@@ -39,7 +39,9 @@ import logging
 import re
 from dataclasses import dataclass
 from typing import Literal
-from urllib.parse import parse_qs, parse_qsl, unquote, urlencode, urlparse, urlsplit, urlunsplit
+from urllib.parse import parse_qs, parse_qsl, urlencode, urlparse, urlunsplit
+
+from anki_miner.utils.url_redaction import split_loggable_url
 
 logger = logging.getLogger(__name__)
 
@@ -160,6 +162,14 @@ def _parse_playlist_id(qs: dict[str, list[str]]) -> str | None:
     return None
 
 
+def _video_result(video_id: str, qs: dict[str, list[str]]) -> YouTubeUrlInfo:
+    """Build the video / video_in_playlist result for one recognised video id."""
+    playlist_id = _parse_playlist_id(qs)
+    if playlist_id:
+        return YouTubeUrlInfo(kind="video_in_playlist", video_id=video_id, playlist_id=playlist_id)
+    return YouTubeUrlInfo(kind="video", video_id=video_id, playlist_id=None)
+
+
 def classify_youtube_url(url: str) -> YouTubeUrlInfo:
     """Classify a YouTube URL without making any network requests.
 
@@ -207,10 +217,7 @@ def classify_youtube_url(url: str) -> YouTubeUrlInfo:
         if not video_id:
             return _UNKNOWN
         qs = parse_qs(parsed.query)
-        playlist_id = _parse_playlist_id(qs)
-        if playlist_id:
-            return YouTubeUrlInfo(kind="video_in_playlist", video_id=video_id, playlist_id=playlist_id)
-        return YouTubeUrlInfo(kind="video", video_id=video_id, playlist_id=None)
+        return _video_result(video_id, qs)
 
     # -----------------------------------------------------------------------
     # youtube.com family
@@ -226,10 +233,7 @@ def classify_youtube_url(url: str) -> YouTubeUrlInfo:
         video_id = _parse_video_id(qs)
         if not video_id:
             return _UNKNOWN
-        playlist_id = _parse_playlist_id(qs)
-        if playlist_id:
-            return YouTubeUrlInfo(kind="video_in_playlist", video_id=video_id, playlist_id=playlist_id)
-        return YouTubeUrlInfo(kind="video", video_id=video_id, playlist_id=None)
+        return _video_result(video_id, qs)
 
     # /playlist?list=…
     if path == "/playlist":
@@ -245,10 +249,7 @@ def classify_youtube_url(url: str) -> YouTubeUrlInfo:
             video_id = _extract_video_id_from_path_segment(segment)
             if not video_id:
                 return _UNKNOWN
-            playlist_id = _parse_playlist_id(qs)
-            if playlist_id:
-                return YouTubeUrlInfo(kind="video_in_playlist", video_id=video_id, playlist_id=playlist_id)
-            return YouTubeUrlInfo(kind="video", video_id=video_id, playlist_id=None)
+            return _video_result(video_id, qs)
 
     return _UNKNOWN
 
@@ -274,18 +275,10 @@ def redact_youtube_url_for_log(url: str) -> str:
     Returns:
         The redacted URL, or ``"<redacted-url>"``.
     """
-    try:
-        parts = urlsplit(url)
-        if parts.username is not None or "@" in unquote(parts.netloc):
-            return "<redacted-url>"
-        hostname = parts.hostname
-        port = parts.port
-    except ValueError:
+    hit = split_loggable_url(url)
+    if hit is None:
         return "<redacted-url>"
-    if not parts.scheme or hostname is None:
-        return "<redacted-url>"
-    host = f"[{hostname}]" if ":" in hostname else hostname
-    netloc = f"{host}:{port}" if port is not None else host
+    parts, netloc = hit
     kept = [
         (key, value) for key, value in parse_qsl(parts.query, keep_blank_values=True) if key in _LOGGABLE_QUERY_KEYS
     ]
