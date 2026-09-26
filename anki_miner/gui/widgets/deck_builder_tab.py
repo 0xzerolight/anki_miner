@@ -33,6 +33,8 @@ from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.constants import SUBTITLE_OFFSET_MAX, SUBTITLE_OFFSET_MIN
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils import queue_state_store
+from anki_miner.gui.utils.queue_state_store import QueueItemSnapshot, QueueSnapshot
 from anki_miner.gui.utils.run_off_thread import still_running
 from anki_miner.gui.widgets._folder_series_screen import FolderSeriesScreenBase
 from anki_miner.gui.widgets.base import (
@@ -78,6 +80,11 @@ class DeckBuilderTab(FolderSeriesScreenBase):
     #: bar gets a stage and a progress bar (D17, D22), mirroring Batch.
     TASK_ID = "run.deckbuilder"
     TASK_OWNER = CapabilityTarget("video", "deckbuilder")
+
+    #: Published so this screen's build survives a crash mid-run (D16-C): a
+    #: confirmed build may already have written cards to Anki, which is what
+    #: makes it worth restoring the form for -- see :meth:`queue_snapshot`.
+    QUEUE_STATE_KEY = "queue.deckbuilder"
 
     def __init__(
         self,
@@ -851,6 +858,108 @@ class DeckBuilderTab(FolderSeriesScreenBase):
             if proc is not None:
                 proc.release_dictionary_resources()
         return True
+
+    # ------------------------------------------------------------------
+    # Durable queue contents (D16-C)
+    # ------------------------------------------------------------------
+
+    def queue_snapshot(self) -> QueueSnapshot:
+        """Describe the in-flight build, or an empty snapshot when nothing is running.
+
+        A row exists only while ``_run_state == "building"``: a scan or a
+        preview waiting at the Build gate has written nothing to Anki, so
+        losing it costs the user a rescan and nothing else. A confirmed build
+        may already have cards in the deck -- including one whose Cancel is
+        still draining (Task 7: ``_run_state`` holds "building" until
+        ``finished`` arrives) -- so that is the one case worth restoring the
+        form for. The worker's own ``request`` is the single source of truth
+        for what this run started with; there is nothing to re-derive from
+        the (locked, but still live) input widgets.
+        """
+        if self._run_state != "building" or self.worker_thread is None:
+            return QueueSnapshot(key=self.QUEUE_STATE_KEY, items=())
+        request = self.worker_thread.request
+        return QueueSnapshot(
+            key=self.QUEUE_STATE_KEY,
+            items=(
+                QueueItemSnapshot(
+                    item_id="build",
+                    source=queue_state_store.folder_pair_source(
+                        request.video_folder,
+                        request.subtitle_folder,
+                        offset=request.subtitle_offset,
+                        secondary=request.secondary_folder,
+                        secondary_offset=request.secondary_offset,
+                    ),
+                    title=request.deck_name,
+                    status=queue_state_store.status_from_run_state("processing"),
+                ),
+            ),
+        )
+
+    def restore_queue_snapshot(self, snapshot: QueueSnapshot) -> int:
+        """Refill the form from ``snapshot``'s one row; return the row count.
+
+        Refused outside idle (a real launch never calls this any other way).
+        The folders are refilled even when one has since moved, so the user
+        sees exactly what the interrupted build was pointed at; the banner
+        then says which problem it is: the input gone, or the build itself
+        interrupted. Nothing here starts a run -- the user's own Build Deck
+        does that, after which words already carded are skipped.
+        """
+        if self._run_state != "idle" or not snapshot.items:
+            return 0
+        row = snapshot.items[0]
+        source = row.source
+        self.video_folder_selector.set_path(str(source["video"]))
+        self.subtitle_folder_selector.set_path(str(source["subtitle"]))
+        self.offset_spinbox.setValue(float(source.get("offset", 0.0) or 0.0))
+        secondary_raw = source.get("secondary")
+        if isinstance(secondary_raw, str) and secondary_raw:
+            self.secondary_folder_selector.set_path(secondary_raw)
+            self.secondary_offset_spinbox.setValue(float(source.get("secondary_offset", 0.0) or 0.0))
+        # After the folder selectors, which auto-fill the deck name from the
+        # video folder's basename (_on_video_folder_changed): the restored
+        # title always has the final word.
+        self.deck_name_edit.setText(row.title)
+
+        missing = row.missing_paths()
+        if missing:
+            self.show_screen_issue(ScreenIssue(summary=tr_format(self.tr("Folder not found: %1"), str(missing[0]))))
+        else:
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=tr_format(
+                        self.tr(
+                            "The build into deck '%1' was interrupted when Anki Miner closed. Build Deck "
+                            "again to finish it; words already in the deck are skipped."
+                        ),
+                        row.title,
+                    )
+                )
+            )
+        return 1
+
+    def clear_queue(self) -> None:
+        """Public alias for Clear, for the language switch (D16-C).
+
+        This screen has no queue panel -- its one "queued" thing is the form
+        itself -- so clearing it means the same as a fresh, untouched screen:
+        every input blanked, the cached preview dropped, and any restore
+        banner dismissed. A switch only reaches this with no worker running.
+        """
+        self.clear_screen_issue()
+        self.video_folder_selector.clear()
+        self.subtitle_folder_selector.clear()
+        self.secondary_folder_selector.clear()
+        self.offset_spinbox.setValue(self.config.subtitle_offset)
+        self.secondary_offset_spinbox.setValue(0.0)
+        self.deck_name_edit.clear()
+        self._last_auto_deck_name = ""
+        self._corpus = None
+        self._confirmed_selection = None
+        for label in self._result_labels.values():
+            label.setText("—")
 
     # ------------------------------------------------------------------
     # Config update

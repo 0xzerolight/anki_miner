@@ -22,7 +22,10 @@ from PyQt6.QtCore import QObject, pyqtSignal
 
 from anki_miner.gui.controllers.task_registry import TaskOutcome, TaskRegistry
 from anki_miner.gui.presenters import GUIPresenter
+from anki_miner.gui.utils import queue_state_store as store
+from anki_miner.gui.utils.queue_state_store import QueueItemSnapshot, QueueSnapshot
 from anki_miner.gui.widgets import deck_builder_tab
+from anki_miner.gui.widgets.base import ScreenIssue
 from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.models.deck_build import DeckCorpus, DeckSelectionMode
 from anki_miner.models.processing import TerminalOutcome
@@ -839,3 +842,163 @@ def test_release_refused_while_preview_pending(ready_tab, workers):
     workers[0].end()
     assert ready_tab.release_dictionary_resources() is True
     processor.release_dictionary_resources.assert_called_once_with()
+
+
+# ---------------------------------------------------------------------------
+# Durable recovery (D16-C): a snapshot row only while a build is running
+# ---------------------------------------------------------------------------
+
+
+def test_snapshot_has_a_row_only_while_building(ready_tab, workers):
+    def _assert_empty_and_discarded() -> None:
+        snapshot = ready_tab.queue_snapshot()
+        assert snapshot.items == ()
+        store.save(snapshot)
+        assert not store.snapshot_path(ready_tab.QUEUE_STATE_KEY).exists()
+
+    _assert_empty_and_discarded()  # idle
+
+    ready_tab.preview_button.click()
+    _assert_empty_and_discarded()  # scanning
+
+    workers[0].preview_ready.emit(_corpus())
+    _assert_empty_and_discarded()  # preview_ready
+
+    ready_tab.build_button.click()
+    worker = workers[0]
+    worker.item_completed.emit("id", 1)
+    worker.end(total_cards=1)
+    _assert_empty_and_discarded()  # completed -> idle
+
+    ready_tab.build_button.click()
+    workers[1].error.emit("boom")
+    workers[1].end()
+    _assert_empty_and_discarded()  # failed -> idle
+
+
+def test_building_snapshot_is_one_interrupted_row(ready_tab, workers, tmp_path):
+    ready_tab.update_config(replace(ready_tab.config, secondary_subtitle_enabled=True))
+    secondary = tmp_path / "trans"
+    secondary.mkdir()
+    ready_tab.secondary_folder_selector.set_path(str(secondary))
+    ready_tab.secondary_offset_spinbox.setValue(-1.5)
+    ready_tab.offset_spinbox.setValue(2.5)
+
+    ready_tab.build_button.click()
+    request = workers[0].request
+
+    snapshot = ready_tab.queue_snapshot()
+    assert [item.item_id for item in snapshot.items] == ["build"]
+    row = snapshot.items[0]
+    assert row.source == store.folder_pair_source(
+        request.video_folder,
+        request.subtitle_folder,
+        offset=request.subtitle_offset,
+        secondary=request.secondary_folder,
+        secondary_offset=request.secondary_offset,
+    )
+    assert row.title == request.deck_name
+    assert row.status == store.status_from_run_state("processing")
+
+
+def test_cancel_during_building_still_snapshots_one_row_before_finished(ready_tab, workers):
+    """Task 7 carry-over: Cancel leaves ``_run_state`` at "building" until
+    ``finished`` arrives, and cards may already be in Anki -- that IS an
+    interrupted build, so it still snapshots one row while the cancel drains."""
+    ready_tab.build_button.click()
+
+    ready_tab.cancel_button.click()
+
+    assert ready_tab._run_state == "building"
+    snapshot = ready_tab.queue_snapshot()
+    assert len(snapshot.items) == 1
+    assert snapshot.items[0].status == store.STATUS_INTERRUPTED
+
+
+def test_restore_refills_form_and_shows_interrupted_banner(tab, tmp_path):
+    video = tmp_path / "My Show"
+    subtitle = tmp_path / "subs"
+    video.mkdir()
+    subtitle.mkdir()
+    snapshot = QueueSnapshot(
+        key=tab.QUEUE_STATE_KEY,
+        items=(
+            QueueItemSnapshot(
+                item_id="build",
+                source=store.folder_pair_source(video, subtitle, offset=1.5),
+                title="My Show",
+                status=store.STATUS_INTERRUPTED,
+            ),
+        ),
+    )
+
+    assert tab.restore_queue_snapshot(snapshot) == 1
+
+    assert tab.video_folder_selector.get_path() == str(video)
+    assert tab.subtitle_folder_selector.get_path() == str(subtitle)
+    assert tab.offset_spinbox.value() == 1.5
+    assert tab.deck_name_edit.text() == "My Show"
+    issue = tab.issue_banner().current_issue()
+    assert issue is not None
+    assert issue.summary == (
+        "The build into deck 'My Show' was interrupted when Anki Miner closed. "
+        "Build Deck again to finish it; words already in the deck are skipped."
+    )
+
+
+def test_restore_with_missing_folder_shows_folder_not_found(tab, tmp_path):
+    video = tmp_path / "gone"
+    subtitle = tmp_path / "subs"
+    subtitle.mkdir()
+    snapshot = QueueSnapshot(
+        key=tab.QUEUE_STATE_KEY,
+        items=(
+            QueueItemSnapshot(
+                item_id="build",
+                source=store.folder_pair_source(video, subtitle),
+                title="My Show",
+                status=store.STATUS_INTERRUPTED,
+            ),
+        ),
+    )
+
+    assert tab.restore_queue_snapshot(snapshot) == 1
+
+    issue = tab.issue_banner().current_issue()
+    assert issue is not None
+    assert issue.summary == f"Folder not found: {video}"
+
+
+def test_restore_refused_while_running(ready_tab, workers):
+    ready_tab.preview_button.click()  # -> scanning, not idle
+
+    snapshot = QueueSnapshot(
+        key=ready_tab.QUEUE_STATE_KEY,
+        items=(
+            QueueItemSnapshot(
+                item_id="build",
+                source=store.folder_pair_source(Path("/a"), Path("/b")),
+                title="X",
+                status=store.STATUS_INTERRUPTED,
+            ),
+        ),
+    )
+
+    assert ready_tab.restore_queue_snapshot(snapshot) == 0
+
+
+def test_clear_queue_resets_form(ready_tab):
+    ready_tab.deck_name_edit.setText("Custom")
+    ready_tab.offset_spinbox.setValue(3.0)
+    ready_tab.secondary_offset_spinbox.setValue(-2.0)
+    ready_tab.show_screen_issue(ScreenIssue(summary="stale issue"))
+
+    ready_tab.clear_queue()
+
+    assert ready_tab.video_folder_selector.get_path() == ""
+    assert ready_tab.subtitle_folder_selector.get_path() == ""
+    assert ready_tab.secondary_folder_selector.get_path() == ""
+    assert ready_tab.offset_spinbox.value() == ready_tab.config.subtitle_offset
+    assert ready_tab.secondary_offset_spinbox.value() == 0.0
+    assert ready_tab.deck_name_edit.text() == ""
+    assert ready_tab.issue_banner().current_issue() is None
