@@ -83,6 +83,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Manga OCR setup (mokuro path, Install) moved to Utilities → Manga OCR**, off Settings; System Health's Fix for a missing mokuro now routes there instead.
 - **Batch is one queue flow (Video → Batch).** The Add Series card's folder pickers add a row to the queue below; pressing Process with the pickers filled adds that series first, then runs, so filling both folders and pressing Process still mines that folder as before.
 - **Tab shortcuts are Ctrl+1 through Ctrl+6 (Settings → Keyboard),** one per main tab.
+- **Deck Builder moved under Video.** Video → Deck Builder now reviews its word list in the Word Curator when Review words is on, shows a receipt, reports to the task strip and pinned bar, and offers to restore a build interrupted by closing the app. Changing Top N or the coverage target after Preview updates the numbers without rescanning; a preview no longer adds Analytics difficulty rows.
 
 ### Fixed
 
@@ -116,7 +117,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Removed
 
-- **The Deck Builder tab.** Point-a-folder-at-a-corpus, frequency-ranked deck mining is gone; a loaded config drops its four run-option keys (`deck_builder_mode`, `deck_builder_top_n`, `deck_builder_coverage_pct`, `deck_builder_skip_known`).
 - **The "Use system file dialogs" toggle (Settings → General).** Native file dialogs are always used now.
 - **The "Text size" control (Settings → General).** Zoom is the one size control; a saved text size is folded into Zoom on load.
 - **The sentence-length filter's Enable box (Settings → Word Filters).** Setting either limit above 0 now turns the filter on by itself; a saved config with the box off keeps its limits at 0.

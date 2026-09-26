@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:eaf6f4a3bb1bf708 -->
+<!-- i18n-source: README.md sha256:06b01f0d7cb8ab71 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -115,7 +115,7 @@ Para a configuração completa de desenvolvimento, veja [CONTRIBUTING.md](../CON
 
 ## Abas
 
-- **Vídeo** - minere um único par de vídeo/legenda, uma pasta inteira ou URLs do YouTube.
+- **Vídeo** - minere um único par de vídeo/legenda, uma pasta inteira, URLs do YouTube ou uma série inteira em um único baralho ordenado por frequência.
 - **Audiobooks** - minere audiobooks, podcasts, rádio, músicas (áudio + legenda/transcrição).
 - **Leitura** - minere mangás (mokuro), livros (`.epub`, `.txt`; um livro único ou uma pasta inteira), arquivos de legenda avulsos ou texto copiado e colado.
 - **Análise e Dados** - histórico de mineração, classificações de dificuldade, marcos.
