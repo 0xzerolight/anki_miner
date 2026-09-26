@@ -329,7 +329,7 @@ class ResourceBundleFlow(ModalImportFlowMixin):
                 "ResourceBundleFlow",
                 "Choose what to install. Each dictionary and list is rebuilt from its original file, which "
                 "can take several minutes for a large dictionary. New dictionaries go to the top of your list; "
-                "nothing you already have is replaced.",
+                "the bundle's ignore list is added to yours; nothing you already have is replaced.",
             ),
             accept_text=QCoreApplication.translate("ResourceBundleFlow", "Import"),
             parent=self._parent,
@@ -386,7 +386,13 @@ class ResourceBundleFlow(ModalImportFlowMixin):
             reason = QCoreApplication.translate("ResourceBundleFlow", "you already use one")
         else:
             reason = ""
-        return BundleChoice(candidate.item, disabled_reason=reason)
+        word_count = dict(candidate.item.options).get("word_count", "")
+        detail = (
+            tr_format(QCoreApplication.translate("ResourceBundleFlow", "%1 words"), word_count)
+            if candidate.item.kind == "known_words" and word_count
+            else ""
+        )
+        return BundleChoice(candidate.item, detail=detail, disabled_reason=reason)
 
     def _on_installed(self, _path: str, meta: dict) -> None:
         result = cast(BundleInstallResult, meta["result"])

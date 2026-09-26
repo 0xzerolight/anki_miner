@@ -221,3 +221,26 @@ def test_an_unreadable_file_is_reported_on_the_page(qtbot, tmp_path, test_config
     assert infos == []
     assert tab.import_resources_action.isEnabled()
     _close(qtbot, tab)
+
+
+def test_the_import_checklist_names_the_bundles_ignore_list_and_its_size(
+    qtbot, tmp_path, test_config, monkeypatch, infos
+):
+    _sender, bundle = write_sender_bundle(tmp_path, test_config)
+    tab = _make_tab(qtbot, empty_receiver(tmp_path / "receiver", test_config))
+    rows: list[str] = []
+
+    def _exec(dialog):
+        for i in range(dialog.tree.topLevelItemCount()):
+            group = dialog.tree.topLevelItem(i)
+            rows.extend(group.child(j).text(0) for j in range(group.childCount()))
+        return QDialog.DialogCode.Rejected
+
+    monkeypatch.setattr(ResourceBundleDialog, "exec", _exec)
+    _pick_open(monkeypatch, bundle)
+    tab.import_resources_action.trigger()
+    qtbot.waitUntil(lambda: bool(rows), timeout=10_000)
+    ignore_row = next(row for row in rows if "ignore list" in row.lower())
+    assert "Your" not in ignore_row, "the bundle's list is the sender's, not the receiver's"
+    assert "1 words" in ignore_row
+    _close(qtbot, tab)

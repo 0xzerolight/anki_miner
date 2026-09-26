@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 import zipfile
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Literal
 
@@ -216,6 +216,7 @@ def write_resource_bundle(
     selected = [c for c in candidates if not c.unavailable]
     total = len(selected)
     with atomic_write_path(target) as staged, zipfile.ZipFile(staged, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        written: list[BundleItem] = []
         for index, candidate in enumerate(selected):
             if cancel_check():
                 raise OperationCancelled("Export cancelled")
@@ -224,11 +225,14 @@ def write_resource_bundle(
             if item.kind == "known_words":
                 words = sorted(KnownWordDB(known_words_db, language=language).get_words_by_source("user"))
                 zf.writestr(item.member, "".join(f"{word}\n" for word in words))
+                # The receiver's checklist shows how many words it would take on.
+                item = replace(item, options=(("word_count", str(len(words))),))
             else:
                 assert candidate.source is not None  # every other available kind has a file
                 compress = zipfile.ZIP_STORED if candidate.source.suffix == ".zip" else zipfile.ZIP_DEFLATED
                 zf.write(candidate.source, item.member, compress_type=compress)
-        manifest = BundleManifest(language=language, app_version=app_version, items=tuple(c.item for c in selected))
+            written.append(item)
+        manifest = BundleManifest(language=language, app_version=app_version, items=tuple(written))
         zf.writestr(MANIFEST_MEMBER, manifest_to_json(manifest))
     size = target.stat().st_size
     logger.info("Resource bundle written: path=%s language=%s items=%d bytes=%d", target, language, total, size)

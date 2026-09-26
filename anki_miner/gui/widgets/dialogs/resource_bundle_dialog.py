@@ -121,7 +121,7 @@ class ResourceBundleDialog(QDialog):
 
     def _row_label(self, item: BundleItem) -> str:
         if item.kind == "known_words":
-            return self.tr("Your ignore list")
+            return self.tr("Known-words ignore list")
         if item.kind == "blacklist":
             return self.tr("Blacklist")
         if item.kind == "whitelist":

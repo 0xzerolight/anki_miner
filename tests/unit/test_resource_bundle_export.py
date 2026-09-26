@@ -109,3 +109,10 @@ def test_a_slot_chained_twice_is_offered_once_and_the_bundle_stays_readable(send
     target = tmp_path / "bundle.zip"
     _write(config, target)
     assert [i.item_id for i in read_bundle_manifest(target).items].count(FREQ_ID) == 1
+
+
+def test_the_written_ignore_list_records_its_word_count(sender, tmp_path):
+    target = tmp_path / "bundle.zip"
+    _write(sender, target)
+    known = next(i for i in read_bundle_manifest(target).items if i.kind == "known_words")
+    assert dict(known.options)["word_count"] == "1"
