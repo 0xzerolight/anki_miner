@@ -1000,68 +1000,7 @@ class EpisodeProcessor:
             2,
             QCoreApplication.translate("EpisodeProcessor", "Filtering against known vocabulary"),
         )
-        if self.config.include_known_words:
-            # "Include everything" mode (set by the e2e harness's no-Anki
-            # mode): skip known-words subtraction entirely — including the
-            # Issue #42 user ignore list — and mine all words that passed
-            # POS/subtype filtering. This intentionally re-cards words the
-            # user already knows.
-            self.presenter.show_info(QCoreApplication.translate("EpisodeProcessor", "Including words already known"))
-            unknown_words = all_words
-        else:
-            # User-curated ignore list (Issue #42): always applied on the normal
-            # mining path, regardless of the use_known_words_db toggle. The DB
-            # object is always present now, but the file may not exist for users
-            # who never added a word — is_available guards.
-            # A locked/raising known_words.db (Manage-Known-Words dialog open, or a
-            # second concurrent run holding the file) must NOT abort the run — the
-            # same T-19 rationale as the guarded writes below. Each read is wrapped;
-            # on failure we drop the user ignore list and fall back to Anki's
-            # existing vocabulary, warning and continuing rather than bubbling the
-            # sqlite3.OperationalError into process_episode's generic except.
-            user_words: set[str] = set()
-            if self.known_word_db and self.known_word_db.is_available():
-                try:
-                    user_words = self.known_word_db.get_words_by_source("user")
-                except (sqlite3.Error, OSError) as e:
-                    logger.warning(
-                        "Could not read the user ignore list from known_words.db (%s); proceeding without it this run.",
-                        e,
-                    )
-
-            if self.config.use_known_words_db and self.known_word_db and self.known_word_db.is_available():
-                try:
-                    known_words = self.known_word_db.get_known_words()
-                    # Sync with Anki to keep DB up to date. Pass the pre-fetched
-                    # ``known_words`` so the DB skips its internal scan; merge the
-                    # diff in-memory below to avoid a post-sync re-read.
-                    anki_vocab = self.anki_service.get_existing_vocabulary()
-                    added, total = self.known_word_db.sync_with_anki(anki_vocab, existing=known_words)
-                    counts.known_db_added = added
-                    counts.known_db_total = total
-                    if added > 0:
-                        self.presenter.show_info(
-                            tr_format(
-                                QCoreApplication.translate(
-                                    "EpisodeProcessor", "Known word DB synced: %1 new words (%2 total)"
-                                ),
-                                added,
-                                total,
-                            )
-                        )
-                        known_words = known_words | (anki_vocab - known_words)
-                except (sqlite3.Error, OSError) as e:
-                    logger.warning(
-                        "Could not access known_words.db (%s); falling back to Anki's "
-                        "existing vocabulary for this run.",
-                        e,
-                    )
-                    known_words = self.anki_service.get_existing_vocabulary()
-            else:
-                known_words = self.anki_service.get_existing_vocabulary()
-
-            unknown_words = self.word_filter.filter_unknown(all_words, known_words | user_words)
-            counts.known_hits = len(all_words) - len(unknown_words)
+        unknown_words = self._phase2_known_words(all_words, counts)
         self.presenter.show_success(
             QCoreApplication.translate("EpisodeProcessor", "%n new word(s) to mine", "", len(unknown_words))
         )
@@ -1504,6 +1443,77 @@ class EpisodeProcessor:
             "Phase 2 filter",
             **{"in": len(all_words), "out": len(unknown_words), **asdict(counts)},
         )
+        return unknown_words
+
+    def _phase2_known_words(self, all_words: list[TokenizedWord], counts: _Phase2Counts) -> list[TokenizedWord]:
+        """Phase 2: drop the words the learner already knows; return the rest.
+
+        Known means in Anki, in the known-words DB (synced from Anki first when
+        that DB is on), or on the user ignore list. Fills ``counts.known_hits``
+        and the two ``known_db_*`` counters.
+        """
+        if self.config.include_known_words:
+            # "Include everything" mode (set by the e2e harness's no-Anki
+            # mode): skip known-words subtraction entirely — including the
+            # Issue #42 user ignore list — and mine all words that passed
+            # POS/subtype filtering. This intentionally re-cards words the
+            # user already knows.
+            self.presenter.show_info(QCoreApplication.translate("EpisodeProcessor", "Including words already known"))
+            unknown_words = all_words
+        else:
+            # User-curated ignore list (Issue #42): always applied on the normal
+            # mining path, regardless of the use_known_words_db toggle. The DB
+            # object is always present now, but the file may not exist for users
+            # who never added a word — is_available guards.
+            # A locked/raising known_words.db (Manage-Known-Words dialog open, or a
+            # second concurrent run holding the file) must NOT abort the run — the
+            # same T-19 rationale as the guarded writes below. Each read is wrapped;
+            # on failure we drop the user ignore list and fall back to Anki's
+            # existing vocabulary, warning and continuing rather than bubbling the
+            # sqlite3.OperationalError into process_episode's generic except.
+            user_words: set[str] = set()
+            if self.known_word_db and self.known_word_db.is_available():
+                try:
+                    user_words = self.known_word_db.get_words_by_source("user")
+                except (sqlite3.Error, OSError) as e:
+                    logger.warning(
+                        "Could not read the user ignore list from known_words.db (%s); proceeding without it this run.",
+                        e,
+                    )
+
+            if self.config.use_known_words_db and self.known_word_db and self.known_word_db.is_available():
+                try:
+                    known_words = self.known_word_db.get_known_words()
+                    # Sync with Anki to keep DB up to date. Pass the pre-fetched
+                    # ``known_words`` so the DB skips its internal scan; merge the
+                    # diff in-memory below to avoid a post-sync re-read.
+                    anki_vocab = self.anki_service.get_existing_vocabulary()
+                    added, total = self.known_word_db.sync_with_anki(anki_vocab, existing=known_words)
+                    counts.known_db_added = added
+                    counts.known_db_total = total
+                    if added > 0:
+                        self.presenter.show_info(
+                            tr_format(
+                                QCoreApplication.translate(
+                                    "EpisodeProcessor", "Known word DB synced: %1 new words (%2 total)"
+                                ),
+                                added,
+                                total,
+                            )
+                        )
+                        known_words = known_words | (anki_vocab - known_words)
+                except (sqlite3.Error, OSError) as e:
+                    logger.warning(
+                        "Could not access known_words.db (%s); falling back to Anki's "
+                        "existing vocabulary for this run.",
+                        e,
+                    )
+                    known_words = self.anki_service.get_existing_vocabulary()
+            else:
+                known_words = self.anki_service.get_existing_vocabulary()
+
+            unknown_words = self.word_filter.filter_unknown(all_words, known_words | user_words)
+            counts.known_hits = len(all_words) - len(unknown_words)
         return unknown_words
 
     @staticmethod
