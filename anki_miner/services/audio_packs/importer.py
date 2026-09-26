@@ -16,13 +16,12 @@ from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.services._sqlite_index import (
     language_identity,
     open_readonly,
-    prove_owned_slot,
     read_slot_language,
     resolve_auto_store_id,
     resolve_managed_slot,
     write_ownership_marker,
 )
-from anki_miner.services._staging import promote_staged_dir, repair_managed_slot
+from anki_miner.services._staging import claim_managed_slot, promote_staged_dir, repair_managed_slot
 from anki_miner.services.audio_packs.fetcher import purge_pack_cache
 from anki_miner.services.audio_packs.formats import PARSERS, detect_pack_format, parse_ozk5
 from anki_miner.services.audio_packs.storage import (
@@ -128,17 +127,9 @@ def import_android_audio_db(
         )
     if pack_id == "jpod101":
         raise SetupError("Pack id 'jpod101' is reserved for the online JPod101 source")
-    try:
-        final_path = resolve_managed_slot(dest_root, pack_id)
-    except ValueError as exc:
-        raise SetupError(str(exc)) from exc
+    dest_root.mkdir(parents=True, exist_ok=True)
+    final_path = claim_managed_slot(dest_root, pack_id, "audio", overwrite=overwrite, noun="Audio pack")
     managed_root = final_path.parent
-    managed_root.mkdir(parents=True, exist_ok=True)
-    if os.path.lexists(final_path):
-        if not overwrite:
-            raise SetupError(f"Audio pack '{pack_id}' already exists")
-        if not prove_owned_slot(managed_root, pack_id, "audio"):
-            raise SetupError(f"Audio pack '{pack_id}' is not managed by Anki Miner")
 
     staging_parent = Path(tempfile.mkdtemp(prefix=".staging-", dir=managed_root))
     try:
@@ -259,13 +250,7 @@ def import_audio_pack(
 
     # --- exists check (before staging so we fail fast) ---
     managed_root.mkdir(parents=True, exist_ok=True)
-    if os.path.lexists(final_path):
-        if not overwrite:
-            raise SetupError(f"Audio pack '{pack_id}' already exists")
-        if not prove_owned_slot(managed_root, pack_id, "audio"):
-            raise SetupError(
-                f"Audio pack '{pack_id}' exists but is not an Anki Miner-managed audio pack; refusing to overwrite it"
-            )
+    final_path = claim_managed_slot(dest_root, pack_id, "audio", overwrite=overwrite, noun="Audio pack")
 
     # --- staging ---
     # Stage under dest_root so os.replace stays on the same filesystem

@@ -248,3 +248,17 @@ def test_failed_overwrite_reimport_preserves_pack_cache(tmp_path: Path, monkeypa
 
     assert cached.exists()
     assert cached.read_bytes() == b"ID3-test-audio"
+
+
+def test_overwrite_refuses_unmanaged_destination(tmp_path: Path):
+    source = _make_android_db(tmp_path / "android.db")
+    packs_root = tmp_path / "packs"
+    foreign = packs_root / "android"
+    foreign.mkdir(parents=True)
+    payload = foreign / "keep.txt"
+    payload.write_text("foreign", encoding="utf-8")
+
+    with pytest.raises(SetupError, match="not an Anki Miner-managed audio pack"):
+        import_android_audio_db(source, packs_root, pack_id="android", overwrite=True)
+
+    assert payload.read_text(encoding="utf-8") == "foreign"

@@ -21,7 +21,6 @@ ever wired up to fetch XML directly, swap ``xml.etree.ElementTree`` for
 from __future__ import annotations
 
 import logging
-import os
 import shutil
 import tempfile
 import xml.etree.ElementTree as ET  # noqa: S405 - see module docstring
@@ -32,12 +31,8 @@ from pathlib import Path
 from typing import Callable, Iterator
 
 from anki_miner.exceptions import OperationCancelled, SetupError
-from anki_miner.services._sqlite_index import (
-    prove_owned_slot,
-    resolve_managed_slot,
-    write_ownership_marker,
-)
-from anki_miner.services._staging import promote_staged_dir, repair_managed_slot
+from anki_miner.services._sqlite_index import write_ownership_marker
+from anki_miner.services._staging import claim_managed_slot, promote_staged_dir, repair_managed_slot
 from anki_miner.services.dictionary.storage import (
     SCHEMA_VERSION,
     DictRow,
@@ -81,22 +76,7 @@ def import_jmdict_xml(
     if not xml_path.exists():
         raise SetupError(f"JMdict XML not found: {xml_path}")
 
-    try:
-        final = resolve_managed_slot(dest_root, JMDICT_DICT_ID)
-    except ValueError as exc:
-        logger.warning(
-            "JMdict import failed: stage=resolve exc=%s",
-            type(exc).__name__,
-        )
-        raise SetupError(str(exc)) from exc
-    if os.path.lexists(final):
-        if not overwrite:
-            raise SetupError(f"Dictionary '{JMDICT_DICT_ID}' already exists")
-        if not prove_owned_slot(final.parent, JMDICT_DICT_ID, "dictionary"):
-            raise SetupError(
-                f"Dictionary '{JMDICT_DICT_ID}' exists but is not an Anki Miner-managed dictionary; "
-                "refusing to overwrite it"
-            )
+    final = claim_managed_slot(dest_root, JMDICT_DICT_ID, "dictionary", overwrite=overwrite, noun="Dictionary")
 
     try:
         tree = ET.parse(str(xml_path))  # noqa: S314 - see module docstring

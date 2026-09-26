@@ -25,7 +25,6 @@ legacy single-CSV loader's semantics.
 from __future__ import annotations
 
 import logging
-import os
 import shutil
 import tempfile
 from collections.abc import Callable, Iterable
@@ -36,13 +35,11 @@ from pathlib import Path
 from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.services._sqlite_index import (
     language_identity,
-    prove_owned_slot,
     read_slot_language,
     resolve_auto_store_id,
-    resolve_managed_slot,
     write_ownership_marker,
 )
-from anki_miner.services._staging import promote_staged_dir, repair_managed_slot
+from anki_miner.services._staging import claim_managed_slot, promote_staged_dir, repair_managed_slot
 from anki_miner.services.pitch_accent import storage
 from anki_miner.services.pitch_accent.yomitan_pitch_importer import (
     extract_pitch_rows,
@@ -340,19 +337,8 @@ def _finalize(
     Copies the original input alongside ``index.sqlite`` (``source.zip`` /
     ``source.csv``) for later reimport.
     """
-    try:
-        final_path = resolve_managed_slot(dest_root, source_id)
-    except ValueError as exc:
-        raise SetupError(str(exc)) from exc
-    final_path.parent.mkdir(parents=True, exist_ok=True)
-    if os.path.lexists(final_path):
-        if not overwrite:
-            raise SetupError(f"Pitch source '{source_id}' already exists")
-        if not prove_owned_slot(final_path.parent, source_id, "pitch"):
-            raise SetupError(
-                f"Pitch source '{source_id}' exists but is not an Anki Miner-managed pitch source; "
-                "refusing to overwrite it"
-            )
+    dest_root.mkdir(parents=True, exist_ok=True)
+    final_path = claim_managed_slot(dest_root, source_id, "pitch", overwrite=overwrite, noun="Pitch source")
 
     staging = Path(tempfile.mkdtemp(prefix=".staging-", dir=final_path.parent))
     try:
