@@ -6,7 +6,7 @@ import re
 import sqlite3
 import threading
 from dataclasses import replace
-from pathlib import Path
+from functools import partial
 from types import SimpleNamespace
 from unittest.mock import MagicMock, call, patch
 
@@ -37,28 +37,11 @@ from anki_miner.services.pitch_accent_service import PitchEntry
 from anki_miner.services.word_filter import WordFilterService
 from anki_miner.services.word_list_service import WordListService
 from tests.conftest import build_processor
+from tests.unit._processor_fixtures import make_media as _make_media
+from tests.unit._processor_fixtures import make_word
 
-
-def _make_word(lemma="食べる", surface=None, start_time=1.0, pos="動詞"):
-    return TokenizedWord(
-        surface=surface or f"{lemma}た",
-        lemma=lemma,
-        reading="タベル",
-        sentence=f"{lemma}のテスト",
-        start_time=start_time,
-        end_time=start_time + 2.0,
-        duration=2.0,
-        pos=pos,
-    )
-
-
-def _make_media(prefix="word"):
-    return MediaData(
-        screenshot_path=Path(f"/tmp/{prefix}.jpg"),
-        audio_path=Path(f"/tmp/{prefix}.mp3"),
-        screenshot_filename=f"{prefix}.jpg",
-        audio_filename=f"{prefix}.mp3",
-    )
+# These suites build verbs unless a test says otherwise.
+_make_word = partial(make_word, pos="動詞")
 
 
 class TestSanitizeSourceLabel:
@@ -182,22 +165,6 @@ class TestLemmaContextCallShape:
     a raised exception.
     """
 
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
-
     def _strict_service(self, *, requires_lemma_context: bool) -> MagicMock:
         service = MagicMock(name="definition_service")
         if requires_lemma_context:
@@ -271,23 +238,6 @@ class TestLemmaContextCallShape:
 
 class TestProcessEpisode:
     """Tests for EpisodeProcessor.process_episode method."""
-
-    @pytest.fixture
-    def mock_services(self):
-        """Create a set of mock services for the episode processor."""
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
 
     @pytest.fixture
     def processor(self, test_config, mock_services):
@@ -845,23 +795,6 @@ class TestProcessEpisode:
 
 class TestOptionalServices:
     """Tests for EpisodeProcessor with optional pitch accent and frequency services."""
-
-    @pytest.fixture
-    def mock_services(self):
-        """Create a set of mock services for the episode processor."""
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
 
     def test_frequency_service_attaches_ranks(self, test_config, mock_services, tmp_path):
         """Frequency attaches min + harmonic + per-source breakdown from ONE fetch."""
@@ -1654,22 +1587,6 @@ class TestPitchLemmaReading:
     lemma reading, not the surface reading.
     """
 
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
-
     def test_lemma_reading_passed_to_pitch_service(self, test_config, mock_services, tmp_path):
         """When lemma_reading is set, pitch lookup receives lemma_reading, not surface reading."""
         # Construct a word where surface reading differs from lemma reading.
@@ -1948,22 +1865,6 @@ class TestPitchLemmaReading:
 class TestKnownWordDBIntegration:
     """Tests for EpisodeProcessor with known_word_db."""
 
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
-
     def test_known_word_db_syncs_and_refilters(self, test_config, mock_services, tmp_path):
         """Known word DB should sync with Anki and filter against the merged set in one pass.
 
@@ -2178,22 +2079,6 @@ class TestKnownWordDBIntegration:
 class TestIncludeKnownWordsFlag:
     """Tests for the include_known_words config flag."""
 
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
-
     def test_include_known_words_true_bypasses_subtraction(self, test_config, mock_services, tmp_path):
         """With include_known_words=True, filter_unknown is not called and all words pass through Phase 2."""
         config = replace(test_config, include_known_words=True)
@@ -2300,22 +2185,6 @@ class TestIncludeKnownWordsFlag:
 class TestWordListServiceIntegration:
     """Tests for EpisodeProcessor with word_list_service."""
 
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
-
     def test_word_list_service_filters_words(self, test_config, mock_services, tmp_path):
         """Word list service should apply blacklist/whitelist filtering."""
         word1 = _make_word("食べる")
@@ -2349,22 +2218,6 @@ class TestWordListServiceIntegration:
 
 class TestWordsetServiceIntegration:
     """Tests for EpisodeProcessor with wordset_service (Issue #59)."""
-
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
 
     def test_wordset_service_filters_words(self, test_config, mock_services, tmp_path):
         """Wordset service should drop matched proper nouns via filter_by_wordsets."""
@@ -2431,21 +2284,6 @@ class TestWhitelistForceInclude:
     and a REAL WordListService loaded from a temp file so the partition and the real
     filters run — a mocked word_filter would replay stubs, and a bare MagicMock
     WordListService would force-include every word."""
-
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
 
     def _wls(self, tmp_path, *lemmas):
         wl = tmp_path / "wl.txt"
@@ -2727,22 +2565,6 @@ def test_process_episode_does_not_expose_dead_cross_episode_input():
 class TestDefinitionSkipping:
     """Tests for skipping words without definitions."""
 
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
-
     def test_skips_words_without_definitions(self, test_config, mock_services, tmp_path):
         """Words with None definitions should be skipped when creating cards."""
         word1 = _make_word("食べる")
@@ -2779,22 +2601,6 @@ class TestDefinitionSkipping:
 
 class TestStatsServiceIntegration:
     """Tests for EpisodeProcessor with stats_service."""
-
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
 
     def test_records_session_on_success(self, test_config, mock_services, tmp_path):
         """Stats service should record a session after successful processing."""
@@ -3163,19 +2969,6 @@ class TestStatsServiceIntegration:
 
 
 class TestReadingTerminalCancellation:
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": MagicMock(),
-            "definition_service": MagicMock(),
-            "anki_service": MagicMock(),
-        }
-
     @staticmethod
     def _document() -> ReadingDocument:
         return ReadingDocument(title="Book", kind="book", series="Books", episode="Book")
@@ -3218,22 +3011,6 @@ class TestReadingTerminalCancellation:
 
 class TestPerRunTempFolder:
     """Isolate temp media per run instead of sharing one folder across calls."""
-
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
 
     def test_extract_media_batch_receives_unique_temp_folder_per_run(self, test_config, mock_services, tmp_path):
         words = [_make_word("食べる")]
@@ -3290,22 +3067,6 @@ class TestPerRunTempFolder:
 
 class TestProcessYoutubeUrl:
     """Tests for EpisodeProcessor.process_youtube_url."""
-
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
 
     def _happy_pipeline(self, mock_services, word, media):
         sp = mock_services["subtitle_parser"]
@@ -3704,22 +3465,6 @@ class TestProcessYoutubeUrlTranscription:
     rmtree's.
     """
 
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
-
     def _pipeline(self, mock_services):
         sp = mock_services["subtitle_parser"]
         word = _make_word("食べる")
@@ -3916,22 +3661,6 @@ class TestProcessYoutubeUrlAlignment:
     reasons, so a failed alignment leaves the fetched captions in place and the
     run continues.
     """
-
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
 
     def _pipeline(self, mock_services):
         sp = mock_services["subtitle_parser"]
@@ -4145,22 +3874,6 @@ class TestProcessYoutubeUrlCancelPropagation:
     self._cancelled, which nothing set on the YouTube path — Stop All was
     ignored mid-mine and a curation dialog could pop after Stop.
     """
-
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
 
     def _build(self, test_config, mock_services, tmp_path):
         """Processor wired to a happy fetcher + happy 5-phase mocks."""
@@ -4423,21 +4136,9 @@ class TestIPlusOneFilter:
     """Tests for the use_i_plus_one_filter wiring in EpisodeProcessor."""
 
     @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
-        word_filter.filter_i_plus_one.side_effect = lambda words, idx, all_unknown_lemmas=None: words
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
+    def mock_services(self, mock_services):
+        mock_services["word_filter"].filter_i_plus_one.side_effect = lambda words, idx, all_unknown_lemmas=None: words
+        return mock_services
 
     def _config_with_flag(self, test_config, *, flag: bool, dedup: bool = True):
         return replace(
@@ -4658,22 +4359,6 @@ class TestGlossaryFetch:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = [1]
         return tmp_path / "v.mkv", tmp_path / "s.ass"
-
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
 
     def test_glossary_fetched_when_field_mapped(self, test_config, mock_services, tmp_path):
         cfg = replace(test_config, anki_fields={**test_config.anki_fields, "glossary": "Glossary"})
@@ -4945,22 +4630,6 @@ class TestAudioTrackOverrideForwarding:
     """Verify process_episode forwards audio_track_override to extract_media_batch."""
 
     @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
-
-    @pytest.fixture
     def processor(self, test_config, mock_services):
         return build_processor(
             config=test_config,
@@ -5056,22 +4725,6 @@ class TestSourceField:
     """Tests for the card "source" extra field (Issue #69)."""
 
     @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
-
-    @pytest.fixture
     def processor(self, test_config, mock_services):
         return build_processor(
             config=test_config,
@@ -5123,20 +4776,9 @@ class TestPreflightCardTarget:
     """Tests for Issue #52: pre-flight Anki target check before the mining pipeline."""
 
     @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock(spec=AnkiService)
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
+    def mock_services(self, mock_services):
+        mock_services["anki_service"] = MagicMock(spec=AnkiService)
+        return mock_services
 
     @pytest.fixture
     def processor(self, test_config, mock_services):
@@ -5547,25 +5189,14 @@ class TestPhase2FilterOrdering:
     """
 
     @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
+    def mock_services(self, mock_services):
+        word_filter = mock_services["word_filter"]
         # All Phase-2 filters pass through so each one actually fires and the
         # pipeline reaches the next; signatures differ (positional vs kwargs).
-        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
         word_filter.filter_i_plus_one.side_effect = lambda words, idx, all_unknown_lemmas=None: words
         word_filter.filter_by_sentence_length.side_effect = lambda words, **kw: words
         word_filter.filter_by_script_type.side_effect = lambda words, **kw: words
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
+        return mock_services
 
     def _wire_pipeline_with_index(self, mock_services, word, line, media):
         mock_services["subtitle_parser"].parse_subtitle_file_with_index.return_value = ([word], [line])
@@ -5760,22 +5391,6 @@ class TestActiveFilterNames:
 class TestRecordDifficultyGuard:
     """A locked stats.db during terminal commit must not abort process_episode (OVH-023/038)."""
 
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
-
     def _make_stats_service(self, tmp_path):
         from anki_miner.services.stats_service import StatsService
 
@@ -5878,22 +5493,6 @@ class TestRecordDifficultyGuard:
 
 class TestMinedFormsOnResult:
     """ProcessingResult.mined_forms is populated on a successful run (OVH-030)."""
-
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
 
     def test_mined_forms_empty_without_known_word_insert_receipt(self, test_config, mock_services, tmp_path):
         """No known-word DB insert means there are no rows Undo may remove."""
@@ -6070,22 +5669,6 @@ class TestOfflineDefinitionPreFilter:
     """Pre-curator offline definition filter — words with no offline definition
     are dropped before the curation dialog (and batch) sees them."""
 
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
-
     def _build(self, config, mock_services):
         return build_processor(
             config=config,
@@ -6224,22 +5807,6 @@ class TestOfflineDefinitionPreFilter:
 class TestWithinRunDuplicateCollapse:
     """Words colliding on mined_form within one run are collapsed before the
     curator, so it never offers a word Anki will silently skip as a duplicate."""
-
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
 
     def _build(self, config, mock_services):
         return build_processor(
@@ -6541,21 +6108,9 @@ class TestAnkiWriteProvenance:
     """
 
     @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        anki_service.last_created_note_ids = []
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
+    def mock_services(self, mock_services):
+        mock_services["anki_service"].last_created_note_ids = []
+        return mock_services
 
     @pytest.fixture
     def processor(self, test_config, mock_services):
@@ -6719,21 +6274,9 @@ class TestDefinitionServiceRunCacheClear:
     accumulates cache across items, whatever way each item ended."""
 
     @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        anki_service.last_created_note_ids = []
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
+    def mock_services(self, mock_services):
+        mock_services["anki_service"].last_created_note_ids = []
+        return mock_services
 
     @pytest.fixture
     def processor(self, test_config, mock_services):
@@ -6785,19 +6328,6 @@ class TestCurationQuietMarker:
     capture) silences _run_curation's two info lines; an unmarked callback
     keeps them — pinned so season mode can't regress per-episode logs."""
 
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": MagicMock(),
-            "definition_service": MagicMock(),
-            "anki_service": MagicMock(),
-        }
-
     def _run(self, test_config, mock_services, tmp_path, callback):
         words = [_make_word("食べる")]
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
@@ -6839,24 +6369,14 @@ class TestCurationLineExpansion:
     """Issue #120: curator line expansions materialize between curation and phase 3."""
 
     @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
+    def mock_services(self, mock_services):
+        word_filter = mock_services["word_filter"]
         # The real dedup, so the automatic merge's second pass (which keys on
         # the merged text) is exercised rather than stubbed away.
         word_filter.deduplicate_by_sentence.side_effect = (
             lambda words, text_of=None: WordFilterService.deduplicate_by_sentence(word_filter, words, text_of)
         )
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
+        return mock_services
 
     def _wire(self, mock_services, words, media):
         sp = mock_services["subtitle_parser"]
@@ -7037,22 +6557,6 @@ class TestPerCallSubtitleOffset:
     call instead of being baked into the processor's config.
     """
 
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
-
     def _wire(self, mock_services, word):
         sp = mock_services["subtitle_parser"]
         sp.parse_subtitle_file.return_value = [word]
@@ -7128,19 +6632,6 @@ class TestSecondarySubtitles:
     """F7: the second track is parsed once at a zero offset and attached after curation."""
 
     SECOND = [(0.5, 2.5, "I eat."), (2.9, 5.0, "You run.")]  # the second cue touches 1.0-3.0 by 0.1 s only
-
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": MagicMock(),
-            "definition_service": MagicMock(),
-            "anki_service": MagicMock(),
-        }
 
     def _run(
         self,
@@ -7225,18 +6716,9 @@ class TestCurationSentenceEdit:
     """A curator sentence edit is re-tokenised and rebuilt between curation and phase 3."""
 
     @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
-        word_filter.expand_word_lines.side_effect = lambda word, entries: word
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": MagicMock(),
-            "definition_service": MagicMock(),
-            "anki_service": MagicMock(),
-        }
+    def mock_services(self, mock_services):
+        mock_services["word_filter"].expand_word_lines.side_effect = lambda word, entries: word
+        return mock_services
 
     def _wire(self, mock_services, words, media):
         sp = mock_services["subtitle_parser"]

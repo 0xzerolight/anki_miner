@@ -170,11 +170,6 @@ class BatchQueue:
         return len(self._items)
 
     @property
-    def pending_count(self) -> int:
-        """Get count of pending items."""
-        return sum(1 for item in self._items if item.status == QueueItemStatus.PENDING)
-
-    @property
     def completed_count(self) -> int:
         """Get count of completed items."""
         return sum(1 for item in self._items if item.status == QueueItemStatus.COMPLETED)

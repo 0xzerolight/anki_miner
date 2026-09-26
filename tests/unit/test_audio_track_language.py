@@ -1,22 +1,14 @@
-"""matches_language_tag: parity with the ja helper, plus a second language."""
+"""matches_language_tag over a language-code set, and the subtitle pick that uses it."""
 
 import pytest
 
 from anki_miner.utils.audio_track_detector import (
     JAPANESE_LANGUAGE_CODES,
     SubtitleStream,
-    is_japanese_language_tag,
     matches_language_tag,
 )
 
 KOREAN = frozenset({"kor", "ko", "korean"})
-
-
-@pytest.mark.parametrize(
-    "tag", [None, "", "jpn", "ja", "JA", "JPN", "Japanese", "jp", "ja-JP", "ja-jp", "jav", "eng", "und"]
-)
-def test_parity_with_the_japanese_helper(tag):
-    assert matches_language_tag(tag, JAPANESE_LANGUAGE_CODES) is is_japanese_language_tag(tag)
 
 
 @pytest.mark.parametrize("tag", ["kor", "ko", "KO", "ko-KR", "Korean"])

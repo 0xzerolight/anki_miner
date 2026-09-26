@@ -14,7 +14,7 @@ import time
 import uuid
 import zipfile
 from collections.abc import Callable, Iterable, Mapping
-from dataclasses import dataclass, field, replace
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -312,6 +312,32 @@ class _EpisodeContext:
         return ProcessingResult(**defaults)
 
 
+@dataclass
+class _Phase2Counts:
+    """Phase 2's per-run counters, in the order the ``Phase 2 filter`` summary logs them.
+
+    Field order IS the log order: ``_phase2_filter`` splats ``asdict(counts)``
+    into that summary, and tests read the line by field name. Each phase-2 step
+    fills in its own fields; a step that never runs leaves them at 0.
+    """
+
+    frequency_ranked: int = 0
+    known_hits: int = 0
+    known_db_added: int = 0
+    known_db_total: int = 0
+    frequency_rejects: int = 0
+    word_list_rejects: int = 0
+    script_rejects: int = 0
+    wordset_rejects: int = 0
+    episode_rejects: int = 0
+    duplicate_sentence_rejects: int = 0
+    i_plus_one_rejects: int = 0
+    sentence_length_rejects: int = 0
+    whitelist_force_includes: int = 0
+    no_definition_rejects: int = 0
+    duplicate_expression_rejects: int = 0
+
+
 class EpisodeProcessor:
     """Orchestrate processing of a single episode."""
 
@@ -494,16 +520,6 @@ class EpisodeProcessor:
             return True
         external = self._external_cancel
         return external is not None and external()
-
-    @property
-    def _expression_audio_active(self) -> bool:
-        """Delegating alias for :attr:`AudioStage.expression_audio_active`.
-
-        The gate logic (the two-part Issue #73 gate) lives on the audio stage;
-        this property stays here because ``process_episode`` (band
-        registration) and the tests reach it on the processor.
-        """
-        return self._audio_stage.expression_audio_active
 
     @property
     def _reading_tts_active(self) -> bool:
@@ -961,21 +977,7 @@ class EpisodeProcessor:
         Mutates ``ctx.new_words_found`` and ``ctx.comprehension_percentage``.
         Stages difficulty stats for a successful terminal result.
         """
-        frequency_ranked = 0
-        known_hits = 0
-        known_db_added = 0
-        known_db_total = 0
-        frequency_rejects = 0
-        word_list_rejects = 0
-        script_rejects = 0
-        wordset_rejects = 0
-        episode_rejects = 0
-        duplicate_sentence_rejects = 0
-        i_plus_one_rejects = 0
-        sentence_length_rejects = 0
-        whitelist_force_includes = 0
-        no_definition_rejects = 0
-        duplicate_expression_rejects = 0
+        counts = _Phase2Counts()
 
         # Attach frequency data if available (mutates words in-place). Each word
         # gets the per-source breakdown (frequency_sources) for the card display,
@@ -983,7 +985,7 @@ class EpisodeProcessor:
         # harmonic-mean rank (frequency_harmonic_rank) that drives the sort field.
         if self.frequency_service and self.frequency_service.is_available():
             ranked_count = self._attach_frequency(all_words)
-            frequency_ranked = ranked_count
+            counts.frequency_ranked = ranked_count
             self.presenter.show_info(
                 tr_format(
                     QCoreApplication.translate("EpisodeProcessor", "Frequency data: %1/%2 words ranked"),
@@ -998,68 +1000,7 @@ class EpisodeProcessor:
             2,
             QCoreApplication.translate("EpisodeProcessor", "Filtering against known vocabulary"),
         )
-        if self.config.include_known_words:
-            # "Include everything" mode (set by the e2e harness's no-Anki
-            # mode): skip known-words subtraction entirely — including the
-            # Issue #42 user ignore list — and mine all words that passed
-            # POS/subtype filtering. This intentionally re-cards words the
-            # user already knows.
-            self.presenter.show_info(QCoreApplication.translate("EpisodeProcessor", "Including words already known"))
-            unknown_words = all_words
-        else:
-            # User-curated ignore list (Issue #42): always applied on the normal
-            # mining path, regardless of the use_known_words_db toggle. The DB
-            # object is always present now, but the file may not exist for users
-            # who never added a word — is_available guards.
-            # A locked/raising known_words.db (Manage-Known-Words dialog open, or a
-            # second concurrent run holding the file) must NOT abort the run — the
-            # same T-19 rationale as the guarded writes below. Each read is wrapped;
-            # on failure we drop the user ignore list and fall back to Anki's
-            # existing vocabulary, warning and continuing rather than bubbling the
-            # sqlite3.OperationalError into process_episode's generic except.
-            user_words: set[str] = set()
-            if self.known_word_db and self.known_word_db.is_available():
-                try:
-                    user_words = self.known_word_db.get_words_by_source("user")
-                except (sqlite3.Error, OSError) as e:
-                    logger.warning(
-                        "Could not read the user ignore list from known_words.db (%s); proceeding without it this run.",
-                        e,
-                    )
-
-            if self.config.use_known_words_db and self.known_word_db and self.known_word_db.is_available():
-                try:
-                    known_words = self.known_word_db.get_known_words()
-                    # Sync with Anki to keep DB up to date. Pass the pre-fetched
-                    # ``known_words`` so the DB skips its internal scan; merge the
-                    # diff in-memory below to avoid a post-sync re-read.
-                    anki_vocab = self.anki_service.get_existing_vocabulary()
-                    added, total = self.known_word_db.sync_with_anki(anki_vocab, existing=known_words)
-                    known_db_added = added
-                    known_db_total = total
-                    if added > 0:
-                        self.presenter.show_info(
-                            tr_format(
-                                QCoreApplication.translate(
-                                    "EpisodeProcessor", "Known word DB synced: %1 new words (%2 total)"
-                                ),
-                                added,
-                                total,
-                            )
-                        )
-                        known_words = known_words | (anki_vocab - known_words)
-                except (sqlite3.Error, OSError) as e:
-                    logger.warning(
-                        "Could not access known_words.db (%s); falling back to Anki's "
-                        "existing vocabulary for this run.",
-                        e,
-                    )
-                    known_words = self.anki_service.get_existing_vocabulary()
-            else:
-                known_words = self.anki_service.get_existing_vocabulary()
-
-            unknown_words = self.word_filter.filter_unknown(all_words, known_words | user_words)
-            known_hits = len(all_words) - len(unknown_words)
+        unknown_words = self._phase2_known_words(all_words, counts)
         self.presenter.show_success(
             QCoreApplication.translate("EpisodeProcessor", "%n new word(s) to mine", "", len(unknown_words))
         )
@@ -1121,6 +1062,138 @@ class EpisodeProcessor:
         # basis, so the column and the i+1 filter can never disagree.
         ctx.unknown_lemmas = all_unknown_lemmas
 
+        unknown_words = self._phase2_definition_viability(unknown_words, counts)
+
+        # Whitelist force-include (partition-then-merge). A whitelisted lemma is
+        # a true force-include: it bypasses every optional COVERAGE filter below
+        # (frequency, blacklist, script-type, name-wordsets, reading
+        # occurrence counts, dedup, i+1, sentence-length). Definition viability
+        # already ran above, so force-included words remain subject to it. We
+        # split them out here and merge them back just before the within-run
+        # duplicate collapse.
+        # Gated on bypass_optional_filters so a bypass run — which already
+        # includes everything — is unchanged.
+        forced_include: list[TokenizedWord] = []
+        whitelist_service = self._active_whitelist()
+        if whitelist_service is not None:
+            forced_include, unknown_words = self.word_filter.partition_whitelisted(unknown_words, whitelist_service)
+            counts.whitelist_force_includes = len(forced_include)
+
+        unknown_words = self._phase2_coverage_filters(
+            unknown_words, line_index, all_unknown_lemmas, occurrence_counts, min_occurrence, counts
+        )
+
+        # Merge force-included whitelist words back in before within-run
+        # duplicate collapse. Prepend so a forced word wins its mined_form slot in the
+        # within-run duplicate collapse below (which keeps the first occurrence)
+        # — this makes force-include hold even in the rare cross-lemma homograph
+        # collision (a forced verb's orth_base equal to a distinct noun's
+        # surface). The tradeoff is that the forced word keeps its own parse-time
+        # sentence rather than the collided rest word's (possibly i+1-swapped)
+        # one, which is correct for "mine this word as-is".
+        if forced_include:
+            unknown_words = forced_include + unknown_words
+            self.presenter.show_info(
+                QCoreApplication.translate(
+                    "EpisodeProcessor",
+                    "Whitelist: force-included %n word(s)",
+                    "",
+                    len(forced_include),
+                )
+            )
+
+        unknown_words = self._phase2_collapse_duplicates(unknown_words, counts)
+
+        # Stage the pre-filter comprehension counts. ``_run_pipeline`` commits
+        # them only after the body returns a successful terminal result.
+        ctx.difficulty_total_words = len(all_words)
+        ctx.difficulty_unknown_words = ctx.candidate_words_found
+        ctx.new_words_found = len(unknown_words)
+        log_summary(
+            logger,
+            "Phase 2 filter",
+            **{"in": len(all_words), "out": len(unknown_words), **asdict(counts)},
+        )
+        return unknown_words
+
+    def _phase2_known_words(self, all_words: list[TokenizedWord], counts: _Phase2Counts) -> list[TokenizedWord]:
+        """Phase 2: drop the words the learner already knows; return the rest.
+
+        Known means in Anki, in the known-words DB (synced from Anki first when
+        that DB is on), or on the user ignore list. Fills ``counts.known_hits``
+        and the two ``known_db_*`` counters.
+        """
+        if self.config.include_known_words:
+            # "Include everything" mode (set by the e2e harness's no-Anki
+            # mode): skip known-words subtraction entirely — including the
+            # Issue #42 user ignore list — and mine all words that passed
+            # POS/subtype filtering. This intentionally re-cards words the
+            # user already knows.
+            self.presenter.show_info(QCoreApplication.translate("EpisodeProcessor", "Including words already known"))
+            unknown_words = all_words
+        else:
+            # User-curated ignore list (Issue #42): always applied on the normal
+            # mining path, regardless of the use_known_words_db toggle. The DB
+            # object is always present now, but the file may not exist for users
+            # who never added a word — is_available guards.
+            # A locked/raising known_words.db (Manage-Known-Words dialog open, or a
+            # second concurrent run holding the file) must NOT abort the run — the
+            # same T-19 rationale as the guarded writes below. Each read is wrapped;
+            # on failure we drop the user ignore list and fall back to Anki's
+            # existing vocabulary, warning and continuing rather than bubbling the
+            # sqlite3.OperationalError into process_episode's generic except.
+            user_words: set[str] = set()
+            if self.known_word_db and self.known_word_db.is_available():
+                try:
+                    user_words = self.known_word_db.get_words_by_source("user")
+                except (sqlite3.Error, OSError) as e:
+                    logger.warning(
+                        "Could not read the user ignore list from known_words.db (%s); proceeding without it this run.",
+                        e,
+                    )
+
+            if self.config.use_known_words_db and self.known_word_db and self.known_word_db.is_available():
+                try:
+                    known_words = self.known_word_db.get_known_words()
+                    # Sync with Anki to keep DB up to date. Pass the pre-fetched
+                    # ``known_words`` so the DB skips its internal scan; merge the
+                    # diff in-memory below to avoid a post-sync re-read.
+                    anki_vocab = self.anki_service.get_existing_vocabulary()
+                    added, total = self.known_word_db.sync_with_anki(anki_vocab, existing=known_words)
+                    counts.known_db_added = added
+                    counts.known_db_total = total
+                    if added > 0:
+                        self.presenter.show_info(
+                            tr_format(
+                                QCoreApplication.translate(
+                                    "EpisodeProcessor", "Known word DB synced: %1 new words (%2 total)"
+                                ),
+                                added,
+                                total,
+                            )
+                        )
+                        known_words = known_words | (anki_vocab - known_words)
+                except (sqlite3.Error, OSError) as e:
+                    logger.warning(
+                        "Could not access known_words.db (%s); falling back to Anki's "
+                        "existing vocabulary for this run.",
+                        e,
+                    )
+                    known_words = self.anki_service.get_existing_vocabulary()
+            else:
+                known_words = self.anki_service.get_existing_vocabulary()
+
+            unknown_words = self.word_filter.filter_unknown(all_words, known_words | user_words)
+            counts.known_hits = len(all_words) - len(unknown_words)
+        return unknown_words
+
+    def _phase2_definition_viability(
+        self, unknown_words: list[TokenizedWord], counts: _Phase2Counts
+    ) -> list[TokenizedWord]:
+        """Phase 2: drop the words no offline dictionary can define; return the rest.
+
+        Fills ``counts.no_definition_rejects``.
+        """
         # Offline definition existence filter. Drops words with no entry in any
         # OFFLINE dictionary so the curation dialog never surfaces words that
         # can never become cards (they would otherwise be silently skipped at
@@ -1188,7 +1261,7 @@ class EpisodeProcessor:
             kept_words = [w for w, keep in zip(unknown_words, viable, strict=True) if keep]
             dropped = [w.mined_form for w, keep in zip(unknown_words, viable, strict=True) if not keep]
             unknown_words = kept_words
-            no_definition_rejects = len(dropped)
+            counts.no_definition_rejects = len(dropped)
             if dropped:
                 # The presenter names ten; the log names fifty. Which words the
                 # offline probe rejected is the whole diagnosis when a dictionary
@@ -1215,22 +1288,24 @@ class EpisodeProcessor:
                         more,
                     )
                 )
+        return unknown_words
 
-        # Whitelist force-include (partition-then-merge). A whitelisted lemma is
-        # a true force-include: it bypasses every optional COVERAGE filter below
-        # (frequency, blacklist, script-type, name-wordsets, reading
-        # occurrence counts, dedup, i+1, sentence-length). Definition viability
-        # already ran above, so force-included words remain subject to it. We
-        # split them out here and merge them back just before the within-run
-        # duplicate collapse.
-        # Gated on bypass_optional_filters so a bypass run — which already
-        # includes everything — is unchanged.
-        forced_include: list[TokenizedWord] = []
-        whitelist_service = self._active_whitelist()
-        if whitelist_service is not None:
-            forced_include, unknown_words = self.word_filter.partition_whitelisted(unknown_words, whitelist_service)
-            whitelist_force_includes = len(forced_include)
+    def _phase2_coverage_filters(
+        self,
+        unknown_words: list[TokenizedWord],
+        line_index: list[LineLemmas] | None,
+        all_unknown_lemmas: set[str],
+        occurrence_counts: dict[str, int] | None,
+        min_occurrence: int,
+        counts: _Phase2Counts,
+    ) -> list[TokenizedWord]:
+        """Phase 2: run the coverage filters in order; return the words they keep.
 
+        Frequency band, word lists, script type, name wordsets, the reading
+        occurrence floor, sentence dedup, i+1, then sentence length. Whitelist
+        force-included words never reach here. Fills each filter's reject
+        counter.
+        """
         # Frequency rank band. Gate on an actually-loaded NUMERIC frequency
         # source — NOT just a configured bound, and NOT is_available(). With
         # no source (or only a categorical one, e.g. a JLPT-band dict whose rows
@@ -1256,7 +1331,7 @@ class EpisodeProcessor:
                 keep_unranked=self.config.frequency_keep_unranked,
             )
             filtered_out = before - len(unknown_words)
-            frequency_rejects = filtered_out
+            counts.frequency_rejects = filtered_out
             if filtered_out > 0:
                 self.presenter.show_info(self._frequency_filter_notice(filtered_out, freq_low, freq_high))
         elif (freq_low > 0 or freq_high > 0) and not self.config.bypass_optional_filters:
@@ -1288,7 +1363,7 @@ class EpisodeProcessor:
             before = len(unknown_words)
             unknown_words = self.word_filter.filter_by_word_lists(unknown_words, self.word_list_service)
             filtered_out = before - len(unknown_words)
-            word_list_rejects = filtered_out
+            counts.word_list_rejects = filtered_out
             if filtered_out > 0:
                 self.presenter.show_info(
                     tr_format(
@@ -1314,7 +1389,7 @@ class EpisodeProcessor:
                 **script_options_kwarg(script_options, self.config.language),
             )
             removed = before - len(unknown_words)
-            script_rejects = removed
+            counts.script_rejects = removed
             if removed > 0:
                 kinds = []
                 if self.config.exclude_hiragana_only_words:
@@ -1330,14 +1405,15 @@ class EpisodeProcessor:
                 )
         # Name wordset filter (Issue #59). Drops proper nouns (people/place
         # names) that slipped past the 固有名詞 POS filter because unidic-lite
-        # mistagged them. Force-included whitelist words are already partitioned
-        # out above, so they never reach here. Gated like neighbors so the Deck
-        # Builder corpus preview (bypass_optional_filters) stays in parity.
+        # mistagged them. Force-included whitelist words are partitioned out in
+        # _phase2_filter before this helper runs, so they never reach here. Gated
+        # like neighbors so the Deck Builder corpus preview
+        # (bypass_optional_filters) stays in parity.
         if self.wordset_service and self.wordset_service.is_available() and not self.config.bypass_optional_filters:
             before = len(unknown_words)
             unknown_words = self.word_filter.filter_by_wordsets(unknown_words, self.wordset_service)
             filtered_out = before - len(unknown_words)
-            wordset_rejects = filtered_out
+            counts.wordset_rejects = filtered_out
             if filtered_out > 0:
                 self.presenter.show_info(
                     tr_format(
@@ -1349,12 +1425,13 @@ class EpisodeProcessor:
         # Reading-specific in-document occurrence floor. Runs BEFORE sentence
         # dedup: removing below-floor words first lets a qualifying sentence-mate
         # survive instead of losing the whole sentence to a below-floor first word.
-        # Force-included whitelist words were partitioned out above and merge
-        # back later, so they continue to bypass this coverage filter.
+        # Force-included whitelist words were partitioned out in _phase2_filter
+        # and merge back there after these filters, so they continue to bypass
+        # this coverage filter.
         if occurrence_counts is not None:
             before = len(unknown_words)
             unknown_words = self.word_filter.filter_by_episode_count(unknown_words, occurrence_counts, min_occurrence)
-            episode_rejects += before - len(unknown_words)
+            counts.episode_rejects += before - len(unknown_words)
 
         # Sentence deduplication. i+1 filter does its own sentence picking;
         # dedup would be a no-op (post-i+1 sentences are unique by construction).
@@ -1366,7 +1443,7 @@ class EpisodeProcessor:
             before = len(unknown_words)
             unknown_words = self.word_filter.deduplicate_by_sentence(unknown_words)
             deduped = before - len(unknown_words)
-            duplicate_sentence_rejects = deduped
+            counts.duplicate_sentence_rejects = deduped
             if deduped > 0:
                 self.presenter.show_info(
                     tr_format(
@@ -1388,7 +1465,7 @@ class EpisodeProcessor:
                 unknown_words, line_index or [], all_unknown_lemmas=all_unknown_lemmas
             )
             kept = len(unknown_words)
-            i_plus_one_rejects = before - kept
+            counts.i_plus_one_rejects = before - kept
             pct = (kept / before * 100.0) if before else 0.0
             self.presenter.show_info(
                 tr_format(
@@ -1414,7 +1491,7 @@ class EpisodeProcessor:
                 max_chars=self.config.max_sentence_chars,
             )
             filtered_out = before - len(unknown_words)
-            sentence_length_rejects = filtered_out
+            counts.sentence_length_rejects = filtered_out
             if filtered_out > 0:
                 caps = []
                 if self.config.max_sentence_duration_seconds > 0.0:
@@ -1430,26 +1507,15 @@ class EpisodeProcessor:
                         ", ".join(caps),
                     )
                 )
+        return unknown_words
 
-        # Merge force-included whitelist words back in before within-run
-        # duplicate collapse. Prepend so a forced word wins its mined_form slot in the
-        # within-run duplicate collapse below (which keeps the first occurrence)
-        # — this makes force-include hold even in the rare cross-lemma homograph
-        # collision (a forced verb's orth_base equal to a distinct noun's
-        # surface). The tradeoff is that the forced word keeps its own parse-time
-        # sentence rather than the collided rest word's (possibly i+1-swapped)
-        # one, which is correct for "mine this word as-is".
-        if forced_include:
-            unknown_words = forced_include + unknown_words
-            self.presenter.show_info(
-                QCoreApplication.translate(
-                    "EpisodeProcessor",
-                    "Whitelist: force-included %n word(s)",
-                    "",
-                    len(forced_include),
-                )
-            )
+    def _phase2_collapse_duplicates(
+        self, unknown_words: list[TokenizedWord], counts: _Phase2Counts
+    ) -> list[TokenizedWord]:
+        """Phase 2: keep the first word of each card identity; return the survivors.
 
+        Fills ``counts.duplicate_expression_rejects``.
+        """
         # Within-run duplicate collapse. Exact mined_form collisions mirror
         # Anki's Expression-first-field dedup. Orthographic aliases need a
         # dictionary identity instead: exact-term sequence + contextual reading,
@@ -1483,7 +1549,7 @@ class EpisodeProcessor:
                 collapsed.append(word)
             removed = len(unknown_words) - len(collapsed)
             unknown_words = collapsed
-            duplicate_expression_rejects = removed
+            counts.duplicate_expression_rejects = removed
             if removed:
                 self.presenter.show_info(
                     tr_format(
@@ -1491,35 +1557,6 @@ class EpisodeProcessor:
                         removed,
                     )
                 )
-
-        # Stage the pre-filter comprehension counts. ``_run_pipeline`` commits
-        # them only after the body returns a successful terminal result.
-        ctx.difficulty_total_words = len(all_words)
-        ctx.difficulty_unknown_words = ctx.candidate_words_found
-        ctx.new_words_found = len(unknown_words)
-        log_summary(
-            logger,
-            "Phase 2 filter",
-            **{
-                "in": len(all_words),
-                "out": len(unknown_words),
-                "frequency_ranked": frequency_ranked,
-                "known_hits": known_hits,
-                "known_db_added": known_db_added,
-                "known_db_total": known_db_total,
-                "frequency_rejects": frequency_rejects,
-                "word_list_rejects": word_list_rejects,
-                "script_rejects": script_rejects,
-                "wordset_rejects": wordset_rejects,
-                "episode_rejects": episode_rejects,
-                "duplicate_sentence_rejects": duplicate_sentence_rejects,
-                "i_plus_one_rejects": i_plus_one_rejects,
-                "sentence_length_rejects": sentence_length_rejects,
-                "whitelist_force_includes": whitelist_force_includes,
-                "no_definition_rejects": no_definition_rejects,
-                "duplicate_expression_rejects": duplicate_expression_rejects,
-            },
-        )
         return unknown_words
 
     @staticmethod

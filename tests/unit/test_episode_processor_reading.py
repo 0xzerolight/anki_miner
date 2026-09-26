@@ -827,7 +827,7 @@ def test_expression_audio_after_images(test_config):
     fetcher.stats.return_value = {}
     fetcher.fetch_candidates.side_effect = lambda cands, cancelled_check=None: order.append("fetch") or None
     proc = _make_processor(cfg, subtitle_parser=sp, expression_audio_fetcher=fetcher)
-    assert proc._expression_audio_active is True
+    assert proc._audio_stage.expression_audio_active is True
 
     def _prep(ref, dest, *_args):
         order.append("prep")

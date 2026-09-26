@@ -3,56 +3,20 @@
 import subprocess
 import threading
 import time
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from anki_miner.models import MediaData, TokenizedWord
+from anki_miner.models import MediaData
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.presenters import NullPresenter
 from anki_miner.services.media_extractor import MediaExtractorService
-
-
-def _make_word(lemma="食べる", surface=None, start_time=1.0):
-    return TokenizedWord(
-        surface=surface or f"{lemma}た",
-        lemma=lemma,
-        reading="タベル",
-        sentence=f"{lemma}のテスト",
-        start_time=start_time,
-        end_time=start_time + 2.0,
-        duration=2.0,
-    )
-
-
-def _make_media(prefix="word"):
-    return MediaData(
-        screenshot_path=Path(f"/tmp/{prefix}.jpg"),
-        audio_path=Path(f"/tmp/{prefix}.mp3"),
-        screenshot_filename=f"{prefix}.jpg",
-        audio_filename=f"{prefix}.mp3",
-    )
+from tests.unit._processor_fixtures import make_media as _make_media
+from tests.unit._processor_fixtures import make_word as _make_word
 
 
 class TestEpisodeProcessorCancel:
     """Tests for EpisodeProcessor cancellation between phases."""
-
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
 
     @pytest.fixture
     def processor(self, test_config, mock_services):
@@ -221,22 +185,6 @@ class TestProcessEpisodeCancelEvent:
     processor's phase checkpoints via the cancel_event keyword — NOT via the
     sticky processor.cancel(), which poisons cached processors across runs.
     """
-
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
 
     @pytest.fixture
     def processor(self, test_config, mock_services):
