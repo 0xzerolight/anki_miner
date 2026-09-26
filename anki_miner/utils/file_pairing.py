@@ -7,6 +7,7 @@ from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from anki_miner.utils.episode_matcher import EpisodeMatcher
 from anki_miner.utils.file_utils import is_junk_path
 from anki_miner.utils.logging_ext import suppressed
 
@@ -206,6 +207,11 @@ def is_same_folder(a: Path, b: Path) -> bool:
     return a == b or a.resolve() == b.resolve()
 
 
+def _files_with_suffix(folder: Path, exts: Collection[str]) -> list[Path]:
+    """Files directly in *folder* whose lowercased suffix is in *exts*, skipping junk siblings."""
+    return [f for f in folder.iterdir() if f.is_file() and f.suffix.lower() in exts and not is_junk_path(f.name)]
+
+
 def _attach_secondary(
     pairs: list["FilePair"],
     videos: list[Path],
@@ -226,8 +232,6 @@ def _attach_secondary(
     An episode with no match keeps ``secondary=None`` and mines with an empty
     Translation field — a partial translation set never fails the run.
     """
-    from anki_miner.utils.episode_matcher import EpisodeMatcher
-
     if is_same_folder(secondary_folder, subtitle_folder):
         logger.warning(
             "secondary subtitles: the translation folder is the subtitle folder (%s); no translations attached",
@@ -240,11 +244,7 @@ def _attach_secondary(
     secondary_subs: list[Path] = []
     scanned = False
     with suppressed(logger, f"scanning {secondary_folder} for translation subtitles", level=logging.WARNING):
-        secondary_subs = [
-            f
-            for f in secondary_folder.iterdir()
-            if f.is_file() and f.suffix.lower() in subtitle_exts and not is_junk_path(f.name)
-        ]
+        secondary_subs = _files_with_suffix(secondary_folder, subtitle_exts)
         scanned = True
     _sort_subtitles(secondary_subs, prefer_retimed)
     if not secondary_subs:
@@ -338,8 +338,6 @@ class FilePairMatcher:
         Returns:
             List of FilePair objects matched by episode number
         """
-        from anki_miner.utils.episode_matcher import EpisodeMatcher
-
         video_exts = FilePairMatcher.VIDEO_EXTENSIONS if video_extensions is None else video_extensions
         subtitle_exts = FilePairMatcher.SUBTITLE_EXTENSIONS if subtitle_extensions is None else subtitle_extensions
 
@@ -357,16 +355,8 @@ class FilePairMatcher:
         videos: list[Path] = []
         subtitles: list[Path] = []
         with suppressed(logger, f"scanning {video_folder} and {subtitle_folder} for pairs", level=logging.WARNING):
-            videos = [
-                f
-                for f in video_folder.iterdir()
-                if f.is_file() and f.suffix.lower() in video_exts and not is_junk_path(f.name)
-            ]
-            subtitles = [
-                f
-                for f in subtitle_folder.iterdir()
-                if f.is_file() and f.suffix.lower() in subtitle_exts and not is_junk_path(f.name)
-            ]
+            videos = _files_with_suffix(video_folder, video_exts)
+            subtitles = _files_with_suffix(subtitle_folder, subtitle_exts)
         if not videos or not subtitles:
             return []
 

@@ -6,6 +6,7 @@ gating, the engine-missing guidance, and the in-app alass download button.
 
 from __future__ import annotations
 
+import sys
 import threading
 
 import pytest
@@ -346,9 +347,9 @@ def test_alass_status_installed_when_bundled_without_managed_download(qtbot, tmp
     empty_bin_root = tmp_path / "bin"
     empty_bin_root.mkdir()
 
-    monkeypatch.setattr(alass_resolver.sys, "frozen", True, raising=False)
-    monkeypatch.setattr(alass_resolver.sys, "_MEIPASS", str(meipass), raising=False)
-    monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "_MEIPASS", str(meipass), raising=False)
+    monkeypatch.setattr(sys, "platform", "linux")
     alass_resolver._clear_cache()
 
     panel = SubtitlesSettingsPanel()

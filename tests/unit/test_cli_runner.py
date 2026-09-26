@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import threading
 from dataclasses import replace
+from itertools import product
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -336,3 +337,36 @@ def test_youtube_refused_by_probe_is_failed_item(services, youtube, test_config)
 def test_run_status(statuses: list[str], expected: str) -> None:
     reports = [runner.ItemReport(item=i, kind="episode", input={}, status=s) for i, s in enumerate(statuses)]
     assert runner.run_status(reports, cancelled=False) == expected
+
+
+def _old_run_status(statuses: list[str], *, cancelled: bool) -> str:
+    """Copy of run_status's pre-refactor body — the equivalence reference, not live code."""
+    if cancelled:
+        return "cancelled"
+    succeeded = sum(1 for s in statuses if s == "success")
+    if succeeded == len(statuses):
+        return "success"
+    return "partial" if succeeded else "failed"
+
+
+_ALL_STATUS_COMBOS = [
+    (list(combo), cancelled)
+    for length in range(0, 4)
+    for combo in product(["success", "failed", "cancelled", "skipped"], repeat=length)
+    for cancelled in (True, False)
+]
+
+
+@pytest.mark.parametrize(("statuses", "cancelled"), _ALL_STATUS_COMBOS)
+def test_run_status_matches_old_rule(statuses: list[str], cancelled: bool) -> None:
+    """runner.run_status must match the pre-refactor rule for every status/cancelled combination.
+
+    Exhaustive over both of run_status's inputs (every status string it
+    branches on, at every list length 0-3, crossed with both cancelled
+    values) — not filtered to a claimed-reachable subset. Run once against
+    the unmodified runner.py (this IS the pre-refactor rule, so it passes
+    trivially and proves the parametrization itself is sound) and once
+    after the refactor (the actual equivalence proof).
+    """
+    reports = [runner.ItemReport(item=i, kind="episode", input={}, status=s) for i, s in enumerate(statuses)]
+    assert runner.run_status(reports, cancelled=cancelled) == _old_run_status(statuses, cancelled=cancelled)

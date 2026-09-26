@@ -29,7 +29,7 @@ from typing import Any
 
 import pysubs2
 
-from anki_miner.utils.cjk_encoding import prefers_big5
+from anki_miner.utils.cjk_encoding import decode_tolerating_truncation, prefers_big5
 from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
@@ -420,26 +420,14 @@ def detect_subtitle_encoding(
                 continue
         if _single_byte_leg_fails(head, candidate, script_check):
             continue
-        try:
-            head.decode(candidate)
-        except UnicodeDecodeError as exc:
-            # Compare against ``exc.object``, never ``head``: a BOM-stripping
-            # codec (utf_8_sig, the first leg of every profile ladder) hands
-            # the delegate the bytes AFTER the BOM, so its offsets are relative
-            # to those and can never reach len(head) when a BOM is present.
-            # Keying on head made this whole retry unreachable, and a BOM'd
-            # UTF-8 subtitle with a cut tail got named cp932/windows-1251.
-            if exc.end != len(exc.object):
-                continue  # a genuine invalid byte, not a truncation artifact
-            # The bounded read can cut mid multi-byte sequence right at the
-            # tail; that's an artifact of the bound, not proof this candidate
-            # is wrong. Retry without the truncated tail before giving up on it.
-            try:
-                exc.object[: exc.start].decode(candidate)
-            except UnicodeDecodeError:
-                continue
-        except LookupError:
-            continue  # a ladder entry Python has no codec for
+        # decode_tolerating_truncation compares against exc.object, never head:
+        # a BOM-stripping codec (utf_8_sig, the first leg of every profile
+        # ladder) hands the delegate the bytes AFTER the BOM, so offsets keyed
+        # on head can never reach len(head) when a BOM is present. Keying on
+        # head made this whole retry unreachable, and a BOM'd UTF-8 subtitle
+        # with a cut tail got named cp932/windows-1251.
+        if decode_tolerating_truncation(head, candidate) is None:
+            continue
         return _WHATWG_LABELS.get(candidate)
 
     detected = _detect_encoding(head)
@@ -452,21 +440,13 @@ def _is_japanese_euc_jp_bytes(data: bytes) -> bool:
     """True iff *data* decodes as EUC-JP and contains real Japanese script.
 
     *data* is a caller-owned, already-bounded head (never a full file read —
-    both callers hold one already). EUC-JP is mostly double-byte, so a
-    bounded head can cut mid-character right at the tail; same truncation
-    tolerance as the ladder checks in :func:`detect_subtitle_encoding`, and
-    keyed on ``exc.object`` for the same reason (here euc_jp strips nothing, so
-    it is the same bytes — the spelling is what keeps the two in step).
+    both callers hold one already). Truncation tolerance is shared with
+    :func:`detect_subtitle_encoding`'s ladder via
+    :func:`anki_miner.utils.cjk_encoding.decode_tolerating_truncation`.
     """
-    try:
-        text = data.decode("euc_jp")
-    except UnicodeDecodeError as exc:
-        if exc.end != len(exc.object):
-            return False  # a genuine invalid byte, not a truncation artifact
-        try:
-            text = exc.object[: exc.start].decode("euc_jp")
-        except UnicodeDecodeError:
-            return False
+    text = decode_tolerating_truncation(data, "euc_jp")
+    if text is None:
+        return False
     return any(
         0x3040 <= ord(char) <= 0x30FF
         or 0xFF66 <= ord(char) <= 0xFF9F
