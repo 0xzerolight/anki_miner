@@ -190,3 +190,51 @@ def test_commit_cancel_file_stops_one_run(services, tmp_path, video) -> None:
     assert first["error"] == "CANCELLED" and first["file"] == "result-1.json"
     assert second["ok"] is True
     assert not (tmp_path / "ep-01" / "cancel").exists()
+
+
+def _honours_cancel(services):
+    """A processor that stops when its run's cancel event is set, as the real checkpoints do."""
+
+    def process(*_a, **kw):
+        if kw["cancel_event"].wait(0.5):
+            return ProcessingResult(
+                total_words_found=0,
+                new_words_found=0,
+                cards_created=0,
+                errors=[CANCELLED_ERROR],
+                anki_write_state=AnkiWriteState.NO_NOTE_WRITE,
+            )
+        kw["curation_callback"](services.words())
+        return _ok_result()
+
+    return process
+
+
+def test_prepare_cancel_file_already_there_cancels_that_run(services, tmp_path, video) -> None:
+    # A Windows caller has no signals: it stops queued episodes by creating their cancel files first.
+    (tmp_path / "ep-01").mkdir()
+    (tmp_path / "ep-01" / "cancel").touch()
+    services.processor.process_episode.side_effect = _honours_cancel(services)
+    first, second = runs.prepare_runs(_run_file(tmp_path, video, second=True), threading.Event())
+    assert first["error"] == "CANCELLED" and second["ok"] is True
+    assert not (tmp_path / "ep-01" / "cancel").exists()
+    assert not (tmp_path / "ep-01" / "candidates.json").exists()
+
+
+def test_relative_episode_paths_survive_a_commit_from_another_folder(services, tmp_path, video, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    job = files.parse_run_file(
+        {
+            "schema": 1,
+            "run_dir": ".",
+            "language": "ja",
+            "episodes": [{"run_id": "ep-01", "video_file": "v.mkv", "subtitle_file": "s.srt"}],
+        }
+    )
+    assert runs.prepare_runs(job, threading.Event())[0]["ok"] is True
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+    commit = files.CommitFile(tmp_path.resolve(), (files.CommitRun("ep-01", (files.WordPick("約束"),)),))
+    verdict = runs.commit_runs(commit, threading.Event())[0]
+    assert verdict["ok"] is True, verdict

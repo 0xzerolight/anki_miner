@@ -100,7 +100,8 @@ def test_reset_run_folder_removes_only_api_files(tmp_path: Path) -> None:
         (folder / name).write_text("x", encoding="utf-8")
     (folder / "media").mkdir()
     runfolder.reset_run_folder(folder)
-    assert sorted(p.name for p in folder.iterdir()) == ["notes.txt"]
+    # the caller's pending cancel request stays for the run to act on
+    assert sorted(p.name for p in folder.iterdir()) == ["cancel", "notes.txt"]
 
 
 def test_next_result_path_counts_up(tmp_path: Path) -> None:

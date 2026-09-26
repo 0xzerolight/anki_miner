@@ -28,9 +28,14 @@ _RESULT = re.compile(r"result-(\d+)\.json")
 
 
 def reset_run_folder(folder: Path) -> None:
-    """prepare on an existing run_id replaces it: this API's own files go, anything else stays."""
+    """prepare on an existing run_id replaces it: this API's own files go, anything else stays.
+
+    A ``cancel`` file stays too: it is the caller's request to stop this run
+    (a Windows caller has no signals and cancels queued episodes this way), and
+    the run's CancelWatcher acts on it and then deletes it.
+    """
     folder.mkdir(exist_ok=True)
-    for name in (CANDIDATES, SAVED_RUN, PROGRESS, CANCEL):
+    for name in (CANDIDATES, SAVED_RUN, PROGRESS):
         (folder / name).unlink(missing_ok=True)
     for path in folder.iterdir():
         if _RESULT.fullmatch(path.name):

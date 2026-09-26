@@ -105,8 +105,13 @@ def _run_id(value: object, where: str) -> str:
     return run_id
 
 
+def _abs(value: str) -> Path:
+    """An input path made absolute against the caller's working folder."""
+    return Path(value).expanduser().resolve()
+
+
 def _path(value: str | None) -> Path | None:
-    return Path(value).expanduser() if value is not None else None
+    return _abs(value) if value is not None else None
 
 
 @dataclass(frozen=True)
@@ -141,20 +146,27 @@ class Episode:
 def parse_episode(raw: object, where: str) -> Episode:
     obj = _object(raw, where)
     _keys(obj, _EPISODE_KEYS, _EPISODE_REQUIRED, where)
+    video_file = _abs(_str(obj["video_file"], f"{where}.video_file"))
+    subtitle_file = _abs(_str(obj["subtitle_file"], f"{where}.subtitle_file"))
+    secondary = _path(_opt_str(obj.get("secondary_subtitle_file"), f"{where}.secondary_subtitle_file"))
+    # The saved episode keeps the resolved paths: commit may run from another folder.
+    resolved = {"video_file": str(video_file), "subtitle_file": str(subtitle_file)}
+    if secondary is not None:
+        resolved["secondary_subtitle_file"] = str(secondary)
     return Episode(
         run_id=_run_id(obj["run_id"], f"{where}.run_id"),
-        video_file=Path(_str(obj["video_file"], f"{where}.video_file")).expanduser(),
-        subtitle_file=Path(_str(obj["subtitle_file"], f"{where}.subtitle_file")).expanduser(),
+        video_file=video_file,
+        subtitle_file=subtitle_file,
         subtitle_offset=_opt_float(obj.get("subtitle_offset"), f"{where}.subtitle_offset"),
         audio_track_override=_opt_int(obj.get("audio_track_override"), f"{where}.audio_track_override"),
         source_label_override=_opt_str(obj.get("source_label_override"), f"{where}.source_label_override"),
-        secondary_subtitle_file=_path(_opt_str(obj.get("secondary_subtitle_file"), f"{where}.secondary_subtitle_file")),
+        secondary_subtitle_file=secondary,
         secondary_subtitle_offset=_opt_float(obj.get("secondary_subtitle_offset"), f"{where}.secondary_subtitle_offset")
         or 0.0,
         series_name_override=_opt_str(obj.get("series_name_override"), f"{where}.series_name_override"),
         episode_name_override=_opt_str(obj.get("episode_name_override"), f"{where}.episode_name_override"),
         tags=_opt_str(obj.get("tags"), f"{where}.tags") or "",
-        raw=dict(obj),
+        raw={**obj, **resolved},
     )
 
 
