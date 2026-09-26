@@ -275,26 +275,12 @@ class SubtitleCreationTab(_ToolTabBase):
         out_desc.setWordWrap(True)
         layout.addWidget(out_desc)
 
-        # Output location row
-        out_row = QHBoxLayout()
-        out_row.setSpacing(SPACING.xs)
-        out_label = QLabel(self.tr("Output:"))
-        out_row.addWidget(out_label)
-
-        self.output_location_label = QLabel(self._strings.output_default)
-        self.output_location_label.setObjectName("output-location-value")
-        out_row.addWidget(self.output_location_label, 1)
-
-        self.choose_output_button = ModernButton(self.tr("Choose Folder…"), variant="secondary")
-        self.choose_output_button.clicked.connect(self._on_choose_output)
-        out_row.addWidget(self.choose_output_button)
-
-        self.clear_output_button = ModernButton(self.tr("Reset"), variant="secondary")
-        self.clear_output_button.clicked.connect(self._on_clear_output)
-        self.clear_output_button.hide()
-        out_row.addWidget(self.clear_output_button)
-
-        layout.addLayout(out_row)
+        self._build_output_row(
+            layout,
+            output_label=self.tr("Output:"),
+            choose_label=self.tr("Choose Folder…"),
+            reset_label=self.tr("Reset"),
+        )
 
         # Overwrite checkbox
         # Deliberately NOT persisted. Off-by-default each launch is the safety

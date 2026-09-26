@@ -11,9 +11,11 @@ launcher stay subclass responsibilities.
 
 Subclass contract — a subclass MUST provide, before any hoisted slot runs:
   * instance attrs ``worker_thread``, ``_custom_output_dir``, ``_cancelled``,
-    ``output_location_label``, ``clear_output_button``, ``cancel_button``,
-    ``progress_widget``, ``log_widget`` (the last two via
+    ``cancel_button``, ``progress_widget``, ``log_widget`` (the last two via
     :meth:`_create_progress_section`);
+  * ``output_location_label`` / ``choose_output_button`` / ``clear_output_button``
+    via :meth:`_build_output_row` (a tool with no output folder, Manga OCR,
+    never builds or reads them);
   * ``self._primary_button`` — the tool's action button (set when building the
     Actions section);
   * ``self._strings`` — a :class:`_ToolTabStrings` built in the SUBCLASS via
@@ -32,8 +34,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterator
 
-from PyQt6.QtWidgets import QFrame, QLabel, QScrollArea, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
+from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import file_dialogs, session_state
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
@@ -109,6 +112,7 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
     _custom_output_dir: Path | None
     _cancelled: bool
     output_location_label: QLabel
+    choose_output_button: ModernButton
     clear_output_button: ModernButton
     cancel_button: ModernButton
     progress_widget: ProgressWidget
@@ -260,6 +264,39 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         self._custom_output_dir = None
         self.output_location_label.setText(self._strings.output_default)
         self.clear_output_button.hide()
+
+    def _build_output_row(
+        self,
+        layout: QVBoxLayout,
+        *,
+        output_label: str,
+        choose_label: str,
+        reset_label: str,
+    ) -> None:
+        """Add the Output row: caption, current folder, Choose Folder…, and a hidden Reset.
+
+        The three captions come from the caller's ``self.tr(...)``, so each keeps
+        the calling tab's tr-context (see the module docstring). The row starts on
+        ``self._strings.output_default`` and is driven by the two slots above.
+        """
+        out_row = QHBoxLayout()
+        out_row.setSpacing(SPACING.xs)
+        out_row.addWidget(QLabel(output_label))
+
+        self.output_location_label = QLabel(self._strings.output_default)
+        self.output_location_label.setObjectName("output-location-value")
+        out_row.addWidget(self.output_location_label, 1)
+
+        self.choose_output_button = ModernButton(choose_label, variant="secondary")
+        self.choose_output_button.clicked.connect(self._on_choose_output)
+        out_row.addWidget(self.choose_output_button)
+
+        self.clear_output_button = ModernButton(reset_label, variant="secondary")
+        self.clear_output_button.clicked.connect(self._on_clear_output)
+        self.clear_output_button.hide()
+        out_row.addWidget(self.clear_output_button)
+
+        layout.addLayout(out_row)
 
     # ------------------------------------------------------------------
     # Run lifecycle
