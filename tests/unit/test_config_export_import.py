@@ -440,3 +440,40 @@ class TestImportErrors:
     def test_missing_file_raises_oserror(self, tmp_path):
         with pytest.raises(OSError):
             GUIConfigManager.import_config(tmp_path / "nope.json", AnkiMinerConfig())
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        pytest.param([1], ([1], None, False), id="non-dict"),
+        pytest.param({"theme": "dark"}, ({"theme": "dark"}, None, False), id="flat-no-marker"),
+        pytest.param(
+            {"theme": "dark", "config_schema_version": 3},
+            ({"theme": "dark", "config_schema_version": 3}, 3, False),
+            id="flat-marker",
+        ),
+        pytest.param(
+            {"config_schema_version": True}, ({"config_schema_version": True}, None, False), id="flat-bool-marker"
+        ),
+        pytest.param(
+            {"anki_miner_settings": 1, "config_schema_version": 2, "app_version": "2.8.1", "settings": {"a": 1}},
+            ({"a": 1}, 2, False),
+            id="envelope-marker-beats-app-version",
+        ),
+        pytest.param(
+            {"anki_miner_settings": 1, "config_schema_version": "2", "settings": {}},
+            ({}, None, False),
+            id="envelope-non-int-marker",
+        ),
+        pytest.param({"anki_miner_settings": 1, "app_version": "2.8.1", "settings": {}}, ({}, 1, False), id="2.8.1"),
+        pytest.param({"anki_miner_settings": 1, "app_version": "2.8.2", "settings": {}}, ({}, 1, False), id="2.8.2"),
+        pytest.param({"anki_miner_settings": 1, "app_version": "2.8.3", "settings": {}}, ({}, 2, True), id="2.8.3"),
+        pytest.param(
+            {"anki_miner_settings": 1, "app_version": "3.0.0", "settings": {}}, ({}, None, False), id="unknown-app"
+        ),
+        pytest.param({"anki_miner_settings": 1}, (None, None, False), id="envelope-without-settings"),
+    ],
+)
+def test_import_provenance_reads_marker_then_legacy_app_version(raw, expected):
+    """The schema a settings file was written under, and where its settings live."""
+    assert GUIConfigManager._import_provenance(raw) == expected

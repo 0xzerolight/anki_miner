@@ -754,26 +754,7 @@ class GUIConfigManager:
         with path.open("r", encoding="utf-8") as f:
             raw = json.load(f)
 
-        data = raw
-        source_schema: int | None = None
-        conservative_283_mapping = False
-        if isinstance(raw, dict) and cls._EXPORT_MARKER in raw:
-            data = raw.get("settings")
-            if "config_schema_version" in raw:
-                marker = raw.get("config_schema_version")
-                if isinstance(marker, int) and not isinstance(marker, bool):
-                    source_schema = marker
-            else:
-                app_version = raw.get("app_version")
-                if app_version in {"2.8.1", "2.8.2"}:
-                    source_schema = 1
-                elif app_version == "2.8.3":
-                    source_schema = 2
-                    conservative_283_mapping = True
-        elif isinstance(raw, dict):
-            marker = raw.get("config_schema_version")
-            if isinstance(marker, int) and not isinstance(marker, bool):
-                source_schema = marker
+        data, source_schema, conservative_283_mapping = cls._import_provenance(raw)
         if not isinstance(data, dict):
             raise ValueError("Not a settings file: expected a JSON object of config fields")
 
@@ -798,26 +779,8 @@ class GUIConfigManager:
         excluded = cls.machine_specific_fields()
         incoming = {k: v for k, v in incoming.items() if k not in excluded}
 
-        invalid_fields: list[str] = []
-        validated: dict[str, Any] = {}
-        hints = typing.get_type_hints(AnkiMinerConfig)
-        for key, value in incoming.items():
-            valid, converted = cls._decode_value(value, hints[key])
-            if valid:
-                validated[key] = converted
-            else:
-                invalid_fields.append(key)
-        incoming = validated
-
-        # Sub-key overlay for the two mapping fields: a present dict merges
-        # onto the current mapping (file wins per sub-key, unlisted sub-keys
-        # keep current); a non-dict value is dropped so current is kept.
-        for key in ("anki_fields", "card_type_marker_fields"):
-            value = incoming.get(key)
-            if isinstance(value, dict):
-                incoming[key] = {**dict(getattr(current_config, key)), **value}
-            elif key in incoming:
-                del incoming[key]
+        incoming, invalid_fields = cls._validate_incoming(incoming)
+        cls._overlay_mapping_fields(incoming, current_config)
 
         notices: list[str] = []
         if legacy_ytdlp_forced:
@@ -844,6 +807,66 @@ class GUIConfigManager:
             invalid_fields=invalid_fields,
             notices=notices,
         )
+
+    @classmethod
+    def _import_provenance(cls, raw: Any) -> tuple[Any, int | None, bool]:
+        """Split a parsed settings file into ``(data, source schema, 2.8.3 flag)``.
+
+        An export envelope carries its settings under ``settings``; a flat dict
+        (a raw gui_config.json) is its own settings. The source schema is the
+        ``config_schema_version`` marker when the file has one (an exact int,
+        never a bool). An envelope without that key predates the marker, so its
+        ``app_version`` stands in: 2.8.1 and 2.8.2 wrote schema 1, and 2.8.3 is
+        mapped conservatively to schema 2, which the flag reports as a notice.
+        ``data`` is returned unchecked; the caller rejects a non-dict.
+        """
+        if not isinstance(raw, dict):
+            return raw, None, False
+        is_envelope = cls._EXPORT_MARKER in raw
+        if is_envelope and "config_schema_version" not in raw:
+            app_version = raw.get("app_version")
+            if app_version in {"2.8.1", "2.8.2"}:
+                return raw.get("settings"), 1, False
+            if app_version == "2.8.3":
+                return raw.get("settings"), 2, True
+            return raw.get("settings"), None, False
+        marker = raw.get("config_schema_version")
+        source_schema = marker if isinstance(marker, int) and not isinstance(marker, bool) else None
+        return (raw.get("settings") if is_envelope else raw), source_schema, False
+
+    @classmethod
+    def _validate_incoming(cls, incoming: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+        """Type-check imported fields into ``(converted valid fields, invalid names)``.
+
+        Unlike :meth:`_decode_field_types` on the load path, which swaps an
+        invalid value for the dataclass default, an import drops the field so
+        the current value survives the overlay, and reports its name.
+        """
+        validated: dict[str, Any] = {}
+        invalid_fields: list[str] = []
+        hints = typing.get_type_hints(AnkiMinerConfig)
+        for key, value in incoming.items():
+            valid, converted = cls._decode_value(value, hints[key])
+            if valid:
+                validated[key] = converted
+            else:
+                invalid_fields.append(key)
+        return validated, invalid_fields
+
+    @staticmethod
+    def _overlay_mapping_fields(incoming: dict[str, Any], current_config: AnkiMinerConfig) -> None:
+        """Sub-key overlay for the two mapping fields, in place.
+
+        A present dict merges onto the current mapping (file wins per sub-key,
+        unlisted sub-keys keep current); a non-dict value is dropped so current
+        is kept.
+        """
+        for key in ("anki_fields", "card_type_marker_fields"):
+            value = incoming.get(key)
+            if isinstance(value, dict):
+                incoming[key] = {**dict(getattr(current_config, key)), **value}
+            elif key in incoming:
+                del incoming[key]
 
     @staticmethod
     def _migrate_dictionary_chain(data: dict[str, Any]) -> dict[str, Any]:
