@@ -9,14 +9,17 @@ parametrized per task; the per-task files keep only their task-specific tests (p
 resolution, the Vulkan acoustic+VAD pair, the ASR-model failure-text/name-forwarding checks).
 
 The ASR-model download task has no cancel-during-install-suppression case: its own test file
-never had one (its install call is a single synchronous call with no progress hook), so none is
-added here — this module moves existing coverage, it does not extend it.
+never had one, so none is added here — this module moves existing coverage, it does not extend
+it. (That case is a pre-run cancel in every task anyway: ``InstallWorker.run()`` checks
+``check_cancelled()`` before calling the task, so a cancel set beforehand — as this test does —
+never reaches the install call it patches to raise. It is kept as its own parametrized case,
+alongside ``test_cancel_before_run_skips_install``, because that is what each original file had.)
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
@@ -44,7 +47,7 @@ class TaskCase:
     patch_targets: tuple[str, ...]
     error_cls: type[Exception]
     error_message: str
-    has_cancel_during_suppress: bool = field(default=True)
+    has_cancel_during_suppress: bool = True
 
 
 TASKS = [
@@ -192,7 +195,12 @@ def test_cancel_event_passed_to_install(qapp, tmp_path, monkeypatch, task):
 
 @pytest.mark.parametrize("task", CANCEL_DURING_TASKS, ids=CANCEL_DURING_IDS)
 def test_cancel_during_install_suppresses_result(qapp, tmp_path, monkeypatch, task):
-    """A failure raised after cancel() emits no result_ready."""
+    """A failure raised after cancel() emits no result_ready.
+
+    The cancel lands before run()'s pre-task check_cancelled(), so this exercises the same
+    pre-run cancel path as test_cancel_before_run_skips_install (the raising install is never
+    reached); it is kept as a separate case because that is how each original file had it.
+    """
     _patch_first_raises(monkeypatch, task)
     worker = task.build_worker(tmp_path)
     worker.cancel()
