@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from unittest.mock import patch
 
@@ -11,44 +10,7 @@ import pytest
 pytest.importorskip("PyQt6.QtCore")
 
 from anki_miner.gui.workers.import_worker import ImportWorker
-
-# ---------------------------------------------------------------------------
-# Pack-building helpers (inline — mirrors test_audio_pack_importer.py)
-# ---------------------------------------------------------------------------
-
-
-def _make_forvo_pack(directory: Path, n_entries: int = 2) -> Path:
-    """Create a minimal Forvo-format audio pack under *directory*."""
-    speakers = ["alice", "bob"]
-    words = ["食べる", "飲む", "走る", "見る"]
-    for i in range(n_entries):
-        speaker = speakers[i % len(speakers)]
-        word = words[i % len(words)]
-        speaker_dir = directory / speaker
-        speaker_dir.mkdir(parents=True, exist_ok=True)
-        (speaker_dir / f"{word}.mp3").touch()
-    return directory
-
-
-def _make_ajt_pack(directory: Path, n_entries: int = 2) -> Path:
-    """Create a minimal AJT-format audio pack under *directory*."""
-    media_dir = directory / "media"
-    media_dir.mkdir(parents=True, exist_ok=True)
-    headwords: dict = {}
-    files_meta: dict = {}
-    words = ["食べる", "飲む", "走る", "見る", "来る"]
-    for i in range(n_entries):
-        word = words[i % len(words)]
-        fname = f"word_{i}.mp3"
-        (media_dir / fname).touch()
-        headwords.setdefault(word, []).append(fname)
-        files_meta[fname] = {"kana_reading": f"reading_{i}", "pitch_number": str(i)}
-    (directory / "index.json").write_text(
-        json.dumps({"headwords": headwords, "files": files_meta}),
-        encoding="utf-8",
-    )
-    return directory
-
+from tests.unit._audio_packs import make_ajt_pack, make_forvo_pack
 
 # ---------------------------------------------------------------------------
 # Success path
@@ -56,7 +18,7 @@ def _make_ajt_pack(directory: Path, n_entries: int = 2) -> Path:
 
 
 def test_import_emits_finished(tmp_path: Path, qapp):
-    pack = _make_forvo_pack(tmp_path / "forvo_pack")
+    pack = make_forvo_pack(tmp_path / "forvo_pack")
     dest = tmp_path / "dicts"
     worker = ImportWorker.for_pack(pack, dest)
 
@@ -73,7 +35,7 @@ def test_import_emits_finished(tmp_path: Path, qapp):
 
 
 def test_import_finished_meta_contains_expected_keys(tmp_path: Path, qapp):
-    pack = _make_forvo_pack(tmp_path / "forvo_pack")
+    pack = make_forvo_pack(tmp_path / "forvo_pack")
     dest = tmp_path / "dicts"
     worker = ImportWorker.for_pack(pack, dest)
 
@@ -93,7 +55,7 @@ def test_import_finished_meta_contains_expected_keys(tmp_path: Path, qapp):
 
 
 def test_import_finished_progress_strings_observed(tmp_path: Path, qapp):
-    pack = _make_ajt_pack(tmp_path / "ajt_pack")
+    pack = make_ajt_pack(tmp_path / "ajt_pack")
     dest = tmp_path / "dicts"
     worker = ImportWorker.for_pack(pack, dest)
 
@@ -111,7 +73,7 @@ def test_import_finished_progress_strings_observed(tmp_path: Path, qapp):
 
 
 def test_import_correct_args_pack_id_override(tmp_path: Path, qapp):
-    pack = _make_ajt_pack(tmp_path / "ajt_pack")
+    pack = make_ajt_pack(tmp_path / "ajt_pack")
     dest = tmp_path / "dicts"
     worker = ImportWorker.for_pack(pack, dest, pack_id="custom-id")
 
@@ -125,7 +87,7 @@ def test_import_correct_args_pack_id_override(tmp_path: Path, qapp):
 
 
 def test_import_correct_args_dest_root(tmp_path: Path, qapp):
-    pack = _make_forvo_pack(tmp_path / "forvo_pack")
+    pack = make_forvo_pack(tmp_path / "forvo_pack")
     dest = tmp_path / "my_audio_dest"
     worker = ImportWorker.for_pack(pack, dest)
 
@@ -140,7 +102,7 @@ def test_import_correct_args_dest_root(tmp_path: Path, qapp):
 
 def test_import_overwrite_passthrough(tmp_path: Path, qapp):
     """overwrite=True should be forwarded to the importer."""
-    pack = _make_ajt_pack(tmp_path / "ajt_pack")
+    pack = make_ajt_pack(tmp_path / "ajt_pack")
     dest = tmp_path / "dicts"
 
     # First import
@@ -186,7 +148,7 @@ def test_setup_error_emits_failed(tmp_path: Path, qapp):
 
 def test_setup_error_no_import_finished(tmp_path: Path, qapp):
     """SetupError (already-exists) must not emit import_finished."""
-    pack = _make_ajt_pack(tmp_path / "pack")
+    pack = make_ajt_pack(tmp_path / "pack")
     dest = tmp_path / "dists"
 
     worker1 = ImportWorker.for_pack(pack, dest)
@@ -209,7 +171,7 @@ def test_setup_error_no_import_finished(tmp_path: Path, qapp):
 
 
 def test_unexpected_exception_emits_failed(tmp_path: Path, qapp):
-    pack = _make_ajt_pack(tmp_path / "pack")
+    pack = make_ajt_pack(tmp_path / "pack")
     dest = tmp_path / "dists"
 
     with patch(
@@ -236,7 +198,7 @@ def test_unexpected_exception_emits_failed(tmp_path: Path, qapp):
 
 
 def test_cancel_aborts_import(tmp_path: Path, qapp):
-    pack = _make_ajt_pack(tmp_path / "pack")
+    pack = make_ajt_pack(tmp_path / "pack")
     dest = tmp_path / "dicts"
 
     worker = ImportWorker.for_pack(pack, dest)
@@ -261,7 +223,7 @@ def test_cancel_aborts_import(tmp_path: Path, qapp):
 
 
 def test_cancel_before_run_no_import_finished(tmp_path: Path, qapp):
-    pack = _make_forvo_pack(tmp_path / "forvo_pack")
+    pack = make_forvo_pack(tmp_path / "forvo_pack")
     dest = tmp_path / "dicts"
 
     worker = ImportWorker.for_pack(pack, dest)

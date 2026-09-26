@@ -12,7 +12,6 @@ Covers:
 from __future__ import annotations
 
 import contextlib
-import json
 import logging
 import threading
 from dataclasses import replace
@@ -26,6 +25,7 @@ from PyQt6.QtWidgets import QMessageBox, QProgressDialog
 from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.widgets.settings_tab import SettingsTab
+from tests.unit._audio_packs import make_ajt_pack, make_forvo_pack
 
 
 def _run_scan_sync(work, on_done, on_error, *, pass_cancel_check=False):
@@ -33,44 +33,6 @@ def _run_scan_sync(work, on_done, on_error, *, pass_cancel_check=False):
         on_done(work(lambda: False) if pass_cancel_check else work())
     except Exception as exc:  # noqa: BLE001
         on_error(str(exc))
-
-
-# ---------------------------------------------------------------------------
-# Pack-building helpers
-# ---------------------------------------------------------------------------
-
-
-def _make_forvo_pack(directory: Path, n_entries: int = 2) -> Path:
-    """Create a minimal Forvo-format audio pack under *directory*."""
-    speakers = ["alice", "bob"]
-    words = ["食べる", "飲む", "走る", "見る"]
-    for i in range(n_entries):
-        speaker = speakers[i % len(speakers)]
-        word = words[i % len(words)]
-        speaker_dir = directory / speaker
-        speaker_dir.mkdir(parents=True, exist_ok=True)
-        (speaker_dir / f"{word}.mp3").touch()
-    return directory
-
-
-def _make_ajt_pack(directory: Path, n_entries: int = 2) -> Path:
-    """Create a minimal AJT-format audio pack under *directory*."""
-    media_dir = directory / "media"
-    media_dir.mkdir(parents=True, exist_ok=True)
-    headwords: dict = {}
-    files_meta: dict = {}
-    words = ["食べる", "飲む", "走る", "見る", "来る"]
-    for i in range(n_entries):
-        word = words[i % len(words)]
-        fname = f"word_{i}.mp3"
-        (media_dir / fname).touch()
-        headwords.setdefault(word, []).append(fname)
-        files_meta[fname] = {"kana_reading": f"reading_{i}", "pitch_number": str(i)}
-    (directory / "index.json").write_text(
-        json.dumps({"headwords": headwords, "files": files_meta}),
-        encoding="utf-8",
-    )
-    return directory
 
 
 # ---------------------------------------------------------------------------
@@ -324,7 +286,7 @@ class TestAddPackSingleHappyPath:
     def test_worker_called_and_chain_updated_on_success(self, tab, monkeypatch, stub_worker, tmp_path):
         pack_dir = tmp_path / "forvo_pack"
         pack_dir.mkdir()
-        _make_forvo_pack(pack_dir)
+        make_forvo_pack(pack_dir)
 
         monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(pack_dir)))
         _capture_warnings(monkeypatch)
@@ -356,7 +318,7 @@ class TestAddPackSingleHappyPath:
     def test_new_pack_inserted_before_jpod101(self, tab, monkeypatch, stub_worker, tmp_path):
         pack_dir = tmp_path / "forvo_pack"
         pack_dir.mkdir()
-        _make_forvo_pack(pack_dir)
+        make_forvo_pack(pack_dir)
 
         monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(pack_dir)))
         _capture_warnings(monkeypatch)
@@ -382,7 +344,7 @@ class TestAddPackSingleHappyPath:
     def test_failed_single_pack_shows_warning(self, tab, monkeypatch, stub_worker, tmp_path):
         pack_dir = tmp_path / "forvo_pack"
         pack_dir.mkdir()
-        _make_forvo_pack(pack_dir)
+        make_forvo_pack(pack_dir)
 
         monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(pack_dir)))
         _capture_warnings(monkeypatch)
@@ -408,7 +370,7 @@ class TestAddPackSingleHappyPath:
     def test_cancelled_single_pack_shows_summary_after_native_finish(self, tab, monkeypatch, stub_worker, tmp_path):
         pack_dir = tmp_path / "forvo_pack"
         pack_dir.mkdir()
-        _make_forvo_pack(pack_dir)
+        make_forvo_pack(pack_dir)
         monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(pack_dir)))
         infos = _capture_infos(monkeypatch)
         _capture_warnings(monkeypatch)
@@ -440,10 +402,10 @@ class TestAddPackMultiPack:
         parent.mkdir()
         pack_a = parent / "forvo"
         pack_a.mkdir()
-        _make_forvo_pack(pack_a)
+        make_forvo_pack(pack_a)
         pack_b = parent / "ajt"
         pack_b.mkdir()
-        _make_ajt_pack(pack_b)
+        make_ajt_pack(pack_b)
 
         monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(parent)))
         infos = _capture_infos(monkeypatch)
@@ -511,10 +473,10 @@ class TestAddPackMultiPack:
         parent.mkdir()
         pack_a = parent / "forvo"
         pack_a.mkdir()
-        _make_forvo_pack(pack_a)
+        make_forvo_pack(pack_a)
         pack_b = parent / "ajt"
         pack_b.mkdir()
-        _make_ajt_pack(pack_b)
+        make_ajt_pack(pack_b)
 
         monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(parent)))
         infos = _capture_infos(monkeypatch)
@@ -554,10 +516,10 @@ class TestAddPackMultiPack:
         parent.mkdir()
         pack_a = parent / "forvo"
         pack_a.mkdir()
-        _make_forvo_pack(pack_a)
+        make_forvo_pack(pack_a)
         pack_b = parent / "ajt"
         pack_b.mkdir()
-        _make_ajt_pack(pack_b)
+        make_ajt_pack(pack_b)
 
         monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(parent)))
         infos = _capture_infos(monkeypatch)
@@ -593,7 +555,7 @@ class TestAddPackMultiPack:
 
 class TestReimportPack:
     def test_reimport_refused_while_mining_active(self, tab, monkeypatch, stub_worker, tmp_path):
-        pack_dir = _make_forvo_pack(tmp_path / "forvo_pack")
+        pack_dir = make_forvo_pack(tmp_path / "forvo_pack")
         monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(pack_dir)))
         monkeypatch.setattr(tab.audio_panel, "request_resource_release", lambda: False, raising=False)
         warnings = _capture_warnings(monkeypatch)
@@ -609,7 +571,7 @@ class TestReimportPack:
     def test_reimport_uses_repair_worker_and_pack_id(self, tab, monkeypatch, stub_worker, tmp_path):
         pack_dir = tmp_path / "forvo_pack"
         pack_dir.mkdir()
-        _make_forvo_pack(pack_dir)
+        make_forvo_pack(pack_dir)
 
         monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(pack_dir)))
         _capture_infos(monkeypatch)
@@ -630,7 +592,7 @@ class TestReimportPack:
     def test_reimport_success_refreshes_panel_no_chain_change(self, tab, monkeypatch, stub_worker, tmp_path):
         pack_dir = tmp_path / "forvo_pack"
         pack_dir.mkdir()
-        _make_forvo_pack(pack_dir)
+        make_forvo_pack(pack_dir)
 
         monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(pack_dir)))
         infos = _capture_infos(monkeypatch)
@@ -833,7 +795,7 @@ class TestAddPackPriorityOrdering:
 
         forvo_dir = parent / "forvo_files"
         forvo_dir.mkdir()
-        _make_forvo_pack(forvo_dir)
+        make_forvo_pack(forvo_dir)
 
         nhk16_dir = parent / "nhk16_files"
         nhk16_dir.mkdir()
@@ -876,7 +838,7 @@ class TestAddPackPriorityOrdering:
 
         forvo_dir = parent / "forvo_files"
         forvo_dir.mkdir()
-        _make_forvo_pack(forvo_dir)
+        make_forvo_pack(forvo_dir)
 
         nhk16_dir = parent / "nhk16_files"
         nhk16_dir.mkdir()
@@ -885,7 +847,7 @@ class TestAddPackPriorityOrdering:
         # shinmeikai8 uses AJT format
         shinmeikai8_dir = parent / "shinmeikai8_files"
         shinmeikai8_dir.mkdir()
-        _make_ajt_pack(shinmeikai8_dir)
+        make_ajt_pack(shinmeikai8_dir)
 
         monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(parent)))
         _capture_infos(monkeypatch)
@@ -926,7 +888,7 @@ class TestAddPackPriorityOrdering:
 
         forvo_dir = parent / "forvo_files"
         forvo_dir.mkdir()
-        _make_forvo_pack(forvo_dir)
+        make_forvo_pack(forvo_dir)
 
         nhk16_dir = parent / "nhk16_files"
         nhk16_dir.mkdir()
@@ -1057,7 +1019,7 @@ def _explode(*_args, **_kwargs):
 
 class TestReimportAll:
     def test_rebuilds_a_folder_pack_from_its_recorded_dir(self, tab, monkeypatch, stub_worker, tmp_path):
-        pack_dir = _make_forvo_pack(tmp_path / "forvo_src")
+        pack_dir = make_forvo_pack(tmp_path / "forvo_src")
         _install_pack_slot(tab.config.audio_packs_root, "forvo", pack_dir=pack_dir)
         tab.audio_panel.set_chain((AudioSourceEntry(kind="pack", pack_id="forvo", enabled=True),))
         _capture_infos(monkeypatch)
@@ -1126,7 +1088,7 @@ class TestReimportAll:
         from the chain before the repair batch ran. A chain that still has
         packs — just not the one that was asked for — reads differently from
         a chain with nothing in it."""
-        pack_dir = _make_forvo_pack(tmp_path / "forvo_src")
+        pack_dir = make_forvo_pack(tmp_path / "forvo_src")
         _install_pack_slot(tab.config.audio_packs_root, "forvo", pack_dir=pack_dir)
         tab.audio_panel.set_chain((AudioSourceEntry(kind="pack", pack_id="forvo", enabled=True),))
         infos = _capture_infos(monkeypatch)
@@ -1139,7 +1101,7 @@ class TestReimportAll:
         stub_worker.repair_factory.assert_not_called()
 
     def test_refuses_while_resources_are_held(self, tab, monkeypatch, stub_worker, tmp_path):
-        pack_dir = _make_forvo_pack(tmp_path / "forvo_src")
+        pack_dir = make_forvo_pack(tmp_path / "forvo_src")
         _install_pack_slot(tab.config.audio_packs_root, "forvo", pack_dir=pack_dir)
         tab.audio_panel.set_chain((AudioSourceEntry(kind="pack", pack_id="forvo", enabled=True),))
         monkeypatch.setattr(tab.audio_panel, "request_resource_release", lambda: False, raising=False)
@@ -1156,7 +1118,7 @@ class TestReimportAll:
         missed fire strands the chain, a double fire runs a family twice."""
         _capture_infos(monkeypatch)
         _capture_warnings(monkeypatch)
-        pack_dir = _make_forvo_pack(tmp_path / "forvo_src")
+        pack_dir = make_forvo_pack(tmp_path / "forvo_src")
         _install_pack_slot(tab.config.audio_packs_root, "forvo", pack_dir=pack_dir)
 
         if scenario == "nothing_to_do":
@@ -1175,7 +1137,7 @@ class TestReimportAll:
         assert calls == [1]
 
     def test_success_refreshes_the_panel_once_and_leaves_the_chain(self, tab, monkeypatch, stub_worker, tmp_path):
-        pack_dir = _make_forvo_pack(tmp_path / "forvo_src")
+        pack_dir = make_forvo_pack(tmp_path / "forvo_src")
         _install_pack_slot(tab.config.audio_packs_root, "forvo", pack_dir=pack_dir)
         tab.audio_panel.set_chain((AudioSourceEntry(kind="pack", pack_id="forvo", enabled=True),))
         infos = _capture_infos(monkeypatch)
