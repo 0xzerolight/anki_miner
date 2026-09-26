@@ -44,6 +44,7 @@ from anki_miner.orchestration import EpisodeProcessor
 from anki_miner.orchestration.episode_processor import require_usable_offline_provider
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.asr.model_availability import usable_model_installed
+from anki_miner.services.definition_service import DefinitionService
 from anki_miner.services.reading import detector
 from anki_miner.services.resource_staleness import stale_resource_reimport_error
 from anki_miner.services.stats_service import StatsService
@@ -208,6 +209,36 @@ def run_status(reports: Sequence[ItemReport], *, cancelled: bool) -> str:
 # ---- the run -----------------------------------------------------------------
 
 
+def check_environment(config: AnkiMinerConfig, *, youtube: bool = False) -> None:
+    """Run-level checks before any service is built (stale index, language pack, yt-dlp)."""
+    stale = stale_resource_reimport_error(config)
+    if stale is not None:
+        raise SetupFailure(stale)
+    # The mining language's engine pack (zh, ko, spaCy languages, ...): the
+    # same probe the GUI asks, so a missing pack refuses the run once instead
+    # of failing every item with a raw ModuleNotFoundError.
+    probe = get_profile(config_language(config)).unavailable_reason
+    reason = probe() if probe is not None else None
+    if reason:
+        raise SetupFailure(reason)
+    if youtube and not ytdlp_available(config):
+        raise SetupFailure(
+            "yt-dlp is not installed. Open Anki Miner, go to Video -> YouTube and install it, then try again."
+        )
+
+
+def check_card_target(
+    config: AnkiMinerConfig, anki_service: AnkiService, definition_service: DefinitionService
+) -> None:
+    """Card target, then a usable offline dictionary. AnkiConnectionError propagates unwrapped."""
+    preflight = queue_preflight_error(
+        anki_service.verify_card_target,
+        partial(require_usable_offline_provider, config, definition_service),
+    )
+    if preflight is not None:
+        raise SetupFailure(preflight)
+
+
 class MiningRun:
     """Mine a list of jobs in order with one processor and one set of services."""
 
@@ -220,20 +251,7 @@ class MiningRun:
 
     def run(self, jobs: Sequence[Job]) -> list[ItemReport]:
         """Mine every job; raise :class:`SetupFailure` if a run-level check fails first."""
-        stale = stale_resource_reimport_error(self._config)
-        if stale is not None:
-            raise SetupFailure(stale)
-        # The mining language's engine pack (zh, ko, spaCy languages, ...): the
-        # same probe the GUI asks, so a missing pack refuses the run once instead
-        # of failing every item with a raw ModuleNotFoundError.
-        probe = get_profile(config_language(self._config)).unavailable_reason
-        reason = probe() if probe is not None else None
-        if reason:
-            raise SetupFailure(reason)
-        if any(isinstance(job, YouTubeJob) for job in jobs) and not ytdlp_available(self._config):
-            raise SetupFailure(
-                "yt-dlp is not installed. Open Anki Miner, go to Video -> YouTube and install it, then try again."
-            )
+        check_environment(self._config, youtube=any(isinstance(job, YouTubeJob) for job in jobs))
         anki_service = AnkiService(self._config)
         shared = create_shared_lookup_services(self._config)
         try:
@@ -242,14 +260,9 @@ class MiningRun:
             for message in shared.load_result.warnings:
                 self._presenter.show_warning(message)
             try:
-                preflight = queue_preflight_error(
-                    anki_service.verify_card_target,
-                    partial(require_usable_offline_provider, self._config, shared.definition_service),
-                )
+                check_card_target(self._config, anki_service, shared.definition_service)
             except AnkiConnectionError as exc:
                 raise SetupFailure(str(exc)) from exc
-            if preflight is not None:
-                raise SetupFailure(preflight)
             processor = create_episode_processor(
                 self._config,
                 self._presenter,

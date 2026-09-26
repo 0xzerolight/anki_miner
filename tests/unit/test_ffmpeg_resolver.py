@@ -251,3 +251,14 @@ class TestResolutionLogging:
 
         assert "ffmpeg resolved: tier=literal path=ffmpeg" in caplog.text
         assert "ffprobe resolved: tier=literal path=ffprobe" in caplog.text
+
+
+def test_binary_available(tmp_path, monkeypatch) -> None:
+    from anki_miner.utils.ffmpeg_resolver import binary_available
+
+    monkeypatch.setattr("shutil.which", lambda name: None)
+    assert binary_available("ffprobe") is False
+    exe = tmp_path / "ffprobe"
+    exe.touch()
+    assert binary_available(str(exe)) is True
+    assert binary_available(str(tmp_path / "missing")) is False

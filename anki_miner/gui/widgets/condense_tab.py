@@ -26,7 +26,6 @@ Worker contract:
 from __future__ import annotations
 
 import logging
-import shutil
 from collections.abc import Callable, Collection
 from dataclasses import replace
 from pathlib import Path
@@ -67,7 +66,7 @@ from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.audio_tagger import TrackMetadata, prefill_track_metadata
 from anki_miner.utils import list_audio_streams
 from anki_miner.utils.audio_track_detector import list_subtitle_streams, matches_language_tag
-from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
+from anki_miner.utils.ffmpeg_resolver import binary_available, resolve_ffmpeg, resolve_ffprobe
 from anki_miner.utils.file_pairing import FilePairMatcher, resolve_output_path
 from anki_miner.utils.file_utils import bounded_output_name, is_junk_path, safe_filename
 from anki_miner.utils.i18n import tr_format
@@ -571,10 +570,7 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
     @staticmethod
     def _binary_available(resolved: str) -> bool:
         """Return whether *resolved* (a PATH literal or explicit path) is reachable."""
-        if resolved in ("ffmpeg", "ffprobe"):
-            # PATH fallback literal — check shutil.which.
-            return shutil.which(resolved) is not None
-        return Path(resolved).exists()
+        return binary_available(resolved)
 
     # ------------------------------------------------------------------
     # Mode toggle

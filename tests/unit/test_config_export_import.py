@@ -477,3 +477,12 @@ class TestImportErrors:
 def test_import_provenance_reads_marker_then_legacy_app_version(raw, expected):
     """The schema a settings file was written under, and where its settings live."""
     assert GUIConfigManager._import_provenance(raw) == expected
+
+
+def test_export_config_extra_keys_sit_beside_settings(tmp_path, test_config) -> None:
+    out = tmp_path / "s.json"
+    GUIConfigManager.export_config(test_config, out, extra={"configured": False})
+    data = json.loads(out.read_text(encoding="utf-8"))
+    assert data["configured"] is False and "settings" in data
+    # still importable through Settings: the extra key is ignored
+    assert GUIConfigManager.import_config(out, test_config).config.anki_deck_name == test_config.anki_deck_name

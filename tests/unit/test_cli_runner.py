@@ -370,3 +370,28 @@ def test_run_status_matches_old_rule(statuses: list[str], cancelled: bool) -> No
     """
     reports = [runner.ItemReport(item=i, kind="episode", input={}, status=s) for i, s in enumerate(statuses)]
     assert runner.run_status(reports, cancelled=cancelled) == _old_run_status(statuses, cancelled=cancelled)
+
+
+# ---- shared preflight (the --api runs use it too) --------------------------
+
+
+def test_check_environment_is_the_runs_first_gate(test_config) -> None:
+    with (
+        patch.object(runner, "stale_resource_reimport_error", return_value="Re-import JMdict"),
+        pytest.raises(runner.SetupFailure, match="Re-import"),
+    ):
+        runner.check_environment(test_config)
+
+
+def test_check_card_target_lets_connection_errors_through(test_config) -> None:
+    anki = MagicMock()
+    anki.verify_card_target.side_effect = AnkiConnectionError("Cannot connect to AnkiConnect")
+    with pytest.raises(AnkiConnectionError):
+        runner.check_card_target(test_config, anki, MagicMock())
+
+
+def test_check_card_target_setup_error_is_setup_failure(test_config) -> None:
+    anki = MagicMock()
+    anki.verify_card_target.side_effect = SetupError("Deck 'X' is not in Anki")
+    with pytest.raises(runner.SetupFailure, match="Deck 'X'"):
+        runner.check_card_target(test_config, anki, MagicMock())

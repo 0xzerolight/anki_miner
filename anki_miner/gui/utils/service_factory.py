@@ -1041,6 +1041,9 @@ def create_episode_processor(
     subtitle_parser: SubtitleParserService | None = None,
     anki_service: AnkiService | None = None,
     shared_lookup: SharedLookupServices | None = None,
+    *,
+    with_known_words_db: bool = True,
+    run_temp_root: Path | None = None,
 ) -> EpisodeProcessor:
     """Create an EpisodeProcessor with all required services.
 
@@ -1059,6 +1062,10 @@ def create_episode_processor(
             :func:`create_services`). When provided the processor is built with
             ``owns_lookup_services=False`` so its ``close()`` leaves the
             bundle's sqlite handles for the owning worker's ``finally``.
+        with_known_words_db: False leaves known_words.db alone (no mined-word
+            writes): the ``--api`` callers keep their own record.
+        run_temp_root: Where each run's temp folder is created (see
+            ``EpisodeProcessor``); ``None`` is the system temp dir.
 
     Returns:
         Configured EpisodeProcessor instance
@@ -1083,7 +1090,7 @@ def create_episode_processor(
         presenter=presenter,
         pitch_accent_service=services.pitch_accent_service,
         frequency_service=services.frequency_service,
-        known_word_db=services.known_word_db,
+        known_word_db=services.known_word_db if with_known_words_db else None,
         word_list_service=services.word_list_service,
         wordset_service=services.wordset_service,
         stats_service=stats_service,
@@ -1099,6 +1106,7 @@ def create_episode_processor(
         # one profile instance (the registry caches per code, so they would
         # anyway — passing it keeps the composition root the single resolver).
         profile=get_profile(config_language(config)),
+        run_temp_root=run_temp_root,
     )
 
 
