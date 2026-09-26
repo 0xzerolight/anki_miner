@@ -147,7 +147,7 @@ def test_ffmpeg_available_via_path_check(qtbot, tmp_path):
     with (
         patch("anki_miner.gui.widgets.condense_tab.resolve_ffmpeg", return_value="ffmpeg"),
         patch("anki_miner.gui.widgets.condense_tab.resolve_ffprobe", return_value="ffprobe"),
-        patch("anki_miner.gui.widgets.condense_tab.shutil.which", return_value="/usr/bin/x"),
+        patch("anki_miner.utils.ffmpeg_resolver.shutil.which", return_value="/usr/bin/x"),
     ):
         tab = CondenseTab(config)
         assert tab._availability_worker.wait(3000)
@@ -162,7 +162,7 @@ def test_ffmpeg_unavailable_via_path_check(qtbot, tmp_path):
     with (
         patch("anki_miner.gui.widgets.condense_tab.resolve_ffmpeg", return_value="ffmpeg"),
         patch("anki_miner.gui.widgets.condense_tab.resolve_ffprobe", return_value="ffprobe"),
-        patch("anki_miner.gui.widgets.condense_tab.shutil.which", return_value=None),
+        patch("anki_miner.utils.ffmpeg_resolver.shutil.which", return_value=None),
     ):
         tab = CondenseTab(config)
         assert tab._availability_worker.wait(3000)

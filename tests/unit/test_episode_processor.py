@@ -6849,3 +6849,44 @@ def test_expression_audio_curation_fn_delegates_to_the_audio_stage(test_config):
     proc._audio_stage.curation_fetch_fn = sentinel
 
     assert proc.expression_audio_curation_fn is sentinel
+
+
+def test_run_temp_root_keeps_the_run_folder_inside_it(test_config, mock_services, tmp_path):
+    """An API run keeps its temp media inside its own run folder (run_temp_root)."""
+    processor = build_processor(test_config, run_temp_root=tmp_path / "media", **mock_services)
+    folder = processor._allocate_run_temp_folder()
+    assert folder.parent == tmp_path / "media"
+
+
+def test_run_temp_root_default_is_the_system_temp(test_config, mock_services):
+    import tempfile
+    from pathlib import Path
+
+    folder = build_processor(test_config, **mock_services)._allocate_run_temp_folder()
+    try:
+        assert folder.parent == Path(tempfile.gettempdir())
+    finally:
+        folder.rmdir()
+
+
+def test_phase3_records_cut_failures_per_word(test_config, mock_services, tmp_path):
+    """Per-word media_missing: the mapped cuts each word came out without."""
+    import time
+
+    from anki_miner.orchestration.episode_processor import _EpisodeContext
+
+    processor = build_processor(test_config, **mock_services)
+    assert processor.last_media_missing == {}
+    a, b = make_word("猫"), make_word("犬")
+    mock_services["media_extractor"].extract_media_batch.return_value = [(a, MediaData(audio_path=tmp_path / "a.opus"))]
+    ctx = _EpisodeContext(
+        start_time=time.time(),
+        video_file_str=str(tmp_path / "v.mkv"),
+        subtitle_file_str=str(tmp_path / "s.ass"),
+        episode_name="ep01",
+        series_name="TestSeries",
+        source_label="TestSeries — ep01",
+    )
+    processor._phase3_extract(ctx, tmp_path / "v.mkv", [a, b], None, tmp_path)
+    # test_config maps picture and audio; "a" lost its screenshot, "b" was dropped entirely.
+    assert processor.last_media_missing == {a.mined_form: ["picture"], b.mined_form: ["picture", "audio"]}

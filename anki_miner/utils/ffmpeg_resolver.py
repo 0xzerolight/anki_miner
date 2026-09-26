@@ -16,13 +16,14 @@ that existing subprocess tests assert (``cmd[0] == "ffmpeg"``).
 """
 
 import logging
+import shutil
 from pathlib import Path
 from typing import Any
 
 from anki_miner.utils.bundled_binary import bundled_name, executable_file, frozen_state
 from anki_miner.utils.resolver_log import log_resolution, log_resolution_refused
 
-__all__ = ["resolve_ffmpeg", "resolve_ffprobe"]
+__all__ = ["binary_available", "resolve_ffmpeg", "resolve_ffprobe"]
 
 logger = logging.getLogger(__name__)
 
@@ -97,3 +98,14 @@ def resolve_ffmpeg(config) -> str:
 def resolve_ffprobe(config) -> str:
     """Resolve the ffprobe executable path/literal for the given config."""
     return _resolve("ffprobe", getattr(config, "ffprobe_location", None))
+
+
+def binary_available(resolved: str) -> bool:
+    """Whether a ``resolve_ffmpeg``/``resolve_ffprobe`` answer points at a program.
+
+    The resolvers never report "missing": they fall back to the bare name, so a
+    bare name is looked up on PATH and anything else must exist.
+    """
+    if resolved in ("ffmpeg", "ffprobe"):
+        return shutil.which(resolved) is not None
+    return Path(resolved).exists()

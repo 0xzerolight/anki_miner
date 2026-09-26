@@ -277,3 +277,69 @@ def test_python_dash_m_version_subprocess(tmp_path: Path) -> None:
     assert proc.returncode == 0, proc.stderr.decode(errors="replace")
     [line] = proc.stdout.decode("ascii").splitlines()
     assert json.loads(line)["status"] == "success"
+
+
+def _hold(path: Path):
+    from PyQt6.QtCore import QLockFile
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lock = QLockFile(str(path))
+    assert lock.tryLock(0)
+    return lock
+
+
+def test_busy_when_window_runs_past_the_warning(booted, fake_run, out, tmp_path: Path) -> None:
+    # A window started past "already running" holds no instance.lock, only its marker.
+    from anki_miner.gui.app import WINDOW_MARKER_PREFIX
+
+    marker = _hold(config_paths.ANKI_MINER_HOME / f"{WINDOW_MARKER_PREFIX}{os.getpid()}.lock")
+    try:
+        assert entry.main(_pair(tmp_path)) == 3
+    finally:
+        marker.unlock()
+    result = out()[-1]
+    assert result["status"] == "busy" and "window is open" in result["error"]
+    # instance.lock was released on the way out
+    _hold(config_paths.ANKI_MINER_HOME / "instance.lock").unlock()
+
+
+def test_busy_names_another_run(booted, fake_run, out, tmp_path: Path) -> None:
+    # instance.lock held with no live window marker: every window holds one, so it is a run.
+    held = _hold(config_paths.ANKI_MINER_HOME / "instance.lock")
+    try:
+        assert entry.main(_pair(tmp_path)) == 3
+    finally:
+        held.unlock()
+    assert "command-line or API run" in out()[-1]["error"]
+
+
+def test_hold_window_marker_is_seen_by_a_run(booted, fake_run, out, tmp_path: Path) -> None:
+    from anki_miner.gui.app import _hold_window_marker
+
+    config_paths.ANKI_MINER_HOME.mkdir(parents=True, exist_ok=True)
+    marker = _hold_window_marker(config_paths.ANKI_MINER_HOME)
+    assert marker is not None
+    try:
+        assert entry.main(_pair(tmp_path)) == 3
+    finally:
+        marker.unlock()
+    assert "window is open" in out()[-1]["error"]
+
+
+def test_stale_window_marker_is_cleared(booted, fake_run, out, tmp_path: Path) -> None:
+    # A crashed window leaves its marker behind; its PID is gone, so it must not block.
+    from anki_miner.gui.app import WINDOW_MARKER_PREFIX
+
+    home = config_paths.ANKI_MINER_HOME
+    home.mkdir(parents=True, exist_ok=True)
+    marker = home / f"{WINDOW_MARKER_PREFIX}999999.lock"
+    code = (
+        "import os, sys\n"
+        "from PyQt6.QtCore import QLockFile\n"
+        "lock = QLockFile(sys.argv[1]); assert lock.tryLock(0)\n"
+        "os._exit(0)\n"  # exit without unlocking: the file stays, its PID dies
+    )
+    subprocess.run([sys.executable, "-c", code, str(marker)], cwd=REPO_ROOT, check=True, timeout=60)
+    assert marker.exists()
+    assert entry.main(_pair(tmp_path)) == 0
+    assert not marker.exists()

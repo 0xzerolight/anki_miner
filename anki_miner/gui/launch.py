@@ -29,7 +29,7 @@ FFSUBSYNC_CHILD_FLAG = "--ffsubsync-child"
 # here for the same reason as the ffsubsync flag: this is the bundle's only entry
 # script. A literal, not an import (the cli package pulls in services and Qt);
 # a test pins it equal to anki_miner.cli.entry.COMMANDS.
-CLI_COMMANDS = frozenset({"mine", "version"})
+CLI_COMMANDS = frozenset({"mine", "version", "--api"})
 
 _CA_ENV_VARS = ("REQUESTS_CA_BUNDLE", "SSL_CERT_FILE", "CURL_CA_BUNDLE")
 # Module + line number form an exact source coordinate against the version in
@@ -47,6 +47,11 @@ _LOG_DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
 # backup; it duplicates the literal instead of importing this module, and a
 # test pins the two equal.
 CHILD_LOG_NAME = "anki_miner.child.log"
+
+# The ``--api`` process's own log: it may run while the window owns
+# anki_miner.log, so it never writes there. ``diagnostics/bundle.py`` collects
+# it by the same duplicated literal.
+API_LOG_NAME = "anki_miner.api.log"
 
 # Thread name is useless here — every child line comes from its MainThread —
 # so the pid takes that column instead: one sync run spawns a child per
@@ -166,8 +171,17 @@ def _install_early_crash_sink() -> None:
     _EARLY_EXCEPTHOOK_INSTALLED = True
 
 
-def _install_child_log_sink() -> None:
+def _install_child_log_sink(
+    file_name: str = CHILD_LOG_NAME,
+    *,
+    level: int = logging.WARNING,
+    max_bytes: int = _CHILD_LOG_MAX_BYTES,
+) -> None:
     """Give the supervised ffsubsync child a log sink of its own.
+
+    The ``--api`` process uses the same sink under its own name
+    (:data:`API_LOG_NAME`), at INFO and with a larger ring: its log is the only
+    record of a run nobody watched.
 
     The child returns from ``main()`` before ``_install_early_crash_sink()``,
     so without this it logs nowhere: a child that dies before writing its JSON
@@ -198,17 +212,17 @@ def _install_child_log_sink() -> None:
         home = Path(home_value) if home_value else _default_anki_miner_home()
         home.mkdir(parents=True, exist_ok=True)
         handler = RotatingFileHandler(
-            home / CHILD_LOG_NAME,
-            maxBytes=_CHILD_LOG_MAX_BYTES,
+            home / file_name,
+            maxBytes=max_bytes,
             backupCount=_CHILD_LOG_BACKUP_COUNT,
             encoding="utf-8",
             errors="backslashreplace",
             delay=True,
         )
-        handler.setLevel(logging.WARNING)
+        handler.setLevel(level)
         handler.setFormatter(logging.Formatter(_CHILD_LOG_FORMAT, datefmt=_LOG_DATE_FORMAT))
         handler._anki_miner_child_sink = True  # type: ignore[attr-defined]
-        root.setLevel(logging.WARNING)
+        root.setLevel(level)
         root.addHandler(handler)
 
         from anki_miner.utils.log_hooks import install_process_log_hooks

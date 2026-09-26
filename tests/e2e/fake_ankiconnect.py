@@ -134,6 +134,11 @@ class FakeAnkiConnect:
                 return len(self._notes)
             return sum(1 for n in self._notes.values() if n["deckName"] == deck)
 
+    def notes(self, deck: str | None = None) -> list[dict[str, str]]:
+        """Field values of the notes in ``deck`` (or all), by field name — a test-side read-back."""
+        with self._lock:
+            return [dict(n["fields"]) for n in self._notes.values() if deck is None or n["deckName"] == deck]
+
     # ----- protocol -------------------------------------------------------
 
     def _envelope(self, payload: dict) -> dict:

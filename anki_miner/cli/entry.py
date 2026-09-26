@@ -39,10 +39,13 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+#: Selects the two-call API (``cli/api``, API.md) instead of the JSON Lines CLI.
+API_FLAG = "--api"
+
 #: First-argument words that select the CLI. Mirrored as a literal in
 #: ``gui/launch.py`` (which must not import this package at boot); a test pins
 #: the two equal.
-COMMANDS = frozenset({"mine", "version"})
+COMMANDS = frozenset({"mine", "version", API_FLAG})
 
 EXIT_OK = 0
 EXIT_FAILED = 1
@@ -62,15 +65,17 @@ _EXIT_BY_STATUS = {
     "cancelled": EXIT_CANCELLED,
 }
 
-_BUSY_MESSAGE = (
-    "Anki Miner is already running (its window, or another command-line run). "
-    "Close it or wait for the other run to finish, then try again."
-)
+_WINDOW_OPEN_MESSAGE = "The Anki Miner window is open. Close it, then try again."
+_OTHER_RUN_MESSAGE = "Another Anki Miner command-line or API run is working. Wait for it to finish, then try again."
 _NOT_SET_UP_MESSAGE = "Anki Miner has no saved settings yet. Open Anki Miner once and finish setup, then try again."
 
 
 class _UsageError(Exception):
     pass
+
+
+class Busy(Exception):
+    """Another Anki Miner process is using the user's home; the message says which."""
 
 
 class _Parser(argparse.ArgumentParser):
@@ -108,6 +113,11 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     """Run one command; the last stdout line is always its ``result`` event."""
     args_list = list(sys.argv[1:] if argv is None else argv)
+    if args_list[:1] == [API_FLAG]:
+        from anki_miner.cli import api
+
+        _install_api_log()
+        return api.main(args_list[1:])
     with _private_stdout() as write:
         sink = EventSink(write=write)
         try:
@@ -139,9 +149,10 @@ def _mine(args: argparse.Namespace, sink: EventSink) -> int:
         return _finish(sink, "usage_error", str(exc))
 
     _prepare_process()
-    lock = _acquire_lock()
-    if lock is None:
-        return _finish(sink, "busy", _BUSY_MESSAGE)
+    try:
+        lock = acquire_run_lock()
+    except Busy as exc:
+        return _finish(sink, "busy", str(exc))
     try:
         if not _settings_exist():
             return _finish(sink, "setup_error", _NOT_SET_UP_MESSAGE)
@@ -325,20 +336,50 @@ def _prepare_process() -> None:
     ensure_asr_pack_on_syspath()
 
 
-def _acquire_lock() -> QLockFile | None:
-    """The GUI's own single-instance lock, or None when someone else holds it."""
-    from anki_miner.gui.app import _acquire_instance_lock
+def acquire_run_lock() -> QLockFile:
+    """The GUI's single-instance lock, refused while any window or another run is open.
+
+    Every window holds its own marker (gui/app.py WINDOW_MARKER_PREFIX), so a
+    live marker means a window is open even when it runs without instance.lock;
+    with none live, a held instance.lock can only be another run. A dead
+    process's marker is reclaimed by tryLock and removed.
+    """
+    from anki_miner.gui.app import WINDOW_MARKER_PREFIX, _acquire_instance_lock
 
     home = config_paths.ANKI_MINER_HOME
     home.mkdir(parents=True, exist_ok=True)  # QLockFile cannot lock inside a missing directory
-    lock, proceed = _acquire_instance_lock(home / "instance.lock", lambda: False)
-    return lock if proceed else None
+    # Probe every marker (no short-circuit), so each stale one is cleared on the way.
+    live_windows = [path for path in home.glob(f"{WINDOW_MARKER_PREFIX}*.lock") if _held(path)]
+    if live_windows:
+        raise Busy(_WINDOW_OPEN_MESSAGE)
+    lock, _proceed = _acquire_instance_lock(home / "instance.lock", lambda: False)
+    if lock is None:
+        raise Busy(_OTHER_RUN_MESSAGE)
+    return lock
+
+
+def _held(path: Path) -> bool:
+    """Whether a live process holds the lock file *path*; a dead one's file is removed."""
+    from PyQt6.QtCore import QLockFile
+
+    probe = QLockFile(str(path))
+    if probe.tryLock(0):
+        probe.unlock()  # removes the file
+        return False
+    return True
 
 
 def _settings_exist() -> bool:
     """Whether Anki Miner was ever set up (load_config silently falls back to defaults)."""
     config_file = GUIConfigManager.CONFIG_FILE
     return config_file.exists() or config_file.with_name(config_file.name + ".bak").exists()
+
+
+def _install_api_log() -> None:
+    """The API's own log file (anki_miner.api.log): it may run while nothing holds the lock."""
+    from anki_miner.gui import launch
+
+    launch._install_child_log_sink(launch.API_LOG_NAME, level=logging.INFO, max_bytes=5 * 1024 * 1024)
 
 
 def _start_log(log_path: Path) -> None:

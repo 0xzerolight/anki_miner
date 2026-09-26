@@ -690,13 +690,14 @@ class GUIConfigManager:
         }
 
     @classmethod
-    def export_config(cls, config: AnkiMinerConfig, path: Path) -> None:
+    def export_config(cls, config: AnkiMinerConfig, path: Path, *, extra: Mapping[str, object] | None = None) -> None:
         """Write a portable settings export to ``path``.
 
         The payload is an envelope ``{"anki_miner_settings": 1, "app_version":
         ..., "config_schema_version": ..., "settings": {...}}`` whose
         ``settings`` dict is the normal gui_config.json serialization minus
-        :meth:`machine_specific_fields`.
+        :meth:`machine_specific_fields`. ``extra`` adds envelope keys beside
+        ``settings`` (the API's ``configured``); import ignores them.
 
         Raises:
             OSError: If the file cannot be written.
@@ -711,6 +712,7 @@ class GUIConfigManager:
             cls._EXPORT_MARKER: 1,
             "app_version": __version__,
             "config_schema_version": cls.CONFIG_SCHEMA_VERSION,
+            **(extra or {}),
             "settings": settings,
         }
 

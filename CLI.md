@@ -2,6 +2,8 @@
 
 Other programs can mine with an installed Anki Miner by running it with a `mine` command. The run uses the user's own Anki Miner settings (mining language, deck, note type, filters, dictionaries) and prints one JSON object per line, so a calling tool can follow progress and read the result.
 
+For a two-call prepare/commit API where the calling program picks the words, see API.md.
+
 Requirements: Anki is running with the AnkiConnect add-on, and Anki Miner has been set up once (its window has saved settings).
 
 ## Where the executable is
@@ -71,7 +73,7 @@ Item `status` is `success`, `failed`, `cancelled` or `skipped` (not reached afte
 | `failed` | 1 | Every item failed. |
 | `error` | 1 | Internal error; details are in Anki Miner's log. |
 | `usage_error` | 2 | Bad arguments, a missing file or folder, no pairs matched, or an unsupported URL. |
-| `busy` | 3 | The Anki Miner window or another command-line run is open. |
+| `busy` | 3 | An Anki Miner window or another command-line or API run is open. |
 | `setup_error` | 4 | Nothing was mined: Anki Miner was never set up, the mining language's pack is missing, AnkiConnect is unreachable, the deck or note type is wrong, there is no offline dictionary, a dictionary needs re-importing, or yt-dlp is missing. |
 | `cancelled` | 130 | Stopped by SIGINT/SIGTERM. |
 
@@ -81,7 +83,7 @@ Item `status` is `success`, `failed`, `cancelled` or `skipped` (not reached afte
 
 - stderr carries free-form diagnostics and the output of child processes such as ffmpeg. Read it or send it to `DEVNULL`; an unread stderr pipe can fill up and stall the run.
 - The word curator never opens. Every word that passes the user's filters is mined, even when "Review words before mining" is on.
-- Only one Anki Miner process runs at a time. While the Anki Miner window or another command-line run is open, the command exits with `busy`. Run jobs one after another.
+- Only one Anki Miner process runs at a time. While the Anki Miner window (including one opened past its "already running" warning) or another command-line run is open, the command exits with `busy`, and `error` says which. Run jobs one after another.
 - Nothing is retried automatically. Check `retryable` and run the item again if it is true.
 - YouTube needs yt-dlp, which the app installs the first time it is used (Video → YouTube).
 - To cancel, send SIGINT or SIGTERM on Linux and macOS; the run stops at its next step and reports `cancelled`. On Windows, terminate the process. Notes already added to Anki stay.

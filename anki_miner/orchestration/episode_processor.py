@@ -372,6 +372,7 @@ class EpisodeProcessor:
         owns_lookup_services: bool = True,
         *,
         profile: LanguageProfile | None = None,
+        run_temp_root: Path | None = None,
     ):
         """Initialize the episode processor.
 
@@ -427,8 +428,15 @@ class EpisodeProcessor:
                 candidate ladder and the phase-5 render hooks. ``None``
                 resolves it from ``config.language``, which is what every
                 pre-existing construction site (and every test) gets.
+            run_temp_root: Where each run's temp folder is created. ``None``
+                (every caller but the ``--api`` runs) is the system temp dir;
+                the API passes a folder inside its caller-owned run folder.
         """
         self.config = config
+        self._run_temp_root = run_temp_root
+        #: Per mined_form of this run's phase-3 words, the mapped cuts
+        #: ("picture", "audio") that produced no file. Reset per run.
+        self.last_media_missing: dict[str, list[str]] = {}
         # Resolved, not required: every existing caller builds this positionally
         # or by the create_episode_processor kwargs, and ja is the only profile
         # until Stage 2.
@@ -682,7 +690,11 @@ class EpisodeProcessor:
             run_dir.mkdir(parents=True, exist_ok=True)
             return run_dir
 
-        return Path(tempfile.mkdtemp(prefix="anki_miner_"))
+        # An API run keeps its temp media inside its own run folder, so a killed
+        # call leaves nothing elsewhere; every other caller passes None (system temp).
+        if self._run_temp_root is not None:
+            self._run_temp_root.mkdir(parents=True, exist_ok=True)
+        return Path(tempfile.mkdtemp(prefix="anki_miner_", dir=self._run_temp_root))
 
     def _make_cancelled_result(
         self,
@@ -1653,6 +1665,23 @@ class EpisodeProcessor:
 
         self._audio_stage.fetch_expression_audio(media_results, progress_callback)
 
+        # Which mapped cut each word came out without (the API's per-word
+        # media_missing). A word extract_media_batch dropped lost every cut.
+        # Expression audio is not a cut: a word no source has is not "missing".
+        produced = {word.mined_form: media for word, media in media_results}
+        wants_picture = picture_mapped and not audio_only
+        self.last_media_missing = {
+            word.mined_form: [
+                name
+                for name, wanted, path in (
+                    ("picture", wants_picture, getattr(produced.get(word.mined_form), "screenshot_path", None)),
+                    ("audio", audio_mapped, getattr(produced.get(word.mined_form), "audio_path", None)),
+                )
+                if wanted and path is None
+            ]
+            for word in unknown_words
+        }
+
         log_summary(
             logger,
             "Phase 3 extract",
@@ -2288,6 +2317,7 @@ class EpisodeProcessor:
         #   answer is NO_NOTE_WRITE. create_cards_batch escalates it from here
         #   and never resets it, so this reset is the mining-pipeline boundary (D30).
         self._reset_run_write_state()
+        self.last_media_missing = {}
 
         self.check_resource_staleness()
         try:
@@ -3589,6 +3619,7 @@ class EpisodeProcessor:
         fetcher = self._youtube_fetcher
 
         self._reset_run_write_state()
+        self.last_media_missing = {}
         start_time = time.time()
         receipt = self._run_receipt_fields(
             kind="youtube",

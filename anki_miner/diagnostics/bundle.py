@@ -55,6 +55,10 @@ _MEMBER_MAX_BYTES = 2 * 1024 * 1024
 # pulls in Qt and this one must stay importable without it.
 _CHILD_LOG_NAME = "anki_miner.child.log"
 
+# The --api process's own log (gui/launch.py API_LOG_NAME). Same reason as the
+# child log: spelled out, not imported.
+_API_LOG_NAME = "anki_miner.api.log"
+
 # gui/utils/session_state.py FILENAME. Same reason as the child log: no Qt here.
 _UI_STATE_NAME = "ui_state.ini"
 
@@ -190,6 +194,8 @@ def collect_log_members() -> tuple[list[tuple[str, bytes]], list[str]]:
     # The child process writes its own stderr sink beside the active log, so a
     # crash that never reached this process still has a record here.
     collect(_CHILD_LOG_NAME, active_path.with_name(_CHILD_LOG_NAME), None)
+    # Runs driven by another program (--api) log beside it too.
+    collect(_API_LOG_NAME, active_path.with_name(_API_LOG_NAME), None)
     return members, missing
 
 

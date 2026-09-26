@@ -124,12 +124,10 @@ ALLOWLIST: dict[str, set[str]] = {
         "widgets/panels/audio_pack_settings_panel.py",
     },
     # shutil.which — a single cheap PATH scan to test for a binary, cached on the
-    # widget (`_alass_is_available` / `_ffmpeg_is_available`); readers use the cache.
+    # widget (`_alass_is_available`); readers use the cache. The Condense tab's
+    # ffmpeg probe now goes through utils.ffmpeg_resolver.binary_available.
     r"shutil\.which\(": {
         "widgets/subtitle_retime_tab.py",
-        # ffmpeg/ffprobe PATH probe, cached in `_ffmpeg_is_available`; recomputed
-        # only in __init__/update_config, never per read.
-        "widgets/condense_tab.py",
     },
     # untimed .wait() — each is a legitimate join/event-wait, not a GUI freeze:
     r"\.wait\(\s*\)": {
