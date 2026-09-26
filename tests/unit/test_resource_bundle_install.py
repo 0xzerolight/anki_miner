@@ -184,3 +184,12 @@ def test_apply_refuses_when_a_folder_moved_mid_import(test_config, tmp_path):
     moved = replace(test_config, dicts_root=tmp_path / "elsewhere")
     with pytest.raises(ValueError, match="theirs"):
         apply_install_to_config(moved, result)
+
+
+def test_a_member_declaring_more_than_the_cap_is_refused_before_extraction(bundle_and_receiver, tmp_path, monkeypatch):
+    sender, bundle, receiver = bundle_and_receiver
+    monkeypatch.setattr(install_module, "_MEMBER_LIMIT", 10)
+    result = _install(bundle, receiver, tmp_path)
+    assert "Test Dict" in [name for name, _ in result.failures]
+    assert any("limit" in message for _, message in result.failures)
+    assert not (receiver.dicts_root / sender.dictionary_chain[0].dict_id).exists()

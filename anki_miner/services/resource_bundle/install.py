@@ -22,7 +22,7 @@ from anki_miner.config import AnkiMinerConfig, ChainEntry, FreqEntry, PitchSourc
 from anki_miner.exceptions import OperationCancelled
 from anki_miner.services._sqlite_index import language_kwarg
 from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip
-from anki_miner.services.dictionary.zip_safety import read_member
+from anki_miner.services.dictionary.zip_safety import MAX_UNCOMPRESSED_BYTES, read_member
 from anki_miner.services.frequency.lemmatize import build_frequency_lemmatizer, lemmatize_kwarg
 from anki_miner.services.frequency.source_importer import import_frequency_source
 from anki_miner.services.known_word_db import add_user_known_words
@@ -35,6 +35,10 @@ logger = logging.getLogger(__name__)
 
 #: Same cap the word-list reader and known-words importer apply to a text file.
 _TEXT_MEMBER_LIMIT = 50 * 1024 * 1024
+#: A slot source is extracted before its importer's own zip checks run, and a
+#: bundle can come from someone else: cap what it may write to temp. Python's
+#: zip reader stops at the declared size, so checking the declaration is enough.
+_MEMBER_LIMIT = MAX_UNCOMPRESSED_BYTES
 
 Blocked = Literal["", "installed", "configured"]
 
@@ -180,6 +184,9 @@ def _install_slot(
     def forward(_current: int, _total: int, message: str) -> None:
         progress(index, total, f"{step}: {message}" if message else step)
 
+    declared = zf.getinfo(item.member).file_size
+    if declared > _MEMBER_LIMIT:
+        raise ValueError(f"{item.member} declares {declared} bytes, over the {_MEMBER_LIMIT}-byte limit")
     with tempfile.TemporaryDirectory(prefix="anki-miner-bundle-", ignore_cleanup_errors=True) as tmp:
         # ``item.member`` is a fixed-shape path the manifest already validated.
         source = Path(zf.extract(item.member, tmp))
