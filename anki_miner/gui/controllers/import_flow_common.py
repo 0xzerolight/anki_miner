@@ -311,7 +311,6 @@ class ModalImportFlowMixin:
         progress_label: str,
         cancel_label: str,
         determinate: bool,
-        trace_id: str,
     ) -> tuple[QProgressDialog, QTimer]:
         """Create the shared modal dialog, watchdog, and import-button gate."""
         dlg = QProgressDialog(progress_label, cancel_label, 0, 100 if determinate else 0, self._parent)
@@ -537,7 +536,6 @@ class ModalImportFlowMixin:
             progress_label=progress_label,
             cancel_label=cancel_label,
             determinate=determinate,
-            trace_id=trace_id,
         )
         worker.set_trace_id(trace_id)
         state = _ModalImportState()
@@ -644,7 +642,6 @@ class ModalImportFlowMixin:
             progress_label=initial_label,
             cancel_label=cancel_label,
             determinate=determinate,
-            trace_id=trace_id,
         )
         state = _ChainedImportState[_JobT]()
         cancel_current: Callable[[], None] | None = None
