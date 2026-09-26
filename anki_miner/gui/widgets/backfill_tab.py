@@ -59,7 +59,6 @@ from anki_miner.gui.widgets.base import (
     install_workflow_shell,
 )
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
-from anki_miner.gui.widgets.enhanced.modern_button import ButtonVariant
 from anki_miner.gui.widgets.panels.anki_settings_panel import (
     hook_field_row_text,
     profile_card_field_specs,
@@ -94,22 +93,6 @@ PREVIEW_MIN_VISIBLE_ROWS = 8
 #: always offered. Each profile-declared card field adds its own entry from its
 #: spec's capability -- see ``_group_capabilities``.
 _CORE_GROUP_CAPABILITIES: dict[str, str] = {"pitch": "pitch", "reading": "furigana"}
-
-
-def _set_variant(button: ModernButton, variant: ButtonVariant) -> None:
-    """Re-role a button in place, using only the variants D41 already defines.
-
-    ``ModernButton`` carries its role in its object name, and Qt caches the
-    resolved stylesheet per widget, so the name change has to be followed by an
-    unpolish/polish or the button keeps painting its old role.
-    """
-    if button.objectName() == variant:
-        return
-    button.setObjectName(variant)
-    style = button.style()
-    if style is not None:
-        style.unpolish(button)
-        style.polish(button)
 
 
 class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
@@ -369,8 +352,8 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
         has_plan = self._plan is not None
         primary = self.apply_button if has_plan else self.scan_button
         quiet = self.scan_button if has_plan else self.apply_button
-        _set_variant(primary, "primary")
-        _set_variant(quiet, "secondary")
+        primary.set_variant("primary")
+        quiet.set_variant("secondary")
         self.action_bar.set_actions(primary, (self.cancel_button, quiet, self.restyle_button))
 
     # ------------------------------------------------------------------

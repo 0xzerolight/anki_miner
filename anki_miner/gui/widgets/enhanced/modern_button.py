@@ -145,6 +145,21 @@ class ModernButton(QPushButton):
         self.pressed.connect(self._begin_press)
         self.released.connect(self._end_press)
 
+    def set_variant(self, variant: ButtonVariant) -> None:
+        """Re-role the button in place, using only the variants D41 already defines.
+
+        The role lives in the object name, and Qt caches the resolved stylesheet
+        per widget, so the name change has to be followed by an unpolish/polish or
+        the button keeps painting its old role.
+        """
+        if self.objectName() == variant:
+            return
+        self.setObjectName(variant)
+        style = self.style()
+        if style is not None:
+            style.unpolish(self)
+            style.polish(self)
+
     # ------------------------------------------------------------------
     # Press feedback
     # ------------------------------------------------------------------

@@ -56,7 +56,6 @@ from anki_miner.gui.widgets.base import (
     install_workflow_shell,
 )
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
-from anki_miner.gui.widgets.enhanced.modern_button import ButtonVariant
 from anki_miner.gui.workers.base_worker import SingleCallWorker
 from anki_miner.gui.workers.deck_filter_worker import DeckFilterApplyWorker, DeckFilterScanWorker
 from anki_miner.gui.workers.fetch_workers import FetchDecksWorker
@@ -77,17 +76,6 @@ _PREVIEW_ROW_CAP = 500
 _CELL_ELIDE = 120
 #: Same whole-row floor rationale as Card Backfill (Issue #102 class).
 PREVIEW_MIN_VISIBLE_ROWS = 8
-
-
-def _set_variant(button: ModernButton, variant: ButtonVariant) -> None:
-    """Re-role a button in place (unpolish/polish; see backfill_tab)."""
-    if button.objectName() == variant:
-        return
-    button.setObjectName(variant)
-    style = button.style()
-    if style is not None:
-        style.unpolish(button)
-        style.polish(button)
 
 
 class DeckFilterTab(TaskPublisherMixin, QWidget):
@@ -255,8 +243,8 @@ class DeckFilterTab(TaskPublisherMixin, QWidget):
         has_plan = self._plan is not None
         primary = self.apply_button if has_plan else self.scan_button
         quiet = self.scan_button if has_plan else self.apply_button
-        _set_variant(primary, "primary")
-        _set_variant(quiet, "secondary")
+        primary.set_variant("primary")
+        quiet.set_variant("secondary")
         self.action_bar.set_actions(primary, (self.cancel_button, quiet))
 
     # ------------------------------------------------------------------
