@@ -818,11 +818,7 @@ class DefinitionService:
             try:
                 hits = exact_sequences_fn(pairs)
             except Exception as e:
-                logger.warning(
-                    "Provider '%s' raised during exact_term_sequences; skipping: %s",
-                    provider.name,
-                    e,
-                )
+                _log_provider_failure(provider, "exact_term_sequences", e)
                 continue
             for (term, reading), sequences in hits.items():
                 identities = found.setdefault((term, reading), set())
@@ -893,7 +889,7 @@ class DefinitionService:
                 try:
                     fresh = fn(missing, include_readings)
                 except Exception as e:
-                    logger.warning("Provider '%s' raised during attest_quality; skipping: %s", provider.name, e)
+                    _log_provider_failure(provider, "attest_quality", e)
             # A provider that raises is cached as an empty verdict for the rest
             # of the episode (sticky): fresh remains {} so .get(w, empty) fills
             # with empty entries. A future provider that raises transiently should
@@ -1041,11 +1037,7 @@ class DefinitionService:
                     try:
                         provider_results = batch_fn(batch, lemmas=batch_lemmas) if batch_lemmas else batch_fn(batch)
                     except Exception as e:
-                        logger.warning(
-                            "Provider '%s' raised during lookup_many; skipping: %s",
-                            provider.name,
-                            e,
-                        )
+                        _log_provider_failure(provider, "lookup_many", e)
                         break
                     for pair in batch:
                         word, _reading = pair
@@ -1060,12 +1052,7 @@ class DefinitionService:
                     try:
                         html = provider.lookup(word)
                     except Exception as e:
-                        logger.warning(
-                            "Provider '%s' raised during lookup of '%s'; skipping: %s",
-                            provider.name,
-                            word,
-                            e,
-                        )
+                        _log_provider_failure(provider, "lookup", e, subject=word)
                         continue
                     if html:
                         offline_hits[pair].append(html)
@@ -1083,12 +1070,7 @@ class DefinitionService:
                     try:
                         html = provider.lookup(word)
                     except Exception as e:
-                        logger.warning(
-                            "Provider '%s' raised during lookup of '%s'; skipping: %s",
-                            provider.name,
-                            word,
-                            e,
-                        )
+                        _log_provider_failure(provider, "lookup", e, subject=word)
                         continue
                     if html:
                         online_results[pair] = html
@@ -1178,12 +1160,7 @@ class DefinitionService:
                 else:
                     html = p.lookup(word)
             except Exception as e:
-                logger.warning(
-                    "Provider '%s' raised during lookup of '%s'; skipping: %s",
-                    p.name,
-                    word,
-                    e,
-                )
+                _log_provider_failure(p, "lookup", e, subject=word)
                 html = None
             if html:
                 out.append((p.name, html))
@@ -1195,12 +1172,7 @@ class DefinitionService:
                 try:
                     fhtml = fb(cand_text, cand_conditions)
                 except Exception as e:
-                    logger.warning(
-                        "Provider '%s' raised during lookup_fallback of '%s'; skipping: %s",
-                        p.name,
-                        cand_text,
-                        e,
-                    )
+                    _log_provider_failure(p, "lookup_fallback", e, subject=cand_text)
                     continue
                 if fhtml and fhtml not in seen_html:
                     out.append((p.name, fhtml))
