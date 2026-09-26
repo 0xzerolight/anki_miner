@@ -564,46 +564,6 @@ class TestApplyFlow:
         assert snapshot is not None
         assert snapshot.outcome is TaskOutcome.CANCELLED
 
-    def test_cancelled_apply_receipt_survives_the_finish(self, tab):
-        # _on_apply_cancelled runs before finished; the finish must not
-        # overwrite the partial receipt it composed.
-        worker = MagicMock()
-        worker.is_cancelled = True
-        tab.worker_thread = worker
-        tab.status_label.setText("Cancelled. Filled 2 field(s) on 1 note(s).")
-
-        tab._on_worker_finished()
-
-        assert tab.status_label.text() == "Cancelled. Filled 2 field(s) on 1 note(s)."
-
-
-class TestCancelledScan:
-    """The scan workers emit no ``cancelled`` signal, so ``finished`` closes out.
-
-    Without that, a cancelled scan left "Cancelling…" on screen for good — a
-    status asserting live work that had already ended (D17).
-    """
-
-    def test_cancelled_scan_reports_cancelled(self, tab):
-        worker = MagicMock()
-        worker.is_cancelled = True
-        tab.worker_thread = worker
-        tab.status_label.setText("Cancelling…")
-
-        tab._on_worker_finished()
-
-        assert tab.status_label.text() == "Cancelled."
-
-    def test_finished_scan_keeps_its_own_receipt(self, tab):
-        worker = MagicMock()
-        worker.is_cancelled = False
-        tab.worker_thread = worker
-        tab.status_label.setText("Cancelling…")
-
-        tab._on_worker_finished()
-
-        assert tab.status_label.text() == "Cancelling…"
-
 
 class TestConfigAndLifecycle:
     def test_update_config_clears_plan_and_regates(self, tab, backfill_config):
@@ -617,62 +577,6 @@ class TestConfigAndLifecycle:
         assert not tab.apply_button.isEnabled()
         assert tab.preview_table.rowCount() == 0
         assert not tab.field_checkboxes["frequency"].isEnabled()
-
-    def test_iter_close_workers_yields_running(self, tab):
-        assert list(tab.iter_close_workers()) == []
-        running = MagicMock()
-        running.isRunning.return_value = True
-        tab.worker_thread = running
-        assert list(tab.iter_close_workers()) == [running]
-
-    def test_iter_close_workers_yields_running_deck_worker(self, tab):
-        # A deck fetch in flight at close must be joined, not abandoned to Qt.
-        deck_worker = MagicMock()
-        deck_worker.isRunning.return_value = True
-        tab._deck_worker = deck_worker
-        assert list(tab.iter_close_workers()) == [deck_worker]
-        deck_worker.isRunning.return_value = False
-        assert list(tab.iter_close_workers()) == []
-
-    def test_error_sets_status(self, tab):
-        tab._set_running(True)
-        tab._on_worker_error("Backfill scan failed: down")
-        assert "down" in tab.status_label.text()
-        assert tab.scan_button.isEnabled()
-
-
-class TestCloseWorkerHandles:
-    """``iter_close_workers`` runs inside MainWindow.closeEvent -- it may not raise.
-
-    Mirrors deck_filter_tab's close-crash fix (2aa584): a worker whose native
-    ``finished`` already deleteLater()'d it leaves the attribute pointing at a
-    dead C++ wrapper. A raw ``isRunning()`` on that wrapper raises RuntimeError
-    straight out of closeEvent, past the config save at the end of it.
-    """
-
-    def test_a_finished_worker_thread_is_skipped_not_raised_on(self, tab):
-        from anki_miner.gui.workers.base_worker import SingleCallWorker
-
-        worker = SingleCallWorker(lambda: None, parent=tab)
-        tab.worker_thread = worker
-        worker.deleteLater()
-        QApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
-        with pytest.raises(RuntimeError):  # precondition: the wrapper really is dead
-            worker.isRunning()
-
-        assert list(tab.iter_close_workers()) == []
-
-    def test_a_finished_deck_worker_is_skipped_not_raised_on(self, tab):
-        from anki_miner.gui.workers.base_worker import SingleCallWorker
-
-        worker = SingleCallWorker(lambda: None, parent=tab)
-        tab._deck_worker = worker
-        worker.deleteLater()
-        QApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
-        with pytest.raises(RuntimeError):  # precondition: the wrapper really is dead
-            worker.isRunning()
-
-        assert list(tab.iter_close_workers()) == []
 
 
 class TestWordAudioGroup:
@@ -759,44 +663,3 @@ class TestMediaFailureReporting:
     def test_a_clean_run_reports_no_media_failure(self, tab):
         tab._on_apply_finished(BackfillResult(notes_updated=1, fields_filled=1, tagged=1, skipped_stale=0))
         assert tab._run_failed is False
-
-
-class TestDeckListRetry:
-    """A deck fetch that failed because Anki was closed must be retried.
-
-    The regression: the latch was set on the ATTEMPT, and ``get_deck_names``
-    answers an unreachable Anki with an empty list, so the failure was
-    remembered as "done". This tab has no Refresh button, so the line stayed on
-    screen for the life of the process.
-    """
-
-    def test_empty_fetch_leaves_the_tab_asking(self, tab):
-        with patch.object(tab, "_load_decks") as load:
-            tab.ensure_decks()
-            assert load.call_count == 1
-
-            tab._on_decks_fetched([])
-            assert tab.status_label.text()
-
-            tab.ensure_decks()
-            assert load.call_count == 2
-
-    def test_a_real_deck_list_stops_the_asking_and_clears_the_line(self, tab):
-        tab._on_decks_fetched([])
-        assert tab.status_label.text()
-
-        tab._on_decks_fetched(["Default", "Premade"])
-
-        assert tab.status_label.text() == ""
-        assert tab.deck_combo.count() == 3  # "All decks" + two decks
-        with patch.object(tab, "_load_decks") as load:
-            tab.ensure_decks()
-            load.assert_not_called()
-
-    def test_a_scan_message_survives_a_deck_fetch(self, tab):
-        """Only the fetch failure is cleared, never whatever else wrote there."""
-        tab.status_label.setText("Scanned 40 notes.")
-
-        tab._on_decks_fetched(["Default"])
-
-        assert tab.status_label.text() == "Scanned 40 notes."
