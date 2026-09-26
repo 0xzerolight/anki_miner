@@ -20,7 +20,7 @@ import unicodedata
 from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING, BinaryIO
 
-from anki_miner.exceptions import OperationCancelled, SetupError
+from anki_miner.exceptions import SetupError, raise_if_cancelled
 from anki_miner.models.reading import (
     ReadingDocument,
     ReadingSourceRef,
@@ -29,7 +29,7 @@ from anki_miner.models.reading import (
 
 # _decode's canonical home is _util (shared with subtitle_source); imported
 # here both for load() and as a re-export for tests that patch/call it.
-from anki_miner.services.reading._util import _decode
+from anki_miner.services.reading._util import READING_CANCELLED, _decode
 from anki_miner.services.reading.sentence_splitter import split_sentences
 from anki_miner.utils.logging_ext import log_summary
 
@@ -281,11 +281,6 @@ def _extract_header(lines: list[str]) -> tuple[str, list[str]]:
 # --- unit emission -------------------------------------------------------
 
 
-def _raise_if_cancelled(cancel_check: Callable[[], bool] | None) -> None:
-    if cancel_check is not None and cancel_check():
-        raise OperationCancelled("Reading load cancelled")
-
-
 def _emit_units(
     body_lines: list[str],
     aozora: bool = True,
@@ -302,7 +297,7 @@ def _emit_units(
     heading_buf: list[str] = []
 
     for raw in body_lines:
-        _raise_if_cancelled(cancel_check)
+        raise_if_cancelled(cancel_check, READING_CANCELLED)
         line = raw[1:] if raw.startswith("　") else raw  # strip one indent
         line = _resolve_gaiji(line)
         # Ruby stripping is unconditional (any 《…》), so only on the Aozora path
@@ -341,7 +336,7 @@ def _emit_units(
             para_no += 1
             label = current_chapter if current_chapter else f"¶{para_no}"
             for sentence in split_sentences(text, rules=rules):
-                _raise_if_cancelled(cancel_check)
+                raise_if_cancelled(cancel_check, READING_CANCELLED)
                 units.append(
                     ReadingUnit(
                         text=sentence,
@@ -470,21 +465,21 @@ def load(
     one 底本 colophon per book, and a per-part cut would drop the next book's
     opening. A part keeps its ``"<stem> (i/n)"`` title so its cards name it.
     """
-    _raise_if_cancelled(cancel_check)
+    raise_if_cancelled(cancel_check, READING_CANCELLED)
     # Per-kind ref contract: file-backed kinds always carry a path.
     assert ref.path is not None
     try:
         if ref.byte_range is not None:
             with ref.path.open("rb") as f:
                 raw = _read_part(f, ref.path.name, *ref.byte_range)
-            _raise_if_cancelled(cancel_check)
+            raise_if_cancelled(cancel_check, READING_CANCELLED)
         else:
             size = ref.path.stat().st_size
             if size > _MAX_TEXT_FILE_BYTES:
                 raise SetupError(f"'{ref.path.name}' is too large to mine (over 32 MB).")
             with ref.path.open("rb") as f:
                 raw = f.read(_MAX_TEXT_FILE_BYTES + 1)
-            _raise_if_cancelled(cancel_check)
+            raise_if_cancelled(cancel_check, READING_CANCELLED)
             if len(raw) > _MAX_TEXT_FILE_BYTES:
                 raise SetupError(f"'{ref.path.name}' is too large to mine (over 32 MB).")
     except OSError as e:

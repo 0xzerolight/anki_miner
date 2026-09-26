@@ -18,21 +18,17 @@ import logging
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
-from anki_miner.exceptions import OperationCancelled
+from anki_miner.exceptions import raise_if_cancelled
 from anki_miner.models.reading import ImageRef, ReadingDocument, ReadingSourceRef, ReadingUnit
 from anki_miner.utils.logging_ext import log_summary
 
+from ._util import READING_CANCELLED
 from .sentence_splitter import split_sentences
 
 if TYPE_CHECKING:
     from anki_miner.languages.profile import SentenceRules
 
 logger = logging.getLogger(__name__)
-
-
-def _raise_if_cancelled(cancel_check: Callable[[], bool] | None) -> None:
-    if cancel_check is not None and cancel_check():
-        raise OperationCancelled("Reading load cancelled")
 
 
 def load(
@@ -51,7 +47,7 @@ def load(
     ``rules`` is the mining language's sentence-splitting policy; ``None`` is
     the splitter's built-in Japanese one.
     """
-    _raise_if_cancelled(cancel_check)
+    raise_if_cancelled(cancel_check, READING_CANCELLED)
     # Physical lines only (\r\n / \r / \n), like aozora's _splitlines —
     # str.splitlines() would also break on \v/\f/NEL/U+2028 from PDF/web pastes.
     text = (ref.text or "").replace("\r\n", "\n").replace("\r", "\n")
@@ -66,14 +62,14 @@ def load(
     para_no = 0
     skipped = 0
     for raw in text.split("\n"):
-        _raise_if_cancelled(cancel_check)
+        raise_if_cancelled(cancel_check, READING_CANCELLED)
         stripped = raw.strip()
         if not stripped:
             skipped += 1
             continue
         para_no += 1
         for sentence in split_sentences(stripped, rules=rules):
-            _raise_if_cancelled(cancel_check)
+            raise_if_cancelled(cancel_check, READING_CANCELLED)
             units.append(
                 ReadingUnit(
                     text=sentence,

@@ -26,8 +26,6 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping, Sequence
 
-from anki_miner.services.frequency.storage import FreqRow
-
 # Declared ``frequencyMode`` values (Yomitan ``index.json``).
 OCCURRENCE_BASED = "occurrence-based"
 RANK_BASED = "rank-based"
@@ -530,15 +528,3 @@ def resolve_is_occurrence(
     if declared_mode == RANK_BASED:
         return False
     return probe_direction(lambda term: term_values.get(term, ()), source_language) == DESCENDING
-
-
-def convert_to_ranks(rows: Iterable[FreqRow]) -> list[FreqRow]:
-    """Re-rank occurrence-based rows: sort by value descending, assign ``1..n``.
-
-    The incoming ``rank`` column holds the raw occurrence value; the largest
-    value becomes rank 1. Ties break by ``(term, reading)`` for a deterministic,
-    human-scannable order. ``display_value`` (the original figure, e.g. a count)
-    is preserved unchanged.
-    """
-    ordered = sorted(rows, key=lambda r: (-r[2], r[0], r[1] or ""))
-    return [(term, reading, new_rank, display) for new_rank, (term, reading, _value, display) in enumerate(ordered, 1)]

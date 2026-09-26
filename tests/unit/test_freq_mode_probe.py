@@ -6,7 +6,6 @@ from anki_miner.services.frequency import mode_probe
 from anki_miner.services.frequency.mode_probe import (
     LESS_COMMON_TERMS,
     MORE_COMMON_TERMS,
-    convert_to_ranks,
     probe_direction,
     resolve_is_occurrence,
 )
@@ -80,26 +79,3 @@ class TestResolveIsOccurrence:
 
     def test_undeclared_ambiguous_defaults_rank(self) -> None:
         assert resolve_is_occurrence("", {"猫": [5]}) is False
-
-
-class TestConvertToRanks:
-    def test_reranks_descending_to_1_n(self) -> None:
-        rows = [("猫", None, 5, None), ("犬", None, 100, None), ("鳥", None, 20, None)]
-        assert convert_to_ranks(rows) == [
-            ("犬", None, 1, None),
-            ("鳥", None, 2, None),
-            ("猫", None, 3, None),
-        ]
-
-    def test_preserves_display_value(self) -> None:
-        rows = [("猫", None, 5, "5回"), ("犬", None, 100, "100回")]
-        assert convert_to_ranks(rows) == [("犬", None, 1, "100回"), ("猫", None, 2, "5回")]
-
-    def test_ties_break_deterministically(self) -> None:
-        rows = [("鳥", None, 7, None), ("猫", None, 7, None), ("犬", None, 7, None)]
-        # Equal values → ordered by term, ranks 1..n.
-        assert convert_to_ranks(rows) == [
-            ("犬", None, 1, None),
-            ("猫", None, 2, None),
-            ("鳥", None, 3, None),
-        ]

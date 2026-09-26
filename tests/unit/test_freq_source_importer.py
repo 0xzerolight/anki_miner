@@ -851,6 +851,16 @@ class TestSourceIdAndAtomicity:
         leftover = [p.name for p in dest.iterdir() if p.name != "same"]
         assert leftover == []
 
+    def test_invalid_source_id_leaves_dest_root_absent(self, tmp_path: Path) -> None:
+        csv_path = tmp_path / "f.csv"
+        csv_path.write_text("term,rank\n猫,5\n", encoding="utf-8")
+        dest = tmp_path / "sources"
+
+        with pytest.raises(SetupError, match="Invalid managed store id"):
+            import_frequency_source(csv_path, dest, source_id="../evil")
+
+        assert not dest.exists()
+
     def test_atomic_overwrite_existing_source_when_enabled(self, tmp_path: Path) -> None:
         dest = tmp_path / "sources"
         first = tmp_path / "first.csv"
