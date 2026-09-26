@@ -1,13 +1,17 @@
 """Shared base for the file-processing tool tabs (Generate / Retime / Condense).
 
-Hoists the verbatim-identical worker-signal slots, the output-location slots, the
-progress-section chrome, and the close contract shared by
+Hoists the verbatim-identical worker-signal slots, the output-location row and
+slots, the Single File / Folder mode row, the engine-probe template, the folder
+scan, the writability refusal, the worker launch, the progress-section chrome,
+and the close contract shared by
 :class:`~anki_miner.gui.widgets.subtitle_creation_tab.SubtitleCreationTab`,
-:class:`~anki_miner.gui.widgets.subtitle_retime_tab.SubtitleRetimeTab`, and
-:class:`~anki_miner.gui.widgets.condense_tab.CondenseTab`.
+:class:`~anki_miner.gui.widgets.subtitle_retime_tab.SubtitleRetimeTab`,
+:class:`~anki_miner.gui.widgets.condense_tab.CondenseTab` and the later tools
+(Download, Manga OCR, Audiobook Sync). A builder that shows text takes it as
+arguments built with the caller's ``self.tr``, for the reason given below.
 
-Per-tool input/options sections, availability gating, and the ``_on_<verb>``
-launcher stay subclass responsibilities.
+Per-tool input/options sections, what the engine probe checks, and the
+``_on_<verb>`` launcher stay subclass responsibilities.
 
 Subclass contract — a subclass MUST provide, before any hoisted slot runs:
   * instance attrs ``worker_thread``, ``_custom_output_dir``, ``_cancelled``,
@@ -23,12 +27,16 @@ Subclass contract — a subclass MUST provide, before any hoisted slot runs:
     tab's ``self.tr`` binds the string to that tab's own tr-context, so the
     translation catalogs keep one entry per tab (no context churn / payload
     loss) even though the consuming logic lives here;
-  * an override of :meth:`_item_total`.
+  * overrides of :meth:`_item_total` and :meth:`_on_file_started`; of
+    :meth:`_probe_engine` (plus ``_PROBE_NAME``) unless the tool keeps its own
+    ``_refresh_engine_state``; and of :meth:`_apply_mode` when it builds the
+    mode row.
 """
 
 from __future__ import annotations
 
 import contextlib
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -120,6 +128,8 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
     cancel_button: ModernButton
     progress_widget: ProgressWidget
     log_widget: LogWidget
+    engine_notice_label: QLabel
+    _suppress_optional_startup: bool
     _availability_worker: SingleCallWorker | None = None
     _availability_generation: int = 0
     #: Files skipped in the current run (reset when the run starts). Counted
@@ -162,6 +172,43 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
                     on_error(message)
 
         self._availability_worker = run_off_thread(self, work, _on_done, _on_error)
+
+    # ------------------------------------------------------------------
+    # Engine availability
+    # ------------------------------------------------------------------
+
+    #: Names the availability probe in its warning line ("ASR", "ffmpeg", …).
+    _PROBE_NAME: str = ""
+    #: The last verdict the default :meth:`_apply_probe_result` adopted.
+    _engine_is_available: bool = False
+
+    def _refresh_engine_state(self) -> None:
+        """Disable the primary action, then probe availability off the GUI thread.
+
+        Under ``suppress_optional_startup`` nothing is probed and the primary
+        stays disabled.
+        """
+        self._primary_button.setEnabled(False)
+        if self._suppress_optional_startup:
+            return
+        # The subclass's module logger, so the line keeps its original source.
+        log = logging.getLogger(type(self).__module__)
+
+        def _on_error(message: str) -> None:
+            log.warning("%s availability probe failed: %s", self._PROBE_NAME, message)
+            self._apply_probe_result(False)
+
+        self._run_availability_scan(self._probe_engine(), self._apply_probe_result, _on_error)
+
+    def _probe_engine(self) -> Callable[[], object]:
+        """Return the availability check to run off the GUI thread."""
+        raise NotImplementedError
+
+    def _apply_probe_result(self, result: object) -> None:
+        """Adopt a verdict: the notice shows when missing, the primary runs only when present."""
+        self._engine_is_available = bool(result)
+        self.engine_notice_label.setVisible(not self._engine_is_available)
+        self._primary_button.setEnabled(self._engine_is_available)
 
     # ------------------------------------------------------------------
     # Progress-section chrome

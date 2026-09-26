@@ -22,8 +22,8 @@ Worker contract:
 from __future__ import annotations
 
 import dataclasses
-import logging
 import os
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterator, cast
@@ -49,7 +49,6 @@ from anki_miner.utils.mokuro_resolver import mokuro_available
 if TYPE_CHECKING:
     from anki_miner.gui.workers.base_worker import CancellableWorker
 
-logger = logging.getLogger(__name__)
 
 #: Debounce for persisting an edited mokuro-executable path: FileSelector's
 #: ``path_changed`` fires on every keystroke, and ``update_config`` re-probes
@@ -85,6 +84,8 @@ class MokuroTab(_ToolTabBase):
     TASK_OWNER = CapabilityTarget("subtitles", "mokuro")
     #: mokuro writes beside its input; there is no output folder to remember.
     OUTPUT_HISTORY_KEY = ""
+
+    _PROBE_NAME = "mokuro"
 
     config_changed = pyqtSignal(object)  # Emits AnkiMinerConfig
     mokuro_install_requested = pyqtSignal()
@@ -430,17 +431,10 @@ class MokuroTab(_ToolTabBase):
     # Engine / availability state
     # ------------------------------------------------------------------
 
-    def _refresh_engine_state(self) -> None:
+    def _probe_engine(self) -> Callable[[], object]:
+        """Probe mokuro availability (the Run OCR guard) for the current config."""
         config = self.config
-        self.run_button.setEnabled(False)
-        if self._suppress_optional_startup:
-            return
-
-        def _on_error(message: str) -> None:
-            logger.warning("mokuro availability probe failed: %s", message)
-            self._apply_probe_result(False)
-
-        self._run_availability_scan(lambda: self._compute_mokuro_available(config), self._apply_probe_result, _on_error)
+        return lambda: self._compute_mokuro_available(config)
 
     def _apply_probe_result(self, result: object) -> None:
         # A probe scheduled before a run started can land after it did. The run

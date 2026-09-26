@@ -135,6 +135,8 @@ class CondenseTab(_ToolTabBase):
     #: Where this tool last wrote — remembered separately from its inputs (D7).
     OUTPUT_HISTORY_KEY = "tools.condense.output"
 
+    _PROBE_NAME = "ffmpeg"
+
     config_changed = pyqtSignal(object)  # Emits AnkiMinerConfig
 
     def __init__(
@@ -162,7 +164,7 @@ class CondenseTab(_ToolTabBase):
         # ffmpeg availability is cached per-config: probing it (resolve_ffmpeg /
         # resolve_ffprobe + shutil.which / Path.exists) is a PATH scan we must
         # not repeat on every read. Recomputed only here and in update_config().
-        self._ffmpeg_is_available: bool = False
+        self._engine_is_available: bool = False
         # Built here (not in the base) so each literal stays in this tab's
         # tr-context — see _ToolTabBase for the rationale.
         self._strings = _ToolTabStrings(
@@ -562,27 +564,14 @@ class CondenseTab(_ToolTabBase):
     # Engine / availability state
     # ------------------------------------------------------------------
 
-    def _refresh_engine_state(self) -> None:
-        """Probe ffmpeg availability off-thread, then update the Condense guard."""
+    def _probe_engine(self) -> Callable[[], object]:
+        """Probe ffmpeg availability (the Condense guard) for the current config."""
         config = self.config
-        self.condense_button.setEnabled(False)
-        if self._suppress_optional_startup:
-            return
-
-        def _apply(result: object) -> None:
-            self._ffmpeg_is_available = bool(result)
-            self.engine_notice_label.setVisible(not self._ffmpeg_is_available)
-            self.condense_button.setEnabled(self._ffmpeg_is_available)
-
-        def _on_error(message: str) -> None:
-            logger.warning("ffmpeg availability probe failed: %s", message)
-            _apply(False)
-
-        self._run_availability_scan(lambda: self._compute_ffmpeg_available(config), _apply, _on_error)
+        return lambda: self._compute_ffmpeg_available(config)
 
     def _ffmpeg_available(self) -> bool:
         """Return the cached ffmpeg availability (probed once per config)."""
-        return self._ffmpeg_is_available
+        return self._engine_is_available
 
     def _compute_ffmpeg_available(self, config: AnkiMinerConfig) -> bool:
         """Probe whether both ffmpeg and ffprobe are reachable for the config.

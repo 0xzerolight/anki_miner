@@ -19,7 +19,6 @@ Worker contract:
 
 from __future__ import annotations
 
-import logging
 import os
 from collections.abc import Callable
 from pathlib import Path
@@ -52,8 +51,6 @@ from anki_miner.utils.file_pairing import FilePairMatcher
 from anki_miner.utils.file_utils import is_junk_path
 from anki_miner.utils.i18n import tr_format
 
-logger = logging.getLogger(__name__)
-
 _MEDIA_EXTENSIONS: frozenset[str] = FilePairMatcher.VIDEO_EXTENSIONS | AUDIO_EXTENSIONS
 _MEDIA_FILE_FILTER = (
     "Media Files (" + " ".join(f"*{extension}" for extension in sorted(_MEDIA_EXTENSIONS)) + ");;All Files (*)"
@@ -81,6 +78,8 @@ class SubtitleCreationTab(_ToolTabBase):
 
     #: Where this tool last wrote — remembered separately from its inputs (D7).
     OUTPUT_HISTORY_KEY = "tools.generate.output"
+
+    _PROBE_NAME = "ASR"
 
     def __init__(
         self,
@@ -300,22 +299,9 @@ class SubtitleCreationTab(_ToolTabBase):
     # Engine / model state
     # ------------------------------------------------------------------
 
-    def _refresh_engine_state(self) -> None:
-        """Probe engine availability off-thread, then update the Generate guard."""
-        self.generate_button.setEnabled(False)
-        if self._suppress_optional_startup:
-            return
-
-        def _apply(result: object) -> None:
-            self._engine_is_available = bool(result)
-            self.engine_notice_label.setVisible(not self._engine_is_available)
-            self.generate_button.setEnabled(self._engine_is_available)
-
-        def _on_error(message: str) -> None:
-            logger.warning("ASR availability probe failed: %s", message)
-            _apply(False)
-
-        self._run_availability_scan(_engine.available, _apply, _on_error)
+    def _probe_engine(self) -> Callable[[], object]:
+        """Probe ASR engine availability (the Generate guard)."""
+        return _engine.available
 
     # ------------------------------------------------------------------
     # Mode toggle

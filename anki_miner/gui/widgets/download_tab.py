@@ -25,7 +25,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import os
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import replace
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -108,6 +108,8 @@ class DownloadTab(YtdlpAvailabilityMixin, _ToolTabBase):
 
     #: Where this tool last wrote — remembered separately from its inputs (D7).
     OUTPUT_HISTORY_KEY = "tools.download.output"
+
+    _PROBE_NAME = "yt-dlp"
 
     config_changed = pyqtSignal(object)  # Emits AnkiMinerConfig
 
@@ -544,18 +546,10 @@ class DownloadTab(YtdlpAvailabilityMixin, _ToolTabBase):
     # Engine / availability state
     # ------------------------------------------------------------------
 
-    def _refresh_engine_state(self) -> None:
-        """Probe yt-dlp availability off-thread, then update the Download guard."""
+    def _probe_engine(self) -> Callable[[], object]:
+        """Probe yt-dlp availability (the Download guard) for the current config."""
         config = self.config
-        self.download_button.setEnabled(False)
-        if self._suppress_optional_startup:
-            return
-
-        def _on_error(message: str) -> None:
-            logger.warning("yt-dlp availability probe failed: %s", message)
-            self._apply_probe_result(False)
-
-        self._run_availability_scan(lambda: self._compute_ytdlp_available(config), self._apply_probe_result, _on_error)
+        return lambda: self._compute_ytdlp_available(config)
 
     def _apply_probe_result(self, result: object) -> None:
         """Apply an availability-probe outcome, never enabling Download mid-run.

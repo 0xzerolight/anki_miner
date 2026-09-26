@@ -20,7 +20,6 @@ Guard contract:
 
 from __future__ import annotations
 
-import logging
 import os
 from collections.abc import Callable
 from pathlib import Path
@@ -43,8 +42,6 @@ from anki_miner.services.asr.model_availability import usable_model_installed
 from anki_miner.services.reading._util import natural_sort_key
 from anki_miner.utils.file_utils import is_junk_path
 from anki_miner.utils.i18n import tr_format
-
-logger = logging.getLogger(__name__)
 
 _AUDIO_FILE_FILTER = "Audio Files (" + " ".join(f"*{e}" for e in sorted(AUDIO_EXTENSIONS)) + ");;All Files (*)"
 _BOOK_EXTENSIONS: frozenset[str] = frozenset({".epub", ".txt"})
@@ -69,6 +66,8 @@ class BookSyncTab(_ToolTabBase):
 
     #: Where this tool last wrote — remembered separately from its inputs (D7).
     OUTPUT_HISTORY_KEY = "tools.booksync.output"
+
+    _PROBE_NAME = "ASR"
 
     def __init__(
         self,
@@ -284,22 +283,9 @@ class BookSyncTab(_ToolTabBase):
     # Engine / model state
     # ------------------------------------------------------------------
 
-    def _refresh_engine_state(self) -> None:
-        """Probe engine availability off-thread, then update the Sync guard."""
-        self.sync_button.setEnabled(False)
-        if self._suppress_optional_startup:
-            return
-
-        def _apply(result: object) -> None:
-            self._engine_is_available = bool(result)
-            self.engine_notice_label.setVisible(not self._engine_is_available)
-            self.sync_button.setEnabled(self._engine_is_available)
-
-        def _on_error(message: str) -> None:
-            logger.warning("ASR availability probe failed: %s", message)
-            _apply(False)
-
-        self._run_availability_scan(_engine.available, _apply, _on_error)
+    def _probe_engine(self) -> Callable[[], object]:
+        """Probe ASR engine availability (the Sync guard)."""
+        return _engine.available
 
     # ------------------------------------------------------------------
     # Mode toggle
