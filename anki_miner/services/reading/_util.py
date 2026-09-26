@@ -33,6 +33,11 @@ logger = logging.getLogger(__name__)
 # hostile multi-GB file (mirrors the Yomitan importer's capped index.json peek).
 MAX_MOKURO_JSON_BYTES = 64 * 1024 * 1024
 
+# The message every reading source passes to raise_if_cancelled. One constant
+# so the five loaders (subtitle, mokuro, aozora, text, epub) can't drift from
+# each other one call site at a time.
+READING_CANCELLED = "Reading load cancelled"
+
 
 def read_text_capped(path: Path, cap: int, description: str) -> str:
     """UTF-8 ``read_text`` with a stat-before-read size gate.

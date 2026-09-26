@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from anki_miner.exceptions import OperationCancelled, SetupError
+from anki_miner.exceptions import SetupError, raise_if_cancelled
 from anki_miner.models.reading import (
     ImageRef,
     ReadingDocument,
@@ -29,6 +29,7 @@ from anki_miner.models.reading import (
 )
 from anki_miner.services.reading._util import (
     MAX_MOKURO_JSON_BYTES,
+    READING_CANCELLED,
     natural_sort_key,
     read_text_capped,
     read_zip_member_text_capped,
@@ -75,11 +76,6 @@ class _ImageRecord:
     ref: ImageRef
 
 
-def _raise_if_cancelled(cancel_check: Callable[[], bool] | None) -> None:
-    if cancel_check is not None and cancel_check():
-        raise OperationCancelled("Reading load cancelled")
-
-
 def load(
     ref: ReadingSourceRef,
     *,
@@ -91,7 +87,7 @@ def load(
     ``rules`` is the mining language's sentence-splitting policy, used only by
     the oversized-block fallback; ``None`` is the built-in Japanese one.
     """
-    _raise_if_cancelled(cancel_check)
+    raise_if_cancelled(cancel_check, READING_CANCELLED)
     # Per-kind ref contract: file-backed kinds always carry a path.
     assert ref.path is not None
     # Size-capped even though the detector normally gates first: load() trusts
@@ -102,7 +98,7 @@ def load(
         raw = read_zip_member_text_capped(ref.path, ref.ocr_entry, MAX_MOKURO_JSON_BYTES, ".mokuro member")
     else:
         raw = read_text_capped(ref.path, MAX_MOKURO_JSON_BYTES, ".mokuro file")
-    _raise_if_cancelled(cancel_check)
+    raise_if_cancelled(cancel_check, READING_CANCELLED)
     ocr_name = ref.ocr_entry or ref.path.name
     data = json.loads(raw)
     if not isinstance(data, dict) or not isinstance(data.get("pages"), list):
@@ -133,7 +129,7 @@ def load(
     positional_pages: list[dict | None] = []
     skipped_malformed = 0
     for page_num, page in enumerate(pages, start=1):
-        _raise_if_cancelled(cancel_check)
+        raise_if_cancelled(cancel_check, READING_CANCELLED)
         if not isinstance(page, dict):
             positional_pages.append(None)
             skipped_malformed += 1
@@ -160,7 +156,7 @@ def load(
 
     index = 0
     for page_num, page in valid_pages:
-        _raise_if_cancelled(cancel_check)
+        raise_if_cancelled(cancel_check, READING_CANCELLED)
         image_ref: ImageRef | None = None
         if image_root is not None:
             img_path = str(page.get("img_path") or "")
@@ -218,7 +214,7 @@ def _page_unit_entries(
     entries: list[tuple[str, tuple[int, int, int, int] | None]] = []
     skipped = 0
     for block in page.get("blocks", []):
-        _raise_if_cancelled(cancel_check)
+        raise_if_cancelled(cancel_check, READING_CANCELLED)
         if not isinstance(block, dict):
             skipped += 1
             continue
@@ -303,7 +299,7 @@ def _list_images(
     cancel_check: Callable[[], bool] | None = None,
 ) -> list[_ImageRecord]:
     """List page images from a directory or archive; empty for text-only."""
-    _raise_if_cancelled(cancel_check)
+    raise_if_cancelled(cancel_check, READING_CANCELLED)
     if image_root is None:
         return []
     if image_root.is_dir():
@@ -318,7 +314,7 @@ def _list_dir_images(
 ) -> list[_ImageRecord]:
     records: list[_ImageRecord] = []
     for path in root.rglob("*"):
-        _raise_if_cancelled(cancel_check)
+        raise_if_cancelled(cancel_check, READING_CANCELLED)
         if not path.is_file():
             continue
         rel = path.relative_to(root).as_posix()
@@ -334,11 +330,11 @@ def _list_archive_images(
     cancel_check: Callable[[], bool] | None = None,
 ) -> list[_ImageRecord]:
     records: list[_ImageRecord] = []
-    _raise_if_cancelled(cancel_check)
+    raise_if_cancelled(cancel_check, READING_CANCELLED)
     with zipfile.ZipFile(archive) as zf:
         names = zf.namelist()  # listing only — never reads or extracts members
     for name in names:
-        _raise_if_cancelled(cancel_check)
+        raise_if_cancelled(cancel_check, READING_CANCELLED)
         if name.endswith("/") or is_junk_path(name) or not _is_image_name(name):
             continue
         records.append(_make_record(name, ImageRef(archive, name)))
@@ -372,13 +368,13 @@ def _unique_image_index(
     """Index records by ``key_fn``, excluding every collided key."""
     seen: dict[str, _ImageRecord | None] = {}
     for record in records:
-        _raise_if_cancelled(cancel_check)
+        raise_if_cancelled(cancel_check, READING_CANCELLED)
         key = key_fn(record)
         seen[key] = None if key in seen else record
     unique: dict[str, _ImageRecord] = {}
     ambiguous: set[str] = set()
     for key, indexed_record in seen.items():
-        _raise_if_cancelled(cancel_check)
+        raise_if_cancelled(cancel_check, READING_CANCELLED)
         if indexed_record is None:
             ambiguous.add(key)
         else:
@@ -398,14 +394,14 @@ def _positional_pairs(
     cancel_check: Callable[[], bool] | None = None,
 ) -> dict[int, _ImageRecord]:
     """Tier-4 fallback: natural-sort pairs when counts match and names give no partial signal."""
-    _raise_if_cancelled(cancel_check)
+    raise_if_cancelled(cancel_check, READING_CANCELLED)
     if not records or len(pages) != len(records):
         return {}
     named_count = 0
     matched_count = 0
     has_missing_page = False
     for page in pages:
-        _raise_if_cancelled(cancel_check)
+        raise_if_cancelled(cancel_check, READING_CANCELLED)
         if page is None:
             has_missing_page = True
             continue
@@ -424,21 +420,21 @@ def _positional_pairs(
         return {}
 
     def _record_sort_key(record: _ImageRecord):
-        _raise_if_cancelled(cancel_check)
+        raise_if_cancelled(cancel_check, READING_CANCELLED)
         return natural_sort_key(record.raw_key)
 
     ordered = sorted(records, key=_record_sort_key)
-    _raise_if_cancelled(cancel_check)
+    raise_if_cancelled(cancel_check, READING_CANCELLED)
     if has_missing_page:
         pairs: dict[int, _ImageRecord] = {}
         for i, page in enumerate(pages):
-            _raise_if_cancelled(cancel_check)
+            raise_if_cancelled(cancel_check, READING_CANCELLED)
             if page is not None:
                 pairs[i] = ordered[i]
         return pairs
 
     def _page_sort_key(i: int):
-        _raise_if_cancelled(cancel_check)
+        raise_if_cancelled(cancel_check, READING_CANCELLED)
         return natural_sort_key(str((pages[i] or {}).get("img_path") or ""))
 
     order = sorted(
@@ -447,7 +443,7 @@ def _positional_pairs(
     )
     pairs = {}
     for pos, page_idx in enumerate(order):
-        _raise_if_cancelled(cancel_check)
+        raise_if_cancelled(cancel_check, READING_CANCELLED)
         pairs[page_idx] = ordered[pos]
     return pairs
 

@@ -26,13 +26,13 @@ from collections.abc import Callable
 
 import pysubs2
 
-from anki_miner.exceptions import OperationCancelled, SetupError
+from anki_miner.exceptions import SetupError, raise_if_cancelled
 from anki_miner.models.reading import (
     ReadingDocument,
     ReadingSourceRef,
     ReadingUnit,
 )
-from anki_miner.services.reading._util import _decode
+from anki_miner.services.reading._util import READING_CANCELLED, _decode
 from anki_miner.utils.logging_ext import log_summary
 from anki_miner.utils.text_utils import clean_subtitle_text
 
@@ -52,11 +52,6 @@ def _format_cue_time(seconds: float) -> str:
     if hours:
         return f"{hours}:{minutes:02d}:{secs:02d}"
     return f"{minutes}:{secs:02d}"
-
-
-def _raise_if_cancelled(cancel_check: Callable[[], bool] | None) -> None:
-    if cancel_check is not None and cancel_check():
-        raise OperationCancelled("Reading load cancelled")
 
 
 def load(
@@ -82,7 +77,7 @@ def load(
     Raises:
         SetupError: unreadable file or unparseable subtitle content.
     """
-    _raise_if_cancelled(cancel_check)
+    raise_if_cancelled(cancel_check, READING_CANCELLED)
     # Per-kind ref contract: file-backed kinds always carry a path.
     assert ref.path is not None
     path = ref.path
@@ -92,7 +87,7 @@ def load(
             raise SetupError(f"'{path.name}' is too large to mine (over 32 MB).")
         with path.open("rb") as f:
             raw = f.read(_MAX_TEXT_FILE_BYTES + 1)
-        _raise_if_cancelled(cancel_check)
+        raise_if_cancelled(cancel_check, READING_CANCELLED)
         if len(raw) > _MAX_TEXT_FILE_BYTES:
             raise SetupError(f"'{path.name}' is too large to mine (over 32 MB).")
     except OSError as e:
@@ -106,15 +101,15 @@ def load(
         format_ = pysubs2.formats.get_format_identifier(path.suffix.lower())
         subs = pysubs2.SSAFile.from_string(text, format_=format_)
     except Exception as e:  # pysubs2 raises format-specific parse errors
-        _raise_if_cancelled(cancel_check)
+        raise_if_cancelled(cancel_check, READING_CANCELLED)
         # Parser exceptions can contain cue text; retain type, never message.
         logger.debug("Subtitle parse failed: file=%s error=%s", path, type(e).__name__)
         raise SetupError(f"Cannot parse subtitle file '{path.name}'.") from e
-    _raise_if_cancelled(cancel_check)
+    raise_if_cancelled(cancel_check, READING_CANCELLED)
 
     units: list[ReadingUnit] = []
     for event in subs:
-        _raise_if_cancelled(cancel_check)
+        raise_if_cancelled(cancel_check, READING_CANCELLED)
         # Skip ASS/SSA Comment events (same guard as parse_raw_entries).
         if getattr(event, "is_comment", None) is True:
             continue
