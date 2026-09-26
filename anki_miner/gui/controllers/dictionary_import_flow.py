@@ -14,11 +14,11 @@ from dataclasses import replace
 from pathlib import Path
 
 from PyQt6.QtCore import QCoreApplication
-from PyQt6.QtWidgets import QMessageBox, QWidget
+from PyQt6.QtWidgets import QMessageBox
 
-from anki_miner.config import AnkiMinerConfig, ChainEntry
+from anki_miner.config import ChainEntry
 from anki_miner.gui.controllers.import_flow_common import (
-    ModalImportFlowMixin,
+    PanelImportFlowBase,
     _begin_import_trace,
     _ChainedImportResult,
     _log_import_persist,
@@ -30,7 +30,6 @@ from anki_miner.gui.controllers.import_flow_common import (
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.widgets.panels import DictionarySettingsPanel
-from anki_miner.gui.widgets.panels.chain_settings_panel_base import MutationToken
 from anki_miner.gui.workers.import_worker import ImportWorker
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services._sqlite_index import (
@@ -52,7 +51,7 @@ from anki_miner.utils.i18n import tr_format
 logger = logging.getLogger(__name__)
 
 
-class DictionaryImportFlow(ModalImportFlowMixin):
+class DictionaryImportFlow(PanelImportFlowBase):
     """Drives dictionary zip/XML imports for the Settings → Dictionary panel.
 
     Args:
@@ -71,35 +70,8 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             reimport rewrites an index in place (no chain change).
     """
 
-    def __init__(
-        self,
-        parent: QWidget,
-        panel: DictionarySettingsPanel,
-        get_config: Callable[[], AnkiMinerConfig],
-        persist_chain: Callable[[tuple[ChainEntry, ...]], None],
-        notify_config_changed: Callable[[], None],
-    ) -> None:
-        self._parent = parent
-        self._panel = panel
-        self._get_config = get_config
-        self._persist_chain = persist_chain
-        self._notify_config_changed = notify_config_changed
-        # Long-lived worker reference; ImportWorker is a QThread and would be
-        # destroyed mid-run if it fell out of scope before joining.
-        self._active_import_worker: ImportWorker | None = None
-        self._retained_import_workers: list[ImportWorker] = []
-        self._mutation_token: MutationToken | None = None
-
-    def iter_close_workers(self) -> tuple:
-        """Live worker handles MainWindow must join on close.
-
-        Returns active and retained import workers so ``SettingsTab.iter_close_workers``
-        can chain it into the single
-        ``BackgroundTaskController._join_worker_for_close`` policy (cancel +
-        bounded grace join + laggard deferral).  A ``None`` entry (idle flow) is
-        filtered by ``_join_worker_for_close``.
-        """
-        return self._iter_import_workers()
+    _panel: DictionarySettingsPanel
+    _persist_chain: Callable[[tuple[ChainEntry, ...]], None]
 
     def _import_notes(self, meta: dict) -> str:
         """Trailing note about malformed-skipped entries and media warnings.
@@ -139,22 +111,6 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                 )
             )
         return ("\n\n" + "\n".join(notes)) if notes else ""
-
-    def _set_import_buttons_enabled(self, enabled: bool) -> None:
-        """Acquire/release the panel token that gates every mutation control."""
-        if enabled:
-            token = self._mutation_token
-            self._mutation_token = None
-            if token is not None:
-                self._panel.release(token)
-        elif self._mutation_token is None:
-            self._mutation_token = self._panel.hold_mutation("import")
-
-    def _begin_mutation(self, kind: str) -> bool:
-        if self._mutation_token is not None or not self._panel.prepare_for_mutation():
-            return False
-        self._mutation_token = self._panel.hold_mutation(kind)
-        return True
 
     def _with_dict_at_top(self, dict_id: str) -> tuple[ChainEntry, ...]:
         """Return the current chain with ``dict_id`` placed (or moved) to the top."""

@@ -25,7 +25,7 @@ import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Generic, Literal, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, TypeVar
 from uuid import uuid4
 
 from PyQt6.QtCore import Qt, QTimer
@@ -35,6 +35,10 @@ from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
 from anki_miner.gui.widgets.base import ScreenIssue, report_screen_issue
 from anki_miner.gui.workers.base_worker import CancellableWorker, SingleCallWorker
 from anki_miner.gui.workers.import_worker import ImportWorker
+
+if TYPE_CHECKING:
+    from anki_miner.config import AnkiMinerConfig
+    from anki_miner.gui.widgets.panels.chain_settings_panel_base import MutationToken
 
 logger = logging.getLogger(__name__)
 
@@ -945,3 +949,65 @@ class ModalImportFlowMixin:
         """Release ``worker`` only from its native ``finished`` signal."""
         self._forget_import_worker(worker)
         worker.deleteLater()
+
+
+class PanelImportFlowBase(ModalImportFlowMixin):
+    """An import flow bound to one Settings resource-chain panel.
+
+    The dictionary, audio-pack and frequency/pitch source-chain flows share
+    this constructor, their worker bookkeeping and the panel mutation token
+    that gates every import trigger. ``ResourceBundleFlow`` has no panel and
+    keeps extending :class:`ModalImportFlowMixin` directly.
+
+    Subclasses narrow ``_panel`` and ``_persist_chain`` with class-level
+    annotations for their own panel and chain types.
+    """
+
+    _panel: Any
+    _persist_chain: Callable[[Any], None]
+
+    def __init__(
+        self,
+        parent: QWidget,
+        panel: Any,
+        get_config: Callable[[], AnkiMinerConfig],
+        persist_chain: Callable[[Any], None],
+        notify_config_changed: Callable[[], None],
+    ) -> None:
+        self._parent = parent
+        self._panel = panel
+        self._get_config = get_config
+        self._persist_chain = persist_chain
+        self._notify_config_changed = notify_config_changed
+        # Long-lived worker reference: ImportWorker is a QThread and would be
+        # destroyed mid-run if it fell out of scope before joining.
+        self._active_import_worker: ImportWorker | None = None
+        self._retained_import_workers: list[ImportWorker] = []
+        self._mutation_token: MutationToken | None = None
+
+    def iter_close_workers(self) -> tuple:
+        """Live worker handles MainWindow must join on close.
+
+        Returns the scan, active and retained import workers so
+        ``SettingsTab.iter_close_workers`` can chain them into the single
+        ``BackgroundTaskController._join_worker_for_close`` policy (cancel +
+        bounded grace join + laggard deferral). A ``None`` entry (idle flow)
+        is filtered by ``_join_worker_for_close``.
+        """
+        return self._iter_import_workers()
+
+    def _set_import_buttons_enabled(self, enabled: bool) -> None:
+        """Acquire/release the panel token that gates every mutation control."""
+        if enabled:
+            token = self._mutation_token
+            self._mutation_token = None
+            if token is not None:
+                self._panel.release(token)
+        elif self._mutation_token is None:
+            self._mutation_token = self._panel.hold_mutation("import")
+
+    def _begin_mutation(self, kind: str) -> bool:
+        if self._mutation_token is not None or not self._panel.prepare_for_mutation():
+            return False
+        self._mutation_token = self._panel.hold_mutation(kind)
+        return True
