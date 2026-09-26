@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import QTabWidget
 
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.gui.widgets._queue_mining_tab_base import _QueueMiningTabBase
+from tests.unit._curation_harness import park_worker_at_gate
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -33,19 +34,6 @@ class _Bare(MiningTabBase):
 
     def _commit_known_words(self, forms):
         return 0
-
-
-class _CurationWorker(QThread):
-    """Worker that calls _curation_bridge and stores the result."""
-
-    def __init__(self, tab: MiningTabBase, words: list) -> None:
-        super().__init__()
-        self._tab = tab
-        self._words = words
-        self.result = None
-
-    def run(self) -> None:
-        self.result = self._tab._curation_bridge(self._words)
 
 
 class _LaggardWorker(QThread):
@@ -67,16 +55,6 @@ class _LaggardWorker(QThread):
 
 class _BareQueue(_QueueMiningTabBase):
     """Minimal queue tab used to drive the real shutdown implementation."""
-
-
-def _drain_until(predicate, timeout_ms: int = 3000, step_ms: int = 10) -> bool:
-    from PyQt6.QtTest import QTest
-
-    waited = 0
-    while not predicate() and waited < timeout_ms:
-        QTest.qWait(step_ms)
-        waited += step_ms
-    return predicate()
 
 
 # ---------------------------------------------------------------------------
@@ -102,23 +80,7 @@ class TestMiningTabBaseShutdown:
         qtbot.addWidget(tab)
         tab._init_curation_bridge()
 
-        # Use DirectConnection to detect when the worker reaches the gate emit
-        # without spinning the event loop (which would deliver the queued slot).
-        reached_gate = threading.Event()
-        tab._curation_requested.connect(
-            lambda words: reached_gate.set(),
-            (
-                type(tab._curation_requested).DirectConnection
-                if False
-                else __import__("PyQt6.QtCore", fromlist=["Qt"]).Qt.ConnectionType.DirectConnection
-            ),
-        )
-
-        worker = _CurationWorker(tab, ["word"])
-        worker.start()
-        assert reached_gate.wait(2.0), "worker never emitted the curation request"
-        time.sleep(0.05)  # let it advance into _curation_event.wait()
-        assert not worker.isFinished(), "worker should be parked at the curation gate"
+        worker = park_worker_at_gate(tab, ["word"])
 
         tab.shutdown()
 
@@ -532,19 +494,7 @@ class TestCurationGatePoisonedByControllerShutdown:
         tab._init_curation_bridge()
         tab.worker_thread = None  # no main process worker
 
-        from PyQt6.QtCore import Qt
-
-        reached_gate = threading.Event()
-        tab._curation_requested.connect(
-            lambda words: reached_gate.set(),
-            Qt.ConnectionType.DirectConnection,
-        )
-
-        worker = _CurationWorker(tab, ["w1"])
-        worker.start()
-        assert reached_gate.wait(2.0), "worker never emitted curation request"
-        time.sleep(0.05)
-        assert not worker.isFinished(), "worker should be parked at gate"
+        worker = park_worker_at_gate(tab, ["w1"])
 
         # Simulate what BackgroundTaskController.shutdown does:
         # join(worker_thread=None) → no-op, then tab.shutdown() → poison

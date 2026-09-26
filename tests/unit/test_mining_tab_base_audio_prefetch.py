@@ -12,14 +12,13 @@ import threading
 from unittest.mock import Mock, patch
 
 import pytest
-from PyQt6.QtCore import QThread
-from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QDialog
 
 from anki_miner.config import create_default_config
 from anki_miner.gui.utils.run_off_thread import join_all_off_thread_workers, still_running
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.models import TokenizedWord
+from tests.unit._curation_harness import CurationWorker, drain_until
 
 MODULE = "anki_miner.gui.widgets._mining_tab_base"
 
@@ -52,19 +51,6 @@ class _FakeDialog(QDialog):
         return self.selection
 
 
-class _CurationWorker(QThread):
-    """Runs ``_curation_bridge`` off the GUI thread, exactly like a mining worker."""
-
-    def __init__(self, tab, words):
-        super().__init__()
-        self._tab = tab
-        self._words = words
-        self.result = "<unset>"
-
-    def run(self):
-        self.result = self._tab._curation_bridge(self._words)
-
-
 def _word(lemma="食べる", available=None):
     word = TokenizedWord(
         surface=lemma,
@@ -77,14 +63,6 @@ def _word(lemma="食べる", available=None):
     )
     word.expression_audio_available = available
     return word
-
-
-def _drain_until(predicate, timeout_ms=3000, step_ms=10):
-    waited = 0
-    while not predicate() and waited < timeout_ms:
-        QTest.qWait(step_ms)
-        waited += step_ms
-    return predicate()
 
 
 @pytest.fixture
@@ -134,7 +112,7 @@ def test_only_unknown_rows_are_queued(tab):
     _with_fetch_fn(tab, _fetch)
 
     dialog = _show(tab, [_word("食べる", True), _word("猫", None), _word("犬", False)])
-    assert _drain_until(lambda: len(dialog.states) == 1)
+    assert drain_until(lambda: len(dialog.states) == 1)
     tab._join_curation_prefetch(tab._curation_live_token)
 
     assert asked == ["猫"]
@@ -193,9 +171,9 @@ def test_the_bridge_joins_the_prefetch_before_returning(tab):
 
     _with_fetch_fn(tab, _fetch)
     with patch(f"{MODULE}.WordCurationDialog", _FakeDialog):
-        mining = _CurationWorker(tab, [_word("猫", None)])
+        mining = CurationWorker(tab, [_word("猫", None)])
         mining.start()
-        assert _drain_until(lambda: tab._active_curation_dialog is not None)
+        assert drain_until(lambda: tab._active_curation_dialog is not None)
         dialog = tab._active_curation_dialog
         assert isinstance(dialog, _FakeDialog)
         assert entered.wait(5)
@@ -204,7 +182,7 @@ def test_the_bridge_joins_the_prefetch_before_returning(tab):
 
         dialog.accept()
         release.set()
-        assert _drain_until(lambda: mining.isFinished(), timeout_ms=10000)
+        assert drain_until(lambda: mining.isFinished(), timeout_ms=10000)
         mining.wait(5000)
 
     # still_running(), not isFinished(): run_off_thread's teardown calls
@@ -279,4 +257,4 @@ def test_app_close_join_reaps_the_prefetch(tab):
     release.set()
 
     assert worker.is_cancelled
-    assert _drain_until(lambda: not still_running(worker))
+    assert drain_until(lambda: not still_running(worker))

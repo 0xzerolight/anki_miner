@@ -8,12 +8,12 @@ _curation_event.wait() is released regardless of caller state.
 from __future__ import annotations
 
 import threading
-import time
 from unittest.mock import MagicMock
 
 from PyQt6.QtCore import Qt, QThread
 
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
+from tests.unit._curation_harness import park_worker_at_gate
 
 
 class _Bare(MiningTabBase):
@@ -24,29 +24,6 @@ class _Bare(MiningTabBase):
 
     def _restore_buttons(self) -> None:
         pass
-
-
-class _CurationWorker(QThread):
-    """Worker that calls _curation_bridge and parks until released."""
-
-    def __init__(self, tab: MiningTabBase, words: list) -> None:
-        super().__init__()
-        self._tab = tab
-        self._words = words
-        self.result = None
-
-    def run(self) -> None:
-        self.result = self._tab._curation_bridge(self._words)
-
-
-def _drain_until(predicate, timeout_ms: int = 3000, step_ms: int = 10) -> bool:
-    from PyQt6.QtTest import QTest
-
-    waited = 0
-    while not predicate() and waited < timeout_ms:
-        QTest.qWait(step_ms)
-        waited += step_ms
-    return predicate()
 
 
 def _fake_worker(*, running: bool = False, wait_result: bool = True, name: str = "w") -> MagicMock:
@@ -200,7 +177,7 @@ class TestTeardownDoesNotDeadlockWithGateParkedWorker:
     def test_parked_worker_unparked_by_teardown(self, qapp, qtbot):
         """Real worker parked at the curation gate is unparked by _teardown_previous_run.
 
-        Uses a _CurationWorker as the parked thread; assigns it to worker_thread
+        Uses a ``CurationWorker`` as the parked thread; assigns it to worker_thread
         so _teardown_previous_run sees it and calls cancel()+wait().  The
         poison fired before cancel releases the curation event so wait() returns
         promptly (no deadlock).
@@ -209,18 +186,7 @@ class TestTeardownDoesNotDeadlockWithGateParkedWorker:
         qtbot.addWidget(tab)
         tab._init_curation_bridge()
 
-        # Park a real curation worker
-        reached_gate = threading.Event()
-        tab._curation_requested.connect(
-            lambda words: reached_gate.set(),
-            Qt.ConnectionType.DirectConnection,
-        )
-
-        curation_worker = _CurationWorker(tab, ["w1"])
-        curation_worker.start()
-        assert reached_gate.wait(2.0), "worker never reached the curation gate"
-        time.sleep(0.05)  # let it advance into _curation_event.wait()
-        assert not curation_worker.isFinished(), "worker should be parked"
+        curation_worker = park_worker_at_gate(tab, ["w1"])
 
         # Assign the curation worker as the tab's worker_thread so teardown sees it
         curation_worker.cancel = MagicMock()  # noop cancel — gate is the real block

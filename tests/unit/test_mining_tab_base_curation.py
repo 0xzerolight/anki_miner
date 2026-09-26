@@ -11,16 +11,15 @@ bridge guards.
 
 import contextlib
 import threading
-import time
 from dataclasses import replace
 from unittest.mock import Mock, patch
 
-from PyQt6.QtCore import Qt, QThread
-from PyQt6.QtTest import QTest
+from PyQt6.QtCore import QThread
 from PyQt6.QtWidgets import QApplication, QDialog
 
 from anki_miner.config import create_default_config
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
+from tests.unit._curation_harness import UNSET, CurationWorker, drain_until, park_worker_at_gate
 
 MODULE = "anki_miner.gui.widgets._mining_tab_base"
 
@@ -30,21 +29,6 @@ class _Bare(MiningTabBase):
 
     def _commit_known_words(self, forms):
         return 0
-
-
-class _CurationWorker(QThread):
-    """Runs ``_curation_bridge`` off the GUI thread to exercise queued delivery."""
-
-    def __init__(self, tab, words):
-        super().__init__()
-        self._tab = tab
-        self._words = words
-        self.thread_obj = None
-        self.result = None
-
-    def run(self):
-        self.thread_obj = QThread.currentThread()
-        self.result = self._tab._curation_bridge(self._words)
 
 
 def _fake_worker():
@@ -98,15 +82,6 @@ def _fake_dialog_cls(*, decision="accept", selection=("picked",)):
             super().deleteLater()
 
     return _FakeCurationDialog, created
-
-
-def _drain_until(predicate, timeout_ms=3000, step_ms=10):
-    """Spin the GUI event loop (delivering queued signals) until predicate or timeout."""
-    waited = 0
-    while not predicate() and waited < timeout_ms:
-        QTest.qWait(step_ms)
-        waited += step_ms
-    return predicate()
 
 
 def test_default_build_curation_context_is_none_none(qapp, qtbot):
@@ -194,10 +169,10 @@ def test_curation_bridge_delivers_dialog_on_gui_thread(qapp, qtbot):
     tab._init_curation_bridge()
 
     cls, created = _fake_dialog_cls()
-    worker = _CurationWorker(tab, ["w1", "w2"])
+    worker = CurationWorker(tab, ["w1", "w2"])
     with patch(f"{MODULE}.WordCurationDialog", cls):
         worker.start()
-        assert _drain_until(worker.isFinished), "worker did not finish — bridge hung"
+        assert drain_until(worker.isFinished), "worker did not finish — bridge hung"
     worker.wait()
 
     # Dialog ran on the GUI thread, NOT the worker thread.
@@ -220,13 +195,13 @@ def test_cancel_during_active_dialog_releases_worker(qapp, qtbot):
     tab._init_curation_bridge()
 
     cls, created = _fake_dialog_cls(decision="wait")
-    worker = _CurationWorker(tab, ["w1"])
+    worker = CurationWorker(tab, ["w1"])
     with patch(f"{MODULE}.WordCurationDialog", cls):
         worker.start()
-        assert _drain_until(lambda: bool(created)), "curation window never opened"
+        assert drain_until(lambda: bool(created)), "curation window never opened"
         assert not worker.isFinished(), "worker released before the user decided"
         tab._cancel_active_curation_dialog()
-        assert _drain_until(worker.isFinished), "worker did not finish after cancel"
+        assert drain_until(worker.isFinished), "worker did not finish after cancel"
     worker.wait()
 
     assert created[0].shown_on is qapp.thread()
@@ -237,25 +212,14 @@ def test_poison_curation_gate_releases_parked_worker(qapp, qtbot):
     """A worker parked in _curation_event.wait() resumes with None after poisoning.
 
     Simulates app close: the GUI thread never spins its event loop (no
-    _drain_until here), so the queued _curation_requested slot can never run —
+    drain_until here), so the queued _curation_requested slot can never run —
     _poison_curation_gate() must release the worker directly (T-01 deadlock fix).
     """
     tab = _Bare()
     qtbot.addWidget(tab)
     tab._init_curation_bridge()
 
-    # DirectConnection probe runs on the worker thread at emit time, right
-    # before the bridge parks in _curation_event.wait(). Deliberately no
-    # event-loop spin here — processing events would deliver the queued slot
-    # and defeat the scenario.
-    reached_gate = threading.Event()
-    tab._curation_requested.connect(lambda words: reached_gate.set(), Qt.ConnectionType.DirectConnection)
-
-    worker = _CurationWorker(tab, ["w1"])
-    worker.start()
-    assert reached_gate.wait(2.0), "worker never emitted the curation request"
-    time.sleep(0.05)  # let it advance the final step into _curation_event.wait()
-    assert not worker.isFinished(), "worker should be parked at the curation gate"
+    worker = park_worker_at_gate(tab, ["w1"])
 
     tab._poison_curation_gate()
 
@@ -318,7 +282,7 @@ def test_on_curation_requested_schedules_dialog_delete_later(qapp, qtbot):
     cls, created = _fake_dialog_cls(selection=())
     with patch(f"{MODULE}.WordCurationDialog", cls):
         tab._on_curation_requested(["w1"])
-        assert _drain_until(lambda: bool(created) and created[0].deleted_later), "deleteLater() not called"
+        assert drain_until(lambda: bool(created) and created[0].deleted_later), "deleteLater() not called"
 
     assert created[0].deleted_later, "deleteLater() was not called on the curation window"
 
@@ -332,7 +296,7 @@ def test_on_curation_requested_schedules_delete_later_on_reject(qapp, qtbot):
     cls, created = _fake_dialog_cls(decision="reject")
     with patch(f"{MODULE}.WordCurationDialog", cls):
         tab._on_curation_requested(["w1"])
-        assert _drain_until(lambda: bool(created) and created[0].deleted_later), "deleteLater() not called"
+        assert drain_until(lambda: bool(created) and created[0].deleted_later), "deleteLater() not called"
 
     assert created[0].deleted_later, "deleteLater() must be called on rejection too"
 
@@ -367,7 +331,7 @@ def test_build_curation_context_runs_off_gui_thread(qapp, qtbot):
     cls, created = _fake_dialog_cls(decision="reject")
     with patch(f"{MODULE}.WordCurationDialog", cls):
         tab._on_curation_requested(["w1"])
-        assert _drain_until(tab._curation_event.is_set), "event never set"
+        assert drain_until(tab._curation_event.is_set), "event never set"
 
     # Build ran off the GUI thread; the window was shown ON the GUI thread.
     assert build_thread["id"] != threading.get_ident()
@@ -403,7 +367,7 @@ def test_cancel_during_off_thread_build_releases_worker_without_dialog(qapp, qtb
         # Cancel arrives while the off-thread build is still parked.
         tab._cancel_active_curation_dialog()
         release_build.set()
-        assert _drain_until(tab._curation_event.is_set), "worker not released after cancel"
+        assert drain_until(tab._curation_event.is_set), "worker not released after cancel"
 
     dialog_cls.assert_not_called()  # no dialog popped for a cancelled run
     assert tab._curation_result is None  # cancelled → None
@@ -548,7 +512,7 @@ class TestStagedKnownWordsGate:
 
     def _park(self, tab, qtbot, words):
         """Start a worker at the curation gate and return it with the live dialog."""
-        worker = _CurationWorker(tab, words)
+        worker = CurationWorker(tab, words)
         worker.start()
         qtbot.waitUntil(lambda: tab._active_curation_dialog is not None, timeout=5000)
         return worker, tab._active_curation_dialog
@@ -621,8 +585,8 @@ class TestStagedKnownWordsGate:
             assert not tab._curation_event.is_set()
 
             release.set()
-            assert _drain_until(worker.isFinished, 5000)
-            assert worker.result is not None
+            assert drain_until(worker.isFinished, 5000)
+            assert worker.result not in (None, UNSET)
         finally:
             release.set()
             tab.shutdown()
@@ -642,11 +606,11 @@ class TestStagedKnownWordsGate:
             # Drained, not waited on: the commit runs off-thread and delivers its
             # result as a queued signal, so blocking the GUI thread here would
             # deadlock the very release being asserted.
-            assert _drain_until(worker.isFinished, 5000)
+            assert drain_until(worker.isFinished, 5000)
             assert worker.wait(5000)
             assert calls == [{staged}]
             # The staged word is excluded; the other one is the whole result.
-            assert worker.result is not None
+            assert worker.result not in (None, UNSET)
             assert staged not in {w.mined_form for w in worker.result}
             assert len(worker.result) == len(words) - 1
         finally:

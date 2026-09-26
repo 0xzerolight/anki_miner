@@ -4,7 +4,7 @@ Drives the REAL curation bridge (``MiningTabBase._curation_bridge`` →
 ``_on_curation_requested``) through the responder, modelled on
 ``tests/unit/test_mining_tab_base_curation.py``: a real ``QThread`` calls the
 worker-side bridge, the responder patches ``WordCurationDialog`` at its import
-site in ``_mining_tab_base``, and we spin the GUI event loop with ``_drain_until``
+site in ``_mining_tab_base``, and we spin the GUI event loop with ``drain_until``
 until the worker returns. This proves the fake actually resolves the non-modal
 curator (releasing the parked worker) and that each policy maps the offered words
 to the right selection.
@@ -12,12 +12,10 @@ to the right selection.
 Qt-only (no Anki / no ffmpeg) → default suite, no pytest marker.
 """
 
-from PyQt6.QtCore import QThread
-from PyQt6.QtTest import QTest
-
 from anki_miner.config import create_default_config
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from tests.e2e.curation import AutoCurationResponder
+from tests.unit._curation_harness import CurationWorker, drain_until
 
 
 class _Bare(MiningTabBase):
@@ -34,33 +32,11 @@ class _Bare(MiningTabBase):
         return 0
 
 
-class _CurationWorker(QThread):
-    """Runs ``_curation_bridge`` off the GUI thread to exercise queued delivery."""
-
-    def __init__(self, tab, words):
-        super().__init__()
-        self._tab = tab
-        self._words = words
-        self.result = None
-
-    def run(self):
-        self.result = self._tab._curation_bridge(self._words)
-
-
-def _drain_until(predicate, timeout_ms=3000, step_ms=10):
-    """Spin the GUI event loop (delivering queued signals) until predicate or timeout."""
-    waited = 0
-    while not predicate() and waited < timeout_ms:
-        QTest.qWait(step_ms)
-        waited += step_ms
-    return predicate()
-
-
 def _run_bridge(tab, words):
     """Start a worker through the bridge and return its result once it finishes."""
-    worker = _CurationWorker(tab, words)
+    worker = CurationWorker(tab, words)
     worker.start()
-    assert _drain_until(worker.isFinished), "worker did not finish — bridge hung"
+    assert drain_until(worker.isFinished), "worker did not finish — bridge hung"
     worker.wait()
     return worker.result
 

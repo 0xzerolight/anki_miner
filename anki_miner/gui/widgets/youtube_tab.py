@@ -69,13 +69,10 @@ from anki_miner.gui.widgets.base import (
     PageWidth,
     ScreenIssue,
     configure_card_layout,
-    page_filler,
 )
 from anki_miner.gui.widgets.base.ytdlp_availability import YtdlpAvailabilityMixin, YtdlpStrings
 from anki_miner.gui.widgets.current_job_strip import CurrentJobStrip
-from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
-from anki_miner.gui.widgets.log_widget import LogWidget
-from anki_miner.gui.widgets.progress_widget import ProgressWidget
+from anki_miner.gui.widgets.enhanced import SectionHeader
 from anki_miner.gui.widgets.queue_controls_bar import QueueControlsBar
 from anki_miner.gui.widgets.youtube_playlist_flow import (
     PlaylistAddCallbacks,
@@ -187,6 +184,12 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
             failed_see_log=self.tr("Failed — see log"),
             complete_succeeded=self.tr("Complete — %1 succeeded"),
             complete_with_failures=self.tr("Complete — %1 succeeded, %2 failed"),
+            mine_tip=self.tr("Check every link in the box, then mine every Ready video."),
+            clear=self.tr("Clear"),
+            clear_tip=self.tr("Remove every item from the queue."),
+            cancel_tip=self.tr("Cancel the active run."),
+            progress=self.tr("Progress"),
+            item_noun=self.tr("videos"),
         )
         # yt-dlp copy, built here so each literal stays in this tab's tr-context.
         self._ytdlp_strings = YtdlpStrings(
@@ -344,54 +347,14 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
         )
         queue_layout.addWidget(self.align_captions_checkbox)
 
-        # Action buttons
-        button_row = QHBoxLayout()
-        button_row.setSpacing(SPACING.xs)
-
-        self.mine_button = ModernButton(self.tr("Mine"), variant="primary")
-        self.mine_button.setToolTip(self.tr("Check every link in the box, then mine every Ready video."))
-        self.mine_button.clicked.connect(self._on_mine_clicked)
-
-        self.clear_button = ModernButton(self.tr("Clear"), variant="ghost")
-        self.clear_button.setToolTip(self.tr("Remove every item from the queue."))
-        self.clear_button.clicked.connect(self._on_clear_clicked)
-
-        self.stop_button = ModernButton(self.tr("Cancel"), variant="secondary")
-        self.stop_button.setToolTip(self.tr("Cancel the active run."))
-        self.stop_button.clicked.connect(self._on_stop_all_clicked)
-
-        # Clear acts on the list right above it and stays with it. Mine and
-        # Cancel move to the pinned bar (D6).
-        button_row.addWidget(self.clear_button)
-        button_row.addStretch()
-        queue_layout.addLayout(button_row)
+        # Mine / Clear / Cancel; only Clear stays in this card (D6).
+        self._build_queue_actions(queue_layout)
 
         queue_card.setLayout(queue_layout)
         layout.addWidget(queue_card)
 
-        # --- Progress card
-        progress_card = QFrame()
-        progress_card.setObjectName("card")
-        progress_layout = QVBoxLayout()
-        configure_card_layout(progress_layout)
-
-        progress_layout.addWidget(SectionHeader(self.tr("Progress")))
-        self.progress_widget = ProgressWidget()
-        progress_layout.addWidget(self.progress_widget)
-        # The durable end state of this same card (D20).
-        self._install_receipt(progress_layout, self.progress_widget, item_noun=self.tr("videos"))
-
-        progress_card.setLayout(progress_layout)
-        layout.addWidget(progress_card)
-
-        # --- LogWidget: own header + Copy/Clear actions; install_workflow_shell moves it into the Activity drawer (D6).
-        self.log_widget = LogWidget(source=self.TASK_ID or type(self).__name__)
-
-        # Stands in for the queue list while an empty queue keeps it hidden, so
-        # the page's leftover height still pools below the cards instead of
-        # inflating their headings. Toggled with the list in _recompute_buttons.
-        self.page_filler = page_filler()
-        layout.addWidget(self.page_filler)
+        # --- Progress card, the Activity log and the page filler.
+        self._build_progress_card(layout)
 
         container.setLayout(layout)
 

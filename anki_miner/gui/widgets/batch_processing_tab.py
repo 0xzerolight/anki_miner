@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING
 from PyQt6.QtGui import QFont, QKeySequence
 from PyQt6.QtWidgets import (
     QCheckBox,
-    QDoubleSpinBox,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -21,7 +20,6 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
-from anki_miner.gui.constants import SUBTITLE_OFFSET_MAX, SUBTITLE_OFFSET_MIN
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils import queue_state_store, result_copy
@@ -33,7 +31,6 @@ from anki_miner.gui.widgets.base import (
     ScreenIssue,
     configure_card_layout,
     field_label_width,
-    make_label_fit_text,
     page_filler,
 )
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
@@ -303,54 +300,15 @@ class BatchProcessingTab(FolderSeriesScreenBase):
 
         # Constant subtitle offset applied to every episode pair in the folder
         # (mirrors the Single Episode tab; per-session, seeded from config).
-        offset_layout = QHBoxLayout()
-        offset_layout.setSpacing(SPACING.xs)
-
-        offset_label = QLabel(self.tr("Subtitle Offset:"))
-        offset_label.setObjectName("field-label")
-        offset_label.setMinimumWidth(label_w)
-        make_label_fit_text(offset_label)
-
-        self.offset_spinbox = QDoubleSpinBox()
-        self.offset_spinbox.setRange(SUBTITLE_OFFSET_MIN, SUBTITLE_OFFSET_MAX)
-        self.offset_spinbox.setSingleStep(0.5)
-        self.offset_spinbox.setValue(self.config.subtitle_offset)
-        self.offset_spinbox.setSuffix(self.tr(" seconds"))
-        self.offset_spinbox.setToolTip(
-            self.tr("Adjust subtitle timing for all episodes (positive = later, negative = earlier)")
+        self._build_offset_rows(
+            layout,
+            label_w=label_w,
+            offset_label=self.tr("Subtitle Offset:"),
+            translation_label=self.tr("Translation Offset:"),
+            seconds_suffix=self.tr(" seconds"),
+            offset_tip=self.tr("Adjust subtitle timing for all episodes (positive = later, negative = earlier)"),
+            translation_tip=self.tr("Shift the translation subtitles only (positive = later, negative = earlier)"),
         )
-
-        offset_layout.addWidget(offset_label)
-        offset_layout.addWidget(self.offset_spinbox)
-        offset_layout.addStretch()
-        layout.addLayout(offset_layout)
-
-        # Wrapped in a QWidget so the gate can hide the whole row: a bare
-        # QHBoxLayout has nothing to setVisible().
-        self.secondary_offset_row = QWidget()
-        secondary_offset_layout = QHBoxLayout(self.secondary_offset_row)
-        secondary_offset_layout.setContentsMargins(0, 0, 0, 0)
-        secondary_offset_layout.setSpacing(SPACING.xs)
-
-        secondary_offset_label = QLabel(self.tr("Translation Offset:"))
-        secondary_offset_label.setObjectName("field-label")
-        secondary_offset_label.setMinimumWidth(label_w)
-        make_label_fit_text(secondary_offset_label)
-
-        self.secondary_offset_spinbox = QDoubleSpinBox()
-        self.secondary_offset_spinbox.setRange(SUBTITLE_OFFSET_MIN, SUBTITLE_OFFSET_MAX)
-        self.secondary_offset_spinbox.setSingleStep(0.5)
-        self.secondary_offset_spinbox.setValue(0.0)
-        self.secondary_offset_spinbox.setSuffix(self.tr(" seconds"))
-        self.secondary_offset_spinbox.setToolTip(
-            self.tr("Shift the translation subtitles only (positive = later, negative = earlier)")
-        )
-        secondary_offset_label.setBuddy(self.secondary_offset_spinbox)
-
-        secondary_offset_layout.addWidget(secondary_offset_label)
-        secondary_offset_layout.addWidget(self.secondary_offset_spinbox)
-        secondary_offset_layout.addStretch()
-        layout.addWidget(self.secondary_offset_row)
 
         self._apply_secondary_gate()
 
@@ -1072,37 +1030,9 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         Args:
             config: New configuration
         """
-        # The Add Series card's offset spinbox is a per-session value the user
-        # dials in for the next series; it is never persisted back to config.
-        # Only follow config.subtitle_offset when the *persisted* value actually
-        # changed, so an unrelated settings save / theme toggle (each of which
-        # re-fires update_config) doesn't wipe the in-progress offset. Mirrors
-        # SingleEpisodeTab.update_config.
-        if config.subtitle_offset != self.config.subtitle_offset:
-            self.offset_spinbox.setValue(config.subtitle_offset)
-        self.config = config
+        self._adopt_offset_config(config)
         self._apply_secondary_gate()
         self.queue_panel.secondary_subtitle_enabled = config.secondary_subtitle_enabled
         # Not a _QueueMiningTabBase, so the shared re-seed in its update_config
         # never reaches here — the curation checkbox has to be re-seeded itself.
         self._seed_review_words_checkbox()
-
-    def release_dictionary_resources(self) -> bool:
-        """Close sqlite handles cached by the most recent worker run.
-
-        ``BatchQueueWorkerThread`` exposes its retained processor via the
-        typed ``curation_processor`` property. The handle is still open after
-        the run finishes and blocks Settings → Remove / Re-import on Windows
-        (Issue #30 follow-up).
-
-        Returns ``False`` while a worker is actively running — closing
-        providers under an in-flight processor would crash the run. The
-        facade resets the chain so the next mine re-opens it cleanly.
-        """
-        if self.worker_thread is not None and self.worker_thread.isRunning():
-            return False
-        if self.worker_thread is not None:
-            proc = self.worker_thread.curation_processor
-            if proc is not None:
-                proc.release_dictionary_resources()
-        return True
