@@ -14,7 +14,7 @@ import time
 import uuid
 import zipfile
 from collections.abc import Callable, Iterable, Mapping
-from dataclasses import dataclass, field, replace
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -310,6 +310,32 @@ class _EpisodeContext:
         }
         defaults.update(overrides)
         return ProcessingResult(**defaults)
+
+
+@dataclass
+class _Phase2Counts:
+    """Phase 2's per-run counters, in the order the ``Phase 2 filter`` summary logs them.
+
+    Field order IS the log order: ``_phase2_filter`` splats ``asdict(counts)``
+    into that summary, and tests read the line by field name. Each phase-2 step
+    fills in its own fields; a step that never runs leaves them at 0.
+    """
+
+    frequency_ranked: int = 0
+    known_hits: int = 0
+    known_db_added: int = 0
+    known_db_total: int = 0
+    frequency_rejects: int = 0
+    word_list_rejects: int = 0
+    script_rejects: int = 0
+    wordset_rejects: int = 0
+    episode_rejects: int = 0
+    duplicate_sentence_rejects: int = 0
+    i_plus_one_rejects: int = 0
+    sentence_length_rejects: int = 0
+    whitelist_force_includes: int = 0
+    no_definition_rejects: int = 0
+    duplicate_expression_rejects: int = 0
 
 
 class EpisodeProcessor:
@@ -951,21 +977,7 @@ class EpisodeProcessor:
         Mutates ``ctx.new_words_found`` and ``ctx.comprehension_percentage``.
         Stages difficulty stats for a successful terminal result.
         """
-        frequency_ranked = 0
-        known_hits = 0
-        known_db_added = 0
-        known_db_total = 0
-        frequency_rejects = 0
-        word_list_rejects = 0
-        script_rejects = 0
-        wordset_rejects = 0
-        episode_rejects = 0
-        duplicate_sentence_rejects = 0
-        i_plus_one_rejects = 0
-        sentence_length_rejects = 0
-        whitelist_force_includes = 0
-        no_definition_rejects = 0
-        duplicate_expression_rejects = 0
+        counts = _Phase2Counts()
 
         # Attach frequency data if available (mutates words in-place). Each word
         # gets the per-source breakdown (frequency_sources) for the card display,
@@ -973,7 +985,7 @@ class EpisodeProcessor:
         # harmonic-mean rank (frequency_harmonic_rank) that drives the sort field.
         if self.frequency_service and self.frequency_service.is_available():
             ranked_count = self._attach_frequency(all_words)
-            frequency_ranked = ranked_count
+            counts.frequency_ranked = ranked_count
             self.presenter.show_info(
                 tr_format(
                     QCoreApplication.translate("EpisodeProcessor", "Frequency data: %1/%2 words ranked"),
@@ -1025,8 +1037,8 @@ class EpisodeProcessor:
                     # diff in-memory below to avoid a post-sync re-read.
                     anki_vocab = self.anki_service.get_existing_vocabulary()
                     added, total = self.known_word_db.sync_with_anki(anki_vocab, existing=known_words)
-                    known_db_added = added
-                    known_db_total = total
+                    counts.known_db_added = added
+                    counts.known_db_total = total
                     if added > 0:
                         self.presenter.show_info(
                             tr_format(
@@ -1049,7 +1061,7 @@ class EpisodeProcessor:
                 known_words = self.anki_service.get_existing_vocabulary()
 
             unknown_words = self.word_filter.filter_unknown(all_words, known_words | user_words)
-            known_hits = len(all_words) - len(unknown_words)
+            counts.known_hits = len(all_words) - len(unknown_words)
         self.presenter.show_success(
             QCoreApplication.translate("EpisodeProcessor", "%n new word(s) to mine", "", len(unknown_words))
         )
@@ -1178,7 +1190,7 @@ class EpisodeProcessor:
             kept_words = [w for w, keep in zip(unknown_words, viable, strict=True) if keep]
             dropped = [w.mined_form for w, keep in zip(unknown_words, viable, strict=True) if not keep]
             unknown_words = kept_words
-            no_definition_rejects = len(dropped)
+            counts.no_definition_rejects = len(dropped)
             if dropped:
                 # The presenter names ten; the log names fifty. Which words the
                 # offline probe rejected is the whole diagnosis when a dictionary
@@ -1219,7 +1231,7 @@ class EpisodeProcessor:
         whitelist_service = self._active_whitelist()
         if whitelist_service is not None:
             forced_include, unknown_words = self.word_filter.partition_whitelisted(unknown_words, whitelist_service)
-            whitelist_force_includes = len(forced_include)
+            counts.whitelist_force_includes = len(forced_include)
 
         # Frequency rank band. Gate on an actually-loaded NUMERIC frequency
         # source — NOT just a configured bound, and NOT is_available(). With
@@ -1246,7 +1258,7 @@ class EpisodeProcessor:
                 keep_unranked=self.config.frequency_keep_unranked,
             )
             filtered_out = before - len(unknown_words)
-            frequency_rejects = filtered_out
+            counts.frequency_rejects = filtered_out
             if filtered_out > 0:
                 self.presenter.show_info(self._frequency_filter_notice(filtered_out, freq_low, freq_high))
         elif (freq_low > 0 or freq_high > 0) and not self.config.bypass_optional_filters:
@@ -1278,7 +1290,7 @@ class EpisodeProcessor:
             before = len(unknown_words)
             unknown_words = self.word_filter.filter_by_word_lists(unknown_words, self.word_list_service)
             filtered_out = before - len(unknown_words)
-            word_list_rejects = filtered_out
+            counts.word_list_rejects = filtered_out
             if filtered_out > 0:
                 self.presenter.show_info(
                     tr_format(
@@ -1304,7 +1316,7 @@ class EpisodeProcessor:
                 **script_options_kwarg(script_options, self.config.language),
             )
             removed = before - len(unknown_words)
-            script_rejects = removed
+            counts.script_rejects = removed
             if removed > 0:
                 kinds = []
                 if self.config.exclude_hiragana_only_words:
@@ -1327,7 +1339,7 @@ class EpisodeProcessor:
             before = len(unknown_words)
             unknown_words = self.word_filter.filter_by_wordsets(unknown_words, self.wordset_service)
             filtered_out = before - len(unknown_words)
-            wordset_rejects = filtered_out
+            counts.wordset_rejects = filtered_out
             if filtered_out > 0:
                 self.presenter.show_info(
                     tr_format(
@@ -1344,7 +1356,7 @@ class EpisodeProcessor:
         if occurrence_counts is not None:
             before = len(unknown_words)
             unknown_words = self.word_filter.filter_by_episode_count(unknown_words, occurrence_counts, min_occurrence)
-            episode_rejects += before - len(unknown_words)
+            counts.episode_rejects += before - len(unknown_words)
 
         # Sentence deduplication. i+1 filter does its own sentence picking;
         # dedup would be a no-op (post-i+1 sentences are unique by construction).
@@ -1356,7 +1368,7 @@ class EpisodeProcessor:
             before = len(unknown_words)
             unknown_words = self.word_filter.deduplicate_by_sentence(unknown_words)
             deduped = before - len(unknown_words)
-            duplicate_sentence_rejects = deduped
+            counts.duplicate_sentence_rejects = deduped
             if deduped > 0:
                 self.presenter.show_info(
                     tr_format(
@@ -1378,7 +1390,7 @@ class EpisodeProcessor:
                 unknown_words, line_index or [], all_unknown_lemmas=all_unknown_lemmas
             )
             kept = len(unknown_words)
-            i_plus_one_rejects = before - kept
+            counts.i_plus_one_rejects = before - kept
             pct = (kept / before * 100.0) if before else 0.0
             self.presenter.show_info(
                 tr_format(
@@ -1404,7 +1416,7 @@ class EpisodeProcessor:
                 max_chars=self.config.max_sentence_chars,
             )
             filtered_out = before - len(unknown_words)
-            sentence_length_rejects = filtered_out
+            counts.sentence_length_rejects = filtered_out
             if filtered_out > 0:
                 caps = []
                 if self.config.max_sentence_duration_seconds > 0.0:
@@ -1473,7 +1485,7 @@ class EpisodeProcessor:
                 collapsed.append(word)
             removed = len(unknown_words) - len(collapsed)
             unknown_words = collapsed
-            duplicate_expression_rejects = removed
+            counts.duplicate_expression_rejects = removed
             if removed:
                 self.presenter.show_info(
                     tr_format(
@@ -1490,25 +1502,7 @@ class EpisodeProcessor:
         log_summary(
             logger,
             "Phase 2 filter",
-            **{
-                "in": len(all_words),
-                "out": len(unknown_words),
-                "frequency_ranked": frequency_ranked,
-                "known_hits": known_hits,
-                "known_db_added": known_db_added,
-                "known_db_total": known_db_total,
-                "frequency_rejects": frequency_rejects,
-                "word_list_rejects": word_list_rejects,
-                "script_rejects": script_rejects,
-                "wordset_rejects": wordset_rejects,
-                "episode_rejects": episode_rejects,
-                "duplicate_sentence_rejects": duplicate_sentence_rejects,
-                "i_plus_one_rejects": i_plus_one_rejects,
-                "sentence_length_rejects": sentence_length_rejects,
-                "whitelist_force_includes": whitelist_force_includes,
-                "no_definition_rejects": no_definition_rejects,
-                "duplicate_expression_rejects": duplicate_expression_rejects,
-            },
+            **{"in": len(all_words), "out": len(unknown_words), **asdict(counts)},
         )
         return unknown_words
 
