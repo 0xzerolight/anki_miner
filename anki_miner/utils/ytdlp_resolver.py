@@ -58,7 +58,7 @@ from pathlib import Path
 from typing import Any
 
 from anki_miner.config import paths
-from anki_miner.utils.bundled_binary import frozen_state
+from anki_miner.utils.bundled_binary import executable_file, frozen_state
 from anki_miner.utils.logging_ext import log_summary
 from anki_miner.utils.resolver_log import log_resolution, log_resolution_refused
 
@@ -111,14 +111,6 @@ def ytdlp_verification_receipt_path(binary: Path) -> Path:
     return binary.with_name(f"{binary.name}.verified")
 
 
-def _is_runnable(path: Path) -> bool:
-    """True if *path* is a file and (Windows, or has the POSIX exec bit).
-
-    X_OK is meaningless on Windows, so the executable check is skipped there.
-    """
-    return path.is_file() and (sys.platform == "win32" or os.access(path, os.X_OK))
-
-
 def _sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:
@@ -142,7 +134,7 @@ def _verify_managed_binary(path: Path) -> tuple[bool, str | None, dict[str, obje
         ``None`` both when verification succeeds and when there was no candidate
         to refuse (the managed slot is simply empty).
     """
-    if not _is_runnable(path):
+    if not executable_file(path):
         if path.is_file():
             return (False, "managed_not_executable", {"binary": path})
         return (False, None, {})
@@ -308,7 +300,7 @@ def resolve_ytdlp(config) -> str:
             cached_is_managed = _is_managed_path(cached, managed)
             if cached == "yt-dlp" and override_key != cached:
                 return cached
-            if not _is_runnable(Path(cached)):
+            if not executable_file(Path(cached)):
                 del _CACHE[cache_key]
             elif not cached_is_managed and not _is_within_directory(cached, download_dir):
                 return cached
@@ -379,7 +371,7 @@ def _compute(
         override_path = Path(override)
         # Pointing the override at the managed slot must not bypass its
         # verification requirement.
-        if _is_runnable(override_path):
+        if executable_file(override_path):
             if not _is_managed_path(override_path, downloaded):
                 log_resolution(logger, "yt-dlp", "override", str(override_path))
                 return str(override_path)
@@ -434,7 +426,7 @@ def _compute(
     if not frozen:
         sibling = Path(sys.executable).parent / ytdlp_binary_name()
         sibling_is_managed = _is_managed_path(sibling, downloaded) or _is_within_directory(sibling, download_dir)
-        if not sibling_is_managed and _is_runnable(sibling):
+        if not sibling_is_managed and executable_file(sibling):
             log_resolution(logger, "yt-dlp", "sibling", str(sibling))
             return str(sibling)
 

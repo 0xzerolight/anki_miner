@@ -1,6 +1,7 @@
 """Tests for the alass runtime resolver."""
 
 import logging
+import sys
 
 from anki_miner.utils import alass_resolver
 from anki_miner.utils.alass_resolver import alass_available, resolve_alass
@@ -24,8 +25,8 @@ class TestResolveAlass:
         assert resolve_alass(config) == str(binary)
 
     def test_non_executable_override_falls_through_to_managed(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
-        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
+        monkeypatch.setattr(sys, "platform", "linux")
         override = tmp_path / "override-alass"
         override.write_text("#!/bin/sh\n")
         override.chmod(0o644)
@@ -50,9 +51,9 @@ class TestResolveAlass:
         bundled.write_text("#!/bin/sh\n")
         bundled.chmod(0o755)
 
-        monkeypatch.setattr(alass_resolver.sys, "frozen", True, raising=False)
-        monkeypatch.setattr(alass_resolver.sys, "_MEIPASS", str(tmp_path), raising=False)
-        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
+        monkeypatch.setattr(sys, "platform", "linux")
 
         assert resolve_alass(_Cfg()) == str(bundled)
 
@@ -65,9 +66,9 @@ class TestResolveAlass:
         bundled.write_text("#!/bin/sh\n")
         bundled.chmod(0o644)
 
-        monkeypatch.setattr(alass_resolver.sys, "frozen", True, raising=False)
-        monkeypatch.setattr(alass_resolver.sys, "_MEIPASS", str(tmp_path), raising=False)
-        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
+        monkeypatch.setattr(sys, "platform", "linux")
 
         assert resolve_alass(_Cfg()) == "alass"
 
@@ -77,22 +78,22 @@ class TestResolveAlass:
         bundled = bin_dir / "alass.exe"
         bundled.write_text("binary")
 
-        monkeypatch.setattr(alass_resolver.sys, "frozen", True, raising=False)
-        monkeypatch.setattr(alass_resolver.sys, "_MEIPASS", str(tmp_path), raising=False)
-        monkeypatch.setattr(alass_resolver.sys, "platform", "win32")
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
+        monkeypatch.setattr(sys, "platform", "win32")
 
         assert resolve_alass(_Cfg()) == str(bundled)
 
     def test_frozen_but_missing_bundle_falls_through(self, tmp_path, monkeypatch):
         # frozen, _MEIPASS set, but no bin/alass present
-        monkeypatch.setattr(alass_resolver.sys, "frozen", True, raising=False)
-        monkeypatch.setattr(alass_resolver.sys, "_MEIPASS", str(tmp_path), raising=False)
-        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
+        monkeypatch.setattr(sys, "platform", "linux")
 
         assert resolve_alass(_Cfg()) == "alass"
 
     def test_no_override_not_frozen_returns_literal(self, monkeypatch):
-        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
 
         assert resolve_alass(_Cfg()) == "alass"
 
@@ -105,16 +106,16 @@ class TestResolveAlass:
         bin_dir.mkdir()
         (bin_dir / "alass").write_text("#!/bin/sh\n")
 
-        monkeypatch.setattr(alass_resolver.sys, "frozen", True, raising=False)
-        monkeypatch.setattr(alass_resolver.sys, "_MEIPASS", str(tmp_path), raising=False)
-        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
+        monkeypatch.setattr(sys, "platform", "linux")
 
         config = _Cfg(alass_location=override)
         assert resolve_alass(config) == str(override)
 
     def test_no_alass_location_attr_uses_path_fallback(self, monkeypatch):
         # Config object without alass_location attribute at all — getattr default kicks in.
-        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
 
         class _BareConfig:
             pass
@@ -124,8 +125,8 @@ class TestResolveAlass:
 
 class TestManagedBinRoot:
     def test_managed_binary_used_when_present(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
-        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
+        monkeypatch.setattr(sys, "platform", "linux")
         bin_root = tmp_path / "bin"
         bin_root.mkdir()
         managed = bin_root / "alass"
@@ -135,16 +136,16 @@ class TestManagedBinRoot:
         assert resolve_alass(_Cfg(bin_root=bin_root)) == str(managed)
 
     def test_managed_absent_falls_through_to_path(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
-        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
+        monkeypatch.setattr(sys, "platform", "linux")
         bin_root = tmp_path / "bin"
         bin_root.mkdir()
 
         assert resolve_alass(_Cfg(bin_root=bin_root)) == "alass"
 
     def test_managed_non_executable_falls_through(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
-        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
+        monkeypatch.setattr(sys, "platform", "linux")
         bin_root = tmp_path / "bin"
         bin_root.mkdir()
         managed = bin_root / "alass"
@@ -154,8 +155,8 @@ class TestManagedBinRoot:
         assert resolve_alass(_Cfg(bin_root=bin_root)) == "alass"
 
     def test_managed_windows_exe_name(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
-        monkeypatch.setattr(alass_resolver.sys, "platform", "win32")
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
+        monkeypatch.setattr(sys, "platform", "win32")
         bin_root = tmp_path / "bin"
         bin_root.mkdir()
         managed = bin_root / "alass.exe"
@@ -164,8 +165,8 @@ class TestManagedBinRoot:
         assert resolve_alass(_Cfg(bin_root=bin_root)) == str(managed)
 
     def test_override_beats_managed(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
-        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
+        monkeypatch.setattr(sys, "platform", "linux")
         override = tmp_path / "override-alass"
         override.write_text("#!/bin/sh\n")
         override.chmod(0o755)
@@ -178,7 +179,7 @@ class TestManagedBinRoot:
         assert resolve_alass(_Cfg(alass_location=override, bin_root=bin_root)) == str(override)
 
     def test_no_bin_root_attr_uses_path_fallback(self, monkeypatch):
-        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
 
         class _BareConfig:
             pass
@@ -186,8 +187,8 @@ class TestManagedBinRoot:
         assert resolve_alass(_BareConfig()) == "alass"
 
     def test_cache_does_not_mask_changed_bin_root(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
-        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
+        monkeypatch.setattr(sys, "platform", "linux")
 
         empty_root = tmp_path / "empty"
         empty_root.mkdir()
@@ -233,7 +234,7 @@ class TestCaching:
 
     def test_cache_does_not_mask_frozen_state_change(self, tmp_path, monkeypatch):
         # Not frozen first.
-        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
         assert resolve_alass(_Cfg()) == "alass"
 
         # Now become frozen with a bundled binary; cache must not mask it.
@@ -242,9 +243,9 @@ class TestCaching:
         bundled = bin_dir / "alass"
         bundled.write_text("#!/bin/sh\n")
         bundled.chmod(0o755)
-        monkeypatch.setattr(alass_resolver.sys, "frozen", True, raising=False)
-        monkeypatch.setattr(alass_resolver.sys, "_MEIPASS", str(tmp_path), raising=False)
-        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
+        monkeypatch.setattr(sys, "platform", "linux")
 
         assert resolve_alass(_Cfg()) == str(bundled)
 
@@ -262,15 +263,15 @@ class TestAlassAvailable:
         empty_bin_root = tmp_path / "bin"
         empty_bin_root.mkdir()
 
-        monkeypatch.setattr(alass_resolver.sys, "frozen", True, raising=False)
-        monkeypatch.setattr(alass_resolver.sys, "_MEIPASS", str(meipass), raising=False)
-        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setattr(sys, "_MEIPASS", str(meipass), raising=False)
+        monkeypatch.setattr(sys, "platform", "linux")
 
         assert alass_available(None, empty_bin_root) is True
 
     def test_override_available(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
-        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
+        monkeypatch.setattr(sys, "platform", "linux")
         override = tmp_path / "my-alass"
         override.write_text("#!/bin/sh\n")
         override.chmod(0o755)
@@ -278,8 +279,8 @@ class TestAlassAvailable:
         assert alass_available(override, None) is True
 
     def test_non_executable_override_is_unavailable_without_fallback(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
-        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
+        monkeypatch.setattr(sys, "platform", "linux")
         monkeypatch.setattr(alass_resolver.shutil, "which", lambda name: None)
         override = tmp_path / "my-alass"
         override.write_text("#!/bin/sh\n")
@@ -288,8 +289,8 @@ class TestAlassAvailable:
         assert alass_available(override, None) is False
 
     def test_managed_available(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
-        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
+        monkeypatch.setattr(sys, "platform", "linux")
         bin_root = tmp_path / "bin"
         bin_root.mkdir()
         managed = bin_root / "alass"
@@ -299,8 +300,8 @@ class TestAlassAvailable:
         assert alass_available(None, bin_root) is True
 
     def test_path_available_when_on_path(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
-        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
+        monkeypatch.setattr(sys, "platform", "linux")
         bin_root = tmp_path / "bin"
         bin_root.mkdir()
         monkeypatch.setattr(alass_resolver.shutil, "which", lambda name: "/usr/bin/alass")
@@ -308,8 +309,8 @@ class TestAlassAvailable:
         assert alass_available(None, bin_root) is True
 
     def test_unavailable_when_nothing_present(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
-        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
+        monkeypatch.setattr(sys, "platform", "linux")
         bin_root = tmp_path / "bin"
         bin_root.mkdir()
         monkeypatch.setattr(alass_resolver.shutil, "which", lambda name: None)
@@ -336,8 +337,8 @@ class TestResolutionLogging:
         assert f"tier=override path={binary}" in receipts[0].getMessage()
 
     def test_managed_tier_is_named_and_bad_override_refused(self, tmp_path, monkeypatch, caplog):
-        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
-        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
+        monkeypatch.setattr(sys, "platform", "linux")
         override = tmp_path / "override-alass"
         override.write_text("#!/bin/sh\n")
         override.chmod(0o644)

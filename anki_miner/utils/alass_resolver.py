@@ -18,13 +18,11 @@ that existing subprocess tests assert (``cmd[0] == "alass"``).
 """
 
 import logging
-import os
 import shutil
-import sys
 from pathlib import Path
 from typing import Any
 
-from anki_miner.utils.bundled_binary import bundled_name, frozen_state
+from anki_miner.utils.bundled_binary import bundled_name, executable_file, frozen_state
 from anki_miner.utils.resolver_log import log_resolution, log_resolution_refused
 
 __all__ = ["alass_available", "resolve_alass"]
@@ -60,16 +58,6 @@ def _resolve(base: str, override: Any, bin_root: Any) -> str:
     return resolved
 
 
-def _executable_file(path: Path) -> bool:
-    """Return True if *path* is a file and (on POSIX) executable.
-
-    X_OK is meaningless on Windows, so the executable check is skipped there. A
-    present-but-non-executable file returns False so callers fall through rather
-    than returning a path that fails later at subprocess time.
-    """
-    return path.is_file() and (sys.platform == "win32" or os.access(path, os.X_OK))
-
-
 def _compute(base: str, override: Any, bin_root: Any, frozen: bool, meipass: str | None) -> str:
     # Provenance is logged from here, never from `_resolve`: this runs only on a
     # cache miss, so both the receipt and any refusal are bounded to once per
@@ -77,7 +65,7 @@ def _compute(base: str, override: Any, bin_root: Any, frozen: bool, meipass: str
     # 1. Config override.
     if override:
         override_path = Path(override)
-        if _executable_file(override_path):
+        if executable_file(override_path):
             log_resolution(logger, base, "override", str(override_path))
             return str(override_path)
         if override_path.exists():
@@ -91,7 +79,7 @@ def _compute(base: str, override: Any, bin_root: Any, frozen: bool, meipass: str
     #    being returned and failing later at subprocess time.
     if frozen and meipass is not None:
         bundled = Path(meipass) / "bin" / bundled_name(base)
-        if _executable_file(bundled):
+        if executable_file(bundled):
             log_resolution(logger, base, "bundled", str(bundled))
             return str(bundled)
         if bundled.exists():
@@ -100,7 +88,7 @@ def _compute(base: str, override: Any, bin_root: Any, frozen: bool, meipass: str
     # 3. Managed in-app-downloaded binary under bin_root.
     if bin_root:
         managed = Path(bin_root) / bundled_name(base)
-        if _executable_file(managed):
+        if executable_file(managed):
             log_resolution(logger, base, "managed", str(managed))
             return str(managed)
         if managed.exists():
@@ -133,4 +121,4 @@ def alass_available(alass_location, bin_root) -> bool:
     resolved = _resolve("alass", alass_location, bin_root)
     if resolved == "alass":
         return shutil.which("alass") is not None
-    return _executable_file(Path(resolved))
+    return executable_file(Path(resolved))

@@ -23,6 +23,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from anki_miner.utils.bundled_binary import executable_file
 from anki_miner.utils.resolver_log import log_resolution, log_resolution_refused
 
 __all__ = [
@@ -60,13 +61,9 @@ def managed_mokuro_path(uv_root: Path) -> Path:
     return env / "Scripts" / "mokuro.exe" if sys.platform == "win32" else env / "bin" / "mokuro"
 
 
-def _executable_file(path: Path) -> bool:
-    return path.is_file() and (sys.platform == "win32" or os.access(path, os.X_OK))
-
-
 def managed_mokuro_installed(uv_root: Path) -> bool:
     """True when the installer's console script is present and runnable. Cheap."""
-    return _executable_file(managed_mokuro_path(uv_root))
+    return executable_file(managed_mokuro_path(uv_root))
 
 
 #: Host-side Python selection. Inherited by a child, PYTHONHOME/PYTHONPATH
@@ -86,14 +83,14 @@ def scrubbed_python_env() -> dict[str, str]:
 def _compute(override: Any, uv_root: Any) -> str:
     if override:
         override_path = Path(override)
-        if _executable_file(override_path):
+        if executable_file(override_path):
             log_resolution(logger, "mokuro", "override", str(override_path))
             return str(override_path)
         if override_path.exists():
             log_resolution_refused(logger, "mokuro", "override_not_executable", override=override_path)
     if uv_root:
         managed = managed_mokuro_path(Path(uv_root))
-        if _executable_file(managed):
+        if executable_file(managed):
             log_resolution(logger, "mokuro", "managed", str(managed))
             return str(managed)
         if managed.exists():
@@ -122,4 +119,4 @@ def mokuro_available(mokuro_location: Any, uv_root: Any) -> bool:
     resolved = _resolve(mokuro_location, uv_root)
     if resolved == "mokuro":
         return shutil.which("mokuro") is not None
-    return _executable_file(Path(resolved))
+    return executable_file(Path(resolved))

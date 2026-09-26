@@ -2,6 +2,7 @@
 
 import dataclasses
 import logging
+import sys
 
 import pytest
 
@@ -52,9 +53,9 @@ class TestResolveFfmpeg:
         bundled.write_text("#!/bin/sh\n")
         bundled.chmod(0o755)
 
-        monkeypatch.setattr(ffmpeg_resolver.sys, "frozen", True, raising=False)
-        monkeypatch.setattr(ffmpeg_resolver.sys, "_MEIPASS", str(tmp_path), raising=False)
-        monkeypatch.setattr(ffmpeg_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
+        monkeypatch.setattr(sys, "platform", "linux")
 
         assert resolve_ffmpeg(base_config) == str(bundled)
 
@@ -67,9 +68,9 @@ class TestResolveFfmpeg:
         bundled.write_text("#!/bin/sh\n")
         bundled.chmod(0o644)
 
-        monkeypatch.setattr(ffmpeg_resolver.sys, "frozen", True, raising=False)
-        monkeypatch.setattr(ffmpeg_resolver.sys, "_MEIPASS", str(tmp_path), raising=False)
-        monkeypatch.setattr(ffmpeg_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
+        monkeypatch.setattr(sys, "platform", "linux")
 
         assert resolve_ffmpeg(base_config) == "ffmpeg"
 
@@ -79,22 +80,22 @@ class TestResolveFfmpeg:
         bundled = bin_dir / "ffmpeg.exe"
         bundled.write_text("binary")
 
-        monkeypatch.setattr(ffmpeg_resolver.sys, "frozen", True, raising=False)
-        monkeypatch.setattr(ffmpeg_resolver.sys, "_MEIPASS", str(tmp_path), raising=False)
-        monkeypatch.setattr(ffmpeg_resolver.sys, "platform", "win32")
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
+        monkeypatch.setattr(sys, "platform", "win32")
 
         assert resolve_ffmpeg(base_config) == str(bundled)
 
     def test_frozen_but_missing_bundle_falls_through(self, base_config, tmp_path, monkeypatch):
         # frozen, _MEIPASS set, but no bin/ffmpeg present
-        monkeypatch.setattr(ffmpeg_resolver.sys, "frozen", True, raising=False)
-        monkeypatch.setattr(ffmpeg_resolver.sys, "_MEIPASS", str(tmp_path), raising=False)
-        monkeypatch.setattr(ffmpeg_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
+        monkeypatch.setattr(sys, "platform", "linux")
 
         assert resolve_ffmpeg(base_config) == "ffmpeg"
 
     def test_no_override_not_frozen_returns_literal(self, base_config, monkeypatch):
-        monkeypatch.setattr(ffmpeg_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
 
         assert resolve_ffmpeg(base_config) == "ffmpeg"
 
@@ -107,9 +108,9 @@ class TestResolveFfmpeg:
         bin_dir.mkdir()
         (bin_dir / "ffmpeg").write_text("#!/bin/sh\n")
 
-        monkeypatch.setattr(ffmpeg_resolver.sys, "frozen", True, raising=False)
-        monkeypatch.setattr(ffmpeg_resolver.sys, "_MEIPASS", str(tmp_path), raising=False)
-        monkeypatch.setattr(ffmpeg_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
+        monkeypatch.setattr(sys, "platform", "linux")
 
         config = dataclasses.replace(base_config, ffmpeg_location=override)
         assert resolve_ffmpeg(config) == str(override)
@@ -136,14 +137,14 @@ class TestResolveFfprobe:
         bundled.write_text("#!/bin/sh\n")
         bundled.chmod(0o755)
 
-        monkeypatch.setattr(ffmpeg_resolver.sys, "frozen", True, raising=False)
-        monkeypatch.setattr(ffmpeg_resolver.sys, "_MEIPASS", str(tmp_path), raising=False)
-        monkeypatch.setattr(ffmpeg_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
+        monkeypatch.setattr(sys, "platform", "linux")
 
         assert resolve_ffprobe(base_config) == str(bundled)
 
     def test_no_override_not_frozen_returns_literal(self, base_config, monkeypatch):
-        monkeypatch.setattr(ffmpeg_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
 
         assert resolve_ffprobe(base_config) == "ffprobe"
 
@@ -179,7 +180,7 @@ class TestCaching:
 
     def test_cache_does_not_mask_frozen_state_change(self, base_config, tmp_path, monkeypatch):
         # Not frozen first.
-        monkeypatch.setattr(ffmpeg_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
         assert resolve_ffmpeg(base_config) == "ffmpeg"
 
         # Now become frozen with a bundled binary; cache must not mask it.
@@ -188,9 +189,9 @@ class TestCaching:
         bundled = bin_dir / "ffmpeg"
         bundled.write_text("#!/bin/sh\n")
         bundled.chmod(0o755)
-        monkeypatch.setattr(ffmpeg_resolver.sys, "frozen", True, raising=False)
-        monkeypatch.setattr(ffmpeg_resolver.sys, "_MEIPASS", str(tmp_path), raising=False)
-        monkeypatch.setattr(ffmpeg_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
+        monkeypatch.setattr(sys, "platform", "linux")
 
         assert resolve_ffmpeg(base_config) == str(bundled)
 

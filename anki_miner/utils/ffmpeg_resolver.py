@@ -16,12 +16,10 @@ that existing subprocess tests assert (``cmd[0] == "ffmpeg"``).
 """
 
 import logging
-import os
-import sys
 from pathlib import Path
 from typing import Any
 
-from anki_miner.utils.bundled_binary import bundled_name, frozen_state
+from anki_miner.utils.bundled_binary import bundled_name, executable_file, frozen_state
 from anki_miner.utils.resolver_log import log_resolution, log_resolution_refused
 
 __all__ = ["resolve_ffmpeg", "resolve_ffprobe"]
@@ -55,11 +53,6 @@ def _resolve(base: str, override: Any) -> str:
     return resolved
 
 
-def _executable_file(path: Path) -> bool:
-    """True if *path* is a file and (Windows, or carries the POSIX exec bit)."""
-    return path.is_file() and (sys.platform == "win32" or os.access(path, os.X_OK))
-
-
 def _compute(base: str, override: Any, frozen: bool, meipass: str | None) -> str:
     # Provenance is logged from here, never from `_resolve`: this runs only on a
     # cache miss, which bounds both the receipt and any refusal to once per cache
@@ -68,7 +61,7 @@ def _compute(base: str, override: Any, frozen: bool, meipass: str | None) -> str
     # 1. Config override.
     if override:
         override_path = Path(override)
-        if _executable_file(override_path):
+        if executable_file(override_path):
             log_resolution(logger, base, "override", str(override_path))
             return str(override_path)
         if override_path.exists():
@@ -85,7 +78,7 @@ def _compute(base: str, override: Any, frozen: bool, meipass: str | None) -> str
     #    meaningless on Windows, so skip the check there.
     if frozen and meipass is not None:
         bundled = Path(meipass) / "bin" / bundled_name(base)
-        if _executable_file(bundled):
+        if executable_file(bundled):
             log_resolution(logger, base, "bundled", str(bundled))
             return str(bundled)
         if bundled.exists():
