@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 import sqlite3
 from pathlib import Path
@@ -463,6 +464,37 @@ class TestStaleEnabled:
         config = _config_with_chain(AudioSourceEntry(kind="pack", pack_id=pack_id, enabled=True))
 
         assert reg.stale_enabled(config) == []
+
+
+# ---------------------------------------------------------------------------
+# usable_enabled (shared with the other three registries)
+# ---------------------------------------------------------------------------
+
+
+class TestUsableEnabled:
+    def test_only_enabled_current_packs_for_the_mining_language(self, tmp_path: Path):
+        import shutil
+
+        root = tmp_path / "audio_packs"
+        _stale_pack(root, "old_pack")
+        _packs_root, _final_dir, good_id = _import_pack(tmp_path)
+        _packs_root, _final_dir, moved_id = _import_pack(tmp_path, pack_dir_name="moved_src")
+        # The index stays, but the audio it points at is gone (moved/unplugged).
+        shutil.rmtree(tmp_path / "moved_src")
+        reg = AudioPackRegistry(root)
+        reg.load()
+        config = _config_with_chain(
+            AudioSourceEntry(kind="pack", pack_id="old_pack", enabled=True),
+            AudioSourceEntry(kind="jpod101", enabled=True),
+            AudioSourceEntry(kind="pack", pack_id="gone_pack", enabled=True),
+            AudioSourceEntry(kind="pack", pack_id=moved_id, enabled=True),
+            AudioSourceEntry(kind="pack", pack_id=good_id, enabled=True),
+        )
+
+        assert [m.pack_id for m in reg.usable_enabled(config)] == [good_id]
+        assert reg.usable_enabled(dataclasses.replace(config, language="zh")) == []
+        disabled = _config_with_chain(AudioSourceEntry(kind="pack", pack_id=good_id, enabled=False))
+        assert reg.usable_enabled(disabled) == []
 
 
 class TestStaleEnabledAudioPacksHelper:

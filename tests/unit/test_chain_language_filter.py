@@ -80,7 +80,7 @@ def _pack_meta(pack_id: str, language: str, tmp_path) -> AudioPackMeta:
 
 def test_dict_chain_drops_other_language_slots(tmp_path):
     registry = DictionaryRegistry(tmp_path)
-    registry._dicts = {
+    registry._slots = {
         "ja-dict": _dict_meta("ja-dict", "ja", tmp_path),
         "zh-dict": _dict_meta("zh-dict", "zh", tmp_path),
     }
@@ -100,7 +100,7 @@ def test_dict_chain_drops_other_language_slots(tmp_path):
 
 def test_ja_config_keeps_a_legacy_unstamped_slot(tmp_path):
     registry = DictionaryRegistry(tmp_path)
-    registry._dicts = {"legacy": _dict_meta("legacy", "ja", tmp_path)}
+    registry._slots = {"legacy": _dict_meta("legacy", "ja", tmp_path)}
     config = dataclasses.replace(
         AnkiMinerConfig(),
         dictionary_chain=(ChainEntry(kind="indexed", dict_id="legacy", enabled=True),),
@@ -111,7 +111,7 @@ def test_ja_config_keeps_a_legacy_unstamped_slot(tmp_path):
 def test_ja_slot_in_a_ja_session_never_warns(tmp_path):
     """The byte-stability guard: no warning is manufactured for a ja slot."""
     registry = DictionaryRegistry(tmp_path)
-    registry._dicts = {"legacy": _dict_meta("legacy", "ja", tmp_path)}
+    registry._slots = {"legacy": _dict_meta("legacy", "ja", tmp_path)}
     config = dataclasses.replace(
         AnkiMinerConfig(),
         dictionary_chain=(ChainEntry(kind="indexed", dict_id="legacy", enabled=True),),
@@ -125,7 +125,7 @@ def test_dict_chain_skips_without_a_load_result(tmp_path, monkeypatch):
     """The skip is the registry's, not the sink's: no load_result, same chain."""
     register_stub_profile(monkeypatch, "ko")
     registry = DictionaryRegistry(tmp_path)
-    registry._dicts = {"ja-dict": _dict_meta("ja-dict", "ja", tmp_path)}
+    registry._slots = {"ja-dict": _dict_meta("ja-dict", "ja", tmp_path)}
     config = dataclasses.replace(
         AnkiMinerConfig(),
         language="ko",
@@ -142,7 +142,7 @@ def test_dict_chain_skips_without_a_load_result(tmp_path, monkeypatch):
 def test_frequency_chain_drops_other_language_slots(tmp_path, monkeypatch):
     register_stub_profile(monkeypatch, "ko")
     registry = FrequencySourceRegistry(tmp_path)
-    registry._sources = {
+    registry._slots = {
         "ja-freq": FreqSourceMeta(
             source_id="ja-freq",
             source_name="ja",
@@ -164,7 +164,7 @@ def test_frequency_chain_drops_other_language_slots(tmp_path, monkeypatch):
 
 def test_frequency_chain_warns_and_keeps_the_matching_slot(tmp_path):
     registry = FrequencySourceRegistry(tmp_path)
-    registry._sources = {
+    registry._slots = {
         "ja-freq": _freq_meta("ja-freq", "ja", tmp_path),
         "zh-freq": _freq_meta("zh-freq", "zh", tmp_path),
     }
@@ -190,7 +190,7 @@ def test_frequency_chain_warns_and_keeps_the_matching_slot(tmp_path):
 def test_pitch_chain_drops_other_language_slots(tmp_path, monkeypatch):
     register_stub_profile(monkeypatch, "ko")
     registry = PitchSourceRegistry(tmp_path)
-    registry._sources = {
+    registry._slots = {
         "ja-pitch": _pitch_meta("ja-pitch", "ja", tmp_path),
         "ko-pitch": _pitch_meta("ko-pitch", "ko", tmp_path),
     }
@@ -210,7 +210,7 @@ def test_pitch_chain_drops_other_language_slots(tmp_path, monkeypatch):
 
 def test_pitch_chain_keeps_every_slot_for_ja(tmp_path):
     registry = PitchSourceRegistry(tmp_path)
-    registry._sources = {"legacy-pitch": _pitch_meta("legacy-pitch", "ja", tmp_path)}
+    registry._slots = {"legacy-pitch": _pitch_meta("legacy-pitch", "ja", tmp_path)}
     config = dataclasses.replace(
         AnkiMinerConfig(),
         pitch_chain=(PitchSourceEntry(source_id="legacy-pitch", enabled=True),),
@@ -225,7 +225,7 @@ def test_pitch_chain_keeps_every_slot_for_ja(tmp_path):
 
 def test_audio_pack_chain_drops_other_language_slots(tmp_path):
     registry = AudioPackRegistry(tmp_path)
-    registry._packs = {
+    registry._slots = {
         "ja-pack": _pack_meta("ja-pack", "ja", tmp_path),
         "zh-pack": _pack_meta("zh-pack", "zh", tmp_path),
     }
@@ -245,7 +245,7 @@ def test_audio_pack_chain_drops_other_language_slots(tmp_path):
 
 def test_audio_pack_chain_keeps_every_pack_for_ja(tmp_path):
     registry = AudioPackRegistry(tmp_path)
-    registry._packs = {"legacy-pack": _pack_meta("legacy-pack", "ja", tmp_path)}
+    registry._slots = {"legacy-pack": _pack_meta("legacy-pack", "ja", tmp_path)}
     config = dataclasses.replace(
         AnkiMinerConfig(),
         expression_audio_chain=(AudioSourceEntry(kind="pack", pack_id="legacy-pack", enabled=True),),
