@@ -6,14 +6,13 @@ import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QCoreApplication
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.interfaces.dictionary_provider import DictionaryProvider
 from anki_miner.languages.registry import config_language, get_profile, language_display_name
-from anki_miner.services._slot_registry import IndexedSlotRegistry
+from anki_miner.services._slot_registry import IndexedSlotRegistry, LoadResultSink
 from anki_miner.services._sqlite_index import (
     is_generated_store_artifact,
     log_resource_inventory,
@@ -26,9 +25,6 @@ from anki_miner.services.dictionary.providers.indexed_provider import IndexedDic
 from anki_miner.services.dictionary.providers.jisho_provider import JishoProvider
 from anki_miner.services.dictionary.storage import SCHEMA_VERSION
 from anki_miner.utils.i18n import tr_format
-
-if TYPE_CHECKING:  # pragma: no cover - typing only, keeps services import-free of gui
-    from anki_miner.gui.utils.service_factory import ServiceLoadResult
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +44,15 @@ class DictMeta:
 
 class DictionaryRegistry(IndexedSlotRegistry[DictMeta, ChainEntry]):
     """Scans the dictionaries folder and builds runtime provider chains."""
+
+    _noun = "Dictionary"
+    _logger = logger
+    # Debug, not warning: this chain is rebuilt on every episode, and a missing
+    # on-disk dict (e.g. the legacy 'jmdict-english' default slot a user never
+    # migrated, or a transiently unreachable dicts_root) is skip-and-continue by
+    # design. A genuinely empty chain is still surfaced at WARNING by
+    # build_definition_service ("No offline dictionary — …").
+    _missing_level = logging.DEBUG
 
     def load(self) -> None:
         self._slots = scan_index_root(
@@ -93,11 +98,18 @@ class DictionaryRegistry(IndexedSlotRegistry[DictMeta, ChainEntry]):
     def _meta_id(self, meta: DictMeta) -> str:
         return meta.dict_id
 
+    def _skipped_language_notice(self, meta: DictMeta) -> str:
+        return tr_format(
+            QCoreApplication.translate("ResourceChain", "Dictionary '%1' is indexed for %2 and was skipped."),
+            meta.source_name,
+            language_display_name(meta.language),
+        )
+
     def build_provider_chain(
         self,
         config: AnkiMinerConfig,
         *,
-        load_result: ServiceLoadResult | None = None,
+        load_result: LoadResultSink | None = None,
     ) -> list[DictionaryProvider]:
         """Build the ordered provider chain from config + disk state.
 
@@ -114,53 +126,8 @@ class DictionaryRegistry(IndexedSlotRegistry[DictMeta, ChainEntry]):
         """
         language = config_language(config)
         chain: list[DictionaryProvider] = []
-        for entry in config.dictionary_chain:
-            if not entry.enabled:
-                continue
-            if entry.kind == "indexed":
-                if entry.dict_id is None:
-                    logger.warning("Skipping indexed ChainEntry with null dict_id")
-                    continue
-                meta = self._slots.get(entry.dict_id)
-                if meta is None:
-                    # Debug, not warning: this chain is rebuilt on every episode,
-                    # and a missing on-disk dict (e.g. the legacy 'jmdict-english'
-                    # default slot a user never migrated, or a transiently
-                    # unreachable dicts_root) is skip-and-continue by design. A
-                    # genuinely empty chain is still surfaced at WARNING by
-                    # build_definition_service ("No offline dictionary — …").
-                    logger.debug(
-                        "Dictionary '%s' referenced in config but not found in %s",
-                        entry.dict_id,
-                        self._root,
-                    )
-                    continue
-                if not meta.schema_ok:
-                    logger.warning(
-                        "Dictionary '%s' has wrong schema_version; needs reimport",
-                        entry.dict_id,
-                    )
-                    continue
-                if meta.language != language:
-                    # A ko index answering a zh run returns confident nonsense;
-                    # skipping is the only safe read of a cross-language slot.
-                    logger.warning(
-                        "Dictionary '%s' is indexed for '%s'; skipped for '%s'",
-                        entry.dict_id,
-                        meta.language,
-                        language,
-                    )
-                    if load_result is not None:
-                        load_result.warnings.append(
-                            tr_format(
-                                QCoreApplication.translate(
-                                    "ResourceChain", "Dictionary '%1' is indexed for %2 and was skipped."
-                                ),
-                                meta.source_name,
-                                language_display_name(meta.language),
-                            )
-                        )
-                    continue
+        for entry, meta in self._walk_enabled(config, language, load_result):
+            if meta is not None:
                 chain.append(
                     IndexedDictProvider(
                         dict_id=meta.dict_id,
@@ -169,6 +136,8 @@ class DictionaryRegistry(IndexedSlotRegistry[DictMeta, ChainEntry]):
                         keys=get_profile(language).dict_keys,
                     )
                 )
+            elif entry.kind == "indexed":
+                logger.warning("Skipping indexed ChainEntry with null dict_id")
             elif entry.kind == "jisho":
                 chain.append(JishoProvider(config.jisho_api_url, config.jisho_delay))
         return chain

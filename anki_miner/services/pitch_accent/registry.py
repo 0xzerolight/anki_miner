@@ -17,13 +17,12 @@ import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QCoreApplication
 
 from anki_miner.config import AnkiMinerConfig, PitchSourceEntry
 from anki_miner.languages.registry import config_language, language_display_name
-from anki_miner.services._slot_registry import IndexedSlotRegistry
+from anki_miner.services._slot_registry import IndexedSlotRegistry, LoadResultSink
 from anki_miner.services._sqlite_index import (
     is_generated_store_artifact,
     log_resource_inventory,
@@ -35,9 +34,6 @@ from anki_miner.services._sqlite_index import (
 from anki_miner.services.pitch_accent.provider import IndexedPitchProvider
 from anki_miner.services.pitch_accent.storage import SCHEMA_VERSION
 from anki_miner.utils.i18n import tr_format
-
-if TYPE_CHECKING:  # pragma: no cover - typing only, keeps services import-free of gui
-    from anki_miner.gui.utils.service_factory import ServiceLoadResult
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +57,9 @@ class PitchSourceMeta:
 
 class PitchSourceRegistry(IndexedSlotRegistry[PitchSourceMeta, PitchSourceEntry]):
     """Scans the pitch-sources folder and builds runtime source lists."""
+
+    _noun = "Pitch source"
+    _logger = logger
 
     def load(self) -> None:
         self._slots = scan_index_root(
@@ -104,11 +103,21 @@ class PitchSourceRegistry(IndexedSlotRegistry[PitchSourceMeta, PitchSourceEntry]
     def _meta_id(self, meta: PitchSourceMeta) -> str:
         return meta.source_id
 
+    def _stale_detail(self, meta: PitchSourceMeta) -> str:
+        return f"unsupported schema_version {meta.version}"
+
+    def _skipped_language_notice(self, meta: PitchSourceMeta) -> str:
+        return tr_format(
+            QCoreApplication.translate("ResourceChain", "Pitch source '%1' is indexed for %2 and was skipped."),
+            meta.source_name,
+            language_display_name(meta.language),
+        )
+
     def build_sources(
         self,
         config: AnkiMinerConfig,
         *,
-        load_result: ServiceLoadResult | None = None,
+        load_result: LoadResultSink | None = None,
     ) -> list[IndexedPitchProvider]:
         """Build the ordered provider list from config + disk state.
 
@@ -125,53 +134,15 @@ class PitchSourceRegistry(IndexedSlotRegistry[PitchSourceMeta, PitchSourceEntry]
         Caller is responsible for invoking provider.load() on each.
         """
         language = config_language(config)
-        sources: list[IndexedPitchProvider] = []
-        for entry in config.pitch_chain:
-            if not entry.enabled:
-                continue
-            meta = self._slots.get(entry.source_id)
-            if meta is None:
-                logger.warning(
-                    "Pitch source '%s' referenced in config but not found in %s",
-                    entry.source_id,
-                    self._root,
-                )
-                continue
-            if not meta.schema_ok:
-                logger.warning(
-                    "Pitch source '%s' has unsupported schema_version %s; needs reimport",
-                    entry.source_id,
-                    meta.version,
-                )
-                continue
-            if meta.language != language:
-                # A ko index answering a zh run returns confident nonsense;
-                # skipping is the only safe read of a cross-language slot.
-                logger.warning(
-                    "Pitch source '%s' is indexed for '%s'; skipped for '%s'",
-                    entry.source_id,
-                    meta.language,
-                    language,
-                )
-                if load_result is not None:
-                    load_result.warnings.append(
-                        tr_format(
-                            QCoreApplication.translate(
-                                "ResourceChain", "Pitch source '%1' is indexed for %2 and was skipped."
-                            ),
-                            meta.source_name,
-                            language_display_name(meta.language),
-                        )
-                    )
-                continue
-            sources.append(
-                IndexedPitchProvider(
-                    source_id=meta.source_id,
-                    db_path=meta.db_path,
-                    display_name=meta.source_name,
-                )
+        return [
+            IndexedPitchProvider(
+                source_id=meta.source_id,
+                db_path=meta.db_path,
+                display_name=meta.source_name,
             )
-        return sources
+            for _entry, meta in self._walk_enabled(config, language, load_result)
+            if meta is not None
+        ]
 
 
 def stale_enabled_pitch_sources(config: AnkiMinerConfig) -> list[PitchSourceMeta]:

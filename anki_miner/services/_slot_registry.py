@@ -2,19 +2,28 @@
 
 Dictionaries, frequency sources, pitch sources and audio packs each scan
 ``<root>/<slot_id>/index.sqlite`` folders in their own ``load()``. What they
-then answer about their config chain is one policy, kept here so the families
-cannot drift apart. ``__init__`` does no I/O.
+then answer about their config chain, and the gates their chain build applies
+(:meth:`IndexedSlotRegistry._walk_enabled`), is one policy, kept here so the
+families cannot drift apart. ``__init__`` does no I/O.
 """
 
 from __future__ import annotations
 
+import logging
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from pathlib import Path
-from typing import Generic, Protocol, TypeVar
+from typing import TYPE_CHECKING, ClassVar, Generic, Protocol, TypeAlias, TypeVar
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.languages.registry import config_language
+
+if TYPE_CHECKING:  # pragma: no cover - typing only, keeps services import-free of gui
+    from anki_miner.gui.utils.service_factory import ServiceLoadResult
+
+#: What every ``build_*`` method's ``load_result`` sink is. Duck typed in
+#: practice: anything with a ``warnings`` list.
+LoadResultSink: TypeAlias = "ServiceLoadResult"
 
 
 class SlotMeta(Protocol):
@@ -44,6 +53,13 @@ EntryT = TypeVar("EntryT", bound=ChainSlotEntry)
 class IndexedSlotRegistry(ABC, Generic[MetaT, EntryT]):
     """One family's scanned slots plus the chain questions asked of them."""
 
+    #: Opens every chain-build log line ("Dictionary", "Audio pack", ...).
+    _noun: ClassVar[str]
+    #: The subclass module's logger, so chain-build records keep their name.
+    _logger: ClassVar[logging.Logger]
+    #: Level of the "referenced in config but not found" line.
+    _missing_level: ClassVar[int] = logging.WARNING
+
     def __init__(self, root: Path) -> None:
         self._root = root
         self._slots: dict[str, MetaT] = {}
@@ -66,6 +82,22 @@ class IndexedSlotRegistry(ABC, Generic[MetaT, EntryT]):
         Only audio packs keep their files outside the index, so only they can
         lose them (a moved folder, an unplugged drive).
         """
+        return True
+
+    @abstractmethod
+    def _skipped_language_notice(self, meta: MetaT) -> str:
+        """The user warning for a slot indexed for another mining language.
+
+        Each subclass keeps its literal ``QCoreApplication.translate(
+        "ResourceChain", ...)`` call so pylupdate6 extracts it unchanged.
+        """
+
+    def _stale_detail(self, meta: MetaT) -> str:
+        """What the schema-stale log line says is wrong with *meta*."""
+        return "wrong schema_version"
+
+    def _extra_gate(self, slot_id: str, meta: MetaT) -> bool:
+        """A family gate run after the schema gate; log and return False to skip."""
         return True
 
     def get(self, slot_id: str) -> MetaT | None:
@@ -147,3 +179,69 @@ class IndexedSlotRegistry(ABC, Generic[MetaT, EntryT]):
             ):
                 usable.append(meta)
         return sorted(usable, key=self._meta_id)
+
+    def _walk_enabled(
+        self,
+        config: AnkiMinerConfig,
+        language: str,
+        load_result: LoadResultSink | None,
+    ) -> Iterator[tuple[EntryT, MetaT | None]]:
+        """Walk the enabled chain entries in order through the slot gates.
+
+        Yields ``(entry, meta)`` for each slot that passes every gate, and
+        ``(entry, None)`` for each enabled entry that names no slot (another
+        kind, or a null id) so the subclass can handle it in chain order. A
+        slot that fails a gate is logged and not yielded: missing on disk (at
+        ``_missing_level``), schema-stale, refused by ``_extra_gate``, or
+        stamped for another mining language, which also appends
+        ``_skipped_language_notice`` to *load_result* when one is given.
+
+        Every record here passes ``stacklevel=2``: the log format is
+        ``%(name)s:%(lineno)d``, and a generator's caller is the ``build_*``
+        that iterates it, so each line points at the registry that built it.
+        """
+        for entry in self._chain(config):
+            if not entry.enabled:
+                continue
+            slot_id = self._slot_id(entry)
+            if slot_id is None:
+                yield entry, None
+                continue
+            meta = self._slots.get(slot_id)
+            if meta is None:
+                self._logger.log(
+                    self._missing_level,
+                    "%s '%s' referenced in config but not found in %s",
+                    self._noun,
+                    slot_id,
+                    self._root,
+                    stacklevel=2,
+                )
+                continue
+            # A stale index must never reach the runtime chain.
+            if not meta.schema_ok:
+                self._logger.warning(
+                    "%s '%s' has %s; needs reimport",
+                    self._noun,
+                    slot_id,
+                    self._stale_detail(meta),
+                    stacklevel=2,
+                )
+                continue
+            if not self._extra_gate(slot_id, meta):
+                continue
+            if meta.language != language:
+                # A ko index answering a zh run returns confident nonsense;
+                # skipping is the only safe read of a cross-language slot.
+                self._logger.warning(
+                    "%s '%s' is indexed for '%s'; skipped for '%s'",
+                    self._noun,
+                    slot_id,
+                    meta.language,
+                    language,
+                    stacklevel=2,
+                )
+                if load_result is not None:
+                    load_result.warnings.append(self._skipped_language_notice(meta))
+                continue
+            yield entry, meta
