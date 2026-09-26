@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -461,3 +462,68 @@ def test_restore_says_so_when_it_finds_nothing(
     assert expected_fix in body
     # The no-op path must touch neither the panel chain nor the config.
     assert emissions == []
+
+
+#: (panel attribute, SettingsTab registry name, persist attribute, restore-failed summary, scan-failed summary)
+_RESTORE_FAILURES = {
+    "audio": (
+        "audio_panel",
+        "AudioPackRegistry",
+        "_persist_audio_chain_change",
+        "The audio packs could not be restored.",
+        "Installed audio packs could not be checked.",
+    ),
+    "frequency": (
+        "frequency_panel",
+        "FrequencySourceRegistry",
+        "_persist_frequency_chain_change",
+        "The frequency sources could not be restored.",
+        "Installed frequency sources could not be checked.",
+    ),
+    "pitch": (
+        "pitch_panel",
+        "PitchSourceRegistry",
+        "_persist_pitch_chain_change",
+        "The pitch accent sources could not be restored.",
+        "Installed pitch accent sources could not be checked.",
+    ),
+}
+
+
+@pytest.mark.parametrize("kind", ["audio", "frequency", "pitch"])
+def test_restore_failures_surface_on_the_family_panel(tab_for_resource_restore, monkeypatch, kind):
+    """A failed persist or scan reports on the panel that asked, in its own words (D24)."""
+    tab = tab_for_resource_restore
+    panel_attr, registry_name, persist_attr, restore_failed, scan_failed = _RESTORE_FAILURES[kind]
+    panel = getattr(tab, panel_attr)
+    registry_cls = getattr(settings_tab_module, registry_name)
+    issues: list[str] = []
+    monkeypatch.setattr(panel, "show_screen_issue", lambda issue: issues.append(issue.summary))
+    monkeypatch.setattr(
+        settings_tab_module,
+        "run_off_thread",
+        lambda _parent, work, on_done, on_error: run_scan_sync(work, on_done, on_error),
+    )
+    monkeypatch.setattr(registry_cls, "load", lambda self: None)
+    monkeypatch.setattr(
+        registry_cls, "unlisted", lambda self, config: [SimpleNamespace(pack_id="orphan", source_id="orphan")]
+    )
+
+    def refuse(_chain):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(tab, persist_attr, refuse)
+    chain_before = panel.get_chain()
+
+    panel._restore_btn.trigger()
+
+    assert issues == [restore_failed]
+    assert panel.get_chain() == chain_before
+
+    def unreadable(self, config):
+        raise OSError("unreadable")
+
+    monkeypatch.setattr(registry_cls, "unlisted", unreadable)
+    panel._restore_btn.trigger()
+
+    assert issues == [restore_failed, scan_failed]
