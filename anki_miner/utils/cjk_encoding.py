@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 _PUA_MOJIBAKE_RATIO = 0.05
 
 
-def _decode_tolerating_truncation(data: bytes, encoding: str) -> str | None:
+def decode_tolerating_truncation(data: bytes, encoding: str) -> str | None:
     """Decode *data*, forgiving a multi-byte sequence cut at the very end.
 
     ``None`` means "these bytes are not this encoding". Keyed on
@@ -79,10 +79,10 @@ def prefers_big5(data: bytes, codec: str = "big5") -> bool:
     ``codec`` is the Big5-family codec the caller's ladder names: yue passes
     ``big5hkscs``; the default is the zh ladder's plain ``big5``.
     """
-    gb = _decode_tolerating_truncation(data, "gb18030")
+    gb = decode_tolerating_truncation(data, "gb18030")
     if gb is None or _pua_share(gb) <= _PUA_MOJIBAKE_RATIO:
         return False
-    big5 = _decode_tolerating_truncation(data, codec)
+    big5 = decode_tolerating_truncation(data, codec)
     if big5 is None or _pua_share(big5) > _PUA_MOJIBAKE_RATIO:
         return False
     # DEBUG, not INFO: the caller's own decode receipt reports the encoding
