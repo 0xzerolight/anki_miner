@@ -37,7 +37,7 @@ from anki_miner.gui.workers._queue_worker_base import (
 from anki_miner.gui.workers.reading_queue_worker import load_reading_source
 from anki_miner.gui.workers.youtube_queue_worker import allocate_youtube_workspace
 from anki_miner.languages.registry import config_language, get_profile
-from anki_miner.models import MiningOutcome, ProcessingResult, classify_result
+from anki_miner.models import MiningOutcome, ProcessingResult, classify_result, classify_terminal_outcome
 from anki_miner.models.reading import ReadingSourceRef
 from anki_miner.models.youtube import SubtitleSource
 from anki_miner.orchestration import EpisodeProcessor
@@ -190,13 +190,19 @@ def youtube_jobs(urls: Sequence[str]) -> list[YouTubeJob]:
 
 
 def run_status(reports: Sequence[ItemReport], *, cancelled: bool) -> str:
-    """The run's ``result.status`` from its item reports."""
-    if cancelled:
-        return "cancelled"
+    """The run's ``result.status`` from its item reports.
+
+    Delegates to :func:`classify_terminal_outcome`, the same whole-run
+    classifier the GUI queue sites use (models/processing.py). ``failed`` is
+    the complement of ``succeeded`` — not a count of specific status strings
+    — which keeps this exactly equivalent to the prior hand-rolled rule for
+    every input (proved in
+    tests/unit/test_cli_runner.py::test_run_status_matches_old_rule, run
+    against both this and the pre-refactor implementation).
+    """
     succeeded = sum(1 for r in reports if r.status == "success")
-    if succeeded == len(reports):
-        return "success"
-    return "partial" if succeeded else "failed"
+    failed = len(reports) - succeeded
+    return classify_terminal_outcome(succeeded, failed, cancelled=cancelled).value
 
 
 # ---- the run -----------------------------------------------------------------
