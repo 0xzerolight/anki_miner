@@ -19,13 +19,9 @@ reason names the button rather than a pip line the bundled user cannot run.
 
 from __future__ import annotations
 
-import logging
 import sys
-from importlib.util import find_spec
 
-from anki_miner.utils.logging_ext import log_summary
-
-logger = logging.getLogger(__name__)
+from anki_miner.languages._spaced.availability import module_importable, pack_component_present
 
 #: Import names, not pip names — ``find_spec`` takes the module. The install
 #: line in the message is what the user acts on, and the extra pulls both.
@@ -43,39 +39,16 @@ KO_MODEL_DOWNLOAD_HINT = "Download the Korean model in Settings -> Mining Langua
 KO_FROZEN_MODEL_REASON = "Korean mining needs the Korean language pack. Download it in Settings -> Mining Language."
 
 
-def _installed(name: str) -> bool:
-    """Return True when *name* is importable, reporting a BROKEN install.
-
-    A clean ``None`` is an absence and says so quietly. A probe that RAISES is
-    the opposite diagnosis - the package is on disk and unimportable (a missing
-    shared library, a half-extracted pack) - and reaches the user through the
-    same "needs kiwipiepy" sentence, so the log is the only place the two differ.
-    """
-    try:
-        return find_spec(name) is not None
-    except (ImportError, ValueError) as exc:
-        log_summary(
-            logger,
-            "Language module probe failed",
-            level=logging.WARNING,
-            module=name,
-            exc=f"{type(exc).__name__}: {exc}",
-        )
-        return False
-
-
-def _pack_installed() -> bool:
-    """Return True when the in-app model pack is present in the app home."""
-    from anki_miner.services.language_pack_installer import component_path
-
-    return component_path("ko", "kiwipiepy_model") is not None
-
-
 def _available(name: str) -> bool:
-    """Return True when requirement *name* is satisfied, however it was met."""
+    """Return True when requirement *name* is satisfied, however it was met.
+
+    A probe that RAISES (the package on disk and unimportable) reaches the user
+    through the same "needs kiwipiepy" sentence as an absence; the shared probe
+    logs it, so the log is the only place the two differ.
+    """
     if name == "kiwipiepy_model":
-        return _installed(name) or _pack_installed()
-    return _installed(name)
+        return module_importable(name) or pack_component_present("ko", name)
+    return module_importable(name)
 
 
 def ko_missing_required_reason() -> str | None:

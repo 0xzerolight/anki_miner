@@ -8,6 +8,7 @@ right-to-left text into this file (LEAD-BRIEF section 3).
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -15,11 +16,13 @@ import pytest
 from anki_miner.languages.fa import script as fa_script
 from anki_miner.languages.fa.script import (
     FA_SENTENCE_RULES,
+    FA_SUBTITLE_REGEX,
     PersianDictKeys,
     PersianScript,
     fa_fold,
     fa_normalize,
 )
+from anki_miner.services.subtitle_parser import compile_subtitle_regex_filter
 
 FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "fa"
 ZWNJ = "\N{ZERO WIDTH NON-JOINER}"
@@ -178,3 +181,32 @@ def test_sentence_rules_carry_the_persian_question_mark():
     assert "\N{ARABIC QUESTION MARK}" in FA_SENTENCE_RULES.terminators
     assert FA_SENTENCE_RULES.space_aware is True
     assert FA_SENTENCE_RULES.abbreviations == frozenset()
+
+
+@pytest.mark.parametrize(
+    ("cue", "cleaned"),
+    [
+        (f"- {KETAB}", KETAB),  # a dialogue dash at the cue start
+        (
+            f"{KETAB}\N{ARABIC QUESTION MARK} - {KHANE}.",
+            f"{KETAB}\N{ARABIC QUESTION MARK} {KHANE}.",
+        ),  # a dash after the Persian question mark opens a turn
+        (f"[{KHANE}] {KETAB}", f" {KETAB}"),  # a bracketed sound label
+        (f"({KHANE}) {KETAB}", f" {KETAB}"),  # a parenthesised one
+        (f"\N{EIGHTH NOTE} {KETAB} \N{EIGHTH NOTE}", f" {KETAB} "),  # music
+    ],
+)
+def test_the_sdh_default_strips_labels_music_and_dialogue_dashes(cue, cleaned):
+    assert re.sub(FA_SUBTITLE_REGEX, "", cue) == cleaned
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        f"{MIRAVAM} {KHANE}.",  # a ZWNJ word and a terminator
+        f"{KETAB}: {KHANE}",  # no speaker rule: the script has no capitals
+        f"{KETAB}-{KHANE}",  # an in-word hyphen is not a dialogue dash
+    ],
+)
+def test_the_sdh_default_compiles_and_leaves_a_plain_line_intact(line):
+    assert compile_subtitle_regex_filter(FA_SUBTITLE_REGEX, "").sub("", line) == line

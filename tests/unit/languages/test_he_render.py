@@ -14,11 +14,12 @@ from pathlib import Path
 import pytest
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.languages._spaced.render import PosHook
+from anki_miner.languages.he.pos import HE_POS_LABELS
 from anki_miner.languages.he.render import (
     HE_EXTRA_CARD_FIELDS,
     HE_RENDER_HOOKS,
     HebrewGrammarHook,
-    HebrewPosHook,
     HebrewRootHook,
     binyan,
     gender,
@@ -199,11 +200,11 @@ def test_the_root_hook_emits_only_what_the_dictionary_spells_out(lookup):
     [("NOUN", "noun"), ("VERB", "verb"), ("PROPN", "proper noun"), ("WORD", "word (unresolved)")],
 )
 def test_the_pos_hook_labels_the_resolved_part_of_speech(pos, label):
-    assert HebrewPosHook().render(_Word("", pos), config=CONFIG) == {"pos": label}
+    assert PosHook(HE_POS_LABELS).render(_Word("", pos), config=CONFIG) == {"pos": label}
 
 
 def test_the_pos_hook_is_silent_for_an_unknown_pos():
-    assert HebrewPosHook().render(_Word("", "nonsense"), config=CONFIG) == {}
+    assert PosHook(HE_POS_LABELS).render(_Word("", "nonsense"), config=CONFIG) == {}
 
 
 # --------------------------------------------------------------------------

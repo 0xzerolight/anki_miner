@@ -137,8 +137,8 @@ def test_the_catalogue_leaves_openrussian_first_in_the_chain(tmp_path):
 
 
 def test_the_probe_names_a_missing_morphology_package(monkeypatch):
-    monkeypatch.setattr(availability, "_importable", lambda name: name != "pymorphy3_dicts_ru")
-    monkeypatch.setattr(availability, "_pack_component_present", lambda code, name: False)
+    monkeypatch.setattr(availability, "module_importable", lambda name: name != "pymorphy3_dicts_ru")
+    monkeypatch.setattr(availability, "pack_component_present", lambda code, name: False)
     monkeypatch.setattr(availability.sys, "frozen", False, raising=False)
     reason = get_profile("ru").unavailable_reason
     assert reason is not None

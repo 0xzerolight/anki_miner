@@ -30,7 +30,7 @@ def test_speakable_is_the_reading_or_the_term():
 def probe(monkeypatch):
     present: set[str] = set()
     monkeypatch.setattr(availability, "find_spec", lambda name: object() if name in present else None)
-    monkeypatch.setattr(availability, "_pack_component_present", lambda code, name: False)
+    monkeypatch.setattr(availability, "pack_component_present", lambda code, name: False)
     return present
 
 
@@ -61,7 +61,7 @@ def test_a_pack_install_satisfies_both(monkeypatch):
     monkeypatch.setattr(availability, "find_spec", lambda name: None)
     monkeypatch.setattr(
         availability,
-        "_pack_component_present",
+        "pack_component_present",
         lambda code, name: (code, name) in {("_spacy", "spacy"), ("xx", "xx_core_news_sm")},
     )
     assert availability.spaced_missing_reason("xx", "Xish", "xx_core_news_sm")() is None

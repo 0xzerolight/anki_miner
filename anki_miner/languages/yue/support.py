@@ -7,8 +7,6 @@ and ``zh.render.ZhMeasureWordHook``.
 
 from __future__ import annotations
 
-from typing import Any
-
 from anki_miner.languages.profile import ScriptFilterOption
 from anki_miner.languages.yue.normalize import fold_term_yue, normalize_yue
 from anki_miner.languages.yue.variants import hk_variant_candidates
@@ -74,9 +72,6 @@ class YueMinedFormPolicy:
     one (``今 日``). The lemma is the space-free spelling and is what belongs on
     the card front. Identity otherwise -- Cantonese is isolating.
     """
-
-    def for_config(self, config: Any) -> YueMinedFormPolicy:
-        return self
 
     def mined_form(
         self,

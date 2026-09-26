@@ -22,7 +22,14 @@ from anki_miner.languages.fa.morphology import (
     PersianMinedForm,
 )
 from anki_miner.languages.fa.render import FA_RENDER_HOOKS
-from anki_miner.languages.fa.script import ZWNJ, PersianDictKeys, PersianScript, fa_fold, fa_normalize
+from anki_miner.languages.fa.script import (
+    FA_SUBTITLE_REGEX,
+    ZWNJ,
+    PersianDictKeys,
+    PersianScript,
+    fa_fold,
+    fa_normalize,
+)
 from anki_miner.languages.fa.style import FA_CONTENT_STYLE
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.switching import LANGUAGE_SCOPED_FIELDS
@@ -160,6 +167,10 @@ def test_scoped_defaults_cover_every_scoped_field_with_persian_values():
     assert scoped["anki_deck_name"] == "Anki Miner"
     assert scoped["script_variant"] == ""
     assert scoped["reading_tone_color"] is False
+    # S10: a first visit strips SDH cues with the Arabic-script default (the ar/he shape).
+    assert scoped["use_subtitle_regex_filter"] is True
+    assert scoped["subtitle_regex_filter"] == FA_SUBTITLE_REGEX
+    assert scoped["subtitle_regex_replacement"] == ""
 
 
 def test_the_default_audio_chain_is_the_edge_voice():

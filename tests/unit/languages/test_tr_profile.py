@@ -126,15 +126,15 @@ def test_the_catalogue_ships_wiktionary_and_a_lemmatised_frequency_list():
 
 
 def test_availability_names_the_pack_in_a_bundle_and_the_extra_in_a_pip_install(monkeypatch):
-    monkeypatch.setattr(availability, "_importable", lambda _name: False)
-    monkeypatch.setattr(availability, "_pack_component_present", lambda _code, _name: False)
+    monkeypatch.setattr(availability, "module_importable", lambda _name: False)
+    monkeypatch.setattr(availability, "pack_component_present", lambda _code, _name: False)
     monkeypatch.setattr(sys, "frozen", True, raising=False)
     assert availability.tr_missing_reason() == (
         "Turkish mining needs the Turkish language pack. Download it in Settings -> Mining Language."
     )
     monkeypatch.setattr(sys, "frozen", False)
     assert 'pip install "anki-miner[tr]"' in (availability.tr_missing_reason() or "")
-    monkeypatch.setattr(availability, "_pack_component_present", lambda code, name: (code, name) == ("tr", "zeyrek"))
+    monkeypatch.setattr(availability, "pack_component_present", lambda code, name: (code, name) == ("tr", "zeyrek"))
     assert availability.tr_missing_reason() is None
 
 

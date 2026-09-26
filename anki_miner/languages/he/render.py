@@ -27,6 +27,7 @@ import html
 import re
 from typing import TYPE_CHECKING, Any
 
+from anki_miner.languages._spaced.render import PosHook
 from anki_miner.languages.he.pos import HE_POS_LABELS
 from anki_miner.languages.he.script import GERESH, MAQAF
 from anki_miner.languages.profile import CardFieldSpec
@@ -39,7 +40,6 @@ __all__ = [
     "HE_EXTRA_CARD_FIELDS",
     "HE_RENDER_HOOKS",
     "HebrewGrammarHook",
-    "HebrewPosHook",
     "HebrewRootHook",
     "binyan",
     "gender",
@@ -205,22 +205,6 @@ class HebrewRootHook:
         return {"root": found} if found else {}
 
 
-class HebrewPosHook:
-    """``pos``: the resolved part of speech as a lowercase English label.
-
-    Not ``_spaced.render.PosHook``: that one keys on the universal POS names, and Hebrew's come
-    from Wiktionary's tags through ``pos.HE_TAG_TO_POS``, which has its own label map.
-    """
-
-    def field_names(self) -> tuple[str, ...]:
-        return ("pos",)
-
-    def render(self, word: Any, *, config: AnkiMinerConfig) -> dict[str, str]:
-        del config
-        label = HE_POS_LABELS.get(str(getattr(word, "pos", "") or ""), "")
-        return {"pos": label.lower()} if label else {}
-
-
 HE_TRANSLITERATION_FIELD = CardFieldSpec(
     key="transliteration", capability="hebrew_transliteration", placeholder="Transliteration"
 )
@@ -240,4 +224,5 @@ HE_EXTRA_CARD_FIELDS: tuple[CardFieldSpec, ...] = (
     HE_POS_FIELD,
 )
 
-HE_RENDER_HOOKS: tuple[CardRenderHook, ...] = (HebrewGrammarHook(), HebrewRootHook(), HebrewPosHook())
+#: ``pos`` is the shared hook reading Hebrew's own label map (``pos.HE_POS_LABELS``).
+HE_RENDER_HOOKS: tuple[CardRenderHook, ...] = (HebrewGrammarHook(), HebrewRootHook(), PosHook(HE_POS_LABELS))

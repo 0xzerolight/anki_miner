@@ -1,23 +1,26 @@
-"""zh anki_fields defaults. Every value "" — mapped ⇒ feature on (spec 9.3)."""
+"""zh extra card-field specs and anki_fields defaults. Every value "" — mapped ⇒ feature on (spec 9.3)."""
 
 from __future__ import annotations
 
 from collections.abc import Mapping
-from types import MappingProxyType
 
+from anki_miner.languages._spaced.fields import spaced_card_fields
+from anki_miner.languages.profile import CardFieldSpec
 
-def _zh_fields() -> dict[str, str]:
-    # Imported inside the function: languages/ must stay import-light, and the
-    # ja dataclass default is the single source of the shared key set.
-    from anki_miner.config.config import AnkiMinerConfig
+#: One spec per ZH_RENDER_HOOKS field (render.py). Placeholders and gating
+#: capabilities match the existing hand-written rows in
+#: gui/widgets/panels/anki_settings_panel.py (``_language_gate_pairs``)
+#: verbatim — "pinyin" gates the expression_pinyin row there, not
+#: "tone_color" (which gates the separate reading_tone_color *checkbox* in
+#: anki_settings_panel.py). ``raw_html=True`` matches
+#: ``anki_note_builder._RAW_HTML_FIELD_KEYS`` membership exactly.
+ZH_EXTRA_CARD_FIELDS: tuple[CardFieldSpec, ...] = (
+    CardFieldSpec(key="measure_word", capability="measure_word", placeholder="MeasureWord"),
+    CardFieldSpec(key="expression_traditional", capability="script_variants", placeholder="Traditional"),
+    CardFieldSpec(key="expression_pinyin", capability="pinyin", placeholder="Pinyin", raw_html=True),
+)
 
-    fields = dict(AnkiMinerConfig().anki_fields)
-    # Furigana is a ja-only concept; the keys stay (REQUIRED_FIELD_KEYS) but map
-    # to nothing so a zh run never writes into a ja note type's ruby fields.
-    fields["expression_furigana"] = ""
-    fields["sentence_furigana"] = ""
-    fields.update({"measure_word": "", "expression_traditional": "", "expression_pinyin": ""})
-    return fields
-
-
-ZH_CARD_FIELD_DEFAULTS: Mapping[str, str] = MappingProxyType(_zh_fields())
+#: The ja default map with furigana unmapped — the keys stay (REQUIRED_FIELD_KEYS)
+#: but map to nothing, so a zh run never writes into a ja note type's ruby fields —
+#: plus each extra key empty.
+ZH_CARD_FIELD_DEFAULTS: Mapping[str, str] = spaced_card_fields(ZH_EXTRA_CARD_FIELDS)

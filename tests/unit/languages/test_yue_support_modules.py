@@ -64,7 +64,6 @@ def test_the_script_gate_is_han_membership():
 
 def test_the_mined_form_prefers_the_lemma():
     policy = YueMinedFormPolicy()
-    assert policy.for_config(object()) is policy
     # the offsets case: the spaced slice is the surface, the space-free word the front
     assert policy.mined_form("ADV", "", "今日", "今 日") == "今日"
     assert policy.mined_form("NOUN", "", "", "戲") == "戲"

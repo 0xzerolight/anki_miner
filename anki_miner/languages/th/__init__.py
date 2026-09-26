@@ -12,7 +12,6 @@ from collections.abc import Mapping
 
 from anki_miner.languages.profile import (
     CaptionLangs,
-    CardFieldSpec,
     LanguageProfile,
     PosDefaults,
     SentenceRules,
@@ -21,7 +20,7 @@ from anki_miner.languages.switching import blank_scoped_defaults
 from anki_miner.languages.th.audio import TH_AUDIO
 from anki_miner.languages.th.availability import th_missing_required_reason
 from anki_miner.languages.th.catalog import TH_CATALOG
-from anki_miner.languages.th.fields import TH_CARD_FIELD_DEFAULTS
+from anki_miner.languages.th.fields import TH_CARD_FIELD_DEFAULTS, TH_EXTRA_CARD_FIELDS
 from anki_miner.languages.th.normalize import normalize_th
 from anki_miner.languages.th.parser import create_parser
 from anki_miner.languages.th.pos import TH_ALLOWED_POS, TH_EXCLUDED_SUBTYPES, TH_POS_LABELS
@@ -39,14 +38,6 @@ __all__ = ["build_profile"]
 #: The bundle smoke line. Ends with no terminator on purpose: Thai writes few,
 #: and the line has to mine with the sentence rules the profile actually ships.
 TH_SMOKE_SENTENCE = "วันนี้อากาศดีมาก"
-
-#: One spec per render-hook field key: ``test_language_contract
-#: .test_extra_card_fields_match_the_render_hooks_exactly`` asserts spec keys ==
-#: hook keys, so these land in the same commit as ``render.TH_RENDER_HOOKS``.
-TH_EXTRA_CARD_FIELDS: tuple[CardFieldSpec, ...] = (
-    CardFieldSpec(key="reading_paiboon", capability="thai_reading", placeholder="Reading"),
-    CardFieldSpec(key="classifier", capability="thai_classifier", placeholder="Classifier"),
-)
 
 
 def _scoped_defaults() -> Mapping[str, object]:

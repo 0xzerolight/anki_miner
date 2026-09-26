@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import sys
 
-from anki_miner.languages._spaced.availability import _importable, _pack_component_present
+from anki_miner.languages._spaced.availability import module_importable, pack_component_present
 
 #: A frozen bundle has no pip: the sentence names the download button instead.
 VI_FROZEN_REASON = "Vietnamese mining needs the Vietnamese language pack. Download it in Settings -> Mining Language."
@@ -23,7 +23,7 @@ def vi_missing_reason() -> str | None:
     missing = [
         comp.import_name
         for comp in PACK.components
-        if comp.required and not (_importable(comp.import_name) or _pack_component_present("vi", comp.import_name))
+        if comp.required and not (module_importable(comp.import_name) or pack_component_present("vi", comp.import_name))
     ]
     if not missing:
         return None

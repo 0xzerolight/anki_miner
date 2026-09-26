@@ -8,7 +8,6 @@ the settings script-filter section has no options.
 from __future__ import annotations
 
 import unicodedata
-from typing import Any
 
 from anki_miner.languages.profile import ScriptFilterOption
 from anki_miner.languages.th.normalize import fold_term_th, normalize_th
@@ -82,9 +81,6 @@ class ThaiMinedFormPolicy:
     the abbreviated spelling of Bangkok is the headword every dictionary lists,
     and newmm emits it as one token.
     """
-
-    def for_config(self, config: Any) -> ThaiMinedFormPolicy:
-        return self
 
     def mined_form(
         self,

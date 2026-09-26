@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from anki_miner.languages._spaced import create_spaced_parser
+from anki_miner.languages._spaced.fields import spaced_card_fields, spaced_scoped_defaults
 from anki_miner.languages.fa.audio import FA_AUDIO
 from anki_miner.languages.fa.availability import fa_missing_reason
 from anki_miner.languages.fa.catalog import FA_CATALOG
@@ -16,6 +17,7 @@ from anki_miner.languages.fa.morphology import (
 from anki_miner.languages.fa.render import FA_RENDER_HOOKS
 from anki_miner.languages.fa.script import (
     FA_SENTENCE_RULES,
+    FA_SUBTITLE_REGEX,
     ZWNJ,
     PersianDictKeys,
     PersianScript,
@@ -41,64 +43,14 @@ FA_EXTRA_CARD_FIELDS: tuple[CardFieldSpec, ...] = (
     CardFieldSpec(key="present_stem", capability="persian_stems", placeholder="PresentStem"),
 )
 
-#: Persian cards start from the same core fields as Japanese, with every
-#: JA-specific field unmapped ("" = feature off, the existing empty-name skip).
+#: Persian cards start from the ja default map with both furigana fields
+#: unmapped ("" = feature off, the existing empty-name skip). Derived, never
+#: hand-written, so a key the config gains reaches Persian too.
 #: ``expression_reading`` stays unmapped too: Persian has no respelling, and the
 #: dictionary's Latin spelling travels in ``reading_romanized`` instead, which
 #: is a render hook and follows the same rule — the mapped field name is the
 #: switch, so an unmapped key writes nothing.
-FA_CARD_FIELDS: dict[str, str] = {
-    "word": "Expression",
-    "sentence": "Sentence",
-    "definition": "MainDefinition",
-    "glossary": "",
-    "picture": "Picture",
-    "audio": "SentenceAudio",
-    "expression_furigana": "",
-    "expression_reading": "",
-    "sentence_furigana": "",
-    "sentence_reading": "",
-    "pitch_position": "",
-    "pitch_category": "",
-    "pitch_graph": "",
-    "pitch_text": "",
-    "frequency": "",
-    "frequency_sort": "",
-    "source": "",
-    "expression_audio": "",
-    "sentence_translation": "",
-    "reading_romanized": "",
-    "colloquial_form": "",
-    "present_stem": "",
-}
-
-
-def _scoped_defaults() -> dict[str, object]:
-    """First-visit values for EVERY language-scoped field.
-
-    Starts from ``blank_scoped_defaults()`` (never hand-written, so a new
-    scoped field cannot silently miss a Persian default), then overridden.
-    Nothing is inherited from the JA dataclass defaults: a first Persian switch
-    must not arrive with the jmdict chain, the JA name wordsets, ``ja``
-    subtitle langs or the JA deck name.
-    """
-    from anki_miner.languages.switching import blank_scoped_defaults
-
-    defaults = blank_scoped_defaults()
-    defaults["downloader_subtitle_langs"] = "fa"
-    # gTTS has no Persian voice (tts_langs() lacks "fa"), so the default word
-    # audio is the Edge read-aloud leg the seam ships.
-    defaults["expression_audio_chain"] = FA_AUDIO.default_chain
-    defaults["allowed_pos"] = FA_ALLOWED_POS
-    defaults["excluded_subtypes"] = FA_EXCLUDED_SUBTYPES
-    defaults["anki_fields"] = dict(FA_CARD_FIELDS)
-    # One the blank-by-type loop gets wrong rather than merely empty: "" is not
-    # a deck AnkiConnect will accept, and inheriting ja's default would file
-    # Persian cards into the Japanese deck.
-    defaults["anki_deck_name"] = "Anki Miner"
-    defaults["script_variant"] = ""
-    defaults["reading_tone_color"] = False
-    return defaults
+FA_CARD_FIELDS: dict[str, str] = dict(spaced_card_fields(FA_EXTRA_CARD_FIELDS))
 
 
 def build_profile() -> LanguageProfile:
@@ -127,7 +79,16 @@ def build_profile() -> LanguageProfile:
         # and pe/che/zhe/gaf, but NOT the Farsi yeh - so every such file spells
         # it with the Arabic yeh, which fa_normalize unifies.
         import_encodings=("utf-8-sig", "cp1256"),
-        scoped_defaults=_scoped_defaults(),
+        scoped_defaults=spaced_scoped_defaults(
+            subtitle_langs="fa",
+            # gTTS has no Persian voice (tts_langs() lacks "fa"), so the default word
+            # audio is the Edge read-aloud leg the seam ships.
+            audio=FA_AUDIO,
+            allowed_pos=FA_ALLOWED_POS,
+            excluded_subtypes=FA_EXCLUDED_SUBTYPES,
+            card_fields=FA_CARD_FIELDS,
+            subtitle_regex=FA_SUBTITLE_REGEX,
+        ),
         sentence_rules=FA_SENTENCE_RULES,
         normalize=fa_normalize,
         dict_keys=PersianDictKeys(),

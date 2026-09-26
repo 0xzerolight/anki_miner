@@ -11,7 +11,6 @@ from collections.abc import Mapping
 
 from anki_miner.languages.profile import (
     CaptionLangs,
-    CardFieldSpec,
     LanguageProfile,
     PosDefaults,
     SentenceRules,
@@ -20,7 +19,7 @@ from anki_miner.languages.switching import blank_scoped_defaults
 from anki_miner.languages.zh.audio import ZH_AUDIO
 from anki_miner.languages.zh.availability import zh_missing_required_reason
 from anki_miner.languages.zh.catalog import ZH_CATALOG
-from anki_miner.languages.zh.fields import ZH_CARD_FIELD_DEFAULTS
+from anki_miner.languages.zh.fields import ZH_CARD_FIELD_DEFAULTS, ZH_EXTRA_CARD_FIELDS
 from anki_miner.languages.zh.parser import create_parser
 from anki_miner.languages.zh.pos import ZH_ALLOWED_POS, ZH_EXCLUDED_SUBTYPES, ZH_POS_LABELS
 from anki_miner.languages.zh.reading import ZhReadingSupport
@@ -38,19 +37,6 @@ __all__ = ["build_profile"]
 
 #: Copied verbatim from gui/app.py::_LANGUAGE_SMOKE_LINES["zh"].
 ZH_SMOKE_SENTENCE = "我今天早上吃了三个苹果。"
-
-#: One spec per ZH_RENDER_HOOKS field (render.py). Placeholders and gating
-#: capabilities match the existing hand-written rows in
-#: gui/widgets/panels/anki_settings_panel.py (``_language_gate_pairs``)
-#: verbatim — "pinyin" gates the expression_pinyin row there, not
-#: "tone_color" (which gates the separate reading_tone_color *checkbox* in
-#: anki_settings_panel.py). ``raw_html=True`` matches
-#: ``anki_note_builder._RAW_HTML_FIELD_KEYS`` membership exactly.
-ZH_EXTRA_CARD_FIELDS: tuple[CardFieldSpec, ...] = (
-    CardFieldSpec(key="measure_word", capability="measure_word", placeholder="MeasureWord"),
-    CardFieldSpec(key="expression_traditional", capability="script_variants", placeholder="Traditional"),
-    CardFieldSpec(key="expression_pinyin", capability="pinyin", placeholder="Pinyin", raw_html=True),
-)
 
 
 def _scoped_defaults() -> Mapping[str, object]:

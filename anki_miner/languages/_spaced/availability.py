@@ -23,7 +23,11 @@ SPACY_RUNTIME_PACK = "_spacy"
 SPACY_IMPORT_NAME = "spacy"
 
 
-def _importable(name: str) -> bool:
+def module_importable(name: str) -> bool:
+    """True when *name* is importable; a probe that RAISES (a broken install) logs a WARNING.
+
+    Every language's availability probe, own-engine ones included, answers through this.
+    """
     try:
         return find_spec(name) is not None
     except (ImportError, ValueError) as exc:  # installed and broken: say so in the log
@@ -37,7 +41,8 @@ def _importable(name: str) -> bool:
         return False
 
 
-def _pack_component_present(code: str, import_name: str) -> bool:
+def pack_component_present(code: str, import_name: str) -> bool:
+    """True when *code*'s in-app pack on disk carries *import_name*."""
     from anki_miner.services.language_pack_installer import component_path
 
     return component_path(code, import_name) is not None
@@ -53,9 +58,11 @@ def spaced_missing_reason(
     """
 
     def reason() -> str | None:
-        runtime = _importable(SPACY_IMPORT_NAME) or _pack_component_present(SPACY_RUNTIME_PACK, SPACY_IMPORT_NAME)
-        model = _importable(model_package) or _pack_component_present(code, model_package)
-        missing = [name for name in extra_packages if not (_importable(name) or _pack_component_present(code, name))]
+        runtime = module_importable(SPACY_IMPORT_NAME) or pack_component_present(SPACY_RUNTIME_PACK, SPACY_IMPORT_NAME)
+        model = module_importable(model_package) or pack_component_present(code, model_package)
+        missing = [
+            name for name in extra_packages if not (module_importable(name) or pack_component_present(code, name))
+        ]
         if runtime and model and not missing:
             return None
         if getattr(sys, "frozen", False):

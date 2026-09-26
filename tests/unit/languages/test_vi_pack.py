@@ -136,8 +136,8 @@ def test_the_pip_extra_and_its_typing_override():
 
 
 def test_availability_names_what_is_missing(monkeypatch):
-    monkeypatch.setattr(availability, "_importable", lambda _name: False)
-    monkeypatch.setattr(availability, "_pack_component_present", lambda _code, _name: False)
+    monkeypatch.setattr(availability, "module_importable", lambda _name: False)
+    monkeypatch.setattr(availability, "pack_component_present", lambda _code, _name: False)
     monkeypatch.delattr(sys, "frozen", raising=False)
     reason = availability.vi_missing_reason()
     assert reason.startswith("Vietnamese mining needs underthesea, underthesea_core, joblib, cloudpickle.")
@@ -147,8 +147,8 @@ def test_availability_names_what_is_missing(monkeypatch):
 
 
 def test_availability_is_satisfied_by_the_pack_on_disk(monkeypatch):
-    monkeypatch.setattr(availability, "_importable", lambda _name: False)
-    monkeypatch.setattr(availability, "_pack_component_present", lambda code, _name: code == "vi")
+    monkeypatch.setattr(availability, "module_importable", lambda _name: False)
+    monkeypatch.setattr(availability, "pack_component_present", lambda code, _name: code == "vi")
     assert availability.vi_missing_reason() is None
 
 
