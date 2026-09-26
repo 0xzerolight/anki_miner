@@ -16,7 +16,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Callable
 
-from anki_miner.exceptions import OperationCancelled, SetupError
+from anki_miner.exceptions import SetupError, raise_if_cancelled
 from anki_miner.services._sqlite_index import (
     language_identity,
     read_slot_language,
@@ -119,11 +119,6 @@ def _has_rendered_glossary_content(content: str) -> bool:
     probe = _RenderedGlossaryProbe()
     probe.feed(content)
     return probe.has_content
-
-
-def _raise_if_cancelled(cancel_check: Callable[[], bool] | None) -> None:
-    if cancel_check is not None and cancel_check():
-        raise OperationCancelled("Import cancelled")
 
 
 @dataclass(frozen=True)
@@ -308,7 +303,7 @@ def import_yomitan_zip(
         def rows() -> Any:
             nonlocal total_entries, skipped_malformed, banks_done, files_done, bank_size, bank_yielded
             for term_file in term_files:
-                _raise_if_cancelled(cancel_check)
+                raise_if_cancelled(cancel_check)
                 try:
                     entries = json.loads(term_file.read_text(encoding="utf-8"))
                 except json.JSONDecodeError as e:
@@ -445,11 +440,11 @@ def import_yomitan_zip(
             # holds 100% while the lookup indexes build instead of dropping
             # back to a busy spinner right after finishing the insert.
             progress(total_files * _PROGRESS_SCALE, total_files * _PROGRESS_SCALE, "Finalizing import")
-        _raise_if_cancelled(cancel_check)
+        raise_if_cancelled(cancel_check)
 
         # Deferred to here so the load did not maintain two B-trees per insert.
         create_lookup_indexes(db_path)
-        _raise_if_cancelled(cancel_check)
+        raise_if_cancelled(cancel_check)
 
         # Tag metadata (schema v3): glob tag_bank_*.json + convert any legacy
         # index.json tagMeta so the provider can expand tag names into hover
@@ -457,7 +452,7 @@ def import_yomitan_zip(
         tag_metas = _collect_tags(tmp_path, index, skipped, skip_examples)
         if tag_metas:
             write_tags(db_path, tag_metas)
-        _raise_if_cancelled(cancel_check)
+        raise_if_cancelled(cancel_check)
 
         media_warnings, media_copied = _copy_dict_media(
             tmp_path,
@@ -467,7 +462,7 @@ def import_yomitan_zip(
             skipped=skipped,
             skip_examples=skip_examples,
         )
-        _raise_if_cancelled(cancel_check)
+        raise_if_cancelled(cancel_check)
 
         meta = {
             "schema_version": str(SCHEMA_VERSION),
@@ -492,13 +487,13 @@ def import_yomitan_zip(
             meta["styles_css"] = styles_css
 
         write_meta(db_path, meta)
-        _raise_if_cancelled(cancel_check)
+        raise_if_cancelled(cancel_check)
 
         # Persist the source zip alongside index.sqlite so "Reimport All" can
         # rebuild without the user re-picking the file. Lives in staging so
         # the atomic rename below promotes it together with the index.
         shutil.copy2(zip_path, staging / "source.zip")
-        _raise_if_cancelled(cancel_check)
+        raise_if_cancelled(cancel_check)
 
         # Move staging into dest_root atomically. final_path was computed up
         # front for the early duplicate check; this late check is the race
@@ -508,7 +503,7 @@ def import_yomitan_zip(
         # Pre-check stays here (the helper owns only the promote skeleton).
         if os.path.lexists(final_path) and not overwrite:
             raise SetupError(f"Dictionary '{dict_id}' already exists")
-        _raise_if_cancelled(cancel_check)
+        raise_if_cancelled(cancel_check)
         promote_staged_dir(
             staging,
             final_path,

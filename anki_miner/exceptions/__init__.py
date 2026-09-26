@@ -2,7 +2,7 @@
 
 from .anki import AnkiConnectionError
 from .base import AnkiMinerException
-from .cancel import OperationCancelled
+from .cancel import OperationCancelled, raise_if_cancelled
 from .media import SubtitleParseError
 from .mokuro import MokuroError, MokuroNotFoundError
 from .subtitle import AlassNotFoundError, SubtitleRetimeError
@@ -23,6 +23,7 @@ __all__ = [
     "SetupError",
     "DownloadFailed",
     "OperationCancelled",
+    "raise_if_cancelled",
     "AnkiConnectionError",
     "SubtitleParseError",
     "MokuroError",

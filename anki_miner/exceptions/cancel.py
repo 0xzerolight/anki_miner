@@ -1,5 +1,9 @@
 """Cooperative-cancellation exception."""
 
+from __future__ import annotations
+
+from typing import Callable
+
 from .validation import SetupError
 
 
@@ -19,3 +23,14 @@ class OperationCancelled(SetupError):
     """
 
     pass
+
+
+def raise_if_cancelled(cancel_check: Callable[[], bool] | None, message: str = "Import cancelled") -> None:
+    """Raise :class:`OperationCancelled` when ``cancel_check`` reports cancellation.
+
+    A no-op when ``cancel_check`` is ``None``. The shared body behind the
+    module-level ``_raise_if_cancelled`` copies every long-running importer
+    used to define for itself.
+    """
+    if cancel_check is not None and cancel_check():
+        raise OperationCancelled(message)
