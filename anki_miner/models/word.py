@@ -3,8 +3,6 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from anki_miner.models.media import MediaData
-
 # Candidate vowel-elongation tail characters a 名詞 surface can carry over its
 # lemma (手ぇ, 気い, 目ー). Small kana and the long-vowel mark prove elongation in
 # the spelling; a full-size vowel only qualifies when UniDic pronunciation ends
@@ -382,30 +380,3 @@ class LineLemmas:
     # line; highlight_end covers the full inflected form (-1 = same as end).
     # Tuple-of-tuples instead of dict to keep the dataclass frozen.
     lemma_spans: tuple[tuple[str, str, int, int, int], ...] = field(default_factory=tuple)
-
-
-@dataclass
-class WordData:
-    """Complete data for a vocabulary word including definition and media."""
-
-    word: TokenizedWord
-    definition: str | None = None
-    screenshot_path: Path | None = None
-    audio_path: Path | None = None
-    media: MediaData | None = None
-    pitch_position: str | None = None
-    pitch_category: str | None = None
-    frequency_rank: int | None = None
-
-    @property
-    def has_media(self) -> bool:
-        """Check if word has any media (screenshot or audio)."""
-        return self.screenshot_path is not None or self.audio_path is not None
-
-    @property
-    def has_definition(self) -> bool:
-        """Check if word has a definition."""
-        return self.definition is not None and len(self.definition) > 0
-
-    def __str__(self) -> str:
-        return f"{self.word.lemma}: {self.definition[:50] if self.definition else 'No definition'}"

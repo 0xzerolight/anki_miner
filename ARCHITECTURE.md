@@ -133,7 +133,6 @@ Data classes in `models/`:
 |-------|------|---------|
 | `TokenizedWord` | `word.py` | Parsed word with surface, orth_base, lemma, reading, sentence, timing, furigana, frequency_rank, pos. `mined_form` property selects `orth_base` (source orthography, `lemma` only as a fallback when it is empty) for verbs/adjectives and surface for nouns — this is the form that becomes the Anki Expression. `sentence_edit: SentenceEdit \| None` carries a curator rewrite as intent (text + target span); `services/sentence_edit.py::resolve_sentence_edit` is its only reader, invoked by `EpisodeProcessor._materialize_sentence_edits` after line expansions through the run's own `parse_sentence_fn`, so the editor's word list and the card agree by construction. |
 | `LineLemmas` | `word.py` | Frozen per-subtitle-line lemma set + timing; feeds the i+1 sentence filter without re-tokenizing |
-| `WordData` | `word.py` | TokenizedWord + definition + media paths + pitch accent |
 | `MediaData` | `media.py` | Screenshot/audio file paths and filenames |
 | `ProcessingResult` | `processing.py` | Pipeline output: word counts, card count, errors, elapsed time, comprehension %, card IDs, plus the write-provenance fields (`anki_write_state`, `failure_is_transient`) |
 | `MiningOutcome` | `processing.py` | Terminal classification of one non-raising `process_*` return (SUCCESS/CANCELLED/FAILED); every queue site routes on it |

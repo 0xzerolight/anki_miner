@@ -16,13 +16,12 @@ from .processing import (
     result_error_text,
 )
 from .stats import DifficultyEntry, Milestone, MilestoneKind, MiningSession, OverallStats
-from .word import LineLemmas, SentenceEdit, TokenizedWord, WordData
+from .word import LineLemmas, SentenceEdit, TokenizedWord
 
 __all__ = [
     "TokenizedWord",
     "SentenceEdit",
     "LineLemmas",
-    "WordData",
     "MediaData",
     "CardPayload",
     "ProcessingResult",

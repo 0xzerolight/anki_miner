@@ -14,7 +14,6 @@ from anki_miner.models.processing import (
 from anki_miner.models.word import (
     LineLemmas,
     TokenizedWord,
-    WordData,
     resolve_pronoun_fold_reading,
     select_mined_form,
 )
@@ -397,61 +396,6 @@ class TestLineLemmas:
             line.lemmas = frozenset()  # type: ignore[misc]
         with pytest.raises(FrozenInstanceError):
             line.start_time = 99.0  # type: ignore[misc]
-
-
-class TestWordData:
-    """Tests for WordData dataclass."""
-
-    def _make_word(self):
-        return TokenizedWord(
-            surface="食べる",
-            lemma="食べる",
-            reading="タベル",
-            sentence="",
-            start_time=0,
-            end_time=0,
-            duration=0,
-        )
-
-    def test_has_media_with_screenshot(self, tmp_path):
-        wd = WordData(
-            word=self._make_word(),
-            screenshot_path=tmp_path / "ss.jpg",
-        )
-        assert wd.has_media is True
-
-    def test_has_media_with_audio(self, tmp_path):
-        wd = WordData(
-            word=self._make_word(),
-            audio_path=tmp_path / "au.mp3",
-        )
-        assert wd.has_media is True
-
-    def test_has_media_false_when_none(self):
-        wd = WordData(word=self._make_word())
-        assert wd.has_media is False
-
-    def test_has_definition_true(self):
-        wd = WordData(word=self._make_word(), definition="to eat")
-        assert wd.has_definition is True
-
-    def test_has_definition_false_when_none(self):
-        wd = WordData(word=self._make_word(), definition=None)
-        assert wd.has_definition is False
-
-    def test_has_definition_false_when_empty(self):
-        wd = WordData(word=self._make_word(), definition="")
-        assert wd.has_definition is False
-
-    def test_str_with_definition(self):
-        wd = WordData(word=self._make_word(), definition="to eat food")
-        s = str(wd)
-        assert "食べる" in s
-        assert "to eat" in s
-
-    def test_str_without_definition(self):
-        wd = WordData(word=self._make_word())
-        assert "No definition" in str(wd)
 
 
 class TestMediaData:
