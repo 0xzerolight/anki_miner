@@ -8427,7 +8427,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Your ignore list</source>
+        <source>Known-words ignore list</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -8538,7 +8538,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Choose what to install. Each dictionary and list is rebuilt from its original file, which can take several minutes for a large dictionary. New dictionaries go to the top of your list; nothing you already have is replaced.</source>
+        <source>Choose what to install. Each dictionary and list is rebuilt from its original file, which can take several minutes for a large dictionary. New dictionaries go to the top of your list; the bundle's ignore list is added to yours; nothing you already have is replaced.</source>
         <translation type="unfinished" />
     </message>
     <message>

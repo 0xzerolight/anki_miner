@@ -8464,7 +8464,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Your ignore list</source>
+        <source>Known-words ignore list</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -8575,7 +8575,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Choose what to install. Each dictionary and list is rebuilt from its original file, which can take several minutes for a large dictionary. New dictionaries go to the top of your list; nothing you already have is replaced.</source>
+        <source>Choose what to install. Each dictionary and list is rebuilt from its original file, which can take several minutes for a large dictionary. New dictionaries go to the top of your list; the bundle's ignore list is added to yours; nothing you already have is replaced.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -9360,7 +9360,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Settings…</source>
-        <translation type="unfinished" />
+        <translation>Cài đặt…</translation>
     </message>
     <message>
         <source>Save a portable settings file (machine-specific paths and resources excluded).</source>
@@ -9368,7 +9368,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Resources…</source>
-        <translation type="unfinished" />
+        <translation>Tài nguyên…</translation>
     </message>
     <message>
         <source>Save this language's dictionaries, frequency and pitch lists, ignore list and word lists to one file.</source>
@@ -9376,7 +9376,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Export</source>
-        <translation type="unfinished" />
+        <translation>Xuất</translation>
     </message>
     <message>
         <source>Export your settings, or this language's resources, to a file.</source>
@@ -9392,7 +9392,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Import</source>
-        <translation type="unfinished" />
+        <translation>Nhập</translation>
     </message>
     <message>
         <source>Import settings, or resources, from a file.</source>

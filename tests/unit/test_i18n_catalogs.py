@@ -143,3 +143,27 @@ def test_config_ui_language_round_trip_loads_catalog(qapp, lang):
     finally:
         for t in result:
             qapp.removeTranslator(t)
+
+
+#: The Settings footer's captions. They were translated in every catalog
+#: before Export/Import Settings became menus; a caption must not fall back
+#: to English in a translated UI.
+_FOOTER_CAPTIONS = {"Export", "Import", "Settings…", "Resources…"}
+
+
+@pytest.mark.parametrize("lang", _ALL)
+def test_the_settings_footer_captions_are_translated(lang):
+    root = ET.parse(TS_DIR / f"anki_miner_{lang.code}.ts").getroot()
+    ctx = next(c for c in root.findall("context") if c.find("name").text == "SettingsTab")
+    found: set[str] = set()
+    untranslated: list[str] = []
+    for msg in ctx.findall("message"):
+        source = msg.find("source").text or ""
+        if source not in _FOOTER_CAPTIONS:
+            continue
+        found.add(source)
+        tr = msg.find("translation")
+        if tr is None or tr.get("type") == "unfinished" or not (tr.text or "").strip():
+            untranslated.append(source)
+    assert found == _FOOTER_CAPTIONS  # vacuity guard
+    assert untranslated == []
