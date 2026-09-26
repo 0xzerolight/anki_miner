@@ -277,6 +277,16 @@ class _FakeRealSettingsTab:
             persist_chain=MagicMock(),
             notify_config_changed=MagicMock(),
         )
+        from anki_miner.gui.controllers.resource_bundle_flow import ResourceBundleFlow
+
+        self._resource_bundle_flow = ResourceBundleFlow(
+            parent=parent,
+            get_config=MagicMock(),
+            acquire=MagicMock(return_value=True),
+            release=MagicMock(),
+            on_imported=MagicMock(),
+            wordlists_root=MagicMock(),
+        )
 
 
 class TestRealSettingsTabIterCloseWorkers:
@@ -288,8 +298,9 @@ class TestRealSettingsTabIterCloseWorkers:
         # 4 from AnkiProbeController (fetch fields, fetch decks, name-list
         # decks, name-list note types)
         # + 1 DictionaryImportFlow (import) + 1 AudioPackImportFlow
-        # + 1 FrequencyImportFlow + 1 PitchImportFlow = 8 entries, all None idle.
-        assert len(workers) == 8
+        # + 1 FrequencyImportFlow + 1 PitchImportFlow + 1 ResourceBundleFlow
+        # = 9 entries, all None idle.
+        assert len(workers) == 9
         assert all(w is None for w in workers)
 
     def test_dict_import_worker_surfaces(self):
@@ -330,4 +341,4 @@ class TestRealSettingsTabIterCloseWorkers:
             BackgroundTaskController._join_worker_for_close(controller, worker) for worker in tab.iter_close_workers()
         ]
 
-        assert results == [True] * 8
+        assert results == [True] * 9

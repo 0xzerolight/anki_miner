@@ -47,7 +47,7 @@ def test_the_button_sits_left_of_export_in_the_same_footer_row(tab, qtbot):
     QApplication.processEvents()
 
     profiles = tab.manage_profiles_button
-    export = tab.export_settings_button
+    export = tab.export_button
 
     # Vacuity guard: an unlaid-out button reports x() == y() == 0, which would
     # satisfy the row assertion trivially.

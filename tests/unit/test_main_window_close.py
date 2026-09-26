@@ -216,6 +216,16 @@ class _FakeSettingsTab(SettingsTab):
             persist_chain=MagicMock(),
             notify_config_changed=MagicMock(),
         )
+        from anki_miner.gui.controllers.resource_bundle_flow import ResourceBundleFlow
+
+        self._resource_bundle_flow = ResourceBundleFlow(
+            parent=self,
+            get_config=MagicMock(),
+            acquire=MagicMock(return_value=True),
+            release=MagicMock(),
+            on_imported=MagicMock(),
+            wordlists_root=MagicMock(),
+        )
         # Real SettingsTab shape: shutdown()/flush_pending_settings touch the
         # auto-save debounce timer, so the fake needs one too (idle).
         from PyQt6.QtCore import QTimer
