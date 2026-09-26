@@ -22,7 +22,6 @@ from collections.abc import Mapping
 
 from anki_miner.languages.profile import (
     CaptionLangs,
-    CardFieldSpec,
     LanguageProfile,
     PosDefaults,
     SentenceRules,
@@ -31,7 +30,7 @@ from anki_miner.languages.switching import blank_scoped_defaults
 from anki_miner.languages.yue.audio import YUE_AUDIO
 from anki_miner.languages.yue.availability import yue_missing_required_reason
 from anki_miner.languages.yue.catalog import YUE_CATALOG
-from anki_miner.languages.yue.fields import YUE_CARD_FIELD_DEFAULTS
+from anki_miner.languages.yue.fields import YUE_CARD_FIELD_DEFAULTS, YUE_EXTRA_CARD_FIELDS
 from anki_miner.languages.yue.normalize import normalize_yue
 from anki_miner.languages.yue.parser import create_parser
 from anki_miner.languages.yue.pos import YUE_ALLOWED_POS, YUE_EXCLUDED_SUBTYPES, YUE_POS_LABELS
@@ -51,15 +50,6 @@ __all__ = ["build_profile"]
 #: classifier and a sentence-final particle, so a broken pack shows up as a
 #: missing segmentation rather than a short one.
 YUE_SMOKE_SENTENCE = "我今日睇咗一套好好睇嘅戲。"
-
-#: One spec per render-hook field key, in hook order (spec 4.7: a key never
-#: lands ahead of its hook). ``measure_word`` is zh's key reused -- the settings
-#: row dedups by key and zh declares it first -- so only ``expression_jyutping``
-#: needs a new ``_HOOK_FIELD_ROW_TEXTS`` pair.
-YUE_EXTRA_CARD_FIELDS: tuple[CardFieldSpec, ...] = (
-    CardFieldSpec(key="measure_word", capability="measure_word", placeholder="MeasureWord"),
-    CardFieldSpec(key="expression_jyutping", capability="jyutping", placeholder="Jyutping", raw_html=True),
-)
 
 
 def _scoped_defaults() -> Mapping[str, object]:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from anki_miner.languages._spaced.fields import spaced_card_fields
 from anki_miner.languages.ko import morphology as ko_morphology
 from anki_miner.languages.ko.audio import KO_AUDIO
 from anki_miner.languages.ko.availability import ko_missing_required_reason
@@ -31,32 +32,12 @@ KO_SMOKE_SENTENCE = "학생이 밥을 먹었어요."
 #: same convention as KO_CARD_FIELDS' own Anki-field-name suggestions.
 KO_EXTRA_CARD_FIELDS: tuple[CardFieldSpec, ...] = (CardFieldSpec(key="hanja", capability="hanja", placeholder="Hanja"),)
 
-#: Korean cards start from the same core fields as Japanese, with every
-#: JA-specific field unmapped ("" = feature off, the existing empty-name skip).
-#: "hanja" is the ko render hook's own key and follows the same convention: the
-#: mapped field name is the switch, so an unmapped key writes nothing.
-KO_CARD_FIELDS: dict[str, str] = {
-    "word": "Expression",
-    "sentence": "Sentence",
-    "definition": "MainDefinition",
-    "glossary": "",
-    "picture": "Picture",
-    "audio": "SentenceAudio",
-    "expression_furigana": "",
-    "expression_reading": "",
-    "sentence_furigana": "",
-    "sentence_reading": "",
-    "pitch_position": "",
-    "pitch_category": "",
-    "pitch_graph": "",
-    "pitch_text": "",
-    "frequency": "",
-    "frequency_sort": "",
-    "source": "",
-    "expression_audio": "",
-    "sentence_translation": "",
-    "hanja": "",
-}
+#: Korean cards start from the ja default map with both furigana fields unmapped
+#: ("" = feature off, the existing empty-name skip). Derived, never
+#: hand-written, so a key the config gains reaches Korean too. "hanja" is
+#: the ko render hook's own key and follows the same convention: the mapped
+#: field name is the switch, so an unmapped key writes nothing.
+KO_CARD_FIELDS: dict[str, str] = dict(spaced_card_fields(KO_EXTRA_CARD_FIELDS))
 
 #: Face candidates for surfaces showing MINED Korean text (not chrome).
 KO_FONT_FAMILIES: tuple[str, ...] = (

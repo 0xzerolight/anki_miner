@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from anki_miner.languages._spaced import create_spaced_parser
+from anki_miner.languages._spaced.fields import spaced_card_fields
 from anki_miner.languages.fa.audio import FA_AUDIO
 from anki_miner.languages.fa.availability import fa_missing_reason
 from anki_miner.languages.fa.catalog import FA_CATALOG
@@ -41,36 +42,14 @@ FA_EXTRA_CARD_FIELDS: tuple[CardFieldSpec, ...] = (
     CardFieldSpec(key="present_stem", capability="persian_stems", placeholder="PresentStem"),
 )
 
-#: Persian cards start from the same core fields as Japanese, with every
-#: JA-specific field unmapped ("" = feature off, the existing empty-name skip).
+#: Persian cards start from the ja default map with both furigana fields
+#: unmapped ("" = feature off, the existing empty-name skip). Derived, never
+#: hand-written, so a key the config gains reaches Persian too.
 #: ``expression_reading`` stays unmapped too: Persian has no respelling, and the
 #: dictionary's Latin spelling travels in ``reading_romanized`` instead, which
 #: is a render hook and follows the same rule — the mapped field name is the
 #: switch, so an unmapped key writes nothing.
-FA_CARD_FIELDS: dict[str, str] = {
-    "word": "Expression",
-    "sentence": "Sentence",
-    "definition": "MainDefinition",
-    "glossary": "",
-    "picture": "Picture",
-    "audio": "SentenceAudio",
-    "expression_furigana": "",
-    "expression_reading": "",
-    "sentence_furigana": "",
-    "sentence_reading": "",
-    "pitch_position": "",
-    "pitch_category": "",
-    "pitch_graph": "",
-    "pitch_text": "",
-    "frequency": "",
-    "frequency_sort": "",
-    "source": "",
-    "expression_audio": "",
-    "sentence_translation": "",
-    "reading_romanized": "",
-    "colloquial_form": "",
-    "present_stem": "",
-}
+FA_CARD_FIELDS: dict[str, str] = dict(spaced_card_fields(FA_EXTRA_CARD_FIELDS))
 
 
 def _scoped_defaults() -> dict[str, object]:
