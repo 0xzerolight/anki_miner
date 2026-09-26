@@ -1,4 +1,7 @@
-"""Shared fixtures for the ``tests/unit`` GUI/app-wiring suites.
+"""Shared fixtures for the ``tests/unit`` suites.
+
+``mock_services`` gives the processor suites the five services ``EpisodeProcessor``
+requires, as mocks.
 
 ``patch_heavy_init`` is the single, parametrizable replacement for the 21
 hand-copied ``_patch_heavy_init`` variants that used to live in
@@ -23,6 +26,8 @@ own ``monkeypatch`` on top of this call.
 """
 
 from __future__ import annotations
+
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -83,3 +88,24 @@ def wired_window(patch_heavy_init, test_config, qtbot):
     qtbot.addWidget(window)
     yield window, titles, tabs
     window.deleteLater()
+
+
+@pytest.fixture
+def mock_services():
+    """The five services ``EpisodeProcessor`` requires, as fresh ``MagicMock``s.
+
+    Splat it into the processor: ``build_processor(config, **mock_services)``.
+    ``deduplicate_by_sentence`` passes its words through, so a run with
+    sentence dedup on keeps them. A test class that needs more overrides this
+    fixture under the same name, takes it as its own argument, and adjusts the
+    dict it returns.
+    """
+    word_filter = MagicMock()
+    word_filter.deduplicate_by_sentence.side_effect = lambda words: words
+    return {
+        "subtitle_parser": MagicMock(),
+        "word_filter": word_filter,
+        "media_extractor": MagicMock(),
+        "definition_service": MagicMock(),
+        "anki_service": MagicMock(),
+    }

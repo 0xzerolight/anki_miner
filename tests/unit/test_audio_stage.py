@@ -12,8 +12,6 @@ from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
-
 from anki_miner.models import MediaData, TokenizedWord
 from anki_miner.orchestration.audio_stage import AudioStage, _audio_failure_diagnosis
 from anki_miner.orchestration.episode_processor import _EpisodeContext
@@ -183,22 +181,6 @@ class TestAudioStageLogging:
 
 class TestExpressionAudio:
     """Phase-3 expression (pronunciation) audio fetching (Issue #73)."""
-
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
 
     @staticmethod
     def _enabled_config(test_config):
@@ -547,22 +529,6 @@ class TestExpressionAudioProgressBand:
     registered by process_episode — no band theft from definitions or later stages.
     """
 
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
-
     @staticmethod
     def _enabled_config(test_config):
         return replace(
@@ -788,22 +754,6 @@ class TestAudioFailureDiagnosis:
 class TestProcessorAudioFailureSummary:
     """Phase-3 summary surfaces the dominant audio-failure cause."""
 
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
-
     @staticmethod
     def _enabled_config(test_config):
         return replace(
@@ -901,19 +851,6 @@ class TestSlowPackDiagnosis:
         assert msg is not None
         assert "forvo" not in msg
         assert "connection/certificate failure" in msg
-
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": MagicMock(),
-            "definition_service": MagicMock(),
-            "anki_service": MagicMock(),
-        }
 
     @staticmethod
     def _enabled_config(test_config):

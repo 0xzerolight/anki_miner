@@ -24,29 +24,18 @@ def _make_word(lemma, start_time=1.0):
 
 
 @pytest.fixture
-def mock_services():
-    subtitle_parser = MagicMock()
+def mock_services(mock_services):
+    subtitle_parser = mock_services["subtitle_parser"]
     # Curation builds the line index too, so mirror parse_subtitle_file's
     # configured return through the with-index path (no candidates).
     subtitle_parser.parse_subtitle_file_with_index.side_effect = lambda f, offset=None: (
         subtitle_parser.parse_subtitle_file.return_value,
         [],
     )
-    word_filter = MagicMock()
-    word_filter.deduplicate_by_sentence.side_effect = lambda w: w
     # The reading path passes occurrence_counts, which turns on the in-document
     # occurrence floor; left as a bare MagicMock it swallows the word list.
-    word_filter.filter_by_episode_count.side_effect = lambda w, counts, minimum: w
-    media_extractor = MagicMock()
-    definition_service = MagicMock()
-    anki_service = MagicMock()
-    return {
-        "subtitle_parser": subtitle_parser,
-        "word_filter": word_filter,
-        "media_extractor": media_extractor,
-        "definition_service": definition_service,
-        "anki_service": anki_service,
-    }
+    mock_services["word_filter"].filter_by_episode_count.side_effect = lambda w, counts, minimum: w
+    return mock_services
 
 
 def _processor(test_config, mock_services, *, strict):

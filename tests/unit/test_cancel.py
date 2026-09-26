@@ -39,22 +39,6 @@ class TestEpisodeProcessorCancel:
     """Tests for EpisodeProcessor cancellation between phases."""
 
     @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
-
-    @pytest.fixture
     def processor(self, test_config, mock_services):
         return EpisodeProcessor(
             config=test_config,
@@ -221,22 +205,6 @@ class TestProcessEpisodeCancelEvent:
     processor's phase checkpoints via the cancel_event keyword — NOT via the
     sticky processor.cancel(), which poisons cached processors across runs.
     """
-
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
 
     @pytest.fixture
     def processor(self, test_config, mock_services):

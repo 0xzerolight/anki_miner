@@ -2,7 +2,6 @@
 
 from dataclasses import replace
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -50,26 +49,15 @@ class TestCurationCallback:
     """Tests for EpisodeProcessor with curation_callback parameter."""
 
     @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
+    def mock_services(self, mock_services):
+        subtitle_parser = mock_services["subtitle_parser"]
         # Curation builds the line index too, so mirror parse_subtitle_file's
         # configured return through the with-index path (no candidates).
         subtitle_parser.parse_subtitle_file_with_index.side_effect = lambda f, offset=None: (
             subtitle_parser.parse_subtitle_file.return_value,
             [],
         )
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
+        return mock_services
 
     @pytest.fixture
     def processor(self, test_config, mock_services):
