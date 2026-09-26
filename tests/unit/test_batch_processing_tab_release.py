@@ -1,11 +1,9 @@
-"""Tests for BatchProcessingTab.release_dictionary_resources (Issue #30 follow-up).
+"""BatchProcessingTab's sequential-rerun teardown (Windows back-to-back-mining freeze).
 
-BatchProcessingTab hosts ``BatchQueueWorkerThread``, which exposes its
-retained processor through the typed ``curation_processor`` property (T-60),
-so the release path never reaches across worker-specific attribute names; it
-closes the sqlite handles through the
-``EpisodeProcessor.release_dictionary_resources`` facade before Settings →
-Remove / Re-import on Windows.
+``_teardown_previous_run`` cancels, joins and closes the prior run's worker
+and processor, and leaks rather than closes them when the join times out. The
+``release_dictionary_resources`` contract this screen shares with Single and
+Deck Builder lives in ``test_tab_release_contract.py``.
 """
 
 from __future__ import annotations
@@ -29,56 +27,6 @@ def tab(qapp, qtbot, test_config):
     qtbot.addWidget(widget)
     yield widget
     widget.deleteLater()
-
-
-def _idle_worker(processor):
-    """Build a MagicMock worker exposing ``processor`` via ``curation_processor``."""
-    worker = MagicMock(name="Worker")
-    worker.isRunning.return_value = False
-    worker.curation_processor = processor
-    return worker
-
-
-def test_release_when_no_worker_returns_true(tab):
-    tab.worker_thread = None
-    assert tab.release_dictionary_resources() is True
-
-
-def test_release_with_running_worker_returns_false(tab, facade_processor):
-    worker = _idle_worker(facade_processor)
-    worker.isRunning.return_value = True
-    tab.worker_thread = worker
-
-    assert tab.release_dictionary_resources() is False
-    worker.isRunning.assert_called()
-    facade_processor.definition_service.close.assert_not_called()
-
-
-def test_release_with_idle_worker_closes_definition_service_via_facade(tab, facade_processor):
-    tab.worker_thread = _idle_worker(facade_processor)
-
-    assert tab.release_dictionary_resources() is True
-    facade_processor.definition_service.close.assert_called_once_with()
-
-
-def test_release_with_idle_worker_no_processor_returns_true(tab):
-    # Worker never created a processor (e.g. failed before the first item):
-    # nothing to close, but removal may proceed.
-    tab.worker_thread = _idle_worker(None)
-    assert tab.release_dictionary_resources() is True
-
-
-def test_release_idempotent(tab, facade_processor):
-    tab.worker_thread = _idle_worker(facade_processor)
-
-    assert tab.release_dictionary_resources() is True
-    assert tab.release_dictionary_resources() is True
-    assert facade_processor.definition_service.close.call_count == 2
-
-
-# ---------------------------------------------------------------------------
-# Sequential-rerun teardown (Windows back-to-back-mining freeze)
-# ---------------------------------------------------------------------------
 
 
 def test_teardown_joins_and_closes_prior_processor(tab):
