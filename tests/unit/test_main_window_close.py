@@ -451,13 +451,23 @@ class _FakeVideoTab(VideoTab):
     only the children are fakes.
     """
 
-    def __init__(self, *, single_running: bool, batch_running: bool, youtube_running: bool) -> None:
+    def __init__(
+        self,
+        *,
+        single_running: bool,
+        batch_running: bool,
+        youtube_running: bool,
+        deck_builder_running: bool = False,
+    ) -> None:
         from PyQt6.QtWidgets import QWidget
 
         QWidget.__init__(self)
         self.single_tab = _FakeMiningChild(worker_running=single_running)
         self.batch_tab = _FakeMiningChild(worker_running=batch_running)
         self.youtube_tab = _FakeYouTubeChild(worker_running=youtube_running)
+        # DeckBuilderTab has no shutdown/iter_close_workers of its own: it is
+        # gate-poisoned-without-join, same shape as Single/Batch.
+        self.deck_builder_tab = _FakeMiningChild(worker_running=deck_builder_running)
 
 
 class TestCloseEventVideoContainer:

@@ -28,6 +28,7 @@ _INPUT_KEYS = frozenset(
     {
         "video.single.inputs",
         "video.batch.inputs",
+        "video.deckbuilder.inputs",
         "audio.inputs",
         "reading.manga.inputs",
         "reading.novels.inputs",
