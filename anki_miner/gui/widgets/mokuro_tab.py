@@ -7,8 +7,9 @@ contract (``services/reading/detector.py``).
 
 Structure and idioms are cloned from
 :mod:`anki_miner.gui.widgets.download_tab` (options persistence via
-``config_changed``, off-thread availability probe, worker lifecycle); the
-folder scan runs off-thread like Condense's folder mode.
+:class:`~anki_miner.gui.utils.run_options.RunOptionsMixin`, off-thread
+availability probe, worker lifecycle); the folder scan runs off-thread like
+Condense's folder mode.
 
 Guard contract:
 - mokuro not found → Run OCR disabled, notice visible (the setup card below installs it).
@@ -24,7 +25,6 @@ from __future__ import annotations
 import dataclasses
 import os
 from collections.abc import Callable
-from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterator, cast
 
@@ -35,6 +35,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
+from anki_miner.gui.utils.run_options import RunOptionsMixin
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import FormPanel, PageWidth, ScreenIssue, configure_card_layout, field_label_width
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
@@ -58,7 +59,7 @@ if TYPE_CHECKING:
 _MOKURO_LOCATION_DEBOUNCE_MS = 1000
 
 
-class MokuroTab(_ToolTabBase):
+class MokuroTab(RunOptionsMixin, _ToolTabBase):
     """Tab that runs mokuro over a volume or series folder.
 
     Deliberately has NO output section: mokuro writes each ``.mokuro`` beside
@@ -68,7 +69,7 @@ class MokuroTab(_ToolTabBase):
     ``_on_clear_output`` touch them.
 
     Signals:
-        config_changed: Emitted with a new ``AnkiMinerConfig`` when the user
+        run_options_changed: Emitted with a new ``AnkiMinerConfig`` when the user
             toggles "Use GPU when available" (so ``mokuro_use_gpu`` persists)
             or edits the mokuro executable path (debounced; so
             ``mokuro_location`` persists). The Redo box is transient on
@@ -87,7 +88,7 @@ class MokuroTab(_ToolTabBase):
 
     _PROBE_NAME = "mokuro"
 
-    config_changed = pyqtSignal(object)  # Emits AnkiMinerConfig
+    run_options_changed = pyqtSignal(object)  # Emits AnkiMinerConfig
     mokuro_install_requested = pyqtSignal()
 
     def __init__(
@@ -100,7 +101,6 @@ class MokuroTab(_ToolTabBase):
         super().__init__(parent)
         self.config = config
         self._suppress_optional_startup = suppress_optional_startup
-        self._seeding = False
         self.worker_thread = None
         self._custom_output_dir = None
         self._cancelled = False
@@ -159,7 +159,7 @@ class MokuroTab(_ToolTabBase):
         Reseeding the location field is skipped while an edit is still
         debouncing (``_mokuro_location_timer.isActive()``): a same-tab
         edit-then-toggle (e.g. type a path, tick GPU within the debounce
-        window) round-trips through ``config_changed`` -> ``window.update_config``
+        window) round-trips through ``run_options_changed`` -> ``window.update_config``
         -> ``config_refreshed`` and lands back here carrying the GPU change
         but the OLD location (the debounce hadn't committed it yet). Reseeding
         on that echo would overwrite the selector with the stale location and
@@ -226,27 +226,15 @@ class MokuroTab(_ToolTabBase):
         self._apply_mokuro_location_default()
 
     def _apply_gpu_default(self) -> None:
-        self._seeding = True
-        try:
+        with self.seeding():
             self.gpu_checkbox.setChecked(self.config.mokuro_use_gpu)
-        finally:
-            self._seeding = False
 
     def _apply_mokuro_location_default(self) -> None:
-        self._seeding = True
-        try:
+        with self.seeding():
             self.mokuro_selector.set_path(str(self.config.mokuro_location) if self.config.mokuro_location else "")
-        finally:
-            self._seeding = False
 
     def _on_gpu_changed(self, checked: bool) -> None:
-        if self._seeding:
-            return
-        new_config = replace(self.config, mokuro_use_gpu=checked)
-        if new_config == self.config:
-            return
-        self.config = new_config
-        self.config_changed.emit(new_config)
+        self.persist_run_options(mokuro_use_gpu=checked)
 
     def _on_mokuro_location_changed(self, _path: str) -> None:
         """Restart the debounce; :meth:`_commit_mokuro_location` reads the live path."""
@@ -255,13 +243,8 @@ class MokuroTab(_ToolTabBase):
         self._mokuro_location_timer.start(self._mokuro_location_debounce_ms)
 
     def _commit_mokuro_location(self) -> None:
-        """Persist the setup card's path through ``config_changed``, if it changed."""
-        new_location = self._current_mokuro_location()
-        if new_location == self.config.mokuro_location:
-            return
-        new_config = replace(self.config, mokuro_location=new_location)
-        self.config = new_config
-        self.config_changed.emit(new_config)
+        """Persist the setup card's path through ``run_options_changed``, if it changed."""
+        self.persist_run_options(mokuro_location=self._current_mokuro_location())
 
     # ------------------------------------------------------------------
     # UI construction

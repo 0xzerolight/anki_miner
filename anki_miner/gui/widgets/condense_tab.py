@@ -52,6 +52,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.run_off_thread import run_off_thread
+from anki_miner.gui.utils.run_options import RunOptionsMixin
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout
 from anki_miner.gui.widgets.dialogs import AudioTracksDialog, CondenseMetadataDialog, SubtitleTracksDialog
@@ -106,7 +107,7 @@ _OFFSET_MAX = 600_000
 _OFFSET_STEP = 100
 
 
-class CondenseTab(_ToolTabBase):
+class CondenseTab(RunOptionsMixin, _ToolTabBase):
     """Tab for condensing media files to dialogue-only audio.
 
     Shared worker-signal slots, output-location slots, progress chrome, and the
@@ -117,10 +118,11 @@ class CondenseTab(_ToolTabBase):
         parent: Optional parent widget.
 
     Signals:
-        config_changed: Emitted with a new ``AnkiMinerConfig`` when the user
-            edits a run option (padding / offset / format / write-subs), so the
-            host can persist ``condenser_*`` to ``gui_config.json`` and survive
-            restart. Mirrors ``SettingsTab.config_changed`` → ``update_config``.
+        run_options_changed: Emitted with a new ``AnkiMinerConfig`` when the user
+            edits a run option (padding / offset / format / write-subs / tagging /
+            merge), so the host persists ``condenser_*`` to ``gui_config.json``
+            and they survive restart. The seed guard and the no-op check are
+            :class:`~anki_miner.gui.utils.run_options.RunOptionsMixin`'s.
     """
 
     #: A label beside its control; a wider window buys gutters, not longer inputs.
@@ -136,7 +138,7 @@ class CondenseTab(_ToolTabBase):
 
     _PROBE_NAME = "ffmpeg"
 
-    config_changed = pyqtSignal(object)  # Emits AnkiMinerConfig
+    run_options_changed = pyqtSignal(object)  # Emits AnkiMinerConfig
 
     def __init__(
         self,
@@ -148,10 +150,6 @@ class CondenseTab(_ToolTabBase):
         super().__init__(parent)
         self.config = config
         self._suppress_optional_startup = suppress_optional_startup
-        # Suppresses the persist slot while _apply_config_defaults programmatically
-        # seeds the option widgets (setValue/setChecked would otherwise feed back
-        # through config_changed and re-persist during a refresh).
-        self._seeding: bool = False
         self.worker_thread = None
         self._custom_output_dir: Path | None = None
         self._total_files: int = 0
@@ -219,11 +217,10 @@ class CondenseTab(_ToolTabBase):
     def _apply_config_defaults(self) -> None:
         """Seed the option widgets from the current config's persisted defaults.
 
-        Guarded by ``_seeding`` so the programmatic setValue/setChecked calls
-        don't feed back through ``_on_option_changed`` and re-emit config_changed.
+        Inside :meth:`seeding` so the programmatic setValue/setChecked calls
+        don't feed back through ``_on_option_changed`` and persist.
         """
-        self._seeding = True
-        try:
+        with self.seeding():
             self.padding_spinbox.setValue(self.config.condenser_padding_ms)
             self.offset_spinbox.setValue(self.config.condenser_offset_ms)
             idx = self.format_combo.findData(self.config.condenser_output_format)
@@ -232,8 +229,6 @@ class CondenseTab(_ToolTabBase):
             self.write_subs_checkbox.setChecked(self.config.condenser_write_subtitles)
             self.tag_outputs_checkbox.setChecked(self.config.condenser_tag_outputs)
             self.merge_checkbox.setChecked(self.config.condenser_merge_output)
-        finally:
-            self._seeding = False
 
     def _options_differ_from_widgets(self) -> bool:
         """Whether the config's condenser_* values differ from the live widgets."""
@@ -249,14 +244,10 @@ class CondenseTab(_ToolTabBase):
     def _on_option_changed(self, *_: object) -> None:
         """Persist an edited run option to config so it survives restart.
 
-        Folds all six widgets into a fresh config and emits ``config_changed``
-        for the host to save. No-ops during programmatic seeding and when
-        nothing actually changed (guards against a save/refresh feedback loop).
+        Folds all six widgets into the config. :meth:`persist_run_options`
+        no-ops while seeding and when nothing moved (the save/refresh loop guard).
         """
-        if self._seeding:
-            return
-        new_config = replace(
-            self.config,
+        self.persist_run_options(
             condenser_padding_ms=self.padding_spinbox.value(),
             condenser_offset_ms=self.offset_spinbox.value(),
             condenser_output_format=self.format_combo.currentData(),
@@ -264,10 +255,6 @@ class CondenseTab(_ToolTabBase):
             condenser_tag_outputs=self.tag_outputs_checkbox.isChecked(),
             condenser_merge_output=self.merge_checkbox.isChecked(),
         )
-        if new_config == self.config:
-            return
-        self.config = new_config
-        self.config_changed.emit(new_config)
 
     # ------------------------------------------------------------------
     # UI construction
@@ -480,8 +467,8 @@ class CondenseTab(_ToolTabBase):
         )
         layout.addWidget(self.tag_outputs_checkbox)
 
-        # Persist any run-option edit to config (survives restart). Guarded by
-        # _seeding so _apply_config_defaults' programmatic writes don't re-emit.
+        # Persist any run-option edit to config (survives restart). The seed
+        # guard keeps _apply_config_defaults' programmatic writes from persisting.
         self.padding_spinbox.valueChanged.connect(self._on_option_changed)
         self.offset_spinbox.valueChanged.connect(self._on_option_changed)
         self.format_combo.currentIndexChanged.connect(self._on_option_changed)

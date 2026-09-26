@@ -212,3 +212,14 @@ def test_a_tool_tabs_saved_run_options_reopen_unchanged(case, qtbot, tmp_path):
     reopened = tab_cls(GUIConfigManager.load_config(), suppress_optional_startup=True)
     qtbot.addWidget(reopened)
     assert read(reopened) == read(tab)
+
+
+def test_the_tool_tabs_are_discovered_and_wired_once(wired_window):
+    """app.py wires these three only through its run_options_changed discovery
+    loop, so each must be a child of the window (hidden Utilities sub-tabs
+    included) with exactly one receiver."""
+    window, _titles, _tabs = wired_window
+    for tab_cls in (CondenseTab, DownloadTab, MokuroTab):
+        found = [w for w in window.findChildren(QWidget) if type(w) is tab_cls]
+        assert len(found) == 1, tab_cls.__name__
+        assert found[0].receivers(found[0].run_options_changed) == 1, tab_cls.__name__

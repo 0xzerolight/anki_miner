@@ -2,7 +2,7 @@
 
 Covers construction, the yt-dlp availability guard, URL validation (blank /
 invalid / T-34 dash-leading lines), worker kwargs assembly (dest + preset /
-custom-format options), option persistence via config_changed, update_config
+custom-format options), option persistence via run_options_changed, update_config
 reseeding, output-folder choose/reset, cancel, and the reentrancy guard.
 
 No real yt-dlp runs: DownloadWorker and the availability probe are patched.
@@ -269,20 +269,20 @@ class TestWorkerConstruction:
 
 
 class TestOptionPersistence:
-    def test_option_edit_emits_config_changed(self, qtbot, tmp_path: Path) -> None:
+    def test_option_edit_emits_run_options_changed(self, qtbot, tmp_path: Path) -> None:
         tab = _make_tab(_make_config(tmp_path), qtbot)
         received: list[AnkiMinerConfig] = []
-        tab.config_changed.connect(received.append)
+        tab.run_options_changed.connect(received.append)
         tab.preset_combo.setCurrentIndex(tab.preset_combo.findData("720p"))
         assert received
         assert received[-1].downloader_format_preset == "720p"
         tab.embed_thumbnail_checkbox.setChecked(True)
         assert received[-1].downloader_embed_thumbnail is True
 
-    def test_seeding_suppresses_config_changed(self, qtbot, tmp_path: Path) -> None:
+    def test_seeding_suppresses_run_options_changed(self, qtbot, tmp_path: Path) -> None:
         tab = _make_tab(_make_config(tmp_path), qtbot)
         received: list[AnkiMinerConfig] = []
-        tab.config_changed.connect(received.append)
+        tab.run_options_changed.connect(received.append)
         tab.config = replace(tab.config, downloader_format_preset="1080p")
         tab._apply_config_defaults()
         assert received == []
@@ -452,7 +452,7 @@ class TestSubtitleLanguagePicker:
         tab = _make_tab(_make_config(tmp_path), qtbot)
         tab.write_subs_checkbox.setChecked(True)
         emitted: list[AnkiMinerConfig] = []
-        tab.config_changed.connect(emitted.append)
+        tab.run_options_changed.connect(emitted.append)
         dialog = MagicMock()
         dialog.exec.return_value = QDialog.DialogCode.Accepted
         dialog.selected_langs.return_value = "ko,en"
@@ -504,7 +504,7 @@ class TestAudioLanguageWidget:
     def test_choosing_a_language_persists_it(self, qtbot, tmp_path: Path) -> None:
         tab = _make_tab(_make_config(tmp_path), qtbot)
         emitted: list[AnkiMinerConfig] = []
-        tab.config_changed.connect(emitted.append)
+        tab.run_options_changed.connect(emitted.append)
         tab.audio_lang_combo.setCurrentIndex(tab.audio_lang_combo.findData("ko"))
         assert emitted[-1].downloader_audio_lang == "ko"
 
@@ -522,7 +522,7 @@ class TestAudioLanguageWidget:
         """The nested seeding guard must restore, not clear, the outer one."""
         tab = _make_tab(_make_config(tmp_path), qtbot)
         received: list[AnkiMinerConfig] = []
-        tab.config_changed.connect(received.append)
+        tab.run_options_changed.connect(received.append)
         tab.config = replace(tab.config, downloader_audio_lang="sw")
         tab._apply_config_defaults()
         assert received == []
@@ -859,7 +859,7 @@ class TestSubtitlesOnlyPreset:
         """DECIDED: downloader_write_subtitles keeps its own value while this preset is active."""
         tab = _make_tab(_make_config(tmp_path), qtbot)
         received: list[AnkiMinerConfig] = []
-        tab.config_changed.connect(received.append)
+        tab.run_options_changed.connect(received.append)
         tab.preset_combo.setCurrentIndex(tab.preset_combo.findData("subtitles"))
         assert received
         assert received[-1].downloader_write_subtitles is False

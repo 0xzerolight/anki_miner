@@ -1019,15 +1019,15 @@ def test_update_config_does_not_refresh_defaults_during_run(qtbot, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Run-option persistence (config_changed) + refresh no-clobber
+# Run-option persistence (run_options_changed) + refresh no-clobber
 # ---------------------------------------------------------------------------
 
 
 def test_editing_option_persists_to_config(qtbot, tmp_path):
-    """Editing a run option updates config and emits config_changed."""
+    """Editing a run option updates config and emits run_options_changed."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
     emitted: list = []
-    tab.config_changed.connect(emitted.append)
+    tab.run_options_changed.connect(emitted.append)
 
     tab.padding_spinbox.setValue(777)
     tab.offset_spinbox.setValue(-250)
@@ -1045,15 +1045,15 @@ def test_editing_option_persists_to_config(qtbot, tmp_path):
     assert emitted[-1].condenser_tag_outputs is True
 
 
-def test_seeding_does_not_emit_config_changed(qtbot, tmp_path):
-    """Construction/reseed seeds widgets without emitting config_changed."""
+def test_seeding_does_not_emit_run_options_changed(qtbot, tmp_path):
+    """Construction/reseed seeds widgets without emitting run_options_changed."""
     emitted: list = []
     with patch(_COMPUTE_AVAILABLE, return_value=True):
         tab = CondenseTab(_make_config(tmp_path))
         assert tab._availability_worker.wait(3000)
         qtbot.waitUntil(tab.condense_button.isEnabled, timeout=3000)
     qtbot.addWidget(tab)
-    tab.config_changed.connect(emitted.append)
+    tab.run_options_changed.connect(emitted.append)
 
     with patch(_AVAILABLE, return_value=True):
         tab.update_config(_config_with_defaults(tmp_path))
@@ -1315,7 +1315,7 @@ def test_merge_name_field_follows_the_checkbox(qtbot, tmp_path):
 def test_merge_checkbox_persists_to_config(qtbot, tmp_path):
     tab = _make_tab(_make_config(tmp_path), qtbot)
     changes: list = []
-    tab.config_changed.connect(changes.append)
+    tab.run_options_changed.connect(changes.append)
 
     tab.merge_checkbox.setChecked(True)
 

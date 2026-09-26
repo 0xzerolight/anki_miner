@@ -1833,15 +1833,6 @@ def compose_main_window(
     # so its config_refreshed connection is wired here too. SubtitlesTab.update_config
     # fans out to both Generate and Retime children.
     window.config_refreshed.connect(subtitles_tab.update_config)
-    # The Condense tab persists its inline run options (padding/offset/format/
-    # write-subs) by emitting config_changed; route it through window.update_config
-    # so condenser_* land in gui_config.json and survive restart.
-    subtitles_tab.condense_tab.config_changed.connect(window.update_config)
-    # Same pattern for the Download tab's downloader_* options.
-    subtitles_tab.download_tab.config_changed.connect(window.update_config)
-    # Same pattern for the Manga OCR tab's mokuro_use_gpu option and its setup
-    # card's (debounced) mokuro_location edits.
-    subtitles_tab.mokuro_tab.config_changed.connect(window.update_config)
     # Restyle moved off the Tools menu onto Card Backfill (Task 14); the
     # button re-emits, and the window still owns the AnkiService + worker.
     subtitles_tab.backfill_tab.restyle_requested.connect(window.restyle_mined_cards)
@@ -1877,16 +1868,15 @@ def compose_main_window(
         screen.bind_task_registry(window.task_registry)
     # --- end task-registry publication ------------------------------------
 
-    # Inline run options (the curation checkbox, Card Backfill's field groups)
-    # persist by folding themselves into the config and
-    # emitting run_options_changed; route it through window.update_config so the
-    # value lands in gui_config.json and survives restart. Same contract as
-    # condense_tab/download_tab's config_changed, but discovered rather than
-    # listed: these screens sit up to three levels deep inside container tabs,
-    # and a hand-kept list would silently stop persisting a sub-tab that moved
-    # (the reasoning behind MainWindow.iter_queue_screens). SettingsTab,
-    # CondenseTab and DownloadTab emit config_changed, not this signal, so they
-    # are already wired above and cannot be connected twice.
+    # Inline run options (the curation checkbox, Card Backfill's field groups,
+    # the Condense / Download / Manga OCR options) persist by folding themselves
+    # into the config and emitting run_options_changed; route it through
+    # window.update_config so the value lands in gui_config.json and survives
+    # restart. Discovered rather than listed: these screens sit up to three
+    # levels deep inside container tabs, and a hand-kept list would silently stop
+    # persisting a sub-tab that moved (the reasoning behind
+    # MainWindow.iter_queue_screens). SettingsTab emits config_changed, not this
+    # signal, so it is wired above and cannot be connected twice.
     for run_options_screen in window.findChildren(QWidget):
         run_options_changed = getattr(run_options_screen, "run_options_changed", None)
         if run_options_changed is not None:
