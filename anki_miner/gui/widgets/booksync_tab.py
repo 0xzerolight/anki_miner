@@ -491,22 +491,7 @@ class BookSyncTab(_ToolTabBase):
             output_dir=out_dir,
             overwrite=self.overwrite_checkbox.isChecked(),
         )
-        self.worker_thread = worker
-
-        worker.file_started.connect(self._on_file_started)
-        worker.file_progress.connect(self._on_file_progress)
-        worker.file_finished.connect(self._on_file_finished)
-        worker.file_skipped.connect(self._on_file_skipped)
-        worker.queue_finished.connect(self._on_queue_finished)
-        worker.error.connect(self._on_run_error)
-        # Lifecycle: free the QThread on real thread exit (not on queue_finished,
-        # which fires just before the thread ends).
-        worker.finished.connect(self._on_worker_finished)
-
-        self.sync_button.setEnabled(False)
-        self.cancel_button.show()
-
-        worker.start()
+        self._start_queue_worker(worker)
 
     # ------------------------------------------------------------------
     # Worker signal slots

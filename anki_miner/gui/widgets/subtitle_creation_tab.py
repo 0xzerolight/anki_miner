@@ -466,24 +466,7 @@ class SubtitleCreationTab(_ToolTabBase):
             output_dir=out_dir,
             overwrite=self.overwrite_checkbox.isChecked(),
         )
-        self.worker_thread = worker
-
-        # Wire signals
-        worker.file_started.connect(self._on_file_started)
-        worker.file_progress.connect(self._on_file_progress)
-        worker.file_finished.connect(self._on_file_finished)
-        worker.file_skipped.connect(self._on_file_skipped)
-        worker.queue_finished.connect(self._on_queue_finished)
-        worker.error.connect(self._on_run_error)
-        # Lifecycle: free the QThread on real thread exit (not on queue_finished,
-        # which fires just before the thread ends). Clears the handle so the
-        # reentrancy guard and iter_close_workers see no stale worker.
-        worker.finished.connect(self._on_worker_finished)
-
-        self.generate_button.setEnabled(False)
-        self.cancel_button.show()
-
-        worker.start()
+        self._start_queue_worker(worker)
 
     def _collect_single_video_file(self) -> list[Path]:
         """Single-file mode: return [media], or [] on validation failure."""

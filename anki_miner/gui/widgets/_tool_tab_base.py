@@ -60,6 +60,7 @@ from anki_miner.utils.i18n import tr_format
 if TYPE_CHECKING:
     from anki_miner.gui.controllers.task_registry import TaskRegistry
     from anki_miner.gui.workers.base_worker import CancellableWorker
+    from anki_miner.gui.workers.file_queue_worker import FileQueueWorker
 
 
 @dataclass(frozen=True)
@@ -316,6 +317,27 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         self._run_skipped = 0
         self._publish_task_start(self._strings.task_title, total=total)
 
+    def _start_queue_worker(self, worker: FileQueueWorker) -> None:
+        """Wire a built queue worker to the shared slots, hand it the run, start it.
+
+        A tool with an extra per-file signal (``file_note``) connects it before
+        calling this.
+        """
+        self.worker_thread = worker
+        worker.file_started.connect(self._on_file_started)
+        worker.file_progress.connect(self._on_file_progress)
+        worker.file_finished.connect(self._on_file_finished)
+        worker.file_skipped.connect(self._on_file_skipped)
+        worker.queue_finished.connect(self._on_queue_finished)
+        worker.error.connect(self._on_run_error)
+        # Lifecycle: free the QThread on real thread exit (not on queue_finished,
+        # which fires just before the thread ends). Clears the handle so the
+        # reentrancy guard and iter_close_workers see no stale worker.
+        worker.finished.connect(self._on_worker_finished)
+        self._primary_button.setEnabled(False)
+        self.cancel_button.show()
+        worker.start()
+
     # ------------------------------------------------------------------
     # Worker signal slots
     # ------------------------------------------------------------------
@@ -450,4 +472,8 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
 
     def _item_total(self) -> int:
         """Return the total item count for this run (files or pairs)."""
+        raise NotImplementedError
+
+    def _on_file_started(self, idx: int) -> None:
+        """Say which item the run has reached (0-based ``idx``)."""
         raise NotImplementedError

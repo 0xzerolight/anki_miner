@@ -633,17 +633,7 @@ class MokuroTab(_ToolTabBase):
             options=MokuroOptions(force_cpu=not self.gpu_checkbox.isChecked(), no_cache=self.redo_checkbox.isChecked()),
             skip_processed=not self.redo_checkbox.isChecked(),
         )
-        self.worker_thread = worker
-        worker.file_started.connect(self._on_file_started)
-        worker.file_progress.connect(self._on_file_progress)
-        worker.file_finished.connect(self._on_file_finished)
-        worker.file_skipped.connect(self._on_file_skipped)
-        worker.queue_finished.connect(self._on_queue_finished)
-        worker.error.connect(self._on_run_error)
-        worker.finished.connect(self._on_worker_finished)
-        self.run_button.setEnabled(False)
-        self.cancel_button.show()
-        worker.start()
+        self._start_queue_worker(worker)
         # After start(), not before: still_running() reads worker.isRunning(),
         # which is False until the thread has actually started.
         self._refresh_mokuro_setup_state()

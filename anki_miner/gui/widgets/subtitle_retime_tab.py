@@ -721,25 +721,8 @@ class SubtitleRetimeTab(_ToolTabBase):
             overwrite=self.overwrite_checkbox.isChecked(),
             reference_override=reference_override,
         )
-        self.worker_thread = worker
-
-        # Wire signals
-        worker.file_started.connect(self._on_file_started)
-        worker.file_progress.connect(self._on_file_progress)
-        worker.file_finished.connect(self._on_file_finished)
         worker.file_note.connect(self._on_file_note)
-        worker.file_skipped.connect(self._on_file_skipped)
-        worker.queue_finished.connect(self._on_queue_finished)
-        worker.error.connect(self._on_run_error)
-        # Lifecycle: free the QThread on real thread exit (not on queue_finished,
-        # which fires just before the thread ends). Clears the handle so the
-        # reentrancy guard and iter_close_workers see no stale worker.
-        worker.finished.connect(self._on_worker_finished)
-
-        self.retime_button.setEnabled(False)
-        self.cancel_button.show()
-
-        worker.start()
+        self._start_queue_worker(worker)
 
     def _collect_single_pair(self) -> list[tuple[Path, Path]]:
         """Single-file mode: return [(video, subtitle)], or [] on failure."""
