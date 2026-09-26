@@ -1,7 +1,9 @@
 """BookSyncTab (Utilities → Audiobook Sync).
 
 Same harness as tests/unit/test_subtitle_creation_tab.py: engine probe and
-worker class patched at the tab's import site; no ffmpeg, no ASR.
+worker class patched at the tab's import site; no ffmpeg, no ASR. The shared
+``_ToolTabBase`` contract (mode toggle, Output row, worker lifecycle) is tested
+once in ``test_tool_tab_contract.py``.
 """
 
 from __future__ import annotations
@@ -13,18 +15,14 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.booksync_tab import BookSyncTab
 from anki_miner.models import TerminalOutcome
+from tests.unit._tool_tab_harness import make_config as _make_config
 
 _ENGINE_AVAILABLE = "anki_miner.services.asr._engine.available"
 _USABLE_MODEL = "anki_miner.gui.widgets.booksync_tab.usable_model_installed"
 _OS_ACCESS = "anki_miner.gui.widgets._tool_tab_base.os.access"
 _WORKER_CLS = "anki_miner.gui.widgets.booksync_tab.BookSyncWorker"
-
-
-def _make_config(tmp_path: Path) -> AnkiMinerConfig:
-    return AnkiMinerConfig(asr_models_root=tmp_path / "asr_models", media_temp_folder=tmp_path / "tmp")
 
 
 class _FakeWorker:
@@ -105,14 +103,6 @@ def test_engine_unavailable_disables_sync_and_shows_notice(qtbot, tmp_path):
         assert tab._availability_worker.wait(3000)
         qtbot.waitUntil(lambda: not tab.engine_notice_label.isHidden(), timeout=3000)
     assert not tab.sync_button.isEnabled()
-
-
-def test_mode_toggle_swaps_selectors(qtbot, tmp_path):
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    tab._on_folder_mode()
-    assert tab.file_selector.isHidden() and not tab.folder_selector.isHidden()
-    tab._on_file_mode()
-    assert not tab.file_selector.isHidden() and tab.folder_selector.isHidden()
 
 
 def test_sync_refuses_without_a_book(qtbot, tmp_path):
@@ -241,20 +231,6 @@ def test_cancel_forwards_to_worker(qtbot, tmp_path):
     tab._on_cancel()
     assert _FakeWorker.instances[0]._cancelled
     assert not tab.cancel_button.isEnabled()
-
-
-def test_iter_close_workers_yields_active_worker(qtbot, tmp_path):
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    audio, book = _inputs(tmp_path)
-    tab.file_selector.set_path(str(audio))
-    tab.book_selector.set_path(str(book))
-    with (
-        patch(_WORKER_CLS, _FakeWorker),
-        patch(_USABLE_MODEL, return_value=True),
-        patch(_ENGINE_AVAILABLE, return_value=True),
-    ):
-        tab._on_sync()
-    assert list(tab.iter_close_workers()) == [tab.worker_thread]
 
 
 def test_update_config_adopts_new_model(qtbot, tmp_path):

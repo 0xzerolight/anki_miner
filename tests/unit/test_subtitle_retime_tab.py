@@ -1,16 +1,15 @@
 """Tests for SubtitleRetimeTab.
 
 Covers:
-- Construction (qtbot.addWidget contract)
 - alass-availability guard: present → Retime enabled, notice hidden;
   absent → button disabled, notice visible.
-- Mode toggle (single video+subtitle selectors vs folder selectors)
 - Single-mode pair collection: both set → [(video, sub)]; missing one → warning, [].
 - Folder-mode pair collection: patched matcher → tuples + "Matched N of M" logged;
   unmatched case logs a warning.
-- Output-location label toggling (Choose Folder / Reset)
-- iter_close_workers returns the active worker
 - split-penalty spinbox default is 7
+
+The shared ``_ToolTabBase`` contract (construction, mode toggle, Output row,
+worker lifecycle, skipped-file log) is tested once in ``test_tool_tab_contract.py``.
 
 No real alass runs: SubtitleRetimeWorker and the availability check are patched.
 """
@@ -24,12 +23,14 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.controllers.task_registry import TaskOutcome, TaskRegistry
 from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
 from anki_miner.models import TerminalOutcome
 from anki_miner.services.retime_reference import ReferenceOverride
 from anki_miner.utils.file_pairing import FilePair
+from tests.unit._tool_tab_harness import FakeToolWorker as _FakeWorker
+from tests.unit._tool_tab_harness import capture_slots as _capture_signal_slots
+from tests.unit._tool_tab_harness import make_config as _make_config
 
 # ---------------------------------------------------------------------------
 # Common patch target constants
@@ -47,45 +48,6 @@ _FIND_PAIRS = "anki_miner.gui.widgets.subtitle_retime_tab.FilePairMatcher.find_p
 # ---------------------------------------------------------------------------
 
 
-def _make_config(tmp_path: Path) -> AnkiMinerConfig:
-    """Return a minimal config with writable paths under tmp_path."""
-    return AnkiMinerConfig(
-        asr_models_root=tmp_path / "asr_models",
-        media_temp_folder=tmp_path / "tmp",
-    )
-
-
-class _FakeWorker:
-    """Minimal fake that mimics the SubtitleRetimeWorker interface used by the tab."""
-
-    def __init__(self, *args, **kwargs):
-        self.args = args
-        self.kwargs = kwargs
-        self.file_started = MagicMock()
-        self.file_progress = MagicMock()
-        self.file_finished = MagicMock()
-        self.file_note = MagicMock()
-        self.file_skipped = MagicMock()
-        self.queue_finished = MagicMock()
-        self.error = MagicMock()
-        self.finished = MagicMock()  # native QThread.finished (lifecycle release)
-        self.deleteLater = MagicMock()
-        self._started = False
-        self._cancelled = False
-
-    def start(self):
-        self._started = True
-
-    def cancel(self):
-        self._cancelled = True
-
-    def isRunning(self):
-        return self._started and not self._cancelled
-
-    def wait(self, *args):
-        return True
-
-
 def _make_tab(config, qtbot):
     """Construct a SubtitleRetimeTab with alass patched available=True."""
     with patch(_COMPUTE_AVAILABLE, return_value=True):
@@ -99,13 +61,6 @@ def _make_tab(config, qtbot):
 # ---------------------------------------------------------------------------
 # Construction
 # ---------------------------------------------------------------------------
-
-
-def test_construction(qtbot, tmp_path):
-    """Tab constructs and registers with qtbot without error."""
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    assert tab is not None
-    assert tab.retime_button is not None
 
 
 def test_update_config_swaps_config(qtbot, tmp_path):
@@ -197,41 +152,6 @@ def test_alass_resolved_path_exists_available(qtbot, tmp_path):
         qtbot.waitUntil(tab.retime_button.isEnabled, timeout=3000)
     qtbot.addWidget(tab)
     assert tab.retime_button.isEnabled()
-
-
-# ---------------------------------------------------------------------------
-# Mode toggle
-# ---------------------------------------------------------------------------
-
-
-def test_mode_toggle_single_by_default(qtbot, tmp_path):
-    """Single-file mode is the default; folder selectors hidden."""
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    assert not tab.video_file_selector.isHidden()
-    assert not tab.subtitle_file_selector.isHidden()
-    assert tab.video_folder_selector.isHidden()
-    assert tab.subtitle_folder_selector.isHidden()
-
-
-def test_mode_toggle_switches_to_folder(qtbot, tmp_path):
-    """Clicking folder mode shows folder selectors, hides file selectors."""
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    tab.folder_mode_button.click()
-    assert tab.video_file_selector.isHidden()
-    assert tab.subtitle_file_selector.isHidden()
-    assert not tab.video_folder_selector.isHidden()
-    assert not tab.subtitle_folder_selector.isHidden()
-
-
-def test_mode_toggle_back_to_file(qtbot, tmp_path):
-    """Toggling back to file mode re-shows file selectors."""
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    tab.folder_mode_button.click()
-    tab.file_mode_button.click()
-    assert not tab.video_file_selector.isHidden()
-    assert not tab.subtitle_file_selector.isHidden()
-    assert tab.video_folder_selector.isHidden()
-    assert tab.subtitle_folder_selector.isHidden()
 
 
 # ---------------------------------------------------------------------------
@@ -466,18 +386,6 @@ def test_folder_mode_missing_video_folder_warns(qtbot, tmp_path):
     assert result == [[]]
 
 
-def test_folder_mode_failed_collection_leaves_button_enabled(qtbot, tmp_path):
-    """A synchronous bail (no folder picked) must not leave Retime dead:
-    _on_retime disables it before dispatch, so the collector must always
-    call on_pairs — even on an early return — for the caller to re-enable it."""
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    tab.folder_mode_button.click()
-
-    tab.retime_button.click()
-
-    assert tab.retime_button.isEnabled()
-
-
 def test_unreadable_video_folder_reports_issue_without_raising(qtbot, tmp_path):
     """Folder enumeration errors stay contained in the Retime screen."""
     video_folder = tmp_path / "videos"
@@ -496,46 +404,6 @@ def test_unreadable_video_folder_reports_issue_without_raising(qtbot, tmp_path):
 
     assert result == [[]]
     assert tab.issue_banner().current_issue() is not None
-
-
-# ---------------------------------------------------------------------------
-# Output location toggle
-# ---------------------------------------------------------------------------
-
-
-def test_choose_output_sets_label_and_shows_reset(qtbot, tmp_path):
-    """Choosing a folder updates the label and reveals the Reset button."""
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    out = tmp_path / "out"
-    out.mkdir()
-
-    with patch(
-        "anki_miner.gui.widgets._tool_tab_base.file_dialogs.pick_directory",
-        side_effect=lambda *a, on_done, **k: on_done(str(out)),
-    ):
-        tab._on_choose_output()
-
-    assert tab._custom_output_dir == out
-    assert str(out) in tab.output_location_label.text()
-    assert not tab.clear_output_button.isHidden()
-
-
-def test_clear_output_resets_label(qtbot, tmp_path):
-    """Reset clears the custom dir and restores the default label."""
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    out = tmp_path / "out"
-    out.mkdir()
-
-    with patch(
-        "anki_miner.gui.widgets._tool_tab_base.file_dialogs.pick_directory",
-        side_effect=lambda *a, on_done, **k: on_done(str(out)),
-    ):
-        tab._on_choose_output()
-
-    tab._on_clear_output()
-    assert tab._custom_output_dir is None
-    assert "Next to source video" in tab.output_location_label.text()
-    assert tab.clear_output_button.isHidden()
 
 
 # ---------------------------------------------------------------------------
@@ -658,27 +526,8 @@ def test_pair_preview_hidden_until_both_folders_chosen(qtbot, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Control explanations / styling
+# Reference override
 # ---------------------------------------------------------------------------
-
-
-def test_output_location_label_objectname_not_helper_text(qtbot, tmp_path):
-    """Output-location label uses a non-italic objectName, not 'helper-text'."""
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    assert tab.output_location_label.objectName() == "output-location-value"
-
-
-def test_mode_buttons_have_tooltips(qtbot, tmp_path):
-    """Single-file / folder mode buttons carry explanatory tooltips."""
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    assert tab.file_mode_button.toolTip().strip()
-    assert tab.folder_mode_button.toolTip().strip()
-
-
-def test_overwrite_checkbox_has_tooltip(qtbot, tmp_path):
-    """Overwrite checkbox explains skip-vs-overwrite via tooltip."""
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    assert tab.overwrite_checkbox.toolTip().strip()
 
 
 def test_reference_override_passed_to_worker(qtbot, tmp_path):
@@ -803,43 +652,6 @@ def test_queue_finished_re_enables_retime(qtbot, tmp_path):
     assert tab.retime_button.isEnabled()
 
 
-def test_worker_released_on_thread_finished(qtbot, tmp_path):
-    """Native QThread.finished clears the handle and schedules deleteLater."""
-    config = _make_config(tmp_path)
-    video = tmp_path / "episode.mp4"
-    sub = tmp_path / "episode.srt"
-    video.write_bytes(b"fake")
-    sub.write_text("1\n")
-
-    fake_worker = _FakeWorker()
-    slots: list = []
-    orig = fake_worker.finished.connect
-
-    def _capture(slot):
-        slots.append(slot)
-        return orig(slot)
-
-    fake_worker.finished.connect = _capture
-
-    tab = _make_tab(config, qtbot)
-    tab.video_file_selector.set_path(str(video))
-    tab.subtitle_file_selector.set_path(str(sub))
-
-    with (
-        patch(_AVAILABLE, return_value=True),
-        patch(_OS_ACCESS, return_value=True),
-        patch(_WORKER_CLS, return_value=fake_worker),
-    ):
-        tab.retime_button.click()
-
-    assert tab.worker_thread is fake_worker
-    for slot in slots:
-        slot()
-
-    assert tab.worker_thread is None
-    fake_worker.deleteLater.assert_called_once()
-
-
 def test_second_retime_refused_while_running(qtbot, tmp_path):
     """A second Retime while the worker is running must not start a new one."""
     config = _make_config(tmp_path)
@@ -868,89 +680,8 @@ def test_second_retime_refused_while_running(qtbot, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# iter_close_workers
+# file_skipped slot: advances progress once
 # ---------------------------------------------------------------------------
-
-
-def test_iter_close_workers_empty_when_no_worker(qtbot, tmp_path):
-    """iter_close_workers() yields nothing when no worker has been started."""
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    assert list(tab.iter_close_workers()) == []
-
-
-def test_iter_close_workers_returns_active_worker(qtbot, tmp_path):
-    """iter_close_workers() yields the active worker when one is running."""
-    config = _make_config(tmp_path)
-    video = tmp_path / "episode.mp4"
-    sub = tmp_path / "episode.srt"
-    video.write_bytes(b"fake")
-    sub.write_text("1\n")
-
-    fake_worker = _FakeWorker()
-    tab = _make_tab(config, qtbot)
-    tab.video_file_selector.set_path(str(video))
-    tab.subtitle_file_selector.set_path(str(sub))
-
-    with (
-        patch(_AVAILABLE, return_value=True),
-        patch(_OS_ACCESS, return_value=True),
-        patch(_WORKER_CLS, return_value=fake_worker),
-    ):
-        tab.retime_button.click()
-
-    assert fake_worker in list(tab.iter_close_workers())
-
-
-# ---------------------------------------------------------------------------
-# file_skipped slot: logs "Skipped:", advances progress once
-# ---------------------------------------------------------------------------
-
-
-def _capture_signal_slots(signal_mock):
-    """Capture slots connected to a _FakeWorker MagicMock signal; returns the list."""
-    slots: list = []
-    original_connect = signal_mock.connect
-
-    def _capture(slot):
-        slots.append(slot)
-        return original_connect(slot)
-
-    signal_mock.connect = _capture
-    return slots
-
-
-def test_file_skipped_logs_skipped_not_done(qtbot, tmp_path):
-    """file_skipped(idx, out_path, reason) logs 'Skipped: <name> — <reason>', not 'Done:' (T1)."""
-    config = _make_config(tmp_path)
-    video = tmp_path / "episode.mp4"
-    sub = tmp_path / "episode.srt"
-    video.write_bytes(b"fake")
-    sub.write_text("1\n")
-    out_srt = tmp_path / "episode.srt"
-
-    fake_worker = _FakeWorker()
-    skipped_slots = _capture_signal_slots(fake_worker.file_skipped)
-
-    tab = _make_tab(config, qtbot)
-    tab.video_file_selector.set_path(str(video))
-    tab.subtitle_file_selector.set_path(str(sub))
-
-    with (
-        patch(_AVAILABLE, return_value=True),
-        patch(_OS_ACCESS, return_value=True),
-        patch(_WORKER_CLS, return_value=fake_worker),
-    ):
-        tab.retime_button.click()
-
-    for slot in skipped_slots:
-        slot(0, out_srt, "Skipped, exists")
-
-    log_text = tab.log_widget.text_edit.toPlainText()
-    assert "Skipped" in log_text
-    assert "episode.srt" in log_text
-    # The worker's reason reaches the Activity log, not just a transient label.
-    assert "Skipped, exists" in log_text
-    assert "Done" not in log_text
 
 
 def test_file_skipped_advances_progress(qtbot, tmp_path):

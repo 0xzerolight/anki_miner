@@ -1,18 +1,19 @@
 """Tests for CondenseTab (Audio Condenser GUI tab).
 
 Covers:
-- Construction (qtbot.addWidget contract).
 - ffmpeg-availability guard: present → Condense enabled, notice hidden;
   absent → button disabled, notice visible.
-- Mode toggle (single media+subtitle selectors + track rows vs folder selectors).
 - Single-mode item collection: media set → [CondenseItem]; missing media → warning;
   audio-only media accepted; explicit-sub picked disables the subtitle-track row.
 - Folder-mode item collection: with subtitle folder → episode-number pairing
   (patched matcher) + "Matched N of M" logged; without → per-file auto-detect scan.
 - Worker kwargs assembled from widget/config state (monkeypatched CondenseWorker).
-- Output-location toggling (Choose Folder / Reset), unwritable-output abort.
-- Cancel flips buttons + calls worker.cancel; iter_close_workers; reentrancy guard.
+- Unwritable-output abort.
+- Cancel flips buttons + calls worker.cancel; reentrancy guard.
 - update_config refreshes option defaults when idle, NOT during a run.
+
+The shared ``_ToolTabBase`` contract (construction, mode toggle, Output row,
+worker lifecycle, skipped-file log) is tested once in ``test_tool_tab_contract.py``.
 
 No real ffmpeg/ffprobe runs: CondenseWorker and the availability check are patched.
 """
@@ -28,7 +29,6 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.condense_tab import (
     CONDENSE_AUDIO_EXTENSIONS,
     CONDENSE_MEDIA_EXTENSIONS,
@@ -36,6 +36,9 @@ from anki_miner.gui.widgets.condense_tab import (
 )
 from anki_miner.gui.workers.condense_worker import CondenseItem
 from anki_miner.utils.file_pairing import FilePair
+from tests.unit._tool_tab_harness import FakeToolWorker as _FakeWorker
+from tests.unit._tool_tab_harness import capture_slots as _capture_signal_slots
+from tests.unit._tool_tab_harness import make_config as _make_config
 
 # ---------------------------------------------------------------------------
 # Patch-target constants
@@ -56,45 +59,6 @@ _SUB_DIALOG = "anki_miner.gui.widgets.condense_tab.SubtitleTracksDialog"
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-def _make_config(tmp_path: Path) -> AnkiMinerConfig:
-    """Return a minimal config with writable paths under tmp_path."""
-    return AnkiMinerConfig(
-        asr_models_root=tmp_path / "asr_models",
-        media_temp_folder=tmp_path / "tmp",
-    )
-
-
-class _FakeWorker:
-    """Minimal fake mimicking the CondenseWorker interface used by the tab."""
-
-    def __init__(self, *args, **kwargs):
-        self.args = args
-        self.kwargs = kwargs
-        self.file_started = MagicMock()
-        self.file_progress = MagicMock()
-        self.file_note = MagicMock()
-        self.file_finished = MagicMock()
-        self.file_skipped = MagicMock()
-        self.queue_finished = MagicMock()
-        self.error = MagicMock()
-        self.finished = MagicMock()  # native QThread.finished (lifecycle release)
-        self.deleteLater = MagicMock()
-        self._started = False
-        self._cancelled = False
-
-    def start(self):
-        self._started = True
-
-    def cancel(self):
-        self._cancelled = True
-
-    def isRunning(self):
-        return self._started and not self._cancelled
-
-    def wait(self, *args):
-        return True
 
 
 def _make_tab(config, qtbot):
@@ -127,29 +91,9 @@ def _start_condense(tab, qtbot, fake_worker, *, folder_mode=False):
     return worker_cls
 
 
-def _capture_signal_slots(signal_mock):
-    """Capture slots connected to a _FakeWorker MagicMock signal; return the list."""
-    slots: list = []
-    original_connect = signal_mock.connect
-
-    def _capture(slot):
-        slots.append(slot)
-        return original_connect(slot)
-
-    signal_mock.connect = _capture
-    return slots
-
-
 # ---------------------------------------------------------------------------
 # Construction
 # ---------------------------------------------------------------------------
-
-
-def test_construction(qtbot, tmp_path):
-    """Tab constructs and registers with qtbot without error."""
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    assert tab.condense_button is not None
-    assert tab.worker_thread is None
 
 
 def test_update_config_swaps_config(qtbot, tmp_path):
@@ -230,40 +174,6 @@ def test_ffmpeg_unavailable_via_path_check(qtbot, tmp_path):
 # ---------------------------------------------------------------------------
 # Mode toggle
 # ---------------------------------------------------------------------------
-
-
-def test_mode_toggle_single_by_default(qtbot, tmp_path):
-    """Single-file mode is the default; folder selectors hidden, track rows shown."""
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    assert not tab.media_file_selector.isHidden()
-    assert not tab.subtitle_file_selector.isHidden()
-    assert not tab.audio_track_row_widget.isHidden()
-    assert not tab.subtitle_track_row_widget.isHidden()
-    assert tab.media_folder_selector.isHidden()
-    assert tab.subtitle_folder_selector.isHidden()
-
-
-def test_mode_toggle_switches_to_folder(qtbot, tmp_path):
-    """Folder mode shows folder selectors, hides file selectors + track rows."""
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    tab.folder_mode_button.click()
-    assert tab.media_file_selector.isHidden()
-    assert tab.subtitle_file_selector.isHidden()
-    assert tab.audio_track_row_widget.isHidden()
-    assert tab.subtitle_track_row_widget.isHidden()
-    assert not tab.media_folder_selector.isHidden()
-    assert not tab.subtitle_folder_selector.isHidden()
-
-
-def test_mode_toggle_back_to_file(qtbot, tmp_path):
-    """Toggling back to file mode re-shows file selectors + track rows."""
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    tab.folder_mode_button.click()
-    tab.file_mode_button.click()
-    assert not tab.media_file_selector.isHidden()
-    assert not tab.audio_track_row_widget.isHidden()
-    assert not tab.subtitle_track_row_widget.isHidden()
-    assert tab.media_folder_selector.isHidden()
 
 
 def test_subtitle_track_row_disabled_when_explicit_sub_picked(qtbot, tmp_path):
@@ -429,18 +339,6 @@ def test_folder_mode_missing_media_folder_warns(qtbot, tmp_path):
     tab._collect_folder_items_async(result.append)
     assert tab.issue_banner().current_issue() is not None
     assert result == [[]]
-
-
-def test_folder_mode_failed_collection_leaves_button_enabled(qtbot, tmp_path):
-    """A synchronous bail (no folder picked) must not leave Condense dead:
-    _on_condense disables it before dispatch, so the collector must always
-    call on_items — even on an early return — for the caller to re-enable it."""
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    tab.folder_mode_button.click()
-
-    tab.condense_button.click()
-
-    assert tab.condense_button.isEnabled()
 
 
 def test_folder_mode_with_subfolder_pairs_and_logs(qtbot, tmp_path):
@@ -789,40 +687,6 @@ def test_second_condense_refused_while_running(qtbot, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Output-location toggle
-# ---------------------------------------------------------------------------
-
-
-def test_choose_output_sets_label_and_shows_reset(qtbot, tmp_path):
-    """Choosing a folder updates the label and reveals the Reset button."""
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    out = tmp_path / "out"
-    out.mkdir()
-
-    with patch(
-        "anki_miner.gui.widgets._tool_tab_base.file_dialogs.pick_directory",
-        side_effect=lambda *a, on_done, **k: on_done(str(out)),
-    ):
-        tab._on_choose_output()
-
-    assert tab._custom_output_dir == out
-    assert str(out) in tab.output_location_label.text()
-    assert not tab.clear_output_button.isHidden()
-
-
-def test_clear_output_resets_label(qtbot, tmp_path):
-    """Reset clears the custom dir and restores the default label."""
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    tab._custom_output_dir = tmp_path / "out"
-    tab.clear_output_button.show()
-
-    tab._on_clear_output()
-    assert tab._custom_output_dir is None
-    assert "Next to source" in tab.output_location_label.text()
-    assert tab.clear_output_button.isHidden()
-
-
-# ---------------------------------------------------------------------------
 # Cancel + lifecycle
 # ---------------------------------------------------------------------------
 
@@ -866,53 +730,6 @@ def test_queue_finished_re_enables_condense(qtbot, tmp_path):
     assert tab.cancel_button.isHidden()
 
 
-def test_worker_released_on_thread_finished(qtbot, tmp_path):
-    """Native QThread.finished clears the handle and schedules deleteLater."""
-    config = _make_config(tmp_path)
-    media = tmp_path / "episode.mkv"
-    media.write_bytes(b"fake")
-
-    tab = _make_tab(config, qtbot)
-    tab.media_file_selector.set_path(str(media))
-
-    fake_worker = _FakeWorker()
-    slots = _capture_signal_slots(fake_worker.finished)
-    _start_condense(tab, qtbot, fake_worker)
-
-    assert tab.worker_thread is fake_worker
-    for slot in slots:
-        slot()
-
-    assert tab.worker_thread is None
-    fake_worker.deleteLater.assert_called_once()
-
-
-# ---------------------------------------------------------------------------
-# iter_close_workers
-# ---------------------------------------------------------------------------
-
-
-def test_iter_close_workers_empty_when_no_worker(qtbot, tmp_path):
-    """iter_close_workers() yields nothing when no worker has been started."""
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    assert list(tab.iter_close_workers()) == []
-
-
-def test_iter_close_workers_returns_active_worker(qtbot, tmp_path):
-    """iter_close_workers() yields the active worker when one is running."""
-    config = _make_config(tmp_path)
-    media = tmp_path / "episode.mkv"
-    media.write_bytes(b"fake")
-
-    tab = _make_tab(config, qtbot)
-    tab.media_file_selector.set_path(str(media))
-
-    fake_worker = _FakeWorker()
-    _start_condense(tab, qtbot, fake_worker)
-
-    assert fake_worker in list(tab.iter_close_workers())
-
-
 # ---------------------------------------------------------------------------
 # Worker signal slots
 # ---------------------------------------------------------------------------
@@ -935,30 +752,6 @@ def test_file_finished_error_logs_error(qtbot, tmp_path):
         slot(0, None, "boom")
 
     assert "boom" in tab.log_widget.text_edit.toPlainText()
-
-
-def test_file_skipped_logs_skipped_not_done(qtbot, tmp_path):
-    """file_skipped(idx, out_path, reason) logs 'Skipped: <name> — <reason>', not 'Done'."""
-    config = _make_config(tmp_path)
-    media = tmp_path / "episode.mkv"
-    media.write_bytes(b"fake")
-    out_audio = tmp_path / "episode_condensed.mp3"
-
-    tab = _make_tab(config, qtbot)
-    tab.media_file_selector.set_path(str(media))
-
-    fake_worker = _FakeWorker()
-    slots = _capture_signal_slots(fake_worker.file_skipped)
-    _start_condense(tab, qtbot, fake_worker)
-
-    for slot in slots:
-        slot(0, out_audio, "Skipped, exists")
-
-    log_text = tab.log_widget.text_edit.toPlainText()
-    assert "Skipped" in log_text
-    assert "episode_condensed.mp3" in log_text
-    assert "Skipped, exists" in log_text
-    assert "Done" not in log_text
 
 
 # ---------------------------------------------------------------------------
