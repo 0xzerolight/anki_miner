@@ -4,14 +4,16 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QCoreApplication
 
-from anki_miner.config import AnkiMinerConfig
+from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
 from anki_miner.languages.registry import config_language, language_display_name
+from anki_miner.services._slot_registry import IndexedSlotRegistry
 from anki_miner.services._sqlite_index import (
     is_generated_store_artifact,
     log_resource_inventory,
@@ -60,16 +62,12 @@ class AudioPackMeta:
         return self.pack_dir_exists
 
 
-class AudioPackRegistry:
+class AudioPackRegistry(IndexedSlotRegistry[AudioPackMeta, AudioSourceEntry]):
     """Scans the audio_packs folder and builds runtime fetcher chains.
 
     Mirrors :class:`~anki_miner.services.dictionary.registry.DictionaryRegistry`:
     ``__init__`` is I/O-free; all disk access happens inside ``load()``.
     """
-
-    def __init__(self, packs_root: Path) -> None:
-        self._root = packs_root
-        self._packs: dict[str, AudioPackMeta] = {}
 
     # ------------------------------------------------------------------
     # Discovery
@@ -90,7 +88,7 @@ class AudioPackRegistry:
         # Audio widens the meta-read guard to (sqlite3.Error, OSError) and
         # pre-filters staging/backup dirs before the meta read (both preserved
         # via scan_index_root's params).
-        self._packs = scan_index_root(
+        self._slots = scan_index_root(
             self._root,
             self._parse_meta,
             child_prefilter=self._is_candidate,
@@ -101,8 +99,8 @@ class AudioPackRegistry:
             logger,
             "audio",
             self._root,
-            sorted(self._packs),
-            sorted(pack_id for pack_id, meta in self._packs.items() if not meta.schema_ok),
+            sorted(self._slots),
+            sorted(pack_id for pack_id, meta in self._slots.items() if not meta.schema_ok),
         )
 
     @staticmethod
@@ -146,38 +144,19 @@ class AudioPackRegistry:
     @property
     def packs(self) -> dict[str, AudioPackMeta]:
         """Snapshot of loaded packs keyed by folder name (pack_id)."""
-        return dict(self._packs)
+        return dict(self._slots)
 
-    def unlisted(self, config: AnkiMinerConfig) -> list[AudioPackMeta]:
-        """Return schema-valid on-disk packs absent from the audio chain."""
-        chained_ids = {
-            entry.pack_id
-            for entry in config.expression_audio_chain
-            if entry.kind == "pack" and entry.pack_id is not None
-        }
-        return sorted(
-            (meta for meta in self._packs.values() if meta.pack_id not in chained_ids and meta.schema_ok),
-            key=lambda meta: meta.pack_id,
-        )
+    def _chain(self, config: AnkiMinerConfig) -> Sequence[AudioSourceEntry]:
+        return config.expression_audio_chain
 
-    def stale_enabled(self, config: AnkiMinerConfig) -> list[AudioPackMeta]:
-        """Enabled chain packs present on disk but schema-mismatched.
+    def _slot_id(self, entry: AudioSourceEntry) -> str | None:
+        return entry.pack_id if entry.kind == "pack" else None
 
-        Mirrors ``FrequencySourceRegistry.stale_enabled``. Online entries
-        (jpod101/googletts/custom) carry no index and cannot be stale; a pack
-        absent from disk is NOT reported, because there is nothing left to
-        rebuild from.
+    def _meta_id(self, meta: AudioPackMeta) -> str:
+        return meta.pack_id
 
-        Does NOT call load(); callers control when the scan happens.
-        """
-        stale: list[AudioPackMeta] = []
-        for entry in config.expression_audio_chain:
-            if entry.kind != "pack" or not entry.enabled or not entry.pack_id:
-                continue
-            meta = self._packs.get(entry.pack_id)
-            if meta is not None and not meta.schema_ok:
-                stale.append(meta)
-        return sorted(stale, key=lambda meta: meta.pack_id)
+    def _slot_available(self, meta: AudioPackMeta) -> bool:
+        return meta.source_available
 
     # ------------------------------------------------------------------
     # Chain assembly
@@ -225,7 +204,7 @@ class AudioPackRegistry:
             if entry.pack_id is None:
                 logger.warning("Skipping audio pack ChainEntry with null pack_id")
                 continue
-            meta = self._packs.get(entry.pack_id)
+            meta = self._slots.get(entry.pack_id)
             if meta is None:
                 logger.warning(
                     "Audio pack '%s' referenced in config but not found in %s",

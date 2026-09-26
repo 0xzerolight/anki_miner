@@ -14,14 +14,16 @@ entries and any source missing / schema-mismatched on disk; the caller invokes
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QCoreApplication
 
-from anki_miner.config import AnkiMinerConfig
+from anki_miner.config import AnkiMinerConfig, PitchSourceEntry
 from anki_miner.languages.registry import config_language, language_display_name
+from anki_miner.services._slot_registry import IndexedSlotRegistry
 from anki_miner.services._sqlite_index import (
     is_generated_store_artifact,
     log_resource_inventory,
@@ -57,15 +59,11 @@ class PitchSourceMeta:
     language: str = "ja"
 
 
-class PitchSourceRegistry:
+class PitchSourceRegistry(IndexedSlotRegistry[PitchSourceMeta, PitchSourceEntry]):
     """Scans the pitch-sources folder and builds runtime source lists."""
 
-    def __init__(self, pitch_root: Path):
-        self._root = pitch_root
-        self._sources: dict[str, PitchSourceMeta] = {}
-
     def load(self) -> None:
-        self._sources = scan_index_root(
+        self._slots = scan_index_root(
             self._root,
             self._parse_meta,
             child_prefilter=lambda child: (
@@ -77,8 +75,8 @@ class PitchSourceRegistry:
             logger,
             "pitch",
             self._root,
-            sorted(self._sources),
-            sorted(source_id for source_id, meta in self._sources.items() if not meta.schema_ok),
+            sorted(self._slots),
+            sorted(source_id for source_id, meta in self._slots.items() if not meta.schema_ok),
         )
 
     def _parse_meta(self, child: Path, db: Path, meta: dict[str, str]) -> PitchSourceMeta:
@@ -97,67 +95,14 @@ class PitchSourceRegistry:
             language=meta_language(meta),
         )
 
-    def get(self, source_id: str) -> PitchSourceMeta | None:
-        return self._sources.get(source_id)
+    def _chain(self, config: AnkiMinerConfig) -> Sequence[PitchSourceEntry]:
+        return config.pitch_chain
 
-    def unlisted(self, config: AnkiMinerConfig) -> list[PitchSourceMeta]:
-        """Return on-disk sources not referenced by any chain entry.
+    def _slot_id(self, entry: PitchSourceEntry) -> str | None:
+        return entry.source_id
 
-        Only sources with schema_ok=True are returned — an unsupported-version
-        source cannot be loaded and would be dropped by build_sources anyway.
-        A source referenced by a *disabled* chain entry is still considered
-        listed (it has a visible, unchecked row the user can re-enable), so it
-        is excluded — unlisted() surfaces only sources with no chain row at all.
-        Results are sorted by source_id for deterministic ordering.
-
-        Does NOT call load(); callers control when the scan happens.
-        """
-        chained_ids: set[str] = {entry.source_id for entry in config.pitch_chain}
-        return sorted(
-            (meta for meta in self._sources.values() if meta.source_id not in chained_ids and meta.schema_ok),
-            key=lambda m: m.source_id,
-        )
-
-    def stale_enabled(self, config: AnkiMinerConfig) -> list[PitchSourceMeta]:
-        """Enabled chain slots present on disk but schema-mismatched.
-
-        Mirrors ``DictionaryRegistry.stale_enabled``: the single source of truth
-        for every reimport surface (settings row button, startup prompt, pre-run
-        gate, health check). A slot missing on disk (``meta is None``) is NOT
-        reported — the user may have deleted it deliberately, and there is no
-        persisted ``source.<ext>`` left to rebuild from either way.
-
-        Does NOT call load(); callers control when the scan happens.
-        """
-        stale: list[PitchSourceMeta] = []
-        for entry in config.pitch_chain:
-            if not entry.enabled or not entry.source_id:
-                continue
-            meta = self._sources.get(entry.source_id)
-            if meta is not None and not meta.schema_ok:
-                stale.append(meta)
-        return sorted(stale, key=lambda m: m.source_id)
-
-    def usable_enabled(self, config: AnkiMinerConfig) -> list[PitchSourceMeta]:
-        """Enabled chain slots that can actually answer a lookup.
-
-        Present on disk, schema-current, holding at least one entry, and
-        stamped for the run's mining language — the same gate ``build_sources``
-        applies, read off this snapshot without opening a SQLite connection, so
-        a readiness check can call it without file-locking an index Reimport
-        All is about to replace (Windows).
-
-        Does NOT call load(); callers control when the scan happens.
-        """
-        language = config_language(config)
-        usable: list[PitchSourceMeta] = []
-        for entry in config.pitch_chain:
-            if not entry.enabled or not entry.source_id:
-                continue
-            meta = self._sources.get(entry.source_id)
-            if meta is not None and meta.schema_ok and meta.entry_count > 0 and meta.language == language:
-                usable.append(meta)
-        return sorted(usable, key=lambda m: m.source_id)
+    def _meta_id(self, meta: PitchSourceMeta) -> str:
+        return meta.source_id
 
     def build_sources(
         self,
@@ -184,7 +129,7 @@ class PitchSourceRegistry:
         for entry in config.pitch_chain:
             if not entry.enabled:
                 continue
-            meta = self._sources.get(entry.source_id)
+            meta = self._slots.get(entry.source_id)
             if meta is None:
                 logger.warning(
                     "Pitch source '%s' referenced in config but not found in %s",
