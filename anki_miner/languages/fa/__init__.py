@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from anki_miner.languages._spaced import create_spaced_parser
-from anki_miner.languages._spaced.fields import spaced_card_fields
+from anki_miner.languages._spaced.fields import spaced_card_fields, spaced_scoped_defaults
 from anki_miner.languages.fa.audio import FA_AUDIO
 from anki_miner.languages.fa.availability import fa_missing_reason
 from anki_miner.languages.fa.catalog import FA_CATALOG
@@ -53,30 +53,17 @@ FA_CARD_FIELDS: dict[str, str] = dict(spaced_card_fields(FA_EXTRA_CARD_FIELDS))
 
 
 def _scoped_defaults() -> dict[str, object]:
-    """First-visit values for EVERY language-scoped field.
-
-    Starts from ``blank_scoped_defaults()`` (never hand-written, so a new
-    scoped field cannot silently miss a Persian default), then overridden.
-    Nothing is inherited from the JA dataclass defaults: a first Persian switch
-    must not arrive with the jmdict chain, the JA name wordsets, ``ja``
-    subtitle langs or the JA deck name.
-    """
-    from anki_miner.languages.switching import blank_scoped_defaults
-
-    defaults = blank_scoped_defaults()
-    defaults["downloader_subtitle_langs"] = "fa"
-    # gTTS has no Persian voice (tts_langs() lacks "fa"), so the default word
-    # audio is the Edge read-aloud leg the seam ships.
-    defaults["expression_audio_chain"] = FA_AUDIO.default_chain
-    defaults["allowed_pos"] = FA_ALLOWED_POS
-    defaults["excluded_subtypes"] = FA_EXCLUDED_SUBTYPES
-    defaults["anki_fields"] = dict(FA_CARD_FIELDS)
-    # One the blank-by-type loop gets wrong rather than merely empty: "" is not
-    # a deck AnkiConnect will accept, and inheriting ja's default would file
-    # Persian cards into the Japanese deck.
-    defaults["anki_deck_name"] = "Anki Miner"
-    defaults["script_variant"] = ""
-    defaults["reading_tone_color"] = False
+    """First-visit values for EVERY language-scoped field: the shared spaced shape, SDH filter off."""
+    defaults = spaced_scoped_defaults(
+        subtitle_langs="fa",
+        # gTTS has no Persian voice (tts_langs() lacks "fa"), so the default word
+        # audio is the Edge read-aloud leg the seam ships.
+        audio=FA_AUDIO,
+        allowed_pos=FA_ALLOWED_POS,
+        excluded_subtypes=FA_EXCLUDED_SUBTYPES,
+        card_fields=FA_CARD_FIELDS,
+    )
+    defaults.update(use_subtitle_regex_filter=False, subtitle_regex_filter="")
     return defaults
 
 
