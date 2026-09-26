@@ -34,15 +34,18 @@ def ko_stack_absent(monkeypatch):
     engine is missing, offered as 한국어 when it is there - lives in
     ``tests/unit/languages/test_ko_availability.py``.
     """
-    monkeypatch.setattr(ko_availability, "find_spec", lambda _name: None)
+    monkeypatch.setattr(ko_availability, "module_importable", lambda _name: False)
     # Same for every spaCy language: the shared probe reads spaCy and its model.
     monkeypatch.setattr(spaced_availability, "find_spec", lambda _name: None)
     # id has no engine at all: like ja it leaves ``unavailable_reason`` None and is
     # always offered, so it is in every exact list below.
     # Same for th: pythainlp is an optional extra, present on a dev box.
-    monkeypatch.setattr(th_availability, "find_spec", lambda _name: None)
+    monkeypatch.setattr(th_availability, "module_importable", lambda _name: False)
     # Same for yue: pycantonese is an optional extra, present on a dev box.
-    monkeypatch.setattr(yue_availability, "find_spec", lambda _name: None)
+    monkeypatch.setattr(yue_availability, "module_importable", lambda _name: False)
+    # zh's probe is the shared one too, so the spaCy pin above would drop it; every
+    # exact list below offers zh, so pin its stack present.
+    monkeypatch.setattr(availability, "module_importable", lambda _name: True)
 
 
 def _panel(qtbot, config: AnkiMinerConfig) -> MiningLanguageSettingsPanel:
@@ -83,13 +86,13 @@ def test_a_missing_optional_package_keeps_the_language_offered(monkeypatch):
     The profile's gate probes the REQUIRED packages; ``zh_unavailable_reason``
     keeps naming the optional one for whoever wants the full list.
     """
-    monkeypatch.setattr(availability, "find_spec", lambda name: None if name == "opencc" else object())
+    monkeypatch.setattr(availability, "module_importable", lambda name: name != "opencc")
 
     assert [code for code, _name in language_choices.available_mining_languages()] == ["ja", "zh", "id", "he"]
 
 
 def test_a_missing_required_package_drops_the_language(monkeypatch):
-    monkeypatch.setattr(availability, "find_spec", lambda name: None if name == "jieba" else object())
+    monkeypatch.setattr(availability, "module_importable", lambda name: name != "jieba")
 
     assert [code for code, _name in language_choices.available_mining_languages()] == ["ja", "id", "he"]
 

@@ -27,39 +27,39 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 class TestMissingRequiredReason:
     def test_a_complete_stack_reports_nothing(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(availability, "_installed", lambda _name: True)
+        monkeypatch.setattr(availability, "module_importable", lambda _name: True)
         assert availability.ko_missing_required_reason() is None
 
     def test_a_missing_package_is_named_with_the_extra(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(availability, "_installed", lambda name: name != "kiwipiepy")
+        monkeypatch.setattr(availability, "module_importable", lambda name: name != "kiwipiepy")
         reason = availability.ko_missing_required_reason()
         assert reason is not None
         assert "kiwipiepy" in reason
         assert "anki-miner[ko]" in reason
 
     def test_every_missing_package_is_listed(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(availability, "_installed", lambda _name: False)
+        monkeypatch.setattr(availability, "module_importable", lambda _name: False)
         reason = availability.ko_missing_required_reason() or ""
         for package in availability.KO_REQUIRED_PACKAGES:
             assert package in reason
 
     def test_the_model_alone_gates_the_language(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Both packages are hard requirements: Kiwi() raises without the model."""
-        monkeypatch.setattr(availability, "find_spec", lambda name: None if name == "kiwipiepy_model" else object())
+        monkeypatch.setattr(availability, "module_importable", lambda name: name != "kiwipiepy_model")
         reason = availability.ko_missing_required_reason() or ""
         assert "kiwipiepy_model" in reason
         assert reason.count("kiwipiepy") == 1  # the engine itself is not named
 
     def test_the_probe_reads_the_real_environment(self) -> None:
-        # _installed answers from find_spec, so an installed stdlib module is a
+        # module_importable answers from find_spec, so an installed stdlib module is a
         # true probe and a nonsense name is a false one - no import executed.
-        assert availability._installed("json") is True
-        assert availability._installed("definitely_not_a_real_package_zzz") is False
+        assert availability.module_importable("json") is True
+        assert availability.module_importable("definitely_not_a_real_package_zzz") is False
 
     def test_a_frozen_build_names_the_pack_not_pip(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # A frozen bundle has no pip: naming the extra would be dead advice, so
         # every missing tier collapses onto the one button-naming sentence.
-        monkeypatch.setattr(availability, "_installed", lambda _name: False)
+        monkeypatch.setattr(availability, "module_importable", lambda _name: False)
         monkeypatch.setattr(sys, "frozen", True, raising=False)
 
         reason = availability.ko_missing_required_reason()
@@ -70,7 +70,7 @@ class TestMissingRequiredReason:
     def test_a_frozen_build_with_only_the_model_missing_still_names_the_pack(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr(availability, "find_spec", lambda name: None if name == "kiwipiepy_model" else object())
+        monkeypatch.setattr(availability, "module_importable", lambda name: name != "kiwipiepy_model")
         monkeypatch.setattr(sys, "frozen", True, raising=False)
 
         reason = availability.ko_missing_required_reason()
@@ -79,7 +79,7 @@ class TestMissingRequiredReason:
 
     def test_a_pip_build_is_unaffected_by_the_frozen_tier(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delattr(sys, "frozen", raising=False)
-        monkeypatch.setattr(availability, "_installed", lambda _name: False)
+        monkeypatch.setattr(availability, "module_importable", lambda _name: False)
 
         reason = availability.ko_missing_required_reason() or ""
 
@@ -89,7 +89,7 @@ class TestMissingRequiredReason:
         """The pack ships the engine AND the model, so a source user with
         neither has two ways out - naming only pip hides the in-app one."""
         monkeypatch.delattr(sys, "frozen", raising=False)
-        monkeypatch.setattr(availability, "_installed", lambda _name: False)
+        monkeypatch.setattr(availability, "module_importable", lambda _name: False)
 
         reason = availability.ko_missing_required_reason() or ""
 
@@ -106,13 +106,13 @@ def test_the_profile_wires_the_required_only_probe() -> None:
 
 
 def test_a_missing_engine_drops_ko_from_the_selector(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(availability, "find_spec", lambda name: None if name == "kiwipiepy" else object())
+    monkeypatch.setattr(availability, "module_importable", lambda name: name != "kiwipiepy")
 
     assert "ko" not in [code for code, _name in language_choices.available_mining_languages()]
 
 
 def test_a_present_engine_keeps_ko_offered_under_its_native_name(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(availability, "find_spec", lambda _name: object())
+    monkeypatch.setattr(availability, "module_importable", lambda _name: True)
 
     assert dict(language_choices.available_mining_languages())["ko"] == "한국어"
 
@@ -135,7 +135,7 @@ class _FakeWindow:
 
 
 def test_a_missing_engine_refuses_the_switch_with_the_reason(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(availability, "find_spec", lambda name: None if name == "kiwipiepy" else object())
+    monkeypatch.setattr(availability, "module_importable", lambda name: name != "kiwipiepy")
     window = _FakeWindow(AnkiMinerConfig())
 
     assert language_switch.request_language_change(window, "ko") is False
@@ -145,7 +145,7 @@ def test_a_missing_engine_refuses_the_switch_with_the_reason(monkeypatch: pytest
 
 def test_a_present_engine_lets_the_switch_reach_the_guard(monkeypatch: pytest.MonkeyPatch) -> None:
     """The probe is the only gate this test cares about; the guard is the proof."""
-    monkeypatch.setattr(availability, "find_spec", lambda _name: object())
+    monkeypatch.setattr(availability, "module_importable", lambda _name: True)
     window = _FakeWindow(AnkiMinerConfig())
 
     with pytest.raises(AssertionError, match="refuse before the guard"):

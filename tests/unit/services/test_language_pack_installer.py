@@ -1108,7 +1108,7 @@ class TestKoAvailability:
     def test_the_pack_alone_satisfies_the_model_requirement(self, home, monkeypatch) -> None:
         from anki_miner.languages.ko import availability
 
-        monkeypatch.setattr(availability, "find_spec", lambda name: None if name == "kiwipiepy_model" else object())
+        monkeypatch.setattr(availability, "module_importable", lambda name: name != "kiwipiepy_model")
         _write_component(installer.language_pack_root("ko"), _ko_model_component())
 
         assert availability.ko_missing_required_reason() is None
@@ -1116,7 +1116,7 @@ class TestKoAvailability:
     def test_without_package_or_pack_the_reason_names_the_download(self, home, monkeypatch) -> None:
         from anki_miner.languages.ko import availability
 
-        monkeypatch.setattr(availability, "find_spec", lambda name: None if name == "kiwipiepy_model" else object())
+        monkeypatch.setattr(availability, "module_importable", lambda name: name != "kiwipiepy_model")
 
         reason = availability.ko_missing_required_reason() or ""
 
@@ -1129,7 +1129,7 @@ class TestKoAvailability:
         # is nothing to download in-app and pip is still the answer.
         from anki_miner.languages.ko import availability
 
-        monkeypatch.setattr(availability, "find_spec", lambda name: None if name == "kiwipiepy" else object())
+        monkeypatch.setattr(availability, "module_importable", lambda name: name != "kiwipiepy")
         _write_component(installer.language_pack_root("ko"), _ko_model_component())
 
         reason = availability.ko_missing_required_reason() or ""
@@ -1141,7 +1141,7 @@ class TestKoAvailability:
         from anki_miner.gui.utils import language_choices
         from anki_miner.languages.ko import availability
 
-        monkeypatch.setattr(availability, "find_spec", lambda name: None if name == "kiwipiepy_model" else object())
+        monkeypatch.setattr(availability, "module_importable", lambda name: name != "kiwipiepy_model")
         _write_component(installer.language_pack_root("ko"), _ko_model_component())
 
         assert "ko" in [code for code, _name in language_choices.available_mining_languages()]

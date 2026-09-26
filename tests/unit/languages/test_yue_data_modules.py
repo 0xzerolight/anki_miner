@@ -73,7 +73,7 @@ def test_availability_is_none_when_the_engine_is_installed():
 
 
 def test_availability_names_the_extra_then_the_pack(monkeypatch):
-    monkeypatch.setattr(yue_availability, "find_spec", lambda _name: None)
+    monkeypatch.setattr(yue_availability, "module_importable", lambda _name: False)
     reason = yue_missing_required_reason()
     assert reason is not None
     assert "pycantonese" in reason
@@ -82,7 +82,7 @@ def test_availability_names_the_extra_then_the_pack(monkeypatch):
 
 
 def test_availability_names_only_the_download_in_a_frozen_build(monkeypatch):
-    monkeypatch.setattr(yue_availability, "find_spec", lambda _name: None)
+    monkeypatch.setattr(yue_availability, "module_importable", lambda _name: False)
     monkeypatch.setattr(sys, "frozen", True, raising=False)
     assert yue_missing_required_reason() == yue_availability.YUE_FROZEN_PACK_REASON
 

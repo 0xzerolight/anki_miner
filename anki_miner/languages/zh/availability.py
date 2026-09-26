@@ -8,13 +8,9 @@ costs nothing on a machine that has none of them.
 
 from __future__ import annotations
 
-import logging
 import sys
-from importlib.util import find_spec
 
-from anki_miner.utils.logging_ext import log_summary
-
-logger = logging.getLogger(__name__)
+from anki_miner.languages._spaced.availability import module_importable
 
 # Hard requirements: without a tokenizer or readings there is no zh mining.
 ZH_REQUIRED_PACKAGES: tuple[str, ...] = ("jieba", "pypinyin")
@@ -36,27 +32,6 @@ ZH_FROZEN_PACK_REASON = "Chinese mining needs the Chinese language pack. Downloa
 ZH_PACK_DOWNLOAD_HINT = "or download the Chinese pack in Settings -> Mining Language."
 
 
-def _installed(name: str) -> bool:
-    """Return True when *name* is importable, reporting a BROKEN install.
-
-    A clean ``None`` is an absence and says so quietly. A probe that RAISES is
-    the opposite diagnosis - the package is on disk and unimportable (a missing
-    shared library, a half-extracted pack) - and reaches the user through the
-    same "needs jieba" sentence, so the log is the only place the two differ.
-    """
-    try:
-        return find_spec(name) is not None
-    except (ImportError, ValueError) as exc:
-        log_summary(
-            logger,
-            "Language module probe failed",
-            level=logging.WARNING,
-            module=name,
-            exc=f"{type(exc).__name__}: {exc}",
-        )
-        return False
-
-
 def _reason(missing: list[str], *, pack_hint: bool) -> str | None:
     if not missing:
         return None
@@ -70,7 +45,7 @@ def _reason(missing: list[str], *, pack_hint: bool) -> str | None:
 
 def zh_unavailable_reason() -> str | None:
     """Names every missing zh package, or ``None`` when the stack is complete."""
-    missing = [name for name in ZH_REQUIRED_PACKAGES + ZH_OPTIONAL_PACKAGES if not _installed(name)]
+    missing = [name for name in ZH_REQUIRED_PACKAGES + ZH_OPTIONAL_PACKAGES if not module_importable(name)]
     return _reason(missing, pack_hint=False)
 
 
@@ -82,4 +57,4 @@ def zh_missing_required_reason() -> str | None:
     untouched and traditional input degrades - so gating on the full set would
     take the language out of the selector and refuse the switch over a feature.
     """
-    return _reason([name for name in ZH_REQUIRED_PACKAGES if not _installed(name)], pack_hint=True)
+    return _reason([name for name in ZH_REQUIRED_PACKAGES if not module_importable(name)], pack_hint=True)

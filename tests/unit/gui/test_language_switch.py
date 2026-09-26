@@ -281,7 +281,7 @@ def test_a_missing_optional_package_does_not_refuse_the_switch(test_config, monk
     refusing the switch would disable a language over a degraded feature.
     """
     monkeypatch.setattr(language_switch, "get_profile", get_profile)  # the real probe, not the fixture's
-    monkeypatch.setattr(availability, "find_spec", lambda name: None if name == "opencc" else object())
+    monkeypatch.setattr(availability, "module_importable", lambda name: name != "opencc")
     window = _FakeWindow(test_config, rows=0)
 
     assert language_switch.request_language_change(window, "zh") is True
@@ -291,7 +291,7 @@ def test_a_missing_optional_package_does_not_refuse_the_switch(test_config, monk
 
 def test_a_missing_required_package_still_refuses_the_switch(test_config, monkeypatch):
     monkeypatch.setattr(language_switch, "get_profile", get_profile)
-    monkeypatch.setattr(availability, "find_spec", lambda name: None if name == "jieba" else object())
+    monkeypatch.setattr(availability, "module_importable", lambda name: name != "jieba")
     window = _FakeWindow(test_config, rows=0)
 
     assert language_switch.request_language_change(window, "zh") is False

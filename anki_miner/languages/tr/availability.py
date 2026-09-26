@@ -9,13 +9,13 @@ from __future__ import annotations
 
 import sys
 
-from anki_miner.languages._spaced.availability import _importable, _pack_component_present
+from anki_miner.languages._spaced.availability import module_importable, pack_component_present
 
 TR_ENGINE = "zeyrek"
 
 
 def tr_missing_reason() -> str | None:
-    if _importable(TR_ENGINE) or _pack_component_present("tr", TR_ENGINE):
+    if module_importable(TR_ENGINE) or pack_component_present("tr", TR_ENGINE):
         return None
     if getattr(sys, "frozen", False):
         return "Turkish mining needs the Turkish language pack. Download it in Settings -> Mining Language."

@@ -23,14 +23,18 @@ def _boom(*_args: object, **_kwargs: object) -> bool:
     raise ImportError(BROKEN)
 
 
+#: Every language's availability probe is ``_spaced.availability.module_importable``.
+SHARED_PROBE = "anki_miner.languages._spaced.availability"
+
+
 class TestProbeFailures:
     def test_a_raising_zh_probe_logs_a_warning_naming_the_module(self, monkeypatch, caplog) -> None:
         from anki_miner.languages.zh import availability
 
-        monkeypatch.setattr(availability, "find_spec", _boom)
+        monkeypatch.setattr(f"{SHARED_PROBE}.find_spec", _boom)
 
-        with caplog.at_level(logging.WARNING, logger="anki_miner.languages.zh.availability"):
-            assert availability._installed("jieba") is False
+        with caplog.at_level(logging.WARNING, logger=SHARED_PROBE):
+            assert availability.module_importable("jieba") is False
 
         record = next(r for r in caplog.records if "Language module probe failed" in r.getMessage())
         assert record.levelno == logging.WARNING
@@ -40,20 +44,20 @@ class TestProbeFailures:
     def test_a_clean_zh_absence_stays_quiet_at_warning(self, monkeypatch, caplog) -> None:
         from anki_miner.languages.zh import availability
 
-        monkeypatch.setattr(availability, "find_spec", lambda _name: None)
+        monkeypatch.setattr(f"{SHARED_PROBE}.find_spec", lambda _name: None)
 
-        with caplog.at_level(logging.WARNING, logger="anki_miner.languages.zh.availability"):
-            assert availability._installed("jieba") is False
+        with caplog.at_level(logging.WARNING, logger=SHARED_PROBE):
+            assert availability.module_importable("jieba") is False
 
         assert caplog.records == []
 
     def test_a_raising_ko_probe_logs_a_warning_naming_the_module(self, monkeypatch, caplog) -> None:
         from anki_miner.languages.ko import availability
 
-        monkeypatch.setattr(availability, "find_spec", _boom)
+        monkeypatch.setattr(f"{SHARED_PROBE}.find_spec", _boom)
 
-        with caplog.at_level(logging.WARNING, logger="anki_miner.languages.ko.availability"):
-            assert availability._installed("kiwipiepy") is False
+        with caplog.at_level(logging.WARNING, logger=SHARED_PROBE):
+            assert availability.module_importable("kiwipiepy") is False
 
         record = next(r for r in caplog.records if "Language module probe failed" in r.getMessage())
         assert record.levelno == logging.WARNING

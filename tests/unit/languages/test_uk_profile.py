@@ -145,8 +145,8 @@ def test_the_catalogue_offers_wiktionary_and_a_lemmatised_frequency_list():
 
 def test_the_probe_names_a_missing_morphology_package(monkeypatch):
     """The availability probe covers pymorphy3 and its uk dictionaries, not just the model (P1)."""
-    monkeypatch.setattr(availability, "_importable", lambda name: name != "pymorphy3_dicts_uk")
-    monkeypatch.setattr(availability, "_pack_component_present", lambda code, name: False)
+    monkeypatch.setattr(availability, "module_importable", lambda name: name != "pymorphy3_dicts_uk")
+    monkeypatch.setattr(availability, "pack_component_present", lambda code, name: False)
     monkeypatch.setattr(availability.sys, "frozen", False, raising=False)
     reason = get_profile("uk").unavailable_reason
     assert reason is not None
