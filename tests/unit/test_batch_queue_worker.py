@@ -727,6 +727,7 @@ def test_setup_error_emits_item_failed(tmp_path, caplog):
     assert failed_emissions[0][0] == "i1"
     assert failed_emissions[0][1] == "1 of 1 episodes failed, starting with ep1.mkv."
     assert "note type not found" in caplog.text
+    assert "BatchQueueWorker pair ep1.mkv failed" in caplog.text
 
 
 def test_mid_loop_raise_does_not_abort_remaining_pairs_or_lose_cards(tmp_path):

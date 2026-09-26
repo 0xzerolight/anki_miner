@@ -263,6 +263,66 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                 self.error.emit(str(e))
         return total_cards
 
+    def _mine_pair(
+        self,
+        item: QueueItem,
+        episode_processor: EpisodeProcessor,
+        pair: FilePair,
+        pair_key: tuple[Path, Path],
+        curation_callback: Callable[[list], list | None] | None,
+        committed_pair_keys: set[tuple[Path, Path]],
+        failed_pairs: list[tuple[str, str]],
+        pairs_done: int,
+        pairs_total: int,
+        *,
+        log_label: str,
+    ) -> tuple[int, bool]:
+        """Mine one pair through ``process_episode`` and tick its progress.
+
+        Shared by ``_process_items``' per-pair branch and
+        ``_process_item_pairs_season``'s mine pass -- the two bodies were
+        identical apart from ``curation_callback`` and the log message.
+        Owns the ``process_episode`` call, its except arm, ``_fold_whitelist``,
+        the ``committed_pair_keys``/``failed_pairs`` bookkeeping and the
+        ``item_pairs_progress`` tick (emitted as ``pairs_done + 1`` so the
+        caller's own counter stays the source of truth). Returns
+        ``(cards_created, concluded)``: ``concluded`` is ``False`` only when
+        ``process_episode`` raised, so each caller can keep its own
+        exception-vs-result cancel-check shape identical to before this
+        extraction. The caller still owns ``self.check_cancelled()``.
+        """
+        try:
+            result = episode_processor.process_episode(
+                pair.video,
+                pair.subtitle,
+                progress_callback=self.progress_callback,
+                curation_callback=curation_callback,
+                subtitle_offset=item.subtitle_offset,
+                secondary_subtitle_file=pair.secondary,
+                secondary_subtitle_offset=item.secondary_offset,
+            )
+        except Exception as e:  # noqa: BLE001 — preflight (Issue #52) can raise
+            # process_episode now runs the card-target preflight (Issue #52)
+            # OUTSIDE its own try, so it can raise SetupError/AnkiConnectionError.
+            # Without this guard a single transient AnkiConnect blip aborted the
+            # item's remaining pairs AND dropped cards already created for
+            # earlier pairs from the count. Record the failure and continue.
+            logger.exception(log_label, pair.video.name)
+            failed_pairs.append((pair.video.name, str(e)))
+            self.item_pairs_progress.emit(item.id, pairs_done + 1, pairs_total)
+            return 0, False
+        self._fold_whitelist(result)
+        cards = result.cards_created
+        if result.success:
+            committed_pair_keys.add(pair_key)
+        self.item_pairs_progress.emit(item.id, pairs_done + 1, pairs_total)
+        if not result.success:
+            # process_episode also returns soft failures as results with errors
+            # populated; surface them per-item so the GUI marks the item ERROR
+            # and offers retry (Issue #51).
+            failed_pairs.append((pair.video.name, result.errors[0]))
+        return cards, True
+
     def _process_items(
         self,
         total_cards: int,
@@ -356,6 +416,8 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                         item, episode_processor, pending_pairs, committed_pair_keys
                     )
                 else:
+                    # Per-pair mode: _mine_pair owns the process_episode call, its
+                    # failure handling and the progress tick for each pair below.
                     for pair, pair_key in pending_pairs:
                         if self.check_cancelled():
                             interrupted = True
@@ -366,42 +428,25 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                         self._curation_offset = item.subtitle_offset
                         self._curation_secondary = pair.secondary
                         self._curation_secondary_offset = item.secondary_offset
-                        try:
-                            result = episode_processor.process_episode(
-                                pair.video,
-                                pair.subtitle,
-                                progress_callback=self.progress_callback,
-                                curation_callback=self.curation_callback,
-                                subtitle_offset=item.subtitle_offset,
-                                secondary_subtitle_file=pair.secondary,
-                                secondary_subtitle_offset=item.secondary_offset,
-                            )
-                        except Exception as e:  # noqa: BLE001 — preflight (Issue #52) can raise
-                            # Per-pair guard: process_episode now runs the card-target
-                            # preflight (Issue #52) OUTSIDE its own try, so it can raise
-                            # SetupError/AnkiConnectionError. Without this guard a single
-                            # transient AnkiConnect blip aborted the item's remaining pairs
-                            # AND dropped cards already created for earlier pairs from the
-                            # count. Record the failure and continue.
-                            logger.exception("BatchQueueWorker pair %s failed", pair.video.name)
-                            failed_pairs.append((pair.video.name, str(e)))
-                            pairs_done += 1
-                            self.item_pairs_progress.emit(item.id, pairs_done, len(pending_pairs))
-                            continue
-                        self._fold_whitelist(result)
-                        cards_for_item += result.cards_created
-                        if result.success:
-                            committed_pair_keys.add(pair_key)
+                        cards, concluded = self._mine_pair(
+                            item,
+                            episode_processor,
+                            pair,
+                            pair_key,
+                            self.curation_callback,
+                            committed_pair_keys,
+                            failed_pairs,
+                            pairs_done,
+                            len(pending_pairs),
+                            log_label="BatchQueueWorker pair %s failed",
+                        )
+                        cards_for_item += cards
                         pairs_done += 1
-                        self.item_pairs_progress.emit(item.id, pairs_done, len(pending_pairs))
+                        if not concluded:
+                            continue
                         if self.check_cancelled():
                             interrupted = True
                             break
-                        if not result.success:
-                            # process_episode also returns soft failures as results with
-                            # errors populated; surface them per-item so the GUI marks the
-                            # item ERROR and offers retry (Issue #51).
-                            failed_pairs.append((pair.video.name, result.errors[0]))
 
                 # Partial successes still count toward the queue total (cards
                 # created before a cancel exist in Anki).
@@ -603,35 +648,27 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                     pairs_done += 1
                     self.item_pairs_progress.emit(item.id, pairs_done, pairs_total)
                     continue
-                try:
-                    result = episode_processor.process_episode(
-                        pair.video,
-                        pair.subtitle,
-                        progress_callback=self.progress_callback,
-                        # Curated objects pass through verbatim to phases 3-5:
-                        # chosen sentence, clip_override and times are already
-                        # this episode's (same offset both passes).
-                        curation_callback=fixed_selection(subset),
-                        subtitle_offset=item.subtitle_offset,
-                        secondary_subtitle_file=pair.secondary,
-                        secondary_subtitle_offset=item.secondary_offset,
-                    )
-                except Exception as e:  # noqa: BLE001 — preflight (Issue #52) can raise
-                    logger.exception("BatchQueueWorker season mine pair %s failed", pair.video.name)
-                    failed_pairs.append((pair.video.name, str(e)))
-                    pairs_done += 1
-                    self.item_pairs_progress.emit(item.id, pairs_done, pairs_total)
-                    continue
-                self._fold_whitelist(result)
-                cards_for_item += result.cards_created
-                if result.success:
-                    committed_pair_keys.add(pair_key)
+                cards, concluded = self._mine_pair(
+                    item,
+                    episode_processor,
+                    pair,
+                    pair_key,
+                    # Curated objects pass through verbatim to phases 3-5:
+                    # chosen sentence, clip_override and times are already
+                    # this episode's (same offset both passes).
+                    fixed_selection(subset),
+                    committed_pair_keys,
+                    failed_pairs,
+                    pairs_done,
+                    pairs_total,
+                    log_label="BatchQueueWorker season mine pair %s failed",
+                )
+                cards_for_item += cards
                 pairs_done += 1
-                self.item_pairs_progress.emit(item.id, pairs_done, pairs_total)
+                if not concluded:
+                    continue
                 if self.check_cancelled():
                     return cards_for_item, failed_pairs, True
-                if not result.success:
-                    failed_pairs.append((pair.video.name, result.errors[0]))
         finally:
             episode_processor.stats_service = original_stats
 

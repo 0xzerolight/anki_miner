@@ -216,6 +216,47 @@ class TestSeasonFlow:
         # The failed pair is NOT committed; the confirmed-empty pair is.
         assert len(item.committed_pair_keys) == 1
 
+    def test_mine_pass_raise_and_soft_failure_report_and_continue(self, caplog):
+        """The mine pass's own EP1/EP2 failures (not the pre-pass's) exercise
+        the paths gui-tabs-02 moved into ``_mine_pair``: a raise on one
+        episode logs and records the failure without stopping the loop, and a
+        soft failure (``result.errors`` set, no exception) on the next
+        episode is still attempted and recorded the same way."""
+        words = {EP1: [_word("猫")], EP2: [_word("犬")]}
+        proc = _make_processor(words)
+        original = proc.process_episode.side_effect
+
+        def mine_pass_failures(video, subtitle, **kwargs):
+            curation_callback = kwargs.get("curation_callback")
+            in_mine_pass = curation_callback is not None and not getattr(
+                curation_callback, "suppress_curation_messages", False
+            )
+            if in_mine_pass and video == EP1:
+                raise RuntimeError("ffmpeg extraction failed")
+            if in_mine_pass and video == EP2:
+                return ProcessingResult(total_words_found=10, new_words_found=0, cards_created=0, errors=["disk full"])
+            return original(video, subtitle, **kwargs)
+
+        proc.process_episode.side_effect = mine_pass_failures
+        bridge = MagicMock(side_effect=lambda pool: list(pool))
+
+        with caplog.at_level("ERROR", logger="anki_miner.gui.workers.batch_queue_worker"):
+            _worker, item, progress = _run_worker(proc, bridge)
+
+        # Both mine-pass calls concluded (one raised, one soft-failed); EP2
+        # still ran after EP1's exception, and each ticked once.
+        assert progress == [(0, 2), (1, 2), (2, 2)]
+        assert item.status == QueueItemStatus.ERROR
+        assert item.error_message == "2 of 2 episodes failed, starting with ep1.mkv."
+        assert "BatchQueueWorker season mine pair ep1.mkv failed" in caplog.text
+        mine_pass_videos = {
+            call.args[0]
+            for call in proc.process_episode.call_args_list
+            if call.kwargs.get("curation_callback") is not None
+            and not getattr(call.kwargs["curation_callback"], "suppress_curation_messages", False)
+        }
+        assert mine_pass_videos == {EP1, EP2}
+
     def test_progress_ticks_only_in_mine_pass(self):
         words = {EP1: [_word("猫")], EP2: [_word("犬")]}
         proc = _make_processor(words)
