@@ -16,6 +16,13 @@ from packaging.utils import canonicalize_name
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
+#: What a real bundle prints for `AnkiMiner version` (the bundle_smoke cli leg).
+VERSION_ANSWER = (
+    'if [ "${1:-}" = version ]; then '
+    'echo \'{"event": "result", "schema": 1, "status": "success", "error": null, "app_version": "0"}\'; '
+    "exit 0; fi\n"
+)
+
 
 def _write_executable(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
@@ -182,7 +189,8 @@ def test_bundle_smoke_uses_one_temporary_anki_miner_home(tmp_path: Path) -> None
         "set -euo pipefail\n"
         'test -d "$ANKI_MINER_HOME"\n'
         'printf \'%s\\n\' "$ANKI_MINER_HOME" >> "$SMOKE_HOME_RECORD"\n'
-        'touch "$ANKI_MINER_HOME/probe-touch"\n'
+        + VERSION_ANSWER
+        + 'touch "$ANKI_MINER_HOME/probe-touch"\n'
         'if [ "${ANKI_MINER_ASR_VULKAN_PROBE:-}" = 1 ]; then\n'
         "  echo 0\n"
         'elif [ "${ANKI_MINER_MPV_PROBE:-}" = 1 ]; then\n'
@@ -241,7 +249,7 @@ def test_bundle_smoke_uses_one_temporary_anki_miner_home(tmp_path: Path) -> None
 
     assert result.returncode == 0, result.stderr
     homes = record.read_text(encoding="utf-8").splitlines()
-    assert len(homes) == 5
+    assert len(homes) == 6
     assert len(set(homes)) == 1
     assert homes[0] != str(caller_home)
     assert not Path(homes[0]).exists()
@@ -258,7 +266,8 @@ def _write_smoke_dist(tmp_path: Path) -> Path:
         "#!/usr/bin/env bash\n"
         "set -euo pipefail\n"
         'printf \'%s\\n\' "$ANKI_MINER_HOME" >> "$SMOKE_HOME_RECORD"\n'
-        'if [ "${ANKI_MINER_ASR_VULKAN_PROBE:-}" = 1 ]; then\n'
+        + VERSION_ANSWER
+        + 'if [ "${ANKI_MINER_ASR_VULKAN_PROBE:-}" = 1 ]; then\n'
         "  echo 0\n"
         'elif [ "${ANKI_MINER_MPV_PROBE:-}" = 1 ]; then\n'
         "  echo MPV_PROBE_OK\n"
@@ -330,6 +339,37 @@ def test_bundle_smoke_seeds_the_managed_ytdlp_before_the_youtube_leg(tmp_path: P
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert "PASS youtube" in result.stdout
+    assert "PASS cli" in result.stdout
+
+
+@pytest.mark.skipif(shutil.which("bash") is None, reason="bash is unavailable")
+def test_cli_leg_fails_when_version_prints_nothing(tmp_path: Path) -> None:
+    """A bundle whose `version` writes no JSON to a captured stdout fails the release."""
+    record = tmp_path / "probe-homes.txt"
+    (tmp_path / "caller-home").mkdir()
+    dist = _write_smoke_dist(tmp_path)
+    app = dist / "AnkiMiner"
+    app.write_text(
+        app.read_text(encoding="utf-8").replace(VERSION_ANSWER, 'if [ "${1:-}" = version ]; then exit 0; fi\n'),
+        encoding="utf-8",
+    )
+    seed = tmp_path / "ytdlp-seed" / "bin"
+    seed.mkdir(parents=True)
+    (seed / "yt-dlp").write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+    (seed / "yt-dlp.verified").write_text("0" * 64 + "\n", encoding="utf-8")
+
+    result = subprocess.run(
+        ["bash", str(PROJECT_ROOT / "scripts" / "bundle_smoke.sh"), str(dist)],
+        cwd=tmp_path,
+        env=_smoke_env(tmp_path, record, BUNDLE_SMOKE_YTDLP_SEED=str(tmp_path / "ytdlp-seed")),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode != 0
+    assert "FAIL cli" in result.stdout
 
 
 @pytest.mark.skipif(shutil.which("bash") is None, reason="bash is unavailable")

@@ -349,6 +349,41 @@ class TestFolderRunSignals:
         assert "succeeded" not in tab.log_widget.text_edit.toPlainText()
 
 
+class TestOversizeTxtParts:
+    """A .txt over the loader's cap runs as one item per part (the worker is never started)."""
+
+    @pytest.fixture
+    def big(self, tmp_path, monkeypatch) -> Path:
+        from anki_miner.services.reading import aozora_source
+
+        monkeypatch.setattr(aozora_source, "_MAX_TEXT_FILE_BYTES", 64)
+        monkeypatch.setattr(aozora_source, "_PART_BYTES", 16)
+        monkeypatch.setattr(aozora_source, "_LINE_SLACK", 8)
+        path = tmp_path / "big.txt"
+        path.write_bytes(b"line.\n" * 20)  # 120 bytes -> 7 parts
+        return path
+
+    def test_single_file_launches_one_item_per_part(self, tab, big):
+        _run(tab, big, [ReadingSourceRef(kind="txt", path=big, title="big")])
+
+        assert [item.title for item in tab._run_items] == [f"big ({i}/7)" for i in range(1, 8)]
+        assert tab._queue_worker_cls.call_args.kwargs["items"] == tab._run_items
+        tab._on_item_started(1)
+        status = tab.progress_widget.status_label.text()
+        assert "big (2/7)" in status
+        assert "Book" not in status  # one book: the part title already says where it is
+
+    def test_folder_expands_the_oversize_book_in_place_and_counts_books(self, tmp_path, tab, big):
+        refs = [_make_ref("epub", "A"), ReadingSourceRef(kind="txt", path=big, title="big"), _make_ref("epub", "C")]
+        _run_folder(tab, tmp_path, refs)
+
+        assert [item.title for item in tab._run_items] == ["A", *[f"big ({i}/7)" for i in range(1, 8)], "C"]
+        tab._on_item_started(2)
+        assert "Book 2/3: big (2/7)" in tab.progress_widget.status_label.text()
+        tab._on_item_started(8)
+        assert "Book 3/3: C" in tab.progress_widget.status_label.text()
+
+
 class TestInvalidPath:
     """Invalid selections warn and never construct a worker."""
 

@@ -30,6 +30,12 @@ class ResourceSpec:
         variant: The ``config.script_variant`` id this resource belongs to
             ("" = every variety). The setup wizard starts a spec ticked only when
             its variant is "" or the config's own (pt's two frequency lists).
+        pin_slot: Freq only. Import into ``freqs_root/<id>/`` instead of the
+            slot derived from the zip title. For a list served from a moving
+            URL: each build carries a new ``index.json`` revision, and a
+            title-derived slot would fork ``<slug>-<hash>`` beside the old one,
+            leaving two enabled chain entries for one list. Dict and pitch
+            specs always import into ``<id>``.
     """
 
     id: str
@@ -39,6 +45,7 @@ class ResourceSpec:
     license_note: str
     lemmatise: bool = False
     variant: str = ""
+    pin_slot: bool = False
 
 
 # For dict resources, ``id`` is the PINNED on-disk slot the importer writes to
@@ -70,6 +77,20 @@ RECOMMENDED_DEFAULT_SET: tuple[ResourceSpec, ...] = (
             "JPDB_v2.2_Frequency_Kana_2024-10-13.zip"
         ),
         license_note="JPDB frequency data — downloaded from upstream source; original license applies.",
+    ),
+    # Jiten serves its list from an always-latest API endpoint, and every build
+    # carries a new index.json revision ("Jiten 26-09-21"): pin_slot keeps each
+    # re-download in one slot. The id is the slug of the zip title "Jiten", so a
+    # hand-imported copy is the slot the download replaces. Placed after JPDB so
+    # it lands first in frequency_chain (apply_download_summary prepends each
+    # success in catalog order), putting Jiten first on the card.
+    ResourceSpec(
+        id="jiten",
+        kind="freq",
+        display_name="Jiten Frequency",
+        url="https://api.jiten.moe/api/frequency-list/download?downloadType=yomitan",
+        license_note="Jiten frequency data (jiten.moe) — CC BY-SA 4.0, downloaded from upstream source.",
+        pin_slot=True,
     ),
     ResourceSpec(
         id="kanjium-pitch",

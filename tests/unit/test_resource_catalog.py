@@ -14,8 +14,10 @@ from anki_miner.services.resource_catalog import (
 
 
 class TestRecommendedDefaultSet:
-    def test_has_exactly_three_entries(self):
-        assert len(RECOMMENDED_DEFAULT_SET) == 3
+    def test_ids_in_catalog_order(self):
+        # Order is behaviour: apply_download_summary prepends each success, so
+        # the later freq spec lands first in frequency_chain and on the card.
+        assert [s.id for s in RECOMMENDED_DEFAULT_SET] == ["jmdict-english", "jpdb-freq", "jiten", "kanjium-pitch"]
 
     def test_ids_are_unique(self):
         ids = [spec.id for spec in RECOMMENDED_DEFAULT_SET]
@@ -43,6 +45,16 @@ class TestRecommendedDefaultSet:
             "https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/"
             "JPDB_v2.2_Frequency_Kana_2024-10-13.zip"
         )
+        assert spec.license_note
+
+    def test_jiten_freq_entry(self):
+        spec = _by_id("jiten")
+        assert spec.kind == "freq"
+        assert spec.display_name == "Jiten Frequency"
+        assert spec.url == "https://api.jiten.moe/api/frequency-list/download?downloadType=yomitan"
+        # Always-latest endpoint: every build is a new revision, so a
+        # re-download must replace the slot, not fork a second one.
+        assert spec.pin_slot
         assert spec.license_note
 
     def test_kanjium_pitch_entry(self):
@@ -79,8 +91,9 @@ class TestCatalogDictSlotIds:
         # stacking. A non-dict spec must NOT use a releases/latest style URL
         # (which would silently reintroduce the freq/pitch stacking the fix
         # deliberately descopes). Locks the descope so a future URL flip fails.
+        # A pin_slot spec imports into its catalog id, so a moving URL cannot stack.
         for spec in RECOMMENDED_DEFAULT_SET:
-            if spec.kind != "dict":
+            if spec.kind != "dict" and not spec.pin_slot:
                 assert "releases/latest" not in spec.url
 
 
@@ -92,7 +105,16 @@ class TestResourceSpec:
 
     def test_fields_present(self):
         field_names = {f.name for f in dataclasses.fields(ResourceSpec)}
-        assert field_names == {"id", "kind", "display_name", "url", "license_note", "lemmatise", "variant"}
+        assert field_names == {
+            "id",
+            "kind",
+            "display_name",
+            "url",
+            "license_note",
+            "lemmatise",
+            "variant",
+            "pin_slot",
+        }
 
 
 def _by_id(spec_id: str) -> ResourceSpec:

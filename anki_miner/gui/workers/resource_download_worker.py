@@ -31,7 +31,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from threading import Event
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 from PyQt6.QtCore import QCoreApplication, pyqtSignal
 
@@ -75,6 +75,21 @@ def _lemmatise_kwargs(spec: ResourceSpec, language: str) -> _LemmatiseKwargs:
     if not spec.lemmatise:
         return {}
     return {"declared_mode": mode_probe.OCCURRENCE_BASED, "lemmatize": build_frequency_lemmatizer(language)}
+
+
+class _PinnedSlotKwargs(TypedDict, total=False):
+    source_id: str
+
+
+def _pinned_slot_kwargs(spec: ResourceSpec) -> _PinnedSlotKwargs:
+    """Keywords that import a ``pin_slot`` freq spec into its catalogue slot.
+
+    Empty for every other spec: an installed list keeps the title-derived slot
+    it was imported into, and the importer call keeps its pre-pin shape.
+    """
+    if not spec.pin_slot:
+        return {}
+    return {"source_id": spec.id}
 
 
 def _resume_key(spec: ResourceSpec) -> str:
@@ -446,6 +461,8 @@ class ResourceDownloadWorker(CancellableWorker):
                     # ``.part`` file. Re-suffix the temp from the catalog URL so
                     # the importer routes correctly (and copies a sensibly-named
                     # source.<ext> alongside the index).
+                    # A pin_slot spec (a moving-URL list) imports into its
+                    # catalog id so a newer build replaces it in place.
                     temp = _retype_for_suffix(temp, spec.url)
                     freq_result = import_frequency_source(
                         temp,
@@ -456,6 +473,7 @@ class ResourceDownloadWorker(CancellableWorker):
                         before_promote=self._require_promotion_allowed,
                         **language_kwarg(self._language),
                         **_lemmatise_kwargs(spec, self._language),
+                        **_pinned_slot_kwargs(spec),
                     )
                     source_id = freq_result.source_id
                     detail = tr_format(

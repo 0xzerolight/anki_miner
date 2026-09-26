@@ -57,12 +57,13 @@ from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.models import MiningOutcome, result_error_text
 from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.models.reading_queue import ReadingQueueItem
-from anki_miner.services.reading import detector
+from anki_miner.services.reading import aozora_source, detector
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
     from anki_miner.config import AnkiMinerConfig
     from anki_miner.interfaces.presenter import PresenterProtocol
+    from anki_miner.models.reading import ReadingSourceRef
     from anki_miner.orchestration import EpisodeProcessor
 
 # File-selector filter glob for the Book File field. The human label ("Books")
@@ -334,8 +335,9 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
 
         The book is classified by ``detector.detect`` (one ref for a valid
         ``.epub``/``.txt``) into an ephemeral :class:`ReadingQueueItem` that is
-        never stored — this tab has no queue. A ``True`` launch swaps the
-        Mine button for Cancel and resets the progress bar.
+        never stored — this tab has no queue. A ``.txt`` over the loader's cap
+        becomes one item per part (:meth:`_items_for`). A ``True`` launch swaps
+        the Mine button for Cancel and resets the progress bar.
         """
         if self.worker_thread is not None:
             return
@@ -352,9 +354,7 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
         if refs is None:
             return
 
-        ref = refs[0]
-        ephemeral = ReadingQueueItem(source=ref, title=ref.title, kind=ref.kind)
-        if self._launch_run([ephemeral]):
+        if self._launch_run(self._items_for(refs[:1])):
             self._begin_run()
 
     def _on_folder_mine_clicked(self) -> None:
@@ -380,9 +380,20 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
         if refs is None:
             return
 
-        items = [ReadingQueueItem(source=ref, title=ref.title, kind=ref.kind) for ref in refs]
-        if self._launch_run(items):
+        if self._launch_run(self._items_for(refs)):
             self._begin_run()
+
+    @staticmethod
+    def _items_for(refs: list[ReadingSourceRef]) -> list[ReadingQueueItem]:
+        """One ephemeral item per book, or per part of a ``.txt`` over the loader's cap.
+
+        A part is its own item so a huge file mines with the folder run's
+        machinery: a bounded load per item, Cancel between items, and one
+        failing part not stopping the rest.
+        """
+        return [
+            ReadingQueueItem(source=ref, title=ref.title, kind=ref.kind) for ref in aozora_source.split_oversize(refs)
+        ]
 
     def _begin_run(self) -> None:
         """Reset the progress bar and swap to the running button state."""
@@ -422,13 +433,18 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
         just the status line — because ``_on_item_progress`` recomposes the
         status from ``_current_item_title`` on every tick, so a status-only
         prefix would vanish on the first progress signal.
+
+        N/M counts books, not items: the parts of one over-cap ``.txt`` share
+        a path, and their titles already say "(i/n)".
         """
         item = self._item_at(idx)
         if item is None:
             return
-        total = len(self._run_items)
-        if total > 1:
-            self._current_item_title = tr_format(self.tr("Book %1/%2: %3"), idx + 1, total, item.title)
+        books = list(dict.fromkeys(i.source.path for i in self._run_items))
+        if len(books) > 1:
+            self._current_item_title = tr_format(
+                self.tr("Book %1/%2: %3"), books.index(item.source.path) + 1, len(books), item.title
+            )
             self.progress_widget.set_status(self._current_item_title)
         else:
             self._current_item_title = item.title
