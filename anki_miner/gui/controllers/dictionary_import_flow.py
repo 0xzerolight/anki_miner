@@ -172,11 +172,7 @@ class DictionaryImportFlow(PanelImportFlowBase):
             imported = [dict_id for _job, dict_id, _meta in result.successes]
             if imported:
                 new_chain = self._with_dicts_at_top(imported)
-                self._panel.refresh_registry()
-                self._panel.set_chain(new_chain)
-                _log_import_persist(trace_id, "start")
-                self._persist_chain(new_chain)
-                _log_import_persist(trace_id, "done")
+                self._adopt_new_chain(trace_id, new_chain)
 
             if len(jobs) == 1 and result.cancelled and not result.successes and not result.failures:
                 return
@@ -404,15 +400,9 @@ class DictionaryImportFlow(PanelImportFlowBase):
             raise
 
         def on_success(dict_id: str, meta: dict) -> None:
-            # Refresh registry so the stale-flag warning clears on the row.
-            current_chain = self._panel.get_chain()
-            self._panel.refresh_registry()
-            self._panel.set_chain(current_chain)
-            # Notify listeners so cached DefinitionService instances rebuild
-            # with the freshly-rebuilt SQLite index.
-            _log_import_persist(trace_id, "start")
-            self._notify_config_changed()
-            _log_import_persist(trace_id, "done")
+            # Clears the row's stale flag and rebuilds cached DefinitionService
+            # instances over the freshly rebuilt SQLite index.
+            self._adopt_rebuilt_index(trace_id)
             QMessageBox.information(
                 self._parent,
                 QCoreApplication.translate("DictionaryImportFlow", "Dictionary re-imported"),

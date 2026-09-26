@@ -254,11 +254,7 @@ class AudioPackImportFlow(PanelImportFlowBase):
 
             if imported:
                 new_chain = self._chain_with_new_packs_inserted(imported)
-                self._panel.refresh_registry()
-                self._panel.set_chain(new_chain)
-                _log_import_persist(trace_id, "start")
-                self._persist_chain(new_chain)
-                _log_import_persist(trace_id, "done")
+                self._adopt_new_chain(trace_id, new_chain)
 
             if len(result.successes) == 1 and not result.failures and not result.cancelled:
                 # Single pack — no summary needed; the registry refresh is feedback enough.
@@ -355,11 +351,7 @@ class AudioPackImportFlow(PanelImportFlowBase):
 
         def on_success(pack_id: str, meta: dict) -> None:
             new_chain = self._chain_with_new_packs_inserted([pack_id])
-            self._panel.refresh_registry()
-            self._panel.set_chain(new_chain)
-            _log_import_persist(trace_id, "start")
-            self._persist_chain(new_chain)
-            _log_import_persist(trace_id, "done")
+            self._adopt_new_chain(trace_id, new_chain)
             QMessageBox.information(
                 self._parent,
                 QCoreApplication.translate("AudioPackImportFlow", "Android Audio Database Added"),
@@ -491,12 +483,7 @@ class AudioPackImportFlow(PanelImportFlowBase):
         """
 
         def on_success(imported_id: str, _meta: dict) -> None:
-            current_chain = self._panel.get_chain()
-            self._panel.refresh_registry()
-            self._panel.set_chain(current_chain)
-            _log_import_persist(trace_id, "start")
-            self._notify_config_changed()
-            _log_import_persist(trace_id, "done")
+            self._adopt_rebuilt_index(trace_id)
             QMessageBox.information(
                 self._parent,
                 reimported_title,

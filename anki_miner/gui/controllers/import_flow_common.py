@@ -1011,3 +1011,26 @@ class PanelImportFlowBase(ModalImportFlowMixin):
             return False
         self._mutation_token = self._panel.hold_mutation(kind)
         return True
+
+    def _adopt_rebuilt_index(self, trace_id: str) -> None:
+        """Make an index rebuilt in place live; the chain itself is unchanged.
+
+        Refreshing the registry clears the row's stale flag, re-setting the
+        same chain redraws the rows, and ``notify_config_changed`` rebuilds the
+        cached lookup services over the new SQLite index. Only the notify sits
+        inside the persist log bracket.
+        """
+        current_chain = self._panel.get_chain()
+        self._panel.refresh_registry()
+        self._panel.set_chain(current_chain)
+        _log_import_persist(trace_id, "start")
+        self._notify_config_changed()
+        _log_import_persist(trace_id, "done")
+
+    def _adopt_new_chain(self, trace_id: str, new_chain: tuple[Any, ...]) -> None:
+        """Show ``new_chain`` (built around freshly imported slots) and persist it."""
+        self._panel.refresh_registry()
+        self._panel.set_chain(new_chain)
+        _log_import_persist(trace_id, "start")
+        self._persist_chain(new_chain)
+        _log_import_persist(trace_id, "done")

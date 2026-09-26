@@ -270,11 +270,7 @@ class SourceChainImportFlow(PanelImportFlowBase):
             imported = [source_id for _job, source_id, _meta in result.successes]
             if imported:
                 new_chain = self._chain_with_new_sources_appended(imported)
-                self._panel.refresh_registry()
-                self._panel.set_chain(new_chain)
-                _log_import_persist(trace_id, "start")
-                self._persist_chain(new_chain)
-                _log_import_persist(trace_id, "done")
+                self._adopt_new_chain(trace_id, new_chain)
 
             # A cancelled single pick is the user changing their mind: say nothing.
             if len(jobs) == 1 and result.cancelled and not result.successes and not result.failures:
@@ -436,12 +432,7 @@ class SourceChainImportFlow(PanelImportFlowBase):
             raise
 
         def on_success(imported_id: str, meta: dict) -> None:
-            current_chain = self._panel.get_chain()
-            self._panel.refresh_registry()
-            self._panel.set_chain(current_chain)
-            _log_import_persist(trace_id, "start")
-            self._notify_config_changed()
-            _log_import_persist(trace_id, "done")
+            self._adopt_rebuilt_index(trace_id)
             QMessageBox.information(
                 self._parent,
                 labels.reimported_title,
