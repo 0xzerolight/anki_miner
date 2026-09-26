@@ -6,7 +6,7 @@ import re
 import sqlite3
 import threading
 from dataclasses import replace
-from pathlib import Path
+from functools import partial
 from types import SimpleNamespace
 from unittest.mock import MagicMock, call, patch
 
@@ -37,28 +37,11 @@ from anki_miner.services.pitch_accent_service import PitchEntry
 from anki_miner.services.word_filter import WordFilterService
 from anki_miner.services.word_list_service import WordListService
 from tests.conftest import build_processor
+from tests.unit._processor_fixtures import make_media as _make_media
+from tests.unit._processor_fixtures import make_word
 
-
-def _make_word(lemma="食べる", surface=None, start_time=1.0, pos="動詞"):
-    return TokenizedWord(
-        surface=surface or f"{lemma}た",
-        lemma=lemma,
-        reading="タベル",
-        sentence=f"{lemma}のテスト",
-        start_time=start_time,
-        end_time=start_time + 2.0,
-        duration=2.0,
-        pos=pos,
-    )
-
-
-def _make_media(prefix="word"):
-    return MediaData(
-        screenshot_path=Path(f"/tmp/{prefix}.jpg"),
-        audio_path=Path(f"/tmp/{prefix}.mp3"),
-        screenshot_filename=f"{prefix}.jpg",
-        audio_filename=f"{prefix}.mp3",
-    )
+# These suites build verbs unless a test says otherwise.
+_make_word = partial(make_word, pos="動詞")
 
 
 class TestSanitizeSourceLabel:
