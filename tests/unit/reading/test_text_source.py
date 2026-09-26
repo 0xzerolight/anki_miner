@@ -1,5 +1,8 @@
 """Tests for the pasted-text source loader."""
 
+import pytest
+
+from anki_miner.exceptions import OperationCancelled
 from anki_miner.models.reading import ImageRef, ReadingSourceRef
 from anki_miner.services.reading import text_source
 
@@ -70,3 +73,11 @@ def test_image_root_becomes_one_shared_image_ref(tmp_path):
 def test_no_image_root_keeps_units_imageless():
     doc = text_source.load(ReadingSourceRef(kind="text", title="Text", text="一文目。"))
     assert doc.units[0].image_ref is None
+
+
+def test_cancel_check_raises_reading_load_cancelled():
+    with pytest.raises(OperationCancelled, match="Reading load cancelled"):
+        text_source.load(
+            ReadingSourceRef(kind="text", title="Text", text="一文目。"),
+            cancel_check=lambda: True,
+        )
