@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import contextlib
 import threading
-import time
 from unittest.mock import Mock, patch
 
 import pytest
@@ -30,6 +29,7 @@ from PyQt6.QtWidgets import QApplication, QDialog
 
 from anki_miner.config import create_default_config
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
+from tests.unit._curation_harness import settle_into_gate
 
 MODULE = "anki_miner.gui.widgets._mining_tab_base"
 
@@ -424,7 +424,7 @@ def _park_worker(tab, words=("w1",)):
     worker = _CurationWorker(tab, list(words))
     worker.start()
     assert _drain_until(lambda: bool(created)), "the curator never opened"
-    time.sleep(0.05)
+    settle_into_gate()
     assert not worker.isFinished(), "the worker should still be parked at the gate"
     return worker, created[0], patcher
 

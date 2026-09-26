@@ -14,7 +14,6 @@ inspected.
 from __future__ import annotations
 
 import threading
-import time
 from dataclasses import replace
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -24,6 +23,7 @@ import pytest
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 from anki_miner.models.youtube import VideoInfo
+from tests.unit._curation_harness import park_at_gate
 
 
 def _make_video_info() -> VideoInfo:
@@ -195,22 +195,12 @@ def test_shutdown_unblocks_worker_parked_at_curation_gate(tab):
     yet, blocking in worker.wait() would deadlock: this GUI thread is the only
     one that could run the slot. shutdown() must poison the gate before joining
     (T-01)."""
-    from PyQt6.QtCore import Qt
-
     results: list = []
-    # DirectConnection probe fires on the bridge thread at emit time, right
-    # before it parks. The queued _on_curation_requested slot itself never
-    # runs because this (GUI) thread does not spin its event loop — exactly
-    # the app-close scenario.
-    reached_gate = threading.Event()
-    tab._curation_requested.connect(lambda words: reached_gate.set(), Qt.ConnectionType.DirectConnection)
     bridge_thread = threading.Thread(
         target=lambda: results.append(tab._curation_bridge(["w1"])),
         daemon=True,
     )
-    bridge_thread.start()
-    assert reached_gate.wait(2.0), "bridge thread never emitted the curation request"
-    time.sleep(0.05)  # let it advance the final step into _curation_event.wait()
+    park_at_gate(tab, bridge_thread.start)
     assert bridge_thread.is_alive(), "bridge thread should be parked at the gate"
 
     worker = MagicMock(name="QueueWorker")
