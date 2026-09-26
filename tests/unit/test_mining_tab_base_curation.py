@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import QApplication, QDialog
 
 from anki_miner.config import create_default_config
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
-from tests.unit._curation_harness import CurationWorker, drain_until, park_worker_at_gate
+from tests.unit._curation_harness import UNSET, CurationWorker, drain_until, park_worker_at_gate
 
 MODULE = "anki_miner.gui.widgets._mining_tab_base"
 
@@ -212,7 +212,7 @@ def test_poison_curation_gate_releases_parked_worker(qapp, qtbot):
     """A worker parked in _curation_event.wait() resumes with None after poisoning.
 
     Simulates app close: the GUI thread never spins its event loop (no
-    _drain_until here), so the queued _curation_requested slot can never run —
+    drain_until here), so the queued _curation_requested slot can never run —
     _poison_curation_gate() must release the worker directly (T-01 deadlock fix).
     """
     tab = _Bare()
@@ -586,7 +586,7 @@ class TestStagedKnownWordsGate:
 
             release.set()
             assert drain_until(worker.isFinished, 5000)
-            assert worker.result is not None
+            assert worker.result not in (None, UNSET)
         finally:
             release.set()
             tab.shutdown()
@@ -610,7 +610,7 @@ class TestStagedKnownWordsGate:
             assert worker.wait(5000)
             assert calls == [{staged}]
             # The staged word is excluded; the other one is the whole result.
-            assert worker.result is not None
+            assert worker.result not in (None, UNSET)
             assert staged not in {w.mined_form for w in worker.result}
             assert len(worker.result) == len(words) - 1
         finally:

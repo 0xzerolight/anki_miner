@@ -28,8 +28,8 @@ connection), so :meth:`_on_worker_created` attaches the capture slots to
 ``result_ready`` (payload = ``ProcessingResult``) and ``error`` (payload = ``str``)
 BEFORE the worker is started and can emit. The ``click_*`` methods just click the
 button; capture is armed by the signal. :meth:`wait_for_result` spins the GUI event
-loop (the proven ``_drain_until`` idiom from
-``tests/unit/test_mining_tab_base_curation.py``) until a payload is captured or the
+loop (the proven ``drain_until`` idiom from
+``tests/unit/_curation_harness.py``) until a payload is captured or the
 timeout fires, joins the worker, then raises / returns.
 
 ``AppDriver`` (full-``MainWindow`` inspection mode) is intentionally NOT built here:
@@ -107,9 +107,10 @@ class CancelOutcome:
 def _drain_until(predicate, timeout_ms: int = 3000, step_ms: int = 10) -> bool:
     """Spin the GUI event loop (delivering queued signals) until predicate or timeout.
 
-    Copied verbatim from ``tests/unit/test_mining_tab_base_curation.py`` — the
-    proven way to advance queued Qt signal delivery in a headless test without a
-    running ``app.exec()``.
+    Mirrors ``drain_until`` in ``tests/unit/_curation_harness.py`` — the proven
+    way to advance queued Qt signal delivery in a headless test without a
+    running ``app.exec()``. Kept here because ``tests/e2e/test_soak.py``
+    patches ``tests.e2e.driver._drain_until`` by name.
     """
     waited = 0
     while not predicate() and waited < timeout_ms:
