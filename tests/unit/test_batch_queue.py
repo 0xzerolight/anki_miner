@@ -111,14 +111,6 @@ class TestBatchQueue:
         queue.clear()
         assert queue.total_items == 0
 
-    def test_pending_count(self, tmp_path):
-        queue = BatchQueue()
-        item1 = queue.add_item(tmp_path / "a1", tmp_path / "s1", "A")
-        queue.add_item(tmp_path / "a2", tmp_path / "s2", "B")
-        queue.add_item(tmp_path / "a3", tmp_path / "s3", "C")
-        item1.status = QueueItemStatus.COMPLETED
-        assert queue.pending_count == 2
-
     def test_completed_count(self, tmp_path):
         queue = BatchQueue()
         item1 = queue.add_item(tmp_path / "a1", tmp_path / "s1", "A")

@@ -496,16 +496,6 @@ class EpisodeProcessor:
         return external is not None and external()
 
     @property
-    def _expression_audio_active(self) -> bool:
-        """Delegating alias for :attr:`AudioStage.expression_audio_active`.
-
-        The gate logic (the two-part Issue #73 gate) lives on the audio stage;
-        this property stays here because ``process_episode`` (band
-        registration) and the tests reach it on the processor.
-        """
-        return self._audio_stage.expression_audio_active
-
-    @property
     def _reading_tts_active(self) -> bool:
         """Delegating alias for :attr:`AudioStage.reading_tts_active`.
 

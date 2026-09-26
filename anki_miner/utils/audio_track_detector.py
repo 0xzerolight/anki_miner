@@ -66,25 +66,13 @@ class SubtitleStream:
     is_default: bool = False
 
 
-def is_japanese_language_tag(language_tag: str | None) -> bool:
-    """Return whether *language_tag* identifies Japanese.
-
-    Alongside the legacy aliases, accept BCP 47 tags whose primary language
-    subtag is ``ja`` (for example, ``ja-JP``).
-    """
-    if language_tag is None:
-        return False
-    normalized = language_tag.lower()
-    return normalized in JAPANESE_LANGUAGE_CODES or normalized.startswith("ja-")
-
-
 def matches_language_tag(language_tag: str | None, codes: frozenset[str]) -> bool:
     """Whether *language_tag* names one of *codes*.
 
     Accepts the exact tag and a BCP 47 regional variant whose primary subtag
     is in *codes* (``ja-JP`` -> ``ja``, ``ko-KR`` -> ``ko``). A code that is
     merely a prefix (``jav``) never matches: the variant must be
-    dash-separated, same rule as :func:`is_japanese_language_tag`.
+    dash-separated.
     """
     if language_tag is None:
         return False
