@@ -2261,9 +2261,13 @@ def test_warn_missing_fields_raising_check_does_not_crash(qtbot, wiz_config):
     wiz.validation_service = MagicMock(return_value=MagicMock(check_field_names=boom))  # type: ignore[method-assign]
 
     page._warn_missing_fields()
-    # Give the worker time to run + deliver its error signal without raising.
-    qtbot.wait(500)
-    assert page is not None  # no crash
+    # The error path sets warning_label with the error_prefix message (pages.py:1011); waiting on
+    # that instead of a fixed sleep proves the worker delivered its error signal without raising.
+    qtbot.waitUntil(
+        lambda: page.warning_label.text().startswith("Could not check note type fields"),
+        timeout=3000,
+    )
+    assert page._warn_worker.wait(3000)
 
 
 def test_warn_missing_fields_latest_check_wins(qtbot, wiz_config):
@@ -2290,17 +2294,23 @@ def test_warn_missing_fields_latest_check_wins(qtbot, wiz_config):
         return_value=MagicMock(check_field_names=slow_first)
     )
     page._warn_missing_fields()
+    stale = page._warn_worker  # captured before the second dispatch overwrites it
 
     # Second (fast) dispatch supersedes it.
     wiz.validation_service = MagicMock(  # type: ignore[method-assign]
         return_value=MagicMock(check_field_names=fast_second)
     )
     page._warn_missing_fields()
+    latest = page._warn_worker
 
     qtbot.waitUntil(lambda: page.warning_label.text() == "LATEST", timeout=3000)
-    # Now let the stale worker finish; its result must NOT overwrite the latest.
+    # Now let the stale worker finish; its result must NOT overwrite the latest. Join the real
+    # QThread (bounded, not a fixed sleep), then pump the event loop briefly so its queued
+    # result_ready/error delivery — which _is_live_check() then rejects as stale — actually runs.
     release_first.set()
-    qtbot.wait(500)
+    assert stale.wait(3000)
+    assert latest.wait(3000)
+    qtbot.wait(20)
     assert page.warning_label.text() == "LATEST"
 
 
