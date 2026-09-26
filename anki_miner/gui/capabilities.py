@@ -881,6 +881,18 @@ CAPABILITIES: tuple[Capability, ...] = (
         target=CapabilityTarget("settings", "subtitles"),
         keywords=("alass", "alignment", "binary", "download", "homebrew", "sync settings"),
     ),
+    Capability(
+        id="settings-resource-bundle",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Export / import resources"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Pack this language's dictionaries, frequency and pitch lists, ignore list and word lists into one "
+            "file, and install them on another machine -- Export or Import, then Resources, in the Settings footer.",
+        ),
+        category=_CAT_SOURCES,
+        target=CapabilityTarget("settings"),
+        keywords=("export resources", "import resources", "bundle", "share", "transfer", "dictionaries", "frequency"),
+    ),
     # --- Audio -------------------------------------------------------------
     Capability(
         id="expression-audio",

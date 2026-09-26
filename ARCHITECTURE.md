@@ -233,6 +233,8 @@ The import flow is `gui/controllers/audio_pack_import_flow.py`, driving `gui/wid
 
 **Known-words import** (`services/known_words_import.py`): parses an external known-word export into the known-words DB. `FORMAT_KEYS` covers jpdb, Migaku (JSON, legacy and CSV), AnkiMorphs and a generic list; `parse_known_words_file` returns a `KnownWordsImportResult` and raises `KnownWordsImportError`.
 
+**Resource bundles** (`services/resource_bundle/`): the engine behind Settings → Export / Import → Resources…. `collect_export_candidates` lists the active language's chained dictionary, frequency and pitch slots plus the `source='user'` known-words rows and the blacklist/whitelist; `write_resource_bundle` zips each slot's kept `source.*` file beside a `manifest.json` (`BundleManifest`, marker `anki_miner_resources`). `install_resource_bundle` rebuilds each slot through its family importer, pinned to the sender's slot id and stamped with the bundle's language, and `plan_import` blocks any slot id or word list the receiver already has. `apply_install_to_config` chains what landed the way the Add buttons do, and refuses if a root moved mid-import. Sources travel instead of indexes so a bundle outlives index schema bumps; audio packs are excluded because their index points at audio outside the app. The GUI side is `gui/controllers/resource_bundle_flow.py`, which holds the chain panels' mutation lock for the whole run.
+
 ## Orchestration
 
 **EpisodeProcessor** (`orchestration/episode_processor.py`):
@@ -520,6 +522,7 @@ All persistent user data under `~/.anki_miner/`:
 | `JMdict_e` | XML | Source JMdict XML (~60MB); migrated to SQLite on first launch |
 | `dicts/<dict-id>/index.sqlite` | SQLite | Indexed offline dictionaries (e.g. `jmdict-english/`); queried by `IndexedDictProvider` |
 | `known_words.db` | SQLite | Known word cache with Anki sync. Japanese only: every other mining language gets a `known_words.<lang>.db` sibling, derived solely by `service_factory.resolve_known_words_db_path` |
+| `wordlists/<lang>/{blacklist,whitelist}.txt` | Text | Word lists installed from a resource bundle; `blacklist_path` / `whitelist_path` point here |
 | `stats.db` | SQLite | Analytics. Exactly two tables — `mining_sessions` and `series_difficulty`; milestones are derived at query time, not stored. Both carry a `language TEXT NOT NULL DEFAULT 'ja'` column (`_migrate_language_column`) and reads filter on it |
 | `pitch/<source_id>/index.sqlite` | SQLite | Per-source pitch accent index; the runtime-authoritative first-hit-wins chain (`config.pitch_chain`) |
 | `pitch_accent.csv` | CSV | Legacy single pitch file; auto-imported into `pitch/legacy-pitch/` on first launch, then no longer read (kept on disk for downgrade) |
