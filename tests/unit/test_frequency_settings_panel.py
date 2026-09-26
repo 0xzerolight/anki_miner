@@ -11,6 +11,7 @@ pytest.importorskip("PyQt6.QtWidgets")
 from PyQt6.QtWidgets import QLabel, QMessageBox
 
 from anki_miner.config import FreqEntry
+from anki_miner.gui.widgets.panels import _source_chain_settings_panel as source_chain_mod
 from anki_miner.gui.widgets.panels import frequency_settings_panel as fsp_mod
 from anki_miner.gui.widgets.panels.frequency_settings_panel import FrequencySettingsPanel
 from anki_miner.services.frequency.registry import FreqSourceMeta
@@ -430,7 +431,7 @@ def test_context_menu_bails_during_scan_placeholder(qapp, qtbot, tmp_path, monke
     monkeypatch.setattr(panel._list, "itemAt", lambda _pos: placeholder_item)
 
     menu_cls = MagicMock()
-    monkeypatch.setattr(fsp_mod, "QMenu", menu_cls)
+    monkeypatch.setattr(source_chain_mod, "QMenu", menu_cls)
     reimports: list = []
     changed: list = []
     panel.reimport_source_requested.connect(reimports.append)
@@ -510,13 +511,13 @@ class TestOffThreadDiskWork:
 
         main_id = threading.get_ident()
         rmtree_threads: list[int] = []
-        real_rmtree = fsp_mod.robust_rmtree
+        real_rmtree = source_chain_mod.robust_rmtree
 
         def _spy_rmtree(path, *a, **kw):
             rmtree_threads.append(threading.get_ident())
             return real_rmtree(path, *a, **kw)
 
-        monkeypatch.setattr(fsp_mod, "robust_rmtree", _spy_rmtree)
+        monkeypatch.setattr(source_chain_mod, "robust_rmtree", _spy_rmtree)
 
         _make_source_on_disk(tmp_path, "jpdb")
         panel = FrequencySettingsPanel(tmp_path)

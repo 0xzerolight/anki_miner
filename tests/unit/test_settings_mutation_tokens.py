@@ -12,8 +12,8 @@ from anki_miner.config import AnkiMinerConfig, AudioSourceEntry, ChainEntry, Fre
 from anki_miner.gui.controllers import import_flow_common as import_flow_common_module
 from anki_miner.gui.controllers.background_tasks import BackgroundTaskController
 from anki_miner.gui.utils.config_commit import ConfigCommitError, ConfigCommitResult
+from anki_miner.gui.widgets.panels import _source_chain_settings_panel as source_chain_module
 from anki_miner.gui.widgets.panels import chain_settings_panel_base as base_module
-from anki_miner.gui.widgets.panels import frequency_settings_panel as frequency_panel_module
 from anki_miner.gui.widgets.panels.dictionary_settings_panel import DictionarySettingsPanel
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.services._sqlite_index import write_ownership_marker
@@ -94,7 +94,7 @@ def test_context_menu_refuses_while_mutation_token_is_held(tab, monkeypatch):
         def __init__(self, *args, **kwargs):
             constructed.append(None)
 
-    monkeypatch.setattr(frequency_panel_module, "QMenu", UnexpectedMenu)
+    monkeypatch.setattr(source_chain_module, "QMenu", UnexpectedMenu)
     token = panel.hold_mutation("import")
     item = panel._list.item(0)
     pos = panel._list.visualItemRect(item).center()
