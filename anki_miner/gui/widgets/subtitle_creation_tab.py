@@ -37,6 +37,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
+from anki_miner.gui.constants import AUDIO_EXTENSIONS
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.qt_helpers import reveal_settings
 from anki_miner.gui.utils.run_off_thread import run_off_thread
@@ -53,8 +54,7 @@ from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
-_AUDIO_EXTENSIONS: frozenset[str] = frozenset({".mp3", ".m4a", ".m4b", ".aac", ".flac", ".opus", ".ogg", ".wav"})
-_MEDIA_EXTENSIONS: frozenset[str] = FilePairMatcher.VIDEO_EXTENSIONS | _AUDIO_EXTENSIONS
+_MEDIA_EXTENSIONS: frozenset[str] = FilePairMatcher.VIDEO_EXTENSIONS | AUDIO_EXTENSIONS
 _MEDIA_FILE_FILTER = (
     "Media Files (" + " ".join(f"*{extension}" for extension in sorted(_MEDIA_EXTENSIONS)) + ");;All Files (*)"
 )

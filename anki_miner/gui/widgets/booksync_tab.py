@@ -30,13 +30,13 @@ from PyQt6.QtWidgets import QCheckBox, QFrame, QHBoxLayout, QLabel, QScrollArea,
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
+from anki_miner.gui.constants import AUDIO_EXTENSIONS
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.qt_helpers import reveal_settings
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout, field_label_width
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
-from anki_miner.gui.widgets.subtitle_creation_tab import _AUDIO_EXTENSIONS
 from anki_miner.gui.workers.booksync_worker import BookSyncWorker
 from anki_miner.services.asr import _engine
 from anki_miner.services.asr.model_availability import usable_model_installed
@@ -46,10 +46,7 @@ from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
-# _AUDIO_EXTENSIONS is imported from subtitle_creation_tab (import block above):
-# the same audio set Generate accepts, not a third copy (audiobook_tab carries
-# the other duplicate; folding all three is out of this change's scope).
-_AUDIO_FILE_FILTER = "Audio Files (" + " ".join(f"*{e}" for e in sorted(_AUDIO_EXTENSIONS)) + ");;All Files (*)"
+_AUDIO_FILE_FILTER = "Audio Files (" + " ".join(f"*{e}" for e in sorted(AUDIO_EXTENSIONS)) + ");;All Files (*)"
 _BOOK_EXTENSIONS: frozenset[str] = frozenset({".epub", ".txt"})
 _BOOK_FILE_FILTER = "Books (*.epub *.txt);;All Files (*)"
 
@@ -217,7 +214,7 @@ class BookSyncTab(_ToolTabBase):
             file_filter=_AUDIO_FILE_FILTER,
             label_width=width,
             history_key="tools.booksync.inputs",
-            drop_validator=accepts_suffixes(_AUDIO_EXTENSIONS, self.tr("This field takes an audio file.")),
+            drop_validator=accepts_suffixes(AUDIO_EXTENSIONS, self.tr("This field takes an audio file.")),
         )
         layout.addWidget(self.file_selector)
 
@@ -445,7 +442,7 @@ class BookSyncTab(_ToolTabBase):
                 (
                     f
                     for f in folder.iterdir()
-                    if f.is_file() and f.suffix.lower() in _AUDIO_EXTENSIONS and not is_junk_path(f.name)
+                    if f.is_file() and f.suffix.lower() in AUDIO_EXTENSIONS and not is_junk_path(f.name)
                 ),
                 key=lambda f: natural_sort_key(f.name),
             )
