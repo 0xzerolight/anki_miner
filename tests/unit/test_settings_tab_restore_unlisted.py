@@ -29,13 +29,7 @@ from anki_miner.services.audio_packs import storage as audio_storage
 from anki_miner.services.dictionary.storage import SCHEMA_VERSION, create_index, write_meta
 from anki_miner.services.frequency import storage as frequency_storage
 from anki_miner.services.pitch_accent import storage as pitch_storage
-
-
-def _run_scan_sync(work, on_done, on_error):
-    try:
-        on_done(work())
-    except Exception as exc:  # noqa: BLE001
-        on_error(str(exc))
+from tests.unit._import_flow_harness import run_scan_sync
 
 
 def _make_dict_on_disk(
@@ -80,7 +74,7 @@ def tab_for_restore(test_config: AnkiMinerConfig, tmp_path: Path, qtbot):
     )
     (tmp_path / "dicts").mkdir(parents=True, exist_ok=True)
     widget = SettingsTab(cfg)
-    widget._dict_import_flow._run_latest_scan = _run_scan_sync
+    widget._dict_import_flow._run_latest_scan = run_scan_sync
     qtbot.addWidget(widget)
     yield widget
     widget.deleteLater()
@@ -322,7 +316,7 @@ def test_restore_unlisted_resource_without_reimport(tab_for_resource_restore, tm
     monkeypatch.setattr(
         settings_tab_module,
         "run_off_thread",
-        lambda _parent, work, on_done, on_error: _run_scan_sync(work, on_done, on_error),
+        lambda _parent, work, on_done, on_error: run_scan_sync(work, on_done, on_error),
     )
     emissions: list[AnkiMinerConfig] = []
     tab.config_changed.connect(emissions.append)
@@ -448,7 +442,7 @@ def test_restore_says_so_when_it_finds_nothing(
     monkeypatch.setattr(
         settings_tab_module,
         "run_off_thread",
-        lambda _parent, work, on_done, on_error: _run_scan_sync(work, on_done, on_error),
+        lambda _parent, work, on_done, on_error: run_scan_sync(work, on_done, on_error),
     )
     info_calls: list[tuple[str, str]] = []
     monkeypatch.setattr(

@@ -22,19 +22,12 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtWidgets import QMessageBox
 
 from anki_miner.config import AnkiMinerConfig, FreqEntry, PitchSourceEntry
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.services.frequency import storage as freq_storage
 from anki_miner.services.pitch_accent import storage as pitch_storage
-
-
-def _run_scan_sync(work, on_done, on_error):
-    try:
-        on_done(work())
-    except Exception as exc:  # noqa: BLE001
-        on_error(str(exc))
+from tests.unit._import_flow_harness import capture_infos, make_stub_worker, run_scan_sync
 
 
 def _make_freq_source(root: Path, source_id: str, *, name: str, with_copy: bool = True) -> None:
@@ -107,7 +100,7 @@ def tab(test_config: AnkiMinerConfig, tmp_path: Path, qtbot):
     )
     widget = SettingsTab(cfg, suppress_optional_startup=True)
     for flow in (widget._frequency_import_flow, widget._pitch_import_flow):
-        flow._run_latest_scan = _run_scan_sync
+        flow._run_latest_scan = run_scan_sync
     qtbot.addWidget(widget)
     yield widget
     widget.deleteLater()
@@ -119,11 +112,7 @@ def workers(monkeypatch):
     instances: list[MagicMock] = []
 
     def _make_instance(*args, **kwargs):
-        inst = MagicMock(name="ImportWorker")
-        for signal in ("progress", "import_finished", "failed", "cancelled", "finished"):
-            setattr(inst, signal, MagicMock())
-        inst.is_cancelled = False
-        inst.isRunning = MagicMock(return_value=True)
+        inst = make_stub_worker(running=True, args=args, kwargs=kwargs)
         instances.append(inst)
         return inst
 
@@ -133,16 +122,6 @@ def workers(monkeypatch):
         monkeypatch.setattr(f"anki_miner.gui.workers.import_worker.ImportWorker.{spec['repair']}", factory)
         factories[family] = factory
     return {"factories": factories, "instances": instances}
-
-
-def _silence_dialogs(monkeypatch) -> list[tuple[str, str]]:
-    captured: list[tuple[str, str]] = []
-    monkeypatch.setattr(
-        QMessageBox,
-        "information",
-        lambda parent, title, body, *a, **kw: captured.append((title, body)) or 0,
-    )
-    return captured
 
 
 def _finish_worker(workers, idx: int = -1) -> None:
@@ -169,7 +148,7 @@ def _setup(tab, family, sources):
 class TestReimportAll:
     def test_rebuilds_each_slot_in_place_from_its_saved_copy(self, tab, workers, monkeypatch, family):
         flow, _panel = _setup(tab, family, [("jpdb", "JPDB", True), ("bccwj", "BCCWJ", True)])
-        summaries = _silence_dialogs(monkeypatch)
+        summaries = capture_infos(monkeypatch)
         emissions: list[object] = []
         tab.config_changed.connect(emissions.append)
 
@@ -201,7 +180,7 @@ class TestReimportAll:
     def test_copyless_slot_is_named_not_prompted_for(self, tab, workers, monkeypatch, family):
         """A batch that stopped on a file picker would strand the upgrade."""
         flow, _panel = _setup(tab, family, [("jpdb", "JPDB", True), ("legacy", "Legacy", False)])
-        summaries = _silence_dialogs(monkeypatch)
+        summaries = capture_infos(monkeypatch)
         picked: list[object] = []
         monkeypatch.setattr(
             "anki_miner.gui.utils.file_dialogs.pick_open_file",
@@ -221,7 +200,7 @@ class TestReimportAll:
     def test_empty_chain_says_so_and_starts_nothing(self, tab, workers, monkeypatch, family):
         spec = FAMILIES[family]
         flow, _panel = _setup(tab, family, [])
-        summaries = _silence_dialogs(monkeypatch)
+        summaries = capture_infos(monkeypatch)
 
         flow.reimport_all()
 
@@ -233,7 +212,7 @@ class TestReimportAll:
     def test_only_ids_scopes_the_batch(self, tab, workers, monkeypatch, family):
         """The startup prompt repairs the stale slots its scan found, not the chain."""
         flow, _panel = _setup(tab, family, [("jpdb", "JPDB", True), ("bccwj", "BCCWJ", True)])
-        summaries = _silence_dialogs(monkeypatch)
+        summaries = capture_infos(monkeypatch)
 
         flow.reimport_all(only_ids=frozenset({"bccwj"}))
         _finish_worker(workers)
@@ -257,7 +236,7 @@ class TestOnCompleteContract:
 
     def test_fires_once_after_a_finished_batch(self, tab, workers, monkeypatch, family):
         flow, _panel = _setup(tab, family, [("jpdb", "JPDB", True)])
-        _silence_dialogs(monkeypatch)
+        capture_infos(monkeypatch)
         completions: list[int] = []
 
         flow.reimport_all(on_complete=lambda: completions.append(1))
@@ -268,7 +247,7 @@ class TestOnCompleteContract:
 
     def test_fires_when_there_is_nothing_to_do(self, tab, workers, monkeypatch, family):
         flow, _panel = _setup(tab, family, [])
-        _silence_dialogs(monkeypatch)
+        capture_infos(monkeypatch)
         completions: list[int] = []
 
         flow.reimport_all(on_complete=lambda: completions.append(1))
@@ -277,7 +256,7 @@ class TestOnCompleteContract:
 
     def test_fires_when_the_resource_release_is_refused(self, tab, workers, monkeypatch, family):
         flow, panel = _setup(tab, family, [("jpdb", "JPDB", True)])
-        _silence_dialogs(monkeypatch)
+        capture_infos(monkeypatch)
         monkeypatch.setattr(panel, "request_resource_release", lambda: False)
         monkeypatch.setattr(
             "anki_miner.gui.controllers.import_flow_common.report_screen_issue",

@@ -26,14 +26,7 @@ from PyQt6.QtWidgets import QMessageBox
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.widgets.settings_tab import SettingsTab
-
-
-def _run_scan_sync(work, on_done, on_error, *, pass_cancel_check=False):
-    try:
-        on_done(work(lambda: False) if pass_cancel_check else work())
-    except Exception as exc:  # noqa: BLE001
-        on_error(str(exc))
-
+from tests.unit._import_flow_harness import make_stub_worker, run_scan_sync
 
 # ---------------------------------------------------------------------------
 # Stub workers — only the bounded-join surface touches.
@@ -162,27 +155,11 @@ def tab(test_config: AnkiMinerConfig, tmp_path, qtbot):
         dicts_root=roots["dicts"],
     )
     widget = SettingsTab(cfg)
-    widget._frequency_import_flow._run_latest_scan = _run_scan_sync
-    widget._audio_pack_import_flow._run_latest_scan = _run_scan_sync
-    widget._dict_import_flow._run_latest_scan = _run_scan_sync
+    widget._frequency_import_flow._run_latest_scan = run_scan_sync
+    widget._audio_pack_import_flow._run_latest_scan = run_scan_sync
+    widget._dict_import_flow._run_latest_scan = run_scan_sync
     qtbot.addWidget(widget)
     yield widget
-
-
-def _stub_import_worker() -> MagicMock:
-    """A freshly-launched import worker (the new one replacing the predecessor)."""
-    instance = MagicMock(name="ImportWorker")
-    instance.progress = MagicMock()
-    instance.import_finished = MagicMock()
-    instance.failed = MagicMock()
-    instance.cancelled = MagicMock()
-    instance.finished = MagicMock()
-    instance.cancel = MagicMock()
-    instance.start = MagicMock()
-    instance.set_trace_id = MagicMock()
-    instance.is_cancelled = False
-    instance.isRunning = MagicMock(return_value=False)
-    return instance
 
 
 def _silence_dialogs(monkeypatch) -> None:
@@ -197,7 +174,7 @@ def _silence_dialogs(monkeypatch) -> None:
 
 class TestFrequencyBoundedJoin:
     def _patch_worker(self, monkeypatch):
-        new = _stub_import_worker()
+        new = make_stub_worker()
         monkeypatch.setattr(
             "anki_miner.gui.controllers.frequency_import_flow.ImportWorker.for_source",
             MagicMock(return_value=new),
@@ -319,7 +296,7 @@ class TestFrequencyBoundedJoin:
 
 class TestAudioPackBoundedJoin:
     def _patch_worker(self, monkeypatch):
-        new = _stub_import_worker()
+        new = make_stub_worker()
         monkeypatch.setattr(
             "anki_miner.gui.controllers.audio_pack_import_flow.ImportWorker.for_pack",
             MagicMock(return_value=new),
@@ -442,7 +419,7 @@ class TestDictionaryBoundedJoin:
 
         mod = "anki_miner.gui.controllers.dictionary_import_flow"
 
-        new = _stub_import_worker()
+        new = make_stub_worker()
         monkeypatch.setattr(
             f"{mod}.ImportWorker.for_yomitan",
             MagicMock(return_value=new),
