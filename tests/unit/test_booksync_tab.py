@@ -19,7 +19,7 @@ from anki_miner.models import TerminalOutcome
 
 _ENGINE_AVAILABLE = "anki_miner.services.asr._engine.available"
 _USABLE_MODEL = "anki_miner.gui.widgets.booksync_tab.usable_model_installed"
-_OS_ACCESS = "anki_miner.gui.widgets.booksync_tab.os.access"
+_OS_ACCESS = "anki_miner.gui.widgets._tool_tab_base.os.access"
 _WORKER_CLS = "anki_miner.gui.widgets.booksync_tab.BookSyncWorker"
 
 

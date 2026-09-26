@@ -37,7 +37,7 @@ from anki_miner.utils.file_pairing import FilePair
 
 _AVAILABLE = "anki_miner.gui.widgets.subtitle_retime_tab.SubtitleRetimeTab._alass_available"
 _COMPUTE_AVAILABLE = "anki_miner.gui.widgets.subtitle_retime_tab.SubtitleRetimeTab._compute_alass_available"
-_OS_ACCESS = "anki_miner.gui.widgets.subtitle_retime_tab.os.access"
+_OS_ACCESS = "anki_miner.gui.widgets._tool_tab_base.os.access"
 _WORKER_CLS = "anki_miner.gui.widgets.subtitle_retime_tab.SubtitleRetimeWorker"
 _FIND_PAIRS = "anki_miner.gui.widgets.subtitle_retime_tab.FilePairMatcher.find_pairs_by_episode_number"
 

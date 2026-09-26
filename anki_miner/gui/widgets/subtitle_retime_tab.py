@@ -26,7 +26,6 @@ Worker contract:
 from __future__ import annotations
 
 import logging
-import os
 import shutil
 from collections.abc import Callable
 from pathlib import Path
@@ -673,13 +672,7 @@ class SubtitleRetimeTab(_ToolTabBase):
         # Pre-run writable check. When out_dir is None every output lands
         # next to its source video, so check the first video's parent.
         check_dir = out_dir if out_dir is not None else pairs[0][0].parent
-        if not os.access(check_dir, os.W_OK):
-            # Its own banner, not a logged ERROR: nothing was retimed, so the
-            # generic run_problem banner _on_log_problem raises would say "Some
-            # files could not be retimed." about a run that never started.
-            self.show_screen_issue(
-                ScreenIssue(summary=self.tr("Output folder is not writable."), details=str(check_dir))
-            )
+        if not self._output_dir_writable(check_dir, self.tr("Output folder is not writable.")):
             self.retime_button.setEnabled(True)
             return
 

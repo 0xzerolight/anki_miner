@@ -19,10 +19,8 @@ Worker contract:
 
 from __future__ import annotations
 
-import os
 from collections.abc import Callable
 from pathlib import Path
-from typing import cast
 
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -39,7 +37,6 @@ from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.constants import AUDIO_EXTENSIONS
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.qt_helpers import reveal_settings
-from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
@@ -48,7 +45,6 @@ from anki_miner.languages.registry import get_profile
 from anki_miner.services.asr import _engine
 from anki_miner.services.asr.model_availability import usable_model_installed
 from anki_miner.utils.file_pairing import FilePairMatcher
-from anki_miner.utils.file_utils import is_junk_path
 from anki_miner.utils.i18n import tr_format
 
 _MEDIA_EXTENSIONS: frozenset[str] = FilePairMatcher.VIDEO_EXTENSIONS | AUDIO_EXTENSIONS
@@ -379,14 +375,7 @@ class SubtitleCreationTab(_ToolTabBase):
         # Pre-run writable check.  When out_dir is None every output lands
         # next to its source media, so check the first source file's parent.
         check_dir = out_dir if out_dir is not None else video_files[0].parent
-        if not os.access(check_dir, os.W_OK):
-            # Its own banner, not a logged ERROR: nothing was transcribed, so
-            # the generic run_problem banner _on_log_problem raises would say
-            # "Some files could not be transcribed." about a run that never
-            # started. Same shape as download_tab's refusal.
-            self.show_screen_issue(
-                ScreenIssue(summary=self.tr("Output folder is not writable."), details=str(check_dir))
-            )
+        if not self._output_dir_writable(check_dir, self.tr("Output folder is not writable.")):
             self.generate_button.setEnabled(True)
             return
 
@@ -452,8 +441,8 @@ class SubtitleCreationTab(_ToolTabBase):
         screen-issue feedback already shown).
 
         The directory listing can stall on a network share, so only the cheap
-        ``is_dir()`` validation below runs synchronously; the scan itself is
-        dispatched via :func:`run_off_thread`.
+        ``is_dir()`` validation below runs synchronously; the scan itself goes
+        through :meth:`_scan_folder_async`.
         """
         path_str = self.folder_selector.path_or_none()
         if path_str is None:
@@ -466,30 +455,13 @@ class SubtitleCreationTab(_ToolTabBase):
             on_files([])
             return
 
-        def _scan() -> object:
-            return sorted(
-                f
-                for f in folder.iterdir()
-                if f.is_file() and f.suffix.lower() in _MEDIA_EXTENSIONS and not is_junk_path(f.name)
-            )
-
-        def _apply(result: object) -> None:
-            files = cast("list[Path]", result)
-            if not files:
-                self.show_screen_issue(
-                    ScreenIssue(summary=self.tr("No video or audio files were found in that folder."))
-                )
-                on_files([])
-                return
-            on_files(files)
-
-        def _on_error(msg: str) -> None:
-            # The path is what the user just picked; what they cannot see is
-            # why listing it failed, so that message is the Details.
-            self.show_screen_issue(ScreenIssue(summary=self.tr("That folder could not be scanned."), details=msg))
-            on_files([])
-
-        run_off_thread(self, _scan, _apply, _on_error)
+        self._scan_folder_async(
+            folder,
+            lambda f: f.suffix.lower() in _MEDIA_EXTENSIONS,
+            on_files,
+            empty_summary=self.tr("No video or audio files were found in that folder."),
+            failed_summary=self.tr("That folder could not be scanned."),
+        )
 
     # ------------------------------------------------------------------
     # Worker signal slots

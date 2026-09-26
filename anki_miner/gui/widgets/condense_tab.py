@@ -26,7 +26,6 @@ Worker contract:
 from __future__ import annotations
 
 import logging
-import os
 import shutil
 from collections.abc import Callable, Collection
 from dataclasses import replace
@@ -877,13 +876,7 @@ class CondenseTab(_ToolTabBase):
         # Pre-run writable check. When out_dir is None every output lands next to
         # its source media, so check the first item's parent.
         check_dir = out_dir if out_dir is not None else items[0].media.parent
-        if not os.access(check_dir, os.W_OK):
-            # Its own banner, not a logged ERROR: nothing was condensed, so the
-            # generic run_problem banner _on_log_problem raises would say "Some
-            # files could not be condensed." about a run that never started.
-            self.show_screen_issue(
-                ScreenIssue(summary=self.tr("Output folder is not writable."), details=str(check_dir))
-            )
+        if not self._output_dir_writable(check_dir, self.tr("Output folder is not writable.")):
             self.condense_button.setEnabled(True)
             return
 
@@ -1007,28 +1000,13 @@ class CondenseTab(_ToolTabBase):
             return
 
         # No subtitle folder → per-file auto-detection over the media folder.
-        def _scan() -> object:
-            return sorted(
-                f
-                for f in media_folder.iterdir()
-                if f.is_file() and f.suffix.lower() in CONDENSE_MEDIA_EXTENSIONS and not is_junk_path(f.name)
-            )
-
-        def _apply(result: object) -> None:
-            media_files = cast("list[Path]", result)
-            if not media_files:
-                self.show_screen_issue(ScreenIssue(summary=self.tr("No media files were found in that folder.")))
-                on_items([])
-                return
-            on_items([CondenseItem(m, None) for m in media_files])
-
-        def _on_error(msg: str) -> None:
-            # The path is what the user just picked; what they cannot see is
-            # why the scan failed, so that message is the Details.
-            self.show_screen_issue(ScreenIssue(summary=self.tr("That media folder could not be scanned."), details=msg))
-            on_items([])
-
-        run_off_thread(self, _scan, _apply, _on_error)
+        self._scan_folder_async(
+            media_folder,
+            lambda f: f.suffix.lower() in CONDENSE_MEDIA_EXTENSIONS,
+            lambda media_files: on_items([CondenseItem(m, None) for m in media_files]),
+            empty_summary=self.tr("No media files were found in that folder."),
+            failed_summary=self.tr("That media folder could not be scanned."),
+        )
 
     def _pair_folder_items_async(
         self, media_folder: Path, sub_folder: Path, on_items: Callable[[list[CondenseItem]], None]

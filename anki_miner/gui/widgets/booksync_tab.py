@@ -20,10 +20,8 @@ Guard contract:
 
 from __future__ import annotations
 
-import os
 from collections.abc import Callable
 from pathlib import Path
-from typing import cast
 
 from PyQt6.QtWidgets import QCheckBox, QFrame, QLabel, QScrollArea, QVBoxLayout, QWidget
 
@@ -32,7 +30,6 @@ from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.constants import AUDIO_EXTENSIONS
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.qt_helpers import reveal_settings
-from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout, field_label_width
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
@@ -40,7 +37,6 @@ from anki_miner.gui.workers.booksync_worker import BookSyncWorker
 from anki_miner.services.asr import _engine
 from anki_miner.services.asr.model_availability import usable_model_installed
 from anki_miner.services.reading._util import natural_sort_key
-from anki_miner.utils.file_utils import is_junk_path
 from anki_miner.utils.i18n import tr_format
 
 _AUDIO_FILE_FILTER = "Audio Files (" + " ".join(f"*{e}" for e in sorted(AUDIO_EXTENSIONS)) + ");;All Files (*)"
@@ -385,31 +381,16 @@ class BookSyncTab(_ToolTabBase):
             on_files([])
             return
 
-        def _scan() -> object:
-            # Natural order (1, 2, 10), junk and AppleDouble sidecars dropped:
-            # the files are one book read in sequence, so order is meaning.
-            return sorted(
-                (
-                    f
-                    for f in folder.iterdir()
-                    if f.is_file() and f.suffix.lower() in AUDIO_EXTENSIONS and not is_junk_path(f.name)
-                ),
-                key=lambda f: natural_sort_key(f.name),
-            )
-
-        def _apply(result: object) -> None:
-            files = cast("list[Path]", result)
-            if not files:
-                self.show_screen_issue(ScreenIssue(summary=self.tr("No audio files were found in that folder.")))
-                on_files([])
-                return
-            on_files(files)
-
-        def _on_error(msg: str) -> None:
-            self.show_screen_issue(ScreenIssue(summary=self.tr("That folder could not be scanned."), details=msg))
-            on_files([])
-
-        run_off_thread(self, _scan, _apply, _on_error)
+        # Natural order (1, 2, 10): the files are one book read in sequence, so
+        # order is meaning.
+        self._scan_folder_async(
+            folder,
+            lambda f: f.suffix.lower() in AUDIO_EXTENSIONS,
+            on_files,
+            sort_key=lambda f: natural_sort_key(f.name),
+            empty_summary=self.tr("No audio files were found in that folder."),
+            failed_summary=self.tr("That folder could not be scanned."),
+        )
 
     def _continue_sync(self, audio_files: list[Path], book: Path) -> None:
         """Check writability + the model, then start the worker."""
@@ -418,10 +399,7 @@ class BookSyncTab(_ToolTabBase):
         # Pre-run writable check. When out_dir is None every output lands
         # next to its audio, so check the first audio file's parent.
         check_dir = out_dir if out_dir is not None else audio_files[0].parent
-        if not os.access(check_dir, os.W_OK):
-            self.show_screen_issue(
-                ScreenIssue(summary=self.tr("Output folder is not writable."), details=str(check_dir))
-            )
+        if not self._output_dir_writable(check_dir, self.tr("Output folder is not writable.")):
             self.sync_button.setEnabled(True)
             return
 

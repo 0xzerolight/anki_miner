@@ -37,10 +37,11 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterator
+from typing import TYPE_CHECKING, Any, Iterator, cast
 
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
@@ -63,6 +64,7 @@ from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.workers.base_worker import SingleCallWorker
 from anki_miner.models import TerminalOutcome
+from anki_miner.utils.file_utils import is_junk_path
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
@@ -443,6 +445,74 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         self._primary_button.setEnabled(False)
         self.cancel_button.show()
         worker.start()
+
+    # ------------------------------------------------------------------
+    # Run inputs
+    # ------------------------------------------------------------------
+
+    def _scan_folder_async(
+        self,
+        folder: Path,
+        accept: Callable[[Path], bool],
+        on_files: Callable[[list[Path]], None],
+        *,
+        empty_summary: str,
+        failed_summary: str,
+        sort_key: Callable[[Path], Any] | None = None,
+    ) -> None:
+        """List *folder* off the GUI thread; hand the accepted files to *on_files*.
+
+        The listing can stall on a network share, so it runs through
+        :func:`run_off_thread` and *on_files* is called back on the GUI thread.
+        Junk entries (``._`` sidecars and the like) are dropped. No file, or a
+        listing that fails, raises a screen issue and calls ``on_files([])`` so
+        the caller can re-enable its button. A failure's message is the Details:
+        the path is what the user just picked; what they cannot see is why
+        listing it failed. Both sentences come from the caller's ``self.tr``.
+
+        Args:
+            folder: A folder the caller has already checked with ``is_dir()``.
+            accept: Whether a listed file is an input for this tool.
+            on_files: Receives the accepted files, sorted (``[]`` on refusal).
+            empty_summary: The screen issue when nothing was accepted.
+            failed_summary: The screen issue when the listing raised.
+            sort_key: Order other than plain path order (Audiobook Sync reads a
+                book in natural file-name order).
+        """
+
+        def _scan() -> object:
+            files = (f for f in folder.iterdir() if f.is_file() and accept(f) and not is_junk_path(f.name))
+            return sorted(files) if sort_key is None else sorted(files, key=sort_key)
+
+        def _apply(result: object) -> None:
+            files = cast("list[Path]", result)
+            if not files:
+                self.show_screen_issue(ScreenIssue(summary=empty_summary))
+                on_files([])
+                return
+            on_files(files)
+
+        def _on_error(msg: str) -> None:
+            self.show_screen_issue(ScreenIssue(summary=failed_summary, details=msg))
+            on_files([])
+
+        run_off_thread(self, _scan, _apply, _on_error)
+
+    def _output_dir_writable(self, check_dir: Path, summary: str) -> bool:
+        """Refuse a run whose output folder cannot be written; return whether it can.
+
+        The refusal is its own banner, not a logged ERROR: nothing was processed,
+        so the generic ``run_problem`` banner :meth:`_on_log_problem` raises would
+        describe a run that never started.
+
+        Args:
+            check_dir: The folder the run would write into.
+            summary: The refusal sentence, from the caller's ``self.tr``.
+        """
+        if os.access(check_dir, os.W_OK):
+            return True
+        self.show_screen_issue(ScreenIssue(summary=summary, details=str(check_dir)))
+        return False
 
     # ------------------------------------------------------------------
     # Worker signal slots

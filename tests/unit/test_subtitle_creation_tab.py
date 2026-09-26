@@ -39,7 +39,7 @@ _ENGINE_AVAILABLE = "anki_miner.services.asr._engine.available"
 # The model guard moved to services/asr/model_availability.py; patch the
 # canonical modules it imports, which the tab now reaches through it.
 _IS_DOWNLOADED = "anki_miner.services.asr.model_manager.is_downloaded"
-_OS_ACCESS = "anki_miner.gui.widgets.subtitle_creation_tab.os.access"
+_OS_ACCESS = "anki_miner.gui.widgets._tool_tab_base.os.access"
 _WORKER_CLS = "anki_miner.gui.widgets.subtitle_creation_tab.SubtitleGenWorker"
 _WHISPER_CPP_AVAILABLE = "anki_miner.services.asr._engine.whisper_cpp_available"
 _GGML_DOWNLOADED = "anki_miner.services.asr.ggml_model_installer.is_ggml_downloaded"
