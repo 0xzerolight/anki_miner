@@ -1464,6 +1464,30 @@ No index files are deleted.</source>
         <translation>Завершено — успешно: %1, с ошибкой: %2</translation>
     </message>
     <message>
+        <source>Mine every queued item into Anki cards.</source>
+        <translation>Майнить каждый элемент очереди в карточки Anki.</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>Очистить</translation>
+    </message>
+    <message>
+        <source>Remove every item from the queue.</source>
+        <translation>Удалить все элементы из очереди.</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation>Отменить активный запуск.</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>Прогресс</translation>
+    </message>
+    <message>
+        <source>audiobooks</source>
+        <translation>аудиокниги</translation>
+    </message>
+    <message>
         <source>Audio File:</source>
         <translation>Аудиофайл:</translation>
     </message>
@@ -1498,30 +1522,6 @@ No index files are deleted.</source>
     <message>
         <source>Show the word-selection popup for each audio file before creating cards.</source>
         <translation>Показывать всплывающее окно выбора слов для каждого аудиофайла перед созданием карточек.</translation>
-    </message>
-    <message>
-        <source>Mine every queued item into Anki cards.</source>
-        <translation>Майнить каждый элемент очереди в карточки Anki.</translation>
-    </message>
-    <message>
-        <source>Clear</source>
-        <translation>Очистить</translation>
-    </message>
-    <message>
-        <source>Remove every item from the queue.</source>
-        <translation>Удалить все элементы из очереди.</translation>
-    </message>
-    <message>
-        <source>Cancel the active run.</source>
-        <translation>Отменить активный запуск.</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>Прогресс</translation>
-    </message>
-    <message>
-        <source>audiobooks</source>
-        <translation>аудиокниги</translation>
     </message>
     <message>
         <source>Choose an audio file first.</source>
@@ -1814,12 +1814,12 @@ No index files are deleted.</source>
         <translation>Один файл</translation>
     </message>
     <message>
-        <source>Sync one audio file to the book.</source>
-        <translation>Синхронизирует один аудиофайл с книгой.</translation>
-    </message>
-    <message>
         <source>Folder</source>
         <translation>Папка</translation>
+    </message>
+    <message>
+        <source>Sync one audio file to the book.</source>
+        <translation>Синхронизирует один аудиофайл с книгой.</translation>
     </message>
     <message>
         <source>Every audio file in the folder, in file-name order, one .srt each.</source>
@@ -2776,6 +2776,26 @@ No index files are deleted.</source>
 </context><context>
     <name>CardBackfillTab</name>
     <message>
+        <source>Applying…</source>
+        <translation>Применение…</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Отмена…</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>Отменено.</translation>
+    </message>
+    <message>
+        <source>Settings changed since this scan; re-scan before applying.</source>
+        <translation>Настройки изменились после этого сканирования; выполните повторное сканирование перед применением.</translation>
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki — scanning all decks.</source>
+        <translation>Не удалось получить названия колод из Anki — сканируются все колоды.</translation>
+    </message>
+    <message>
         <source>Card Backfill</source>
         <translation>Дозаполнение карточек</translation>
     </message>
@@ -2880,10 +2900,6 @@ No index files are deleted.</source>
         <translation>Сопоставьте это поле в разделе Настройки → Карточки и Anki</translation>
     </message>
     <message>
-        <source>Couldn't fetch deck names from Anki — scanning all decks.</source>
-        <translation>Не удалось получить названия колод из Anki — сканируются все колоды.</translation>
-    </message>
-    <message>
         <source>Select at least one field group to fill.</source>
         <translation>Выберите хотя бы одну группу полей для заполнения.</translation>
     </message>
@@ -2952,10 +2968,6 @@ No index files are deleted.</source>
         <translation>Заметки, пропущенные из-за пустого поля «Выражение»: {count}.</translation>
     </message>
     <message>
-        <source>Settings changed since this scan; re-scan before applying.</source>
-        <translation>Настройки изменились после этого сканирования; выполните повторное сканирование перед применением.</translation>
-    </message>
-    <message>
         <source>Update notes in Anki?</source>
         <translation>Обновить заметки в Anki?</translation>
     </message>
@@ -2970,10 +2982,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>Card backfill</source>
         <translation>Заполнение карточек</translation>
-    </message>
-    <message>
-        <source>Applying…</source>
-        <translation>Применение…</translation>
     </message>
     <message>
         <source>Filled {fields} field(s) on {notes} note(s).</source>
@@ -2998,14 +3006,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>{count} audio file(s) could not be added to Anki; scan again to retry.</source>
         <translation>Не удалось добавить в Anki аудиофайлов: {count}; выполните сканирование ещё раз, чтобы повторить.</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Отмена…</translation>
-    </message>
-    <message>
-        <source>Cancelled.</source>
-        <translation>Отменено.</translation>
     </message>
 </context><context>
     <name>CondenseMetadataDialog</name>
@@ -3144,12 +3144,12 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>Один файл</translation>
     </message>
     <message>
-        <source>Condense one selected media file.</source>
-        <translation>Сжать один выбранный медиафайл.</translation>
-    </message>
-    <message>
         <source>Folder</source>
         <translation>Папка</translation>
+    </message>
+    <message>
+        <source>Condense one selected media file.</source>
+        <translation>Сжать один выбранный медиафайл.</translation>
     </message>
     <message>
         <source>Condense every media file in a selected folder.</source>
@@ -3716,6 +3716,26 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
 </context><context>
     <name>DeckFilterTab</name>
     <message>
+        <source>Copying…</source>
+        <translation>Копирование…</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Отмена…</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>Отменено.</translation>
+    </message>
+    <message>
+        <source>Settings changed since this scan; re-scan before copying.</source>
+        <translation>Настройки изменились после этого сканирования; выполните повторное сканирование перед копированием.</translation>
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki — is Anki running?</source>
+        <translation>Не удалось получить имена колод из Anki — Anki запущен?</translation>
+    </message>
+    <message>
         <source>Deck Filter</source>
         <translation>Фильтр колоды</translation>
     </message>
@@ -3812,10 +3832,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>Активные фильтры: {filters}.</translation>
     </message>
     <message>
-        <source>Couldn't fetch deck names from Anki — is Anki running?</source>
-        <translation>Не удалось получить имена колод из Anki — Anki запущен?</translation>
-    </message>
-    <message>
         <source>{deck} (Filtered)</source>
         <translation>{deck} (отфильтровано)</translation>
     </message>
@@ -3904,10 +3920,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>Показаны строки с начала списка (количество: {rows}).</translation>
     </message>
     <message>
-        <source>Settings changed since this scan; re-scan before copying.</source>
-        <translation>Настройки изменились после этого сканирования; выполните повторное сканирование перед копированием.</translation>
-    </message>
-    <message>
         <source>Copy notes to a new deck?</source>
         <translation>Скопировать заметки в новую колоду?</translation>
     </message>
@@ -3920,24 +3932,12 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>Копирование для фильтра колоды</translation>
     </message>
     <message>
-        <source>Copying…</source>
-        <translation>Копирование…</translation>
-    </message>
-    <message>
         <source>Copied {count} note(s) into "{deck}".</source>
         <translation>Скопировано {count} заметок в «{deck}».</translation>
     </message>
     <message>
         <source>{count} note(s) were not accepted by Anki (see log).</source>
         <translation>{count} заметок не были приняты Anki (см. журнал).</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Отмена…</translation>
-    </message>
-    <message>
-        <source>Cancelled.</source>
-        <translation>Отменено.</translation>
     </message>
 </context><context>
     <name>DeckPage</name>
@@ -4819,14 +4819,6 @@ No files on disk are deleted.</source>
         <source>Filtering against known vocabulary</source>
         <translation>Фильтрация по известной лексике</translation>
     </message>
-    <message>
-        <source>Including words already known</source>
-        <translation>Включая уже известные слова</translation>
-    </message>
-    <message>
-        <source>Known word DB synced: %1 new words (%2 total)</source>
-        <translation>БД известных слов синхронизирована: %1 новых слов (всего %2)</translation>
-    </message>
     <message numerus="yes">
         <source>%n new word(s) to mine</source>
         <translation>
@@ -4846,6 +4838,22 @@ No files on disk are deleted.</source>
             <numerusform>Все %n слова из этого запуска уже известны — новые карточки не созданы</numerusform>
             <numerusform>Все %n слов из этого запуска уже известны — новые карточки не созданы</numerusform>
         </translation>
+    </message>
+    <message numerus="yes">
+        <source>Whitelist: force-included %n word(s)</source>
+        <translation>
+            <numerusform>Белый список: принудительно включено %n слово</numerusform>
+            <numerusform>Белый список: принудительно включено %n слова</numerusform>
+            <numerusform>Белый список: принудительно включено %n слов</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Including words already known</source>
+        <translation>Включая уже известные слова</translation>
+    </message>
+    <message>
+        <source>Known word DB synced: %1 new words (%2 total)</source>
+        <translation>БД известных слов синхронизирована: %1 новых слов (всего %2)</translation>
     </message>
     <message>
         <source>Skipped %1 words missing from your offline dictionaries: %2%3</source>
@@ -4886,14 +4894,6 @@ No files on disk are deleted.</source>
     <message>
         <source>Sentence length filter: removed %1 words (cap: %2)</source>
         <translation>Фильтр длины предложения: удалено %1 слов (предел: %2)</translation>
-    </message>
-    <message numerus="yes">
-        <source>Whitelist: force-included %n word(s)</source>
-        <translation>
-            <numerusform>Белый список: принудительно включено %n слово</numerusform>
-            <numerusform>Белый список: принудительно включено %n слова</numerusform>
-            <numerusform>Белый список: принудительно включено %n слов</numerusform>
-        </translation>
     </message>
     <message>
         <source>Collapsed %1 duplicate-expression word(s)</source>
@@ -5682,14 +5682,6 @@ No files on disk are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>word-based</source>
-        <translation>на основе слов</translation>
-    </message>
-    <message>
-        <source>Level labels are shown on the card but not used for frequency filtering.</source>
-        <translation>Метки уровней показываются на карточке, но не используются для фильтрации по частотности.</translation>
-    </message>
-    <message>
         <source>%1 entries</source>
         <translation>%1 записей</translation>
     </message>
@@ -5718,6 +5710,26 @@ No files on disk are deleted.</source>
         <translation>⚠ отсутствует — повторный импорт</translation>
     </message>
     <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>Другая задача сейчас использует индексированные ресурсы — попробуйте снова, когда она завершится.</translation>
+    </message>
+    <message>
+        <source>Re-import…</source>
+        <translation>Повторный импорт…</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Удалить</translation>
+    </message>
+    <message>
+        <source>word-based</source>
+        <translation>на основе слов</translation>
+    </message>
+    <message>
+        <source>Level labels are shown on the card but not used for frequency filtering.</source>
+        <translation>Метки уровней показываются на карточке, но не используются для фильтрации по частотности.</translation>
+    </message>
+    <message>
         <source>Remove '%1' from the frequency chain?
 
 Only the index files are deleted. Adding it back needs the source file.</source>
@@ -5732,18 +5744,6 @@ No index files are deleted.</source>
         <translation>Удалить «%1» из цепочки частотности?
 
 Файлы индекса не удаляются.</translation>
-    </message>
-    <message>
-        <source>Another task is using the indexed resources — try again when it finishes.</source>
-        <translation>Другая задача сейчас использует индексированные ресурсы — попробуйте снова, когда она завершится.</translation>
-    </message>
-    <message>
-        <source>Re-import…</source>
-        <translation>Повторный импорт…</translation>
-    </message>
-    <message>
-        <source>Remove</source>
-        <translation>Удалить</translation>
     </message>
 </context><context>
     <name>GUIPresenter</name>
@@ -7578,6 +7578,18 @@ Continue?</source>
         <translation>⚠ отсутствует — повторный импорт</translation>
     </message>
     <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>Другая задача сейчас использует индексированные ресурсы — попробуйте снова, когда она завершится.</translation>
+    </message>
+    <message>
+        <source>Re-import…</source>
+        <translation>Повторный импорт…</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Удалить</translation>
+    </message>
+    <message>
         <source>Remove '%1' from the pitch accent chain?
 
 Only the index files are deleted. Adding it back needs the source file.</source>
@@ -7592,18 +7604,6 @@ No index files are deleted.</source>
         <translation>Удалить «%1» из цепочки тонального ударения?
 
 Файлы индекса не удаляются.</translation>
-    </message>
-    <message>
-        <source>Another task is using the indexed resources — try again when it finishes.</source>
-        <translation>Другая задача сейчас использует индексированные ресурсы — попробуйте снова, когда она завершится.</translation>
-    </message>
-    <message>
-        <source>Re-import…</source>
-        <translation>Повторный импорт…</translation>
-    </message>
-    <message>
-        <source>Remove</source>
-        <translation>Удалить</translation>
     </message>
 </context><context>
     <name>PlaylistAddController</name>
@@ -10301,12 +10301,12 @@ Your installed resources and your theme are kept.</source>
         <translation>Один файл</translation>
     </message>
     <message>
-        <source>Transcribe one selected video or audio file.</source>
-        <translation>Транскрибировать один выбранный видео- или аудиофайл.</translation>
-    </message>
-    <message>
         <source>Folder</source>
         <translation>Папка</translation>
+    </message>
+    <message>
+        <source>Transcribe one selected video or audio file.</source>
+        <translation>Транскрибировать один выбранный видео- или аудиофайл.</translation>
     </message>
     <message>
         <source>Transcribe every video or audio file in a selected folder.</source>
@@ -10555,12 +10555,12 @@ Your installed resources and your theme are kept.</source>
         <translation>Один файл</translation>
     </message>
     <message>
-        <source>Retime one subtitle file against one video.</source>
-        <translation>Переназначить тайминг одного файла субтитров по одному видео.</translation>
-    </message>
-    <message>
         <source>Folder</source>
         <translation>Папка</translation>
+    </message>
+    <message>
+        <source>Retime one subtitle file against one video.</source>
+        <translation>Переназначить тайминг одного файла субтитров по одному видео.</translation>
     </message>
     <message>
         <source>Retime a folder of subtitles, paired to videos by episode number.</source>
@@ -11901,6 +11901,30 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>Завершено — успешно: %1, с ошибкой: %2</translation>
     </message>
     <message>
+        <source>Check every link in the box, then mine every Ready video.</source>
+        <translation>Проверить каждую ссылку в поле, затем майнить каждое видео со статусом «Готово».</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>Очистить</translation>
+    </message>
+    <message>
+        <source>Remove every item from the queue.</source>
+        <translation>Удалить все элементы из очереди.</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation>Отменить активный запуск.</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>Прогресс</translation>
+    </message>
+    <message>
+        <source>videos</source>
+        <translation>видео</translation>
+    </message>
+    <message>
         <source>yt-dlp is not installed, so YouTube mining cannot run.</source>
         <translation>yt-dlp не установлен, поэтому майнинг YouTube выполнить нельзя.</translation>
     </message>
@@ -11955,30 +11979,6 @@ Sort by it to work through a long recording in order — then highlight the rows
     <message>
         <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
         <translation>Синхронизировать субтитры YouTube со звуковой дорожкой видео перед майнингом. Не применяется, если субтитры были расшифрованы локально.</translation>
-    </message>
-    <message>
-        <source>Check every link in the box, then mine every Ready video.</source>
-        <translation>Проверить каждую ссылку в поле, затем майнить каждое видео со статусом «Готово».</translation>
-    </message>
-    <message>
-        <source>Clear</source>
-        <translation>Очистить</translation>
-    </message>
-    <message>
-        <source>Remove every item from the queue.</source>
-        <translation>Удалить все элементы из очереди.</translation>
-    </message>
-    <message>
-        <source>Cancel the active run.</source>
-        <translation>Отменить активный запуск.</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>Прогресс</translation>
-    </message>
-    <message>
-        <source>videos</source>
-        <translation>видео</translation>
     </message>
     <message>
         <source>Some lines are not valid URLs.</source>

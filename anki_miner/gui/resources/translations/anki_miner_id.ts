@@ -1458,6 +1458,30 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Selesai — %1 berhasil, %2 gagal</translation>
     </message>
     <message>
+        <source>Mine every queued item into Anki cards.</source>
+        <translation>Mining setiap item dalam antrean menjadi kartu Anki.</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>Bersihkan</translation>
+    </message>
+    <message>
+        <source>Remove every item from the queue.</source>
+        <translation>Hapus setiap item dari antrean.</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation>Batalkan proses yang aktif.</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>Kemajuan</translation>
+    </message>
+    <message>
+        <source>audiobooks</source>
+        <translation>buku audio</translation>
+    </message>
+    <message>
         <source>Audio File:</source>
         <translation>Berkas Audio:</translation>
     </message>
@@ -1492,30 +1516,6 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <message>
         <source>Show the word-selection popup for each audio file before creating cards.</source>
         <translation>Tampilkan popup pemilihan kata untuk setiap berkas audio sebelum membuat kartu.</translation>
-    </message>
-    <message>
-        <source>Mine every queued item into Anki cards.</source>
-        <translation>Mining setiap item dalam antrean menjadi kartu Anki.</translation>
-    </message>
-    <message>
-        <source>Clear</source>
-        <translation>Bersihkan</translation>
-    </message>
-    <message>
-        <source>Remove every item from the queue.</source>
-        <translation>Hapus setiap item dari antrean.</translation>
-    </message>
-    <message>
-        <source>Cancel the active run.</source>
-        <translation>Batalkan proses yang aktif.</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>Kemajuan</translation>
-    </message>
-    <message>
-        <source>audiobooks</source>
-        <translation>buku audio</translation>
     </message>
     <message>
         <source>Choose an audio file first.</source>
@@ -1806,12 +1806,12 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Berkas Tunggal</translation>
     </message>
     <message>
-        <source>Sync one audio file to the book.</source>
-        <translation>Sinkronkan satu berkas audio dengan buku.</translation>
-    </message>
-    <message>
         <source>Folder</source>
         <translation>Folder</translation>
+    </message>
+    <message>
+        <source>Sync one audio file to the book.</source>
+        <translation>Sinkronkan satu berkas audio dengan buku.</translation>
     </message>
     <message>
         <source>Every audio file in the folder, in file-name order, one .srt each.</source>
@@ -2768,6 +2768,26 @@ Tidak ada berkas indeks yang dihapus.</translation>
 </context><context>
     <name>CardBackfillTab</name>
     <message>
+        <source>Applying…</source>
+        <translation>Menerapkan…</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Membatalkan…</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>Dibatalkan.</translation>
+    </message>
+    <message>
+        <source>Settings changed since this scan; re-scan before applying.</source>
+        <translation>Pengaturan berubah sejak pemindaian ini; pindai ulang sebelum menerapkan.</translation>
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki — scanning all decks.</source>
+        <translation>Tidak dapat mengambil nama dek dari Anki — memindai semua dek.</translation>
+    </message>
+    <message>
         <source>Card Backfill</source>
         <translation>Pengisian Bidang Kartu</translation>
     </message>
@@ -2872,10 +2892,6 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Petakan bidang ini di Pengaturan → Kartu &amp; Anki</translation>
     </message>
     <message>
-        <source>Couldn't fetch deck names from Anki — scanning all decks.</source>
-        <translation>Tidak dapat mengambil nama dek dari Anki — memindai semua dek.</translation>
-    </message>
-    <message>
         <source>Select at least one field group to fill.</source>
         <translation>Pilih setidaknya satu kelompok bidang untuk diisi.</translation>
     </message>
@@ -2944,10 +2960,6 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>{count} catatan dilewati — bidang Ekspresi kosong.</translation>
     </message>
     <message>
-        <source>Settings changed since this scan; re-scan before applying.</source>
-        <translation>Pengaturan berubah sejak pemindaian ini; pindai ulang sebelum menerapkan.</translation>
-    </message>
-    <message>
         <source>Update notes in Anki?</source>
         <translation>Perbarui catatan di Anki?</translation>
     </message>
@@ -2962,10 +2974,6 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
     <message>
         <source>Card backfill</source>
         <translation>Pengisian ulang kartu</translation>
-    </message>
-    <message>
-        <source>Applying…</source>
-        <translation>Menerapkan…</translation>
     </message>
     <message>
         <source>Filled {fields} field(s) on {notes} note(s).</source>
@@ -2990,14 +2998,6 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
     <message>
         <source>{count} audio file(s) could not be added to Anki; scan again to retry.</source>
         <translation>{count} berkas audio tidak dapat ditambahkan ke Anki; pindai lagi untuk mencoba ulang.</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Membatalkan…</translation>
-    </message>
-    <message>
-        <source>Cancelled.</source>
-        <translation>Dibatalkan.</translation>
     </message>
 </context><context>
     <name>CondenseMetadataDialog</name>
@@ -3136,12 +3136,12 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
         <translation>Berkas Tunggal</translation>
     </message>
     <message>
-        <source>Condense one selected media file.</source>
-        <translation>Padatkan satu berkas media yang dipilih.</translation>
-    </message>
-    <message>
         <source>Folder</source>
         <translation>Folder</translation>
+    </message>
+    <message>
+        <source>Condense one selected media file.</source>
+        <translation>Padatkan satu berkas media yang dipilih.</translation>
     </message>
     <message>
         <source>Condense every media file in a selected folder.</source>
@@ -3706,6 +3706,26 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
 </context><context>
     <name>DeckFilterTab</name>
     <message>
+        <source>Copying…</source>
+        <translation>Menyalin…</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Membatalkan…</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>Dibatalkan.</translation>
+    </message>
+    <message>
+        <source>Settings changed since this scan; re-scan before copying.</source>
+        <translation>Pengaturan berubah sejak pemindaian ini; pindai ulang sebelum menyalin.</translation>
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki — is Anki running?</source>
+        <translation>Tidak dapat mengambil nama dek dari Anki — apakah Anki berjalan?</translation>
+    </message>
+    <message>
         <source>Deck Filter</source>
         <translation>Filter Dek</translation>
     </message>
@@ -3802,10 +3822,6 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
         <translation>Filter aktif: {filters}.</translation>
     </message>
     <message>
-        <source>Couldn't fetch deck names from Anki — is Anki running?</source>
-        <translation>Tidak dapat mengambil nama dek dari Anki — apakah Anki berjalan?</translation>
-    </message>
-    <message>
         <source>{deck} (Filtered)</source>
         <translation>{deck} (Difilter)</translation>
     </message>
@@ -3894,10 +3910,6 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
         <translation>Menampilkan {rows} baris pertama.</translation>
     </message>
     <message>
-        <source>Settings changed since this scan; re-scan before copying.</source>
-        <translation>Pengaturan berubah sejak pemindaian ini; pindai ulang sebelum menyalin.</translation>
-    </message>
-    <message>
         <source>Copy notes to a new deck?</source>
         <translation>Salin catatan ke dek baru?</translation>
     </message>
@@ -3910,24 +3922,12 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
         <translation>Penyalinan filter dek</translation>
     </message>
     <message>
-        <source>Copying…</source>
-        <translation>Menyalin…</translation>
-    </message>
-    <message>
         <source>Copied {count} note(s) into "{deck}".</source>
         <translation>Menyalin {count} catatan ke dalam "{deck}".</translation>
     </message>
     <message>
         <source>{count} note(s) were not accepted by Anki (see log).</source>
         <translation>{count} catatan tidak diterima oleh Anki (lihat log).</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Membatalkan…</translation>
-    </message>
-    <message>
-        <source>Cancelled.</source>
-        <translation>Dibatalkan.</translation>
     </message>
 </context><context>
     <name>DeckPage</name>
@@ -4807,14 +4807,6 @@ Tidak ada berkas di disk yang dihapus.</translation>
         <source>Filtering against known vocabulary</source>
         <translation>Memfilter berdasarkan kosakata yang dikenal</translation>
     </message>
-    <message>
-        <source>Including words already known</source>
-        <translation>Termasuk kata yang sudah dikenal</translation>
-    </message>
-    <message>
-        <source>Known word DB synced: %1 new words (%2 total)</source>
-        <translation>DB kata yang dikenal disinkronkan: %1 kata baru (%2 total)</translation>
-    </message>
     <message numerus="yes">
         <source>%n new word(s) to mine</source>
         <translation>
@@ -4830,6 +4822,20 @@ Tidak ada berkas di disk yang dihapus.</translation>
         <translation>
             <numerusform>Semua %n kata dari proses ini sudah dikenal — tidak ada kartu baru yang dibuat</numerusform>
         </translation>
+    </message>
+    <message numerus="yes">
+        <source>Whitelist: force-included %n word(s)</source>
+        <translation>
+            <numerusform>Daftar putih: %n kata dipaksa disertakan</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Including words already known</source>
+        <translation>Termasuk kata yang sudah dikenal</translation>
+    </message>
+    <message>
+        <source>Known word DB synced: %1 new words (%2 total)</source>
+        <translation>DB kata yang dikenal disinkronkan: %1 kata baru (%2 total)</translation>
     </message>
     <message>
         <source>Skipped %1 words missing from your offline dictionaries: %2%3</source>
@@ -4870,12 +4876,6 @@ Tidak ada berkas di disk yang dihapus.</translation>
     <message>
         <source>Sentence length filter: removed %1 words (cap: %2)</source>
         <translation>Filter panjang kalimat: menghapus %1 kata (batas: %2)</translation>
-    </message>
-    <message numerus="yes">
-        <source>Whitelist: force-included %n word(s)</source>
-        <translation>
-            <numerusform>Daftar putih: %n kata dipaksa disertakan</numerusform>
-        </translation>
     </message>
     <message>
         <source>Collapsed %1 duplicate-expression word(s)</source>
@@ -5650,14 +5650,6 @@ Tidak ada berkas di disk yang dihapus.</translation>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>word-based</source>
-        <translation>berbasis kata</translation>
-    </message>
-    <message>
-        <source>Level labels are shown on the card but not used for frequency filtering.</source>
-        <translation>Label tingkat ditampilkan di kartu tetapi tidak digunakan untuk pemfilteran frekuensi.</translation>
-    </message>
-    <message>
         <source>%1 entries</source>
         <translation>%1 entri</translation>
     </message>
@@ -5686,6 +5678,26 @@ Tidak ada berkas di disk yang dihapus.</translation>
         <translation>⚠ hilang — impor ulang</translation>
     </message>
     <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>Tugas lain sedang menggunakan sumber daya terindeks — coba lagi setelah selesai.</translation>
+    </message>
+    <message>
+        <source>Re-import…</source>
+        <translation>Impor ulang…</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Hapus</translation>
+    </message>
+    <message>
+        <source>word-based</source>
+        <translation>berbasis kata</translation>
+    </message>
+    <message>
+        <source>Level labels are shown on the card but not used for frequency filtering.</source>
+        <translation>Label tingkat ditampilkan di kartu tetapi tidak digunakan untuk pemfilteran frekuensi.</translation>
+    </message>
+    <message>
         <source>Remove '%1' from the frequency chain?
 
 Only the index files are deleted. Adding it back needs the source file.</source>
@@ -5700,18 +5712,6 @@ No index files are deleted.</source>
         <translation>Hapus '%1' dari rantai frekuensi?
 
 Tidak ada berkas indeks yang dihapus.</translation>
-    </message>
-    <message>
-        <source>Another task is using the indexed resources — try again when it finishes.</source>
-        <translation>Tugas lain sedang menggunakan sumber daya terindeks — coba lagi setelah selesai.</translation>
-    </message>
-    <message>
-        <source>Re-import…</source>
-        <translation>Impor ulang…</translation>
-    </message>
-    <message>
-        <source>Remove</source>
-        <translation>Hapus</translation>
     </message>
 </context><context>
     <name>GUIPresenter</name>
@@ -7544,6 +7544,18 @@ Lanjutkan?</translation>
         <translation>⚠ hilang — impor ulang</translation>
     </message>
     <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>Tugas lain sedang menggunakan sumber daya terindeks — coba lagi setelah selesai.</translation>
+    </message>
+    <message>
+        <source>Re-import…</source>
+        <translation>Impor ulang…</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Hapus</translation>
+    </message>
+    <message>
         <source>Remove '%1' from the pitch accent chain?
 
 Only the index files are deleted. Adding it back needs the source file.</source>
@@ -7558,18 +7570,6 @@ No index files are deleted.</source>
         <translation>Hapus '%1' dari rantai aksen nada?
 
 Tidak ada berkas indeks yang dihapus.</translation>
-    </message>
-    <message>
-        <source>Another task is using the indexed resources — try again when it finishes.</source>
-        <translation>Tugas lain sedang menggunakan sumber daya terindeks — coba lagi setelah selesai.</translation>
-    </message>
-    <message>
-        <source>Re-import…</source>
-        <translation>Impor ulang…</translation>
-    </message>
-    <message>
-        <source>Remove</source>
-        <translation>Hapus</translation>
     </message>
 </context><context>
     <name>PlaylistAddController</name>
@@ -10261,12 +10261,12 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
         <translation>Berkas Tunggal</translation>
     </message>
     <message>
-        <source>Transcribe one selected video or audio file.</source>
-        <translation>Transkripsikan satu berkas video atau audio yang dipilih.</translation>
-    </message>
-    <message>
         <source>Folder</source>
         <translation>Folder</translation>
+    </message>
+    <message>
+        <source>Transcribe one selected video or audio file.</source>
+        <translation>Transkripsikan satu berkas video atau audio yang dipilih.</translation>
     </message>
     <message>
         <source>Transcribe every video or audio file in a selected folder.</source>
@@ -10515,12 +10515,12 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
         <translation>Berkas Tunggal</translation>
     </message>
     <message>
-        <source>Retime one subtitle file against one video.</source>
-        <translation>Sesuaikan waktu satu berkas subtitel terhadap satu video.</translation>
-    </message>
-    <message>
         <source>Folder</source>
         <translation>Folder</translation>
+    </message>
+    <message>
+        <source>Retime one subtitle file against one video.</source>
+        <translation>Sesuaikan waktu satu berkas subtitel terhadap satu video.</translation>
     </message>
     <message>
         <source>Retime a folder of subtitles, paired to videos by episode number.</source>
@@ -11861,6 +11861,30 @@ Urutkan berdasarkan kolom ini untuk menelusuri rekaman panjang secara berurutan 
         <translation>Selesai — %1 berhasil, %2 gagal</translation>
     </message>
     <message>
+        <source>Check every link in the box, then mine every Ready video.</source>
+        <translation>Periksa setiap tautan di kotak, lalu mining setiap video Siap.</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>Bersihkan</translation>
+    </message>
+    <message>
+        <source>Remove every item from the queue.</source>
+        <translation>Hapus setiap item dari antrean.</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation>Batalkan proses yang aktif.</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>Progres</translation>
+    </message>
+    <message>
+        <source>videos</source>
+        <translation>video</translation>
+    </message>
+    <message>
         <source>yt-dlp is not installed, so YouTube mining cannot run.</source>
         <translation>yt-dlp belum terpasang, sehingga mining YouTube tidak dapat dijalankan.</translation>
     </message>
@@ -11915,30 +11939,6 @@ Urutkan berdasarkan kolom ini untuk menelusuri rekaman panjang secara berurutan 
     <message>
         <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
         <translation>Atur ulang waktu teks YouTube berdasarkan audio video sebelum mining. Diabaikan jika subtitel ditranskripsi secara lokal.</translation>
-    </message>
-    <message>
-        <source>Check every link in the box, then mine every Ready video.</source>
-        <translation>Periksa setiap tautan di kotak, lalu mining setiap video Siap.</translation>
-    </message>
-    <message>
-        <source>Clear</source>
-        <translation>Bersihkan</translation>
-    </message>
-    <message>
-        <source>Remove every item from the queue.</source>
-        <translation>Hapus setiap item dari antrean.</translation>
-    </message>
-    <message>
-        <source>Cancel the active run.</source>
-        <translation>Batalkan proses yang aktif.</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>Progres</translation>
-    </message>
-    <message>
-        <source>videos</source>
-        <translation>video</translation>
     </message>
     <message>
         <source>Some lines are not valid URLs.</source>
