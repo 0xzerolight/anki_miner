@@ -835,11 +835,7 @@ class AnkiService:
             note_type=self.config.anki_note_type,
         )
         if not word_data_list:
-            self.last_created_note_ids = []
-            self.last_created_mined_forms = []
-            self.last_created_lemmas = []
-            self.last_skipped_duplicates = 0
-            self.last_media_store_failures = 0
+            self._reset_last_run()
             log_summary(
                 logger,
                 "Anki create cards done",
@@ -855,11 +851,7 @@ class AnkiService:
             )
             return []
 
-        self.last_created_note_ids = []
-        self.last_created_mined_forms = []
-        self.last_created_lemmas = []
-        self.last_skipped_duplicates = 0
-        self.last_media_store_failures = 0
+        self._reset_last_run()
         skipped_duplicates = 0
         probed_duplicates = 0
         all_created_ids: list[int] = []
@@ -872,28 +864,7 @@ class AnkiService:
 
         excluded_deck_admission = bool(self.config.excluded_decks and not self.config.allow_duplicate_cards)
         if excluded_deck_admission:
-            # The normal Phase-2 admission query deliberately excludes these
-            # decks. Reuse that same answer here, then allow admitted notes past
-            # Anki's collection-wide duplicate rule. Keep a local seen set so
-            # one run still submits a given first field at most once.
-            # This answer authorizes bypassing Anki's collection-wide duplicate
-            # rule. An uncertain answer must fail closed, unlike Phase 2's
-            # best-effort filtering preview.
-            existing = self.get_existing_vocabulary(allow_degraded=False)
-            seen: set[str] = set()
-            candidate_payloads: list[CardPayload] = []
-            for item in word_data_list:
-                note = self._build_note(item, set()).note
-                fields = note.get("fields") or {}
-                first_value = next(iter(fields.values()), "")
-                key = self._dedup_key(first_value if isinstance(first_value, str) else "")
-                duplicate = bool(key and (key in existing or key in seen))
-                if duplicate:
-                    skipped_duplicates += 1
-                else:
-                    candidate_payloads.append(item)
-                if key:
-                    seen.add(key)
+            candidate_payloads, skipped_duplicates = self._admit_against_excluded_decks(word_data_list)
         else:
             candidate_payloads = list(word_data_list)
         probed_duplicates = skipped_duplicates
@@ -982,44 +953,10 @@ class AnkiService:
                 submit_notes = notes
                 submit_payloads = batch
 
-                # Submit only the non-duplicates. `post_action` raises
-                # `AnkiConnectionError` for connection failures, transport errors,
-                # and AnkiConnect-side error payloads. `_expect_list` enforces the
-                # addNotes contract: a list of exactly len(submit_notes) slots,
-                # each an id (int) or null (None); length alignment is load-bearing
-                # for the positional zip below.
-                if submit_notes:
-                    # Note-write provenance (D30). From the moment the request
-                    # leaves this process until a VALIDATED response comes back,
-                    # the honest answer is "we cannot tell": a dropped
-                    # connection or an unreadable body may well have created the
-                    # notes. Anything that escapes between these two lines
-                    # therefore leaves NOTE_WRITE_UNCERTAIN behind, which blocks
-                    # automatic retry. Only the validated response downgrades it
-                    # again — and only back to what held BEFORE this batch, so a
-                    # later all-duplicate batch cannot erase an earlier batch's
-                    # confirmed write.
-                    state_before_request = self.anki_write_state
-                    self.anki_write_state = AnkiWriteState.NOTE_WRITE_UNCERTAIN
-                    logger.debug("Anki write state: %s", self.anki_write_state.value)
-                    note_ids = _expect_list(
-                        post_action(
-                            self.config.ankiconnect_url,
-                            "addNotes",
-                            params={"notes": submit_notes},
-                            timeout=60,
-                        ),
-                        "addNotes",
-                        len(submit_notes),
-                        (int, type(None)),
-                    )
-                    if any(nid is not None for nid in note_ids):
-                        self.anki_write_state = AnkiWriteState.NOTE_WRITE_CONFIRMED
-                    else:
-                        self.anki_write_state = state_before_request
-                    logger.debug("Anki write state: %s", self.anki_write_state.value)
-                else:
-                    note_ids = []
+                # Submit only the non-duplicates; the slots align positionally
+                # with submit_notes (see _submit_add_notes), which the zips
+                # below rely on.
+                note_ids = self._submit_add_notes(submit_notes) if submit_notes else []
 
                 # Count successful creations (non-null IDs). A null slot here is a
                 # note the probe had cleared that addNotes still didn't create — a
@@ -1132,6 +1069,84 @@ class AnkiService:
         )
         return list(all_created_ids)
 
+    def _reset_last_run(self) -> None:
+        """Clear the per-call receipts before a new ``create_cards_batch`` run."""
+        self.last_created_note_ids = []
+        self.last_created_mined_forms = []
+        self.last_created_lemmas = []
+        self.last_skipped_duplicates = 0
+        self.last_media_store_failures = 0
+
+    def _admit_against_excluded_decks(self, word_data_list: list[CardPayload]) -> tuple[list[CardPayload], int]:
+        """Admit payloads whose first field is absent from the non-excluded collection.
+
+        Returns the admitted payloads, in order, and how many were refused.
+        """
+        # The normal Phase-2 admission query deliberately excludes these
+        # decks. Reuse that same answer here, then allow admitted notes past
+        # Anki's collection-wide duplicate rule. Keep a local seen set so
+        # one run still submits a given first field at most once.
+        # This answer authorizes bypassing Anki's collection-wide duplicate
+        # rule. An uncertain answer must fail closed, unlike Phase 2's
+        # best-effort filtering preview.
+        existing = self.get_existing_vocabulary(allow_degraded=False)
+        seen: set[str] = set()
+        candidate_payloads: list[CardPayload] = []
+        skipped_duplicates = 0
+        for item in word_data_list:
+            note = self._build_note(item, set()).note
+            fields = note.get("fields") or {}
+            first_value = next(iter(fields.values()), "")
+            key = self._dedup_key(first_value if isinstance(first_value, str) else "")
+            duplicate = bool(key and (key in existing or key in seen))
+            if duplicate:
+                skipped_duplicates += 1
+            else:
+                candidate_payloads.append(item)
+            if key:
+                seen.add(key)
+        return candidate_payloads, skipped_duplicates
+
+    def _submit_add_notes(self, notes: list[dict]) -> list[int | None]:
+        """POST one ``addNotes`` request under the D30 write-state guard.
+
+        ``post_action`` raises ``AnkiConnectionError`` for connection failures,
+        transport errors, and AnkiConnect-side error payloads. ``_expect_list``
+        enforces the addNotes contract: a list of exactly ``len(notes)`` slots,
+        each an id (int) or null (None). Callers zip the slots positionally
+        against ``notes``, so that length check is load-bearing.
+        """
+        # Note-write provenance (D30). From the moment the request
+        # leaves this process until a VALIDATED response comes back,
+        # the honest answer is "we cannot tell": a dropped
+        # connection or an unreadable body may well have created the
+        # notes. Anything that escapes between these two lines
+        # therefore leaves NOTE_WRITE_UNCERTAIN behind, which blocks
+        # automatic retry. Only the validated response downgrades it
+        # again — and only back to what held BEFORE this batch, so a
+        # later all-duplicate batch cannot erase an earlier batch's
+        # confirmed write.
+        state_before_request = self.anki_write_state
+        self.anki_write_state = AnkiWriteState.NOTE_WRITE_UNCERTAIN
+        logger.debug("Anki write state: %s", self.anki_write_state.value)
+        note_ids = _expect_list(
+            post_action(
+                self.config.ankiconnect_url,
+                "addNotes",
+                params={"notes": notes},
+                timeout=60,
+            ),
+            "addNotes",
+            len(notes),
+            (int, type(None)),
+        )
+        if any(nid is not None for nid in note_ids):
+            self.anki_write_state = AnkiWriteState.NOTE_WRITE_CONFIRMED
+        else:
+            self.anki_write_state = state_before_request
+        logger.debug("Anki write state: %s", self.anki_write_state.value)
+        return note_ids
+
     def add_notes_raw(self, notes: list[dict]) -> list[int | None]:
         """POST caller-built note dicts via ``addNotes`` in chunks of 100.
 
@@ -1151,27 +1166,7 @@ class AnkiService:
         results: list[int | None] = []
         batch_size = 100
         for i in range(0, len(notes), batch_size):
-            chunk = notes[i : i + batch_size]
-            state_before_request = self.anki_write_state
-            self.anki_write_state = AnkiWriteState.NOTE_WRITE_UNCERTAIN
-            logger.debug("Anki write state: %s", self.anki_write_state.value)
-            note_ids = _expect_list(
-                post_action(
-                    self.config.ankiconnect_url,
-                    "addNotes",
-                    params={"notes": chunk},
-                    timeout=60,
-                ),
-                "addNotes",
-                len(chunk),
-                (int, type(None)),
-            )
-            if any(nid is not None for nid in note_ids):
-                self.anki_write_state = AnkiWriteState.NOTE_WRITE_CONFIRMED
-            else:
-                self.anki_write_state = state_before_request
-            logger.debug("Anki write state: %s", self.anki_write_state.value)
-            results.extend(note_ids)
+            results.extend(self._submit_add_notes(notes[i : i + batch_size]))
         log_summary(
             logger,
             "Anki add raw notes done",

@@ -2297,3 +2297,145 @@ class TestDefinitionsBatchReceipt:
         assert "dict_id=slot" in failures[0].getMessage()
         assert f"db={db}" in failures[0].getMessage()
         assert "RuntimeError: batch boom" in failures[0].getMessage()
+
+
+class TestEveryProviderBoundaryNamesTheSlot:
+    """services-05: the glossary, in-app lookup and probe boundaries log through
+    ``_log_provider_failure`` like the definition path does, so each failure
+    names its dictionary slot and keeps the traceback of an unexpected error."""
+
+    _LOGGER = "anki_miner.services.definition_service"
+
+    @staticmethod
+    def _slot(provider, db):
+        provider.dict_id = "slot"
+        provider._db_path = db
+        return provider
+
+    @staticmethod
+    def _per_word_provider(name, *extra):
+        p = MagicMock(
+            spec=["name", "is_online", "is_available", "lookup", "load", "close", "dict_id", "_db_path", *extra]
+        )
+        p.name = name
+        p.is_online = False
+        p.is_available.return_value = True
+        p.load.return_value = True
+        p.lookup.return_value = None
+        return p
+
+    @staticmethod
+    def _failures(caplog, marker):
+        return [r for r in caplog.records if marker in r.getMessage()]
+
+    @staticmethod
+    def _assert_names_slot(record, db, error):
+        message = record.getMessage()
+        assert "dict_id=slot" in message
+        assert f"db={db}" in message
+        assert error in message
+        assert record.exc_info is not None
+
+    def test_exact_term_sequences(self, test_config, caplog, tmp_path):
+        import logging
+
+        db = tmp_path / "slot" / "index.sqlite"
+        p = self._slot(make_batch_offline_provider("Seq"), db)
+        p.exact_term_sequences.side_effect = RuntimeError("seq boom")
+        service = DefinitionService(test_config, providers=[p])
+
+        with caplog.at_level(logging.WARNING, logger=self._LOGGER):
+            assert service.offline_term_identities([("x", "y")]) == {}
+
+        [record] = self._failures(caplog, "Provider 'Seq' raised during exact_term_sequences;")
+        self._assert_names_slot(record, db, "RuntimeError: seq boom")
+
+    def test_attest_quality(self, test_config, caplog, tmp_path):
+        import logging
+
+        db = tmp_path / "slot" / "index.sqlite"
+        p = self._slot(make_batch_offline_provider("Attest"), db)
+        p.commonness_aware = True
+        p.attest_quality.side_effect = RuntimeError("attest boom")
+        service = DefinitionService(test_config, providers=[p])
+
+        with caplog.at_level(logging.WARNING, logger=self._LOGGER):
+            assert service.offline_term_commonness(["x"]) == {"x": False}
+
+        [record] = self._failures(caplog, "Provider 'Attest' raised during attest_quality;")
+        self._assert_names_slot(record, db, "RuntimeError: attest boom")
+
+    def test_glossaries_lookup_many(self, test_config, caplog, tmp_path):
+        import logging
+
+        db = tmp_path / "slot" / "index.sqlite"
+        p = self._slot(make_batch_offline_provider("GlossBatch"), db)
+        p.lookup_many.side_effect = RuntimeError("gloss batch boom")
+        service = DefinitionService(test_config, providers=[p])
+
+        with caplog.at_level(logging.WARNING, logger=self._LOGGER):
+            assert service.get_glossaries_batch([("x", None)]) == [None]
+
+        [record] = self._failures(caplog, "Provider 'GlossBatch' raised during lookup_many;")
+        self._assert_names_slot(record, db, "RuntimeError: gloss batch boom")
+
+    def test_glossaries_offline_per_word_lookup(self, test_config, caplog, tmp_path):
+        import logging
+
+        db = tmp_path / "slot" / "index.sqlite"
+        p = self._slot(self._per_word_provider("GlossWord"), db)
+        p.lookup.side_effect = RuntimeError("gloss word boom")
+        service = DefinitionService(test_config, providers=[p])
+
+        with caplog.at_level(logging.WARNING, logger=self._LOGGER):
+            assert service.get_glossaries_batch([("x", None)]) == [None]
+
+        [record] = self._failures(caplog, "Provider 'GlossWord' raised during lookup of 'x';")
+        self._assert_names_slot(record, db, "RuntimeError: gloss word boom")
+
+    def test_glossaries_online_fallback_lookup(self, test_config, caplog):
+        import logging
+
+        offline = make_provider("Off", return_value=None)
+        online = make_provider("Jisho")
+        online.is_online = True
+        online.lookup.side_effect = RuntimeError("online boom")
+        service = DefinitionService(test_config, providers=[offline, online])
+
+        with caplog.at_level(logging.WARNING, logger=self._LOGGER):
+            assert service.get_glossaries_batch([("x", None)]) == [None]
+
+        [record] = self._failures(caplog, "Provider 'Jisho' raised during lookup of 'x';")
+        message = record.getMessage()
+        assert "dict_id=- db=- RuntimeError: online boom" in message
+        assert record.exc_info is not None
+
+    def test_lookup_all_offline_exact_lookup(self, test_config, caplog, tmp_path):
+        import logging
+
+        db = tmp_path / "slot" / "index.sqlite"
+        p = self._slot(self._per_word_provider("Pane"), db)
+        p.lookup.side_effect = RuntimeError("pane boom")
+        service = DefinitionService(test_config, providers=[p])
+
+        with caplog.at_level(logging.WARNING, logger=self._LOGGER):
+            assert service.lookup_all_offline("x") == []
+
+        [record] = self._failures(caplog, "Provider 'Pane' raised during lookup of 'x';")
+        self._assert_names_slot(record, db, "RuntimeError: pane boom")
+
+    def test_lookup_all_offline_fallback(self, test_config, caplog, tmp_path):
+        import logging
+
+        db = tmp_path / "slot" / "index.sqlite"
+        p = self._slot(self._per_word_provider("PaneFallback", "lookup_fallback"), db)
+        p.lookup_fallback.side_effect = RuntimeError("fallback boom")
+        service = DefinitionService(test_config, providers=[p])
+
+        with caplog.at_level(logging.WARNING, logger=self._LOGGER):
+            assert service.lookup_all_offline("食べさせられた") == []
+
+        records = self._failures(caplog, "Provider 'PaneFallback' raised during lookup_fallback of '")
+        assert records
+        for record in records:
+            self._assert_names_slot(record, db, "RuntimeError: fallback boom")
