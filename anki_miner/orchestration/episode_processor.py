@@ -1079,205 +1079,9 @@ class EpisodeProcessor:
             forced_include, unknown_words = self.word_filter.partition_whitelisted(unknown_words, whitelist_service)
             counts.whitelist_force_includes = len(forced_include)
 
-        # Frequency rank band. Gate on an actually-loaded NUMERIC frequency
-        # source — NOT just a configured bound, and NOT is_available(). With
-        # no source (or only a categorical one, e.g. a JLPT-band dict whose rows
-        # all carry CATEGORICAL_RANK), no word gets a numeric rank, so every word
-        # keeps frequency_rank=None and filter_by_frequency drops every None-ranked
-        # word (word_filter.py) — a configured cutoff would then silently wipe 100%
-        # of words and produce zero cards. has_numeric_source() is True only when a
-        # non-categorical source is loaded, which is the sole case the cutoff can
-        # meaningfully apply.
-        freq_low = self.config.min_frequency_rank
-        freq_high = self.config.max_frequency_rank
-        if (
-            (freq_low > 0 or freq_high > 0)
-            and self.frequency_service
-            and self.frequency_service.has_numeric_source()
-            and not self.config.bypass_optional_filters
-        ):
-            before = len(unknown_words)
-            unknown_words = self.word_filter.filter_by_frequency(
-                unknown_words,
-                freq_high,
-                min_rank=freq_low,
-                keep_unranked=self.config.frequency_keep_unranked,
-            )
-            filtered_out = before - len(unknown_words)
-            counts.frequency_rejects = filtered_out
-            if filtered_out > 0:
-                self.presenter.show_info(self._frequency_filter_notice(filtered_out, freq_low, freq_high))
-        elif (freq_low > 0 or freq_high > 0) and not self.config.bypass_optional_filters:
-            # Band configured but no frequency source is loaded: skip it (it
-            # would drop every word) and tell the user it is inert, so they add a
-            # source instead of silently getting zero cards.
-            #
-            # ``sources`` is the half the user-facing text cannot carry: a chain
-            # that loaded only a CATEGORICAL source reaches here too, and
-            # "no frequency source is loaded" reads as a lie to someone looking
-            # at their configured JLPT list.
-            log_summary(
-                logger,
-                "Frequency cutoff ignored",
-                level=logging.WARNING,
-                low=freq_low,
-                high=freq_high,
-                sources=self._loaded_frequency_source_names(),
-            )
-            self.presenter.show_warning(
-                QCoreApplication.translate(
-                    "EpisodeProcessor",
-                    "Frequency cutoff ignored — no ranked frequency source is loaded (Settings → Frequency).",
-                )
-            )
-
-        # Word list (blacklist/whitelist) filter.
-        if self.word_list_service and self.word_list_service.is_available() and not self.config.bypass_optional_filters:
-            before = len(unknown_words)
-            unknown_words = self.word_filter.filter_by_word_lists(unknown_words, self.word_list_service)
-            filtered_out = before - len(unknown_words)
-            counts.word_list_rejects = filtered_out
-            if filtered_out > 0:
-                self.presenter.show_info(
-                    tr_format(
-                        QCoreApplication.translate("EpisodeProcessor", "Word list filter: removed %1 words"),
-                        filtered_out,
-                    )
-                )
-
-        # Script-type filter (for ja: hiragana-only / katakana-only). Issue #57.
-        # For ja the guard is equivalent to the old two-boolean `or` — neither
-        # box ticked derives an empty set, so the block is skipped exactly as
-        # before — and the derived ids are the same three the old body applied.
-        # The keyword is SPLATTED, not spelled out: ja omits it (the filter's
-        # own None path re-derives the identical set from the two booleans), so
-        # the ja call shape stays byte-identical down to the test doubles.
-        script_options = enabled_script_options(self.profile.script, self.config)
-        if script_options and not self.config.bypass_optional_filters:
-            before = len(unknown_words)
-            unknown_words = self.word_filter.filter_by_script_type(
-                unknown_words,
-                exclude_hiragana_only=self.config.exclude_hiragana_only_words,
-                exclude_katakana_only=self.config.exclude_katakana_only_words,
-                **script_options_kwarg(script_options, self.config.language),
-            )
-            removed = before - len(unknown_words)
-            counts.script_rejects = removed
-            if removed > 0:
-                kinds = []
-                if self.config.exclude_hiragana_only_words:
-                    kinds.append(QCoreApplication.translate("EpisodeProcessor", "hiragana-only"))
-                if self.config.exclude_katakana_only_words:
-                    kinds.append(QCoreApplication.translate("EpisodeProcessor", "katakana-only"))
-                self.presenter.show_info(
-                    tr_format(
-                        QCoreApplication.translate("EpisodeProcessor", "Script-type filter: removed %1 %2 words"),
-                        removed,
-                        "/".join(kinds),
-                    )
-                )
-        # Name wordset filter (Issue #59). Drops proper nouns (people/place
-        # names) that slipped past the 固有名詞 POS filter because unidic-lite
-        # mistagged them. Force-included whitelist words are already partitioned
-        # out above, so they never reach here. Gated like neighbors so the Deck
-        # Builder corpus preview (bypass_optional_filters) stays in parity.
-        if self.wordset_service and self.wordset_service.is_available() and not self.config.bypass_optional_filters:
-            before = len(unknown_words)
-            unknown_words = self.word_filter.filter_by_wordsets(unknown_words, self.wordset_service)
-            filtered_out = before - len(unknown_words)
-            counts.wordset_rejects = filtered_out
-            if filtered_out > 0:
-                self.presenter.show_info(
-                    tr_format(
-                        QCoreApplication.translate("EpisodeProcessor", "Name wordset filter: removed %1 words"),
-                        filtered_out,
-                    )
-                )
-
-        # Reading-specific in-document occurrence floor. Runs BEFORE sentence
-        # dedup: removing below-floor words first lets a qualifying sentence-mate
-        # survive instead of losing the whole sentence to a below-floor first word.
-        # Force-included whitelist words were partitioned out above and merge
-        # back later, so they continue to bypass this coverage filter.
-        if occurrence_counts is not None:
-            before = len(unknown_words)
-            unknown_words = self.word_filter.filter_by_episode_count(unknown_words, occurrence_counts, min_occurrence)
-            counts.episode_rejects += before - len(unknown_words)
-
-        # Sentence deduplication. i+1 filter does its own sentence picking;
-        # dedup would be a no-op (post-i+1 sentences are unique by construction).
-        if (
-            self.config.deduplicate_sentences
-            and not self.config.use_i_plus_one_filter
-            and not self.config.bypass_optional_filters
-        ):
-            before = len(unknown_words)
-            unknown_words = self.word_filter.deduplicate_by_sentence(unknown_words)
-            deduped = before - len(unknown_words)
-            counts.duplicate_sentence_rejects = deduped
-            if deduped > 0:
-                self.presenter.show_info(
-                    tr_format(
-                        QCoreApplication.translate(
-                            "EpisodeProcessor", "Sentence deduplication: removed %1 duplicate-sentence words"
-                        ),
-                        deduped,
-                    )
-                )
-
-        # i+1 sentence filtering. Restricts mining to words with an i+1 example
-        # sentence (exactly one unknown overall — checked against the pre-filter
-        # snapshot, Issue #74 — and that unknown must be mineable). Rescans
-        # lines and may swap the chosen sentence per word. Drops words with no
-        # i+1 coverage.
-        if self.config.use_i_plus_one_filter and not self.config.bypass_optional_filters:
-            before = len(unknown_words)
-            unknown_words = self.word_filter.filter_i_plus_one(
-                unknown_words, line_index or [], all_unknown_lemmas=all_unknown_lemmas
-            )
-            kept = len(unknown_words)
-            counts.i_plus_one_rejects = before - kept
-            pct = (kept / before * 100.0) if before else 0.0
-            self.presenter.show_info(
-                tr_format(
-                    QCoreApplication.translate("EpisodeProcessor", "i+1 filter: kept %1/%2 words (%3%)"),
-                    kept,
-                    before,
-                    f"{pct:.0f}",
-                )
-            )
-
-        # Sentence length filter (Issue #33). Drops words whose FINAL example
-        # sentence exceeds the configured audio-duration and/or character caps.
-        # Runs AFTER i+1 because filter_i_plus_one swaps each word's sentence
-        # (and duration) to its chosen i+1 line — applying the cap before that
-        # swap would be silently bypassed by the swap target.
-        if not self.config.bypass_optional_filters and (
-            self.config.max_sentence_duration_seconds > 0.0 or self.config.max_sentence_chars > 0
-        ):
-            before = len(unknown_words)
-            unknown_words = self.word_filter.filter_by_sentence_length(
-                unknown_words,
-                max_duration=self.config.max_sentence_duration_seconds,
-                max_chars=self.config.max_sentence_chars,
-            )
-            filtered_out = before - len(unknown_words)
-            counts.sentence_length_rejects = filtered_out
-            if filtered_out > 0:
-                caps = []
-                if self.config.max_sentence_duration_seconds > 0.0:
-                    caps.append(f"{self.config.max_sentence_duration_seconds:g}s")
-                if self.config.max_sentence_chars > 0:
-                    caps.append(f"{self.config.max_sentence_chars} chars")
-                self.presenter.show_info(
-                    tr_format(
-                        QCoreApplication.translate(
-                            "EpisodeProcessor", "Sentence length filter: removed %1 words (cap: %2)"
-                        ),
-                        filtered_out,
-                        ", ".join(caps),
-                    )
-                )
+        unknown_words = self._phase2_coverage_filters(
+            unknown_words, line_index, all_unknown_lemmas, occurrence_counts, min_occurrence, counts
+        )
 
         # Merge force-included whitelist words back in before within-run
         # duplicate collapse. Prepend so a forced word wins its mined_form slot in the
@@ -1522,6 +1326,223 @@ class EpisodeProcessor:
                         len(dropped),
                         preview,
                         more,
+                    )
+                )
+        return unknown_words
+
+    def _phase2_coverage_filters(
+        self,
+        unknown_words: list[TokenizedWord],
+        line_index: list[LineLemmas] | None,
+        all_unknown_lemmas: set[str],
+        occurrence_counts: dict[str, int] | None,
+        min_occurrence: int,
+        counts: _Phase2Counts,
+    ) -> list[TokenizedWord]:
+        """Phase 2: run the coverage filters in order; return the words they keep.
+
+        Frequency band, word lists, script type, name wordsets, the reading
+        occurrence floor, sentence dedup, i+1, then sentence length. Whitelist
+        force-included words never reach here. Fills each filter's reject
+        counter.
+        """
+        # Frequency rank band. Gate on an actually-loaded NUMERIC frequency
+        # source — NOT just a configured bound, and NOT is_available(). With
+        # no source (or only a categorical one, e.g. a JLPT-band dict whose rows
+        # all carry CATEGORICAL_RANK), no word gets a numeric rank, so every word
+        # keeps frequency_rank=None and filter_by_frequency drops every None-ranked
+        # word (word_filter.py) — a configured cutoff would then silently wipe 100%
+        # of words and produce zero cards. has_numeric_source() is True only when a
+        # non-categorical source is loaded, which is the sole case the cutoff can
+        # meaningfully apply.
+        freq_low = self.config.min_frequency_rank
+        freq_high = self.config.max_frequency_rank
+        if (
+            (freq_low > 0 or freq_high > 0)
+            and self.frequency_service
+            and self.frequency_service.has_numeric_source()
+            and not self.config.bypass_optional_filters
+        ):
+            before = len(unknown_words)
+            unknown_words = self.word_filter.filter_by_frequency(
+                unknown_words,
+                freq_high,
+                min_rank=freq_low,
+                keep_unranked=self.config.frequency_keep_unranked,
+            )
+            filtered_out = before - len(unknown_words)
+            counts.frequency_rejects = filtered_out
+            if filtered_out > 0:
+                self.presenter.show_info(self._frequency_filter_notice(filtered_out, freq_low, freq_high))
+        elif (freq_low > 0 or freq_high > 0) and not self.config.bypass_optional_filters:
+            # Band configured but no frequency source is loaded: skip it (it
+            # would drop every word) and tell the user it is inert, so they add a
+            # source instead of silently getting zero cards.
+            #
+            # ``sources`` is the half the user-facing text cannot carry: a chain
+            # that loaded only a CATEGORICAL source reaches here too, and
+            # "no frequency source is loaded" reads as a lie to someone looking
+            # at their configured JLPT list.
+            log_summary(
+                logger,
+                "Frequency cutoff ignored",
+                level=logging.WARNING,
+                low=freq_low,
+                high=freq_high,
+                sources=self._loaded_frequency_source_names(),
+            )
+            self.presenter.show_warning(
+                QCoreApplication.translate(
+                    "EpisodeProcessor",
+                    "Frequency cutoff ignored — no ranked frequency source is loaded (Settings → Frequency).",
+                )
+            )
+
+        # Word list (blacklist/whitelist) filter.
+        if self.word_list_service and self.word_list_service.is_available() and not self.config.bypass_optional_filters:
+            before = len(unknown_words)
+            unknown_words = self.word_filter.filter_by_word_lists(unknown_words, self.word_list_service)
+            filtered_out = before - len(unknown_words)
+            counts.word_list_rejects = filtered_out
+            if filtered_out > 0:
+                self.presenter.show_info(
+                    tr_format(
+                        QCoreApplication.translate("EpisodeProcessor", "Word list filter: removed %1 words"),
+                        filtered_out,
+                    )
+                )
+
+        # Script-type filter (for ja: hiragana-only / katakana-only). Issue #57.
+        # For ja the guard is equivalent to the old two-boolean `or` — neither
+        # box ticked derives an empty set, so the block is skipped exactly as
+        # before — and the derived ids are the same three the old body applied.
+        # The keyword is SPLATTED, not spelled out: ja omits it (the filter's
+        # own None path re-derives the identical set from the two booleans), so
+        # the ja call shape stays byte-identical down to the test doubles.
+        script_options = enabled_script_options(self.profile.script, self.config)
+        if script_options and not self.config.bypass_optional_filters:
+            before = len(unknown_words)
+            unknown_words = self.word_filter.filter_by_script_type(
+                unknown_words,
+                exclude_hiragana_only=self.config.exclude_hiragana_only_words,
+                exclude_katakana_only=self.config.exclude_katakana_only_words,
+                **script_options_kwarg(script_options, self.config.language),
+            )
+            removed = before - len(unknown_words)
+            counts.script_rejects = removed
+            if removed > 0:
+                kinds = []
+                if self.config.exclude_hiragana_only_words:
+                    kinds.append(QCoreApplication.translate("EpisodeProcessor", "hiragana-only"))
+                if self.config.exclude_katakana_only_words:
+                    kinds.append(QCoreApplication.translate("EpisodeProcessor", "katakana-only"))
+                self.presenter.show_info(
+                    tr_format(
+                        QCoreApplication.translate("EpisodeProcessor", "Script-type filter: removed %1 %2 words"),
+                        removed,
+                        "/".join(kinds),
+                    )
+                )
+        # Name wordset filter (Issue #59). Drops proper nouns (people/place
+        # names) that slipped past the 固有名詞 POS filter because unidic-lite
+        # mistagged them. Force-included whitelist words are already partitioned
+        # out above, so they never reach here. Gated like neighbors so the Deck
+        # Builder corpus preview (bypass_optional_filters) stays in parity.
+        if self.wordset_service and self.wordset_service.is_available() and not self.config.bypass_optional_filters:
+            before = len(unknown_words)
+            unknown_words = self.word_filter.filter_by_wordsets(unknown_words, self.wordset_service)
+            filtered_out = before - len(unknown_words)
+            counts.wordset_rejects = filtered_out
+            if filtered_out > 0:
+                self.presenter.show_info(
+                    tr_format(
+                        QCoreApplication.translate("EpisodeProcessor", "Name wordset filter: removed %1 words"),
+                        filtered_out,
+                    )
+                )
+
+        # Reading-specific in-document occurrence floor. Runs BEFORE sentence
+        # dedup: removing below-floor words first lets a qualifying sentence-mate
+        # survive instead of losing the whole sentence to a below-floor first word.
+        # Force-included whitelist words were partitioned out above and merge
+        # back later, so they continue to bypass this coverage filter.
+        if occurrence_counts is not None:
+            before = len(unknown_words)
+            unknown_words = self.word_filter.filter_by_episode_count(unknown_words, occurrence_counts, min_occurrence)
+            counts.episode_rejects += before - len(unknown_words)
+
+        # Sentence deduplication. i+1 filter does its own sentence picking;
+        # dedup would be a no-op (post-i+1 sentences are unique by construction).
+        if (
+            self.config.deduplicate_sentences
+            and not self.config.use_i_plus_one_filter
+            and not self.config.bypass_optional_filters
+        ):
+            before = len(unknown_words)
+            unknown_words = self.word_filter.deduplicate_by_sentence(unknown_words)
+            deduped = before - len(unknown_words)
+            counts.duplicate_sentence_rejects = deduped
+            if deduped > 0:
+                self.presenter.show_info(
+                    tr_format(
+                        QCoreApplication.translate(
+                            "EpisodeProcessor", "Sentence deduplication: removed %1 duplicate-sentence words"
+                        ),
+                        deduped,
+                    )
+                )
+
+        # i+1 sentence filtering. Restricts mining to words with an i+1 example
+        # sentence (exactly one unknown overall — checked against the pre-filter
+        # snapshot, Issue #74 — and that unknown must be mineable). Rescans
+        # lines and may swap the chosen sentence per word. Drops words with no
+        # i+1 coverage.
+        if self.config.use_i_plus_one_filter and not self.config.bypass_optional_filters:
+            before = len(unknown_words)
+            unknown_words = self.word_filter.filter_i_plus_one(
+                unknown_words, line_index or [], all_unknown_lemmas=all_unknown_lemmas
+            )
+            kept = len(unknown_words)
+            counts.i_plus_one_rejects = before - kept
+            pct = (kept / before * 100.0) if before else 0.0
+            self.presenter.show_info(
+                tr_format(
+                    QCoreApplication.translate("EpisodeProcessor", "i+1 filter: kept %1/%2 words (%3%)"),
+                    kept,
+                    before,
+                    f"{pct:.0f}",
+                )
+            )
+
+        # Sentence length filter (Issue #33). Drops words whose FINAL example
+        # sentence exceeds the configured audio-duration and/or character caps.
+        # Runs AFTER i+1 because filter_i_plus_one swaps each word's sentence
+        # (and duration) to its chosen i+1 line — applying the cap before that
+        # swap would be silently bypassed by the swap target.
+        if not self.config.bypass_optional_filters and (
+            self.config.max_sentence_duration_seconds > 0.0 or self.config.max_sentence_chars > 0
+        ):
+            before = len(unknown_words)
+            unknown_words = self.word_filter.filter_by_sentence_length(
+                unknown_words,
+                max_duration=self.config.max_sentence_duration_seconds,
+                max_chars=self.config.max_sentence_chars,
+            )
+            filtered_out = before - len(unknown_words)
+            counts.sentence_length_rejects = filtered_out
+            if filtered_out > 0:
+                caps = []
+                if self.config.max_sentence_duration_seconds > 0.0:
+                    caps.append(f"{self.config.max_sentence_duration_seconds:g}s")
+                if self.config.max_sentence_chars > 0:
+                    caps.append(f"{self.config.max_sentence_chars} chars")
+                self.presenter.show_info(
+                    tr_format(
+                        QCoreApplication.translate(
+                            "EpisodeProcessor", "Sentence length filter: removed %1 words (cap: %2)"
+                        ),
+                        filtered_out,
+                        ", ".join(caps),
                     )
                 )
         return unknown_words
