@@ -22,9 +22,10 @@ from anki_miner.services.audio_packs.importer import (
     repair_audio_pack,
 )
 from anki_miner.services.audio_packs.storage import SCHEMA_VERSION, read_meta_cached
+from tests.unit._audio_packs import make_ajt_pack, make_forvo_pack, make_jpod_pack
 
 # ---------------------------------------------------------------------------
-# Pack-building helpers (inline — no separate fixture file needed)
+# Pack-building helpers (NHK16 is local; the shared builders live in tests/unit/_audio_packs.py)
 # ---------------------------------------------------------------------------
 
 
@@ -54,49 +55,6 @@ def _make_nhk16_pack(directory: Path) -> Path:
         },
     ]
     (directory / "entries.json").write_text(json.dumps(entries), encoding="utf-8")
-    return directory
-
-
-def _make_ajt_pack(directory: Path, n_entries: int = 2) -> Path:
-    """Create a minimal AJT-format audio pack under *directory*."""
-    media_dir = directory / "media"
-    media_dir.mkdir(parents=True, exist_ok=True)
-    headwords: dict = {}
-    files_meta: dict = {}
-    words = ["食べる", "飲む", "走る", "見る", "来る"]
-    for i in range(n_entries):
-        word = words[i % len(words)]
-        fname = f"word_{i}.mp3"
-        (media_dir / fname).touch()
-        headwords.setdefault(word, []).append(fname)
-        files_meta[fname] = {"kana_reading": f"reading_{i}", "pitch_number": str(i)}
-    (directory / "index.json").write_text(
-        json.dumps({"headwords": headwords, "files": files_meta}),
-        encoding="utf-8",
-    )
-    return directory
-
-
-def _make_forvo_pack(directory: Path, n_entries: int = 2) -> Path:
-    """Create a minimal Forvo-format audio pack under *directory*."""
-    speakers = ["alice", "bob"]
-    words = ["食べる", "飲む", "走る", "見る"]
-    for i in range(n_entries):
-        speaker = speakers[i % len(speakers)]
-        word = words[i % len(words)]
-        speaker_dir = directory / speaker
-        speaker_dir.mkdir(parents=True, exist_ok=True)
-        (speaker_dir / f"{word}.mp3").touch()
-    return directory
-
-
-def _make_jpod_pack(directory: Path, n_entries: int = 2) -> Path:
-    """Create a minimal JPod-legacy-format audio pack under *directory*."""
-    directory.mkdir(parents=True, exist_ok=True)
-    words = [("たべる", "食べる"), ("のむ", "飲む"), ("はしる", "走る")]
-    for i in range(n_entries):
-        reading, expr = words[i % len(words)]
-        (directory / f"{reading} - {expr}.mp3").touch()
     return directory
 
 
@@ -133,7 +91,7 @@ class TestImportHappyPath:
         assert result.skipped_malformed == 4
 
     def test_ajt_import(self, tmp_path: Path):
-        pack = _make_ajt_pack(tmp_path / "my_pack")
+        pack = make_ajt_pack(tmp_path / "my_pack")
         dest = tmp_path / "out"
 
         result = import_audio_pack(pack, dest)
@@ -145,14 +103,14 @@ class TestImportHappyPath:
         assert result.source_name == result.pack_id
 
     def test_ajt_index_sqlite_exists(self, tmp_path: Path):
-        pack = _make_ajt_pack(tmp_path / "my_pack")
+        pack = make_ajt_pack(tmp_path / "my_pack")
         dest = tmp_path / "out"
 
         result = import_audio_pack(pack, dest)
         assert (dest / result.pack_id / "index.sqlite").exists()
 
     def test_ajt_meta_readable_via_read_meta_cached(self, tmp_path: Path):
-        pack = _make_ajt_pack(tmp_path / "my_pack")
+        pack = make_ajt_pack(tmp_path / "my_pack")
         dest = tmp_path / "out"
 
         result = import_audio_pack(pack, dest)
@@ -166,7 +124,7 @@ class TestImportHappyPath:
         assert meta["schema_version"] == str(SCHEMA_VERSION)
 
     def test_ajt_meta_pack_dir_is_absolute(self, tmp_path: Path):
-        pack = _make_ajt_pack(tmp_path / "my_pack")
+        pack = make_ajt_pack(tmp_path / "my_pack")
         dest = tmp_path / "out"
 
         result = import_audio_pack(pack, dest)
@@ -177,7 +135,7 @@ class TestImportHappyPath:
         assert Path(meta["pack_dir"]) == pack.resolve()
 
     def test_forvo_import(self, tmp_path: Path):
-        pack = _make_forvo_pack(tmp_path / "forvo_pack")
+        pack = make_forvo_pack(tmp_path / "forvo_pack")
         dest = tmp_path / "out"
 
         result = import_audio_pack(pack, dest)
@@ -188,7 +146,7 @@ class TestImportHappyPath:
         assert db_path.exists()
 
     def test_forvo_meta_via_read_meta_cached(self, tmp_path: Path):
-        pack = _make_forvo_pack(tmp_path / "forvo_pack")
+        pack = make_forvo_pack(tmp_path / "forvo_pack")
         dest = tmp_path / "out"
 
         result = import_audio_pack(pack, dest)
@@ -198,7 +156,7 @@ class TestImportHappyPath:
         assert meta["entry_count"] == str(result.entry_count)
 
     def test_jpod_import(self, tmp_path: Path):
-        pack = _make_jpod_pack(tmp_path / "jpod_pack")
+        pack = make_jpod_pack(tmp_path / "jpod_pack")
         dest = tmp_path / "out"
 
         result = import_audio_pack(pack, dest)
@@ -210,7 +168,7 @@ class TestImportHappyPath:
         # An 80k-file pack parses for ~45 minutes; without a running count the
         # progress dialog sits on one static string and reads as a hang.
         monkeypatch.setattr(audio_pack_importer, "_PROGRESS_EVERY_ROWS", 2)
-        pack = _make_ajt_pack(tmp_path / "my_pack", n_entries=5)
+        pack = make_ajt_pack(tmp_path / "my_pack", n_entries=5)
         messages: list[str] = []
 
         import_audio_pack(pack, tmp_path / "out", progress=messages.append)
@@ -248,7 +206,7 @@ class TestDerivePackId:
         assert result == "some-pack-name"
 
     def test_pack_id_override_used(self, tmp_path: Path):
-        pack = _make_ajt_pack(tmp_path / "source_dir")
+        pack = make_ajt_pack(tmp_path / "source_dir")
         dest = tmp_path / "out"
 
         result = import_audio_pack(pack, dest, pack_id="custom-id")
@@ -258,7 +216,7 @@ class TestDerivePackId:
 
     def test_jpod101_folder_name_reserved(self, tmp_path: Path):
         """A folder named jpod101 derives the reserved id and must be rejected."""
-        pack = _make_ajt_pack(tmp_path / "jpod101")
+        pack = make_ajt_pack(tmp_path / "jpod101")
         dest = tmp_path / "out"
 
         with pytest.raises(SetupError, match="reserved"):
@@ -267,7 +225,7 @@ class TestDerivePackId:
         assert not (dest / "jpod101").exists()
 
     def test_jpod101_explicit_pack_id_reserved(self, tmp_path: Path):
-        pack = _make_ajt_pack(tmp_path / "source_dir")
+        pack = make_ajt_pack(tmp_path / "source_dir")
         dest = tmp_path / "out"
 
         with pytest.raises(SetupError, match="reserved"):
@@ -281,7 +239,7 @@ class TestDerivePackId:
 
 class TestExistsOverwrite:
     def test_new_pack_routes_overwrite_false_to_promotion(self, tmp_path: Path, monkeypatch) -> None:
-        pack = _make_ajt_pack(tmp_path / "pack")
+        pack = make_ajt_pack(tmp_path / "pack")
         dest = tmp_path / "out"
         observed: list[bool] = []
         real_promote = audio_pack_importer.promote_staged_dir
@@ -297,7 +255,7 @@ class TestExistsOverwrite:
         assert observed == [False]
 
     def test_exists_without_overwrite_raises(self, tmp_path: Path):
-        pack = _make_ajt_pack(tmp_path / "pack")
+        pack = make_ajt_pack(tmp_path / "pack")
         dest = tmp_path / "out"
 
         import_audio_pack(pack, dest)
@@ -306,7 +264,7 @@ class TestExistsOverwrite:
             import_audio_pack(pack, dest, overwrite=False)
 
     def test_exists_without_overwrite_leaves_original_intact(self, tmp_path: Path):
-        pack = _make_ajt_pack(tmp_path / "pack")
+        pack = make_ajt_pack(tmp_path / "pack")
         dest = tmp_path / "out"
 
         first = import_audio_pack(pack, dest)
@@ -320,13 +278,13 @@ class TestExistsOverwrite:
 
     def test_overwrite_true_replaces(self, tmp_path: Path):
         # First import: 2 entries
-        pack_v1 = _make_ajt_pack(tmp_path / "pack", n_entries=2)
+        pack_v1 = make_ajt_pack(tmp_path / "pack", n_entries=2)
         dest = tmp_path / "out"
         first = import_audio_pack(pack_v1, dest)
         assert first.entry_count == 2
 
         # Second import: 3 entries from a fresh pack dir (same dest pack_id via override)
-        pack_v2 = _make_ajt_pack(tmp_path / "pack_v2", n_entries=3)
+        pack_v2 = make_ajt_pack(tmp_path / "pack_v2", n_entries=3)
         second = import_audio_pack(pack_v2, dest, pack_id=first.pack_id, overwrite=True)
 
         assert second.pack_id == first.pack_id
@@ -338,7 +296,7 @@ class TestExistsOverwrite:
         assert backups == []
 
     def test_overwrite_refuses_foreign_same_name_with_plausible_meta(self, tmp_path: Path):
-        pack = _make_ajt_pack(tmp_path / "pack")
+        pack = make_ajt_pack(tmp_path / "pack")
         dest = tmp_path / "out"
         foreign = dest / "pack"
         foreign.mkdir(parents=True)
@@ -363,11 +321,11 @@ class TestExistsOverwrite:
         assert payload.read_text(encoding="utf-8") == "foreign"
 
     def test_overwrite_updates_entry_count_in_meta(self, tmp_path: Path):
-        pack_v1 = _make_ajt_pack(tmp_path / "pack", n_entries=2)
+        pack_v1 = make_ajt_pack(tmp_path / "pack", n_entries=2)
         dest = tmp_path / "out"
         first = import_audio_pack(pack_v1, dest)
 
-        pack_v2 = _make_ajt_pack(tmp_path / "pack_v2", n_entries=3)
+        pack_v2 = make_ajt_pack(tmp_path / "pack_v2", n_entries=3)
         second = import_audio_pack(pack_v2, dest, pack_id=first.pack_id, overwrite=True)
 
         meta = read_meta_cached(dest / second.pack_id / "index.sqlite")
@@ -384,7 +342,7 @@ class TestExplicitRepair:
         return slot
 
     def test_cancel_restores_corrupt_slot(self, tmp_path: Path):
-        pack = _make_ajt_pack(tmp_path / "source")
+        pack = make_ajt_pack(tmp_path / "source")
         dest = tmp_path / "out"
         slot = self._corrupt_slot(dest, "pack")
 
@@ -395,7 +353,7 @@ class TestExplicitRepair:
         assert list(dest.glob("pack.corrupt-*")) == []
 
     def test_promotion_failure_restores_corrupt_slot(self, tmp_path: Path, monkeypatch):
-        pack = _make_ajt_pack(tmp_path / "source")
+        pack = make_ajt_pack(tmp_path / "source")
         dest = tmp_path / "out"
         slot = self._corrupt_slot(dest, "pack")
 
@@ -413,7 +371,7 @@ class TestExplicitRepair:
     def test_success_retains_invisible_quarantine(self, tmp_path: Path):
         from anki_miner.services.audio_packs.registry import AudioPackRegistry
 
-        pack = _make_ajt_pack(tmp_path / "source")
+        pack = make_ajt_pack(tmp_path / "source")
         dest = tmp_path / "out"
         self._corrupt_slot(dest, "pack")
 
@@ -431,8 +389,8 @@ class TestExplicitRepair:
         home = tmp_path / "home"
         monkeypatch.setattr(config_paths, "ANKI_MINER_HOME", home)
         dest = home / "audio_packs"
-        old_pack = _make_ajt_pack(tmp_path / "old")
-        alternate_pack = _make_ajt_pack(tmp_path / "alternate")
+        old_pack = make_ajt_pack(tmp_path / "old")
+        alternate_pack = make_ajt_pack(tmp_path / "alternate")
         (old_pack / "media" / "word_0.mp3").write_bytes(b"OLD")
         (alternate_pack / "media" / "word_0.mp3").write_bytes(b"KEEP")
         result = import_audio_pack(old_pack, dest, pack_id="jpod")
@@ -452,7 +410,7 @@ class TestExplicitRepair:
         ).fetch("食べる", "reading_0")
         assert stale is not None
         assert sibling is not None
-        replacement = _make_ajt_pack(tmp_path / "replacement", n_entries=3)
+        replacement = make_ajt_pack(tmp_path / "replacement", n_entries=3)
 
         repaired = repair_audio_pack(replacement, dest, pack_id=result.pack_id)
 
@@ -464,7 +422,7 @@ class TestExplicitRepair:
         home = tmp_path / "home"
         monkeypatch.setattr(config_paths, "ANKI_MINER_HOME", home)
         dest = home / "audio_packs"
-        old_pack = _make_ajt_pack(tmp_path / "old")
+        old_pack = make_ajt_pack(tmp_path / "old")
         (old_pack / "media" / "word_0.mp3").write_bytes(b"OLD")
         result = import_audio_pack(old_pack, dest, pack_id="pack")
         cache = home / "audio_cache" / "local_packs"
@@ -491,8 +449,8 @@ class TestExplicitRepair:
         home = tmp_path / "home"
         monkeypatch.setattr(config_paths, "ANKI_MINER_HOME", home)
         dest = home / "audio_packs"
-        old_pack = _make_ajt_pack(tmp_path / "old")
-        replacement = _make_ajt_pack(tmp_path / "replacement")
+        old_pack = make_ajt_pack(tmp_path / "old")
+        replacement = make_ajt_pack(tmp_path / "replacement")
         (old_pack / "media" / "word_0.mp3").write_bytes(b"OLD")
         (replacement / "media" / "word_0.mp3").write_bytes(b"NEW")
         result = import_audio_pack(old_pack, dest, pack_id="pack")
@@ -536,7 +494,7 @@ class TestExplicitRepair:
 class TestZeroEntriesAndBadInput:
     def test_rejects_source_under_managed_root(self, tmp_path: Path):
         dest = tmp_path / "out"
-        pack = _make_ajt_pack(dest / "pack")
+        pack = make_ajt_pack(dest / "pack")
 
         with pytest.raises(SetupError, match="overlaps the managed audio-pack root"):
             import_audio_pack(pack, dest)
@@ -544,7 +502,7 @@ class TestZeroEntriesAndBadInput:
         assert (pack / "index.json").is_file()
 
     def test_rejects_destination_under_source(self, tmp_path: Path):
-        pack = _make_ajt_pack(tmp_path / "pack")
+        pack = make_ajt_pack(tmp_path / "pack")
         dest = pack / "managed"
 
         with pytest.raises(SetupError, match="overlaps the audio source"):
@@ -596,7 +554,7 @@ class TestZeroEntriesAndBadInput:
 
 class TestCancellation:
     def test_cancel_early_raises_setup_error(self, tmp_path: Path):
-        pack = _make_ajt_pack(tmp_path / "pack", n_entries=2)
+        pack = make_ajt_pack(tmp_path / "pack", n_entries=2)
         dest = tmp_path / "out"
 
         calls: list[int] = [0]
@@ -609,7 +567,7 @@ class TestCancellation:
             import_audio_pack(pack, dest, cancel_check=cancel_check)
 
     def test_cancel_leaves_no_final_dir(self, tmp_path: Path):
-        pack = _make_ajt_pack(tmp_path / "pack", n_entries=2)
+        pack = make_ajt_pack(tmp_path / "pack", n_entries=2)
         dest = tmp_path / "out"
 
         with pytest.raises(SetupError, match="cancelled"):
@@ -620,7 +578,7 @@ class TestCancellation:
 
     def test_cancel_leaves_no_staging_leftovers(self, tmp_path: Path):
         """No .staging-* directories should persist under dest_root after cancellation."""
-        pack = _make_ajt_pack(tmp_path / "pack", n_entries=2)
+        pack = make_ajt_pack(tmp_path / "pack", n_entries=2)
         dest = tmp_path / "out"
 
         with pytest.raises(SetupError, match="cancelled"):
@@ -638,7 +596,7 @@ class TestCancellation:
     ) -> None:
         from anki_miner.services.audio_packs import importer
 
-        pack = _make_ajt_pack(tmp_path / "pack", n_entries=2)
+        pack = make_ajt_pack(tmp_path / "pack", n_entries=2)
         dest = tmp_path / "out"
         metadata_written = False
         real_write_meta = importer.write_meta
@@ -668,7 +626,7 @@ class TestStagingPlacement:
         """tempfile.mkdtemp must be called with dir=dest_root."""
         import tempfile as _tempfile
 
-        pack = _make_ajt_pack(tmp_path / "pack")
+        pack = make_ajt_pack(tmp_path / "pack")
         dest = tmp_path / "out"
         recorded_dirs: list[Path | None] = []
 
@@ -689,7 +647,7 @@ class TestStagingPlacement:
 
     def test_no_staging_leftovers_after_success(self, tmp_path: Path):
         """No .staging-* dirs should remain under dest_root after a clean import."""
-        pack = _make_ajt_pack(tmp_path / "pack")
+        pack = make_ajt_pack(tmp_path / "pack")
         dest = tmp_path / "out"
 
         result = import_audio_pack(pack, dest)
@@ -716,7 +674,7 @@ class TestStagingPlacement:
 
     def test_no_staging_leftovers_after_cancel(self, tmp_path: Path):
         """No .staging-* dirs should remain under dest_root after cancellation."""
-        pack = _make_ajt_pack(tmp_path / "pack")
+        pack = make_ajt_pack(tmp_path / "pack")
         dest = tmp_path / "out"
 
         with pytest.raises(SetupError, match="cancelled"):
@@ -736,7 +694,7 @@ class TestOverwriteWithStaleBackup:
     def test_overwrite_succeeds_with_preexisting_stale_bak_dir(self, tmp_path: Path):
         """overwrite=True must succeed even when a stale .bak-* dir from a prior
         crashed run already exists alongside the final destination."""
-        pack_v1 = _make_ajt_pack(tmp_path / "pack_v1", n_entries=2)
+        pack_v1 = make_ajt_pack(tmp_path / "pack_v1", n_entries=2)
         dest = tmp_path / "out"
         first = import_audio_pack(pack_v1, dest)
 
@@ -744,7 +702,7 @@ class TestOverwriteWithStaleBackup:
         stale_bak = dest / (first.pack_id + ".bak-20240101000000000000")
         stale_bak.mkdir()
 
-        pack_v2 = _make_ajt_pack(tmp_path / "pack_v2", n_entries=3)
+        pack_v2 = make_ajt_pack(tmp_path / "pack_v2", n_entries=3)
         second = import_audio_pack(pack_v2, dest, pack_id=first.pack_id, overwrite=True)
 
         assert second.entry_count == 3
@@ -758,11 +716,11 @@ class TestOverwriteWithStaleBackup:
 
     def test_timestamped_backup_name_never_collides(self, tmp_path: Path):
         """Two successive overwrites must not collide on backup names (different timestamps)."""
-        pack_v1 = _make_ajt_pack(tmp_path / "pack_v1", n_entries=2)
+        pack_v1 = make_ajt_pack(tmp_path / "pack_v1", n_entries=2)
         dest = tmp_path / "out"
         first = import_audio_pack(pack_v1, dest)
 
-        pack_v2 = _make_ajt_pack(tmp_path / "pack_v2", n_entries=3)
+        pack_v2 = make_ajt_pack(tmp_path / "pack_v2", n_entries=3)
         import_audio_pack(pack_v2, dest, pack_id=first.pack_id, overwrite=True)
 
         # After success, no .bak-* dirs should remain (the one created is cleaned up)
@@ -777,7 +735,7 @@ class TestOverwriteWithStaleBackup:
 
 class TestProgress:
     def test_progress_called_with_non_empty_strings(self, tmp_path: Path):
-        pack = _make_ajt_pack(tmp_path / "pack")
+        pack = make_ajt_pack(tmp_path / "pack")
         dest = tmp_path / "out"
         messages: list[str] = []
 
@@ -789,7 +747,7 @@ class TestProgress:
             assert msg.strip()  # non-empty
 
     def test_progress_fires_at_detect_and_finalize(self, tmp_path: Path):
-        pack = _make_ajt_pack(tmp_path / "pack")
+        pack = make_ajt_pack(tmp_path / "pack")
         dest = tmp_path / "out"
         messages: list[str] = []
 
@@ -849,7 +807,7 @@ class TestCreateIndexFailureCleansUp:
     def test_create_index_oserror_no_staging_leftover(self, tmp_path: Path):
         """If create_index raises OSError (e.g. disk full), no .staging-* dir
         should be left under dest_root."""
-        pack = _make_ajt_pack(tmp_path / "pack")
+        pack = make_ajt_pack(tmp_path / "pack")
         dest = tmp_path / "out"
 
         with (
@@ -867,7 +825,7 @@ class TestCreateIndexFailureCleansUp:
 
     def test_create_index_setup_error_no_staging_leftover(self, tmp_path: Path):
         """If create_index raises SetupError, no .staging-* dir should remain."""
-        pack = _make_ajt_pack(tmp_path / "pack")
+        pack = make_ajt_pack(tmp_path / "pack")
         dest = tmp_path / "out"
 
         with (
@@ -890,7 +848,7 @@ class TestImportReceipts:
     LOGGER = "anki_miner.services.audio_packs.importer"
 
     def test_start_and_done_receipts_logged(self, tmp_path: Path, caplog):
-        pack = _make_ajt_pack(tmp_path / "my_pack")
+        pack = make_ajt_pack(tmp_path / "my_pack")
 
         with caplog.at_level(logging.INFO, logger=self.LOGGER):
             result = import_audio_pack(pack, tmp_path / "out")

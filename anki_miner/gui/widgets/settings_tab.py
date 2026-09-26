@@ -7,7 +7,7 @@ import os
 from collections.abc import Callable, Mapping
 from dataclasses import fields, replace
 from pathlib import Path
-from typing import Protocol, cast, runtime_checkable
+from typing import Any, Protocol, cast, runtime_checkable
 
 from PyQt6.QtCore import QRect, QSize, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QAction, QFont
@@ -87,11 +87,11 @@ from anki_miner.gui.widgets.settings_search import (
     build_entries,
     flash_search_hit,
 )
-from anki_miner.services.audio_packs.registry import AudioPackMeta, AudioPackRegistry
+from anki_miner.services.audio_packs.registry import AudioPackRegistry
 from anki_miner.services.expression_audio_fetcher import purge_miss_markers
-from anki_miner.services.frequency.registry import FreqSourceMeta, FrequencySourceRegistry
+from anki_miner.services.frequency.registry import FrequencySourceRegistry
 from anki_miner.services.known_word_db import KnownWordDB
-from anki_miner.services.pitch_accent.registry import PitchSourceMeta, PitchSourceRegistry
+from anki_miner.services.pitch_accent.registry import PitchSourceRegistry
 from anki_miner.services.resource_bundle import BundleInstallResult, apply_install_to_config
 from anki_miner.services.subtitle_parser import compile_subtitle_regex_filter
 from anki_miner.utils.i18n import tr_format
@@ -876,128 +876,105 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         """
         QMessageBox.information(self, self.tr("Nothing to restore"), body)
 
-    def _restore_audio_from_disk(self) -> None:
-        scan_root = self.config.audio_packs_root
-        scan_chain = self.audio_panel.get_chain()
-        panel_config = replace(self.config, expression_audio_chain=scan_chain)
+    def _restore_chain_from_disk(
+        self,
+        panel: AudioPackSettingsPanel | FrequencySettingsPanel | PitchSettingsPanel,
+        *,
+        get_root: Callable[[], Path],
+        chain_field: str,
+        registry_cls: type[AudioPackRegistry] | type[FrequencySourceRegistry] | type[PitchSourceRegistry],
+        make_chain: Callable[[tuple[Any, ...], list[Any]], tuple[Any, ...]],
+        persist: Callable[[Any], None],
+        nothing_body: str,
+        failed_summary: str,
+        scan_failed_summary: str,
+    ) -> None:
+        """Re-add the sources on disk that ``panel``'s chain does not list.
+
+        The off-thread scan runs against the root and chain captured now; its
+        result is dropped if either changed meanwhile. The three strings arrive
+        as ``self.tr`` literals from each family's slot, so they keep the
+        SettingsTab translation context.
+        """
+        scan_root = get_root()
+        scan_chain = panel.get_chain()
+        changes: dict[str, Any] = {chain_field: scan_chain}
+        panel_config = replace(self.config, **changes)
 
         def scan() -> object:
-            registry = AudioPackRegistry(scan_root)
+            registry = registry_cls(scan_root)
             registry.load()
             return registry.unlisted(panel_config)
 
         def apply(result: object) -> None:
-            if self.config.audio_packs_root != scan_root or self.audio_panel.get_chain() != scan_chain:
+            if get_root() != scan_root or panel.get_chain() != scan_chain:
                 return
-            packs = cast(list[AudioPackMeta], result)
-            if not packs:
-                self._show_nothing_to_restore(
-                    self.tr(
-                        "Every audio pack found in the storage folder is already listed.\n\n"
-                        "A pack that stopped working after an app upgrade is repaired by "
-                        "Re-import on its row, not by restoring it."
-                    )
-                )
+            metas = cast(list[Any], result)
+            if not metas:
+                self._show_nothing_to_restore(nothing_body)
                 return
-            entries = [AudioSourceEntry(kind="pack", pack_id=pack.pack_id, enabled=True) for pack in packs]
-            new_chain = insert_above_first_enabled_jpod101(scan_chain, entries)
+            new_chain = make_chain(scan_chain, metas)
             try:
-                self._persist_audio_chain_change(new_chain)
+                persist(new_chain)
             except Exception as error:  # noqa: BLE001 - persistence boundary
-                self.audio_panel.show_screen_issue(
-                    ScreenIssue(summary=self.tr("The audio packs could not be restored."), details=str(error))
-                )
+                panel.show_screen_issue(ScreenIssue(summary=failed_summary, details=str(error)))
                 return
-            self.audio_panel.set_chain(new_chain)
-            self.audio_panel.refresh_registry()
+            panel.set_chain(new_chain)
+            panel.refresh_registry()
 
-        self._start_restore_scan(
+        self._start_restore_scan(panel, scan, apply, scan_failed_summary)
+
+    def _restore_audio_from_disk(self) -> None:
+        self._restore_chain_from_disk(
             self.audio_panel,
-            scan,
-            apply,
-            self.tr("Installed audio packs could not be checked."),
+            get_root=lambda: self.config.audio_packs_root,
+            chain_field="expression_audio_chain",
+            registry_cls=AudioPackRegistry,
+            make_chain=lambda chain, packs: insert_above_first_enabled_jpod101(
+                chain, [AudioSourceEntry(kind="pack", pack_id=pack.pack_id, enabled=True) for pack in packs]
+            ),
+            persist=self._persist_audio_chain_change,
+            nothing_body=self.tr(
+                "Every audio pack found in the storage folder is already listed.\n\n"
+                "A pack that stopped working after an app upgrade is repaired by "
+                "Re-import on its row, not by restoring it."
+            ),
+            failed_summary=self.tr("The audio packs could not be restored."),
+            scan_failed_summary=self.tr("Installed audio packs could not be checked."),
         )
 
     def _restore_frequency_from_disk(self) -> None:
-        scan_root = self.config.freqs_root
-        scan_chain = self.frequency_panel.get_chain()
-        panel_config = replace(self.config, frequency_chain=scan_chain)
-
-        def scan() -> object:
-            registry = FrequencySourceRegistry(scan_root)
-            registry.load()
-            return registry.unlisted(panel_config)
-
-        def apply(result: object) -> None:
-            if self.config.freqs_root != scan_root or self.frequency_panel.get_chain() != scan_chain:
-                return
-            sources = cast(list[FreqSourceMeta], result)
-            if not sources:
-                self._show_nothing_to_restore(
-                    self.tr(
-                        "Every frequency source found in the storage folder is already listed.\n\n"
-                        "A source that stopped working after an app upgrade is repaired by "
-                        "Reimport All, not by restoring it."
-                    )
-                )
-                return
-            new_chain = (*scan_chain, *(FreqEntry(source.source_id) for source in sources))
-            try:
-                self._persist_frequency_chain_change(new_chain)
-            except Exception as error:  # noqa: BLE001 - persistence boundary
-                self.frequency_panel.show_screen_issue(
-                    ScreenIssue(summary=self.tr("The frequency sources could not be restored."), details=str(error))
-                )
-                return
-            self.frequency_panel.set_chain(new_chain)
-            self.frequency_panel.refresh_registry()
-
-        self._start_restore_scan(
+        self._restore_chain_from_disk(
             self.frequency_panel,
-            scan,
-            apply,
-            self.tr("Installed frequency sources could not be checked."),
+            get_root=lambda: self.config.freqs_root,
+            chain_field="frequency_chain",
+            registry_cls=FrequencySourceRegistry,
+            make_chain=lambda chain, sources: (*chain, *(FreqEntry(source.source_id) for source in sources)),
+            persist=self._persist_frequency_chain_change,
+            nothing_body=self.tr(
+                "Every frequency source found in the storage folder is already listed.\n\n"
+                "A source that stopped working after an app upgrade is repaired by "
+                "Reimport All, not by restoring it."
+            ),
+            failed_summary=self.tr("The frequency sources could not be restored."),
+            scan_failed_summary=self.tr("Installed frequency sources could not be checked."),
         )
 
     def _restore_pitch_from_disk(self) -> None:
-        scan_root = self.config.pitch_root
-        scan_chain = self.pitch_panel.get_chain()
-        panel_config = replace(self.config, pitch_chain=scan_chain)
-
-        def scan() -> object:
-            registry = PitchSourceRegistry(scan_root)
-            registry.load()
-            return registry.unlisted(panel_config)
-
-        def apply(result: object) -> None:
-            if self.config.pitch_root != scan_root or self.pitch_panel.get_chain() != scan_chain:
-                return
-            sources = cast(list[PitchSourceMeta], result)
-            if not sources:
-                self._show_nothing_to_restore(
-                    self.tr(
-                        "Every pitch accent source found in the storage folder is already listed.\n\n"
-                        "A source that stopped working after an app upgrade is repaired by "
-                        "Reimport All, not by restoring it."
-                    )
-                )
-                return
-            new_chain = (*scan_chain, *(PitchSourceEntry(source.source_id) for source in sources))
-            try:
-                self._persist_pitch_chain_change(new_chain)
-            except Exception as error:  # noqa: BLE001 - persistence boundary
-                self.pitch_panel.show_screen_issue(
-                    ScreenIssue(summary=self.tr("The pitch accent sources could not be restored."), details=str(error))
-                )
-                return
-            self.pitch_panel.set_chain(new_chain)
-            self.pitch_panel.refresh_registry()
-
-        self._start_restore_scan(
+        self._restore_chain_from_disk(
             self.pitch_panel,
-            scan,
-            apply,
-            self.tr("Installed pitch accent sources could not be checked."),
+            get_root=lambda: self.config.pitch_root,
+            chain_field="pitch_chain",
+            registry_cls=PitchSourceRegistry,
+            make_chain=lambda chain, sources: (*chain, *(PitchSourceEntry(source.source_id) for source in sources)),
+            persist=self._persist_pitch_chain_change,
+            nothing_body=self.tr(
+                "Every pitch accent source found in the storage folder is already listed.\n\n"
+                "A source that stopped working after an app upgrade is repaired by "
+                "Reimport All, not by restoring it."
+            ),
+            failed_summary=self.tr("The pitch accent sources could not be restored."),
+            scan_failed_summary=self.tr("Installed pitch accent sources could not be checked."),
         )
 
     def _wire_edit_signals(self) -> None:

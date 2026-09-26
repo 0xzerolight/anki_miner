@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from typing import Any
 
@@ -143,6 +144,7 @@ class _Timer:
         self.stop_calls = 0
         self.delete_later_calls = 0
         self.active = False
+        self.start_callback: Callable[[], None] | None = None
 
     def setSingleShot(self, enabled: bool) -> None:  # noqa: N802
         self.single_shot = enabled
@@ -153,6 +155,8 @@ class _Timer:
     def start(self) -> None:
         self.start_calls += 1
         self.active = True
+        if self.start_callback is not None:
+            self.start_callback()
 
     def stop(self) -> None:
         self.stop_calls += 1
@@ -546,7 +550,197 @@ def test_construct_rechecks_reentrant_cancel_before_wiring(
     assert worker.start_calls == 0
     assert worker.delete_later_calls == 1
     assert timers[0].start_calls == 0
+    # Stopped at the re-check right after construction, before set_trace_id;
+    # without this the next re-check would end the batch in the same state.
+    assert worker.trace_ids == []
     assert results[0].cancelled is True
+
+
+@pytest.mark.parametrize(
+    ("setter", "never_called"),
+    [("setLabelText", ("setRange", "setValue")), ("setRange", ("setValue",))],
+)
+def test_reentrant_cancel_during_job_setup_setter_starts_no_worker(
+    spine: tuple[_Harness, list[_Dialog], list[_Timer]],
+    monkeypatch: pytest.MonkeyPatch,
+    setter: str,
+    never_called: tuple[str, ...],
+) -> None:
+    """The two setters test_15 does not cover: each has its own re-check.
+
+    Asserting that no later setter ran is what makes each case bite: without
+    it, the next setter's re-check would catch the cancel and the batch would
+    end in the same state.
+    """
+    flow, dialogs, _timers = spine
+    made: list[str] = []
+    calls: list[str] = []
+    original_factory = import_flow_common.QProgressDialog
+
+    def make_reentrant_dialog(*args: Any, **kwargs: Any) -> _Dialog:
+        dialog = original_factory(*args, **kwargs)
+        for name in ("setLabelText", "setRange", "setValue"):
+            real_setter = getattr(dialog, name)
+
+            def recording(*setter_args: Any, _name: str = name, _real: Callable[..., None] = real_setter) -> None:
+                calls.append(_name)
+                _real(*setter_args)
+                if _name == setter and calls.count(setter) == 1:
+                    dialog.canceled.emit()
+
+            setattr(dialog, name, recording)
+        return dialog
+
+    monkeypatch.setattr(import_flow_common, "QProgressDialog", make_reentrant_dialog)
+    results = _run(flow, [], make_worker=lambda job: made.append(job) or _Worker())
+
+    assert [name for name in calls if name in never_called] == []
+    assert made == []
+    assert results[0].cancelled is True
+    assert dialogs[0].label == "Cancelling…"
+    assert dialogs[0].cancel_button_visible is False
+
+
+_COMMON_LOGGER = "anki_miner.gui.controllers.import_flow_common"
+
+
+class _CancelOnRecord(logging.Handler):
+    """Cancel from inside the logger call whose message carries ``marker``."""
+
+    def __init__(self, marker: str, cancel: Callable[[], None]) -> None:
+        super().__init__(level=logging.INFO)
+        self._marker = marker
+        self._cancel = cancel
+        self.fired = False
+
+    def emit(self, record: logging.LogRecord) -> None:
+        if not self.fired and self._marker in record.getMessage():
+            self.fired = True
+            self._cancel()
+
+
+@pytest.mark.parametrize(
+    ("reentry", "cancel_calls", "watchdog_starts", "start_logged"),
+    [
+        ("set_trace_id", 2, 0, False),  # re-check #2
+        ("watchdog_start", 1, 1, False),  # re-check #3: stops before the start log line
+        ("worker_start_log", 1, 1, True),  # re-check #4: the log line itself cancels
+    ],
+)
+def test_reentrant_cancel_between_construct_and_start_starts_no_worker(
+    spine: tuple[_Harness, list[_Dialog], list[_Timer]],
+    caplog: pytest.LogCaptureFixture,
+    reentry: str,
+    cancel_calls: int,
+    watchdog_starts: int,
+    start_logged: bool,
+) -> None:
+    """Pins the re-checks after set_trace_id, the step wiring and the start log line."""
+    flow, dialogs, timers = spine
+    worker = _Worker()
+    caplog.set_level(logging.INFO, logger=_COMMON_LOGGER)
+    common_logger = logging.getLogger(_COMMON_LOGGER)
+    cancel_on_start_log = _CancelOnRecord("worker start index", lambda: dialogs[0].canceled.emit())
+
+    def make_worker(_job: str) -> _Worker:
+        if reentry == "set_trace_id":
+            record = worker.set_trace_id
+
+            def set_trace_id(trace_id: str) -> None:
+                record(trace_id)
+                dialogs[0].canceled.emit()
+
+            worker.set_trace_id = set_trace_id  # type: ignore[method-assign]
+        elif reentry == "watchdog_start":
+            timers[0].start_callback = dialogs[0].canceled.emit
+        else:
+            common_logger.addHandler(cancel_on_start_log)
+        return worker
+
+    try:
+        results = _run(flow, [], make_worker=make_worker)
+    finally:
+        common_logger.removeHandler(cancel_on_start_log)
+
+    assert worker.start_calls == 0
+    assert worker.cancel_calls == cancel_calls
+    assert worker.delete_later_calls == 1
+    assert timers[0].start_calls == watchdog_starts
+    assert results[0].cancelled is True
+    start_records = [record for record in caplog.records if "worker start index" in record.getMessage()]
+    assert bool(start_records) is start_logged
+
+
+def test_batch_cancel_hook_lives_exactly_as_long_as_the_batch(
+    spine: tuple[_Harness, list[_Dialog], list[_Timer]],
+) -> None:
+    """SettingsTab shutdown reaches the live batch through cancel_active_batch()."""
+    flow, _dialogs, _timers = spine
+    first = _Worker()
+    second = _Worker()
+
+    results = _run(flow, [first, second], jobs=("one", "two"))
+    assert flow._active_batch_cancel_hook is not None
+    flow.cancel_active_batch()
+
+    assert first.cancel_calls == 1
+    assert results == []
+    first.finish()
+
+    assert results[0].cancelled is True
+    assert second.start_calls == 0
+    assert flow._active_batch_cancel_hook is None
+    flow.cancel_active_batch()
+    assert first.cancel_calls == 1
+
+
+def _run_modal(flow: _Harness, worker: _Worker, successes: list[tuple[str, dict]]) -> None:
+    flow._run_modal_import(
+        worker=worker,  # type: ignore[arg-type]
+        progress_label="Importing",
+        cancel_label="Cancel",
+        determinate=True,
+        join_noun="test import worker",
+        failure_summary="Import Failed",
+        refusal_message="Busy",
+        cancelling_label="Cancelling…",
+        missing_result_message="Missing result",
+        trace_id="trace123",
+        on_success=lambda resource_id, meta: successes.append((resource_id, meta)),
+    )
+
+
+@pytest.mark.parametrize("cancel_action", ["button", "title_bar"])
+def test_modal_import_cancel_locks_dialog_until_native_finish(
+    spine: tuple[_Harness, list[_Dialog], list[_Timer]],
+    cancel_action: str,
+) -> None:
+    """The single-worker spine shares the cancel wiring with the chained one."""
+    flow, dialogs, _timers = spine
+    worker = _Worker()
+    successes: list[tuple[str, dict]] = []
+
+    _run_modal(flow, worker, successes)
+    dialog = dialogs[0]
+    if cancel_action == "button":
+        dialog.canceled.emit()
+    else:
+        dialog.close()
+    _Timer.drain()
+    worker.cancelled.emit()
+
+    assert worker.cancel_calls == 1
+    assert dialog.visible
+    assert dialog.label == "Cancelling…"
+    assert dialog.cancel_button_visible is False
+    assert flow.buttons_enabled is False
+
+    worker.finish()
+
+    assert successes == []
+    assert flow.buttons_enabled is True
+    assert dialog.delete_later_calls == 1
+    assert worker.delete_later_calls == 1
 
 
 def test_16_factory_exception_becomes_failure_and_batch_continues(

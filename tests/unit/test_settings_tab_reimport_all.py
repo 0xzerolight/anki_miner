@@ -19,20 +19,13 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtWidgets import QMessageBox
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.services._sqlite_index import write_ownership_marker
 from anki_miner.services.dictionary.storage import SCHEMA_VERSION, create_index, write_meta
 from tests.fixtures.dictionary.build_yomitan_fixture import build_yomitan_zip
-
-
-def _run_scan_sync(work, on_done, on_error):
-    try:
-        on_done(work())
-    except Exception as exc:  # noqa: BLE001
-        on_error(str(exc))
+from tests.unit._import_flow_harness import capture_infos, capture_warnings, make_stub_worker, run_scan_sync
 
 
 def _make_dict_on_disk(
@@ -73,7 +66,7 @@ def tab_for_reimport_all(test_config: AnkiMinerConfig, tmp_path: Path, qtbot):
     )
     (tmp_path / "dicts").mkdir(parents=True, exist_ok=True)
     widget = SettingsTab(cfg)
-    widget._dict_import_flow._run_latest_scan = _run_scan_sync
+    widget._dict_import_flow._run_latest_scan = run_scan_sync
     qtbot.addWidget(widget)
     yield widget
     widget.deleteLater()
@@ -93,17 +86,7 @@ def stubbed_workers(monkeypatch):
     instances: list[MagicMock] = []
 
     def _make_instance(*args, **kwargs):
-        inst = MagicMock(name="ImportWorker")
-        inst.progress = MagicMock()
-        inst.import_finished = MagicMock()
-        inst.failed = MagicMock()
-        inst.cancelled = MagicMock()
-        inst.finished = MagicMock()
-        inst.cancel = MagicMock()
-        inst.start = MagicMock()
-        inst.set_trace_id = MagicMock()
-        inst.is_cancelled = False
-        inst.isRunning = MagicMock(return_value=True)
+        inst = make_stub_worker(running=True, args=args, kwargs=kwargs)
         instances.append(inst)
         return inst
 
@@ -123,31 +106,6 @@ def stubbed_workers(monkeypatch):
         "jmdict_factory": jmdict_factory,
         "instances": instances,
     }
-
-
-def _silence_dialogs(monkeypatch) -> list[tuple[str, str]]:
-    """Capture (title, body) tuples passed to QMessageBox.information."""
-    captured: list[tuple[str, str]] = []
-    monkeypatch.setattr(
-        QMessageBox,
-        "information",
-        lambda parent, title, body, *a, **kw: captured.append((title, body)) or 0,
-    )
-    return captured
-
-
-def _capture_warnings(monkeypatch) -> list[tuple[str, str]]:
-    """Capture reported screen issues as ``(summary, whole text)`` (D24).
-
-    Import failures are no longer modals: they land in the owning panel's
-    banner, so the seam moved from ``QMessageBox.warning`` to the reporter.
-    """
-    captured: list[tuple[str, str]] = []
-    monkeypatch.setattr(
-        "anki_miner.gui.controllers.import_flow_common.report_screen_issue",
-        lambda origin, issue: captured.append((issue.summary, f"{issue.summary}\n{issue.details}".strip())) or True,
-    )
-    return captured
 
 
 def _complete_in_flight_worker(stubbed_workers, idx: int = -1) -> None:
@@ -186,8 +144,8 @@ def test_reimport_all_two_yomitan(tab_for_reimport_all, monkeypatch, stubbed_wor
 
     config_changed_emissions: list[object] = []
     tab.config_changed.connect(config_changed_emissions.append)
-    summaries = _silence_dialogs(monkeypatch)
-    warnings = _capture_warnings(monkeypatch)
+    summaries = capture_infos(monkeypatch)
+    warnings = capture_warnings(monkeypatch)
 
     tab._dict_import_flow.reimport_all()
 
@@ -238,7 +196,7 @@ def test_reimport_all_skips_legacy_without_source_zip(tab_for_reimport_all, monk
             ChainEntry(kind="indexed", dict_id="legacy-dict", enabled=True),
         )
     )
-    summaries = _silence_dialogs(monkeypatch)
+    summaries = capture_infos(monkeypatch)
 
     tab._dict_import_flow.reimport_all()
     _complete_in_flight_worker(stubbed_workers)
@@ -296,7 +254,7 @@ def test_reimport_all_only_ids_scopes_jobs_and_missing_sources(tab_for_reimport_
             ChainEntry(kind="indexed", dict_id="unrelated-stale", enabled=True),
         )
     )
-    summaries = _silence_dialogs(monkeypatch)
+    summaries = capture_infos(monkeypatch)
 
     tab._dict_import_flow.reimport_all(only_ids=frozenset({"stale-saved", "stale-missing"}))
     _complete_in_flight_worker(stubbed_workers)
@@ -322,7 +280,7 @@ def test_reimport_all_includes_jmdict(tab_for_reimport_all, monkeypatch, stubbed
     )
     tab.config.jmdict_path.write_text("<JMdict/>", encoding="utf-8")
     tab.dictionary_panel.set_chain((ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),))
-    _silence_dialogs(monkeypatch)
+    capture_infos(monkeypatch)
 
     tab._dict_import_flow.reimport_all()
 
@@ -341,7 +299,7 @@ def test_reimport_all_jmdict_skipped_when_xml_missing(tab_for_reimport_all, monk
     )
     # jmdict_path intentionally NOT created.
     tab.dictionary_panel.set_chain((ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),))
-    summaries = _silence_dialogs(monkeypatch)
+    summaries = capture_infos(monkeypatch)
 
     tab._dict_import_flow.reimport_all()
 
@@ -371,7 +329,7 @@ def test_reimport_all_repairs_only_owned_metadata_less_slot(
             ChainEntry(kind="indexed", dict_id="foreign", enabled=True),
         )
     )
-    summaries = _silence_dialogs(monkeypatch)
+    summaries = capture_infos(monkeypatch)
 
     tab._dict_import_flow.reimport_all()
     _complete_in_flight_worker(stubbed_workers)
@@ -394,7 +352,7 @@ def test_reimport_all_skips_saved_zip_for_other_dictionary(
     slot = _make_dict_on_disk(root, "expected", fmt="yomitan", source_name="Expected")
     build_yomitan_zip(slot / "source.zip", title="Other Dictionary")
     tab.dictionary_panel.set_chain((ChainEntry(kind="indexed", dict_id="expected", enabled=True),))
-    summaries = _silence_dialogs(monkeypatch)
+    summaries = capture_infos(monkeypatch)
 
     tab._dict_import_flow.reimport_all()
 
@@ -418,7 +376,7 @@ def test_reimport_all_corrupt_saved_jmdict_zip_falls_back_to_configured_xml(
     (slot / "source.zip").write_bytes(b"PK\x03\x04")
     tab.config.jmdict_path.write_text("<JMdict/>", encoding="utf-8")
     tab.dictionary_panel.set_chain((ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),))
-    _silence_dialogs(monkeypatch)
+    capture_infos(monkeypatch)
 
     tab._dict_import_flow.reimport_all()
 
@@ -445,7 +403,7 @@ def test_reimport_all_cancel_stops_chain(tab_for_reimport_all, monkeypatch, stub
         )
     )
 
-    summaries = _silence_dialogs(monkeypatch)
+    summaries = capture_infos(monkeypatch)
 
     tab._dict_import_flow.reimport_all()
     assert stubbed_workers["yomitan_factory"].call_count == 1
@@ -478,7 +436,7 @@ def test_reimport_all_one_failure_continues(tab_for_reimport_all, monkeypatch, s
             ChainEntry(kind="indexed", dict_id="dict-b", enabled=True),
         )
     )
-    summaries = _silence_dialogs(monkeypatch)
+    summaries = capture_infos(monkeypatch)
 
     tab._dict_import_flow.reimport_all()
     _fail_in_flight_worker(stubbed_workers, "boom")
@@ -496,7 +454,7 @@ def test_reimport_all_empty_chain_shows_message(tab_for_reimport_all, monkeypatc
     """Empty chain — no workers, surface a 'nothing to reimport' message."""
     tab = tab_for_reimport_all
     tab.dictionary_panel.set_chain(())
-    summaries = _silence_dialogs(monkeypatch)
+    summaries = capture_infos(monkeypatch)
 
     tab._dict_import_flow.reimport_all()
 
@@ -518,7 +476,7 @@ def test_reimport_all_release_refusal_blocks_workers(tab_for_reimport_all, monke
 
     monkeypatch.setattr(tab.dictionary_panel, "request_resource_release", lambda: False)
 
-    warnings = _capture_warnings(monkeypatch)
+    warnings = capture_warnings(monkeypatch)
 
     tab._dict_import_flow.reimport_all()
 
@@ -541,7 +499,7 @@ def test_reimport_all_defers_reassignment_until_native_finished_without_wait(
             ChainEntry(kind="indexed", dict_id="dict-b", enabled=True),
         )
     )
-    _silence_dialogs(monkeypatch)
+    capture_infos(monkeypatch)
 
     tab._dict_import_flow.reimport_all()
     assert stubbed_workers["yomitan_factory"].call_count == 1
@@ -569,7 +527,7 @@ def test_reimport_all_shutdown_while_waiting_does_not_dispatch_after_predecessor
     dicts_root = tab.config.dicts_root
     _make_dict_on_disk(dicts_root, "dict-a", fmt="yomitan", source_name="Dict A")
     tab.dictionary_panel.set_chain((ChainEntry(kind="indexed", dict_id="dict-a", enabled=True),))
-    _silence_dialogs(monkeypatch)
+    capture_infos(monkeypatch)
 
     predecessor = stubbed_workers["yomitan_factory"]()
     stubbed_workers["yomitan_factory"].reset_mock()
@@ -593,8 +551,8 @@ def test_reimport_all_refresh_failure_warns_and_restores_controls(
     dicts_root = tab.config.dicts_root
     _make_dict_on_disk(dicts_root, "dict-a", fmt="yomitan", source_name="Dict A")
     tab.dictionary_panel.set_chain((ChainEntry(kind="indexed", dict_id="dict-a", enabled=True),))
-    warnings = _capture_warnings(monkeypatch)
-    _silence_dialogs(monkeypatch)
+    warnings = capture_warnings(monkeypatch)
+    capture_infos(monkeypatch)
 
     def fail_notify() -> None:
         raise RuntimeError("refresh callback failed")
@@ -639,7 +597,7 @@ def test_trigger_reimport_all_dispatches_both_slot_kinds(tab_for_reimport_all, m
             ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),
         )
     )
-    _silence_dialogs(monkeypatch)
+    capture_infos(monkeypatch)
 
     tab.trigger_reimport_all()
     # Drive both chained workers to completion so the sequence runs end to end.

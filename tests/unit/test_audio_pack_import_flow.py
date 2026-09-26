@@ -12,7 +12,6 @@ Covers:
 from __future__ import annotations
 
 import contextlib
-import json
 import logging
 import threading
 from dataclasses import replace
@@ -21,57 +20,18 @@ from unittest.mock import MagicMock
 
 import pytest
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QMessageBox, QProgressDialog
+from PyQt6.QtWidgets import QProgressDialog
 
 from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.widgets.settings_tab import SettingsTab
-
-
-def _run_scan_sync(work, on_done, on_error, *, pass_cancel_check=False):
-    try:
-        on_done(work(lambda: False) if pass_cancel_check else work())
-    except Exception as exc:  # noqa: BLE001
-        on_error(str(exc))
-
-
-# ---------------------------------------------------------------------------
-# Pack-building helpers
-# ---------------------------------------------------------------------------
-
-
-def _make_forvo_pack(directory: Path, n_entries: int = 2) -> Path:
-    """Create a minimal Forvo-format audio pack under *directory*."""
-    speakers = ["alice", "bob"]
-    words = ["食べる", "飲む", "走る", "見る"]
-    for i in range(n_entries):
-        speaker = speakers[i % len(speakers)]
-        word = words[i % len(words)]
-        speaker_dir = directory / speaker
-        speaker_dir.mkdir(parents=True, exist_ok=True)
-        (speaker_dir / f"{word}.mp3").touch()
-    return directory
-
-
-def _make_ajt_pack(directory: Path, n_entries: int = 2) -> Path:
-    """Create a minimal AJT-format audio pack under *directory*."""
-    media_dir = directory / "media"
-    media_dir.mkdir(parents=True, exist_ok=True)
-    headwords: dict = {}
-    files_meta: dict = {}
-    words = ["食べる", "飲む", "走る", "見る", "来る"]
-    for i in range(n_entries):
-        word = words[i % len(words)]
-        fname = f"word_{i}.mp3"
-        (media_dir / fname).touch()
-        headwords.setdefault(word, []).append(fname)
-        files_meta[fname] = {"kana_reading": f"reading_{i}", "pitch_number": str(i)}
-    (directory / "index.json").write_text(
-        json.dumps({"headwords": headwords, "files": files_meta}),
-        encoding="utf-8",
-    )
-    return directory
-
+from tests.unit._audio_packs import make_ajt_pack, make_forvo_pack
+from tests.unit._import_flow_harness import (
+    capture_infos,
+    capture_warnings,
+    patch_stub_worker_factories,
+    run_scan_sync,
+)
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -84,7 +44,7 @@ def tab(test_config: AnkiMinerConfig, tmp_path, qtbot):
     cfg = replace(test_config, audio_packs_root=tmp_path / "audio_packs")
     (tmp_path / "audio_packs").mkdir()
     widget = SettingsTab(cfg)
-    widget._audio_pack_import_flow._run_latest_scan = _run_scan_sync
+    widget._audio_pack_import_flow._run_latest_scan = run_scan_sync
     qtbot.addWidget(widget)
     yield widget
     # _on_save_clicked reconciles styling, spawning a short-lived AnkiConnect
@@ -107,63 +67,11 @@ def stub_worker(monkeypatch):
     import_finished / failed signals by calling the stored `on_done` / `on_fail`
     callbacks that the flow connects to the mock's signals.
     """
-    factory = MagicMock(name="for_pack")
-    repair_factory = MagicMock(name="for_pack_repair")
-    instances: list[MagicMock] = []
-
-    def _build_instance(*args, **kwargs):
-        instance = MagicMock(name="ImportWorker")
-        instance.progress = MagicMock()
-        instance.import_finished = MagicMock()
-        instance.failed = MagicMock()
-        instance.cancelled = MagicMock()
-        instance.finished = MagicMock()
-        instance.cancel = MagicMock()
-        instance.start = MagicMock()
-        instance.set_trace_id = MagicMock()
-        instance.is_cancelled = False
-        instance.isRunning = MagicMock(return_value=False)
-        instances.append(instance)
-        return instance
-
-    factory.side_effect = _build_instance
-    repair_factory.side_effect = _build_instance
-    factory.instances = instances
-    factory.repair_factory = repair_factory
-    monkeypatch.setattr(
+    return patch_stub_worker_factories(
+        monkeypatch,
         "anki_miner.gui.controllers.audio_pack_import_flow.ImportWorker.for_pack",
-        factory,
-    )
-    monkeypatch.setattr(
         "anki_miner.gui.controllers.audio_pack_import_flow.ImportWorker.for_pack_repair",
-        repair_factory,
-        raising=False,
     )
-    return factory
-
-
-def _capture_warnings(monkeypatch) -> list[tuple[str, str]]:
-    """Capture reported screen issues as ``(summary, whole text)`` (D24).
-
-    Import failures are no longer modals: they land in the owning panel's
-    banner, so the seam moved from ``QMessageBox.warning`` to the reporter.
-    """
-    captured: list[tuple[str, str]] = []
-    monkeypatch.setattr(
-        "anki_miner.gui.controllers.import_flow_common.report_screen_issue",
-        lambda origin, issue: captured.append((issue.summary, f"{issue.summary}\n{issue.details}".strip())) or True,
-    )
-    return captured
-
-
-def _capture_infos(monkeypatch) -> list[tuple[str, str]]:
-    captured: list[tuple[str, str]] = []
-    monkeypatch.setattr(
-        QMessageBox,
-        "information",
-        lambda parent, title, body, *a, **kw: captured.append((title, body)) or 0,
-    )
-    return captured
 
 
 def test_add_android_db_uses_file_picker_and_android_worker(tab, monkeypatch, tmp_path):
@@ -208,7 +116,7 @@ class TestAddPackNoPacks:
         empty_dir = tmp_path / "empty"
         empty_dir.mkdir()
         monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(empty_dir)))
-        warnings = _capture_warnings(monkeypatch)
+        warnings = capture_warnings(monkeypatch)
 
         tab._audio_pack_import_flow.add_pack()
 
@@ -224,7 +132,7 @@ class TestAddPackNoPacks:
         chosen = tmp_path / "unreadable"
         chosen.mkdir()
         monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(chosen)))
-        warnings = _capture_warnings(monkeypatch)
+        warnings = capture_warnings(monkeypatch)
         scan_thread: dict[str, int] = {}
 
         def _fail_scan(_path, *, cancel_check=None, progress=None):
@@ -296,8 +204,8 @@ class TestAddPackSingleHappyPath:
         flow = tab._audio_pack_import_flow
         pack_dir = tmp_path / "forvo"
         pack_dir.mkdir()
-        warnings = _capture_warnings(monkeypatch)
-        infos = _capture_infos(monkeypatch)
+        warnings = capture_warnings(monkeypatch)
+        infos = capture_infos(monkeypatch)
         monkeypatch.setattr(tab.audio_panel, "refresh_registry", lambda: None)
 
         def fail_persist(_config: AnkiMinerConfig) -> None:
@@ -324,11 +232,11 @@ class TestAddPackSingleHappyPath:
     def test_worker_called_and_chain_updated_on_success(self, tab, monkeypatch, stub_worker, tmp_path):
         pack_dir = tmp_path / "forvo_pack"
         pack_dir.mkdir()
-        _make_forvo_pack(pack_dir)
+        make_forvo_pack(pack_dir)
 
         monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(pack_dir)))
-        _capture_warnings(monkeypatch)
-        infos = _capture_infos(monkeypatch)
+        capture_warnings(monkeypatch)
+        infos = capture_infos(monkeypatch)
 
         persist_calls: list[tuple[AudioSourceEntry, ...]] = []
         tab._audio_pack_import_flow._persist_chain = persist_calls.append
@@ -356,10 +264,10 @@ class TestAddPackSingleHappyPath:
     def test_new_pack_inserted_before_jpod101(self, tab, monkeypatch, stub_worker, tmp_path):
         pack_dir = tmp_path / "forvo_pack"
         pack_dir.mkdir()
-        _make_forvo_pack(pack_dir)
+        make_forvo_pack(pack_dir)
 
         monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(pack_dir)))
-        _capture_warnings(monkeypatch)
+        capture_warnings(monkeypatch)
 
         persist_calls: list[tuple[AudioSourceEntry, ...]] = []
         tab._audio_pack_import_flow._persist_chain = persist_calls.append
@@ -382,11 +290,11 @@ class TestAddPackSingleHappyPath:
     def test_failed_single_pack_shows_warning(self, tab, monkeypatch, stub_worker, tmp_path):
         pack_dir = tmp_path / "forvo_pack"
         pack_dir.mkdir()
-        _make_forvo_pack(pack_dir)
+        make_forvo_pack(pack_dir)
 
         monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(pack_dir)))
-        _capture_warnings(monkeypatch)
-        infos = _capture_infos(monkeypatch)
+        capture_warnings(monkeypatch)
+        infos = capture_infos(monkeypatch)
 
         persist_calls: list = []
         tab._audio_pack_import_flow._persist_chain = persist_calls.append
@@ -408,10 +316,10 @@ class TestAddPackSingleHappyPath:
     def test_cancelled_single_pack_shows_summary_after_native_finish(self, tab, monkeypatch, stub_worker, tmp_path):
         pack_dir = tmp_path / "forvo_pack"
         pack_dir.mkdir()
-        _make_forvo_pack(pack_dir)
+        make_forvo_pack(pack_dir)
         monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(pack_dir)))
-        infos = _capture_infos(monkeypatch)
-        _capture_warnings(monkeypatch)
+        infos = capture_infos(monkeypatch)
+        capture_warnings(monkeypatch)
         persist_calls: list[tuple[AudioSourceEntry, ...]] = []
         tab._audio_pack_import_flow._persist_chain = persist_calls.append
 
@@ -440,14 +348,14 @@ class TestAddPackMultiPack:
         parent.mkdir()
         pack_a = parent / "forvo"
         pack_a.mkdir()
-        _make_forvo_pack(pack_a)
+        make_forvo_pack(pack_a)
         pack_b = parent / "ajt"
         pack_b.mkdir()
-        _make_ajt_pack(pack_b)
+        make_ajt_pack(pack_b)
 
         monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(parent)))
-        infos = _capture_infos(monkeypatch)
-        _capture_warnings(monkeypatch)
+        infos = capture_infos(monkeypatch)
+        capture_warnings(monkeypatch)
 
         persist_calls: list[tuple[AudioSourceEntry, ...]] = []
         tab._audio_pack_import_flow._persist_chain = persist_calls.append
@@ -511,14 +419,14 @@ class TestAddPackMultiPack:
         parent.mkdir()
         pack_a = parent / "forvo"
         pack_a.mkdir()
-        _make_forvo_pack(pack_a)
+        make_forvo_pack(pack_a)
         pack_b = parent / "ajt"
         pack_b.mkdir()
-        _make_ajt_pack(pack_b)
+        make_ajt_pack(pack_b)
 
         monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(parent)))
-        infos = _capture_infos(monkeypatch)
-        _capture_warnings(monkeypatch)
+        infos = capture_infos(monkeypatch)
+        capture_warnings(monkeypatch)
 
         persist_calls: list[tuple[AudioSourceEntry, ...]] = []
         tab._audio_pack_import_flow._persist_chain = persist_calls.append
@@ -554,14 +462,14 @@ class TestAddPackMultiPack:
         parent.mkdir()
         pack_a = parent / "forvo"
         pack_a.mkdir()
-        _make_forvo_pack(pack_a)
+        make_forvo_pack(pack_a)
         pack_b = parent / "ajt"
         pack_b.mkdir()
-        _make_ajt_pack(pack_b)
+        make_ajt_pack(pack_b)
 
         monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(parent)))
-        infos = _capture_infos(monkeypatch)
-        _capture_warnings(monkeypatch)
+        infos = capture_infos(monkeypatch)
+        capture_warnings(monkeypatch)
 
         tab._audio_pack_import_flow.add_pack()
 
@@ -593,10 +501,10 @@ class TestAddPackMultiPack:
 
 class TestReimportPack:
     def test_reimport_refused_while_mining_active(self, tab, monkeypatch, stub_worker, tmp_path):
-        pack_dir = _make_forvo_pack(tmp_path / "forvo_pack")
+        pack_dir = make_forvo_pack(tmp_path / "forvo_pack")
         monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(pack_dir)))
         monkeypatch.setattr(tab.audio_panel, "request_resource_release", lambda: False, raising=False)
-        warnings = _capture_warnings(monkeypatch)
+        warnings = capture_warnings(monkeypatch)
 
         tab._audio_pack_import_flow.reimport_pack("my-pack-id")
 
@@ -609,11 +517,11 @@ class TestReimportPack:
     def test_reimport_uses_repair_worker_and_pack_id(self, tab, monkeypatch, stub_worker, tmp_path):
         pack_dir = tmp_path / "forvo_pack"
         pack_dir.mkdir()
-        _make_forvo_pack(pack_dir)
+        make_forvo_pack(pack_dir)
 
         monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(pack_dir)))
-        _capture_infos(monkeypatch)
-        _capture_warnings(monkeypatch)
+        capture_infos(monkeypatch)
+        capture_warnings(monkeypatch)
 
         tab._audio_pack_import_flow.reimport_pack("my-pack-id")
 
@@ -630,11 +538,11 @@ class TestReimportPack:
     def test_reimport_success_refreshes_panel_no_chain_change(self, tab, monkeypatch, stub_worker, tmp_path):
         pack_dir = tmp_path / "forvo_pack"
         pack_dir.mkdir()
-        _make_forvo_pack(pack_dir)
+        make_forvo_pack(pack_dir)
 
         monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(pack_dir)))
-        infos = _capture_infos(monkeypatch)
-        _capture_warnings(monkeypatch)
+        infos = capture_infos(monkeypatch)
+        capture_warnings(monkeypatch)
 
         persist_calls: list = []
         tab._audio_pack_import_flow._persist_chain = persist_calls.append
@@ -800,8 +708,8 @@ class TestAddPackPriorityOrdering:
             "anki_miner.gui.controllers.audio_pack_import_flow.derive_pack_id",
             lambda name: f"unknown-{name}",
         )
-        _capture_infos(monkeypatch)
-        _capture_warnings(monkeypatch)
+        capture_infos(monkeypatch)
+        capture_warnings(monkeypatch)
 
         tab._audio_pack_import_flow.add_pack(_scan_result=(str(tmp_path), packs))
 
@@ -833,15 +741,15 @@ class TestAddPackPriorityOrdering:
 
         forvo_dir = parent / "forvo_files"
         forvo_dir.mkdir()
-        _make_forvo_pack(forvo_dir)
+        make_forvo_pack(forvo_dir)
 
         nhk16_dir = parent / "nhk16_files"
         nhk16_dir.mkdir()
         _make_nhk16_pack(nhk16_dir)
 
         monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(parent)))
-        _capture_infos(monkeypatch)
-        _capture_warnings(monkeypatch)
+        capture_infos(monkeypatch)
+        capture_warnings(monkeypatch)
 
         persist_calls: list[tuple[AudioSourceEntry, ...]] = []
         tab._audio_pack_import_flow._persist_chain = persist_calls.append
@@ -876,7 +784,7 @@ class TestAddPackPriorityOrdering:
 
         forvo_dir = parent / "forvo_files"
         forvo_dir.mkdir()
-        _make_forvo_pack(forvo_dir)
+        make_forvo_pack(forvo_dir)
 
         nhk16_dir = parent / "nhk16_files"
         nhk16_dir.mkdir()
@@ -885,11 +793,11 @@ class TestAddPackPriorityOrdering:
         # shinmeikai8 uses AJT format
         shinmeikai8_dir = parent / "shinmeikai8_files"
         shinmeikai8_dir.mkdir()
-        _make_ajt_pack(shinmeikai8_dir)
+        make_ajt_pack(shinmeikai8_dir)
 
         monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(parent)))
-        _capture_infos(monkeypatch)
-        _capture_warnings(monkeypatch)
+        capture_infos(monkeypatch)
+        capture_warnings(monkeypatch)
 
         persist_calls: list[tuple[AudioSourceEntry, ...]] = []
         tab._audio_pack_import_flow._persist_chain = persist_calls.append
@@ -926,15 +834,15 @@ class TestAddPackPriorityOrdering:
 
         forvo_dir = parent / "forvo_files"
         forvo_dir.mkdir()
-        _make_forvo_pack(forvo_dir)
+        make_forvo_pack(forvo_dir)
 
         nhk16_dir = parent / "nhk16_files"
         nhk16_dir.mkdir()
         _make_nhk16_pack(nhk16_dir)
 
         monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(parent)))
-        _capture_infos(monkeypatch)
-        _capture_warnings(monkeypatch)
+        capture_infos(monkeypatch)
+        capture_warnings(monkeypatch)
 
         persist_calls: list[tuple[AudioSourceEntry, ...]] = []
         tab._audio_pack_import_flow._persist_chain = persist_calls.append
@@ -1057,10 +965,10 @@ def _explode(*_args, **_kwargs):
 
 class TestReimportAll:
     def test_rebuilds_a_folder_pack_from_its_recorded_dir(self, tab, monkeypatch, stub_worker, tmp_path):
-        pack_dir = _make_forvo_pack(tmp_path / "forvo_src")
+        pack_dir = make_forvo_pack(tmp_path / "forvo_src")
         _install_pack_slot(tab.config.audio_packs_root, "forvo", pack_dir=pack_dir)
         tab.audio_panel.set_chain((AudioSourceEntry(kind="pack", pack_id="forvo", enabled=True),))
-        _capture_infos(monkeypatch)
+        capture_infos(monkeypatch)
 
         tab._audio_pack_import_flow.reimport_all(only_ids=frozenset({"forvo"}))
 
@@ -1079,7 +987,7 @@ class TestReimportAll:
             "anki_miner.gui.controllers.audio_pack_import_flow.ImportWorker.for_android_audio_db",
             android_factory,
         )
-        _capture_infos(monkeypatch)
+        capture_infos(monkeypatch)
 
         tab._audio_pack_import_flow.reimport_all(only_ids=frozenset({"jp"}))
 
@@ -1095,7 +1003,7 @@ class TestReimportAll:
         tab.audio_panel.set_chain((AudioSourceEntry(kind="pack", pack_id="gone", enabled=True),))
         monkeypatch.setattr(file_dialogs, "pick_directory", _explode)
         monkeypatch.setattr(file_dialogs, "pick_open_file", _explode)
-        _capture_infos(monkeypatch)
+        capture_infos(monkeypatch)
 
         tab._audio_pack_import_flow.reimport_all(only_ids=frozenset({"gone"}))
 
@@ -1104,7 +1012,7 @@ class TestReimportAll:
     def test_names_packs_it_cannot_rebuild(self, tab, monkeypatch, stub_worker, tmp_path):
         _install_pack_slot(tab.config.audio_packs_root, "gone", pack_dir=tmp_path / "deleted")
         tab.audio_panel.set_chain((AudioSourceEntry(kind="pack", pack_id="gone", enabled=True),))
-        infos = _capture_infos(monkeypatch)
+        infos = capture_infos(monkeypatch)
 
         tab._audio_pack_import_flow.reimport_all(only_ids=frozenset({"gone"}))
 
@@ -1113,7 +1021,7 @@ class TestReimportAll:
 
     def test_reports_an_empty_chain(self, tab, monkeypatch, stub_worker):
         tab.audio_panel.set_chain((AudioSourceEntry(kind="jpod101", enabled=True),))
-        infos = _capture_infos(monkeypatch)
+        infos = capture_infos(monkeypatch)
 
         tab._audio_pack_import_flow.reimport_all()
 
@@ -1126,10 +1034,10 @@ class TestReimportAll:
         from the chain before the repair batch ran. A chain that still has
         packs — just not the one that was asked for — reads differently from
         a chain with nothing in it."""
-        pack_dir = _make_forvo_pack(tmp_path / "forvo_src")
+        pack_dir = make_forvo_pack(tmp_path / "forvo_src")
         _install_pack_slot(tab.config.audio_packs_root, "forvo", pack_dir=pack_dir)
         tab.audio_panel.set_chain((AudioSourceEntry(kind="pack", pack_id="forvo", enabled=True),))
-        infos = _capture_infos(monkeypatch)
+        infos = capture_infos(monkeypatch)
 
         tab._audio_pack_import_flow.reimport_all(only_ids=frozenset({"gone-pack"}))
 
@@ -1139,11 +1047,11 @@ class TestReimportAll:
         stub_worker.repair_factory.assert_not_called()
 
     def test_refuses_while_resources_are_held(self, tab, monkeypatch, stub_worker, tmp_path):
-        pack_dir = _make_forvo_pack(tmp_path / "forvo_src")
+        pack_dir = make_forvo_pack(tmp_path / "forvo_src")
         _install_pack_slot(tab.config.audio_packs_root, "forvo", pack_dir=pack_dir)
         tab.audio_panel.set_chain((AudioSourceEntry(kind="pack", pack_id="forvo", enabled=True),))
         monkeypatch.setattr(tab.audio_panel, "request_resource_release", lambda: False, raising=False)
-        warnings = _capture_warnings(monkeypatch)
+        warnings = capture_warnings(monkeypatch)
 
         tab._audio_pack_import_flow.reimport_all(only_ids=frozenset({"forvo"}))
 
@@ -1154,9 +1062,9 @@ class TestReimportAll:
     def test_on_complete_fires_once_on_every_terminal_path(self, tab, monkeypatch, stub_worker, tmp_path, scenario):
         """The startup prompt chains the next family off this callback: a
         missed fire strands the chain, a double fire runs a family twice."""
-        _capture_infos(monkeypatch)
-        _capture_warnings(monkeypatch)
-        pack_dir = _make_forvo_pack(tmp_path / "forvo_src")
+        capture_infos(monkeypatch)
+        capture_warnings(monkeypatch)
+        pack_dir = make_forvo_pack(tmp_path / "forvo_src")
         _install_pack_slot(tab.config.audio_packs_root, "forvo", pack_dir=pack_dir)
 
         if scenario == "nothing_to_do":
@@ -1175,11 +1083,11 @@ class TestReimportAll:
         assert calls == [1]
 
     def test_success_refreshes_the_panel_once_and_leaves_the_chain(self, tab, monkeypatch, stub_worker, tmp_path):
-        pack_dir = _make_forvo_pack(tmp_path / "forvo_src")
+        pack_dir = make_forvo_pack(tmp_path / "forvo_src")
         _install_pack_slot(tab.config.audio_packs_root, "forvo", pack_dir=pack_dir)
         tab.audio_panel.set_chain((AudioSourceEntry(kind="pack", pack_id="forvo", enabled=True),))
-        infos = _capture_infos(monkeypatch)
-        _capture_warnings(monkeypatch)
+        infos = capture_infos(monkeypatch)
+        capture_warnings(monkeypatch)
         persist_calls: list = []
         tab._audio_pack_import_flow._persist_chain = persist_calls.append
         notify_calls: list[None] = []
@@ -1215,7 +1123,7 @@ class TestScanSupersession:
         # The `tab` fixture stubs _run_latest_scan to run synchronously; this
         # test exercises the real generation-tracking contract instead.
         del flow._run_latest_scan
-        warnings = _capture_warnings(monkeypatch)
+        warnings = capture_warnings(monkeypatch)
 
         captured: list[tuple] = []
 
@@ -1293,7 +1201,7 @@ class TestScanBusyDialog:
         empty = tmp_path / "empty"
         empty.mkdir()
         monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(empty)))
-        warnings = _capture_warnings(monkeypatch)
+        warnings = capture_warnings(monkeypatch)
         tab._audio_pack_import_flow.add_pack()
         assert warnings, "zero-pack warning still surfaces"
         assert not [d for d in tab.findChildren(QProgressDialog) if d.isVisible()]

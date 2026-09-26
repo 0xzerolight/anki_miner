@@ -17,21 +17,23 @@ from unittest.mock import MagicMock
 import pytest
 from PyQt6 import sip
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QMessageBox, QProgressDialog, QPushButton
+from PyQt6.QtWidgets import QProgressDialog, QPushButton
 
 from anki_miner.config import AnkiMinerConfig, FreqEntry
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.gui.workers.import_worker import ImportWorker
 from anki_miner.services.frequency.source_importer import FREQUENCY_SOURCE_SUFFIXES
-
-
-def _run_scan_sync(work, on_done, on_error):
-    try:
-        on_done(work())
-    except Exception as exc:  # noqa: BLE001
-        on_error(str(exc))
-
+from tests.unit._import_flow_harness import (
+    capture_infos,
+    capture_warnings,
+    fire_cancelled,
+    fire_done,
+    fire_failed,
+    fire_thread_finished,
+    patch_stub_worker_factories,
+    run_scan_sync,
+)
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -45,7 +47,7 @@ def tab(test_config: AnkiMinerConfig, tmp_path, qtbot):
     freqs_root.mkdir()
     cfg = replace(test_config, freqs_root=freqs_root)
     widget = SettingsTab(cfg)
-    widget._frequency_import_flow._run_latest_scan = _run_scan_sync
+    widget._frequency_import_flow._run_latest_scan = run_scan_sync
     qtbot.addWidget(widget)
     yield widget
 
@@ -53,86 +55,11 @@ def tab(test_config: AnkiMinerConfig, tmp_path, qtbot):
 @pytest.fixture
 def stub_worker(monkeypatch):
     """Replace ImportWorker.for_source with a controllable mock factory."""
-    factory = MagicMock(name="for_source")
-    repair_factory = MagicMock(name="for_source_repair")
-    instances: list[MagicMock] = []
-
-    def _build_instance(*args, **kwargs):
-        instance = MagicMock(name="ImportWorker")
-        instance.progress = MagicMock()
-        instance.import_finished = MagicMock()
-        instance.failed = MagicMock()
-        instance.cancelled = MagicMock()
-        instance.finished = MagicMock()
-        instance.cancel = MagicMock()
-        instance.start = MagicMock()
-        instance.isRunning = MagicMock(return_value=False)
-        instance._args = args
-        instance._kwargs = kwargs
-        instances.append(instance)
-        return instance
-
-    factory.side_effect = _build_instance
-    repair_factory.side_effect = _build_instance
-    factory.instances = instances
-    factory.repair_factory = repair_factory
-    monkeypatch.setattr(
+    return patch_stub_worker_factories(
+        monkeypatch,
         "anki_miner.gui.controllers.frequency_import_flow.ImportWorker.for_source",
-        factory,
-    )
-    monkeypatch.setattr(
         "anki_miner.gui.controllers.frequency_import_flow.ImportWorker.for_source_repair",
-        repair_factory,
-        raising=False,
     )
-    return factory
-
-
-def _capture_warnings(monkeypatch) -> list[tuple[str, str]]:
-    """Capture reported screen issues as ``(summary, whole text)`` (D24).
-
-    Import failures are no longer modals: they land in the owning panel's
-    banner, so the seam moved from ``QMessageBox.warning`` to the reporter.
-    """
-    captured: list[tuple[str, str]] = []
-    monkeypatch.setattr(
-        "anki_miner.gui.controllers.import_flow_common.report_screen_issue",
-        lambda origin, issue: captured.append((issue.summary, f"{issue.summary}\n{issue.details}".strip())) or True,
-    )
-    return captured
-
-
-def _capture_infos(monkeypatch) -> list[tuple[str, str]]:
-    captured: list[tuple[str, str]] = []
-    monkeypatch.setattr(
-        QMessageBox,
-        "information",
-        lambda parent, title, body, *a, **kw: captured.append((title, body)) or 0,
-    )
-    return captured
-
-
-def _fire_done(instance, source_id: str, meta: dict) -> None:
-    on_done = instance.import_finished.connect.call_args[0][0]
-    on_done(source_id, meta)
-    _fire_thread_finished(instance)
-
-
-def _fire_failed(instance, err: str) -> None:
-    on_failed = instance.failed.connect.call_args[0][0]
-    on_failed(err)
-    _fire_thread_finished(instance)
-
-
-def _fire_cancelled(instance) -> None:
-    on_cancelled = instance.cancelled.connect.call_args[0][0]
-    on_cancelled()
-    _fire_thread_finished(instance)
-
-
-def _fire_thread_finished(instance) -> None:
-    on_thread_finished = instance.finished.connect.call_args[0][0]
-    on_thread_finished()
 
 
 class _TailImportWorker(ImportWorker):
@@ -224,7 +151,7 @@ class TestAddSource:
         src = tmp_path / "mylist.csv"
         src.write_text("word,rank\n猫,5\n", encoding="utf-8")
         monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
-        _capture_infos(monkeypatch)
+        capture_infos(monkeypatch)
 
         persist_calls: list[tuple[FreqEntry, ...]] = []
         tab._frequency_import_flow._persist_chain = persist_calls.append
@@ -236,7 +163,7 @@ class TestAddSource:
 
         instance = stub_worker.instances[0]
         assert instance._kwargs.get("overwrite") is False
-        _fire_done(instance, "mylist", {"entry_count": 1, "source_name": "mylist", "format": "csv"})
+        fire_done(instance, "mylist", {"entry_count": 1, "source_name": "mylist", "format": "csv"})
 
         assert persist_calls, "persist_chain must be called on success"
         new_chain = persist_calls[-1]
@@ -253,15 +180,15 @@ class TestAddSource:
             "pick_open_files",
             lambda *a, on_done, **kw: on_done([str(first), str(second)]),
         )
-        _capture_infos(monkeypatch)
+        capture_infos(monkeypatch)
         monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
         persist_calls: list[tuple[FreqEntry, ...]] = []
         tab._frequency_import_flow._persist_chain = persist_calls.append
 
         tab._frequency_import_flow.add_source()
-        _fire_done(stub_worker.instances[0], "first", {"entry_count": 1, "source_name": "First"})
+        fire_done(stub_worker.instances[0], "first", {"entry_count": 1, "source_name": "First"})
         qtbot.waitUntil(lambda: len(stub_worker.instances) == 2)
-        _fire_done(stub_worker.instances[1], "second", {"entry_count": 2, "source_name": "Second"})
+        fire_done(stub_worker.instances[1], "second", {"entry_count": 2, "source_name": "Second"})
 
         assert [entry.source_id for entry in persist_calls[-1]][-2:] == ["first", "second"]
         assert len(persist_calls) == 1
@@ -270,13 +197,13 @@ class TestAddSource:
         src = tmp_path / "counts.csv"
         src.write_text("word,count\n猫,5\n", encoding="utf-8")
         monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
-        infos = _capture_infos(monkeypatch)
+        infos = capture_infos(monkeypatch)
         tab._frequency_import_flow._persist_chain = lambda _chain: None
         monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
 
         tab._frequency_import_flow.add_source()
         instance = stub_worker.instances[0]
-        _fire_done(
+        fire_done(
             instance,
             "counts",
             {"entry_count": 1, "source_name": "counts", "format": "csv", "converted_to_ranks": True},
@@ -289,13 +216,13 @@ class TestAddSource:
         src = tmp_path / "jlpt.zip"
         src.write_bytes(b"zip")
         monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
-        infos = _capture_infos(monkeypatch)
+        infos = capture_infos(monkeypatch)
         tab._frequency_import_flow._persist_chain = lambda _chain: None
         monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
 
         tab._frequency_import_flow.add_source()
         instance = stub_worker.instances[0]
-        _fire_done(
+        fire_done(
             instance,
             "jlpt",
             {"entry_count": 2, "source_name": "JLPT", "format": "yomitan-freq", "is_categorical": True},
@@ -308,7 +235,7 @@ class TestAddSource:
         src = tmp_path / "new.csv"
         src.write_text("word,rank\n猫,5\n", encoding="utf-8")
         monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
-        _capture_infos(monkeypatch)
+        capture_infos(monkeypatch)
         monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
 
         tab.frequency_panel.set_chain(
@@ -321,7 +248,7 @@ class TestAddSource:
 
         tab._frequency_import_flow.add_source()
         instance = stub_worker.instances[0]
-        _fire_done(instance, "new", {"entry_count": 1, "source_name": "new", "format": "csv"})
+        fire_done(instance, "new", {"entry_count": 1, "source_name": "new", "format": "csv"})
 
         new_chain = persist_calls[-1]
         ids = [e.source_id for e in new_chain]
@@ -331,7 +258,7 @@ class TestAddSource:
         src = tmp_path / "broken.zip"
         src.write_bytes(b"junk")
         monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
-        warnings = _capture_warnings(monkeypatch)
+        warnings = capture_warnings(monkeypatch)
         monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
 
         tab.frequency_panel.set_chain(
@@ -343,7 +270,7 @@ class TestAddSource:
 
         tab._frequency_import_flow.add_source()
         instance = stub_worker.instances[0]
-        _fire_failed(instance, "freq zip is broken")
+        fire_failed(instance, "freq zip is broken")
 
         assert warnings, "failure must surface a warning"
         assert persist_calls == [], "chain must not be persisted on failure"
@@ -357,12 +284,12 @@ class TestAddSource:
         src = tmp_path / "cancel-list.zip"
         src.write_bytes(b"junk")
         monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
-        warnings = _capture_warnings(monkeypatch)
+        warnings = capture_warnings(monkeypatch)
         monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
 
         tab._frequency_import_flow.add_source()
         instance = stub_worker.instances[0]
-        _fire_failed(instance, "could not open 'cancel-list.zip': bad magic")
+        fire_failed(instance, "could not open 'cancel-list.zip': bad magic")
 
         assert warnings, "a real error mentioning 'cancel' must still surface"
 
@@ -372,13 +299,13 @@ class TestAddSource:
         src = tmp_path / "list.zip"
         src.write_bytes(b"junk")
         monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
-        warnings = _capture_warnings(monkeypatch)
+        warnings = capture_warnings(monkeypatch)
         monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
 
         tab._frequency_import_flow.add_source()
         assert tab.frequency_panel._add_btn.isEnabled() is False
         instance = stub_worker.instances[0]
-        _fire_cancelled(instance)
+        fire_cancelled(instance)
 
         assert warnings == [], "user cancellation must not surface an error dialog"
         assert tab.frequency_panel._add_btn.isEnabled() is True, "add button re-enabled after cancel"
@@ -393,8 +320,8 @@ class TestAddSource:
             lambda *a, **kw: worker,
         )
         dialogs = _capture_progress_dialog(monkeypatch, qtbot)
-        infos = _capture_infos(monkeypatch)
-        _capture_warnings(monkeypatch)
+        infos = capture_infos(monkeypatch)
+        capture_warnings(monkeypatch)
         monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
         persisted: list[tuple[FreqEntry, ...]] = []
         tab._frequency_import_flow._persist_chain = persisted.append
@@ -435,8 +362,8 @@ class TestAddSource:
         src = tmp_path / "race.csv"
         src.write_text("word,rank\n猫,5\n", encoding="utf-8")
         monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
-        infos = _capture_infos(monkeypatch)
-        warnings = _capture_warnings(monkeypatch)
+        infos = capture_infos(monkeypatch)
+        warnings = capture_warnings(monkeypatch)
         monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
         persisted: list[tuple[FreqEntry, ...]] = []
         tab._frequency_import_flow._persist_chain = persisted.append
@@ -453,8 +380,8 @@ class TestAddSource:
         assert infos == []
         assert warnings == []
 
-        _fire_thread_finished(instance)
-        _fire_thread_finished(instance)
+        fire_thread_finished(instance)
+        fire_thread_finished(instance)
 
         assert persisted == [(FreqEntry(source_id="race", enabled=True),)]
         assert len(infos) == 1
@@ -470,8 +397,8 @@ class TestAddSource:
         src = tmp_path / "persist.csv"
         src.write_text("word,rank\n猫,5\n", encoding="utf-8")
         monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
-        infos = _capture_infos(monkeypatch)
-        warnings = _capture_warnings(monkeypatch)
+        infos = capture_infos(monkeypatch)
+        warnings = capture_warnings(monkeypatch)
         monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
 
         def fail_persist(_config: AnkiMinerConfig) -> None:
@@ -487,7 +414,7 @@ class TestAddSource:
             assert tab.frequency_panel._add_btn.isEnabled() is False
             assert warnings == []
 
-            _fire_thread_finished(instance)
+            fire_thread_finished(instance)
         finally:
             monkeypatch.setattr(GUIConfigManager, "save_config", original_save)
 
@@ -501,11 +428,11 @@ class TestAddSource:
         src = tmp_path / "missing.csv"
         src.write_text("word,rank\n猫,5\n", encoding="utf-8")
         monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
-        warnings = _capture_warnings(monkeypatch)
+        warnings = capture_warnings(monkeypatch)
 
         tab._frequency_import_flow.add_source()
         instance = stub_worker.instances[0]
-        _fire_thread_finished(instance)
+        fire_thread_finished(instance)
 
         assert tab.frequency_panel._add_btn.isEnabled() is True
         assert len(warnings) == 1
@@ -528,7 +455,7 @@ class TestAddSource:
         on_progress(0, 0, "Finalizing")
 
         dialog.setRange.assert_called_with(0, 0)
-        _fire_cancelled(instance)
+        fire_cancelled(instance)
 
     def test_cancel_during_set_value_keeps_cancelling_label_and_watchdog_stopped(
         self, tab, monkeypatch, stub_worker, tmp_path
@@ -555,7 +482,7 @@ class TestAddSource:
         dialog.setCancelButton.assert_called_once_with(None)
         assert "Cancelling" in dialog.setLabelText.call_args.args[0]
         assert timer.start.call_count == 1
-        _fire_cancelled(instance)
+        fire_cancelled(instance)
 
     def test_no_progress_watchdog_restarts_then_stops_on_domain_latch(self, tab, monkeypatch, stub_worker, tmp_path):
         from anki_miner.gui.controllers import import_flow_common
@@ -584,7 +511,7 @@ class TestAddSource:
         timer.stop.assert_called_once()
         instance.progress.connect.call_args[0][0](2, 2, "Late progress")
         assert timer.start.call_count == 2
-        _fire_thread_finished(instance)
+        fire_thread_finished(instance)
         timer.deleteLater.assert_called_once()
         dialog.deleteLater.assert_called_once()
 
@@ -599,7 +526,7 @@ class TestAddSource:
             lambda *a, **kw: worker,
         )
         dialogs = _capture_progress_dialog(monkeypatch, qtbot)
-        warnings = _capture_warnings(monkeypatch)
+        warnings = capture_warnings(monkeypatch)
 
         tab._frequency_import_flow.add_source()
         try:
@@ -650,7 +577,7 @@ class TestReimportSource:
         source_dir.mkdir(parents=True)
         (source_dir / "source.csv").write_text("word,rank\n猫,5\n", encoding="utf-8")
         monkeypatch.setattr(tab.frequency_panel, "request_resource_release", lambda: False, raising=False)
-        warnings = _capture_warnings(monkeypatch)
+        warnings = capture_warnings(monkeypatch)
 
         tab._frequency_import_flow.reimport_source("jpdb")
 
@@ -680,7 +607,7 @@ class TestReimportSource:
         source = source_dir / "source.csv"
         source.write_text("word,rank\n猫,5\n", encoding="utf-8")
         monkeypatch.setattr(storage, "read_meta", lambda _path: (_ for _ in ()).throw(OSError("corrupt")))
-        warnings = _capture_warnings(monkeypatch)
+        warnings = capture_warnings(monkeypatch)
 
         tab._frequency_import_flow.reimport_source("jpdb")
 
@@ -698,7 +625,7 @@ class TestReimportSource:
         source_dir = freqs_root / "jpdb"
         source_dir.mkdir(parents=True)
         (source_dir / "source.csv").write_text("word,rank\n猫,5\n", encoding="utf-8")
-        _capture_infos(monkeypatch)
+        capture_infos(monkeypatch)
         monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
 
         tab._frequency_import_flow.reimport_source("jpdb")
@@ -716,7 +643,7 @@ class TestReimportSource:
         source_dir = tab.config.freqs_root / "jpdb"
         source_dir.mkdir(parents=True)
         (source_dir / "source.csv").write_text("word,rank\n猫,5\n", encoding="utf-8")
-        _capture_infos(monkeypatch)
+        capture_infos(monkeypatch)
         monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
         notify_calls: list[None] = []
         monkeypatch.setattr(
@@ -727,7 +654,7 @@ class TestReimportSource:
         )
 
         tab._frequency_import_flow.reimport_source("jpdb")
-        _fire_done(stub_worker.instances[0], "jpdb", {"entry_count": 1})
+        fire_done(stub_worker.instances[0], "jpdb", {"entry_count": 1})
 
         assert notify_calls == [None]
 
@@ -746,7 +673,7 @@ class TestReimportSource:
             [("猫", None, 5, None)],
             {"source_name": "JPDB", "format": "csv"},
         )
-        _capture_infos(monkeypatch)
+        capture_infos(monkeypatch)
         monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
 
         tab._frequency_import_flow.reimport_source("jpdb")
@@ -761,7 +688,7 @@ class TestReimportSource:
         picked = tmp_path / "repick.csv"
         picked.write_text("word,rank\n猫,5\n", encoding="utf-8")
         monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(picked)))
-        _capture_infos(monkeypatch)
+        capture_infos(monkeypatch)
         monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
 
         tab._frequency_import_flow.reimport_source("jpdb")

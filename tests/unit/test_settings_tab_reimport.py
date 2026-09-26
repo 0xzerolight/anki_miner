@@ -12,20 +12,14 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 from tests.fixtures.dictionary.build_yomitan_fixture import build_yomitan_zip
-
-
-def _run_scan_sync(work, on_done, on_error):
-    try:
-        on_done(work())
-    except Exception as exc:  # noqa: BLE001
-        on_error(str(exc))
+from tests.unit._import_flow_harness import capture_warnings, patch_stub_worker_factories, run_scan_sync
 
 
 @pytest.fixture
 def tab(test_config: AnkiMinerConfig, qtbot):
     """Instantiate a SettingsTab against the shared test config."""
     widget = SettingsTab(test_config)
-    widget._dict_import_flow._run_latest_scan = _run_scan_sync
+    widget._dict_import_flow._run_latest_scan = run_scan_sync
     qtbot.addWidget(widget)
     yield widget
 
@@ -34,51 +28,19 @@ def tab(test_config: AnkiMinerConfig, qtbot):
 def stub_worker(monkeypatch):
     """Replace normal and repair Yomitan worker factories with mocks.
 
-    The mock returns an instance whose signals are also MagicMocks so the
-    handler's `.connect(...)` calls succeed and `.start()` is a no-op. We
-    return the factory mock so tests can inspect call_args.
+    ``running=True`` keeps this module's original input: its stub never set
+    ``isRunning``, so ``still_running`` saw a truthy MagicMock.
     """
-    factory = MagicMock(name="for_yomitan")
-    repair_factory = MagicMock(name="for_yomitan_repair")
-
-    def _build_instance(*args, **kwargs):
-        instance = MagicMock(name="ImportWorker")
-        # Signals: any attribute access yields a MagicMock with .connect/.emit
-        instance.progress = MagicMock()
-        instance.import_finished = MagicMock()
-        instance.failed = MagicMock()
-        instance.cancelled = MagicMock()
-        instance.finished = MagicMock()
-        instance.cancel = MagicMock()
-        instance.start = MagicMock()
-        return instance
-
-    factory.side_effect = _build_instance
-    repair_factory.side_effect = _build_instance
-    factory.repair_factory = repair_factory
-    monkeypatch.setattr(
+    return patch_stub_worker_factories(
+        monkeypatch,
         "anki_miner.gui.controllers.dictionary_import_flow.ImportWorker.for_yomitan",
-        factory,
-    )
-    monkeypatch.setattr(
         "anki_miner.gui.controllers.dictionary_import_flow.ImportWorker.for_yomitan_repair",
-        repair_factory,
+        running=True,
     )
-    return factory
-
-
-def _capture_warnings(monkeypatch) -> list[tuple[str, str]]:
-    """Capture reported screen issues as ``(summary, whole text)`` (D24)."""
-    captured: list[tuple[str, str]] = []
-    monkeypatch.setattr(
-        "anki_miner.gui.controllers.import_flow_common.report_screen_issue",
-        lambda origin, issue: captured.append((issue.summary, f"{issue.summary}\n{issue.details}".strip())) or True,
-    )
-    return captured
 
 
 def test_no_saved_source_shows_warning_and_skips_worker(tab, monkeypatch, stub_worker):
-    warnings = _capture_warnings(monkeypatch)
+    warnings = capture_warnings(monkeypatch)
 
     tab._dict_import_flow.reimport_dict("wrong-slot")
 
@@ -91,7 +53,7 @@ def test_saved_zip_invokes_slot_pinned_repair_worker(tab, monkeypatch, stub_work
     slot = tab.config.dicts_root / "test-dict-v1"
     slot.mkdir(parents=True)
     zip_path = build_yomitan_zip(slot / "source.zip", title="Test Dict", revision="v1")
-    warnings = _capture_warnings(monkeypatch)
+    warnings = capture_warnings(monkeypatch)
 
     tab._dict_import_flow.reimport_dict("test-dict-v1")
 
@@ -134,7 +96,7 @@ def test_refresh_registry_called_on_success(tab, monkeypatch, stub_worker, tmp_p
 def test_source_first_reimport_does_not_open_file_picker(tab, monkeypatch, stub_worker):
     picker = MagicMock(return_value=("", ""))
     monkeypatch.setattr(file_dialogs, "pick_open_file", picker)
-    warnings = _capture_warnings(monkeypatch)
+    warnings = capture_warnings(monkeypatch)
 
     tab._dict_import_flow.reimport_dict("any-slot")
 
@@ -151,7 +113,7 @@ def test_add_dict_user_cancel_closes_without_warning(tab, monkeypatch, stub_work
     cancellation used to route through ``failed``."""
     zip_path = build_yomitan_zip(tmp_path / "src.zip", title="Test Dict", revision="v1")
     monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(zip_path)]))
-    warnings = _capture_warnings(monkeypatch)
+    warnings = capture_warnings(monkeypatch)
 
     tab._dict_import_flow.add_dict()
     assert tab.dictionary_panel._add_btn.isEnabled() is False, "buttons disabled while import runs"
@@ -172,7 +134,7 @@ def test_resource_release_refusal_blocks_worker(tab, monkeypatch, stub_worker, t
     slot = tab.config.dicts_root / "test-dict-v1"
     slot.mkdir(parents=True)
     build_yomitan_zip(slot / "source.zip", title="Test Dict", revision="v1")
-    warnings = _capture_warnings(monkeypatch)
+    warnings = capture_warnings(monkeypatch)
     monkeypatch.setattr(tab.dictionary_panel, "request_resource_release", lambda: False)
 
     tab._dict_import_flow.reimport_dict("test-dict-v1")

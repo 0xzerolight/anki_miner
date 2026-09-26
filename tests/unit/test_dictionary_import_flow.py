@@ -14,16 +14,10 @@ from PyQt6.QtWidgets import QWidget
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.controllers.dictionary_import_flow import DictionaryImportFlow
 from anki_miner.gui.controllers.import_flow_common import _ChainedImportResult
+from tests.unit._import_flow_harness import run_scan_sync
 
 MOD = "anki_miner.gui.controllers.dictionary_import_flow"
 COMMON = "anki_miner.gui.controllers.import_flow_common"
-
-
-def _run_scan_sync(work, on_done, on_error):
-    try:
-        on_done(work())
-    except Exception as exc:  # noqa: BLE001
-        on_error(str(exc))
 
 
 def _make_flow(dicts_root: Path) -> DictionaryImportFlow:
@@ -36,7 +30,7 @@ def _make_flow(dicts_root: Path) -> DictionaryImportFlow:
         persist_chain=MagicMock(),
         notify_config_changed=MagicMock(),
     )
-    flow._run_latest_scan = _run_scan_sync
+    flow._run_latest_scan = run_scan_sync
     return flow
 
 

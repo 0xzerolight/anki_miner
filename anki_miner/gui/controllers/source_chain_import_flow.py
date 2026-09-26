@@ -27,11 +27,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
-from PyQt6.QtWidgets import QMessageBox, QWidget
+from PyQt6.QtWidgets import QMessageBox
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.controllers.import_flow_common import (
-    ModalImportFlowMixin,
+    PanelImportFlowBase,
     _begin_import_trace,
     _ChainedImportResult,
     _log_import_persist,
@@ -42,7 +42,6 @@ from anki_miner.gui.controllers.import_flow_common import (
 )
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
-from anki_miner.gui.widgets.panels.chain_settings_panel_base import MutationToken
 from anki_miner.gui.workers.import_worker import ImportWorker
 from anki_miner.services._sqlite_index import resolve_managed_slot
 from anki_miner.utils.i18n import tr_format
@@ -117,7 +116,7 @@ class SourceFlowLabels:
     nothing_skipped_header: str
 
 
-class SourceChainImportFlow(ModalImportFlowMixin):
+class SourceChainImportFlow(PanelImportFlowBase):
     """Drives add / reimport-one / reimport-all for one single-file source chain.
 
     Plain (non-Qt) class: owns the :class:`ImportWorker` lifecycle and every
@@ -141,25 +140,6 @@ class SourceChainImportFlow(ModalImportFlowMixin):
         notify_config_changed: Rebuilds cached services after a reimport, which
             changes an index in place rather than the chain.
     """
-
-    def __init__(
-        self,
-        parent: QWidget,
-        panel: Any,
-        get_config: Callable[[], AnkiMinerConfig],
-        persist_chain: Callable[[Any], None],
-        notify_config_changed: Callable[[], None],
-    ) -> None:
-        self._parent = parent
-        self._panel = panel
-        self._get_config = get_config
-        self._persist_chain = persist_chain
-        self._notify_config_changed = notify_config_changed
-        # Long-lived worker reference: ImportWorker is a QThread and would be
-        # destroyed mid-run if it fell out of scope before joining.
-        self._active_import_worker: ImportWorker | None = None
-        self._retained_import_workers: list[ImportWorker] = []
-        self._mutation_token: MutationToken | None = None
 
     # ------------------------------------------------------------------
     # Family hooks
@@ -223,34 +203,6 @@ class SourceChainImportFlow(ModalImportFlowMixin):
         """
         del meta
         return ""
-
-    # ------------------------------------------------------------------
-    # Mutation gating
-    # ------------------------------------------------------------------
-
-    def iter_close_workers(self) -> tuple:
-        """Live worker handles MainWindow must join on close.
-
-        A ``None`` entry (idle flow) is filtered by
-        ``BackgroundTaskController._join_worker_for_close``.
-        """
-        return self._iter_import_workers()
-
-    def _set_import_buttons_enabled(self, enabled: bool) -> None:
-        """Acquire/release the panel token that gates every mutation control."""
-        if enabled:
-            token = self._mutation_token
-            self._mutation_token = None
-            if token is not None:
-                self._panel.release(token)
-        elif self._mutation_token is None:
-            self._mutation_token = self._panel.hold_mutation("import")
-
-    def _begin_mutation(self, kind: str) -> bool:
-        if self._mutation_token is not None or not self._panel.prepare_for_mutation():
-            return False
-        self._mutation_token = self._panel.hold_mutation(kind)
-        return True
 
     # ------------------------------------------------------------------
     # Add
@@ -318,11 +270,7 @@ class SourceChainImportFlow(ModalImportFlowMixin):
             imported = [source_id for _job, source_id, _meta in result.successes]
             if imported:
                 new_chain = self._chain_with_new_sources_appended(imported)
-                self._panel.refresh_registry()
-                self._panel.set_chain(new_chain)
-                _log_import_persist(trace_id, "start")
-                self._persist_chain(new_chain)
-                _log_import_persist(trace_id, "done")
+                self._adopt_new_chain(trace_id, new_chain)
 
             # A cancelled single pick is the user changing their mind: say nothing.
             if len(jobs) == 1 and result.cancelled and not result.successes and not result.failures:
@@ -484,12 +432,7 @@ class SourceChainImportFlow(ModalImportFlowMixin):
             raise
 
         def on_success(imported_id: str, meta: dict) -> None:
-            current_chain = self._panel.get_chain()
-            self._panel.refresh_registry()
-            self._panel.set_chain(current_chain)
-            _log_import_persist(trace_id, "start")
-            self._notify_config_changed()
-            _log_import_persist(trace_id, "done")
+            self._adopt_rebuilt_index(trace_id)
             QMessageBox.information(
                 self._parent,
                 labels.reimported_title,

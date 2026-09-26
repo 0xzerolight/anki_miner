@@ -10,22 +10,22 @@ source-copy/name resolution, and mutation-token release.
 from __future__ import annotations
 
 from dataclasses import replace
-from unittest.mock import MagicMock
 
 import pytest
-from PyQt6.QtWidgets import QMessageBox
 
 from anki_miner.config import AnkiMinerConfig, PitchSourceEntry
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.services.pitch_accent.source_importer import PITCH_SOURCE_SUFFIXES
-
-
-def _run_scan_sync(work, on_done, on_error):
-    try:
-        on_done(work())
-    except Exception as exc:  # noqa: BLE001
-        on_error(str(exc))
+from tests.unit._import_flow_harness import (
+    capture_infos,
+    capture_warnings,
+    fire_cancelled,
+    fire_done,
+    fire_failed,
+    patch_stub_worker_factories,
+    run_scan_sync,
+)
 
 
 @pytest.fixture
@@ -35,7 +35,7 @@ def tab(test_config: AnkiMinerConfig, tmp_path, qtbot):
     pitch_root.mkdir()
     cfg = replace(test_config, pitch_root=pitch_root)
     widget = SettingsTab(cfg)
-    widget._pitch_import_flow._run_latest_scan = _run_scan_sync
+    widget._pitch_import_flow._run_latest_scan = run_scan_sync
     qtbot.addWidget(widget)
     yield widget
 
@@ -43,82 +43,11 @@ def tab(test_config: AnkiMinerConfig, tmp_path, qtbot):
 @pytest.fixture
 def stub_worker(monkeypatch):
     """Replace ImportWorker.for_pitch_source with a controllable mock factory."""
-    factory = MagicMock(name="for_pitch_source")
-    repair_factory = MagicMock(name="for_pitch_source_repair")
-    instances: list[MagicMock] = []
-
-    def _build_instance(*args, **kwargs):
-        instance = MagicMock(name="ImportWorker")
-        instance.progress = MagicMock()
-        instance.import_finished = MagicMock()
-        instance.failed = MagicMock()
-        instance.cancelled = MagicMock()
-        instance.finished = MagicMock()
-        instance.cancel = MagicMock()
-        instance.start = MagicMock()
-        instance.isRunning = MagicMock(return_value=False)
-        instance._args = args
-        instance._kwargs = kwargs
-        instances.append(instance)
-        return instance
-
-    factory.side_effect = _build_instance
-    repair_factory.side_effect = _build_instance
-    factory.instances = instances
-    factory.repair_factory = repair_factory
-    monkeypatch.setattr(
+    return patch_stub_worker_factories(
+        monkeypatch,
         "anki_miner.gui.controllers.pitch_import_flow.ImportWorker.for_pitch_source",
-        factory,
-    )
-    monkeypatch.setattr(
         "anki_miner.gui.controllers.pitch_import_flow.ImportWorker.for_pitch_source_repair",
-        repair_factory,
-        raising=False,
     )
-    return factory
-
-
-def _capture_warnings(monkeypatch) -> list[tuple[str, str]]:
-    """Capture reported screen issues as ``(summary, whole text)`` (D24).
-
-    Import failures are no longer modals: they land in the owning panel's
-    banner, so the seam moved from ``QMessageBox.warning`` to the reporter.
-    """
-    captured: list[tuple[str, str]] = []
-    monkeypatch.setattr(
-        "anki_miner.gui.controllers.import_flow_common.report_screen_issue",
-        lambda origin, issue: captured.append((issue.summary, f"{issue.summary}\n{issue.details}".strip())) or True,
-    )
-    return captured
-
-
-def _capture_infos(monkeypatch) -> list[tuple[str, str]]:
-    captured: list[tuple[str, str]] = []
-    monkeypatch.setattr(
-        QMessageBox,
-        "information",
-        lambda parent, title, body, *a, **kw: captured.append((title, body)) or 0,
-    )
-    return captured
-
-
-def _fire_done(instance, source_id: str, meta: dict) -> None:
-    instance.import_finished.connect.call_args[0][0](source_id, meta)
-    _fire_thread_finished(instance)
-
-
-def _fire_failed(instance, err: str) -> None:
-    instance.failed.connect.call_args[0][0](err)
-    _fire_thread_finished(instance)
-
-
-def _fire_cancelled(instance) -> None:
-    instance.cancelled.connect.call_args[0][0]()
-    _fire_thread_finished(instance)
-
-
-def _fire_thread_finished(instance) -> None:
-    instance.finished.connect.call_args[0][0]()
 
 
 class TestAddSource:
@@ -158,7 +87,7 @@ class TestAddSource:
         src = tmp_path / "nhk.zip"
         src.write_bytes(b"zip")
         monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
-        _capture_infos(monkeypatch)
+        capture_infos(monkeypatch)
         monkeypatch.setattr(tab.pitch_panel, "refresh_registry", lambda: None)
 
         persist_calls: list[tuple[PitchSourceEntry, ...]] = []
@@ -169,7 +98,7 @@ class TestAddSource:
 
         instance = stub_worker.instances[0]
         assert instance._kwargs.get("overwrite") is False
-        _fire_done(instance, "nhk", {"entry_count": 100, "source_name": "NHK", "format": "yomitan-pitch"})
+        fire_done(instance, "nhk", {"entry_count": 100, "source_name": "NHK", "format": "yomitan-pitch"})
 
         assert persist_calls, "persist_chain must be called on success"
         new_chain = persist_calls[-1]
@@ -185,15 +114,15 @@ class TestAddSource:
             "pick_open_files",
             lambda *a, on_done, **kw: on_done([str(first), str(second)]),
         )
-        _capture_infos(monkeypatch)
+        capture_infos(monkeypatch)
         monkeypatch.setattr(tab.pitch_panel, "refresh_registry", lambda: None)
         persist_calls: list[tuple[PitchSourceEntry, ...]] = []
         tab._pitch_import_flow._persist_chain = persist_calls.append
 
         tab._pitch_import_flow.add_source()
-        _fire_done(stub_worker.instances[0], "first", {"entry_count": 1, "source_name": "First"})
+        fire_done(stub_worker.instances[0], "first", {"entry_count": 1, "source_name": "First"})
         qtbot.waitUntil(lambda: len(stub_worker.instances) == 2)
-        _fire_done(stub_worker.instances[1], "second", {"entry_count": 2, "source_name": "Second"})
+        fire_done(stub_worker.instances[1], "second", {"entry_count": 2, "source_name": "Second"})
 
         assert [entry.source_id for entry in persist_calls[-1]][-2:] == ["first", "second"]
         assert len(persist_calls) == 1
@@ -202,7 +131,7 @@ class TestAddSource:
         src = tmp_path / "new.csv"
         src.write_text("ねこ,猫,1\n", encoding="utf-8")
         monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
-        _capture_infos(monkeypatch)
+        capture_infos(monkeypatch)
         monkeypatch.setattr(tab.pitch_panel, "refresh_registry", lambda: None)
 
         tab.pitch_panel.set_chain(
@@ -213,7 +142,7 @@ class TestAddSource:
         tab._pitch_import_flow._persist_chain = persist_calls.append
 
         tab._pitch_import_flow.add_source()
-        _fire_done(stub_worker.instances[0], "new", {"entry_count": 1, "source_name": "new", "format": "csv"})
+        fire_done(stub_worker.instances[0], "new", {"entry_count": 1, "source_name": "new", "format": "csv"})
 
         assert [e.source_id for e in persist_calls[-1]] == ["existing", "new"]
 
@@ -221,7 +150,7 @@ class TestAddSource:
         src = tmp_path / "again.csv"
         src.write_text("ねこ,猫,1\n", encoding="utf-8")
         monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
-        _capture_infos(monkeypatch)
+        capture_infos(monkeypatch)
         monkeypatch.setattr(tab.pitch_panel, "refresh_registry", lambda: None)
 
         tab.pitch_panel.set_chain(
@@ -235,7 +164,7 @@ class TestAddSource:
         tab._pitch_import_flow._persist_chain = persist_calls.append
 
         tab._pitch_import_flow.add_source()
-        _fire_done(stub_worker.instances[0], "again", {"entry_count": 1, "source_name": "again", "format": "csv"})
+        fire_done(stub_worker.instances[0], "again", {"entry_count": 1, "source_name": "again", "format": "csv"})
 
         # No duplicate: the stale entry moved to the end, re-enabled.
         assert [e.source_id for e in persist_calls[-1]] == ["other", "again"]
@@ -245,7 +174,7 @@ class TestAddSource:
         src = tmp_path / "broken.zip"
         src.write_bytes(b"junk")
         monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
-        warnings = _capture_warnings(monkeypatch)
+        warnings = capture_warnings(monkeypatch)
         monkeypatch.setattr(tab.pitch_panel, "refresh_registry", lambda: None)
 
         tab.pitch_panel.set_chain(
@@ -256,7 +185,7 @@ class TestAddSource:
         tab._pitch_import_flow._persist_chain = persist_calls.append
 
         tab._pitch_import_flow.add_source()
-        _fire_failed(stub_worker.instances[0], "pitch zip is broken")
+        fire_failed(stub_worker.instances[0], "pitch zip is broken")
 
         assert warnings, "failure must surface a warning"
         assert persist_calls == [], "chain must not be persisted on failure"
@@ -266,12 +195,12 @@ class TestAddSource:
         src = tmp_path / "list.zip"
         src.write_bytes(b"junk")
         monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
-        warnings = _capture_warnings(monkeypatch)
+        warnings = capture_warnings(monkeypatch)
         monkeypatch.setattr(tab.pitch_panel, "refresh_registry", lambda: None)
 
         tab._pitch_import_flow.add_source()
         assert tab.pitch_panel._add_btn.isEnabled() is False
-        _fire_cancelled(stub_worker.instances[0])
+        fire_cancelled(stub_worker.instances[0])
 
         assert warnings == []
         assert tab.pitch_panel._add_btn.isEnabled() is True
@@ -283,7 +212,7 @@ class TestReimportSource:
         source_dir.mkdir(parents=True)
         (source_dir / "source.zip").write_bytes(b"zip")
         monkeypatch.setattr(tab.pitch_panel, "request_resource_release", lambda: False, raising=False)
-        warnings = _capture_warnings(monkeypatch)
+        warnings = capture_warnings(monkeypatch)
 
         tab._pitch_import_flow.reimport_source("nhk")
 
@@ -297,7 +226,7 @@ class TestReimportSource:
         source_dir = pitch_root / "nhk"
         source_dir.mkdir(parents=True)
         (source_dir / "source.zip").write_bytes(b"zip")
-        _capture_infos(monkeypatch)
+        capture_infos(monkeypatch)
         monkeypatch.setattr(tab.pitch_panel, "refresh_registry", lambda: None)
 
         tab._pitch_import_flow.reimport_source("nhk")
@@ -320,7 +249,7 @@ class TestReimportSource:
             [("ねこ", "猫", "1", "", "")],
             {"source_name": "NHK Accent", "format": "csv", "schema_version": str(storage.SCHEMA_VERSION)},
         )
-        _capture_infos(monkeypatch)
+        capture_infos(monkeypatch)
         monkeypatch.setattr(tab.pitch_panel, "refresh_registry", lambda: None)
 
         tab._pitch_import_flow.reimport_source("nhk")
@@ -333,7 +262,7 @@ class TestReimportSource:
         picked = tmp_path / "repick.zip"
         picked.write_bytes(b"zip")
         monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(picked)))
-        _capture_infos(monkeypatch)
+        capture_infos(monkeypatch)
         monkeypatch.setattr(tab.pitch_panel, "refresh_registry", lambda: None)
 
         tab._pitch_import_flow.reimport_source("nhk")
@@ -355,7 +284,7 @@ class TestReimportSource:
         source_dir = tab.config.pitch_root / "nhk"
         source_dir.mkdir(parents=True)
         (source_dir / "source.zip").write_bytes(b"zip")
-        _capture_infos(monkeypatch)
+        capture_infos(monkeypatch)
         monkeypatch.setattr(tab.pitch_panel, "refresh_registry", lambda: None)
         notify_calls: list[None] = []
         monkeypatch.setattr(
@@ -366,7 +295,7 @@ class TestReimportSource:
         )
 
         tab._pitch_import_flow.reimport_source("nhk")
-        _fire_done(stub_worker.instances[0], "nhk", {"entry_count": 1})
+        fire_done(stub_worker.instances[0], "nhk", {"entry_count": 1})
 
         assert notify_calls == [None]
 
