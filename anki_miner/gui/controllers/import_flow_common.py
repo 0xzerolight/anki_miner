@@ -662,236 +662,21 @@ class ModalImportFlowMixin:
         on_finished_error: Callable[[Exception, _ChainedImportResult[_JobT]], None] | None = None,
     ) -> None:
         """Drive a sequence of import workers behind one modal dialog."""
-        initial_label = format_label(1, len(jobs), jobs[0], None) if jobs else ""
-        dlg, no_progress_timer = self._create_modal_import_dialog(
-            progress_label=initial_label,
+        _ChainedImportSession(
+            self,
+            jobs=jobs,
+            make_worker=make_worker,
+            format_label=format_label,
             cancel_label=cancel_label,
-            determinate=determinate,
-        )
-        state = _ChainedImportState[_JobT]()
-        cancel_current: Callable[[], None] | None = None
-
-        def cancel_batch_session() -> None:
-            if state.terminal_handled:
-                return
-            state.cancel_requested = True
-            # A retained predecessor belongs to the close join; only the
-            # worker created by this batch is cancelled here.
-            worker = state.current_worker
-            if worker is None:
-                return
-            if state.current_step is not None:
-                state.current_step.cancel_requested = True
-            worker.cancel()
-
-        self._active_batch_cancel_hook = cancel_batch_session
-
-        def drop_current_worker(worker: ImportWorker | None) -> None:
-            nonlocal cancel_current
-            state.current_worker = None
-            state.current_step = None
-            cancel_current = None
-            if worker is not None:
-                self._release_import_worker(worker)
-
-        def cleanup_current_worker() -> None:
-            drop_current_worker(state.current_worker)
-
-        def finish_batch() -> None:
-            if self._active_batch_cancel_hook is cancel_batch_session:
-                self._active_batch_cancel_hook = None
-            result = _ChainedImportResult(
-                successes=tuple(state.successes),
-                failures=tuple(state.failures),
-                cancelled=state.cancel_requested,
-            )
-
-            def report_error(exc: Exception) -> None:
-                # error(exc_info=exc), not exception(): identical output, but the
-                # callback runs outside the handler that caught it (ruff LOG004).
-                logger.error("Import trace %s batch finish handler failed", trace_id, exc_info=exc)
-                if on_finished_error is not None:
-                    on_finished_error(exc, result)
-                else:
-                    self._report_import_issue(failure_summary, str(exc))
-
-            self._finish_modal_import_dialog(
-                state=state,
-                dlg=dlg,
-                no_progress_timer=no_progress_timer,
-                trace_id=trace_id,
-                on_finished=lambda: on_finished(result),
-                on_finished_error=report_error,
-                cleanup_worker=cleanup_current_worker,
-            )
-
-        def dialog_live() -> bool:
-            """Re-check after a dialog setter: a modal QProgressDialog setter can
-            process events, so a cancel or a teardown can land inside it."""
-            if state.terminal_handled:
-                return False
-            if state.cancel_requested:
-                finish_batch()
-                return False
-            return True
-
-        def schedule_next() -> None:
-            QTimer.singleShot(0, launch_next)
-
-        def record_unstarted_failure(job: _JobT, worker: ImportWorker, step: _ModalImportState, exc: Exception) -> None:
-            step.kind = "failed"
-            step.error = str(exc)
-            step.terminal_handled = True
-            # bucket C: failed worker construction may leave no live Qt timer.
-            with contextlib.suppress(RuntimeError):
-                no_progress_timer.stop()
-            state.failures.append((job, str(exc)))
-            drop_current_worker(worker)
-            state.index += 1
-            schedule_next()
-
-        def launch_next() -> None:
-            nonlocal cancel_current
-            if state.terminal_handled:
-                return
-            if state.cancel_requested or state.index >= len(jobs):
-                finish_batch()
-                return
-
-            index = state.index
-            job = jobs[index]
-            dlg.setLabelText(format_label(index + 1, len(jobs), job, None))
-            if not dialog_live():
-                return
-            dlg.setRange(0, 100 if determinate else 0)
-            if not dialog_live():
-                return
-            dlg.setValue(0)
-            if not dialog_live():
-                return
-
-            laggard = self._join_active_import_worker(join_noun)
-            if laggard is not None:
-                state.awaited_predecessor = laggard
-
-                def resume_after_predecessor() -> None:
-                    if state.terminal_handled or state.awaited_predecessor is not laggard:
-                        return
-                    state.awaited_predecessor = None
-                    if state.cancel_requested:
-                        finish_batch()
-                    else:
-                        launch_next()
-
-                self._resume_once_finished(laggard, resume_after_predecessor)
-                return
-
-            try:
-                worker = make_worker(job)
-            except Exception as exc:  # noqa: BLE001 - bucket A: one batch item cannot be imported.
-                logger.exception("Import trace %s worker construction failed index=%d", trace_id, index)
-                state.failures.append((job, str(exc)))
-                state.index += 1
-                schedule_next()
-                return
-
-            step = _ModalImportState()
-            self._active_import_worker = worker
-            state.current_worker = worker
-            state.current_step = step
-
-            def abort_before_start() -> bool:
-                if state.terminal_handled:
-                    cleanup_current_worker()
-                    return True
-                if not state.cancel_requested:
-                    return False
-                if cancel_current is None:
-                    step.cancel_requested = True
-                    worker.cancel()
-                else:
-                    cancel_current()
-                cleanup_current_worker()
-                finish_batch()
-                return True
-
-            if abort_before_start():
-                return
-            worker.set_trace_id(trace_id)
-            if abort_before_start():
-                return
-
-            def is_current() -> bool:
-                return (
-                    not state.terminal_handled
-                    and state.index == index
-                    and state.current_worker is worker
-                    and state.current_step is step
-                )
-
-            def on_native_finished() -> None:
-                if not is_current():
-                    return
-                worker_cancelled = getattr(worker, "is_cancelled", False) is True
-                if step.kind == "success":
-                    assert step.resource_id is not None
-                    assert step.meta is not None
-                    state.successes.append((job, step.resource_id, step.meta))
-                elif step.kind == "failed":
-                    state.failures.append((job, step.error or missing_result_message))
-                elif step.kind == "cancelled":
-                    state.cancel_requested = True
-                else:
-                    state.failures.append((job, missing_result_message))
-
-                if worker_cancelled or step.cancel_requested:
-                    state.cancel_requested = True
-
-                step.terminal_handled = True
-                drop_current_worker(worker)
-                if state.cancel_requested:
-                    finish_batch()
-                else:
-                    state.index = index + 1
-                    launch_next()
-
-            cancel_current = self._wire_latched_import_step(
-                worker=worker,
-                dlg=dlg,
-                no_progress_timer=no_progress_timer,
-                state=step,
-                trace_id=trace_id,
-                job_index=index,
-                format_progress=lambda message: format_label(index + 1, len(jobs), job, message),
-                is_current=is_current,
-                on_native_finished=on_native_finished,
-            )
-            if abort_before_start():
-                return
-
-            logger.info("Import trace %s worker start index=%d", trace_id, index)
-            if abort_before_start():
-                return
-            try:
-                worker.start()
-            except Exception as exc:  # noqa: BLE001 - bucket A: one batch item cannot start.
-                logger.exception("Import trace %s worker start failed index=%d", trace_id, index)
-                if still_running(worker):
-                    step.kind = "failed"
-                    step.error = str(exc)
-                    # bucket C: start-failure cleanup may race deletion of the timer.
-                    with contextlib.suppress(RuntimeError):
-                        no_progress_timer.stop()
-                else:
-                    record_unstarted_failure(job, worker, step, exc)
-
-        self._wire_cancel_button(
-            dlg=dlg,
-            state=state,
             cancelling_label=cancelling_label,
-            cancel_step=cancel_batch_session,
-        )
-        launch_next()
+            determinate=determinate,
+            join_noun=join_noun,
+            failure_summary=failure_summary,
+            missing_result_message=missing_result_message,
+            trace_id=trace_id,
+            on_finished=on_finished,
+            on_finished_error=on_finished_error,
+        ).start()
 
     def cancel_active_batch(self) -> None:
         """Cancel the active chained session without waiting on any worker."""
@@ -1039,3 +824,301 @@ class PanelImportFlowBase(ModalImportFlowMixin):
         _log_import_persist(trace_id, "start")
         self._persist_chain(new_chain)
         _log_import_persist(trace_id, "done")
+
+
+class _ChainedImportSession(Generic[_JobT]):
+    """One ``_run_chained_imports`` batch: jobs run in order behind one modal.
+
+    Each job's worker starts only after its predecessor's native ``finished``;
+    its domain outcome is latched per job and folded into the batch result on
+    that barrier. Every call that can process Qt events (a dialog setter, the
+    worker factory) is followed by a re-check of ``terminal_handled`` /
+    ``cancel_requested``.
+
+    PyQt holds a plain object's bound-method slot only weakly, so nothing here
+    hands a bound method straight to ``connect()`` or ``QTimer.singleShot``:
+    every Qt-held callback is a closure or lambda, which keeps the session
+    alive for as long as Qt can still call into it.
+    """
+
+    def __init__(
+        self,
+        flow: ModalImportFlowMixin,
+        *,
+        jobs: Sequence[_JobT],
+        make_worker: Callable[[_JobT], ImportWorker],
+        format_label: Callable[[int, int, _JobT, str | None], str],
+        cancel_label: str,
+        cancelling_label: str,
+        determinate: bool,
+        join_noun: str,
+        failure_summary: str,
+        missing_result_message: str,
+        trace_id: str,
+        on_finished: Callable[[_ChainedImportResult[_JobT]], None],
+        on_finished_error: Callable[[Exception, _ChainedImportResult[_JobT]], None] | None,
+    ) -> None:
+        self._flow = flow
+        self._jobs = jobs
+        self._make_worker = make_worker
+        self._format_label = format_label
+        self._cancelling_label = cancelling_label
+        self._determinate = determinate
+        self._join_noun = join_noun
+        self._failure_summary = failure_summary
+        self._missing_result_message = missing_result_message
+        self._trace_id = trace_id
+        self._on_finished = on_finished
+        self._on_finished_error = on_finished_error
+        initial_label = format_label(1, len(jobs), jobs[0], None) if jobs else ""
+        self._dlg, self._timer = flow._create_modal_import_dialog(
+            progress_label=initial_label,
+            cancel_label=cancel_label,
+            determinate=determinate,
+        )
+        self._state = _ChainedImportState[_JobT]()
+        self._cancel_current: Callable[[], None] | None = None
+        # One bound-method object, stored once: ``_finish`` identity-checks the
+        # flow's hook against it, and ``self.cancel`` is a new object per access.
+        self._cancel_hook: Callable[[], None] = self.cancel
+
+    def start(self) -> None:
+        self._flow._active_batch_cancel_hook = self._cancel_hook
+        self._flow._wire_cancel_button(
+            dlg=self._dlg,
+            state=self._state,
+            cancelling_label=self._cancelling_label,
+            cancel_step=self._cancel_hook,
+        )
+        self._launch_next()
+
+    def cancel(self) -> None:
+        """Stop the batch after the current job (the flow's ``cancel_active_batch``)."""
+        state = self._state
+        if state.terminal_handled:
+            return
+        state.cancel_requested = True
+        # A retained predecessor belongs to the close join; only the
+        # worker created by this batch is cancelled here.
+        worker = state.current_worker
+        if worker is None:
+            return
+        if state.current_step is not None:
+            state.current_step.cancel_requested = True
+        worker.cancel()
+
+    def _drop_current_worker(self, worker: ImportWorker | None) -> None:
+        state = self._state
+        state.current_worker = None
+        state.current_step = None
+        self._cancel_current = None
+        if worker is not None:
+            self._flow._release_import_worker(worker)
+
+    def _cleanup_current_worker(self) -> None:
+        self._drop_current_worker(self._state.current_worker)
+
+    def _finish(self) -> None:
+        flow = self._flow
+        if flow._active_batch_cancel_hook is self._cancel_hook:
+            flow._active_batch_cancel_hook = None
+        state = self._state
+        result = _ChainedImportResult(
+            successes=tuple(state.successes),
+            failures=tuple(state.failures),
+            cancelled=state.cancel_requested,
+        )
+
+        def report_error(exc: Exception) -> None:
+            # error(exc_info=exc), not exception(): identical output, but the
+            # callback runs outside the handler that caught it (ruff LOG004).
+            logger.error("Import trace %s batch finish handler failed", self._trace_id, exc_info=exc)
+            if self._on_finished_error is not None:
+                self._on_finished_error(exc, result)
+            else:
+                flow._report_import_issue(self._failure_summary, str(exc))
+
+        flow._finish_modal_import_dialog(
+            state=state,
+            dlg=self._dlg,
+            no_progress_timer=self._timer,
+            trace_id=self._trace_id,
+            on_finished=lambda: self._on_finished(result),
+            on_finished_error=report_error,
+            cleanup_worker=self._cleanup_current_worker,
+        )
+
+    def _dialog_live(self) -> bool:
+        """Re-check after a dialog setter: a modal QProgressDialog setter can
+        process events, so a cancel or a teardown can land inside it."""
+        state = self._state
+        if state.terminal_handled:
+            return False
+        if state.cancel_requested:
+            self._finish()
+            return False
+        return True
+
+    def _schedule_next(self) -> None:
+        # A lambda, not the bound method: PyQt would hold ``self`` only weakly.
+        QTimer.singleShot(0, lambda: self._launch_next())
+
+    def _record_unstarted_failure(
+        self, job: _JobT, worker: ImportWorker, step: _ModalImportState, exc: Exception
+    ) -> None:
+        step.kind = "failed"
+        step.error = str(exc)
+        step.terminal_handled = True
+        # bucket C: failed worker construction may leave no live Qt timer.
+        with contextlib.suppress(RuntimeError):
+            self._timer.stop()
+        self._state.failures.append((job, str(exc)))
+        self._drop_current_worker(worker)
+        self._state.index += 1
+        self._schedule_next()
+
+    def _launch_next(self) -> None:
+        state = self._state
+        if state.terminal_handled:
+            return
+        if state.cancel_requested or state.index >= len(self._jobs):
+            self._finish()
+            return
+
+        index = state.index
+        job = self._jobs[index]
+        self._dlg.setLabelText(self._format_label(index + 1, len(self._jobs), job, None))
+        if not self._dialog_live():
+            return
+        self._dlg.setRange(0, 100 if self._determinate else 0)
+        if not self._dialog_live():
+            return
+        self._dlg.setValue(0)
+        if not self._dialog_live():
+            return
+
+        laggard = self._flow._join_active_import_worker(self._join_noun)
+        if laggard is not None:
+            self._await_predecessor(laggard)
+            return
+        self._start_job(index, job)
+
+    def _await_predecessor(self, laggard: ImportWorker) -> None:
+        state = self._state
+        state.awaited_predecessor = laggard
+
+        def resume_after_predecessor() -> None:
+            if state.terminal_handled or state.awaited_predecessor is not laggard:
+                return
+            state.awaited_predecessor = None
+            if state.cancel_requested:
+                self._finish()
+            else:
+                self._launch_next()
+
+        self._flow._resume_once_finished(laggard, resume_after_predecessor)
+
+    def _start_job(self, index: int, job: _JobT) -> None:
+        state = self._state
+        trace_id = self._trace_id
+        try:
+            worker = self._make_worker(job)
+        except Exception as exc:  # noqa: BLE001 - bucket A: one batch item cannot be imported.
+            logger.exception("Import trace %s worker construction failed index=%d", trace_id, index)
+            state.failures.append((job, str(exc)))
+            state.index += 1
+            self._schedule_next()
+            return
+
+        step = _ModalImportState()
+        self._flow._active_import_worker = worker
+        state.current_worker = worker
+        state.current_step = step
+
+        # Re-checked after each call below: a cancel may have landed meanwhile.
+        if self._abort_before_start(worker, step):
+            return
+        worker.set_trace_id(trace_id)
+        if self._abort_before_start(worker, step):
+            return
+        self._cancel_current = self._flow._wire_latched_import_step(
+            worker=worker,
+            dlg=self._dlg,
+            no_progress_timer=self._timer,
+            state=step,
+            trace_id=trace_id,
+            job_index=index,
+            format_progress=lambda message: self._format_label(index + 1, len(self._jobs), job, message),
+            is_current=lambda: self._is_current(index, worker, step),
+            on_native_finished=lambda: self._on_job_finished(index, job, worker, step),
+        )
+        if self._abort_before_start(worker, step):
+            return
+
+        logger.info("Import trace %s worker start index=%d", trace_id, index)
+        if self._abort_before_start(worker, step):
+            return
+        try:
+            worker.start()
+        except Exception as exc:  # noqa: BLE001 - bucket A: one batch item cannot start.
+            logger.exception("Import trace %s worker start failed index=%d", trace_id, index)
+            if still_running(worker):
+                step.kind = "failed"
+                step.error = str(exc)
+                # bucket C: start-failure cleanup may race deletion of the timer.
+                with contextlib.suppress(RuntimeError):
+                    self._timer.stop()
+            else:
+                self._record_unstarted_failure(job, worker, step, exc)
+
+    def _abort_before_start(self, worker: ImportWorker, step: _ModalImportState) -> bool:
+        state = self._state
+        if state.terminal_handled:
+            self._cleanup_current_worker()
+            return True
+        if not state.cancel_requested:
+            return False
+        if self._cancel_current is None:
+            step.cancel_requested = True
+            worker.cancel()
+        else:
+            self._cancel_current()
+        self._cleanup_current_worker()
+        self._finish()
+        return True
+
+    def _is_current(self, index: int, worker: ImportWorker, step: _ModalImportState) -> bool:
+        state = self._state
+        return (
+            not state.terminal_handled
+            and state.index == index
+            and state.current_worker is worker
+            and state.current_step is step
+        )
+
+    def _on_job_finished(self, index: int, job: _JobT, worker: ImportWorker, step: _ModalImportState) -> None:
+        if not self._is_current(index, worker, step):
+            return
+        state = self._state
+        worker_cancelled = getattr(worker, "is_cancelled", False) is True
+        if step.kind == "success":
+            assert step.resource_id is not None
+            assert step.meta is not None
+            state.successes.append((job, step.resource_id, step.meta))
+        elif step.kind == "failed":
+            state.failures.append((job, step.error or self._missing_result_message))
+        elif step.kind == "cancelled":
+            state.cancel_requested = True
+        else:
+            state.failures.append((job, self._missing_result_message))
+
+        if worker_cancelled or step.cancel_requested:
+            state.cancel_requested = True
+
+        step.terminal_handled = True
+        self._drop_current_worker(worker)
+        if state.cancel_requested:
+            self._finish()
+        else:
+            state.index = index + 1
+            self._launch_next()
