@@ -213,28 +213,14 @@ class SubtitleRetimeTab(_ToolTabBase):
         input_desc.setWordWrap(True)
         layout.addWidget(input_desc)
 
-        # Mode toggle
-        mode_row = QHBoxLayout()
-        mode_row.setSpacing(SPACING.xs)
-        mode_label = QLabel(self.tr("Mode:"))
-        mode_row.addWidget(mode_label)
-
-        self.file_mode_button = ModernButton(self.tr("Single File"), variant="secondary")
-        self.file_mode_button.setCheckable(True)
-        self.file_mode_button.setChecked(True)
-        self.file_mode_button.setToolTip(self.tr("Retime one subtitle file against one video."))
-        self.file_mode_button.clicked.connect(self._on_file_mode)
-        mode_row.addWidget(self.file_mode_button)
-
-        self.folder_mode_button = ModernButton(self.tr("Folder"), variant="secondary")
-        self.folder_mode_button.setCheckable(True)
-        self.folder_mode_button.setChecked(False)
-        self.folder_mode_button.setToolTip(self.tr("Retime a folder of subtitles, paired to videos by episode number."))
-        self.folder_mode_button.clicked.connect(self._on_folder_mode)
-        mode_row.addWidget(self.folder_mode_button)
-
-        mode_row.addStretch()
-        layout.addLayout(mode_row)
+        self._build_mode_row(
+            layout,
+            mode_label=self.tr("Mode:"),
+            single_label=self.tr("Single File"),
+            folder_label=self.tr("Folder"),
+            single_tip=self.tr("Retime one subtitle file against one video."),
+            folder_tip=self.tr("Retime a folder of subtitles, paired to videos by episode number."),
+        )
 
         # Single-mode selectors
         self.video_file_selector = FileSelector(
@@ -480,19 +466,21 @@ class SubtitleRetimeTab(_ToolTabBase):
         return Path(resolved).exists()
 
     # ------------------------------------------------------------------
-    # Mode toggle slots
+    # Mode toggle
     # ------------------------------------------------------------------
 
-    def _on_file_mode(self) -> None:
-        self.file_mode_button.setChecked(True)
-        self.folder_mode_button.setChecked(False)
-        self.video_file_selector.show()
-        self.subtitle_file_selector.show()
-        self.track_row_widget.show()
-        self.video_folder_selector.hide()
-        self.subtitle_folder_selector.hide()
-        self.pair_preview.hide()
-        self.pair_preview_label.hide()
+    def _apply_mode(self, single: bool) -> None:
+        self.video_file_selector.setVisible(single)
+        self.subtitle_file_selector.setVisible(single)
+        # Folder mode resolves the reference per video; no per-file pick.
+        self.track_row_widget.setVisible(single)
+        self.video_folder_selector.setVisible(not single)
+        self.subtitle_folder_selector.setVisible(not single)
+        if single:
+            self.pair_preview.hide()
+            self.pair_preview_label.hide()
+        else:
+            self._refresh_pair_preview()
 
     def set_single_inputs(self, video_path: Path, subtitle_path: Path) -> None:
         """Prefill single-file mode with an exact pair (D35 hand-off).
@@ -511,17 +499,6 @@ class SubtitleRetimeTab(_ToolTabBase):
         # per-run reference pick is dropped with the video it belonged to.
         self.video_file_selector.set_path(str(video_path))
         self.subtitle_file_selector.set_path(str(subtitle_path))
-
-    def _on_folder_mode(self) -> None:
-        self.folder_mode_button.setChecked(True)
-        self.file_mode_button.setChecked(False)
-        self.video_file_selector.hide()
-        self.subtitle_file_selector.hide()
-        # Folder mode resolves the reference per video; no per-file pick.
-        self.track_row_widget.hide()
-        self.video_folder_selector.show()
-        self.subtitle_folder_selector.show()
-        self._refresh_pair_preview()
 
     # ------------------------------------------------------------------
     # Reference selection (single-file mode)

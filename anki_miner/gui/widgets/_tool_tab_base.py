@@ -115,6 +115,8 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
     output_location_label: QLabel
     choose_output_button: ModernButton
     clear_output_button: ModernButton
+    file_mode_button: ModernButton
+    folder_mode_button: ModernButton
     cancel_button: ModernButton
     progress_widget: ProgressWidget
     log_widget: LogWidget
@@ -300,6 +302,63 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         layout.addLayout(out_row)
 
     # ------------------------------------------------------------------
+    # Single-file / folder mode
+    # ------------------------------------------------------------------
+
+    def _build_mode_row(
+        self,
+        layout: QVBoxLayout,
+        *,
+        mode_label: str,
+        single_label: str,
+        folder_label: str,
+        single_tip: str,
+        folder_tip: str,
+    ) -> None:
+        """Add the Mode row: two checkable buttons, Single File checked.
+
+        Every caption and tooltip comes from the caller's ``self.tr(...)`` so it
+        keeps the calling tab's tr-context. The buttons drive :meth:`_set_mode`.
+        """
+        mode_row = QHBoxLayout()
+        mode_row.setSpacing(SPACING.xs)
+        mode_row.addWidget(QLabel(mode_label))
+
+        self.file_mode_button = ModernButton(single_label, variant="secondary")
+        self.file_mode_button.setCheckable(True)
+        self.file_mode_button.setChecked(True)
+        self.file_mode_button.setToolTip(single_tip)
+        self.file_mode_button.clicked.connect(self._on_file_mode)
+        mode_row.addWidget(self.file_mode_button)
+
+        self.folder_mode_button = ModernButton(folder_label, variant="secondary")
+        self.folder_mode_button.setCheckable(True)
+        self.folder_mode_button.setChecked(False)
+        self.folder_mode_button.setToolTip(folder_tip)
+        self.folder_mode_button.clicked.connect(self._on_folder_mode)
+        mode_row.addWidget(self.folder_mode_button)
+
+        mode_row.addStretch()
+        layout.addLayout(mode_row)
+
+    def _on_file_mode(self) -> None:
+        self._set_mode(True)
+
+    def _on_folder_mode(self) -> None:
+        self._set_mode(False)
+
+    def _set_mode(self, single: bool) -> None:
+        """Check the chosen mode's button, uncheck the other, then re-lay the inputs."""
+        chosen, other = (
+            (self.file_mode_button, self.folder_mode_button)
+            if single
+            else (self.folder_mode_button, self.file_mode_button)
+        )
+        chosen.setChecked(True)
+        other.setChecked(False)
+        self._apply_mode(single)
+
+    # ------------------------------------------------------------------
     # Run lifecycle
     # ------------------------------------------------------------------
 
@@ -476,4 +535,8 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
 
     def _on_file_started(self, idx: int) -> None:
         """Say which item the run has reached (0-based ``idx``)."""
+        raise NotImplementedError
+
+    def _apply_mode(self, single: bool) -> None:
+        """Show the single-file inputs (``single``) or the folder inputs."""
         raise NotImplementedError

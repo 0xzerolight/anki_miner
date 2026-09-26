@@ -26,7 +26,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import cast
 
-from PyQt6.QtWidgets import QCheckBox, QFrame, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QCheckBox, QFrame, QLabel, QScrollArea, QVBoxLayout, QWidget
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
@@ -180,29 +180,14 @@ class BookSyncTab(_ToolTabBase):
         desc.setWordWrap(True)
         layout.addWidget(desc)
 
-        # Mode toggle
-        mode_row = QHBoxLayout()
-        mode_row.setSpacing(SPACING.xs)
-        mode_row.addWidget(QLabel(self.tr("Mode:")))
-
-        self.file_mode_button = ModernButton(self.tr("Single File"), variant="secondary")
-        self.file_mode_button.setCheckable(True)
-        self.file_mode_button.setChecked(True)
-        self.file_mode_button.setToolTip(self.tr("Sync one audio file to the book."))
-        self.file_mode_button.clicked.connect(self._on_file_mode)
-        mode_row.addWidget(self.file_mode_button)
-
-        self.folder_mode_button = ModernButton(self.tr("Folder"), variant="secondary")
-        self.folder_mode_button.setCheckable(True)
-        self.folder_mode_button.setChecked(False)
-        self.folder_mode_button.setToolTip(
-            self.tr("Every audio file in the folder, in file-name order, one .srt each.")
+        self._build_mode_row(
+            layout,
+            mode_label=self.tr("Mode:"),
+            single_label=self.tr("Single File"),
+            folder_label=self.tr("Folder"),
+            single_tip=self.tr("Sync one audio file to the book."),
+            folder_tip=self.tr("Every audio file in the folder, in file-name order, one .srt each."),
         )
-        self.folder_mode_button.clicked.connect(self._on_folder_mode)
-        mode_row.addWidget(self.folder_mode_button)
-
-        mode_row.addStretch()
-        layout.addLayout(mode_row)
 
         # The book selector's label is the longest of the three; align all on it.
         width = field_label_width(self.tr("EPUB or Text File:"))
@@ -317,20 +302,12 @@ class BookSyncTab(_ToolTabBase):
         self._run_availability_scan(_engine.available, _apply, _on_error)
 
     # ------------------------------------------------------------------
-    # Mode toggle slots
+    # Mode toggle
     # ------------------------------------------------------------------
 
-    def _on_file_mode(self) -> None:
-        self.file_mode_button.setChecked(True)
-        self.folder_mode_button.setChecked(False)
-        self.file_selector.show()
-        self.folder_selector.hide()
-
-    def _on_folder_mode(self) -> None:
-        self.folder_mode_button.setChecked(True)
-        self.file_mode_button.setChecked(False)
-        self.file_selector.hide()
-        self.folder_selector.show()
+    def _apply_mode(self, single: bool) -> None:
+        self.file_selector.setVisible(single)
+        self.folder_selector.setVisible(not single)
 
     # ------------------------------------------------------------------
     # Sync

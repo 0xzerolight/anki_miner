@@ -214,28 +214,14 @@ class SubtitleCreationTab(_ToolTabBase):
         self.engine_notice_label.hide()
         layout.addWidget(self.engine_notice_label)
 
-        # Mode toggle
-        mode_row = QHBoxLayout()
-        mode_row.setSpacing(SPACING.xs)
-        mode_label = QLabel(self.tr("Mode:"))
-        mode_row.addWidget(mode_label)
-
-        self.file_mode_button = ModernButton(self.tr("Single File"), variant="secondary")
-        self.file_mode_button.setCheckable(True)
-        self.file_mode_button.setChecked(True)
-        self.file_mode_button.setToolTip(self.tr("Transcribe one selected video or audio file."))
-        self.file_mode_button.clicked.connect(self._on_file_mode)
-        mode_row.addWidget(self.file_mode_button)
-
-        self.folder_mode_button = ModernButton(self.tr("Folder"), variant="secondary")
-        self.folder_mode_button.setCheckable(True)
-        self.folder_mode_button.setChecked(False)
-        self.folder_mode_button.setToolTip(self.tr("Transcribe every video or audio file in a selected folder."))
-        self.folder_mode_button.clicked.connect(self._on_folder_mode)
-        mode_row.addWidget(self.folder_mode_button)
-
-        mode_row.addStretch()
-        layout.addLayout(mode_row)
+        self._build_mode_row(
+            layout,
+            mode_label=self.tr("Mode:"),
+            single_label=self.tr("Single File"),
+            folder_label=self.tr("Folder"),
+            single_tip=self.tr("Transcribe one selected video or audio file."),
+            folder_tip=self.tr("Transcribe every video or audio file in a selected folder."),
+        )
 
         # File selector (single-file mode)
         self.file_selector = FileSelector(
@@ -332,20 +318,12 @@ class SubtitleCreationTab(_ToolTabBase):
         self._run_availability_scan(_engine.available, _apply, _on_error)
 
     # ------------------------------------------------------------------
-    # Mode toggle slots
+    # Mode toggle
     # ------------------------------------------------------------------
 
-    def _on_file_mode(self) -> None:
-        self.file_mode_button.setChecked(True)
-        self.folder_mode_button.setChecked(False)
-        self.file_selector.show()
-        self.folder_selector.hide()
-
-    def _on_folder_mode(self) -> None:
-        self.folder_mode_button.setChecked(True)
-        self.file_mode_button.setChecked(False)
-        self.file_selector.hide()
-        self.folder_selector.show()
+    def _apply_mode(self, single: bool) -> None:
+        self.file_selector.setVisible(single)
+        self.folder_selector.setVisible(not single)
 
     # ------------------------------------------------------------------
     # Generate
