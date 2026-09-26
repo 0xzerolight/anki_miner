@@ -1062,100 +1062,7 @@ class EpisodeProcessor:
         # basis, so the column and the i+1 filter can never disagree.
         ctx.unknown_lemmas = all_unknown_lemmas
 
-        # Offline definition existence filter. Drops words with no entry in any
-        # OFFLINE dictionary so the curation dialog never surfaces words that
-        # can never become cards (they would otherwise be silently skipped at
-        # Phase 5). Offline-only by design: matches the curator's no-network
-        # def-pane and the project's offline-first default (Jisho is off by
-        # default). Probes mined_form plus only same-kanji, okurigana-only lemma
-        # alternates; a different-kanji UniDic lemma may be another homograph.
-        # Exact misses also use the same rules-validated deinflection candidates
-        # as Phase 4, so 帰れる can qualify through 帰る without trusting 返る.
-        # Runs before every lossy sentence selector so an undefined first word
-        # cannot erase a definition-backed sentence-mate. Gated on
-        # bypass_optional_filters so the golden contract's bypass path is
-        # unaffected (Phase 5 stays the skip point there).
-        #
-        # Known, intentional asymmetry: this probe is offline-only, but Phase 5
-        # looks definitions up over the FULL chain (get_definitions_batch, which
-        # includes Jisho when enabled). A user who turns Jisho on therefore has
-        # words with a Jisho-only definition dropped here before the curator —
-        # accepted on purpose so Phase 2 never blocks on network I/O. Do not
-        # "fix" this by calling online providers here.
-        if not self.config.bypass_optional_filters and unknown_words:
-            safe_alternates = [self._lookup_alternate(w) for w in unknown_words]
-            probe_terms = list(
-                {
-                    term
-                    for w, alternate in zip(unknown_words, safe_alternates, strict=True)
-                    for term in (w.mined_form, alternate)
-                    if term
-                }
-            )
-            has_def = self.definition_service.has_offline_definitions(probe_terms) or {}
-            # Candidate ladder comes from the PROFILE, never from
-            # definition_service: pre-existing tests stub that service with a
-            # bare MagicMock and assert on this probe's contents, so routing
-            # here through it would starve the probe. JaLookupStrategy is a
-            # pure delegate to DefinitionService._fallback_candidates, so the
-            # Japanese terms are byte-identical to the pre-profile static call.
-            fallback_candidates = [
-                (
-                    []
-                    if has_def.get(w.mined_form) or has_def.get(alternate)
-                    else self.profile.lookup.candidates(w.mined_form, alternate, None)
-                )
-                for w, alternate in zip(unknown_words, safe_alternates, strict=True)
-            ]
-            fallback_probe = list(
-                dict.fromkeys(candidate for candidates in fallback_candidates for candidate in candidates)
-            )
-            deinflection_hits = (
-                self.definition_service.offline_deinflection_terms_exist(fallback_probe) if fallback_probe else set()
-            ) or set()
-            viable = [
-                bool(
-                    has_def.get(w.mined_form)
-                    or has_def.get(alternate)
-                    or any(term in deinflection_hits for term, _conditions in candidates)
-                )
-                for w, alternate, candidates in zip(
-                    unknown_words,
-                    safe_alternates,
-                    fallback_candidates,
-                    strict=True,
-                )
-            ]
-            kept_words = [w for w, keep in zip(unknown_words, viable, strict=True) if keep]
-            dropped = [w.mined_form for w, keep in zip(unknown_words, viable, strict=True) if not keep]
-            unknown_words = kept_words
-            counts.no_definition_rejects = len(dropped)
-            if dropped:
-                # The presenter names ten; the log names fifty. Which words the
-                # offline probe rejected is the whole diagnosis when a dictionary
-                # is installed but indexed under the wrong spellings, and ten is
-                # too few to see the pattern.
-                log_summary(
-                    logger,
-                    "Definitions missing",
-                    level=logging.DEBUG,
-                    phase=2,
-                    count=len(dropped),
-                    words=capped(dropped),
-                )
-                preview = ", ".join(dropped[:10])
-                more = f" (+{len(dropped) - 10} more)" if len(dropped) > 10 else ""
-                self.presenter.show_warning(
-                    tr_format(
-                        QCoreApplication.translate(
-                            "EpisodeProcessor",
-                            "Skipped %1 words missing from your offline dictionaries: %2%3",
-                        ),
-                        len(dropped),
-                        preview,
-                        more,
-                    )
-                )
+        unknown_words = self._phase2_definition_viability(unknown_words, counts)
 
         # Whitelist force-include (partition-then-merge). A whitelisted lemma is
         # a true force-include: it bypasses every optional COVERAGE filter below
@@ -1514,6 +1421,109 @@ class EpisodeProcessor:
 
             unknown_words = self.word_filter.filter_unknown(all_words, known_words | user_words)
             counts.known_hits = len(all_words) - len(unknown_words)
+        return unknown_words
+
+    def _phase2_definition_viability(
+        self, unknown_words: list[TokenizedWord], counts: _Phase2Counts
+    ) -> list[TokenizedWord]:
+        """Phase 2: drop the words no offline dictionary can define; return the rest.
+
+        Fills ``counts.no_definition_rejects``.
+        """
+        # Offline definition existence filter. Drops words with no entry in any
+        # OFFLINE dictionary so the curation dialog never surfaces words that
+        # can never become cards (they would otherwise be silently skipped at
+        # Phase 5). Offline-only by design: matches the curator's no-network
+        # def-pane and the project's offline-first default (Jisho is off by
+        # default). Probes mined_form plus only same-kanji, okurigana-only lemma
+        # alternates; a different-kanji UniDic lemma may be another homograph.
+        # Exact misses also use the same rules-validated deinflection candidates
+        # as Phase 4, so 帰れる can qualify through 帰る without trusting 返る.
+        # Runs before every lossy sentence selector so an undefined first word
+        # cannot erase a definition-backed sentence-mate. Gated on
+        # bypass_optional_filters so the golden contract's bypass path is
+        # unaffected (Phase 5 stays the skip point there).
+        #
+        # Known, intentional asymmetry: this probe is offline-only, but Phase 5
+        # looks definitions up over the FULL chain (get_definitions_batch, which
+        # includes Jisho when enabled). A user who turns Jisho on therefore has
+        # words with a Jisho-only definition dropped here before the curator —
+        # accepted on purpose so Phase 2 never blocks on network I/O. Do not
+        # "fix" this by calling online providers here.
+        if not self.config.bypass_optional_filters and unknown_words:
+            safe_alternates = [self._lookup_alternate(w) for w in unknown_words]
+            probe_terms = list(
+                {
+                    term
+                    for w, alternate in zip(unknown_words, safe_alternates, strict=True)
+                    for term in (w.mined_form, alternate)
+                    if term
+                }
+            )
+            has_def = self.definition_service.has_offline_definitions(probe_terms) or {}
+            # Candidate ladder comes from the PROFILE, never from
+            # definition_service: pre-existing tests stub that service with a
+            # bare MagicMock and assert on this probe's contents, so routing
+            # here through it would starve the probe. JaLookupStrategy is a
+            # pure delegate to DefinitionService._fallback_candidates, so the
+            # Japanese terms are byte-identical to the pre-profile static call.
+            fallback_candidates = [
+                (
+                    []
+                    if has_def.get(w.mined_form) or has_def.get(alternate)
+                    else self.profile.lookup.candidates(w.mined_form, alternate, None)
+                )
+                for w, alternate in zip(unknown_words, safe_alternates, strict=True)
+            ]
+            fallback_probe = list(
+                dict.fromkeys(candidate for candidates in fallback_candidates for candidate in candidates)
+            )
+            deinflection_hits = (
+                self.definition_service.offline_deinflection_terms_exist(fallback_probe) if fallback_probe else set()
+            ) or set()
+            viable = [
+                bool(
+                    has_def.get(w.mined_form)
+                    or has_def.get(alternate)
+                    or any(term in deinflection_hits for term, _conditions in candidates)
+                )
+                for w, alternate, candidates in zip(
+                    unknown_words,
+                    safe_alternates,
+                    fallback_candidates,
+                    strict=True,
+                )
+            ]
+            kept_words = [w for w, keep in zip(unknown_words, viable, strict=True) if keep]
+            dropped = [w.mined_form for w, keep in zip(unknown_words, viable, strict=True) if not keep]
+            unknown_words = kept_words
+            counts.no_definition_rejects = len(dropped)
+            if dropped:
+                # The presenter names ten; the log names fifty. Which words the
+                # offline probe rejected is the whole diagnosis when a dictionary
+                # is installed but indexed under the wrong spellings, and ten is
+                # too few to see the pattern.
+                log_summary(
+                    logger,
+                    "Definitions missing",
+                    level=logging.DEBUG,
+                    phase=2,
+                    count=len(dropped),
+                    words=capped(dropped),
+                )
+                preview = ", ".join(dropped[:10])
+                more = f" (+{len(dropped) - 10} more)" if len(dropped) > 10 else ""
+                self.presenter.show_warning(
+                    tr_format(
+                        QCoreApplication.translate(
+                            "EpisodeProcessor",
+                            "Skipped %1 words missing from your offline dictionaries: %2%3",
+                        ),
+                        len(dropped),
+                        preview,
+                        more,
+                    )
+                )
         return unknown_words
 
     @staticmethod
