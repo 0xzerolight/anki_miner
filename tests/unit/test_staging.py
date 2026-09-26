@@ -656,3 +656,9 @@ class TestClaimManagedSlot:
         final = claim_managed_slot(tmp_path, "resource", "dictionary", overwrite=True, noun="Dictionary")
 
         assert final == owned.resolve()
+
+    def test_invalid_id_raises_before_touching_disk(self, tmp_path: Path) -> None:
+        with pytest.raises(SetupError, match="Invalid managed store id"):
+            claim_managed_slot(tmp_path, "../evil", "dictionary", overwrite=False, noun="Dictionary")
+
+        assert list(tmp_path.iterdir()) == []

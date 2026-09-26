@@ -705,8 +705,8 @@ def _finalize(
     Copies the original input alongside ``index.sqlite`` (``source.zip`` /
     ``source.csv``) for later reimport.
     """
-    dest_root.mkdir(parents=True, exist_ok=True)
     final_path = claim_managed_slot(dest_root, source_id, "frequency", overwrite=overwrite, noun="Frequency source")
+    final_path.parent.mkdir(parents=True, exist_ok=True)
 
     staging = Path(tempfile.mkdtemp(prefix=".staging-", dir=final_path.parent))
     try:

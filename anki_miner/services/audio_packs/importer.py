@@ -127,9 +127,9 @@ def import_android_audio_db(
         )
     if pack_id == "jpod101":
         raise SetupError("Pack id 'jpod101' is reserved for the online JPod101 source")
-    dest_root.mkdir(parents=True, exist_ok=True)
     final_path = claim_managed_slot(dest_root, pack_id, "audio", overwrite=overwrite, noun="Audio pack")
     managed_root = final_path.parent
+    managed_root.mkdir(parents=True, exist_ok=True)
 
     staging_parent = Path(tempfile.mkdtemp(prefix=".staging-", dir=managed_root))
     try:

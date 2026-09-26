@@ -209,6 +209,14 @@ class TestGuards:
             import_pitch_source(csv_file, tmp_path / "pitch", source_id="slot", overwrite=True)
         assert (foreign / "keep.txt").is_file()
 
+    def test_invalid_source_id_leaves_dest_root_absent(self, tmp_path: Path) -> None:
+        csv_file = tmp_path / "a.csv"
+        csv_file.write_text("ねこ,猫,1\n", encoding="utf-8")
+        dest = tmp_path / "pitch"
+        with pytest.raises(SetupError, match="Invalid managed store id"):
+            import_pitch_source(csv_file, dest, source_id="../evil")
+        assert not dest.exists()
+
     def test_cancel_cleans_staging(self, tmp_path: Path) -> None:
         csv_file = tmp_path / "a.csv"
         csv_file.write_text("ねこ,猫,1\n", encoding="utf-8")

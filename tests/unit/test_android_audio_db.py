@@ -262,3 +262,13 @@ def test_overwrite_refuses_unmanaged_destination(tmp_path: Path):
         import_android_audio_db(source, packs_root, pack_id="android", overwrite=True)
 
     assert payload.read_text(encoding="utf-8") == "foreign"
+
+
+def test_invalid_pack_id_leaves_packs_root_absent(tmp_path: Path):
+    source = _make_android_db(tmp_path / "android.db")
+    packs_root = tmp_path / "packs"
+
+    with pytest.raises(SetupError, match="Invalid managed store id"):
+        import_android_audio_db(source, packs_root, pack_id="../evil")
+
+    assert not packs_root.exists()
