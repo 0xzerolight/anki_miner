@@ -45,6 +45,7 @@ from anki_miner.gui.widgets.base.sizing import (
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.booksync_tab import BookSyncTab
 from anki_miner.gui.widgets.condense_tab import CondenseTab
+from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.gui.widgets.deck_filter_tab import DeckFilterTab
 from anki_miner.gui.widgets.download_tab import DownloadTab
 from anki_miner.gui.widgets.enhanced import FileSelector
@@ -79,6 +80,7 @@ PAGES = (
     AudiobookTab,
     AnalyticsTab,
     CardBackfillTab,
+    DeckBuilderTab,
     DeckFilterTab,
     DownloadTab,
     MokuroTab,
@@ -106,6 +108,7 @@ def _build_page(name: str, config):
         "AudiobookTab": lambda: AudiobookTab(config, None, MagicMock()),
         "AnalyticsTab": lambda: AnalyticsTab(MagicMock()),
         "CardBackfillTab": lambda: CardBackfillTab(config),
+        "DeckBuilderTab": lambda: DeckBuilderTab(config, MagicMock(), MagicMock()),
         "DeckFilterTab": lambda: DeckFilterTab(config),
         "DownloadTab": lambda: DownloadTab(config, suppress_optional_startup=True),
         "MokuroTab": lambda: MokuroTab(config, suppress_optional_startup=True),

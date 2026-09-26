@@ -3,20 +3,22 @@
 The former flat Episode Mining / Batch Mining / YouTube top-level tabs now
 nest inside a thin ``VideoTab`` container. The child-tab behaviour keeps its
 own modules (``test_single_episode_tab*.py``, ``test_batch_processing_tab*.py``,
-``test_youtube_tab.py``); this module covers only the container:
+``test_youtube_tab.py``, ``test_deck_builder_tab*.py``); this module covers
+only the container:
 
-- Inner ``QTabWidget`` has exactly three tabs: "Single" (0), "Batch" (1),
-  "YouTube" (2), holding the real sub-tab classes.
-- Each child is constructed with its OWN presenter (Single/Batch wire presenter
-  signals into their log widgets — sharing would cross-post), YouTube with
-  ``processor=None`` + the fetcher, ``stats_service`` reaching all three.
-- ``update_config`` stores config and fans out to all three children.
-- ``shutdown`` fans out to all three, each guarded independently.
+- Inner ``QTabWidget`` has exactly four tabs: "Single" (0), "Batch" (1),
+  "YouTube" (2), "Deck Builder" (3), holding the real sub-tab classes.
+- Each child is constructed with its OWN presenter (Single/Batch/Deck Builder
+  wire presenter signals into their log widgets — sharing would cross-post),
+  YouTube with ``processor=None`` + the fetcher, ``stats_service`` reaching
+  all four.
+- ``update_config`` stores config and fans out to all four children.
+- ``shutdown`` fans out to all four, each guarded independently.
 - ``release_dictionary_resources`` evaluates ALL children (no short-circuit)
   and returns their ``and``.
 - ``iter_close_workers`` yields exactly the still-live child workers (the
-  close-contract divergence from ``ReadingTab``: Single/Batch base
-  ``shutdown()`` never joins, so the controller must).
+  close-contract divergence from ``ReadingTab``: Single/Batch/Deck Builder
+  base ``shutdown()`` never joins, so the controller must).
 - No ``worker_thread`` attribute; ``open_subtab`` switches the inner tab; the
   class name stays exactly ``"VideoTab"``.
 
@@ -35,6 +37,7 @@ pytest.importorskip("PyQt6.QtWidgets")
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.base import AnimatedTabBar
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
+from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
 from anki_miner.gui.widgets.video_tab import VideoTab
 from anki_miner.gui.widgets.youtube_tab import YouTubeTab
@@ -42,6 +45,7 @@ from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 _SINGLE_CLS = "anki_miner.gui.widgets.video_tab.SingleEpisodeTab"
 _BATCH_CLS = "anki_miner.gui.widgets.video_tab.BatchProcessingTab"
 _YOUTUBE_CLS = "anki_miner.gui.widgets.video_tab.YouTubeTab"
+_DECKBUILDER_CLS = "anki_miner.gui.widgets.video_tab.DeckBuilderTab"
 
 
 def _make_tab(qtbot, config: AnkiMinerConfig, **overrides) -> VideoTab:
@@ -52,6 +56,8 @@ def _make_tab(qtbot, config: AnkiMinerConfig, **overrides) -> VideoTab:
         "batch_progress": MagicMock(name="BatchProgress"),
         "youtube_presenter": MagicMock(name="YouTubePresenter"),
         "youtube_fetcher": MagicMock(name="YouTubeFetcher"),
+        "deck_builder_presenter": MagicMock(name="DeckBuilderPresenter"),
+        "deck_builder_progress": MagicMock(name="DeckBuilderProgress"),
     }
     kwargs.update(overrides)
     widget = VideoTab(config, **kwargs)
@@ -72,17 +78,19 @@ def tab(qtbot, test_config: AnkiMinerConfig) -> VideoTab:
 
 class TestInnerTabs:
     def test_inner_tab_count(self, tab):
-        assert tab._inner_tabs.count() == 3
+        assert tab._inner_tabs.count() == 4
 
     def test_inner_tab_labels(self, tab):
         assert tab._inner_tabs.tabText(0) == "Single"
         assert tab._inner_tabs.tabText(1) == "Batch"
         assert tab._inner_tabs.tabText(2) == "YouTube"
+        assert tab._inner_tabs.tabText(3) == "Deck Builder"
 
     def test_children_order(self, tab):
         assert tab._inner_tabs.widget(0) is tab.single_tab
         assert tab._inner_tabs.widget(1) is tab.batch_tab
         assert tab._inner_tabs.widget(2) is tab.youtube_tab
+        assert tab._inner_tabs.widget(3) is tab.deck_builder_tab
 
     def test_the_sub_tab_underline_slides(self, tab):
         """Sub-tabs are navigation too -- see tests/unit/gui/test_animated_tab_bar.py."""
@@ -92,6 +100,7 @@ class TestInnerTabs:
         assert isinstance(tab.single_tab, SingleEpisodeTab)
         assert isinstance(tab.batch_tab, BatchProcessingTab)
         assert isinstance(tab.youtube_tab, YouTubeTab)
+        assert isinstance(tab.deck_builder_tab, DeckBuilderTab)
 
 
 # ---------------------------------------------------------------------------
@@ -101,21 +110,23 @@ class TestInnerTabs:
 
 class TestConstruction:
     def test_each_child_gets_its_own_presenter(self, tab):
-        # Single/Batch wire presenter signals into their per-tab log widgets, so
-        # the three presenters must be pairwise distinct (no cross-posting).
+        # Single/Batch/Deck Builder wire presenter signals into their per-tab
+        # log widgets, so the four presenters must be pairwise distinct (no
+        # cross-posting).
         presenters = (
             tab.single_tab.presenter,
             tab.batch_tab.presenter,
             tab.youtube_tab._presenter,
+            tab.deck_builder_tab.presenter,
         )
         assert all(p is not None for p in presenters)
-        assert len({id(p) for p in presenters}) == 3
+        assert len({id(p) for p in presenters}) == 4
 
     def test_youtube_built_with_none_processor(self, tab):
         assert tab.youtube_tab._processor is None
 
     def test_ctor_args_forwarded_to_children(self, qtbot, test_config):
-        """Each child gets its own presenter/progress; stats reach all three."""
+        """Each child gets its own presenter/progress; stats reach all four."""
         from PyQt6.QtWidgets import QWidget
 
         episode_presenter = MagicMock(name="EpisodePresenter")
@@ -124,6 +135,8 @@ class TestConstruction:
         batch_progress = MagicMock(name="BatchProgress")
         youtube_presenter = MagicMock(name="YouTubePresenter")
         fetcher = MagicMock(name="YouTubeFetcher")
+        deck_builder_presenter = MagicMock(name="DeckBuilderPresenter")
+        deck_builder_progress = MagicMock(name="DeckBuilderProgress")
         stats = MagicMock(name="StatsService")
         # Patched child classes must return real QWidgets so QTabWidget.addTab
         # accepts them; the class mock still records the constructor call.
@@ -131,6 +144,7 @@ class TestConstruction:
             patch(_SINGLE_CLS, return_value=QWidget()) as single_cls,
             patch(_BATCH_CLS, return_value=QWidget()) as batch_cls,
             patch(_YOUTUBE_CLS, return_value=QWidget()) as youtube_cls,
+            patch(_DECKBUILDER_CLS, return_value=QWidget()) as deckbuilder_cls,
         ):
             widget = _make_tab(
                 qtbot,
@@ -141,6 +155,8 @@ class TestConstruction:
                 batch_progress=batch_progress,
                 youtube_presenter=youtube_presenter,
                 youtube_fetcher=fetcher,
+                deck_builder_presenter=deck_builder_presenter,
+                deck_builder_progress=deck_builder_progress,
                 stats_service=stats,
             )
             assert isinstance(widget, VideoTab)
@@ -164,6 +180,12 @@ class TestConstruction:
             assert kwargs["presenter"] is youtube_presenter
             assert kwargs["stats_service"] is stats
 
+            args, kwargs = deckbuilder_cls.call_args
+            assert args[0] is test_config
+            assert args[1] is deck_builder_presenter
+            assert args[2] is deck_builder_progress
+            assert kwargs["stats_service"] is stats
+
 
 # ---------------------------------------------------------------------------
 # open_subtab
@@ -173,7 +195,7 @@ class TestConstruction:
 class TestOpenSubtab:
     @pytest.mark.parametrize(
         ("key", "expected_index"),
-        [("single", 0), ("batch", 1), ("youtube", 2)],
+        [("single", 0), ("batch", 1), ("youtube", 2), ("deckbuilder", 3)],
     )
     def test_switches_inner_tab(self, tab, key, expected_index):
         tab._inner_tabs.setCurrentIndex(2 if expected_index == 0 else 0)
@@ -196,7 +218,7 @@ class TestOpenSubtab:
 
 
 class TestCurrentSubtabKey:
-    @pytest.mark.parametrize("key", ["single", "batch", "youtube"])
+    @pytest.mark.parametrize("key", ["single", "batch", "youtube", "deckbuilder"])
     def test_round_trips_with_open_subtab(self, tab, key):
         tab.open_subtab(key)
 
@@ -217,18 +239,21 @@ class TestUpdateConfig:
         tab.single_tab.update_config = MagicMock()
         tab.batch_tab.update_config = MagicMock()
         tab.youtube_tab.update_config = MagicMock()
+        tab.deck_builder_tab.update_config = MagicMock()
 
         tab.update_config(new_config)
 
         tab.single_tab.update_config.assert_called_once_with(new_config)
         tab.batch_tab.update_config.assert_called_once_with(new_config)
         tab.youtube_tab.update_config.assert_called_once_with(new_config)
+        tab.deck_builder_tab.update_config.assert_called_once_with(new_config)
 
     def test_stores_config(self, tab, test_config):
         new_config = replace(test_config, subtitle_offset=2.5)
         tab.single_tab.update_config = MagicMock()
         tab.batch_tab.update_config = MagicMock()
         tab.youtube_tab.update_config = MagicMock()
+        tab.deck_builder_tab.update_config = MagicMock()
 
         tab.update_config(new_config)
 
@@ -245,26 +270,31 @@ class TestShutdown:
         tab.single_tab = MagicMock(name="single")
         tab.batch_tab = MagicMock(name="batch")
         tab.youtube_tab = MagicMock(name="youtube")
+        tab.deck_builder_tab = MagicMock(name="deckbuilder")
 
         tab.shutdown()
 
         tab.single_tab.shutdown.assert_called_once_with()
         tab.batch_tab.shutdown.assert_called_once_with()
         tab.youtube_tab.shutdown.assert_called_once_with()
+        tab.deck_builder_tab.shutdown.assert_called_once_with()
 
     def test_earlier_children_raising_do_not_strand_later(self, tab):
-        """Exceptions from the first AND second child must not skip the rest."""
+        """Exceptions from the first three children must not skip the rest."""
         tab.single_tab = MagicMock(name="single")
         tab.single_tab.shutdown.side_effect = RuntimeError("boom")
         tab.batch_tab = MagicMock(name="batch")
         tab.batch_tab.shutdown.side_effect = RuntimeError("boom too")
         tab.youtube_tab = MagicMock(name="youtube")
+        tab.youtube_tab.shutdown.side_effect = RuntimeError("boom thrice")
+        tab.deck_builder_tab = MagicMock(name="deckbuilder")
 
         tab.shutdown()  # must not raise
 
         tab.single_tab.shutdown.assert_called_once_with()
         tab.batch_tab.shutdown.assert_called_once_with()
         tab.youtube_tab.shutdown.assert_called_once_with()
+        tab.deck_builder_tab.shutdown.assert_called_once_with()
 
     def test_queued_playlist_resolve_cannot_spawn_probe_during_shutdown(self, qtbot, test_config):
         """A pure-playlist resolve delivered after its close join is inert."""
@@ -366,11 +396,22 @@ class TestIterCloseWorkers:
         w_single = MagicMock(name="single-worker")
         w_batch = MagicMock(name="batch-worker")
         w_youtube = MagicMock(name="youtube-worker")
+        w_deckbuilder = MagicMock(name="deckbuilder-worker")
         tab.single_tab.worker_thread = w_single
         tab.batch_tab.worker_thread = w_batch
         tab.youtube_tab.worker_thread = w_youtube
+        tab.deck_builder_tab.worker_thread = w_deckbuilder
 
-        assert list(tab.iter_close_workers()) == [w_single, w_batch, w_youtube]
+        assert list(tab.iter_close_workers()) == [w_single, w_batch, w_youtube, w_deckbuilder]
+
+    def test_yields_only_the_live_deck_builder_worker(self, tab):
+        # DeckBuilderTab deliberately has no shutdown()/iter_close_workers() of
+        # its own; VideoTab.iter_close_workers must still surface its parked
+        # worker so the close controller can cancel+join it (Review Focus 3).
+        live = MagicMock(name="live-deckbuilder-worker")
+        tab.deck_builder_tab.worker_thread = live
+
+        assert list(tab.iter_close_workers()) == [live]
 
     def test_yields_workers_from_nested_child_iterators(self, tab):
         nested = MagicMock(name="youtube-probe-worker")
@@ -387,22 +428,25 @@ class TestIterCloseWorkers:
 
 class TestReleaseDictionaryResources:
     @pytest.mark.parametrize(
-        ("single_ret", "batch_ret", "youtube_ret", "expected"),
+        ("single_ret", "batch_ret", "youtube_ret", "deckbuilder_ret", "expected"),
         [
-            (True, True, True, True),
-            (False, True, True, False),
-            (True, False, True, False),
-            (True, True, False, False),
-            (False, False, False, False),
+            (True, True, True, True, True),
+            (False, True, True, True, False),
+            (True, False, True, True, False),
+            (True, True, False, True, False),
+            (True, True, True, False, False),
+            (False, False, False, False, False),
         ],
     )
-    def test_truth_table(self, tab, single_ret, batch_ret, youtube_ret, expected):
+    def test_truth_table(self, tab, single_ret, batch_ret, youtube_ret, deckbuilder_ret, expected):
         tab.single_tab = MagicMock(name="single")
         tab.single_tab.release_dictionary_resources.return_value = single_ret
         tab.batch_tab = MagicMock(name="batch")
         tab.batch_tab.release_dictionary_resources.return_value = batch_ret
         tab.youtube_tab = MagicMock(name="youtube")
         tab.youtube_tab.release_dictionary_resources.return_value = youtube_ret
+        tab.deck_builder_tab = MagicMock(name="deckbuilder")
+        tab.deck_builder_tab.release_dictionary_resources.return_value = deckbuilder_ret
 
         assert tab.release_dictionary_resources() is expected
 
@@ -414,6 +458,8 @@ class TestReleaseDictionaryResources:
         tab.batch_tab.release_dictionary_resources.return_value = True
         tab.youtube_tab = MagicMock(name="youtube")
         tab.youtube_tab.release_dictionary_resources.return_value = True
+        tab.deck_builder_tab = MagicMock(name="deckbuilder")
+        tab.deck_builder_tab.release_dictionary_resources.return_value = True
 
         result = tab.release_dictionary_resources()
 
@@ -421,6 +467,7 @@ class TestReleaseDictionaryResources:
         tab.single_tab.release_dictionary_resources.assert_called_once_with()
         tab.batch_tab.release_dictionary_resources.assert_called_once_with()
         tab.youtube_tab.release_dictionary_resources.assert_called_once_with()
+        tab.deck_builder_tab.release_dictionary_resources.assert_called_once_with()
 
 
 # ---------------------------------------------------------------------------
@@ -437,3 +484,76 @@ class TestCloseContractSurface:
     def test_class_name_is_video_tab(self, tab):
         # main_window._MAIN_TAB_CLASSES["video"] matches by type name.
         assert type(tab).__name__ == "VideoTab"
+
+
+# ---------------------------------------------------------------------------
+# Close path: a DeckBuilderWorker parked at the Build gate (Review Focus 3)
+# ---------------------------------------------------------------------------
+
+
+class TestClosePathReleasesDeckBuilderWorker:
+    def test_close_path_releases_a_parked_deck_builder_worker(self, qtbot, tab):
+        """DeckBuilderTab has no ``shutdown``/``iter_close_workers`` of its own
+        (it relies on ``MiningTabBase``'s gate-poison-without-join contract).
+        A worker parked at the Build gate must still be discoverable through
+        ``VideoTab.iter_close_workers`` -- exactly once -- and the close
+        controller's cancel-then-bounded-join policy must release it within
+        the grace period, the same way it would for a top-level Batch run.
+        """
+        from collections import Counter
+        from pathlib import Path
+        from types import SimpleNamespace
+        from unittest.mock import patch
+
+        from PyQt6.QtWidgets import QWidget
+
+        from anki_miner.gui.controllers.background_tasks import BackgroundTaskController
+        from anki_miner.gui.workers.deck_builder_worker import DeckBuilderWorker
+        from anki_miner.models.deck_build import DeckBuildRequest
+        from anki_miner.models.processing import ProcessingResult
+        from anki_miner.services.anki_service import AnkiService
+
+        pairs = [
+            SimpleNamespace(video=Path("/tmp/dbep1.mkv"), subtitle=Path("/tmp/dbep1.ass"), secondary=None),
+            SimpleNamespace(video=Path("/tmp/dbep2.mkv"), subtitle=Path("/tmp/dbep2.ass"), secondary=None),
+        ]
+        proc = MagicMock(name="FakeProcessor")
+        proc.subtitle_parser = MagicMock()
+        proc.subtitle_parser.count_lemmas.return_value = Counter()
+        proc.process_episode.return_value = ProcessingResult(total_words_found=0, new_words_found=0, cards_created=0)
+        proc.cancel = MagicMock()
+        proc.close = MagicMock()
+
+        request = DeckBuildRequest(
+            video_folder=Path("/tmp/dbvideo"),
+            subtitle_folder=Path("/tmp/dbsubs"),
+            deck_name="Close Path Show",
+            skip_known=True,
+            review=False,
+        )
+        worker = DeckBuilderWorker(request, tab.config, MagicMock(name="Presenter"))
+        tab.deck_builder_tab.worker_thread = worker
+
+        with (
+            patch("anki_miner.gui.workers.batch_queue_worker.create_episode_processor", return_value=proc),
+            patch(
+                "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+                return_value=pairs,
+            ),
+            patch.object(AnkiService, "ensure_deck"),
+            patch.object(AnkiService, "verify_card_target"),
+        ):
+            with qtbot.waitSignal(worker.preview_ready, timeout=5000):
+                worker.start()
+            assert worker.isRunning()  # parked at the Build gate, unconfirmed
+
+            workers = list(tab.iter_close_workers())
+            assert workers.count(worker) == 1
+
+            parent_widget = QWidget()
+            qtbot.addWidget(parent_widget)
+            controller = BackgroundTaskController(parent_widget)  # type: ignore[arg-type]
+
+            assert controller._join_worker_for_close(worker) is True
+
+        assert not worker.isRunning()

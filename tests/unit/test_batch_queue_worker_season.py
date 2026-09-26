@@ -368,3 +368,153 @@ class TestSeasonFlow:
             EP2: CurationEpisode(SUB2, offset, trans2, 3.0),
         }
         assert seen["secondary"] is None  # the first pair had no translation
+
+
+def _run_hook_worker(worker, proc, pairs=None):
+    """Like ``_run_worker``, but the caller supplies the (subclassed) worker."""
+    progress: list[tuple[int, int]] = []
+    worker.item_pairs_progress.connect(lambda _id, done, total: progress.append((done, total)))
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            return_value=proc,
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=pairs if pairs is not None else _pairs(),
+        ),
+    ):
+        worker.run()
+    return progress
+
+
+class _SpyHooksWorker(BatchQueueWorkerThread):
+    """Records every hook call while delegating to the default behaviour."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.make_capture_calls = 0
+        self.prepass_message_calls: list[int] = []
+        self.select_calls: list[list[TokenizedWord]] = []
+
+    def _make_capture(self):
+        self.make_capture_calls += 1
+        return super()._make_capture()
+
+    def _prepass_message(self, pairs_total):
+        self.prepass_message_calls.append(pairs_total)
+        return super()._prepass_message(pairs_total)
+
+    def _select_season_pool(self, pool, prepass_ok, episode_processor):
+        self.select_calls.append(list(pool))
+        return super()._select_season_pool(pool, prepass_ok, episode_processor)
+
+
+class _NoneSelectWorker(BatchQueueWorkerThread):
+    def _select_season_pool(self, pool, prepass_ok, episode_processor):
+        return None
+
+
+class _FilterSelectWorker(BatchQueueWorkerThread):
+    def _select_season_pool(self, pool, prepass_ok, episode_processor):
+        return [w for w in pool if w.mined_form == "犬"]
+
+
+class _CountingSelectWorker(BatchQueueWorkerThread):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.select_calls = 0
+
+    def _select_season_pool(self, pool, prepass_ok, episode_processor):
+        self.select_calls += 1
+        return super()._select_season_pool(pool, prepass_ok, episode_processor)
+
+
+class _CustomPrepassWorker(BatchQueueWorkerThread):
+    def _prepass_message(self, pairs_total):
+        return f"Custom review message for {pairs_total}"
+
+
+class TestSeasonHooks:
+    def test_default_hooks_leave_season_flow_unchanged(self):
+        words = {EP1: [_word("猫"), _word("犬")], EP2: [_word("猫"), _word("鳥")]}
+        proc = _make_processor(words)
+        bridge = MagicMock(return_value=[])
+        queue = BatchQueue()
+        queue.add_item(Path("/tmp/video"), Path("/tmp/subs"), "Show")
+        item = queue.get_all_items()[0]
+        worker = _SpyHooksWorker(queue, AnkiMinerConfig(), MagicMock(), curation_callback=bridge)
+        _run_hook_worker(worker, proc)
+
+        assert worker.make_capture_calls == 1
+        assert worker.prepass_message_calls == [2]
+        assert len(worker.select_calls) == 1
+        assert sorted(w.mined_form for w in worker.select_calls[0]) == ["犬", "猫", "鳥"]
+
+        # Existing season assertions (test_bridge_invoked_once_with_merged_pool)
+        # still hold with the hooks wired in.
+        assert bridge.call_count == 1
+        pool = bridge.call_args.args[0]
+        assert sorted(w.mined_form for w in pool) == ["犬", "猫", "鳥"]
+        cat = next(w for w in pool if w.mined_form == "猫")
+        assert cat.occurrence_count == 2
+        assert item.status == QueueItemStatus.COMPLETED
+
+    def test_select_hook_none_interrupts_and_commits_nothing(self):
+        words = {EP1: [_word("猫")], EP2: [_word("犬")]}
+        proc = _make_processor(words)
+        bridge = MagicMock(return_value=[])
+        queue = BatchQueue()
+        queue.add_item(Path("/tmp/video"), Path("/tmp/subs"), "Show")
+        item = queue.get_all_items()[0]
+        worker = _NoneSelectWorker(queue, AnkiMinerConfig(), MagicMock(), curation_callback=bridge)
+        _run_hook_worker(worker, proc)
+
+        bridge.assert_not_called()
+        assert item.committed_pair_keys == set()
+        assert item.status == QueueItemStatus.PENDING
+
+    def test_select_hook_filters_what_is_mined(self):
+        words = {EP1: [_word("猫")], EP2: [_word("犬")]}
+        proc = _make_processor(words)
+        bridge = MagicMock(side_effect=lambda pool: list(pool))
+        queue = BatchQueue()
+        queue.add_item(Path("/tmp/video"), Path("/tmp/subs"), "Show")
+        item = queue.get_all_items()[0]
+        worker = _FilterSelectWorker(queue, AnkiMinerConfig(), MagicMock(), curation_callback=bridge)
+        _run_hook_worker(worker, proc)
+
+        pool_seen_by_curator = bridge.call_args.args[0]
+        assert [w.mined_form for w in pool_seen_by_curator] == ["犬"]
+        # Ep1's subset is empty after the hook filters it out (zero-card
+        # skip, still committed); ep2 mines its one word.
+        assert item.cards_created == 1
+        assert len(item.committed_pair_keys) == 2
+        assert item.status == QueueItemStatus.COMPLETED
+
+    def test_select_hook_skipped_when_no_pair_prepassed(self):
+        proc = MagicMock()
+        proc.stats_service = None
+        proc.process_episode.side_effect = RuntimeError("boom")
+        bridge = MagicMock()
+        queue = BatchQueue()
+        queue.add_item(Path("/tmp/video"), Path("/tmp/subs"), "Show")
+        item = queue.get_all_items()[0]
+        worker = _CountingSelectWorker(queue, AnkiMinerConfig(), MagicMock(), curation_callback=bridge)
+        _run_hook_worker(worker, proc)
+
+        assert worker.select_calls == 0
+        bridge.assert_not_called()
+        assert item.status == QueueItemStatus.ERROR
+
+    def test_prepass_message_hook_is_used(self):
+        words = {EP1: [_word("猫")], EP2: [_word("犬")]}
+        proc = _make_processor(words)
+        bridge = MagicMock(return_value=[])
+        presenter = MagicMock()
+        queue = BatchQueue()
+        queue.add_item(Path("/tmp/video"), Path("/tmp/subs"), "Show")
+        worker = _CustomPrepassWorker(queue, AnkiMinerConfig(), presenter, curation_callback=bridge)
+        _run_hook_worker(worker, proc)
+
+        presenter.show_info.assert_any_call("Custom review message for 2")

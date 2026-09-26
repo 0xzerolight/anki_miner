@@ -87,6 +87,12 @@ def test_reveals_video_and_drives_subtab(window):
     window._tabs["video"].open_subtab.assert_called_once_with("single")
 
 
+def test_reveal_capability_opens_deck_builder_subtab(window):
+    window.reveal_capability(CapabilityTarget("video", "deckbuilder"))
+    assert window.tabs.currentWidget() is window._tabs["video"]
+    window._tabs["video"].open_subtab.assert_called_once_with("deckbuilder")
+
+
 def test_reveals_reading_and_drives_subtab(window):
     window.reveal_capability(CapabilityTarget("reading", "novels"))
     assert window.tabs.currentWidget() is window._tabs["reading"]

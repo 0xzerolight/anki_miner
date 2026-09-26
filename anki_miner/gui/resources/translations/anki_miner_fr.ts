@@ -1547,6 +1547,30 @@ Aucun fichier d'index n'est supprimé.</translation>
 </context><context>
     <name>BatchProcessingTab</name>
     <message>
+        <source>That translation subtitle folder no longer exists.</source>
+        <translation>Ce dossier de sous-titres de traduction n'existe plus.</translation>
+    </message>
+    <message>
+        <source>The translation folder must be different from the subtitle folder.</source>
+        <translation>Le dossier de traduction doit être différent du dossier de sous-titres.</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Annulé</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>Échec — voir le journal</translation>
+    </message>
+    <message>
+        <source>Finished with errors — see log</source>
+        <translation>Terminé avec des erreurs — voir le journal</translation>
+    </message>
+    <message>
+        <source>Complete — %1 cards created</source>
+        <translation>Terminé — %1 cartes créées</translation>
+    </message>
+    <message>
         <source>Review words before mining</source>
         <translation>Vérifier les mots avant l'extraction</translation>
     </message>
@@ -1615,14 +1639,6 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Annuler le traitement</translation>
     </message>
     <message>
-        <source>That translation subtitle folder no longer exists.</source>
-        <translation>Ce dossier de sous-titres de traduction n'existe plus.</translation>
-    </message>
-    <message>
-        <source>The translation folder must be different from the subtitle folder.</source>
-        <translation>Le dossier de traduction doit être différent du dossier de sous-titres.</translation>
-    </message>
-    <message>
         <source>Choose existing video and subtitle folders.</source>
         <translation>Choisissez des dossiers existants de vidéos et de sous-titres.</translation>
     </message>
@@ -1659,10 +1675,6 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Démarrage du traitement de la file (%1 séries)...</translation>
     </message>
     <message>
-        <source>Cancelled</source>
-        <translation>Annulé</translation>
-    </message>
-    <message>
         <source>Cancelling…</source>
         <translation>Annulation…</translation>
     </message>
@@ -1677,18 +1689,6 @@ Aucun fichier d'index n'est supprimé.</translation>
     <message>
         <source>Mining series %1 of %2: %3</source>
         <translation>Extraction de la série %1 sur %2 : %3</translation>
-    </message>
-    <message>
-        <source>Failed — see log</source>
-        <translation>Échec — voir le journal</translation>
-    </message>
-    <message>
-        <source>Finished with errors — see log</source>
-        <translation>Terminé avec des erreurs — voir le journal</translation>
-    </message>
-    <message>
-        <source>Complete — %1 cards created</source>
-        <translation>Terminé — %1 cartes créées</translation>
     </message>
     <message>
         <source>Folder not found: %1</source>
@@ -2040,6 +2040,22 @@ Aucun fichier d'index n'est supprimé.</translation>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Sentences.</source>
         <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Build a deck by coverage %</source>
+        <translation>Construire un paquet par % de couverture</translation>
+    </message>
+    <message>
+        <source>Build a frequency-ordered deck that covers a chosen percentage of a whole corpus. Preview creates the deck in Anki if it doesn't exist yet; the preview numbers are approximate -- a word whose card form another dictionary form already took can show as already known.</source>
+        <translation>Construisez un paquet ordonné par fréquence qui couvre un pourcentage choisi d'un corpus entier. L'aperçu crée le paquet dans Anki s'il n'existe pas encore ; les chiffres de l'aperçu sont approximatifs -- un mot dont la forme de carte est déjà prise par une autre forme du dictionnaire peut apparaître comme déjà connu.</translation>
+    </message>
+    <message>
+        <source>Deck Builder modes (all / top N / coverage %)</source>
+        <translation>Modes du Générateur de paquets (tous / top N / couverture %)</translation>
+    </message>
+    <message>
+        <source>Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
+        <translation>Le Générateur de paquets ignore toujours les filtres par épisode et les vérifications de doublons ; choisissez tous les mots, les N premiers, ou une couverture cible, et ignorez éventuellement les mots connus.</translation>
     </message>
     <message>
         <source>Mine from YouTube</source>
@@ -3468,6 +3484,221 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
     <message>
         <source>%1 (%2 of %3)</source>
         <translation>%1 (%2 sur %3)</translation>
+    </message>
+</context><context>
+    <name>DeckBuilderTab</name>
+    <message>
+        <source>Progress</source>
+        <translation>Progression</translation>
+    </message>
+    <message>
+        <source>deck</source>
+        <translation>paquet</translation>
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation>Aperçu</translation>
+    </message>
+    <message>
+        <source>Scan the season and preview which words will be included</source>
+        <translation>Analyser la saison et prévisualiser les mots qui seront inclus</translation>
+    </message>
+    <message>
+        <source>Build Deck</source>
+        <translation>Construire le paquet</translation>
+    </message>
+    <message>
+        <source>Create the Anki cards for the selected words, scanning the season first if you have not previewed it</source>
+        <translation>Créer les cartes Anki pour les mots sélectionnés, en analysant d'abord la saison si vous ne l'avez pas prévisualisée</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Annuler</translation>
+    </message>
+    <message>
+        <source>Input</source>
+        <translation>Entrée</translation>
+    </message>
+    <message>
+        <source>Video Folder:</source>
+        <translation>Dossier vidéo :</translation>
+    </message>
+    <message>
+        <source>Subtitle Folder:</source>
+        <translation>Dossier des sous-titres :</translation>
+    </message>
+    <message>
+        <source>Subtitle Offset:</source>
+        <translation>Décalage des sous-titres :</translation>
+    </message>
+    <message>
+        <source>Translation Folder:</source>
+        <translation>Dossier des sous-titres de traduction :</translation>
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation>Décalage des sous-titres de traduction :</translation>
+    </message>
+    <message>
+        <source> seconds</source>
+        <translation> secondes</translation>
+    </message>
+    <message>
+        <source>Adjust subtitle timing for the whole season (positive = later, negative = earlier)</source>
+        <translation>Ajuster la synchronisation des sous-titres pour toute la saison (positif = plus tard, négatif = plus tôt)</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation>Décaler uniquement les sous-titres de traduction (positif = plus tard, négatif = plus tôt)</translation>
+    </message>
+    <message>
+        <source>Deck Settings</source>
+        <translation>Paramètres du paquet</translation>
+    </message>
+    <message>
+        <source>Deck Name:</source>
+        <translation>Nom du paquet :</translation>
+    </message>
+    <message>
+        <source>Word Selection:</source>
+        <translation>Sélection des mots :</translation>
+    </message>
+    <message>
+        <source>Enter deck name…</source>
+        <translation>Saisir le nom du paquet…</translation>
+    </message>
+    <message>
+        <source>All vocabulary</source>
+        <translation>Tout le vocabulaire</translation>
+    </message>
+    <message>
+        <source>Top N words</source>
+        <translation>Les N mots les plus fréquents</translation>
+    </message>
+    <message>
+        <source>Target coverage %</source>
+        <translation>% de couverture cible</translation>
+    </message>
+    <message>
+        <source> words</source>
+        <translation> mots</translation>
+    </message>
+    <message>
+        <source>Include the N most-frequent lemmas</source>
+        <translation>Inclure les N lemmes les plus fréquents</translation>
+    </message>
+    <message>
+        <source>Include enough words to cover this percentage of tokens</source>
+        <translation>Inclure assez de mots pour couvrir ce pourcentage de tokens</translation>
+    </message>
+    <message>
+        <source>Skip words already in my Anki collection</source>
+        <translation>Ignorer les mots déjà présents dans ma collection Anki</translation>
+    </message>
+    <message>
+        <source>Checked: skip your known words; unchecked: mine every word.</source>
+        <translation>Coché : ignore vos mots connus ; décoché : extrait tous les mots.</translation>
+    </message>
+    <message>
+        <source>Review words before mining</source>
+        <translation>Vérifier les mots avant l'extraction</translation>
+    </message>
+    <message>
+        <source>Pick which words get cards, once per series.</source>
+        <translation>Choisissez les mots qui deviennent des cartes, une fois par série.</translation>
+    </message>
+    <message>
+        <source>Results</source>
+        <translation>Résultats</translation>
+    </message>
+    <message>
+        <source>Selected words that won't get a card this run: already in your collection, or with no sentence to mine.</source>
+        <translation>Mots sélectionnés qui n'obtiendront pas de carte lors de cette exécution : déjà dans votre collection, ou sans phrase à extraire.</translation>
+    </message>
+    <message>
+        <source>Total tokens:</source>
+        <translation>Total de tokens :</translation>
+    </message>
+    <message>
+        <source>Unique lemmas:</source>
+        <translation>Lemmes uniques :</translation>
+    </message>
+    <message>
+        <source>Candidate words:</source>
+        <translation>Mots candidats :</translation>
+    </message>
+    <message>
+        <source>Projected coverage:</source>
+        <translation>Couverture projetée :</translation>
+    </message>
+    <message>
+        <source>Already known (skipped):</source>
+        <translation>Déjà connus (ignorés) :</translation>
+    </message>
+    <message>
+        <source>Cards to create:</source>
+        <translation>Cartes à créer :</translation>
+    </message>
+    <message>
+        <source>Choose existing video and subtitle folders.</source>
+        <translation>Choisissez des dossiers existants de vidéos et de sous-titres.</translation>
+    </message>
+    <message>
+        <source>Enter a deck name before mining.</source>
+        <translation>Saisissez un nom de paquet avant l'extraction.</translation>
+    </message>
+    <message>
+        <source>No video/subtitle pairs found. Check the folders.</source>
+        <translation>Aucune paire vidéo/sous-titres trouvée. Vérifiez les dossiers.</translation>
+    </message>
+    <message>
+        <source>Deck Builder</source>
+        <translation>Générateur de paquets</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Annulation…</translation>
+    </message>
+    <message>
+        <source>Preview ready. Press Build Deck to create the cards.</source>
+        <translation>Aperçu prêt. Cliquez sur « Construire le paquet » pour créer les cartes.</translation>
+    </message>
+    <message>
+        <source>%1 of %2 episodes mined</source>
+        <translation>Épisodes extraits : %1 sur %2</translation>
+    </message>
+    <message>
+        <source>Some episodes could not be mined.</source>
+        <translation>Certains épisodes n'ont pas pu être extraits.</translation>
+    </message>
+    <message>
+        <source>The deck could not be built.</source>
+        <translation>Le paquet n'a pas pu être construit.</translation>
+    </message>
+    <message>
+        <source>Created %1 cards in deck '%3'; the candidate words cover ~%2% of tokens.</source>
+        <translation>%1 cartes créées dans le paquet « %3 » ; les mots candidats couvrent ~%2 % des occurrences.</translation>
+    </message>
+    <message>
+        <source>Created %1 cards in deck '%2'.</source>
+        <translation>%1 cartes créées dans le paquet « %2 ».</translation>
+    </message>
+    <message>
+        <source>Folder not found: %1</source>
+        <translation>Dossier introuvable : %1</translation>
+    </message>
+    <message>
+        <source>The build into deck '%1' was interrupted when Anki Miner closed. Build Deck again to finish it; words already in the deck are skipped.</source>
+        <translation>La construction du paquet « %1 » a été interrompue à la fermeture d'Anki Miner. Cliquez à nouveau sur « Construire le paquet » pour la terminer ; les mots déjà présents dans le paquet sont ignorés.</translation>
+    </message>
+</context><context>
+    <name>DeckBuilderWorker</name>
+    <message numerus="yes">
+        <source>Scanning %n episode(s)...</source>
+        <translation>
+            <numerusform>Analyse de %n épisode...</numerusform>
+            <numerusform>Analyse de %n épisodes...</numerusform>
+        </translation>
     </message>
 </context><context>
     <name>DeckFilterTab</name>
@@ -6414,6 +6645,10 @@ Continuer ?</translation>
     <message>
         <source>YouTube</source>
         <translation>YouTube</translation>
+    </message>
+    <message>
+        <source>Deck Builder</source>
+        <translation>Générateur de paquets</translation>
     </message>
     <message>
         <source>'Anki Miner' should now appear in your application menu.</source>

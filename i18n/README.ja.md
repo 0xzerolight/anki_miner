@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:eaf6f4a3bb1bf708 -->
+<!-- i18n-source: README.md sha256:06b01f0d7cb8ab71 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -115,7 +115,7 @@ anki_miner_gui
 
 ## タブ
 
-- **動画** - 単一の動画/字幕のペア、バッチフォルダ、または YouTube の URL をマイニングします。
+- **動画** - 単一の動画/字幕のペア、バッチフォルダ、YouTube の URL をマイニングしたり、シリーズ全体を頻度順に並んだ 1 つのデッキにまとめたりします。
 - **オーディオブック** - オーディオブック、ポッドキャスト、ラジオ、楽曲（音声 + 字幕/文字起こしのペア）をマイニングします。
 - **読み** - 漫画（mokuro）、小説（`.epub`、`.txt`。1 冊でもフォルダ全体でも可）、単体の字幕ファイル、貼り付けたテキストをマイニングします。
 - **分析** - マイニング履歴、難易度ランキング、マイルストーン。

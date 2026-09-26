@@ -360,6 +360,7 @@ class TestCallSiteRoles:
             "backfill_tab.py",
             "booksync_tab.py",
             "condense_tab.py",
+            "deck_builder_tab.py",
             "deck_filter_tab.py",
             "reading_manga_tab.py",
             "reading_novels_tab.py",

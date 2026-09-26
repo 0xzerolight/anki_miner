@@ -1,34 +1,36 @@
-"""Video container tab — nests Single, Batch, and YouTube as inner tabs.
+"""Video container tab — nests Single, Batch, YouTube, and Deck Builder as inner tabs.
 
 Wraps :class:`~anki_miner.gui.widgets.single_episode_tab.SingleEpisodeTab`
 (Single), :class:`~anki_miner.gui.widgets.batch_processing_tab.BatchProcessingTab`
-(Batch), and :class:`~anki_miner.gui.widgets.youtube_tab.YouTubeTab` (YouTube)
+(Batch), :class:`~anki_miner.gui.widgets.youtube_tab.YouTubeTab` (YouTube), and
+:class:`~anki_miner.gui.widgets.deck_builder_tab.DeckBuilderTab` (Deck Builder)
 inside a single top-level tab so the main tab bar stays uncluttered. This
 container only routes config refreshes, shutdown, dictionary-release, and
 sub-tab reveal down to the children; each child keeps its own worker lifecycle.
 
 Close contract (differs from ``ReadingTab`` — read before changing):
-- ``shutdown()`` fans out to ALL THREE children, each guarded independently:
+- ``shutdown()`` fans out to ALL FOUR children, each guarded independently:
   an exception raised while stopping one child must not strand another child's
   still-running worker at app close.
 - Timing: only YouTube joins its worker inline (``YouTubeTab.shutdown`` bounded
   ``wait()`` at ``_SHUTDOWN_WAIT_MS`` = 2s; on join-OK it nulls ``worker_thread``,
   but on timeout it RETAINS the handle — same deferred-close design as
-  Single/Batch). Single/Batch inherit the ``MiningTabBase`` ``shutdown()``
-  which poisons the curation gate WITHOUT joining — their live workers are
-  cancelled+joined later by the controller at ``_CLOSE_JOIN_GRACE_MS`` (2s
-  each), so worst-case close is ~2s inline join + 2x2s deferred grace
-  (~6s total).
-- Ordering: YouTube's inline join runs before Single/Batch workers are
-  cancelled. No deadlock — the base ``shutdown()`` gate-poison *unparks* a
+  Single/Batch/Deck Builder). Single/Batch/Deck Builder inherit the
+  ``MiningTabBase`` ``shutdown()`` which poisons the curation gate WITHOUT
+  joining — their live workers are cancelled+joined later by the controller at
+  ``_CLOSE_JOIN_GRACE_MS`` (2s each), so worst-case close is ~2s inline join +
+  3x2s deferred grace (~8s total).
+- Ordering: YouTube's inline join runs before Single/Batch/Deck Builder workers
+  are cancelled. No deadlock — the base ``shutdown()`` gate-poison *unparks* a
   curation-blocked worker rather than cancelling it, so nothing waits on a
-  worker that cannot make progress.
+  worker that cannot make progress. Deck Builder's own Build gate is opened
+  the same way, by its worker's ``cancel()`` (see ``DeckBuilderWorker.cancel``).
 - NO ``worker_thread`` attribute on the container, but — unlike ``ReadingTab``
   — it DOES expose ``iter_close_workers()``. Nested, the controller's
   top-level ``getattr(tab, "worker_thread", None)`` probe hits the container
-  and yields ``None``, and the Single/Batch base ``shutdown()`` never joins
-  their workers; without ``iter_close_workers`` those live workers would be
-  destroyed mid-run at close.
+  and yields ``None``, and the Single/Batch/Deck Builder base ``shutdown()``
+  never joins their workers; without ``iter_close_workers`` those live workers
+  would be destroyed mid-run at close.
   :class:`~anki_miner.gui.controllers.background_tasks.BackgroundTaskController`
   routes each yielded worker through the same cancel → bounded-join →
   laggard-deferral policy they got as top-level tabs. YouTube's worker is
@@ -47,6 +49,7 @@ from PyQt6.QtWidgets import QTabWidget, QVBoxLayout, QWidget
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.base import install_animated_tab_bar
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
+from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
 from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 
@@ -62,15 +65,15 @@ logger = logging.getLogger(__name__)
 
 
 class VideoTab(QWidget):
-    """Container tab holding Single, Batch, and YouTube as inner tabs.
+    """Container tab holding Single, Batch, YouTube, and Deck Builder as inner tabs.
 
     The class name is load-bearing: ``main_window._MAIN_TAB_CLASSES["video"]``
     resolves this tab by type name, so it must stay ``VideoTab``.
 
-    Unlike ``ReadingTab``, each child gets its OWN presenter (and Single/Batch
-    their own progress callback): Single and Batch wire presenter signals into
-    their per-tab log widgets, so a shared presenter would cross-post log lines
-    between sub-tabs.
+    Unlike ``ReadingTab``, each child gets its OWN presenter (and its own
+    progress callback, YouTube excepted): Single, Batch, and Deck Builder wire
+    presenter signals into their per-tab log widgets, so a shared presenter
+    would cross-post log lines between sub-tabs.
 
     Close contract: see the module docstring — ``shutdown()`` fan-out plus
     ``iter_close_workers()``, and deliberately no ``worker_thread`` attribute.
@@ -83,6 +86,8 @@ class VideoTab(QWidget):
         batch_progress: Progress callback owned by the Batch sub-tab.
         youtube_presenter: Presenter owned by the YouTube sub-tab.
         youtube_fetcher: YouTube fetcher service handed to the YouTube sub-tab.
+        deck_builder_presenter: Presenter owned by the Deck Builder sub-tab.
+        deck_builder_progress: Progress callback owned by the Deck Builder sub-tab.
         stats_service: Optional ``StatsService`` shared by all children.
         parent: Optional parent widget.
     """
@@ -97,6 +102,8 @@ class VideoTab(QWidget):
         batch_progress: GUIProgressCallback,
         youtube_presenter: GUIPresenter,
         youtube_fetcher: YouTubeFetcherService,
+        deck_builder_presenter: GUIPresenter,
+        deck_builder_progress: GUIProgressCallback,
         stats_service: object | None = None,
         parent: QWidget | None = None,
     ) -> None:
@@ -125,6 +132,12 @@ class VideoTab(QWidget):
             presenter=youtube_presenter,
             stats_service=stats_service,
         )
+        self.deck_builder_tab = DeckBuilderTab(
+            config,
+            deck_builder_presenter,
+            deck_builder_progress,
+            stats_service=stats_service,
+        )
 
         self._inner_tabs = QTabWidget()
         install_animated_tab_bar(self._inner_tabs)
@@ -140,9 +153,13 @@ class VideoTab(QWidget):
             self.youtube_tab,
             QCoreApplication.translate("MainWindow", "YouTube"),
         )
+        self._inner_tabs.addTab(
+            self.deck_builder_tab,
+            QCoreApplication.translate("MainWindow", "Deck Builder"),
+        )
 
         # Stable sub-tab keys for reveal_capability (see capabilities.SUBTAB_KEYS).
-        self._subtab_index = {"single": 0, "batch": 1, "youtube": 2}
+        self._subtab_index = {"single": 0, "batch": 1, "youtube": 2, "deckbuilder": 3}
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -158,8 +175,8 @@ class VideoTab(QWidget):
 
         ``key`` is a stable identifier from
         :data:`anki_miner.gui.capabilities.SUBTAB_KEYS` (``"single"``,
-        ``"batch"``, ``"youtube"``). Unknown keys are ignored so a stale caller
-        can't crash the UI.
+        ``"batch"``, ``"youtube"``, ``"deckbuilder"``). Unknown keys are
+        ignored so a stale caller can't crash the UI.
         """
         index = self._subtab_index.get(key)
         if index is not None:
@@ -184,27 +201,28 @@ class VideoTab(QWidget):
     # ------------------------------------------------------------------
 
     def update_config(self, config: AnkiMinerConfig) -> None:
-        """Store a new config and fan it out to all three child tabs."""
+        """Store a new config and fan it out to all four child tabs."""
         self.config = config
         self.single_tab.update_config(config)
         self.batch_tab.update_config(config)
         self.youtube_tab.update_config(config)
+        self.deck_builder_tab.update_config(config)
 
     # ------------------------------------------------------------------
     # Close contract
     # ------------------------------------------------------------------
 
     def shutdown(self) -> None:
-        """Stop all three children, each guarded independently.
+        """Stop all four children, each guarded independently.
 
         An exception raised stopping one child must not strand another child's
         still-running worker at app close, so each child's ``shutdown`` runs in
         its own ``try``/``except`` (the failure is logged). See the module
         docstring for the timing/ordering contract: only YouTube joins inline;
-        Single/Batch workers are joined by the controller via
+        Single/Batch/Deck Builder workers are joined by the controller via
         :meth:`iter_close_workers`.
         """
-        for child in (self.single_tab, self.batch_tab, self.youtube_tab):
+        for child in (self.single_tab, self.batch_tab, self.youtube_tab, self.deck_builder_tab):
             try:
                 child.shutdown()
             except Exception:  # noqa: BLE001 - one child must not strand the others
@@ -214,12 +232,12 @@ class VideoTab(QWidget):
         """Yield each child's direct and nested workers for close joining.
 
         Called by ``BackgroundTaskController.shutdown`` AFTER :meth:`shutdown`
-        has poisoned the curation gates. Single/Batch leave a running
-        ``worker_thread`` live (their base ``shutdown()`` never joins); YouTube
-        joined and nulled its own, so ``None`` entries are skipped and nothing
-        is cancelled twice.
+        has poisoned the curation gates. Single/Batch/Deck Builder leave a
+        running ``worker_thread`` live (their base ``shutdown()`` never
+        joins); YouTube joined and nulled its own, so ``None`` entries are
+        skipped and nothing is cancelled twice.
         """
-        for child in (self.single_tab, self.batch_tab, self.youtube_tab):
+        for child in (self.single_tab, self.batch_tab, self.youtube_tab, self.deck_builder_tab):
             worker = getattr(child, "worker_thread", None)
             if worker is not None:
                 yield worker
@@ -240,5 +258,6 @@ class VideoTab(QWidget):
             self.single_tab.release_dictionary_resources(),
             self.batch_tab.release_dictionary_resources(),
             self.youtube_tab.release_dictionary_resources(),
+            self.deck_builder_tab.release_dictionary_resources(),
         ]
         return all(released)

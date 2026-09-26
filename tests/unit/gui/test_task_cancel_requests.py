@@ -124,6 +124,7 @@ def _publishing_screens():
     from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
     from anki_miner.gui.widgets.booksync_tab import BookSyncTab
     from anki_miner.gui.widgets.condense_tab import CondenseTab
+    from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
     from anki_miner.gui.widgets.deck_filter_tab import DeckFilterTab
     from anki_miner.gui.widgets.download_tab import DownloadTab
     from anki_miner.gui.widgets.mokuro_tab import MokuroTab
@@ -140,6 +141,7 @@ def _publishing_screens():
         SingleEpisodeTab,
         BatchProcessingTab,
         YouTubeTab,
+        DeckBuilderTab,
         AudiobookTab,
         ReadingMangaTab,
         ReadingNovelsTab,
