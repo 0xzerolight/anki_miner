@@ -142,7 +142,7 @@ class _PromotionLock:
                 raise
         return self
 
-    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+    def __exit__(self, exc_type: object, exc: object, _tb: object) -> None:
         if self._depth == 1:
             try:
                 self._release_file_lock()
