@@ -327,6 +327,8 @@ dev = [
     # directly. It only ever arrived transitively via pre-commit, so a pre-commit
     # release that drops it would turn those CI gates into a bare ImportError.
     "pyyaml>=6.0",
+    # health.sh's dead-code step; skipped when the binary is missing.
+    "vulture>=2.16",
 ]
 # Build-time only: pyside6-lrelease compiles .ts → .qm translation catalogs
 # (scripts/i18n.py compile). NOT needed by tests or CI's drift check (which
