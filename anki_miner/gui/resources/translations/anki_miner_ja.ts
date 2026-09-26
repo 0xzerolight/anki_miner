@@ -1458,6 +1458,30 @@ No index files are deleted.</source>
         <translation>完了 — %1 件成功、%2 件失敗</translation>
     </message>
     <message>
+        <source>Mine every queued item into Anki cards.</source>
+        <translation>キュー内のすべての項目をAnkiカードにマイニングします。</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>クリア</translation>
+    </message>
+    <message>
+        <source>Remove every item from the queue.</source>
+        <translation>キュー内のすべての項目を削除します。</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation>実行中の処理をキャンセルします。</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>進捗</translation>
+    </message>
+    <message>
+        <source>audiobooks</source>
+        <translation>オーディオブック</translation>
+    </message>
+    <message>
         <source>Audio File:</source>
         <translation>音声ファイル:</translation>
     </message>
@@ -1492,30 +1516,6 @@ No index files are deleted.</source>
     <message>
         <source>Show the word-selection popup for each audio file before creating cards.</source>
         <translation>カードを作成する前に、各音声ファイルの単語選択ポップアップを表示します。</translation>
-    </message>
-    <message>
-        <source>Mine every queued item into Anki cards.</source>
-        <translation>キュー内のすべての項目をAnkiカードにマイニングします。</translation>
-    </message>
-    <message>
-        <source>Clear</source>
-        <translation>クリア</translation>
-    </message>
-    <message>
-        <source>Remove every item from the queue.</source>
-        <translation>キュー内のすべての項目を削除します。</translation>
-    </message>
-    <message>
-        <source>Cancel the active run.</source>
-        <translation>実行中の処理をキャンセルします。</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>進捗</translation>
-    </message>
-    <message>
-        <source>audiobooks</source>
-        <translation>オーディオブック</translation>
     </message>
     <message>
         <source>Choose an audio file first.</source>
@@ -1806,12 +1806,12 @@ No index files are deleted.</source>
         <translation>単一ファイル</translation>
     </message>
     <message>
-        <source>Sync one audio file to the book.</source>
-        <translation>音声ファイル1つを書籍に同期します。</translation>
-    </message>
-    <message>
         <source>Folder</source>
         <translation>フォルダ</translation>
+    </message>
+    <message>
+        <source>Sync one audio file to the book.</source>
+        <translation>音声ファイル1つを書籍に同期します。</translation>
     </message>
     <message>
         <source>Every audio file in the folder, in file-name order, one .srt each.</source>
@@ -2768,6 +2768,26 @@ No index files are deleted.</source>
 </context><context>
     <name>CardBackfillTab</name>
     <message>
+        <source>Applying…</source>
+        <translation>適用中…</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>キャンセル中…</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>キャンセルしました。</translation>
+    </message>
+    <message>
+        <source>Settings changed since this scan; re-scan before applying.</source>
+        <translation>このスキャン以降に設定が変更されました。適用する前に再スキャンしてください。</translation>
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki — scanning all decks.</source>
+        <translation>Anki からデッキ名を取得できませんでした。すべてのデッキをスキャンします。</translation>
+    </message>
+    <message>
         <source>Card Backfill</source>
         <translation>カードの一括補完</translation>
     </message>
@@ -2872,10 +2892,6 @@ No index files are deleted.</source>
         <translation>このフィールドは設定 → カードと Anki でマッピングしてください</translation>
     </message>
     <message>
-        <source>Couldn't fetch deck names from Anki — scanning all decks.</source>
-        <translation>Anki からデッキ名を取得できませんでした。すべてのデッキをスキャンします。</translation>
-    </message>
-    <message>
         <source>Select at least one field group to fill.</source>
         <translation>補完するフィールドグループを 1 つ以上選択してください。</translation>
     </message>
@@ -2944,10 +2960,6 @@ No index files are deleted.</source>
         <translation>表現フィールドが空のため、ノート {count} 件をスキップしました。</translation>
     </message>
     <message>
-        <source>Settings changed since this scan; re-scan before applying.</source>
-        <translation>このスキャン以降に設定が変更されました。適用する前に再スキャンしてください。</translation>
-    </message>
-    <message>
         <source>Update notes in Anki?</source>
         <translation>Anki のノートを更新しますか？</translation>
     </message>
@@ -2962,10 +2974,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>Card backfill</source>
         <translation>カード補完</translation>
-    </message>
-    <message>
-        <source>Applying…</source>
-        <translation>適用中…</translation>
     </message>
     <message>
         <source>Filled {fields} field(s) on {notes} note(s).</source>
@@ -2990,14 +2998,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>{count} audio file(s) could not be added to Anki; scan again to retry.</source>
         <translation>{count} 件の音声ファイルを Anki に追加できませんでした。再スキャンして再試行してください。</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>キャンセル中…</translation>
-    </message>
-    <message>
-        <source>Cancelled.</source>
-        <translation>キャンセルしました。</translation>
     </message>
 </context><context>
     <name>CondenseMetadataDialog</name>
@@ -3136,12 +3136,12 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>単一ファイル</translation>
     </message>
     <message>
-        <source>Condense one selected media file.</source>
-        <translation>選択した 1 つのメディアファイルを凝縮します。</translation>
-    </message>
-    <message>
         <source>Folder</source>
         <translation>フォルダ</translation>
+    </message>
+    <message>
+        <source>Condense one selected media file.</source>
+        <translation>選択した 1 つのメディアファイルを凝縮します。</translation>
     </message>
     <message>
         <source>Condense every media file in a selected folder.</source>
@@ -3706,6 +3706,26 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
 </context><context>
     <name>DeckFilterTab</name>
     <message>
+        <source>Copying…</source>
+        <translation>コピー中…</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>キャンセル中…</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>キャンセルしました。</translation>
+    </message>
+    <message>
+        <source>Settings changed since this scan; re-scan before copying.</source>
+        <translation>このスキャン以降に設定が変更されました。コピーする前に再スキャンしてください。</translation>
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki — is Anki running?</source>
+        <translation>Anki からデッキ名を取得できませんでした — Anki は起動していますか？</translation>
+    </message>
+    <message>
         <source>Deck Filter</source>
         <translation>デッキフィルター</translation>
     </message>
@@ -3802,10 +3822,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>有効なフィルター: {filters}。</translation>
     </message>
     <message>
-        <source>Couldn't fetch deck names from Anki — is Anki running?</source>
-        <translation>Anki からデッキ名を取得できませんでした — Anki は起動していますか？</translation>
-    </message>
-    <message>
         <source>{deck} (Filtered)</source>
         <translation>{deck}（フィルター後）</translation>
     </message>
@@ -3894,10 +3910,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>先頭の {rows} 行を表示しています。</translation>
     </message>
     <message>
-        <source>Settings changed since this scan; re-scan before copying.</source>
-        <translation>このスキャン以降に設定が変更されました。コピーする前に再スキャンしてください。</translation>
-    </message>
-    <message>
         <source>Copy notes to a new deck?</source>
         <translation>ノートを新しいデッキへコピーしますか？</translation>
     </message>
@@ -3910,24 +3922,12 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>デッキフィルターのコピー</translation>
     </message>
     <message>
-        <source>Copying…</source>
-        <translation>コピー中…</translation>
-    </message>
-    <message>
         <source>Copied {count} note(s) into "{deck}".</source>
         <translation>{count} 件のノートを「{deck}」へコピーしました。</translation>
     </message>
     <message>
         <source>{count} note(s) were not accepted by Anki (see log).</source>
         <translation>{count} 件のノートが Anki に受け付けられませんでした（ログを確認してください）。</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>キャンセル中…</translation>
-    </message>
-    <message>
-        <source>Cancelled.</source>
-        <translation>キャンセルしました。</translation>
     </message>
 </context><context>
     <name>DeckPage</name>
@@ -4807,14 +4807,6 @@ No files on disk are deleted.</source>
         <source>Filtering against known vocabulary</source>
         <translation>既知の語彙でフィルタリングしています</translation>
     </message>
-    <message>
-        <source>Including words already known</source>
-        <translation>既知の単語も含めています</translation>
-    </message>
-    <message>
-        <source>Known word DB synced: %1 new words (%2 total)</source>
-        <translation>既知単語DBを同期しました: 新規 %1 単語（合計 %2）</translation>
-    </message>
     <message numerus="yes">
         <source>%n new word(s) to mine</source>
         <translation>
@@ -4830,6 +4822,20 @@ No files on disk are deleted.</source>
         <translation>
             <numerusform>この実行の %n 個の単語はすべてすでに既知です — 新しいカードは作成されませんでした</numerusform>
         </translation>
+    </message>
+    <message numerus="yes">
+        <source>Whitelist: force-included %n word(s)</source>
+        <translation>
+            <numerusform>ホワイトリスト: %n 個の単語を強制的に含めました</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Including words already known</source>
+        <translation>既知の単語も含めています</translation>
+    </message>
+    <message>
+        <source>Known word DB synced: %1 new words (%2 total)</source>
+        <translation>既知単語DBを同期しました: 新規 %1 単語（合計 %2）</translation>
     </message>
     <message>
         <source>Skipped %1 words missing from your offline dictionaries: %2%3</source>
@@ -4870,12 +4876,6 @@ No files on disk are deleted.</source>
     <message>
         <source>Sentence length filter: removed %1 words (cap: %2)</source>
         <translation>文の長さフィルター: %1 単語を除去（上限: %2）</translation>
-    </message>
-    <message numerus="yes">
-        <source>Whitelist: force-included %n word(s)</source>
-        <translation>
-            <numerusform>ホワイトリスト: %n 個の単語を強制的に含めました</numerusform>
-        </translation>
     </message>
     <message>
         <source>Collapsed %1 duplicate-expression word(s)</source>
@@ -5650,14 +5650,6 @@ No files on disk are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>word-based</source>
-        <translation>単語ベース</translation>
-    </message>
-    <message>
-        <source>Level labels are shown on the card but not used for frequency filtering.</source>
-        <translation>レベルラベルはカードに表示されますが、頻度フィルタリングには使用されません。</translation>
-    </message>
-    <message>
         <source>%1 entries</source>
         <translation>%1 件のエントリ</translation>
     </message>
@@ -5686,6 +5678,26 @@ No files on disk are deleted.</source>
         <translation>⚠ 見つかりません — 再インポート</translation>
     </message>
     <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>別のタスクがインデックス済みリソースを使用しています — 完了後に再試行してください。</translation>
+    </message>
+    <message>
+        <source>Re-import…</source>
+        <translation>再インポート…</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>削除</translation>
+    </message>
+    <message>
+        <source>word-based</source>
+        <translation>単語ベース</translation>
+    </message>
+    <message>
+        <source>Level labels are shown on the card but not used for frequency filtering.</source>
+        <translation>レベルラベルはカードに表示されますが、頻度フィルタリングには使用されません。</translation>
+    </message>
+    <message>
         <source>Remove '%1' from the frequency chain?
 
 Only the index files are deleted. Adding it back needs the source file.</source>
@@ -5700,18 +5712,6 @@ No index files are deleted.</source>
         <translation>「%1」を頻度チェーンから削除しますか？
 
 インデックスファイルは削除されません。</translation>
-    </message>
-    <message>
-        <source>Another task is using the indexed resources — try again when it finishes.</source>
-        <translation>別のタスクがインデックス済みリソースを使用しています — 完了後に再試行してください。</translation>
-    </message>
-    <message>
-        <source>Re-import…</source>
-        <translation>再インポート…</translation>
-    </message>
-    <message>
-        <source>Remove</source>
-        <translation>削除</translation>
     </message>
 </context><context>
     <name>GUIPresenter</name>
@@ -7544,6 +7544,18 @@ Continue?</source>
         <translation>⚠ 見つかりません — 再インポート</translation>
     </message>
     <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>別のタスクがインデックス済みリソースを使用しています — 完了後に再試行してください。</translation>
+    </message>
+    <message>
+        <source>Re-import…</source>
+        <translation>再インポート…</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>削除</translation>
+    </message>
+    <message>
         <source>Remove '%1' from the pitch accent chain?
 
 Only the index files are deleted. Adding it back needs the source file.</source>
@@ -7558,18 +7570,6 @@ No index files are deleted.</source>
         <translation>「%1」をピッチアクセントチェーンから削除しますか？
 
 インデックスファイルは削除されません。</translation>
-    </message>
-    <message>
-        <source>Another task is using the indexed resources — try again when it finishes.</source>
-        <translation>別のタスクがインデックス済みリソースを使用しています — 完了後に再試行してください。</translation>
-    </message>
-    <message>
-        <source>Re-import…</source>
-        <translation>再インポート…</translation>
-    </message>
-    <message>
-        <source>Remove</source>
-        <translation>削除</translation>
     </message>
 </context><context>
     <name>PlaylistAddController</name>
@@ -10261,12 +10261,12 @@ Your installed resources and your theme are kept.</source>
         <translation>単一ファイル</translation>
     </message>
     <message>
-        <source>Transcribe one selected video or audio file.</source>
-        <translation>選択した1つの動画または音声ファイルを文字起こしします。</translation>
-    </message>
-    <message>
         <source>Folder</source>
         <translation>フォルダ</translation>
+    </message>
+    <message>
+        <source>Transcribe one selected video or audio file.</source>
+        <translation>選択した1つの動画または音声ファイルを文字起こしします。</translation>
     </message>
     <message>
         <source>Transcribe every video or audio file in a selected folder.</source>
@@ -10515,12 +10515,12 @@ Your installed resources and your theme are kept.</source>
         <translation>単一ファイル</translation>
     </message>
     <message>
-        <source>Retime one subtitle file against one video.</source>
-        <translation>1 つの字幕ファイルを 1 つの動画に対してリタイミングします。</translation>
-    </message>
-    <message>
         <source>Folder</source>
         <translation>フォルダ</translation>
+    </message>
+    <message>
+        <source>Retime one subtitle file against one video.</source>
+        <translation>1 つの字幕ファイルを 1 つの動画に対してリタイミングします。</translation>
     </message>
     <message>
         <source>Retime a folder of subtitles, paired to videos by episode number.</source>
@@ -11861,6 +11861,30 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>完了 — %1 件成功、%2 件失敗</translation>
     </message>
     <message>
+        <source>Check every link in the box, then mine every Ready video.</source>
+        <translation>ボックス内のすべてのリンクを確認し、準備完了の動画をすべてマイニングします。</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>クリア</translation>
+    </message>
+    <message>
+        <source>Remove every item from the queue.</source>
+        <translation>キュー内のすべての項目を削除します。</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation>実行中の処理をキャンセルします。</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>進捗</translation>
+    </message>
+    <message>
+        <source>videos</source>
+        <translation>動画</translation>
+    </message>
+    <message>
         <source>yt-dlp is not installed, so YouTube mining cannot run.</source>
         <translation>yt-dlp がインストールされていないため、YouTube マイニングを実行できません。</translation>
     </message>
@@ -11915,30 +11939,6 @@ Sort by it to work through a long recording in order — then highlight the rows
     <message>
         <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
         <translation>マイニング前にYouTubeの字幕を動画の音声に合わせて再調整します。字幕がローカルで文字起こしされた場合は無視されます。</translation>
-    </message>
-    <message>
-        <source>Check every link in the box, then mine every Ready video.</source>
-        <translation>ボックス内のすべてのリンクを確認し、準備完了の動画をすべてマイニングします。</translation>
-    </message>
-    <message>
-        <source>Clear</source>
-        <translation>クリア</translation>
-    </message>
-    <message>
-        <source>Remove every item from the queue.</source>
-        <translation>キュー内のすべての項目を削除します。</translation>
-    </message>
-    <message>
-        <source>Cancel the active run.</source>
-        <translation>実行中の処理をキャンセルします。</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>進捗</translation>
-    </message>
-    <message>
-        <source>videos</source>
-        <translation>動画</translation>
     </message>
     <message>
         <source>Some lines are not valid URLs.</source>

@@ -1449,6 +1449,30 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Mine every queued item into Anki cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove every item from the queue.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>audiobooks</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Audio File:</source>
         <translation type="unfinished" />
     </message>
@@ -1482,30 +1506,6 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Show the word-selection popup for each audio file before creating cards.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Mine every queued item into Anki cards.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Clear</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Remove every item from the queue.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cancel the active run.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>audiobooks</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1797,11 +1797,11 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Sync one audio file to the book.</source>
+        <source>Folder</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Folder</source>
+        <source>Sync one audio file to the book.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2759,6 +2759,26 @@ No index files are deleted.</source>
 </context><context>
     <name>CardBackfillTab</name>
     <message>
+        <source>Applying…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Settings changed since this scan; re-scan before applying.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki — scanning all decks.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Card Backfill</source>
         <translation type="unfinished" />
     </message>
@@ -2863,10 +2883,6 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Couldn't fetch deck names from Anki — scanning all decks.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Select at least one field group to fill.</source>
         <translation type="unfinished" />
     </message>
@@ -2935,10 +2951,6 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Settings changed since this scan; re-scan before applying.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Update notes in Anki?</source>
         <translation type="unfinished" />
     </message>
@@ -2950,10 +2962,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>Card backfill</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Applying…</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2978,14 +2986,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>{count} audio file(s) could not be added to Anki; scan again to retry.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cancelled.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -3125,11 +3125,11 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Condense one selected media file.</source>
+        <source>Folder</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Folder</source>
+        <source>Condense one selected media file.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3695,6 +3695,26 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
 </context><context>
     <name>DeckFilterTab</name>
     <message>
+        <source>Copying…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Settings changed since this scan; re-scan before copying.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki — is Anki running?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Deck Filter</source>
         <translation type="unfinished" />
     </message>
@@ -3791,10 +3811,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Couldn't fetch deck names from Anki — is Anki running?</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>{deck} (Filtered)</source>
         <translation type="unfinished" />
     </message>
@@ -3883,10 +3899,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Settings changed since this scan; re-scan before copying.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Copy notes to a new deck?</source>
         <translation type="unfinished" />
     </message>
@@ -3899,23 +3911,11 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Copying…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Copied {count} note(s) into "{deck}".</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>{count} note(s) were not accepted by Anki (see log).</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cancelled.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -4789,14 +4789,6 @@ No files on disk are deleted.</source>
         <source>Filtering against known vocabulary</source>
         <translation type="unfinished" />
     </message>
-    <message>
-        <source>Including words already known</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Known word DB synced: %1 new words (%2 total)</source>
-        <translation type="unfinished" />
-    </message>
     <message numerus="yes">
         <source>%n new word(s) to mine</source>
         <translation type="unfinished">
@@ -4812,6 +4804,20 @@ No files on disk are deleted.</source>
         <translation type="unfinished">
             <numerusform />
         </translation>
+    </message>
+    <message numerus="yes">
+        <source>Whitelist: force-included %n word(s)</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
+    </message>
+    <message>
+        <source>Including words already known</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Known word DB synced: %1 new words (%2 total)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Skipped %1 words missing from your offline dictionaries: %2%3</source>
@@ -4852,12 +4858,6 @@ No files on disk are deleted.</source>
     <message>
         <source>Sentence length filter: removed %1 words (cap: %2)</source>
         <translation type="unfinished" />
-    </message>
-    <message numerus="yes">
-        <source>Whitelist: force-included %n word(s)</source>
-        <translation type="unfinished">
-            <numerusform />
-        </translation>
     </message>
     <message>
         <source>Collapsed %1 duplicate-expression word(s)</source>
@@ -5631,14 +5631,6 @@ No files on disk are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>word-based</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Level labels are shown on the card but not used for frequency filtering.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>%1 entries</source>
         <translation type="unfinished" />
     </message>
@@ -5667,18 +5659,6 @@ No files on disk are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Remove '%1' from the frequency chain?
-
-Only the index files are deleted. Adding it back needs the source file.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Remove '%1' from the frequency chain?
-
-No index files are deleted.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Another task is using the indexed resources — try again when it finishes.</source>
         <translation type="unfinished" />
     </message>
@@ -5688,6 +5668,26 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Remove</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>word-based</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Level labels are shown on the card but not used for frequency filtering.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove '%1' from the frequency chain?
+
+Only the index files are deleted. Adding it back needs the source file.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove '%1' from the frequency chain?
+
+No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -7511,18 +7511,6 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Remove '%1' from the pitch accent chain?
-
-Only the index files are deleted. Adding it back needs the source file.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Remove '%1' from the pitch accent chain?
-
-No index files are deleted.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Another task is using the indexed resources — try again when it finishes.</source>
         <translation type="unfinished" />
     </message>
@@ -7532,6 +7520,18 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Remove</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove '%1' from the pitch accent chain?
+
+Only the index files are deleted. Adding it back needs the source file.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove '%1' from the pitch accent chain?
+
+No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -10213,11 +10213,11 @@ Your installed resources and your theme are kept.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Transcribe one selected video or audio file.</source>
+        <source>Folder</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Folder</source>
+        <source>Transcribe one selected video or audio file.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -10467,11 +10467,11 @@ Your installed resources and your theme are kept.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Retime one subtitle file against one video.</source>
+        <source>Folder</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Folder</source>
+        <source>Retime one subtitle file against one video.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -11803,6 +11803,30 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Check every link in the box, then mine every Ready video.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove every item from the queue.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>videos</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>yt-dlp is not installed, so YouTube mining cannot run.</source>
         <translation type="unfinished" />
     </message>
@@ -11856,30 +11880,6 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Check every link in the box, then mine every Ready video.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Clear</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Remove every item from the queue.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cancel the active run.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>videos</source>
         <translation type="unfinished" />
     </message>
     <message>

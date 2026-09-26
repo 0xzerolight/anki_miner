@@ -1458,6 +1458,30 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Hoàn tất — %1 thành công, %2 thất bại</translation>
     </message>
     <message>
+        <source>Mine every queued item into Anki cards.</source>
+        <translation>Khai thác mọi mục trong hàng đợi thành thẻ Anki.</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>Xóa</translation>
+    </message>
+    <message>
+        <source>Remove every item from the queue.</source>
+        <translation>Xóa mọi mục khỏi hàng đợi.</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation>Hủy lần chạy đang hoạt động.</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>Tiến trình</translation>
+    </message>
+    <message>
+        <source>audiobooks</source>
+        <translation>sách nói</translation>
+    </message>
+    <message>
         <source>Audio File:</source>
         <translation>Tệp âm thanh:</translation>
     </message>
@@ -1492,30 +1516,6 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <message>
         <source>Show the word-selection popup for each audio file before creating cards.</source>
         <translation>Hiển thị cửa sổ chọn từ cho mỗi tệp âm thanh trước khi tạo thẻ.</translation>
-    </message>
-    <message>
-        <source>Mine every queued item into Anki cards.</source>
-        <translation>Khai thác mọi mục trong hàng đợi thành thẻ Anki.</translation>
-    </message>
-    <message>
-        <source>Clear</source>
-        <translation>Xóa</translation>
-    </message>
-    <message>
-        <source>Remove every item from the queue.</source>
-        <translation>Xóa mọi mục khỏi hàng đợi.</translation>
-    </message>
-    <message>
-        <source>Cancel the active run.</source>
-        <translation>Hủy lần chạy đang hoạt động.</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>Tiến trình</translation>
-    </message>
-    <message>
-        <source>audiobooks</source>
-        <translation>sách nói</translation>
     </message>
     <message>
         <source>Choose an audio file first.</source>
@@ -1806,12 +1806,12 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Một tệp</translation>
     </message>
     <message>
-        <source>Sync one audio file to the book.</source>
-        <translation>Đồng bộ một tệp âm thanh với sách.</translation>
-    </message>
-    <message>
         <source>Folder</source>
         <translation>Thư mục</translation>
+    </message>
+    <message>
+        <source>Sync one audio file to the book.</source>
+        <translation>Đồng bộ một tệp âm thanh với sách.</translation>
     </message>
     <message>
         <source>Every audio file in the folder, in file-name order, one .srt each.</source>
@@ -2768,6 +2768,26 @@ Không có tệp chỉ mục nào bị xóa.</translation>
 </context><context>
     <name>CardBackfillTab</name>
     <message>
+        <source>Applying…</source>
+        <translation>Đang áp dụng…</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Đang hủy…</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>Đã hủy.</translation>
+    </message>
+    <message>
+        <source>Settings changed since this scan; re-scan before applying.</source>
+        <translation>Cài đặt đã thay đổi kể từ lần quét này; hãy quét lại trước khi áp dụng.</translation>
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki — scanning all decks.</source>
+        <translation>Không thể lấy tên bộ thẻ từ Anki — đang quét tất cả bộ thẻ.</translation>
+    </message>
+    <message>
         <source>Card Backfill</source>
         <translation>Điền dữ liệu còn thiếu cho thẻ</translation>
     </message>
@@ -2872,10 +2892,6 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Ánh xạ trường này trong Cài đặt → Thẻ &amp; Anki</translation>
     </message>
     <message>
-        <source>Couldn't fetch deck names from Anki — scanning all decks.</source>
-        <translation>Không thể lấy tên bộ thẻ từ Anki — đang quét tất cả bộ thẻ.</translation>
-    </message>
-    <message>
         <source>Select at least one field group to fill.</source>
         <translation>Chọn ít nhất một nhóm trường cần điền.</translation>
     </message>
@@ -2944,10 +2960,6 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Đã bỏ qua {count} ghi chú — trường Biểu thức trống.</translation>
     </message>
     <message>
-        <source>Settings changed since this scan; re-scan before applying.</source>
-        <translation>Cài đặt đã thay đổi kể từ lần quét này; hãy quét lại trước khi áp dụng.</translation>
-    </message>
-    <message>
         <source>Update notes in Anki?</source>
         <translation>Cập nhật ghi chú trong Anki?</translation>
     </message>
@@ -2962,10 +2974,6 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
     <message>
         <source>Card backfill</source>
         <translation>Điền lại thẻ</translation>
-    </message>
-    <message>
-        <source>Applying…</source>
-        <translation>Đang áp dụng…</translation>
     </message>
     <message>
         <source>Filled {fields} field(s) on {notes} note(s).</source>
@@ -2990,14 +2998,6 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
     <message>
         <source>{count} audio file(s) could not be added to Anki; scan again to retry.</source>
         <translation>Không thể thêm {count} tệp âm thanh vào Anki; hãy quét lại để thử lại.</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Đang hủy…</translation>
-    </message>
-    <message>
-        <source>Cancelled.</source>
-        <translation>Đã hủy.</translation>
     </message>
 </context><context>
     <name>CondenseMetadataDialog</name>
@@ -3136,12 +3136,12 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
         <translation>Một tệp</translation>
     </message>
     <message>
-        <source>Condense one selected media file.</source>
-        <translation>Cô đọng một tệp phương tiện đã chọn.</translation>
-    </message>
-    <message>
         <source>Folder</source>
         <translation>Thư mục</translation>
+    </message>
+    <message>
+        <source>Condense one selected media file.</source>
+        <translation>Cô đọng một tệp phương tiện đã chọn.</translation>
     </message>
     <message>
         <source>Condense every media file in a selected folder.</source>
@@ -3706,6 +3706,26 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
 </context><context>
     <name>DeckFilterTab</name>
     <message>
+        <source>Copying…</source>
+        <translation>Đang sao chép…</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Đang hủy…</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>Đã hủy.</translation>
+    </message>
+    <message>
+        <source>Settings changed since this scan; re-scan before copying.</source>
+        <translation>Cài đặt đã thay đổi kể từ lần quét này; hãy quét lại trước khi sao chép.</translation>
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki — is Anki running?</source>
+        <translation>Không thể lấy tên bộ thẻ từ Anki — Anki có đang chạy không?</translation>
+    </message>
+    <message>
         <source>Deck Filter</source>
         <translation>Lọc bộ thẻ</translation>
     </message>
@@ -3802,10 +3822,6 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
         <translation>Bộ lọc đang áp dụng: {filters}.</translation>
     </message>
     <message>
-        <source>Couldn't fetch deck names from Anki — is Anki running?</source>
-        <translation>Không thể lấy tên bộ thẻ từ Anki — Anki có đang chạy không?</translation>
-    </message>
-    <message>
         <source>{deck} (Filtered)</source>
         <translation>{deck} (Đã lọc)</translation>
     </message>
@@ -3894,10 +3910,6 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
         <translation>Đang hiển thị {rows} hàng đầu tiên.</translation>
     </message>
     <message>
-        <source>Settings changed since this scan; re-scan before copying.</source>
-        <translation>Cài đặt đã thay đổi kể từ lần quét này; hãy quét lại trước khi sao chép.</translation>
-    </message>
-    <message>
         <source>Copy notes to a new deck?</source>
         <translation>Sao chép ghi chú vào bộ thẻ mới?</translation>
     </message>
@@ -3910,24 +3922,12 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
         <translation>Sao chép lọc bộ thẻ</translation>
     </message>
     <message>
-        <source>Copying…</source>
-        <translation>Đang sao chép…</translation>
-    </message>
-    <message>
         <source>Copied {count} note(s) into "{deck}".</source>
         <translation>Đã sao chép {count} ghi chú vào "{deck}".</translation>
     </message>
     <message>
         <source>{count} note(s) were not accepted by Anki (see log).</source>
         <translation>{count} ghi chú không được Anki chấp nhận (xem nhật ký).</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Đang hủy…</translation>
-    </message>
-    <message>
-        <source>Cancelled.</source>
-        <translation>Đã hủy.</translation>
     </message>
 </context><context>
     <name>DeckPage</name>
@@ -4807,14 +4807,6 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
         <source>Filtering against known vocabulary</source>
         <translation>Đang lọc theo từ vựng đã biết</translation>
     </message>
-    <message>
-        <source>Including words already known</source>
-        <translation>Bao gồm cả từ đã biết</translation>
-    </message>
-    <message>
-        <source>Known word DB synced: %1 new words (%2 total)</source>
-        <translation>Đã đồng bộ CSDL từ đã biết: %1 từ mới (%2 tổng cộng)</translation>
-    </message>
     <message numerus="yes">
         <source>%n new word(s) to mine</source>
         <translation>
@@ -4830,6 +4822,20 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
         <translation>
             <numerusform>Tất cả %n từ trong lần chạy này đều đã biết — không có thẻ mới nào được tạo</numerusform>
         </translation>
+    </message>
+    <message numerus="yes">
+        <source>Whitelist: force-included %n word(s)</source>
+        <translation>
+            <numerusform>Danh sách trắng: đã buộc bao gồm %n từ</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Including words already known</source>
+        <translation>Bao gồm cả từ đã biết</translation>
+    </message>
+    <message>
+        <source>Known word DB synced: %1 new words (%2 total)</source>
+        <translation>Đã đồng bộ CSDL từ đã biết: %1 từ mới (%2 tổng cộng)</translation>
     </message>
     <message>
         <source>Skipped %1 words missing from your offline dictionaries: %2%3</source>
@@ -4870,12 +4876,6 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     <message>
         <source>Sentence length filter: removed %1 words (cap: %2)</source>
         <translation>Bộ lọc độ dài câu: đã loại bỏ %1 từ (giới hạn: %2)</translation>
-    </message>
-    <message numerus="yes">
-        <source>Whitelist: force-included %n word(s)</source>
-        <translation>
-            <numerusform>Danh sách trắng: đã buộc bao gồm %n từ</numerusform>
-        </translation>
     </message>
     <message>
         <source>Collapsed %1 duplicate-expression word(s)</source>
@@ -5650,14 +5650,6 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>word-based</source>
-        <translation>dựa trên từ</translation>
-    </message>
-    <message>
-        <source>Level labels are shown on the card but not used for frequency filtering.</source>
-        <translation>Nhãn cấp độ được hiển thị trên thẻ nhưng không dùng để lọc theo tần suất.</translation>
-    </message>
-    <message>
         <source>%1 entries</source>
         <translation>%1 mục</translation>
     </message>
@@ -5686,6 +5678,26 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
         <translation>⚠ thiếu — nhập lại</translation>
     </message>
     <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>Một tác vụ khác đang dùng tài nguyên đã lập chỉ mục — hãy thử lại khi tác vụ đó hoàn tất.</translation>
+    </message>
+    <message>
+        <source>Re-import…</source>
+        <translation>Nhập lại…</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Gỡ bỏ</translation>
+    </message>
+    <message>
+        <source>word-based</source>
+        <translation>dựa trên từ</translation>
+    </message>
+    <message>
+        <source>Level labels are shown on the card but not used for frequency filtering.</source>
+        <translation>Nhãn cấp độ được hiển thị trên thẻ nhưng không dùng để lọc theo tần suất.</translation>
+    </message>
+    <message>
         <source>Remove '%1' from the frequency chain?
 
 Only the index files are deleted. Adding it back needs the source file.</source>
@@ -5700,18 +5712,6 @@ No index files are deleted.</source>
         <translation>Gỡ '%1' khỏi chuỗi tần suất?
 
 Không có tệp chỉ mục nào bị xóa.</translation>
-    </message>
-    <message>
-        <source>Another task is using the indexed resources — try again when it finishes.</source>
-        <translation>Một tác vụ khác đang dùng tài nguyên đã lập chỉ mục — hãy thử lại khi tác vụ đó hoàn tất.</translation>
-    </message>
-    <message>
-        <source>Re-import…</source>
-        <translation>Nhập lại…</translation>
-    </message>
-    <message>
-        <source>Remove</source>
-        <translation>Gỡ bỏ</translation>
     </message>
 </context><context>
     <name>GUIPresenter</name>
@@ -7544,6 +7544,18 @@ Tiếp tục?</translation>
         <translation>⚠ thiếu — nhập lại</translation>
     </message>
     <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>Một tác vụ khác đang dùng tài nguyên đã lập chỉ mục — hãy thử lại khi tác vụ đó hoàn tất.</translation>
+    </message>
+    <message>
+        <source>Re-import…</source>
+        <translation>Nhập lại…</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Xóa</translation>
+    </message>
+    <message>
         <source>Remove '%1' from the pitch accent chain?
 
 Only the index files are deleted. Adding it back needs the source file.</source>
@@ -7558,18 +7570,6 @@ No index files are deleted.</source>
         <translation>Gỡ '%1' khỏi chuỗi trọng âm cao độ?
 
 Không có tệp chỉ mục nào bị xóa.</translation>
-    </message>
-    <message>
-        <source>Another task is using the indexed resources — try again when it finishes.</source>
-        <translation>Một tác vụ khác đang dùng tài nguyên đã lập chỉ mục — hãy thử lại khi tác vụ đó hoàn tất.</translation>
-    </message>
-    <message>
-        <source>Re-import…</source>
-        <translation>Nhập lại…</translation>
-    </message>
-    <message>
-        <source>Remove</source>
-        <translation>Xóa</translation>
     </message>
 </context><context>
     <name>PlaylistAddController</name>
@@ -10261,12 +10261,12 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
         <translation>Một tệp</translation>
     </message>
     <message>
-        <source>Transcribe one selected video or audio file.</source>
-        <translation>Phiên âm một tệp video hoặc âm thanh đã chọn.</translation>
-    </message>
-    <message>
         <source>Folder</source>
         <translation>Thư mục</translation>
+    </message>
+    <message>
+        <source>Transcribe one selected video or audio file.</source>
+        <translation>Phiên âm một tệp video hoặc âm thanh đã chọn.</translation>
     </message>
     <message>
         <source>Transcribe every video or audio file in a selected folder.</source>
@@ -10515,12 +10515,12 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
         <translation>Một tệp</translation>
     </message>
     <message>
-        <source>Retime one subtitle file against one video.</source>
-        <translation>Chỉnh lại thời gian một tệp phụ đề với một video.</translation>
-    </message>
-    <message>
         <source>Folder</source>
         <translation>Thư mục</translation>
+    </message>
+    <message>
+        <source>Retime one subtitle file against one video.</source>
+        <translation>Chỉnh lại thời gian một tệp phụ đề với một video.</translation>
     </message>
     <message>
         <source>Retime a folder of subtitles, paired to videos by episode number.</source>
@@ -11861,6 +11861,30 @@ Sắp xếp theo cột này để duyệt hết một bản thu dài theo thứ 
         <translation>Hoàn tất — %1 thành công, %2 thất bại</translation>
     </message>
     <message>
+        <source>Check every link in the box, then mine every Ready video.</source>
+        <translation>Kiểm tra mọi liên kết trong ô, rồi khai thác mọi video Sẵn sàng.</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>Xóa</translation>
+    </message>
+    <message>
+        <source>Remove every item from the queue.</source>
+        <translation>Xóa mọi mục khỏi hàng đợi.</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation>Hủy lần chạy đang hoạt động.</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>Tiến độ</translation>
+    </message>
+    <message>
+        <source>videos</source>
+        <translation>video</translation>
+    </message>
+    <message>
         <source>yt-dlp is not installed, so YouTube mining cannot run.</source>
         <translation>yt-dlp chưa được cài đặt nên không thể khai thác YouTube.</translation>
     </message>
@@ -11915,30 +11939,6 @@ Sắp xếp theo cột này để duyệt hết một bản thu dài theo thứ 
     <message>
         <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
         <translation>Chỉnh lại thời gian phụ đề của YouTube theo âm thanh video trước khi khai thác. Bỏ qua khi phụ đề đã được phiên âm cục bộ.</translation>
-    </message>
-    <message>
-        <source>Check every link in the box, then mine every Ready video.</source>
-        <translation>Kiểm tra mọi liên kết trong ô, rồi khai thác mọi video Sẵn sàng.</translation>
-    </message>
-    <message>
-        <source>Clear</source>
-        <translation>Xóa</translation>
-    </message>
-    <message>
-        <source>Remove every item from the queue.</source>
-        <translation>Xóa mọi mục khỏi hàng đợi.</translation>
-    </message>
-    <message>
-        <source>Cancel the active run.</source>
-        <translation>Hủy lần chạy đang hoạt động.</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>Tiến độ</translation>
-    </message>
-    <message>
-        <source>videos</source>
-        <translation>video</translation>
     </message>
     <message>
         <source>Some lines are not valid URLs.</source>

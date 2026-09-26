@@ -1458,6 +1458,30 @@ No index files are deleted.</source>
         <translation>完成——%1 成功，%2 失败</translation>
     </message>
     <message>
+        <source>Mine every queued item into Anki cards.</source>
+        <translation>将队列中每一项挖词为 Anki 卡片。</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>清空</translation>
+    </message>
+    <message>
+        <source>Remove every item from the queue.</source>
+        <translation>移除队列中的所有项目。</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation>取消当前运行。</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>进度</translation>
+    </message>
+    <message>
+        <source>audiobooks</source>
+        <translation>有声书</translation>
+    </message>
+    <message>
         <source>Audio File:</source>
         <translation>音频文件：</translation>
     </message>
@@ -1492,30 +1516,6 @@ No index files are deleted.</source>
     <message>
         <source>Show the word-selection popup for each audio file before creating cards.</source>
         <translation>在创建卡片前，为每个音频文件显示单词选择弹窗。</translation>
-    </message>
-    <message>
-        <source>Mine every queued item into Anki cards.</source>
-        <translation>将队列中每一项挖词为 Anki 卡片。</translation>
-    </message>
-    <message>
-        <source>Clear</source>
-        <translation>清空</translation>
-    </message>
-    <message>
-        <source>Remove every item from the queue.</source>
-        <translation>移除队列中的所有项目。</translation>
-    </message>
-    <message>
-        <source>Cancel the active run.</source>
-        <translation>取消当前运行。</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>进度</translation>
-    </message>
-    <message>
-        <source>audiobooks</source>
-        <translation>有声书</translation>
     </message>
     <message>
         <source>Choose an audio file first.</source>
@@ -1806,12 +1806,12 @@ No index files are deleted.</source>
         <translation>单个文件</translation>
     </message>
     <message>
-        <source>Sync one audio file to the book.</source>
-        <translation>将一个音频文件与该书同步。</translation>
-    </message>
-    <message>
         <source>Folder</source>
         <translation>文件夹</translation>
+    </message>
+    <message>
+        <source>Sync one audio file to the book.</source>
+        <translation>将一个音频文件与该书同步。</translation>
     </message>
     <message>
         <source>Every audio file in the folder, in file-name order, one .srt each.</source>
@@ -2768,6 +2768,26 @@ No index files are deleted.</source>
 </context><context>
     <name>CardBackfillTab</name>
     <message>
+        <source>Applying…</source>
+        <translation>正在应用…</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>已取消。</translation>
+    </message>
+    <message>
+        <source>Settings changed since this scan; re-scan before applying.</source>
+        <translation>设置在本次扫描后已更改，请先重新扫描再应用。</translation>
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki — scanning all decks.</source>
+        <translation>无法从 Anki 获取牌组名称——将扫描所有牌组。</translation>
+    </message>
+    <message>
         <source>Card Backfill</source>
         <translation>卡片字段补全</translation>
     </message>
@@ -2872,10 +2892,6 @@ No index files are deleted.</source>
         <translation>在“设置 → 卡片和 Anki”中映射此字段</translation>
     </message>
     <message>
-        <source>Couldn't fetch deck names from Anki — scanning all decks.</source>
-        <translation>无法从 Anki 获取牌组名称——将扫描所有牌组。</translation>
-    </message>
-    <message>
         <source>Select at least one field group to fill.</source>
         <translation>请至少选择一组要补全的字段。</translation>
     </message>
@@ -2944,10 +2960,6 @@ No index files are deleted.</source>
         <translation>已跳过 {count} 条笔记——表达字段为空。</translation>
     </message>
     <message>
-        <source>Settings changed since this scan; re-scan before applying.</source>
-        <translation>设置在本次扫描后已更改，请先重新扫描再应用。</translation>
-    </message>
-    <message>
         <source>Update notes in Anki?</source>
         <translation>更新 Anki 中的笔记？</translation>
     </message>
@@ -2962,10 +2974,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>Card backfill</source>
         <translation>卡片补全</translation>
-    </message>
-    <message>
-        <source>Applying…</source>
-        <translation>正在应用…</translation>
     </message>
     <message>
         <source>Filled {fields} field(s) on {notes} note(s).</source>
@@ -2990,14 +2998,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>{count} audio file(s) could not be added to Anki; scan again to retry.</source>
         <translation>有 {count} 个音频文件无法添加到 Anki；请重新扫描以重试。</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>正在取消…</translation>
-    </message>
-    <message>
-        <source>Cancelled.</source>
-        <translation>已取消。</translation>
     </message>
 </context><context>
     <name>CondenseMetadataDialog</name>
@@ -3136,12 +3136,12 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>单个文件</translation>
     </message>
     <message>
-        <source>Condense one selected media file.</source>
-        <translation>压缩选定的一个媒体文件。</translation>
-    </message>
-    <message>
         <source>Folder</source>
         <translation>文件夹</translation>
+    </message>
+    <message>
+        <source>Condense one selected media file.</source>
+        <translation>压缩选定的一个媒体文件。</translation>
     </message>
     <message>
         <source>Condense every media file in a selected folder.</source>
@@ -3706,6 +3706,26 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
 </context><context>
     <name>DeckFilterTab</name>
     <message>
+        <source>Copying…</source>
+        <translation>正在复制…</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>已取消。</translation>
+    </message>
+    <message>
+        <source>Settings changed since this scan; re-scan before copying.</source>
+        <translation>设置自本次扫描后已更改；复制前请重新扫描。</translation>
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki — is Anki running?</source>
+        <translation>无法从 Anki 获取牌组名称 — Anki 正在运行吗？</translation>
+    </message>
+    <message>
         <source>Deck Filter</source>
         <translation>牌组过滤</translation>
     </message>
@@ -3802,10 +3822,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>生效的过滤器：{filters}。</translation>
     </message>
     <message>
-        <source>Couldn't fetch deck names from Anki — is Anki running?</source>
-        <translation>无法从 Anki 获取牌组名称 — Anki 正在运行吗？</translation>
-    </message>
-    <message>
         <source>{deck} (Filtered)</source>
         <translation>{deck}（已过滤）</translation>
     </message>
@@ -3894,10 +3910,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>显示前 {rows} 行。</translation>
     </message>
     <message>
-        <source>Settings changed since this scan; re-scan before copying.</source>
-        <translation>设置自本次扫描后已更改；复制前请重新扫描。</translation>
-    </message>
-    <message>
         <source>Copy notes to a new deck?</source>
         <translation>将笔记复制到新牌组？</translation>
     </message>
@@ -3910,24 +3922,12 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>牌组过滤复制</translation>
     </message>
     <message>
-        <source>Copying…</source>
-        <translation>正在复制…</translation>
-    </message>
-    <message>
         <source>Copied {count} note(s) into "{deck}".</source>
         <translation>已将 {count} 条笔记复制到“{deck}”中。</translation>
     </message>
     <message>
         <source>{count} note(s) were not accepted by Anki (see log).</source>
         <translation>{count} 条笔记未被 Anki 接受（详见日志）。</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>正在取消…</translation>
-    </message>
-    <message>
-        <source>Cancelled.</source>
-        <translation>已取消。</translation>
     </message>
 </context><context>
     <name>DeckPage</name>
@@ -4807,14 +4807,6 @@ No files on disk are deleted.</source>
         <source>Filtering against known vocabulary</source>
         <translation>正在根据已知词汇过滤</translation>
     </message>
-    <message>
-        <source>Including words already known</source>
-        <translation>包含已知单词</translation>
-    </message>
-    <message>
-        <source>Known word DB synced: %1 new words (%2 total)</source>
-        <translation>已知单词数据库已同步：%1 个新单词（共 %2 个）</translation>
-    </message>
     <message numerus="yes">
         <source>%n new word(s) to mine</source>
         <translation>
@@ -4830,6 +4822,20 @@ No files on disk are deleted.</source>
         <translation>
             <numerusform>本次运行的全部 %n 个单词均已知——未创建新卡片</numerusform>
         </translation>
+    </message>
+    <message numerus="yes">
+        <source>Whitelist: force-included %n word(s)</source>
+        <translation>
+            <numerusform>白名单：强制包含 %n 个单词</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Including words already known</source>
+        <translation>包含已知单词</translation>
+    </message>
+    <message>
+        <source>Known word DB synced: %1 new words (%2 total)</source>
+        <translation>已知单词数据库已同步：%1 个新单词（共 %2 个）</translation>
     </message>
     <message>
         <source>Skipped %1 words missing from your offline dictionaries: %2%3</source>
@@ -4870,12 +4876,6 @@ No files on disk are deleted.</source>
     <message>
         <source>Sentence length filter: removed %1 words (cap: %2)</source>
         <translation>句子长度过滤器：移除了 %1 个单词（上限：%2）</translation>
-    </message>
-    <message numerus="yes">
-        <source>Whitelist: force-included %n word(s)</source>
-        <translation>
-            <numerusform>白名单：强制包含 %n 个单词</numerusform>
-        </translation>
     </message>
     <message>
         <source>Collapsed %1 duplicate-expression word(s)</source>
@@ -5650,14 +5650,6 @@ No files on disk are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>word-based</source>
-        <translation>基于单词</translation>
-    </message>
-    <message>
-        <source>Level labels are shown on the card but not used for frequency filtering.</source>
-        <translation>级别标签显示在卡片上，但不用于词频过滤。</translation>
-    </message>
-    <message>
         <source>%1 entries</source>
         <translation>%1 个条目</translation>
     </message>
@@ -5686,6 +5678,26 @@ No files on disk are deleted.</source>
         <translation>⚠ 缺失 — 请重新导入</translation>
     </message>
     <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>另一个任务正在使用已建立索引的资源——请等它完成后再试。</translation>
+    </message>
+    <message>
+        <source>Re-import…</source>
+        <translation>重新导入…</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>移除</translation>
+    </message>
+    <message>
+        <source>word-based</source>
+        <translation>基于单词</translation>
+    </message>
+    <message>
+        <source>Level labels are shown on the card but not used for frequency filtering.</source>
+        <translation>级别标签显示在卡片上，但不用于词频过滤。</translation>
+    </message>
+    <message>
         <source>Remove '%1' from the frequency chain?
 
 Only the index files are deleted. Adding it back needs the source file.</source>
@@ -5700,18 +5712,6 @@ No index files are deleted.</source>
         <translation>是否从词频链中移除“%1”？
 
 不会删除任何索引文件。</translation>
-    </message>
-    <message>
-        <source>Another task is using the indexed resources — try again when it finishes.</source>
-        <translation>另一个任务正在使用已建立索引的资源——请等它完成后再试。</translation>
-    </message>
-    <message>
-        <source>Re-import…</source>
-        <translation>重新导入…</translation>
-    </message>
-    <message>
-        <source>Remove</source>
-        <translation>移除</translation>
     </message>
 </context><context>
     <name>GUIPresenter</name>
@@ -7544,6 +7544,18 @@ Continue?</source>
         <translation>⚠ 缺失 — 请重新导入</translation>
     </message>
     <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>另一个任务正在使用已建立索引的资源——请等它完成后再试。</translation>
+    </message>
+    <message>
+        <source>Re-import…</source>
+        <translation>重新导入…</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>移除</translation>
+    </message>
+    <message>
         <source>Remove '%1' from the pitch accent chain?
 
 Only the index files are deleted. Adding it back needs the source file.</source>
@@ -7558,18 +7570,6 @@ No index files are deleted.</source>
         <translation>是否从音调链中移除“%1”？
 
 不会删除任何索引文件。</translation>
-    </message>
-    <message>
-        <source>Another task is using the indexed resources — try again when it finishes.</source>
-        <translation>另一个任务正在使用已建立索引的资源——请等它完成后再试。</translation>
-    </message>
-    <message>
-        <source>Re-import…</source>
-        <translation>重新导入…</translation>
-    </message>
-    <message>
-        <source>Remove</source>
-        <translation>移除</translation>
     </message>
 </context><context>
     <name>PlaylistAddController</name>
@@ -10261,12 +10261,12 @@ Your installed resources and your theme are kept.</source>
         <translation>单个文件</translation>
     </message>
     <message>
-        <source>Transcribe one selected video or audio file.</source>
-        <translation>转录单个选定的视频或音频文件。</translation>
-    </message>
-    <message>
         <source>Folder</source>
         <translation>文件夹</translation>
+    </message>
+    <message>
+        <source>Transcribe one selected video or audio file.</source>
+        <translation>转录单个选定的视频或音频文件。</translation>
     </message>
     <message>
         <source>Transcribe every video or audio file in a selected folder.</source>
@@ -10515,12 +10515,12 @@ Your installed resources and your theme are kept.</source>
         <translation>单个文件</translation>
     </message>
     <message>
-        <source>Retime one subtitle file against one video.</source>
-        <translation>将单个字幕文件对齐到单个视频。</translation>
-    </message>
-    <message>
         <source>Folder</source>
         <translation>文件夹</translation>
+    </message>
+    <message>
+        <source>Retime one subtitle file against one video.</source>
+        <translation>将单个字幕文件对齐到单个视频。</translation>
     </message>
     <message>
         <source>Retime a folder of subtitles, paired to videos by episode number.</source>
@@ -11861,6 +11861,30 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>完成——%1 成功，%2 失败</translation>
     </message>
     <message>
+        <source>Check every link in the box, then mine every Ready video.</source>
+        <translation>检查框中的每个链接，然后挖取每个“就绪”视频。</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>清空</translation>
+    </message>
+    <message>
+        <source>Remove every item from the queue.</source>
+        <translation>移除队列中的所有项目。</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation>取消正在进行的运行。</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>进度</translation>
+    </message>
+    <message>
+        <source>videos</source>
+        <translation>视频</translation>
+    </message>
+    <message>
         <source>yt-dlp is not installed, so YouTube mining cannot run.</source>
         <translation>未安装 yt-dlp，因此无法进行 YouTube 挖词。</translation>
     </message>
@@ -11915,30 +11939,6 @@ Sort by it to work through a long recording in order — then highlight the rows
     <message>
         <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
         <translation>挖词前根据视频音频重新校准YouTube字幕的时间。若字幕为本地转录，则忽略此设置。</translation>
-    </message>
-    <message>
-        <source>Check every link in the box, then mine every Ready video.</source>
-        <translation>检查框中的每个链接，然后挖取每个“就绪”视频。</translation>
-    </message>
-    <message>
-        <source>Clear</source>
-        <translation>清空</translation>
-    </message>
-    <message>
-        <source>Remove every item from the queue.</source>
-        <translation>移除队列中的所有项目。</translation>
-    </message>
-    <message>
-        <source>Cancel the active run.</source>
-        <translation>取消正在进行的运行。</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>进度</translation>
-    </message>
-    <message>
-        <source>videos</source>
-        <translation>视频</translation>
     </message>
     <message>
         <source>Some lines are not valid URLs.</source>

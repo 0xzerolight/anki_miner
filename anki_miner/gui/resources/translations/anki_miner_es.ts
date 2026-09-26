@@ -1461,6 +1461,30 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Completado — %1 con éxito, %2 con error</translation>
     </message>
     <message>
+        <source>Mine every queued item into Anki cards.</source>
+        <translation>Minar cada elemento en cola en tarjetas de Anki.</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>Limpiar</translation>
+    </message>
+    <message>
+        <source>Remove every item from the queue.</source>
+        <translation>Quitar todos los elementos de la cola.</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation>Cancelar la ejecución activa.</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>Progreso</translation>
+    </message>
+    <message>
+        <source>audiobooks</source>
+        <translation>audiolibros</translation>
+    </message>
+    <message>
         <source>Audio File:</source>
         <translation>Archivo de audio:</translation>
     </message>
@@ -1495,30 +1519,6 @@ No se elimina ningún archivo de índice.</translation>
     <message>
         <source>Show the word-selection popup for each audio file before creating cards.</source>
         <translation>Muestra la ventana emergente de selección de palabras para cada archivo de audio antes de crear tarjetas.</translation>
-    </message>
-    <message>
-        <source>Mine every queued item into Anki cards.</source>
-        <translation>Minar cada elemento en cola en tarjetas de Anki.</translation>
-    </message>
-    <message>
-        <source>Clear</source>
-        <translation>Limpiar</translation>
-    </message>
-    <message>
-        <source>Remove every item from the queue.</source>
-        <translation>Quitar todos los elementos de la cola.</translation>
-    </message>
-    <message>
-        <source>Cancel the active run.</source>
-        <translation>Cancelar la ejecución activa.</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>Progreso</translation>
-    </message>
-    <message>
-        <source>audiobooks</source>
-        <translation>audiolibros</translation>
     </message>
     <message>
         <source>Choose an audio file first.</source>
@@ -1810,12 +1810,12 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Archivo único</translation>
     </message>
     <message>
-        <source>Sync one audio file to the book.</source>
-        <translation>Sincronizar un archivo de audio con el libro.</translation>
-    </message>
-    <message>
         <source>Folder</source>
         <translation>Carpeta</translation>
+    </message>
+    <message>
+        <source>Sync one audio file to the book.</source>
+        <translation>Sincronizar un archivo de audio con el libro.</translation>
     </message>
     <message>
         <source>Every audio file in the folder, in file-name order, one .srt each.</source>
@@ -2772,6 +2772,26 @@ No se elimina ningún archivo de índice.</translation>
 </context><context>
     <name>CardBackfillTab</name>
     <message>
+        <source>Applying…</source>
+        <translation>Aplicando…</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Cancelando…</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>Se canceló.</translation>
+    </message>
+    <message>
+        <source>Settings changed since this scan; re-scan before applying.</source>
+        <translation>La configuración cambió desde este escaneo; vuelva a escanear antes de aplicar.</translation>
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki — scanning all decks.</source>
+        <translation>No se pudieron obtener los nombres de los mazos de Anki — se analizarán todos los mazos.</translation>
+    </message>
+    <message>
         <source>Card Backfill</source>
         <translation>Completar tarjetas</translation>
     </message>
@@ -2876,10 +2896,6 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Asigne este campo en Ajustes → Tarjetas y Anki</translation>
     </message>
     <message>
-        <source>Couldn't fetch deck names from Anki — scanning all decks.</source>
-        <translation>No se pudieron obtener los nombres de los mazos de Anki — se analizarán todos los mazos.</translation>
-    </message>
-    <message>
         <source>Select at least one field group to fill.</source>
         <translation>Seleccione al menos un grupo de campos que rellenar.</translation>
     </message>
@@ -2948,10 +2964,6 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Número de notas omitidas por tener vacío el campo Expresión: {count}.</translation>
     </message>
     <message>
-        <source>Settings changed since this scan; re-scan before applying.</source>
-        <translation>La configuración cambió desde este escaneo; vuelva a escanear antes de aplicar.</translation>
-    </message>
-    <message>
         <source>Update notes in Anki?</source>
         <translation>¿Actualizar notas en Anki?</translation>
     </message>
@@ -2966,10 +2978,6 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
     <message>
         <source>Card backfill</source>
         <translation>Relleno de tarjetas</translation>
-    </message>
-    <message>
-        <source>Applying…</source>
-        <translation>Aplicando…</translation>
     </message>
     <message>
         <source>Filled {fields} field(s) on {notes} note(s).</source>
@@ -2994,14 +3002,6 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
     <message>
         <source>{count} audio file(s) could not be added to Anki; scan again to retry.</source>
         <translation>No se pudieron añadir {count} archivo(s) de audio a Anki; vuelve a analizar para reintentarlo.</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Cancelando…</translation>
-    </message>
-    <message>
-        <source>Cancelled.</source>
-        <translation>Se canceló.</translation>
     </message>
 </context><context>
     <name>CondenseMetadataDialog</name>
@@ -3140,12 +3140,12 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
         <translation>Archivo único</translation>
     </message>
     <message>
-        <source>Condense one selected media file.</source>
-        <translation>Condensar un archivo multimedia seleccionado.</translation>
-    </message>
-    <message>
         <source>Folder</source>
         <translation>Carpeta</translation>
+    </message>
+    <message>
+        <source>Condense one selected media file.</source>
+        <translation>Condensar un archivo multimedia seleccionado.</translation>
     </message>
     <message>
         <source>Condense every media file in a selected folder.</source>
@@ -3711,6 +3711,26 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
 </context><context>
     <name>DeckFilterTab</name>
     <message>
+        <source>Copying…</source>
+        <translation>Copiando…</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Cancelando…</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>Se canceló.</translation>
+    </message>
+    <message>
+        <source>Settings changed since this scan; re-scan before copying.</source>
+        <translation>La configuración cambió desde este análisis; vuelva a analizar antes de copiar.</translation>
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki — is Anki running?</source>
+        <translation>No se pudieron obtener los nombres de mazos de Anki — ¿está Anki en ejecución?</translation>
+    </message>
+    <message>
         <source>Deck Filter</source>
         <translation>Filtro de mazos</translation>
     </message>
@@ -3807,10 +3827,6 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
         <translation>Filtros activos: {filters}.</translation>
     </message>
     <message>
-        <source>Couldn't fetch deck names from Anki — is Anki running?</source>
-        <translation>No se pudieron obtener los nombres de mazos de Anki — ¿está Anki en ejecución?</translation>
-    </message>
-    <message>
         <source>{deck} (Filtered)</source>
         <translation>{deck} (filtrado)</translation>
     </message>
@@ -3899,10 +3915,6 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
         <translation>Se muestran las primeras {rows} filas.</translation>
     </message>
     <message>
-        <source>Settings changed since this scan; re-scan before copying.</source>
-        <translation>La configuración cambió desde este análisis; vuelva a analizar antes de copiar.</translation>
-    </message>
-    <message>
         <source>Copy notes to a new deck?</source>
         <translation>¿Copiar notas a un mazo nuevo?</translation>
     </message>
@@ -3915,24 +3927,12 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
         <translation>Copia del filtro de mazos</translation>
     </message>
     <message>
-        <source>Copying…</source>
-        <translation>Copiando…</translation>
-    </message>
-    <message>
         <source>Copied {count} note(s) into "{deck}".</source>
         <translation>Se copiaron {count} nota(s) en "{deck}".</translation>
     </message>
     <message>
         <source>{count} note(s) were not accepted by Anki (see log).</source>
         <translation>Anki no aceptó {count} nota(s) (vea el registro).</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Cancelando…</translation>
-    </message>
-    <message>
-        <source>Cancelled.</source>
-        <translation>Se canceló.</translation>
     </message>
 </context><context>
     <name>DeckPage</name>
@@ -4813,14 +4813,6 @@ No se elimina ningún archivo del disco.</translation>
         <source>Filtering against known vocabulary</source>
         <translation>Filtrando según el vocabulario conocido</translation>
     </message>
-    <message>
-        <source>Including words already known</source>
-        <translation>Incluyendo palabras ya conocidas</translation>
-    </message>
-    <message>
-        <source>Known word DB synced: %1 new words (%2 total)</source>
-        <translation>BD de palabras conocidas sincronizada: %1 palabras nuevas (%2 en total)</translation>
-    </message>
     <message numerus="yes">
         <source>%n new word(s) to mine</source>
         <translation>
@@ -4838,6 +4830,21 @@ No se elimina ningún archivo del disco.</translation>
             <numerusform>%n palabra de esta ejecución ya es conocida — no se crearon tarjetas nuevas</numerusform>
             <numerusform>Todas las %n palabras de esta ejecución ya son conocidas — no se crearon tarjetas nuevas</numerusform>
         </translation>
+    </message>
+    <message numerus="yes">
+        <source>Whitelist: force-included %n word(s)</source>
+        <translation>
+            <numerusform>Lista blanca: se forzó la inclusión de %n palabra</numerusform>
+            <numerusform>Lista blanca: se forzó la inclusión de %n palabras</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Including words already known</source>
+        <translation>Incluyendo palabras ya conocidas</translation>
+    </message>
+    <message>
+        <source>Known word DB synced: %1 new words (%2 total)</source>
+        <translation>BD de palabras conocidas sincronizada: %1 palabras nuevas (%2 en total)</translation>
     </message>
     <message>
         <source>Skipped %1 words missing from your offline dictionaries: %2%3</source>
@@ -4878,13 +4885,6 @@ No se elimina ningún archivo del disco.</translation>
     <message>
         <source>Sentence length filter: removed %1 words (cap: %2)</source>
         <translation>Filtro de longitud de oración: se eliminaron %1 palabras (límite: %2)</translation>
-    </message>
-    <message numerus="yes">
-        <source>Whitelist: force-included %n word(s)</source>
-        <translation>
-            <numerusform>Lista blanca: se forzó la inclusión de %n palabra</numerusform>
-            <numerusform>Lista blanca: se forzó la inclusión de %n palabras</numerusform>
-        </translation>
     </message>
     <message>
         <source>Collapsed %1 duplicate-expression word(s)</source>
@@ -5666,14 +5666,6 @@ No se elimina ningún archivo del disco.</translation>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>word-based</source>
-        <translation>basada en palabras</translation>
-    </message>
-    <message>
-        <source>Level labels are shown on the card but not used for frequency filtering.</source>
-        <translation>Las etiquetas de nivel se muestran en la tarjeta pero no se usan para el filtrado por frecuencia.</translation>
-    </message>
-    <message>
         <source>%1 entries</source>
         <translation>%1 entradas</translation>
     </message>
@@ -5702,6 +5694,26 @@ No se elimina ningún archivo del disco.</translation>
         <translation>⚠ ausente — reimportar</translation>
     </message>
     <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>Otra tarea está usando los recursos indexados — inténtelo de nuevo cuando termine.</translation>
+    </message>
+    <message>
+        <source>Re-import…</source>
+        <translation>Reimportar…</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Quitar</translation>
+    </message>
+    <message>
+        <source>word-based</source>
+        <translation>basada en palabras</translation>
+    </message>
+    <message>
+        <source>Level labels are shown on the card but not used for frequency filtering.</source>
+        <translation>Las etiquetas de nivel se muestran en la tarjeta pero no se usan para el filtrado por frecuencia.</translation>
+    </message>
+    <message>
         <source>Remove '%1' from the frequency chain?
 
 Only the index files are deleted. Adding it back needs the source file.</source>
@@ -5716,18 +5728,6 @@ No index files are deleted.</source>
         <translation>¿Quitar '%1' de la cadena de frecuencia?
 
 No se elimina ningún archivo de índice.</translation>
-    </message>
-    <message>
-        <source>Another task is using the indexed resources — try again when it finishes.</source>
-        <translation>Otra tarea está usando los recursos indexados — inténtelo de nuevo cuando termine.</translation>
-    </message>
-    <message>
-        <source>Re-import…</source>
-        <translation>Reimportar…</translation>
-    </message>
-    <message>
-        <source>Remove</source>
-        <translation>Quitar</translation>
     </message>
 </context><context>
     <name>GUIPresenter</name>
@@ -7561,6 +7561,18 @@ Cierre primero el navegador de tarjetas y el editor de notas de Anki — una not
         <translation>⚠ ausente — reimportar</translation>
     </message>
     <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>Otra tarea está usando los recursos indexados — inténtelo de nuevo cuando termine.</translation>
+    </message>
+    <message>
+        <source>Re-import…</source>
+        <translation>Reimportar…</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Quitar</translation>
+    </message>
+    <message>
         <source>Remove '%1' from the pitch accent chain?
 
 Only the index files are deleted. Adding it back needs the source file.</source>
@@ -7575,18 +7587,6 @@ No index files are deleted.</source>
         <translation>¿Quitar '%1' de la cadena de acento tonal?
 
 No se elimina ningún archivo de índice.</translation>
-    </message>
-    <message>
-        <source>Another task is using the indexed resources — try again when it finishes.</source>
-        <translation>Otra tarea está usando los recursos indexados — inténtelo de nuevo cuando termine.</translation>
-    </message>
-    <message>
-        <source>Re-import…</source>
-        <translation>Reimportar…</translation>
-    </message>
-    <message>
-        <source>Remove</source>
-        <translation>Quitar</translation>
     </message>
 </context><context>
     <name>PlaylistAddController</name>
@@ -10281,12 +10281,12 @@ Sus recursos instalados y su tema se conservan.</translation>
         <translation>Archivo único</translation>
     </message>
     <message>
-        <source>Transcribe one selected video or audio file.</source>
-        <translation>Transcribir un archivo de vídeo o audio seleccionado.</translation>
-    </message>
-    <message>
         <source>Folder</source>
         <translation>Carpeta</translation>
+    </message>
+    <message>
+        <source>Transcribe one selected video or audio file.</source>
+        <translation>Transcribir un archivo de vídeo o audio seleccionado.</translation>
     </message>
     <message>
         <source>Transcribe every video or audio file in a selected folder.</source>
@@ -10535,12 +10535,12 @@ Sus recursos instalados y su tema se conservan.</translation>
         <translation>Archivo único</translation>
     </message>
     <message>
-        <source>Retime one subtitle file against one video.</source>
-        <translation>Reajustar el tiempo de un archivo de subtítulos respecto a un vídeo.</translation>
-    </message>
-    <message>
         <source>Folder</source>
         <translation>Carpeta</translation>
+    </message>
+    <message>
+        <source>Retime one subtitle file against one video.</source>
+        <translation>Reajustar el tiempo de un archivo de subtítulos respecto a un vídeo.</translation>
     </message>
     <message>
         <source>Retime a folder of subtitles, paired to videos by episode number.</source>
@@ -11881,6 +11881,30 @@ Ordene por esta columna para recorrer en orden una grabación larga — luego re
         <translation>Completado — %1 con éxito, %2 con error</translation>
     </message>
     <message>
+        <source>Check every link in the box, then mine every Ready video.</source>
+        <translation>Comprobar cada enlace del cuadro y luego minar cada video Listo.</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>Limpiar</translation>
+    </message>
+    <message>
+        <source>Remove every item from the queue.</source>
+        <translation>Quitar todos los elementos de la cola.</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation>Cancelar la ejecución activa.</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>Progreso</translation>
+    </message>
+    <message>
+        <source>videos</source>
+        <translation>vídeos</translation>
+    </message>
+    <message>
         <source>yt-dlp is not installed, so YouTube mining cannot run.</source>
         <translation>yt-dlp no está instalado, por lo que no se puede ejecutar la minería de YouTube.</translation>
     </message>
@@ -11935,30 +11959,6 @@ Ordene por esta columna para recorrer en orden una grabación larga — luego re
     <message>
         <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
         <translation>Reajusta el tiempo de los subtítulos de YouTube según el audio del video antes de minar. Se ignora cuando el subtítulo se transcribió localmente.</translation>
-    </message>
-    <message>
-        <source>Check every link in the box, then mine every Ready video.</source>
-        <translation>Comprobar cada enlace del cuadro y luego minar cada video Listo.</translation>
-    </message>
-    <message>
-        <source>Clear</source>
-        <translation>Limpiar</translation>
-    </message>
-    <message>
-        <source>Remove every item from the queue.</source>
-        <translation>Quitar todos los elementos de la cola.</translation>
-    </message>
-    <message>
-        <source>Cancel the active run.</source>
-        <translation>Cancelar la ejecución activa.</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>Progreso</translation>
-    </message>
-    <message>
-        <source>videos</source>
-        <translation>vídeos</translation>
     </message>
     <message>
         <source>Some lines are not valid URLs.</source>
