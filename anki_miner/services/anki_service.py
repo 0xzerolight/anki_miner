@@ -1166,27 +1166,7 @@ class AnkiService:
         results: list[int | None] = []
         batch_size = 100
         for i in range(0, len(notes), batch_size):
-            chunk = notes[i : i + batch_size]
-            state_before_request = self.anki_write_state
-            self.anki_write_state = AnkiWriteState.NOTE_WRITE_UNCERTAIN
-            logger.debug("Anki write state: %s", self.anki_write_state.value)
-            note_ids = _expect_list(
-                post_action(
-                    self.config.ankiconnect_url,
-                    "addNotes",
-                    params={"notes": chunk},
-                    timeout=60,
-                ),
-                "addNotes",
-                len(chunk),
-                (int, type(None)),
-            )
-            if any(nid is not None for nid in note_ids):
-                self.anki_write_state = AnkiWriteState.NOTE_WRITE_CONFIRMED
-            else:
-                self.anki_write_state = state_before_request
-            logger.debug("Anki write state: %s", self.anki_write_state.value)
-            results.extend(note_ids)
+            results.extend(self._submit_add_notes(notes[i : i + batch_size]))
         log_summary(
             logger,
             "Anki add raw notes done",
