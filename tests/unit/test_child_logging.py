@@ -150,3 +150,4 @@ def test_bundle_collects_the_name_this_module_writes() -> None:
     from anki_miner.gui import launch
 
     assert bundle._CHILD_LOG_NAME == launch.CHILD_LOG_NAME
+    assert bundle._API_LOG_NAME == launch.API_LOG_NAME

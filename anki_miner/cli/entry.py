@@ -39,10 +39,13 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+#: Selects the two-call API (``cli/api``, API.md) instead of the JSON Lines CLI.
+API_FLAG = "--api"
+
 #: First-argument words that select the CLI. Mirrored as a literal in
 #: ``gui/launch.py`` (which must not import this package at boot); a test pins
 #: the two equal.
-COMMANDS = frozenset({"mine", "version"})
+COMMANDS = frozenset({"mine", "version", API_FLAG})
 
 EXIT_OK = 0
 EXIT_FAILED = 1
@@ -110,6 +113,11 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     """Run one command; the last stdout line is always its ``result`` event."""
     args_list = list(sys.argv[1:] if argv is None else argv)
+    if args_list[:1] == [API_FLAG]:
+        from anki_miner.cli import api
+
+        _install_api_log()
+        return api.main(args_list[1:])
     with _private_stdout() as write:
         sink = EventSink(write=write)
         try:
@@ -365,6 +373,13 @@ def _settings_exist() -> bool:
     """Whether Anki Miner was ever set up (load_config silently falls back to defaults)."""
     config_file = GUIConfigManager.CONFIG_FILE
     return config_file.exists() or config_file.with_name(config_file.name + ".bak").exists()
+
+
+def _install_api_log() -> None:
+    """The API's own log file (anki_miner.api.log): it may run while nothing holds the lock."""
+    from anki_miner.gui import launch
+
+    launch._install_child_log_sink(launch.API_LOG_NAME, level=logging.INFO, max_bytes=5 * 1024 * 1024)
 
 
 def _start_log(log_path: Path) -> None:

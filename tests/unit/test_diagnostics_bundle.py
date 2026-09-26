@@ -572,6 +572,19 @@ def test_bundle_includes_the_child_log_beside_the_active_log(tmp_path: Path, mon
     assert missing == []
 
 
+def test_bundle_includes_the_api_log_beside_the_active_log(tmp_path: Path, monkeypatch) -> None:
+    _seed_home(tmp_path, monkeypatch)
+    active = tmp_path / "anki_miner.log"
+    active.write_bytes(b"active")
+    (tmp_path / "anki_miner.api.log").write_bytes(b"api run")
+    _disable_early_crash_member(monkeypatch, tmp_path)
+
+    with _installed_sink(active):
+        members, _missing = collect_log_members()
+
+    assert ("anki_miner.api.log", b"api run") in members
+
+
 def test_readme_declares_the_bundle_format(tmp_path: Path, monkeypatch) -> None:
     _seed_home(tmp_path, monkeypatch)
     _disable_early_crash_member(monkeypatch, tmp_path)
