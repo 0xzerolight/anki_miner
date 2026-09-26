@@ -340,6 +340,23 @@ def test_cancel_during_counting_returns_without_preview():
     assert worker.item.status == QueueItemStatus.PENDING
 
 
+def test_cancel_during_counting_clears_the_capture():
+    """Finding 2: a cancel mid-counting must not keep the per-episode capture
+    (with its per-episode pools) alive past the run."""
+    worker = _worker()
+    proc = _FakeProcessor(_words())
+
+    def _count_then_cancel(subtitle):
+        worker.cancel()
+        return Counter(COUNTS[subtitle])
+
+    proc.subtitle_parser.count_lemmas.side_effect = _count_then_cancel
+
+    _run(worker, proc)
+
+    assert worker._capture is None
+
+
 def test_review_off_capture_drops_sentence_candidates():
     curator = MagicMock()
     worker = _worker(_request(review=False), curation_callback=curator)

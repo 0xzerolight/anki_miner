@@ -14,6 +14,7 @@ import logging
 from pathlib import Path
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QDragEnterEvent, QDropEvent
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -231,6 +232,7 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         layout.addWidget(self.video_folder_selector)
         # Auto-fill deck name from folder name.
         self.video_folder_selector.path_changed.connect(self._on_video_folder_changed)
+        self.video_folder_selector.path_changed.connect(self._reset_preview_if_idle)
 
         self.subtitle_folder_selector = FileSelector(
             label=self.tr("Subtitle Folder:"),
@@ -240,6 +242,7 @@ class DeckBuilderTab(FolderSeriesScreenBase):
             history_key=_HISTORY_KEY,
         )
         layout.addWidget(self.subtitle_folder_selector)
+        self.subtitle_folder_selector.path_changed.connect(self._reset_preview_if_idle)
 
         # Secondary-language subtitles, gated on the Settings toggle -- its own
         # folder, not a language suffix inside the subtitle folder, mirroring
@@ -383,6 +386,7 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         self.skip_known_checkbox.toggled.connect(
             lambda checked: self.persist_run_options(deck_builder_skip_known=checked)
         )
+        self.skip_known_checkbox.toggled.connect(self._reset_preview_if_idle)
 
         # Issue #60: opt-in word curation popup (default off), shared across
         # all seven mining screens.
@@ -493,6 +497,43 @@ class DeckBuilderTab(FolderSeriesScreenBase):
             auto_name = Path(new_path).name if new_path else ""
             self.deck_name_edit.setText(auto_name)
             self._last_auto_deck_name = auto_name
+
+    def _reset_preview_if_idle(self, *_args: object) -> None:
+        """Drop the cached preview when a scan input changes while idle.
+
+        Otherwise the previous show's numbers stay on screen and a later
+        mode/Top-N/coverage change (which recomputes from the cached corpus
+        with no rescan) keeps describing that stale show. Only idle: these
+        controls are locked for the rest of a run anyway (see
+        :meth:`_apply_run_state`), so a live corpus never reaches here.
+        """
+        if self._run_state != "idle":
+            return
+        self._corpus = None
+        for label in self._result_labels.values():
+            label.setText("—")
+
+    # ------------------------------------------------------------------
+    # Drag-and-drop (locked outside idle)
+    # ------------------------------------------------------------------
+
+    def dragEnterEvent(self, event: QDragEnterEvent | None) -> None:
+        """Accept a drag only while the scan inputs are unlocked (idle).
+
+        The base implementation routes straight to ``set_path`` on the
+        selectors, bypassing their disabled state while a scan is pending or
+        a build is running: a drop would then silently swap the show a
+        pending Preview/Build is about to act on.
+        """
+        if self._run_state != "idle":
+            return
+        super().dragEnterEvent(event)
+
+    def dropEvent(self, event: QDropEvent | None) -> None:
+        """Route a drop only while the scan inputs are unlocked (idle). See :meth:`dragEnterEvent`."""
+        if self._run_state != "idle":
+            return
+        super().dropEvent(event)
 
     # ------------------------------------------------------------------
     # Request building
@@ -708,6 +749,11 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         worker = self.worker_thread
         if worker is None:
             return
+        if self._run_state == "preview_ready":
+            # Leaving the Build gate: the "Preview ready..." status/detail it
+            # set must not linger through the build that follows.
+            self.progress_widget.set_status("")
+            self._publish_task_detail("")
         mode, value = self._current_selection()
         self._confirmed_selection = (mode, value)
         worker.confirm(mode, value)
@@ -811,6 +857,11 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         if self._from_superseded_worker():
             return
         self._record_receipt_whitelist(whitelist)
+        if self._cancel_requested and total_cards > 0:
+            # The item interrupted mid-build emits neither item_completed nor
+            # item_failed, so this is the only place its real card count
+            # reaches the log.
+            self.presenter.show_info(self._closing_line(total_cards))
         self._show_terminal_progress(self.progress_widget, total_cards)
 
     def _restore_buttons(self) -> None:

@@ -18,7 +18,8 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import QMimeData, QObject, QPoint, QPointF, Qt, QUrl, pyqtSignal
+from PyQt6.QtGui import QDragEnterEvent, QDropEvent
 
 from anki_miner.gui.controllers.task_registry import TaskOutcome, TaskRegistry
 from anki_miner.gui.presenters import GUIPresenter
@@ -580,6 +581,20 @@ def test_build_after_preview_confirms_current_mode_and_value(ready_tab, workers)
     assert not any(control.isEnabled() for control in _selection_controls(ready_tab))
 
 
+def test_confirm_from_preview_ready_clears_the_stale_preview_status(ready_tab, workers, registry):
+    """Finding 4: the "Preview ready..." status/detail must not survive Build."""
+    ready_tab.bind_task_registry(registry)
+    ready_tab.preview_button.click()
+    workers[0].preview_ready.emit(_corpus())
+    assert ready_tab.progress_widget.status_label.text() == "Preview ready. Press Build Deck to create the cards."
+    assert registry.snapshot("run.deckbuilder").detail == "Preview ready. Press Build Deck to create the cards."
+
+    ready_tab.build_button.click()
+
+    assert ready_tab.progress_widget.status_label.text() == ""
+    assert registry.snapshot("run.deckbuilder").detail == ""
+
+
 def test_cancel_sets_cancel_requested_and_marks_receipt_cancelled(ready_tab, workers):
     ready_tab.preview_button.click()
     worker = workers[0]
@@ -716,6 +731,34 @@ def test_receipt_records_counts_and_logs_closing_line(ready_tab, workers, regist
     assert ready_tab._run_state == "idle"
 
 
+def test_cancelled_build_with_cards_logs_the_created_count(ready_tab, workers):
+    """Finding 3: an interrupted item emits neither item_completed nor
+    item_failed, but ``queue_finished`` still carries the real card count."""
+    ready_tab.preview_button.click()
+    worker = workers[0]
+    worker.preview_ready.emit(_corpus())
+    _select(ready_tab, DeckSelectionMode.TOP_N)
+    ready_tab.top_n_spinbox.setValue(2)
+    ready_tab.build_button.click()
+
+    ready_tab.cancel_button.click()
+    worker.end(total_cards=2)  # interrupted mid-item: no item_completed/item_failed
+
+    ready_tab.presenter.show_info.assert_any_call(
+        "Created 2 cards in deck 'My Show'; the candidate words cover ~80.0% of tokens."
+    )
+
+
+def test_cancelled_build_with_no_cards_logs_nothing_extra(ready_tab, workers):
+    ready_tab.build_button.click()
+    worker = workers[0]
+
+    ready_tab.cancel_button.click()
+    worker.end(total_cards=0)
+
+    ready_tab.presenter.show_info.assert_not_called()
+
+
 def test_item_pairs_progress_moves_the_bar_and_the_published_count(ready_tab, workers, registry):
     ready_tab.bind_task_registry(registry)
     ready_tab.build_button.click()
@@ -842,6 +885,178 @@ def test_release_refused_while_preview_pending(ready_tab, workers):
     workers[0].end()
     assert ready_tab.release_dictionary_resources() is True
     processor.release_dictionary_resources.assert_called_once_with()
+
+
+# ---------------------------------------------------------------------------
+# Drag-and-drop respects the scan-input lock (finding 1)
+# ---------------------------------------------------------------------------
+
+
+def _mime(*paths: Path) -> QMimeData:
+    data = QMimeData()
+    data.setUrls([QUrl.fromLocalFile(str(p)) for p in paths])
+    return data
+
+
+def _drop_event(data: QMimeData) -> QDropEvent:
+    """Build a drop event. The CALLER must keep ``data`` alive: the event holds
+    a borrowed pointer, and letting the mime die first segfaults Qt."""
+    return QDropEvent(
+        QPointF(1.0, 1.0),
+        Qt.DropAction.CopyAction,
+        data,
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+    )
+
+
+def _drag_enter_event(data: QMimeData) -> QDragEnterEvent:
+    return QDragEnterEvent(
+        QPoint(1, 1),
+        Qt.DropAction.CopyAction,
+        data,
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+    )
+
+
+def _advance_to(ready_tab: DeckBuilderTab, workers, run_state: str) -> None:
+    """Drive ``ready_tab`` into ``run_state`` (one of the three locked states)."""
+    if run_state == "scanning":
+        ready_tab.preview_button.click()
+    elif run_state == "preview_ready":
+        ready_tab.preview_button.click()
+        workers[0].preview_ready.emit(_corpus())
+    elif run_state == "building":
+        ready_tab.build_button.click()
+    else:
+        raise ValueError(run_state)
+
+
+@pytest.mark.parametrize("run_state", ["scanning", "preview_ready", "building"])
+def test_drop_is_ignored_while_scan_inputs_are_locked(ready_tab, workers, tmp_path, run_state):
+    """Reproduces the report: dropping a different show must not reach the
+    disabled selectors (and, through ``path_changed``, the disabled deck-name
+    field) while a scan is pending or a build is running."""
+    _advance_to(ready_tab, workers, run_state)
+    assert ready_tab._run_state == run_state
+
+    before_video = ready_tab.video_folder_selector.get_path()
+    before_subs = ready_tab.subtitle_folder_selector.get_path()
+    before_name = ready_tab.deck_name_edit.text()
+
+    other_video = tmp_path / "Other Show"
+    other_subs = tmp_path / "other_subs"
+    other_video.mkdir()
+    other_subs.mkdir()
+    data = _mime(other_video, other_subs)
+
+    ready_tab.dropEvent(_drop_event(data))
+
+    assert ready_tab.video_folder_selector.get_path() == before_video
+    assert ready_tab.subtitle_folder_selector.get_path() == before_subs
+    assert ready_tab.deck_name_edit.text() == before_name
+
+
+@pytest.mark.parametrize("run_state", ["scanning", "preview_ready", "building"])
+def test_drag_enter_is_ignored_while_scan_inputs_are_locked(ready_tab, workers, tmp_path, run_state):
+    _advance_to(ready_tab, workers, run_state)
+    other = tmp_path / "Other"
+    other.mkdir()
+    data = _mime(other)
+    event = _drag_enter_event(data)
+
+    ready_tab.dragEnterEvent(event)
+
+    assert not event.isAccepted()
+
+
+def test_drop_still_routes_folders_in_idle(ready_tab, tmp_path):
+    assert ready_tab._run_state == "idle"
+    other_video = tmp_path / "New Show"
+    other_subs = tmp_path / "new_subs"
+    other_video.mkdir()
+    other_subs.mkdir()
+    data = _mime(other_video, other_subs)
+
+    ready_tab.dropEvent(_drop_event(data))
+
+    assert ready_tab.video_folder_selector.get_path() == str(other_video)
+    assert ready_tab.subtitle_folder_selector.get_path() == str(other_subs)
+    # The routed video folder still auto-fills the deck name.
+    assert ready_tab.deck_name_edit.text() == "New Show"
+
+
+def test_drag_enter_still_accepts_in_idle(ready_tab, tmp_path):
+    assert ready_tab._run_state == "idle"
+    data = _mime(tmp_path)
+    event = _drag_enter_event(data)
+
+    ready_tab.dragEnterEvent(event)
+
+    assert event.isAccepted()
+
+
+# ---------------------------------------------------------------------------
+# Stale preview numbers drop when a scan input changes in idle (finding 5)
+# ---------------------------------------------------------------------------
+
+
+def test_changing_video_folder_in_idle_drops_the_stale_preview(ready_tab, workers, tmp_path):
+    ready_tab.preview_button.click()
+    workers[0].preview_ready.emit(_corpus())
+    ready_tab.cancel_button.click()
+    workers[0].end()
+    assert ready_tab._run_state == "idle"
+    assert ready_tab._corpus is not None
+
+    other_video = tmp_path / "Another Show"
+    other_video.mkdir()
+    ready_tab.video_folder_selector.set_path(str(other_video))
+
+    assert ready_tab._corpus is None
+    assert _results(ready_tab) == dict.fromkeys(ready_tab._result_labels, "—")
+
+
+def test_changing_subtitle_folder_in_idle_drops_the_stale_preview(ready_tab, workers, tmp_path):
+    ready_tab.preview_button.click()
+    workers[0].preview_ready.emit(_corpus())
+    ready_tab.cancel_button.click()
+    workers[0].end()
+    assert ready_tab._corpus is not None
+
+    other_subs = tmp_path / "other_subs2"
+    other_subs.mkdir()
+    ready_tab.subtitle_folder_selector.set_path(str(other_subs))
+
+    assert ready_tab._corpus is None
+    assert _results(ready_tab) == dict.fromkeys(ready_tab._result_labels, "—")
+
+
+def test_toggling_skip_known_in_idle_drops_the_stale_preview(ready_tab, workers):
+    ready_tab.preview_button.click()
+    workers[0].preview_ready.emit(_corpus())
+    ready_tab.cancel_button.click()
+    workers[0].end()
+    assert ready_tab._corpus is not None
+
+    ready_tab.skip_known_checkbox.setChecked(not ready_tab.skip_known_checkbox.isChecked())
+
+    assert ready_tab._corpus is None
+    assert _results(ready_tab) == dict.fromkeys(ready_tab._result_labels, "—")
+
+
+def test_changing_a_scan_input_while_running_does_not_touch_the_corpus(ready_tab, workers, tmp_path):
+    """The controls are disabled while running anyway; guard against a future
+    caller driving them programmatically and silently dropping a live preview."""
+    ready_tab.preview_button.click()
+    workers[0].preview_ready.emit(_corpus())
+    assert ready_tab._run_state == "preview_ready"
+    assert ready_tab._corpus is not None
+
+    ready_tab.skip_known_checkbox.setChecked(not ready_tab.skip_known_checkbox.isChecked())
+
+    assert ready_tab._corpus is not None
 
 
 # ---------------------------------------------------------------------------

@@ -147,7 +147,14 @@ class DeckBuilderWorker(BatchQueueWorkerThread):
                 logger.exception("DeckBuilderWorker could not create deck %s", self.request.deck_name)
                 self.error.emit(str(e))
                 return total_cards
-        return super()._run_queue(total_cards)
+        try:
+            return super()._run_queue(total_cards)
+        finally:
+            # A cancel or exception during the pre-pass or counting can exit
+            # before _select_season_pool ever clears the per-episode pools;
+            # this is the run's own exit, so it is the last chance to drop
+            # them rather than let a finished worker keep holding them.
+            self._capture = None
 
     def _make_capture(self) -> CaptureCurationCallback:
         # Kept so _select_season_pool can drop the per-episode lists once merged.
