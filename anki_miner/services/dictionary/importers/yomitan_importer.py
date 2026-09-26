@@ -19,13 +19,11 @@ from typing import Any, Callable
 from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.services._sqlite_index import (
     language_identity,
-    prove_owned_slot,
     read_slot_language,
     resolve_auto_store_id,
-    resolve_managed_slot,
     write_ownership_marker,
 )
-from anki_miner.services._staging import promote_staged_dir, repair_managed_slot
+from anki_miner.services._staging import claim_managed_slot, promote_staged_dir, repair_managed_slot
 from anki_miner.services.dictionary.schema_validation import (
     ensure_bank_array,
     is_valid_term_bank_entry,
@@ -261,23 +259,11 @@ def import_yomitan_zip(
         # file someone can open.
         log_summary(logger, "Yomitan import", zip=zip_path, dict_id=dict_id, title=title, revision=revision)
 
-        try:
-            final_path = resolve_managed_slot(dest_root, dict_id)
-        except ValueError as exc:
-            raise SetupError(str(exc)) from exc
-
         # Fail fast on an already-imported dict BEFORE any staging/rendering
         # work (mirrors Yomitan checking dictionaryExists right after reading
         # index.json). The late check below the atomic rename stays as a
         # race backstop. dest_root may not exist yet — .exists() is False then.
-        if os.path.lexists(final_path):
-            if not overwrite:
-                raise SetupError(f"Dictionary '{dict_id}' already exists")
-            if not prove_owned_slot(final_path.parent, dict_id, "dictionary"):
-                raise SetupError(
-                    f"Dictionary '{dict_id}' exists but is not an Anki Miner-managed dictionary; "
-                    "refusing to overwrite it"
-                )
+        final_path = claim_managed_slot(dest_root, dict_id, "dictionary", overwrite=overwrite, noun="Dictionary")
 
         # Enumerate term bank files for progress totals
         term_files = sorted(tmp_path.glob("term_bank_*.json"))
