@@ -23,6 +23,10 @@ EXPECTED_SITES = {
     "anki_miner/gui/workers/deck_filter_worker.py",
     "anki_miner/gui/widgets/_mining_tab_base.py",
     "anki_miner/services/known_word_db.py",
+    # Resource bundles read the ignore list on export and add to it on import;
+    # both receive the path from resolve_known_words_db_path in the GUI layer.
+    "anki_miner/services/resource_bundle/export.py",
+    "anki_miner/services/resource_bundle/install.py",
 }
 
 
