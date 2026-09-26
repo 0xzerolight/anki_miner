@@ -76,10 +76,19 @@ def _verdict(argv: list[str]) -> dict[str, object]:
 
 
 def _dispatch(args: argparse.Namespace) -> dict[str, object]:
+    from anki_miner.cli.api import commands
+
     if args.command == "version":
         return _ok(
             "version", result={"schema": API_SCHEMA, "app": __version__, "commands": list(COMMANDS), "features": []}
         )
+    if args.command == "profiles":
+        return _ok("profiles", result=commands.profiles_result())
+    if args.command == "check":
+        return _ok("check", result=commands.check_result(args.profile, args.language))
+    if args.command == "settings-export":
+        commands.settings_export(args.profile, args.language, args.out)
+        return _ok("settings-export")
     raise ApiError(BAD_ARGUMENTS, f"Not available yet: {args.command}")
 
 

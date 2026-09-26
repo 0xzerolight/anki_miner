@@ -70,3 +70,79 @@ def test_setup_failure_maps_unreachable_anki() -> None:
     except AnkiConnectionError as exc:
         assert contract.setup_failure(exc).code == "ANKI_UNREACHABLE"
     assert contract.setup_failure(AnkiConnectionError("AnkiConnect error in 'x': y")).code == "SETUP_ERROR"
+
+
+def test_profiles_command(verdict) -> None:
+    v = verdict("profiles")
+    assert v["ok"] and v["result"] == {"profiles": [{"id": "default", "name": "Default", "active": True}]}
+
+
+def _fake_validation(**checks):
+    return type(
+        "V", (), {"__init__": lambda self, config: None, **{k: (lambda self, r=r: r) for k, r in checks.items()}}
+    )
+
+
+def test_check_reports_every_item(verdict, monkeypatch, test_config) -> None:
+    from anki_miner.cli.api import commands
+
+    monkeypatch.setattr(commands.settings, "load_profile_config", lambda pid: test_config)
+    fake = _fake_validation(
+        check_ankiconnect=(True, ""),
+        check_deck_exists=(False, "Deck 'x' not found."),
+        check_note_type_exists=(True, ""),
+        check_field_names=(True, ""),
+        check_offline_dictionary=(True, ""),
+    )
+    monkeypatch.setattr(commands, "ValidationService", fake)
+    monkeypatch.setattr(commands, "stale_resource_reimport_error", lambda config: None)
+    monkeypatch.setattr(commands, "binary_available", lambda resolved: True)
+    v = verdict("check", "--language", "ja")
+    items = {i["name"]: i for i in v["result"]["items"]}
+    assert v["result"]["ready"] is False
+    assert list(items) == [
+        "anki",
+        "deck",
+        "note_type",
+        "fields",
+        "dictionary",
+        "resources",
+        "language_pack",
+        "ffmpeg",
+        "ffprobe",
+    ]
+    assert items["deck"] == {"name": "deck", "ok": False, "message": "Deck 'x' not found."}
+    assert items["anki"]["message"] is None
+
+
+def test_check_skips_anki_items_when_unreachable(verdict, monkeypatch, test_config) -> None:
+    from anki_miner.cli.api import commands
+
+    monkeypatch.setattr(commands.settings, "load_profile_config", lambda pid: test_config)
+    fake = _fake_validation(check_ankiconnect=(False, "Cannot connect"), check_offline_dictionary=(True, ""))
+    monkeypatch.setattr(commands, "ValidationService", fake)
+    monkeypatch.setattr(commands, "stale_resource_reimport_error", lambda config: None)
+    monkeypatch.setattr(commands, "binary_available", lambda resolved: True)
+    items = {i["name"]: i for i in verdict("check", "--language", "ja")["result"]["items"]}
+    assert items["deck"]["ok"] is False and "not reachable" in items["deck"]["message"]
+
+
+def test_check_unknown_language_is_bad_arguments(verdict) -> None:
+    assert verdict("check", "--language", "xx")["error"] == "BAD_ARGUMENTS"
+
+
+def test_settings_export_marks_unconfigured_language(verdict, tmp_path, test_config) -> None:
+    from anki_miner.gui.utils.config_manager import GUIConfigManager
+
+    GUIConfigManager.save_config(test_config)
+    out = tmp_path / "ko.json"
+    v = verdict("settings-export", "--language", "ko", "--out", str(out))
+    assert v["ok"] is True
+    data = json.loads(out.read_text(encoding="utf-8"))
+    assert data["configured"] is False and data["settings"]["language"] == "ko"
+    assert data["anki_miner_settings"] == 1
+
+
+def test_settings_export_bad_out_folder(verdict, tmp_path) -> None:
+    v = verdict("settings-export", "--language", "ja", "--out", str(tmp_path / "no" / "x.json"))
+    assert v["error"] == "BAD_ARGUMENTS"
