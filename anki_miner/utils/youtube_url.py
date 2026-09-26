@@ -162,6 +162,14 @@ def _parse_playlist_id(qs: dict[str, list[str]]) -> str | None:
     return None
 
 
+def _video_result(video_id: str, qs: dict[str, list[str]]) -> YouTubeUrlInfo:
+    """Build the video / video_in_playlist result for one recognised video id."""
+    playlist_id = _parse_playlist_id(qs)
+    if playlist_id:
+        return YouTubeUrlInfo(kind="video_in_playlist", video_id=video_id, playlist_id=playlist_id)
+    return YouTubeUrlInfo(kind="video", video_id=video_id, playlist_id=None)
+
+
 def classify_youtube_url(url: str) -> YouTubeUrlInfo:
     """Classify a YouTube URL without making any network requests.
 
@@ -209,10 +217,7 @@ def classify_youtube_url(url: str) -> YouTubeUrlInfo:
         if not video_id:
             return _UNKNOWN
         qs = parse_qs(parsed.query)
-        playlist_id = _parse_playlist_id(qs)
-        if playlist_id:
-            return YouTubeUrlInfo(kind="video_in_playlist", video_id=video_id, playlist_id=playlist_id)
-        return YouTubeUrlInfo(kind="video", video_id=video_id, playlist_id=None)
+        return _video_result(video_id, qs)
 
     # -----------------------------------------------------------------------
     # youtube.com family
@@ -228,10 +233,7 @@ def classify_youtube_url(url: str) -> YouTubeUrlInfo:
         video_id = _parse_video_id(qs)
         if not video_id:
             return _UNKNOWN
-        playlist_id = _parse_playlist_id(qs)
-        if playlist_id:
-            return YouTubeUrlInfo(kind="video_in_playlist", video_id=video_id, playlist_id=playlist_id)
-        return YouTubeUrlInfo(kind="video", video_id=video_id, playlist_id=None)
+        return _video_result(video_id, qs)
 
     # /playlist?list=…
     if path == "/playlist":
@@ -247,10 +249,7 @@ def classify_youtube_url(url: str) -> YouTubeUrlInfo:
             video_id = _extract_video_id_from_path_segment(segment)
             if not video_id:
                 return _UNKNOWN
-            playlist_id = _parse_playlist_id(qs)
-            if playlist_id:
-                return YouTubeUrlInfo(kind="video_in_playlist", video_id=video_id, playlist_id=playlist_id)
-            return YouTubeUrlInfo(kind="video", video_id=video_id, playlist_id=None)
+            return _video_result(video_id, qs)
 
     return _UNKNOWN
 
