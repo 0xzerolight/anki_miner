@@ -26,13 +26,14 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from urllib.parse import unquote, urlsplit, urlunsplit
+from urllib.parse import urlunsplit
 
 from anki_miner.config import AudioSourceEntry, paths
 from anki_miner.diagnostics.environment import EnvironmentSnapshot, format_environment_lines
 from anki_miner.utils.atomic_io import atomic_write_path
 from anki_miner.utils.bounded_reader import read_json_bounded
 from anki_miner.utils.logging_ext import capped, log_summary
+from anki_miner.utils.url_redaction import split_loggable_url
 
 logger = logging.getLogger(__name__)
 
@@ -391,18 +392,10 @@ def _ui_fact_lines(ui_facts: Mapping[str, str] | None) -> list[str]:
 
 def _redact_custom_audio_url(url: str) -> str:
     """Keep a useful URL shape without credentials or parse failures."""
-    try:
-        parts = urlsplit(url)
-        if parts.username is not None or "@" in unquote(parts.netloc):
-            return "<redacted-url>"
-        hostname = parts.hostname
-        port = parts.port
-    except ValueError:
+    hit = split_loggable_url(url)
+    if hit is None:
         return "<redacted-url>"
-    if not parts.scheme or hostname is None:
-        return "<redacted-url>"
-    host = f"[{hostname}]" if ":" in hostname else hostname
-    netloc = f"{host}:{port}" if port is not None else host
+    parts, netloc = hit
     return urlunsplit((parts.scheme, netloc, parts.path, "REDACTED", ""))
 
 

@@ -26,6 +26,7 @@ from anki_miner.models import TokenizedWord
 from anki_miner.services.subtitle_parser import _differs_by_okurigana_only
 from anki_miner.utils import has_katakana, hiragana_to_katakana
 from anki_miner.utils.logging_ext import log_summary
+from anki_miner.utils.url_redaction import split_loggable_url
 
 if TYPE_CHECKING:
     from anki_miner.interfaces.expression_audio import ExpressionAudioFetcher
@@ -125,18 +126,10 @@ def record_cached_path(cache_dir: Path, path: Path) -> None:
 
 def redact_url_for_log(url: str) -> str:
     """Keep scheme, host, port, and path; fail closed when userinfo exists."""
-    try:
-        parts = urlsplit(url)
-        if parts.username is not None or "@" in unquote(parts.netloc):
-            return "<redacted-url>"
-        hostname = parts.hostname
-        port = parts.port
-    except ValueError:
+    hit = split_loggable_url(url)
+    if hit is None:
         return "<redacted-url>"
-    if not parts.scheme or hostname is None:
-        return "<redacted-url>"
-    host = f"[{hostname}]" if ":" in hostname else hostname
-    netloc = f"{host}:{port}" if port is not None else host
+    parts, netloc = hit
     return urlunsplit((parts.scheme, netloc, parts.path, "", ""))
 
 
