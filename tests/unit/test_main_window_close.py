@@ -922,7 +922,7 @@ class TestCloseEventFlushesMokuroLocationEdit:
     def _subtitles_tab_with_mokuro(self, main_window, test_config, qtbot):
         """Insert a REAL MokuroTab under a minimal ``SubtitlesTab``-named stand-in
         (MainWindow finds it by class name via ``_main_tab_index("subtitles")``),
-        and mirror app.py's ``config_changed`` -> ``window.update_config`` wiring."""
+        and mirror app.py's ``run_options_changed`` -> ``window.update_config`` wiring."""
         from PyQt6.QtWidgets import QWidget
 
         from anki_miner.gui.widgets.mokuro_tab import MokuroTab
@@ -934,7 +934,7 @@ class TestCloseEventFlushesMokuroLocationEdit:
 
         mokuro_tab = MokuroTab(test_config, suppress_optional_startup=True)
         qtbot.addWidget(mokuro_tab)
-        mokuro_tab.config_changed.connect(main_window.update_config)
+        mokuro_tab.run_options_changed.connect(main_window.update_config)
         container = SubtitlesTab(mokuro_tab)
         qtbot.addWidget(container)
         main_window.tabs.addTab(container, "Utilities")

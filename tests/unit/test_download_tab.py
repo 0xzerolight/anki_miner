@@ -2,8 +2,10 @@
 
 Covers construction, the yt-dlp availability guard, URL validation (blank /
 invalid / T-34 dash-leading lines), worker kwargs assembly (dest + preset /
-custom-format options), option persistence via config_changed, update_config
-reseeding, output-folder choose/reset, cancel, and the reentrancy guard.
+custom-format options), option persistence via run_options_changed, update_config
+reseeding, the chosen output folder reaching the worker, cancel, and the
+reentrancy guard. The shared ``_ToolTabBase`` contract (Output row, worker
+lifecycle) is tested once in ``test_tool_tab_contract.py``.
 
 No real yt-dlp runs: DownloadWorker and the availability probe are patched.
 """
@@ -32,6 +34,7 @@ from anki_miner.services.media_downloader import (
     DownloadPlaylistEntry,
     UrlTracks,
 )
+from tests.unit._tool_tab_harness import FakeToolWorker as _FakeWorker
 
 # ---------------------------------------------------------------------------
 # Patch-target constants
@@ -55,40 +58,6 @@ _PLAYLIST_DIALOG_CLS = "anki_miner.gui.widgets.download_tab.PlaylistPickerDialog
 
 def _make_config(tmp_path: Path, **overrides) -> AnkiMinerConfig:
     return AnkiMinerConfig(media_temp_folder=tmp_path / "tmp", **overrides)
-
-
-class _FakeWorker:
-    """Minimal fake mimicking the DownloadWorker interface used by the tab."""
-
-    def __init__(self, *args, **kwargs):
-        self.args = args
-        self.kwargs = kwargs
-        self.file_started = MagicMock()
-        self.file_progress = MagicMock()
-        self.file_finished = MagicMock()
-        self.file_skipped = MagicMock()
-        self.queue_finished = MagicMock()
-        self.error = MagicMock()
-        # The same fake stands in for the two probe workers.
-        self.tracks_probed = MagicMock()
-        self.playlist_resolved = MagicMock()
-        self.probe_error = MagicMock()
-        self.finished = MagicMock()
-        self.deleteLater = MagicMock()
-        self._started = False
-        self._cancelled = False
-
-    def start(self):
-        self._started = True
-
-    def cancel(self):
-        self._cancelled = True
-
-    def isRunning(self):
-        return self._started and not self._cancelled
-
-    def wait(self, *args):
-        return True
 
 
 def _make_tab(config, qtbot) -> DownloadTab:
@@ -269,20 +238,20 @@ class TestWorkerConstruction:
 
 
 class TestOptionPersistence:
-    def test_option_edit_emits_config_changed(self, qtbot, tmp_path: Path) -> None:
+    def test_option_edit_emits_run_options_changed(self, qtbot, tmp_path: Path) -> None:
         tab = _make_tab(_make_config(tmp_path), qtbot)
         received: list[AnkiMinerConfig] = []
-        tab.config_changed.connect(received.append)
+        tab.run_options_changed.connect(received.append)
         tab.preset_combo.setCurrentIndex(tab.preset_combo.findData("720p"))
         assert received
         assert received[-1].downloader_format_preset == "720p"
         tab.embed_thumbnail_checkbox.setChecked(True)
         assert received[-1].downloader_embed_thumbnail is True
 
-    def test_seeding_suppresses_config_changed(self, qtbot, tmp_path: Path) -> None:
+    def test_seeding_suppresses_run_options_changed(self, qtbot, tmp_path: Path) -> None:
         tab = _make_tab(_make_config(tmp_path), qtbot)
         received: list[AnkiMinerConfig] = []
-        tab.config_changed.connect(received.append)
+        tab.run_options_changed.connect(received.append)
         tab.config = replace(tab.config, downloader_format_preset="1080p")
         tab._apply_config_defaults()
         assert received == []
@@ -370,7 +339,8 @@ class TestConfigLoopAndRefusal:
 
 
 class TestOutputAndCancel:
-    def test_choose_and_reset_output_folder(self, qtbot, tmp_path: Path) -> None:
+    def test_a_chosen_folder_is_the_download_destination(self, qtbot, tmp_path: Path) -> None:
+        """The label/Reset half is the shared contract (test_tool_tab_contract.py)."""
         tab = _make_tab(_make_config(tmp_path), qtbot)
         chosen = tmp_path / "downloads"
         chosen.mkdir()
@@ -380,16 +350,10 @@ class TestOutputAndCancel:
 
         with patch(_PICK_DIRECTORY, side_effect=_fake_pick):
             tab.choose_output_button.click()
-        assert tab._custom_output_dir == chosen
-        assert tab.output_location_label.text() == str(chosen)
 
         tab.url_input.setPlainText("https://example.com/v")
         worker_cls = _start_download(tab, _FakeWorker())
         assert worker_cls.call_args.kwargs["dest_dir"] == chosen
-
-        tab.clear_output_button.click()
-        assert tab._custom_output_dir is None
-        assert tab.output_location_label.text() == tab._strings.output_default
 
     def test_cancel_flips_buttons_and_cancels_worker(self, qtbot, tmp_path: Path) -> None:
         tab = _make_tab(_make_config(tmp_path), qtbot)
@@ -402,13 +366,6 @@ class TestOutputAndCancel:
         assert fake._cancelled is True
         assert tab._cancelled is True
         assert not tab.cancel_button.isEnabled()
-
-    def test_iter_close_workers_yields_active_worker(self, qtbot, tmp_path: Path) -> None:
-        tab = _make_tab(_make_config(tmp_path), qtbot)
-        tab.url_input.setPlainText("https://example.com/v")
-        fake = _FakeWorker()
-        _start_download(tab, fake)
-        assert fake in list(tab.iter_close_workers())
 
 
 # ---------------------------------------------------------------------------
@@ -452,7 +409,7 @@ class TestSubtitleLanguagePicker:
         tab = _make_tab(_make_config(tmp_path), qtbot)
         tab.write_subs_checkbox.setChecked(True)
         emitted: list[AnkiMinerConfig] = []
-        tab.config_changed.connect(emitted.append)
+        tab.run_options_changed.connect(emitted.append)
         dialog = MagicMock()
         dialog.exec.return_value = QDialog.DialogCode.Accepted
         dialog.selected_langs.return_value = "ko,en"
@@ -504,7 +461,7 @@ class TestAudioLanguageWidget:
     def test_choosing_a_language_persists_it(self, qtbot, tmp_path: Path) -> None:
         tab = _make_tab(_make_config(tmp_path), qtbot)
         emitted: list[AnkiMinerConfig] = []
-        tab.config_changed.connect(emitted.append)
+        tab.run_options_changed.connect(emitted.append)
         tab.audio_lang_combo.setCurrentIndex(tab.audio_lang_combo.findData("ko"))
         assert emitted[-1].downloader_audio_lang == "ko"
 
@@ -522,7 +479,7 @@ class TestAudioLanguageWidget:
         """The nested seeding guard must restore, not clear, the outer one."""
         tab = _make_tab(_make_config(tmp_path), qtbot)
         received: list[AnkiMinerConfig] = []
-        tab.config_changed.connect(received.append)
+        tab.run_options_changed.connect(received.append)
         tab.config = replace(tab.config, downloader_audio_lang="sw")
         tab._apply_config_defaults()
         assert received == []
@@ -859,7 +816,7 @@ class TestSubtitlesOnlyPreset:
         """DECIDED: downloader_write_subtitles keeps its own value while this preset is active."""
         tab = _make_tab(_make_config(tmp_path), qtbot)
         received: list[AnkiMinerConfig] = []
-        tab.config_changed.connect(received.append)
+        tab.run_options_changed.connect(received.append)
         tab.preset_combo.setCurrentIndex(tab.preset_combo.findData("subtitles"))
         assert received
         assert received[-1].downloader_write_subtitles is False

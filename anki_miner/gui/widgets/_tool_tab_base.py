@@ -1,19 +1,25 @@
 """Shared base for the file-processing tool tabs (Generate / Retime / Condense).
 
-Hoists the verbatim-identical worker-signal slots, the output-location slots, the
-progress-section chrome, and the close contract shared by
+Hoists the verbatim-identical worker-signal slots, the output-location row and
+slots, the Single File / Folder mode row, the engine-probe template, the folder
+scan, the writability refusal, the worker launch, the progress-section chrome,
+and the close contract shared by
 :class:`~anki_miner.gui.widgets.subtitle_creation_tab.SubtitleCreationTab`,
-:class:`~anki_miner.gui.widgets.subtitle_retime_tab.SubtitleRetimeTab`, and
-:class:`~anki_miner.gui.widgets.condense_tab.CondenseTab`.
+:class:`~anki_miner.gui.widgets.subtitle_retime_tab.SubtitleRetimeTab`,
+:class:`~anki_miner.gui.widgets.condense_tab.CondenseTab` and the later tools
+(Download, Manga OCR, Audiobook Sync). A builder that shows text takes it as
+arguments built with the caller's ``self.tr``, for the reason given below.
 
-Per-tool input/options sections, availability gating, and the ``_on_<verb>``
-launcher stay subclass responsibilities.
+Per-tool input/options sections, what the engine probe checks, and the
+``_on_<verb>`` launcher stay subclass responsibilities.
 
 Subclass contract — a subclass MUST provide, before any hoisted slot runs:
   * instance attrs ``worker_thread``, ``_custom_output_dir``, ``_cancelled``,
-    ``output_location_label``, ``clear_output_button``, ``cancel_button``,
-    ``progress_widget``, ``log_widget`` (the last two via
+    ``cancel_button``, ``progress_widget``, ``log_widget`` (the last two via
     :meth:`_create_progress_section`);
+  * ``output_location_label`` / ``choose_output_button`` / ``clear_output_button``
+    via :meth:`_build_output_row` (a tool with no output folder, Manga OCR,
+    never builds or reads them);
   * ``self._primary_button`` — the tool's action button (set when building the
     Actions section);
   * ``self._strings`` — a :class:`_ToolTabStrings` built in the SUBCLASS via
@@ -21,19 +27,25 @@ Subclass contract — a subclass MUST provide, before any hoisted slot runs:
     tab's ``self.tr`` binds the string to that tab's own tr-context, so the
     translation catalogs keep one entry per tab (no context churn / payload
     loss) even though the consuming logic lives here;
-  * an override of :meth:`_item_total`.
+  * overrides of :meth:`_item_total` and :meth:`_on_file_started`; of
+    :meth:`_probe_engine` (plus ``_PROBE_NAME``) unless the tool keeps its own
+    ``_refresh_engine_state``; and of :meth:`_apply_mode` when it builds the
+    mode row.
 """
 
 from __future__ import annotations
 
 import contextlib
+import logging
+import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterator
+from typing import TYPE_CHECKING, Any, Iterator, cast
 
-from PyQt6.QtWidgets import QFrame, QLabel, QScrollArea, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
+from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import file_dialogs, session_state
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
@@ -52,11 +64,13 @@ from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.workers.base_worker import SingleCallWorker
 from anki_miner.models import TerminalOutcome
+from anki_miner.utils.file_utils import is_junk_path
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
     from anki_miner.gui.controllers.task_registry import TaskRegistry
     from anki_miner.gui.workers.base_worker import CancellableWorker
+    from anki_miner.gui.workers.file_queue_worker import FileQueueWorker
 
 
 @dataclass(frozen=True)
@@ -109,10 +123,15 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
     _custom_output_dir: Path | None
     _cancelled: bool
     output_location_label: QLabel
+    choose_output_button: ModernButton
     clear_output_button: ModernButton
+    file_mode_button: ModernButton
+    folder_mode_button: ModernButton
     cancel_button: ModernButton
     progress_widget: ProgressWidget
     log_widget: LogWidget
+    engine_notice_label: QLabel
+    _suppress_optional_startup: bool
     _availability_worker: SingleCallWorker | None = None
     _availability_generation: int = 0
     #: Files skipped in the current run (reset when the run starts). Counted
@@ -155,6 +174,44 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
                     on_error(message)
 
         self._availability_worker = run_off_thread(self, work, _on_done, _on_error)
+
+    # ------------------------------------------------------------------
+    # Engine availability
+    # ------------------------------------------------------------------
+
+    #: Names the availability probe in its warning line ("ASR", "ffmpeg", …).
+    _PROBE_NAME: str = ""
+    #: The last verdict the default :meth:`_apply_probe_result` adopted.
+    _engine_is_available: bool = False
+
+    def _refresh_engine_state(self) -> None:
+        """Disable the primary action, then probe availability off the GUI thread.
+
+        Under ``suppress_optional_startup`` nothing is probed and the primary
+        stays disabled.
+        """
+        self._primary_button.setEnabled(False)
+        if self._suppress_optional_startup:
+            return
+        # The subclass's module logger, so the line keeps its original source
+        # name; its %(lineno)d now points into this file, not the subclass.
+        log = logging.getLogger(type(self).__module__)
+
+        def _on_error(message: str) -> None:
+            log.warning("%s availability probe failed: %s", self._PROBE_NAME, message)
+            self._apply_probe_result(False)
+
+        self._run_availability_scan(self._probe_engine(), self._apply_probe_result, _on_error)
+
+    def _probe_engine(self) -> Callable[[], object]:
+        """Return the availability check to run off the GUI thread."""
+        raise NotImplementedError
+
+    def _apply_probe_result(self, result: object) -> None:
+        """Adopt a verdict: the notice shows when missing, the primary runs only when present."""
+        self._engine_is_available = bool(result)
+        self.engine_notice_label.setVisible(not self._engine_is_available)
+        self._primary_button.setEnabled(self._engine_is_available)
 
     # ------------------------------------------------------------------
     # Progress-section chrome
@@ -261,6 +318,96 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         self.output_location_label.setText(self._strings.output_default)
         self.clear_output_button.hide()
 
+    def _build_output_row(
+        self,
+        layout: QVBoxLayout,
+        *,
+        output_label: str,
+        choose_label: str,
+        reset_label: str,
+    ) -> None:
+        """Add the Output row: caption, current folder, Choose Folder…, and a hidden Reset.
+
+        The three captions come from the caller's ``self.tr(...)``, so each keeps
+        the calling tab's tr-context (see the module docstring). The row starts on
+        ``self._strings.output_default`` and is driven by the two slots above.
+        """
+        out_row = QHBoxLayout()
+        out_row.setSpacing(SPACING.xs)
+        out_row.addWidget(QLabel(output_label))
+
+        self.output_location_label = QLabel(self._strings.output_default)
+        self.output_location_label.setObjectName("output-location-value")
+        out_row.addWidget(self.output_location_label, 1)
+
+        self.choose_output_button = ModernButton(choose_label, variant="secondary")
+        self.choose_output_button.clicked.connect(self._on_choose_output)
+        out_row.addWidget(self.choose_output_button)
+
+        self.clear_output_button = ModernButton(reset_label, variant="secondary")
+        self.clear_output_button.clicked.connect(self._on_clear_output)
+        self.clear_output_button.hide()
+        out_row.addWidget(self.clear_output_button)
+
+        layout.addLayout(out_row)
+
+    # ------------------------------------------------------------------
+    # Single-file / folder mode
+    # ------------------------------------------------------------------
+
+    def _build_mode_row(
+        self,
+        layout: QVBoxLayout,
+        *,
+        mode_label: str,
+        single_label: str,
+        folder_label: str,
+        single_tip: str,
+        folder_tip: str,
+    ) -> None:
+        """Add the Mode row: two checkable buttons, Single File checked.
+
+        Every caption and tooltip comes from the caller's ``self.tr(...)`` so it
+        keeps the calling tab's tr-context. The buttons drive :meth:`_set_mode`.
+        """
+        mode_row = QHBoxLayout()
+        mode_row.setSpacing(SPACING.xs)
+        mode_row.addWidget(QLabel(mode_label))
+
+        self.file_mode_button = ModernButton(single_label, variant="secondary")
+        self.file_mode_button.setCheckable(True)
+        self.file_mode_button.setChecked(True)
+        self.file_mode_button.setToolTip(single_tip)
+        self.file_mode_button.clicked.connect(self._on_file_mode)
+        mode_row.addWidget(self.file_mode_button)
+
+        self.folder_mode_button = ModernButton(folder_label, variant="secondary")
+        self.folder_mode_button.setCheckable(True)
+        self.folder_mode_button.setChecked(False)
+        self.folder_mode_button.setToolTip(folder_tip)
+        self.folder_mode_button.clicked.connect(self._on_folder_mode)
+        mode_row.addWidget(self.folder_mode_button)
+
+        mode_row.addStretch()
+        layout.addLayout(mode_row)
+
+    def _on_file_mode(self) -> None:
+        self._set_mode(True)
+
+    def _on_folder_mode(self) -> None:
+        self._set_mode(False)
+
+    def _set_mode(self, single: bool) -> None:
+        """Check the chosen mode's button, uncheck the other, then re-lay the inputs."""
+        chosen, other = (
+            (self.file_mode_button, self.folder_mode_button)
+            if single
+            else (self.folder_mode_button, self.file_mode_button)
+        )
+        chosen.setChecked(True)
+        other.setChecked(False)
+        self._apply_mode(single)
+
     # ------------------------------------------------------------------
     # Run lifecycle
     # ------------------------------------------------------------------
@@ -278,6 +425,95 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         self._cancelled = False
         self._run_skipped = 0
         self._publish_task_start(self._strings.task_title, total=total)
+
+    def _start_queue_worker(self, worker: FileQueueWorker) -> None:
+        """Wire a built queue worker to the shared slots, hand it the run, start it.
+
+        A tool with an extra per-file signal (``file_note``) connects it before
+        calling this.
+        """
+        self.worker_thread = worker
+        worker.file_started.connect(self._on_file_started)
+        worker.file_progress.connect(self._on_file_progress)
+        worker.file_finished.connect(self._on_file_finished)
+        worker.file_skipped.connect(self._on_file_skipped)
+        worker.queue_finished.connect(self._on_queue_finished)
+        worker.error.connect(self._on_run_error)
+        # Lifecycle: free the QThread on real thread exit (not on queue_finished,
+        # which fires just before the thread ends). Clears the handle so the
+        # reentrancy guard and iter_close_workers see no stale worker.
+        worker.finished.connect(self._on_worker_finished)
+        self._primary_button.setEnabled(False)
+        self.cancel_button.show()
+        worker.start()
+
+    # ------------------------------------------------------------------
+    # Run inputs
+    # ------------------------------------------------------------------
+
+    def _scan_folder_async(
+        self,
+        folder: Path,
+        accept: Callable[[Path], bool],
+        on_files: Callable[[list[Path]], None],
+        *,
+        empty_summary: str,
+        failed_summary: str,
+        sort_key: Callable[[Path], Any] | None = None,
+    ) -> None:
+        """List *folder* off the GUI thread; hand the accepted files to *on_files*.
+
+        The listing can stall on a network share, so it runs through
+        :func:`run_off_thread` and *on_files* is called back on the GUI thread.
+        Junk entries (``._`` sidecars and the like) are dropped. No file, or a
+        listing that fails, raises a screen issue and calls ``on_files([])`` so
+        the caller can re-enable its button. A failure's message is the Details:
+        the path is what the user just picked; what they cannot see is why
+        listing it failed. Both sentences come from the caller's ``self.tr``.
+
+        Args:
+            folder: A folder the caller has already checked with ``is_dir()``.
+            accept: Whether a listed file is an input for this tool.
+            on_files: Receives the accepted files, sorted (``[]`` on refusal).
+            empty_summary: The screen issue when nothing was accepted.
+            failed_summary: The screen issue when the listing raised.
+            sort_key: Order other than plain path order (Audiobook Sync reads a
+                book in natural file-name order).
+        """
+
+        def _scan() -> object:
+            files = (f for f in folder.iterdir() if f.is_file() and accept(f) and not is_junk_path(f.name))
+            return sorted(files) if sort_key is None else sorted(files, key=sort_key)
+
+        def _apply(result: object) -> None:
+            files = cast("list[Path]", result)
+            if not files:
+                self.show_screen_issue(ScreenIssue(summary=empty_summary))
+                on_files([])
+                return
+            on_files(files)
+
+        def _on_error(msg: str) -> None:
+            self.show_screen_issue(ScreenIssue(summary=failed_summary, details=msg))
+            on_files([])
+
+        run_off_thread(self, _scan, _apply, _on_error)
+
+    def _output_dir_writable(self, check_dir: Path, summary: str) -> bool:
+        """Refuse a run whose output folder cannot be written; return whether it can.
+
+        The refusal is its own banner, not a logged ERROR: nothing was processed,
+        so the generic ``run_problem`` banner :meth:`_on_log_problem` raises would
+        describe a run that never started.
+
+        Args:
+            check_dir: The folder the run would write into.
+            summary: The refusal sentence, from the caller's ``self.tr``.
+        """
+        if os.access(check_dir, os.W_OK):
+            return True
+        self.show_screen_issue(ScreenIssue(summary=summary, details=str(check_dir)))
+        return False
 
     # ------------------------------------------------------------------
     # Worker signal slots
@@ -413,4 +649,12 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
 
     def _item_total(self) -> int:
         """Return the total item count for this run (files or pairs)."""
+        raise NotImplementedError
+
+    def _on_file_started(self, idx: int) -> None:
+        """Say which item the run has reached (0-based ``idx``)."""
+        raise NotImplementedError
+
+    def _apply_mode(self, single: bool) -> None:
+        """Show the single-file inputs (``single``) or the folder inputs."""
         raise NotImplementedError

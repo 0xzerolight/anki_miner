@@ -7,8 +7,9 @@ downloader tool: nothing here feeds the mining pipeline.
 
 Structure and idioms are cloned from
 :mod:`anki_miner.gui.widgets.condense_tab` (options persistence via
-``config_changed``, off-thread availability probe, output-location row, worker
-lifecycle) — this tab is a sibling.
+:class:`~anki_miner.gui.utils.run_options.RunOptionsMixin`, off-thread
+availability probe, output-location row, worker lifecycle) — this tab is a
+sibling.
 
 Guard contract:
 - yt-dlp not found → Download disabled, notice visible.
@@ -25,8 +26,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import os
-from collections.abc import Iterator
-from dataclasses import replace
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -54,6 +54,7 @@ from anki_miner.gui.utils.language_names import (
     parse_lang_list,
 )
 from anki_miner.gui.utils.run_off_thread import still_running
+from anki_miner.gui.utils.run_options import RunOptionsMixin
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout
 from anki_miner.gui.widgets.base.ytdlp_availability import YtdlpAvailabilityMixin, YtdlpStrings
@@ -81,7 +82,7 @@ from anki_miner.utils.i18n import tr_format
 logger = logging.getLogger(__name__)
 
 
-class DownloadTab(YtdlpAvailabilityMixin, _ToolTabBase):
+class DownloadTab(RunOptionsMixin, YtdlpAvailabilityMixin, _ToolTabBase):
     """Tab for downloading media from URLs via yt-dlp.
 
     Shared worker-signal slots, output-location slots, progress chrome, and the
@@ -92,10 +93,10 @@ class DownloadTab(YtdlpAvailabilityMixin, _ToolTabBase):
         parent: Optional parent widget.
 
     Signals:
-        config_changed: Emitted with a new ``AnkiMinerConfig`` when the user
+        run_options_changed: Emitted with a new ``AnkiMinerConfig`` when the user
             edits a run option (preset / custom format / subs / embeds), so the
-            host can persist ``downloader_*`` to ``gui_config.json`` and
-            survive restart. Mirrors ``CondenseTab.config_changed``.
+            host persists ``downloader_*`` to ``gui_config.json`` and they
+            survive restart. Same mechanism as ``CondenseTab``.
     """
 
     #: A label beside its control; a wider window buys gutters, not longer inputs.
@@ -109,7 +110,9 @@ class DownloadTab(YtdlpAvailabilityMixin, _ToolTabBase):
     #: Where this tool last wrote — remembered separately from its inputs (D7).
     OUTPUT_HISTORY_KEY = "tools.download.output"
 
-    config_changed = pyqtSignal(object)  # Emits AnkiMinerConfig
+    _PROBE_NAME = "yt-dlp"
+
+    run_options_changed = pyqtSignal(object)  # Emits AnkiMinerConfig
 
     #: The banner's "Download yt-dlp" repair. gui/app.py routes it to
     #: BackgroundTaskController.start_ytdlp_update(force=True) — this screen owns
@@ -126,9 +129,6 @@ class DownloadTab(YtdlpAvailabilityMixin, _ToolTabBase):
         super().__init__(parent)
         self.config = config
         self._suppress_optional_startup = suppress_optional_startup
-        # Suppresses the persist slot while _apply_config_defaults seeds the
-        # option widgets (see CondenseTab for the rationale).
-        self._seeding: bool = False
         self.worker_thread = None
         self._custom_output_dir: Path | None = None
         self._total_urls: int = 0
@@ -214,23 +214,17 @@ class DownloadTab(YtdlpAvailabilityMixin, _ToolTabBase):
         """Add *code* to the audio combo if it is missing, without persisting.
 
         Shared by the config seed (a detected-only code saved last session is
-        not in the curated list) and the track probe. The seeding flag is
-        restored rather than cleared: the config seed calls this from inside
-        its own seeding block.
+        not in the curated list) and the track probe. Seeding nests: the config
+        seed calls this from inside its own seeding block.
         """
         if not code or self.audio_lang_combo.findData(code) >= 0:
             return
-        was_seeding = self._seeding
-        self._seeding = True
-        try:
+        with self.seeding():
             self.audio_lang_combo.addItem(f"{language_display_name(code)}  ({code}){suffix}", code)
-        finally:
-            self._seeding = was_seeding
 
     def _apply_config_defaults(self) -> None:
         """Seed the option widgets from the current config's persisted defaults."""
-        self._seeding = True
-        try:
+        with self.seeding():
             idx = self.preset_combo.findData(self.config.downloader_format_preset)
             self.preset_combo.setCurrentIndex(idx if idx >= 0 else 0)
             self.custom_format_edit.setText(self.config.downloader_custom_format)
@@ -245,8 +239,6 @@ class DownloadTab(YtdlpAvailabilityMixin, _ToolTabBase):
             # the non-subtitles-only branch, and overrides the checkbox itself
             # for the subtitles-only one.
             self._apply_preset_controls(str(self.preset_combo.currentData()))
-        finally:
-            self._seeding = False
 
     def _options_differ_from_widgets(self) -> bool:
         """Whether the config's downloader_* values differ from the live
@@ -292,14 +284,11 @@ class DownloadTab(YtdlpAvailabilityMixin, _ToolTabBase):
         current value instead, and it comes back untouched when another
         preset is chosen.
         """
-        if self._seeding:
-            return
         is_subs_only = self.preset_combo.currentData() == SUBTITLES_ONLY_PRESET
         write_subtitles = (
             self.config.downloader_write_subtitles if is_subs_only else self.write_subs_checkbox.isChecked()
         )
-        new_config = replace(
-            self.config,
+        self.persist_run_options(
             downloader_format_preset=str(self.preset_combo.currentData()),
             downloader_custom_format=self.custom_format_edit.text().strip(),
             downloader_write_subtitles=write_subtitles,
@@ -308,10 +297,6 @@ class DownloadTab(YtdlpAvailabilityMixin, _ToolTabBase):
             downloader_embed_thumbnail=self.embed_thumbnail_checkbox.isChecked(),
             downloader_embed_metadata=self.embed_metadata_checkbox.isChecked(),
         )
-        if new_config == self.config:
-            return
-        self.config = new_config
-        self.config_changed.emit(new_config)
 
     # ------------------------------------------------------------------
     # UI construction
@@ -481,12 +466,8 @@ class DownloadTab(YtdlpAvailabilityMixin, _ToolTabBase):
         Runs before ``_on_option_changed`` (connected second on the same
         signal), so persistence always sees the freshly-applied widget state.
         """
-        was_seeding = self._seeding
-        self._seeding = True
-        try:
+        with self.seeding():
             self._apply_preset_controls(str(self.preset_combo.currentData()))
-        finally:
-            self._seeding = was_seeding
 
     def _apply_preset_controls(self, preset_key: str) -> None:
         """Enable/disable the controls 'Subtitles only' makes moot.
@@ -520,24 +501,12 @@ class DownloadTab(YtdlpAvailabilityMixin, _ToolTabBase):
 
         layout.addWidget(SectionHeader(self.tr("Output")))
 
-        out_row = QHBoxLayout()
-        out_row.setSpacing(SPACING.xs)
-        out_row.addWidget(QLabel(self.tr("Output:")))
-
-        self.output_location_label = QLabel(self._strings.output_default)
-        self.output_location_label.setObjectName("output-location-value")
-        out_row.addWidget(self.output_location_label, 1)
-
-        self.choose_output_button = ModernButton(self.tr("Choose Folder…"), variant="secondary")
-        self.choose_output_button.clicked.connect(self._on_choose_output)
-        out_row.addWidget(self.choose_output_button)
-
-        self.clear_output_button = ModernButton(self.tr("Reset"), variant="secondary")
-        self.clear_output_button.clicked.connect(self._on_clear_output)
-        self.clear_output_button.hide()
-        out_row.addWidget(self.clear_output_button)
-
-        layout.addLayout(out_row)
+        self._build_output_row(
+            layout,
+            output_label=self.tr("Output:"),
+            choose_label=self.tr("Choose Folder…"),
+            reset_label=self.tr("Reset"),
+        )
 
         group.setLayout(layout)
         return group
@@ -556,18 +525,10 @@ class DownloadTab(YtdlpAvailabilityMixin, _ToolTabBase):
     # Engine / availability state
     # ------------------------------------------------------------------
 
-    def _refresh_engine_state(self) -> None:
-        """Probe yt-dlp availability off-thread, then update the Download guard."""
+    def _probe_engine(self) -> Callable[[], object]:
+        """Probe yt-dlp availability (the Download guard) for the current config."""
         config = self.config
-        self.download_button.setEnabled(False)
-        if self._suppress_optional_startup:
-            return
-
-        def _on_error(message: str) -> None:
-            logger.warning("yt-dlp availability probe failed: %s", message)
-            self._apply_probe_result(False)
-
-        self._run_availability_scan(lambda: self._compute_ytdlp_available(config), self._apply_probe_result, _on_error)
+        return lambda: self._compute_ytdlp_available(config)
 
     def _apply_probe_result(self, result: object) -> None:
         """Apply an availability-probe outcome, never enabling Download mid-run.
@@ -634,21 +595,7 @@ class DownloadTab(YtdlpAvailabilityMixin, _ToolTabBase):
             dest_dir=dest,
             options=self._build_options(),
         )
-        self.worker_thread = worker
-
-        worker.file_started.connect(self._on_file_started)
-        worker.file_progress.connect(self._on_file_progress)
-        worker.file_finished.connect(self._on_file_finished)
-        worker.file_skipped.connect(self._on_file_skipped)
-        worker.queue_finished.connect(self._on_queue_finished)
-        worker.error.connect(self._on_run_error)
-        # Lifecycle: free the QThread on real thread exit (see CondenseTab).
-        worker.finished.connect(self._on_worker_finished)
-
-        self.download_button.setEnabled(False)
-        self.cancel_button.show()
-
-        worker.start()
+        self._start_queue_worker(worker)
 
     def _collect_urls(self) -> list[str]:
         """Return the validated URL list, or [] after raising a screen issue."""

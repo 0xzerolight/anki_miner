@@ -20,36 +20,26 @@ Guard contract:
 
 from __future__ import annotations
 
-import logging
-import os
 from collections.abc import Callable
 from pathlib import Path
-from typing import cast
 
-from PyQt6.QtWidgets import QCheckBox, QFrame, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QCheckBox, QFrame, QLabel, QScrollArea, QVBoxLayout, QWidget
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
+from anki_miner.gui.constants import AUDIO_EXTENSIONS
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.qt_helpers import reveal_settings
-from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout, field_label_width
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
-from anki_miner.gui.widgets.subtitle_creation_tab import _AUDIO_EXTENSIONS
 from anki_miner.gui.workers.booksync_worker import BookSyncWorker
 from anki_miner.services.asr import _engine
 from anki_miner.services.asr.model_availability import usable_model_installed
 from anki_miner.services.reading._util import natural_sort_key
-from anki_miner.utils.file_utils import is_junk_path
 from anki_miner.utils.i18n import tr_format
 
-logger = logging.getLogger(__name__)
-
-# _AUDIO_EXTENSIONS is imported from subtitle_creation_tab (import block above):
-# the same audio set Generate accepts, not a third copy (audiobook_tab carries
-# the other duplicate; folding all three is out of this change's scope).
-_AUDIO_FILE_FILTER = "Audio Files (" + " ".join(f"*{e}" for e in sorted(_AUDIO_EXTENSIONS)) + ");;All Files (*)"
+_AUDIO_FILE_FILTER = "Audio Files (" + " ".join(f"*{e}" for e in sorted(AUDIO_EXTENSIONS)) + ");;All Files (*)"
 _BOOK_EXTENSIONS: frozenset[str] = frozenset({".epub", ".txt"})
 _BOOK_FILE_FILTER = "Books (*.epub *.txt);;All Files (*)"
 
@@ -72,6 +62,8 @@ class BookSyncTab(_ToolTabBase):
 
     #: Where this tool last wrote — remembered separately from its inputs (D7).
     OUTPUT_HISTORY_KEY = "tools.booksync.output"
+
+    _PROBE_NAME = "ASR"
 
     def __init__(
         self,
@@ -183,29 +175,14 @@ class BookSyncTab(_ToolTabBase):
         desc.setWordWrap(True)
         layout.addWidget(desc)
 
-        # Mode toggle
-        mode_row = QHBoxLayout()
-        mode_row.setSpacing(SPACING.xs)
-        mode_row.addWidget(QLabel(self.tr("Mode:")))
-
-        self.file_mode_button = ModernButton(self.tr("Single File"), variant="secondary")
-        self.file_mode_button.setCheckable(True)
-        self.file_mode_button.setChecked(True)
-        self.file_mode_button.setToolTip(self.tr("Sync one audio file to the book."))
-        self.file_mode_button.clicked.connect(self._on_file_mode)
-        mode_row.addWidget(self.file_mode_button)
-
-        self.folder_mode_button = ModernButton(self.tr("Folder"), variant="secondary")
-        self.folder_mode_button.setCheckable(True)
-        self.folder_mode_button.setChecked(False)
-        self.folder_mode_button.setToolTip(
-            self.tr("Every audio file in the folder, in file-name order, one .srt each.")
+        self._build_mode_row(
+            layout,
+            mode_label=self.tr("Mode:"),
+            single_label=self.tr("Single File"),
+            folder_label=self.tr("Folder"),
+            single_tip=self.tr("Sync one audio file to the book."),
+            folder_tip=self.tr("Every audio file in the folder, in file-name order, one .srt each."),
         )
-        self.folder_mode_button.clicked.connect(self._on_folder_mode)
-        mode_row.addWidget(self.folder_mode_button)
-
-        mode_row.addStretch()
-        layout.addLayout(mode_row)
 
         # The book selector's label is the longest of the three; align all on it.
         width = field_label_width(self.tr("EPUB or Text File:"))
@@ -217,7 +194,7 @@ class BookSyncTab(_ToolTabBase):
             file_filter=_AUDIO_FILE_FILTER,
             label_width=width,
             history_key="tools.booksync.inputs",
-            drop_validator=accepts_suffixes(_AUDIO_EXTENSIONS, self.tr("This field takes an audio file.")),
+            drop_validator=accepts_suffixes(AUDIO_EXTENSIONS, self.tr("This field takes an audio file.")),
         )
         layout.addWidget(self.file_selector)
 
@@ -256,7 +233,6 @@ class BookSyncTab(_ToolTabBase):
         return group
 
     def _create_output_section(self) -> QFrame:
-        # Verbatim shape of SubtitleCreationTab._create_output_section, with this tab's strings.
         group = QFrame()
         group.setObjectName("card")
         layout = QVBoxLayout()
@@ -269,24 +245,12 @@ class BookSyncTab(_ToolTabBase):
         out_desc.setWordWrap(True)
         layout.addWidget(out_desc)
 
-        out_row = QHBoxLayout()
-        out_row.setSpacing(SPACING.xs)
-        out_row.addWidget(QLabel(self.tr("Output:")))
-
-        self.output_location_label = QLabel(self._strings.output_default)
-        self.output_location_label.setObjectName("output-location-value")
-        out_row.addWidget(self.output_location_label, 1)
-
-        self.choose_output_button = ModernButton(self.tr("Choose Folder…"), variant="secondary")
-        self.choose_output_button.clicked.connect(self._on_choose_output)
-        out_row.addWidget(self.choose_output_button)
-
-        self.clear_output_button = ModernButton(self.tr("Reset"), variant="secondary")
-        self.clear_output_button.clicked.connect(self._on_clear_output)
-        self.clear_output_button.hide()
-        out_row.addWidget(self.clear_output_button)
-
-        layout.addLayout(out_row)
+        self._build_output_row(
+            layout,
+            output_label=self.tr("Output:"),
+            choose_label=self.tr("Choose Folder…"),
+            reset_label=self.tr("Reset"),
+        )
 
         # Deliberately NOT persisted. Off-by-default each launch is the safety
         # property: a remembered destructive default carries no reminder. Pinned
@@ -315,38 +279,17 @@ class BookSyncTab(_ToolTabBase):
     # Engine / model state
     # ------------------------------------------------------------------
 
-    def _refresh_engine_state(self) -> None:
-        """Probe engine availability off-thread, then update the Sync guard."""
-        self.sync_button.setEnabled(False)
-        if self._suppress_optional_startup:
-            return
-
-        def _apply(result: object) -> None:
-            self._engine_is_available = bool(result)
-            self.engine_notice_label.setVisible(not self._engine_is_available)
-            self.sync_button.setEnabled(self._engine_is_available)
-
-        def _on_error(message: str) -> None:
-            logger.warning("ASR availability probe failed: %s", message)
-            _apply(False)
-
-        self._run_availability_scan(_engine.available, _apply, _on_error)
+    def _probe_engine(self) -> Callable[[], object]:
+        """Probe ASR engine availability (the Sync guard)."""
+        return _engine.available
 
     # ------------------------------------------------------------------
-    # Mode toggle slots
+    # Mode toggle
     # ------------------------------------------------------------------
 
-    def _on_file_mode(self) -> None:
-        self.file_mode_button.setChecked(True)
-        self.folder_mode_button.setChecked(False)
-        self.file_selector.show()
-        self.folder_selector.hide()
-
-    def _on_folder_mode(self) -> None:
-        self.folder_mode_button.setChecked(True)
-        self.file_mode_button.setChecked(False)
-        self.file_selector.hide()
-        self.folder_selector.show()
+    def _apply_mode(self, single: bool) -> None:
+        self.file_selector.setVisible(single)
+        self.folder_selector.setVisible(not single)
 
     # ------------------------------------------------------------------
     # Sync
@@ -438,31 +381,16 @@ class BookSyncTab(_ToolTabBase):
             on_files([])
             return
 
-        def _scan() -> object:
-            # Natural order (1, 2, 10), junk and AppleDouble sidecars dropped:
-            # the files are one book read in sequence, so order is meaning.
-            return sorted(
-                (
-                    f
-                    for f in folder.iterdir()
-                    if f.is_file() and f.suffix.lower() in _AUDIO_EXTENSIONS and not is_junk_path(f.name)
-                ),
-                key=lambda f: natural_sort_key(f.name),
-            )
-
-        def _apply(result: object) -> None:
-            files = cast("list[Path]", result)
-            if not files:
-                self.show_screen_issue(ScreenIssue(summary=self.tr("No audio files were found in that folder.")))
-                on_files([])
-                return
-            on_files(files)
-
-        def _on_error(msg: str) -> None:
-            self.show_screen_issue(ScreenIssue(summary=self.tr("That folder could not be scanned."), details=msg))
-            on_files([])
-
-        run_off_thread(self, _scan, _apply, _on_error)
+        # Natural order (1, 2, 10): the files are one book read in sequence, so
+        # order is meaning.
+        self._scan_folder_async(
+            folder,
+            lambda f: f.suffix.lower() in AUDIO_EXTENSIONS,
+            on_files,
+            sort_key=lambda f: natural_sort_key(f.name),
+            empty_summary=self.tr("No audio files were found in that folder."),
+            failed_summary=self.tr("That folder could not be scanned."),
+        )
 
     def _continue_sync(self, audio_files: list[Path], book: Path) -> None:
         """Check writability + the model, then start the worker."""
@@ -471,10 +399,7 @@ class BookSyncTab(_ToolTabBase):
         # Pre-run writable check. When out_dir is None every output lands
         # next to its audio, so check the first audio file's parent.
         check_dir = out_dir if out_dir is not None else audio_files[0].parent
-        if not os.access(check_dir, os.W_OK):
-            self.show_screen_issue(
-                ScreenIssue(summary=self.tr("Output folder is not writable."), details=str(check_dir))
-            )
+        if not self._output_dir_writable(check_dir, self.tr("Output folder is not writable.")):
             self.sync_button.setEnabled(True)
             return
 
@@ -507,22 +432,7 @@ class BookSyncTab(_ToolTabBase):
             output_dir=out_dir,
             overwrite=self.overwrite_checkbox.isChecked(),
         )
-        self.worker_thread = worker
-
-        worker.file_started.connect(self._on_file_started)
-        worker.file_progress.connect(self._on_file_progress)
-        worker.file_finished.connect(self._on_file_finished)
-        worker.file_skipped.connect(self._on_file_skipped)
-        worker.queue_finished.connect(self._on_queue_finished)
-        worker.error.connect(self._on_run_error)
-        # Lifecycle: free the QThread on real thread exit (not on queue_finished,
-        # which fires just before the thread ends).
-        worker.finished.connect(self._on_worker_finished)
-
-        self.sync_button.setEnabled(False)
-        self.cancel_button.show()
-
-        worker.start()
+        self._start_queue_worker(worker)
 
     # ------------------------------------------------------------------
     # Worker signal slots

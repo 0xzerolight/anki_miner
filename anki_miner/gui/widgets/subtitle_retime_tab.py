@@ -26,7 +26,6 @@ Worker contract:
 from __future__ import annotations
 
 import logging
-import os
 import shutil
 from collections.abc import Callable
 from pathlib import Path
@@ -213,28 +212,14 @@ class SubtitleRetimeTab(_ToolTabBase):
         input_desc.setWordWrap(True)
         layout.addWidget(input_desc)
 
-        # Mode toggle
-        mode_row = QHBoxLayout()
-        mode_row.setSpacing(SPACING.xs)
-        mode_label = QLabel(self.tr("Mode:"))
-        mode_row.addWidget(mode_label)
-
-        self.file_mode_button = ModernButton(self.tr("Single File"), variant="secondary")
-        self.file_mode_button.setCheckable(True)
-        self.file_mode_button.setChecked(True)
-        self.file_mode_button.setToolTip(self.tr("Retime one subtitle file against one video."))
-        self.file_mode_button.clicked.connect(self._on_file_mode)
-        mode_row.addWidget(self.file_mode_button)
-
-        self.folder_mode_button = ModernButton(self.tr("Folder"), variant="secondary")
-        self.folder_mode_button.setCheckable(True)
-        self.folder_mode_button.setChecked(False)
-        self.folder_mode_button.setToolTip(self.tr("Retime a folder of subtitles, paired to videos by episode number."))
-        self.folder_mode_button.clicked.connect(self._on_folder_mode)
-        mode_row.addWidget(self.folder_mode_button)
-
-        mode_row.addStretch()
-        layout.addLayout(mode_row)
+        self._build_mode_row(
+            layout,
+            mode_label=self.tr("Mode:"),
+            single_label=self.tr("Single File"),
+            folder_label=self.tr("Folder"),
+            single_tip=self.tr("Retime one subtitle file against one video."),
+            folder_tip=self.tr("Retime a folder of subtitles, paired to videos by episode number."),
+        )
 
         # Single-mode selectors
         self.video_file_selector = FileSelector(
@@ -393,26 +378,12 @@ class SubtitleRetimeTab(_ToolTabBase):
 
         layout.addWidget(SectionHeader(self.tr("Output")))
 
-        # Output location row
-        out_row = QHBoxLayout()
-        out_row.setSpacing(SPACING.xs)
-        out_label = QLabel(self.tr("Output:"))
-        out_row.addWidget(out_label)
-
-        self.output_location_label = QLabel(self._strings.output_default)
-        self.output_location_label.setObjectName("output-location-value")
-        out_row.addWidget(self.output_location_label, 1)
-
-        self.choose_output_button = ModernButton(self.tr("Choose Folder…"), variant="secondary")
-        self.choose_output_button.clicked.connect(self._on_choose_output)
-        out_row.addWidget(self.choose_output_button)
-
-        self.clear_output_button = ModernButton(self.tr("Reset"), variant="secondary")
-        self.clear_output_button.clicked.connect(self._on_clear_output)
-        self.clear_output_button.hide()
-        out_row.addWidget(self.clear_output_button)
-
-        layout.addLayout(out_row)
+        self._build_output_row(
+            layout,
+            output_label=self.tr("Output:"),
+            choose_label=self.tr("Choose Folder…"),
+            reset_label=self.tr("Reset"),
+        )
 
         # Overwrite checkbox
         # Deliberately NOT persisted. Off-by-default each launch is the safety
@@ -494,19 +465,21 @@ class SubtitleRetimeTab(_ToolTabBase):
         return Path(resolved).exists()
 
     # ------------------------------------------------------------------
-    # Mode toggle slots
+    # Mode toggle
     # ------------------------------------------------------------------
 
-    def _on_file_mode(self) -> None:
-        self.file_mode_button.setChecked(True)
-        self.folder_mode_button.setChecked(False)
-        self.video_file_selector.show()
-        self.subtitle_file_selector.show()
-        self.track_row_widget.show()
-        self.video_folder_selector.hide()
-        self.subtitle_folder_selector.hide()
-        self.pair_preview.hide()
-        self.pair_preview_label.hide()
+    def _apply_mode(self, single: bool) -> None:
+        self.video_file_selector.setVisible(single)
+        self.subtitle_file_selector.setVisible(single)
+        # Folder mode resolves the reference per video; no per-file pick.
+        self.track_row_widget.setVisible(single)
+        self.video_folder_selector.setVisible(not single)
+        self.subtitle_folder_selector.setVisible(not single)
+        if single:
+            self.pair_preview.hide()
+            self.pair_preview_label.hide()
+        else:
+            self._refresh_pair_preview()
 
     def set_single_inputs(self, video_path: Path, subtitle_path: Path) -> None:
         """Prefill single-file mode with an exact pair (D35 hand-off).
@@ -525,17 +498,6 @@ class SubtitleRetimeTab(_ToolTabBase):
         # per-run reference pick is dropped with the video it belonged to.
         self.video_file_selector.set_path(str(video_path))
         self.subtitle_file_selector.set_path(str(subtitle_path))
-
-    def _on_folder_mode(self) -> None:
-        self.folder_mode_button.setChecked(True)
-        self.file_mode_button.setChecked(False)
-        self.video_file_selector.hide()
-        self.subtitle_file_selector.hide()
-        # Folder mode resolves the reference per video; no per-file pick.
-        self.track_row_widget.hide()
-        self.video_folder_selector.show()
-        self.subtitle_folder_selector.show()
-        self._refresh_pair_preview()
 
     # ------------------------------------------------------------------
     # Reference selection (single-file mode)
@@ -710,13 +672,7 @@ class SubtitleRetimeTab(_ToolTabBase):
         # Pre-run writable check. When out_dir is None every output lands
         # next to its source video, so check the first video's parent.
         check_dir = out_dir if out_dir is not None else pairs[0][0].parent
-        if not os.access(check_dir, os.W_OK):
-            # Its own banner, not a logged ERROR: nothing was retimed, so the
-            # generic run_problem banner _on_log_problem raises would say "Some
-            # files could not be retimed." about a run that never started.
-            self.show_screen_issue(
-                ScreenIssue(summary=self.tr("Output folder is not writable."), details=str(check_dir))
-            )
+        if not self._output_dir_writable(check_dir, self.tr("Output folder is not writable.")):
             self.retime_button.setEnabled(True)
             return
 
@@ -735,25 +691,8 @@ class SubtitleRetimeTab(_ToolTabBase):
             overwrite=self.overwrite_checkbox.isChecked(),
             reference_override=reference_override,
         )
-        self.worker_thread = worker
-
-        # Wire signals
-        worker.file_started.connect(self._on_file_started)
-        worker.file_progress.connect(self._on_file_progress)
-        worker.file_finished.connect(self._on_file_finished)
         worker.file_note.connect(self._on_file_note)
-        worker.file_skipped.connect(self._on_file_skipped)
-        worker.queue_finished.connect(self._on_queue_finished)
-        worker.error.connect(self._on_run_error)
-        # Lifecycle: free the QThread on real thread exit (not on queue_finished,
-        # which fires just before the thread ends). Clears the handle so the
-        # reentrancy guard and iter_close_workers see no stale worker.
-        worker.finished.connect(self._on_worker_finished)
-
-        self.retime_button.setEnabled(False)
-        self.cancel_button.show()
-
-        worker.start()
+        self._start_queue_worker(worker)
 
     def _collect_single_pair(self) -> list[tuple[Path, Path]]:
         """Single-file mode: return [(video, subtitle)], or [] on failure."""

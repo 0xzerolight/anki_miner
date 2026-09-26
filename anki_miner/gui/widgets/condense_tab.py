@@ -26,7 +26,6 @@ Worker contract:
 from __future__ import annotations
 
 import logging
-import os
 import shutil
 from collections.abc import Callable, Collection
 from dataclasses import replace
@@ -53,6 +52,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.run_off_thread import run_off_thread
+from anki_miner.gui.utils.run_options import RunOptionsMixin
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout
 from anki_miner.gui.widgets.dialogs import AudioTracksDialog, CondenseMetadataDialog, SubtitleTracksDialog
@@ -107,7 +107,7 @@ _OFFSET_MAX = 600_000
 _OFFSET_STEP = 100
 
 
-class CondenseTab(_ToolTabBase):
+class CondenseTab(RunOptionsMixin, _ToolTabBase):
     """Tab for condensing media files to dialogue-only audio.
 
     Shared worker-signal slots, output-location slots, progress chrome, and the
@@ -118,10 +118,11 @@ class CondenseTab(_ToolTabBase):
         parent: Optional parent widget.
 
     Signals:
-        config_changed: Emitted with a new ``AnkiMinerConfig`` when the user
-            edits a run option (padding / offset / format / write-subs), so the
-            host can persist ``condenser_*`` to ``gui_config.json`` and survive
-            restart. Mirrors ``SettingsTab.config_changed`` → ``update_config``.
+        run_options_changed: Emitted with a new ``AnkiMinerConfig`` when the user
+            edits a run option (padding / offset / format / write-subs / tagging /
+            merge), so the host persists ``condenser_*`` to ``gui_config.json``
+            and they survive restart. The seed guard and the no-op check are
+            :class:`~anki_miner.gui.utils.run_options.RunOptionsMixin`'s.
     """
 
     #: A label beside its control; a wider window buys gutters, not longer inputs.
@@ -135,7 +136,9 @@ class CondenseTab(_ToolTabBase):
     #: Where this tool last wrote — remembered separately from its inputs (D7).
     OUTPUT_HISTORY_KEY = "tools.condense.output"
 
-    config_changed = pyqtSignal(object)  # Emits AnkiMinerConfig
+    _PROBE_NAME = "ffmpeg"
+
+    run_options_changed = pyqtSignal(object)  # Emits AnkiMinerConfig
 
     def __init__(
         self,
@@ -147,10 +150,6 @@ class CondenseTab(_ToolTabBase):
         super().__init__(parent)
         self.config = config
         self._suppress_optional_startup = suppress_optional_startup
-        # Suppresses the persist slot while _apply_config_defaults programmatically
-        # seeds the option widgets (setValue/setChecked would otherwise feed back
-        # through config_changed and re-persist during a refresh).
-        self._seeding: bool = False
         self.worker_thread = None
         self._custom_output_dir: Path | None = None
         self._total_files: int = 0
@@ -162,7 +161,7 @@ class CondenseTab(_ToolTabBase):
         # ffmpeg availability is cached per-config: probing it (resolve_ffmpeg /
         # resolve_ffprobe + shutil.which / Path.exists) is a PATH scan we must
         # not repeat on every read. Recomputed only here and in update_config().
-        self._ffmpeg_is_available: bool = False
+        self._engine_is_available: bool = False
         # Built here (not in the base) so each literal stays in this tab's
         # tr-context — see _ToolTabBase for the rationale.
         self._strings = _ToolTabStrings(
@@ -218,11 +217,10 @@ class CondenseTab(_ToolTabBase):
     def _apply_config_defaults(self) -> None:
         """Seed the option widgets from the current config's persisted defaults.
 
-        Guarded by ``_seeding`` so the programmatic setValue/setChecked calls
-        don't feed back through ``_on_option_changed`` and re-emit config_changed.
+        Inside :meth:`seeding` so the programmatic setValue/setChecked calls
+        don't feed back through ``_on_option_changed`` and persist.
         """
-        self._seeding = True
-        try:
+        with self.seeding():
             self.padding_spinbox.setValue(self.config.condenser_padding_ms)
             self.offset_spinbox.setValue(self.config.condenser_offset_ms)
             idx = self.format_combo.findData(self.config.condenser_output_format)
@@ -231,8 +229,6 @@ class CondenseTab(_ToolTabBase):
             self.write_subs_checkbox.setChecked(self.config.condenser_write_subtitles)
             self.tag_outputs_checkbox.setChecked(self.config.condenser_tag_outputs)
             self.merge_checkbox.setChecked(self.config.condenser_merge_output)
-        finally:
-            self._seeding = False
 
     def _options_differ_from_widgets(self) -> bool:
         """Whether the config's condenser_* values differ from the live widgets."""
@@ -248,14 +244,10 @@ class CondenseTab(_ToolTabBase):
     def _on_option_changed(self, *_: object) -> None:
         """Persist an edited run option to config so it survives restart.
 
-        Folds all six widgets into a fresh config and emits ``config_changed``
-        for the host to save. No-ops during programmatic seeding and when
-        nothing actually changed (guards against a save/refresh feedback loop).
+        Folds all six widgets into the config. :meth:`persist_run_options`
+        no-ops while seeding and when nothing moved (the save/refresh loop guard).
         """
-        if self._seeding:
-            return
-        new_config = replace(
-            self.config,
+        self.persist_run_options(
             condenser_padding_ms=self.padding_spinbox.value(),
             condenser_offset_ms=self.offset_spinbox.value(),
             condenser_output_format=self.format_combo.currentData(),
@@ -263,10 +255,6 @@ class CondenseTab(_ToolTabBase):
             condenser_tag_outputs=self.tag_outputs_checkbox.isChecked(),
             condenser_merge_output=self.merge_checkbox.isChecked(),
         )
-        if new_config == self.config:
-            return
-        self.config = new_config
-        self.config_changed.emit(new_config)
 
     # ------------------------------------------------------------------
     # UI construction
@@ -317,27 +305,14 @@ class CondenseTab(_ToolTabBase):
         input_desc.setWordWrap(True)
         layout.addWidget(input_desc)
 
-        # Mode toggle
-        mode_row = QHBoxLayout()
-        mode_row.setSpacing(SPACING.xs)
-        mode_row.addWidget(QLabel(self.tr("Mode:")))
-
-        self.file_mode_button = ModernButton(self.tr("Single File"), variant="secondary")
-        self.file_mode_button.setCheckable(True)
-        self.file_mode_button.setChecked(True)
-        self.file_mode_button.setToolTip(self.tr("Condense one selected media file."))
-        self.file_mode_button.clicked.connect(self._on_file_mode)
-        mode_row.addWidget(self.file_mode_button)
-
-        self.folder_mode_button = ModernButton(self.tr("Folder"), variant="secondary")
-        self.folder_mode_button.setCheckable(True)
-        self.folder_mode_button.setChecked(False)
-        self.folder_mode_button.setToolTip(self.tr("Condense every media file in a selected folder."))
-        self.folder_mode_button.clicked.connect(self._on_folder_mode)
-        mode_row.addWidget(self.folder_mode_button)
-
-        mode_row.addStretch()
-        layout.addLayout(mode_row)
+        self._build_mode_row(
+            layout,
+            mode_label=self.tr("Mode:"),
+            single_label=self.tr("Single File"),
+            folder_label=self.tr("Folder"),
+            single_tip=self.tr("Condense one selected media file."),
+            folder_tip=self.tr("Condense every media file in a selected folder."),
+        )
 
         # Single-mode selectors
         self.media_file_selector = FileSelector(
@@ -492,8 +467,8 @@ class CondenseTab(_ToolTabBase):
         )
         layout.addWidget(self.tag_outputs_checkbox)
 
-        # Persist any run-option edit to config (survives restart). Guarded by
-        # _seeding so _apply_config_defaults' programmatic writes don't re-emit.
+        # Persist any run-option edit to config (survives restart). The seed
+        # guard keeps _apply_config_defaults' programmatic writes from persisting.
         self.padding_spinbox.valueChanged.connect(self._on_option_changed)
         self.offset_spinbox.valueChanged.connect(self._on_option_changed)
         self.format_combo.currentIndexChanged.connect(self._on_option_changed)
@@ -511,24 +486,12 @@ class CondenseTab(_ToolTabBase):
 
         layout.addWidget(SectionHeader(self.tr("Output")))
 
-        out_row = QHBoxLayout()
-        out_row.setSpacing(SPACING.xs)
-        out_row.addWidget(QLabel(self.tr("Output:")))
-
-        self.output_location_label = QLabel(self._strings.output_default)
-        self.output_location_label.setObjectName("output-location-value")
-        out_row.addWidget(self.output_location_label, 1)
-
-        self.choose_output_button = ModernButton(self.tr("Choose Folder…"), variant="secondary")
-        self.choose_output_button.clicked.connect(self._on_choose_output)
-        out_row.addWidget(self.choose_output_button)
-
-        self.clear_output_button = ModernButton(self.tr("Reset"), variant="secondary")
-        self.clear_output_button.clicked.connect(self._on_clear_output)
-        self.clear_output_button.hide()
-        out_row.addWidget(self.clear_output_button)
-
-        layout.addLayout(out_row)
+        self._build_output_row(
+            layout,
+            output_label=self.tr("Output:"),
+            choose_label=self.tr("Choose Folder…"),
+            reset_label=self.tr("Reset"),
+        )
 
         # Deliberately NOT persisted, unlike the six run options above. Ticking
         # overwrite in March must not still be ticked in June: off-by-default
@@ -587,27 +550,14 @@ class CondenseTab(_ToolTabBase):
     # Engine / availability state
     # ------------------------------------------------------------------
 
-    def _refresh_engine_state(self) -> None:
-        """Probe ffmpeg availability off-thread, then update the Condense guard."""
+    def _probe_engine(self) -> Callable[[], object]:
+        """Probe ffmpeg availability (the Condense guard) for the current config."""
         config = self.config
-        self.condense_button.setEnabled(False)
-        if self._suppress_optional_startup:
-            return
-
-        def _apply(result: object) -> None:
-            self._ffmpeg_is_available = bool(result)
-            self.engine_notice_label.setVisible(not self._ffmpeg_is_available)
-            self.condense_button.setEnabled(self._ffmpeg_is_available)
-
-        def _on_error(message: str) -> None:
-            logger.warning("ffmpeg availability probe failed: %s", message)
-            _apply(False)
-
-        self._run_availability_scan(lambda: self._compute_ffmpeg_available(config), _apply, _on_error)
+        return lambda: self._compute_ffmpeg_available(config)
 
     def _ffmpeg_available(self) -> bool:
         """Return the cached ffmpeg availability (probed once per config)."""
-        return self._ffmpeg_is_available
+        return self._engine_is_available
 
     def _compute_ffmpeg_available(self, config: AnkiMinerConfig) -> bool:
         """Probe whether both ffmpeg and ffprobe are reachable for the config.
@@ -627,33 +577,19 @@ class CondenseTab(_ToolTabBase):
         return Path(resolved).exists()
 
     # ------------------------------------------------------------------
-    # Mode toggle slots
+    # Mode toggle
     # ------------------------------------------------------------------
 
-    def _on_file_mode(self) -> None:
-        self.file_mode_button.setChecked(True)
-        self.folder_mode_button.setChecked(False)
-        self.media_file_selector.show()
-        self.subtitle_file_selector.show()
-        self.audio_track_row_widget.show()
-        self.subtitle_track_row_widget.show()
-        self.media_folder_selector.hide()
-        self.subtitle_folder_selector.hide()
-        self.subtitle_folder_hint.hide()
-        self.merge_row_widget.hide()
-
-    def _on_folder_mode(self) -> None:
-        self.folder_mode_button.setChecked(True)
-        self.file_mode_button.setChecked(False)
-        self.media_file_selector.hide()
-        self.subtitle_file_selector.hide()
+    def _apply_mode(self, single: bool) -> None:
+        self.media_file_selector.setVisible(single)
+        self.subtitle_file_selector.setVisible(single)
         # Folder mode auto-detects the track per file; no per-file pick.
-        self.audio_track_row_widget.hide()
-        self.subtitle_track_row_widget.hide()
-        self.media_folder_selector.show()
-        self.subtitle_folder_selector.show()
-        self.subtitle_folder_hint.show()
-        self.merge_row_widget.show()
+        self.audio_track_row_widget.setVisible(single)
+        self.subtitle_track_row_widget.setVisible(single)
+        self.media_folder_selector.setVisible(not single)
+        self.subtitle_folder_selector.setVisible(not single)
+        self.subtitle_folder_hint.setVisible(not single)
+        self.merge_row_widget.setVisible(not single)
 
     # ------------------------------------------------------------------
     # Track selection (single-file mode)
@@ -927,13 +863,7 @@ class CondenseTab(_ToolTabBase):
         # Pre-run writable check. When out_dir is None every output lands next to
         # its source media, so check the first item's parent.
         check_dir = out_dir if out_dir is not None else items[0].media.parent
-        if not os.access(check_dir, os.W_OK):
-            # Its own banner, not a logged ERROR: nothing was condensed, so the
-            # generic run_problem banner _on_log_problem raises would say "Some
-            # files could not be condensed." about a run that never started.
-            self.show_screen_issue(
-                ScreenIssue(summary=self.tr("Output folder is not writable."), details=str(check_dir))
-            )
+        if not self._output_dir_writable(check_dir, self.tr("Output folder is not writable.")):
             self.condense_button.setEnabled(True)
             return
 
@@ -990,25 +920,8 @@ class CondenseTab(_ToolTabBase):
             merge_into=merge_into,
             merge_metadata=merge_metadata,
         )
-
-        self.worker_thread = worker
-
-        worker.file_started.connect(self._on_file_started)
-        worker.file_progress.connect(self._on_file_progress)
         worker.file_note.connect(self._on_file_note)
-        worker.file_finished.connect(self._on_file_finished)
-        worker.file_skipped.connect(self._on_file_skipped)
-        worker.queue_finished.connect(self._on_queue_finished)
-        worker.error.connect(self._on_run_error)
-        # Lifecycle: free the QThread on real thread exit (not on queue_finished,
-        # which fires just before the thread ends). Clears the handle so the
-        # reentrancy guard and iter_close_workers see no stale worker.
-        worker.finished.connect(self._on_worker_finished)
-
-        self.condense_button.setEnabled(False)
-        self.cancel_button.show()
-
-        worker.start()
+        self._start_queue_worker(worker)
 
     def _collect_single_item(self) -> list[CondenseItem]:
         media_str = self.media_file_selector.path_or_none()
@@ -1074,28 +987,13 @@ class CondenseTab(_ToolTabBase):
             return
 
         # No subtitle folder → per-file auto-detection over the media folder.
-        def _scan() -> object:
-            return sorted(
-                f
-                for f in media_folder.iterdir()
-                if f.is_file() and f.suffix.lower() in CONDENSE_MEDIA_EXTENSIONS and not is_junk_path(f.name)
-            )
-
-        def _apply(result: object) -> None:
-            media_files = cast("list[Path]", result)
-            if not media_files:
-                self.show_screen_issue(ScreenIssue(summary=self.tr("No media files were found in that folder.")))
-                on_items([])
-                return
-            on_items([CondenseItem(m, None) for m in media_files])
-
-        def _on_error(msg: str) -> None:
-            # The path is what the user just picked; what they cannot see is
-            # why the scan failed, so that message is the Details.
-            self.show_screen_issue(ScreenIssue(summary=self.tr("That media folder could not be scanned."), details=msg))
-            on_items([])
-
-        run_off_thread(self, _scan, _apply, _on_error)
+        self._scan_folder_async(
+            media_folder,
+            lambda f: f.suffix.lower() in CONDENSE_MEDIA_EXTENSIONS,
+            lambda media_files: on_items([CondenseItem(m, None) for m in media_files]),
+            empty_summary=self.tr("No media files were found in that folder."),
+            failed_summary=self.tr("That media folder could not be scanned."),
+        )
 
     def _pair_folder_items_async(
         self, media_folder: Path, sub_folder: Path, on_items: Callable[[list[CondenseItem]], None]

@@ -1,13 +1,13 @@
 """Tests for SubtitleCreationTab.
 
 Covers:
-- Construction (qtbot.addWidget contract)
-- Mode toggle (single-file vs folder selector)
 - Engine-unavailable disables Generate + shows notice
 - Output-dir not writable aborts before starting worker
 - Generate with stubbed worker drives ProgressWidget/LogWidget and re-enables Generate
-- iter_close_workers returns the active worker
 - ASR smoke handler (BUNDLED_SMOKE_PASS path)
+
+The shared ``_ToolTabBase`` contract (construction, mode toggle, Output row,
+worker lifecycle, skipped-file log) is tested once in ``test_tool_tab_contract.py``.
 
 No real ASR/ffmpeg runs: SubtitleGenWorker and _engine.available are monkeypatched.
 
@@ -30,6 +30,9 @@ pytest.importorskip("PyQt6.QtWidgets")
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
 from anki_miner.gui.workers.file_queue_worker import FileQueueWorker
+from tests.unit._tool_tab_harness import FakeToolWorker as _FakeWorker
+from tests.unit._tool_tab_harness import capture_slots as _capture_signal_slots
+from tests.unit._tool_tab_harness import make_config as _make_config
 
 # ---------------------------------------------------------------------------
 # Common patch target constants
@@ -39,7 +42,7 @@ _ENGINE_AVAILABLE = "anki_miner.services.asr._engine.available"
 # The model guard moved to services/asr/model_availability.py; patch the
 # canonical modules it imports, which the tab now reaches through it.
 _IS_DOWNLOADED = "anki_miner.services.asr.model_manager.is_downloaded"
-_OS_ACCESS = "anki_miner.gui.widgets.subtitle_creation_tab.os.access"
+_OS_ACCESS = "anki_miner.gui.widgets._tool_tab_base.os.access"
 _WORKER_CLS = "anki_miner.gui.widgets.subtitle_creation_tab.SubtitleGenWorker"
 _WHISPER_CPP_AVAILABLE = "anki_miner.services.asr._engine.whisper_cpp_available"
 _GGML_DOWNLOADED = "anki_miner.services.asr.ggml_model_installer.is_ggml_downloaded"
@@ -49,43 +52,6 @@ _VAD_DOWNLOADED = "anki_miner.services.asr.ggml_model_installer.is_vad_downloade
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-def _make_config(tmp_path: Path) -> AnkiMinerConfig:
-    """Return a minimal config with writable paths under tmp_path."""
-    return AnkiMinerConfig(
-        asr_models_root=tmp_path / "asr_models",
-        media_temp_folder=tmp_path / "tmp",
-    )
-
-
-class _FakeWorker:
-    """Minimal fake that mimics the SubtitleGenWorker interface used by the tab."""
-
-    def __init__(self, *args, **kwargs):
-        # Per-instance mocks so connect() calls on different instances stay independent.
-        self.file_started = MagicMock()
-        self.file_progress = MagicMock()
-        self.file_finished = MagicMock()
-        self.file_skipped = MagicMock()
-        self.queue_finished = MagicMock()
-        self.error = MagicMock()
-        self.finished = MagicMock()  # native QThread.finished (lifecycle release)
-        self.deleteLater = MagicMock()
-        self._started = False
-        self._cancelled = False
-
-    def start(self):
-        self._started = True
-
-    def cancel(self):
-        self._cancelled = True
-
-    def isRunning(self):
-        return self._started and not self._cancelled
-
-    def wait(self, *args):
-        return True
 
 
 def _make_tab(config, qtbot):
@@ -101,12 +67,6 @@ def _make_tab(config, qtbot):
 # ---------------------------------------------------------------------------
 # Construction
 # ---------------------------------------------------------------------------
-
-
-def test_construction(qtbot, tmp_path):
-    """Tab constructs and registers with qtbot without error."""
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    assert tab is not None
 
 
 def test_generate_button_exists(qtbot, tmp_path):
@@ -132,60 +92,6 @@ def test_language_label_shows_japanese(qtbot, tmp_path):
     """Read-only Language: Japanese label must be present."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
     assert "Japanese" in tab.language_label.text()
-
-
-# ---------------------------------------------------------------------------
-# Control explanations / styling
-# ---------------------------------------------------------------------------
-
-
-def test_output_location_label_objectname_not_helper_text(qtbot, tmp_path):
-    """Output-location label uses a non-italic objectName, not 'helper-text'."""
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    assert tab.output_location_label.objectName() == "output-location-value"
-
-
-def test_mode_buttons_have_tooltips(qtbot, tmp_path):
-    """Single-file / folder mode buttons carry explanatory tooltips."""
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    assert tab.file_mode_button.toolTip().strip()
-    assert tab.folder_mode_button.toolTip().strip()
-
-
-def test_overwrite_checkbox_has_tooltip(qtbot, tmp_path):
-    """Overwrite checkbox explains skip-vs-overwrite via tooltip."""
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    assert tab.overwrite_checkbox.toolTip().strip()
-
-
-# ---------------------------------------------------------------------------
-# Mode toggle
-# ---------------------------------------------------------------------------
-
-
-def test_mode_toggle_shows_file_selector_by_default(qtbot, tmp_path):
-    """Single-file mode is the default; folder selector is explicitly hidden."""
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    # isVisible() is False for un-shown top-level; use isHidden() for explicit hide state.
-    assert not tab.file_selector.isHidden()
-    assert tab.folder_selector.isHidden()
-
-
-def test_mode_toggle_switches_to_folder(qtbot, tmp_path):
-    """Clicking folder mode button switches to folder selector."""
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    tab.folder_mode_button.click()
-    assert tab.file_selector.isHidden()
-    assert not tab.folder_selector.isHidden()
-
-
-def test_mode_toggle_back_to_file(qtbot, tmp_path):
-    """Toggling back to file mode re-shows file selector, hides folder selector."""
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    tab.folder_mode_button.click()
-    tab.file_mode_button.click()
-    assert not tab.file_selector.isHidden()
-    assert tab.folder_selector.isHidden()
 
 
 # ---------------------------------------------------------------------------
@@ -251,18 +157,6 @@ def test_folder_collection_skips_appledouble_sidecars(qtbot, tmp_path):
     tab._collect_folder_video_files_async(result.append)
     qtbot.waitUntil(lambda: bool(result), timeout=3000)
     assert result[0] == [mp3]
-
-
-def test_folder_mode_failed_collection_leaves_button_enabled(qtbot, tmp_path):
-    """A synchronous bail (no folder picked) must not leave Generate dead:
-    _on_generate disables it before dispatch, so the collector must always
-    call on_files — even on an early return — for the caller to re-enable it."""
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    tab.folder_mode_button.click()
-
-    tab.generate_button.click()
-
-    assert tab.generate_button.isEnabled()
 
 
 def test_unreadable_folder_reports_issue_without_raising(qtbot, tmp_path):
@@ -452,19 +346,6 @@ def test_queue_finished_re_enables_generate(qtbot, tmp_path):
     assert tab.generate_button.isEnabled()
 
 
-def _capture_signal_slots(signal_mock):
-    """Capture slots connected to a _FakeWorker MagicMock signal; returns the list."""
-    slots: list = []
-    original_connect = signal_mock.connect
-
-    def _capture(slot):
-        slots.append(slot)
-        return original_connect(slot)
-
-    signal_mock.connect = _capture
-    return slots
-
-
 def test_cancelled_run_shows_cancelled_status(qtbot, tmp_path):
     """After cancel, queue_finished reports 'Cancelled', not 'Finished' (M1)."""
     config = _make_config(tmp_path)
@@ -492,34 +373,6 @@ def test_cancelled_run_shows_cancelled_status(qtbot, tmp_path):
 
     tab.progress_widget.set_status.assert_called_once()
     assert "Cancel" in tab.progress_widget.set_status.call_args[0][0]
-
-
-def test_worker_released_on_thread_finished(qtbot, tmp_path):
-    """Native QThread.finished clears the handle and schedules deleteLater (M9)."""
-    config = _make_config(tmp_path)
-    video = tmp_path / "episode.mp4"
-    video.write_bytes(b"fake")
-
-    fake_worker = _FakeWorker()
-    finished_slots = _capture_signal_slots(fake_worker.finished)
-
-    tab = _make_tab(config, qtbot)
-    tab.file_selector.set_path(str(video))
-
-    with (
-        patch(_ENGINE_AVAILABLE, return_value=True),
-        patch(_OS_ACCESS, return_value=True),
-        patch(_IS_DOWNLOADED, return_value=True),
-        patch(_WORKER_CLS, return_value=fake_worker),
-    ):
-        tab.generate_button.click()
-
-    assert tab.worker_thread is fake_worker
-    for slot in finished_slots:
-        slot()
-
-    assert tab.worker_thread is None
-    fake_worker.deleteLater.assert_called_once()
 
 
 def test_second_generate_refused_while_running(qtbot, tmp_path):
@@ -747,40 +600,6 @@ def test_file_started_sets_status(qtbot, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# iter_close_workers
-# ---------------------------------------------------------------------------
-
-
-def test_iter_close_workers_empty_when_no_worker(qtbot, tmp_path):
-    """iter_close_workers() yields nothing when no worker has been started."""
-    tab = _make_tab(_make_config(tmp_path), qtbot)
-    workers = list(tab.iter_close_workers())
-    assert workers == []
-
-
-def test_iter_close_workers_returns_active_worker(qtbot, tmp_path):
-    """iter_close_workers() yields the active worker when one is running."""
-    config = _make_config(tmp_path)
-    video = tmp_path / "episode.mp4"
-    video.write_bytes(b"fake")
-
-    fake_worker = _FakeWorker()
-    tab = _make_tab(config, qtbot)
-    tab.file_selector.set_path(str(video))
-
-    with (
-        patch(_ENGINE_AVAILABLE, return_value=True),
-        patch(_OS_ACCESS, return_value=True),
-        patch(_IS_DOWNLOADED, return_value=True),
-        patch(_WORKER_CLS, return_value=fake_worker),
-    ):
-        tab.generate_button.click()
-
-    workers = list(tab.iter_close_workers())
-    assert fake_worker in workers
-
-
-# ---------------------------------------------------------------------------
 # Model-not-downloaded guard
 # ---------------------------------------------------------------------------
 
@@ -982,52 +801,8 @@ def test_whispercpp_smoke_handler_returns_nonzero_on_import_error(capsys):
 
 
 # ---------------------------------------------------------------------------
-# file_skipped slot: logs "Skipped:", advances progress once
+# file_skipped slot: advances progress once
 # ---------------------------------------------------------------------------
-
-
-def _capture_skipped_slots(signal_mock):
-    """Capture slots connected to a _FakeWorker MagicMock signal; returns the list."""
-    slots: list = []
-    original_connect = signal_mock.connect
-
-    def _capture(slot):
-        slots.append(slot)
-        return original_connect(slot)
-
-    signal_mock.connect = _capture
-    return slots
-
-
-def test_file_skipped_logs_skipped_not_done(qtbot, tmp_path):
-    """file_skipped(idx, out_path, reason) logs 'Skipped: <name> — <reason>', not 'Done:' (T1)."""
-    config = _make_config(tmp_path)
-    video = tmp_path / "episode.mp4"
-    video.write_bytes(b"fake")
-    out_srt = tmp_path / "episode.srt"
-
-    fake_worker = _FakeWorker()
-    skipped_slots = _capture_skipped_slots(fake_worker.file_skipped)
-
-    tab = _make_tab(config, qtbot)
-    tab.file_selector.set_path(str(video))
-
-    with (
-        patch(_ENGINE_AVAILABLE, return_value=True),
-        patch(_OS_ACCESS, return_value=True),
-        patch(_IS_DOWNLOADED, return_value=True),
-        patch(_WORKER_CLS, return_value=fake_worker),
-    ):
-        tab.generate_button.click()
-
-    for slot in skipped_slots:
-        slot(0, out_srt, "Skipped, exists")
-
-    log_text = tab.log_widget.text_edit.toPlainText()
-    assert "Skipped" in log_text
-    assert "episode.srt" in log_text
-    assert "Skipped, exists" in log_text
-    assert "Done" not in log_text
 
 
 def test_file_skipped_advances_progress(qtbot, tmp_path):
@@ -1039,7 +814,7 @@ def test_file_skipped_advances_progress(qtbot, tmp_path):
     video2.write_bytes(b"fake")
 
     fake_worker = _FakeWorker()
-    skipped_slots = _capture_skipped_slots(fake_worker.file_skipped)
+    skipped_slots = _capture_signal_slots(fake_worker.file_skipped)
 
     tab = _make_tab(config, qtbot)
     tab.folder_mode_button.click()

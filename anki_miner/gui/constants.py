@@ -29,6 +29,10 @@ VIDEO_FILE_FILTER = "Video Files (*.mp4 *.mkv *.avi *.m4v *.mov);;All Files (*)"
 SUBTITLE_FILE_FILTER = (
     f"Subtitle Files ({' '.join(f'*{ext}' for ext in sorted(DEFAULT_SUBTITLE_PRIORITY))});;All Files (*)"
 )
+#: Audio-only inputs the transcription tools (Generate, Audiobook Sync) accept.
+#: Condense keeps its own set on purpose (D12, condense_tab.py), and Audiobook
+#: mining keeps an ordered tuple for its picker.
+AUDIO_EXTENSIONS: frozenset[str] = frozenset({".mp3", ".m4a", ".m4b", ".aac", ".flac", ".opus", ".ogg", ".wav"})
 
 # =============================================================================
 # SUBTITLE OFFSET RANGE
