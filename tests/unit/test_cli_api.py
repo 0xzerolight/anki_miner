@@ -146,3 +146,57 @@ def test_settings_export_marks_unconfigured_language(verdict, tmp_path, test_con
 def test_settings_export_bad_out_folder(verdict, tmp_path) -> None:
     v = verdict("settings-export", "--language", "ja", "--out", str(tmp_path / "no" / "x.json"))
     assert v["error"] == "BAD_ARGUMENTS"
+
+
+def _write_run_file(tmp_path) -> str:
+    run = tmp_path / "run.json"
+    run.write_text(
+        json.dumps(
+            {
+                "schema": 1,
+                "run_dir": str(tmp_path),
+                "language": "ja",
+                "episodes": [{"run_id": "e", "video_file": "v", "subtitle_file": "s"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return str(run)
+
+
+def test_prepare_busy_while_window_open(verdict, tmp_path) -> None:
+    from anki_miner.config import paths as config_paths
+    from anki_miner.gui.app import _hold_window_marker
+
+    run = _write_run_file(tmp_path)
+    config_paths.ANKI_MINER_HOME.mkdir(parents=True, exist_ok=True)
+    marker = _hold_window_marker(config_paths.ANKI_MINER_HOME)
+    assert marker is not None
+    try:
+        v = verdict("prepare", run)
+    finally:
+        marker.unlock()
+    assert v["error"] == "BUSY" and v["runs"] == [] and "window is open" in v["message"]
+    assert not (tmp_path / "e").exists()  # refused before any run folder
+
+
+def test_prepare_runs_under_the_lock_and_reports_per_run(verdict, tmp_path, monkeypatch) -> None:
+    from anki_miner.cli.api import runs
+
+    seen = {}
+
+    def fake_prepare(job, cancel):
+        seen["job"] = job
+        return [{"run_id": "e", "ok": False, "error": "VIDEO_UNREADABLE", "message": "x", "file": None}]
+
+    monkeypatch.setattr(runs, "prepare_runs", fake_prepare)
+    v = verdict("prepare", _write_run_file(tmp_path))
+    assert v["command"] == "prepare" and v["ok"] is False and v["error"] is None
+    assert v["runs"][0]["error"] == "VIDEO_UNREADABLE"
+    assert seen["job"].episodes[0].run_id == "e"
+
+
+def test_bad_run_file_is_refused_before_the_lock(verdict, tmp_path) -> None:
+    bad = tmp_path / "run.json"
+    bad.write_text("{}", encoding="utf-8")
+    assert verdict("prepare", str(bad))["error"] == "BAD_RUN_FILE"

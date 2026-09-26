@@ -11,12 +11,13 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import threading
 from collections.abc import Sequence
 from pathlib import Path
 from typing import NoReturn
 
 from anki_miner import __version__
-from anki_miner.cli.api.contract import API_SCHEMA, BAD_ARGUMENTS, COMMANDS, INTERNAL, ApiError
+from anki_miner.cli.api.contract import API_SCHEMA, BAD_ARGUMENTS, BUSY, COMMANDS, INTERNAL, ApiError
 from anki_miner.cli.entry import _prepare_process, _private_stdout
 
 logger = logging.getLogger(__name__)
@@ -89,7 +90,32 @@ def _dispatch(args: argparse.Namespace) -> dict[str, object]:
     if args.command == "settings-export":
         commands.settings_export(args.profile, args.language, args.out)
         return _ok("settings-export")
-    raise ApiError(BAD_ARGUMENTS, f"Not available yet: {args.command}")
+    return _run(args)
+
+
+def _run(args: argparse.Namespace) -> dict[str, object]:
+    """prepare or commit: the input file checked first, then the runs under the instance lock."""
+    from anki_miner.cli.api import files, runs
+    from anki_miner.cli.entry import Busy, _cancel_on_signals, acquire_run_lock
+
+    prepare = args.command == "prepare"
+    data = files.read_json_file(args.run_file if prepare else args.commit_file)
+    job = files.parse_run_file(data) if prepare else files.parse_commit_file(data)
+    try:
+        lock = acquire_run_lock()
+    except Busy as exc:
+        raise ApiError(BUSY, str(exc)) from exc
+    try:
+        cancel = threading.Event()
+        with _cancel_on_signals(cancel):
+            if isinstance(job, files.RunFile):
+                verdicts = runs.prepare_runs(job, cancel)
+            else:
+                verdicts = runs.commit_runs(job, cancel)
+    finally:
+        lock.unlock()
+    # With several runs the call is ok only if every run is; each run carries its own error.
+    return {**_ok(args.command, runs=verdicts), "ok": all(v["ok"] for v in verdicts)}
 
 
 def _ok(command: str | None, **fields: object) -> dict[str, object]:
