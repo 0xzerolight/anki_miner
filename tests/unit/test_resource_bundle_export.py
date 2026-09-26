@@ -101,3 +101,11 @@ def test_a_cancelled_export_leaves_no_file_behind(sender, tmp_path):
     with pytest.raises(OperationCancelled):
         _write(sender, target, cancel=lambda: True)
     assert list(target.parent.iterdir()) == []
+
+
+def test_a_slot_chained_twice_is_offered_once_and_the_bundle_stays_readable(sender, tmp_path):
+    config = replace(sender, frequency_chain=(*sender.frequency_chain, FreqEntry(FREQ_ID)))
+    assert [c.item.item_id for c in _collect(config)].count(FREQ_ID) == 1
+    target = tmp_path / "bundle.zip"
+    _write(config, target)
+    assert [i.item_id for i in read_bundle_manifest(target).items].count(FREQ_ID) == 1

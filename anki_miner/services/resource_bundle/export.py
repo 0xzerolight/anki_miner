@@ -148,7 +148,12 @@ def collect_export_candidates(config: AnkiMinerConfig, *, known_words_db: Path) 
             candidates.append(
                 ExportCandidate(_single_item(kind, enabled=enabled), source=path, size_bytes=path.stat().st_size)
             )
-    return candidates
+    # A hand-edited or legacy config can chain one slot twice; the manifest
+    # refuses duplicate items, so the first occurrence is the one offered.
+    unique: dict[tuple[str, str], ExportCandidate] = {}
+    for candidate in candidates:
+        unique.setdefault((candidate.item.kind, candidate.item.item_id), candidate)
+    return list(unique.values())
 
 
 def _single_item(kind: ItemKind, *, enabled: bool) -> BundleItem:
