@@ -10,7 +10,6 @@ modal storm exactly where it was.
 
 from __future__ import annotations
 
-from dataclasses import replace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -20,7 +19,6 @@ pytest.importorskip("PyQt6.QtWidgets")
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.controllers.run_receipt import RunReceiptAccumulator
 from anki_miner.gui.controllers.task_registry import TaskOutcome, TaskRegistry
-from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.models.processing import (
     CANCELLED_ERROR,
     ProcessingResult,
@@ -28,21 +26,10 @@ from anki_miner.models.processing import (
     WhitelistCoverage,
 )
 from anki_miner.models.reading import ReadingSourceRef
+from tests.unit.gui._screens import ready_youtube_item, start_single_run
 
 _READING_WORKER = "anki_miner.gui.widgets._reading_mining_base.ReadingQueueWorker"
 _NOVELS_DETECT = "anki_miner.gui.widgets._reading_mining_base.detector.detect"
-
-
-@pytest.fixture
-def clock(monkeypatch):
-    """Freeze the receipt's clock; the test advances it by hand."""
-    state = {"t": 1000.0}
-    monkeypatch.setattr(
-        MiningTabBase,
-        "_receipt_now",
-        staticmethod(lambda: (state["t"], state["t"])),
-    )
-    return state
 
 
 @pytest.fixture
@@ -89,54 +76,10 @@ def test_non_success_run_details_keep_the_terminal_header(qtbot, results, outcom
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture
-def youtube_tab(qtbot, test_config: AnkiMinerConfig):
-    cfg = replace(test_config, youtube_max_duration_s=7200, youtube_cookies_from_browser=None)
-    from anki_miner.gui.widgets.youtube_tab import YouTubeTab
-
-    with (
-        patch("anki_miner.gui.widgets.youtube_playlist_flow.YouTubeProbeWorker") as probe_cls,
-        patch("anki_miner.gui.widgets.youtube_tab.YouTubeQueueWorker") as queue_cls,
-    ):
-        probe_cls.side_effect = lambda *a, **kw: MagicMock(name="ProbeWorker")
-        queue_cls.side_effect = lambda *a, **kw: MagicMock(name="QueueWorker")
-        widget = YouTubeTab(
-            config=cfg,
-            processor=MagicMock(name="EpisodeProcessor"),
-            fetcher=MagicMock(name="Fetcher"),
-            presenter=MagicMock(name="Presenter"),
-        )
-        qtbot.addWidget(widget)
-        try:
-            yield widget
-        finally:
-            widget.deleteLater()
-
-
-def _ready_youtube_item(tab, video_id: str):
-    from anki_miner.models.youtube import VideoInfo
-
-    tab._add_flow.add_urls([f"https://www.youtube.com/watch?v={video_id}"])
-    item = tab._queue.all_items()[-1]
-    tab._add_flow._on_probe_done(
-        item,
-        VideoInfo(
-            video_id=video_id,
-            title=f"Video {video_id}",
-            duration_s=600,
-            has_manual_ja_subs=True,
-            has_auto_ja_subs=False,
-            is_live=False,
-            is_age_restricted=False,
-        ),
-    )
-    return item
-
-
 class TestListQueueReceipt:
     def test_a_finished_queue_run_leaves_a_receipt(self, youtube_tab, clock):
-        _ready_youtube_item(youtube_tab, "aaa")
-        _ready_youtube_item(youtube_tab, "bbb")
+        ready_youtube_item(youtube_tab, "aaa")
+        ready_youtube_item(youtube_tab, "bbb")
         youtube_tab._on_mine_clicked()
 
         youtube_tab._on_item_finished(0, _result(30), None, 1)
@@ -148,8 +91,8 @@ class TestListQueueReceipt:
         assert youtube_tab._receipt_widget.isVisibleTo(youtube_tab) is True
 
     def test_a_cancelled_queue_run_keeps_the_work_it_did(self, youtube_tab, clock):
-        _ready_youtube_item(youtube_tab, "aaa")
-        _ready_youtube_item(youtube_tab, "bbb")
+        ready_youtube_item(youtube_tab, "aaa")
+        ready_youtube_item(youtube_tab, "bbb")
         youtube_tab._on_mine_clicked()
 
         youtube_tab._on_item_finished(0, _result(9), None, 1)
@@ -163,14 +106,14 @@ class TestListQueueReceipt:
         )
 
     def test_the_next_run_clears_the_previous_receipt(self, youtube_tab, clock):
-        _ready_youtube_item(youtube_tab, "aaa")
+        ready_youtube_item(youtube_tab, "aaa")
         youtube_tab._on_mine_clicked()
         youtube_tab._on_item_finished(0, _result(4), None, 1)
         youtube_tab._after_run_cleanup()
         youtube_tab.worker_thread = None
         assert youtube_tab._receipt_widget.summary_text != ""
 
-        _ready_youtube_item(youtube_tab, "bbb")
+        ready_youtube_item(youtube_tab, "bbb")
         youtube_tab._on_mine_clicked()
 
         assert youtube_tab._receipt_widget.summary_text == ""
@@ -178,7 +121,7 @@ class TestListQueueReceipt:
 
     def test_no_item_result_reaches_the_window_as_a_dialog(self, youtube_tab, clock):
         """The presenter still hears every item; the window no longer opens one."""
-        _ready_youtube_item(youtube_tab, "aaa")
+        ready_youtube_item(youtube_tab, "aaa")
         youtube_tab._on_mine_clicked()
 
         youtube_tab._on_item_finished(0, _result(4), None, 1)
@@ -189,7 +132,7 @@ class TestListQueueReceipt:
         """The queue screens' presenters route info/warning to the window's
         transient status bar, not to this log. The report is the record the
         user comes back for, so it is written to the log directly."""
-        _ready_youtube_item(youtube_tab, "aaa")
+        ready_youtube_item(youtube_tab, "aaa")
         youtube_tab._on_mine_clicked()
         result = _result(1)
         result.whitelist_coverage = WhitelistCoverage(frozenset({"食べる", "走る"}), mined=frozenset({"食べる"}))
@@ -204,8 +147,8 @@ class TestListQueueReceipt:
         assert "Whitelist: 1 of 2 mined. Not mined: 走る." in youtube_tab.log_widget.full_text()
 
     def test_view_details_forwards_the_whole_run(self, youtube_tab, clock):
-        _ready_youtube_item(youtube_tab, "aaa")
-        _ready_youtube_item(youtube_tab, "bbb")
+        ready_youtube_item(youtube_tab, "aaa")
+        ready_youtube_item(youtube_tab, "bbb")
         youtube_tab._on_mine_clicked()
         youtube_tab._on_item_finished(0, _result(2), None, 1)
         youtube_tab._on_item_finished(1, _result(3), None, 1)
@@ -219,8 +162,8 @@ class TestListQueueReceipt:
     def test_cancelled_details_keep_the_cancelled_header(self, youtube_tab, clock, qtbot):
         from anki_miner.gui.widgets.dialogs.results_dialog import ResultsDialog
 
-        _ready_youtube_item(youtube_tab, "aaa")
-        _ready_youtube_item(youtube_tab, "bbb")
+        ready_youtube_item(youtube_tab, "aaa")
+        ready_youtube_item(youtube_tab, "bbb")
         youtube_tab._on_mine_clicked()
         youtube_tab._on_item_finished(0, _result(2), None, 1)
         youtube_tab._cancel_requested = True
@@ -326,39 +269,9 @@ class TestReadingReceipt:
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture
-def single_tab(qtbot, test_config):
-    from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
-
-    widget = SingleEpisodeTab(
-        config=test_config,
-        presenter=MagicMock(name="Presenter"),
-        progress_callback=MagicMock(name="ProgressCallback"),
-    )
-    qtbot.addWidget(widget)
-    yield widget
-    widget.deleteLater()
-
-
-def _start_single_run(tab, tmp_path):
-    video = tmp_path / "ep01.mkv"
-    video.touch()
-    subs = tmp_path / "ep01.ass"
-    subs.touch()
-    tab.video_selector.get_path = MagicMock(return_value=str(video))
-    tab.video_selector.is_valid = MagicMock(return_value=True)
-    tab.subtitle_selector.get_path = MagicMock(return_value=str(subs))
-    tab.subtitle_selector.is_valid = MagicMock(return_value=True)
-    with (
-        patch("anki_miner.gui.widgets.single_episode_tab.EpisodeWorkerThread", return_value=MagicMock()),
-        patch("anki_miner.gui.widgets.single_episode_tab.create_episode_processor", return_value=MagicMock()),
-    ):
-        tab._start_processing()
-
-
 class TestSingleEpisodeReceipt:
     def test_a_finished_episode_leaves_a_receipt(self, single_tab, clock, tmp_path):
-        _start_single_run(single_tab, tmp_path)
+        start_single_run(single_tab, tmp_path)
 
         single_tab._on_processing_finished(_result(24))
         clock["t"] += 137
@@ -368,7 +281,7 @@ class TestSingleEpisodeReceipt:
 
     def test_a_cancelled_episode_that_already_wrote_notes_keeps_them(self, single_tab, clock, tmp_path):
         """The worker still emits a result when notes reached Anki before the stop."""
-        _start_single_run(single_tab, tmp_path)
+        start_single_run(single_tab, tmp_path)
         single_tab._cancel_requested = True
 
         single_tab._on_processing_finished(_result(6))
@@ -378,7 +291,7 @@ class TestSingleEpisodeReceipt:
         assert single_tab._receipt_widget.summary_text == "Cancelled — 6 notes added in 00m 41s"
 
     def test_a_worker_error_leaves_a_failure_receipt(self, single_tab, clock, tmp_path):
-        _start_single_run(single_tab, tmp_path)
+        start_single_run(single_tab, tmp_path)
 
         single_tab._on_processing_error("ffprobe not found")
         clock["t"] += 2
@@ -388,7 +301,7 @@ class TestSingleEpisodeReceipt:
 
     def test_a_leaked_previous_worker_cannot_seal_the_live_run(self, single_tab, clock, tmp_path):
         """A timed-out teardown leaves an old thread that finishes mid-new-run."""
-        _start_single_run(single_tab, tmp_path)
+        start_single_run(single_tab, tmp_path)
         stale_worker = MagicMock(name="LeakedWorker")
         single_tab.sender = MagicMock(return_value=stale_worker)
 
@@ -401,20 +314,6 @@ class TestSingleEpisodeReceipt:
 # ---------------------------------------------------------------------------
 # Batch
 # ---------------------------------------------------------------------------
-
-
-@pytest.fixture
-def batch_tab(qtbot, test_config):
-    from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
-
-    widget = BatchProcessingTab(
-        config=test_config,
-        presenter=MagicMock(name="Presenter"),
-        progress_callback=MagicMock(name="ProgressCallback"),
-    )
-    qtbot.addWidget(widget)
-    yield widget
-    widget.deleteLater()
 
 
 class TestBatchReceipt:

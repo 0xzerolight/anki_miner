@@ -14,58 +14,20 @@ another row.
 
 from __future__ import annotations
 
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QListWidget
 
 from anki_miner.gui.controllers.task_registry import TaskRegistry
-from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
-from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 from anki_miner.models.youtube import VideoInfo
 from anki_miner.models.youtube_queue import YouTubeItemStatus
+from tests.unit.gui._screens import add_audiobook
 
 # ---------------------------------------------------------------------------
 # Both tabs, one contract
 # ---------------------------------------------------------------------------
-
-
-@pytest.fixture
-def audiobook_tab(qtbot, test_config):
-    with patch("anki_miner.gui.widgets.audiobook_tab.AudiobookQueueWorker") as worker_cls:
-        worker_cls.side_effect = lambda *a, **kw: MagicMock(name="QueueWorker")
-        widget = AudiobookTab(config=test_config, processor=MagicMock(), presenter=MagicMock())
-        qtbot.addWidget(widget)
-        yield widget
-        widget.deleteLater()
-
-
-@pytest.fixture
-def youtube_tab(qtbot, test_config):
-    with patch("anki_miner.gui.widgets.youtube_tab.YouTubeQueueWorker") as worker_cls:
-        worker_cls.side_effect = lambda *a, **kw: MagicMock(name="QueueWorker")
-        widget = YouTubeTab(
-            config=test_config,
-            processor=MagicMock(),
-            fetcher=MagicMock(),
-            presenter=MagicMock(),
-        )
-        qtbot.addWidget(widget)
-        yield widget
-        widget.deleteLater()
-
-
-def _add_audiobook(tab, tmp_path: Path, stem: str):
-    audio = tmp_path / f"{stem}.m4b"
-    sub = tmp_path / f"{stem}.srt"
-    audio.touch()
-    sub.touch()
-    item = tab._queue.add(audio, sub)
-    tab._render_new_item(item)
-    tab._recompute_buttons()
-    return item
 
 
 def _add_youtube(tab, title: str):
@@ -91,11 +53,11 @@ def _add_youtube(tab, title: str):
 
 
 @pytest.fixture(params=["audiobook", "youtube"])
-def queue(request, audiobook_tab, youtube_tab, tmp_path):
+def queue(request, audiobook_tab, queue_youtube_tab, tmp_path):
     """A tab plus an ``add(name)`` helper, once per list-queue tab."""
     if request.param == "audiobook":
-        return audiobook_tab, lambda name: _add_audiobook(audiobook_tab, tmp_path, name)
-    return youtube_tab, lambda name: _add_youtube(youtube_tab, name)
+        return audiobook_tab, lambda name: add_audiobook(audiobook_tab, tmp_path, name)
+    return queue_youtube_tab, lambda name: _add_youtube(queue_youtube_tab, name)
 
 
 def _rows(tab) -> list:
@@ -575,18 +537,18 @@ def test_alt_arrows_are_bound_to_the_list_only(queue) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_retry_reprobes_a_failed_youtube_probe(youtube_tab) -> None:
+def test_retry_reprobes_a_failed_youtube_probe(queue_youtube_tab) -> None:
     """A probe failure is retried by probing again, not by mining a bad row."""
-    item = youtube_tab._queue.add("https://youtu.be/x")
+    item = queue_youtube_tab._queue.add("https://youtu.be/x")
     item.status = YouTubeItemStatus.PROBE_ERROR
     item.error_message = "Video unavailable"
-    youtube_tab._render_new_item(item)
-    youtube_tab._list_items[item].setSelected(True)
-    youtube_tab._add_flow.retry_probe = MagicMock()
+    queue_youtube_tab._render_new_item(item)
+    queue_youtube_tab._list_items[item].setSelected(True)
+    queue_youtube_tab._add_flow.retry_probe = MagicMock()
 
-    youtube_tab._on_retry_selected()
+    queue_youtube_tab._on_retry_selected()
 
-    youtube_tab._add_flow.retry_probe.assert_called_once_with(item)
+    queue_youtube_tab._add_flow.retry_probe.assert_called_once_with(item)
     # It is not swept into the retry run: mining an unprobed row cannot succeed.
-    assert youtube_tab.worker_thread is None
+    assert queue_youtube_tab.worker_thread is None
     assert item.status is YouTubeItemStatus.PROBE_ERROR

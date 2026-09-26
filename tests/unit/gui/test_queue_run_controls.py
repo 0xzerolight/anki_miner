@@ -13,51 +13,11 @@ from a stall.
 
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
-from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
-from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 from anki_miner.models.youtube import VideoInfo
 from anki_miner.models.youtube_queue import YouTubeItemStatus
-
-
-@pytest.fixture
-def audiobook_tab(qtbot, test_config):
-    with patch("anki_miner.gui.widgets.audiobook_tab.AudiobookQueueWorker") as worker_cls:
-        worker_cls.side_effect = lambda *a, **kw: MagicMock(name="QueueWorker")
-        widget = AudiobookTab(config=test_config, processor=MagicMock(), presenter=MagicMock())
-        qtbot.addWidget(widget)
-        yield widget
-        widget.deleteLater()
-
-
-@pytest.fixture
-def youtube_tab(qtbot, test_config):
-    with patch("anki_miner.gui.widgets.youtube_tab.YouTubeQueueWorker") as worker_cls:
-        worker_cls.side_effect = lambda *a, **kw: MagicMock(name="QueueWorker")
-        widget = YouTubeTab(
-            config=test_config,
-            processor=MagicMock(),
-            fetcher=MagicMock(),
-            presenter=MagicMock(),
-        )
-        qtbot.addWidget(widget)
-        yield widget
-        widget.deleteLater()
-
-
-def _add_audiobook(tab, tmp_path: Path, stem: str):
-    audio = tmp_path / f"{stem}.m4b"
-    sub = tmp_path / f"{stem}.srt"
-    audio.touch()
-    sub.touch()
-    item = tab._queue.add(audio, sub)
-    tab._render_new_item(item)
-    tab._recompute_buttons()
-    return item
+from tests.unit.gui._screens import add_audiobook
 
 
 def _add_youtube(tab, name: str):
@@ -85,7 +45,7 @@ def _add_youtube(tab, name: str):
 
 def test_mine_locks_every_queue_verb(audiobook_tab, tmp_path):
     tab = audiobook_tab
-    items = [_add_audiobook(tab, tmp_path, f"v{i}") for i in range(3)]
+    items = [add_audiobook(tab, tmp_path, f"v{i}") for i in range(3)]
     tab.list_widget.item(1).setSelected(True)
 
     tab._on_mine_clicked()
@@ -104,8 +64,8 @@ def test_mine_locks_every_queue_verb(audiobook_tab, tmp_path):
 
 def test_locked_reorder_leaves_the_model_alone(audiobook_tab, tmp_path):
     tab = audiobook_tab
-    first = _add_audiobook(tab, tmp_path, "a")
-    second = _add_audiobook(tab, tmp_path, "b")
+    first = add_audiobook(tab, tmp_path, "a")
+    second = add_audiobook(tab, tmp_path, "b")
     tab.list_widget.item(1).setSelected(True)
 
     tab._on_mine_clicked()
@@ -116,7 +76,7 @@ def test_locked_reorder_leaves_the_model_alone(audiobook_tab, tmp_path):
 
 def test_run_end_unlocks_everything(audiobook_tab, tmp_path):
     tab = audiobook_tab
-    _add_audiobook(tab, tmp_path, "a")
+    add_audiobook(tab, tmp_path, "a")
 
     tab._on_mine_clicked()
     tab.worker_thread = None
@@ -136,7 +96,7 @@ def test_run_end_unlocks_everything(audiobook_tab, tmp_path):
 
 def test_pause_asks_the_worker_to_stop_at_the_next_boundary(audiobook_tab, tmp_path):
     tab = audiobook_tab
-    _add_audiobook(tab, tmp_path, "a")
+    add_audiobook(tab, tmp_path, "a")
     tab._on_mine_clicked()
     worker = tab.worker_thread
 
@@ -150,7 +110,7 @@ def test_pause_asks_the_worker_to_stop_at_the_next_boundary(audiobook_tab, tmp_p
 def test_paused_run_reports_where_it_stopped_and_offers_resume(audiobook_tab, tmp_path):
     tab = audiobook_tab
     for i in range(3):
-        _add_audiobook(tab, tmp_path, f"v{i}")
+        add_audiobook(tab, tmp_path, f"v{i}")
     tab._on_mine_clicked()
     tab._items_done = 2
 
@@ -163,7 +123,7 @@ def test_paused_run_reports_where_it_stopped_and_offers_resume(audiobook_tab, tm
 
 def test_resume_continues_the_run(audiobook_tab, tmp_path):
     tab = audiobook_tab
-    _add_audiobook(tab, tmp_path, "a")
+    add_audiobook(tab, tmp_path, "a")
     tab._on_mine_clicked()
     worker = tab.worker_thread
     tab._on_run_paused()
@@ -178,7 +138,7 @@ def test_resume_continues_the_run(audiobook_tab, tmp_path):
 
 def test_finish_current_then_stop_is_a_separate_quiet_control(audiobook_tab, tmp_path):
     tab = audiobook_tab
-    _add_audiobook(tab, tmp_path, "a")
+    add_audiobook(tab, tmp_path, "a")
     tab._on_mine_clicked()
     worker = tab.worker_thread
 
@@ -194,7 +154,7 @@ def test_cancel_still_takes_no_prompt(audiobook_tab, tmp_path, monkeypatch):
     from PyQt6.QtWidgets import QMessageBox
 
     tab = audiobook_tab
-    _add_audiobook(tab, tmp_path, "a")
+    add_audiobook(tab, tmp_path, "a")
     tab._on_mine_clicked()
     worker = tab.worker_thread
 
@@ -216,8 +176,8 @@ def test_cancel_still_takes_no_prompt(audiobook_tab, tmp_path, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_retry_countdown_reaches_the_status_line_and_the_task_snapshot(youtube_tab):
-    tab = youtube_tab
+def test_retry_countdown_reaches_the_status_line_and_the_task_snapshot(queue_youtube_tab):
+    tab = queue_youtube_tab
     _add_youtube(tab, "a")
     tab._on_mine_clicked()
     tab._on_item_started(0)
@@ -227,8 +187,8 @@ def test_retry_countdown_reaches_the_status_line_and_the_task_snapshot(youtube_t
     assert "Attempt 2 of 3 · retrying in 8s" in tab.progress_widget.status_label.text()
 
 
-def test_retry_countdown_logs_once_per_attempt(youtube_tab):
-    tab = youtube_tab
+def test_retry_countdown_logs_once_per_attempt(queue_youtube_tab):
+    tab = queue_youtube_tab
     _add_youtube(tab, "a")
     tab._on_mine_clicked()
     tab._on_item_started(0)
@@ -254,9 +214,9 @@ def test_reading_tabs_report_the_retry_too(qtbot, test_config):
         tab.deleteLater()
 
 
-def test_a_second_run_still_announces_its_first_retry(youtube_tab):
+def test_a_second_run_still_announces_its_first_retry(queue_youtube_tab):
     """The one-line-per-attempt memo is per run, not for the life of the tab."""
-    tab = youtube_tab
+    tab = queue_youtube_tab
     _add_youtube(tab, "a")
 
     tab._on_mine_clicked()
