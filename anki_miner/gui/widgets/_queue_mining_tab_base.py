@@ -56,14 +56,19 @@ from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QKeySequence
-from PyQt6.QtWidgets import QListWidget, QListWidgetItem
+from PyQt6.QtWidgets import QBoxLayout, QFrame, QHBoxLayout, QListWidget, QListWidgetItem, QVBoxLayout
 
+from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.keyboard_shortcuts import scoped_shortcut
 from anki_miner.gui.utils.qt_helpers import configure_data_view, install_copy_rows
 from anki_miner.gui.utils.run_off_thread import join_or_retain, still_running
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
+from anki_miner.gui.widgets.base import configure_card_layout, page_filler
 from anki_miner.gui.widgets.base.sizing import metric_row_height
 from anki_miner.gui.widgets.current_job_strip import CurrentJobStrip
+from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
+from anki_miner.gui.widgets.log_widget import LogWidget
+from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.widgets.queue_controls_bar import QueueControlsBar
 from anki_miner.models import MiningOutcome, classify_result, result_error_text
 from anki_miner.utils.i18n import tr_format
@@ -73,8 +78,6 @@ if TYPE_CHECKING:
 
     from anki_miner.config import AnkiMinerConfig
     from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext
-    from anki_miner.gui.widgets.log_widget import LogWidget
-    from anki_miner.gui.widgets.progress_widget import ProgressWidget
     from anki_miner.gui.workers._queue_worker_base import SequentialQueueWorker
     from anki_miner.interfaces.presenter import PresenterProtocol
     from anki_miner.orchestration import EpisodeProcessor
@@ -140,6 +143,15 @@ class _QueueListStrings:
     failed_see_log: str  # "Failed — see log"
     complete_succeeded: str  # "Complete — %1 succeeded"
     complete_with_failures: str  # "Complete — %1 succeeded, %2 failed"
+    # The run controls and Progress card built by _ListQueueMiningTabBase. The
+    # Mine and Cancel labels are not repeated here: they are
+    # _QueueRunStrings.mine_label and stop_all above.
+    mine_tip: str  # per tab: what Mine does on this screen
+    clear: str  # "Clear"
+    clear_tip: str  # "Remove every item from the queue."
+    cancel_tip: str  # "Cancel the active run."
+    progress: str  # "Progress"
+    item_noun: str  # the receipt's plural noun: "audiobooks" / "videos"
 
 
 class _QueueMiningTabBase(MiningTabBase):
@@ -765,6 +777,66 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
             lambda: self._move_selection(1),
             context=widget_only,
         )
+
+    # ------------------------------------------------------------------
+    # UI construction
+    # ------------------------------------------------------------------
+
+    def _build_queue_actions(self, queue_layout: QBoxLayout) -> None:
+        """Build Mine, Clear and Cancel, and put the Clear row at the foot of the queue card.
+
+        Clear acts on the list right above it and stays with it. Mine and
+        Cancel are built here but placed by the subclass's
+        ``_install_action_bar`` call, which moves them to the pinned bar (D6).
+        """
+        strings = self._queue_list_strings
+        button_row = QHBoxLayout()
+        button_row.setSpacing(SPACING.xs)
+
+        self.mine_button = ModernButton(self._run_strings.mine_label, variant="primary")
+        self.mine_button.setToolTip(strings.mine_tip)
+        self.mine_button.clicked.connect(self._on_mine_clicked)
+
+        self.clear_button = ModernButton(strings.clear, variant="ghost")
+        self.clear_button.setToolTip(strings.clear_tip)
+        self.clear_button.clicked.connect(self._on_clear_clicked)
+
+        self.stop_button = ModernButton(strings.stop_all, variant="secondary")
+        self.stop_button.setToolTip(strings.cancel_tip)
+        self.stop_button.clicked.connect(self._on_stop_all_clicked)
+
+        button_row.addWidget(self.clear_button)
+        button_row.addStretch()
+        queue_layout.addLayout(button_row)
+
+    def _build_progress_card(self, layout: QBoxLayout) -> None:
+        """Add the Progress card and the page filler to ``layout``; build the log widget.
+
+        The receipt is the durable end state of the same card (D20). The log
+        widget is not added here: ``install_workflow_shell`` moves it into the
+        Activity drawer (D6). The filler stands in for the queue list while an
+        empty queue keeps it hidden, so the page's leftover height pools below
+        the cards instead of inflating their headings; ``_recompute_buttons``
+        toggles it with the list.
+        """
+        strings = self._queue_list_strings
+        progress_card = QFrame()
+        progress_card.setObjectName("card")
+        progress_layout = QVBoxLayout()
+        configure_card_layout(progress_layout)
+
+        progress_layout.addWidget(SectionHeader(strings.progress))
+        self.progress_widget = ProgressWidget()
+        progress_layout.addWidget(self.progress_widget)
+        self._install_receipt(progress_layout, self.progress_widget, item_noun=strings.item_noun)
+
+        progress_card.setLayout(progress_layout)
+        layout.addWidget(progress_card)
+
+        self.log_widget = LogWidget(source=self.TASK_ID or type(self).__name__)
+
+        self.page_filler = page_filler()
+        layout.addWidget(self.page_filler)
 
     # ------------------------------------------------------------------
     # Run lifecycle
