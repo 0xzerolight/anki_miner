@@ -63,6 +63,30 @@ CASES = {
         "https://example.com:8443/api/audio?v=123",
         "https://example.com:8443/api/audio?REDACTED",
     ),
+    "empty_host": (
+        "http://:80/x",
+        "<redacted-url>",
+        "<redacted-url>",
+        "<redacted-url>",
+    ),
+    "unclosed_ipv6_bracket": (
+        "https://[::1/x",
+        "<redacted-url>",
+        "<redacted-url>",
+        "<redacted-url>",
+    ),
+    "scheme_with_no_host": (
+        "https:///path",
+        "<redacted-url>",
+        "<redacted-url>",
+        "<redacted-url>",
+    ),
+    "empty_port": (
+        "https://example.com:/x",
+        "https://example.com/x",
+        "https://example.com/x",
+        "https://example.com/x?REDACTED",
+    ),
 }
 
 
