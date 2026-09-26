@@ -171,16 +171,6 @@ class TestPlanLifecycle:
         assert not tab.apply_button.isEnabled()
         assert tab.preview_table.rowCount() == 0
 
-    def test_stale_config_version_blocks_apply(self, tab, test_config):
-        tab._on_scan_finished(_plan(config_version=test_config.config_version + 1))
-
-        with patch(f"{_TAB_MOD}.QMessageBox") as box:
-            tab._start_apply()
-
-        box.question.assert_not_called()
-        assert tab._plan is None
-        assert "re-scan" in tab.status_label.text()
-
     def test_confirm_no_aborts_the_apply(self, tab):
         tab._on_scan_finished(_plan())
 
@@ -229,51 +219,6 @@ class TestReceipts:
 
         assert "not accepted by Anki" in tab.status_label.text()
 
-    def test_worker_error_lands_on_the_status_line(self, tab):
-        tab._on_worker_error("Deck filter scan failed: boom")
-
-        assert tab.status_label.text() == "Deck filter scan failed: boom"
-
-
-class TestCancelledScan:
-    """The scan worker emits no ``cancelled`` signal, so ``finished`` closes out.
-
-    Without that, a cancelled scan left "Cancelling…" on screen for good — a
-    status asserting live work that had already ended (D17).
-    """
-
-    def test_cancelled_scan_reports_cancelled(self, tab):
-        worker = MagicMock()
-        worker.is_cancelled = True
-        tab.worker_thread = worker
-        tab.status_label.setText("Cancelling…")
-
-        tab._on_worker_finished()
-
-        assert tab.status_label.text() == "Cancelled."
-
-    def test_finished_scan_keeps_its_own_receipt(self, tab):
-        worker = MagicMock()
-        worker.is_cancelled = False
-        tab.worker_thread = worker
-        tab.status_label.setText("Cancelling…")
-
-        tab._on_worker_finished()
-
-        assert tab.status_label.text() == "Cancelling…"
-
-    def test_cancelled_apply_receipt_survives_the_finish(self, tab):
-        # _on_apply_cancelled runs before finished; the finish must not
-        # overwrite the partial receipt it composed.
-        worker = MagicMock()
-        worker.is_cancelled = True
-        tab.worker_thread = worker
-        tab.status_label.setText('Cancelled. Copied 1 note(s) into "Premade (Filtered)".')
-
-        tab._on_worker_finished()
-
-        assert tab.status_label.text() == 'Cancelled. Copied 1 note(s) into "Premade (Filtered)".'
-
 
 class TestCloseWorkerHandles:
     """``iter_close_workers`` runs inside MainWindow.closeEvent -- it may not raise."""
@@ -305,43 +250,10 @@ class TestCloseWorkerHandles:
             gate.set()
             assert worker.wait(2000)
 
+    def test_the_inspection_is_joined_after_the_run_and_the_deck_fetch(self, tab):
+        run, fetch, inspect = MagicMock(), MagicMock(), MagicMock()
+        for worker in (run, fetch, inspect):
+            worker.isRunning.return_value = True
+        tab.worker_thread, tab._deck_worker, tab._inspect_worker = run, fetch, inspect
 
-class TestDeckListRetry:
-    """A deck fetch that failed because Anki was closed must be retried.
-
-    The regression: the latch was set on the ATTEMPT, and ``get_deck_names``
-    answers an unreachable Anki with an empty list, so the failure was
-    remembered as "done". This tab has no Refresh button, so the line stayed on
-    screen for the life of the process.
-    """
-
-    def test_empty_fetch_leaves_the_tab_asking(self, tab):
-        with patch.object(tab, "_load_decks") as load:
-            tab.ensure_decks()
-            assert load.call_count == 1
-
-            tab._on_decks_fetched([])
-            assert tab.status_label.text()
-
-            tab.ensure_decks()
-            assert load.call_count == 2
-
-    def test_a_real_deck_list_stops_the_asking_and_clears_the_line(self, tab):
-        tab._on_decks_fetched([])
-        assert tab.status_label.text()
-
-        tab._on_decks_fetched(["Default", "Premade"])
-
-        assert tab.status_label.text() == ""
-        assert tab.source_combo.count() == 3  # placeholder + two decks
-        with patch.object(tab, "_load_decks") as load:
-            tab.ensure_decks()
-            load.assert_not_called()
-
-    def test_a_scan_message_survives_a_deck_fetch(self, tab):
-        """Only the fetch failure is cleared, never whatever else wrote there."""
-        tab.status_label.setText("Scanned 40 notes.")
-
-        tab._on_decks_fetched(["Default"])
-
-        assert tab.status_label.text() == "Scanned 40 notes."
+        assert list(tab.iter_close_workers()) == [run, fetch, inspect]

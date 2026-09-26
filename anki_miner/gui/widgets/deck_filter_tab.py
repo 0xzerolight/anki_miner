@@ -7,27 +7,24 @@ flow mirroring Card Backfill: Scan (read-only, off-thread) builds a
 target deck and copies exactly the previewed notes, tagging them
 ``anki-miner::deckfilter``.
 
-Plain ``QWidget`` (not ``_ToolTabBase`` — that base is file-processing
-chrome). The active worker lives on ``self.worker_thread``,
-``iter_close_workers()`` yields it for the app-close join, and
-``update_config`` drops any held plan (its filter decisions are
+Built on ``_AnkiPlanTabBase`` with Card Backfill (not ``_ToolTabBase`` — that
+base is file-processing chrome). The active worker lives on
+``self.worker_thread``, ``iter_close_workers()`` yields it for the app-close
+join, and ``update_config`` drops any held plan (its filter decisions are
 config-stale).
 """
 
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterator
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDropEvent
 from PyQt6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QMessageBox,
-    QProgressBar,
     QScrollArea,
     QTableWidget,
     QVBoxLayout,
@@ -36,27 +33,23 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
-from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.content_text import content_cell_font
 from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
 from anki_miner.gui.utils.qt_helpers import (
     CellRole,
     configure_data_view,
-    data_row_height,
     install_copy_rows,
     install_no_scroll_on_inputs,
     make_table_item,
-    urls_from_event,
 )
-from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
+from anki_miner.gui.utils.run_off_thread import run_off_thread
+from anki_miner.gui.widgets._anki_plan_tab_base import _AnkiPlanTabBase, _PlanTabStrings
 from anki_miner.gui.widgets.base import (
     PageWidth,
-    TaskPublisherMixin,
     capped_page_column,
     install_workflow_shell,
 )
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
-from anki_miner.gui.widgets.enhanced.modern_button import ButtonVariant
 from anki_miner.gui.workers.base_worker import SingleCallWorker
 from anki_miner.gui.workers.deck_filter_worker import DeckFilterApplyWorker, DeckFilterScanWorker
 from anki_miner.gui.workers.fetch_workers import FetchDecksWorker
@@ -75,22 +68,9 @@ logger = logging.getLogger(__name__)
 
 _PREVIEW_ROW_CAP = 500
 _CELL_ELIDE = 120
-#: Same whole-row floor rationale as Card Backfill (Issue #102 class).
-PREVIEW_MIN_VISIBLE_ROWS = 8
 
 
-def _set_variant(button: ModernButton, variant: ButtonVariant) -> None:
-    """Re-role a button in place (unpolish/polish; see backfill_tab)."""
-    if button.objectName() == variant:
-        return
-    button.setObjectName(variant)
-    style = button.style()
-    if style is not None:
-        style.unpolish(button)
-        style.polish(button)
-
-
-class DeckFilterTab(TaskPublisherMixin, QWidget):
+class DeckFilterTab(_AnkiPlanTabBase):
     """Scan → summary + preview table → Copy into a new deck."""
 
     #: The preview table genuinely uses the extra width.
@@ -103,6 +83,15 @@ class DeckFilterTab(TaskPublisherMixin, QWidget):
     def __init__(self, config: AnkiMinerConfig, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.config = config
+        # Built here, not in the base, so every literal keeps this tab's
+        # tr-context (see _anki_plan_tab_base).
+        self._strings = _PlanTabStrings(
+            applying=self.tr("Copying…"),
+            cancelling=self.tr("Cancelling…"),
+            cancelled=self.tr("Cancelled."),
+            settings_changed=self.tr("Settings changed since this scan; re-scan before copying."),
+            couldnt_fetch_decks=self.tr("Couldn't fetch deck names from Anki — is Anki running?"),
+        )
         # The Expression column is mined content, so its face follows the mining
         # language; re-derived in update_config when the language changes.
         self._content_style = get_profile(config_language(config)).content_style
@@ -216,49 +205,6 @@ class DeckFilterTab(TaskPublisherMixin, QWidget):
         # Ctrl+Enter runs whichever verb the stage is showing (D48-B).
         primary_action_shortcut(self, self.action_bar.trigger_primary)
 
-    def _apply_preview_height_floor(self) -> None:
-        header = self.preview_table.horizontalHeader()
-        header_h = header.sizeHint().height() if header is not None else 0
-        frame = 2 * self.preview_table.frameWidth()
-        self.preview_table.setMinimumHeight(
-            header_h + frame + PREVIEW_MIN_VISIBLE_ROWS * data_row_height(self.preview_table)
-        )
-
-    def changeEvent(self, a0) -> None:  # noqa: N802 - Qt override
-        """Re-derive the preview's row metrics when the UI zoom changes."""
-        from PyQt6.QtCore import QEvent
-
-        super().changeEvent(a0)
-        if a0 is not None and a0.type() == QEvent.Type.FontChange and hasattr(self, "preview_table"):
-            configure_data_view(self.preview_table)
-            self._apply_preview_height_floor()
-
-    def _create_run_status(self) -> QWidget:
-        """The one-line status and thin bar that sit directly above the actions."""
-        strip = QWidget()
-        strip_layout = QVBoxLayout(strip)
-        strip_layout.setContentsMargins(SPACING.sm, 0, SPACING.sm, 0)
-        strip_layout.setSpacing(SPACING.xxs)
-
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setVisible(False)
-        strip_layout.addWidget(self.progress_bar)
-
-        self.status_label = QLabel("")
-        self.status_label.setWordWrap(True)
-        strip_layout.addWidget(self.status_label)
-
-        return strip
-
-    def _sync_action_prominence(self) -> None:
-        """Scan is primary until a plan exists; then Copy takes over."""
-        has_plan = self._plan is not None
-        primary = self.apply_button if has_plan else self.scan_button
-        quiet = self.scan_button if has_plan else self.apply_button
-        _set_variant(primary, "primary")
-        _set_variant(quiet, "secondary")
-        self.action_bar.set_actions(primary, (self.cancel_button, quiet))
-
     # ------------------------------------------------------------------
     # Drag and drop (D50): this screen takes no payload, and says so
     # ------------------------------------------------------------------
@@ -266,31 +212,6 @@ class DeckFilterTab(TaskPublisherMixin, QWidget):
     def _drop_refusal(self) -> str:
         """The one reason this screen gives for refusing a dropped payload."""
         return self.tr("Deck Filter works on a deck already in Anki — pick it above.")
-
-    def _may_answer_a_drop(self) -> bool:
-        return self.worker_thread is None
-
-    def dragEnterEvent(self, event: QDragEnterEvent | None) -> None:  # noqa: N802 - Qt override
-        if event is None or not self._may_answer_a_drop():
-            return
-        if not urls_from_event(event):
-            return
-        event.acceptProposedAction()
-        self.status_label.setText(self._drop_refusal())
-
-    def dragLeaveEvent(self, event: QDragLeaveEvent | None) -> None:  # noqa: N802 - Qt override
-        if self.status_label.text() == self._drop_refusal():
-            self.status_label.setText("")
-        if event is not None:
-            event.accept()
-
-    def dropEvent(self, event: QDropEvent | None) -> None:  # noqa: N802 - Qt override
-        if event is None:
-            return
-        if self._may_answer_a_drop():
-            self.status_label.setText(self._drop_refusal())
-            self.source_combo.setFocus(Qt.FocusReason.OtherFocusReason)
-        event.ignore()
 
     # ------------------------------------------------------------------
     # Config
@@ -320,56 +241,22 @@ class DeckFilterTab(TaskPublisherMixin, QWidget):
         """Adopt a new config: drop any held plan (its decisions are stale)."""
         self.config = config
         self._content_style = get_profile(config_language(config)).content_style
-        self._plan = None
-        self._scan_warnings = ()
-        self.preview_table.setRowCount(0)
-        self.apply_button.setEnabled(False)
-        self.summary_label.setText("")
+        self._drop_plan()
         self._sync_action_prominence()
         self._refresh_filters_summary()
 
-    def iter_close_workers(self) -> Iterator[DeckFilterScanWorker | DeckFilterApplyWorker | SingleCallWorker]:
-        # Both lazy fetches run blocking AnkiConnect calls; abandoning them to
-        # Qt teardown aborts with "QThread: Destroyed while thread is still
-        # running", so surface them for the close-join policy alongside the run
-        # worker.
-        #
-        # ``still_running``, never a raw ``isRunning()``: ``_inspect_worker``
-        # comes from ``run_off_thread``, which owns the worker's lifetime and
-        # deleteLater()s it on finish. The handle is not cleared, so once an
-        # inspect completes it is a live Python wrapper around a destroyed C++
-        # object and ``isRunning()`` raises RuntimeError -- out of closeEvent,
-        # into the excepthook dialog, and past the config save at the end of
-        # MainWindow.closeEvent.
-        for worker in (self.worker_thread, self._deck_worker, self._inspect_worker):
-            if still_running(worker):
-                assert worker is not None
-                yield worker
+    def _extra_close_workers(self) -> tuple[SingleCallWorker | None, ...]:
+        # The source-deck inspection: ``run_off_thread`` owns its lifetime and
+        # deleteLater()s it on finish without clearing this handle, which is why
+        # the base guards every handle with ``still_running``.
+        return (self._inspect_worker,)
 
     # ------------------------------------------------------------------
     # Deck dropdown (lazy fetch on first show) + source inspection
     # ------------------------------------------------------------------
 
-    def showEvent(self, event) -> None:  # noqa: N802 - Qt override
-        super().showEvent(event)
-        self.ensure_decks()
-
-    def ensure_decks(self) -> None:
-        """Fetch the deck list unless one has already arrived.
-
-        Guarded on the list ARRIVING, not on having asked. ``get_deck_names``
-        answers an unreachable Anki with an empty list, so latching on the
-        attempt left "Couldn't fetch deck names from Anki" on screen for the
-        life of the process once Anki was started after Anki Miner — this tab
-        has no Refresh button to escape with.
-
-        Also the slot for ``MainWindow.anki_reachable``: a validation sweep that
-        has just found Anki is the only thing that can retry while this tab is
-        the visible one and its ``showEvent`` will not fire again.
-        """
-        if self._decks_loaded or still_running(self._deck_worker):
-            return
-        self._load_decks()
+    def _deck_combo(self) -> QComboBox:
+        return self.source_combo
 
     def _load_decks(self) -> None:
         try:
@@ -386,19 +273,6 @@ class DeckFilterTab(TaskPublisherMixin, QWidget):
     def _on_deck_fetch_error(self, message: str) -> None:
         logger.warning("Deck Filter deck fetch failed: error=%s", message)
         self._on_decks_fetched([])
-
-    def _on_decks_fetched(self, decks: list) -> None:
-        if decks:
-            # Runs at most once: ensure_decks() stops asking from here on, so
-            # the combo can never accumulate a second copy of the deck list.
-            self._decks_loaded = True
-            self.source_combo.addItems([str(d) for d in decks])
-            if self._deck_fetch_failed:
-                self._deck_fetch_failed = False
-                self.status_label.setText("")
-        else:
-            self._deck_fetch_failed = True
-            self.status_label.setText(self.tr("Couldn't fetch deck names from Anki — is Anki running?"))
 
     def _selected_source_deck(self) -> str | None:
         return self.source_combo.currentText() if self.source_combo.currentIndex() > 0 else None
@@ -584,14 +458,7 @@ class DeckFilterTab(TaskPublisherMixin, QWidget):
         plan = self._plan
         if plan is None:
             return
-        if plan.config_version != self.config.config_version:
-            self._plan = None
-            self._scan_warnings = ()
-            self.preview_table.setRowCount(0)
-            self.apply_button.setEnabled(False)
-            self.summary_label.setText("")
-            self._sync_action_prominence()
-            self.status_label.setText(self.tr("Settings changed since this scan; re-scan before copying."))
+        if self._drop_stale_plan(plan.config_version):
             return
         answer = QMessageBox.question(
             self,
@@ -614,7 +481,7 @@ class DeckFilterTab(TaskPublisherMixin, QWidget):
         self.worker_thread = worker
         self._set_running(True)
         self._publish_task_start(self.tr("Deck filter copy"), total=len(plan.kept))
-        self.status_label.setText(self.tr("Copying…"))
+        self.status_label.setText(self._strings.applying)
         logger.info(
             "Deck Filter apply started: target=%s notes=%d",
             plan.options.target_deck,
@@ -624,11 +491,7 @@ class DeckFilterTab(TaskPublisherMixin, QWidget):
 
     def _on_apply_finished(self, result: DeckFilterResult) -> None:
         target = self._plan.options.target_deck if self._plan is not None else ""
-        self._plan = None
-        self._scan_warnings = ()
-        self.preview_table.setRowCount(0)
-        self.apply_button.setEnabled(False)
-        self.summary_label.setText("")
+        self._drop_plan()
         parts = [self.tr('Copied {count} note(s) into "{deck}".').format(count=result.created, deck=target)]
         if result.not_created:
             parts.append(
@@ -636,18 +499,6 @@ class DeckFilterTab(TaskPublisherMixin, QWidget):
             )
             self._run_failed = True
         self.status_label.setText(" ".join(parts))
-
-    def _on_apply_cancelled(self) -> None:
-        self._plan = None
-        self._scan_warnings = ()
-        self.preview_table.setRowCount(0)
-        self.apply_button.setEnabled(False)
-        self.summary_label.setText("")
-        receipt = self.status_label.text()
-        if receipt in {self.tr("Copying…"), self.tr("Cancelling…")}:
-            self.status_label.setText(self.tr("Cancelled."))
-        elif not receipt.startswith(self.tr("Cancelled.")):
-            self.status_label.setText(f"{self.tr('Cancelled.')} {receipt}")
 
     # ------------------------------------------------------------------
     # Worker plumbing
@@ -668,38 +519,8 @@ class DeckFilterTab(TaskPublisherMixin, QWidget):
             self.progress_bar.setRange(0, 0)
         self._sync_action_prominence()
 
-    def _cancel_published_task(self) -> None:
-        """Route a registry cancel request into this screen's own Cancel."""
-        self._cancel()
-
-    def _cancel(self) -> None:
-        if self.worker_thread is not None and self.worker_thread.isRunning():
-            self._publish_task_cancelling()
-            self.worker_thread.cancel()
-            self.cancel_button.setEnabled(False)
-            self.status_label.setText(self.tr("Cancelling…"))
-
-    def _on_progress(self, done: int, total: int) -> None:
-        if total:
-            self.progress_bar.setRange(0, total)
-            self.progress_bar.setValue(done)
-        self._publish_task_count(current=done, total=total or None, detail="")
-
     def _on_worker_error(self, message: str) -> None:
         logger.warning("Deck Filter worker failed: error=%s", message)
         self._run_failed = True
         self._set_running(False)
         self.status_label.setText(message)
-
-    def _on_worker_finished(self) -> None:
-        self._set_running(False)
-        cancelled = self.worker_thread is not None and self.worker_thread.is_cancelled
-        # The scan worker declares no ``cancelled`` signal and returns silently,
-        # so this is the only place that can close out a cancelled scan. Guarded
-        # on the exact live text: the Apply path has already written its partial
-        # receipt here by the time ``finished`` arrives.
-        if cancelled and self.status_label.text() == self.tr("Cancelling…"):
-            self.status_label.setText(self.tr("Cancelled."))
-        self._publish_task_finish(self._task_outcome(cancelled=cancelled, failed=self._run_failed))
-        self._run_failed = False
-        self.worker_thread = None
