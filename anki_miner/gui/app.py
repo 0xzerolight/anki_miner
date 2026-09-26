@@ -928,6 +928,19 @@ def _acquire_instance_lock(
     return None, on_conflict()
 
 
+#: Every window holds a lock file of its own under this prefix for its
+#: lifetime — including one started past the "already running" warning, which
+#: holds no instance.lock. Command-line and API runs refuse while a live one
+#: exists (cli/entry.py acquire_run_lock).
+WINDOW_MARKER_PREFIX = "instance.window-"
+
+
+def _hold_window_marker(home: Path) -> QLockFile | None:
+    """This window's own lock file, so other Anki Miner processes can see it."""
+    marker = QLockFile(str(home / f"{WINDOW_MARKER_PREFIX}{os.getpid()}.lock"))
+    return marker if marker.tryLock(0) else None
+
+
 def _relaunch_if_requested(app: QApplication) -> None:
     """Start the replacement process, if a restart was asked for (D39b-A).
 
@@ -2310,6 +2323,9 @@ def main():
         if not _proceed:
             return
         app._instance_lock = _instance_lock  # type: ignore[attr-defined]
+        # Held for the process lifetime whether or not instance.lock was ours:
+        # a window past the warning has nothing else a command-line/API run can see.
+        app._window_marker = _hold_window_marker(ANKI_MINER_HOME)  # type: ignore[attr-defined]
         _run_store_recovery_if_locked(
             _early_config,
             _instance_lock,
