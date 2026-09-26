@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Protocol, cast, runtime_checkable
 
 from PyQt6.QtCore import QRect, QSize, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QAction, QFont
 from PyQt6.QtWidgets import (
     QAbstractScrollArea,
     QCheckBox,
@@ -44,6 +44,7 @@ from anki_miner.gui.controllers.dictionary_import_flow import DictionaryImportFl
 from anki_miner.gui.controllers.frequency_import_flow import FrequencyImportFlow
 from anki_miner.gui.controllers.import_flow_common import ReimportAllFlow
 from anki_miner.gui.controllers.pitch_import_flow import PitchImportFlow
+from anki_miner.gui.controllers.resource_bundle_flow import ResourceBundleFlow
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.config_commit import ConfigCommitError, ConfigCommitResult
@@ -60,7 +61,7 @@ from anki_miner.gui.widgets.base import (
     capped_page_column,
     configure_scrolled_page,
 )
-from anki_miner.gui.widgets.enhanced import ModernButton
+from anki_miner.gui.widgets.enhanced import ModernButton, make_menu_button
 from anki_miner.gui.widgets.panels import (
     AnkiSettingsPanel,
     AudioPackSettingsPanel,
@@ -75,7 +76,7 @@ from anki_miner.gui.widgets.panels import (
     UISettingsPanel,
     YouTubeSettingsPanel,
 )
-from anki_miner.gui.widgets.panels.chain_settings_panel_base import ChainSettingsPanelBase
+from anki_miner.gui.widgets.panels.chain_settings_panel_base import ChainSettingsPanelBase, MutationToken
 from anki_miner.gui.widgets.panels.subtitles_settings_panel import SubtitlesSettingsPanel
 from anki_miner.gui.widgets.settings_search import (
     BREADCRUMB_SEPARATOR,
@@ -91,6 +92,7 @@ from anki_miner.services.expression_audio_fetcher import purge_miss_markers
 from anki_miner.services.frequency.registry import FreqSourceMeta, FrequencySourceRegistry
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.pitch_accent.registry import PitchSourceMeta, PitchSourceRegistry
+from anki_miner.services.resource_bundle import BundleInstallResult, apply_install_to_config
 from anki_miner.services.subtitle_parser import compile_subtitle_regex_filter
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import capped, log_summary, suppressed
@@ -315,6 +317,17 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             persist_chain=self._persist_pitch_chain_change,
             notify_config_changed=lambda: self.config_changed.emit(self.config),
         )
+        # Resource bundle export/import (Export ▾ / Import ▾ → Resources…). It
+        # holds the dictionary, frequency and pitch panels' mutation lock for its run.
+        self._resource_bundle_tokens: list[tuple[ChainSettingsPanelBase, MutationToken]] = []
+        self._resource_bundle_flow = ResourceBundleFlow(
+            parent=self,
+            get_config=lambda: self.config,
+            acquire=self._acquire_resource_bundle_lock,
+            release=self._release_resource_bundle_lock,
+            on_imported=self._apply_resource_import,
+            wordlists_root=ANKI_MINER_HOME / "wordlists",
+        )
         # AnkiConnect probe workers (fetch fields / fetch decks / styling);
         # their live handles surface through iter_close_workers (T-12).
         self._anki_probe = AnkiProbeController(
@@ -458,19 +471,47 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.manage_profiles_button.clicked.connect(self._on_manage_profiles_clicked)
         button_layout.addWidget(self.manage_profiles_button)
 
-        self.export_settings_button = ModernButton(self.tr("Export Settings…"), variant="secondary")
-        self.export_settings_button.setToolTip(
+        # Export ▾ / Import ▾ each offer the settings file and the resource
+        # bundle (the active mining language's dictionaries, frequency and
+        # pitch lists, ignore list and word lists in one file -- to move a setup
+        # to another install or hand it to someone). Two menus rather than four
+        # plain buttons: this footer cannot scroll, and four captions overflow
+        # the 1024px minimum window at 1.5x text scale.
+        self.export_settings_action = QAction(self.tr("Settings…"), self)
+        self.export_settings_action.setToolTip(
             self.tr("Save a portable settings file (machine-specific paths and resources excluded).")
         )
-        self.export_settings_button.clicked.connect(self._on_export_settings)
-        button_layout.addWidget(self.export_settings_button)
+        self.export_settings_action.triggered.connect(self._on_export_settings)
+        self.export_resources_action = QAction(self.tr("Resources…"), self)
+        self.export_resources_action.setToolTip(
+            self.tr(
+                "Save this language's dictionaries, frequency and pitch lists, ignore list and word lists to one file."
+            )
+        )
+        self.export_resources_action.triggered.connect(self._on_export_resources)
+        self.export_button = make_menu_button(
+            self.tr("Export"),
+            self.tr("Export your settings, or this language's resources, to a file."),
+            (self.export_settings_action, self.export_resources_action),
+        )
+        button_layout.addWidget(self.export_button)
 
-        self.import_settings_button = ModernButton(self.tr("Import Settings…"), variant="secondary")
-        self.import_settings_button.setToolTip(
+        self.import_settings_action = QAction(self.tr("Settings…"), self)
+        self.import_settings_action.setToolTip(
             self.tr("Apply settings from an exported file; anything not in the file is kept.")
         )
-        self.import_settings_button.clicked.connect(self._on_import_settings)
-        button_layout.addWidget(self.import_settings_button)
+        self.import_settings_action.triggered.connect(self._on_import_settings)
+        self.import_resources_action = QAction(self.tr("Resources…"), self)
+        self.import_resources_action.setToolTip(
+            self.tr("Install resources from a bundle file. Nothing you already have is replaced.")
+        )
+        self.import_resources_action.triggered.connect(self._on_import_resources)
+        self.import_button = make_menu_button(
+            self.tr("Import"),
+            self.tr("Import settings, or resources, from a file."),
+            (self.import_settings_action, self.import_resources_action),
+        )
+        button_layout.addWidget(self.import_button)
 
         # Inline, non-modal save confirmation. Flashed by _flash_save_status()
         # and auto-cleared by a timer; validation warnings park here sticky.
@@ -1877,6 +1918,44 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         """
         self.manage_profiles_requested.emit()
 
+    def _on_export_resources(self) -> None:
+        self._resource_bundle_flow.export_resources()
+
+    def _on_import_resources(self) -> None:
+        self._resource_bundle_flow.import_resources()
+
+    def _acquire_resource_bundle_lock(self) -> bool:
+        """Commit pending edits and lock the three chain panels, as their own imports do.
+
+        Refused (silently, like a panel's own Add) while any of them is mid-mutation.
+        """
+        panels: tuple[ChainSettingsPanelBase, ...] = (self.dictionary_panel, self.frequency_panel, self.pitch_panel)
+        if self._resource_bundle_tokens or not all(panel.prepare_for_mutation() for panel in panels):
+            return False
+        self._resource_bundle_tokens = [(panel, panel.hold_mutation("bundle")) for panel in panels]
+        self.export_resources_action.setEnabled(False)
+        self.import_resources_action.setEnabled(False)
+        return True
+
+    def _release_resource_bundle_lock(self) -> None:
+        tokens, self._resource_bundle_tokens = self._resource_bundle_tokens, []
+        for panel, token in tokens:
+            panel.release(token)
+        self.export_resources_action.setEnabled(True)
+        self.import_resources_action.setEnabled(True)
+
+    def _apply_resource_import(self, result: BundleInstallResult) -> None:
+        """Chain what a resource bundle installed, then repaint every page.
+
+        Pending edits were committed when the lock was taken, and the lock plus
+        the modal progress dialog kept new ones out, so the repaint loses nothing.
+        """
+        new_config = apply_install_to_config(self.config, result)
+        self._commit_immediate_config(new_config, self._commit_config)
+        self._load_config()
+        for panel in (self.dictionary_panel, self.frequency_panel, self.pitch_panel):
+            panel.refresh_registry()
+
     def _on_export_settings(self) -> None:
         """Export a portable settings file (machine-specific fields stripped)."""
 
@@ -2174,6 +2253,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             *self._audio_pack_import_flow.iter_close_workers(),
             *self._frequency_import_flow.iter_close_workers(),
             *self._pitch_import_flow.iter_close_workers(),
+            *self._resource_bundle_flow.iter_close_workers(),
         )
 
     def shutdown(self) -> None:

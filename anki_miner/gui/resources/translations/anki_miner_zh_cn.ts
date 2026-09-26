@@ -2414,6 +2414,14 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Export / import resources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pack this language's dictionaries, frequency and pitch lists, ignore list and word lists into one file, and install them on another machine -- Export or Import, then Resources, in the Settings footer.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Word pronunciation audio</source>
         <translation>单词发音音频</translation>
     </message>
@@ -8668,6 +8676,207 @@ No index files are deleted.</source>
         </translation>
     </message>
 </context><context>
+    <name>ResourceBundleDialog</name>
+    <message>
+        <source>Dictionaries</source>
+        <translation type="unfinished">词典</translation>
+    </message>
+    <message>
+        <source>Frequency lists</source>
+        <translation type="unfinished">词频列表</translation>
+    </message>
+    <message>
+        <source>Pitch accent</source>
+        <translation type="unfinished">音调</translation>
+    </message>
+    <message>
+        <source>Known words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Word lists</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Known-words ignore list</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Blacklist</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Whitelist</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>ResourceBundleFlow</name>
+    <message>
+        <source>Your installed resources could not be checked.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing to Export</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Your %1 setup has no dictionary, frequency or pitch list, ignore list or word list that can be exported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export Resources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose what goes into the %1 resource bundle. Dictionaries and lists travel as their original files and are rebuilt when the bundle is imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export…</source>
+        <translation type="unfinished">导出…</translation>
+    </message>
+    <message>
+        <source>Resource bundles (*.zip)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>no original file was kept; add it again from its file to include it</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>imported for another mining language</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Exporting resources…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished">取消</translation>
+    </message>
+    <message>
+        <source>The resources could not be exported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>A resource export or import is still finishing. Try again in a moment.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished">正在取消…</translation>
+    </message>
+    <message>
+        <source>The export stopped without reporting a result.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resources Exported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resources written: %1 (%2)
+%3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import Resources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resource bundles (*.zip);;All Files (*)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That file is not a resource bundle Anki Miner can read.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This bundle holds %1 resources. Switch the mining language to %1, then import it again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing to Import</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>You already have everything this bundle holds, so nothing was changed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose what to install. Each dictionary and list is rebuilt from its original file, which can take several minutes for a large dictionary. New dictionaries go to the top of your list; the bundle's ignore list is added to yours; nothing you already have is replaced.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Importing resources…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The resources could not be imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The import stopped without reporting a result.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The resources were installed, but your settings could not be updated to use them.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>already installed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>you already use one</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>None of the chosen resources could be installed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Installed:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Not installed:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The import was cancelled. What finished installing is kept.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing was installed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resources Imported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Your ignore list (%1 new words)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Blacklist</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Whitelist</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>ResourceChain</name>
     <message>
         <source>Audio pack '%1' is indexed for %2 and was skipped.</source>
@@ -9384,20 +9593,44 @@ No index files are deleted.</source>
         <translation>保存多个完整设置快照并在其间切换。</translation>
     </message>
     <message>
-        <source>Export Settings…</source>
-        <translation>导出设置…</translation>
+        <source>Settings…</source>
+        <translation>设置…</translation>
     </message>
     <message>
         <source>Save a portable settings file (machine-specific paths and resources excluded).</source>
         <translation>保存可移植的设置文件（不含特定于机器的路径和资源）。</translation>
     </message>
     <message>
-        <source>Import Settings…</source>
-        <translation>导入设置…</translation>
+        <source>Resources…</source>
+        <translation>资源…</translation>
+    </message>
+    <message>
+        <source>Save this language's dictionaries, frequency and pitch lists, ignore list and word lists to one file.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export</source>
+        <translation>导出</translation>
+    </message>
+    <message>
+        <source>Export your settings, or this language's resources, to a file.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Apply settings from an exported file; anything not in the file is kept.</source>
         <translation>从导出的文件应用设置；文件中没有的内容保持不变。</translation>
+    </message>
+    <message>
+        <source>Install resources from a bundle file. Nothing you already have is replaced.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import</source>
+        <translation>导入</translation>
+    </message>
+    <message>
+        <source>Import settings, or resources, from a file.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cards</source>

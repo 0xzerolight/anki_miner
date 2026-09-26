@@ -1,11 +1,12 @@
 """Modern button widget with multiple style variants."""
 
+from collections.abc import Sequence
 from typing import Literal
 
 # pyqtProperty is present at runtime but missing from the PyQt6 stubs.
 from PyQt6.QtCore import QEvent, QRectF, Qt, pyqtProperty  # type: ignore[attr-defined]
-from PyQt6.QtGui import QColor, QHideEvent, QPainter, QPaintEvent, QPalette
-from PyQt6.QtWidgets import QApplication, QPushButton
+from PyQt6.QtGui import QAction, QColor, QHideEvent, QPainter, QPaintEvent, QPalette
+from PyQt6.QtWidgets import QApplication, QMenu, QPushButton
 
 from anki_miner.gui.resources.styles import BORDER_RADIUS, MOTION
 from anki_miner.gui.utils import motion
@@ -227,3 +228,24 @@ class ModernButton(QPushButton):
         radius = float(BORDER_RADIUS.default)
         painter.drawRoundedRect(QRectF(self.rect()), radius, radius)
         painter.end()
+
+
+def make_menu_button(text: str, tooltip: str, actions: Sequence[QAction]) -> ModernButton:
+    """A quiet secondary button that opens a dropdown of ``actions`` on click.
+
+    A ``ModernButton`` rather than a bare ``QToolButton``: it must read as the
+    toolbar's ordinary quiet control (D41 reserves accent and red for Add and
+    the trash), and ``ModernButton#secondary`` already has that look -- reusing
+    it needs no new QSS. ``setMenu`` opens the dropdown on click.
+    """
+    button = ModernButton(text, variant="secondary")
+    accessible = tooltip or text
+    button.setAccessibleName(accessible)
+    button.setToolTip(accessible)
+    menu = QMenu(button)
+    # QAction tooltips are otherwise silent inside a menu.
+    menu.setToolTipsVisible(True)
+    for action in actions:
+        menu.addAction(action)
+    button.setMenu(menu)
+    return button

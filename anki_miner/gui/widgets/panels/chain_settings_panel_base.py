@@ -45,7 +45,6 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QListWidgetItem,
-    QMenu,
     QVBoxLayout,
     QWidget,
 )
@@ -55,7 +54,7 @@ from anki_miner.gui.utils.config_commit import ConfigCommitResult
 from anki_miner.gui.utils.focus_ring import KEYBOARD_FOCUS_PROPERTY
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import FormPanel, ScreenIssue, ScreenIssueHost
-from anki_miner.gui.widgets.enhanced.modern_button import ButtonVariant, ModernButton
+from anki_miner.gui.widgets.enhanced.modern_button import ButtonVariant, ModernButton, make_menu_button
 from anki_miner.gui.widgets.panels.chain_priority_list import (
     ChainPriorityList,
     ChainRowActions,
@@ -284,7 +283,8 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
         self._add_btn = ModernButton(labels.add, variant="primary")
         toolbar.addWidget(self._add_btn)
         if extra_actions:
-            self._more_btn = self._make_more_button(labels.more, labels.more_tooltip, extra_actions)
+            # The quiet "More" control collapsing this panel's maintenance actions.
+            self._more_btn = make_menu_button(labels.more, labels.more_tooltip, extra_actions)
             toolbar.addWidget(self._more_btn)
         else:
             self._more_btn = None
@@ -308,29 +308,6 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
         button = ModernButton(glyph, variant=variant, square=True)
         button.setAccessibleName(name)
         button.setToolTip(tooltip or name)
-        return button
-
-    @staticmethod
-    def _make_more_button(text: str, tooltip: str, actions: tuple[QAction, ...]) -> ModernButton:
-        """The quiet "More" control collapsing this panel's maintenance actions.
-
-        A ``ModernButton`` rather than a bare ``QToolButton``: the button must
-        read as the toolbar's ordinary quiet control (D41 reserves accent and
-        red for Add and the trash), and that look already exists on
-        ``ModernButton#secondary`` -- reusing it needs no new QSS. ``setMenu``
-        opens the dropdown on click the same way the Audio panel's own Add
-        button already does for its three add-kinds.
-        """
-        button = ModernButton(text, variant="secondary")
-        accessible = tooltip or text
-        button.setAccessibleName(accessible)
-        button.setToolTip(accessible)
-        menu = QMenu(button)
-        # QAction tooltips are otherwise silent inside a menu.
-        menu.setToolTipsVisible(True)
-        for action in actions:
-            menu.addAction(action)
-        button.setMenu(menu)
         return button
 
     # ------------------------------------------------------------------

@@ -44,15 +44,15 @@ def messageboxes(monkeypatch):
 
 
 class TestExportButton:
-    def test_buttons_exist(self, tab):
-        assert tab.export_settings_button is not None
-        assert tab.import_settings_button is not None
+    def test_the_footer_menus_offer_settings_and_resources(self, tab):
+        assert tab.export_button.menu().actions() == [tab.export_settings_action, tab.export_resources_action]
+        assert tab.import_button.menu().actions() == [tab.import_settings_action, tab.import_resources_action]
 
     def test_export_writes_portable_file(self, tab, tmp_path, monkeypatch, messageboxes):
         target = tmp_path / "my_settings.json"
         monkeypatch.setattr(file_dialogs, "pick_save_file", lambda *a, on_done, **k: on_done(str(target)))
 
-        tab.export_settings_button.click()
+        tab.export_settings_action.trigger()
 
         payload = json.loads(target.read_text(encoding="utf-8"))
         assert payload["anki_miner_settings"] == 1
@@ -64,7 +64,7 @@ class TestExportButton:
     def test_export_cancelled_is_noop(self, tab, monkeypatch, messageboxes):
         monkeypatch.setattr(file_dialogs, "pick_save_file", lambda *a, on_done, **k: on_done(""))
 
-        tab.export_settings_button.click()
+        tab.export_settings_action.trigger()
 
         assert not messageboxes["information"]
         assert not messageboxes["critical"]
@@ -82,7 +82,7 @@ class TestImportButton:
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
-        tab.import_settings_button.click()
+        tab.import_settings_action.trigger()
 
         assert messageboxes["question"], "confirmation prompt expected"
         assert len(received) == 1
@@ -103,7 +103,7 @@ class TestImportButton:
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
-        tab.import_settings_button.click()
+        tab.import_settings_action.trigger()
 
         assert received == []
         assert tab.anki_panel.get_deck_name() == test_config.anki_deck_name
@@ -113,7 +113,7 @@ class TestImportButton:
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
-        tab.import_settings_button.click()
+        tab.import_settings_action.trigger()
 
         assert received == []
         assert not messageboxes["question"]
@@ -125,7 +125,7 @@ class TestImportButton:
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
-        tab.import_settings_button.click()
+        tab.import_settings_action.trigger()
 
         issue = tab.issue_banner().current_issue()
         assert issue is not None and issue.summary == "Settings could not be imported."
@@ -139,7 +139,7 @@ class TestImportButton:
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
-        tab.import_settings_button.click()
+        tab.import_settings_action.trigger()
 
         issue = tab.issue_banner().current_issue()
         assert issue is not None and issue.summary == "Settings could not be imported."

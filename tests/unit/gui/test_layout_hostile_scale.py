@@ -577,8 +577,8 @@ class TestSettingsNavigatorKeepsEveryCategoryReachable:
 class TestSettingsFooterFitsTheWindowMinimum:
     """Five widgets now share the Settings footer, and it cannot scroll.
 
-    Reset / Settings Profiles / Export / Import plus the save-status label sit in
-    one ``QHBoxLayout`` outside the panels' scroll area, so their combined
+    Reset / Settings Profiles / Export / Import plus the save-status
+    label sit in one ``QHBoxLayout`` outside the panels' scroll area, so their combined
     minimum is a hard floor on the tab's width -- the profiles button moved here
     out of General, which could absorb it by scrolling.
 
@@ -620,8 +620,8 @@ class TestSettingsFooterFitsTheWindowMinimum:
         row = (
             tab.reset_settings_button,
             tab.manage_profiles_button,
-            tab.export_settings_button,
-            tab.import_settings_button,
+            tab.export_button,
+            tab.import_button,
         )
         needed = sum(button.minimumSizeHint().width() for button in row) + SPACING.sm * len(row)
 

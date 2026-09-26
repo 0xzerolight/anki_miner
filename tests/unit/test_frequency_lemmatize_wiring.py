@@ -169,7 +169,7 @@ def test_import_options_come_from_the_sidecar_even_beside_a_corrupt_index(tmp_pa
     sidecar_ns = (slot / "meta.json").stat().st_mtime_ns
     os.utime(db, ns=(sidecar_ns + 10**9, sidecar_ns + 10**9))  # the sidecar is now stale
 
-    assert source_importer._slot_import_options(slot) == (mode_probe.OCCURRENCE_BASED, True)
+    assert source_importer.slot_import_options(slot) == (mode_probe.OCCURRENCE_BASED, True)
 
 
 def test_import_options_fall_back_to_the_index_without_a_sidecar(tmp_path: Path, monkeypatch):
@@ -177,7 +177,7 @@ def test_import_options_fall_back_to_the_index_without_a_sidecar(tmp_path: Path,
     slot = dest / result.source_id
     (slot / "meta.json").unlink()
 
-    assert source_importer._slot_import_options(slot) == (mode_probe.OCCURRENCE_BASED, True)
+    assert source_importer.slot_import_options(slot) == (mode_probe.OCCURRENCE_BASED, True)
 
 
 def test_import_options_default_when_nothing_answers(tmp_path: Path):
@@ -185,7 +185,7 @@ def test_import_options_default_when_nothing_answers(tmp_path: Path):
     slot.mkdir()
     (slot / "index.sqlite").write_bytes(b"not a database")
 
-    assert source_importer._slot_import_options(slot) == ("", False)
+    assert source_importer.slot_import_options(slot) == ("", False)
 
 
 def test_a_default_slot_beside_a_corrupt_index_needs_no_index_read(tmp_path: Path, caplog):
@@ -196,6 +196,6 @@ def test_a_default_slot_beside_a_corrupt_index_needs_no_index_read(tmp_path: Pat
     (slot / "index.sqlite").write_bytes(b"not a database")
 
     with caplog.at_level("WARNING", logger=source_importer.logger.name):
-        assert source_importer._slot_import_options(slot) == ("", False)
+        assert source_importer.slot_import_options(slot) == ("", False)
 
     assert not caplog.records
