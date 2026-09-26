@@ -72,7 +72,7 @@ The run file:
 
 The active profile reads the settings the window uses; before Anki Miner was ever set up, that is the defaults, as in the app. Any other profile reads that profile's file; a profile that does not exist or cannot be read gives `PROFILE_UNREADABLE`, never the defaults. The settings then switch to `language` the way the window's language switch does, and `config` is applied on top. Nothing is saved.
 
-Allowed `config` keys: `anki_deck_name`, `anki_note_type`, `anki_fields`, `card_type`, `card_type_marker_fields`, `allow_duplicate_cards`, `merge_incomplete_cues`, `max_parallel_workers`, `min_frequency_rank`, `max_frequency_rank`, `use_blacklist`, `use_whitelist`, `deduplicate_sentences`, `use_i_plus_one_filter`, `max_sentence_duration_seconds`, `max_sentence_chars`, `exclude_hiragana_only_words`, `exclude_katakana_only_words`. `anki_fields` and `card_type_marker_fields` merge key by key into the profile's. An unknown key, or a value of the wrong type or out of range, gives `BAD_RUN_FILE`.
+Allowed `config` keys: `anki_deck_name`, `anki_note_type`, `anki_fields`, `card_type`, `card_type_marker_fields`, `allow_duplicate_cards`, `merge_incomplete_cues`, `max_parallel_workers`, `min_frequency_rank`, `max_frequency_rank`, `use_blacklist`, `use_whitelist`, `deduplicate_sentences`, `use_i_plus_one_filter`, `max_sentence_duration_seconds`, `max_sentence_chars`, `exclude_hiragana_only_words`, `exclude_katakana_only_words`. `anki_fields` and `card_type_marker_fields` merge key by key into the profile's. An unknown key, a value of the wrong type, or a value Anki Miner's settings refuse gives `BAD_RUN_FILE`; the ranges themselves are not checked.
 
 API runs never subtract words the user already knows (Anki's cards, the known-words list, the ignore list): the caller filters known words itself.
 
@@ -81,7 +81,7 @@ An episode:
 | Key | Value |
 |---|---|
 | `run_id` | required |
-| `video_file`, `subtitle_file` | required paths |
+| `video_file`, `subtitle_file` | required paths; a relative path is taken from the folder `prepare` runs in |
 | `subtitle_offset` | seconds, or `null` for the profile's offset |
 | `audio_track_override` | 0-based audio track, or `null` to find the mining language's track |
 | `source_label_override` | the card's Source text instead of `<series> — <episode>` |
@@ -201,7 +201,7 @@ To stop a run, create an empty file named `cancel` in its folder. The run stops 
 
 ## Differences from the proposal
 
-This build implements the proposal's "First" list (v6) and takes every "Smaller version": word statuses are `created`, `not_created` and `not_found`; the setup codes are one `SETUP_ERROR`; `prepare` checks the Anki deck and note type; `profiles` is its own command. Otherwise:
+This build implements the proposal's "First" list (v6) and takes every "Smaller version": word statuses are `created`, `not_created` and `not_found`; the setup codes are one `SETUP_ERROR`; and `prepare` checks the Anki deck and note type. `profiles` is its own command, as in the full version. Otherwise:
 
 - Two codes were added: `BAD_ARGUMENTS` for a command line that does not parse, and `MINING_FAILED` for a run that failed inside the pipeline.
 - Verdict runs and result files carry a `message` beside `error`.
@@ -244,7 +244,9 @@ if not verdict["ok"]:
     raise SystemExit(verdict)
 
 candidates = json.loads((runs / "ep05" / "candidates.json").read_text(encoding="utf-8"))
-picks = [{"mined_form": c["mined_form"], "line": c["sentence_candidates"][-1]}
+# Here: the first ten words, each on the last line it appears on (a word whose
+# line could not be located has no candidates and keeps its own line).
+picks = [{"mined_form": c["mined_form"], **({"line": c["sentence_candidates"][-1]} if c["sentence_candidates"] else {})}
          for c in candidates["candidates"][:10]]
 
 pathlib.Path("commit.json").write_text(json.dumps({
