@@ -22,14 +22,14 @@ import threading
 from unittest.mock import Mock, patch
 
 import pytest
-from PyQt6.QtCore import QEvent, Qt, QThread
+from PyQt6.QtCore import QEvent, Qt
 from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication, QDialog
 
 from anki_miner.config import create_default_config
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
-from tests.unit._curation_harness import settle_into_gate
+from tests.unit._curation_harness import CurationWorker, drain_until, settle_into_gate
 
 MODULE = "anki_miner.gui.widgets._mining_tab_base"
 
@@ -44,19 +44,6 @@ class _Bare(MiningTabBase):
         pass
 
 
-class _CurationWorker(QThread):
-    """Runs ``_curation_bridge`` off the GUI thread, exactly like a mining worker."""
-
-    def __init__(self, tab, words):
-        super().__init__()
-        self._tab = tab
-        self._words = words
-        self.result = "<unset>"
-
-    def run(self):
-        self.result = self._tab._curation_bridge(self._words)
-
-
 def _flush() -> None:
     """Deliver queued signals *and* pending ``deleteLater`` deletions.
 
@@ -66,14 +53,6 @@ def _flush() -> None:
     QApplication.processEvents()
     QApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
     QApplication.processEvents()
-
-
-def _drain_until(predicate, timeout_ms: int = 3000, step_ms: int = 10) -> bool:
-    waited = 0
-    while not predicate() and waited < timeout_ms:
-        QTest.qWait(step_ms)
-        waited += step_ms
-    return predicate()
 
 
 def _fake_worker():
@@ -310,7 +289,7 @@ def test_context_build_error_still_presents_and_releases(tab):
     cls, created = _fake_dialog_cls()
     with patch(f"{MODULE}.WordCurationDialog", cls):
         failing._on_curation_requested(["w1"])
-        assert _drain_until(lambda: bool(created)), "no table-only curator was presented"
+        assert drain_until(lambda: bool(created)), "no table-only curator was presented"
         assert not failing._curation_event.is_set()
         created[0].accept()
 
@@ -421,9 +400,9 @@ def _park_worker(tab, words=("w1",)):
     cls, created = _fake_dialog_cls()
     patcher = patch(f"{MODULE}.WordCurationDialog", cls)
     patcher.start()
-    worker = _CurationWorker(tab, list(words))
+    worker = CurationWorker(tab, list(words))
     worker.start()
-    assert _drain_until(lambda: bool(created)), "the curator never opened"
+    assert drain_until(lambda: bool(created)), "the curator never opened"
     settle_into_gate()
     assert not worker.isFinished(), "the worker should still be parked at the gate"
     return worker, created[0], patcher
@@ -434,7 +413,7 @@ def test_parked_worker_receives_the_selection_after_accept(tab):
     try:
         dialog.selection = ["猫"]
         dialog.accept()
-        assert _drain_until(worker.isFinished), "the worker was never released"
+        assert drain_until(worker.isFinished), "the worker was never released"
     finally:
         patcher.stop()
         worker.wait(3000)
