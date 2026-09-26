@@ -527,29 +527,3 @@ class TestStaleHelpers:
             dictionary_chain=(ChainEntry(kind="indexed", dict_id="old-dict", enabled=True),),
         )
         assert [m.dict_id for m in stale_enabled_dicts(config)] == ["old-dict"]
-
-    def test_format_message_single_and_plural(self, tmp_path: Path):
-        from anki_miner.services.dictionary.registry import format_stale_reimport_message
-
-        _seed_stale_dict(tmp_path, "a", "Alpha")
-        _seed_stale_dict(tmp_path, "b", "Beta")
-        registry = DictionaryRegistry(tmp_path)
-        registry.load()
-        one = format_stale_reimport_message([registry.get("a")])
-        assert "Dictionary 'Alpha' needs reimport" in one
-        assert "Settings → Dictionaries → More → Reimport All" in one
-        two = format_stale_reimport_message([registry.get("a"), registry.get("b")])
-        assert "Dictionaries 'Alpha', 'Beta' need reimport" in two
-
-    def test_stale_dict_reimport_error(self, tmp_path: Path):
-        from anki_miner.services.dictionary.registry import stale_dict_reimport_error
-
-        _seed_stale_dict(tmp_path, "old-dict", "Old Dict")
-        stale_cfg = replace(
-            AnkiMinerConfig(),
-            dicts_root=tmp_path,
-            dictionary_chain=(ChainEntry(kind="indexed", dict_id="old-dict", enabled=True),),
-        )
-        assert stale_dict_reimport_error(stale_cfg) is not None
-        clean_cfg = replace(stale_cfg, dictionary_chain=())
-        assert stale_dict_reimport_error(clean_cfg) is None

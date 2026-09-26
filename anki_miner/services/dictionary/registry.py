@@ -255,29 +255,3 @@ def stale_enabled_dicts(config: AnkiMinerConfig) -> list[DictMeta]:
     registry = DictionaryRegistry(config.dicts_root)
     registry.load()
     return registry.stale_enabled(config)
-
-
-def format_stale_reimport_message(metas: list[DictMeta]) -> str:
-    """Actionable one-line error naming the schema-stale dictionaries.
-
-    Points the user at the one-click fix (Settings → Dictionaries → More →
-    Reimport All). Shared by the processor backstop and the queue-worker
-    pre-loop gate so every entry point speaks with one voice.
-    """
-    names = ", ".join(f"'{m.source_name}'" for m in metas)
-    verb = "need" if len(metas) != 1 else "needs"
-    noun = "Dictionaries" if len(metas) != 1 else "Dictionary"
-    return f"{noun} {names} {verb} reimport (schema upgrade) — Settings → Dictionaries → More → Reimport All"
-
-
-def stale_dict_reimport_error(config: AnkiMinerConfig) -> str | None:
-    """Return the actionable reimport message if any enabled slot is stale.
-
-    ``None`` when the chain is clean. The queue workers call this once before
-    their per-item loop so a stale slot aborts the whole run with a single error
-    instead of emitting one soft-failure row per queued item.
-    """
-    stale = stale_enabled_dicts(config)
-    if not stale:
-        return None
-    return format_stale_reimport_message(stale)
