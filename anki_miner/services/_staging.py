@@ -362,6 +362,54 @@ def repair_managed_slot(
         return result
 
 
+def claim_managed_slot(
+    dest_root: Path,
+    slot_id: str,
+    family: StoreFamily,
+    *,
+    overwrite: bool,
+    noun: str,
+) -> Path:
+    """Resolve a managed slot and refuse an unsafe overwrite before staging.
+
+    Every importer runs this same prologue: resolve the slot, then -- when it
+    already exists -- either refuse outright or, with ``overwrite``, prove
+    this process owns it before agreeing to replace it. The ownership proof
+    is safety-relevant (a foreign directory must never be silently replaced),
+    so one implementation is worth having.
+
+    Does not create ``dest_root``: some callers must ``mkdir`` it before this
+    check runs (to fail fast even when ``dest_root`` doesn't exist yet),
+    others don't need to. That stays the caller's job.
+
+    Args:
+        dest_root: The family root the slot lives under.
+        slot_id: The managed slot's on-disk directory name.
+        family: The ownership-marker family this slot belongs to.
+        overwrite: Replace an existing, owned slot instead of refusing it.
+        noun: The user-facing name for this slot kind (e.g. "Dictionary",
+            "Frequency source"), used verbatim in both error messages.
+
+    Raises:
+        SetupError: The slot id is invalid, it already exists and
+            ``overwrite`` is false, or it exists but isn't a slot this app
+            manages.
+    """
+    try:
+        final = resolve_managed_slot(dest_root, slot_id)
+    except ValueError as exc:
+        raise SetupError(str(exc)) from exc
+    if os.path.lexists(final):
+        if not overwrite:
+            raise SetupError(f"{noun} '{slot_id}' already exists")
+        if not prove_owned_slot(final.parent, slot_id, family):
+            raise SetupError(
+                f"{noun} '{slot_id}' exists but is not an Anki Miner-managed {noun.lower()}; "
+                "refusing to overwrite it"
+            )
+    return final
+
+
 def promote_staged_dir(
     staging: Path,
     final: Path,

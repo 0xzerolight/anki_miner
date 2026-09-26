@@ -19,7 +19,7 @@ import pytest
 from anki_miner.exceptions import SetupError
 from anki_miner.services import _staging as staging_module
 from anki_miner.services._sqlite_index import read_ownership_marker, write_ownership_marker
-from anki_miner.services._staging import promote_staged_dir, repair_managed_slot
+from anki_miner.services._staging import claim_managed_slot, promote_staged_dir, repair_managed_slot
 
 
 def test_repair_crash_after_quarantine_leaves_owned_recovery_candidate(
@@ -617,3 +617,42 @@ def test_promotion_lock_registry_reclaims_unused_roots(tmp_path: Path) -> None:
 
     assert lock_ref() is None
     assert root not in staging_module._promotion_locks
+
+
+class TestClaimManagedSlot:
+    """The shared resolve/exists/overwrite/prove-owned prologue every importer runs."""
+
+    def test_resolves_fresh_slot_without_touching_disk(self, tmp_path: Path) -> None:
+        final = claim_managed_slot(tmp_path, "resource", "dictionary", overwrite=False, noun="Dictionary")
+
+        assert final == (tmp_path / "resource").resolve()
+        assert not final.exists()
+
+    def test_refuses_existing_slot_without_overwrite(self, tmp_path: Path) -> None:
+        existing = tmp_path / "resource"
+        existing.mkdir()
+
+        with pytest.raises(SetupError, match="Dictionary 'resource' already exists"):
+            claim_managed_slot(tmp_path, "resource", "dictionary", overwrite=False, noun="Dictionary")
+
+    def test_overwrite_refuses_unowned_existing_slot(self, tmp_path: Path) -> None:
+        foreign = tmp_path / "resource"
+        foreign.mkdir()
+        (foreign / "keep.txt").write_text("foreign", encoding="utf-8")
+
+        with pytest.raises(
+            SetupError,
+            match="Dictionary 'resource' exists but is not an Anki Miner-managed dictionary; refusing to overwrite it",
+        ):
+            claim_managed_slot(tmp_path, "resource", "dictionary", overwrite=True, noun="Dictionary")
+
+        assert (foreign / "keep.txt").read_text(encoding="utf-8") == "foreign"
+
+    def test_overwrite_allows_owned_existing_slot(self, tmp_path: Path) -> None:
+        owned = tmp_path / "resource"
+        owned.mkdir()
+        write_ownership_marker(owned, "resource", "dictionary")
+
+        final = claim_managed_slot(tmp_path, "resource", "dictionary", overwrite=True, noun="Dictionary")
+
+        assert final == owned.resolve()
