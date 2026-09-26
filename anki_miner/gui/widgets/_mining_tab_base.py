@@ -145,8 +145,9 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
     review_words_checkbox: QCheckBox
 
     # The per-run offset rows, built by :meth:`_build_offset_rows` on the three
-    # screens that take a subtitle offset (Single, Batch, Deck Builder). Bare
-    # annotations only -- see ``config`` above.
+    # screens that take a subtitle offset (Single, Batch, Deck Builder); the
+    # queue screens never have them. Bare annotations only -- see ``config``
+    # above.
     offset_spinbox: QDoubleSpinBox
     secondary_offset_spinbox: QDoubleSpinBox
     secondary_offset_row: QWidget
@@ -771,12 +772,12 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         survivors: list[tuple[QThread, EpisodeProcessor | None]] = []
         for worker, processor in self._leaked_runs:
             try:
-                still_running = worker.isRunning() and not worker.wait(0)
+                running = worker.isRunning() and not worker.wait(0)
             except RuntimeError:
                 # Underlying C++ object already deleted — the worker is gone, so
                 # the processor is safe to close.
-                still_running = False
-            if still_running:
+                running = False
+            if running:
                 survivors.append((worker, processor))
                 continue
             # processor may be None when the worker timed out before its

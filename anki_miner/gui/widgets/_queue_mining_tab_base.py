@@ -143,9 +143,8 @@ class _QueueListStrings:
     failed_see_log: str  # "Failed — see log"
     complete_succeeded: str  # "Complete — %1 succeeded"
     complete_with_failures: str  # "Complete — %1 succeeded, %2 failed"
-    # The run controls and Progress card built by _ListQueueMiningTabBase. The
-    # Mine and Cancel labels are not repeated here: they are
-    # _QueueRunStrings.mine_label and stop_all above.
+    # The run controls and Progress card built by _ListQueueMiningTabBase. Mine
+    # reuses _QueueRunStrings.mine_label; Cancel reuses stop_all above.
     mine_tip: str  # per tab: what Mine does on this screen
     clear: str  # "Clear"
     clear_tip: str  # "Remove every item from the queue."
@@ -833,7 +832,7 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         progress_card.setLayout(progress_layout)
         layout.addWidget(progress_card)
 
-        self.log_widget = LogWidget(source=self.TASK_ID or type(self).__name__)
+        self.log_widget = LogWidget(source=self._run_log_id())
 
         self.page_filler = page_filler()
         layout.addWidget(self.page_filler)
