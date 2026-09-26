@@ -489,6 +489,38 @@ class ModalImportFlowMixin:
                     finally:
                         cleanup_worker()
 
+    def _wire_cancel_button(
+        self,
+        *,
+        dlg: QProgressDialog,
+        state: _ModalImportState | _ChainedImportState[Any],
+        cancelling_label: str,
+        cancel_step: Callable[[], None],
+    ) -> None:
+        """Route the dialog's Cancel (or title-bar close) to ``cancel_step``.
+
+        The dialog then stays up, locked on ``cancelling_label`` with no Cancel
+        button, until the terminal handler closes it at native finish.
+        """
+
+        def show_cancelling() -> None:
+            if state.terminal_handled:
+                return
+            dlg.setLabelText(cancelling_label)
+            dlg.setCancelButton(None)
+            dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
+            dlg.show()
+
+        def on_cancel_requested() -> None:
+            if state.terminal_handled:
+                return
+            cancel_step()
+            show_cancelling()
+            # Title-bar close hides the dialog after ``canceled`` slots return.
+            QTimer.singleShot(0, show_cancelling)
+
+        dlg.canceled.connect(on_cancel_requested)
+
     def _run_modal_import(
         self,
         *,
@@ -544,22 +576,6 @@ class ModalImportFlowMixin:
         worker.set_trace_id(trace_id)
         state = _ModalImportState()
 
-        def show_cancelling() -> None:
-            if state.terminal_handled:
-                return
-            dlg.setLabelText(cancelling_label)
-            dlg.setCancelButton(None)
-            dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
-            dlg.show()
-
-        def on_cancel_requested() -> None:
-            if state.terminal_handled:
-                return
-            cancel_step()
-            show_cancelling()
-            # Title-bar close hides the dialog after ``canceled`` slots return.
-            QTimer.singleShot(0, show_cancelling)
-
         def on_thread_finished() -> None:
             def finish() -> None:
                 if state.kind == "success":
@@ -600,7 +616,12 @@ class ModalImportFlowMixin:
             is_current=lambda: self._active_import_worker is worker,
             on_native_finished=on_thread_finished,
         )
-        dlg.canceled.connect(on_cancel_requested)
+        self._wire_cancel_button(
+            dlg=dlg,
+            state=state,
+            cancelling_label=cancelling_label,
+            cancel_step=cancel_step,
+        )
         logger.info("Import trace %s worker start", trace_id)
         try:
             worker.start()
@@ -665,14 +686,16 @@ class ModalImportFlowMixin:
 
         self._active_batch_cancel_hook = cancel_batch_session
 
-        def cleanup_current_worker() -> None:
+        def drop_current_worker(worker: ImportWorker | None) -> None:
             nonlocal cancel_current
-            worker = state.current_worker
             state.current_worker = None
             state.current_step = None
             cancel_current = None
             if worker is not None:
                 self._release_import_worker(worker)
+
+        def cleanup_current_worker() -> None:
+            drop_current_worker(state.current_worker)
 
         def finish_batch() -> None:
             if self._active_batch_cancel_hook is cancel_batch_session:
@@ -702,27 +725,20 @@ class ModalImportFlowMixin:
                 cleanup_worker=cleanup_current_worker,
             )
 
-        def show_cancelling() -> None:
+        def dialog_live() -> bool:
+            """Re-check after a dialog setter: a modal QProgressDialog setter can
+            process events, so a cancel or a teardown can land inside it."""
             if state.terminal_handled:
-                return
-            dlg.setLabelText(cancelling_label)
-            dlg.setCancelButton(None)
-            dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
-            dlg.show()
-
-        def on_cancel_requested() -> None:
-            if state.terminal_handled:
-                return
-            cancel_batch_session()
-            show_cancelling()
-            # Title-bar close hides the dialog after ``canceled`` slots return.
-            QTimer.singleShot(0, show_cancelling)
+                return False
+            if state.cancel_requested:
+                finish_batch()
+                return False
+            return True
 
         def schedule_next() -> None:
             QTimer.singleShot(0, launch_next)
 
         def record_unstarted_failure(job: _JobT, worker: ImportWorker, step: _ModalImportState, exc: Exception) -> None:
-            nonlocal cancel_current
             step.kind = "failed"
             step.error = str(exc)
             step.terminal_handled = True
@@ -730,10 +746,7 @@ class ModalImportFlowMixin:
             with contextlib.suppress(RuntimeError):
                 no_progress_timer.stop()
             state.failures.append((job, str(exc)))
-            state.current_worker = None
-            state.current_step = None
-            cancel_current = None
-            self._release_import_worker(worker)
+            drop_current_worker(worker)
             state.index += 1
             schedule_next()
 
@@ -748,22 +761,13 @@ class ModalImportFlowMixin:
             index = state.index
             job = jobs[index]
             dlg.setLabelText(format_label(index + 1, len(jobs), job, None))
-            if state.terminal_handled:
-                return
-            if state.cancel_requested:
-                finish_batch()
+            if not dialog_live():
                 return
             dlg.setRange(0, 100 if determinate else 0)
-            if state.terminal_handled:
-                return
-            if state.cancel_requested:
-                finish_batch()
+            if not dialog_live():
                 return
             dlg.setValue(0)
-            if state.terminal_handled:
-                return
-            if state.cancel_requested:
-                finish_batch()
+            if not dialog_live():
                 return
 
             laggard = self._join_active_import_worker(join_noun)
@@ -826,7 +830,6 @@ class ModalImportFlowMixin:
                 )
 
             def on_native_finished() -> None:
-                nonlocal cancel_current
                 if not is_current():
                     return
                 worker_cancelled = getattr(worker, "is_cancelled", False) is True
@@ -845,10 +848,7 @@ class ModalImportFlowMixin:
                     state.cancel_requested = True
 
                 step.terminal_handled = True
-                state.current_worker = None
-                state.current_step = None
-                cancel_current = None
-                self._release_import_worker(worker)
+                drop_current_worker(worker)
                 if state.cancel_requested:
                     finish_batch()
                 else:
@@ -885,7 +885,12 @@ class ModalImportFlowMixin:
                 else:
                     record_unstarted_failure(job, worker, step, exc)
 
-        dlg.canceled.connect(on_cancel_requested)
+        self._wire_cancel_button(
+            dlg=dlg,
+            state=state,
+            cancelling_label=cancelling_label,
+            cancel_step=cancel_batch_session,
+        )
         launch_next()
 
     def cancel_active_batch(self) -> None:
