@@ -1544,6 +1544,30 @@ Tidak ada berkas indeks yang dihapus.</translation>
 </context><context>
     <name>BatchProcessingTab</name>
     <message>
+        <source>That translation subtitle folder no longer exists.</source>
+        <translation>Folder subtitel terjemahan tersebut sudah tidak ada.</translation>
+    </message>
+    <message>
+        <source>The translation folder must be different from the subtitle folder.</source>
+        <translation>Folder terjemahan harus berbeda dari folder subtitel.</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Dibatalkan</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>Gagal — lihat log</translation>
+    </message>
+    <message>
+        <source>Finished with errors — see log</source>
+        <translation>Selesai dengan kesalahan — lihat log</translation>
+    </message>
+    <message>
+        <source>Complete — %1 cards created</source>
+        <translation>Selesai — %1 kartu dibuat</translation>
+    </message>
+    <message>
         <source>Review words before mining</source>
         <translation>Tinjau kata sebelum mining</translation>
     </message>
@@ -1612,14 +1636,6 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Batalkan pemrosesan</translation>
     </message>
     <message>
-        <source>That translation subtitle folder no longer exists.</source>
-        <translation>Folder subtitel terjemahan tersebut sudah tidak ada.</translation>
-    </message>
-    <message>
-        <source>The translation folder must be different from the subtitle folder.</source>
-        <translation>Folder terjemahan harus berbeda dari folder subtitel.</translation>
-    </message>
-    <message>
         <source>Choose existing video and subtitle folders.</source>
         <translation>Pilih folder video dan subtitel yang sudah ada.</translation>
     </message>
@@ -1656,10 +1672,6 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Memulai pemrosesan antrean (%1 seri)...</translation>
     </message>
     <message>
-        <source>Cancelled</source>
-        <translation>Dibatalkan</translation>
-    </message>
-    <message>
         <source>Cancelling…</source>
         <translation>Membatalkan…</translation>
     </message>
@@ -1674,18 +1686,6 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <message>
         <source>Mining series %1 of %2: %3</source>
         <translation>Mining seri %1 dari %2: %3</translation>
-    </message>
-    <message>
-        <source>Failed — see log</source>
-        <translation>Gagal — lihat log</translation>
-    </message>
-    <message>
-        <source>Finished with errors — see log</source>
-        <translation>Selesai dengan kesalahan — lihat log</translation>
-    </message>
-    <message>
-        <source>Complete — %1 cards created</source>
-        <translation>Selesai — %1 kartu dibuat</translation>
     </message>
     <message>
         <source>Folder not found: %1</source>
@@ -2036,6 +2036,22 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Sentences.</source>
         <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Build a deck by coverage %</source>
+        <translation>Bangun dek berdasarkan cakupan %</translation>
+    </message>
+    <message>
+        <source>Build a frequency-ordered deck that covers a chosen percentage of a whole corpus. Preview creates the deck in Anki if it doesn't exist yet; the preview numbers are approximate -- a word whose card form another dictionary form already took can show as already known.</source>
+        <translation>Bangun dek yang diurutkan berdasarkan frekuensi yang mencakup persentase tertentu dari seluruh korpus. Pratinjau membuat dek di Anki jika belum ada; angka pratinjau bersifat perkiraan -- kata yang bentuk kartunya sudah dipakai oleh bentuk kamus lain dapat tampil sebagai sudah dikenal.</translation>
+    </message>
+    <message>
+        <source>Deck Builder modes (all / top N / coverage %)</source>
+        <translation>Mode Pembuat Dek (semua / N teratas / cakupan %)</translation>
+    </message>
+    <message>
+        <source>Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
+        <translation>Pembuat Dek selalu melewati filter per-episode dan pemeriksaan duplikat; pilih semua kata, N teratas, atau target cakupan, dan opsional lewati kata yang dikenal.</translation>
     </message>
     <message>
         <source>Mine from YouTube</source>
@@ -3464,6 +3480,220 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
     <message>
         <source>%1 (%2 of %3)</source>
         <translation>%1 (%2 dari %3)</translation>
+    </message>
+</context><context>
+    <name>DeckBuilderTab</name>
+    <message>
+        <source>Progress</source>
+        <translation>Progres</translation>
+    </message>
+    <message>
+        <source>deck</source>
+        <translation>dek</translation>
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation>Pratinjau</translation>
+    </message>
+    <message>
+        <source>Scan the season and preview which words will be included</source>
+        <translation>Pindai musim dan pratinjau kata yang akan disertakan</translation>
+    </message>
+    <message>
+        <source>Build Deck</source>
+        <translation>Bangun Dek</translation>
+    </message>
+    <message>
+        <source>Create the Anki cards for the selected words, scanning the season first if you have not previewed it</source>
+        <translation>Buat kartu Anki untuk kata yang dipilih, dengan memindai musim terlebih dahulu jika belum dipratinjau</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Batal</translation>
+    </message>
+    <message>
+        <source>Input</source>
+        <translation>Masukan</translation>
+    </message>
+    <message>
+        <source>Video Folder:</source>
+        <translation>Folder Video:</translation>
+    </message>
+    <message>
+        <source>Subtitle Folder:</source>
+        <translation>Folder Subtitel:</translation>
+    </message>
+    <message>
+        <source>Subtitle Offset:</source>
+        <translation>Offset Subtitel:</translation>
+    </message>
+    <message>
+        <source>Translation Folder:</source>
+        <translation>Folder Subtitel Terjemahan:</translation>
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation>Offset Subtitel Terjemahan:</translation>
+    </message>
+    <message>
+        <source> seconds</source>
+        <translation> detik</translation>
+    </message>
+    <message>
+        <source>Adjust subtitle timing for the whole season (positive = later, negative = earlier)</source>
+        <translation>Sesuaikan waktu subtitel untuk seluruh musim (positif = lebih lambat, negatif = lebih awal)</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation>Geser subtitel terjemahan saja (positif = lebih lambat, negatif = lebih awal)</translation>
+    </message>
+    <message>
+        <source>Deck Settings</source>
+        <translation>Pengaturan Dek</translation>
+    </message>
+    <message>
+        <source>Deck Name:</source>
+        <translation>Nama Dek:</translation>
+    </message>
+    <message>
+        <source>Word Selection:</source>
+        <translation>Pemilihan Kata:</translation>
+    </message>
+    <message>
+        <source>Enter deck name…</source>
+        <translation>Masukkan nama dek…</translation>
+    </message>
+    <message>
+        <source>All vocabulary</source>
+        <translation>Semua kosakata</translation>
+    </message>
+    <message>
+        <source>Top N words</source>
+        <translation>N kata teratas</translation>
+    </message>
+    <message>
+        <source>Target coverage %</source>
+        <translation>Target cakupan %</translation>
+    </message>
+    <message>
+        <source> words</source>
+        <translation> kata</translation>
+    </message>
+    <message>
+        <source>Include the N most-frequent lemmas</source>
+        <translation>Sertakan N lema paling sering muncul</translation>
+    </message>
+    <message>
+        <source>Include enough words to cover this percentage of tokens</source>
+        <translation>Sertakan cukup kata untuk mencakup persentase token ini</translation>
+    </message>
+    <message>
+        <source>Skip words already in my Anki collection</source>
+        <translation>Lewati kata yang sudah ada di koleksi Anki saya</translation>
+    </message>
+    <message>
+        <source>Checked: skip your known words; unchecked: mine every word.</source>
+        <translation>Dicentang: lewati kata yang dikenal; tidak dicentang: mining semua kata.</translation>
+    </message>
+    <message>
+        <source>Review words before mining</source>
+        <translation>Tinjau kata sebelum mining</translation>
+    </message>
+    <message>
+        <source>Pick which words get cards, once per series.</source>
+        <translation>Pilih kata mana yang mendapat kartu, sekali per seri.</translation>
+    </message>
+    <message>
+        <source>Results</source>
+        <translation>Hasil</translation>
+    </message>
+    <message>
+        <source>Selected words that won't get a card this run: already in your collection, or with no sentence to mine.</source>
+        <translation>Kata terpilih yang tidak mendapat kartu pada proses ini: sudah ada di koleksi Anda, atau tidak memiliki kalimat untuk di-mining.</translation>
+    </message>
+    <message>
+        <source>Total tokens:</source>
+        <translation>Total token:</translation>
+    </message>
+    <message>
+        <source>Unique lemmas:</source>
+        <translation>Lema unik:</translation>
+    </message>
+    <message>
+        <source>Candidate words:</source>
+        <translation>Kata kandidat:</translation>
+    </message>
+    <message>
+        <source>Projected coverage:</source>
+        <translation>Cakupan proyeksi:</translation>
+    </message>
+    <message>
+        <source>Already known (skipped):</source>
+        <translation>Sudah dikenal (dilewati):</translation>
+    </message>
+    <message>
+        <source>Cards to create:</source>
+        <translation>Kartu yang akan dibuat:</translation>
+    </message>
+    <message>
+        <source>Choose existing video and subtitle folders.</source>
+        <translation>Pilih folder video dan subtitel yang sudah ada.</translation>
+    </message>
+    <message>
+        <source>Enter a deck name before mining.</source>
+        <translation>Masukkan nama dek sebelum mining.</translation>
+    </message>
+    <message>
+        <source>No video/subtitle pairs found. Check the folders.</source>
+        <translation>Tidak ada pasangan video/subtitel yang ditemukan. Periksa foldernya.</translation>
+    </message>
+    <message>
+        <source>Deck Builder</source>
+        <translation>Pembuat Dek</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Membatalkan…</translation>
+    </message>
+    <message>
+        <source>Preview ready. Press Build Deck to create the cards.</source>
+        <translation>Pratinjau siap. Tekan Bangun Dek untuk membuat kartu.</translation>
+    </message>
+    <message>
+        <source>%1 of %2 episodes mined</source>
+        <translation>%1 dari %2 episode selesai di-mining</translation>
+    </message>
+    <message>
+        <source>Some episodes could not be mined.</source>
+        <translation>Beberapa episode tidak dapat di-mining.</translation>
+    </message>
+    <message>
+        <source>The deck could not be built.</source>
+        <translation>Dek tidak dapat dibangun.</translation>
+    </message>
+    <message>
+        <source>Created %1 cards in deck '%3'; the candidate words cover ~%2% of tokens.</source>
+        <translation>%1 kartu dibuat di dek '%3'; kata kandidat mencakup ~%2% token.</translation>
+    </message>
+    <message>
+        <source>Created %1 cards in deck '%2'.</source>
+        <translation>%1 kartu dibuat di dek '%2'.</translation>
+    </message>
+    <message>
+        <source>Folder not found: %1</source>
+        <translation>Folder tidak ditemukan: %1</translation>
+    </message>
+    <message>
+        <source>The build into deck '%1' was interrupted when Anki Miner closed. Build Deck again to finish it; words already in the deck are skipped.</source>
+        <translation>Pembangunan dek '%1' terputus saat Anki Miner ditutup. Tekan Bangun Dek lagi untuk menyelesaikannya; kata yang sudah ada di dek akan dilewati.</translation>
+    </message>
+</context><context>
+    <name>DeckBuilderWorker</name>
+    <message numerus="yes">
+        <source>Scanning %n episode(s)...</source>
+        <translation>
+            <numerusform>Memindai %n episode...</numerusform>
+        </translation>
     </message>
 </context><context>
     <name>DeckFilterTab</name>
@@ -6398,6 +6628,10 @@ Lanjutkan?</translation>
     <message>
         <source>YouTube</source>
         <translation>YouTube</translation>
+    </message>
+    <message>
+        <source>Deck Builder</source>
+        <translation>Pembuat Dek</translation>
     </message>
     <message>
         <source>'Anki Miner' should now appear in your application menu.</source>

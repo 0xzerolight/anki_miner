@@ -169,7 +169,11 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         self.preview_button.clicked.connect(self._on_preview_clicked)
 
         self.build_button = ModernButton(self.tr("Build Deck"), variant="primary")
-        self.build_button.setToolTip(self.tr("Create the Anki cards for the previewed word list"))
+        self.build_button.setToolTip(
+            self.tr(
+                "Create the Anki cards for the selected words, scanning the season first if you have not previewed it"
+            )
+        )
         self.build_button.clicked.connect(self._on_build_clicked)
 
         self.cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")

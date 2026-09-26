@@ -1544,6 +1544,30 @@ Không có tệp chỉ mục nào bị xóa.</translation>
 </context><context>
     <name>BatchProcessingTab</name>
     <message>
+        <source>That translation subtitle folder no longer exists.</source>
+        <translation>Thư mục phụ đề dịch đó không còn tồn tại.</translation>
+    </message>
+    <message>
+        <source>The translation folder must be different from the subtitle folder.</source>
+        <translation>Thư mục phụ đề dịch phải khác thư mục phụ đề.</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Đã hủy</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>Thất bại — xem nhật ký</translation>
+    </message>
+    <message>
+        <source>Finished with errors — see log</source>
+        <translation>Hoàn tất với lỗi — xem nhật ký</translation>
+    </message>
+    <message>
+        <source>Complete — %1 cards created</source>
+        <translation>Hoàn tất — đã tạo %1 thẻ</translation>
+    </message>
+    <message>
         <source>Review words before mining</source>
         <translation>Xem lại từ trước khi khai thác</translation>
     </message>
@@ -1612,14 +1636,6 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Hủy xử lý</translation>
     </message>
     <message>
-        <source>That translation subtitle folder no longer exists.</source>
-        <translation>Thư mục phụ đề dịch đó không còn tồn tại.</translation>
-    </message>
-    <message>
-        <source>The translation folder must be different from the subtitle folder.</source>
-        <translation>Thư mục phụ đề dịch phải khác thư mục phụ đề.</translation>
-    </message>
-    <message>
         <source>Choose existing video and subtitle folders.</source>
         <translation>Chọn các thư mục video và phụ đề hiện có.</translation>
     </message>
@@ -1656,10 +1672,6 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Đang bắt đầu xử lý hàng đợi (%1 loạt phim)...</translation>
     </message>
     <message>
-        <source>Cancelled</source>
-        <translation>Đã hủy</translation>
-    </message>
-    <message>
         <source>Cancelling…</source>
         <translation>Đang hủy…</translation>
     </message>
@@ -1674,18 +1686,6 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <message>
         <source>Mining series %1 of %2: %3</source>
         <translation>Đang khai thác loạt phim %1 trên %2: %3</translation>
-    </message>
-    <message>
-        <source>Failed — see log</source>
-        <translation>Thất bại — xem nhật ký</translation>
-    </message>
-    <message>
-        <source>Finished with errors — see log</source>
-        <translation>Hoàn tất với lỗi — xem nhật ký</translation>
-    </message>
-    <message>
-        <source>Complete — %1 cards created</source>
-        <translation>Hoàn tất — đã tạo %1 thẻ</translation>
     </message>
     <message>
         <source>Folder not found: %1</source>
@@ -2036,6 +2036,22 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Sentences.</source>
         <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Build a deck by coverage %</source>
+        <translation>Xây dựng bộ thẻ theo % độ bao phủ</translation>
+    </message>
+    <message>
+        <source>Build a frequency-ordered deck that covers a chosen percentage of a whole corpus. Preview creates the deck in Anki if it doesn't exist yet; the preview numbers are approximate -- a word whose card form another dictionary form already took can show as already known.</source>
+        <translation>Xây dựng bộ thẻ được sắp xếp theo tần suất bao phủ một tỷ lệ phần trăm đã chọn của toàn bộ kho ngữ liệu. Xem trước sẽ tạo bộ thẻ trong Anki nếu bộ thẻ chưa tồn tại; các con số xem trước chỉ là ước tính -- một từ có dạng trên thẻ đã bị một dạng từ điển khác chiếm có thể hiển thị là đã biết.</translation>
+    </message>
+    <message>
+        <source>Deck Builder modes (all / top N / coverage %)</source>
+        <translation>Các chế độ Trình dựng bộ thẻ (tất cả / top N / % bao phủ)</translation>
+    </message>
+    <message>
+        <source>Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
+        <translation>Trình dựng bộ thẻ luôn bỏ qua các bộ lọc theo từng tập và kiểm tra trùng lặp; chọn mọi từ, top N, hoặc mục tiêu độ bao phủ, và tùy chọn bỏ qua từ đã biết.</translation>
     </message>
     <message>
         <source>Mine from YouTube</source>
@@ -3464,6 +3480,220 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
     <message>
         <source>%1 (%2 of %3)</source>
         <translation>%1 (%2/%3)</translation>
+    </message>
+</context><context>
+    <name>DeckBuilderTab</name>
+    <message>
+        <source>Progress</source>
+        <translation>Tiến độ</translation>
+    </message>
+    <message>
+        <source>deck</source>
+        <translation>bộ thẻ</translation>
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation>Xem trước</translation>
+    </message>
+    <message>
+        <source>Scan the season and preview which words will be included</source>
+        <translation>Quét cả mùa và xem trước những từ nào sẽ được đưa vào</translation>
+    </message>
+    <message>
+        <source>Build Deck</source>
+        <translation>Dựng bộ thẻ</translation>
+    </message>
+    <message>
+        <source>Create the Anki cards for the selected words, scanning the season first if you have not previewed it</source>
+        <translation>Tạo các thẻ Anki cho những từ đã chọn, quét cả mùa trước nếu chưa xem trước</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Hủy</translation>
+    </message>
+    <message>
+        <source>Input</source>
+        <translation>Đầu vào</translation>
+    </message>
+    <message>
+        <source>Video Folder:</source>
+        <translation>Thư mục video:</translation>
+    </message>
+    <message>
+        <source>Subtitle Folder:</source>
+        <translation>Thư mục phụ đề:</translation>
+    </message>
+    <message>
+        <source>Subtitle Offset:</source>
+        <translation>Độ lệch phụ đề:</translation>
+    </message>
+    <message>
+        <source>Translation Folder:</source>
+        <translation>Thư mục phụ đề dịch:</translation>
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation>Độ lệch phụ đề dịch:</translation>
+    </message>
+    <message>
+        <source> seconds</source>
+        <translation> giây</translation>
+    </message>
+    <message>
+        <source>Adjust subtitle timing for the whole season (positive = later, negative = earlier)</source>
+        <translation>Điều chỉnh thời gian phụ đề cho cả mùa (dương = trễ hơn, âm = sớm hơn)</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation>Chỉ dời thời gian phụ đề dịch (dương = trễ hơn, âm = sớm hơn)</translation>
+    </message>
+    <message>
+        <source>Deck Settings</source>
+        <translation>Cài đặt bộ thẻ</translation>
+    </message>
+    <message>
+        <source>Deck Name:</source>
+        <translation>Tên bộ thẻ:</translation>
+    </message>
+    <message>
+        <source>Word Selection:</source>
+        <translation>Lựa chọn từ:</translation>
+    </message>
+    <message>
+        <source>Enter deck name…</source>
+        <translation>Nhập tên bộ thẻ…</translation>
+    </message>
+    <message>
+        <source>All vocabulary</source>
+        <translation>Toàn bộ từ vựng</translation>
+    </message>
+    <message>
+        <source>Top N words</source>
+        <translation>N từ hàng đầu</translation>
+    </message>
+    <message>
+        <source>Target coverage %</source>
+        <translation>% độ bao phủ mục tiêu</translation>
+    </message>
+    <message>
+        <source> words</source>
+        <translation> từ</translation>
+    </message>
+    <message>
+        <source>Include the N most-frequent lemmas</source>
+        <translation>Bao gồm N từ gốc có tần suất cao nhất</translation>
+    </message>
+    <message>
+        <source>Include enough words to cover this percentage of tokens</source>
+        <translation>Bao gồm đủ số từ để bao phủ tỷ lệ phần trăm token này</translation>
+    </message>
+    <message>
+        <source>Skip words already in my Anki collection</source>
+        <translation>Bỏ qua các từ đã có trong bộ sưu tập Anki của tôi</translation>
+    </message>
+    <message>
+        <source>Checked: skip your known words; unchecked: mine every word.</source>
+        <translation>Chọn: bỏ qua từ đã biết; bỏ chọn: khai thác mọi từ.</translation>
+    </message>
+    <message>
+        <source>Review words before mining</source>
+        <translation>Xem lại từ trước khi khai thác</translation>
+    </message>
+    <message>
+        <source>Pick which words get cards, once per series.</source>
+        <translation>Chọn từ nào được tạo thẻ, một lần cho mỗi loạt phim.</translation>
+    </message>
+    <message>
+        <source>Results</source>
+        <translation>Kết quả</translation>
+    </message>
+    <message>
+        <source>Selected words that won't get a card this run: already in your collection, or with no sentence to mine.</source>
+        <translation>Những từ đã chọn sẽ không được tạo thẻ trong lần chạy này: đã có trong bộ sưu tập, hoặc không có câu nào để khai thác.</translation>
+    </message>
+    <message>
+        <source>Total tokens:</source>
+        <translation>Tổng số token:</translation>
+    </message>
+    <message>
+        <source>Unique lemmas:</source>
+        <translation>Số từ gốc duy nhất:</translation>
+    </message>
+    <message>
+        <source>Candidate words:</source>
+        <translation>Số từ ứng viên:</translation>
+    </message>
+    <message>
+        <source>Projected coverage:</source>
+        <translation>Độ bao phủ dự kiến:</translation>
+    </message>
+    <message>
+        <source>Already known (skipped):</source>
+        <translation>Đã biết (bỏ qua):</translation>
+    </message>
+    <message>
+        <source>Cards to create:</source>
+        <translation>Số thẻ cần tạo:</translation>
+    </message>
+    <message>
+        <source>Choose existing video and subtitle folders.</source>
+        <translation>Chọn các thư mục video và phụ đề hiện có.</translation>
+    </message>
+    <message>
+        <source>Enter a deck name before mining.</source>
+        <translation>Hãy nhập tên bộ thẻ trước khi khai thác.</translation>
+    </message>
+    <message>
+        <source>No video/subtitle pairs found. Check the folders.</source>
+        <translation>Không tìm thấy cặp video/phụ đề nào. Hãy kiểm tra lại các thư mục.</translation>
+    </message>
+    <message>
+        <source>Deck Builder</source>
+        <translation>Trình dựng bộ thẻ</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Đang hủy…</translation>
+    </message>
+    <message>
+        <source>Preview ready. Press Build Deck to create the cards.</source>
+        <translation>Bản xem trước đã sẵn sàng. Nhấn Dựng bộ thẻ để tạo thẻ.</translation>
+    </message>
+    <message>
+        <source>%1 of %2 episodes mined</source>
+        <translation>Đã khai thác %1 trên %2 tập</translation>
+    </message>
+    <message>
+        <source>Some episodes could not be mined.</source>
+        <translation>Không thể khai thác một số tập.</translation>
+    </message>
+    <message>
+        <source>The deck could not be built.</source>
+        <translation>Không thể dựng bộ thẻ.</translation>
+    </message>
+    <message>
+        <source>Created %1 cards in deck '%3'; the candidate words cover ~%2% of tokens.</source>
+        <translation>Đã tạo %1 thẻ trong bộ thẻ '%3'; các từ ứng viên bao phủ ~%2% số token.</translation>
+    </message>
+    <message>
+        <source>Created %1 cards in deck '%2'.</source>
+        <translation>Đã tạo %1 thẻ trong bộ thẻ '%2'.</translation>
+    </message>
+    <message>
+        <source>Folder not found: %1</source>
+        <translation>Không tìm thấy thư mục: %1</translation>
+    </message>
+    <message>
+        <source>The build into deck '%1' was interrupted when Anki Miner closed. Build Deck again to finish it; words already in the deck are skipped.</source>
+        <translation>Việc dựng bộ thẻ '%1' đã bị ngắt khi Anki Miner đóng. Nhấn Dựng bộ thẻ lần nữa để hoàn tất; những từ đã có trong bộ thẻ sẽ được bỏ qua.</translation>
+    </message>
+</context><context>
+    <name>DeckBuilderWorker</name>
+    <message numerus="yes">
+        <source>Scanning %n episode(s)...</source>
+        <translation>
+            <numerusform>Đang quét %n tập...</numerusform>
+        </translation>
     </message>
 </context><context>
     <name>DeckFilterTab</name>
@@ -6398,6 +6628,10 @@ Tiếp tục?</translation>
     <message>
         <source>YouTube</source>
         <translation>YouTube</translation>
+    </message>
+    <message>
+        <source>Deck Builder</source>
+        <translation>Trình dựng bộ thẻ</translation>
     </message>
     <message>
         <source>'Anki Miner' should now appear in your application menu.</source>

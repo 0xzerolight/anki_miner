@@ -1550,6 +1550,30 @@ No index files are deleted.</source>
 </context><context>
     <name>BatchProcessingTab</name>
     <message>
+        <source>That translation subtitle folder no longer exists.</source>
+        <translation>Эта папка с субтитрами перевода больше не существует.</translation>
+    </message>
+    <message>
+        <source>The translation folder must be different from the subtitle folder.</source>
+        <translation>Папка перевода должна отличаться от папки субтитров.</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Отменено</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>Ошибка — см. журнал</translation>
+    </message>
+    <message>
+        <source>Finished with errors — see log</source>
+        <translation>Завершено с ошибками — см. журнал</translation>
+    </message>
+    <message>
+        <source>Complete — %1 cards created</source>
+        <translation>Завершено — создано карточек: %1</translation>
+    </message>
+    <message>
         <source>Review words before mining</source>
         <translation>Просмотреть слова перед майнингом</translation>
     </message>
@@ -1618,14 +1642,6 @@ No index files are deleted.</source>
         <translation>Отменить обработку</translation>
     </message>
     <message>
-        <source>That translation subtitle folder no longer exists.</source>
-        <translation>Эта папка с субтитрами перевода больше не существует.</translation>
-    </message>
-    <message>
-        <source>The translation folder must be different from the subtitle folder.</source>
-        <translation>Папка перевода должна отличаться от папки субтитров.</translation>
-    </message>
-    <message>
         <source>Choose existing video and subtitle folders.</source>
         <translation>Выберите существующие папки с видео и субтитрами.</translation>
     </message>
@@ -1662,10 +1678,6 @@ No index files are deleted.</source>
         <translation>Запуск обработки очереди (серий: %1)...</translation>
     </message>
     <message>
-        <source>Cancelled</source>
-        <translation>Отменено</translation>
-    </message>
-    <message>
         <source>Cancelling…</source>
         <translation>Отмена…</translation>
     </message>
@@ -1680,18 +1692,6 @@ No index files are deleted.</source>
     <message>
         <source>Mining series %1 of %2: %3</source>
         <translation>Майнинг сериала %1 из %2: %3</translation>
-    </message>
-    <message>
-        <source>Failed — see log</source>
-        <translation>Ошибка — см. журнал</translation>
-    </message>
-    <message>
-        <source>Finished with errors — see log</source>
-        <translation>Завершено с ошибками — см. журнал</translation>
-    </message>
-    <message>
-        <source>Complete — %1 cards created</source>
-        <translation>Завершено — создано карточек: %1</translation>
     </message>
     <message>
         <source>Folder not found: %1</source>
@@ -2044,6 +2044,22 @@ No index files are deleted.</source>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Sentences.</source>
         <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Build a deck by coverage %</source>
+        <translation>Собрать колоду по % покрытия</translation>
+    </message>
+    <message>
+        <source>Build a frequency-ordered deck that covers a chosen percentage of a whole corpus. Preview creates the deck in Anki if it doesn't exist yet; the preview numbers are approximate -- a word whose card form another dictionary form already took can show as already known.</source>
+        <translation>Соберите колоду, упорядоченную по частотности, которая покрывает выбранный процент всего корпуса. Предпросмотр создаёт колоду в Anki, если её ещё нет; цифры предпросмотра приблизительны -- слово, чью форму на карточке уже заняла другая словарная форма, может отображаться как уже известное.</translation>
+    </message>
+    <message>
+        <source>Deck Builder modes (all / top N / coverage %)</source>
+        <translation>Режимы Конструктора колод (все / первые N / % покрытия)</translation>
+    </message>
+    <message>
+        <source>Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
+        <translation>Конструктор колод всегда пропускает пофрагментные фильтры и проверки на дубликаты; выбирайте все слова, первые N или целевой охват, и при желании пропускайте известные слова.</translation>
     </message>
     <message>
         <source>Mine from YouTube</source>
@@ -3472,6 +3488,222 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>%1 (%2 of %3)</source>
         <translation>%1 (%2 из %3)</translation>
+    </message>
+</context><context>
+    <name>DeckBuilderTab</name>
+    <message>
+        <source>Progress</source>
+        <translation>Прогресс</translation>
+    </message>
+    <message>
+        <source>deck</source>
+        <translation>колода</translation>
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation>Предпросмотр</translation>
+    </message>
+    <message>
+        <source>Scan the season and preview which words will be included</source>
+        <translation>Просканировать сезон и показать, какие слова будут включены</translation>
+    </message>
+    <message>
+        <source>Build Deck</source>
+        <translation>Собрать колоду</translation>
+    </message>
+    <message>
+        <source>Create the Anki cards for the selected words, scanning the season first if you have not previewed it</source>
+        <translation>Создать карточки Anki для выбранных слов; если предпросмотра не было, сначала будет просканирован сезон</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Отмена</translation>
+    </message>
+    <message>
+        <source>Input</source>
+        <translation>Ввод</translation>
+    </message>
+    <message>
+        <source>Video Folder:</source>
+        <translation>Папка с видео:</translation>
+    </message>
+    <message>
+        <source>Subtitle Folder:</source>
+        <translation>Папка с субтитрами:</translation>
+    </message>
+    <message>
+        <source>Subtitle Offset:</source>
+        <translation>Смещение субтитров:</translation>
+    </message>
+    <message>
+        <source>Translation Folder:</source>
+        <translation>Папка перевода:</translation>
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation>Смещение перевода:</translation>
+    </message>
+    <message>
+        <source> seconds</source>
+        <translation> секунд</translation>
+    </message>
+    <message>
+        <source>Adjust subtitle timing for the whole season (positive = later, negative = earlier)</source>
+        <translation>Настройте тайминг субтитров для всего сезона (положительное значение = позже, отрицательное = раньше)</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation>Сдвинуть только субтитры перевода (положительное = позже, отрицательное = раньше)</translation>
+    </message>
+    <message>
+        <source>Deck Settings</source>
+        <translation>Настройки колоды</translation>
+    </message>
+    <message>
+        <source>Deck Name:</source>
+        <translation>Название колоды:</translation>
+    </message>
+    <message>
+        <source>Word Selection:</source>
+        <translation>Выбор слов:</translation>
+    </message>
+    <message>
+        <source>Enter deck name…</source>
+        <translation>Введите название колоды…</translation>
+    </message>
+    <message>
+        <source>All vocabulary</source>
+        <translation>Вся лексика</translation>
+    </message>
+    <message>
+        <source>Top N words</source>
+        <translation>Топ-N слов</translation>
+    </message>
+    <message>
+        <source>Target coverage %</source>
+        <translation>Целевой охват, %</translation>
+    </message>
+    <message>
+        <source> words</source>
+        <translation> слов</translation>
+    </message>
+    <message>
+        <source>Include the N most-frequent lemmas</source>
+        <translation>Включить N наиболее частотных лемм</translation>
+    </message>
+    <message>
+        <source>Include enough words to cover this percentage of tokens</source>
+        <translation>Включить столько слов, чтобы покрыть этот процент токенов</translation>
+    </message>
+    <message>
+        <source>Skip words already in my Anki collection</source>
+        <translation>Пропускать слова, уже имеющиеся в моей коллекции Anki</translation>
+    </message>
+    <message>
+        <source>Checked: skip your known words; unchecked: mine every word.</source>
+        <translation>Если отмечено: известные слова пропускаются; если не отмечено: майнятся все слова.</translation>
+    </message>
+    <message>
+        <source>Review words before mining</source>
+        <translation>Просмотреть слова перед майнингом</translation>
+    </message>
+    <message>
+        <source>Pick which words get cards, once per series.</source>
+        <translation>Выберите, какие слова получат карточки — один раз для каждого сериала.</translation>
+    </message>
+    <message>
+        <source>Results</source>
+        <translation>Результаты</translation>
+    </message>
+    <message>
+        <source>Selected words that won't get a card this run: already in your collection, or with no sentence to mine.</source>
+        <translation>Выбранные слова, которые не получат карточку в этом запуске: уже есть в вашей коллекции или для них нет предложения для майнинга.</translation>
+    </message>
+    <message>
+        <source>Total tokens:</source>
+        <translation>Всего токенов:</translation>
+    </message>
+    <message>
+        <source>Unique lemmas:</source>
+        <translation>Уникальных лемм:</translation>
+    </message>
+    <message>
+        <source>Candidate words:</source>
+        <translation>Слов-кандидатов:</translation>
+    </message>
+    <message>
+        <source>Projected coverage:</source>
+        <translation>Прогнозируемый охват:</translation>
+    </message>
+    <message>
+        <source>Already known (skipped):</source>
+        <translation>Уже известные (пропущено):</translation>
+    </message>
+    <message>
+        <source>Cards to create:</source>
+        <translation>Карточек к созданию:</translation>
+    </message>
+    <message>
+        <source>Choose existing video and subtitle folders.</source>
+        <translation>Выберите существующие папки с видео и субтитрами.</translation>
+    </message>
+    <message>
+        <source>Enter a deck name before mining.</source>
+        <translation>Введите название колоды перед майнингом.</translation>
+    </message>
+    <message>
+        <source>No video/subtitle pairs found. Check the folders.</source>
+        <translation>Пары видео/субтитры не найдены. Проверьте папки.</translation>
+    </message>
+    <message>
+        <source>Deck Builder</source>
+        <translation>Конструктор колод</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Отмена…</translation>
+    </message>
+    <message>
+        <source>Preview ready. Press Build Deck to create the cards.</source>
+        <translation>Предпросмотр готов. Нажмите «Собрать колоду», чтобы создать карточки.</translation>
+    </message>
+    <message>
+        <source>%1 of %2 episodes mined</source>
+        <translation>Эпизодов обработано: %1 из %2</translation>
+    </message>
+    <message>
+        <source>Some episodes could not be mined.</source>
+        <translation>Не удалось выполнить майнинг некоторых эпизодов.</translation>
+    </message>
+    <message>
+        <source>The deck could not be built.</source>
+        <translation>Не удалось собрать колоду.</translation>
+    </message>
+    <message>
+        <source>Created %1 cards in deck '%3'; the candidate words cover ~%2% of tokens.</source>
+        <translation>Создано %1 карточек в колоде «%3»; кандидаты покрывают ~%2% токенов.</translation>
+    </message>
+    <message>
+        <source>Created %1 cards in deck '%2'.</source>
+        <translation>Создано карточек в колоде «%2»: %1.</translation>
+    </message>
+    <message>
+        <source>Folder not found: %1</source>
+        <translation>Папка не найдена: %1</translation>
+    </message>
+    <message>
+        <source>The build into deck '%1' was interrupted when Anki Miner closed. Build Deck again to finish it; words already in the deck are skipped.</source>
+        <translation>Сборка колоды «%1» была прервана при закрытии Anki Miner. Нажмите «Собрать колоду» ещё раз, чтобы завершить её; слова, которые уже есть в колоде, будут пропущены.</translation>
+    </message>
+</context><context>
+    <name>DeckBuilderWorker</name>
+    <message numerus="yes">
+        <source>Scanning %n episode(s)...</source>
+        <translation>
+            <numerusform>Сканируется %n эпизод...</numerusform>
+            <numerusform>Сканируются %n эпизода...</numerusform>
+            <numerusform>Сканируются %n эпизодов...</numerusform>
+        </translation>
     </message>
 </context><context>
     <name>DeckFilterTab</name>
@@ -6430,6 +6662,10 @@ Continue?</source>
     <message>
         <source>YouTube</source>
         <translation>YouTube</translation>
+    </message>
+    <message>
+        <source>Deck Builder</source>
+        <translation>Конструктор колод</translation>
     </message>
     <message>
         <source>'Anki Miner' should now appear in your application menu.</source>
