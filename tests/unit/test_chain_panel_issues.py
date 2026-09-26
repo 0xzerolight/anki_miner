@@ -14,6 +14,7 @@ import pytest
 from PyQt6.QtWidgets import QMessageBox
 
 from anki_miner.config import AudioSourceEntry, ChainEntry, FreqEntry, PitchSourceEntry
+from anki_miner.gui.utils.config_commit import ConfigCommitResult
 from anki_miner.gui.widgets.panels.audio_pack_settings_panel import AudioPackSettingsPanel
 from anki_miner.gui.widgets.panels.dictionary_settings_panel import DictionarySettingsPanel
 from anki_miner.gui.widgets.panels.frequency_settings_panel import FrequencySettingsPanel
@@ -151,3 +152,100 @@ def test_chain_only_remove_says_files_remain(qtbot, tmp_path, monkeypatch, facto
     assert widget._confirm_chain_only_remove("Source") is False
     assert bodies[0].endswith("No index files are deleted.")
     assert "Only the index files are deleted" not in bodies[0]
+
+
+_FILES_LEFT = "The frequency source was removed from the chain; no files were deleted from disk."
+
+
+def _post_save(name: str) -> str:
+    return (
+        f"{name} was removed, but Anki Miner could not refresh it. "
+        "The removal is saved and will remain after a restart."
+    )
+
+
+class TestChainOnlyRemove:
+    """Three removals leave the disk alone and must report alike.
+
+    No managed folder (an empty source id), a folder that is already gone, and a
+    folder the panel cannot prove it owns: each commits the smaller chain, then
+    says what happened. Only the failure summary and what "files left" names
+    differ between them.
+    """
+
+    @pytest.fixture
+    def remove(self, qtbot, tmp_path, monkeypatch):
+        foreign = tmp_path / "foreign"
+        foreign.mkdir()
+        (foreign / "keep.txt").write_text("foreign", encoding="utf-8")
+        monkeypatch.setattr(QMessageBox, "question", lambda *a, **kw: QMessageBox.StandardButton.Yes)
+
+        def run(source_id: str, commit: ConfigCommitResult):
+            widget = FrequencySettingsPanel(tmp_path)
+            qtbot.addWidget(widget)
+            widget.set_chain((FreqEntry(source_id),), registry_meta={})
+            widget.set_remove_chain_commit(lambda _chain: commit)
+            shown: list[tuple[str, str]] = []
+            real_show = widget.show_screen_issue
+
+            def spy(issue, **kwargs):
+                shown.append((issue.summary, issue.details))
+                real_show(issue, **kwargs)
+
+            monkeypatch.setattr(widget, "show_screen_issue", spy)
+            widget.remove(0)
+            qtbot.waitUntil(lambda: not widget.has_active_mutation(), timeout=3000)
+            assert (foreign / "keep.txt").read_text(encoding="utf-8") == "foreign"
+            return widget.get_chain(), shown
+
+        return run
+
+    @pytest.mark.parametrize("source_id", ["", "gone", "foreign"])
+    def test_a_saved_removal_drops_the_entry_and_names_what_stayed(self, remove, tmp_path, source_id):
+        chain, shown = remove(source_id, ConfigCommitResult.committed())
+
+        assert chain == ()
+        assert (
+            shown
+            == {
+                "": [(_FILES_LEFT, "(missing)")],
+                "gone": [],
+                "foreign": [(_FILES_LEFT, str(tmp_path.resolve() / "foreign"))],
+            }[source_id]
+        )
+
+    @pytest.mark.parametrize("source_id", ["", "gone", "foreign"])
+    def test_a_refresh_failure_warns_before_the_files_left_notice(self, remove, tmp_path, source_id):
+        chain, shown = remove(source_id, ConfigCommitResult.post_save_failure(RuntimeError("refresh failed")))
+
+        post_save = (_post_save(source_id or "(missing)"), "refresh failed")
+        assert chain == ()
+        assert (
+            shown
+            == {
+                "": [post_save, (_FILES_LEFT, "(missing)")],
+                "gone": [post_save],
+                "foreign": [post_save, (_FILES_LEFT, str(tmp_path.resolve() / "foreign"))],
+            }[source_id]
+        )
+
+    @pytest.mark.parametrize("source_id", ["", "gone", "foreign"])
+    def test_a_failed_save_keeps_the_entry_and_says_why(self, remove, tmp_path, source_id):
+        chain, shown = remove(source_id, ConfigCommitResult.pre_save_failure(RuntimeError("disk full")))
+
+        not_saved = "%s could not be removed: its settings could not be saved. Restart Anki Miner and try again."
+        root = tmp_path.resolve()
+        assert chain == (FreqEntry(source_id),)
+        assert (
+            shown
+            == {
+                "": [(not_saved % "(missing)", "(missing): disk full")],
+                "gone": [(not_saved % "gone", f"{root / 'gone'}: disk full")],
+                "foreign": [
+                    (
+                        "foreign could not be removed. Its files are intact — try again.",
+                        f"{root / 'foreign'}: disk full",
+                    )
+                ],
+            }[source_id]
+        )

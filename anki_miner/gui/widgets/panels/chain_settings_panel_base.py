@@ -788,43 +788,17 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
                 return  # user declined the destructive-remove confirmation
 
             if target_dir is None:
-                result = self._commit_removed_entry(entry)
-                if not result.persisted:
-                    self._report_remove_failure(entry, None, self._error_text(result))
-                    async_started = True
-                    return
-                self._refresh_after_chain_only_remove()
-                if not result.refreshed:
-                    self._warn_post_save_failure(display, self._error_text(result))
-                self._warn_files_left(display)
+                async_started = self._commit_chain_only_remove(entry, display, None, files_left=display)
                 return
 
             if not os.path.lexists(target_dir):
-                result = self._commit_removed_entry(entry)
-                if not result.persisted:
-                    self._report_remove_failure(entry, target_dir, self._error_text(result))
-                    async_started = True
-                    return
-                self._refresh_after_chain_only_remove()
-                if not result.refreshed:
-                    self._warn_post_save_failure(display, self._error_text(result))
+                async_started = self._commit_chain_only_remove(entry, display, target_dir)
                 return
 
             if not owns_target or not self._owns_entry_disk_dir(entry, target_dir):
-                result = self._commit_removed_entry(entry)
-                if not result.persisted:
-                    self._report_remove_failure(
-                        entry,
-                        target_dir,
-                        self._error_text(result),
-                        files_untouched=True,
-                    )
-                    async_started = True
-                    return
-                self._refresh_after_chain_only_remove()
-                if not result.refreshed:
-                    self._warn_post_save_failure(display, self._error_text(result))
-                self._warn_files_left(target_dir)
+                async_started = self._commit_chain_only_remove(
+                    entry, display, target_dir, files_untouched=True, files_left=target_dir
+                )
                 return
 
             # Give the subclass a chance to drop cached sqlite handles before
@@ -867,6 +841,37 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
         finally:
             if not async_started:
                 self._finish_remove_mutation()
+
+    def _commit_chain_only_remove(
+        self,
+        entry: Any,
+        display: str,
+        target_dir: Path | None,
+        *,
+        files_untouched: bool = False,
+        files_left: object | None = None,
+    ) -> bool:
+        """Drop *entry* from the chain without touching disk, then report.
+
+        Shared by the three removals that leave files alone: no managed folder,
+        a folder already gone, and a folder whose ownership is unproven.
+        ``files_left`` is what the "no files were deleted" notice names, or
+        ``None`` for no notice.
+
+        Returns:
+            True when the save failed and a failure report now owns the remove
+            token; False when the removal finished synchronously.
+        """
+        result = self._commit_removed_entry(entry)
+        if not result.persisted:
+            self._report_remove_failure(entry, target_dir, self._error_text(result), files_untouched=files_untouched)
+            return True
+        self._refresh_after_chain_only_remove()
+        if not result.refreshed:
+            self._warn_post_save_failure(display, self._error_text(result))
+        if files_left is not None:
+            self._warn_files_left(files_left)
+        return False
 
     def _finish_remove_mutation(self) -> None:
         token = self._remove_mutation_token
