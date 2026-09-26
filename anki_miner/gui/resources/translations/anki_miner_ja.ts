@@ -3573,7 +3573,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>Target coverage %</source>
-        <translation>目標理解度 %</translation>
+        <translation>目標カバー率%</translation>
     </message>
     <message>
         <source> words</source>
@@ -3625,7 +3625,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>Projected coverage:</source>
-        <translation>予測理解度:</translation>
+        <translation>予測カバー率:</translation>
     </message>
     <message>
         <source>Already known (skipped):</source>
