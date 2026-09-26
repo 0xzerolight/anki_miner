@@ -1102,47 +1102,7 @@ class EpisodeProcessor:
                 )
             )
 
-        # Within-run duplicate collapse. Exact mined_form collisions mirror
-        # Anki's Expression-first-field dedup. Orthographic aliases need a
-        # dictionary identity instead: exact-term sequence + contextual reading,
-        # scoped by dictionary. Never use the normal term-OR-reading lookup here;
-        # it would falsely give reading-only junk such as いでる the identity of
-        # 出でる. Keep the first source occurrence (stable order).
-        #
-        # Gated on allow_duplicate_cards: the golden contract (alongside
-        # bypass_optional_filters) and the e2e harness's no-Anki mode set it
-        # True to intentionally re-card duplicates, in which case Anki creates
-        # both and showing both is correct — collapsing here would diverge
-        # from that parity.
-        if not self.config.allow_duplicate_cards and unknown_words:
-            identity_pairs: list[tuple[str, str]] = [
-                (
-                    word.mined_form,
-                    katakana_to_hiragana(word.expression_reading or word.lemma_reading or word.reading),
-                )
-                for word in unknown_words
-            ]
-            identities_by_pair = self.definition_service.offline_term_identities(identity_pairs)
-            seen: set[str] = set()
-            seen_identities: set[tuple[str, int, str]] = set()
-            collapsed: list[TokenizedWord] = []
-            for word, pair in zip(unknown_words, identity_pairs, strict=True):
-                identities = identities_by_pair.get(pair, set())
-                if word.mined_form in seen or not seen_identities.isdisjoint(identities):
-                    continue
-                seen.add(word.mined_form)
-                seen_identities.update(identities)
-                collapsed.append(word)
-            removed = len(unknown_words) - len(collapsed)
-            unknown_words = collapsed
-            counts.duplicate_expression_rejects = removed
-            if removed:
-                self.presenter.show_info(
-                    tr_format(
-                        QCoreApplication.translate("EpisodeProcessor", "Collapsed %1 duplicate-expression word(s)"),
-                        removed,
-                    )
-                )
+        unknown_words = self._phase2_collapse_duplicates(unknown_words, counts)
 
         # Stage the pre-filter comprehension counts. ``_run_pipeline`` commits
         # them only after the body returns a successful terminal result.
@@ -1543,6 +1503,56 @@ class EpisodeProcessor:
                         ),
                         filtered_out,
                         ", ".join(caps),
+                    )
+                )
+        return unknown_words
+
+    def _phase2_collapse_duplicates(
+        self, unknown_words: list[TokenizedWord], counts: _Phase2Counts
+    ) -> list[TokenizedWord]:
+        """Phase 2: keep the first word of each card identity; return the survivors.
+
+        Fills ``counts.duplicate_expression_rejects``.
+        """
+        # Within-run duplicate collapse. Exact mined_form collisions mirror
+        # Anki's Expression-first-field dedup. Orthographic aliases need a
+        # dictionary identity instead: exact-term sequence + contextual reading,
+        # scoped by dictionary. Never use the normal term-OR-reading lookup here;
+        # it would falsely give reading-only junk such as いでる the identity of
+        # 出でる. Keep the first source occurrence (stable order).
+        #
+        # Gated on allow_duplicate_cards: the golden contract (alongside
+        # bypass_optional_filters) and the e2e harness's no-Anki mode set it
+        # True to intentionally re-card duplicates, in which case Anki creates
+        # both and showing both is correct — collapsing here would diverge
+        # from that parity.
+        if not self.config.allow_duplicate_cards and unknown_words:
+            identity_pairs: list[tuple[str, str]] = [
+                (
+                    word.mined_form,
+                    katakana_to_hiragana(word.expression_reading or word.lemma_reading or word.reading),
+                )
+                for word in unknown_words
+            ]
+            identities_by_pair = self.definition_service.offline_term_identities(identity_pairs)
+            seen: set[str] = set()
+            seen_identities: set[tuple[str, int, str]] = set()
+            collapsed: list[TokenizedWord] = []
+            for word, pair in zip(unknown_words, identity_pairs, strict=True):
+                identities = identities_by_pair.get(pair, set())
+                if word.mined_form in seen or not seen_identities.isdisjoint(identities):
+                    continue
+                seen.add(word.mined_form)
+                seen_identities.update(identities)
+                collapsed.append(word)
+            removed = len(unknown_words) - len(collapsed)
+            unknown_words = collapsed
+            counts.duplicate_expression_rejects = removed
+            if removed:
+                self.presenter.show_info(
+                    tr_format(
+                        QCoreApplication.translate("EpisodeProcessor", "Collapsed %1 duplicate-expression word(s)"),
+                        removed,
                     )
                 )
         return unknown_words
