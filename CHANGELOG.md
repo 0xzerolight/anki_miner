@@ -94,6 +94,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Fixed
 
 - **The frequency and pitch-accent import dialogs, download progress lines and resource-loading messages are translated.** About a hundred strings were passed through small helper functions that the translation extractor cannot see, so they stayed English in every interface language; the Usage Guide window's title, search box, empty-results line and Open button were among them. They are extracted and translated, and a test now fails on a helper called with a bare string.
+- **The F1 Usage Guide finds the mining-language switcher by its own name.** Searching 日本語, 한국어, 中文, Català or Português — the language's own name rather than its English one — missed the "Mine another language" entry for Japanese, Korean, Chinese, Catalan and Portuguese, even though every other shipped language's own name already worked. Those five native names are now in the entry's search keywords.
 - **The Reading tab is named for reading, not for a word's pronunciation,** in German (Lesen), Japanese (リーディング) and Vietnamese (Đọc), in its tab label and wherever a path names it (`Reading -> Manga`); the Reading field on cards keeps its pronunciation sense.
 - **Settings -> Keyboard and the Word Curator name the confirm key the way they name every other key.** German showed `Strg+A` beside `Ctrl+Enter`; the confirm key is now `Strg+Enter` there, and French, Spanish, Italian and Chinese get their own key names too. An empty key box shows its whole "Press shortcut" hint instead of "Pre…".
 

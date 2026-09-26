@@ -15,6 +15,7 @@ from anki_miner.gui.capabilities import (
     search,
     utility_labels,
 )
+from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages.registry import get_profile
 from tests.unit.languages.test_language_contract import CAPABILITY_VOCABULARY
 
@@ -440,3 +441,44 @@ def test_keyboard_shortcuts_prints_no_key() -> None:
     entry = next(c for c in CAPABILITIES if c.id == "keyboard-shortcuts")
     for printed in ("Ctrl+", "F1", "F2"):
         assert printed not in entry.description
+
+
+# ---------------------------------------------------------------------------
+# S28: the mining-language capability is searchable by every shipped language
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("code", AVAILABLE_LANGUAGES)
+def test_mining_language_capability_is_findable_by_every_language_name(code: str) -> None:
+    """S28 matrix: replaces the 18 hand-maintained per-language files. Any of
+    the 32 AVAILABLE_LANGUAGES whose English or native name -- or ISO code --
+    is missing from the mining-language capability's keywords is a real F1
+    Usage Guide search gap, not a test gap.
+    """
+    profile = get_profile(code)
+    capability = next(c for c in CAPABILITIES if c.id == "mining-language")
+
+    assert capability in search(profile.english_name)
+    assert capability in search(profile.display_name)
+    assert {profile.english_name.lower(), profile.display_name.lower(), code} <= set(capability.keywords)
+
+
+def test_mining_language_capability_has_a_stable_title() -> None:
+    capability = next(c for c in CAPABILITIES if c.id == "mining-language")
+
+    assert capability.title == "Mine another language"
+
+
+def test_mining_language_extra_synonyms_are_searchable() -> None:
+    """Keywords the matrix above never checks, because they are not any
+    language's own english_name/display_name/code: niqqud/rtl (the two words
+    a Hebrew learner is likeliest to type), the 'Farsi' alternate English
+    name for Persian, 'bokmål' alone (nb's display_name is the two-word
+    'Norsk bokmål'), and 粵語/jyutping (yue's display_name is 廣東話).
+    """
+    capability = next(c for c in CAPABILITIES if c.id == "mining-language")
+    extras = {"niqqud", "rtl", "farsi", "bokmål", "粵語", "jyutping"}
+
+    for keyword in extras:
+        assert capability in search(keyword), keyword
+    assert extras <= set(capability.keywords)
