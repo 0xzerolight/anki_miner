@@ -1405,9 +1405,10 @@ class EpisodeProcessor:
                 )
         # Name wordset filter (Issue #59). Drops proper nouns (people/place
         # names) that slipped past the 固有名詞 POS filter because unidic-lite
-        # mistagged them. Force-included whitelist words are already partitioned
-        # out above, so they never reach here. Gated like neighbors so the Deck
-        # Builder corpus preview (bypass_optional_filters) stays in parity.
+        # mistagged them. Force-included whitelist words are partitioned out in
+        # _phase2_filter before this helper runs, so they never reach here. Gated
+        # like neighbors so the Deck Builder corpus preview
+        # (bypass_optional_filters) stays in parity.
         if self.wordset_service and self.wordset_service.is_available() and not self.config.bypass_optional_filters:
             before = len(unknown_words)
             unknown_words = self.word_filter.filter_by_wordsets(unknown_words, self.wordset_service)
@@ -1424,8 +1425,9 @@ class EpisodeProcessor:
         # Reading-specific in-document occurrence floor. Runs BEFORE sentence
         # dedup: removing below-floor words first lets a qualifying sentence-mate
         # survive instead of losing the whole sentence to a below-floor first word.
-        # Force-included whitelist words were partitioned out above and merge
-        # back later, so they continue to bypass this coverage filter.
+        # Force-included whitelist words were partitioned out in _phase2_filter
+        # and merge back there after these filters, so they continue to bypass
+        # this coverage filter.
         if occurrence_counts is not None:
             before = len(unknown_words)
             unknown_words = self.word_filter.filter_by_episode_count(unknown_words, occurrence_counts, min_occurrence)
