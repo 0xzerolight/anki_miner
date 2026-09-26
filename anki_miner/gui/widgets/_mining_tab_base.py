@@ -33,7 +33,7 @@ from anki_miner.gui.controllers.run_receipt import RunReceiptAccumulator
 from anki_miner.gui.presenters import GUIProgressCallback
 from anki_miner.gui.utils import result_copy
 from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
-from anki_miner.gui.utils.run_off_thread import join_or_retain, run_off_thread
+from anki_miner.gui.utils.run_off_thread import join_or_retain, run_off_thread, still_running
 from anki_miner.gui.utils.run_options import RunOptionsMixin
 from anki_miner.gui.widgets.base import (
     PageWidth,
@@ -685,6 +685,36 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
                 with contextlib.suppress(Exception):
                     processor.close()
         self._leaked_runs = survivors
+
+    # ------------------------------------------------------------------
+    # Dictionary-handle release (Issue #30)
+    # ------------------------------------------------------------------
+
+    def release_dictionary_resources(self) -> bool:
+        """Close the sqlite handles the most recent run's worker still holds.
+
+        Single, Batch and Deck Builder create a processor per run, and the
+        finished worker keeps it -- exposed through the typed
+        ``curation_processor`` property -- until the next run replaces
+        ``self.worker_thread``. On Windows those handles keep ``index.sqlite``
+        locked, so Settings → Remove / Re-import fails once the user has mined
+        (Issue #30 follow-up).
+
+        Returns ``False`` while a worker is running -- one parked at Deck
+        Builder's Build gate included, since its processor is still in use --
+        because closing providers under an in-flight processor would crash the
+        run. The facade resets the chain so the next run re-opens it cleanly.
+        ``_QueueMiningTabBase`` overrides this: its screens cache one processor
+        on the tab rather than on the worker.
+        """
+        worker = self.worker_thread  # type: ignore[attr-defined]
+        if still_running(worker):
+            return False
+        if worker is not None:
+            proc = worker.curation_processor
+            if proc is not None:
+                proc.release_dictionary_resources()
+        return True
 
     # ------------------------------------------------------------------
     # Known/ignore list (Issue #42)

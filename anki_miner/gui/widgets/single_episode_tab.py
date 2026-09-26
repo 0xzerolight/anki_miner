@@ -1076,24 +1076,3 @@ class SingleEpisodeTab(MiningTabBase):
         # (e.g. duck-typed shutdown-call tests) never set the attribute.
         self._teardown_generation = getattr(self, "_teardown_generation", 0) + 1
         super().shutdown()
-
-    def release_dictionary_resources(self) -> bool:
-        """Close sqlite handles cached by the most recent worker run.
-
-        The processor is created fresh per run, but the finished worker
-        retains it (exposed via ``curation_processor``) until a new run
-        replaces ``self.worker_thread``. On Windows those cached handles
-        keep ``index.sqlite`` locked, so Settings → Remove / Re-import fails
-        after the user has mined at least once (Issue #30 follow-up).
-
-        Returns ``False`` while a worker is actively running — closing
-        providers under an in-flight processor would crash the run. The
-        facade resets the chain so the next mine re-opens it cleanly.
-        """
-        if self.worker_thread is not None and self.worker_thread.isRunning():
-            return False
-        if self.worker_thread is not None:
-            proc = self.worker_thread.curation_processor
-            if proc is not None:
-                proc.release_dictionary_resources()
-        return True

@@ -83,3 +83,13 @@ def test_release_idempotent(tab, facade_processor):
     assert tab.release_dictionary_resources() is True
     assert tab.release_dictionary_resources() is True
     assert facade_processor.definition_service.close.call_count == 2
+
+
+def test_release_with_deleted_worker_wrapper_does_not_raise(tab, facade_processor):
+    """A worker whose C++ object is gone is not running: release proceeds."""
+    worker = _idle_worker(facade_processor)
+    worker.isRunning.side_effect = RuntimeError("wrapped C/C++ object has been deleted")
+    tab.worker_thread = worker
+
+    assert tab.release_dictionary_resources() is True
+    facade_processor.definition_service.close.assert_called_once_with()

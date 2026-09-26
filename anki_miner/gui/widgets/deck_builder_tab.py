@@ -893,27 +893,6 @@ class DeckBuilderTab(FolderSeriesScreenBase):
             )
         return tr_format(self.tr("Created %1 cards in deck '%2'."), cards, deck_name)
 
-    def release_dictionary_resources(self) -> bool:
-        """Close sqlite handles cached by the most recent run (Issue #30/#32).
-
-        ``DeckBuilderWorker`` exposes its retained processor via the typed
-        ``curation_processor`` property it inherits from Batch's worker. The
-        handle is still open after the run finishes and blocks Settings →
-        Remove / Re-import on Windows.
-
-        Returns ``False`` while a worker is running -- one parked at the Build
-        gate included, since its processor is still in use -- because closing
-        providers under an in-flight processor would crash the run. The facade
-        resets the chain so the next run re-opens it cleanly.
-        """
-        if still_running(self.worker_thread):
-            return False
-        if self.worker_thread is not None:
-            proc = self.worker_thread.curation_processor
-            if proc is not None:
-                proc.release_dictionary_resources()
-        return True
-
     # ------------------------------------------------------------------
     # Durable queue contents (D16-C)
     # ------------------------------------------------------------------

@@ -1086,23 +1086,3 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         # Not a _QueueMiningTabBase, so the shared re-seed in its update_config
         # never reaches here — the curation checkbox has to be re-seeded itself.
         self._seed_review_words_checkbox()
-
-    def release_dictionary_resources(self) -> bool:
-        """Close sqlite handles cached by the most recent worker run.
-
-        ``BatchQueueWorkerThread`` exposes its retained processor via the
-        typed ``curation_processor`` property. The handle is still open after
-        the run finishes and blocks Settings → Remove / Re-import on Windows
-        (Issue #30 follow-up).
-
-        Returns ``False`` while a worker is actively running — closing
-        providers under an in-flight processor would crash the run. The
-        facade resets the chain so the next mine re-opens it cleanly.
-        """
-        if self.worker_thread is not None and self.worker_thread.isRunning():
-            return False
-        if self.worker_thread is not None:
-            proc = self.worker_thread.curation_processor
-            if proc is not None:
-                proc.release_dictionary_resources()
-        return True
