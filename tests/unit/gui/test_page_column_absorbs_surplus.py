@@ -42,6 +42,7 @@ from anki_miner.gui.widgets.base.sizing import PAGE_SCROLL_OBJECT_NAME
 from anki_miner.gui.widgets.base.workflow_action_bar import _column_has_vertical_absorber
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.condense_tab import CondenseTab
+from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.gui.widgets.deck_filter_tab import DeckFilterTab
 from anki_miner.gui.widgets.enhanced import SectionHeader
 from anki_miner.gui.widgets.queue_item_widget import QueueItemWidget
@@ -69,6 +70,7 @@ _SHELL_PAGES = (
     "retime",
     "creation",
     "backfill",
+    "deckbuilder",
     "deckfilter",
 )
 
@@ -89,6 +91,7 @@ def _build(name: str, config: AnkiMinerConfig) -> QWidget:
         "retime": lambda: SubtitleRetimeTab(config, suppress_optional_startup=True),
         "creation": lambda: SubtitleCreationTab(config, suppress_optional_startup=True),
         "backfill": lambda: CardBackfillTab(config),
+        "deckbuilder": lambda: DeckBuilderTab(config, MagicMock(), MagicMock()),
         "deckfilter": lambda: DeckFilterTab(config),
     }
     return builders[name]()

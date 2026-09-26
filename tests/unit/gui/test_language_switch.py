@@ -308,9 +308,10 @@ def test_every_durable_queue_screen_answers_clear_queue():
     """
     from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
     from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
+    from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
     from anki_miner.gui.widgets.reading_subtitles_tab import ReadingSubtitlesTab
     from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 
-    for screen in (AudiobookTab, BatchProcessingTab, ReadingSubtitlesTab, YouTubeTab):
+    for screen in (AudiobookTab, BatchProcessingTab, DeckBuilderTab, ReadingSubtitlesTab, YouTubeTab):
         assert screen.QUEUE_STATE_KEY, screen.__name__
         assert callable(getattr(screen, "clear_queue", None)), screen.__name__

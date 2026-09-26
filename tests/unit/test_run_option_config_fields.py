@@ -14,6 +14,10 @@ def test_defaults_match_the_pre_change_hardcoded_widget_values():
     assert config.review_words_before_mining is False
     assert config.youtube_align_captions is False
     assert config.youtube_subtitle_source == "auto"
+    assert config.deck_builder_mode == "all"
+    assert config.deck_builder_top_n == 1000
+    assert config.deck_builder_coverage_pct == 90.0
+    assert config.deck_builder_skip_known is True
     assert config.backfill_field_groups == ()
 
 
@@ -23,6 +27,10 @@ def test_every_run_option_survives_a_save_load_round_trip():
         review_words_before_mining=True,
         youtube_align_captions=True,
         youtube_subtitle_source="captions",
+        deck_builder_mode="coverage_pct",
+        deck_builder_top_n=250,
+        deck_builder_coverage_pct=98.5,
+        deck_builder_skip_known=False,
         backfill_field_groups=("pitch", "frequency"),
     )
     GUIConfigManager.save_config(saved)
@@ -31,6 +39,10 @@ def test_every_run_option_survives_a_save_load_round_trip():
     assert loaded.review_words_before_mining is True
     assert loaded.youtube_align_captions is True
     assert loaded.youtube_subtitle_source == "captions"
+    assert loaded.deck_builder_mode == "coverage_pct"
+    assert loaded.deck_builder_top_n == 250
+    assert loaded.deck_builder_coverage_pct == 98.5
+    assert loaded.deck_builder_skip_known is False
     assert loaded.backfill_field_groups == ("pitch", "frequency")
 
 
@@ -42,3 +54,8 @@ def test_a_json_list_of_field_groups_becomes_a_tuple():
 
 def test_an_unknown_subtitle_source_falls_back_to_the_default():
     assert AnkiMinerConfig(youtube_subtitle_source="nonsense").youtube_subtitle_source == "auto"
+
+
+def test_deck_builder_values_are_clamped_and_mode_reset():
+    cfg = AnkiMinerConfig(deck_builder_top_n=0, deck_builder_coverage_pct=250.0, deck_builder_mode="bogus")
+    assert (cfg.deck_builder_top_n, cfg.deck_builder_coverage_pct, cfg.deck_builder_mode) == (1, 100.0, "all")

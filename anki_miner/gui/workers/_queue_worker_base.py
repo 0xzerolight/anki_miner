@@ -173,6 +173,46 @@ def result_retry_eligible(result: object) -> bool:
     return getattr(result, "auto_retry_eligible", False) is True
 
 
+def exception_retry_eligible(exc: BaseException, write_state: AnkiWriteState) -> bool:
+    """Whether repeating the attempt that raised ``exc`` is safe and useful.
+
+    Classified explicitly, class by class, and closed by default — an
+    unrecognised exception is never repeated. Two classes qualify:
+
+    * A **generic** :class:`YouTubeFetchError`. Fetching runs to completion
+      before mining begins, so no ``addNotes`` can have happened for this
+      item; the deterministic subclasses are excluded first because for them
+      a second attempt only pays for a second download.
+    * A **source-proven transient AnkiConnect transport failure**, and then
+      only while ``write_state`` (what the live processor can prove, see
+      :func:`anki_write_state_of`) is :attr:`AnkiWriteState.NO_NOTE_WRITE`. A
+      connection dropped *during* ``addNotes`` is equally transient and must
+      never be replayed.
+
+    Setup errors, cancellation, malformed or Anki-side responses and every
+    generic exception fall through to ``False``. Shared with the command line.
+    """
+    if isinstance(exc, (*_DETERMINISTIC_FETCH_ERRORS, SetupError)):
+        return False
+    if isinstance(exc, YouTubeFetchError):
+        return True
+    if is_transient_anki_transport_error(exc):
+        return write_state is AnkiWriteState.NO_NOTE_WRITE
+    return False
+
+
+def anki_write_state_of(processor: object) -> AnkiWriteState:
+    """Fail-closed read of what *processor* can prove about note writes.
+
+    Anything that is not a real :class:`AnkiWriteState` — an absent service,
+    a stub, a mock — has proved nothing, so it reports the answer that
+    blocks the retry rather than the one that permits it.
+    """
+    service = getattr(processor, "anki_service", None)
+    state = getattr(service, "anki_write_state", None)
+    return state if isinstance(state, AnkiWriteState) else AnkiWriteState.NOTE_WRITE_UNCERTAIN
+
+
 @dataclass(frozen=True)
 class AttemptOutcome:
     """What one attempt at mining a queue item produced.
@@ -730,41 +770,12 @@ class SequentialQueueWorker(RunBoundaryControls, ProcessorOwningWorker, Generic[
         )
 
     def _exception_retryable(self, exc: BaseException) -> bool:
-        """Whether repeating the attempt that raised ``exc`` is safe and useful.
-
-        Classified explicitly, class by class, and closed by default — an
-        unrecognised exception is never repeated. Two classes qualify:
-
-        * A **generic** :class:`YouTubeFetchError`. Fetching runs to completion
-          before mining begins, so no ``addNotes`` can have happened for this
-          item; the deterministic subclasses are excluded first because for them
-          a second attempt only pays for a second download.
-        * A **source-proven transient AnkiConnect transport failure**, and then
-          only while the live service can still prove
-          :attr:`AnkiWriteState.NO_NOTE_WRITE`. A connection dropped *during*
-          ``addNotes`` is equally transient and must never be replayed.
-
-        Setup errors, cancellation, malformed or Anki-side responses and every
-        generic exception fall through to ``False``.
-        """
-        if isinstance(exc, (*_DETERMINISTIC_FETCH_ERRORS, SetupError)):
-            return False
-        if isinstance(exc, YouTubeFetchError):
-            return True
-        if is_transient_anki_transport_error(exc):
-            return self._anki_write_state() is AnkiWriteState.NO_NOTE_WRITE
-        return False
+        """See :func:`exception_retry_eligible`."""
+        return exception_retry_eligible(exc, self._anki_write_state())
 
     def _anki_write_state(self) -> AnkiWriteState:
-        """Fail-closed read of what the live processor can prove about writes.
-
-        Anything that is not a real :class:`AnkiWriteState` — an absent service,
-        a stub, a mock — has proved nothing, so it reports the answer that
-        blocks the retry rather than the one that permits it.
-        """
-        service = getattr(self._processor, "anki_service", None)
-        state = getattr(service, "anki_write_state", None)
-        return state if isinstance(state, AnkiWriteState) else AnkiWriteState.NOTE_WRITE_UNCERTAIN
+        """See :func:`anki_write_state_of`."""
+        return anki_write_state_of(self._processor)
 
     # ------------------------------------------------------------------
     # Subclass hooks

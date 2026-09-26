@@ -80,7 +80,7 @@ UTILITY_SUBTABS: tuple[str, ...] = (
 # duck-typed ``open_subtab``). Main tabs absent here have no sub-tabs.
 SUBTAB_KEYS: dict[str, frozenset[str]] = {
     "settings": SETTINGS_SUBTABS,
-    "video": frozenset({"single", "batch", "youtube"}),
+    "video": frozenset({"single", "batch", "youtube", "deckbuilder"}),
     "reading": frozenset({"manga", "novels", "subtitles", "text"}),
     "subtitles": frozenset(UTILITY_SUBTABS),
 }
@@ -238,6 +238,38 @@ CAPABILITIES: tuple[Capability, ...] = (
             "dual subtitles",
             "batch",
             "folder",
+        ),
+    ),
+    Capability(
+        id="deck-builder",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Build a deck by coverage %"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Build a frequency-ordered deck that covers a chosen percentage of a whole corpus. Preview creates "
+            "the deck in Anki if it doesn't exist yet; the preview numbers are approximate -- a word whose card "
+            "form another dictionary form already took can show as already known.",
+        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("video", "deckbuilder"),
+        keywords=("deck builder", "corpus", "coverage", "frequency deck", "premade", "premine", "top words"),
+    ),
+    Capability(
+        id="deck-builder-modes",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Deck Builder modes (all / top N / coverage %)"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.",
+        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("video", "deckbuilder"),
+        keywords=(
+            "bypass filters",
+            "include known",
+            "allow duplicates",
+            "complete deck",
+            "top n",
+            "coverage target",
+            "everything",
         ),
     ),
     Capability(

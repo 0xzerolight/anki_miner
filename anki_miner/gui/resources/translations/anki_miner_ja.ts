@@ -1544,6 +1544,30 @@ No index files are deleted.</source>
 </context><context>
     <name>BatchProcessingTab</name>
     <message>
+        <source>That translation subtitle folder no longer exists.</source>
+        <translation>その翻訳字幕フォルダは存在しなくなっています。</translation>
+    </message>
+    <message>
+        <source>The translation folder must be different from the subtitle folder.</source>
+        <translation>翻訳フォルダは字幕フォルダと別にする必要があります。</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>キャンセルされました</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>失敗しました — ログを確認してください</translation>
+    </message>
+    <message>
+        <source>Finished with errors — see log</source>
+        <translation>エラーが発生して完了しました — ログを確認してください</translation>
+    </message>
+    <message>
+        <source>Complete — %1 cards created</source>
+        <translation>完了 — %1 枚のカードを作成しました</translation>
+    </message>
+    <message>
         <source>Review words before mining</source>
         <translation>マイニング前に単語を確認</translation>
     </message>
@@ -1612,14 +1636,6 @@ No index files are deleted.</source>
         <translation>処理をキャンセル</translation>
     </message>
     <message>
-        <source>That translation subtitle folder no longer exists.</source>
-        <translation>その翻訳字幕フォルダは存在しなくなっています。</translation>
-    </message>
-    <message>
-        <source>The translation folder must be different from the subtitle folder.</source>
-        <translation>翻訳フォルダは字幕フォルダと別にする必要があります。</translation>
-    </message>
-    <message>
         <source>Choose existing video and subtitle folders.</source>
         <translation>既存の動画フォルダと字幕フォルダを選択してください。</translation>
     </message>
@@ -1656,10 +1672,6 @@ No index files are deleted.</source>
         <translation>キューの処理を開始しています（%1シリーズ）...</translation>
     </message>
     <message>
-        <source>Cancelled</source>
-        <translation>キャンセルされました</translation>
-    </message>
-    <message>
         <source>Cancelling…</source>
         <translation>キャンセル中…</translation>
     </message>
@@ -1674,18 +1686,6 @@ No index files are deleted.</source>
     <message>
         <source>Mining series %1 of %2: %3</source>
         <translation>シリーズ %1/%2 をマイニング中: %3</translation>
-    </message>
-    <message>
-        <source>Failed — see log</source>
-        <translation>失敗しました — ログを確認してください</translation>
-    </message>
-    <message>
-        <source>Finished with errors — see log</source>
-        <translation>エラーが発生して完了しました — ログを確認してください</translation>
-    </message>
-    <message>
-        <source>Complete — %1 cards created</source>
-        <translation>完了 — %1 枚のカードを作成しました</translation>
     </message>
     <message>
         <source>Folder not found: %1</source>
@@ -2036,6 +2036,22 @@ No index files are deleted.</source>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Sentences.</source>
         <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Build a deck by coverage %</source>
+        <translation>カバー率（%）でデッキを作成</translation>
+    </message>
+    <message>
+        <source>Build a frequency-ordered deck that covers a chosen percentage of a whole corpus. Preview creates the deck in Anki if it doesn't exist yet; the preview numbers are approximate -- a word whose card form another dictionary form already took can show as already known.</source>
+        <translation>コーパス全体の指定した割合をカバーする、頻度順のデッキを作成します。プレビューを実行すると、デッキがまだ Anki にない場合は作成されます。プレビューの数値は概算です。カードの表記がすでに別の辞書形で使われている単語は、既知として表示されることがあります。</translation>
+    </message>
+    <message>
+        <source>Deck Builder modes (all / top N / coverage %)</source>
+        <translation>デッキビルダーのモード（すべて／上位N件／カバー率%）</translation>
+    </message>
+    <message>
+        <source>Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
+        <translation>デッキビルダーはエピソードごとのフィルターと重複チェックを常にスキップします。すべての単語、上位N件、またはカバー率の目標を選び、必要に応じて既知単語を除外できます。</translation>
     </message>
     <message>
         <source>Mine from YouTube</source>
@@ -3472,6 +3488,220 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>%1 (%2 of %3)</source>
         <translation>%1（%3 件中 %2 件目）</translation>
+    </message>
+</context><context>
+    <name>DeckBuilderTab</name>
+    <message>
+        <source>Progress</source>
+        <translation>進捗</translation>
+    </message>
+    <message>
+        <source>deck</source>
+        <translation>デッキ</translation>
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation>プレビュー</translation>
+    </message>
+    <message>
+        <source>Scan the season and preview which words will be included</source>
+        <translation>シーズンをスキャンし、含まれる単語をプレビューします</translation>
+    </message>
+    <message>
+        <source>Build Deck</source>
+        <translation>デッキを作成</translation>
+    </message>
+    <message>
+        <source>Create the Anki cards for the selected words, scanning the season first if you have not previewed it</source>
+        <translation>選択した単語の Anki カードを作成します（プレビューしていない場合は先にシーズンをスキャンします）</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>キャンセル</translation>
+    </message>
+    <message>
+        <source>Input</source>
+        <translation>入力</translation>
+    </message>
+    <message>
+        <source>Video Folder:</source>
+        <translation>動画フォルダ:</translation>
+    </message>
+    <message>
+        <source>Subtitle Folder:</source>
+        <translation>字幕フォルダ:</translation>
+    </message>
+    <message>
+        <source>Subtitle Offset:</source>
+        <translation>字幕オフセット:</translation>
+    </message>
+    <message>
+        <source>Translation Folder:</source>
+        <translation>翻訳字幕フォルダ:</translation>
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation>翻訳字幕オフセット:</translation>
+    </message>
+    <message>
+        <source> seconds</source>
+        <translation> 秒</translation>
+    </message>
+    <message>
+        <source>Adjust subtitle timing for the whole season (positive = later, negative = earlier)</source>
+        <translation>シーズン全体の字幕タイミングを調整します（正 = 遅く、負 = 早く）</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation>翻訳字幕のみのタイミングを調整します（正の値 = 遅く、負の値 = 早く）</translation>
+    </message>
+    <message>
+        <source>Deck Settings</source>
+        <translation>デッキ設定</translation>
+    </message>
+    <message>
+        <source>Deck Name:</source>
+        <translation>デッキ名:</translation>
+    </message>
+    <message>
+        <source>Word Selection:</source>
+        <translation>単語の選択:</translation>
+    </message>
+    <message>
+        <source>Enter deck name…</source>
+        <translation>デッキ名を入力…</translation>
+    </message>
+    <message>
+        <source>All vocabulary</source>
+        <translation>すべての語彙</translation>
+    </message>
+    <message>
+        <source>Top N words</source>
+        <translation>上位N単語</translation>
+    </message>
+    <message>
+        <source>Target coverage %</source>
+        <translation>目標カバー率%</translation>
+    </message>
+    <message>
+        <source> words</source>
+        <translation> 単語</translation>
+    </message>
+    <message>
+        <source>Include the N most-frequent lemmas</source>
+        <translation>頻度上位N件の見出し語を含める</translation>
+    </message>
+    <message>
+        <source>Include enough words to cover this percentage of tokens</source>
+        <translation>この割合のトークンをカバーできるだけの単語を含める</translation>
+    </message>
+    <message>
+        <source>Skip words already in my Anki collection</source>
+        <translation>Ankiコレクションに既にある単語をスキップする</translation>
+    </message>
+    <message>
+        <source>Checked: skip your known words; unchecked: mine every word.</source>
+        <translation>チェックすると既知単語をスキップし、チェックを外すとすべての単語をマイニングします。</translation>
+    </message>
+    <message>
+        <source>Review words before mining</source>
+        <translation>マイニング前に単語を確認</translation>
+    </message>
+    <message>
+        <source>Pick which words get cards, once per series.</source>
+        <translation>どの単語をカードにするかシリーズごとに1回選択します。</translation>
+    </message>
+    <message>
+        <source>Results</source>
+        <translation>結果</translation>
+    </message>
+    <message>
+        <source>Selected words that won't get a card this run: already in your collection, or with no sentence to mine.</source>
+        <translation>今回の実行でカードが作成されない選択済みの単語：すでにコレクションにあるか、マイニングできる文がありません。</translation>
+    </message>
+    <message>
+        <source>Total tokens:</source>
+        <translation>総トークン数:</translation>
+    </message>
+    <message>
+        <source>Unique lemmas:</source>
+        <translation>異なり見出し語数:</translation>
+    </message>
+    <message>
+        <source>Candidate words:</source>
+        <translation>候補単語数:</translation>
+    </message>
+    <message>
+        <source>Projected coverage:</source>
+        <translation>予測カバー率:</translation>
+    </message>
+    <message>
+        <source>Already known (skipped):</source>
+        <translation>既知（スキップ）:</translation>
+    </message>
+    <message>
+        <source>Cards to create:</source>
+        <translation>作成するカード数:</translation>
+    </message>
+    <message>
+        <source>Choose existing video and subtitle folders.</source>
+        <translation>既存の動画フォルダと字幕フォルダを選択してください。</translation>
+    </message>
+    <message>
+        <source>Enter a deck name before mining.</source>
+        <translation>マイニングの前にデッキ名を入力してください。</translation>
+    </message>
+    <message>
+        <source>No video/subtitle pairs found. Check the folders.</source>
+        <translation>動画と字幕のペアが見つかりません。フォルダを確認してください。</translation>
+    </message>
+    <message>
+        <source>Deck Builder</source>
+        <translation>デッキビルダー</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>キャンセル中…</translation>
+    </message>
+    <message>
+        <source>Preview ready. Press Build Deck to create the cards.</source>
+        <translation>プレビューの準備ができました。「デッキを作成」を押してカードを作成してください。</translation>
+    </message>
+    <message>
+        <source>%1 of %2 episodes mined</source>
+        <translation>%2 件中 %1 件のエピソードをマイニングしました</translation>
+    </message>
+    <message>
+        <source>Some episodes could not be mined.</source>
+        <translation>一部のエピソードをマイニングできませんでした。</translation>
+    </message>
+    <message>
+        <source>The deck could not be built.</source>
+        <translation>デッキを作成できませんでした。</translation>
+    </message>
+    <message>
+        <source>Created %1 cards in deck '%3'; the candidate words cover ~%2% of tokens.</source>
+        <translation>デッキ「%3」に %1 枚のカードを作成しました。候補単語がトークンの約 %2% をカバーしています。</translation>
+    </message>
+    <message>
+        <source>Created %1 cards in deck '%2'.</source>
+        <translation>デッキ「%2」に %1 枚のカードを作成しました。</translation>
+    </message>
+    <message>
+        <source>Folder not found: %1</source>
+        <translation>フォルダが見つかりません：%1</translation>
+    </message>
+    <message>
+        <source>The build into deck '%1' was interrupted when Anki Miner closed. Build Deck again to finish it; words already in the deck are skipped.</source>
+        <translation>Anki Miner の終了により、デッキ「%1」の作成が中断されました。もう一度「デッキを作成」を押すと完了します。すでにデッキにある単語はスキップされます。</translation>
+    </message>
+</context><context>
+    <name>DeckBuilderWorker</name>
+    <message numerus="yes">
+        <source>Scanning %n episode(s)...</source>
+        <translation>
+            <numerusform>%n 件のエピソードをスキャン中...</numerusform>
+        </translation>
     </message>
 </context><context>
     <name>DeckFilterTab</name>
@@ -6406,6 +6636,10 @@ Continue?</source>
     <message>
         <source>YouTube</source>
         <translation>YouTube</translation>
+    </message>
+    <message>
+        <source>Deck Builder</source>
+        <translation>デッキビルダー</translation>
     </message>
     <message>
         <source>'Anki Miner' should now appear in your application menu.</source>

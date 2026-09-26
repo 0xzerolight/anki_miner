@@ -487,3 +487,12 @@ class TestUndoRevertsMinedWords:
             assert captured["cb"] is None
         else:
             assert captured["cb"] is not None
+
+
+def test_deck_builder_owner_is_gated_by_the_video_main_tab() -> None:
+    """The gate above blocks undo by ``main_tab`` alone, never by subtab, so a
+    Deck Builder run -- owned by ``video`` -- is already covered by the
+    ``("video", True)`` case."""
+    from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
+
+    assert DeckBuilderTab.TASK_OWNER.main_tab == "video"

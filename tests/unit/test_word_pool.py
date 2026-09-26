@@ -150,6 +150,14 @@ class TestCaptureCurationCallback:
     def test_carries_quiet_marker(self):
         assert CaptureCurationCallback.suppress_curation_messages is True
 
+    def test_capture_without_candidates_strips_them(self):
+        capture = CaptureCurationCallback(keep_candidates=False)
+        capture.set_episode(EP1)
+        candidate = _word("犬candidate")
+        words = [_word("猫", candidates=[candidate])]
+        assert capture(words) == []
+        assert words[0].sentence_candidates == []
+
 
 class TestMinePassStats:
     def test_record_difficulty_is_noop_but_sessions_record(self, tmp_path):

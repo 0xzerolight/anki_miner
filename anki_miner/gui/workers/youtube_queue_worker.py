@@ -82,6 +82,23 @@ from anki_miner.utils.logging_ext import log_summary
 logger = logging.getLogger(__name__)
 
 
+def allocate_youtube_workspace(config: AnkiMinerConfig) -> Path:
+    """Create a fresh private per-attempt workspace under ``media_temp_folder/youtube``.
+
+    The intermediate ``youtube`` directory is created with mode 0o700 and the
+    leaf via ``tempfile.mkdtemp`` (also 0o700), mirroring
+    ``episode_processor._allocate_run_temp_folder``. Explicit modes rather than
+    the umask so cookie-authenticated files never land world-readable (OVH-062).
+    The caller owns the directory and removes it. Shared with the command line.
+    """
+    youtube_dir = config.media_temp_folder / "youtube"
+    youtube_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+    # Enforce 0o700 even if the directory already exists with a looser mode
+    # (e.g. created by an older version of the app).
+    youtube_dir.chmod(0o700)
+    return Path(tempfile.mkdtemp(prefix="run-", dir=youtube_dir))
+
+
 class YouTubeQueueWorker(SequentialQueueWorker[YouTubeQueueItem]):
     """Worker thread that processes a queue of YouTube URLs sequentially.
 
@@ -211,21 +228,8 @@ class YouTubeQueueWorker(SequentialQueueWorker[YouTubeQueueItem]):
         item.status = YouTubeItemStatus.PROCESSING
 
     def _allocate_workspace(self) -> Path:
-        """Create and return a fresh per-attempt workspace directory.
-
-        The intermediate ``youtube`` directory is created with mode 0o700 and
-        the leaf workspace is allocated via ``tempfile.mkdtemp`` (also 0o700),
-        mirroring ``episode_processor._allocate_run_temp_folder``.  Explicit
-        modes are used rather than relying on the process umask so
-        cookie-authenticated files never land world-readable (OVH-062).
-        """
-        youtube_dir = self._config.media_temp_folder / "youtube"
-        youtube_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
-        # Enforce 0o700 even if the directory already exists with a looser mode
-        # (e.g. created by an older version of the app).
-        youtube_dir.chmod(0o700)
-        workspace = Path(tempfile.mkdtemp(prefix="run-", dir=youtube_dir))
-        return workspace
+        """Create and return a fresh per-attempt workspace directory."""
+        return allocate_youtube_workspace(self._config)
 
     def _mine_one(self, idx: int, item: YouTubeQueueItem, workspace: Path) -> object:
         """Run a single fetch + mine attempt against ``workspace``.

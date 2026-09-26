@@ -268,6 +268,10 @@ class AnkiMinerConfig:
     review_words_before_mining: bool = False  # The word curator popup, all 7 mining screens
     youtube_align_captions: bool = False  # Align downloaded captions to the audio
     youtube_subtitle_source: str = "auto"  # "auto" | "transcribe" | "captions"
+    deck_builder_mode: str = "all"  # DeckSelectionMode value: "all" | "top_n" | "coverage_pct"
+    deck_builder_top_n: int = 1000
+    deck_builder_coverage_pct: float = 90.0
+    deck_builder_skip_known: bool = True  # "Skip words already in my Anki collection"
     # Ticked backfill group keys: card_backfiller.FIELD_GROUPS plus one per
     # profile-declared card field (measure_word, expression_pinyin, hanja, …).
     backfill_field_groups: tuple[str, ...] = ()
@@ -871,9 +875,20 @@ class AnkiMinerConfig:
         if isinstance(self.backfill_field_groups, list):
             object.__setattr__(self, "backfill_field_groups", tuple(self.backfill_field_groups))
 
+        # Clamp the Deck Builder run options to their spinbox ranges. A config
+        # value outside them would otherwise be silently re-clamped by the
+        # widget at seed time, so the saved value and the shown value would
+        # disagree.
+        object.__setattr__(self, "deck_builder_top_n", max(1, min(100_000, int(self.deck_builder_top_n))))
+        object.__setattr__(
+            self, "deck_builder_coverage_pct", max(1.0, min(100.0, float(self.deck_builder_coverage_pct)))
+        )
+
         # Reset an unrecognised enumerated value rather than carrying it into a
         # combo lookup, which would silently leave the widget on whatever index
         # it happened to hold (mirrors the asr_model / asr_device resets).
+        if self.deck_builder_mode not in {"all", "top_n", "coverage_pct"}:
+            object.__setattr__(self, "deck_builder_mode", "all")
         if self.youtube_subtitle_source not in {"auto", "transcribe", "captions"}:
             object.__setattr__(self, "youtube_subtitle_source", "auto")
 

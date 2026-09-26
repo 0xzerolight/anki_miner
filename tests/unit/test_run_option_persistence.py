@@ -61,6 +61,7 @@ def test_an_idle_refresh_does_not_chain_into_another_save(wired_window):
 _CURATION_SCREENS = (
     "BatchProcessingTab",
     "YouTubeTab",
+    "DeckBuilderTab",
     "AudiobookTab",
     "ReadingMangaTab",
     "ReadingNovelsTab",
@@ -153,6 +154,29 @@ def test_a_remembered_source_reaches_the_add_flow_at_construction(qtbot, test_co
         assert tab._add_flow._subtitle_source == "captions"
     finally:
         window.deleteLater()
+
+
+def test_the_deck_builder_controls_reopen_where_they_were(wired_window):
+    from anki_miner.models.deck_build import DeckSelectionMode
+
+    window, _titles, _tabs = wired_window
+    tab = _screen(window, "DeckBuilderTab")
+
+    tab.mode_combo.setCurrentIndex(tab.mode_combo.findData(DeckSelectionMode.COVERAGE_PCT))
+    tab.coverage_spinbox.setValue(75.0)
+    tab.top_n_spinbox.setValue(300)
+    tab.skip_known_checkbox.setChecked(False)
+
+    assert window.config.deck_builder_mode == "coverage_pct"
+    assert window.config.deck_builder_coverage_pct == 75.0
+    assert window.config.deck_builder_top_n == 300
+    assert window.config.deck_builder_skip_known is False
+
+    tab.update_config(window.config)
+    assert tab.mode_combo.currentData() is DeckSelectionMode.COVERAGE_PCT
+    assert tab.coverage_spinbox.value() == 75.0
+    assert tab.top_n_spinbox.value() == 300
+    assert tab.skip_known_checkbox.isChecked() is False
 
 
 def _map_pitch(config):

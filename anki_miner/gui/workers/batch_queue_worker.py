@@ -20,6 +20,7 @@ from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.interfaces.progress import ProgressCallback
 from anki_miner.models.batch_queue import BatchQueue, QueueItem, QueueItemStatus
 from anki_miner.models.processing import ProcessingResult, WhitelistCoverage
+from anki_miner.models.word import TokenizedWord
 from anki_miner.orchestration.episode_processor import EpisodeProcessor, require_usable_offline_provider
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.resource_staleness import stale_resource_reimport_error
@@ -442,6 +443,43 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
 
         return total_cards
 
+    def _make_capture(self) -> CaptureCurationCallback:
+        """The season pre-pass's capture callback.
+
+        Overridable so a subclass (e.g. Deck Builder) can swap in a capture
+        that discards sentence candidates it will never let a curator show.
+        """
+        return CaptureCurationCallback()
+
+    def _prepass_message(self, pairs_total: int) -> str:
+        """The presenter line shown while the season pre-pass runs.
+
+        Overridable so a subclass can narrate its own pre-pass; the default
+        text and translation context must stay verbatim (pylupdate keys on
+        both).
+        """
+        return QCoreApplication.translate(
+            "BatchQueueWorkerThread",
+            "Collecting words from %n episode(s) for review...",
+            "",
+            pairs_total,
+        )
+
+    def _select_season_pool(
+        self,
+        pool: list[TokenizedWord],
+        prepass_ok: list[tuple[FilePair, tuple[Path, Path]]],
+        episode_processor: EpisodeProcessor,
+    ) -> list[TokenizedWord] | None:
+        """Pick the pool the season curator (or a subclass's own selection) sees.
+
+        Called only when at least one pair pre-passed, before the "nothing to
+        review" shortcut — so a subclass can act on an empty pool too. The
+        default hands the merged pool through unchanged; ``None`` interrupts
+        the item (mirrors a curator reject: nothing committed, item PENDING).
+        """
+        return pool
+
     def _process_item_pairs_season(
         self,
         item: QueueItem,
@@ -473,15 +511,8 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
         failed_pairs: list[tuple[str, str]] = []
 
         # --- Pre-pass: collect every episode's reviewable words (no cards). ---
-        self.presenter.show_info(
-            QCoreApplication.translate(
-                "BatchQueueWorkerThread",
-                "Collecting words from %n episode(s) for review...",
-                "",
-                pairs_total,
-            )
-        )
-        capture = CaptureCurationCallback()
+        self.presenter.show_info(self._prepass_message(pairs_total))
+        capture = self._make_capture()
         prepass_ok: list[tuple[FilePair, tuple[Path, Path]]] = []
         for pair, pair_key in pending_pairs:
             if self.check_cancelled():
@@ -513,6 +544,11 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
             prepass_ok.append((pair, pair_key))
 
         pool = merge_pools(capture.pools)
+        if prepass_ok:
+            selected = self._select_season_pool(pool, prepass_ok, episode_processor)
+            if selected is None or self.check_cancelled():
+                return cards_for_item, failed_pairs, True
+            pool = selected
         if not pool or not prepass_ok:
             # Nothing to review anywhere: the pre-passed episodes ARE this
             # item's outcome (zero-card successes), no curator to show.

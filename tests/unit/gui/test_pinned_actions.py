@@ -24,6 +24,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
 from anki_miner.gui.widgets.base import WorkflowActionBar
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
+from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.gui.widgets.reading_manga_tab import ReadingMangaTab
 from anki_miner.gui.widgets.reading_novels_tab import ReadingNovelsTab
 from anki_miner.gui.widgets.reading_subtitles_tab import ReadingSubtitlesTab
@@ -54,6 +55,8 @@ def _build(name: str, config: AnkiMinerConfig) -> QWidget:
         return BatchProcessingTab(config, _presenter(), _progress_callback())
     if name == "youtube":
         return YouTubeTab(config, MagicMock(name="Processor"), MagicMock(name="Fetcher"), MagicMock())
+    if name == "deckbuilder":
+        return DeckBuilderTab(config, _presenter(), _progress_callback())
     if name == "audiobook":
         return AudiobookTab(config, MagicMock(name="Processor"), MagicMock())
     reading = {
@@ -70,6 +73,7 @@ _SCREENS = [
     ("single", "process_button", "cancel_button"),
     ("batch", None, "cancel_button"),
     ("youtube", "mine_button", "stop_button"),
+    ("deckbuilder", "build_button", "cancel_button"),
     ("audiobook", "mine_button", "stop_button"),
     ("manga", "mine_button", "cancel_button"),
     ("novels", "mine_button", "cancel_button"),

@@ -1675,6 +1675,8 @@ def compose_main_window(
     batch_progress = GUIProgressCallback(window)
     youtube_presenter = GUIPresenter(window)
     youtube_fetcher = create_youtube_fetcher(window.get_config())
+    deck_builder_presenter = GUIPresenter(window)
+    deck_builder_progress = GUIProgressCallback(window)
     video_tab = VideoTab(
         window.get_config(),
         episode_presenter=episode_presenter,
@@ -1683,6 +1685,8 @@ def compose_main_window(
         batch_progress=batch_progress,
         youtube_presenter=youtube_presenter,
         youtube_fetcher=youtube_fetcher,
+        deck_builder_presenter=deck_builder_presenter,
+        deck_builder_progress=deck_builder_progress,
         stats_service=stats_service,
     )
     register_mining_tab(
@@ -1690,7 +1694,7 @@ def compose_main_window(
         video_tab,
         episode_presenter,
         QCoreApplication.translate("MainWindow", "Video"),
-        extra_presenters=(batch_presenter, youtube_presenter),
+        extra_presenters=(batch_presenter, youtube_presenter, deck_builder_presenter),
     )
 
     # Audiobook tab (Issue #71). Same lazy-processor pattern as YouTube:
@@ -1856,6 +1860,7 @@ def compose_main_window(
     for screen in (
         video_tab.single_tab,
         video_tab.batch_tab,
+        video_tab.deck_builder_tab,
         reading_tab.manga_tab,
         reading_tab.novels_tab,
         reading_tab.subtitles_tab,

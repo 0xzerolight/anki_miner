@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:eaf6f4a3bb1bf708 -->
+<!-- i18n-source: README.md sha256:06b01f0d7cb8ab71 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -115,7 +115,7 @@ anki_miner_gui
 
 ## 标签页
 
-- **视频** - 挖词单个视频/字幕配对、批量文件夹或 YouTube 链接。
+- **视频** - 挖词单个视频/字幕配对、批量文件夹、YouTube 链接，或把整部剧集挖词成一个按词频排序的牌组。
 - **有声书** - 挖词有声书、播客、广播和歌曲（音频 + 字幕/文稿配对）。
 - **阅读** - 挖词漫画（mokuro）、小说（`.epub`、`.txt`；单本书或整个文件夹）、独立字幕文件，或粘贴的文本。
 - **分析** - 挖词历史、难度排名、里程碑。

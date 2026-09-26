@@ -254,6 +254,7 @@ class TestCardsShareOneDensity:
         "SubtitleCreationTab",
         "SubtitleRetimeTab",
         "CondenseTab",
+        "DeckBuilderTab",
         "DownloadTab",
         "MokuroTab",
         "BookSyncTab",

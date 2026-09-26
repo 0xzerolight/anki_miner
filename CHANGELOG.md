@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Added
 
 - **Export and import your resources as one file (Settings → Export / Import → Resources…).** Exporting packs the active mining language's dictionaries, frequency and pitch lists, known-words ignore list, and blacklist/whitelist into a zip; a checklist picks what goes in. Importing rebuilds them on another install from their original files, adds them to your lists (new dictionaries on top), and never replaces anything already installed. Audio packs are not included: their audio lives outside the app. The footer's Export Settings… and Import Settings… buttons are now the Settings… entries of these two menus.
+- **Other tools can drive Anki Miner from the command line.** `anki-miner mine batch|pairs|reading|youtube …` mines with your saved settings and prints one JSON object per line — progress, per-episode results with note IDs, and a final result — with exit codes for busy, setup and usage errors. It is the same installed program (`AnkiMiner.exe mine …` on Windows, `/usr/bin/anki-miner mine …` from the .deb). It never opens the word curator and refuses to run while the Anki Miner window is open. See CLI.md.
 - **Jiten is a recommended Japanese frequency list (setup wizard, Tools → Download Recommended Resources).** Jiten ranks words across more than 16,000 anime, drama, film, novel, visual-novel and manga titles and is rebuilt from its live library; the JPDB list the app already offered is a 2024 snapshot. It installs beside JPDB rather than replacing it: cards list both ranks, the Frequency Rank Range (Settings → Filtering) judges each word by the more common of its two ranks, and Frequency Sort takes the harmonic mean of the two. Downloading it again replaces the installed list in place, including a copy you imported by hand. Jiten's per-media lists (anime only, visual novels only, …) are linked from RESOURCES.md for manual import. CC BY-SA 4.0.
 
 - **Utilities → Download can fetch subtitles only.** A new "Subtitles only" entry in the Quality list skips the video and audio; re-running the same URL reports the file as already downloaded instead of re-fetching it.
@@ -88,6 +89,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Manga OCR setup (mokuro path, Install) moved to Utilities → Manga OCR**, off Settings; System Health's Fix for a missing mokuro now routes there instead.
 - **Batch is one queue flow (Video → Batch).** The Add Series card's folder pickers add a row to the queue below; pressing Process with the pickers filled adds that series first, then runs, so filling both folders and pressing Process still mines that folder as before.
 - **Tab shortcuts are Ctrl+1 through Ctrl+6 (Settings → Keyboard),** one per main tab.
+- **Deck Builder moved under Video.** Video → Deck Builder now reviews its word list in the Word Curator when Review words is on, shows a receipt, reports to the task strip and pinned bar, and offers to restore a build interrupted by closing the app. Changing Top N or the coverage target after Preview updates the numbers without rescanning; a preview no longer adds Analytics difficulty rows.
 
 ### Fixed
 
@@ -121,7 +123,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Removed
 
-- **The Deck Builder tab.** Point-a-folder-at-a-corpus, frequency-ranked deck mining is gone; a loaded config drops its four run-option keys (`deck_builder_mode`, `deck_builder_top_n`, `deck_builder_coverage_pct`, `deck_builder_skip_known`).
 - **The "Use system file dialogs" toggle (Settings → General).** Native file dialogs are always used now.
 - **The "Text size" control (Settings → General).** Zoom is the one size control; a saved text size is folded into Zoom on load.
 - **The sentence-length filter's Enable box (Settings → Word Filters).** Setting either limit above 0 now turns the filter on by itself; a saved config with the box off keeps its limits at 0.

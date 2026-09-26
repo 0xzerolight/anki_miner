@@ -1547,6 +1547,30 @@ Nenhum arquivo de índice é excluído.</translation>
 </context><context>
     <name>BatchProcessingTab</name>
     <message>
+        <source>That translation subtitle folder no longer exists.</source>
+        <translation>Essa pasta de legenda de tradução não existe mais.</translation>
+    </message>
+    <message>
+        <source>The translation folder must be different from the subtitle folder.</source>
+        <translation>A pasta de tradução deve ser diferente da pasta de legendas.</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Cancelado</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>Falhou — consulte o log</translation>
+    </message>
+    <message>
+        <source>Finished with errors — see log</source>
+        <translation>Concluído com erros — veja o log</translation>
+    </message>
+    <message>
+        <source>Complete — %1 cards created</source>
+        <translation>Concluído — %1 cartões criados</translation>
+    </message>
+    <message>
         <source>Review words before mining</source>
         <translation>Revisar palavras antes de minerar</translation>
     </message>
@@ -1615,14 +1639,6 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Cancelar processamento</translation>
     </message>
     <message>
-        <source>That translation subtitle folder no longer exists.</source>
-        <translation>Essa pasta de legenda de tradução não existe mais.</translation>
-    </message>
-    <message>
-        <source>The translation folder must be different from the subtitle folder.</source>
-        <translation>A pasta de tradução deve ser diferente da pasta de legendas.</translation>
-    </message>
-    <message>
         <source>Choose existing video and subtitle folders.</source>
         <translation>Escolha pastas existentes de vídeo e legenda.</translation>
     </message>
@@ -1659,10 +1675,6 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Iniciando processamento da fila (%1 séries)...</translation>
     </message>
     <message>
-        <source>Cancelled</source>
-        <translation>Cancelado</translation>
-    </message>
-    <message>
         <source>Cancelling…</source>
         <translation>Cancelando…</translation>
     </message>
@@ -1677,18 +1689,6 @@ Nenhum arquivo de índice é excluído.</translation>
     <message>
         <source>Mining series %1 of %2: %3</source>
         <translation>Minerando série %1 de %2: %3</translation>
-    </message>
-    <message>
-        <source>Failed — see log</source>
-        <translation>Falhou — consulte o log</translation>
-    </message>
-    <message>
-        <source>Finished with errors — see log</source>
-        <translation>Concluído com erros — veja o log</translation>
-    </message>
-    <message>
-        <source>Complete — %1 cards created</source>
-        <translation>Concluído — %1 cartões criados</translation>
     </message>
     <message>
         <source>Folder not found: %1</source>
@@ -2040,6 +2040,22 @@ Nenhum arquivo de índice é excluído.</translation>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Sentences.</source>
         <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Build a deck by coverage %</source>
+        <translation>Construir um baralho por % de cobertura</translation>
+    </message>
+    <message>
+        <source>Build a frequency-ordered deck that covers a chosen percentage of a whole corpus. Preview creates the deck in Anki if it doesn't exist yet; the preview numbers are approximate -- a word whose card form another dictionary form already took can show as already known.</source>
+        <translation>Construir um baralho ordenado por frequência que cobre uma porcentagem escolhida de um corpus inteiro. A prévia cria o baralho no Anki se ele ainda não existir; os números da prévia são aproximados -- uma palavra cuja forma no cartão já foi ocupada por outra forma de dicionário pode aparecer como já conhecida.</translation>
+    </message>
+    <message>
+        <source>Deck Builder modes (all / top N / coverage %)</source>
+        <translation>Modos do Construtor de Baralho (todas / top N / % de cobertura)</translation>
+    </message>
+    <message>
+        <source>Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
+        <translation>O Construtor de Baralho sempre ignora os filtros por episódio e as verificações de duplicidade; escolha todas as palavras, as top N ou uma meta de cobertura, e opcionalmente ignore as palavras conhecidas.</translation>
     </message>
     <message>
         <source>Mine from YouTube</source>
@@ -3476,6 +3492,221 @@ Notas a modificar: {notes}; campos a modificar: {fields}; etiqueta a adicionar: 
     <message>
         <source>%1 (%2 of %3)</source>
         <translation>%1 (%2 de %3)</translation>
+    </message>
+</context><context>
+    <name>DeckBuilderTab</name>
+    <message>
+        <source>Progress</source>
+        <translation>Progresso</translation>
+    </message>
+    <message>
+        <source>deck</source>
+        <translation>baralho</translation>
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation>Prévia</translation>
+    </message>
+    <message>
+        <source>Scan the season and preview which words will be included</source>
+        <translation>Analisar a temporada e pré-visualizar quais palavras serão incluídas</translation>
+    </message>
+    <message>
+        <source>Build Deck</source>
+        <translation>Construir Baralho</translation>
+    </message>
+    <message>
+        <source>Create the Anki cards for the selected words, scanning the season first if you have not previewed it</source>
+        <translation>Criar os cartões do Anki para as palavras selecionadas, analisando a temporada primeiro se você ainda não gerou a prévia</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
+        <source>Input</source>
+        <translation>Entrada</translation>
+    </message>
+    <message>
+        <source>Video Folder:</source>
+        <translation>Pasta de vídeos:</translation>
+    </message>
+    <message>
+        <source>Subtitle Folder:</source>
+        <translation>Pasta de legendas:</translation>
+    </message>
+    <message>
+        <source>Subtitle Offset:</source>
+        <translation>Deslocamento da Legenda:</translation>
+    </message>
+    <message>
+        <source>Translation Folder:</source>
+        <translation>Pasta da Tradução:</translation>
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation>Deslocamento da Tradução:</translation>
+    </message>
+    <message>
+        <source> seconds</source>
+        <translation> segundos</translation>
+    </message>
+    <message>
+        <source>Adjust subtitle timing for the whole season (positive = later, negative = earlier)</source>
+        <translation>Ajustar o tempo das legendas para a temporada inteira (positivo = mais tarde, negativo = mais cedo)</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation>Deslocar apenas as legendas de tradução (positivo = mais tarde, negativo = mais cedo)</translation>
+    </message>
+    <message>
+        <source>Deck Settings</source>
+        <translation>Configurações do baralho</translation>
+    </message>
+    <message>
+        <source>Deck Name:</source>
+        <translation>Nome do baralho:</translation>
+    </message>
+    <message>
+        <source>Word Selection:</source>
+        <translation>Seleção de palavras:</translation>
+    </message>
+    <message>
+        <source>Enter deck name…</source>
+        <translation>Digite o nome do baralho…</translation>
+    </message>
+    <message>
+        <source>All vocabulary</source>
+        <translation>Todo o vocabulário</translation>
+    </message>
+    <message>
+        <source>Top N words</source>
+        <translation>N palavras mais frequentes</translation>
+    </message>
+    <message>
+        <source>Target coverage %</source>
+        <translation>% de cobertura desejada</translation>
+    </message>
+    <message>
+        <source> words</source>
+        <translation> palavras</translation>
+    </message>
+    <message>
+        <source>Include the N most-frequent lemmas</source>
+        <translation>Incluir os N lemas mais frequentes</translation>
+    </message>
+    <message>
+        <source>Include enough words to cover this percentage of tokens</source>
+        <translation>Incluir palavras suficientes para cobrir esta porcentagem de tokens</translation>
+    </message>
+    <message>
+        <source>Skip words already in my Anki collection</source>
+        <translation>Pular palavras que já estão na minha coleção do Anki</translation>
+    </message>
+    <message>
+        <source>Checked: skip your known words; unchecked: mine every word.</source>
+        <translation>Marcado: pula suas palavras conhecidas; desmarcado: minera todas as palavras.</translation>
+    </message>
+    <message>
+        <source>Review words before mining</source>
+        <translation>Revisar palavras antes de minerar</translation>
+    </message>
+    <message>
+        <source>Pick which words get cards, once per series.</source>
+        <translation>Escolha quais palavras viram cartões, uma vez por série.</translation>
+    </message>
+    <message>
+        <source>Results</source>
+        <translation>Resultados</translation>
+    </message>
+    <message>
+        <source>Selected words that won't get a card this run: already in your collection, or with no sentence to mine.</source>
+        <translation>Palavras selecionadas que não receberão cartão nesta execução: já estão na sua coleção ou não têm nenhuma frase para minerar.</translation>
+    </message>
+    <message>
+        <source>Total tokens:</source>
+        <translation>Total de tokens:</translation>
+    </message>
+    <message>
+        <source>Unique lemmas:</source>
+        <translation>Lemas únicos:</translation>
+    </message>
+    <message>
+        <source>Candidate words:</source>
+        <translation>Palavras candidatas:</translation>
+    </message>
+    <message>
+        <source>Projected coverage:</source>
+        <translation>Cobertura projetada:</translation>
+    </message>
+    <message>
+        <source>Already known (skipped):</source>
+        <translation>Já conhecidas (puladas):</translation>
+    </message>
+    <message>
+        <source>Cards to create:</source>
+        <translation>Cartões a criar:</translation>
+    </message>
+    <message>
+        <source>Choose existing video and subtitle folders.</source>
+        <translation>Escolha pastas existentes de vídeo e legenda.</translation>
+    </message>
+    <message>
+        <source>Enter a deck name before mining.</source>
+        <translation>Digite um nome de baralho antes de minerar.</translation>
+    </message>
+    <message>
+        <source>No video/subtitle pairs found. Check the folders.</source>
+        <translation>Nenhum par de vídeo/legenda encontrado. Verifique as pastas.</translation>
+    </message>
+    <message>
+        <source>Deck Builder</source>
+        <translation>Construtor de Baralho</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Cancelando…</translation>
+    </message>
+    <message>
+        <source>Preview ready. Press Build Deck to create the cards.</source>
+        <translation>Prévia pronta. Clique em Construir Baralho para criar os cartões.</translation>
+    </message>
+    <message>
+        <source>%1 of %2 episodes mined</source>
+        <translation>%1 de %2 episódios minerados</translation>
+    </message>
+    <message>
+        <source>Some episodes could not be mined.</source>
+        <translation>Alguns episódios não puderam ser minerados.</translation>
+    </message>
+    <message>
+        <source>The deck could not be built.</source>
+        <translation>Não foi possível construir o baralho.</translation>
+    </message>
+    <message>
+        <source>Created %1 cards in deck '%3'; the candidate words cover ~%2% of tokens.</source>
+        <translation>Criados %1 cartões no baralho '%3'; as palavras candidatas cobrem ~%2% dos tokens.</translation>
+    </message>
+    <message>
+        <source>Created %1 cards in deck '%2'.</source>
+        <translation>Criados %1 cartões no baralho '%2'.</translation>
+    </message>
+    <message>
+        <source>Folder not found: %1</source>
+        <translation>Pasta não encontrada: %1</translation>
+    </message>
+    <message>
+        <source>The build into deck '%1' was interrupted when Anki Miner closed. Build Deck again to finish it; words already in the deck are skipped.</source>
+        <translation>A construção do baralho '%1' foi interrompida quando o Anki Miner foi fechado. Clique em Construir Baralho novamente para concluí-la; palavras que já estão no baralho são puladas.</translation>
+    </message>
+</context><context>
+    <name>DeckBuilderWorker</name>
+    <message numerus="yes">
+        <source>Scanning %n episode(s)...</source>
+        <translation>
+            <numerusform>Analisando %n episódio...</numerusform>
+            <numerusform>Analisando %n episódios...</numerusform>
+        </translation>
     </message>
 </context><context>
     <name>DeckFilterTab</name>
@@ -6422,6 +6653,10 @@ Continuar?</translation>
     <message>
         <source>YouTube</source>
         <translation>YouTube</translation>
+    </message>
+    <message>
+        <source>Deck Builder</source>
+        <translation>Construtor de Baralho</translation>
     </message>
     <message>
         <source>'Anki Miner' should now appear in your application menu.</source>

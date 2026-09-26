@@ -1535,6 +1535,30 @@ No index files are deleted.</source>
 </context><context>
     <name>BatchProcessingTab</name>
     <message>
+        <source>That translation subtitle folder no longer exists.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The translation folder must be different from the subtitle folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Finished with errors — see log</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 cards created</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Review words before mining</source>
         <translation type="unfinished" />
     </message>
@@ -1603,14 +1627,6 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>That translation subtitle folder no longer exists.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The translation folder must be different from the subtitle folder.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Choose existing video and subtitle folders.</source>
         <translation type="unfinished" />
     </message>
@@ -1647,10 +1663,6 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Cancelled</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Cancelling…</source>
         <translation type="unfinished" />
     </message>
@@ -1664,18 +1676,6 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mining series %1 of %2: %3</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Failed — see log</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Finished with errors — see log</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Complete — %1 cards created</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2026,6 +2026,22 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Sentences.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Build a deck by coverage %</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Build a frequency-ordered deck that covers a chosen percentage of a whole corpus. Preview creates the deck in Anki if it doesn't exist yet; the preview numbers are approximate -- a word whose card form another dictionary form already took can show as already known.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Deck Builder modes (all / top N / coverage %)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3461,6 +3477,220 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>%1 (%2 of %3)</source>
         <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>DeckBuilderTab</name>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>deck</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Scan the season and preview which words will be included</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Build Deck</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Create the Anki cards for the selected words, scanning the season first if you have not previewed it</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Input</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Video Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle Offset:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Translation Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source> seconds</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Adjust subtitle timing for the whole season (positive = later, negative = earlier)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Deck Settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Deck Name:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Word Selection:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enter deck name…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>All vocabulary</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Top N words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Target coverage %</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source> words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Include the N most-frequent lemmas</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Include enough words to cover this percentage of tokens</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skip words already in my Anki collection</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Checked: skip your known words; unchecked: mine every word.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Review words before mining</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pick which words get cards, once per series.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Results</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Selected words that won't get a card this run: already in your collection, or with no sentence to mine.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Total tokens:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Unique lemmas:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Candidate words:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Projected coverage:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Already known (skipped):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cards to create:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose existing video and subtitle folders.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enter a deck name before mining.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No video/subtitle pairs found. Check the folders.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Deck Builder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Preview ready. Press Build Deck to create the cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 of %2 episodes mined</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Some episodes could not be mined.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The deck could not be built.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Created %1 cards in deck '%3'; the candidate words cover ~%2% of tokens.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Created %1 cards in deck '%2'.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Folder not found: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The build into deck '%1' was interrupted when Anki Miner closed. Build Deck again to finish it; words already in the deck are skipped.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>DeckBuilderWorker</name>
+    <message numerus="yes">
+        <source>Scanning %n episode(s)...</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
 </context><context>
     <name>DeckFilterTab</name>
@@ -6373,6 +6603,10 @@ Continue?</source>
     </message>
     <message>
         <source>YouTube</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Deck Builder</source>
         <translation type="unfinished" />
     </message>
     <message>

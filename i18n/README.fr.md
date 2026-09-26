@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:eaf6f4a3bb1bf708 -->
+<!-- i18n-source: README.md sha256:06b01f0d7cb8ab71 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -115,7 +115,7 @@ Pour une configuration de développement complète, consultez [CONTRIBUTING.md](
 
 ## Onglets
 
-- **Vidéo** - extraire une seule paire vidéo/sous-titres, un dossier de traitement par lot, ou des URL YouTube.
+- **Vidéo** - extraire une seule paire vidéo/sous-titres, un dossier de traitement par lot, des URL YouTube, ou une série entière dans un seul paquet classé par fréquence.
 - **Livres audio** - extraire des livres audio, podcasts, radio, chansons (paires audio + sous-titres/transcription).
 - **Lecture** - extraire des mangas (mokuro), des romans (`.epub`, `.txt` ; un seul livre ou un dossier entier), des fichiers de sous-titres autonomes, ou du texte collé.
 - **Statistiques** - historique d'extraction, classements de difficulté, jalons.

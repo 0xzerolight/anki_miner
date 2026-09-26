@@ -26,7 +26,7 @@ from anki_miner.exceptions.youtube import (
     YouTubeFetchError,
     YtdlpNotFoundError,
 )
-from anki_miner.models.youtube import FetchedMedia, PlaylistEntry, PlaylistInfo, SubMode, VideoInfo
+from anki_miner.models.youtube import FetchedMedia, PlaylistEntry, PlaylistInfo, SubMode, SubtitleSource, VideoInfo
 from anki_miner.services import ytdlp_invocation
 from anki_miner.utils.logging_ext import capped, log_summary
 from anki_miner.utils.process_supervisor import SupervisedState, run_supervised
@@ -467,7 +467,7 @@ class YouTubeFetcherService:
 
         On a genuinely Japanese video the original audio-only track also
         matches ("ja audio track" is the semantic, dub or not) — harmless,
-        because ``_classify_probe_result`` only consults the dub flag after
+        because ``classify_probe_result`` only consults the dub flag after
         the native routes have already been ruled out.
 
         Matches ``ja`` exactly or a regional variant like ``ja-JP``; a plain
@@ -980,3 +980,64 @@ class YouTubeFetcherService:
         if size <= 0:
             logger.warning("youtube fetch output empty: label=%s path=%s", label, path)
             raise YouTubeFetchError(f"The downloaded {label} file is empty.")
+
+
+def classify_probe_result(
+    info: VideoInfo, config: AnkiMinerConfig, source: SubtitleSource
+) -> tuple[bool, str | None, SubMode | None]:
+    """Classify a probe result against the run's requested subtitle source.
+
+    ``source`` is required, with no default: it decides whether a caption-less
+    video is refused or transcribed, and a default would silently reinstate the
+    refusal for callers that forgot to thread the user's choice through.
+
+    Lives beside :meth:`YouTubeFetcherService.probe_metadata` so the YouTube tab
+    and the command line (``anki_miner.cli``) share one policy.
+
+    Returns:
+        (is_mineable, error_message, resolved_sub_mode). On success
+        ``is_mineable`` is True, ``error_message`` is None, and
+        ``resolved_sub_mode`` is the chosen sub mode. On failure the
+        triple's first element is False and ``error_message`` describes
+        why the video cannot be mined.
+    """
+    if info.is_live:
+        return False, "Live streams are not supported.", None
+    if info.duration_s > config.youtube_max_duration_s:
+        minutes_limit = max(1, config.youtube_max_duration_s // 60)
+        return False, f"Video exceeds max duration ({minutes_limit} min).", None
+    if info.is_age_restricted and not (config.youtube_cookies_from_browser or config.youtube_cookies_file):
+        # Either cookies source bypasses YouTube's age gate; the fetcher's
+        # _cookie_args() honors both --cookies-from-browser and --cookies <file>.
+        return (
+            False,
+            "Age-restricted video. Set Cookies (Browser or File) in Settings and retry.",
+            None,
+        )
+    if source == "transcribe":
+        # The user asked for local transcription outright. Skip the caption
+        # cascade entirely: a badly-timed auto track must not win over the ASR
+        # pass that was explicitly requested.
+        return True, None, "transcribe"
+    if info.has_manual_ja_subs:
+        return True, None, "manual_only"
+    if info.has_auto_ja_subs:
+        return True, None, "auto_only"
+    if info.has_dub_ja_subs:
+        # Auto-dub route: MT ja captions matched by a JA dub audio track (see
+        # VideoInfo.has_dub_ja_subs). Lowest priority — a real manual track or
+        # native captions always describe the video better than the dub pipeline.
+        return True, None, "auto_dub"
+    if source == "auto":
+        # No caption track of any kind. Auto pays for a local transcription
+        # rather than refusing the video, which is the whole point of the
+        # picker: the user's alternative was Download + Generate + Video/Single.
+        return True, None, "transcribe"
+    # Imported function-locally, like the rest of this module, so ``services``
+    # keeps no import-time dependency on ``anki_miner.languages``.
+    from anki_miner.languages.registry import config_language, get_profile
+
+    # english_name, like the fetcher's NoSourceSubtitlesError: a zh run used
+    # to be refused with "No Japanese subtitles available".
+    label = get_profile(config_language(config)).english_name or "source"
+    return False, f"No {label} subtitles available for this video.", None

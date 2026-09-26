@@ -1544,6 +1544,30 @@ No index files are deleted.</source>
 </context><context>
     <name>BatchProcessingTab</name>
     <message>
+        <source>That translation subtitle folder no longer exists.</source>
+        <translation>該翻譯字幕資料夾已不存在。</translation>
+    </message>
+    <message>
+        <source>The translation folder must be different from the subtitle folder.</source>
+        <translation>翻譯資料夾必須與字幕資料夾不同。</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>已取消</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>失敗 — 請查看日誌</translation>
+    </message>
+    <message>
+        <source>Finished with errors — see log</source>
+        <translation>完成時發生錯誤 — 請查看日誌</translation>
+    </message>
+    <message>
+        <source>Complete — %1 cards created</source>
+        <translation>完成 — 已建立 %1 張卡片</translation>
+    </message>
+    <message>
         <source>Review words before mining</source>
         <translation>採集前先檢視單字</translation>
     </message>
@@ -1612,14 +1636,6 @@ No index files are deleted.</source>
         <translation>取消處理</translation>
     </message>
     <message>
-        <source>That translation subtitle folder no longer exists.</source>
-        <translation>該翻譯字幕資料夾已不存在。</translation>
-    </message>
-    <message>
-        <source>The translation folder must be different from the subtitle folder.</source>
-        <translation>翻譯資料夾必須與字幕資料夾不同。</translation>
-    </message>
-    <message>
         <source>Choose existing video and subtitle folders.</source>
         <translation>選擇現有的影片與字幕資料夾。</translation>
     </message>
@@ -1656,10 +1672,6 @@ No index files are deleted.</source>
         <translation>正在開始佇列處理（%1 個系列）…</translation>
     </message>
     <message>
-        <source>Cancelled</source>
-        <translation>已取消</translation>
-    </message>
-    <message>
         <source>Cancelling…</source>
         <translation>取消中……</translation>
     </message>
@@ -1674,18 +1686,6 @@ No index files are deleted.</source>
     <message>
         <source>Mining series %1 of %2: %3</source>
         <translation>正在採集第 %1／%2 個系列：%3</translation>
-    </message>
-    <message>
-        <source>Failed — see log</source>
-        <translation>失敗 — 請查看日誌</translation>
-    </message>
-    <message>
-        <source>Finished with errors — see log</source>
-        <translation>完成時發生錯誤 — 請查看日誌</translation>
-    </message>
-    <message>
-        <source>Complete — %1 cards created</source>
-        <translation>完成 — 已建立 %1 張卡片</translation>
     </message>
     <message>
         <source>Folder not found: %1</source>
@@ -2036,6 +2036,22 @@ No index files are deleted.</source>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Sentences.</source>
         <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Build a deck by coverage %</source>
+        <translation>依覆蓋率 % 建立牌組</translation>
+    </message>
+    <message>
+        <source>Build a frequency-ordered deck that covers a chosen percentage of a whole corpus. Preview creates the deck in Anki if it doesn't exist yet; the preview numbers are approximate -- a word whose card form another dictionary form already took can show as already known.</source>
+        <translation>建立一個依頻率排序的牌組，涵蓋整個語料庫中所選的百分比。若牌組尚未存在於 Anki，預覽會建立它；預覽數字僅為概估——若某個單字的卡片形式已被另一個字典形佔用，它可能會顯示為已知。</translation>
+    </message>
+    <message>
+        <source>Deck Builder modes (all / top N / coverage %)</source>
+        <translation>牌組建立器模式（全部／前 N 個／涵蓋率 %）</translation>
+    </message>
+    <message>
+        <source>Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
+        <translation>牌組建立器一律略過逐集篩選與重複檢查；可選擇全部單字、前 N 個，或設定涵蓋率目標，並可選擇略過已知單字。</translation>
     </message>
     <message>
         <source>Mine from YouTube</source>
@@ -3472,6 +3488,220 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>%1 (%2 of %3)</source>
         <translation>%1（第 %2／%3 個）</translation>
+    </message>
+</context><context>
+    <name>DeckBuilderTab</name>
+    <message>
+        <source>Progress</source>
+        <translation>進度</translation>
+    </message>
+    <message>
+        <source>deck</source>
+        <translation>牌組</translation>
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation>預覽</translation>
+    </message>
+    <message>
+        <source>Scan the season and preview which words will be included</source>
+        <translation>掃描整季並預覽哪些單字將被納入</translation>
+    </message>
+    <message>
+        <source>Build Deck</source>
+        <translation>建立牌組</translation>
+    </message>
+    <message>
+        <source>Create the Anki cards for the selected words, scanning the season first if you have not previewed it</source>
+        <translation>為所選單字建立 Anki 卡片；若尚未預覽，會先掃描整季</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message>
+        <source>Input</source>
+        <translation>輸入</translation>
+    </message>
+    <message>
+        <source>Video Folder:</source>
+        <translation>影片資料夾：</translation>
+    </message>
+    <message>
+        <source>Subtitle Folder:</source>
+        <translation>字幕資料夾：</translation>
+    </message>
+    <message>
+        <source>Subtitle Offset:</source>
+        <translation>字幕偏移：</translation>
+    </message>
+    <message>
+        <source>Translation Folder:</source>
+        <translation>翻譯資料夾：</translation>
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation>翻譯偏移：</translation>
+    </message>
+    <message>
+        <source> seconds</source>
+        <translation> 秒</translation>
+    </message>
+    <message>
+        <source>Adjust subtitle timing for the whole season (positive = later, negative = earlier)</source>
+        <translation>調整整季的字幕時間（正值＝延後，負值＝提前）</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation>僅調整翻譯字幕的偏移（正值 = 延後，負值 = 提前）</translation>
+    </message>
+    <message>
+        <source>Deck Settings</source>
+        <translation>牌組設定</translation>
+    </message>
+    <message>
+        <source>Deck Name:</source>
+        <translation>牌組名稱：</translation>
+    </message>
+    <message>
+        <source>Word Selection:</source>
+        <translation>單字選擇：</translation>
+    </message>
+    <message>
+        <source>Enter deck name…</source>
+        <translation>輸入牌組名稱…</translation>
+    </message>
+    <message>
+        <source>All vocabulary</source>
+        <translation>所有詞彙</translation>
+    </message>
+    <message>
+        <source>Top N words</source>
+        <translation>前 N 個單字</translation>
+    </message>
+    <message>
+        <source>Target coverage %</source>
+        <translation>目標涵蓋率 %</translation>
+    </message>
+    <message>
+        <source> words</source>
+        <translation> 個單字</translation>
+    </message>
+    <message>
+        <source>Include the N most-frequent lemmas</source>
+        <translation>納入最常出現的前 N 個詞元</translation>
+    </message>
+    <message>
+        <source>Include enough words to cover this percentage of tokens</source>
+        <translation>納入足以涵蓋此百分比詞元的單字</translation>
+    </message>
+    <message>
+        <source>Skip words already in my Anki collection</source>
+        <translation>略過已在我 Anki 收藏中的單字</translation>
+    </message>
+    <message>
+        <source>Checked: skip your known words; unchecked: mine every word.</source>
+        <translation>勾選：略過您的已知單字；取消勾選：採集所有單字。</translation>
+    </message>
+    <message>
+        <source>Review words before mining</source>
+        <translation>採集前先檢視單字</translation>
+    </message>
+    <message>
+        <source>Pick which words get cards, once per series.</source>
+        <translation>選擇哪些單字要製作卡片，每個系列只需設定一次。</translation>
+    </message>
+    <message>
+        <source>Results</source>
+        <translation>結果</translation>
+    </message>
+    <message>
+        <source>Selected words that won't get a card this run: already in your collection, or with no sentence to mine.</source>
+        <translation>本次執行中不會建立卡片的已選單字：已在您的收藏中，或沒有可採集的句子。</translation>
+    </message>
+    <message>
+        <source>Total tokens:</source>
+        <translation>總詞元數：</translation>
+    </message>
+    <message>
+        <source>Unique lemmas:</source>
+        <translation>不重複詞元數：</translation>
+    </message>
+    <message>
+        <source>Candidate words:</source>
+        <translation>候選單字：</translation>
+    </message>
+    <message>
+        <source>Projected coverage:</source>
+        <translation>預估涵蓋率：</translation>
+    </message>
+    <message>
+        <source>Already known (skipped):</source>
+        <translation>已知（已略過）：</translation>
+    </message>
+    <message>
+        <source>Cards to create:</source>
+        <translation>待建立卡片：</translation>
+    </message>
+    <message>
+        <source>Choose existing video and subtitle folders.</source>
+        <translation>選擇現有的影片與字幕資料夾。</translation>
+    </message>
+    <message>
+        <source>Enter a deck name before mining.</source>
+        <translation>採集前請先輸入牌組名稱。</translation>
+    </message>
+    <message>
+        <source>No video/subtitle pairs found. Check the folders.</source>
+        <translation>找不到影片／字幕配對。請檢查資料夾。</translation>
+    </message>
+    <message>
+        <source>Deck Builder</source>
+        <translation>牌組建立器</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>取消中……</translation>
+    </message>
+    <message>
+        <source>Preview ready. Press Build Deck to create the cards.</source>
+        <translation>預覽已就緒。按下「建立牌組」即可建立卡片。</translation>
+    </message>
+    <message>
+        <source>%1 of %2 episodes mined</source>
+        <translation>已採集 %2 集中的 %1 集</translation>
+    </message>
+    <message>
+        <source>Some episodes could not be mined.</source>
+        <translation>部分集數無法採集。</translation>
+    </message>
+    <message>
+        <source>The deck could not be built.</source>
+        <translation>無法建立牌組。</translation>
+    </message>
+    <message>
+        <source>Created %1 cards in deck '%3'; the candidate words cover ~%2% of tokens.</source>
+        <translation>已在牌組「%3」中建立 %1 張卡片；候選單字涵蓋約 %2% 的詞元。</translation>
+    </message>
+    <message>
+        <source>Created %1 cards in deck '%2'.</source>
+        <translation>已在牌組「%2」中建立 %1 張卡片。</translation>
+    </message>
+    <message>
+        <source>Folder not found: %1</source>
+        <translation>找不到資料夾：%1</translation>
+    </message>
+    <message>
+        <source>The build into deck '%1' was interrupted when Anki Miner closed. Build Deck again to finish it; words already in the deck are skipped.</source>
+        <translation>Anki Miner 關閉時，牌組「%1」的建立作業已中斷。再次按下「建立牌組」即可完成；牌組中已有的單字會被略過。</translation>
+    </message>
+</context><context>
+    <name>DeckBuilderWorker</name>
+    <message numerus="yes">
+        <source>Scanning %n episode(s)...</source>
+        <translation>
+            <numerusform>正在掃描 %n 集...</numerusform>
+        </translation>
     </message>
 </context><context>
     <name>DeckFilterTab</name>
@@ -6406,6 +6636,10 @@ Continue?</source>
     <message>
         <source>YouTube</source>
         <translation>YouTube</translation>
+    </message>
+    <message>
+        <source>Deck Builder</source>
+        <translation>牌組建立器</translation>
     </message>
     <message>
         <source>'Anki Miner' should now appear in your application menu.</source>

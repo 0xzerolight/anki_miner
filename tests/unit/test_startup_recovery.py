@@ -91,12 +91,14 @@ class TestScreenDiscovery:
     def test_every_queue_owning_tab_class_declares_a_distinct_key(self):
         from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
         from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
+        from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
         from anki_miner.gui.widgets.reading_subtitles_tab import ReadingSubtitlesTab
         from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 
         keys = [
             AudiobookTab.QUEUE_STATE_KEY,
             BatchProcessingTab.QUEUE_STATE_KEY,
+            DeckBuilderTab.QUEUE_STATE_KEY,
             ReadingSubtitlesTab.QUEUE_STATE_KEY,
             YouTubeTab.QUEUE_STATE_KEY,
         ]

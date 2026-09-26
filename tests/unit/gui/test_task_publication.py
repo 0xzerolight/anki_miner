@@ -23,6 +23,7 @@ from anki_miner.gui.widgets.backfill_tab import CardBackfillTab
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.booksync_tab import BookSyncTab
 from anki_miner.gui.widgets.condense_tab import CondenseTab
+from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.gui.widgets.deck_filter_tab import DeckFilterTab
 from anki_miner.gui.widgets.download_tab import DownloadTab
 from anki_miner.gui.widgets.mokuro_tab import MokuroTab
@@ -38,6 +39,7 @@ from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
 PUBLISHING_SCREENS = [
     (SingleEpisodeTab, "run.single", ("video", "single")),
     (BatchProcessingTab, "run.batch", ("video", "batch")),
+    (DeckBuilderTab, "run.deckbuilder", ("video", "deckbuilder")),
     (ReadingMangaTab, "queue.reading.manga", ("reading", "manga")),
     (ReadingNovelsTab, "queue.reading.novels", ("reading", "novels")),
     (ReadingSubtitlesTab, "queue.reading.subtitles", ("reading", "subtitles")),

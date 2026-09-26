@@ -11,6 +11,7 @@ patched, exactly as its own test module does.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -20,6 +21,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils import queue_state_store as store
 from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
+from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.gui.widgets.reading_subtitles_tab import ReadingSubtitlesTab
 from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 from anki_miner.models.batch_queue import QueueItemStatus
@@ -85,6 +87,19 @@ def reading_subtitles(qtbot, test_config: AnkiMinerConfig):
     qtbot.addWidget(widget)
     yield widget
     widget.deleteLater()
+
+
+@pytest.fixture()
+def deck_builder(qtbot, test_config: AnkiMinerConfig):
+    # Patched exactly like Audiobook/YouTube above: a build is started for
+    # real (through Build Deck) so the row this screen snapshots comes from
+    # its own worker's ``request``, but the worker itself never runs.
+    with patch("anki_miner.gui.widgets.deck_builder_tab.DeckBuilderWorker") as cls:
+        cls.side_effect = lambda request, *a, **kw: MagicMock(name="DeckBuilderWorker", request=request)
+        widget = DeckBuilderTab(config=test_config, presenter=MagicMock(), progress_callback=MagicMock())
+        qtbot.addWidget(widget)
+        yield widget
+        widget.deleteLater()
 
 
 class TestAudiobook:
@@ -297,6 +312,86 @@ class TestBatch:
         (restored,) = batch.batch_queue.get_all_items()
         assert restored.status is QueueItemStatus.ERROR
         assert "one-video" in restored.error_message
+
+
+class TestDeckBuilder:
+    def _episode_pair(self, tmp_path: Path, stem: str) -> tuple[Path, Path]:
+        video = tmp_path / f"{stem}-video"
+        subtitle = tmp_path / f"{stem}-subs"
+        video.mkdir()
+        subtitle.mkdir()
+        (video / "Show_01.mkv").touch()
+        (subtitle / "Show_01.srt").touch()
+        return video, subtitle
+
+    def _fresh(self, qtbot, test_config: AnkiMinerConfig) -> DeckBuilderTab:
+        """A screen as it exists after a relaunch: idle, no worker, blank form."""
+        widget = DeckBuilderTab(config=test_config, presenter=MagicMock(), progress_callback=MagicMock())
+        qtbot.addWidget(widget)
+        return widget
+
+    def test_the_interrupted_build_round_trips_with_its_folders_offset_and_deck_name(
+        self, _home, deck_builder, qtbot, test_config, tmp_path
+    ):
+        video, subtitle = self._episode_pair(tmp_path, "one")
+        deck_builder.video_folder_selector.set_path(str(video))
+        deck_builder.subtitle_folder_selector.set_path(str(subtitle))
+        deck_builder.deck_name_edit.setText("My Show")
+        deck_builder.offset_spinbox.setValue(1.5)
+        deck_builder.build_button.click()
+        assert deck_builder._run_state == "building"
+
+        store.save(deck_builder.queue_snapshot())
+
+        fresh = self._fresh(qtbot, test_config)
+        assert fresh.restore_queue_snapshot(store.load(fresh.QUEUE_STATE_KEY)) == 1
+        assert fresh.video_folder_selector.get_path() == str(video)
+        assert fresh.subtitle_folder_selector.get_path() == str(subtitle)
+        assert fresh.offset_spinbox.value() == 1.5
+        assert fresh.deck_name_edit.text() == "My Show"
+        issue = fresh.issue_banner().current_issue()
+        assert issue is not None
+        assert "interrupted" in issue.summary
+        assert "My Show" in issue.summary
+
+    def test_a_series_keeps_its_translation_folder_across_a_restart(
+        self, _home, deck_builder, qtbot, test_config, tmp_path
+    ):
+        video, subtitle = self._episode_pair(tmp_path, "one")
+        translations = tmp_path / "one-trans"
+        translations.mkdir()
+        deck_builder.update_config(replace(deck_builder.config, secondary_subtitle_enabled=True))
+        deck_builder.video_folder_selector.set_path(str(video))
+        deck_builder.subtitle_folder_selector.set_path(str(subtitle))
+        deck_builder.secondary_folder_selector.set_path(str(translations))
+        deck_builder.secondary_offset_spinbox.setValue(-0.5)
+        deck_builder.deck_name_edit.setText("My Show")
+        deck_builder.build_button.click()
+
+        store.save(deck_builder.queue_snapshot())
+
+        fresh = self._fresh(qtbot, test_config)
+        assert fresh.restore_queue_snapshot(store.load(fresh.QUEUE_STATE_KEY)) == 1
+        assert fresh.secondary_folder_selector.get_path() == str(translations)
+        assert fresh.secondary_offset_spinbox.value() == -0.5
+
+    def test_a_missing_folder_comes_back_as_a_failure(self, _home, deck_builder, qtbot, test_config, tmp_path):
+        video, subtitle = self._episode_pair(tmp_path, "one")
+        deck_builder.video_folder_selector.set_path(str(video))
+        deck_builder.subtitle_folder_selector.set_path(str(subtitle))
+        deck_builder.deck_name_edit.setText("My Show")
+        deck_builder.build_button.click()
+
+        store.save(deck_builder.queue_snapshot())
+        for child in video.iterdir():
+            child.unlink()
+        video.rmdir()
+
+        fresh = self._fresh(qtbot, test_config)
+        assert fresh.restore_queue_snapshot(store.load(fresh.QUEUE_STATE_KEY)) == 1
+        issue = fresh.issue_banner().current_issue()
+        assert issue is not None
+        assert "one-video" in issue.summary
 
 
 class TestReadingSubtitles:
