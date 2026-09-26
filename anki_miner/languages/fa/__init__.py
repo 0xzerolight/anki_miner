@@ -17,6 +17,7 @@ from anki_miner.languages.fa.morphology import (
 from anki_miner.languages.fa.render import FA_RENDER_HOOKS
 from anki_miner.languages.fa.script import (
     FA_SENTENCE_RULES,
+    FA_SUBTITLE_REGEX,
     ZWNJ,
     PersianDictKeys,
     PersianScript,
@@ -52,21 +53,6 @@ FA_EXTRA_CARD_FIELDS: tuple[CardFieldSpec, ...] = (
 FA_CARD_FIELDS: dict[str, str] = dict(spaced_card_fields(FA_EXTRA_CARD_FIELDS))
 
 
-def _scoped_defaults() -> dict[str, object]:
-    """First-visit values for EVERY language-scoped field: the shared spaced shape, SDH filter off."""
-    defaults = spaced_scoped_defaults(
-        subtitle_langs="fa",
-        # gTTS has no Persian voice (tts_langs() lacks "fa"), so the default word
-        # audio is the Edge read-aloud leg the seam ships.
-        audio=FA_AUDIO,
-        allowed_pos=FA_ALLOWED_POS,
-        excluded_subtypes=FA_EXCLUDED_SUBTYPES,
-        card_fields=FA_CARD_FIELDS,
-    )
-    defaults.update(use_subtitle_regex_filter=False, subtitle_regex_filter="")
-    return defaults
-
-
 def build_profile() -> LanguageProfile:
     """Build the Persian profile. Never calls ``registry.get_profile`` (non-reentrant lock)."""
     return LanguageProfile(
@@ -93,7 +79,16 @@ def build_profile() -> LanguageProfile:
         # and pe/che/zhe/gaf, but NOT the Farsi yeh - so every such file spells
         # it with the Arabic yeh, which fa_normalize unifies.
         import_encodings=("utf-8-sig", "cp1256"),
-        scoped_defaults=_scoped_defaults(),
+        scoped_defaults=spaced_scoped_defaults(
+            subtitle_langs="fa",
+            # gTTS has no Persian voice (tts_langs() lacks "fa"), so the default word
+            # audio is the Edge read-aloud leg the seam ships.
+            audio=FA_AUDIO,
+            allowed_pos=FA_ALLOWED_POS,
+            excluded_subtypes=FA_EXCLUDED_SUBTYPES,
+            card_fields=FA_CARD_FIELDS,
+            subtitle_regex=FA_SUBTITLE_REGEX,
+        ),
         sentence_rules=FA_SENTENCE_RULES,
         normalize=fa_normalize,
         dict_keys=PersianDictKeys(),

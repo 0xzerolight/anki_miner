@@ -22,6 +22,7 @@ import re
 import unicodedata
 from collections.abc import Callable
 
+from anki_miner.languages._spaced.script import BRACKETS_PATTERN, MUSIC_PATTERN, PARENS_PATTERN
 from anki_miner.languages.profile import ScriptFilterOption, SentenceRules
 
 ZWNJ = "\N{ZERO WIDTH NON-JOINER}"
@@ -315,3 +316,9 @@ FA_SENTENCE_RULES = SentenceRules(
     # sentences differently before and after the download.
     abbreviations=frozenset(),
 )
+
+#: A dialogue dash at the cue start, or after a Latin or Persian terminator and a space (the ar rule).
+FA_DIALOGUE_DASH_PATTERN = r"(?:^|(?<=[.!?…\N{ARABIC QUESTION MARK}]\s))[-–—]\s+"
+#: The SDH default: the script-neutral bracket/paren/music patterns plus the Persian dash rule.
+#: No speaker-label pattern: the Arabic script has no capitals to tell a ``name:`` label from speech.
+FA_SUBTITLE_REGEX = "|".join((BRACKETS_PATTERN, PARENS_PATTERN, MUSIC_PATTERN, FA_DIALOGUE_DASH_PATTERN))
