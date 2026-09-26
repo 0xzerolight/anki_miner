@@ -1,8 +1,8 @@
 """Tests for the mokuro install task run through InstallWorker.
 
-Mirrors ``test_alass_install_worker``: the per-resource worker is
-``InstallWorker`` + a task builder, so these construct that pairing and
-exercise success/failure/cancel-forwarding with a mocked ``install_mokuro``.
+Mirrors the shared generic behaviours in ``tests/unit/test_install_tasks.py``: the per-resource
+worker is ``InstallWorker`` + a task builder, so these construct that pairing and exercise
+success/failure/cancel-forwarding with a mocked ``install_mokuro``.
 """
 
 from __future__ import annotations

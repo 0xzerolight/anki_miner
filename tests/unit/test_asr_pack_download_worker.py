@@ -1,8 +1,8 @@
 """The ASR engine pack install task run through InstallWorker.
 
-Same shape as ``test_onnx_pack_download_worker.py``: a mocked ``install_asr_pack``
-and the shared sync runner; what is specific here is the progress-line relabel
-(the GUI-free installer says ``"ASR pack (i/n): downloading"``).
+Same generic shape as the other InstallWorker tasks (see ``tests/unit/test_install_tasks.py``):
+a mocked ``install_asr_pack`` and the shared sync runner; what is specific here is the
+progress-line relabel (the GUI-free installer says ``"ASR pack (i/n): downloading"``).
 """
 
 from __future__ import annotations
