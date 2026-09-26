@@ -8,27 +8,25 @@ table; the update writes exactly the previewed values and tags touched notes
 ``anki-miner::backfill``. Fill-only-empty by default; overwrite is an explicit
 checkbox.
 
-Plain ``QWidget`` (not ``_ToolTabBase`` — that base is file-processing
-chrome). Follows the condense-tab worker conventions: the active worker lives
-on ``self.worker_thread``, ``iter_close_workers()`` yields it for the
-app-close join, and ``update_config`` re-gates the field checkboxes AND drops
-any held plan (its computed values are config-stale).
+Built on ``_AnkiPlanTabBase`` with Deck Filter (not ``_ToolTabBase`` — that
+base is file-processing chrome). Follows the condense-tab worker conventions:
+the active worker lives on ``self.worker_thread``, ``iter_close_workers()``
+yields it for the app-close join, and ``update_config`` re-gates the field
+checkboxes AND drops any held plan (its computed values are config-stale).
 """
 
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterator
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDropEvent
 from PyQt6.QtWidgets import (
+    QAbstractButton,
     QCheckBox,
     QComboBox,
     QHBoxLayout,
     QLabel,
     QMessageBox,
-    QProgressBar,
     QScrollArea,
     QTableWidget,
     QVBoxLayout,
@@ -37,24 +35,20 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
-from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.content_text import content_cell_font
 from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
 from anki_miner.gui.utils.language_gate import apply_language_gate
 from anki_miner.gui.utils.qt_helpers import (
     CellRole,
     configure_data_view,
-    data_row_height,
     install_copy_rows,
     install_no_scroll_on_inputs,
     make_table_item,
-    urls_from_event,
 )
-from anki_miner.gui.utils.run_off_thread import still_running
 from anki_miner.gui.utils.run_options import RunOptionsMixin
+from anki_miner.gui.widgets._anki_plan_tab_base import _AnkiPlanTabBase, _PlanTabStrings
 from anki_miner.gui.widgets.base import (
     PageWidth,
-    TaskPublisherMixin,
     capped_page_column,
     install_workflow_shell,
 )
@@ -82,10 +76,6 @@ logger = logging.getLogger(__name__)
 
 _PREVIEW_ROW_CAP = 500
 _CELL_ELIDE = 120
-#: How much of the plan the preview must always show. Counted in rows rather
-#: than pixels: a flat pixel floor holds fewer and fewer rows as the text scale
-#: grows, which is Issue #102's class of bug rather than its fix.
-PREVIEW_MIN_VISIBLE_ROWS = 8
 
 #: Core backfill group → the capability whose absence makes it meaningless. The
 #: ja profile declares both "pitch" and "furigana". The other four core groups
@@ -95,7 +85,7 @@ PREVIEW_MIN_VISIBLE_ROWS = 8
 _CORE_GROUP_CAPABILITIES: dict[str, str] = {"pitch": "pitch", "reading": "furigana"}
 
 
-class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
+class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
     """Scan → preview table → Apply, over the configured note type."""
 
     #: Which field groups to fill is a remembered preference; the two gates in
@@ -120,6 +110,15 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
     def __init__(self, config: AnkiMinerConfig, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.config = config
+        # Built here, not in the base, so every literal keeps this tab's
+        # tr-context (see _anki_plan_tab_base).
+        self._strings = _PlanTabStrings(
+            applying=self.tr("Applying…"),
+            cancelling=self.tr("Cancelling…"),
+            cancelled=self.tr("Cancelled."),
+            settings_changed=self.tr("Settings changed since this scan; re-scan before applying."),
+            couldnt_fetch_decks=self.tr("Couldn't fetch deck names from Anki — scanning all decks."),
+        )
         # The Expression column is mined content, so its face follows the mining
         # language; re-derived in update_config when the language changes.
         self._content_style = get_profile(config_language(config)).content_style
@@ -295,66 +294,10 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
         # follows without knowing the stage itself.
         primary_action_shortcut(self, self.action_bar.trigger_primary)
 
-    def _apply_preview_height_floor(self) -> None:
-        """Floor the preview at whole rows of the font it is actually rendering.
-
-        Issue #102 gave the table a flat 240px floor so the chrome above could
-        not crush it. That floor holds eight rows at the default text size and
-        four at 150%, so the same crushing returns the moment the user scales
-        text. Measuring the floor in rows keeps the guarantee the issue asked
-        for at every scale.
-        """
-        header = self.preview_table.horizontalHeader()
-        header_h = header.sizeHint().height() if header is not None else 0
-        frame = 2 * self.preview_table.frameWidth()
-        self.preview_table.setMinimumHeight(
-            header_h + frame + PREVIEW_MIN_VISIBLE_ROWS * data_row_height(self.preview_table)
-        )
-
-    def changeEvent(self, a0) -> None:  # noqa: N802 - Qt override
-        """Re-derive the preview's row metrics when the UI zoom changes.
-
-        Zoom applies live, so a row height and a floor computed once at
-        construction are stale from the next Settings save onward.
-        """
-        from PyQt6.QtCore import QEvent
-
-        super().changeEvent(a0)
-        if a0 is not None and a0.type() == QEvent.Type.FontChange and hasattr(self, "preview_table"):
-            configure_data_view(self.preview_table)
-            self._apply_preview_height_floor()
-
-    def _create_run_status(self) -> QWidget:
-        """The one-line status and thin bar that sit directly above the actions."""
-        strip = QWidget()
-        strip_layout = QVBoxLayout(strip)
-        strip_layout.setContentsMargins(SPACING.sm, 0, SPACING.sm, 0)
-        strip_layout.setSpacing(SPACING.xxs)
-
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setVisible(False)
-        strip_layout.addWidget(self.progress_bar)
-
-        self.status_label = QLabel("")
-        self.status_label.setWordWrap(True)
-        strip_layout.addWidget(self.status_label)
-
-        return strip
-
-    def _sync_action_prominence(self) -> None:
-        """Put the action the user can actually take next on the right.
-
-        Before a valid preview there is only one honest move — Scan — and Apply
-        has nothing to apply. Once a preview exists Apply becomes the point of
-        the screen, and Scan stays visible so a rescan never needs the page
-        rebuilt.
-        """
-        has_plan = self._plan is not None
-        primary = self.apply_button if has_plan else self.scan_button
-        quiet = self.scan_button if has_plan else self.apply_button
-        primary.set_variant("primary")
-        quiet.set_variant("secondary")
-        self.action_bar.set_actions(primary, (self.cancel_button, quiet, self.restyle_button))
+    def _quiet_extras(self) -> tuple[QAbstractButton, ...]:
+        # Restyle is unrelated to the scan/apply cycle, so it stays beside the
+        # quiet verb whatever the stage (see _build_ui).
+        return (self.restyle_button,)
 
     # ------------------------------------------------------------------
     # Drag and drop (D50): this screen takes no payload, and says so
@@ -363,45 +306,6 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
     def _drop_refusal(self) -> str:
         """The one reason this screen gives for refusing a dropped payload."""
         return self.tr("Card Backfill works on the selected Anki deck.")
-
-    def _may_answer_a_drop(self) -> bool:
-        """Whether the status line is free to carry a drop refusal.
-
-        During a run that line is the only account of what the run is doing, so
-        a stray drag must not overwrite ``Scanning…`` with a note about decks.
-        The drag is simply not accepted then, and the cursor already says no.
-        """
-        return self.worker_thread is None
-
-    def dragEnterEvent(self, event: QDragEnterEvent | None) -> None:  # noqa: N802 - Qt override
-        """Accept the drag so the refusal can be delivered, and state it now.
-
-        Backfill reads the deck the user picked above; there is no file it could
-        take. Accepting only buys the chance to answer -- an ignored drag is the
-        silent non-acceptance D50 exists to remove.
-        """
-        if event is None or not self._may_answer_a_drop():
-            return
-        if not urls_from_event(event):
-            return
-        event.acceptProposedAction()
-        self.status_label.setText(self._drop_refusal())
-
-    def dragLeaveEvent(self, event: QDragLeaveEvent | None) -> None:  # noqa: N802 - Qt override
-        """Take the refusal back down when the drag moves off the screen."""
-        if self.status_label.text() == self._drop_refusal():
-            self.status_label.setText("")
-        if event is not None:
-            event.accept()
-
-    def dropEvent(self, event: QDropEvent | None) -> None:  # noqa: N802 - Qt override
-        """Refuse the payload and point at the control that does the choosing."""
-        if event is None:
-            return
-        if self._may_answer_a_drop():
-            self.status_label.setText(self._drop_refusal())
-            self.deck_combo.setFocus(Qt.FocusReason.OtherFocusReason)
-        event.ignore()
 
     # ------------------------------------------------------------------
     # Gating / config
@@ -502,56 +406,19 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
         """
         self.config = config
         self._content_style = get_profile(config_language(config)).content_style
-        self._plan = None
-        self._scan_warnings = ()
-        self.preview_table.setRowCount(0)
-        self.apply_button.setEnabled(False)
-        self.summary_label.setText("")
+        self._drop_plan()
         self._sync_action_prominence()
         # Restore full intent first, then let the gates mask it — the other
         # order would re-tick a group the new config cannot fill.
         self._seed_field_groups()
         self._refresh_checkbox_gates()
 
-    def iter_close_workers(self) -> Iterator[BackfillScanWorker | BackfillApplyWorker | SingleCallWorker]:
-        # ``still_running``, never a raw ``isRunning()``: once a worker finishes
-        # and its handle isn't cleared, the Python wrapper survives as a live
-        # reference to a destroyed C++ QThread and ``isRunning()`` raises
-        # RuntimeError out of closeEvent (see deck_filter_tab.iter_close_workers).
-        if still_running(self.worker_thread):
-            assert self.worker_thread is not None
-            yield self.worker_thread
-        # The lazy deck-fetch QThread runs a blocking get_deck_names (timeout 15s);
-        # abandoning it to Qt teardown aborts with "QThread: Destroyed while
-        # thread is still running", so surface it for the close-join policy too.
-        if still_running(self._deck_worker):
-            assert self._deck_worker is not None
-            yield self._deck_worker
-
     # ------------------------------------------------------------------
     # Deck dropdown (lazy fetch on first show)
     # ------------------------------------------------------------------
 
-    def showEvent(self, event) -> None:  # noqa: N802 - Qt override
-        super().showEvent(event)
-        self.ensure_decks()
-
-    def ensure_decks(self) -> None:
-        """Fetch the deck list unless one has already arrived.
-
-        Guarded on the list ARRIVING, not on having asked. ``get_deck_names``
-        answers an unreachable Anki with an empty list, so latching on the
-        attempt left "Couldn't fetch deck names from Anki" on screen for the
-        life of the process once Anki was started after Anki Miner — this tab
-        has no Refresh button to escape with.
-
-        Also the slot for ``MainWindow.anki_reachable``: a validation sweep that
-        has just found Anki is the only thing that can retry while this tab is
-        the visible one and its ``showEvent`` will not fire again.
-        """
-        if self._decks_loaded or still_running(self._deck_worker):
-            return
-        self._load_decks()
+    def _deck_combo(self) -> QComboBox:
+        return self.deck_combo
 
     def _load_decks(self) -> None:
         try:
@@ -574,19 +441,6 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
             message,
         )
         self._on_decks_fetched([])
-
-    def _on_decks_fetched(self, decks: list) -> None:
-        if decks:
-            # Runs at most once: ensure_decks() stops asking from here on, so
-            # the combo can never accumulate a second copy of the deck list.
-            self._decks_loaded = True
-            self.deck_combo.addItems([str(d) for d in decks])
-            if self._deck_fetch_failed:
-                self._deck_fetch_failed = False
-                self.status_label.setText("")
-        else:
-            self._deck_fetch_failed = True
-            self.status_label.setText(self.tr("Couldn't fetch deck names from Anki — scanning all decks."))
 
     # ------------------------------------------------------------------
     # Scan
@@ -775,14 +629,7 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
         plan = self._plan
         if plan is None:
             return
-        if plan.config_version != self.config.config_version:
-            self._plan = None
-            self._scan_warnings = ()
-            self.preview_table.setRowCount(0)
-            self.apply_button.setEnabled(False)
-            self.summary_label.setText("")
-            self._sync_action_prominence()
-            self.status_label.setText(self.tr("Settings changed since this scan; re-scan before applying."))
+        if self._drop_stale_plan(plan.config_version):
             return
         answer = QMessageBox.question(
             self,
@@ -813,7 +660,7 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
         self.worker_thread = worker
         self._set_running(True)
         self._publish_task_start(self.tr("Card backfill"), total=len(plan.notes))
-        self.status_label.setText(self.tr("Applying…"))
+        self.status_label.setText(self._strings.applying)
         logger.info(
             "Card Backfill apply started: field_groups=%d overwrite=%s deck=%s note_type=%s",
             sum(
@@ -827,11 +674,7 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
         worker.start()
 
     def _on_apply_finished(self, result: BackfillResult) -> None:
-        self._plan = None
-        self._scan_warnings = ()
-        self.preview_table.setRowCount(0)
-        self.apply_button.setEnabled(False)
-        self.summary_label.setText("")
+        self._drop_plan()
         parts = [
             self.tr("Filled {fields} field(s) on {notes} note(s).").format(
                 fields=result.fields_filled,
@@ -862,18 +705,6 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
             self._run_failed = True
         self.status_label.setText(" ".join(parts))
 
-    def _on_apply_cancelled(self) -> None:
-        self._plan = None
-        self._scan_warnings = ()
-        self.preview_table.setRowCount(0)
-        self.apply_button.setEnabled(False)
-        self.summary_label.setText("")
-        receipt = self.status_label.text()
-        if receipt in {self.tr("Applying…"), self.tr("Cancelling…")}:
-            self.status_label.setText(self.tr("Cancelled."))
-        elif not receipt.startswith(self.tr("Cancelled.")):
-            self.status_label.setText(f"{self.tr('Cancelled.')} {receipt}")
-
     # ------------------------------------------------------------------
     # Worker plumbing
     # ------------------------------------------------------------------
@@ -894,39 +725,8 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
             self._refresh_checkbox_gates()
         self._sync_action_prominence()
 
-    def _cancel_published_task(self) -> None:
-        """Route a registry cancel request into this screen's own Cancel."""
-        self._cancel()
-
-    def _cancel(self) -> None:
-        """Cancel the run: one verb, no prompt, and the button says it is waiting."""
-        if self.worker_thread is not None and self.worker_thread.isRunning():
-            self._publish_task_cancelling()
-            self.worker_thread.cancel()
-            self.cancel_button.setEnabled(False)
-            self.status_label.setText(self.tr("Cancelling…"))
-
-    def _on_progress(self, done: int, total: int) -> None:
-        if total:
-            self.progress_bar.setRange(0, total)
-            self.progress_bar.setValue(done)
-        self._publish_task_count(current=done, total=total or None, detail="")
-
     def _on_worker_error(self, message: str) -> None:
         logger.warning("Card Backfill worker failed: error=%s", message)
         self._run_failed = True
         self._set_running(False)
         self.status_label.setText(message)
-
-    def _on_worker_finished(self) -> None:
-        self._set_running(False)
-        cancelled = self.worker_thread is not None and self.worker_thread.is_cancelled
-        # The scan worker declares no ``cancelled`` signal and returns silently,
-        # so this is the only place that can close out a cancelled scan. Guarded
-        # on the exact live text: the Apply path has already written its partial
-        # receipt here by the time ``finished`` arrives.
-        if cancelled and self.status_label.text() == self.tr("Cancelling…"):
-            self.status_label.setText(self.tr("Cancelled."))
-        self._publish_task_finish(self._task_outcome(cancelled=cancelled, failed=self._run_failed))
-        self._run_failed = False
-        self.worker_thread = None

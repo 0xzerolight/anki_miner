@@ -13,11 +13,8 @@ from PyQt6.QtWidgets import QApplication, QHeaderView, QScrollArea
 
 from anki_miner.gui.controllers.task_registry import TaskOutcome, TaskRegistry
 from anki_miner.gui.utils.qt_helpers import data_row_height
-from anki_miner.gui.widgets.backfill_tab import (
-    _PREVIEW_ROW_CAP,
-    PREVIEW_MIN_VISIBLE_ROWS,
-    CardBackfillTab,
-)
+from anki_miner.gui.widgets._anki_plan_tab_base import PREVIEW_MIN_VISIBLE_ROWS
+from anki_miner.gui.widgets.backfill_tab import _PREVIEW_ROW_CAP, CardBackfillTab
 from anki_miner.services.card_backfiller import (
     BackfillOptions,
     BackfillPlan,
