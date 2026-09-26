@@ -1,9 +1,11 @@
-"""Tests for the Vulkan model install task run through InstallWorker.
+"""Tests for the Vulkan model install task's own behaviour.
 
-Post-ARC-010 the per-resource ``VulkanModelDownloadWorker`` collapsed into
-``InstallWorker`` + ``vulkan_model_task``; one run fetches BOTH the ggml
-acoustic model and the Silero VAD via the ggml_model_installer seam, so both
-``install_ggml_model`` and ``install_vad_model`` are mocked here.
+The six generic success/failure/cancel behaviours live in
+``tests/unit/test_install_tasks.py`` (tests-08, task id ``vulkan``); this file keeps only what is
+specific to Vulkan: that one run fetches BOTH the ggml acoustic model and the Silero VAD, the
+progress-context resolution (regression guard for the fr/zh_cn Vulkan template variant), a VAD
+failure surfacing as a result failure, cancelling between the two installs, and the real-QThread
+smoke test.
 """
 
 from __future__ import annotations
@@ -32,36 +34,6 @@ def _patch_installers(monkeypatch, *, ggml=None, vad=None) -> None:
         f"{_MOD}.install_vad_model",
         vad or (lambda root, progress=None, cancel_event=None: root),
     )
-
-
-def test_success_emits_result_true(qapp, tmp_path, monkeypatch):
-    _patch_installers(monkeypatch)
-    worker = _worker("large-v3", tmp_path)
-
-    results: list[tuple] = []
-    worker.result_ready.connect(lambda ok, msg: results.append((ok, msg)))
-
-    _run_worker_sync(worker)
-
-    assert len(results) == 1
-    ok, msg = results[0]
-    assert ok is True
-    assert isinstance(msg, str)
-
-
-def test_success_emits_status_before_result(qapp, tmp_path, monkeypatch):
-    _patch_installers(monkeypatch)
-    statuses: list[str] = []
-    worker = _worker("large-v3", tmp_path)
-    worker.status.connect(statuses.append)
-
-    results: list[tuple] = []
-    worker.result_ready.connect(lambda ok, msg: results.append((ok, msg)))
-
-    _run_worker_sync(worker)
-
-    assert len(statuses) >= 1
-    assert len(results) == 1
 
 
 def test_installs_both_acoustic_and_vad(qapp, tmp_path, monkeypatch):
@@ -108,9 +80,9 @@ def test_progress_adapter_emits_status(qapp, tmp_path, monkeypatch):
 def test_progress_resolves_under_vulkan_context(qapp, tmp_path, monkeypatch):
     """The ``%1 (%2%)`` template resolves under the Vulkan context, NOT CudaPack.
 
-    Regression guard: fr/zh_cn carry a distinct Vulkan variant (non-breaking
-    space / fullwidth parens), so a progress line during a Vulkan download must
-    resolve under ``VulkanModelDownloadWorker``.
+    Regression guard: fr/zh_cn carry a distinct Vulkan variant (non-breaking space / fullwidth
+    parens), so a progress line during a Vulkan download must resolve under
+    ``VulkanModelDownloadWorker``.
     """
     import anki_miner.gui.workers.install_worker as iw
 
@@ -153,24 +125,6 @@ def test_progress_template_routes_each_context_to_its_own(qapp, monkeypatch):
     ]
 
 
-def test_failure_emits_result_false(qapp, tmp_path, monkeypatch):
-    def _ggml(asr_model, root, progress=None, cancel_event=None):
-        raise SetupError("checksum mismatch")
-
-    _patch_installers(monkeypatch, ggml=_ggml)
-    worker = _worker("large-v3", tmp_path)
-
-    results: list[tuple] = []
-    worker.result_ready.connect(lambda ok, msg: results.append((ok, msg)))
-
-    _run_worker_sync(worker)
-
-    assert len(results) == 1
-    ok, msg = results[0]
-    assert ok is False
-    assert "checksum mismatch" in msg
-
-
 def test_vad_failure_emits_result_false(qapp, tmp_path, monkeypatch):
     """A SetupError raised by the VAD install also surfaces as a failure."""
 
@@ -189,57 +143,6 @@ def test_vad_failure_emits_result_false(qapp, tmp_path, monkeypatch):
     ok, msg = results[0]
     assert ok is False
     assert "vad download failed" in msg
-
-
-def test_cancel_before_run_skips_install(qapp, tmp_path, monkeypatch):
-    calls: list[object] = []
-    _patch_installers(
-        monkeypatch,
-        ggml=lambda asr_model, root, progress=None, cancel_event=None: calls.append(root),
-        vad=lambda root, progress=None, cancel_event=None: calls.append(root),
-    )
-    worker = _worker("large-v3", tmp_path)
-    worker.cancel()
-
-    results: list[tuple] = []
-    worker.result_ready.connect(lambda ok, msg: results.append((ok, msg)))
-
-    _run_worker_sync(worker)
-
-    assert calls == []
-    assert results == []
-
-
-def test_cancel_event_passed_to_install(qapp, tmp_path, monkeypatch):
-    received: list[object] = []
-    _patch_installers(
-        monkeypatch,
-        ggml=lambda asr_model, root, progress=None, cancel_event=None: received.append(cancel_event) or root,
-        vad=lambda root, progress=None, cancel_event=None: received.append(cancel_event) or root,
-    )
-    worker = _worker("large-v3", tmp_path)
-    _run_worker_sync(worker)
-
-    assert len(received) == 2
-    assert all(ev is worker.cancel_event for ev in received)
-
-
-def test_cancel_during_install_suppresses_result(qapp, tmp_path, monkeypatch):
-    """A failure raised after cancel() emits no result_ready."""
-
-    def _ggml(asr_model, root, progress=None, cancel_event=None):
-        raise SetupError("installation cancelled")
-
-    _patch_installers(monkeypatch, ggml=_ggml)
-    worker = _worker("large-v3", tmp_path)
-    worker.cancel()
-
-    results: list[tuple] = []
-    worker.result_ready.connect(lambda ok, msg: results.append((ok, msg)))
-
-    _run_worker_sync(worker)
-
-    assert results == []
 
 
 def test_cancel_between_installs_skips_vad(qapp, tmp_path, monkeypatch):
