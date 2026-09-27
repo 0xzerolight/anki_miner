@@ -88,6 +88,13 @@ class TestStreamEncodeChunks:
         assert len(chunks[0]) == 2
         assert len(chunks[1]) == 1
 
+    def test_byte_budget_stays_small_for_ankiconnects_quadratic_reader(self):
+        """AnkiConnect's web.py rebuilds its receive buffer on every 1 KB recv(),
+        so one request's receive time grows with its size squared. A 4 MB batch
+        took ~15 s on a user's Windows machine and, past the 30 s timeout, failed
+        as a ConnectionError. Raising the budget brings that back."""
+        assert anki_media_store._MEDIA_BATCH_MAX_BYTES <= 512 * 1024
+
     def test_byte_budget_splits_large_files(self, tmp_path):
         """Files whose cumulative base64 size exceeds the byte budget split."""
         # Each file is 300 bytes → ~400 base64 bytes; budget=100 → each file alone.

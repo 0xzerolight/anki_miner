@@ -10,7 +10,7 @@ POST).
 
 ``store_batch`` streams: filenames are deduplicated first (cheap, no I/O),
 then base64 encoding happens lazily inside ``_stream_encode_chunks`` as each
-chunk is assembled, so only one chunk's worth of encoded data (~4 MB) is
+chunk is assembled, so only one chunk's worth of encoded data (~256 KB) is
 resident in memory at a time.  ``_chunk_media_actions`` is kept for the
 ``upload_dict_media`` path which pre-builds actions before chunking.
 """
@@ -63,13 +63,16 @@ _MASK_IMAGE_URL_RE = re.compile(
 # Media uploads are base64-heavy; a smaller chunk than the 100-note addNotes
 # batch keeps individual request payloads manageable.
 _MEDIA_BATCH_CHUNK = 50
-# AnkiConnect resets the connection on very large `multi` request bodies (one
-# 50-file chunk of YouTube clips can hit ~7-8 MB of base64), surfacing as a
-# requests ConnectionError that reads "Is Anki running?" even though it is.
-# Bound each `multi` POST by cumulative base64 size as well as action count so a
-# chunk of large files flushes early instead of tripping the reset (Issue: media
-# files not stored on big batches).
-_MEDIA_BATCH_MAX_BYTES = 4 * 1024 * 1024
+# AnkiConnect's web server (web.py ``WebClient.advance``) reads a request with
+# ``recv(1024)`` and rebuilds its whole buffer on every read, so receiving a
+# body costs time proportional to its size squared, on Anki's main thread (Anki
+# freezes meanwhile). A 4 MB ``multi`` took ~15 s on a user's Windows machine;
+# past the 30 s timeout the send fails and requests reports a ConnectionError
+# ("Is Anki running?") — the "reset on big batches" once seen at ~7-8 MB
+# (Issue: media files not stored on big batches). Total receive time grows
+# linearly with the batch size, so keep batches small; much below this,
+# AnkiConnect's 25 ms poll tick per request dominates instead.
+_MEDIA_BATCH_MAX_BYTES = 256 * 1024
 _MAX_MEDIA_FILE_BYTES = 32 * 1024 * 1024
 
 
@@ -314,7 +317,7 @@ class AnkiMediaStore:
         the size cap, or rejected by its sub-action — and the caller must not
         reference it from a note.
 
-        Encoding is streamed per chunk, so only one chunk's base64 (~4 MB) is
+        Encoding is streamed per chunk, so only one chunk's base64 (~256 KB) is
         resident at a time; the caller discards each chunk after its POST.
 
         The engine behind :meth:`store_batch`, exposed directly for callers that
@@ -336,7 +339,7 @@ class AnkiMediaStore:
 
         Deduplicates filenames first (cheap, no I/O), then streams base64
         encoding lazily via ``_stream_encode_chunks``: only one chunk's worth
-        of encoded data (~4 MB) is resident in memory at a time.  Each chunk
+        of encoded data (~256 KB) is resident in memory at a time.  Each chunk
         is POSTed and its encoded data dropped before the next chunk is
         assembled.  Files that cannot be read (OSError) are logged and skipped
         at encode time.  If a chunk's ``multi`` POST fails with a transport
