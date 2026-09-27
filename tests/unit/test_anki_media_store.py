@@ -29,6 +29,22 @@ def _mock_response(result=None, error=None):
     return resp
 
 
+def _anki_without_path_access(respond):
+    """``requests.post`` side effect for an Anki that cannot read our files by
+    path (Flatpak's private /tmp, WSL to Windows): a by-path ``multi`` gets one
+    error per action; every other call goes to *respond*, so the inline upload
+    runs as it would there."""
+
+    def post(*args, **kwargs):
+        body = kwargs["json"]
+        actions = body["params"].get("actions", []) if body["action"] == "multi" else []
+        if actions and all("path" in a["params"] for a in actions):
+            return _mock_response(result=[{"result": None, "error": "No such file or directory"} for _ in actions])
+        return respond(*args, **kwargs)
+
+    return post
+
+
 def _make_files(tmp_path: Path, count: int, size: int = 16) -> list[tuple[str, Path]]:
     """Return (filename, path) pairs for *count* temp files of *size* bytes."""
     pairs = []
@@ -187,9 +203,10 @@ class TestStoreBatchLazyEncoding:
 
         orig_build = anki_media_store._build_store_media_action
 
-        def spying_build(filename, src_path, content_hash=False):
-            encode_order.append(filename)
-            return orig_build(filename, src_path, content_hash=content_hash)
+        def spying_build(filename, src_path, content_hash=False, by_path=False):
+            if not by_path:
+                encode_order.append(filename)
+            return orig_build(filename, src_path, content_hash=content_hash, by_path=by_path)
 
         success_resp = _mock_response(result=[None])
 
@@ -203,7 +220,7 @@ class TestStoreBatchLazyEncoding:
         with (
             patch("anki_miner.services.anki_media_store._MEDIA_BATCH_CHUNK", 1),
             patch("anki_miner.services.anki_media_store._build_store_media_action", side_effect=spying_build),
-            patch("anki_miner.services._ankiconnect.requests.post", side_effect=spying_post),
+            patch("anki_miner.services._ankiconnect.requests.post", side_effect=_anki_without_path_access(spying_post)),
         ):
             store = AnkiMediaStore(test_config)
             store.store_batch(items)
@@ -219,9 +236,10 @@ class TestStoreBatchLazyEncoding:
 
         orig_build2 = anki_media_store._build_store_media_action
 
-        def spying_build2(filename, src_path, content_hash=False):
-            combined.append(("encode", filename))
-            return orig_build2(filename, src_path, content_hash=content_hash)
+        def spying_build2(filename, src_path, content_hash=False, by_path=False):
+            if not by_path:
+                combined.append(("encode", filename))
+            return orig_build2(filename, src_path, content_hash=content_hash, by_path=by_path)
 
         def spying_post2(*args, **kwargs):
             json_body = kwargs.get("json", {})
@@ -233,7 +251,9 @@ class TestStoreBatchLazyEncoding:
         with (
             patch("anki_miner.services.anki_media_store._MEDIA_BATCH_CHUNK", 1),
             patch("anki_miner.services.anki_media_store._build_store_media_action", side_effect=spying_build2),
-            patch("anki_miner.services._ankiconnect.requests.post", side_effect=spying_post2),
+            patch(
+                "anki_miner.services._ankiconnect.requests.post", side_effect=_anki_without_path_access(spying_post2)
+            ),
         ):
             store2 = AnkiMediaStore(test_config)
             # Fresh payloads: the first store_batch mutated `items`' filenames to
@@ -265,7 +285,9 @@ class TestStoreBatchLazyEncoding:
             captured_payloads.append(kwargs.get("json", {}))
             return success_resp
 
-        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=capture_post):
+        with patch(
+            "anki_miner.services._ankiconnect.requests.post", side_effect=_anki_without_path_access(capture_post)
+        ):
             store = AnkiMediaStore(test_config)
             stored = store.store_batch(items)
 
@@ -317,13 +339,17 @@ class TestStoreBatchLazyEncoding:
 
         orig_build = anki_media_store._build_store_media_action
 
-        def tracking_build(filename, src_path, content_hash=False):
-            build_calls.append(filename)
-            return orig_build(filename, src_path, content_hash=content_hash)
+        def tracking_build(filename, src_path, content_hash=False, by_path=False):
+            if not by_path:
+                build_calls.append(filename)
+            return orig_build(filename, src_path, content_hash=content_hash, by_path=by_path)
 
         with (
             patch("anki_miner.services.anki_media_store._build_store_media_action", side_effect=tracking_build),
-            patch("anki_miner.services._ankiconnect.requests.post", return_value=resp),
+            patch(
+                "anki_miner.services._ankiconnect.requests.post",
+                side_effect=_anki_without_path_access(MagicMock(return_value=resp)),
+            ),
         ):
             store = AnkiMediaStore(test_config)
             stored = store.store_batch(items)
@@ -652,3 +678,104 @@ class TestStoreFiles:
             assert store.store_batch([payload]) == {"b_abc123def456.mp3"}
         assert media.expression_audio_filename == "b_abc123def456.mp3"
         assert store.last_store_failures == 0
+
+
+# ---------------------------------------------------------------------------
+# TestStoreFilesByPath — Anki reads local media itself; inline upload is the fallback
+# ---------------------------------------------------------------------------
+
+
+class TestStoreFilesByPath:
+    """AnkiConnect's reader is quadratic in body size, so local files go by path."""
+
+    def test_local_files_go_by_path_in_one_multi(self, test_config, tmp_path):
+        shot = tmp_path / "shot.jpg"
+        shot.write_bytes(b"jpeg-bytes")
+        clip = tmp_path / "clip.mp3"
+        clip.write_bytes(b"mp3-bytes")
+        sent_batches: list[list[dict]] = []
+
+        def fake_multi(_url, actions, timeout=30):
+            sent_batches.append(actions)
+            return [a["params"]["filename"] for a in actions]
+
+        store = AnkiMediaStore(test_config)
+        with patch("anki_miner.services.anki_media_store.post_multi", side_effect=fake_multi):
+            result = store.store_files({"shot.jpg": shot, "clip.mp3": clip})
+
+        assert len(sent_batches) == 1
+        params = [a["params"] for a in sent_batches[0]]
+        assert [p["path"] for p in params] == [str(shot.absolute()), str(clip.absolute())]
+        assert not any("data" in p for p in params)
+        assert result == {
+            "shot.jpg": _content_addressed_name("shot.jpg", b"jpeg-bytes"),
+            "clip.mp3": _content_addressed_name("clip.mp3", b"mp3-bytes"),
+        }
+
+    def test_files_anki_cannot_read_by_path_are_uploaded_inline(self, test_config, tmp_path, caplog):
+        shot = tmp_path / "shot.jpg"
+        shot.write_bytes(b"jpeg-bytes")
+        clip = tmp_path / "clip.mp3"
+        clip.write_bytes(b"mp3-bytes")
+        inline = MagicMock(return_value=_mock_response(result=[None, None]))
+
+        store = AnkiMediaStore(test_config)
+        with (
+            patch("anki_miner.services._ankiconnect.requests.post", side_effect=_anki_without_path_access(inline)),
+            caplog.at_level(logging.INFO, logger="anki_miner.services.anki_media_store"),
+        ):
+            result = store.store_files({"shot.jpg": shot, "clip.mp3": clip})
+
+        assert result == {
+            "shot.jpg": _content_addressed_name("shot.jpg", b"jpeg-bytes"),
+            "clip.mp3": _content_addressed_name("clip.mp3", b"mp3-bytes"),
+        }
+        assert inline.call_count == 1
+        data = [a["params"]["data"] for a in inline.call_args[1]["json"]["params"]["actions"]]
+        assert data == [base64.b64encode(b"jpeg-bytes").decode(), base64.b64encode(b"mp3-bytes").decode()]
+        assert any("uploading inline" in r.message and "files=2" in r.message for r in caplog.records)
+
+    def test_by_path_transport_failure_goes_inline_without_per_file_retries(self, test_config, tmp_path):
+        import requests
+
+        shot = tmp_path / "shot.jpg"
+        shot.write_bytes(b"jpeg-bytes")
+        clip = tmp_path / "clip.mp3"
+        clip.write_bytes(b"mp3-bytes")
+        side_effect = [
+            requests.exceptions.ConnectionError("connection reset"),
+            _mock_response(result=[None, None]),
+        ]
+
+        store = AnkiMediaStore(test_config)
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=side_effect) as post:
+            result = store.store_files({"shot.jpg": shot, "clip.mp3": clip})
+
+        # No per-file by-path retries: the next call is already the inline multi.
+        bodies = [c[1]["json"] for c in post.call_args_list]
+        assert [b["action"] for b in bodies] == ["multi", "multi"]
+        assert all("path" in a["params"] for a in bodies[0]["params"]["actions"])
+        assert all("data" in a["params"] for a in bodies[1]["params"]["actions"])
+        assert set(result) == {"shot.jpg", "clip.mp3"}
+
+    def test_over_cap_file_is_warned_once_and_never_sent(self, test_config, tmp_path, caplog):
+        big = tmp_path / "big.webp"
+        big.write_bytes(b"x" * 64)
+        small = tmp_path / "small.mp3"
+        small.write_bytes(b"y")
+        inline = MagicMock(return_value=_mock_response(result=[None]))
+
+        store = AnkiMediaStore(test_config)
+        with (
+            patch("anki_miner.services.anki_media_store._MAX_MEDIA_FILE_BYTES", 32),
+            patch(
+                "anki_miner.services._ankiconnect.requests.post", side_effect=_anki_without_path_access(inline)
+            ) as post,
+            caplog.at_level(logging.WARNING, logger="anki_miner.services.anki_media_store"),
+        ):
+            result = store.store_files({"big.webp": big, "small.mp3": small})
+
+        assert set(result) == {"small.mp3"}
+        sent = [a["params"]["filename"] for c in post.call_args_list for a in c[1]["json"]["params"]["actions"]]
+        assert not any(name.startswith("big") for name in sent)
+        assert sum("big.webp" in r.getMessage() for r in caplog.records) == 1

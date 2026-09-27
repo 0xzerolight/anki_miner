@@ -8,11 +8,13 @@ dictionary-bundled assets referenced from definition/glossary HTML:
 budget) → ``_store_media_chunk`` (per-file fallback on a failed ``multi``
 POST).
 
-``store_batch`` streams: filenames are deduplicated first (cheap, no I/O),
-then base64 encoding happens lazily inside ``_stream_encode_chunks`` as each
-chunk is assembled, so only one chunk's worth of encoded data (~256 KB) is
-resident in memory at a time.  ``_chunk_media_actions`` is kept for the
-``upload_dict_media`` path which pre-builds actions before chunking.
+``store_batch`` deduplicates filenames first (cheap, no I/O), then
+``store_files`` asks Anki to read each card media file from its local ``path``
+(tiny bodies). Files Anki cannot read that way are uploaded inline: base64
+encoding happens lazily inside ``_stream_encode_chunks`` as each chunk is
+assembled, so only one chunk's worth of encoded data (~256 KB) is resident in
+memory at a time.  ``_chunk_media_actions`` chunks the pre-built by-path
+actions and the ``upload_dict_media`` actions.
 """
 
 import base64
@@ -254,7 +256,9 @@ def _content_addressed_name(filename: str, content: bytes) -> str:
     return f"{p.stem}_{digest}{p.suffix}"
 
 
-def _build_store_media_action(filename: str, src_path: Path, content_hash: bool = False) -> dict | None:
+def _build_store_media_action(
+    filename: str, src_path: Path, content_hash: bool = False, by_path: bool = False
+) -> dict | None:
     """Build a ``storeMediaFile`` action dict for use in a ``multi`` envelope.
 
     Returns ``None`` and logs a warning if the file cannot be read. When
@@ -262,6 +266,10 @@ def _build_store_media_action(filename: str, src_path: Path, content_hash: bool 
     (``{stem}_{sha1[:12]}{ext}``) so distinct bytes never collide on one Anki
     media name (7.5). The dict-media path passes False so the src name the
     rendered ``<img>`` references is preserved.
+
+    ``by_path`` sends the file's absolute ``path`` for Anki to read itself
+    instead of inline base64 ``data``, so the request body stays tiny. The file
+    is still read here: it is validated and content-hashed the same way.
     """
     try:
         raw_size = src_path.stat().st_size
@@ -282,11 +290,14 @@ def _build_store_media_action(filename: str, src_path: Path, content_hash: bool 
         logger.warning("Media file %s exceeds the %d-byte cap; skipping upload", filename, _MAX_MEDIA_FILE_BYTES)
         return None
     stored_name = _content_addressed_name(filename, raw) if content_hash else filename
-    data_base64 = base64.b64encode(raw).decode("utf-8")
+    if by_path:
+        params = {"filename": stored_name, "path": str(src_path.absolute())}
+    else:
+        params = {"filename": stored_name, "data": base64.b64encode(raw).decode("utf-8")}
     return {
         "action": "storeMediaFile",
         "version": 6,
-        "params": {"filename": stored_name, "data": data_base64},
+        "params": params,
     }
 
 
@@ -317,8 +328,12 @@ class AnkiMediaStore:
         the size cap, or rejected by its sub-action — and the caller must not
         reference it from a note.
 
-        Encoding is streamed per chunk, so only one chunk's base64 (~256 KB) is
-        resident at a time; the caller discards each chunk after its POST.
+        Files go by ``path`` first: Anki reads them from disk, so no body
+        reaches AnkiConnect's quadratic reader. Only the files Anki could not
+        read that way (Flatpak's private /tmp, WSL to Windows, a remote Anki)
+        are then uploaded inline. Encoding is streamed per chunk, so only one
+        chunk's base64 (~256 KB) is resident at a time; the caller discards
+        each chunk after its POST.
 
         The engine behind :meth:`store_batch`, exposed directly for callers that
         hold file paths rather than ``CardPayload`` objects (Card Backfill).
@@ -326,7 +341,26 @@ class AnkiMediaStore:
         path-holding caller counts requested-minus-returned.
         """
         rename: dict[str, str] = {}
-        for chunk in _stream_encode_chunks(paths_by_filename.items()):
+        # Unreadable or over-cap files are warned about here and dropped, not
+        # retried inline below.
+        by_path: list[tuple[str, dict]] = []
+        orig_by_sent: dict[str, str] = {}
+        for orig, src_path in paths_by_filename.items():
+            action = _build_store_media_action(orig, src_path, content_hash=True, by_path=True)
+            if action is not None:
+                sent = action["params"]["filename"]
+                by_path.append((sent, action))
+                orig_by_sent[sent] = orig
+        # Path actions carry no data, so only the action-count budget splits them.
+        for path_chunk in _chunk_media_actions(by_path):
+            for sent, stored_name in self._store_media_chunk(path_chunk).items():
+                rename[orig_by_sent[sent]] = stored_name
+
+        leftovers = {orig: paths_by_filename[orig] for orig in orig_by_sent.values() if orig not in rename}
+        if not leftovers:
+            return rename
+        log_summary(logger, "Media not stored by path; uploading inline", files=len(leftovers))
+        for chunk in _stream_encode_chunks(leftovers.items()):
             result_map = self._store_media_chunk([(sent, action) for _, sent, action in chunk])
             for orig, sent, _ in chunk:
                 actual = result_map.get(sent)
@@ -523,9 +557,15 @@ class AnkiMediaStore:
             sub_results = post_multi(self.config.ankiconnect_url, actions, timeout=30)
         except AnkiConnectionError as e:
             cause = e.__cause__
+            exc_name = type(cause).__name__ if cause is not None else type(e).__name__
+            if not any("data" in a["params"] for a in actions):
+                # Path-only bodies are tiny, so a per-file retry cannot help;
+                # store_files uploads these files inline next.
+                logger.warning("Media by-path multi POST failed (%s: %s); %d file(s)", exc_name, e, len(actions))
+                return {}
             logger.warning(
                 "Media batch multi POST failed (%s: %s); retrying %d file(s) individually",
-                type(cause).__name__ if cause is not None else type(e).__name__,
+                exc_name,
                 e,
                 len(actions),
             )

@@ -25,6 +25,7 @@ Deliberately minimal semantics, matched to what the app actually issues:
 
 from __future__ import annotations
 
+import base64
 import json
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -194,7 +195,16 @@ class FakeAnkiConnect:
             return [self._add_note(n) for n in params.get("notes") or []]
         if action == "storeMediaFile":
             filename = params.get("filename") or ""
-            self._media[filename] = params.get("data") or ""
+            data = params.get("data") or ""
+            if not data and params.get("path"):
+                # AnkiConnect opens the path itself; an unreadable one fails
+                # this action only, and the app uploads the file inline.
+                try:
+                    with open(params["path"], "rb") as f:
+                        data = base64.b64encode(f.read()).decode("ascii")
+                except OSError as e:
+                    raise _FakeError(str(e)) from e
+            self._media[filename] = data
             return filename
         if action == "multi":
             results: list[dict] = []
