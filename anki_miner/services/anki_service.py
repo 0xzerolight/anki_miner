@@ -250,6 +250,14 @@ class AnkiService:
         # warn the user when cards land with empty media fields. Mirrored from
         # the media store after each upload pass.
         self.last_media_store_failures: int = 0
+        # Why each payload of the last create_cards_batch call did not become a
+        # note, by mined_form: "duplicate" (the pre-add probe or the excluded-
+        # deck admission refused it), "refused" (the probe cleared it but its
+        # addNotes slot came back null) or "uncertain" (its addNotes request
+        # failed in flight, so Anki may hold it). A payload in neither this nor
+        # last_created_mined_forms was never submitted (a Stop, or an earlier
+        # failure). Read by the --api result's word statuses.
+        self.last_not_created: dict[str, str] = {}
         # Owns the storeMediaFile upload pipeline (chunking, per-file fallback)
         # and the per-run dict-media upload cache.
         self._media_store = AnkiMediaStore(config)
@@ -862,9 +870,12 @@ class AnkiService:
                 QCoreApplication.translate("AnkiService", "Creating Anki cards"),
             )
 
+        not_created: dict[str, str] = {}
         excluded_deck_admission = bool(self.config.excluded_decks and not self.config.allow_duplicate_cards)
         if excluded_deck_admission:
-            candidate_payloads, skipped_duplicates = self._admit_against_excluded_decks(word_data_list)
+            candidate_payloads, refused = self._admit_against_excluded_decks(word_data_list)
+            skipped_duplicates = len(refused)
+            not_created.update(dict.fromkeys(refused, "duplicate"))
         else:
             candidate_payloads = list(word_data_list)
         probed_duplicates = skipped_duplicates
@@ -894,6 +905,7 @@ class AnkiService:
         bold_used = 0
         bold_fallback = 0
         media_store_failures = 0
+        in_flight: list[str] = []
         cancelled_between_batches = False
 
         # Persist progress even if a later batch raises. Earlier batches'
@@ -920,6 +932,11 @@ class AnkiService:
                     batch = candidate_batch
                 else:
                     is_duplicate = self._probe_duplicates(probe_notes)
+                    not_created.update(
+                        (item.word.mined_form, "duplicate")
+                        for item, duplicate in zip(candidate_batch, is_duplicate, strict=True)
+                        if duplicate
+                    )
                     batch = [
                         item for item, duplicate in zip(candidate_batch, is_duplicate, strict=True) if not duplicate
                     ]
@@ -956,7 +973,10 @@ class AnkiService:
                 # Submit only the non-duplicates; the slots align positionally
                 # with submit_notes (see _submit_add_notes), which the zips
                 # below rely on.
+                # The request's words stay "uncertain" if it escapes (D30).
+                in_flight = [item.word.mined_form for item in submit_payloads]
                 note_ids = self._submit_add_notes(submit_notes) if submit_notes else []
+                in_flight = []
 
                 # Count successful creations (non-null IDs). A null slot here is a
                 # note the probe had cleared that addNotes still didn't create — a
@@ -965,9 +985,11 @@ class AnkiService:
                 batch_created = sum(1 for nid in note_ids if nid is not None)
                 skipped_duplicates += len(submit_notes) - batch_created
                 if batch_created < len(submit_notes):
-                    failed_words.extend(
+                    refused_forms = [
                         item.word.mined_form for item, nid in zip(submit_payloads, note_ids, strict=True) if nid is None
-                    )
+                    ]
+                    failed_words.extend(refused_forms)
+                    not_created.update(dict.fromkeys(refused_forms, "refused"))
                     # Keep a sample of the refused payloads for the after-the-run
                     # explanation probe; the probe itself must not run inside the
                     # loop (see below).
@@ -1006,6 +1028,8 @@ class AnkiService:
             # Record whatever batches completed (all of them on success, the
             # earlier ones on a mid-run failure). Runs before the exception
             # re-raises.
+            not_created.update(dict.fromkeys(in_flight, "uncertain"))
+            self.last_not_created = not_created
             self.last_created_note_ids = all_created_ids
             self.last_created_mined_forms = created_forms
             self.last_created_lemmas = created_lemmas
@@ -1076,11 +1100,12 @@ class AnkiService:
         self.last_created_lemmas = []
         self.last_skipped_duplicates = 0
         self.last_media_store_failures = 0
+        self.last_not_created = {}
 
-    def _admit_against_excluded_decks(self, word_data_list: list[CardPayload]) -> tuple[list[CardPayload], int]:
+    def _admit_against_excluded_decks(self, word_data_list: list[CardPayload]) -> tuple[list[CardPayload], list[str]]:
         """Admit payloads whose first field is absent from the non-excluded collection.
 
-        Returns the admitted payloads, in order, and how many were refused.
+        Returns the admitted payloads, in order, and the refused payloads' mined forms.
         """
         # The normal Phase-2 admission query deliberately excludes these
         # decks. Reuse that same answer here, then allow admitted notes past
@@ -1092,7 +1117,7 @@ class AnkiService:
         existing = self.get_existing_vocabulary(allow_degraded=False)
         seen: set[str] = set()
         candidate_payloads: list[CardPayload] = []
-        skipped_duplicates = 0
+        refused: list[str] = []
         for item in word_data_list:
             note = self._build_note(item, set()).note
             fields = note.get("fields") or {}
@@ -1100,12 +1125,12 @@ class AnkiService:
             key = self._dedup_key(first_value if isinstance(first_value, str) else "")
             duplicate = bool(key and (key in existing or key in seen))
             if duplicate:
-                skipped_duplicates += 1
+                refused.append(item.word.mined_form)
             else:
                 candidate_payloads.append(item)
             if key:
                 seen.add(key)
-        return candidate_payloads, skipped_duplicates
+        return candidate_payloads, refused
 
     def _submit_add_notes(self, notes: list[dict]) -> list[int | None]:
         """POST one ``addNotes`` request under the D30 write-state guard.
