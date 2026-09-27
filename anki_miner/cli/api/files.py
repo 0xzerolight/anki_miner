@@ -212,6 +212,14 @@ class WordPick:
 
 
 @dataclass(frozen=True)
+class WordRequest:
+    word: str
+    line_start: float | None = None
+    line_text: str | None = None
+    line_expansion: tuple[int, int] | None = None
+
+
+@dataclass(frozen=True)
 class CommitRun:
     run_id: str
     words: tuple[WordPick, ...]
