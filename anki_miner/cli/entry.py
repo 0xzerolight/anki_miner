@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-#: Selects the two-call API (``cli/api``, API.md) instead of the JSON Lines CLI.
+#: Selects the mining API (``cli/api``, API.md) instead of the JSON Lines CLI.
 API_FLAG = "--api"
 
 #: First-argument words that select the CLI. Mirrored as a literal in

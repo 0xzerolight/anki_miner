@@ -6,7 +6,7 @@ from anki_miner.exceptions import AnkiConnectionError
 from anki_miner.services.anki_service import is_transient_anki_transport_error
 
 API_SCHEMA = 1
-COMMANDS = ("prepare", "commit", "check", "version", "profiles", "settings-export")
+COMMANDS = ("mine", "check", "version", "profiles", "settings-export")
 
 BUSY = "BUSY"
 ANKI_UNREACHABLE = "ANKI_UNREACHABLE"
@@ -14,11 +14,8 @@ SETUP_ERROR = "SETUP_ERROR"  # the proposal's smaller version of the six setup c
 PROFILE_UNREADABLE = "PROFILE_UNREADABLE"
 SUBTITLE_UNREADABLE = "SUBTITLE_UNREADABLE"
 VIDEO_UNREADABLE = "VIDEO_UNREADABLE"
-UNKNOWN_RUN = "UNKNOWN_RUN"
-BAD_LINE = "BAD_LINE"
 BAD_RUN_FILE = "BAD_RUN_FILE"
 BAD_ARGUMENTS = "BAD_ARGUMENTS"  # not in the proposal: a command line that does not parse
-RUN_STALE = "RUN_STALE"
 MINING_FAILED = "MINING_FAILED"  # not in the proposal: the pipeline returned a failure
 CANCELLED = "CANCELLED"
 INTERNAL = "INTERNAL"

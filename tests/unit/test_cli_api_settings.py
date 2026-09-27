@@ -1,10 +1,8 @@
-"""--api settings: profile, language, one-run overlay, and the RUN_STALE view."""
+"""--api settings: profile, language and the one-run overlay."""
 
 from __future__ import annotations
 
-import json
 from dataclasses import replace
-from pathlib import Path
 
 import pytest
 
@@ -76,28 +74,3 @@ def test_run_config_switches_language_then_overlays_and_forces_known_words(test_
     with pytest.raises(ApiError) as err:
         settings.resolve_run_config(None, "xx", {})
     assert err.value.code == "BAD_RUN_FILE"
-
-
-@pytest.mark.parametrize(
-    "change",
-    [
-        {"theme": "x", "ui_zoom": 1.5, "config_version": 99},
-        {"review_words_before_mining": True},  # the Video tab's run option
-        {"condenser_padding_ms": 999},  # a Condense tab option
-        {"downloader_write_subtitles": True},  # a Download tab option
-        {"media_temp_folder": Path("/elsewhere")},  # the API sets its own
-    ],
-)
-def test_staleness_ignores_non_mining_fields(test_config, change) -> None:
-    assert settings.staleness_view(replace(test_config, **change)) == settings.staleness_view(test_config)
-
-
-@pytest.mark.parametrize(
-    "change", [{"anki_deck_name": "Other"}, {"min_frequency_rank": 500}, {"merge_incomplete_cues": True}]
-)
-def test_staleness_sees_mining_fields(test_config, change) -> None:
-    assert settings.staleness_view(replace(test_config, **change)) != settings.staleness_view(test_config)
-
-
-def test_staleness_view_is_json_safe(test_config) -> None:
-    json.dumps(settings.staleness_view(test_config))

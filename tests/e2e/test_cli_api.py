@@ -1,4 +1,4 @@
-"""The --api two-call flow against the real pipeline: a subprocess, a seeded home, a fake Anki, real ffmpeg.
+"""The --api mine call against the real pipeline: a subprocess, a seeded home, a fake Anki, real ffmpeg.
 
 Marked ``network`` (loopback FakeAnkiConnect), not ``e2e``, so it runs in the
 gate like tests/e2e/test_cli_mine.py.
@@ -25,7 +25,6 @@ from tests.e2e.app_config import build_app_config
 from tests.e2e.config import E2EConfig
 from tests.e2e.fixtures_dictionary import seed_offline_dict
 from tests.e2e.fixtures_media import get_test_video
-from tests.e2e.fixtures_subtitle import get_test_srt
 
 pytestmark = [
     pytest.mark.network,  # real loopback socket; suppresses the tripwire
@@ -70,8 +69,20 @@ def home(isolated_home: Path, fake_anki):
     return isolated_home, fake_anki
 
 
-def _prepare(home: Path, runs_dir: Path, run_id: str, video: Path, subtitle: Path) -> dict:
-    run_file = runs_dir.parent / f"{run_id}.run.json"
+def _srt(cues: list[tuple[float, float, str]]) -> str:
+    def stamp(seconds: float) -> str:
+        ms = round(seconds * 1000)
+        return f"{ms // 3_600_000:02}:{ms // 60_000 % 60:02}:{ms // 1000 % 60:02},{ms % 1000:03}"
+
+    return "\n".join(f"{i}\n{stamp(a)} --> {stamp(b)}\n{text}\n" for i, (a, b, text) in enumerate(cues, 1))
+
+
+def _plain(field_html: str) -> str:
+    return html.unescape(re.sub(r"<[^>]+>", "", field_html))
+
+
+def _mine(home: Path, tmp_path: Path, runs_dir: Path, video: Path, subtitle: Path, words: list[dict]) -> dict:
+    run_file = tmp_path / "run.json"
     run_file.write_text(
         json.dumps(
             {
@@ -86,33 +97,26 @@ def _prepare(home: Path, runs_dir: Path, run_id: str, video: Path, subtitle: Pat
                     "max_frequency_rank": 0,
                     "merge_incomplete_cues": True,
                     "deduplicate_sentences": False,
+                    "allow_duplicate_cards": False,  # the re-mine below must come back duplicate
                     "anki_fields": _EXTRA_FIELDS,
                 },
                 "episodes": [
-                    {"run_id": run_id, "video_file": str(video), "subtitle_file": str(subtitle), "tags": "job::1"}
+                    {
+                        "run_id": "ep-01",
+                        "video_file": str(video),
+                        "subtitle_file": str(subtitle),
+                        "tags": "job::1",
+                        "words": words,
+                    }
                 ],
             }
         ),
         encoding="utf-8",
     )
-    verdict = _api(home, "prepare", str(run_file))
-    assert verdict["ok"] is True and verdict["runs"][0]["file"] == "candidates.json", verdict
-    return json.loads((runs_dir / run_id / "candidates.json").read_text(encoding="utf-8"))
+    return _api(home, "mine", str(run_file))
 
 
-def _srt(cues: list[tuple[float, float, str]]) -> str:
-    def stamp(seconds: float) -> str:
-        ms = round(seconds * 1000)
-        return f"{ms // 3_600_000:02}:{ms // 60_000 % 60:02}:{ms // 1000 % 60:02},{ms % 1000:03}"
-
-    return "\n".join(f"{i}\n{stamp(a)} --> {stamp(b)}\n{text}\n" for i, (a, b, text) in enumerate(cues, 1))
-
-
-def _plain(field_html: str) -> str:
-    return html.unescape(re.sub(r"<[^>]+>", "", field_html))
-
-
-def test_api_prepare_commit_round_trip(home, tmp_path) -> None:
+def test_api_mine_round_trip(home, tmp_path) -> None:
     test_home, fake = home
     fake.seed_model(E2EConfig().note_type, ["Front", "Back", *_EXTRA_FIELDS.values()])
     fields = {"word": "Front", **_EXTRA_FIELDS}
@@ -121,73 +125,62 @@ def test_api_prepare_commit_round_trip(home, tmp_path) -> None:
     assert (get_media_duration_seconds(video, "ffprobe") or 0) >= 5
     runs_dir = tmp_path / "runs"
     runs_dir.mkdir()
-
-    # A throwaway prepare on the fixture subtitle yields two lines whose words the seeded dictionary defines.
-    scout = _prepare(test_home, runs_dir, "scout", video, Path(get_test_srt()))
-    first = scout["candidates"][0]
-    other = next(c for c in scout["candidates"] if c["line"] != first["line"])
-    a_text, b_text = scout["lines"][first["line"]][3], scout["lines"][other["line"]][3]
-
-    # `first` sits on lines 0 and 2 (line 2 reads differently), `other` on line 1, all inside the video.
+    # 本 and 買う sit on lines 0 and 2 (line 2 reads differently); 学校 on line 1 only.
     subtitle = tmp_path / "ep.ja.srt"
-    subtitle.write_text(_srt([(0.5, 1.5, a_text), (1.7, 2.7, b_text), (2.9, 3.9, "ねえ、" + a_text)]), encoding="utf-8")
-    doc = _prepare(test_home, runs_dir, "ep-01", video, subtitle)
-    assert fake.note_count() == 0  # prepare writes nothing to Anki
-    lines = doc["lines"]
-    by_form = {c["mined_form"]: c for c in doc["candidates"]}
-    assert 2 in by_form[first["mined_form"]]["sentence_candidates"] and lines[2][3] != lines[0][3]
-
-    commit_file = tmp_path / "commit.json"
-    commit_file.write_text(
-        json.dumps(
-            {
-                "schema": 1,
-                "run_dir": str(runs_dir),
-                "runs": [
-                    {
-                        "run_id": "ep-01",
-                        "words": [
-                            {"mined_form": first["mined_form"], "line": 2, "line_expansion": [0, 0]},
-                            {"mined_form": other["mined_form"], "line": 1, "line_expansion": [0, 1]},
-                            {"mined_form": "notaword"},
-                        ],
-                    }
-                ],
-            }
+    subtitle.write_text(
+        _srt(
+            [
+                (0.5, 1.5, "新しい本を買いました"),
+                (1.7, 2.7, "今日は学校で勉強する"),
+                (2.9, 3.9, "ねえ、新しい本を買いました"),
+            ]
         ),
         encoding="utf-8",
     )
-    verdict = _api(test_home, "commit", str(commit_file))
+    words = [
+        {"word": "本", "line_start": 2.9, "line_expansion": [0, 0]},
+        {"word": "学校", "line_start": 1.7, "line_expansion": [0, 1]},
+        {"word": "買う", "line_text": "ねえ", "line_expansion": [0, 0]},
+        {"word": "本"},
+        {"word": "notaword"},
+    ]
+    verdict = _mine(test_home, tmp_path, runs_dir, video, subtitle, words)
     assert verdict["ok"] is True and verdict["runs"][0]["file"] == "result-1.json", verdict
     result = json.loads((runs_dir / "ep-01" / "result-1.json").read_text(encoding="utf-8"))
-    rows = {w["mined_form"]: w for w in result["words"]}
-    assert rows["notaword"]["status"] == "not_found"
-    assert rows[first["mined_form"]]["status"] == rows[other["mined_form"]]["status"] == "created", result
-    assert rows[other["mined_form"]]["line_range"] == [1, 2]
-    # the per-word cut record ran for real: both clips and pictures were cut
-    assert rows[first["mined_form"]]["media_missing"] == rows[other["mined_form"]]["media_missing"] == []
-    assert result["media_store_failures"] == 0
+    rows = result["words"]
+    assert [(r["word"], r["status"]) for r in rows] == [
+        ("本", "created"),
+        ("学校", "created"),
+        ("買う", "created"),
+        ("本", "duplicate"),
+        ("notaword", "not_found"),
+    ], result
+    assert [r["line_start"] for r in rows[:3]] == [2.9, 1.7, 2.9]
+    assert all(r["media_missing"] == [] for r in rows[:3]) and result["media_store_failures"] == 0
 
-    # Review focus 6: the chosen line and the merge reach the note itself.
+    # The chosen line and the merge reach the notes themselves.
     notes = {_plain(n[fields["word"]]): n for n in fake.notes(DECK)}
-    assert set(notes) == {first["mined_form"], other["mined_form"]}
-    first_sentence = _plain(notes[first["mined_form"]][fields["sentence"]])
-    assert first_sentence == lines[2][3] == rows[first["mined_form"]]["sentence"]
-    assert _plain(notes[other["mined_form"]][fields["sentence"]]) == rows[other["mined_form"]]["sentence"]
-    assert rows[other["mined_form"]]["sentence"] == f"{lines[1][3]} {lines[2][3]}"
+    assert set(notes) == {"本", "学校", "買う"}
+    for row in rows[:3]:
+        assert _plain(notes[row["word"]][fields["sentence"]]) == row["sentence"]
+    assert rows[0]["sentence"].startswith("ねえ") and rows[2]["sentence"].startswith("ねえ")
+    assert "学校" in rows[1]["sentence"] and "ねえ" in rows[1]["sentence"]  # merged with the line after
     assert not (runs_dir / "ep-01" / "media").exists()
     assert (test_home / "anki_miner.api.log").exists()
-    # Review focus 4: neither call touched the known-words or stats databases.
+    # The call touched neither the known-words nor the stats database.
     config = GUIConfigManager.load_config()
     assert not resolve_known_words_db_path(config).exists() and not config.stats_db_path.exists()
 
-    subtitle.write_text(subtitle.read_text(encoding="utf-8") + "\n", encoding="utf-8")
-    verdict = _api(test_home, "commit", str(commit_file))
-    assert verdict["runs"][0]["error"] == "RUN_STALE" and verdict["runs"][0]["file"] is None
+    # Mining the run again: Anki now has every word, and nothing new is written.
+    verdict = _mine(test_home, tmp_path, runs_dir, video, subtitle, words[:3])
+    assert verdict["runs"][0]["file"] == "result-2.json", verdict
+    again = json.loads((runs_dir / "ep-01" / "result-2.json").read_text(encoding="utf-8"))
+    assert [r["status"] for r in again["words"]] == ["duplicate"] * 3, again
+    assert len(fake.notes(DECK)) == 3
 
 
 def test_api_check_and_version(home) -> None:
     test_home, _fake = home
-    assert _api(test_home, "version")["result"]["commands"][0] == "prepare"
+    assert _api(test_home, "version")["result"]["commands"][0] == "mine"
     check = _api(test_home, "check", "--language", "ja")
     assert {i["name"] for i in check["result"]["items"]} >= {"anki", "deck", "dictionary", "ffmpeg"}

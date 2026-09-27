@@ -1,7 +1,7 @@
-"""``--api``: the two-call mining API for other programs (API.md).
+"""``--api``: the mining API for other programs (API.md).
 
 Each call writes exactly one JSON verdict line to fd 1 and exits 0; any other
-exit is a crash. ``prepare`` and ``commit`` hold the instance lock; ``check``,
+exit is a crash. ``mine`` holds the instance lock; ``check``,
 ``version``, ``profiles`` and ``settings-export`` run at any time. The log goes
 to ``anki_miner.api.log`` (installed by ``cli.entry`` before this runs).
 """
@@ -36,8 +36,7 @@ def build_parser() -> argparse.ArgumentParser:
     """The ``--api`` grammar (API.md, "Calling it")."""
     parser = _Parser(prog="AnkiMiner --api")
     commands = parser.add_subparsers(dest="command", required=True, parser_class=_Parser)
-    commands.add_parser("prepare").add_argument("run_file", type=Path)
-    commands.add_parser("commit").add_argument("commit_file", type=Path)
+    commands.add_parser("mine").add_argument("run_file", type=Path)
     check = commands.add_parser("check")
     check.add_argument("--profile")
     check.add_argument("--language", required=True)
@@ -94,13 +93,11 @@ def _dispatch(args: argparse.Namespace) -> dict[str, object]:
 
 
 def _run(args: argparse.Namespace) -> dict[str, object]:
-    """prepare or commit: the input file checked first, then the runs under the instance lock."""
+    """mine: the run file checked first, then the runs under the instance lock."""
     from anki_miner.cli.api import files, runs
     from anki_miner.cli.entry import Busy, _cancel_on_signals, acquire_run_lock
 
-    prepare = args.command == "prepare"
-    data = files.read_json_file(args.run_file if prepare else args.commit_file)
-    job = files.parse_run_file(data) if prepare else files.parse_commit_file(data)
+    job = files.parse_run_file(files.read_json_file(args.run_file))
     try:
         lock = acquire_run_lock()
     except Busy as exc:
@@ -108,10 +105,7 @@ def _run(args: argparse.Namespace) -> dict[str, object]:
     try:
         cancel = threading.Event()
         with _cancel_on_signals(cancel):
-            if isinstance(job, files.RunFile):
-                verdicts = runs.prepare_runs(job, cancel)
-            else:
-                verdicts = runs.commit_runs(job, cancel)
+            verdicts = runs.mine_runs(job, cancel)
     finally:
         lock.unlock()
     # With several runs the call is ok only if every run is; each run carries its own error.
