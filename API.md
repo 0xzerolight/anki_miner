@@ -89,7 +89,7 @@ Allowed `config` keys:
 
 `anki_fields` and `card_type_marker_fields` merge key by key into the profile's. An unknown key, a value of the wrong type, or a value Anki Miner's settings refuse gives `BAD_RUN_FILE`. The ranges themselves are not checked.
 
-API runs never subtract words the user already knows (Anki's cards, the known-words list, the ignore list): the caller names only words it wants mined. The profile's other filters still apply, so use `config` to turn off any that could remove a named word.
+API runs never subtract words the user already knows (Anki's cards, the known-words list, the ignore list): the caller names only words it wants mined. The profile's other filters still apply, so use `config` to turn off any that could remove a named word. Two steps cannot be turned off from `config`: the name lists, which remove words that are names, and, unless `allow_duplicate_cards` is on, the merge of words that share one dictionary entry, which keeps the first. A word either step removes comes back `not_found`.
 
 An episode:
 
@@ -117,7 +117,7 @@ A word:
 - **Matching the word.** `word` is compared after Unicode NFC normalization. It names the word whose card front equals it. When none does, it names a word whose dictionary form equals it: the one on the line nearest `line_start`, else on a line containing `line_text`, else the first.
 - **Choosing the line.** A word can be mined from any line it appears on.
   - `line_start` takes the line starting nearest to it; a tie goes to the earlier line.
-  - `line_text` takes the first line containing it, compared after NFKC normalization with whitespace ignored. When no line contains it, the word keeps its own line.
+  - `line_text` takes the first line containing it. Both are compared after the cleaning the subtitle lines get (markup, speaker tags, furigana readings, the profile's text filter) and NFKC normalization, with whitespace ignored, so a whole line copied from the file matches. When no line contains it, the word keeps its own line.
   - With both, `line_start` wins.
   - With neither, the word keeps its own line: its first in the episode, or the line the i+1 filter chose when that filter is on.
 - **Merging lines.** Left out, `line_expansion` is the automatic merge Anki Miner gives the chosen line (none with `merge_incomplete_cues` off); `[0, 0]` means no merge. Merged lines stop at the file's ends and at 30 seconds including the audio padding, as in the Word Curator. Lines after the chosen one are added first, then lines before.
@@ -133,7 +133,7 @@ Before any episode runs, `mine` checks:
 
 A failure refuses the call with `SETUP_ERROR`, or with `ANKI_UNREACHABLE` when Anki does not answer. Per episode, a video that does not open gives `VIDEO_UNREADABLE`, and a subtitle that cannot be read gives `SUBTITLE_UNREADABLE`; the other episodes still run.
 
-Episodes run one at a time, and each run's `result-<n>.json` is written as it ends, before the next starts. Nothing is retried: mine the same `run_id` again with any subset of the words. The media is cut again, and a word Anki now has comes back `duplicate` (unless `allow_duplicate_cards` is on).
+Episodes run one at a time, and each run's `result-<n>.json` is written as it ends, before the next starts. Nothing is retried: mine the same `run_id` again with any subset of the words. The media is cut again, and a word Anki now has comes back `duplicate` (with `allow_duplicate_cards` on, a word already in the run's deck).
 
 `mine` writes to Anki, to its run folder, and to the pronunciation-audio cache in Anki Miner's data folder, which the app shares.
 
@@ -162,7 +162,7 @@ Episodes run one at a time, and each run's `result-<n>.json` is written as it en
 | `duplicate` | Anki already has the word, or an earlier entry named the same word |
 | `refused` | Anki added no note although its duplicate check passed |
 | `no_definition` | no dictionary defines it |
-| `media_failed` | its clip or picture could not be cut |
+| `media_failed` | no card: its picture could not be cut (its audio clip, when no picture field is mapped) |
 | `not_found` | the episode does not produce the word, or one of the profile's filters removed it |
 | `not_attempted` | the run stopped (cancelled or failed) before reaching it |
 | `uncertain` | its note was being added when the connection failed; check Anki before mining it again |
@@ -226,7 +226,7 @@ Otherwise:
 - `media_missing` covers the picture and the audio clip. Missing pronunciation audio is not reported, and media Anki failed to store is counted for the run, not per word.
 - `file` is also `null` for a run its own checks refused (`SETUP_ERROR`, `ANKI_UNREACHABLE`), and for a run a signal cancelled before it started.
 - `line_start` is compared with the line starts as written in the subtitle file, not after the offset. The two differ only where a negative offset moves lines before 0.
-- `line_text` also ignores whitespace, and an empty `word` or `line_text` is refused.
+- `line_text` is also cleaned the way the subtitle lines are and ignores whitespace, and an empty `word` or `line_text` is refused.
 - Where `line_expansion` is cut to 30 seconds, lines after the chosen one are added first.
 
 ## Example (Python)
@@ -250,7 +250,8 @@ def api(*args):
 
 pathlib.Path("run.json").write_text(json.dumps({
     "schema": 1, "run_dir": str(runs.resolve()), "language": "ja",
-    "config": {"anki_deck_name": "Mining", "min_frequency_rank": 0, "max_frequency_rank": 0},
+    "config": {"anki_deck_name": "Mining", "min_frequency_rank": 0, "max_frequency_rank": 0,
+               "deduplicate_sentences": False},
     "episodes": [{"run_id": "ep05", "video_file": "ep05.mkv", "subtitle_file": "ep05.ja.srt",
                   "words": [{"word": "約束", "line_start": 812.3},
                             {"word": "今日", "line_start": 15.02, "line_expansion": [0, 1]},

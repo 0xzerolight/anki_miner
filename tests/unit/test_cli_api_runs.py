@@ -122,6 +122,13 @@ def test_a_run_that_finished_before_curation_reports_not_found(services, tmp_pat
     assert result["outcome"] == "success" and {w["status"] for w in result["words"]} == {"not_found"}
 
 
+def test_line_text_goes_through_the_parsers_own_cleaner(services, tmp_path, video) -> None:
+    services.processor.subtitle_parser._clean_line_text.side_effect = lambda text: text.replace("（男性）", "")
+    words = [{"word": "約束", "line_text": "（男性）約束だよ"}]
+    runs.mine_runs(_run_file(tmp_path, video, words=words), threading.Event())
+    assert _result_file(tmp_path)["words"][0]["line_start"] == 30.0
+
+
 def test_mine_builds_processor_without_db_or_stats(services, tmp_path, video) -> None:
     runs.mine_runs(_run_file(tmp_path, video), threading.Event())
     args, kwargs = services.factory.call_args

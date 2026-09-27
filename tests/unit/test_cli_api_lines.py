@@ -5,8 +5,11 @@ from __future__ import annotations
 import unicodedata
 from dataclasses import replace
 
+import pytest
+
 from anki_miner.cli.api import files, lines
 from anki_miner.models.word import TokenizedWord
+from anki_miner.services.subtitle_parser import SubtitleParserService
 
 ENTRIES = [
     (12.48, 14.90, "約束したでしょう"),
@@ -203,3 +206,23 @@ def test_a_word_off_every_line_keeps_its_own_sentence_and_times() -> None:
     assert chosen.sentence == "not in the file"
     [row] = selection.report(lines.Fates())
     assert row["line_start"] is None and row["sentence"] == "not in the file" and row["start"] == 15.02
+
+
+@pytest.mark.parametrize(
+    "raw", ["（男性）約束だよ", "約束(やくそく)だよ", "{\\an8}約束だよ", "約束\\Nだよ", "<i>約束だよ</i>"]
+)
+def test_line_text_is_cleaned_the_way_the_lines_were(test_config, raw) -> None:
+    # a whole line as the subtitle file holds it: speaker tag, furigana, override tag, hard break, markup
+    clean = SubtitleParserService(test_config)._clean_line_text
+    entries = [(1.0, 2.0, "約束したでしょう"), (3.0, 4.0, clean(raw))]
+    selection = lines.WordSelection([R("約束", line_text=raw)], entries, entries, [(0, 0)] * 2, 30.0, clean=clean)
+    [chosen] = selection([_on_lines("約束", 0, 1, entries=entries)])
+    assert chosen.start_time == 3.0
+
+
+def test_line_text_that_cleans_to_nothing_is_matched_as_written() -> None:
+    selection = lines.WordSelection(
+        [R("約束", line_text="(やくそく)")], ENTRIES, ENTRIES, MERGES, 30.0, clean=lambda text: ""
+    )
+    [chosen] = selection([_on_lines("約束", 3, 0)])
+    assert chosen.start_time == 30.0  # its own line, not the first line an empty needle would match

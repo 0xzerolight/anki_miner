@@ -140,7 +140,12 @@ def _mine(
         except SubtitleParseError as exc:
             raise ApiError(SUBTITLE_UNREADABLE, str(exc)) from exc
         selection = WordSelection(
-            episode.words, entries, raw, line_merges(config, entries), merge_budget_seconds(config.audio_padding)
+            episode.words,
+            entries,
+            raw,
+            line_merges(config, entries),
+            merge_budget_seconds(config.audio_padding),
+            clean=parser._clean_line_text,  # the cleaner parse_raw_entries applied to the lines
         )
         with CancelWatcher(folder, cancel_all) as cancel:
             try:

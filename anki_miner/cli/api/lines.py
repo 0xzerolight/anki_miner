@@ -14,7 +14,7 @@ times the caller wrote.
 from __future__ import annotations
 
 import unicodedata
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 
 from anki_miner.cli.api.files import WordRequest
@@ -116,12 +116,17 @@ class WordSelection:
         raw: Entries,
         merges: Sequence[tuple[int, int]],
         budget: float,
+        *,
+        clean: Callable[[str], str] | None = None,
     ) -> None:
         self._requests = list(requests)
         self._entries = entries
         self._raw = raw
         self._merges = merges
         self._budget = budget
+        #: The cleaner the lines went through (markup, speaker tags, furigana, the
+        #: user's filter), so a ``line_text`` copied from the file matches its line.
+        self._clean = clean or (lambda text: text)
         self._chosen: dict[int, _Picked] = {}  # by request index
         self._repeats: dict[int, str] = {}  # request index -> the mined_form an earlier request took
         #: False until the processor reached the curation step.
@@ -171,7 +176,8 @@ class WordSelection:
             # min keeps the first of equals: a tie goes to the earlier line
             return min(placed, key=lambda p: abs(self._raw[p.line or 0][0] - start))
         if request.line_text is not None:
-            needle = _fold(request.line_text)
+            # A needle the cleaner empties would match every line: keep it as written.
+            needle = _fold(self._clean(request.line_text)) or _fold(request.line_text)
             for p in placed:
                 if needle in _fold(self._entries[p.line or 0][2]):
                     return p
