@@ -2,7 +2,7 @@
 
 Other programs can mine with an installed Anki Miner by running it with a `mine` command. The run uses the user's own Anki Miner settings (mining language, deck, note type, filters, dictionaries) and prints one JSON object per line, so a calling tool can follow progress and read the result.
 
-For a two-call prepare/commit API where the calling program picks the words, see API.md.
+For an API where the calling program names the words to mine, see API.md.
 
 Requirements: Anki is running with the AnkiConnect add-on, and Anki Miner has been set up once (its window has saved settings).
 
