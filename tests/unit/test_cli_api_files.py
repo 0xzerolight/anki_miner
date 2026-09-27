@@ -1,4 +1,4 @@
-"""--api run/commit files and the run folder: progress, cancel file, saved run."""
+"""--api run file and the run folder: progress, cancel file, result numbering."""
 
 from __future__ import annotations
 
@@ -12,6 +12,8 @@ import pytest
 from anki_miner.cli.api import files, runfolder
 from anki_miner.cli.api.contract import ApiError
 
+R = files.WordRequest
+
 
 def _run_file(tmp_path: Path, **episode) -> dict:
     return {
@@ -20,7 +22,9 @@ def _run_file(tmp_path: Path, **episode) -> dict:
         "profile": None,
         "language": "ja",
         "config": {},
-        "episodes": [{"run_id": "ep-01", "video_file": "v.mkv", "subtitle_file": "s.srt", **episode}],
+        "episodes": [
+            {"run_id": "ep-01", "video_file": "v.mkv", "subtitle_file": "s.srt", "words": [{"word": "約束"}], **episode}
+        ],
     }
 
 
@@ -29,6 +33,7 @@ def test_parse_run_file(tmp_path: Path) -> None:
     [ep] = run.episodes
     assert run.run_dir == tmp_path.resolve() and ep.run_id == "ep-01" and ep.tags == "job::1"
     assert ep.process_kwargs()["subtitle_offset"] == 1.0 and ep.process_kwargs()["audio_track_override"] == 2
+    assert ep.words == (files.WordRequest("約束"),)
 
 
 @pytest.mark.parametrize(
@@ -43,6 +48,9 @@ def test_parse_run_file(tmp_path: Path) -> None:
         lambda d: d["episodes"].append(dict(d["episodes"][0])),  # duplicate run_id
         lambda d: d.update(episodes=[]),
         lambda d: d.update(run_dir="/definitely/not/here"),
+        lambda d: d["episodes"][0].pop("words"),
+        lambda d: d["episodes"][0].update(subtitle_offset=float("inf")),
+        lambda d: d["episodes"][0].update(subtitle_offset=10**400),
     ],
 )
 def test_parse_run_file_rejects(tmp_path: Path, mutate) -> None:
@@ -53,36 +61,54 @@ def test_parse_run_file_rejects(tmp_path: Path, mutate) -> None:
     assert err.value.code == "BAD_RUN_FILE"
 
 
-def test_parse_commit_file(tmp_path: Path) -> None:
-    data = {
-        "schema": 1,
-        "run_dir": str(tmp_path),
-        "runs": [
-            {
-                "run_id": "ep-01",
-                "words": [{"mined_form": "約束", "line": 57}, {"mined_form": "今日", "line_expansion": [0, 1]}],
-            }
-        ],
-    }
-    [run] = files.parse_commit_file(data).runs
-    assert run.words[0] == files.WordPick("約束", 57, None)
-    assert run.words[1] == files.WordPick("今日", None, (0, 1))
+def test_subtitle_offset_left_out_or_null_is_zero(tmp_path: Path) -> None:
+    for data in (_run_file(tmp_path), _run_file(tmp_path, subtitle_offset=None)):
+        assert files.parse_run_file(data).episodes[0].subtitle_offset == 0.0
+
+
+def test_parse_words(tmp_path: Path) -> None:
+    words = [
+        {"word": "約束", "line_start": 812.3},
+        {"word": "今日", "line_start": 15, "line_expansion": [0, 1]},
+        {"word": "言う", "line_text": "今日こそは言うよ"},
+        {"word": "言う"},  # the same word twice is the run's to report, not a refusal
+    ]
+    [ep] = files.parse_run_file(_run_file(tmp_path, words=words)).episodes
+    # R is a module-level alias (a function-local one trips ruff N806)
+    assert ep.words == (R("約束", 812.3), R("今日", 15.0, None, (0, 1)), R("言う", None, "今日こそは言うよ"), R("言う"))
 
 
 @pytest.mark.parametrize(
     "words",
     [
         [],
-        [{"mined_form": "a"}, {"mined_form": "a"}],
-        [{"mined_form": ""}],
-        [{"mined_form": "a", "line": "1"}],
-        [{"mined_form": "a", "line_expansion": [1]}],
-        [{"mined_form": "a", "extra": 1}],
+        "約束",
+        [{"line_start": 1}],
+        [{"word": 1}],
+        [{"word": ""}],
+        [{"word": "a", "line_start": -1}],
+        [{"word": "a", "line_start": float("nan")}],
+        [{"word": "a", "line_start": "1"}],
+        [{"word": "a", "line_text": 5}],
+        [{"word": "a", "line_text": " "}],
+        [{"word": "a", "line_expansion": [1]}],
+        [{"word": "a", "line_expansion": [0, -1]}],
+        [{"word": "a", "line_expansion": [True, 0]}],
+        [{"word": "a", "extra": 1}],
     ],
 )
-def test_parse_commit_file_rejects(tmp_path: Path, words) -> None:
+def test_parse_words_rejects(tmp_path: Path, words) -> None:
     with pytest.raises(ApiError) as err:
-        files.parse_commit_file({"schema": 1, "run_dir": str(tmp_path), "runs": [{"run_id": "r", "words": words}]})
+        files.parse_run_file(_run_file(tmp_path, words=words))
+    assert err.value.code == "BAD_RUN_FILE"
+
+
+def test_nan_line_start_in_the_file_is_refused(tmp_path: Path) -> None:
+    path = tmp_path / "run.json"
+    data = _run_file(tmp_path, words=[{"word": "a", "line_start": float("nan")}])
+    path.write_text(json.dumps(data), encoding="utf-8")  # json writes (and reads) a bare NaN
+    with pytest.raises(ApiError) as err:
+        files.parse_run_file(files.read_json_file(path))
     assert err.value.code == "BAD_RUN_FILE"
 
 
@@ -91,17 +117,6 @@ def test_read_json_file_refuses_non_json(tmp_path: Path) -> None:
     bad.write_text("{nope", encoding="utf-8")
     with pytest.raises(ApiError):
         files.read_json_file(bad)
-
-
-def test_reset_run_folder_removes_only_api_files(tmp_path: Path) -> None:
-    folder = tmp_path / "ep-01"
-    folder.mkdir()
-    for name in ("candidates.json", "prepared.json", "progress.json", "cancel", "result-1.json", "notes.txt"):
-        (folder / name).write_text("x", encoding="utf-8")
-    (folder / "media").mkdir()
-    runfolder.reset_run_folder(folder)
-    # the caller's pending cancel request stays for the run to act on
-    assert sorted(p.name for p in folder.iterdir()) == ["cancel", "notes.txt"]
 
 
 def test_next_result_path_counts_up(tmp_path: Path) -> None:
@@ -150,28 +165,3 @@ def test_cancel_watcher_uncancelled_run_leaves_no_file(tmp_path: Path) -> None:
     with runfolder.CancelWatcher(tmp_path, threading.Event(), interval=0.01) as cancel:
         time.sleep(0.05)
     assert not cancel.is_set()
-
-
-def test_saved_run_round_trip_and_staleness(tmp_path: Path) -> None:
-    video, subtitle = tmp_path / "v.mkv", tmp_path / "s.srt"
-    video.write_bytes(b"v")
-    subtitle.write_text("1", encoding="utf-8")
-    episode = files.parse_episode({"run_id": "r", "video_file": str(video), "subtitle_file": str(subtitle)}, "ep")
-
-    def capture(view: dict) -> runfolder.SavedRun:
-        return runfolder.SavedRun.capture(
-            profile=None,
-            language="ja",
-            overlay={},
-            episode=episode,
-            config_view=view,
-            indexes=[["dictionary", "jmdict", 1, 2]],
-        )
-
-    saved = capture({"a": 1})
-    runfolder.write_json(tmp_path / "prepared.json", saved.to_json())
-    loaded = runfolder.SavedRun.read(tmp_path)
-    assert loaded == saved and loaded.stale_reason(saved) is None
-    assert "Settings" in loaded.stale_reason(capture({"a": 2}))
-    subtitle.write_text("12", encoding="utf-8")
-    assert "s.srt" in loaded.stale_reason(capture({"a": 1}))

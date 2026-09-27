@@ -1,9 +1,10 @@
-"""--api prepare and commit over mocked services: run folders, verdicts, refusals."""
+"""--api mine over mocked services: run folders, result files, verdicts, refusals."""
 
 from __future__ import annotations
 
 import json
 import threading
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -13,13 +14,20 @@ import pytest
 from anki_miner.cli import runner
 from anki_miner.cli.api import files, runs
 from anki_miner.cli.api.contract import ApiError
+from anki_miner.exceptions import SubtitleParseError
 from anki_miner.models import CANCELLED_ERROR, AnkiWriteState, ProcessingResult
-from tests.unit.test_cli_api_lines import ENTRIES, _with_variants, _word
+from tests.unit.test_cli_api_lines import ENTRIES, _on_lines, _word
+
+WORDS = [{"word": "約束", "line_start": 30.0}, {"word": "無い"}]
 
 
-def _ok_result(new: int = 0) -> ProcessingResult:
+def _result(*, cancelled: bool = False) -> ProcessingResult:
     return ProcessingResult(
-        total_words_found=4, new_words_found=new, cards_created=0, anki_write_state=AnkiWriteState.NO_NOTE_WRITE
+        total_words_found=4,
+        new_words_found=0,
+        cards_created=0,
+        errors=[CANCELLED_ERROR] if cancelled else [],
+        anki_write_state=AnkiWriteState.NO_NOTE_WRITE,
     )
 
 
@@ -30,38 +38,40 @@ def video(tmp_path: Path) -> Path:
     return tmp_path / "v.mkv"
 
 
-def _run_file(tmp_path: Path, video: Path, *, tags: str = "", second: bool = False) -> files.RunFile:
-    episode = {"run_id": "ep-01", "video_file": str(video), "subtitle_file": str(tmp_path / "s.srt"), "tags": tags}
-    episodes = [episode, {**episode, "run_id": "ep-02"}] if second else [episode]
+def _run_file(tmp_path: Path, video: Path, *, second: bool = False, words=WORDS, **episode) -> files.RunFile:
+    first = {"run_id": "ep-01", "video_file": str(video), "subtitle_file": str(tmp_path / "s.srt"), "words": words}
+    first.update(episode)
+    episodes = [first, {**first, "run_id": "ep-02"}] if second else [first]
     return files.parse_run_file(
         {"schema": 1, "run_dir": str(tmp_path), "language": "ja", "config": {}, "episodes": episodes}
     )
 
 
+def _result_file(tmp_path: Path, name: str = "result-1.json") -> dict:
+    return json.loads((tmp_path / "ep-01" / name).read_text(encoding="utf-8"))
+
+
 @pytest.fixture
 def services(test_config):
-    """Every service the runs build, mocked; the processor feeds the callback two words."""
-    ns = SimpleNamespace(words=lambda: [_with_variants("約束", 0, 3), _word("今日", 1)], calls=0)
+    """Every service a run builds, mocked; the processor feeds the callback two words."""
+    ns = SimpleNamespace(words=lambda: [_on_lines("約束", 0, 3), _word("今日", 1)], calls=0)
     processor = MagicMock()
     processor.subtitle_parser.parse_raw_entries.return_value = ENTRIES
-    processor.anki_service.last_created_mined_forms = []
-    processor.anki_service.last_created_note_ids = []
-    processor.anki_service.last_media_store_failures = 0
-    processor.last_media_missing = {}
+    anki = processor.anki_service
+    anki.last_created_mined_forms, anki.last_created_note_ids = [], []
+    anki.last_not_created, anki.last_media_store_failures = {}, 0
+    processor.last_word_drops, processor.last_definition_rejects, processor.last_media_missing = {}, [], {}
 
     def process(*_args, **kwargs):
         kwargs["curation_callback"](ns.words())
-        return _ok_result()
+        return _result()
 
     processor.process_episode.side_effect = process
-    shared = MagicMock()
-    shared.dictionary_registry.usable_enabled.return_value = []
-    shared.frequency_registry = None
     with (
         patch.object(runs.settings, "resolve_run_config", return_value=test_config),
         patch.object(runs, "check_environment"),
         patch.object(runs, "check_card_target") as check_card_target,
-        patch.object(runs, "create_shared_lookup_services", return_value=shared),
+        patch.object(runs, "create_shared_lookup_services", return_value=MagicMock()),
         patch.object(runs, "AnkiService"),
         patch.object(runs, "binary_available", return_value=True),
         patch.object(runs, "get_media_duration_seconds", return_value=1.0) as duration,
@@ -74,18 +84,53 @@ def services(test_config):
         yield ns
 
 
-def test_prepare_writes_candidates_and_saved_run(services, tmp_path, video) -> None:
-    verdicts = runs.prepare_runs(_run_file(tmp_path, video), threading.Event())
-    assert verdicts == [{"run_id": "ep-01", "ok": True, "error": None, "message": None, "file": "candidates.json"}]
-    folder = tmp_path / "ep-01"
-    doc = json.loads((folder / "candidates.json").read_text(encoding="utf-8"))
-    assert [c["mined_form"] for c in doc["candidates"]] == ["約束", "今日"]
-    assert doc["candidates"][0]["sentence_candidates"] == [0, 3]
-    assert (folder / "prepared.json").exists() and not (folder / "media").exists()
+def test_mine_writes_a_result_file_per_run(services, tmp_path, video) -> None:
+    anki = services.processor.anki_service
+    anki.last_created_mined_forms, anki.last_created_note_ids = ["約束"], [1727000000001]
+    services.processor.last_media_missing = {"約束": ["audio"]}
+    [verdict] = runs.mine_runs(_run_file(tmp_path, video), threading.Event())
+    assert verdict == {"run_id": "ep-01", "ok": True, "error": None, "message": None, "file": "result-1.json"}
+    result = _result_file(tmp_path)
+    assert result["outcome"] == "success" and result["error"] is None and result["media_store_failures"] == 0
+    assert result["anki_write_state"] == "no_note_write" and result["failure_is_transient"] is False
+    made, missing = result["words"]
+    assert (made["status"], made["note_id"], made["media_missing"]) == ("created", 1727000000001, ["audio"])
+    assert (made["line_start"], made["sentence"]) == (30.0, "約束だよ")
+    assert (missing["word"], missing["mined_form"], missing["status"]) == ("無い", None, "not_found")
+    assert not (tmp_path / "ep-01" / "media").exists()
+    # mining the run again starts over and keeps the earlier result
+    assert runs.mine_runs(_run_file(tmp_path, video), threading.Event())[0]["file"] == "result-2.json"
+    assert (tmp_path / "ep-01" / "result-1.json").exists()
+
+
+def test_statuses_come_from_the_processor_and_its_anki_service(services, tmp_path, video) -> None:
+    services.words = lambda: [_on_lines("約束", 0, 3), _word("今日", 1), _word("別", 2)]
+    services.processor.anki_service.last_not_created = {"今日": "uncertain"}
+    services.processor.last_word_drops = {"別": "no_definition"}
+    services.processor.last_definition_rejects = [_word("走る", 3)]
+    words = [{"word": w} for w in ("約束", "今日", "別", "走る")]
+    runs.mine_runs(_run_file(tmp_path, video, words=words), threading.Event())
+    statuses = [w["status"] for w in _result_file(tmp_path)["words"]]
+    assert statuses == ["not_attempted", "uncertain", "no_definition", "no_definition"]
+
+
+def test_a_run_that_finished_before_curation_reports_not_found(services, tmp_path, video) -> None:
+    # nothing parsed, or every word filtered out: a success that never opened the curation step
+    services.processor.process_episode.side_effect = lambda *_a, **_kw: _result()
+    runs.mine_runs(_run_file(tmp_path, video), threading.Event())
+    result = _result_file(tmp_path)
+    assert result["outcome"] == "success" and {w["status"] for w in result["words"]} == {"not_found"}
+
+
+def test_line_text_goes_through_the_parsers_own_cleaner(services, tmp_path, video) -> None:
+    services.processor.subtitle_parser._clean_line_text.side_effect = lambda text: text.replace("（男性）", "")
+    words = [{"word": "約束", "line_text": "（男性）約束だよ"}]
+    runs.mine_runs(_run_file(tmp_path, video, words=words), threading.Event())
+    assert _result_file(tmp_path)["words"][0]["line_start"] == 30.0
 
 
 def test_mine_builds_processor_without_db_or_stats(services, tmp_path, video) -> None:
-    runs.prepare_runs(_run_file(tmp_path, video), threading.Event())
+    runs.mine_runs(_run_file(tmp_path, video), threading.Event())
     args, kwargs = services.factory.call_args
     assert args[2] is None  # no stats service
     assert kwargs["with_known_words_db"] is False
@@ -93,103 +138,68 @@ def test_mine_builds_processor_without_db_or_stats(services, tmp_path, video) ->
     assert args[0].media_temp_folder == tmp_path.resolve() / "ep-01" / "media"
 
 
-def test_prepare_episode_tags_add_to_the_profile_tags(services, tmp_path, video, test_config) -> None:
-    runs.prepare_runs(_run_file(tmp_path, video, tags="job::1"), threading.Event())
+def test_episode_tags_add_to_the_profile_tags(services, tmp_path, video, test_config) -> None:
+    runs.mine_runs(_run_file(tmp_path, video, tags="job::1"), threading.Event())
     assert services.factory.call_args.args[0].anki_tags == f"{test_config.anki_tags} job::1".strip()
 
 
-def test_prepare_unreadable_video_fails_that_run_only(services, tmp_path, video) -> None:
+def test_subtitle_offset_left_out_is_zero_not_the_profiles(services, tmp_path, video, test_config) -> None:
+    with patch.object(runs.settings, "resolve_run_config", return_value=replace(test_config, subtitle_offset=2.5)):
+        runs.mine_runs(_run_file(tmp_path, video), threading.Event())
+    parse = services.processor.subtitle_parser.parse_raw_entries
+    assert [c.args[1] for c in parse.call_args_list] == [0.0, 0.0]
+    assert services.processor.process_episode.call_args.kwargs["subtitle_offset"] == 0.0
+
+
+def test_subtitle_offset_shifts_the_lines_and_a_second_parse_keeps_the_files_times(services, tmp_path, video) -> None:
+    runs.mine_runs(_run_file(tmp_path, video, subtitle_offset=-1.5), threading.Event())
+    parse = services.processor.subtitle_parser.parse_raw_entries
+    assert [c.args[1] for c in parse.call_args_list] == [-1.5, 0.0]
+
+
+def test_unreadable_video_fails_that_run_only(services, tmp_path, video) -> None:
     services.duration.side_effect = [None, 1.0]
-    verdicts = runs.prepare_runs(_run_file(tmp_path, video, second=True), threading.Event())
+    verdicts = runs.mine_runs(_run_file(tmp_path, video, second=True), threading.Event())
     assert [v["error"] for v in verdicts] == ["VIDEO_UNREADABLE", None]
+    assert verdicts[0]["file"] is None
 
 
-def test_prepare_card_target_failure_is_call_level(services, tmp_path, video) -> None:
+def test_unreadable_subtitle_fails_that_run_without_a_file(services, tmp_path, video) -> None:
+    services.processor.subtitle_parser.parse_raw_entries.side_effect = SubtitleParseError("No suitable formats")
+    [verdict] = runs.mine_runs(_run_file(tmp_path, video), threading.Event())
+    assert verdict["error"] == "SUBTITLE_UNREADABLE" and verdict["file"] is None
+
+
+def test_card_target_failure_is_call_level(services, tmp_path, video) -> None:
     services.check_card_target.side_effect = runner.SetupFailure("Deck 'X' is not in Anki")
     with pytest.raises(ApiError) as err:
-        runs.prepare_runs(_run_file(tmp_path, video), threading.Event())
+        runs.mine_runs(_run_file(tmp_path, video), threading.Event())
     assert err.value.code == "SETUP_ERROR"
 
 
-def test_prepare_missing_ffmpeg_is_setup_error(services, tmp_path, video) -> None:
+def test_missing_ffmpeg_is_setup_error(services, tmp_path, video) -> None:
     with patch.object(runs, "binary_available", return_value=False), pytest.raises(ApiError) as err:
-        runs.prepare_runs(_run_file(tmp_path, video), threading.Event())
+        runs.mine_runs(_run_file(tmp_path, video), threading.Event())
     assert err.value.code == "SETUP_ERROR" and "ffmpeg" in err.value.message
 
 
-def test_commit_round_trip(services, tmp_path, video) -> None:
-    runs.prepare_runs(_run_file(tmp_path, video), threading.Event())
-    services.processor.anki_service.last_created_mined_forms = ["約束"]
-    services.processor.anki_service.last_created_note_ids = [1727000000001]
-    services.processor.last_media_missing = {"約束": ["audio"]}
-    commit = files.CommitFile(
-        tmp_path.resolve(), (files.CommitRun("ep-01", (files.WordPick("約束", 3), files.WordPick("無い"))),)
-    )
-    [verdict] = runs.commit_runs(commit, threading.Event())
-    assert verdict == {"run_id": "ep-01", "ok": True, "error": None, "message": None, "file": "result-1.json"}
-    result = json.loads((tmp_path / "ep-01" / "result-1.json").read_text(encoding="utf-8"))
-    assert result["outcome"] == "success" and result["error"] is None and result["media_store_failures"] == 0
-    assert result["anki_write_state"] == "no_note_write" and result["failure_is_transient"] is False
-    assert result["words"][0]["media_missing"] == ["audio"]
-    assert [(w["mined_form"], w["status"]) for w in result["words"]] == [("約束", "created"), ("無い", "not_found")]
-    assert result["words"][0]["line_range"] == [3, 3]
-    assert runs.commit_runs(commit, threading.Event())[0]["file"] == "result-2.json"
-
-
-def test_commit_unknown_run(services, tmp_path) -> None:
-    commit = files.CommitFile(tmp_path, (files.CommitRun("nope", (files.WordPick("x"),)),))
-    assert runs.commit_runs(commit, threading.Event())[0]["error"] == "UNKNOWN_RUN"
-
-
-def test_commit_bad_line_refuses_before_mining(services, tmp_path, video) -> None:
-    runs.prepare_runs(_run_file(tmp_path, video), threading.Event())
-    services.processor.process_episode.reset_mock()
-    commit = files.CommitFile(tmp_path.resolve(), (files.CommitRun("ep-01", (files.WordPick("約束", 2),)),))
-    assert runs.commit_runs(commit, threading.Event())[0] == {
-        "run_id": "ep-01",
-        "ok": False,
-        "error": "BAD_LINE",
-        "message": "約束: line 2 is not one of its sentence_candidates.",
-        "file": None,
-    }
-    services.processor.process_episode.assert_not_called()
-
-
-def test_commit_stale_subtitle(services, tmp_path, video) -> None:
-    runs.prepare_runs(_run_file(tmp_path, video), threading.Event())
-    (tmp_path / "s.srt").write_text("changed", encoding="utf-8")
-    commit = files.CommitFile(tmp_path.resolve(), (files.CommitRun("ep-01", (files.WordPick("約束"),)),))
-    verdict = runs.commit_runs(commit, threading.Event())[0]
-    assert verdict["error"] == "RUN_STALE" and "s.srt" in verdict["message"] and verdict["file"] is None
-
-
-def test_commit_cancel_file_stops_one_run(services, tmp_path, video) -> None:
-    runs.prepare_runs(_run_file(tmp_path, video, second=True), threading.Event())
-
+def test_cancel_file_stops_one_run(services, tmp_path, video) -> None:
     def cancelled_first(*_a, **kw):
         if services.calls == 0:
             services.calls += 1
             (tmp_path / "ep-01" / "cancel").touch()
             assert kw["cancel_event"].wait(2)
-            return ProcessingResult(
-                total_words_found=0,
-                new_words_found=0,
-                cards_created=0,
-                errors=[CANCELLED_ERROR],
-                anki_write_state=AnkiWriteState.NO_NOTE_WRITE,
-            )
+            return _result(cancelled=True)
         kw["curation_callback"](services.words())
-        return _ok_result(new=1)
+        return _result()
 
     services.processor.process_episode.side_effect = cancelled_first
-    commit = files.CommitFile(
-        tmp_path.resolve(),
-        (files.CommitRun("ep-01", (files.WordPick("約束"),)), files.CommitRun("ep-02", (files.WordPick("約束"),))),
-    )
-    first, second = runs.commit_runs(commit, threading.Event())
+    first, second = runs.mine_runs(_run_file(tmp_path, video, second=True), threading.Event())
     assert first["error"] == "CANCELLED" and first["file"] == "result-1.json"
     assert second["ok"] is True
     assert not (tmp_path / "ep-01" / "cancel").exists()
+    result = _result_file(tmp_path)
+    assert result["outcome"] == "cancelled" and {w["status"] for w in result["words"]} == {"not_attempted"}
 
 
 def _honours_cancel(services):
@@ -197,44 +207,34 @@ def _honours_cancel(services):
 
     def process(*_a, **kw):
         if kw["cancel_event"].wait(0.5):
-            return ProcessingResult(
-                total_words_found=0,
-                new_words_found=0,
-                cards_created=0,
-                errors=[CANCELLED_ERROR],
-                anki_write_state=AnkiWriteState.NO_NOTE_WRITE,
-            )
+            return _result(cancelled=True)
         kw["curation_callback"](services.words())
-        return _ok_result()
+        return _result()
 
     return process
 
 
-def test_prepare_cancel_file_already_there_cancels_that_run(services, tmp_path, video) -> None:
+def test_cancel_file_already_there_cancels_that_run(services, tmp_path, video) -> None:
     # A Windows caller has no signals: it stops queued episodes by creating their cancel files first.
     (tmp_path / "ep-01").mkdir()
     (tmp_path / "ep-01" / "cancel").touch()
     services.processor.process_episode.side_effect = _honours_cancel(services)
-    first, second = runs.prepare_runs(_run_file(tmp_path, video, second=True), threading.Event())
+    first, second = runs.mine_runs(_run_file(tmp_path, video, second=True), threading.Event())
     assert first["error"] == "CANCELLED" and second["ok"] is True
     assert not (tmp_path / "ep-01" / "cancel").exists()
-    assert not (tmp_path / "ep-01" / "candidates.json").exists()
 
 
-def test_relative_episode_paths_survive_a_commit_from_another_folder(services, tmp_path, video, monkeypatch) -> None:
+def test_signal_before_a_run_cancels_it_without_a_file(services, tmp_path, video) -> None:
+    everything = threading.Event()
+    everything.set()
+    [verdict] = runs.mine_runs(_run_file(tmp_path, video), everything)
+    assert verdict["error"] == "CANCELLED" and verdict["file"] is None
+    services.processor.process_episode.assert_not_called()
+
+
+def test_relative_paths_are_taken_from_the_callers_folder(services, tmp_path, video, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
-    job = files.parse_run_file(
-        {
-            "schema": 1,
-            "run_dir": ".",
-            "language": "ja",
-            "episodes": [{"run_id": "ep-01", "video_file": "v.mkv", "subtitle_file": "s.srt"}],
-        }
-    )
-    assert runs.prepare_runs(job, threading.Event())[0]["ok"] is True
-    elsewhere = tmp_path / "elsewhere"
-    elsewhere.mkdir()
-    monkeypatch.chdir(elsewhere)
-    commit = files.CommitFile(tmp_path.resolve(), (files.CommitRun("ep-01", (files.WordPick("約束"),)),))
-    verdict = runs.commit_runs(commit, threading.Event())[0]
-    assert verdict["ok"] is True, verdict
+    episode = {"run_id": "ep-01", "video_file": "v.mkv", "subtitle_file": "s.srt", "words": WORDS}
+    job = files.parse_run_file({"schema": 1, "run_dir": ".", "language": "ja", "episodes": [episode]})
+    assert runs.mine_runs(job, threading.Event())[0]["ok"] is True
+    assert services.processor.process_episode.call_args.args[0] == tmp_path.resolve() / "v.mkv"

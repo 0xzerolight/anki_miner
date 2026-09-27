@@ -1,60 +1,29 @@
-"""One run's folder, ``<run_dir>/<run_id>/``: its files, progress, cancel file and saved run."""
+"""One run's folder, ``<run_dir>/<run_id>/``: its result files, progress and cancel file."""
 
 from __future__ import annotations
 
 import json
 import logging
 import re
-import shutil
 import threading
 import time
-from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any
 
-from anki_miner import __version__
-from anki_miner.cli.api.files import Episode
 from anki_miner.utils.atomic_io import atomic_write_path
 
 logger = logging.getLogger(__name__)
 
-CANDIDATES = "candidates.json"
-SAVED_RUN = "prepared.json"
 PROGRESS = "progress.json"
 CANCEL = "cancel"
 MEDIA = "media"
 _RESULT = re.compile(r"result-(\d+)\.json")
 
 
-def reset_run_folder(folder: Path) -> None:
-    """prepare on an existing run_id replaces it: this API's own files go, anything else stays.
-
-    A ``cancel`` file stays too: it is the caller's request to stop this run
-    (a Windows caller has no signals and cancels queued episodes this way), and
-    the run's CancelWatcher acts on it and then deletes it.
-    """
-    folder.mkdir(exist_ok=True)
-    for name in (CANDIDATES, SAVED_RUN, PROGRESS):
-        (folder / name).unlink(missing_ok=True)
-    for path in folder.iterdir():
-        if _RESULT.fullmatch(path.name):
-            path.unlink(missing_ok=True)
-    shutil.rmtree(folder / MEDIA, ignore_errors=True)
-
-
 def write_json(path: Path, data: object) -> None:
     """UTF-8 without a BOM, replaced atomically."""
     with atomic_write_path(path) as tmp:
         tmp.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
-
-
-def read_json(path: Path) -> object | None:
-    try:
-        data: object = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return None
-    return data
 
 
 def next_result_path(folder: Path) -> Path:
@@ -147,108 +116,3 @@ class CancelWatcher:
                 return
             if self._stop.wait(self._interval):
                 return
-
-
-def file_stamp(path: Path | None) -> list[int] | None:
-    """``[size, mtime_ns]``, or None for no file."""
-    if path is None:
-        return None
-    try:
-        stat = path.stat()
-    except OSError:
-        return None
-    return [stat.st_size, stat.st_mtime_ns]
-
-
-def _json_copy(value: Any) -> Any:
-    """*value* as JSON gives it back, so a captured run compares equal to a read one."""
-    return json.loads(json.dumps(value))
-
-
-@dataclass(frozen=True)
-class SavedRun:
-    """What prepare saw, so commit can refuse a run whose inputs or settings moved (RUN_STALE)."""
-
-    app_version: str
-    profile: str | None
-    language: object
-    overlay: Mapping[str, object]
-    episode: Mapping[str, object]
-    config: Mapping[str, object]
-    inputs: Mapping[str, list[int] | None]
-    indexes: list[list[object]]
-
-    @classmethod
-    def capture(
-        cls,
-        *,
-        profile: str | None,
-        language: object,
-        overlay: Mapping[str, object],
-        episode: Episode,
-        config_view: Mapping[str, object],
-        indexes: list[list[object]],
-    ) -> SavedRun:
-        inputs = {
-            "video_file": file_stamp(episode.video_file),
-            "subtitle_file": file_stamp(episode.subtitle_file),
-            "secondary_subtitle_file": file_stamp(episode.secondary_subtitle_file),
-        }
-        return cls(
-            app_version=__version__,
-            profile=profile,
-            language=_json_copy(language),
-            overlay=_json_copy(dict(overlay)),
-            episode=_json_copy(dict(episode.raw)),
-            config=_json_copy(dict(config_view)),
-            inputs=inputs,
-            indexes=_json_copy(indexes),
-        )
-
-    def to_json(self) -> dict[str, object]:
-        return {
-            "schema": 1,
-            "app_version": self.app_version,
-            "profile": self.profile,
-            "language": self.language,
-            "overlay": dict(self.overlay),
-            "episode": dict(self.episode),
-            "config": dict(self.config),
-            "inputs": dict(self.inputs),
-            "indexes": self.indexes,
-        }
-
-    @classmethod
-    def from_json(cls, data: object) -> SavedRun | None:
-        if not isinstance(data, dict) or data.get("schema") != 1:
-            return None
-        try:
-            return cls(
-                app_version=data["app_version"],
-                profile=data["profile"],
-                language=data["language"],
-                overlay=data["overlay"],
-                episode=data["episode"],
-                config=data["config"],
-                inputs=data["inputs"],
-                indexes=data["indexes"],
-            )
-        except KeyError:
-            return None
-
-    @classmethod
-    def read(cls, folder: Path) -> SavedRun | None:
-        return cls.from_json(read_json(folder / SAVED_RUN))
-
-    def stale_reason(self, now: SavedRun) -> str | None:
-        """Why *now* no longer matches this saved run, or None."""
-        if self.app_version != now.app_version:
-            return "Anki Miner was updated since prepare."
-        for key, stamp in self.inputs.items():
-            if now.inputs.get(key) != stamp:
-                return f"{Path(str(self.episode.get(key, key))).name} changed since prepare."
-        if self.config != now.config:
-            return "Settings changed since prepare."
-        if self.indexes != now.indexes:
-            return "Dictionaries or frequency lists changed since prepare."
-        return None

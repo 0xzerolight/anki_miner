@@ -5082,3 +5082,69 @@ class TestRejectedNoteNamesTheWord:
             service.create_cards_batch(items)
 
         assert str(exc_info.value) == "Anki refused the card for '猫'."
+
+
+class TestNotCreatedRecord:
+    """last_not_created: why each payload of the last create_cards_batch call did not become a note."""
+
+    def _items(self, make_tokenized_word, n):
+        return [
+            CardPayload(word=make_tokenized_word(surface=f"w{i}", lemma=f"w{i}"), media=MediaData(), definition=f"d{i}")
+            for i in range(n)
+        ]
+
+    def test_created_notes_leave_it_empty(self, test_config, make_tokenized_word):
+        service = AnkiService(test_config)
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=_mock_response(result=[100, 101])):
+            service.create_cards_batch(self._items(make_tokenized_word, 2))
+        assert service.last_not_created == {}
+
+    def test_probe_duplicate_is_duplicate(self, test_config, make_tokenized_word):
+        service = AnkiService(test_config)
+        with (
+            patch.object(service, "_probe_duplicates", return_value=[False, True]),
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=_mock_response(result=[100])),
+        ):
+            service.create_cards_batch(self._items(make_tokenized_word, 2))
+        assert service.last_not_created == {"w1": "duplicate"}
+
+    def test_null_slot_is_refused(self, test_config, make_tokenized_word):
+        service = AnkiService(test_config)
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=_mock_response(result=[100, None])):
+            service.create_cards_batch(self._items(make_tokenized_word, 2))
+        assert service.last_not_created == {"w1": "refused"}
+
+    def test_failed_add_is_uncertain_and_later_chunks_were_never_submitted(self, test_config, make_tokenized_word):
+        service = AnkiService(test_config)
+        items = self._items(make_tokenized_word, 150)  # chunks of 100 and 50
+        with (
+            patch.object(service, "_store_media_files_batch", return_value=set()),
+            patch.object(service, "_upload_dict_media_batch"),
+            patch("anki_miner.services.anki_service.post_action", side_effect=AnkiConnectionError("down")),
+            pytest.raises(AnkiConnectionError),
+        ):
+            service.create_cards_batch(items)
+        assert service.last_not_created == {f"w{i}": "uncertain" for i in range(100)}
+
+    def test_excluded_deck_admission_refusal_is_duplicate(self, test_config, make_tokenized_word):
+        from dataclasses import replace
+
+        service = AnkiService(replace(test_config, excluded_decks=("Archive",)))
+        service._existing_vocab_cache = {service._dedup_key("w0")}
+        with (
+            patch.object(service, "_store_media_files_batch", return_value=set()),
+            patch.object(service, "_upload_dict_media_batch"),
+            patch(
+                "anki_miner.services.anki_service.post_action",
+                side_effect=[[{"canAdd": True, "error": None}], [10]],
+            ),
+        ):
+            assert service.create_cards_batch(self._items(make_tokenized_word, 2)) == [10]
+        assert service.last_not_created == {"w0": "duplicate"}
+        assert service.last_skipped_duplicates == 1
+
+    def test_reset_by_the_next_call(self, test_config, make_tokenized_word):
+        service = AnkiService(test_config)
+        service.last_not_created = {"old": "refused"}
+        service.create_cards_batch([])
+        assert service.last_not_created == {}

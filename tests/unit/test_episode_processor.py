@@ -5707,6 +5707,17 @@ class TestOfflineDefinitionPreFilter:
 
         assert captured["lemmas"] == ["食べる"]
 
+    def test_rejects_are_recorded_for_the_run(self, test_config, mock_services, tmp_path):
+        keep, drop = _make_word("食べる"), _make_word("走る", 5.0)
+        self._prime(mock_services, [keep, drop])
+        mock_services["definition_service"].has_offline_definitions.return_value = {"食べる": True, "走る": False}
+        proc = self._build(test_config, mock_services)
+        proc.process_episode(tmp_path / "ep.mkv", tmp_path / "ep.ass", curation_callback=lambda words: None)
+        assert proc.last_definition_rejects == [drop]
+        mock_services["definition_service"].has_offline_definitions.return_value = {"食べる": True, "走る": True}
+        proc.process_episode(tmp_path / "ep.mkv", tmp_path / "ep.ass", curation_callback=lambda words: None)
+        assert proc.last_definition_rejects == []  # replaced per run, never accumulated
+
     def test_words_with_definition_retained(self, test_config, mock_services, tmp_path):
         w1, w2 = _make_word("食べる"), _make_word("走る", 5.0)
         self._prime(mock_services, [w1, w2])
@@ -6890,3 +6901,53 @@ def test_phase3_records_cut_failures_per_word(test_config, mock_services, tmp_pa
     processor._phase3_extract(ctx, tmp_path / "v.mkv", [a, b], None, tmp_path)
     # test_config maps picture and audio; "a" lost its screenshot, "b" was dropped entirely.
     assert processor.last_media_missing == {a.mined_form: ["picture"], b.mined_form: ["picture", "audio"]}
+
+
+def test_phase3_records_dropped_words_unless_cancelled(test_config, mock_services, tmp_path):
+    """A word extract_media_batch dropped is media_failed; after a Stop it is only unattempted."""
+    import time
+
+    from anki_miner.orchestration.episode_processor import _EpisodeContext
+
+    a, b = make_word("猫"), make_word("犬")
+    ctx = _EpisodeContext(
+        start_time=time.time(),
+        video_file_str=str(tmp_path / "v.mkv"),
+        subtitle_file_str=str(tmp_path / "s.ass"),
+        episode_name="ep01",
+        series_name="TestSeries",
+        source_label="TestSeries — ep01",
+    )
+    processor = build_processor(test_config, **mock_services)
+    assert processor.last_word_drops == {}
+    mock_services["media_extractor"].extract_media_batch.return_value = [(a, MediaData(audio_path=tmp_path / "a.opus"))]
+    processor._phase3_extract(ctx, tmp_path / "v.mkv", [a, b], None, tmp_path)
+    assert processor.last_word_drops == {b.mined_form: "media_failed"}
+
+    stopped = build_processor(test_config, **mock_services)
+    stopped.cancel()
+    stopped._phase3_extract(ctx, tmp_path / "v.mkv", [a, b], None, tmp_path)
+    assert stopped.last_word_drops == {}
+
+    # A Stop during the expression-audio fetch, after the cuts, keeps the real cut failure.
+    late = build_processor(test_config, **mock_services)
+    late._audio_stage = MagicMock()
+    late._audio_stage.fetch_expression_audio.side_effect = lambda *_a, **_k: late.cancel()
+    late._phase3_extract(ctx, tmp_path / "v.mkv", [a, b], None, tmp_path)
+    assert late.last_word_drops == {b.mined_form: "media_failed"}
+
+
+def test_phase5_records_words_with_no_definition(test_config, mock_services, tmp_path):
+    eat, run = make_word("食べる", pos="動詞"), make_word("走る", start_time=5.0, pos="動詞")
+    mock_services["subtitle_parser"].parse_subtitle_file.return_value = [eat, run]
+    mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+    mock_services["word_filter"].filter_unknown.return_value = [eat, run]
+    mock_services["media_extractor"].extract_media_batch.return_value = [
+        (eat, _make_media("e")),
+        (run, _make_media("r")),
+    ]
+    mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat", None]
+    mock_services["anki_service"].create_cards_batch.return_value = [1]
+    processor = build_processor(replace(test_config, bypass_optional_filters=True), **mock_services)
+    processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+    assert processor.last_word_drops == {run.mined_form: "no_definition"}

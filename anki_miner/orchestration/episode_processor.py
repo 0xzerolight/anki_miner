@@ -437,6 +437,13 @@ class EpisodeProcessor:
         #: Per mined_form of this run's phase-3 words, the mapped cuts
         #: ("picture", "audio") that produced no file. Reset per run.
         self.last_media_missing: dict[str, list[str]] = {}
+        #: This run's words the phase-2 offline-definition probe removed. Reset per run.
+        self.last_definition_rejects: list[TokenizedWord] = []
+        #: Per mined_form of this run's curated words that never reached
+        #: create_cards_batch: "media_failed" (phase 3 kept none of its
+        #: required cuts) or "no_definition" (phase 5 found no definition).
+        #: The --api result's word statuses read both. Reset per run.
+        self.last_word_drops: dict[str, str] = {}
         # Resolved, not required: every existing caller builds this positionally
         # or by the create_episode_processor kwargs, and ja is the only profile
         # until Stage 2.
@@ -1271,7 +1278,8 @@ class EpisodeProcessor:
                 )
             ]
             kept_words = [w for w, keep in zip(unknown_words, viable, strict=True) if keep]
-            dropped = [w.mined_form for w, keep in zip(unknown_words, viable, strict=True) if not keep]
+            self.last_definition_rejects = [w for w, keep in zip(unknown_words, viable, strict=True) if not keep]
+            dropped = [w.mined_form for w in self.last_definition_rejects]
             unknown_words = kept_words
             counts.no_definition_rejects = len(dropped)
             if dropped:
@@ -1662,6 +1670,9 @@ class EpisodeProcessor:
             )
         else:
             media_results = [(word, MediaData()) for word in unknown_words]
+        # Taken before the expression-audio fetch: a Stop during that fetch must
+        # not turn the cuts that really failed into unattempted words.
+        stopped_during_cuts = self.cancelled
 
         self._audio_stage.fetch_expression_audio(media_results, progress_callback)
 
@@ -1681,6 +1692,12 @@ class EpisodeProcessor:
             ]
             for word in unknown_words
         }
+        # A word extract_media_batch dropped never reaches Anki. After a Stop
+        # during the cuts, the words it never got to are unattempted, not failed.
+        if not stopped_during_cuts:
+            self.last_word_drops.update(
+                (word.mined_form, "media_failed") for word in unknown_words if word.mined_form not in produced
+            )
 
         log_summary(
             logger,
@@ -2034,6 +2051,7 @@ class EpisodeProcessor:
         skipped_words = [
             word.mined_form for (word, _), definition in zip(media_results, definitions, strict=True) if not definition
         ]
+        self.last_word_drops.update(dict.fromkeys(skipped_words, "no_definition"))
         if skipped_words:
             log_summary(
                 logger,
@@ -2318,6 +2336,8 @@ class EpisodeProcessor:
         #   and never resets it, so this reset is the mining-pipeline boundary (D30).
         self._reset_run_write_state()
         self.last_media_missing = {}
+        self.last_definition_rejects = []
+        self.last_word_drops = {}
 
         self.check_resource_staleness()
         try:
@@ -3620,6 +3640,8 @@ class EpisodeProcessor:
 
         self._reset_run_write_state()
         self.last_media_missing = {}
+        self.last_definition_rejects = []
+        self.last_word_drops = {}
         start_time = time.time()
         receipt = self._run_receipt_fields(
             kind="youtube",

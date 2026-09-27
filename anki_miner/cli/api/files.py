@@ -1,7 +1,8 @@
-"""The run file (prepare) and commit file, validated into typed objects (proposal, "Run file", "commit")."""
+"""The run file, validated into typed objects (API.md, "mine")."""
 
 from __future__ import annotations
 
+import math
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -27,9 +28,11 @@ _EPISODE_KEYS = frozenset(
         "series_name_override",
         "episode_name_override",
         "tags",
+        "words",
     }
 )
-_EPISODE_REQUIRED = frozenset({"run_id", "video_file", "subtitle_file"})
+_EPISODE_REQUIRED = frozenset({"run_id", "video_file", "subtitle_file", "words"})
+_WORD_KEYS = frozenset({"word", "line_start", "line_text", "line_expansion"})
 
 
 def _bad(message: str) -> ApiError:
@@ -81,7 +84,13 @@ def _opt_float(value: object, where: str) -> float | None:
         return None
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise _bad(f"{where} must be a number.")
-    return float(value)
+    try:
+        number = float(value)
+    except OverflowError:  # an int past float range
+        number = math.inf
+    if not math.isfinite(number):
+        raise _bad(f"{where} must be a finite number.")
+    return number
 
 
 def _schema(obj: Mapping[str, object], where: str) -> None:
@@ -91,7 +100,7 @@ def _schema(obj: Mapping[str, object], where: str) -> None:
 
 
 def _run_dir(value: object) -> Path:
-    # Resolved, so run.json and commit.json may spell the same folder differently.
+    # Resolved, so a relative run_dir is taken from the caller's folder.
     path = Path(_str(value, "run_dir")).expanduser().resolve()
     if not path.is_dir():
         raise _bad(f"run_dir must be an existing folder: {path}")
@@ -115,11 +124,44 @@ def _path(value: str | None) -> Path | None:
 
 
 @dataclass(frozen=True)
+class WordRequest:
+    word: str
+    line_start: float | None = None
+    line_text: str | None = None
+    line_expansion: tuple[int, int] | None = None
+
+
+def _word_request(raw: object, where: str) -> WordRequest:
+    obj = _object(raw, where)
+    _keys(obj, _WORD_KEYS, frozenset({"word"}), where)
+    word = _str(obj["word"], f"{where}.word")
+    if not word.strip():
+        raise _bad(f"{where}.word is empty.")
+    line_start = _opt_float(obj.get("line_start"), f"{where}.line_start")
+    if line_start is not None and line_start < 0:
+        raise _bad(f"{where}.line_start cannot be negative.")
+    line_text = _opt_str(obj.get("line_text"), f"{where}.line_text")
+    if line_text is not None and not line_text.strip():
+        raise _bad(f"{where}.line_text is empty.")
+    raw_expansion = obj.get("line_expansion")
+    expansion: tuple[int, int] | None = None
+    if raw_expansion is not None:
+        if not (
+            isinstance(raw_expansion, list)
+            and len(raw_expansion) == 2
+            and all(isinstance(n, int) and not isinstance(n, bool) and n >= 0 for n in raw_expansion)
+        ):
+            raise _bad(f"{where}.line_expansion must be [before, after], two whole numbers of 0 or more.")
+        expansion = (raw_expansion[0], raw_expansion[1])
+    return WordRequest(word, line_start, line_text, expansion)
+
+
+@dataclass(frozen=True)
 class Episode:
     run_id: str
     video_file: Path
     subtitle_file: Path
-    subtitle_offset: float | None
+    subtitle_offset: float
     audio_track_override: int | None
     source_label_override: str | None
     secondary_subtitle_file: Path | None
@@ -127,8 +169,7 @@ class Episode:
     series_name_override: str | None
     episode_name_override: str | None
     tags: str
-    #: The episode as the run file gave it; the saved run keeps it for commit.
-    raw: Mapping[str, object]
+    words: tuple[WordRequest, ...]
 
     def process_kwargs(self) -> dict[str, object]:
         """The optional ``process_episode`` arguments this episode sets."""
@@ -149,15 +190,15 @@ def parse_episode(raw: object, where: str) -> Episode:
     video_file = _abs(_str(obj["video_file"], f"{where}.video_file"))
     subtitle_file = _abs(_str(obj["subtitle_file"], f"{where}.subtitle_file"))
     secondary = _path(_opt_str(obj.get("secondary_subtitle_file"), f"{where}.secondary_subtitle_file"))
-    # The saved episode keeps the resolved paths: commit may run from another folder.
-    resolved = {"video_file": str(video_file), "subtitle_file": str(subtitle_file)}
-    if secondary is not None:
-        resolved["secondary_subtitle_file"] = str(secondary)
+    raw_words = obj["words"]
+    if not isinstance(raw_words, list) or not raw_words:
+        raise _bad(f"{where}.words must list at least one word (there is no 'all').")
+    words = tuple(_word_request(w, f"{where}.words[{j}]") for j, w in enumerate(raw_words))
     return Episode(
         run_id=_run_id(obj["run_id"], f"{where}.run_id"),
         video_file=video_file,
         subtitle_file=subtitle_file,
-        subtitle_offset=_opt_float(obj.get("subtitle_offset"), f"{where}.subtitle_offset"),
+        subtitle_offset=_opt_float(obj.get("subtitle_offset"), f"{where}.subtitle_offset") or 0.0,
         audio_track_override=_opt_int(obj.get("audio_track_override"), f"{where}.audio_track_override"),
         source_label_override=_opt_str(obj.get("source_label_override"), f"{where}.source_label_override"),
         secondary_subtitle_file=secondary,
@@ -166,7 +207,7 @@ def parse_episode(raw: object, where: str) -> Episode:
         series_name_override=_opt_str(obj.get("series_name_override"), f"{where}.series_name_override"),
         episode_name_override=_opt_str(obj.get("episode_name_override"), f"{where}.episode_name_override"),
         tags=_opt_str(obj.get("tags"), f"{where}.tags") or "",
-        raw={**obj, **resolved},
+        words=words,
     )
 
 
@@ -202,66 +243,3 @@ def parse_run_file(data: object) -> RunFile:
         overlay=_object(obj.get("config", {}), "config"),
         episodes=episodes,
     )
-
-
-@dataclass(frozen=True)
-class WordPick:
-    mined_form: str
-    line: int | None = None
-    line_expansion: tuple[int, int] | None = None
-
-
-@dataclass(frozen=True)
-class CommitRun:
-    run_id: str
-    words: tuple[WordPick, ...]
-
-
-@dataclass(frozen=True)
-class CommitFile:
-    run_dir: Path
-    runs: tuple[CommitRun, ...]
-
-
-def _pick(raw: object, where: str) -> WordPick:
-    obj = _object(raw, where)
-    _keys(obj, frozenset({"mined_form", "line", "line_expansion"}), frozenset({"mined_form"}), where)
-    mined_form = _str(obj["mined_form"], f"{where}.mined_form")
-    if not mined_form:
-        raise _bad(f"{where}.mined_form is empty.")
-    line = _opt_int(obj.get("line"), f"{where}.line")
-    raw_expansion = obj.get("line_expansion")
-    expansion: tuple[int, int] | None = None
-    if raw_expansion is not None:
-        if not (
-            isinstance(raw_expansion, list)
-            and len(raw_expansion) == 2
-            and all(isinstance(n, int) and not isinstance(n, bool) for n in raw_expansion)
-        ):
-            raise _bad(f"{where}.line_expansion must be [before, after].")
-        expansion = (raw_expansion[0], raw_expansion[1])
-    return WordPick(mined_form, line, expansion)
-
-
-def parse_commit_file(data: object) -> CommitFile:
-    obj = _object(data, "The commit file")
-    required = frozenset({"schema", "run_dir", "runs"})
-    _keys(obj, required, required, "The commit file")
-    _schema(obj, "The commit file")
-    raw_runs = obj["runs"]
-    if not isinstance(raw_runs, list) or not raw_runs:
-        raise _bad("runs must be a non-empty list.")
-    runs: list[CommitRun] = []
-    for i, raw in enumerate(raw_runs):
-        run = _object(raw, f"runs[{i}]")
-        _keys(run, frozenset({"run_id", "words"}), frozenset({"run_id", "words"}), f"runs[{i}]")
-        words = run["words"]
-        if not isinstance(words, list) or not words:
-            raise _bad(f"runs[{i}].words must list at least one word (there is no 'all').")
-        picks = tuple(_pick(w, f"runs[{i}].words[{j}]") for j, w in enumerate(words))
-        if len({p.mined_form for p in picks}) != len(picks):
-            raise _bad(f"runs[{i}] names a word twice.")
-        runs.append(CommitRun(_run_id(run["run_id"], f"runs[{i}].run_id"), picks))
-    if len({r.run_id for r in runs}) != len(runs):
-        raise _bad("Two runs share a run_id.")
-    return CommitFile(_run_dir(obj["run_dir"]), tuple(runs))
