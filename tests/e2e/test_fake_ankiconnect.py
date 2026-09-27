@@ -155,6 +155,25 @@ class TestMediaAndMulti:
         assert results[1]["result"] is None
         assert "unsupported action" in results[1]["error"]
 
+    def test_store_media_file_by_path_reads_the_file_or_fails_that_action(self, fake_anki, tmp_path):
+        src = tmp_path / "c.jpg"
+        src.write_bytes(b"hi")
+        results = post_multi(
+            fake_anki.url,
+            [
+                {"action": "storeMediaFile", "version": 6, "params": {"filename": "c.jpg", "path": str(src)}},
+                {
+                    "action": "storeMediaFile",
+                    "version": 6,
+                    "params": {"filename": "d.jpg", "path": str(tmp_path / "d")},
+                },
+            ],
+        )
+        assert results[0] == {"result": "c.jpg", "error": None}
+        assert fake_anki._media["c.jpg"] == "aGk="
+        assert results[1]["result"] is None
+        assert results[1]["error"]
+
 
 class TestGatewayCompatibility:
     def test_real_gateway_full_cycle_against_fake(self, fake_anki, tmp_path):

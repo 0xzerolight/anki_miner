@@ -26,6 +26,22 @@ def _mock_response(result=None, error=None):
     return resp
 
 
+def _anki_without_path_access(respond):
+    """``requests.post`` side effect for an Anki that cannot read our files by
+    path (Flatpak's private /tmp, WSL to Windows): a by-path ``multi`` gets one
+    error per action; every other call goes to *respond*, so the inline upload
+    runs as it would there."""
+
+    def post(*args, **kwargs):
+        body = kwargs["json"]
+        actions = body["params"].get("actions", []) if body["action"] == "multi" else []
+        if actions and all("path" in a["params"] for a in actions):
+            return _mock_response(result=[{"result": None, "error": "No such file or directory"} for _ in actions])
+        return respond(*args, **kwargs)
+
+    return post
+
+
 class TestAnkiConnectLogging:
     """The shared HTTP seam preserves diagnostics while translating failures."""
 
@@ -1716,7 +1732,10 @@ class TestStoreMediaFilesBatch:
         multi_result = ["shot.jpg", "clip.mp3", {"error": "failed to store bad.jpg"}]
         multi_resp = _mock_response(result=multi_result)
 
-        with patch("anki_miner.services._ankiconnect.requests.post", return_value=multi_resp):
+        with patch(
+            "anki_miner.services._ankiconnect.requests.post",
+            side_effect=_anki_without_path_access(MagicMock(return_value=multi_resp)),
+        ):
             stored = service._store_media_files_batch(items)
 
         assert "shot.jpg" in stored
@@ -1748,7 +1767,10 @@ class TestStoreMediaFilesBatch:
         ]
 
         with (
-            patch("anki_miner.services._ankiconnect.requests.post", side_effect=responses),
+            patch(
+                "anki_miner.services._ankiconnect.requests.post",
+                side_effect=_anki_without_path_access(MagicMock(side_effect=responses)),
+            ),
             caplog.at_level(logging.WARNING, logger="anki_miner.services.anki_media_store"),
         ):
             stored = service._store_media_files_batch([CardPayload(word=word, media=media, definition="def")])
@@ -1779,13 +1801,14 @@ class TestStoreMediaFilesBatch:
             _mock_response(result="clip.mp3"),
         ]
 
-        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=side_effect) as mock_post:
+        inline = MagicMock(side_effect=side_effect)
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=_anki_without_path_access(inline)):
             stored = service._store_media_files_batch([CardPayload(word=word, media=media, definition="def")])
 
-        # 1 failed multi + 2 per-file storeMediaFile retries
-        assert mock_post.call_count == 3
-        actions = [c[1]["json"]["action"] for c in mock_post.call_args_list]
+        # After the rejected by-path multi: 1 failed inline multi + 2 per-file retries
+        actions = [c[1]["json"]["action"] for c in inline.call_args_list]
         assert actions == ["multi", "storeMediaFile", "storeMediaFile"]
+        assert all("data" in c[1]["json"]["params"] for c in inline.call_args_list[1:])
         assert stored == {"shot.jpg", "clip.mp3"}
         assert service.last_media_store_failures == 0
 
@@ -1803,15 +1826,16 @@ class TestStoreMediaFilesBatch:
 
         resp = _mock_response(result=[None])  # one non-error sub-result per single-file chunk
 
+        inline = MagicMock(return_value=resp)
         with (
             patch("anki_miner.services.anki_media_store._MEDIA_BATCH_MAX_BYTES", 100),
-            patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post,
+            patch("anki_miner.services._ankiconnect.requests.post", side_effect=_anki_without_path_access(inline)),
         ):
             stored = service._store_media_files_batch(items)
 
-        # Each oversized file flushes its own multi chunk → 3 POSTs, each with 1 action
-        assert mock_post.call_count == 3
-        for call in mock_post.call_args_list:
+        # Each oversized file flushes its own inline multi chunk → 3 POSTs, each with 1 action
+        assert inline.call_count == 3
+        for call in inline.call_args_list:
             payload = call[1]["json"]
             assert payload["action"] == "multi"
             assert len(payload["params"]["actions"]) == 1
