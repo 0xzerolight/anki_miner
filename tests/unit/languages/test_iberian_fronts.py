@@ -1,9 +1,9 @@
-"""Iberian card fronts and input: ca feminine nouns, the es/ca/pt soft-hyphen normalize.
+"""Iberian card fronts and input: ca feminine nouns, pt form-of fronts, the es/ca/pt soft-hyphen normalize.
 
-The engine-free half drives the parser post-pass with duck tokens and a stand-in for R36's
+The engine-free half drives the parser post-passes with duck tokens and a stand-in for R36's
 ``form_lookup`` holding rows in the rendered shape the Yomitan importer stores. Every row set below is
-one the wty dictionary of that language holds (wty-ca-en, revision 2026.09.20), cut to the rows the
-rules read. The real-engine half runs the injected pass over the real tagger's tokens; the tagger is
+one the wty dictionary of that language holds (wty-ca-en, wty-pt-en, revision 2026.09.20), cut to the
+rows the rules read. The real-engine half runs the injected pass over the real tagger's tokens; the tagger is
 module-scoped because the autouse conftest fixture clears the tagger cache around every test.
 """
 
@@ -14,6 +14,7 @@ import unicodedata
 import pytest
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.languages._spaced.form_of import FormOfLemmaPass
 from anki_miner.languages._spaced.script import nbsp_shy_normalize
 from anki_miner.languages.ca.morphology import FeminineNounPass
 from anki_miner.languages.registry import get_profile
@@ -149,6 +150,52 @@ def test_one_read_per_line_and_one_more_for_plural_targets():
 
 def test_catalan_wires_the_feminine_noun_pass(monkeypatch):
     assert isinstance(_injected(monkeypatch, "ca"), FeminineNounPass)
+
+
+# --------------------------------------------------------------------------
+# IBER-02: Portuguese fronts the small lemmatizer leaves inflected
+# --------------------------------------------------------------------------
+
+#: wty-pt-en rows for fronts pt_core_news_sm backs off to the surface on (or invents).
+PT_ROWS = {
+    "sinto": [form("sentir")],
+    "sentir": [lemma("v")],
+    "tens": [form("ter")],
+    "ter": [lemma("v")],
+    "diga": [form("dizer"), form("dizer")],
+    "dizer": [lemma("v vt")],
+    "deixei": [form("deixar")],
+    "deixar": [lemma("v")],
+    "maçãs": [form("maçã")],
+    "maçã": [lemma("n fem")],
+    "fria": [form("frio")],
+    "frio": [lemma("adj"), lemma("n masc uncount")],
+}
+
+
+@pytest.mark.parametrize(
+    ("token", "front"),
+    [
+        (tok("sinto", "VERB", "sinto"), ("sentir", "VERB")),  # carded 'sinto', defined only as 'sentir'
+        (tok("tens", "NOUN", "tens"), ("ter", "VERB")),  # carded 'tens' under 'a'
+        (tok("Diga", "VERB", "digar"), ("dizer", "VERB")),  # an invented lemma with no rows: the surface decides
+        (tok("Deixei", "VERB", "deixeir"), ("deixar", "VERB")),
+        (tok("maçãs", "NOUN", "maçãs"), ("maçã", "NOUN")),
+        (tok("fria", "ADJ", "fria"), ("frio", "ADJ")),
+        (tok("sentir", "VERB", "sentir"), ("sentir", "VERB")),  # a headword lemma is never second-guessed
+        (tok("Diga", "PROPN", "Diga"), ("Diga", "PROPN")),  # not a content class
+    ],
+)
+def test_portuguese_fronts_come_from_the_form_rows(monkeypatch, token, front):
+    assert fronts(_injected(monkeypatch, "pt"), Forms(PT_ROWS), token) == [front]
+
+
+def test_portuguese_reads_the_lemma_before_the_surface(monkeypatch):
+    """Lemma-first, as measured (made-up keys): the lemma's one target beats a surface headword."""
+    injected = _injected(monkeypatch, "pt")
+    rows = {"surface": [lemma("n masc")], "lemma": [form("target")], "target": [lemma("v")]}
+    assert isinstance(injected, FormOfLemmaPass)
+    assert fronts(injected, Forms(rows), tok("surface", "VERB", "lemma")) == [("target", "VERB")]
 
 
 # --------------------------------------------------------------------------
