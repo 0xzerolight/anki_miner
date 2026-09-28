@@ -7,7 +7,8 @@ Availability is reported by ``languages.yue.availability``.
 
 **Contract with zh (R32).** This package imports from zh exactly one symbol,
 ``zh.render.ZhMeasureWordHook``, which it constructs traditional-first and
-neither subclasses nor branches on. That hook pulls ``zh.reading`` and
+neither subclasses nor branches on; ``render.YueMeasureWordHook`` wraps it to
+swap two Mandarin-only classifiers. That hook pulls ``zh.reading`` and
 ``zh.variants`` at module level, but both import their engines
 function-locally, so no jieba, pypinyin or opencc is loaded.
 ``zh.tokenizer``, ``zh.audio``, ``zh.catalog``, ``zh.pack``, ``zh.support`` and
@@ -104,12 +105,13 @@ def build_profile() -> LanguageProfile:
         import_encodings=("utf-8-sig", "gb18030", "big5hkscs"),
         scoped_defaults=_scoped_defaults(),
         # zh's literal, copied not imported (R32). S8 is inert for a dot-free
-        # script, so abbreviations stays empty.
+        # script, so abbreviations stays empty. Curly quotes join the corner
+        # brackets (zh's ZH-045): HK web fiction and forum posts quote with both.
         sentence_rules=SentenceRules(
             terminators=frozenset("。｡！？!?‼⁉⁇⁈"),
             ellipses=frozenset("…‥"),
-            openers=frozenset("「｢『（〔［｛〈《【([{｟〝"),
-            closers=frozenset("」｣』）〕］｝〉》】)]}｠〟"),
+            openers=frozenset("「｢『（〔［｛〈《【([{｟〝“‘"),
+            closers=frozenset("」｣』）〕］｝〉》】)]}｠〟”’"),
             space_aware=False,
             split_on_whitespace=False,
         ),

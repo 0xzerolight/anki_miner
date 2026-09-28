@@ -591,6 +591,13 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
             os.path.join(project_root, "anki_miner", "languages", "fa", "data"),
             os.path.join("anki_miner", "languages", "fa", "data"),
         ),
+        # Cantonese spoken-jyutping overrides — read by languages/yue/reading.py
+        # via importlib.resources, so they must land at the same package path.
+        # pyproject's package-data covers the wheel only.
+        (
+            os.path.join(project_root, "anki_miner", "languages", "yue", "data"),
+            os.path.join("anki_miner", "languages", "yue", "data"),
+        ),
         # unidic-lite dictionary data (required by fugashi/MeCab)
         (unidic_data, "unidic_lite"),
         # BudouX phrase-segmentation data (curator sentence wrapping)
