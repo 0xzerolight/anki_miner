@@ -71,6 +71,24 @@ class SlovenianDictKeys(CasefoldDictKeys):
         return row_pos == pos or {row_pos, pos} <= _ADJ_ADV
 
 
+class SlovenianLookupStrategy(LatinLookupStrategy):
+    """``LatinLookupStrategy`` without the candidates the key fold makes the probe word itself.
+
+    The variant fallback reads its candidates with no token in hand, so a line-initial ``Mama``
+    (``mama`` under the key fold) re-read the rows the direct lookup had just read, without the class
+    :meth:`SlovenianDictKeys.splice_row_fits` tests, and the card read "to have" again. Such a candidate
+    adds nothing else: the direct lookup missed because the key has no row or no target that fits.
+    """
+
+    def __init__(self, keys: CasefoldDictKeys) -> None:
+        super().__init__()
+        self._fold = keys.fold_term
+
+    def candidates(self, word: str, orth_base: str, ctype: str | None) -> list[tuple[str, int]]:
+        key = self._fold(word)
+        return [(text, cond) for text, cond in super().candidates(word, orth_base, ctype) if self._fold(text) != key]
+
+
 #: NFC + the accent-notation fold + casefold. wty-sl-en writes 41,212 of its keys - nearly all of them
 #: form rows - in accent notation (``čȃkam``, ``učím``, ``mȃma``), which no Slovenian text spells, so
 #: the fold runs inside the key at import and at query alike (the ro precedent). It keeps the caron and
@@ -103,7 +121,7 @@ def build_profile() -> LanguageProfile:
         display_name="Slovenščina",
         create_parser=create_parser,
         mined_form=SpacedMinedForm(),
-        lookup=LatinLookupStrategy(),
+        lookup=SlovenianLookupStrategy(SL_KEYS),
         reading=None,
         sentence_annotator=None,
         script=LatinScript(),

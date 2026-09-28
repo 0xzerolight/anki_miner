@@ -191,6 +191,14 @@ def test_sl_a_lookup_with_no_token_class_splices_as_before(tmp_path):
     assert found is not None and "to have" in found
 
 
+def test_sl_the_variant_ladder_never_retries_the_probe_word_under_its_key():
+    """A line-initial ``Mama`` is ``mama`` under the key: retried with no class, it read "to have" again."""
+    ladder = get_profile("sl").lookup
+    assert ladder.candidates("mama", "Mama", None) == []
+    assert ladder.candidates("mama", "MȂMA", None) == []
+    assert ("goste", 0) in ladder.candidates("gost", "goste", None)
+
+
 # --------------------------------------------------------------------------
 # E2E-2-01: hr keys fold the tone marks, so the splice reaches a toned target
 # --------------------------------------------------------------------------
