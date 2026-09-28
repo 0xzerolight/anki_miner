@@ -572,7 +572,7 @@ class EpisodeProcessor:
     # ------------------------------------------------------------------
 
     @property
-    def offline_lookup_fn(self) -> Callable[[str], list[tuple[str, str]]]:
+    def offline_lookup_fn(self) -> Callable[..., list[tuple[str, str]]]:
         """Offline-dictionary lookup for interactive UI (curation dialog).
 
         Bound form of :meth:`DefinitionService.lookup_all_offline`: takes a

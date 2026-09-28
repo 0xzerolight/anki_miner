@@ -311,23 +311,26 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self._candidate_list_words: list[TokenizedWord] = []
         self._populating_candidates = False
 
-        # Lookup result cache keyed by (term, scope_lemma) (empty results are
+        # Lookup result cache keyed by (term, scope_lemma, pos) (empty results are
         # cached too). scope_lemma (see _scope_lemma) is part of the key, not
         # just an input: two curator rows can share a mined_form but differ in
         # lemma (kana front ゆう from 言う vs from 結う — upstream dedups by
         # lemma, word_filter.py, so both survive as distinct rows), and a
         # term-only key would serve one row's lemma-scoped entry to the
         # other — the exact wrong-homograph pane bug Rule A' exists to fix.
-        # The miss-only fallback-term retry is always unscoped, so it caches
-        # under (fallback_term, None). The fetch itself runs off the GUI
+        # The token's POS is keyed for the same reason: it ranks the rows
+        # (a wty verb opens on its verb row), and a picked sentence can carry
+        # another POS than the row's first one. The miss-only fallback-term
+        # retry is always unscoped and unranked, so it caches under
+        # (fallback_term, None, None). The fetch itself runs off the GUI
         # thread: at most one request is in flight, the newest queued request
         # replaces any older one, and every callback is checked against
         # _lookup_gen so a fast scroll can never paint an entry the user has
         # already scrolled past.
-        self._lookup_cache: dict[tuple[str, str | None], list[tuple[str, str]]] = {}
+        self._lookup_cache: dict[tuple[str, str | None, str | None], list[tuple[str, str]]] = {}
         self._lookup_gen = 0
         self._lookup_inflight = False
-        self._pending_lookup: tuple[str, str | None] | None = None
+        self._pending_lookup: tuple[str, str | None, str | None] | None = None
 
         # Debounce timer for row-focus changes (avoid hammering lookup on arrow-key scroll).
         self._focus_timer = QTimer(self)
@@ -2259,7 +2262,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         Looks up by ``mined_form`` (the card-front spelling, the same primary key
         Phase 4 uses) with a miss-only lemma retry — unidic's canonical lemma
         collapses kanji variants (殺る → 遣る), so a lemma-keyed pane showed the
-        wrong homograph's entry.
+        wrong homograph's entry. The token's part of speech ranks the rows, as
+        it does on the card.
 
         Called from the focus debounce and, directly, from the sentence pick.
         The pick does not need a debounce of its own: :meth:`_lookup_and_render`
@@ -2268,9 +2272,9 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         key down in the picker cannot pile up or paint a superseded entry.
         """
         if self._show_dict and hasattr(self, "definition_view"):
-            self._lookup_and_render(word.mined_form, word.lemma)
+            self._lookup_and_render(word.mined_form, word.lemma, word.pos or None)
 
-    def _lookup_and_render(self, term: str, fallback_term: str | None = None) -> None:
+    def _lookup_and_render(self, term: str, fallback_term: str | None = None, pos: str | None = None) -> None:
         """Show definition entries for ``term``, fetching them off the GUI thread.
 
         ``lookup_fn`` reaches a SQLite index (and, in the worst case, a chain of
@@ -2295,6 +2299,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         miss it is looked up as its own (unscoped) term. Both terms are
         fetched inside the one background job, keeping both off the GUI
         thread.
+
+        ``pos`` (the token's part of speech) ranks the rows of ``term``'s own
+        lookup, matching the card's ``get_definitions_batch(pos_context=...)``
+        rank: a wty verb's pane opens on the verb row its card opens on. The
+        miss-only retry stays unranked, as the card's miss ladder is.
         """
         if self._closing or not self._show_dict:
             return
@@ -2304,64 +2313,66 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # over the row the user is actually looking at.
         self._lookup_gen += 1
 
-        entries = self._cached_entries(term, fallback_term)
+        entries = self._cached_entries(term, fallback_term, pos)
         if entries is not None:
             self._pending_lookup = None
             self._render_definitions(term, entries)
             return
 
         if self._lookup_inflight:
-            self._pending_lookup = (term, fallback_term)
+            self._pending_lookup = (term, fallback_term, pos)
             return
 
-        self._dispatch_lookup(term, fallback_term, self._lookup_gen)
+        self._dispatch_lookup(term, fallback_term, pos, self._lookup_gen)
 
     @staticmethod
     def _scope_lemma(term: str, fallback_term: str | None) -> str | None:
         """The Rule A′ scope for ``term``'s own lookup: ``fallback_term`` (the
         token's lemma) when it differs from ``term``, else ``None`` — the
         non-empty convention every lemma-threading call site in this codebase
-        shares, so a word whose mined_form already IS its lemma calls
-        ``lookup_fn`` arity-1 exactly as before. Also the ``_lookup_cache``
+        shares, so a word whose mined_form already IS its lemma passes
+        ``lookup_fn`` no lemma, exactly as before. Also a ``_lookup_cache``
         key discriminant (see its declaration in ``__init__``).
         """
         return fallback_term if fallback_term and fallback_term != term else None
 
-    def _cached_entries(self, term: str, fallback_term: str | None) -> list[tuple[str, str]] | None:
+    def _cached_entries(self, term: str, fallback_term: str | None, pos: str | None) -> list[tuple[str, str]] | None:
         """Entries resolvable from the cache alone, or ``None`` if a fetch is needed.
 
         An empty list is a real answer (a cached miss), which is why the
         "unresolved" signal is ``None`` rather than falsiness.
         """
-        key = (term, self._scope_lemma(term, fallback_term))
+        key = (term, self._scope_lemma(term, fallback_term), pos)
         if key not in self._lookup_cache:
             return None
         entries = self._lookup_cache[key]
         if entries or not fallback_term or fallback_term == term:
             return entries
-        fallback_key = (fallback_term, None)
+        fallback_key = (fallback_term, None, None)
         if fallback_key not in self._lookup_cache:
             return None
         return self._lookup_cache[fallback_key]
 
-    def _dispatch_lookup(self, term: str, fallback_term: str | None, gen: int) -> None:
+    def _dispatch_lookup(self, term: str, fallback_term: str | None, pos: str | None, gen: int) -> None:
         """Run the (possibly two-term) query on a worker thread."""
         lookup_fn = self._lookup_fn
         assert lookup_fn is not None  # guarded by self._show_dict
         self._lookup_inflight = True
 
-        def work() -> dict[tuple[str, str | None], list[tuple[str, str]]]:
+        def work() -> dict[tuple[str, str | None, str | None], list[tuple[str, str]]]:
             scope_lemma = self._scope_lemma(term, fallback_term)
-            key = (term, scope_lemma)
-            fetched = {key: lookup_fn(term, scope_lemma) if scope_lemma else lookup_fn(term)}
+            key = (term, scope_lemma, pos)
+            # Lemma and POS are each passed only when set: a bare term stays lookup_fn(term).
+            args = (term, scope_lemma) if scope_lemma else (term,)
+            fetched = {key: lookup_fn(*args, pos=pos) if pos else lookup_fn(*args)}
             if not fetched[key] and fallback_term and fallback_term != term:
-                fetched[(fallback_term, None)] = lookup_fn(fallback_term)
+                fetched[(fallback_term, None, None)] = lookup_fn(fallback_term)
             return fetched
 
         run_off_thread(
             self,
             work,
-            lambda fetched: self._on_lookup_done(gen, term, fallback_term, fetched),
+            lambda fetched: self._on_lookup_done(gen, term, fallback_term, pos, fetched),
             lambda message: self._on_lookup_failed(gen, term, message),
         )
 
@@ -2370,6 +2381,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         gen: int,
         term: str,
         fallback_term: str | None,
+        pos: str | None,
         fetched: object,
     ) -> None:
         """GUI-thread landing point for a completed lookup."""
@@ -2383,7 +2395,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         if isinstance(fetched, dict):
             self._lookup_cache.update(fetched)
         if is_gen_current:
-            self._render_definitions(term, self._cached_entries(term, fallback_term) or [])
+            self._render_definitions(term, self._cached_entries(term, fallback_term, pos) or [])
         self._drain_pending_lookup()
 
     def _on_lookup_failed(self, gen: int, term: str, message: str) -> None:
