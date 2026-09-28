@@ -195,6 +195,21 @@ class TestLadder:
             assert token.feature.kana == ""
 
 
+class TestVerbTables:
+    """The verb forms spoken and written Persian use that the 79 formal patterns miss."""
+
+    def test_a_formal_present_carries_no_register(self, armed):
+        # xar- is kharidan's informal stem AND its formal one; the textbook
+        # mi-xaram must not come back as slang with a Colloquial field.
+        mixaram = MI + ZWNJ + _KHAH + _REH + _MEEM
+        (token,) = fa_tokenizer.to_duck_tokens(mixaram, armed)
+        assert token.feature.pos1 == "V"
+        assert token.feature.lemma == _KHAH + _REH + _YEH + _DAL + _NOON
+        assert token.feature.pos2 == ""
+        assert token.feature.surface_formal == ""
+        assert token.morph == "PresentStem=" + _KHAH + _REH
+
+
 class TestTagger:
     def test_the_tagger_is_callable_like_fugashi(self, armed, monkeypatch):
         monkeypatch.setattr(fa_tokenizer, "_load_lexicon", lambda: armed)

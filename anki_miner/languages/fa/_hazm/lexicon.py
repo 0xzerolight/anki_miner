@@ -143,6 +143,7 @@ class PersianLexicon:
 
 def _build_formal(
     verb_lines: Iterable[str],
+    iverb_rows: Iterable[tuple[str, str]],
     preferred_stems: dict[str, str],
 ) -> tuple[dict[str, str], dict[str, str]]:
     verbs: dict[str, str] = {}
@@ -162,6 +163,20 @@ def _build_formal(
             # homograph past stems (raft#ro "go" is line 360, raft#rub "sweep"
             # line 361), and the file's order is upstream's answer.
             verbs.setdefault(form, infinitive)
+
+    # An iverbs.dat row whose informal stem IS the formal one (bud#bash bash,
+    # kard#kon kon: seven rows) adds no colloquial spelling, so the informal
+    # table skips it. What the row does say is which verb owns a homograph
+    # present stem: bash- is budan's though bashid#bash (line 117) precedes
+    # bud#bash (144), kesh- keshidan's though kosht#kesh precedes keshid#kesh.
+    # Those forms resolved through the informal tier before; they keep the verb.
+    for verb_line, informal_present in iverb_rows:
+        past, present = conjugation.split_stems(verb_line)
+        if informal_present != present or _is_malformed(past, present):
+            continue
+        infinitive = conjugation.infinitive(verb_line)
+        for pattern in conjugation.PRESENT_PATTERNS:
+            verbs[conjugation.apply(pattern, present=present)] = infinitive
     return verbs, present_stems
 
 
@@ -169,7 +184,10 @@ def _build_informal(rows: Iterable[tuple[str, str]]) -> dict[str, tuple[str, str
     informal: dict[str, tuple[str, str]] = {}
     for verb_line, informal_present in rows:
         past, present = conjugation.split_stems(verb_line)
-        if _is_malformed(past, present):
+        # A row whose informal stem is the formal one would pair every formal
+        # form with itself and tag the textbook spelling Informal;
+        # _build_formal keeps its verb instead.
+        if _is_malformed(past, present) or informal_present == present:
             continue
         infinitive = conjugation.infinitive(verb_line)
         for pattern in conjugation.PRESENT_PATTERNS:
@@ -184,7 +202,7 @@ def _build_informal(rows: Iterable[tuple[str, str]]) -> dict[str, tuple[str, str
 def build(hazm_data: HazmData) -> PersianLexicon:
     """Build every table from one loaded pack plus the committed TSVs."""
     preferred_stems = {row[0]: row[1] for row in _read_tsv(PREFERRED_PRESENT_STEMS_FILE) if len(row) == 2}
-    verbs, present_stems = _build_formal(hazm_data.verb_lines, preferred_stems)
+    verbs, present_stems = _build_formal(hazm_data.verb_lines, hazm_data.iverb_rows, preferred_stems)
 
     colloquial: dict[str, str] = {}
     for row in _read_tsv(COLLOQUIAL_FILE):

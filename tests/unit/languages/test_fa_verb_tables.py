@@ -17,8 +17,11 @@ from __future__ import annotations
 
 import pytest
 
+from anki_miner.languages.fa import script as fa_script
+from anki_miner.languages.fa import tokenizer as fa_tokenizer
 from anki_miner.languages.fa._hazm import data, lexicon
 from anki_miner.languages.fa.availability import FA_DATA_COMPONENT
+from anki_miner.languages.fa.script import ZWNJ
 from tests._pack_seeds import seeded_component
 
 
@@ -26,6 +29,35 @@ from tests._pack_seeds import seeded_component
 def real_lexicon():
     pack_root = seeded_component("fa", FA_DATA_COMPONENT, "words.dat").parent
     return lexicon.build(data.load(pack_root))
+
+
+@pytest.fixture
+def armed(real_lexicon, monkeypatch):
+    # FA_SEPARATE_MI_HOOK is module-level mutable state: set it explicitly so a
+    # lexicon another test file built cannot make these pass for the wrong reason.
+    monkeypatch.setattr(fa_script, "FA_SEPARATE_MI_HOOK", real_lexicon.is_known_verb_form)
+    return real_lexicon
+
+
+def _one(surface: str, lexicon_: lexicon.PersianLexicon):
+    tokens = [
+        token
+        for token in fa_tokenizer.to_duck_tokens(fa_script.fa_normalize(surface), lexicon_)
+        if token.feature.pos1 != "PUNCT"
+    ]
+    assert len(tokens) == 1, [token.surface for token in tokens]
+    return tokens[0]
+
+
+@pytest.mark.parametrize(
+    ("surface", "infinitive"),
+    [(f"می{ZWNJ}خرم", "خریدن"), (f"می{ZWNJ}پرسد", "پرسیدن"), (f"می{ZWNJ}کشند", "کشیدن"), ("باشیم", "بودن")],
+)
+def test_a_formal_present_is_standard_persian_not_colloquial(surface, infinitive, armed):
+    token = _one(surface, armed)
+    assert token.feature.lemma == infinitive
+    assert token.feature.pos2 != "informal"
+    assert "Register=Informal" not in token.morph
 
 
 @pytest.mark.parametrize(

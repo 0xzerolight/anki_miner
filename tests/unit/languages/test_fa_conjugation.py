@@ -76,8 +76,16 @@ THIS_ARABIC = _ALEF + _ARABIC_YEH + _NOON
 THIS_FARSI = _ALEF + _YEH + _NOON
 KOJAST = _KEHEH + _JEEM + _ALEF + _SEEN + _TEH
 
+# the seven iverbs.dat rows whose informal stem IS the formal one (kharidan here)
+MIXARAM = MI + ZWNJ + _KHAH + _REH + _MEEM
+XARIDAN = _KHAH + _REH + _YEH + _DAL + _NOON
+# bashad is budan's, though bashidan's verbs.dat line comes first
+BASHAD = _BEH + _ALEF + _SHEEN + _DAL
 BUDAN = _BEH + _WAW + _DAL + _NOON
 BASH = _BEH + _ALEF + _SHEEN
+# mikeshand is keshidan's (to pull), though koshtan's line (to kill) comes first
+MIKESHAND = MI + ZWNJ + _KEHEH + _SHEEN + _NOON + _DAL
+KESHIDAN = _KEHEH + _SHEEN + _YEH + _DAL + _NOON
 KESH = _KEHEH + _SHEEN
 KOSHTAN = _KEHEH + _SHEEN + _TEH + _NOON
 # neveshtan / forukhtan: verbs.dat lists a dead present stem first
@@ -206,6 +214,21 @@ class TestLexiconTables:
         tracemalloc.stop()
         assert built.verb_count
         assert peak < 40 * 1024 * 1024, peak
+
+
+class TestFormalPresentIsNotInformal:
+    """An iverbs.dat row whose informal stem is the formal one adds no colloquial form."""
+
+    def test_a_formal_present_is_absent_from_the_informal_table(self, fa_lexicon):
+        assert fa_lexicon.informal_verb(MIXARAM) is None
+        assert fa_lexicon.verb_form(MIXARAM) == XARIDAN
+
+    def test_the_row_still_names_the_verb_that_owns_a_shared_stem(self, fa_lexicon):
+        # verbs.dat lists bashid#bash (line 117) before bud#bash (144) and
+        # kosht#kesh (524) before keshid#kesh (525); the iverbs.dat row keeps
+        # the everyday verb, as the informal tier did when it answered first.
+        assert fa_lexicon.verb_form(BASHAD) == BUDAN
+        assert fa_lexicon.verb_form(MIKESHAND) == KESHIDAN
 
 
 class TestPreferredPresentStems:
