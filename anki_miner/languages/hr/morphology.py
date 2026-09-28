@@ -132,6 +132,10 @@ _TONE_MARKS = frozenset({"\u0300", "\u0301", "\u0304", "\u030f", "\u0311"})
 #: Schwa never carries a mark in wty-sh-en, so it is not a base.
 _TONE_BASES = frozenset("aeiourAEIOUR")
 
+#: Croatian quotes „…” (or „…“) and »…«: the shared Latin set opens with « and “, which Croatian closes with.
+HR_OPENERS: frozenset[str] = frozenset("([{„»")
+HR_CLOSERS: frozenset[str] = frozenset(")]}“”«")
+
 #: Croatian speaker cues (``ŽELJKO:``, ``ĐURO:``): the Latin rule with the five letters Latin-1 lacks.
 #: The filter runs after ``hr_normalize``, so a digraph ligature has already become two ordinary letters.
 HR_SPEAKER_PATTERN = r"^[A-ZÀ-ÖØ-ÞĆČĐŠŽ]" r"[A-ZÀ-ÖØ-ÞĆČĐŠŽ0-9 .'-]*" r"[A-ZÀ-ÖØ-ÞĆČĐŠŽ]:\s*"
