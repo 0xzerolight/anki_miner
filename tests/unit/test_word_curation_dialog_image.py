@@ -440,7 +440,7 @@ class TestTeardown:
         started = threading.Event()
         painted: list[str] = []
 
-        def blocking_lookup(term: str) -> list[tuple[str, str]]:
+        def blocking_lookup(term: str, pos: str | None = None) -> list[tuple[str, str]]:
             started.set()
             release.wait(timeout=5)
             return [("JMdict", "<div>late</div>")]

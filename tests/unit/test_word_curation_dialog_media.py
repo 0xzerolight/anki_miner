@@ -344,7 +344,7 @@ class TestDictionaryLookup:
     def test_lookup_renders_provider_name(self, qtbot, words):
         call_count = 0
 
-        def fake_lookup(lemma: str) -> list[tuple[str, str]]:
+        def fake_lookup(lemma: str, pos: str | None = None) -> list[tuple[str, str]]:
             nonlocal call_count
             call_count += 1
             return [("JMdict", "<div>to eat</div>")]
@@ -362,7 +362,7 @@ class TestDictionaryLookup:
         """Selecting the same row twice should invoke lookup_fn only once."""
         call_count = 0
 
-        def fake_lookup(lemma: str) -> list[tuple[str, str]]:
+        def fake_lookup(lemma: str, pos: str | None = None) -> list[tuple[str, str]]:
             nonlocal call_count
             call_count += 1
             return [("JMdict", "<div>x</div>")]
@@ -380,7 +380,7 @@ class TestDictionaryLookup:
 
     def test_empty_result_shows_grey_placeholder(self, qtbot, words):
         """Empty lookup result → grey 'No offline dictionary entry' placeholder."""
-        dlg = WordCurationDialog(words, lookup_fn=lambda lemma: [])
+        dlg = WordCurationDialog(words, lookup_fn=lambda lemma, pos=None: [])
         qtbot.addWidget(dlg)
 
         _select_row(dlg, 0)
@@ -393,7 +393,7 @@ class TestDictionaryLookup:
         """Even empty results are cached so lookup_fn is called only once."""
         call_count = 0
 
-        def empty_lookup(lemma: str) -> list[tuple[str, str]]:
+        def empty_lookup(lemma: str, pos: str | None = None) -> list[tuple[str, str]]:
             nonlocal call_count
             call_count += 1
             return []
@@ -460,7 +460,7 @@ class TestLookupUsesMinedForm:
     def test_lookup_uses_mined_form_when_it_hits(self, qtbot):
         received: list[str] = []
 
-        def capturing_lookup(term: str, lemma: str | None = None) -> list[tuple[str, str]]:
+        def capturing_lookup(term: str, lemma: str | None = None, pos: str | None = None) -> list[tuple[str, str]]:
             received.append(term)
             return [("JMdict", "<div>to do someone in</div>")]
 
@@ -475,7 +475,7 @@ class TestLookupUsesMinedForm:
     def test_lookup_retries_lemma_on_miss(self, qtbot):
         received: list[str] = []
 
-        def capturing_lookup(term: str, lemma: str | None = None) -> list[tuple[str, str]]:
+        def capturing_lookup(term: str, lemma: str | None = None, pos: str | None = None) -> list[tuple[str, str]]:
             received.append(term)
             return [] if term == "殺る" else [("JMdict", "<div>to do</div>")]
 
@@ -488,7 +488,7 @@ class TestLookupUsesMinedForm:
         assert "to do" in dlg.definition_view.toHtml()
 
     def test_both_miss_placeholder_names_mined_form(self, qtbot):
-        dlg = WordCurationDialog([self._variant_word()], lookup_fn=lambda term, lemma=None: [])
+        dlg = WordCurationDialog([self._variant_word()], lookup_fn=lambda term, lemma=None, pos=None: [])
         qtbot.addWidget(dlg)
         _select_row(dlg, 0)
         _fire_timer(dlg)
@@ -504,7 +504,7 @@ class TestLookupUsesMinedForm:
         same-reading homograph beside the card's lemma-scoped entry."""
         received: list[tuple[str, str | None]] = []
 
-        def capturing_lookup(term: str, lemma: str | None = None) -> list[tuple[str, str]]:
+        def capturing_lookup(term: str, lemma: str | None = None, pos: str | None = None) -> list[tuple[str, str]]:
             received.append((term, lemma))
             return [("JMdict", "<div>to say</div>")]
 
@@ -523,7 +523,7 @@ class TestLookupUsesMinedForm:
         the exact wrong-homograph pane bug this task exists to fix."""
         calls: list[tuple[str, str | None]] = []
 
-        def recording_lookup(term: str, lemma: str | None = None) -> list[tuple[str, str]]:
+        def recording_lookup(term: str, lemma: str | None = None, pos: str | None = None) -> list[tuple[str, str]]:
             calls.append((term, lemma))
             return [("JMdict", f"<div>{lemma or term}</div>")]
 
@@ -584,7 +584,7 @@ class TestMissingVideo:
         ctx = _make_media_context(video_file=Path("/nonexistent/file.mkv"))
         call_count = 0
 
-        def fake_lookup(lemma: str) -> list[tuple[str, str]]:
+        def fake_lookup(lemma: str, pos: str | None = None) -> list[tuple[str, str]]:
             nonlocal call_count
             call_count += 1
             return [("JMdict", "<div>test</div>")]
@@ -809,7 +809,7 @@ class TestDebounceCoalescing:
         """Two rapid focus changes → only the final word is looked up after the timer fires."""
         received: list[str] = []
 
-        def capturing_lookup(lemma: str) -> list[tuple[str, str]]:
+        def capturing_lookup(lemma: str, pos: str | None = None) -> list[tuple[str, str]]:
             received.append(lemma)
             return []
 
@@ -853,7 +853,7 @@ class TestDebounceCoalescing:
 def _entry_lookup(received: list[str]):
     """A lookup_fn that records its calls and answers with the term it was given."""
 
-    def lookup(term: str) -> list[tuple[str, str]]:
+    def lookup(term: str, pos: str | None = None) -> list[tuple[str, str]]:
         received.append(term)
         return [("JMdict", f"<div>{term} entry</div>")]
 
@@ -927,7 +927,7 @@ class TestLookupIsAsynchronous:
         _fire_timer(dlg)  # row 0 in flight
 
         # Row 1 resolves from cache, so it paints immediately and supersedes.
-        dlg._lookup_cache[("走る", None)] = [("JMdict", "<div>fresher</div>")]
+        dlg._lookup_cache[("走る", None, "動詞")] = [("JMdict", "<div>fresher</div>")]
         _select_row(dlg, 1)
         _fire_timer(dlg)
         assert "fresher" in dlg.definition_view.toHtml()
@@ -946,7 +946,7 @@ class TestLookupIsAsynchronous:
         _select_row(dlg, 0)
         _fire_timer(dlg)
 
-        dlg._lookup_cache[("走る", None)] = [("JMdict", "<div>fresher</div>")]
+        dlg._lookup_cache[("走る", None, "動詞")] = [("JMdict", "<div>fresher</div>")]
         _select_row(dlg, 1)
         _fire_timer(dlg)
 
@@ -963,7 +963,7 @@ class TestLookupIsAsynchronous:
 
         _select_row(dlg, 0)
         _fire_timer(dlg)
-        dlg._lookup_cache[("走る", None)] = [("JMdict", "<div>fresher</div>")]
+        dlg._lookup_cache[("走る", None, "動詞")] = [("JMdict", "<div>fresher</div>")]
         _select_row(dlg, 1)
         _fire_timer(dlg)
 
@@ -980,7 +980,7 @@ class TestLookupIsAsynchronous:
     def test_cache_hit_renders_without_dispatching(self, qtbot, words, deferred_off_thread):
         dlg = WordCurationDialog(words, lookup_fn=_entry_lookup([]))
         qtbot.addWidget(dlg)
-        dlg._lookup_cache[("食べる", None)] = [("JMdict", "<div>cached</div>")]
+        dlg._lookup_cache[("食べる", None, "動詞")] = [("JMdict", "<div>cached</div>")]
 
         _select_row(dlg, 0)
         _fire_timer(dlg)
@@ -1029,7 +1029,7 @@ class TestLateCallbackGuards:
         result after dialog teardown returns without modifying any Qt state.
         """
 
-        def fake_lookup(term: str) -> list[tuple[str, str]]:
+        def fake_lookup(term: str, pos: str | None = None) -> list[tuple[str, str]]:
             return [("JMdict", f"<div>{term} entry</div>")]
 
         dlg = WordCurationDialog(words, lookup_fn=fake_lookup)
@@ -1068,7 +1068,7 @@ class TestLateCallbackGuards:
         during the flight.
         """
 
-        def fake_lookup(term: str) -> list[tuple[str, str]]:
+        def fake_lookup(term: str, pos: str | None = None) -> list[tuple[str, str]]:
             return [("JMdict", f"<div>{term} entry</div>")]
 
         dlg = WordCurationDialog(words, lookup_fn=fake_lookup)
@@ -1079,7 +1079,7 @@ class TestLateCallbackGuards:
         _fire_timer(dlg)
 
         # Row 1 is already cached, so it paints immediately and supersedes gen
-        dlg._lookup_cache[("走る", None)] = [("JMdict", "<div>row 1 entry</div>")]
+        dlg._lookup_cache[("走る", None, "動詞")] = [("JMdict", "<div>row 1 entry</div>")]
         _select_row(dlg, 1)
         _fire_timer(dlg)
         assert "row 1 entry" in dlg.definition_view.toHtml()

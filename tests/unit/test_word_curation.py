@@ -1,12 +1,20 @@
 """Tests for word curation callback in EpisodeProcessor."""
 
 from dataclasses import replace
+from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
+from anki_miner.gui.widgets.dialogs import word_curation_dialog as wcd
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
+from anki_miner.languages.registry import get_profile
+from anki_miner.models import TokenizedWord
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.presenters import NullPresenter
+from anki_miner.services.definition_service import DefinitionService
+from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
+from anki_miner.services.dictionary.storage import SCHEMA_VERSION, DictRow, bulk_insert, create_index, write_meta
 from tests.unit._processor_fixtures import make_media as _make_media
 from tests.unit._processor_fixtures import make_word as _make_word
 
@@ -22,6 +30,81 @@ def test_curation_search_matches_hidden_sentence_suffix(qtbot):
 
     assert "検索語" not in dialog.table.item(0, 4).text()
     assert not dialog.table.isRowHidden(0)
+
+
+class TestDefinitionPaneRanksByTokenPos:
+    """The dictionary pane beside the card opens on the row the card opens on:
+    both rank a word's rows by the token's part of speech (WBR-gui-05)."""
+
+    @pytest.fixture(autouse=True)
+    def _lookup_inline(self, monkeypatch):
+        def run_now(parent, work, on_done, on_error=None, **kwargs):
+            on_done(work())
+            return MagicMock()
+
+        monkeypatch.setattr(wcd, "run_off_thread", run_now)
+
+    @staticmethod
+    def _en_word(pos: str, start_time: float = 1.0) -> TokenizedWord:
+        return TokenizedWord(
+            surface="watch",
+            lemma="watch",
+            reading="",
+            sentence="I watch the news.",
+            start_time=start_time,
+            end_time=start_time + 2.0,
+            duration=2.0,
+            pos=pos,
+            mined_form_override="watch",
+        )
+
+    @staticmethod
+    def _show(dialog: WordCurationDialog, row: int) -> str:
+        dialog.table.setCurrentCell(row, 0)
+        dialog._on_row_focus_changed()
+        dialog._focus_timer.stop()
+        dialog._on_focus_timer_fired()
+        return dialog.definition_view.toPlainText()
+
+    def test_en_verb_token_opens_the_pane_on_the_verb_row(self, qtbot, test_config, tmp_path: Path):
+        db = tmp_path / "wty-en-en.sqlite"
+        create_index(db)
+        # wty's shape: one row per part of speech, score 0, sequence 0, noun first.
+        bulk_insert(
+            db,
+            [
+                DictRow(term="watch", reading=None, content="<div>A portable timepiece</div>", tags="n", sequence=0),
+                DictRow(term="watch", reading=None, content="<div>To look at</div>", tags="v", sequence=0),
+            ],
+        )
+        write_meta(db, {"schema_version": str(SCHEMA_VERSION), "source_name": "wty-en-en"})
+        provider = IndexedDictProvider("wty-en-en", db, keys=get_profile("en").dict_keys)
+        provider.load()
+        service = DefinitionService(test_config, providers=[provider])
+        dialog = WordCurationDialog([self._en_word("VERB")], lookup_fn=service.lookup_all_offline)
+        qtbot.addWidget(dialog)
+
+        pane = self._show(dialog, 0)
+
+        assert pane.index("To look at") < pane.index("A portable timepiece")
+
+    def test_the_token_pos_is_part_of_the_cache_key(self, qtbot):
+        """Two rows (or two picked sentences) share a front but not a POS: each
+        gets its own ranked entry, not the other's cached one."""
+        calls: list[tuple[str, str | None, str | None]] = []
+
+        def lookup(term: str, lemma: str | None = None, pos: str | None = None) -> list[tuple[str, str]]:
+            calls.append((term, lemma, pos))
+            return [("wty-en-en", f"<div>{pos} row</div>")]
+
+        dialog = WordCurationDialog([self._en_word("NOUN"), self._en_word("VERB", 5.0)], lookup_fn=lookup)
+        qtbot.addWidget(dialog)
+
+        for row in (0, 1, 0):
+            pane = self._show(dialog, row)
+            assert f"{dialog._pending_word.pos} row" in pane
+
+        assert sorted(calls) == [("watch", None, "NOUN"), ("watch", None, "VERB")]
 
 
 class TestCurationCallback:
