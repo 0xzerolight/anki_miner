@@ -23,12 +23,14 @@ Latin, digit and punctuation tokens are emitted so the spans stay aligned with
 the line. Their tags are not trustworthy (measured in sentence context:
 ``Netflix`` NOUN, ``2024`` NOUN, ``IQ題`` NOUN, and fullwidth Latin glues onto
 the preceding particle as one ``嘅ＡＢＣ`` PART token), which is why the profile
-excludes them with the Han script gate and never with POS.
+excludes them with the Han script gate and never with POS. ``YUE_TAG_OVERRIDES``
+corrects the Han words the model tags wrong in every context.
 """
 
 from __future__ import annotations
 
 from anki_miner.languages.token import LanguageToken
+from anki_miner.languages.yue.overrides import YUE_TAG_OVERRIDES
 from anki_miner.services.tagger import LockedTagger
 
 
@@ -58,7 +60,7 @@ class YueTagger:
             tokens.append(
                 LanguageToken(
                     surface=surface,
-                    pos1=tag,
+                    pos1=YUE_TAG_OVERRIDES.get(word, tag),
                     pos2="stopword" if word in self._stop_words else "",
                     lemma=word,
                     kana="",

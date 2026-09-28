@@ -14,9 +14,11 @@ Two measured consequences, accepted rather than papered over:
 
 * 廣東話, 香港人 and 澳門 tag PROPN, so Hong Kong place and language names need
   the user's PROPN tick -- the ja/ko/zh names convention.
-* the tagger glues and mis-tags particles (緊飯 NOUN, 靚啦 ADJ, 啦 NOUN), so a
-  particle-bearing token can pass this gate. The dictionary miss is what stops
-  it: neither 靚啦 nor 咁啦 is a headword in either catalogue row.
+* the tagger mis-tags particles standing alone (啦 NOUN, 吧 NOUN, aspect 緊
+  PROPN) and files set phrases under X (唔該, 對唔住). A dictionary miss cannot
+  stop the particles -- standalone 啦 and 吧 are headwords in both catalogue
+  rows -- so ``yue/overrides.py`` retags them PART and the set phrases into this
+  set, in the tagger, by word.
 
 PART, INTJ, PRON, PROPN, NUM, ADP, AUX, DET, CCONJ, SCONJ, PUNCT, SYM and X need
 no exclusion entry -- their tag is outside ``YUE_ALLOWED_POS`` already.

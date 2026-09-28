@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 
+from anki_miner.languages.yue.pos import YUE_ALLOWED_POS
 from anki_miner.languages.yue.tokenizer import build_tagger
 
 FIXTURE = Path(__file__).parents[2] / "fixtures" / "yue" / "tokens.jsonl"
@@ -69,3 +70,31 @@ def test_stop_words_are_tiered_in_pos2(tagger):
 
 def test_an_empty_line_produces_no_tokens(tagger):
     assert tagger.parse("") == []
+
+
+@pytest.mark.parametrize(
+    ("line", "phrase"),
+    [
+        ("埋單，唔該。", "唔該"),
+        ("對唔住，我瞓過咗龍。", "對唔住"),
+        ("唔好意思，我哋淨係收現金。", "唔好意思"),
+        ("知道喇，拜拜。", "拜拜"),
+        ("多謝讚賞，我都想早啲收工啫。", "多謝"),
+    ],
+)
+def test_a_polite_set_phrase_carries_a_mineable_tag(tagger, line, phrase):
+    # The engine tags every one of these X (HKCanCor's fixed expressions),
+    # outside YUE_ALLOWED_POS, so the first-week phrases never became cards.
+    tags = {t.feature.lemma: t.feature.pos1 for t in tagger.parse(line)}
+    assert tags[phrase] in YUE_ALLOWED_POS
+
+
+@pytest.mark.parametrize(
+    ("line", "particle"),
+    [("我哋一齊去睇戲啦。", "啦"), ("我們明天去看電影吧。", "吧"), ("我做緊功課。", "緊")],
+)
+def test_a_particle_is_tagged_part_wherever_the_engine_puts_it(tagger, line, particle):
+    # Measured engine tags: 啦 NOUN, 吧 NOUN, standalone aspect 緊 PROPN. Each is
+    # a dictionary headword, so any content tag turned it into a card.
+    tags = {t.feature.lemma: t.feature.pos1 for t in tagger.parse(line)}
+    assert tags[particle] == "PART"
