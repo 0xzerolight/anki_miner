@@ -23,7 +23,8 @@ ADJ/ADV/NOUN/VERB tokens 310 reach the dictionary through it alone (VERB 242, NO
 24,977 direct front hits and 403 surface hits.
 
 ``demote_question_clitic``: spaCy's hu tokenizer splits the ``-e`` question clitic off (``tudod-e``), and the model
-tags it ADV, which would mine.
+tags it ADV, which would mine. ``demote_negation_particles``: the model tags ``nem``/``ne``/``sem``/``se`` ADV with
+``PronType=Neg`` (UD Hungarian), so ``nem``, third in the frequency list, was mined in 187 of 1,500 example sentences.
 
 ``HU_OPENERS``/``HU_CLOSERS``: Hungarian quotes are „…” outside and »…« inside, so ``»`` opens and ``«`` closes, the
 reverse of the shared Latin pair. ``HU_SPEAKER_PATTERN`` is the shared speaker label with ``Ő`` and ``Ű`` added:
@@ -91,6 +92,23 @@ def demote_question_clitic(tokens: list[LanguageToken]) -> list[LanguageToken]:
     for token in tokens:
         if token.surface.casefold() == "-e":
             token.feature.pos1 = "PART"
+    return tokens
+
+
+#: The negation particles UD Hungarian tags ADV with ``PronType=Neg`` (``se`` is the colloquial ``sem``).
+HU_NEGATION_PARTICLES: frozenset[str] = frozenset({"nem", "ne", "sem", "se"})
+
+
+def demote_negation_particles(tokens: list[LanguageToken]) -> list[LanguageToken]:
+    """Tokenizer post-pass: an ADV negation particle becomes PART (fr ``ne``, en ``not``).
+
+    Both the lemma table and the morph must agree: ``soha`` (never) is ``PronType=Tot`` vocabulary, and the model's
+    rare ``PronType=Neg`` on a content word (``nélküle``, ``bármennyire``) is no listed lemma.
+    """
+    for token in tokens:
+        feature = token.feature
+        if feature.pos1 == "ADV" and feature.lemma in HU_NEGATION_PARTICLES and "PronType=Neg" in token.morph:
+            feature.pos1 = "PART"
     return tokens
 
 
