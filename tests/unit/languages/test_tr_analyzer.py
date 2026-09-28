@@ -53,9 +53,9 @@ def test_parsing_logs_and_prints_nothing(analyzer, caplog, capfd):
         ("Kitabın", TrAnalysis("kitap", "NOUN")),
         ("ilacını", TrAnalysis("ilaç", "NOUN")),
         ("kâğıdı", TrAnalysis("kâğıt", "NOUN")),
-        ("yıka", TrAnalysis("yıkamak", "VERB")),
+        ("yıka", TrAnalysis("yıkamak", "VERB", imperative=True)),
         ("biliyorum", TrAnalysis("bilmek", "VERB")),
-        ("ederim", TrAnalysis("etmek", "VERB")),
+        ("ederim", TrAnalysis("etmek", "VERB", aorist=True)),
         ("kız", TrAnalysis("kız", "NOUN")),
         ("aman", TrAnalysis("aman", "INTJ")),
         ("mi", TrAnalysis("mi", "PART")),
@@ -96,6 +96,17 @@ def test_every_reading_is_listed_once(analyzer):
         TrAnalysis("banmak", "VERB"),
         TrAnalysis("Ba", "PROPN", "Prop"),
     ]
+
+
+def test_a_verb_says_whether_a_reading_is_its_imperative_or_its_aorist(analyzer):
+    """The tagger's clause evidence: an aorist participle (``AorPart``) or an optative is neither."""
+    assert analyzer.analyse("at") == [
+        TrAnalysis("at", "NOUN"),
+        TrAnalysis("atmak", "VERB", imperative=True),
+        TrAnalysis("At", "PROPN", "Prop"),
+    ]
+    assert TrAnalysis("beklemek", "VERB", aorist=True) in analyzer.analyse("bekler")
+    assert TrAnalysis("kazmak", "VERB") in analyzer.analyse("kaza")
 
 
 def test_unanalysable_words_come_back_empty_and_fast(analyzer):

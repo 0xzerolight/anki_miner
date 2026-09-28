@@ -221,13 +221,17 @@ class TurkishAnalyzer:
         return sorted(readings, key=key)
 
     def analyse(self, word: str) -> list[TrAnalysis]:
-        out: list[TrAnalysis] = []
+        """One ``TrAnalysis`` per distinct lemma and POS, in ``_ranked`` order; a verb's flags cover all its readings."""
+        out: dict[tuple[str, str, str], TrAnalysis] = {}
         for reading in self._ranked(self._zeyrek._parse(word.translate(_APOSTROPHES))):
             item = reading.dict_item
             secondary = _secondary(item)
             pos1 = upos(item.primary_pos.value, secondary)
             lemma = front_spelling(item.lemma, word)
-            analysis = TrAnalysis(lemma if pos1 == "PROPN" else tr_casefold(lemma), pos1, secondary)
-            if analysis not in out:
-                out.append(analysis)
-        return out
+            key = (lemma if pos1 == "PROPN" else tr_casefold(lemma), pos1, secondary)
+            morphemes = {morpheme.id_ for morpheme, _surface in reading.morphemes} if pos1 == "VERB" else set()
+            seen = out.get(key, TrAnalysis(*key))
+            out[key] = TrAnalysis(
+                *key, imperative=seen.imperative or "Imp" in morphemes, aorist=seen.aorist or "Aor" in morphemes
+            )
+        return list(out.values())
