@@ -9,8 +9,10 @@ application-level miss, so no per-word URL under it can resolve.
 
 The ladder puts the ORTHOGRAPHIC form in the reading slot: the Google fetcher
 synthesises from that slot, and Korean TTS applies its own phonology, so 국물 is
-what should be spoken. The pronunciation respelling (궁물) is a second rung, used
-only when the first fails.
+what should be spoken. A second rung speaks ``expression_reading`` when it
+differs from the front, but ko has no ``ReadingSupport``: the parser leaves that
+field empty, so today the ladder is the one orthographic rung. No respelling
+(국물 -> 궁물) ships.
 
 cache_stem_prefix namespaces the stem (googletts_ko_...) because the stem doubles
 as the Anki media filename: without it a Korean and a Japanese card for the same
@@ -46,7 +48,7 @@ def ko_speakable(term: str, reading: str) -> str | None:
     """What Google TTS speaks for a Korean ladder pair: the slot the ladder filled.
 
     The first rung carries the orthographic form in the reading slot (Korean TTS
-    applies its own phonology to it), the second the pronunciation respelling.
+    applies its own phonology to it), a second one ``expression_reading``.
     """
     return reading or term or None
 
