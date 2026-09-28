@@ -1,7 +1,9 @@
 """Tests for the Yomitan zip importer."""
 
+import json
 import logging
 import sqlite3
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -1314,6 +1316,66 @@ class TestAttributionMetadata:
         meta = self._import(tmp_path, {})
         for key in ("author", "attribution", "description"):
             assert key not in meta
+
+
+class TestSequencedFlag:
+    """index.json ``sequenced`` says whether term-bank sequence numbers mean anything.
+
+    KRDICT declares ``"sequenced": false`` and still writes sequence 1 on every
+    row. Stored as-is, that number grouped every homograph of a word into one
+    block under one tag line (못: "Noun, ⭐⭐, Adverb, ⭐⭐⭐" over both "nail" and
+    "not"), so a dictionary that does not declare itself sequenced stores none.
+    """
+
+    #: Two KRDICT homographs of 못: one row each, both carrying sequence 1.
+    HOMOGRAPHS = [
+        ["못", "", "Noun ⭐⭐", "", 0, ["nail"], 1, ""],
+        ["못", "", "Adverb ⭐⭐⭐", "", 0, ["not; cannot"], 1, ""],
+    ]
+
+    def _import(self, tmp_path: Path, index_extra: dict) -> Path:
+        zip_path = build_yomitan_zip(
+            tmp_path / "src" / "k.zip", term_banks=[self.HOMOGRAPHS], tag_banks=[], index_extra=index_extra
+        )
+        result = import_yomitan_zip(zip_path, tmp_path / "dicts", language="ko")
+        return tmp_path / "dicts" / result.dict_id / "index.sqlite"
+
+    def _sequences(self, db_path: Path) -> list[int | None]:
+        with sqlite3.connect(db_path) as conn:
+            return [row[0] for row in conn.execute("SELECT sequence FROM entries ORDER BY id")]
+
+    @pytest.mark.parametrize("index_extra", [{"sequenced": False}, {"sequenced": None}])
+    def test_an_unsequenced_dictionary_stores_no_sequence(self, tmp_path: Path, index_extra: dict):
+        assert self._sequences(self._import(tmp_path, index_extra)) == [None, None]
+
+    def test_a_dictionary_that_omits_the_flag_is_unsequenced(self, tmp_path: Path):
+        zip_path = build_yomitan_zip(tmp_path / "src" / "k.zip", term_banks=[self.HOMOGRAPHS], tag_banks=[])
+        with zipfile.ZipFile(zip_path) as zf:
+            index = json.loads(zf.read("index.json"))
+            banks = {name: zf.read(name) for name in zf.namelist() if name != "index.json"}
+        del index["sequenced"]
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr("index.json", json.dumps(index))
+            for name, data in banks.items():
+                zf.writestr(name, data)
+        result = import_yomitan_zip(zip_path, tmp_path / "dicts", language="ko")
+        assert self._sequences(tmp_path / "dicts" / result.dict_id / "index.sqlite") == [None, None]
+
+    def test_a_sequenced_dictionary_keeps_its_sequence(self, tmp_path: Path):
+        assert self._sequences(self._import(tmp_path, {"sequenced": True})) == [1, 1]
+
+    def test_each_unsequenced_homograph_renders_under_its_own_tag_line(self, tmp_path: Path):
+        db_path = self._import(tmp_path, {"sequenced": False})
+        provider = IndexedDictProvider(db_path.parent.name, db_path, display_name="KRDICT EN")
+        provider.load()
+        try:
+            rendered = provider.lookup("못")
+        finally:
+            provider.close()
+        assert rendered is not None
+        assert rendered.count('<ul class="gloss-list"') == 2
+        assert "<i>(Noun, ⭐⭐, KRDICT EN)</i>" in rendered
+        assert "<i>(Adverb, ⭐⭐⭐, KRDICT EN)</i>" in rendered
 
 
 class TestDictIdOverride:
