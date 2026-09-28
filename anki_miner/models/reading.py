@@ -29,6 +29,19 @@ class ImageRef:
 
 
 @dataclass(frozen=True)
+class DeckFieldMap:
+    """Which note fields of an existing Anki deck feed a ``kind="deck"`` run.
+
+    ``sentence`` is required; ``""`` means the optional field is not used.
+    """
+
+    sentence: str
+    audio: str = ""
+    picture: str = ""
+    translation: str = ""
+
+
+@dataclass(frozen=True)
 class ReadingUnit:
     """One mining unit: a text span with its document position and image.
 
@@ -39,6 +52,10 @@ class ReadingUnit:
     ``block_box`` is the mokuro block bounding box in original-page pixel
     coords (xmin, ymin, xmax, ymax); None for novels/txt and malformed blocks.
     Sentence-split pieces of one oversized block share the parent block's box.
+
+    ``audio_ref`` and ``translation`` are set only by the Anki-deck loader
+    (kind="deck"): the card's own sentence clip in Anki's ``collection.media``
+    and its native-language line. Every other kind leaves them empty.
     """
 
     text: str
@@ -46,6 +63,8 @@ class ReadingUnit:
     location_label: str
     image_ref: ImageRef | None = None
     block_box: tuple[int, int, int, int] | None = None
+    audio_ref: Path | None = None
+    translation: str = ""
 
 
 @dataclass(frozen=True)
@@ -75,8 +94,12 @@ class ReadingSourceRef:
       Distinct from kind="txt", which is a ``.txt`` *file* on disk (aozora
       loader).
 
+    * kind="deck": built directly by the Anki Deck sub-tab, never by the
+      detector — ``title`` is the Anki deck name (subdecks included),
+      ``deck_fields`` names the note fields to read, and ``path`` is None.
+
     ``path`` is always set for the file-backed kinds (their loaders assert
-    this) and only None for kind="text".
+    this) and only None for kind="text" and kind="deck".
 
     ``byte_range`` marks one part of a ``.txt`` too large to mine whole
     (``aozora_source.split_oversize``): ``(start, end)`` byte offsets, ``end``
@@ -84,7 +107,7 @@ class ReadingSourceRef:
     in ``[start, end)``. None for every other ref.
     """
 
-    kind: Literal["mokuro", "epub", "txt", "subtitle", "text"]
+    kind: Literal["mokuro", "epub", "txt", "subtitle", "text", "deck"]
     path: Path | None = None
     image_root: Path | None = None
     title: str = ""
@@ -92,14 +115,22 @@ class ReadingSourceRef:
     text: str | None = None
     ocr_entry: str | None = None
     byte_range: tuple[int, int | None] | None = None
+    deck_fields: DeckFieldMap | None = None
 
     def __post_init__(self) -> None:
         # Every field defaults so kind="text" can be built positionally, but the
         # file-backed kinds must carry a path — their loaders assert it, and that
         # assert is stripped under `python -O`. Enforce the invariant at
         # construction so a malformed ref fails loudly at its source instead.
-        if self.kind != "text" and self.path is None:
+        if self.kind == "deck":
+            # Pathless like "text": the deck is named by title and read
+            # through AnkiConnect with the fields deck_fields names.
+            if not self.title or self.deck_fields is None:
+                raise ValueError("ReadingSourceRef(kind='deck') requires a deck name and deck_fields")
+        elif self.kind != "text" and self.path is None:
             raise ValueError(f"ReadingSourceRef(kind={self.kind!r}) requires a path")
+        if self.deck_fields is not None and self.kind != "deck":
+            raise ValueError(f"ReadingSourceRef(kind={self.kind!r}) cannot carry deck_fields")
         # Only the novel loader reads a part; any other loader would silently
         # mine the whole file.
         if self.byte_range is not None and self.kind != "txt":
@@ -116,7 +147,7 @@ class ReadingDocument:
     """
 
     title: str
-    kind: Literal["manga", "book", "subtitle"]
+    kind: Literal["manga", "book", "subtitle", "deck"]
     series: str
     episode: str
     units: list[ReadingUnit] = field(default_factory=list)

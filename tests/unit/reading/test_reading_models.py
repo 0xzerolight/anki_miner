@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from anki_miner.models.reading import (
+    DeckFieldMap,
     ImageRef,
     ReadingDocument,
     ReadingSourceRef,
@@ -183,3 +184,38 @@ def test_reading_document_is_mutable():
     # Distinct documents do not share the mutable default lists.
     other = ReadingDocument(title="U", kind="manga", series="S", episode="1")
     assert other.units == []
+
+
+# ---------------------------------------------------------------------------
+# kind="deck" (Issue #131: mine an existing Anki deck)
+# ---------------------------------------------------------------------------
+
+
+def test_deck_ref_needs_a_deck_name_and_fields_but_no_path():
+    ref = ReadingSourceRef(kind="deck", title="Show::Ep01", deck_fields=DeckFieldMap(sentence="Expression"))
+    assert ref.path is None
+    with pytest.raises(ValueError):
+        ReadingSourceRef(kind="deck", title="Show", deck_fields=None)
+    with pytest.raises(ValueError):
+        ReadingSourceRef(kind="deck", title="", deck_fields=DeckFieldMap(sentence="Expression"))
+
+
+def test_only_a_deck_ref_carries_deck_fields(tmp_path):
+    with pytest.raises(ValueError):
+        ReadingSourceRef(kind="subtitle", path=tmp_path / "a.srt", deck_fields=DeckFieldMap(sentence="S"))
+
+
+def test_deck_field_map_optional_fields_default_to_unused():
+    fmap = DeckFieldMap(sentence="Expression")
+    assert (fmap.audio, fmap.picture, fmap.translation) == ("", "", "")
+
+
+def test_unit_media_defaults_are_empty():
+    unit = ReadingUnit(text="a", index=0, location_label="#1")
+    assert unit.audio_ref is None
+    assert unit.translation == ""
+
+
+def test_document_accepts_the_deck_kind():
+    doc = ReadingDocument(title="D", kind="deck", series="D", episode="D")
+    assert doc.kind == "deck"

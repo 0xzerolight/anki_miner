@@ -2,6 +2,7 @@
 
 import base64
 import logging
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -4484,6 +4485,18 @@ class TestNoteFieldPrimitives:
         with patch("anki_miner.services.anki_service.post_action") as pa:
             assert service.notes_info([]) == []
         pa.assert_not_called()
+
+    def test_media_dir_path_returns_ankis_folder(self, test_config):
+        service = AnkiService(test_config)
+        folder = "/home/u/.local/share/Anki2/User 1/collection.media"
+        with patch("anki_miner.services.anki_service.post_action", return_value=folder) as pa:
+            assert service.media_dir_path() == Path(folder)
+        assert pa.call_args[0][1] == "getMediaDirPath"
+
+    def test_media_dir_path_is_none_for_a_non_path_answer(self, test_config):
+        service = AnkiService(test_config)
+        with patch("anki_miner.services.anki_service.post_action", return_value=None):
+            assert service.media_dir_path() is None
 
     def test_update_notes_fields_batches_and_shapes(self, test_config):
         service = AnkiService(test_config)
