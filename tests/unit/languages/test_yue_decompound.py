@@ -73,6 +73,17 @@ def test_an_attested_token_stays_whole(tagger):
     assert YueDecompoundPass(tagger)(raw, dictionary("好忙", "好", "忙"), None) is raw
 
 
+def test_a_token_the_lookup_ladder_attests_stays_whole(tagger):
+    # No dictionary keys 甚麼 'what'; the definition lookup finds it as 什麼. Split,
+    # it carded 甚 'variant of 什' and 麼 'exclamatory final particle'.
+    raw = tagger.parse("你為甚麼不告訴我？")
+    assert "甚麼" in [t.surface for t in raw]
+
+    tokens = split(tagger, "你為甚麼不告訴我？", "你", "為", "什麼", "甚", "麼", "不", "告", "訴", "我")
+
+    assert "甚麼" in [t.surface for t in tokens]
+
+
 def test_a_token_the_pass_does_not_split_keeps_its_first_tag(tagger):
     # Re-tagging the re-segmented line gave the untouched 起床 PART, so it lost its card.
     raw = tagger.parse("她每天都很早起床。")
