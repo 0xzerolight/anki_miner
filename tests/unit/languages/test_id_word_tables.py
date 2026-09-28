@@ -46,9 +46,10 @@ def test_only_the_curated_core_carries_the_stopword_read_through():
     ``morphology.is_stopword`` reads :data:`ID_COLLOQUIAL_CORE` alone; the counts here are what that
     decision costs and saves. The whole table would add 306 words nobody reviewed.
     """
-    assert len(ID_COLLOQUIAL_CORE) == 29
+    assert len(ID_COLLOQUIAL_CORE) == 33
     assert ID_COLLOQUIAL_CORE.items() <= ID_COLLOQUIAL.items()
-    assert len([key for key, formal in ID_COLLOQUIAL_CORE.items() if formal in ID_STOPWORDS]) == 23
+    # kalo joins with kalau (ID-02); tau liat abis reach content words
+    assert len([key for key, formal in ID_COLLOQUIAL_CORE.items() if formal in ID_STOPWORDS]) == 24
     unreviewed = [
         key
         for key, formal in ID_COLLOQUIAL.items()
@@ -58,7 +59,7 @@ def test_only_the_curated_core_carries_the_stopword_read_through():
 
 
 def test_the_colloquial_table_is_indocollex_under_the_curated_core():
-    assert len(ID_COLLOQUIAL) == 1920
+    assert len(ID_COLLOQUIAL) == 1924
     core = {
         "lo": "kamu",
         "nggak": "tidak",
