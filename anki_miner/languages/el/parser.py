@@ -12,6 +12,10 @@ The same pass recovers the content words the model tags X or PROPN, mostly a cap
 verb (``Κλείσε την πόρτα.``, ``Θυμάσαι;``): the dictionary decides, never the capital, so
 Ruling S2's rejection of lowercasing the tagging copy stands. ``admit_front`` keeps names out.
 
+A surface with an enclitic second accent (``τηλέφωνό μου``) is no dictionary key, and the model can
+still mislemmatise the folded copy (``τηλέφωνος``), so the pass also reads the surface without that
+accent (``dictionary_spelling``).
+
 The it-style attested-lemma pass was measured and left out: on UD Greek GDT test it moves lemma
 accuracy from 81.1 % to 81.2 % (plan 2026-09-17-el, "Lemma quality").
 """
@@ -23,7 +27,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from anki_miner.languages._spaced.form_of import lemma_row_targets, rendered_text
-from anki_miner.languages.el.morphology import EL_RECOVERED_POS
+from anki_miner.languages.el.morphology import EL_RECOVERED_POS, fold_enclitic_accent
 
 _GLOSSES = re.compile(r'<ol class="gloss-sc-ol" data-sc-content="glosses">(.*?)</ol>', re.S)
 _GLOSS = re.compile(r'<li class="gloss-sc-li">(.*?)</li>', re.S)
@@ -64,12 +68,22 @@ def admit_front(token: Any, front: str, heads: Sequence[tuple[str, str]]) -> boo
     return not front[:1].isupper() and not any("name" in tags.split(" ") for _content, tags in heads)
 
 
+def dictionary_spelling(token: Any) -> list[str]:
+    """The lowered surface without its enclitic second accent, read right after the surface itself."""
+    return [fold_enclitic_accent(token.surface.lower())]
+
+
 def create_parser(config: Any, **kwargs: Any) -> Any:
     from anki_miner.languages._spaced import create_spaced_parser
     from anki_miner.languages._spaced.form_of import FormOfLemmaPass
 
     kwargs.setdefault(
         "token_post_pass",
-        FormOfLemmaPass(row_targets=greek_row_targets, recover_pos=EL_RECOVERED_POS, accept=admit_front),
+        FormOfLemmaPass(
+            row_targets=greek_row_targets,
+            recover_pos=EL_RECOVERED_POS,
+            accept=admit_front,
+            extra_candidates=dictionary_spelling,
+        ),
     )
     return create_spaced_parser(config, **kwargs)

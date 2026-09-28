@@ -8,9 +8,9 @@ is the sentence splitter's, so ``κ.``/``χλμ.`` stay tokenizer exceptions and
 
 A proparoxytone before an enclitic takes a second acute (``το αυτοκίνητό μου``, ``άκουσέ με``), a
 spelling neither the model nor wty-el-en knows: ``αυτοκίνητό`` lemmatises ``αυτοκίνητός``, ``Άκουσέ``
-tags NOUN, and neither front has a dictionary row. ``fold_enclitic_accent`` drops it from the tagging
-copy, so the lemma (and with it the card front) is the dictionary spelling while the surface stays
-as written.
+tags NOUN, and neither front has a dictionary row. ``fold_enclitic_accent`` (``el/morphology.py``)
+drops it from the tagging copy, so the lemma (and with it the card front) is the dictionary spelling
+while the surface stays as written.
 
 ``retag_greek_tokens`` (a tagger post-pass) gives the closed-class words the model tags as content
 (``σου`` NOUN, ``είσαι`` ADV) their own class from ``EL_CLOSED_CLASS``.
@@ -21,9 +21,6 @@ dev+test lemma exact 80.99 % -> 81.92 %, POS untouched).
 
 from __future__ import annotations
 
-import re
-import unicodedata
-
 from anki_miner.languages._spaced.morphology import APOSTROPHE_FOLD
 from anki_miner.languages._spaced.pos import UPOS_ALLOWED
 from anki_miner.languages._spaced.tokenizer import build_spacy_tagger
@@ -32,46 +29,10 @@ from anki_miner.languages.el.morphology import (
     EL_CLOSED_CLASS,
     EL_MODEL_PACKAGE,
     EL_RECOVERED_POS,
+    fold_enclitic_accent,
 )
 from anki_miner.languages.token import LanguageToken
 from anki_miner.services.tagger import LockedTagger
-
-_ACUTE = "́"
-_LETTER_RUN = re.compile(r"[^\W\d_]+")
-
-
-def _without_acute(char: str) -> str:
-    return unicodedata.normalize("NFC", unicodedata.normalize("NFD", char).replace(_ACUTE, ""))
-
-
-#: Every precomposed Greek letter with an acute (tonos), to the same letter without it: one code point
-#: each (``ό`` -> ``ο``, ``ΐ`` -> ``ϊ``), so the tagging copy keeps its length.
-_UNACCENTED: dict[str, str] = {
-    char: _without_acute(char)
-    for char in map(chr, range(0x0370, 0x0400))
-    if _ACUTE in unicodedata.normalize("NFD", char) and len(_without_acute(char)) == 1
-}
-
-
-def _fold_run(match: re.Match[str]) -> str:
-    run = match.group()
-    accents = [index for index, char in enumerate(run) if char in _UNACCENTED]
-    if len(accents) < 2:
-        return run
-    chars = list(run)
-    for index in accents[1:]:
-        chars[index] = _UNACCENTED[chars[index]]
-    return "".join(chars)
-
-
-def fold_enclitic_accent(text: str) -> str:
-    """Every accented letter after the first in a letter run loses its acute; the length never changes.
-
-    A monotonic Greek word carries one accent, and a second one only before an enclitic, always
-    later in the word. Per letter run, not per whitespace token: ``νωρίς—αλλά`` is two words.
-    """
-    return _LETTER_RUN.sub(_fold_run, text)
-
 
 #: The classes the model puts a closed-class word in by mistake: the mined ones, and the two the parser
 #: recovers content words from. A closed class the model chose (``το`` DET or PRON) is kept.

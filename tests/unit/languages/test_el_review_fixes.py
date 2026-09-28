@@ -11,9 +11,9 @@ from __future__ import annotations
 import pytest
 
 from anki_miner.languages._spaced.form_of import FormOfLemmaPass
-from anki_miner.languages.el.morphology import EL_CLOSED_CLASS
+from anki_miner.languages.el.morphology import EL_CLOSED_CLASS, fold_enclitic_accent
 from anki_miner.languages.el.parser import greek_row_targets
-from anki_miner.languages.el.tokenizer import fold_enclitic_accent, retag_greek_tokens
+from anki_miner.languages.el.tokenizer import retag_greek_tokens
 from anki_miner.languages.token import LanguageToken
 
 # --------------------------------------------------------------------------
@@ -194,6 +194,7 @@ EL_ROWS: dict[str, list[tuple[str, str]]] = {
     "χρόνο": [form("χρόνος")],
     "χρόνος": [head("n masc", "time"), head("n masc", "year")],
     "θόρυβος": [head("n masc", "noise")],
+    "τηλέφωνο": [head("n neut", "telephone, phone")],
     # EL-03: cue-initial content words tagged X/PROPN, and the names that must stay out
     "κλείσε": [form("κλείνω")],
     "κλείνω": [head("v", "to close"), form("κλείνομαι")],
@@ -287,6 +288,16 @@ def test_an_inflected_verb_fronts_its_lemma_and_takes_the_verb_class(monkeypatch
 def test_a_surface_front_keeps_its_final_sigma(monkeypatch):
     """The dictionary key folds ``ς`` to ``σ``; the card front must not."""
     assert _fronts(monkeypatch, tok("Θόρυβος", "NOUN", "θόρυβο")) == [("θόρυβος", "NOUN")]
+
+
+def test_a_surface_with_an_enclitic_accent_is_read_in_its_dictionary_spelling(monkeypatch):
+    """The model lemmatises the folded ``τηλέφωνο`` as ``τηλέφωνος``, and ``τηλέφωνό`` is no dictionary key."""
+    assert _fronts(monkeypatch, tok("τηλέφωνό", "NOUN", "τηλέφωνος")) == [("τηλέφωνο", "NOUN")]
+
+
+def test_the_real_parser_cards_a_noun_before_an_enclitic(el_parser):
+    fronts = {word.surface: word.mined_form for word in _words(el_parser, "Το τηλέφωνό μου χάλασε.")}
+    assert fronts["τηλέφωνό"] == "τηλέφωνο"
 
 
 def test_without_a_dictionary_the_greek_pass_changes_nothing(monkeypatch):

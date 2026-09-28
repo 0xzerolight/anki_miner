@@ -32,10 +32,16 @@ BLOCKER — ``ΓΙΑΝΝΗΣ: [χτυπάει η πόρτα] -Η …`` left ``-�
 ``el_sentence_rules``: the Latin rules plus both Greek question marks, ASCII ``;`` and U+037E.
 ``normalize`` (NFC) already folds U+037E to ``;`` on the mining path, but the reading-tab splitter
 sees raw book text.
+
+``fold_enclitic_accent``: the second acute a proparoxytone takes before an enclitic
+(``αυτοκίνητό μου``) dropped per letter run. The tokenizer folds the tagging copy with it, and the
+parser's form-row pass reads the surface through it.
 """
 
 from __future__ import annotations
 
+import re
+import unicodedata
 from collections.abc import Mapping
 from dataclasses import replace
 from types import MappingProxyType
@@ -135,3 +141,41 @@ EL_TERMINATORS: frozenset[str] = LATIN_TERMINATORS | {";", "\u037e"}
 def el_sentence_rules() -> SentenceRules:
     """The Latin sentence rules with the Greek terminators and abbreviation set."""
     return replace(sentence_rules(EL_ABBREVIATIONS), terminators=EL_TERMINATORS)
+
+
+_ACUTE = "́"
+_LETTER_RUN = re.compile(r"[^\W\d_]+")
+
+
+def _without_acute(char: str) -> str:
+    return unicodedata.normalize("NFC", unicodedata.normalize("NFD", char).replace(_ACUTE, ""))
+
+
+#: Every precomposed Greek letter with an acute (tonos), to the same letter without it: one code point
+#: each (``ό`` -> ``ο``, ``ΐ`` -> ``ϊ``), so a folded string keeps its length.
+_UNACCENTED: dict[str, str] = {
+    char: _without_acute(char)
+    for char in map(chr, range(0x0370, 0x0400))
+    if _ACUTE in unicodedata.normalize("NFD", char) and len(_without_acute(char)) == 1
+}
+
+
+def _fold_run(match: re.Match[str]) -> str:
+    run = match.group()
+    accents = [index for index, char in enumerate(run) if char in _UNACCENTED]
+    if len(accents) < 2:
+        return run
+    chars = list(run)
+    for index in accents[1:]:
+        chars[index] = _UNACCENTED[chars[index]]
+    return "".join(chars)
+
+
+def fold_enclitic_accent(text: str) -> str:
+    """Every accented letter after the first in a letter run loses its acute; the length never changes.
+
+    A monotonic Greek word carries one accent, and a second one only before an enclitic, always
+    later in the word (``το αυτοκίνητό μου``, ``άκουσέ με``). Per letter run, not per whitespace
+    token: ``νωρίς—αλλά`` is two words.
+    """
+    return _LETTER_RUN.sub(_fold_run, text)
