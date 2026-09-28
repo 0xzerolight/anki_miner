@@ -631,6 +631,10 @@ class AudioStage:
         memo: dict[str, Path | None] = {}
 
         def _per_item(word: TokenizedWord, media: MediaData) -> bool | None:
+            if media.audio_path is not None:
+                # The source brought a real recording (Anki deck); synthesis
+                # is only the stand-in for a line with none.
+                return None
             sentence = word.sentence
             if sentence.strip():
                 if sentence in memo:
