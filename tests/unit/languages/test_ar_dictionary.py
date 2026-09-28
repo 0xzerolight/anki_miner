@@ -46,7 +46,11 @@ def provider(tmp_path_factory) -> IndexedDictProvider:
             "\u0630\u0647\u0628",
             "I (non-past \u064a\u064e\u0630\u0652\u0647\u064e\u0628\u064f, verbal noun \u0630\u064e\u0647\u064e\u0627\u0628 or \u0645\u064e\u0630\u0652\u0647\u064e\u0628)",
         ),  # dhahaba
-        ("\u0637\u0644\u0627\u0628", ""),  # tullaab: a form-of row has no head line
+        (
+            "\u0637\u0644\u0627\u0628",
+            "m (plural \u0637\u064e\u0627\u0644\u0650\u0628\u064f\u0648\u0646 or \u0637\u064e\u0644\u064e\u0628\u064e\u0629"
+            " or \u0637\u064f\u0644\u064e\u0651\u0627\u0628, feminine \u0637\u064e\u0627\u0644\u0650\u0628\u064e\u0629)",
+        ),  # tullaab: its form-of row names taalib, whose entry (and head line) the card shows
     ],
 )
 def test_the_grammar_line_on_real_rows(provider, word, line):
