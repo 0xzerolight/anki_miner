@@ -124,6 +124,35 @@ class TestFilePairMatcher:
 
             assert [pair.subtitle.name for pair in pairs] == ["Show_01.srt"]
 
+        def test_default_subtitle_extensions_pair_smi(self, tmp_path):
+            """SAMI (.smi), the long-standing Korean fansub format, pairs by default."""
+            video_dir = tmp_path / "video"
+            video_dir.mkdir()
+            sub_dir = tmp_path / "subs"
+            sub_dir.mkdir()
+
+            (video_dir / "Show_01.mkv").touch()
+            (sub_dir / "Show_01.smi").touch()
+
+            pairs = FilePairMatcher.find_pairs_by_episode_number(video_dir, sub_dir)
+
+            assert [pair.subtitle.name for pair in pairs] == ["Show_01.smi"]
+
+        def test_every_other_format_outranks_smi(self, tmp_path):
+            """SAMI sorts last: pysubs2 guesses nothing for the others' cue ends and keeps their styling."""
+            video_dir = tmp_path / "video"
+            video_dir.mkdir()
+            sub_dir = tmp_path / "subs"
+            sub_dir.mkdir()
+
+            (video_dir / "Show_01.mkv").touch()
+            (sub_dir / "Show_01.smi").touch()
+            (sub_dir / "Show_01.vtt").touch()
+
+            pairs = FilePairMatcher.find_pairs_by_episode_number(video_dir, sub_dir)
+
+            assert [pair.subtitle.name for pair in pairs] == ["Show_01.vtt"]
+
         def test_custom_video_extensions_finds_audio(self, tmp_path):
             """Audio-only inputs pair when the caller supplies audio media
             extensions (condenser use case, D12)."""
@@ -380,6 +409,15 @@ def test_find_sibling_subtitle_matches_nfd_stem(tmp_path):
     sub = tmp_path / _NFD_NAME
     sub.touch()
     assert find_sibling_subtitle(video) == sub
+
+
+def test_find_sibling_subtitle_finds_a_smi(tmp_path):
+    """Picking ep01.mkv on the video tab fills in the ep01.smi beside it."""
+    from anki_miner.utils.file_pairing import find_sibling_subtitle
+
+    (tmp_path / "ep01.mkv").touch()
+    (tmp_path / "ep01.smi").touch()
+    assert find_sibling_subtitle(tmp_path / "ep01.mkv") == tmp_path / "ep01.smi"
 
 
 class TestFindSiblingSubtitleIdentity:

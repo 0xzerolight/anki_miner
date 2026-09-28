@@ -29,6 +29,13 @@ VIDEO_FILE_FILTER = "Video Files (*.mp4 *.mkv *.avi *.m4v *.mov);;All Files (*)"
 SUBTITLE_FILE_FILTER = (
     f"Subtitle Files ({' '.join(f'*{ext}' for ext in sorted(DEFAULT_SUBTITLE_PRIORITY))});;All Files (*)"
 )
+#: What Utilities -> Retime takes: every mining format but SAMI. The retimed
+#: file keeps the input's format (``map_deltas_back`` saves what it read), and
+#: pysubs2 reads SAMI but raises NotImplementedError writing it.
+RETIME_SUBTITLE_EXTENSIONS: frozenset[str] = frozenset(DEFAULT_SUBTITLE_PRIORITY) - {".smi"}
+RETIME_SUBTITLE_FILE_FILTER = (
+    f"Subtitle Files ({' '.join(f'*{ext}' for ext in sorted(RETIME_SUBTITLE_EXTENSIONS))});;All Files (*)"
+)
 #: Audio-only inputs the transcription tools (Generate, Audiobook Sync) accept.
 #: Condense keeps its own set on purpose (D12, condense_tab.py), and Audiobook
 #: mining keeps an ordered tuple for its picker.

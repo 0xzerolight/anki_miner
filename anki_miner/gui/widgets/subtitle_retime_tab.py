@@ -46,7 +46,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
-from anki_miner.gui.constants import SUBTITLE_FILE_FILTER, VIDEO_FILE_FILTER
+from anki_miner.gui.constants import RETIME_SUBTITLE_EXTENSIONS, RETIME_SUBTITLE_FILE_FILTER, VIDEO_FILE_FILTER
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
@@ -236,11 +236,9 @@ class SubtitleRetimeTab(_ToolTabBase):
         self.subtitle_file_selector = FileSelector(
             label=self.tr("Subtitle File:"),
             file_mode=True,
-            file_filter=SUBTITLE_FILE_FILTER,
+            file_filter=RETIME_SUBTITLE_FILE_FILTER,
             history_key="tools.retime.inputs",
-            drop_validator=accepts_suffixes(
-                FilePairMatcher.SUBTITLE_EXTENSIONS, self.tr("This field takes a subtitle file.")
-            ),
+            drop_validator=accepts_suffixes(RETIME_SUBTITLE_EXTENSIONS, self.tr("This field takes a subtitle file.")),
         )
         layout.addWidget(self.subtitle_file_selector)
 
@@ -327,7 +325,9 @@ class SubtitleRetimeTab(_ToolTabBase):
             # prefer_retimed=False: mining wants the retimed subtitle, this tab
             # wants the one it was made from. Without it a second run over the
             # same folder would retime its own output.
-            pairs = FilePairMatcher.find_pairs_by_episode_number(video_folder, sub_folder, prefer_retimed=False)
+            pairs = FilePairMatcher.find_pairs_by_episode_number(
+                video_folder, sub_folder, subtitle_extensions=RETIME_SUBTITLE_EXTENSIONS, prefer_retimed=False
+            )
             try:
                 unmatched = sorted(
                     f.name
@@ -764,8 +764,10 @@ class SubtitleRetimeTab(_ToolTabBase):
                 for f in video_folder.iterdir()
                 if f.is_file() and f.suffix.lower() in FilePairMatcher.VIDEO_EXTENSIONS and not is_junk_path(f.name)
             )
-            # Same pairing as the preview above, including prefer_retimed=False.
-            file_pairs = FilePairMatcher.find_pairs_by_episode_number(video_folder, sub_folder, prefer_retimed=False)
+            # Same pairing as the preview above: no SAMI, prefer_retimed=False.
+            file_pairs = FilePairMatcher.find_pairs_by_episode_number(
+                video_folder, sub_folder, subtitle_extensions=RETIME_SUBTITLE_EXTENSIONS, prefer_retimed=False
+            )
             return all_videos, file_pairs
 
         def _apply(result: object) -> None:
