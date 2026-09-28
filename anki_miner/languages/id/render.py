@@ -21,21 +21,36 @@ _ETYMOLOGY_RE = re.compile(r'data-sc-content="Etymology-content"[^>]*>(.*?)</div
 _TAG_RE = re.compile(r"<[^>]+>")
 _GLOSS = r"(?:\s*\([^()]*\))?"
 _COMPONENT = r"-?[a-z]+(?:-[a-z]+)*-?(?:\s+-[a-z]+)?"
-_LEAD = (
-    r"(?:^|(?<=[.;:,]\s)|\b(?:[Ff]rom|[Aa]ffixed(?: from| of)?|[Aa]ffixation(?: of)?|[Ee]quivalent to|"
-    r"[Aa]naly[sz]ed as|[Pp]refixed|[Ss]uffixed|[Cc]ompound of|[Cc]ombination of|[Rr]eanaly[sz]ed as|"
-    r"surface analysis,|[Cc]onstructed)\s+)"
+_MARKER = (
+    r"[Aa]ffixed(?: from| of)?|[Aa]ffixation(?: of)?|[Ee]quivalent to|[Aa]naly[sz]ed as|[Pp]refixed|[Ss]uffixed|"
+    r"[Ii]nfixed(?: from)?|[Cc]ompound of|[Cc]ombination of|[Rr]eanaly[sz]ed as|surface analysis,|[Cc]onstructed"
 )
-_FORMULA_RE = re.compile(_LEAD + rf"({_COMPONENT}{_GLOSS}(?:\s*\+\s*{_COMPONENT}{_GLOSS})+)")
+#: A bare lead (block start, sentence break, ``from``) or an explicit marker, which names the analysis outright.
+_LEAD = rf"(?:^|(?<=[.;:,]\s)|\b[Ff]rom\s+|\b(?P<marker>{_MARKER})\s+)"
+#: The formula ends at a word end: ``ka- + göm`` never yields the root ``g``.
+_FORMULA_RE = re.compile(_LEAD + rf"(?P<formula>{_COMPONENT}{_GLOSS}(?:\s*\+\s*{_COMPONENT}{_GLOSS})+)(?![^\W\d_])")
+#: The first step into another language (``from Latin``, ``from Old Javanese``, ``from Proto-Malayic``); a Malay or
+#: Indonesian step (``From Malay pilihan``, ``from Classical Malay``) is still the word's own history, and a doubled
+#: ``From From meng- + ...`` is not a language.
+_FOREIGN_STEP_RE = re.compile(r"\b[Ff]rom\s+(?!(?:[A-Z][a-z]+\s+)*(?:Malay|Indonesian)\b|From\b)[A-Z]")
 _GLOSS_RE = re.compile(r"\s*\([^()]*\)")
 
 
 def etymology_parse(definition_html: str) -> tuple[str, str] | None:
-    """``(root, affixes)`` from the first etymology formula with exactly one bare word and an affix."""
+    """``(root, affixes)`` from the first etymology formula with exactly one bare word and an affix.
+
+    A formula behind a bare lead counts only before the block's first foreign step: past it, ``from co- + ops``
+    (kopi, via Latin) or ``from relation + -ship`` (a note on English *ship*) is another language's analysis.
+    An explicit marker (``Equivalent to``, ``Affixed``) counts anywhere.
+    """
     for block in _ETYMOLOGY_RE.findall(definition_html or ""):
         text = " ".join(html.unescape(_TAG_RE.sub(" ", block)).split())
+        foreign = _FOREIGN_STEP_RE.search(text)
+        own_history_end = foreign.start() if foreign else len(text)
         for match in _FORMULA_RE.finditer(text):
-            parts = [_GLOSS_RE.sub("", part).strip() for part in match.group(1).split("+")]
+            if match.group("marker") is None and match.start() >= own_history_end:
+                continue
+            parts = [_GLOSS_RE.sub("", part).strip() for part in match.group("formula").split("+")]
             pieces = [piece for part in parts for piece in part.split()]
             prefixes = [p for p in pieces if p.endswith("-") and not p.startswith("-")]
             suffixes = [p for p in pieces if p.startswith("-")]
