@@ -3,7 +3,9 @@
 Surfaces are verbatim match slices. A word whose apostrophe follows a capital-headed stem (``İstanbul'da``,
 ``Ankara’ya``) is a proper noun plus suffix (Turkish orthography): ``PROPN``, lemma = the head. Digits are ``NUM``,
 any other non-letter ``PUNCT``; every other word takes ``TurkishAnalyzer``'s first reading unless the clause says
-otherwise (``_pick``), and a word zeyrek cannot analyse is ``X`` (never mined), lemma = its Turkish casefold. No
+otherwise (``_pick``), and a word zeyrek cannot analyse is ``X`` (never mined), lemma = its Turkish casefold. A pick
+carries ``feature.lemma_pos``, the classes of every reading of its lemma in rank order, for the parser's label pass
+(``çocuk`` is Adj first, Noun second; ``HeadwordPosPass`` asks the dictionary which one it is). No
 tagging copy is built, so §4.3's lowercased-copy rule has nothing to skip: zeyrek lowercases each word itself, the
 Turkish way. zeyrek is imported inside ``build_tagger``, so this module, the profile and the registry load without
 the Turkish pack.
@@ -63,7 +65,7 @@ class TurkishTagger:
         tokens: list[LanguageToken] = []
         for index, surface in enumerate(surfaces):
             pick = _pick(readings, index, surfaces, tokens[-1] if tokens else None) if readings[index] else None
-            tokens.append(_token(surface, pick))
+            tokens.append(_token(surface, pick, readings[index]))
         return tokens
 
     def parse(self, text: str) -> list[LanguageToken]:
@@ -71,7 +73,7 @@ class TurkishTagger:
         return self(text)
 
 
-def _token(surface: str, pick: TrAnalysis | None) -> LanguageToken:
+def _token(surface: str, pick: TrAnalysis | None, own: list[TrAnalysis]) -> LanguageToken:
     if surface[0].isdigit():
         return LanguageToken(surface, "NUM", lemma=surface)
     if not surface[0].isalpha():
@@ -80,7 +82,9 @@ def _token(surface: str, pick: TrAnalysis | None) -> LanguageToken:
         return LanguageToken(surface, "PROPN", lemma=head)
     if pick is None:
         return LanguageToken(surface, "X", lemma=tr_casefold(surface))
-    return LanguageToken(surface, pick.pos1, pick.pos2, lemma=pick.lemma)
+    token = LanguageToken(surface, pick.pos1, pick.pos2, lemma=pick.lemma)
+    token.feature.lemma_pos = tuple(dict.fromkeys(reading.pos1 for reading in own if reading.lemma == pick.lemma))
+    return token
 
 
 def _pick(
