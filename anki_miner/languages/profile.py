@@ -111,9 +111,13 @@ class DictKeyFolding(Protocol):
 
     Two OPTIONAL methods an implementation may add, each probed by ``getattr``
     at its one reader so the other profiles need neither: ``term_variants(term)
-    -> list[str]`` (read by ``IndexedFreqProvider``) and ``sense_rank(content)
-    -> int``, the lookup sort's row demotion (read by
-    ``storage._sense_rank_fn``). Both live on ``ZhDictKeyFolding``.
+    -> list[str]`` (read by ``IndexedFreqProvider``, on ``ZhDictKeyFolding``)
+    and ``sense_rank(content, tags, pos) -> int``, the lookup sort's row rank
+    within one term/reading priority (read by ``storage._sense_rank_fn``). It
+    sees the row's ``content`` and ``tags`` and the part of speech of the token
+    being defined (``TokenizedWord.pos``; ``None`` with no token in hand).
+    ``ZhDictKeyFolding`` ranks by content alone; ``CasefoldDictKeys`` ranks the
+    wty rows of the token's part of speech first and proper-name rows last.
     """
 
     def fold_term(self, s: str) -> str: ...

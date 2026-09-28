@@ -10,9 +10,27 @@ deck front ``to go`` meets the mined ``go``.
 from __future__ import annotations
 
 import unicodedata
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from types import MappingProxyType
 
 Fold = Callable[[str], str]
+
+#: First tags of the wty rows that define a proper noun: a place, a surname, a given name.
+NAME_ROW_TAGS = frozenset({"name", "prop-n", "surn"})
+
+#: A token's UPOS -> the first tags of the wty rows stating that part of speech, which then lead
+#: the definition. Measured class by class on ordinary subtitle lines (en de nl sv fr it es pt ru
+#: pl ro tr), cards whose lead row got better/worse: VERB 43/0, NOUN 34/5, ADV 52/7 (the losses
+#: are mostly tagger slips: de "aber" as ADV loses "but", en "cost" as NOUN loses the verb), ADJ
+#: 1/4 (fr "neuf heures" opened on "brand new"), so ADJ is left out. A NOUN takes an ``intj`` row
+#: too: spaCy tags thanks-words NOUN, and fr "merci" would open on "mercy".
+ROW_TAGS_BY_UPOS: Mapping[str, frozenset[str]] = MappingProxyType(
+    {
+        "NOUN": frozenset({"n", "intj"}),
+        "VERB": frozenset({"v"}),
+        "ADV": frozenset({"adv"}),
+    }
+)
 
 
 class CasefoldDictKeys:
@@ -46,6 +64,24 @@ class CasefoldDictKeys:
                 contents = {content for (_, content), hit in zip(rows, exact, strict=True) if hit}
                 return [hit or content in contents for (_, content), hit in zip(rows, exact, strict=True)]
         return [True] * len(rows)
+
+    def sense_rank(self, content: str, tags: str, pos: str | None) -> int:
+        """Where a wty row sorts among the rows sharing its term/reading priority.
+
+        wty stores one row per part of speech and gives every row score 0 and
+        sequence 0, so without this the import id orders them, and the casefolded
+        key puts a word's place-name and surname rows beside it: ``airport`` opened
+        on "A census-designated place", nl ``komen`` on "Comines (a city in
+        Belgium)", de ``Essen`` on "to eat". The row's first tag names its part of
+        speech. ``0`` for a row of the token's own part of speech
+        (``ROW_TAGS_BY_UPOS``); ``2`` for a proper-name row unless the token is
+        itself a proper noun; ``1`` for every other row, form-of rows included.
+        Nothing is dropped, and storage keeps the index order inside each rank.
+        """
+        first = tags.split(" ", 1)[0]
+        if first in NAME_ROW_TAGS and pos != "PROPN":
+            return 2
+        return 0 if first in ROW_TAGS_BY_UPOS.get(pos or "", frozenset()) else 1
 
 
 def _strip_trailing_punctuation(text: str) -> str:

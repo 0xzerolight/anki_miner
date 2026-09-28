@@ -233,6 +233,21 @@ def _build_lemma_context(words: list[TokenizedWord]) -> dict[str, str]:
     return context
 
 
+def _build_pos_context(words: list[TokenizedWord]) -> dict[str, str]:
+    """Map each word's ``mined_form`` to its token's part of speech for the
+    definition / glossary batches' row rank (``DictKeyFolding.sense_rank``).
+
+    wty rows of one headword differ only by part of speech and import order, so
+    the POS is what opens a verb's card on its verb row. First-seen wins, like
+    :func:`_build_lemma_context`; a token with no POS is skipped.
+    """
+    context: dict[str, str] = {}
+    for w in words:
+        if w.pos:
+            context.setdefault(w.mined_form, w.pos)
+    return context
+
+
 @dataclass
 class _EpisodeContext:
     """Mutable accumulator carried through the five phase helpers.
@@ -1757,13 +1772,18 @@ class EpisodeProcessor:
         # the same legacy-call-shape convention the service applies toward
         # providers, so kanji-only runs keep the pre-A′ call signature.
         lemma_context = _build_lemma_context(words_with_media)
-        lemma_kwargs: dict[str, dict[str, str]] = {"lemma_context": lemma_context} if lemma_context else {}
+        token_kwargs: dict[str, dict[str, str]] = {"lemma_context": lemma_context} if lemma_context else {}
+        # The token's part of speech feeds the profile's row rank the same way
+        # (a wty verb opens on its verb row), under the same convention.
+        pos_context = _build_pos_context(words_with_media)
+        if pos_context:
+            token_kwargs["pos_context"] = pos_context
         definitions = self.definition_service.get_definitions_batch(
             lookup_pairs,
             progress_callback,
             fallback_context,
             is_cancelled=lambda: self.cancelled,
-            **lemma_kwargs,
+            **token_kwargs,
         )
         self.presenter.show_success(
             QCoreApplication.translate(
@@ -1780,7 +1800,7 @@ class EpisodeProcessor:
                 lookup_pairs,
                 progress_callback,
                 is_cancelled=lambda: self.cancelled,
-                **lemma_kwargs,
+                **token_kwargs,
             )
             # get_glossaries_batch has no miss-fallback mechanism, so a miss may
             # retry once under a same-kanji, okurigana-only lemma alternate.

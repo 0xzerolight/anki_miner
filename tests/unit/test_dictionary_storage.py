@@ -916,6 +916,45 @@ class TestReadingBoost:
         finally:
             conn.close()
 
+    def _seed_mai(self, db_path: Path) -> None:
+        """wty-ro-en's shape: the lemma rows carry no reading, the form-of rows do."""
+        create_index(db_path)
+        bulk_insert(
+            db_path,
+            [
+                DictRow(term="mai", reading=None, content="<div>more</div>", tags="adv"),
+                DictRow(term="mai", reading="mâi", content="<div>form of mâna</div>", tags="non-lemma"),
+                DictRow(term="mai", reading=None, content="<div>May</div>", tags="n"),
+            ],
+        )
+
+    def test_a_row_without_a_reading_is_a_plain_non_match(self, tmp_path: Path):
+        """A boost no row matches leaves the index order alone: a NULL reading
+        ranks like a differing one, not after it."""
+        db_path = tmp_path / "t.sqlite"
+        self._seed_mai(db_path)
+        conn = open_readonly(db_path)
+        try:
+            boosted = [c for c, _, _ in lookup(conn, "mai", "mai")]
+            wildcard = [c for c, _, _ in lookup(conn, "mai", None)]
+            batch = lookup_many(conn, [("mai", "mai")])["mai"]
+            assert batch == lookup(conn, "mai", "mai")
+        finally:
+            conn.close()
+        assert boosted == ["<div>more</div>", "<div>form of mâna</div>", "<div>May</div>"]
+        assert boosted == wildcard
+
+    def test_a_matching_reading_still_outranks_a_missing_one(self, tmp_path: Path):
+        db_path = tmp_path / "t.sqlite"
+        self._seed_mai(db_path)
+        conn = open_readonly(db_path)
+        try:
+            contents = [c for c, _, _ in lookup(conn, "mai", "mâi")]
+            assert lookup_many(conn, [("mai", "mâi")])["mai"] == lookup(conn, "mai", "mâi")
+        finally:
+            conn.close()
+        assert contents == ["<div>form of mâna</div>", "<div>more</div>", "<div>May</div>"]
+
 
 # ---------------------------------------------------------------------------
 # 5.1: structural perf guards (no wall-time assertions — see brief)
@@ -2146,8 +2185,25 @@ class _RankingKeys(_PlainKeys):
     list: a row whose content says ``pointer`` states no sense of its own.
     """
 
-    def sense_rank(self, content: str) -> int:
+    def sense_rank(self, content: str, tags: str, pos: str | None) -> int:
         return 1 if "pointer" in content else 0
+
+
+class _TagPosKeys(_PlainKeys):
+    """A rank reading only what the seam adds: the row's tags and the token's POS.
+
+    A row tagged with the token's POS leads; a ``name`` row trails. Every call
+    is recorded so a test can see exactly what storage handed over.
+    """
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str, str | None]] = []
+
+    def sense_rank(self, content: str, tags: str, pos: str | None) -> int:
+        self.calls.append((content, tags, pos))
+        if tags == "name":
+            return 2
+        return 0 if pos is not None and tags == pos else 1
 
 
 _SENSE = DictRow(term="干", reading="gān", content="<div>dry</div>", sequence=4429)
@@ -2294,3 +2350,85 @@ class TestSenseRankDemotion:
         finally:
             conn.close()
         assert contents[0] == _SENSE.content
+
+
+_PICK_NAME = DictRow(term="pick", reading=None, content="<div>A surname.</div>", tags="name")
+_PICK_NOUN = DictRow(term="pick", reading=None, content="<div>A pickaxe.</div>", tags="n")
+_PICK_VERB = DictRow(term="pick", reading=None, content="<div>To choose.</div>", tags="v")
+
+
+class TestSenseRankSeesTagsAndPos:
+    """The rank is handed each row's tags and the token's part of speech.
+
+    wty rows all carry score 0 and sequence 0, so without these the import id
+    alone orders a word's parts of speech and its proper-name rows.
+    """
+
+    @pytest.fixture
+    def conn(self, tmp_path: Path):
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        bulk_insert(db, [_PICK_NAME, _PICK_NOUN, _PICK_VERB])
+        conn = open_readonly(db)
+        yield conn
+        conn.close()
+
+    def test_the_token_pos_row_leads_and_the_name_row_trails(self, conn):
+        contents = [c for c, _tags, _seq in lookup(conn, "pick", None, pos="v", keys=_TagPosKeys())]
+        assert contents == [_PICK_VERB.content, _PICK_NOUN.content, _PICK_NAME.content]
+
+    def test_storage_hands_over_the_row_tags_and_the_token_pos(self, conn):
+        keys = _TagPosKeys()
+        lookup(conn, "pick", None, pos="v", keys=keys)
+        assert sorted(keys.calls) == sorted(
+            (row.content, row.tags, "v") for row in (_PICK_NAME, _PICK_NOUN, _PICK_VERB)
+        )
+
+    def test_no_pos_leaves_only_the_tag_rank(self, conn):
+        contents = [c for c, _tags, _seq in lookup(conn, "pick", None, keys=_TagPosKeys())]
+        assert contents == [_PICK_NOUN.content, _PICK_VERB.content, _PICK_NAME.content]
+
+    def test_lookup_many_matches_lookup_row_for_row(self, conn):
+        keys = _TagPosKeys()
+        batch = lookup_many(conn, [("pick", None), ("other", None)], pos={"pick": "v"}, keys=keys)
+        assert batch["pick"] == lookup(conn, "pick", None, pos="v", keys=keys)
+        assert batch["other"] == []
+
+    def test_each_word_ranks_by_its_own_pos(self, tmp_path: Path):
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        bulk_insert(
+            db,
+            [
+                _PICK_NOUN,
+                _PICK_VERB,
+                DictRow(term="watch", reading=None, content="<div>A timepiece.</div>", tags="n"),
+                DictRow(term="watch", reading=None, content="<div>To look at.</div>", tags="v"),
+            ],
+        )
+        conn = open_readonly(db)
+        try:
+            keys = _TagPosKeys()
+            batch = lookup_many(conn, [("pick", None), ("watch", None)], pos={"watch": "v"}, keys=keys)
+        finally:
+            conn.close()
+        assert [c for c, _t, _s in batch["pick"]] == [_PICK_NOUN.content, _PICK_VERB.content]
+        assert [c for c, _t, _s in batch["watch"]] == ["<div>To look at.</div>", "<div>A timepiece.</div>"]
+
+    def test_the_variant_fallback_hands_over_the_row_tags(self, conn):
+        contents = [c for c, _tags, _seq, _rules in lookup_with_rules(conn, "pick", keys=_TagPosKeys())]
+        assert contents == [_PICK_NOUN.content, _PICK_VERB.content, _PICK_NAME.content]
+
+    def test_the_japanese_pair_ignores_the_pos(self, tmp_path: Path):
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        bulk_insert(db, [_JA_ARCHAIC, _JA_SENSE, _JA_OTHER_READING])
+        conn = open_readonly(db)
+        try:
+            keys = get_profile("ja").dict_keys
+            with_pos = lookup(conn, "辛い", "からい", pos="形容詞", keys=keys)
+            batch = lookup_many(conn, [("辛い", "からい")], pos={"辛い": "形容詞"}, keys=keys)["辛い"]
+            without = lookup(conn, "辛い", "からい", keys=keys)
+        finally:
+            conn.close()
+        assert with_pos == without == batch
