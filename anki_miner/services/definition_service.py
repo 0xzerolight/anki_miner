@@ -1159,7 +1159,7 @@ class DefinitionService:
             progress_callback.on_complete()
         return results
 
-    def lookup_all_offline(self, word: str, lemma: str | None = None) -> list[tuple[str, str]]:
+    def lookup_all_offline(self, word: str, lemma: str | None = None, pos: str | None = None) -> list[tuple[str, str]]:
         """Aggregate results from all available OFFLINE providers.
 
         Returns a list of (provider_name, html) tuples for every offline
@@ -1192,6 +1192,11 @@ class DefinitionService:
                 offline stub) keeps the arity-1 ``lookup(word)`` path.
                 ``None``/empty skips the probe entirely, so this is
                 byte-identical to pre-A′ behavior for every existing caller.
+            pos: the token's part of speech, for the profile's row rank
+                (mirrors ``get_definitions_batch``'s ``pos_context``): a wty
+                verb's pane opens on the verb row its card opens on. Routed
+                like ``lemma``, and each is passed to ``lookup_many`` only
+                when set; with neither, ``lookup(word)`` runs as before.
 
         Returns:
             List of (provider_name, html) tuples in provider chain order. Empty
@@ -1199,17 +1204,16 @@ class DefinitionService:
         """
         self.ensure_loaded()
         candidates = self.fallback_candidates(word, "", None)
+        pair: list[tuple[str, str | None]] = [(word, None)]
+        token_kwargs = _token_kwargs(pair, {word: lemma} if lemma else None, {word: pos} if pos else None)
         out: list[tuple[str, str]] = []
         for p in self._providers:
             if p.is_online or not p.is_available():
                 continue
             seen_html: set[str] = set()
-            batch_fn = getattr(p, "lookup_many", None) if lemma else None
+            batch_fn = getattr(p, "lookup_many", None) if token_kwargs else None
             try:
-                if callable(batch_fn):
-                    html = batch_fn([(word, None)], lemmas={word: lemma}).get(word)
-                else:
-                    html = p.lookup(word)
+                html = batch_fn(pair, **token_kwargs).get(word) if callable(batch_fn) else p.lookup(word)
             except Exception as e:
                 _log_provider_failure(p, "lookup", e, subject=word)
                 html = None
