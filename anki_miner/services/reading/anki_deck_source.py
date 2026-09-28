@@ -94,15 +94,24 @@ def _share(name: str, samples: Sequence[Mapping[str, str]], fits: Callable[[str]
 
 
 def _best_media_field(names: Sequence[str], samples: Sequence[Mapping[str, str]], fits: Callable[[str], bool]) -> str:
-    # Ties on share break by name: a sentence-named field beats a word-named
-    # one (Core 2k/6k: Vocabulary-Audio before Sentence-Audio; Lapis:
-    # ExpressionAudio before SentenceAudio), and a "video" field loses.
+    # Among the fields that qualify, the name decides before coverage: a
+    # "video" field loses (a subs2srs Video clip on every note must not beat
+    # an Audio field one note short), and a sentence-named field beats a
+    # word-named one (Core 2k/6k: Vocabulary-Audio before Sentence-Audio;
+    # Lapis: ExpressionAudio before SentenceAudio).
     scored = [
-        (_share(n, samples, fits), "sentence" in n.casefold(), "video" not in n.casefold(), -i, n)
+        (
+            (share := _share(n, samples, fits)) >= SAMPLE_SHARE,
+            "video" not in n.casefold(),
+            "sentence" in n.casefold(),
+            share,
+            -i,
+            n,
+        )
         for i, n in enumerate(names)
     ]
     best = max(scored, default=None)
-    return best[-1] if best is not None and best[0] >= SAMPLE_SHARE else ""
+    return best[-1] if best is not None and best[0] else ""
 
 
 def suggest_field_map(

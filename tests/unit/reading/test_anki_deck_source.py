@@ -129,6 +129,27 @@ def test_core_2k_layout_prefers_the_sentence_media_and_gloss():
     )
 
 
+def test_a_fuller_video_field_still_loses_to_the_audio_field():
+    # Every note has a video clip, one note lacks its audio: name, not
+    # coverage, decides among fields that qualify.
+    samples = [{"Video": "[sound:v.webm]", "Audio": "[sound:a.mp3]" if i else "", "Line": "猫だ"} for i in range(20)]
+    fmap = suggest_field_map(["Video", "Audio", "Line"], samples, contains_target_script=_JA)
+    assert fmap.audio == "Audio"
+
+
+def test_fuller_word_audio_still_loses_to_sentence_audio():
+    samples = [
+        {
+            "ExpressionAudio": "[sound:w.mp3]",
+            "SentenceAudio": "[sound:s.mp3]" if i else "",
+            "Sentence": "今日はいい天気だ",
+        }
+        for i in range(20)
+    ]
+    fmap = suggest_field_map(["ExpressionAudio", "SentenceAudio", "Sentence"], samples, contains_target_script=_JA)
+    assert fmap.audio == "SentenceAudio"
+
+
 def test_a_field_filled_on_under_half_the_notes_is_not_suggested():
     samples = [{"Line": "猫だ", "Audio": "[sound:a.mp3]" if i < 2 else ""} for i in range(5)]
     fmap = suggest_field_map(["Line", "Audio"], samples, contains_target_script=_JA)
