@@ -115,6 +115,8 @@ KELEV = _word("KAF", "LAMED", "BET")
 HALAKH = _word("HE", "LAMED", "FINAL KAF")
 KARA = _word("QOF", "RESH", "ALEF")
 EGROF = _word("ALEF", "GIMEL", "RESH", "VAV", "FINAL PE")
+SHELO = _word("SHIN", "LAMED", "ALEF")
+LO = _word("LAMED", "ALEF")
 
 
 @pytest.mark.parametrize(
@@ -143,6 +145,18 @@ EGROF = _word("ALEF", "GIMEL", "RESH", "VAV", "FINAL PE")
 )
 def test_the_measured_case_table(form_lookup, surface, front, pos1, why):
     assert _resolve(form_lookup, surface) == (front, pos1), why
+
+
+@pytest.mark.parametrize(("surface", "front"), [(SHELO, LO)])
+def test_a_proclitic_form_of_a_function_word_is_a_stopword(form_lookup, surface, front):
+    """The tier the tokenizer applies to a bare surface applies to the resolved front too."""
+    [token] = HebrewLemmaPass()(to_duck_tokens(surface), None, form_lookup)
+    assert (token.feature.lemma, token.feature.pos2) == (front, "stopword")
+
+
+def test_a_resolved_content_word_keeps_an_empty_subtype(form_lookup):
+    [token] = HebrewLemmaPass()(to_duck_tokens(KATAVTI), None, form_lookup)
+    assert (token.feature.lemma, token.feature.pos2) == (KATAV, "")
 
 
 def test_an_abbreviation_reaches_its_gershayim_key(form_lookup):

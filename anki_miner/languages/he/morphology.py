@@ -26,6 +26,9 @@ The resolution rules, in order, and what each is for:
   the target stands (206 cases: ``ha-dvarim`` -> ``davar``); if they are disjoint the surface stays
   (89 cases: ``ha-kol`` does not become ``hekhil``, ``ba-yom`` not ``biyem``, ``la-gan`` not ``log``).
 
+Every front the pass writes is then held to the function-word tier the tokenizer applies to a bare
+surface, so ``she-lo`` and ``ve-gam`` drop the way ``lo`` and ``gam`` do.
+
 ``forms is None`` -- no offline dictionary wired, and every ja/ko/zh path -- makes the whole pass a
 no-op, so the tokens reach the card exactly as the tokenizer built them.
 """
@@ -39,6 +42,7 @@ from anki_miner.languages._spaced.form_of import form_targets, is_lemma_row, ren
 from anki_miner.languages.he.pos import pos_from_tags
 from anki_miner.languages.he.proclitics import rungs
 from anki_miner.languages.he.script import he_fold, is_he_mark
+from anki_miner.languages.he.stopwords import HE_FUNCTION_WORDS
 from anki_miner.services.morphology import AttestLookup, FormLookup
 
 __all__ = [
@@ -134,6 +138,11 @@ class HebrewLemmaPass:
             token.feature.pos1 = resolved.pos1
             token.feature.vocalised = resolved.vocalised
             token.feature.dict_tags = resolved.tags
+            if resolved.lemma in HE_FUNCTION_WORDS:
+                # The tokenizer tests its tier on the folded SURFACE; a proclitic form of a function
+                # word (she-lo, ve-az, ba-kol) reaches the same folded front here and drops the
+                # same way, whatever part of speech wty gives the bare word (lo 'adv', kol 'n').
+                token.feature.pos2 = "stopword"
         return tokens
 
     @staticmethod
