@@ -1,10 +1,11 @@
-"""Finnish card fronts repaired from the dictionary's form-of rows (``_spaced/form_of.py``).
+"""Finnish and Hungarian card fronts repaired from the dictionary's form-of rows (``_spaced/form_of.py``).
 
 fi: the repair reads the surface, then the surface without the clitics and possessive suffix the model's morph
-marks (``finnish_suffix_candidates``), then the lemma. Every row set below is the one wty-fi-en (2026.08.29) holds
-for those keys, cut to the rows the rule reads. The real-engine half runs the language's own injected pass over the
-real tagger's tokens; the taggers are module-scoped because the autouse conftest fixture clears the tagger cache
-around every test.
+marks (``finnish_suffix_candidates``), then the lemma. hu: after the preverb join, a potential ``-hat``/``-het`` verb
+front that is no headword takes the one target its own form row names. Every row set below is the one wty-fi-en or
+wty-hu-en (2026.08.29) holds for those keys, cut to the rows the rule reads. The real-engine half runs each
+language's own injected pass over the real tagger's tokens; the taggers are module-scoped because the autouse
+conftest fixture clears the tagger cache around every test.
 """
 
 from __future__ import annotations
@@ -102,6 +103,44 @@ def test_fi_a_headword_front_is_never_second_guessed(monkeypatch):
 
 
 # --------------------------------------------------------------------------
+# hu: potential -hat/-het fronts
+# --------------------------------------------------------------------------
+
+HU_TUDHAT = {"tudhatod": [form("tudhat")], "tudhat": [form("tud")], "tud": [lemma("v")]}
+
+
+def test_hu_a_potential_front_takes_its_own_row_s_target(monkeypatch):
+    """The surface ``tudhatod`` names ``tudhat``, itself only a form row: the front's own row decides."""
+    assert fronts(monkeypatch, "hu", HU_TUDHAT, tok("tudhatod", "VERB", "tudhat")) == [("tud", "VERB")]
+
+
+def test_hu_an_irregular_base_comes_from_the_row(monkeypatch):
+    rows = {"tehet": [form("tesz")], "tesz": [lemma("v")], "mehet": [form("megy")], "megy": [lemma("v vi")]}
+    line = [tok("teheted", "VERB", "tehet"), tok("mehetünk", "VERB", "mehet")]
+    assert fronts(monkeypatch, "hu", rows, *line) == [("tesz", "VERB"), ("megy", "VERB")]
+
+
+def test_hu_a_potential_headword_stays(monkeypatch):
+    rows = {"lehet": [lemma("v"), form("van")], "van": [lemma("v")]}
+    assert fronts(monkeypatch, "hu", rows, tok("lehet", "VERB", "lehet")) == [("lehet", "VERB")]
+
+
+def test_hu_only_a_potential_verb_front_is_repaired(monkeypatch):
+    """wty-hu-en files ``gyerek`` as a form of ``gyermek``: an unrestricted repair would rewrite it."""
+    rows = {"gyerek": [form("gyermek")], "gyermek": [lemma("n")], "fáradhat": [form("fárad")], "fárad": [lemma("v")]}
+    line = [tok("gyerek", "NOUN", "gyerek"), tok("fáradhat", "ADJ", "fáradhat")]
+    assert fronts(monkeypatch, "hu", rows, *line) == [("gyerek", "NOUN"), ("fáradhat", "ADJ")]
+
+
+def test_hu_the_potential_repair_runs_after_the_preverb_join(monkeypatch):
+    """``teheted … fel``: the join builds ``feltehet``, whose own row names ``feltesz``."""
+    head = tok("teheted", "VERB", "tehet")
+    head.feature.particle = "fel"
+    rows = {"feltehet": [form("feltesz")], "feltesz": [lemma("v vt")], "tehet": [form("tesz")], "tesz": [lemma("v")]}
+    assert fronts(monkeypatch, "hu", rows, head, attested={"feltehet"}) == [("feltesz", "VERB")]
+
+
+# --------------------------------------------------------------------------
 # The real taggers
 # --------------------------------------------------------------------------
 
@@ -109,8 +148,9 @@ def test_fi_a_headword_front_is_never_second_guessed(monkeypatch):
 @pytest.fixture(scope="module")
 def taggers():
     from anki_miner.languages.fi.tokenizer import build_tagger as fi_tagger
+    from anki_miner.languages.hu.tokenizer import build_tagger as hu_tagger
 
-    return {"fi": fi_tagger()}
+    return {"fi": fi_tagger(), "hu": hu_tagger()}
 
 
 def _real(monkeypatch, taggers, code, line, rows, attested=frozenset()):
@@ -127,3 +167,14 @@ def test_fi_real_question_with_a_clitic(monkeypatch, taggers):
 def test_fi_real_possessive(monkeypatch, taggers):
     rows = {"avaimen": [form("avain")], "avain": [lemma("n")], "autoon": [form("auto")], "auto": [lemma("n")]}
     assert _real(monkeypatch, taggers, "fi", "Unohdin avaimeni autoon.", rows)["avaimeni"] == ("avain", "NOUN")
+
+
+def test_hu_real_negation_is_a_particle_and_the_potential_verb_its_base(monkeypatch, taggers):
+    fronts_ = _real(monkeypatch, taggers, "hu", "Ezt nem tudhatod.", HU_TUDHAT)
+    assert fronts_["nem"] == ("nem", "PART") and fronts_["tudhatod"] == ("tud", "VERB")
+
+
+def test_hu_real_joined_potential_verb(monkeypatch, taggers):
+    rows = {"feltehet": [form("feltesz")], "feltesz": [lemma("v vt")], "kérdés": [lemma("n")]}
+    fronts_ = _real(monkeypatch, taggers, "hu", "Nem teheted fel a kérdést.", rows, {"feltehet"})
+    assert fronts_["teheted"] == ("feltesz", "VERB")
