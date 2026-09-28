@@ -73,6 +73,45 @@ def test_an_attested_token_stays_whole(tagger):
     assert YueDecompoundPass(tagger)(raw, dictionary("好忙", "好", "忙"), None) is raw
 
 
+def test_a_token_the_lookup_ladder_attests_stays_whole(tagger):
+    # No dictionary keys 甚麼 'what'; the definition lookup finds it as 什麼. Split,
+    # it carded 甚 'variant of 什' and 麼 'exclamatory final particle'.
+    raw = tagger.parse("你為甚麼不告訴我？")
+    assert "甚麼" in [t.surface for t in raw]
+
+    tokens = split(tagger, "你為甚麼不告訴我？", "你", "為", "什麼", "甚", "麼", "不", "告", "訴", "我")
+
+    assert "甚麼" in [t.surface for t in tokens]
+
+
+def test_a_token_the_pass_does_not_split_keeps_its_first_tag(tagger):
+    # Re-tagging the re-segmented line gave the untouched 起床 PART, so it lost its card.
+    raw = tagger.parse("她每天都很早起床。")
+    assert [(t.surface, t.feature.pos1) for t in raw][3:5] == [("很早", "ADV"), ("起床", "VERB")]
+
+    tokens = YueDecompoundPass(tagger)(raw, dictionary("她", "每天", "都", "很", "早", "起床"), None)
+
+    assert [t.surface for t in tokens] == ["她", "每天", "都", "很", "早", "起床", "。"]
+    assert tokens[5].feature.pos1 == "VERB"
+    assert all(new is old for new, old in zip(tokens[:3] + tokens[5:], raw[:3] + raw[4:], strict=True))
+
+
+@pytest.mark.parametrize(
+    ("line", "pieces", "word"),
+    [
+        ("這件事情跟你沒有關係。", ("這", "件"), "這"),
+        ("他們在公司開會。", ("他們", "在"), "他們"),
+        ("他說他不會來了。", ("說", "他", "不會", "來", "了"), "了"),
+    ],
+)
+def test_a_written_chinese_function_word_a_split_frees_is_not_mined(tagger, line, pieces, word):
+    # Written-Chinese lines glue 這, 他們 and 了 onto the next word, and freed
+    # they came out VERB, ADJ and VERB: each became a card.
+    tokens = split(tagger, line, *pieces)
+
+    assert {t.feature.lemma: t.feature.pos1 for t in tokens}[word] not in YUE_ALLOWED_POS
+
+
 def test_a_proper_noun_is_never_split(tagger):
     raw = tagger.parse("阿明鍾意睇Netflix。")
     assert raw[0].feature.pos1 == "PROPN"

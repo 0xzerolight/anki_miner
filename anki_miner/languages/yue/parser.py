@@ -23,6 +23,7 @@ from __future__ import annotations
 import unicodedata
 from typing import TYPE_CHECKING, Any
 
+from anki_miner.languages.yue.support import YueLookupStrategy
 from anki_miner.utils.ja_normalize import is_cjk_ideograph
 
 if TYPE_CHECKING:
@@ -30,6 +31,8 @@ if TYPE_CHECKING:
 
     from anki_miner.languages.yue.tokenizer import Span
     from anki_miner.services.morphology import AttestLookup, FormLookup
+
+_LADDER = YueLookupStrategy()
 
 
 def _splittable(token: Any) -> bool:
@@ -65,15 +68,18 @@ class YueDecompoundPass:
 
     The segmenter glues adverbs, aspect markers, particles and pronouns onto the
     word next to them (好忙, 瞓緊覺, 煮啦, 佢住). The glued token is no headword,
-    so the word inside it never became a card. A splittable token that the probe
-    misses is cut by longest match, and only when the probe attests EVERY piece.
-    A separable verb-object compound (拍緊拖) comes apart into its literal pieces
-    too; that is accepted.
+    so the word inside it never became a card. A splittable token is a miss only
+    when the probe attests neither it nor a spelling the lookup ladder tries for
+    it (甚麼 is defined as 什麼, so it stays whole). A miss is cut by longest
+    match, and only when the probe attests EVERY piece. A separable verb-object
+    compound (拍緊拖) comes apart into its literal pieces too; that is accepted.
 
     The re-segmented line is re-tagged in one ``pos_tag`` call through the
     lock-guarded tagger, so each piece is tagged in sentence context and
-    ``YUE_TAG_OVERRIDES`` applies (a freed 緊 or 啦 is PART). Two probe calls per
-    line at most: the suspects, then every inner substring of the misses.
+    ``YUE_TAG_OVERRIDES`` applies (a freed 緊 or 啦 is PART). Only the pieces
+    take those tags: every token the pass did not split is returned as it came,
+    with its first tag. Two probe calls per line at most: the suspects with
+    their ladder spellings, then every inner substring of the misses.
     ``attest is None`` (no offline dictionary) makes the pass inert. The third
     argument (R36's form lookup) is ignored.
     """
@@ -88,7 +94,9 @@ class YueDecompoundPass:
         suspects = list(dict.fromkeys(token.surface for token in tokens if _splittable(token)))
         if not suspects:
             return tokens
-        misses = set(suspects) - attest(suspects)
+        probes = {word: [word, *(term for term, _mask in _LADDER.candidates(word, word, None))] for word in suspects}
+        found = attest(list(dict.fromkeys(term for terms in probes.values() for term in terms)))
+        misses = {word for word in suspects if found.isdisjoint(probes[word])}
         if not misses:
             return tokens
         inner = [word[i:j] for word in misses for i in range(len(word)) for j in range(i + 1, len(word) + 1)]
@@ -96,12 +104,12 @@ class YueDecompoundPass:
         splits = {word: pieces for word in misses if (pieces := _longest_match(word, attested))}
         if not splits:
             return tokens
+        cuts = [splits.get(token.surface) if _splittable(token) else None for token in tokens]
         # Offsets into the surfaces joined: a split surface equals its lemma, so
         # its pieces are consecutive slices of it.
         spans: list[Span] = []
         cursor = 0
-        for token in tokens:
-            pieces = splits.get(token.surface) if _splittable(token) else None
+        for token, pieces in zip(tokens, cuts, strict=True):
             if pieces is None:
                 spans.append((token.feature.lemma, (cursor, cursor + len(token.surface))))
                 cursor += len(token.surface)
@@ -109,7 +117,17 @@ class YueDecompoundPass:
             for piece in pieces:
                 spans.append((piece, (cursor, cursor + len(piece))))
                 cursor += len(piece)
-        return self._tagger("".join(token.surface for token in tokens), spans=spans)
+        # One tagger token per span. Only the pieces take the new tags: re-tagged,
+        # an untouched neighbour can change class (起床 VERB -> PART) and lose its card.
+        retagged = iter(self._tagger("".join(token.surface for token in tokens), spans=spans))
+        out: list[Any] = []
+        for token, pieces in zip(tokens, cuts, strict=True):
+            if pieces is None:
+                next(retagged)
+                out.append(token)
+            else:
+                out += [next(retagged) for _piece in pieces]
+        return out
 
 
 def create_parser(config: Any, **kwargs: Any) -> Any:

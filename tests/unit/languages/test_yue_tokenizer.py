@@ -113,6 +113,24 @@ def test_no_token_spans_a_punctuation_mark(tagger, line):
         assert len(surface) == 1 or not any(unicodedata.category(char).startswith("P") for char in surface), surface
 
 
+@pytest.mark.parametrize(("line", "word"), [("要唔要飲嘢？", "飲嘢"), ("寫得幾好，不過有幾個錯字。", "錯字")])
+def test_a_run_is_segmented_with_the_mark_that_closes_it(tagger, line, word):
+    # The segmenter decides a run's last word by the character after it: without
+    # the mark 飲嘢 comes out 飲 嘢 and 錯字 comes out 錯 字.
+    assert word in [t.feature.lemma for t in tagger.parse(line)]
+
+
+def test_a_closing_mark_the_segmenter_glues_on_is_cut_back_off(tagger):
+    # pycantonese strips only its own marks off a word's ends; 』 is not one of them.
+    import pycantonese
+
+    assert ("攰』", (2, 5)) in pycantonese.segment("我好攰 』", offsets=True)
+
+    tokens = tagger.parse("我好攰 』")
+
+    assert [(t.surface, t.feature.lemma) for t in tokens] == [("我", "我"), ("好", "好"), ("攰", "攰"), ("』", "』")]
+
+
 def test_a_segmentation_given_by_the_caller_is_tagged_in_place_of_the_segmenter(tagger):
     # The seam the parser's split pass re-tags a line through, under the lock.
     tokens = tagger("今 日好忙", spans=[("今日", (0, 3)), ("好", (3, 4)), ("忙", (4, 5))])
