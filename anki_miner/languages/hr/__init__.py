@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import dataclasses
+
 from anki_miner.config.config import AudioSourceEntry
 from anki_miner.languages._spaced.audio import spaced_audio_candidates, spaced_speakable
 from anki_miner.languages._spaced.availability import spaced_missing_reason
@@ -24,8 +26,10 @@ from anki_miner.languages.hr.catalog import HR_CATALOG
 from anki_miner.languages.hr.morphology import (
     HR_ABBREVIATIONS,
     HR_ALLOWED_POS,
+    HR_CLOSERS,
     HR_EXCLUDED_SUBTYPES,
     HR_MODEL_PACKAGE,
+    HR_OPENERS,
     HR_SUBTITLE_REGEX,
     hr_normalize,
     hr_tone_fold,
@@ -80,7 +84,7 @@ def build_profile() -> LanguageProfile:
             card_fields=HR_CARD_FIELDS,
             subtitle_regex=HR_SUBTITLE_REGEX,
         ),
-        sentence_rules=sentence_rules(HR_ABBREVIATIONS),
+        sentence_rules=dataclasses.replace(sentence_rules(HR_ABBREVIATIONS), openers=HR_OPENERS, closers=HR_CLOSERS),
         normalize=hr_normalize,
         dict_keys=HR_KEYS,
         audio=HR_AUDIO,

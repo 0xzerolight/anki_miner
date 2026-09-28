@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import dataclasses
+
 from anki_miner.config.config import AudioSourceEntry
 from anki_miner.languages._spaced.audio import spaced_audio_candidates, spaced_speakable
 from anki_miner.languages._spaced.availability import spaced_missing_reason
@@ -25,8 +27,10 @@ from anki_miner.languages.sl.abbreviations import SL_ABBREVIATIONS
 from anki_miner.languages.sl.catalog import SL_CATALOG
 from anki_miner.languages.sl.morphology import (
     SL_ALLOWED_POS,
+    SL_CLOSERS,
     SL_EXCLUDED_SUBTYPES,
     SL_MODEL_PACKAGE,
+    SL_OPENERS,
     SL_SUBTITLE_REGEX,
     sl_tone_fold,
 )
@@ -86,11 +90,9 @@ def build_profile() -> LanguageProfile:
             card_fields=SL_CARD_FIELDS,
             subtitle_regex=SL_SUBTITLE_REGEX,
         ),
-        # Slovenian writes German-style quotes, which need no rule of their own: the shared
-        # openers/closers leave both characters depth-neutral (the low opening quote is tracked by
-        # neither side, and the closing one is an unmatched opener, which the splitter's pre-scan
-        # keeps depth-neutral), and a quoted question still ends its sentence.
-        sentence_rules=sentence_rules(SL_ABBREVIATIONS),
+        # Slovenian writes „…“ and »…«, which the shared Latin pairs do not track, so a quote holding two
+        # sentences split inside it ('„Dobro jutro.' | 'Kako si?“ je vprašala.'); the da/lt/hu override.
+        sentence_rules=dataclasses.replace(sentence_rules(SL_ABBREVIATIONS), openers=SL_OPENERS, closers=SL_CLOSERS),
         normalize=nfc_normalize,
         dict_keys=SL_KEYS,
         audio=SL_AUDIO,

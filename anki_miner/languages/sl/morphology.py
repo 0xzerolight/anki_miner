@@ -137,6 +137,11 @@ _TONE_MARKS = frozenset({"\u0300", "\u0301", "\u0302", "\u0304", "\u030f", "\u03
 #: Bases the notation marks: the vowels and syllabic r. The schwa is a LETTER here, not a base.
 _TONE_BASES = frozenset("aeiourAEIOUR")
 
+#: Slovenian quotes „…“ and »…«: the shared Latin set opens with « and “, which Slovenian closes with.
+#: ” keeps closing, as in the shared set, for text typed „…”.
+SL_OPENERS: frozenset[str] = frozenset("([{„»")
+SL_CLOSERS: frozenset[str] = frozenset(")]}“”«")
+
 #: Slovenian speaker cues; the filter runs after the shared NFC normaliser.
 SL_SPEAKER_PATTERN = (
     r"^[A-Z\u00c0-\u00d6\u00d8-\u00de\u010c\u0160\u017d]"
