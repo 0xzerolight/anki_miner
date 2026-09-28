@@ -82,6 +82,9 @@ def test_dedup_fold_drops_a_leading_article_only_when_something_remains(front, f
         "the, a, to",
         "the dog, a (b)",
         "a b c d, -s",
+        "The more, the merrier.",
+        "the the, x.",
+        "the dog (n), -s",
     ],
 )
 def test_dedup_fold_is_idempotent(text):
@@ -126,6 +129,8 @@ DUTCH = spaced_dedup_fold(KEYS, frozenset({"de", "het", "een", "'t", "zich"}))
         (GERMAN, "freuen (sich)", "freuen"),
         (GERMAN, "anfangen (fängt an)", "anfangen"),
         (GERMAN, "Hund (m) (pl. Hunde)", "hund"),
+        (GERMAN, "Hund (m), -e", "hund"),
+        (GERMAN, "der Herr, -n, -en", "herr"),
         (DUTCH, "hond (de)", "hond"),
         (DUTCH, "huis (het)", "huis"),
         (DUTCH, "de hond, honden", "hond"),
@@ -150,6 +155,10 @@ def test_a_plural_or_gender_note_after_the_word_is_dropped(fold, front, folded):
         ("(m)", "(m"),
         ("der Mann ist hier, oder", "der mann ist hier, oder"),
         ("sich (nicht) freuen", "(nicht) freuen"),
+        ("Das Auto, bitte.", "auto, bitte"),
+        ("Der Mann, der da steht, ist mein Vater.", "der mann, der da steht, ist mein vater"),
+        ("Der Mann, der kommt", "der mann, der kommt"),
+        ("die die, x.", "die, x"),
     ],
 )
 def test_a_comma_is_cut_only_before_a_note(front, folded):

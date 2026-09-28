@@ -102,6 +102,9 @@ _TRAILING_GROUPS = re.compile(r"(?:\s*\([^()]*\))+\s*$")
 #: How a German plural note opens after the comma: ``-e``, ``¨-er``, ``¨er``.
 _PLURAL_NOTE_MARKS = ("-", "¨")
 
+#: A front ending in one of these is a sentence, whose comma no note follows: ``Das Auto, bitte.``
+_SENTENCE_ENDS = (".", "!", "?", "…")
+
 
 def spaced_dedup_fold(keys: CasefoldDictKeys, leading_words: frozenset[str] = frozenset()) -> Fold:
     """The S3 comparison fold: key fold, notes and trailing punctuation off, leading table words dropped.
@@ -109,11 +112,15 @@ def spaced_dedup_fold(keys: CasefoldDictKeys, leading_words: frozenset[str] = fr
     Vocab decks put a plural or gender note after the word, so first, while
     something remains, the bracketed groups closing the text are dropped
     (``Hund (m)``, nl ``hond (de)``), and a front of one to three tokens before
-    its first comma is cut there when the rest is a note: the front is
-    article-led (``der Hund, -e``, nl ``de hond, honden``), or the rest is a
-    table word (``Hund, der``) or opens with ``-``/``¨`` (``Haus, ¨-er``). Any
-    other comma stays: ``Gut, danke.`` must not meet ``gut``, because the
-    known-word scan covers the whole collection.
+    its first comma is cut there (brackets closing the cut front go too) when
+    the rest is a note: the front is article-led, the whole text is at most
+    three tokens and ends no sentence (``das Haus, Häuser``, nl ``de hond,
+    honden``, not ``Das Auto, bitte.``), or the rest is a table word (``Hund,
+    der``) or opens with ``-``/``¨`` (``Haus, ¨-er``). Any other comma stays:
+    ``Gut, danke.`` must not meet ``gut``, because the known-word scan covers
+    the whole collection. The three-token bound is the one the article drop
+    below uses: a comma kept for its sentence end loses the article there, so
+    the next pass, with the end mark gone, finds no article-led front to cut.
 
     Then only a text of one to three whitespace tokens is touched. To a fixed point:
     a leading table word is dropped while more than one token remains (``to``
@@ -129,11 +136,16 @@ def spaced_dedup_fold(keys: CasefoldDictKeys, leading_words: frozenset[str] = fr
     whole_words = frozenset(_apostrophes(keys.fold_term(word)) for word in leading_words)
     elided = tuple(sorted((w for w in whole_words if w.endswith("'")), key=lambda w: (-len(w), w)))
 
-    def article_led(head: str) -> bool:
-        return head in whole_words or any(head.startswith(entry) and len(head) > len(entry) for entry in elided)
+    def article_led(head_tokens: list[str]) -> bool:
+        """An article glued to the word (``l'home``) or standing before a word that is not one (``der Hund``)."""
+        first = _apostrophes(head_tokens[0])
+        if first in whole_words:
+            return len(head_tokens) > 1 and _apostrophes(head_tokens[1]) not in whole_words
+        return any(first.startswith(entry) and len(first) > len(entry) for entry in elided)
 
     def fold(text: str) -> str:
         folded = keys.fold_term(text)
+        sentence = folded.rstrip().endswith(_SENTENCE_ENDS)
         folded = _strip_trailing_punctuation(_TRAILING_GROUPS.sub("", folded) or folded)
         head, comma, rest = folded.partition(",")
         head_tokens = head.split()
@@ -142,10 +154,12 @@ def spaced_dedup_fold(keys: CasefoldDictKeys, leading_words: frozenset[str] = fr
             comma
             and 1 <= len(head_tokens) <= 3
             and (
-                article_led(_apostrophes(head_tokens[0])) or rest in whole_words or rest.startswith(_PLURAL_NOTE_MARKS)
+                (article_led(head_tokens) and len(folded.split()) <= 3 and not sentence)
+                or rest in whole_words
+                or rest.startswith(_PLURAL_NOTE_MARKS)
             )
         ):
-            folded = _strip_trailing_punctuation(head)
+            folded = _strip_trailing_punctuation(_TRAILING_GROUPS.sub("", head) or head)
         tokens = folded.split()
         if not 1 <= len(tokens) <= 3:
             return folded.strip()
