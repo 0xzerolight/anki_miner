@@ -158,6 +158,40 @@ def test_sl_an_accent_notation_form_row_is_reachable_after_import(tmp_path):
 
 
 # --------------------------------------------------------------------------
+# E2E-2-02: the sl Definition splice reads only the target rows of the token's own class
+# --------------------------------------------------------------------------
+
+#: wty-sl-en files ``mȃma`` (folded ``mama``) as a form of the verb ``imeti``, and ``ima`` as another; ``prav``
+#: as a form of the noun ``pravo``; the adverb ``lepo`` only as a form of the adjective ``lep``.
+_SL_ROWS = [
+    ["imeti", "", "v impf pf", "", 0, ["to have"], 1, ""],
+    ["mȃma", "", "non-lemma", "", 0, [["imeti", ["first-person present indicative negative dual"]]], 2, ""],
+    ["ima", "", "non-lemma", "", 0, [["imeti", ["third-person singular present"]]], 3, ""],
+    ["pravo", "", "n neut", "", 0, ["law"], 4, ""],
+    ["prav", "", "non-lemma", "", 0, [["pravo", ["genitive dual/plural"]]], 5, ""],
+    ["lep", "", "adj", "", 0, ["beautiful"], 6, ""],
+    ["lepo", "", "non-lemma", "", 0, [["lep", ["nominative/accusative singular neuter"]]], 7, ""],
+]
+
+
+def test_sl_a_card_reads_no_gloss_of_another_class_through_its_form_row(tmp_path):
+    provider = _imported(tmp_path, "sl", "wty-sl-en", _SL_ROWS)
+    pos = {"mama": "NOUN", "prav": "ADV", "ima": "VERB", "lepo": "ADV"}
+    found = provider.lookup_many([(word, None) for word in pos], pos=pos)
+    assert found["mama"] is None and found["prav"] is None
+    assert found["ima"] is not None and "to have" in found["ima"]
+    # An adverb in -o is its adjective's neuter form: the adjective's meaning is the adverb's.
+    assert found["lepo"] is not None and "beautiful" in found["lepo"]
+
+
+def test_sl_a_lookup_with_no_token_class_splices_as_before(tmp_path):
+    """The curator and a backfill without a stored Pos hand no class: nothing to compare, nothing dropped."""
+    provider = _imported(tmp_path, "sl", "wty-sl-en", _SL_ROWS)
+    found = provider.lookup_many([("mama", None)])["mama"]
+    assert found is not None and "to have" in found
+
+
+# --------------------------------------------------------------------------
 # E2E-2-01: hr keys fold the tone marks, so the splice reaches a toned target
 # --------------------------------------------------------------------------
 

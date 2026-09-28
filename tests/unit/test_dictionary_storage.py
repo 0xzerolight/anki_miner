@@ -2462,6 +2462,17 @@ class _PromotingKeys(_PlainKeys):
         return 0 if tags == "non-lemma" and "tahu" in content else 1
 
 
+class _ClassSpliceKeys(_PlainKeys):
+    """Keys whose splice reads only the target rows tagged with the token's own class (wty-sl-en's shape)."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str]] = []
+
+    def splice_row_fits(self, tags: str, pos: str) -> bool:
+        self.calls.append((tags, pos))
+        return tags.split(" ")[0] == {"NOUN": "n", "VERB": "v"}.get(pos)
+
+
 class TestFormOfRows:
     """wty ``non-lemma`` rows on the render read paths.
 
@@ -2650,6 +2661,31 @@ class TestFormOfRows:
             conn.close()
         assert noun == ["<div>August</div>", "<div>Augusta</div>"]
         assert name == ["<div>Augusta</div>"]
+
+    def test_declared_keys_splice_only_the_target_rows_of_the_tokens_class(self, tmp_path: Path):
+        """sl mama names the verb imeti, picks the noun and verb pick: a token reads its own class's rows."""
+        rows = [_form_of("mama", "imeti"), _lemma("imeti", "to have", "v impf pf"), _form_of("picks", "pick")]
+        conn = self._open(tmp_path, [*rows, _PICK_NAME, _PICK_NOUN, _PICK_VERB])
+        keys = _ClassSpliceKeys()
+        try:
+            for lookup_pos, word, expected in (
+                ("NOUN", "mama", []),
+                ("VERB", "mama", ["<div>to have</div>"]),
+                ("NOUN", "picks", [_PICK_NOUN.content]),
+                ("VERB", "picks", [_PICK_VERB.content]),
+            ):
+                single = self._contents(lookup(conn, word, keys=keys, pos=lookup_pos))
+                batch = self._contents(lookup_many(conn, [(word, None)], keys=keys, pos={word: lookup_pos})[word])
+                assert single == batch == expected, (word, lookup_pos)
+            assert ("v impf pf", "NOUN") in keys.calls
+            # No token class in hand, or keys without the test: every target row, as before.
+            keys.calls.clear()
+            assert self._contents(lookup(conn, "mama", keys=keys)) == ["<div>to have</div>"]
+            assert self._contents(lookup_with_rules(conn, "mama", keys=keys)) == ["<div>to have</div>"]
+            assert keys.calls == []
+            assert self._contents(lookup(conn, "mama", keys=_PlainKeys(), pos="NOUN")) == ["<div>to have</div>"]
+        finally:
+            conn.close()
 
     def test_a_dictionary_without_form_rows_is_untouched(self, tmp_path: Path):
         """JMdict/CC-CEDICT shapes: no ``non-lemma`` tag, so no extra query and the same rows."""

@@ -109,8 +109,8 @@ class DictKeyFolding(Protocol):
     ``homograph_keep_mask`` mirrors ``services/dictionary/storage.py:247``
     verbatim in arity and return.
 
-    Two OPTIONAL methods an implementation may add, each probed by ``getattr``
-    at its one reader so the other profiles need neither: ``term_variants(term)
+    Three OPTIONAL methods an implementation may add, each probed by ``getattr``
+    at its one reader so the other profiles need none: ``term_variants(term)
     -> list[str]`` (read by ``IndexedFreqProvider``, on ``ZhDictKeyFolding``)
     and ``sense_rank(content, tags, pos) -> int``, the lookup sort's row rank
     within one term/reading priority (read by ``storage._sense_rank_fn``). It
@@ -118,6 +118,10 @@ class DictKeyFolding(Protocol):
     being defined (``TokenizedWord.pos``; ``None`` with no token in hand).
     ``ZhDictKeyFolding`` ranks by content alone; ``CasefoldDictKeys`` ranks the
     wty rows of the token's part of speech first and proper-name rows last.
+    ``splice_row_fits(tags, pos) -> bool`` decides whether the form-row splice
+    reads a target lemma row with these ``tags`` for a token of that part of
+    speech (read by ``storage._splice_row_fits``, only with a token part of
+    speech in hand; on ``SlovenianDictKeys``).
 
     One OPTIONAL flag, probed the same way: ``term_rows_match_reading = True``
     makes the form lookup (``storage.term_rows``) match the reading column as
