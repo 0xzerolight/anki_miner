@@ -26,11 +26,14 @@ the preceding particle as one ``嘅ＡＢＣ`` PART token), which is why the pro
 excludes them with the Han script gate and never with POS. ``YUE_TAG_OVERRIDES``
 corrects the Han words the model tags wrong in every context.
 
-**Each run between punctuation marks is segmented on its own**, and each mark is
-a token of its own. The segmenter strips punctuation only off a predicted word's
-ends, so a whole-line segment emitted ``塞緊車，行告士打道`` as one word: a
-dictionary miss that cost every word in it. The tags still come from ONE
-``pos_tag`` call over the whole line, so each word keeps its sentence context.
+**Each run between punctuation marks is segmented on its own**, together with
+the mark that closes it, and each mark is a token of its own. The segmenter
+strips punctuation only off a predicted word's ends, so a whole-line segment
+emitted ``塞緊車，行告士打道`` as one word: a dictionary miss that cost every
+word in it. The closing mark stays in the segmented text because the segmenter
+reads it as context for the run's last word (``飲嘢？``). The tags still come
+from ONE ``pos_tag`` call over the whole line, so each word keeps its sentence
+context.
 """
 
 from __future__ import annotations
@@ -98,7 +101,23 @@ class YueTagger:
         return spans + self._segment_run(text, run_start, len(text))
 
     def _segment_run(self, text: str, start: int, end: int) -> list[Span]:
-        return [(word, (start + s, start + e)) for word, (s, e) in self._segment(text[start:end], offsets=True)]
+        """``segment`` over ``text[start:end]`` with the mark that closes it, ``text[end]``, as context.
+
+        The segmenter decides a run's last word by the character after it (飲嘢？
+        -> 飲嘢, 飲嘢 -> 飲 嘢), so the run is segmented as the whole line had it
+        and the mark is dropped here; the caller emits it. pycantonese strips only
+        its own marks off a word's ends (『 』 · are not among them), so it can
+        glue the mark onto the last word (攰』): that word keeps its slice before
+        the mark.
+        """
+        spans: list[Span] = []
+        for word, (s, e) in self._segment(text[start : end + 1], offsets=True):
+            s, e = start + s, start + e
+            if e > end:
+                word, e = word[:-1], s + len(text[s:end].rstrip())
+            if word:
+                spans.append((word, (s, e)))
+        return spans
 
     def parse(self, text: str) -> list[LanguageToken]:
         """fugashi-compatible alias so ``LockedTagger.parse`` delegates cleanly."""
