@@ -36,9 +36,11 @@ ID_POS_LABELS: Mapping[str, str] = MappingProxyType(
 LATIN_OTHER: frozenset[str] = frozenset({"okay", "guys", "sorry", "yes", "no", "thanks"})
 
 #: Casefolded abbreviations without their final dot: not sentence ends (reading tab), not mined (tokenizer ``X``).
+#: ``tn ny nn`` are Tuan/Nyonya/Nona, the Mr./Mrs./Miss of dubbed-film subtitles.
 ID_ABBREVIATIONS: frozenset[str] = frozenset(
-    {"bpk", "dkk", "dll", "dr", "drs", "dsb", "dst", "hlm", "ir", "jl", "no", "prof", "sdr", "tsb", "yth"}
-)
+    {"bpk", "dkk", "dll", "dr", "drs", "dsb", "dst", "hlm", "ir", "jl", "nn", "no", "ny", "prof", "sdr", "tn",
+     "tsb", "yth"}
+)  # fmt: skip
 
 
 def id_fold(text: str) -> str:

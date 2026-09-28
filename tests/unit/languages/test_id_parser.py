@@ -10,6 +10,7 @@ from types import SimpleNamespace
 import pytest
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.languages.id import ID_SENTENCE_RULES
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.switching import switch_language
 from anki_miner.models.reading import ReadingUnit
@@ -17,6 +18,7 @@ from anki_miner.services.definition_service import DefinitionService
 from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip
 from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
 from anki_miner.services.frequency.lemmatize import build_frequency_lemmatizer
+from anki_miner.services.reading.sentence_splitter import split_sentences
 
 FIXTURE = json.loads((Path(__file__).parents[2] / "fixtures" / "id" / "wty_rows.json").read_text(encoding="utf-8"))
 CONFIG = switch_language(AnkiMinerConfig(), "id")
@@ -39,6 +41,21 @@ def test_the_smoke_sentence_mines_its_content_words(parser):
 def test_fronts_are_folded_surfaces_and_function_words_names_and_numbers_stay_out(parser):
     fronts = _fronts(parser, "Gue nggak ngerti, beliin aja buku-buku itu dari Jakarta, 3 kali.")
     assert fronts == ["ngerti", "beliin", "buku-buku", "kali"]
+
+
+def test_derived_verbs_are_mined_and_pronouns_and_articles_are_not(parser):
+    assert _fronts(parser, "Aku mengira kau sudah pulang.") == ["mengira", "sudah", "pulang"]
+    assert _fronts(parser, "Kue ini dibuat oleh si nenek untuk sang raja.") == ["kue", "dibuat", "nenek", "raja"]
+
+
+def test_the_honorifics_are_abbreviations_so_the_name_after_them_stays_out(parser):
+    """``Tn.``/``Ny.``/``Nn.`` (Tuan, Nyonya, Nona) render Mr./Mrs./Miss in dubbed-film subtitles."""
+    text = "Tn. Harris sudah menunggu di lobi. Ny. Wijaya, silakan masuk. Nn. Parker belum datang."
+    assert _fronts(parser, text) == ["sudah", "menunggu", "lobi", "silakan", "masuk", "datang"]
+    assert split_sentences("Tn. Harris membuka pintu perlahan. Ny. Wijaya diam.", rules=ID_SENTENCE_RULES) == [
+        "Tn. Harris membuka pintu perlahan.",
+        "Ny. Wijaya diam.",
+    ]
 
 
 @pytest.fixture
