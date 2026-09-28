@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
+from anki_miner.languages.registry import get_profile
 from anki_miner.services.dictionary.providers.indexed_provider import (
     _DISPLAY_LIMIT,
     IndexedDictProvider,
@@ -1734,3 +1735,30 @@ class TestSequenceIndexBackfill:
         sidecar = db.parent / "meta.json"
         IndexedDictProvider("test-dict", db).load()
         assert sidecar.stat().st_mtime >= db.stat().st_mtime
+
+
+class TestTokenPosRowRank:
+    """``lookup_many(pos=...)`` reaches the profile's row rank: a wty verb's card
+    opens on its verb row, and a proper-name row never leads a common word."""
+
+    def test_the_token_pos_row_leads_the_rendered_definition(self, tmp_path: Path):
+        db = tmp_path / "wty.sqlite"
+        _seed_db(
+            db,
+            [
+                DictRow(term="pick", reading=None, content='<li class="gloss-item">A surname.</li>', tags="name"),
+                DictRow(term="pick", reading=None, content='<li class="gloss-item">A pickaxe.</li>', tags="n"),
+                DictRow(term="pick", reading=None, content='<li class="gloss-item">To choose.</li>', tags="v"),
+            ],
+        )
+        provider = IndexedDictProvider("wty-en-en", db, keys=get_profile("en").dict_keys)
+        assert provider.load() is True
+        try:
+            verb = provider.lookup_many([("pick", "pick")], pos={"pick": "VERB"})["pick"]
+            untagged = provider.lookup_many([("pick", "pick")])["pick"]
+            single = provider.lookup("pick")
+        finally:
+            provider.close()
+        assert verb.index("To choose.") < verb.index("A pickaxe.") < verb.index("A surname.")
+        assert untagged.index("A pickaxe.") < untagged.index("To choose.") < untagged.index("A surname.")
+        assert single == untagged
