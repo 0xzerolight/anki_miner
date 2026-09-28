@@ -146,6 +146,30 @@ def test_a_truncated_utf16_file_raises_rather_than_falling_to_the_ladder() -> No
         decode_with_ladder("Apfel".encode("utf-16") + b"\x00", encodings=("utf-8-sig", "cp1252"))
 
 
+def test_one_stray_byte_keeps_a_utf8_file_utf8() -> None:
+    """The cp1252 leg read the whole novel as mojibake ('pÃ¥') for one bad byte."""
+    good = "Jag mår bra.\nVi måste gå till trädgården på söndag.\n" * 5
+    raw = good.encode() + b"\xff" + "Hon är här.\n".encode()
+
+    text, winner = decode_with_ladder(raw, encodings=("utf-8-sig", "cp1252"))
+
+    assert text == good + "�" + "Hon är här.\n"
+    assert winner == "utf-8-sig"
+
+
+@pytest.mark.parametrize(
+    ("text", "ladder", "codec"),
+    [
+        ("Jag mår bra. Vi måste gå till trädgården på söndag.", ("utf-8-sig", "cp1252"), "cp1252"),
+        ("Он сказал, что всё будет хорошо, и Фёдор ушёл.", ("utf-8-sig", "cp1251"), "cp1251"),
+        ("他昨天读了红楼梦，觉得很有意思。", ("utf-8-sig", "gb18030", "big5"), "gb18030"),
+        ("日本語のテキストです。漢字とかなが混ざる。", ("utf-8-sig", "cp932", "euc_jp"), "cp932"),
+    ],
+)
+def test_a_real_legacy_file_still_picks_its_legacy_leg(text: str, ladder: tuple[str, ...], codec: str) -> None:
+    assert decode_with_ladder(text.encode(codec), encodings=ladder) == (text, codec)
+
+
 # ---------------------------------------------------------------------------
 # Dispatcher: only the two sniffing loaders receive the ladder
 # ---------------------------------------------------------------------------

@@ -25,6 +25,8 @@ from anki_miner.utils.cjk_encoding import prefers_big5
 from anki_miner.utils.subtitle_encoding import (
     big5_family_codec,
     is_single_byte_codec,
+    is_utf8_codec,
+    mostly_utf8,
     plausible_single_byte_text,
 )
 
@@ -223,7 +225,9 @@ def decode_with_ladder(
     here knows which of several successful decodes of another language's bytes
     is the right one. Exhausting the ladder raises rather than returning a
     replacement-character string, because a novel that decoded to U+FFFD noise
-    would mine into cards.
+    would mine into cards. The one lossy success is a UTF-8 leg on a file that
+    is UTF-8 but for a few stray bytes (``mostly_utf8``): only those bytes
+    become U+FFFD, where the next single-byte leg would garble every line.
 
     A single-byte leg (cp1252, cp1258, …) must also pass
     ``plausible_single_byte_text`` with *script_check* — such codecs almost never
@@ -262,7 +266,11 @@ def decode_with_ladder(
                 continue
         try:
             text = raw.decode(encoding)
-        except (UnicodeDecodeError, LookupError):
+        except UnicodeDecodeError:
+            if not (is_utf8_codec(encoding) and mostly_utf8(raw)):
+                continue
+            text = raw.decode(encoding, errors="replace")
+        except LookupError:
             continue
         if is_single_byte_codec(encoding):
             if not plausible_single_byte_text(text, script_check):
