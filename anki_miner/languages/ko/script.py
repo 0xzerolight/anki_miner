@@ -55,12 +55,14 @@ def ko_normalize(text: str) -> str:
 
 #: Korean prose mixes CJK terminators (rips from CJK tooling) with the ASCII set,
 #: and unlike Japanese it is space-delimited, so the splitter rejoins fragments
-#: on spaces instead of concatenating them bare.
+#: on spaces instead of concatenating them bare. Books write dialogue in “ ” and
+#: inner speech in ‘ ’, so those pairs nest like the brackets: without them a
+#: quoted “엄마, 나 왔어! 밥 있어?” is cut into two cards at the "!".
 KO_SENTENCE_RULES = SentenceRules(
     terminators=frozenset("。｡！？!?‼⁉⁇⁈."),
     ellipses=frozenset("…‥"),
-    openers=frozenset("「｢『（〔［｛〈《【([{｟〝"),
-    closers=frozenset("」｣』）〕］｝〉》】)]}｠〟"),
+    openers=frozenset("「｢『（〔［｛〈《【([{｟〝“‘"),
+    closers=frozenset("」｣』）〕］｝〉》】)]}｠〟”’"),
     space_aware=True,
 )
 
