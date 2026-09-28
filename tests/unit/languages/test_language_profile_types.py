@@ -39,6 +39,7 @@ EXPECTED_FIELDS = (
     "english_name",
     "wiktionary_code",
     "dedup_fold",
+    "stacked_definition",
 )
 
 

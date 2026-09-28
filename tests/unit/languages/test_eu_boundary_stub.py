@@ -126,6 +126,7 @@ FIELD_CHECKS: dict[str, Callable[[object], bool]] = {
     "wiktionary_code": lambda v: isinstance(v, str)
     and (v == "" or (v.isascii() and v.isalpha() and v.islower() and 2 <= len(v) <= 3)),
     "dedup_fold": _optional(callable),
+    "stacked_definition": lambda v: isinstance(v, bool),
 }
 
 
@@ -151,9 +152,10 @@ def test_the_profile_is_constructed_not_replaced_off_ja():
     shared = [
         f.name
         for f in dataclasses.fields(LanguageProfile)
-        # Empty containers and None are interned/singleton, not shared ja
-        # answers, so identity says nothing about them.
-        if getattr(stub, f.name) is getattr(ja, f.name) and getattr(stub, f.name) not in (None, (), frozenset(), "")
+        # Empty containers, None and the bools are interned/singleton, not
+        # shared ja answers, so identity says nothing about them.
+        if getattr(stub, f.name) is getattr(ja, f.name)
+        and getattr(stub, f.name) not in (None, (), frozenset(), "", False, True)
     ]
     assert shared == []
 

@@ -1778,7 +1778,13 @@ class EpisodeProcessor:
         pos_context = _build_pos_context(words_with_media)
         if pos_context:
             token_kwargs["pos_context"] = pos_context
-        definitions = self.definition_service.get_definitions_batch(
+        # A stacking profile (yue) fills the Definition the way the Glossary is
+        # built: every enabled dictionary's hit in chain order, same miss ladder.
+        stacked = self.profile.stacked_definition
+        lookup_batch = (
+            self.definition_service.get_glossaries_batch if stacked else self.definition_service.get_definitions_batch
+        )
+        definitions = lookup_batch(
             lookup_pairs,
             progress_callback,
             fallback_context,
@@ -1798,12 +1804,16 @@ class EpisodeProcessor:
         # so a ladder-resolved front never gets a Definition and a blank Glossary.
         glossaries: list[str | None] = [None] * len(words_with_media)
         if self.config.anki_fields.get("glossary"):
-            glossaries = self.definition_service.get_glossaries_batch(
-                lookup_pairs,
-                progress_callback,
-                fallback_context,
-                is_cancelled=lambda: self.cancelled,
-                **token_kwargs,
+            glossaries = (
+                list(definitions)
+                if stacked
+                else self.definition_service.get_glossaries_batch(
+                    lookup_pairs,
+                    progress_callback,
+                    fallback_context,
+                    is_cancelled=lambda: self.cancelled,
+                    **token_kwargs,
+                )
             )
 
         # Pitch follows the same identity ladder as definitions/audio: the card
