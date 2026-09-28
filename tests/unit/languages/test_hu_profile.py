@@ -100,7 +100,7 @@ def test_the_tagger_stashes_preverbs_demotes_the_clitic_and_splits_sentence_fina
         "tok2vec", "tagger", "morphologizer", "lookup_lemmatizer", "trainable_lemmatizer", "parser"
     ]  # fmt: skip
     features = {token.surface: token.feature for token in tagger("Nem olvasta el a könyvet.")}
-    assert features["olvasta"].particle == "el" and features["el"].pos1 == "PART"
+    assert features["olvasta"].particle == "el" and [p.text for p in features["olvasta"].particles] == ["el"]
     assert ("-e", "PART") in [(t.surface, t.feature.pos1) for t in tagger("Tudod-e, hol van?")]
     assert [(t.surface, t.feature.pos1) for t in tagger("Ez egy jó út.")][-2:] == [("út", "NOUN"), (".", "PUNCT")]
     assert ("Dr.", "X") in [(t.surface, t.feature.pos1) for t in tagger("Dr. Kovács késett.")]

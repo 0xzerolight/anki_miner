@@ -84,7 +84,7 @@ def test_a_known_word_front_meets_the_mined_lemma():
 
 def test_the_tagger_stashes_particles_and_splits_word_final_dots(tagger):
     features = {t.surface: t.feature for t in tagger("Jeg står opp klokka sju.")}
-    assert features["står"].particle == "opp" and features["opp"].pos1 == "PART"
+    assert features["står"].particle == "opp" and [p.text for p in features["står"].particles] == ["opp"]
     assert [(t.surface, t.feature.pos1) for t in tagger("God jul.")] == [
         ("God", "ADJ"),
         ("jul", "NOUN"),

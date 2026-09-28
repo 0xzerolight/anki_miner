@@ -10,8 +10,8 @@ each with the real-word loss it costs -- abbreviation forms (``AB|AN`` 278 token
 ``åh``; losing ``föll`` and ``så``) and an ordinal, which lemmatises to its cardinal (``RO|NOM`` 121 tokens, lemma
 ``en`` alone 66 -- the nl ``TW|rang`` case; losing ~14 tokens of ``hetta``/``lära``/``skaka``/``sunt``). A stranded
 verb particle (``PL``: ``upp`` in ``sprang upp för trappan``) is NOT excluded: it is 145 tokens over 42 lemmas, 39
-of them dictionary headwords (``in``, ``ner``, ``upp``, ``fast``, ``ut``, ``fram``, ``igen``), and a particle that
-carries a ``compound:prt`` arc is ``PART`` before the gate sees it, so excluding it only removed real adverbs.
+of them dictionary headwords (``in``, ``ner``, ``upp``, ``fast``, ``ut``, ``fram``, ``igen``), and a particle whose
+``compound:prt`` join is taken is ``PART`` before the gate sees it, so excluding it only removed real adverbs.
 Inflection tags stay, ``GEN`` included: the model lemmatises a genitive common noun to its base (``husets`` ->
 ``hus``) and a name's genitive is PROPN, so nothing there needs removing, and an excluded subtype removes a word
 with no trace.
@@ -22,7 +22,8 @@ total), wty-sv-en attests the spaced join 1,197 times against 577 for the concat
 different verb (``ta av`` -> ``avta`` "diminish"). Only the spaced join is offered, and a non-alphabetic particle
 offers none (real arcs produce ``bo ―``, ``lägga /``, ``bikini →``). 926 of those arcs (41.5 %) attest neither
 join, and ``SeparableVerbPass`` then keeps the model's bare lemma: ``komma tillbaka`` mines as ``komma``, and so do
-``få``, ``ta`` and ``dra`` on their unattested particles.
+``få``, ``ta`` and ``dra`` on their unattested particles; the particle keeps its own class, so an adverb still mines
+as a word of its own.
 
 ``SV_ARTICLE_MAP``: Swedish has two genders and one indefinite article each, so every non-neuter key maps to
 ``en`` (the nl "every non-neuter takes de" shape). The morphologizer's ``Gender=Com``/``Gender=Neut`` answers for

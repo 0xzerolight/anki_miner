@@ -7,12 +7,12 @@ Pinned on real ``da_core_news_sm`` 3.8.0 output (``tests/fixtures/da/``) and wty
 
 Particle verbs: wty-da-en keys them as two words, verb first (``stå op``, ``give op``, ``se ud``), so the join is
 ``lemma + " " + particle`` and never the fused ``opstå`` (arise), which is another verb. ``DA_SEPARABLE_VERB_DEPS``
-is UD's dedicated ``compound:prt`` and nothing else, the nb and nl shape. The model in fact puts most Danish
-particles on ``advmod``/``advmod:lmod``: over the 2,995 example sentences of wty-da-en those arcs would attest 50
-more two-word verbs (11 -> 61), but ``to_duck_tokens`` demotes a stashed token to ``PART`` before the dictionary is
-consulted and ``SeparableVerbPass`` never restores it, so they would also drop ~170 ordinary adverbs (``ud``,
-``op``, ``ind``, ``sammen``) out of mining. **Known limit:** a particle the parser labels ``advmod`` leaves its verb
-front bare -- ``gik ud`` mines ``gå``, not ``gå ud``.
+is UD's dedicated ``compound:prt`` plus the adverbial arcs, because the model puts most Danish particles on
+``advmod``/``advmod:lmod`` (``Hun stod op``, ``Giv ikke op``, ``Du ser træt ud``): over the 2,995 example sentences
+of wty-da-en those arcs attest 50 more two-word verbs (11 -> 61). They also carry every other adverb of the verb
+(``ikke``, ``nu``, ``tidligt``), so ``DA_ADVERBIAL_PARTICLE_DEPS`` join only when the dictionary attests the
+two-word verb, never blindly without one; ``SeparableVerbPass`` demotes only the particle it joins, and every other
+adverb stays a word.
 
 ``DA_ARTICLE_MAP`` / ``DA_GRAMMAR_SOURCES``: two genders, common (``en``) and neuter (``et``). wty-da-en writes the
 gender letter in the Grammar head line (``bog c (...)``, ``hus n (...)``) and tags only neuter rows with a chip, and
@@ -42,8 +42,10 @@ DA_MODEL_PACKAGE = "da_core_news_sm"
 DA_ALLOWED_POS: tuple[str, ...] = UPOS_ALLOWED
 DA_EXCLUDED_SUBTYPES: tuple[str, ...] = ()
 
-#: UD's dedicated verb-particle arc. The adverbial arcs are deliberately out (see the module docstring).
-DA_SEPARABLE_VERB_DEPS: frozenset[str] = frozenset({"compound:prt"})
+#: The adverbial arcs the model hangs most Danish particles on; a join there needs the dictionary (module docstring).
+DA_ADVERBIAL_PARTICLE_DEPS: frozenset[str] = frozenset({"advmod", "advmod:lmod"})
+#: UD's dedicated verb-particle arc and the adverbial ones.
+DA_SEPARABLE_VERB_DEPS: frozenset[str] = frozenset({"compound:prt"}) | DA_ADVERBIAL_PARTICLE_DEPS
 
 
 def danish_particle_candidates(token: Any) -> list[str]:

@@ -13,7 +13,7 @@ import re
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 from anki_miner.languages._spaced.pos import UPOS_ALLOWED
 
@@ -217,43 +217,91 @@ def particle_plus_lemma(token: Any) -> list[str]:
     return [token.feature.particle + token.feature.lemma]
 
 
+class StashedParticle(NamedTuple):
+    """One dependant on a language's particle arc, stashed on its verb head (``tokens.to_duck_tokens``)."""
+
+    #: The casefolded text a join candidate spells.
+    text: str
+    #: The dependant's own token: ``SeparableVerbPass`` demotes it to ``PART`` only when it takes its join.
+    token: Any
+    #: The arc it hangs on (``SeparableVerbPass(attested_only_deps=...)`` reads it).
+    dep: str
+
+
+def stash_particle(head: Any, particle: StashedParticle) -> None:
+    """Add *particle* to *head*'s ``feature.particles``, in line order; ``feature.particle`` is the first one's text.
+
+    ``feature.particle`` is the particle a candidate function spells a join with: the first stashed one here, and
+    each one in turn while ``SeparableVerbPass`` asks for candidates.
+    """
+    stash = getattr(head.feature, "particles", None)
+    if not stash:
+        head.feature.particle = particle.text
+        head.feature.particles = stash = []
+    stash.append(particle)
+
+
 class SeparableVerbPass:
-    """§4.3 item 2(b): join a stashed particle to its verb when the dictionary knows the result.
+    """§4.3 item 2(b): join one stashed particle to its verb when the dictionary knows the result.
 
     A ``token_post_pass`` (Stage S seam), injected by a language's
     ``parser.py`` through ``create_spaced_parser``. ``candidates`` lists a
-    head's possible joins, best first; the default is ``particle + lemma``. A
-    language whose lemmatiser already folds particles into lemmas passes its
-    own order (nl: ``dutch_particle_candidates``). One attestation call per
-    line over every head's distinct candidates; per head the first attested
-    candidate wins. ``attest is None`` (no offline dictionary wired) takes the
-    first candidate, mirroring the ungated merge passes; nothing attested keeps
-    the model's lemma and is logged at debug. The stash is cleared either way,
-    so running the pass twice cannot join twice. The third argument (R36's
-    form lookup) is ignored.
+    head's possible joins with one particle, best first; the default is
+    ``particle + lemma``. A language whose lemmatiser already folds particles
+    into lemmas passes its own order (nl: ``dutch_particle_candidates``). One
+    attestation call per line over every head's distinct candidates. Per head
+    the stashed particles are tried in line order and the first attested
+    candidate wins; ``attest is None`` (no offline dictionary wired) takes the
+    first candidate of the first particle that offers one, mirroring the
+    ungated merge passes. A particle on an ``attested_only_deps`` arc joins only
+    when attested: da hangs most particles on ``advmod``, beside every other
+    adverb (``gå ikke``, ``gå nu``).
+
+    Only the particle whose join is taken is demoted to ``PART``, outside every
+    allowed class. Every other stashed dependant keeps the class the tagger gave
+    it, so a join nothing attests loses no word (nl ``op prijs gesteld`` hangs
+    the noun on ``compound:prt``); that case keeps the model's lemma and is
+    logged at debug. The stash is cleared either way, so running the pass twice
+    cannot join twice. The third argument (R36's form lookup) is ignored.
     """
 
-    def __init__(self, candidates: ParticleCandidates = particle_plus_lemma) -> None:
+    def __init__(
+        self, candidates: ParticleCandidates = particle_plus_lemma, *, attested_only_deps: frozenset[str] = frozenset()
+    ) -> None:
         self._candidates = candidates
+        self._attested_only_deps = attested_only_deps
 
     def __call__(self, tokens: list[Any], attest: AttestLookup | None, forms: FormLookup | None) -> list[Any]:
         del forms
-        heads = [token for token in tokens if getattr(token.feature, "particle", "")]
+        heads = [token for token in tokens if getattr(token.feature, "particles", None)]
         if not heads:
             return tokens
-        options = [list(dict.fromkeys(self._candidates(token))) for token in heads]
-        probe = list(dict.fromkeys(text for texts in options for text in texts))
+        options = [[(particle, self._texts(head, particle)) for particle in head.feature.particles] for head in heads]
         attested: set[str] | None = None
         if attest is not None:
+            probe = list(dict.fromkeys(text for tried in options for _particle, texts in tried for text in texts))
             attested = attest(probe) if probe else set()
-        for token, texts in zip(heads, options, strict=True):
-            if attested is None:
-                chosen = texts[0] if texts else ""
+        for head, tried in zip(heads, options, strict=True):
+            chosen = next(
+                ((particle, text) for particle, texts in tried if (text := self._choose(particle, texts, attested))),
+                None,
+            )
+            if chosen is None:
+                joins = [text for _particle, texts in tried for text in texts]
+                logger.debug("Separable verb %r not attested; keeping %r", joins, head.feature.lemma)
             else:
-                chosen = next((text for text in texts if text in attested), "")
-            if chosen:
-                token.feature.lemma = chosen
-            else:
-                logger.debug("Separable verb %r not attested; keeping %r", texts, token.feature.lemma)
-            token.feature.particle = ""
+                particle, head.feature.lemma = chosen
+                particle.token.feature.pos1 = "PART"
+            head.feature.particle = ""
+            head.feature.particles = []
         return tokens
+
+    def _texts(self, head: Any, particle: StashedParticle) -> list[str]:
+        """The language's candidates for *head* joined with *particle*, duplicates dropped."""
+        head.feature.particle = particle.text
+        return list(dict.fromkeys(self._candidates(head)))
+
+    def _choose(self, particle: StashedParticle, texts: list[str], attested: set[str] | None) -> str:
+        if attested is None:
+            return "" if particle.dep in self._attested_only_deps else next(iter(texts), "")
+        return next((text for text in texts if text in attested), "")

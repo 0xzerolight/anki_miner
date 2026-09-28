@@ -20,7 +20,7 @@ from anki_miner.languages._spaced.form_of import (
     is_lemma_row,
     lemma_row_targets,
 )
-from anki_miner.languages._spaced.morphology import SeparableVerbPass
+from anki_miner.languages._spaced.morphology import SeparableVerbPass, StashedParticle, stash_particle
 from anki_miner.languages.token import LanguageToken
 
 # --------------------------------------------------------------------------
@@ -237,7 +237,7 @@ def test_ordered_passes_run_in_order_with_the_same_arguments():
 def test_the_join_sees_the_repaired_verb():
     """de ``Du siehst müde aus``: ``siehst`` becomes ``sehen`` first, so the join is ``aussehen``."""
     head = tok("siehst", "VERB", "siehst")
-    head.feature.particle = "aus"
+    stash_particle(head, StashedParticle("aus", tok("aus", "ADP", "aus"), "svp"))
     forms = Forms({"siehst": [form("sehen")], "sehen": [lemma("v")]})
     OrderedPasses(FormOfLemmaPass(), SeparableVerbPass())([head], lambda words: set(words) & {"aussehen"}, forms)
     assert head.feature.lemma == "aussehen"

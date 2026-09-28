@@ -102,7 +102,7 @@ def test_the_tagger_relemmatises_capitals_stashes_particles_and_splits_sentence_
     assert [(t.surface, t.feature.lemma) for t in tagger("Pigerne løb hjem.")][0] == ("Pigerne", "pige")
     assert [(t.surface, t.feature.lemma) for t in tagger("Husk at låse døren.")][0] == ("Husk", "huske")
     features = {t.surface: t.feature for t in tagger("Hun gav op efter en time.")}
-    assert features["gav"].particle == "op" and features["op"].pos1 == "PART"
+    assert features["gav"].particle == "op" and [p.text for p in features["gav"].particles] == ["op"]
     assert [(t.surface, t.feature.pos1) for t in tagger("Det ved man.")][-2:] == [("man", "PRON"), (".", "PUNCT")]
     assert ("bl.a.", "X") in [(t.surface, t.feature.pos1) for t in tagger("Han kom bl.a. hjem.")]
 
