@@ -1793,44 +1793,18 @@ class EpisodeProcessor:
 
         # Optional: fetch concatenated multi-dict glossary if the user mapped
         # the Glossary field. Skipped otherwise to avoid the extra chain walk
-        # per word.
+        # per word. It walks the Definition's miss ladder (fallback_context; for
+        # ja the ladder opens on the same-kanji, okurigana-only lemma alternate),
+        # so a ladder-resolved front never gets a Definition and a blank Glossary.
         glossaries: list[str | None] = [None] * len(words_with_media)
         if self.config.anki_fields.get("glossary"):
             glossaries = self.definition_service.get_glossaries_batch(
                 lookup_pairs,
                 progress_callback,
+                fallback_context,
                 is_cancelled=lambda: self.cancelled,
                 **token_kwargs,
             )
-            # get_glossaries_batch has no miss-fallback mechanism, so a miss may
-            # retry once under a same-kanji, okurigana-only lemma alternate.
-            # Different-kanji UniDic lemmas may be another homograph and are
-            # excluded. Hits pay nothing; None progress avoids a second cycle.
-            retry_idx = [
-                i
-                for i, g in enumerate(glossaries)
-                if not g
-                and words_with_media[i].lemma != words_with_media[i].mined_form
-                and _differs_by_okurigana_only(
-                    words_with_media[i].mined_form,
-                    words_with_media[i].lemma,
-                )
-            ]
-            if retry_idx:
-                retry_pairs: list[tuple[str, str | None]] = [
-                    (
-                        words_with_media[i].lemma,
-                        katakana_to_hiragana(words_with_media[i].lemma_reading or words_with_media[i].reading),
-                    )
-                    for i in retry_idx
-                ]
-                retry_glossaries = self.definition_service.get_glossaries_batch(
-                    retry_pairs,
-                    None,
-                    is_cancelled=lambda: self.cancelled,
-                )
-                for i, g in zip(retry_idx, retry_glossaries, strict=True):
-                    glossaries[i] = g
 
         # Pitch follows the same identity ladder as definitions/audio: the card
         # front and its selected reading first, then only a same-kanji,
