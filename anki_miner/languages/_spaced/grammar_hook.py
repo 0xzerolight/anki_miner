@@ -52,7 +52,8 @@ _EMPTY: Mapping[str, str] = MappingProxyType({})
 
 _MORPH_GENDER = {"Masc": "masc", "Fem": "fem", "Neut": "neut", "Com": "common"}
 _CHIP_GENDER = {"masculine": "masc", "feminine": "fem", "neuter": "neut", "common": "common"}
-_HEAD_GENDER = {"m": "masc", "f": "fem", "n": "neut", "c": "common"}
+#: ``pl`` closes a plural-only noun's head (``Eltern pl (plural only)``); a language names its article under ``plural``.
+_HEAD_GENDER = {"m": "masc", "f": "fem", "n": "neut", "c": "common", "pl": "plural"}
 
 #: A masculine animacy qualifier a wty head line puts after the gender letter (pl ``stół m inan``, ``pies m animal``).
 _HEAD_ANIMACY = {"pers": "pers", "anim": "anim", "animal": "anim", "inan": "inan"}
@@ -248,7 +249,8 @@ def _partner(head: str, aspect: str, fold: Callable[[str], str] | None) -> tuple
 class GrammarTagHook:
     """One hook for ``noun_gender`` / ``noun_article`` / ``noun_plural`` (R17 — no per-field classes).
 
-    ``article_map`` and ``gender_labels`` are keyed by ``masc fem neut common``.
+    ``article_map`` and ``gender_labels`` are keyed by ``masc fem neut common``
+    and ``plural`` (a plural-only noun); a missing key prints nothing.
     ``article_rule(gender, headword)`` (headword = the card front) covers
     articles that depend on the word's spelling (it ``lo``/``l'``, fr ``l'``);
     it wins over ``article_map`` and ``""`` omits the field.

@@ -90,7 +90,7 @@ def test_the_token_pass_repairs_every_lemma_in_place():
 
 
 def test_articles_and_sources():
-    assert dict(NL_ARTICLE_MAP) == {"masc": "de", "fem": "de", "common": "de", "neut": "het"}
+    assert dict(NL_ARTICLE_MAP) == {"masc": "de", "fem": "de", "common": "de", "neut": "het", "plural": "de"}
     assert NL_GRAMMAR_SOURCES == ("chips", "head", "morph")
     assert frozenset({"de", "het", "een", "'t", "’t", "zich"}) == NL_LEADING_WORDS
     assert frozenset("„") == NL_EXTRA_OPENERS
