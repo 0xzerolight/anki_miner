@@ -94,3 +94,48 @@ def test_the_homograph_mask_is_rule_a_only():
     rows = [("戲", "a play"), ("戲劇", "drama")]
     assert folding.homograph_keep_mask("戲", rows) == [True, False]
     assert folding.homograph_keep_mask("無此詞", rows) == [True, True]
+
+
+def _cedict_row(*glosses: str) -> str:
+    """One CC-CEDICT Canto row's stored ``content``, shaped as the importer renders it."""
+    items = "".join(f'<li class="gloss-sc-li">{gloss}</li>' for gloss in glosses)
+    return (
+        '<li class="gloss-item"><div class="gloss-content">'
+        '<ul class="gloss-sc-ul" data-sc-cccedict="definition">'
+        f"{items}</ul></div></li>"
+    )
+
+
+def _rank(content: str) -> int:
+    return YueDictKeyFolding().sense_rank(content, "", None)
+
+
+def test_the_sense_row_leads_the_surname_row():
+    """仲 'still': CC-CEDICT Canto files 'surname Zhong' ahead of the sense row."""
+    rows = [_cedict_row("surname Zhong"), _cedict_row("second month of a season", "middle")]
+    assert sorted(rows, key=_rank) == rows[::-1]
+
+
+@pytest.mark.parametrize(
+    "glosses, rank",
+    [
+        (("surname Ping",), 1),
+        (("(literary) almost",), 1),
+        (("long robe (old)",), 1),
+        (("see 集寧區|集宁区[jíníngqū]",), 2),
+        (("variant of 日元[rìyuán]",), 2),
+        (("used in 㐖毒[xiédú]",), 2),
+        (("variant of 乾|干[gān]", "surname Gan"), 1),
+        (("surname Wang", "king"), 0),
+        (("surname and given name; full name",), 0),
+        (("see you next time",), 0),
+        (("abbr. for Xinjiang",), 0),
+        (("(noun) Chinese surname",), 0),  # CC-Canto's own phrasing: not the CEDICT shape
+    ],
+)
+def test_the_sense_rank_is_zh_s_cedict_rank(glosses, rank):
+    assert _rank(_cedict_row(*glosses)) == rank
+
+
+def test_content_with_no_gloss_items_keeps_its_rank():
+    assert _rank("<div>surname Zhong</div>") == 0
