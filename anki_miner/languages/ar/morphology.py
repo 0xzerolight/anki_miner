@@ -2,23 +2,35 @@
 
 The analyzer (``_calima``) returns every analysis the database licenses; ``pick_analysis`` chooses one:
 the highest ``pos_lex_logprob`` among ``lex``/``spvar`` analyses (what CAMeL's MLE disambiguator does for
-a word it has no statistics for), ties to a ``lex`` source and then to a clitic-free reading. One
-exception: the database lexicalises 173 tanween adverbs and interjections (``\u0634\u064f\u0643\u0652\u0631\u0627\u064b``, ``\u062c\u0650\u062f\u0651\u0627\u064b``,
+a word it has no statistics for), ties to a ``lex`` source and then to a clitic-free reading. Two
+exceptions. A token key in ``overrides.AR_PICK_OVERRIDES`` takes the analysis that table names, because
+calima gives many of the commonest words no statistics at all (``-99``). And the database lexicalises
+173 tanween adverbs and interjections (``\u0634\u064f\u0643\u0652\u0631\u0627\u064b``, ``\u062c\u0650\u062f\u0651\u0627\u064b``,
 ``\u0623\u064e\u0628\u064e\u062f\u0627\u064b``); such a lexeme wins when the surface carries fathatan or when the plain winner is a
 case-bearing noun/verb/adjective reading (the raw argmax sends ``\u0634\u0643\u0631\u0627\u064b`` to the verb ``\u0634\u064e\u0643\u064e\u0631``). A
 function-word winner on an unmarked surface keeps its reading (``\u0625\u0630\u0627`` "if", not ``\u0625\u0650\u0630\u0627\u064b``). No
 dictionary probe is involved: wty-ar-en has non-lemma rows for plain accusatives (``\u0643\u062a\u0627\u0628\u0627``), so an
 existence test would front ``\u0643\u062a\u0627\u0628\u0627\u064b`` as ``\u0643\u062a\u0627\u0628\u0627``.
+
+The dictionary does come in after the pick, in ``ArabicFormOfPass``: a front wty-ar-en files only as a
+form of one lemma takes that lemma.
 """
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+from anki_miner.languages._spaced.form_of import form_targets, is_lemma_row, rendered_text
 from anki_miner.languages.ar._calima.charsets import dediac_ar
+from anki_miner.languages.ar.overrides import AR_LEX_REPAIRS, AR_PICK_OVERRIDES
+from anki_miner.languages.ar.script import ar_fold, is_arabic_letter
+
+if TYPE_CHECKING:  # annotation-only: services must not load at profile build
+    from anki_miner.services.morphology import AttestLookup, FormLookup
 
 AR_UNKNOWN_POS = "unknown"
 AR_CLITIC_SUBTYPE = "clitic"
@@ -27,6 +39,10 @@ FATHATAN = "\N{ARABIC FATHATAN}"
 AR_TANWEEN = (FATHATAN, "\N{ARABIC DAMMATAN}", "\N{ARABIC KASRATAN}")
 _ALEF = "\N{ARABIC LETTER ALEF}"
 _ALEF_WASLA = "\N{ARABIC LETTER ALEF WASLA}"
+_FATHA = "\N{ARABIC FATHA}"
+_SHADDA = "\N{ARABIC SHADDA}"
+#: A verb lexeme ending in a long-vowel letter takes no citation fatha (``\u062f\u064e\u0639\u0627``, ``\u0631\u064e\u0623\u064e\u0649``).
+_OPEN_FINALS = frozenset({_ALEF, "\N{ARABIC LETTER ALEF MAKSURA}"})
 _CONJUNCTIONS = ("\N{ARABIC LETTER WAW}", "\N{ARABIC LETTER FEH}")  # wa, fa
 _HAMZA_SEATS = str.maketrans({"\u0625": "\u0627", "\u0623": "\u0627", "\u0622": "\u0627", "\u0671": "\u0627"})
 
@@ -139,11 +155,16 @@ def _spells_the_token(lex: str, key: str) -> bool:
 def pick_analysis(analyses: list[dict[str, Any]], key: str, *, surface_has_tanween: bool) -> dict[str, Any] | None:
     """The analysis a token takes, or None when the database licenses no lex/spvar reading.
 
-    ``key`` is the token's folded spelling (what the analyzer was asked about).
+    ``key`` is the token's folded spelling (what the analyzer was asked about). An override row picks
+    only among the key's own analyses: the best-ranked one with the row's ``(lex, pos)``.
     """
     analysed = [analysis for analysis in analyses if analysis.get("source") in _ANALYSED_SOURCES]
     if not analysed:
         return None
+    named = AR_PICK_OVERRIDES.get(key)
+    chosen = [analysis for analysis in analysed if (analysis.get("lex"), analysis.get("pos")) == named]
+    if chosen:
+        return max(chosen, key=_rank)
     best = max(analysed, key=_rank)
     lexicalised = [
         analysis
@@ -167,9 +188,31 @@ class AnalysisSummary:
     morph: str  # "Root=\u0643.\u062a.\u0628|Segmentation=\u0648\u064e+ \u0633\u064e+ \u064a\u064e\u0643\u0652\u062a\u064f\u0628\u064f\u0648\u0646\u064e +\u0647\u0627"
 
 
+def citation_form(verb: str) -> str:
+    """A verb lexeme as wty heads its verb rows: a final bare consonant takes the perfect's fatha.
+
+    calima writes ``\u0630\u064e\u0647\u064e\u0628``, which is wty's noun "gold"; the verb "go" is ``\u0630\u064e\u0647\u064e\u0628\u064e``, and
+    the reading is the lookup's ranking boost, so without the fatha the noun leads the card. The fatha
+    goes before a final shadda (``\u0623\u064e\u062d\u064e\u0628\u0651`` -> ``\u0623\u064e\u062d\u064e\u0628\u064e\u0651``), the NFC order wty stores. An
+    alef or alef maqsura ending (``\u0631\u064e\u0623\u064e\u0649``) and one already vowelled stay as they are.
+    """
+    stem = verb.removesuffix(_SHADDA)
+    if not stem or not is_arabic_letter(stem[-1]) or stem[-1] in _OPEN_FINALS:
+        return verb
+    return stem + _FATHA + verb[len(stem) :]
+
+
 def summarise(analysis: Mapping[str, Any]) -> AnalysisSummary:
-    """Reduce one analysis to the token fields (hamzat wasl reads as a plain alef, like wty headwords)."""
-    reading = str(analysis.get("lex", "")).replace(_ALEF_WASLA, _ALEF)
+    """Reduce one analysis to the token fields (hamzat wasl reads as a plain alef, like wty headwords).
+
+    The lexeme passes ``AR_LEX_REPAIRS`` first, and a verb's reading is its ``citation_form``; the
+    lemma (the card front) carries no marks, so neither changes it beyond the repair.
+    """
+    pos = str(analysis.get("pos", ""))
+    lex = str(analysis.get("lex", ""))
+    reading = AR_LEX_REPAIRS.get((lex, pos), lex).replace(_ALEF_WASLA, _ALEF)
+    if pos == "verb":
+        reading = citation_form(reading)
     d3tok = str(analysis.get("d3tok", ""))
     base = next((part for part in d3tok.split("_") if part and not part.startswith("+") and not part.endswith("+")), "")
     clitic = "+" in d3tok
@@ -177,7 +220,7 @@ def summarise(analysis: Mapping[str, Any]) -> AnalysisSummary:
     segmentation = d3tok.replace("_", " ") if clitic else ""
     morph = "|".join(f"{name}={value}" for name, value in (("Root", root), ("Segmentation", segmentation)) if value)
     return AnalysisSummary(
-        pos=str(analysis.get("pos", "")),
+        pos=pos,
         clitic=clitic,
         lemma=dediac_ar(reading),
         orth_base=dediac_ar(base).replace(_ALEF_WASLA, _ALEF),
@@ -327,6 +370,89 @@ class ArabicLookupStrategy:
             for text in _clitic_strips(word):
                 add(text)
         return out
+
+
+_GRAMMAR_HEAD_RE = re.compile(r'data-sc-content="Grammar-content"[^>]*>(.*?)</div>', re.S)
+#: One line's worth of fronts is small; the cache exists so a word repeated across a long corpus
+#: (count_lemmas) is read once per parser, not once per occurrence.
+_FORM_CACHE_MAX = 4096
+
+
+def vocalised_head(content: str) -> str:
+    """The vocalised headword a wty lemma row's Grammar line opens with, or ``""``.
+
+    ``\u0645\u064e\u0627\u0636\u064d • (māḍin) m (construct state ...)`` -- everything before the bullet.
+    """
+    match = _GRAMMAR_HEAD_RE.search(content)
+    head, bullet, _rest = rendered_text(match.group(1)).partition("\N{BULLET}") if match else ("", "", "")
+    return head.strip() if bullet else ""
+
+
+class ArabicFormOfPass:
+    """``token_post_pass``: a front wty-ar-en files only as a form of one lemma takes that lemma.
+
+    calima lexes manqus nouns with their final ya (``\u0645\u0627\u0636\u064a``, ``\u062b\u0627\u0646\u064a``) and fronts words wty-ar-en
+    keeps only as forms (``\u0623\u062e\u0631\u0649`` of ``\u0622\u062e\u0631``); the lookup then hits a pointer row and the card
+    shows no English. HebrewLemmaPass's rule, on the analysed lemma: every row of the front is a form
+    row, their targets fold (``ar_fold``) to exactly one lemma, and that lemma has a lemma row -> the
+    front is that lemma. The reading is the vocalised head of the lemma row the pointer names by its
+    vocalised spelling, else of the first one: ``\u0623\u062e\u0631\u0649`` names ``\u0622\u062e\u064e\u0631`` "other", whose row comes after
+    two headed ``\u0622\u062e\u0650\u0631`` "last" (blank when the row has no Grammar line). A headword front, several
+    targets (``\u0642\u064a\u0627\u0645``: ``\u0642\u0627\u0645`` and ``\u0642\u0627\u0626\u0645``), a target that is itself only a form, or no rows
+    leave the token as the analyzer built it; the surface and the analyzer's POS always stay.
+
+    Not ``_spaced.form_of.FormOfLemmaPass``: that pass selects tokens by UPOS tag, rewrites ``pos1``
+    to UPOS (which the CAMeL ``allowed_pos`` gate would then drop), reads the surface, and sets no
+    reading. Only an analysed token (one carrying a reading) is read; ``forms is None`` (no offline
+    dictionary) makes the pass a no-op.
+    """
+
+    def __init__(self) -> None:
+        self._cache: dict[str, list[tuple[str, str]]] = {}
+
+    def __call__(self, tokens: list[Any], attest: AttestLookup | None, forms: FormLookup | None) -> list[Any]:
+        del attest  # existence is not enough: this pass needs the rows themselves
+        if forms is None:
+            return tokens
+        analysed = [token for token in tokens if token.feature.reading]
+        pointers = {
+            front: _pointer(rows) for front, rows in self._read(forms, [t.feature.lemma for t in analysed]).items()
+        }
+        # A target is a key of its own that the first read did not ask for: its lemma rows (and the
+        # vocalised heads on them) need one more batched read.
+        targets = self._read(forms, [target for target, _named in pointers.values()])
+        for token in analysed:
+            target, named = pointers.get(token.feature.lemma, ("", frozenset()))
+            heads = [vocalised_head(content) for content, tags in targets.get(target, ()) if is_lemma_row(tags)]
+            if heads:
+                token.feature.lemma = target
+                token.feature.reading = next((head for head in heads if head in named), heads[0])
+        return tokens
+
+    def _read(self, forms: FormLookup, keys: list[str]) -> dict[str, list[tuple[str, str]]]:
+        """Every key's rows (``[]`` for none): the cached ones, and one batched read for the rest."""
+        keys = [key for key in dict.fromkeys(keys) if key]
+        found = {key: self._cache[key] for key in keys if key in self._cache}
+        wanted = [key for key in keys if key not in found]
+        if wanted:
+            read = forms(wanted)
+            if len(self._cache) + len(wanted) > _FORM_CACHE_MAX:
+                self._cache.clear()
+            for key in wanted:
+                found[key] = self._cache[key] = read.get(key, [])
+        return found
+
+
+def _pointer(rows: list[tuple[str, str]]) -> tuple[str, frozenset[str]]:
+    """``(the one folded lemma a pointer-only front's rows name, every spelling they name it by)``.
+
+    ``("", ...)`` for a front with a lemma row, no rows, or targets that fold to more than one lemma.
+    """
+    if not rows or any(is_lemma_row(tags) for _content, tags in rows):
+        return "", frozenset()
+    named = frozenset(target for content, _tags in rows for target in form_targets(content))
+    folded = {ar_fold(target) for target in named}
+    return (next(iter(folded)), named) if len(folded) == 1 else ("", frozenset())
 
 
 class ArabicReadingSupport:
