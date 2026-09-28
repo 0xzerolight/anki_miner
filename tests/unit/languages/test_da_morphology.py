@@ -21,6 +21,7 @@ from anki_miner.languages.da.morphology import (
     DA_SUBTITLE_REGEX,
     da_normalize,
     danish_particle_candidates,
+    ikke_as_particle,
 )
 from anki_miner.languages.token import LanguageToken
 
@@ -34,6 +35,17 @@ def test_the_adverbial_arcs_are_taken_and_join_only_on_attestation():
     # The model puts most Danish particles on advmod/advmod:lmod (DA5); they carry every other adverb too.
     assert frozenset({"advmod", "advmod:lmod"}) == DA_ADVERBIAL_PARTICLE_DEPS
     assert frozenset({"compound:prt"}) | DA_ADVERBIAL_PARTICLE_DEPS == DA_SEPARABLE_VERB_DEPS
+
+
+def test_the_negation_is_a_particle_as_the_nb_and_sv_models_tag_it():
+    tokens = [
+        LanguageToken("Jeg", "PRON", "", "jeg"),
+        LanguageToken("ved", "VERB", "", "vide"),
+        LanguageToken("ikke", "ADV", "", "ikke"),
+        LanguageToken("Ikke", "ADV", "", "ikke"),
+        LanguageToken("aldrig", "ADV", "", "aldrig"),
+    ]
+    assert [token.feature.pos1 for token in ikke_as_particle(tokens)] == ["PRON", "VERB", "PART", "PART", "ADV"]
 
 
 def test_the_join_puts_the_particle_after_the_verb_as_wiktionary_keys_it():

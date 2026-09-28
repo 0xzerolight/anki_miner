@@ -161,5 +161,12 @@ def test_da_an_adverbial_particle_joins_only_when_attested(parsers, name, presen
 def test_da_the_attested_particle_joins_past_the_adverbs_before_it_and_the_rest_stay_words(parsers):
     """``ikke`` (advmod), ``op`` (advmod:lmod), ``nu`` (advmod), ``fremme`` (compound:prt) all hang on ``Giv``."""
     fronts = _fronts(parsers["da-known"], "Giv ikke op nu, vi er næsten fremme!")
-    assert "give op" in fronts and not {"op", "give"} & fronts
+    assert "give op" in fronts and not {"op", "give", "ikke"} & fronts
     assert {"nu", "fremme"} <= fronts
+
+
+@pytest.mark.parametrize("name", ["da-known", "da-none"])
+def test_da_the_negation_is_never_a_card(parsers, name):
+    """da_core_news_sm tags ``ikke`` ADV; the nb and sv models tag the same negation PART (NORD-07)."""
+    fronts = _fronts(parsers[name], "Jeg ved det ikke. Ikke nu!")
+    assert "vide" in fronts and "ikke" not in fronts

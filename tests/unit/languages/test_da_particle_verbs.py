@@ -88,7 +88,8 @@ def test_only_a_joined_particle_leaves_mining(tagger, row, with_dictionary):
     joined = head.feature.lemma != row["model_lemma"]
     for token, pos1 in before.values():
         assert token.feature.pos1 == ("PART" if joined and token.surface.casefold() == row["particle"] else pos1)
-    assert all(pos1 != "PART" for _token, pos1 in before.values())
+    (particle_pos,) = [pos1 for token, pos1 in before.values() if token.surface.casefold() == row["particle"]]
+    assert particle_pos != "PART"  # the tokenizer demotes nothing
 
 
 def test_an_unattested_compound_prt_join_keeps_the_verb_and_the_particle(tagger):

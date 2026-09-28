@@ -35,6 +35,7 @@ from anki_miner.languages._spaced.script import (
     PARENS_PATTERN,
     nfc_normalize,
 )
+from anki_miner.languages.token import LanguageToken
 
 #: The model package the tokenizer loads and the availability probe looks for.
 DA_MODEL_PACKAGE = "da_core_news_sm"
@@ -51,6 +52,18 @@ DA_SEPARABLE_VERB_DEPS: frozenset[str] = frozenset({"compound:prt"}) | DA_ADVERB
 def danish_particle_candidates(token: Any) -> list[str]:
     """``SeparableVerbPass`` candidates for a verb head carrying ``feature.particle``: the two-word headword."""
     return [f"{token.feature.lemma} {token.feature.particle}"]
+
+
+def ikke_as_particle(tokens: list[LanguageToken]) -> list[LanguageToken]:
+    """Tokenizer post-pass (``build_spacy_tagger(post_passes=...)``): the negation ``ikke`` becomes PART.
+
+    ``da_core_news_sm`` tags it ADV, which mines, so one of the five commonest Danish words reached a card; the nb
+    and sv models tag the same negation (``ikke``, ``inte``) PART, and fr retags its ``ne`` the same way.
+    """
+    for token in tokens:
+        if token.feature.pos1 == "ADV" and token.feature.lemma == "ikke":
+            token.feature.pos1 = "PART"
+    return tokens
 
 
 #: Leading words a deck front carries that the mined lemma never does (S3): ``en bog``, ``et hus``, ``at gå``.
