@@ -60,7 +60,7 @@ def test_the_profile_is_built_from_the_shared_substrate():
     assert profile.pos_defaults.excluded_subtypes == HR_EXCLUDED_SUBTYPES
     assert profile.smoke_sentence == "Student je ju\u010der pro\u010ditao zanimljivu knjigu."
     assert profile.sentence_rules.abbreviations == HR_ABBREVIATIONS
-    assert profile.dict_keys.fold_term("Knjige") == "knjige"  # NFC + casefold, nothing else
+    assert profile.dict_keys.fold_term("Knjige") == "knjige"  # NFC + tone fold + casefold
 
 
 def test_only_the_dictionary_speaks_serbo_croatian():

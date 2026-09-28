@@ -1,8 +1,8 @@
-"""Croatian and Slovenian: form-row fronts, sl tone-folded keys, the Latin-2 ladder and „…“ quotes.
+"""Croatian and Slovenian: form-row fronts, tone-folded keys, the Latin-2 ladder and „…“ quotes.
 
 The front half drives each profile's own ``token_post_pass`` with duck tokens and a stand-in for R36's
 ``form_lookup``; every row set is the one wty-sh-en 2026.08.29 / wty-sl-en 2026.09.19 hold for those keys,
-cut to the rows the rule reads. The sl stand-in folds its keys through the profile's own ``dict_keys``, as
+cut to the rows the rule reads. The stand-in folds its keys through the profile's own ``dict_keys``, as
 the index does on import and query. The real-engine cases run the injected pass over the real tagger's
 tokens; the taggers are module-scoped because the autouse conftest fixture clears the tagger cache around
 every test.
@@ -124,27 +124,65 @@ def test_sl_keys_fold_the_accent_notation_and_keep_the_caron():
     assert keys.fold_term("Žena šla") == "žena šla"  # plain orthography is unchanged: old indexes still answer
 
 
-def test_sl_an_accent_notation_form_row_is_reachable_after_import(tmp_path):
-    """41,212 wty-sl-en keys are written in accent notation; the import folds them like the query."""
-    index = {"title": "wty-sl-en", "format": 3, "revision": "2026.09.19", "sequenced": True, "sourceLanguage": "sl"}
-    term_rows = [
-        ["čakati", "", "v vt impf", "", 0, ["to wait"], 1, ""],
-        ["čȃkam", "", "non-lemma", "", 0, [["čakati", ["first-person singular present"]]], 2, ""],
-    ]
+def _imported(tmp_path, code: str, dict_id: str, term_rows: list[list[object]]) -> IndexedDictProvider:
+    """A loaded provider over a wty dictionary holding ``term_rows``, imported and queried with the profile's keys."""
+    index = {"title": dict_id, "format": 3, "revision": "2026.09.19", "sequenced": True, "sourceLanguage": code}
     tag_bank = [["non-lemma", "", 10, "non-lemma", -10], ["v", "partOfSpeech", -2, "verb", 2]]
-    archive = tmp_path / "wty-sl-en.zip"
+    archive = tmp_path / f"{dict_id}.zip"
     with zipfile.ZipFile(archive, "w") as zf:
         zf.writestr("index.json", json.dumps(index))
         zf.writestr("tag_bank_1.json", json.dumps(tag_bank))
         zf.writestr("term_bank_1.json", json.dumps(term_rows))
-    import_yomitan_zip(archive, tmp_path / "dicts", dict_id="wty-sl-en", language="sl")
+    import_yomitan_zip(archive, tmp_path / "dicts", dict_id=dict_id, language=code)
     provider = IndexedDictProvider(
-        "wty-sl-en", tmp_path / "dicts" / "wty-sl-en" / "index.sqlite", keys=get_profile("sl").dict_keys
+        dict_id, tmp_path / "dicts" / dict_id / "index.sqlite", keys=get_profile(code).dict_keys
     )
     assert provider.load()
+    return provider
+
+
+def test_sl_an_accent_notation_form_row_is_reachable_after_import(tmp_path):
+    """41,212 wty-sl-en keys are written in accent notation; the import folds them like the query."""
+    provider = _imported(
+        tmp_path,
+        "sl",
+        "wty-sl-en",
+        [
+            ["čakati", "", "v vt impf", "", 0, ["to wait"], 1, ""],
+            ["čȃkam", "", "non-lemma", "", 0, [["čakati", ["first-person singular present"]]], 2, ""],
+        ],
+    )
     rows = provider.term_rows(["čakam"])
     assert [tags for _content, tags in rows["čakam"]] == ["non-lemma"]
     assert "čakati" in rows["čakam"][0][0]
+
+
+# --------------------------------------------------------------------------
+# E2E-2-01: hr keys fold the tone marks, so the splice reaches a toned target
+# --------------------------------------------------------------------------
+
+
+def test_hr_keys_fold_the_tone_marks_and_keep_every_letter():
+    keys = get_profile("hr").dict_keys
+    assert keys.fold_term("prímiti") == keys.fold_term("Primiti") == "primiti"
+    assert keys.fold_term("spȁsti") == "spasti"
+    # Croatian spelling is unchanged, so an index imported before the fold keeps answering.
+    assert keys.fold_term("Ćup, đak, Čekam, šuma, žena, dž") == "ćup, đak, čekam, šuma, žena, dž"
+
+
+def test_hr_an_imperfective_reads_its_toned_perfectives_lemma_rows(tmp_path):
+    """wty-sh-en keys ``primiti`` plain, but ``primati``'s one row names it ``prímiti``."""
+    provider = _imported(
+        tmp_path,
+        "hr",
+        "wty-sh-en",
+        [
+            ["primiti", "", "v pf", "", 0, ["to receive"], 1, ""],
+            ["primati", "", "non-lemma", "", 0, [["prímiti", ["imperfective form"]]], 2, ""],
+        ],
+    )
+    found = provider.lookup_many([("primati", None)], pos={"primati": "VERB"})["primati"]
+    assert found is not None and "to receive" in found
 
 
 # --------------------------------------------------------------------------
