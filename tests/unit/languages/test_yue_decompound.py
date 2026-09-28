@@ -73,6 +73,18 @@ def test_an_attested_token_stays_whole(tagger):
     assert YueDecompoundPass(tagger)(raw, dictionary("好忙", "好", "忙"), None) is raw
 
 
+def test_a_token_the_pass_does_not_split_keeps_its_first_tag(tagger):
+    # Re-tagging the re-segmented line gave the untouched 起床 PART, so it lost its card.
+    raw = tagger.parse("她每天都很早起床。")
+    assert [(t.surface, t.feature.pos1) for t in raw][3:5] == [("很早", "ADV"), ("起床", "VERB")]
+
+    tokens = YueDecompoundPass(tagger)(raw, dictionary("她", "每天", "都", "很", "早", "起床"), None)
+
+    assert [t.surface for t in tokens] == ["她", "每天", "都", "很", "早", "起床", "。"]
+    assert tokens[5].feature.pos1 == "VERB"
+    assert all(new is old for new, old in zip(tokens[:3] + tokens[5:], raw[:3] + raw[4:], strict=True))
+
+
 def test_a_proper_noun_is_never_split(tagger):
     raw = tagger.parse("阿明鍾意睇Netflix。")
     assert raw[0].feature.pos1 == "PROPN"
