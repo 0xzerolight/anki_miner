@@ -11,6 +11,7 @@ Manage Known Words importer share so the Big5-versus-GB18030 rule exists once.
 
 from __future__ import annotations
 
+import codecs
 import logging
 import re
 import unicodedata
@@ -235,7 +236,17 @@ def decode_with_ladder(
     The winning encoding comes back with the text: mojibake is reported as "the
     words are wrong", never as an encoding name, so a caller's receipt cannot
     name the leg that produced it unless this says which one won.
+
+    A UTF-32/UTF-16 BOM replaces the ladder, the precedence the subtitle loader
+    (``utils/subtitle_encoding.py``) applies: every single-byte leg decodes
+    UTF-16 (Excel's "Unicode Text") without raising, into NUL-riddled words
+    that pass its plausibility check. UTF-32 goes first because its
+    little-endian BOM starts with UTF-16's.
     """
+    if raw.startswith((codecs.BOM_UTF32_LE, codecs.BOM_UTF32_BE)):
+        encodings = ("utf_32",)
+    elif raw.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
+        encodings = ("utf_16",)
     for encoding in encodings:
         # gb18030 accepts every valid Big5 sequence and decodes it into PUA
         # garbage without raising, so first-success could never reach a big5
