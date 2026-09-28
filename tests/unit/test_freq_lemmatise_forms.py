@@ -104,6 +104,87 @@ def test_a_dictionary_installed_after_the_lemmatiser_was_built_is_read(tmp_path,
     assert lemmatize(["welt"]) == ["Welt"]
 
 
+FR_TAGS = {
+    "gare": ("VERB", "gare"),
+    "porte": ("VERB", "porte"),
+    "viens": ("VERB", "vien"),
+    "parle": ("VERB", "parle"),
+    "est": ("AUX", "être"),
+}
+FR_ROWS = [
+    headword("parler", "v"),
+    form_of("parle", "parler"),
+    headword("gare", "n fem"),
+    headword("garer", "v"),
+    form_of("gare", "garer"),
+    headword("porte", "n fem"),
+    headword("porter", "v"),
+    form_of("porte", "porter"),
+    headword("venir", "v"),
+    form_of("viens", "venir"),
+    headword("est", "n masc"),
+    headword("être", "v"),
+]
+
+
+def test_a_list_word_the_dictionary_files_as_a_headword_keeps_its_own_key(tmp_path, monkeypatch):
+    """E2E-1-03: tagged alone, fr ``gare`` is a verb, and the parser's ``-e`` repair would file it under ``garer``.
+
+    The card for ``la gare`` fronts ``gare``. A word the dictionary files only as a form still moves (``parle`` ->
+    ``parler``, ``viens`` -> ``venir``), and a lemma the tagger chose itself stands (``est`` -> ``être``, although
+    ``est`` is a noun too).
+    """
+    monkeypatch.setitem(tagger_provider._TAGGERS, "fr", ScriptedTagger(FR_TAGS))
+    install_dictionary(tmp_path / "dicts", "fr", FR_ROWS)
+
+    lemmatize = build_frequency_lemmatizer("fr", tmp_path / "dicts")
+
+    assert lemmatize(["gare", "porte", "parle", "viens", "est"]) == ["gare", "porte", "parler", "venir", "être"]
+
+
+#: wty-el-en's second form-row shape: a row tagged as a verb whose gloss is an inflection of another.
+EL_INFLECTION_GLOSS = {
+    "type": "structured-content",
+    "content": [
+        {
+            "tag": "ol",
+            "data": {"content": "glosses"},
+            "content": [{"tag": "li", "content": "second-person singular present of ξέρω (kséro)"}],
+        }
+    ],
+}
+
+
+@pytest.mark.parametrize(
+    ("code", "tags", "rows", "word", "key"),
+    [
+        # A name row is no headword of the common word (tr_row_targets): sever is "loves".
+        (
+            "tr",
+            {"sever": ("VERB", "sever")},
+            [headword("sever", "name"), form_of("sever", "sevmek"), headword("sevmek", "v")],
+            "sever",
+            "sevmek",
+        ),
+        # The verb row the tagger's own lemma has is an inflection gloss: the move stays inside its class.
+        (
+            "el",
+            {"ξέρεις": ("VERB", "ξέρεις")},
+            [["ξέρεις", "", "v sg", "", 0, [EL_INFLECTION_GLOSS], 1, ""], headword("ξέρω", "v")],
+            "ξέρεις",
+            "ξέρω",
+        ),
+    ],
+)
+def test_a_word_kept_as_its_own_lemma_still_moves_off_a_name_or_inside_its_class(
+    tmp_path, monkeypatch, code, tags, rows, word, key
+):
+    monkeypatch.setitem(tagger_provider._TAGGERS, code, ScriptedTagger(tags))
+    install_dictionary(tmp_path / "dicts", code, rows)
+
+    assert build_frequency_lemmatizer(code, tmp_path / "dicts")([word]) == [key]
+
+
 def test_a_hand_added_list_reads_the_same_dictionaries(tmp_path, de_tagger):
     install_dictionary(tmp_path / "dicts", "de", DE_ROWS)
 
@@ -230,9 +311,10 @@ def test_a_re_import_rebuilds_a_lemmatised_list_by_card_front(tmp_path, de_tagge
 @pytest.fixture(scope="module")
 def real_taggers():
     from anki_miner.languages.de.tokenizer import build_tagger as de_tagger
+    from anki_miner.languages.fr.tokenizer import build_tagger as fr_tagger
     from anki_miner.languages.it.tokenizer import build_tagger as it_tagger
 
-    return {"de": de_tagger(), "it": it_tagger()}
+    return {"de": de_tagger(), "fr": fr_tagger(), "it": it_tagger()}
 
 
 @pytest.mark.parametrize(
@@ -251,3 +333,13 @@ def test_real_models_key_a_common_noun_by_its_own_headword(tmp_path, monkeypatch
 
     assert build_frequency_lemmatizer(code)(words) != fronts
     assert build_frequency_lemmatizer(code, tmp_path / "dicts")(words) == fronts
+
+
+def test_real_fr_model_keeps_a_noun_it_tags_as_a_verb_alone(tmp_path, monkeypatch, real_taggers):
+    """fr_core_news_sm alone tags ``gare``/``porte`` VERB with the surface as lemma; ``viens`` comes back ``vien``."""
+    monkeypatch.setitem(tagger_provider._TAGGERS, "fr", real_taggers["fr"])
+    install_dictionary(tmp_path / "dicts", "fr", FR_ROWS)
+
+    lemmatize = build_frequency_lemmatizer("fr", tmp_path / "dicts")
+
+    assert lemmatize(["gare", "porte", "viens"]) == ["gare", "porte", "venir"]
