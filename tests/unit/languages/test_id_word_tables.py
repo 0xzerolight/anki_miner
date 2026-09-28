@@ -12,7 +12,7 @@ from anki_miner.languages.id.stopwords import ID_STOPWORDS
 
 
 def test_the_stopword_tier_keeps_function_words_and_drops_content_words():
-    assert len(ID_STOPWORDS) == 532
+    assert len(ID_STOPWORDS) == 322
     assert all(word == word.casefold() and word.isascii() for word in ID_STOPWORDS)
     # the C.5 function-word core: closed classes, monomorphemic (D6)
     assert {"yang", "dan", "ini", "itu", "pada", "di", "ke", "dari", "saya", "dia", "tidak"} <= ID_STOPWORDS
@@ -26,11 +26,25 @@ def test_the_stopword_tier_keeps_function_words_and_drops_content_words():
     assert {"gue", "lo", "nggak", "gak", "udah", "aja", "kayak", "sih", "deh", "kan", "ya", "nya"} <= ID_STOPWORDS
 
 
+def test_a_form_takes_the_tier_status_of_the_lemma_it_reaches():
+    """wty lists ``dilakukan`` only as a form of ``melakukan`` and lacks ``mengira``: the reached lemma decides (D6).
+
+    A form of a content lemma is vocabulary; a form of a function word (``inilah``, ``padanya``) stays in the tier.
+    """
+    derived = {"dilakukan", "dibuat", "dilihat", "diminta", "diberikan", "mengira", "menanyakan", "jelaskan"}
+    assert not (derived | {"menyiapkan", "mengingatkan", "ternyata", "waktunya", "melihatnya"}) & ID_STOPWORDS
+    assert {"inilah", "padanya", "kepadanya", "sepertinya", "tapi", "akulah", "tersebut", "terhadap"} <= ID_STOPWORDS
+    # the pronouns and articles stopwords-iso lacks join the function-word core
+    assert {"kau", "engkau", "dikau", "beliau", "si", "sang"} <= ID_STOPWORDS
+    # wty lacks these function words and the ladder's hit is another word (mau, sela, mata), not their base
+    assert {"maupun", "selaku", "semata-mata"} <= ID_STOPWORDS
+
+
 def test_only_the_curated_core_carries_the_stopword_read_through():
     """IndoCollex is crowd-derived: its formal side never makes a word a stopword (D6).
 
     ``morphology.is_stopword`` reads :data:`ID_COLLOQUIAL_CORE` alone; the counts here are what that
-    decision costs and saves. The whole table would add 315 words nobody reviewed.
+    decision costs and saves. The whole table would add 306 words nobody reviewed.
     """
     assert len(ID_COLLOQUIAL_CORE) == 29
     assert ID_COLLOQUIAL_CORE.items() <= ID_COLLOQUIAL.items()
@@ -40,7 +54,7 @@ def test_only_the_curated_core_carries_the_stopword_read_through():
         for key, formal in ID_COLLOQUIAL.items()
         if formal in ID_STOPWORDS and key not in ID_STOPWORDS and key not in ID_COLLOQUIAL_CORE
     ]
-    assert len(unreviewed) == 315
+    assert len(unreviewed) == 306
 
 
 def test_the_colloquial_table_is_indocollex_under_the_curated_core():
