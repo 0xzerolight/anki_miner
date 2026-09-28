@@ -821,6 +821,11 @@ class SubtitleParserService:
         return self._has_target_script
 
     @property
+    def token_post_pass(self) -> TokenPostPass | None:
+        """The injected post-pass over raw tagger tokens (None = none). Read by the frequency lemmatiser."""
+        return self._token_post_pass
+
+    @property
     def ambiguous_reading_count(self) -> int:
         """Number of distinct real-token card fronts needing reading review."""
         return len(self._ambiguous_readings)

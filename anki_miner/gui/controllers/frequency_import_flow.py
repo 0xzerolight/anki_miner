@@ -132,14 +132,16 @@ class FrequencyImportFlow(SourceChainImportFlow):
         # A new source is stamped with the language it is being added for; the
         # repair factory below takes no language, so a rebuild keeps the stamp
         # already on the slot instead of relabelling it. A language that declares
-        # lemmatised frequency lists aggregates a hand-added list per lemma (S17).
-        language = config_language(self._get_config())
+        # lemmatised frequency lists aggregates a hand-added list per lemma (S17),
+        # keyed by card front over the installed dictionaries (SHARED-06).
+        config = self._get_config()
+        language = config_language(config)
         return ImportWorker.for_source(
             source_file,
             dest_root,
             overwrite=False,
             **language_kwarg(language),
-            **lemmatize_kwarg(manual_import_lemmatizer(language)),
+            **lemmatize_kwarg(manual_import_lemmatizer(language, config.dicts_root)),
         )
 
     def _make_repair_worker(
@@ -155,6 +157,7 @@ class FrequencyImportFlow(SourceChainImportFlow):
             dest_root,
             source_id=source_id,
             source_name=source_name,
+            dicts_root=self._get_config().dicts_root,
         )
 
     def _extra_add_notes(self, meta: dict) -> str:

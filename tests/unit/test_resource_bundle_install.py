@@ -120,13 +120,16 @@ def test_cancel_keeps_what_landed_and_leaves_no_partial_slot(bundle_and_receiver
 def test_frequency_rebuild_replays_import_options(bundle_and_receiver, tmp_path, monkeypatch):
     _sender, bundle, receiver = bundle_and_receiver
     seen: dict = {}
-    monkeypatch.setattr(install_module, "build_frequency_lemmatizer", lambda language: "LEMMATIZER")
+    monkeypatch.setattr(
+        install_module, "build_frequency_lemmatizer", lambda language, dicts_root: ("LEMMATIZER", dicts_root)
+    )
     monkeypatch.setattr(install_module, "import_frequency_source", lambda source, root, **kwargs: seen.update(kwargs))
     freq = next(i for i in read_bundle_manifest(bundle).items if i.kind == "frequency")
     replayed = replace(freq, options=(("declared_mode", "occurrence"), ("lemmatised", "1")))
     _install(bundle, receiver, tmp_path, selected=[replayed])
     assert seen["source_id"] == FREQ_ID and seen["source_name"] == "Test Freq"
-    assert seen["declared_mode"] == "occurrence" and seen["lemmatize"] == "LEMMATIZER"
+    # Keyed by card front over the receiver's own dictionaries (SHARED-06).
+    assert seen["declared_mode"] == "occurrence" and seen["lemmatize"] == ("LEMMATIZER", receiver.dicts_root)
 
 
 def _item(kind, item_id, enabled=True):

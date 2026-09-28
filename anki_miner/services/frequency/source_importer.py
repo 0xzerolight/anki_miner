@@ -226,8 +226,13 @@ def repair_frequency_source(
     source_name: str,
     progress: ProgressFn | None = None,
     cancel_check: Callable[[], bool] | None = None,
+    dicts_root: Path | None = None,
 ) -> FreqSourceImportResult:
-    """Explicitly repair ``source_id``, retaining an invalid prior slot as quarantine."""
+    """Explicitly repair ``source_id``, retaining an invalid prior slot as quarantine.
+
+    ``dicts_root`` is the dictionaries folder a lemmatised list keys its words
+    by (``build_frequency_lemmatizer``); ``None`` keys them by the tagger alone.
+    """
     # Read the stamp before the rebuild: repair_managed_slot may quarantine the
     # slot, and a re-import would otherwise fall back to the "ja" default.
     language = read_slot_language(dest_root / source_id)
@@ -237,7 +242,7 @@ def repair_frequency_source(
     # Function-local like _term_fold: the lemmatizer resolves the tagger lazily.
     from anki_miner.services.frequency.lemmatize import build_frequency_lemmatizer
 
-    lemmatize = build_frequency_lemmatizer(language) if lemmatised else None
+    lemmatize = build_frequency_lemmatizer(language, dicts_root) if lemmatised else None
     return repair_managed_slot(
         input_path,
         dest_root,

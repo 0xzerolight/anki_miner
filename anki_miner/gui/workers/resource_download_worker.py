@@ -65,16 +65,22 @@ class _LemmatiseKwargs(LemmatizeKwarg, total=False):
     declared_mode: str
 
 
-def _lemmatise_kwargs(spec: ResourceSpec, language: str) -> _LemmatiseKwargs:
+def _lemmatise_kwargs(spec: ResourceSpec, language: str, dicts_root: Path) -> _LemmatiseKwargs:
     """Keywords for a catalogue list the importer must aggregate per lemma.
 
     Only a word-count list is lemmatised, and summing per lemma is only defined
     for occurrence counts, so such a spec declares its mode outright (D11).
-    Empty for every other spec, keeping the pre-S17 call shape.
+    The lemmatizer reads the dictionaries under ``dicts_root``, where the
+    catalogue's own dictionary has just been imported, so each word is keyed by
+    its card front (SHARED-06). Empty for every other spec, keeping the pre-S17
+    call shape.
     """
     if not spec.lemmatise:
         return {}
-    return {"declared_mode": mode_probe.OCCURRENCE_BASED, "lemmatize": build_frequency_lemmatizer(language)}
+    return {
+        "declared_mode": mode_probe.OCCURRENCE_BASED,
+        "lemmatize": build_frequency_lemmatizer(language, dicts_root),
+    }
 
 
 class _PinnedSlotKwargs(TypedDict, total=False):
@@ -481,7 +487,7 @@ class ResourceDownloadWorker(CancellableWorker):
                         overwrite=True,
                         before_promote=self._require_promotion_allowed,
                         **language_kwarg(self._language),
-                        **_lemmatise_kwargs(spec, self._language),
+                        **_lemmatise_kwargs(spec, self._language, self._dicts_root),
                         **_pinned_slot_kwargs(spec, temp),
                     )
                     source_id = freq_result.source_id
