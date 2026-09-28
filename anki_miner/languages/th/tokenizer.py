@@ -18,11 +18,16 @@ emitted. ``iter_token_spans``' cursor walks past them.
 mark (PUNCT), a digit run in either numeral set (NUM) and a run with no Thai
 letter (X -- perceptron/tud calls ``Netflix`` a VERB). ``pos2`` is this package's
 tier, not a finer tagset: the model has no second level.
+
+newmm cuts against ``thai_words()`` minus ``_NEWMM_EXCLUDED``, never against the
+dictionaries the user installed (plan D3: that union measured harmful).
 """
 
 from __future__ import annotations
 
+import functools
 import re
+from typing import Any
 
 from anki_miner.languages.th import _engine  # noqa: F401  # env guard; must precede pythainlp
 from anki_miner.languages.th.tiers import TH_MARK_CODE_POINTS, TH_MARKS, TH_STOPWORDS
@@ -43,6 +48,20 @@ _DIGIT_RUN_RE = re.compile(
 )
 #: newmm-safe is the guard against the O(n^2) worst case on an unspaced run.
 _SAFE_MODE_CHARS = 100
+#: ``thai_words()`` entries newmm must not cut with. บอ ('near crazy', a rare
+#: adjective) wins newmm's tie บอก|ว่า vs บอ|กว่า every time, so the reported-speech
+#: frame "said that" mined บอ and กว่า ('than') and never บอก. Measured over 4,560
+#: wty-th-en example sentences: 9 lines change, 8 of them to บอก|ว่า or บอก|รัก.
+_NEWMM_EXCLUDED: frozenset[str] = frozenset({"บอ"})
+
+
+@functools.cache
+def _newmm_dictionary() -> Any:
+    """newmm's own dictionary minus ``_NEWMM_EXCLUDED``: built once per process (0.2 s), like newmm's."""
+    from pythainlp.corpus.common import thai_words
+    from pythainlp.util import Trie
+
+    return Trie(thai_words() - _NEWMM_EXCLUDED)
 
 
 class ThaiTagger:
@@ -61,7 +80,8 @@ class ThaiTagger:
             if not chunk:
                 continue
             engine = "newmm-safe" if len(chunk) > _SAFE_MODE_CHARS and " " not in chunk else "newmm"
-            out += [tok for tok in self._tokenize(chunk, engine=engine, keep_whitespace=False) if tok.strip()]
+            tokens = self._tokenize(chunk, custom_dict=_newmm_dictionary(), engine=engine, keep_whitespace=False)
+            out += [tok for tok in tokens if tok.strip()]
         return out
 
     def _tier(self, surface: str) -> str:
@@ -96,8 +116,8 @@ class ThaiTagger:
 def build_tagger() -> LockedTagger:
     """Build a lock-guarded Thai tokenizer.
 
-    ``LockedTagger`` is reused verbatim from the ja stack: newmm builds its
-    dictionary Trie lazily on the first cut and the perceptron model is a
+    ``LockedTagger`` is reused verbatim from the ja stack: the dictionary Trie
+    is built lazily on the first cut and the perceptron model is a
     module-level singleton, which is the same hazard the ja lock already covers.
     """
     return LockedTagger(ThaiTagger())
