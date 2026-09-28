@@ -79,17 +79,25 @@ def _lemmatise_kwargs(spec: ResourceSpec, language: str) -> _LemmatiseKwargs:
 
 class _PinnedSlotKwargs(TypedDict, total=False):
     source_id: str
+    source_name: str
 
 
-def _pinned_slot_kwargs(spec: ResourceSpec) -> _PinnedSlotKwargs:
-    """Keywords that import a ``pin_slot`` freq spec into its catalogue slot.
+def _pinned_slot_kwargs(spec: ResourceSpec, staged: Path) -> _PinnedSlotKwargs:
+    """Keywords that import a freq spec into its catalogue slot.
 
-    Empty for every other spec: an installed list keeps the title-derived slot
-    it was imported into, and the importer call keeps its pre-pin shape.
+    A single-file list (.csv/.tsv/.txt) always imports into ``spec.id`` under
+    ``spec.display_name``: the importer names its slot and label after the file
+    stem, and a download's stem is the downloader's temp name ("tmpd3n2pl0v"),
+    new on every download. A zip is named by its ``index.json`` title, so only
+    a ``pin_slot`` zip (a moving-URL list) is pinned. Empty for every other
+    zip: an installed list keeps the title-derived slot it was imported into,
+    and the importer call keeps its pre-pin shape.
     """
-    if not spec.pin_slot:
-        return {}
-    return {"source_id": spec.id}
+    if staged.suffix.lower() != ".zip":
+        return {"source_id": spec.id, "source_name": spec.display_name}
+    if spec.pin_slot:
+        return {"source_id": spec.id}
+    return {}
 
 
 def _resume_key(spec: ResourceSpec) -> str:
@@ -461,8 +469,9 @@ class ResourceDownloadWorker(CancellableWorker):
                     # ``.part`` file. Re-suffix the temp from the catalog URL so
                     # the importer routes correctly (and copies a sensibly-named
                     # source.<ext> alongside the index).
-                    # A pin_slot spec (a moving-URL list) imports into its
-                    # catalog id so a newer build replaces it in place.
+                    # A single-file list or a pin_slot zip (a moving-URL list)
+                    # imports into its catalog id so a re-download replaces it
+                    # in place (see _pinned_slot_kwargs).
                     temp = _retype_for_suffix(temp, spec.url)
                     freq_result = import_frequency_source(
                         temp,
@@ -473,7 +482,7 @@ class ResourceDownloadWorker(CancellableWorker):
                         before_promote=self._require_promotion_allowed,
                         **language_kwarg(self._language),
                         **_lemmatise_kwargs(spec, self._language),
-                        **_pinned_slot_kwargs(spec),
+                        **_pinned_slot_kwargs(spec, temp),
                     )
                     source_id = freq_result.source_id
                     detail = tr_format(
