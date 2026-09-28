@@ -55,6 +55,75 @@ def test_titles_fixed_tokens_and_ne():
     ]
 
 
+def test_bare_personal_pronouns_possessives_and_que_leave_the_content_classes():
+    """ROM-02: corpus-fr (68 lines) tagged ``tu`` PRON 0 of 13 times; these are the tags it gave instead."""
+    tokens = tokenizer.retag_french_tokens(
+        [
+            _stub("Tu", "ADP", "tu"),
+            _stub("tu", "ADJ", "taire"),
+            _stub("tu", "ADV", "tu"),
+            _stub("te", "ADV", "te"),
+            _stub("t’", "VERB", "te"),
+            _stub("me", "ADV", "me"),
+            _stub("m'", "NOUN", "m'"),
+            _stub("ton", "ADJ", "ton"),
+            _stub("Mes", "ADJ", "mes"),
+            _stub("que", "ADV", "que"),
+            _stub("qu’", "ADV", "que"),
+        ]
+    )
+    assert [(t.feature.pos1, t.feature.lemma) for t in tokens] == [
+        ("PRON", "tu"),
+        ("PRON", "tu"),
+        ("PRON", "tu"),
+        ("PRON", "te"),
+        ("PRON", "te"),
+        ("PRON", "me"),
+        ("PRON", "me"),
+        ("DET", "ton"),
+        ("DET", "mes"),
+        ("PRON", "que"),
+        ("PRON", "que"),
+    ]
+
+
+def test_the_participle_tu_the_noun_ton_and_other_que_keep_their_tags():
+    """``tu`` VERB or right after être/avoir is taire's participle (``il s'est tu``); ``ton`` NOUN is the tone."""
+    tokens = tokenizer.retag_french_tokens(
+        [
+            _stub("tu", "VERB", "taire"),
+            _stub("est", "AUX", "être"),
+            _stub("tu", "ADJ", "taire"),
+            _stub("ton", "NOUN", "ton"),
+            _stub("que", "SCONJ", "que"),
+        ]
+    )
+    assert [(t.feature.pos1, t.feature.lemma) for t in tokens] == [
+        ("VERB", "taire"),
+        ("AUX", "être"),
+        ("ADJ", "taire"),
+        ("NOUN", "ton"),
+        ("SCONJ", "que"),
+    ]
+
+
+def test_as_right_after_tu_is_avoir_and_the_ace_elsewhere():
+    tokens = tokenizer.retag_french_tokens(
+        [
+            _stub("tu", "ADJ", "taire"),
+            _stub("as", "NOUN", "as"),
+            _stub("un", "DET", "un"),
+            _stub("as", "NOUN", "as"),
+        ]
+    )
+    assert [(t.feature.pos1, t.feature.lemma) for t in tokens] == [
+        ("PRON", "tu"),
+        ("AUX", "avoir"),
+        ("DET", "un"),
+        ("NOUN", "as"),
+    ]
+
+
 def test_fold_apostrophes_is_one_to_one():
     assert fold_apostrophes("aujourd’hui ʼ ‘ ´") == "aujourd'hui ' ' '"
 
@@ -172,6 +241,24 @@ def test_an_all_caps_cue_is_tagged_lowercased(french):
     tags = _tags(french, "LE CHAT DORT SUR LA CHAISE.")
     assert ("CHAT", "NOUN", "chat") in tags and ("CHAISE", "NOUN", "chaise") in tags
     assert all(pos != "PROPN" for _, pos, _ in tags)
+
+
+@pytest.mark.parametrize(
+    ("line", "surface", "expected"),
+    [
+        ("Salut ! Tu viens ce soir ?", "Tu", ("PRON", "tu")),
+        ("J’espère que tu vas mieux aujourd’hui.", "tu", ("PRON", "tu")),
+        ("Donne-le-moi, s'il te plaît.", "te", ("PRON", "te")),
+        ("« Je t'attendrai », a-t-elle murmuré.", "t'", ("PRON", "te")),
+        ("Prends ton manteau, il va pleuvoir.", "ton", ("DET", "ton")),
+        ("Qu'est-ce que tu fais demain matin ?", "que", ("PRON", "que")),
+        ("Montre-moi ce que tu as dessiné.", "as", ("AUX", "avoir")),
+        ("Il s'est tu.", "tu", ("ADJ", "taire")),
+        ("Il faut baisser le ton.", "ton", ("NOUN", "ton")),
+    ],
+)
+def test_real_closed_class_misreads_are_retagged(french, line, surface, expected):
+    assert {s: (pos, lemma) for s, pos, lemma in _tags(french, line)}[surface] == expected
 
 
 def test_the_model_has_no_fine_tags(french):
