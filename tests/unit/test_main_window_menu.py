@@ -121,6 +121,12 @@ def test_star_button_in_corner_container(main_window):
     # The tooltip restated the label verbatim, so it is gone.
     assert star.toolTip() == ""
     assert star.autoRaise() is True
+    # A gold star mark sits beside the label, laid out like the Discord mark.
+    assert star.toolButtonStyle() == Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+    pixmap = star.icon().pixmap(QSize(16, 16))
+    assert not pixmap.isNull()
+    center = pixmap.toImage().pixelColor(8, 8)
+    assert (center.red(), center.green(), center.blue(), center.alpha()) == (0xE3, 0xB3, 0x41, 255)
 
 
 def _tools_menu(window):
@@ -266,7 +272,7 @@ def _ink_columns(button: QToolButton) -> list[int]:
     return [x for x in range(image.width()) if any(is_ink(x, y) for y in range(image.height()))]
 
 
-@pytest.mark.parametrize("object_name", ["discord_button"])
+@pytest.mark.parametrize("object_name", ["github_star_button", "discord_button"])
 def test_corner_mark_and_label_are_centred_with_a_gap(main_window, themed_app, object_name):
     """The mark and label sit centred, with clear space between them.
 

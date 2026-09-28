@@ -533,11 +533,11 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         corner_layout.addWidget(report_button)
 
         # "Star on GitHub" button.
-        star_button = QToolButton(corner_widget)
+        star_button = IconLinkButton(corner_widget)
         star_button.setObjectName("github_star_button")
         star_button.setText(self.tr("Star on GitHub"))
-        star_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         star_button.setAutoRaise(True)
+        star_button.set_mark(get_resource_dir() / "icons" / "github_star.svg")
         star_button.clicked.connect(self._open_github_repo)
         corner_layout.addWidget(star_button)
 
