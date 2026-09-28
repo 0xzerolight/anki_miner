@@ -50,6 +50,16 @@ def _one(surface: str, lexicon_: lexicon.PersianLexicon):
 
 
 @pytest.mark.parametrize(
+    "surface",
+    ["برميگردم", "برميگرديم", "برمیگردی", f"برمی{ZWNJ}گردم", f"برنمی{ZWNJ}گردم", f"برمی{ZWNJ}گشتم"],
+)
+def test_a_preverb_present_or_past_progressive_is_bargashtan(surface, armed):
+    token = _one(surface, armed)
+    assert token.feature.pos1 == "V"
+    assert token.feature.lemma == "برگشتن"
+
+
+@pytest.mark.parametrize(
     ("surface", "infinitive"),
     [(f"می{ZWNJ}خرم", "خریدن"), (f"می{ZWNJ}پرسد", "پرسیدن"), (f"می{ZWNJ}کشند", "کشیدن"), ("باشیم", "بودن")],
 )

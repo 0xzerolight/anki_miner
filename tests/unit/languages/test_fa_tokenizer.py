@@ -209,6 +209,13 @@ class TestVerbTables:
         assert token.feature.surface_formal == ""
         assert token.morph == "PresentStem=" + _KHAH + _REH
 
+    def test_a_preverb_present_is_a_verb(self, armed):
+        bar_mi_gardam = _BEH + _REH + MI + _GAF + _REH + _DAL + _MEEM
+        (token,) = fa_tokenizer.to_duck_tokens(bar_mi_gardam, armed)
+        assert token.feature.pos1 == "V"
+        assert token.feature.lemma == _BEH + _REH + _GAF + _SHEEN + _TEH + _NOON
+        assert token.feature.present_stem == _BEH + _REH + _GAF + _REH + _DAL
+
 
 class TestTagger:
     def test_the_tagger_is_callable_like_fugashi(self, armed, monkeypatch):

@@ -1,8 +1,9 @@
 """Every Persian table the tokenizer asks, built once from the pack and the TSVs.
 
-The formal verb table is the 79 patterns expanded over ``verbs.dat``; the
-informal one is the 30 present patterns expanded over ``iverbs.dat``'s informal
-stems, paired form for form with the formal spelling they stand for. hazm's own
+The formal verb table is the 79 patterns expanded over ``verbs.dat``, plus the
+mi-/nami- forms of its preverb verbs spelt bar-mi-gardam; the informal one is
+the 30 present patterns expanded over ``iverbs.dat``'s informal stems, paired
+form for form with the formal spelling they stand for. hazm's own
 ``informal_to_formal_conjucation`` is NOT ported: it zips two conjugation lists
 at hard-coded offsets and is wrong upstream (probe P-5 -- it maps miram to a
 three-word string meaning "they had been going").
@@ -91,7 +92,7 @@ class PersianLexicon:
 
     @property
     def verb_count(self) -> int:
-        """How many formal verb forms resolve (the probe's 47,925 over the whole file)."""
+        """How many formal verb forms resolve (49,331 over the whole file, preverb forms included)."""
         return len(self._verbs)
 
     def verb_form(self, word: str) -> str | None:
@@ -148,10 +149,12 @@ def _build_formal(
 ) -> tuple[dict[str, str], dict[str, str]]:
     verbs: dict[str, str] = {}
     present_stems: dict[str, str] = {}
+    stems: list[tuple[str, str]] = []
     for line in verb_lines:
         past, present = conjugation.split_stems(line)
         if _is_malformed(past, present):
             continue
+        stems.append((past, present))
         infinitive = conjugation.infinitive(line)
         # First line wins here too, except where verbs.dat lists a rarer stem
         # first (nevesht#navard before nevesht#nevis, bud#ast before bud#bash):
@@ -163,6 +166,23 @@ def _build_formal(
             # homograph past stems (raft#ro "go" is line 360, raft#rub "sweep"
             # line 361), and the file's order is upstream's answer.
             verbs.setdefault(form, infinitive)
+
+    # A preverb verb whose remainder is itself a verbs.dat verb (bar + gasht#gard,
+    # 33 rows) also takes mi-/nami- AFTER the preverb: bar-mi-gardam, which the
+    # plain templates never build (they give mi-bargardam). The normaliser only
+    # restores a word-initial mi-'s ZWNJ, so the joined spelling is keyed too.
+    known = set(stems)
+    for past, present in stems:
+        split = conjugation.split_preverb(past, present)
+        if split is None:
+            continue
+        preverb, rest_past, rest_present = split
+        if (rest_past, rest_present) not in known:
+            continue
+        infinitive = conjugation.apply(conjugation.INFINITIVE_PATTERN, past=past)
+        for form in conjugation.expand_preverb(preverb, rest_past, rest_present):
+            verbs.setdefault(form, infinitive)
+            verbs.setdefault(form.replace(ZWNJ, ""), infinitive)
 
     # An iverbs.dat row whose informal stem IS the formal one (bud#bash bash,
     # kard#kon kon: seven rows) adds no colloquial spelling, so the informal

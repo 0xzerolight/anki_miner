@@ -29,6 +29,7 @@ _ZAIN = "\N{ARABIC LETTER ZAIN}"
 _SEEN = "\N{ARABIC LETTER SEEN}"
 _SHEEN = "\N{ARABIC LETTER SHEEN}"
 _FEH = "\N{ARABIC LETTER FEH}"
+_GAF = "\N{ARABIC LETTER GAF}"
 _KEHEH = "\N{ARABIC LETTER KEHEH}"
 _LAM = "\N{ARABIC LETTER LAM}"
 _MEEM = "\N{ARABIC LETTER MEEM}"
@@ -76,6 +77,14 @@ THIS_ARABIC = _ALEF + _ARABIC_YEH + _NOON
 THIS_FARSI = _ALEF + _YEH + _NOON
 KOJAST = _KEHEH + _JEEM + _ALEF + _SEEN + _TEH
 
+# bargashtan, "to come back": the preverb bar- goes in front of mi-
+BARGASHTAN = _BEH + _REH + _GAF + _SHEEN + _TEH + _NOON
+GARD = _GAF + _REH + _DAL
+GASHT = _GAF + _SHEEN + _TEH
+BAR_MI_GARDAM = _BEH + _REH + MI + ZWNJ + GARD + _MEEM
+BAR_MIGARDAM = _BEH + _REH + MI + GARD + _MEEM
+BAR_NEMI_GARDAM = _BEH + _REH + _NOON + MI + ZWNJ + GARD + _MEEM
+BAR_MI_GASHTAM = _BEH + _REH + MI + ZWNJ + GASHT + _MEEM
 # the seven iverbs.dat rows whose informal stem IS the formal one (kharidan here)
 MIXARAM = MI + ZWNJ + _KHAH + _REH + _MEEM
 XARIDAN = _KHAH + _REH + _YEH + _DAL + _NOON
@@ -160,9 +169,10 @@ class TestLexiconGuards:
 
 class TestLexiconTables:
     def test_the_verb_table_is_the_probed_size(self, fa_lexicon):
-        # 47,925 keys over the whole verbs.dat (probe P-3); the fixture carries
-        # the file whole, so this is the real number.
-        assert 47_000 <= fa_lexicon.verb_count <= 49_000
+        # 47,787 keys from the 79 patterns over the whole verbs.dat (probe P-3
+        # counted 47,925) plus 1,544 bar-mi-gardam preverb forms; the fixture
+        # carries the file whole, so this is the real number.
+        assert 48_500 <= fa_lexicon.verb_count <= 50_000
 
     def test_the_informal_table_beats_the_formal_one(self, fa_lexicon):
         assert fa_lexicon.informal_verb(MIRAM) == (RAFTAN, MIRAVAM)
@@ -214,6 +224,21 @@ class TestLexiconTables:
         tracemalloc.stop()
         assert built.verb_count
         assert peak < 40 * 1024 * 1024, peak
+
+
+class TestPreverbForms:
+    """bar-mi-gardam: a separable preverb goes in front of mi-, not behind it."""
+
+    def test_the_progressive_present_puts_mi_after_the_preverb(self, fa_lexicon):
+        assert fa_lexicon.verb_form(BAR_MI_GARDAM) == BARGASHTAN
+        assert fa_lexicon.verb_form(BAR_NEMI_GARDAM) == BARGASHTAN
+
+    def test_the_zwnj_less_spelling_resolves_too(self, fa_lexicon):
+        # seperate_mi only splits a word-initial mi-, so nothing restores this ZWNJ.
+        assert fa_lexicon.verb_form(BAR_MIGARDAM) == BARGASHTAN
+
+    def test_the_past_progressive_puts_mi_after_the_preverb(self, fa_lexicon):
+        assert fa_lexicon.verb_form(BAR_MI_GASHTAM) == BARGASHTAN
 
 
 class TestFormalPresentIsNotInformal:
