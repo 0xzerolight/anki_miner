@@ -107,9 +107,8 @@ class ReadingDeckTab(_ReadingMiningTabBase):
                 processor rebuilds so these runs land in analytics.
         """
         super().__init__(config, processor, presenter, parent, stats_service)
-        # Guarded on the list ARRIVING, not on having asked: an unreachable
-        # Anki answers with an empty list, and Anki may start after we do.
-        self._decks_loaded = False
+        # The deck list is fetched again on every show: the whole point of the
+        # screen is a deck the user may have imported into Anki a minute ago.
         self._deck_worker: SingleCallWorker | None = None
         self._deck_fetch_failed = False
         self._inspect_generation = 0
@@ -265,7 +264,7 @@ class ReadingDeckTab(_ReadingMiningTabBase):
             combo.setEnabled(enabled)
 
     # ------------------------------------------------------------------
-    # Deck list (lazy fetch on first show, retried until it arrives)
+    # Deck list (fetched on every show, refilled in place)
     # ------------------------------------------------------------------
 
     def showEvent(self, event) -> None:  # noqa: N802 - Qt override
@@ -273,13 +272,16 @@ class ReadingDeckTab(_ReadingMiningTabBase):
         self.ensure_decks()
 
     def ensure_decks(self) -> None:
-        """Fetch the deck list unless one has already arrived.
+        """Fetch the deck list unless a fetch is already in flight.
 
-        Also the slot for ``MainWindow.anki_reachable``: when Anki starts after
-        Anki Miner, the health sweep that finds it is the only retry while this
-        tab stays on screen.
+        Not latched on the first answer: a deck imported into Anki while Anki
+        Miner is open must show up the next time this screen is looked at. One
+        ``deckNames`` call is cheap. Also the slot for
+        ``MainWindow.anki_reachable``: when Anki starts after Anki Miner, the
+        health sweep that finds it is the only retry while this tab stays on
+        screen.
         """
-        if self._decks_loaded or still_running(self._deck_worker):
+        if still_running(self._deck_worker):
             return
         self._load_decks()
 
@@ -298,16 +300,35 @@ class ReadingDeckTab(_ReadingMiningTabBase):
         )
 
     def _on_decks_fetched(self, decks: object) -> None:
-        if isinstance(decks, list) and decks:
-            # Runs at most once: ensure_decks() stops asking from here on.
-            self._decks_loaded = True
-            self.deck_combo.addItems([str(deck) for deck in decks])
-            if self._deck_fetch_failed:
-                self._deck_fetch_failed = False
-                self.status_label.setText("")
-        else:
-            self._deck_fetch_failed = True
-            self.status_label.setText(self.tr("Couldn't fetch deck names from Anki. Is Anki running?"))
+        names = [str(deck) for deck in decks] if isinstance(decks, list) else []
+        listed = [self.deck_combo.itemText(i) for i in range(1, self.deck_combo.count())]
+        if not names:
+            # Anki closed after a list arrived: keep the list the user is
+            # looking at; the run itself reports an unreachable Anki.
+            if not listed:
+                self._deck_fetch_failed = True
+                self.status_label.setText(self.tr("Couldn't fetch deck names from Anki. Is Anki running?"))
+            return
+        if self._deck_fetch_failed:
+            self._deck_fetch_failed = False
+            self.status_label.setText("")
+        if names == listed:
+            return
+        picked = self._selected_deck()
+        # Refill without firing _on_deck_changed, so a deck that is still
+        # there keeps its inspected field picks.
+        self.deck_combo.blockSignals(True)
+        try:
+            while self.deck_combo.count() > 1:
+                self.deck_combo.removeItem(self.deck_combo.count() - 1)
+            self.deck_combo.addItems(names)
+            index = self.deck_combo.findText(picked, Qt.MatchFlag.MatchExactly) if picked else -1
+            self.deck_combo.setCurrentIndex(max(index, 0))
+        finally:
+            self.deck_combo.blockSignals(False)
+        if picked and index < 0:
+            # The picked deck is gone (renamed or deleted in Anki).
+            self._on_deck_changed(0)
 
     def _on_deck_fetch_error(self, message: str) -> None:
         logger.warning("Anki Deck deck fetch failed: error=%s", message)

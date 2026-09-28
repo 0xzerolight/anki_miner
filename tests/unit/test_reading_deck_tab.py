@@ -127,6 +127,39 @@ class TestDeckAndFields:
         tab.ensure_decks()
         assert tab.deck_combo.count() == 3  # placeholder + two decks, never doubled
 
+    def test_a_deck_imported_later_appears_and_the_pick_survives(self, tab, deck_service):
+        # The user imports a subs2srs deck into Anki while Anki Miner is open.
+        _pick_first_deck(tab)
+        assert tab.deck_combo.currentText() == "Show::Ep01"
+
+        deck_service.decks = ["Just Imported", "Show::Ep01", "Other"]
+        tab.ensure_decks()
+
+        items = [tab.deck_combo.itemText(i) for i in range(1, tab.deck_combo.count())]
+        assert items == ["Just Imported", "Show::Ep01", "Other"]
+        assert tab.deck_combo.currentText() == "Show::Ep01"
+        assert tab.sentence_combo.currentText() == "Expression"  # the field picks were not wiped
+        assert tab.mine_button.isEnabled()
+
+    def test_a_picked_deck_that_disappears_resets_the_pickers(self, tab, deck_service):
+        _pick_first_deck(tab)
+
+        deck_service.decks = ["Other"]
+        tab.ensure_decks()
+
+        assert tab.deck_combo.currentIndex() == 0
+        assert tab.sentence_combo.count() == 1
+        assert not tab.mine_button.isEnabled()
+
+    def test_a_failed_refresh_keeps_the_list_it_has(self, tab, deck_service):
+        _pick_first_deck(tab)
+
+        deck_service.decks = []  # Anki closed after the list arrived
+        tab.ensure_decks()
+
+        assert tab.deck_combo.count() == 3
+        assert tab.deck_combo.currentText() == "Show::Ep01"
+
     def test_an_empty_deck_list_says_so_and_retries_next_time(self, tab, deck_service):
         deck_service.decks = []
         tab.ensure_decks()
