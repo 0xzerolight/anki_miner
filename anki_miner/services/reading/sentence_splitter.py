@@ -16,7 +16,11 @@ The module constants below are the Japanese policy and stay the behaviour of a
 contains ``.`` (Korean's) leave ``3.14`` and ``Dr.`` alone, by requiring the run
 to be followed by whitespace or end-of-text. ``abbreviations`` adds the period
 model for a language whose ``.`` is also an abbreviation dot (``Dr.``, ``z.B.``)
-and whose ``...`` is an ellipsis; an empty set keeps that model off.
+and whose ``...`` is an ellipsis; an empty set keeps that model off. Under
+``space_aware``, a run followed by whitespace, an optional dialogue dash and a
+lowercase letter does not end the sentence either (``A 3. emeleten``,
+``¿Vienes? —preguntó``): a cased sentence never starts lowercase, and an
+uncased script has no lowercase letter to trip it.
 """
 
 from __future__ import annotations
@@ -37,6 +41,10 @@ _SENTENCE_PUNCT = _HARD_TERMINATORS | _ELLIPSIS | {_DOT}
 # The ASCII period of a language's period model (SentenceRules.abbreviations).
 _ASCII_DOT = "."
 _WHITESPACE_RE = re.compile(r"\s")
+# What follows a space_aware terminator run: whitespace, an optional dialogue
+# dash (hyphen, en dash, em dash, or the "--" plain-text books write for the em
+# dash) and its optional space, then the next character.
+_NEXT_WORD_RE = re.compile(r"\s+(?:(?:--?|[–—])\s*)?(\S)")
 
 # Bracket/quote pairs; depth rises on an opener, falls on a matching closer.
 _OPENERS = frozenset("「｢『（〔［｛〈《【([{｟〝")
@@ -72,6 +80,18 @@ def _period_continues(run: str, buf: list[str], abbreviations: frozenset[str], o
     before = "".join(buf)[: -len(run)]
     word = _WHITESPACE_RE.split(before)[-1].lstrip("".join(openers))
     return bool(word) and word.casefold() in abbreviations
+
+
+def _lowercase_follows(text: str, j: int) -> bool:
+    """Whether the word after the whitespace at ``j`` (past a dialogue dash) starts lowercase.
+
+    A cased sentence never starts lowercase, so such a word continues the
+    sentence: the rest of a date or ordinal (hu ``2003. szeptember``, hr
+    ``12. svibnja``, nb ``17. mai``) or a speech tag after ``?``/``!`` (es
+    ``¿Vienes? —preguntó``, pl ``— zapytała``, tr ``Nereye? diye sordu``).
+    """
+    match = _NEXT_WORD_RE.match(text, j)
+    return match is not None and match.group(1).islower()
 
 
 def _run_is_terminating(run: str, terminators: frozenset[str]) -> bool:
@@ -162,9 +182,12 @@ def split_sentences(
             buf.append(run)
             i = j
             # space_aware: a terminator set containing "." only splits when the
-            # run is followed by whitespace or end-of-text, so "3.14" survives.
+            # run is followed by whitespace or end-of-text, so "3.14" survives,
+            # and not when the next word (past a dialogue dash) is lowercase.
             # The period model (abbreviations) keeps "Dr." and "..." in the sentence.
-            terminates = _run_is_terminating(run, terminators) and (not space_aware or j >= n or text[j].isspace())
+            terminates = _run_is_terminating(run, terminators) and (
+                not space_aware or j >= n or (text[j].isspace() and not _lowercase_follows(text, j))
+            )
             if terminates and not (abbreviations and _period_continues(run, buf, abbreviations, openers)):
                 segments.append("".join(buf))
                 buf = []

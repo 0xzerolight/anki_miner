@@ -54,7 +54,8 @@ def test_empty_set_keeps_the_pre_stage_splits():
         "Smith paid 3.14 today.",
         "He left!",
     ]
-    assert split_sentences("wait... what", rules=_rules()) == ["wait...", "what"]
+    # A capital after it: a lowercase next word continues the sentence under any space_aware rules.
+    assert split_sentences("wait... What", rules=_rules()) == ["wait...", "What"]
     assert split_sentences("잠깐... 뭐야?", rules=KO_SENTENCE_RULES) == ["잠깐...", "뭐야?"]
 
 
