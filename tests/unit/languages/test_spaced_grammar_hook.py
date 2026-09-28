@@ -165,6 +165,25 @@ def test_an_article_rule_sees_the_headword_and_wins_over_the_map():
     assert render(("noun_article",), word("", "Gender=Masc", mined_form="x"), article_rule=lambda g, h: "") == {}
 
 
+@pytest.mark.parametrize(
+    ("title", "morph", "aspect"),
+    [
+        ("perfective", "Aspect=Imp|VerbForm=Inf", "perfective"),
+        ("imperfective", "Aspect=Perf|VerbForm=Inf", "imperfective"),
+        ("imperfective", "", "imperfective"),
+        ("perfective and imperfective", "Aspect=Imp", "imperfective"),
+        ("perfective and imperfective", "", None),
+    ],
+)
+def test_an_uncategorised_aspect_chip_is_read_by_its_title(title, morph, aspect):
+    """OpenRussian files ``pf``/``ipf``/``both`` with an empty category; the title names the aspect."""
+    name = {"perfective": "pf", "imperfective": "ipf"}.get(title, "both")
+    chips = f'<span class="gloss-tag" data-category="" title="{title}">{name}</span>'
+    opr = f'<li data-dictionary="opr-ru-en" data-dictionary-id="opr-ru-en">{chips}<i>(opr-ru-en)</i></li>'
+    out = render(("aspect_pair",), word(html(opr), morph, pos="VERB"))
+    assert out == ({} if aspect is None else {"aspect_pair": aspect})
+
+
 def test_a_plural_only_head_takes_the_plural_article_where_a_language_names_one():
     """wty heads a plural-only noun ``Eltern pl (plural only)``: de prints ``die``, nl ``de``; others print nothing."""
     from anki_miner.languages.de.morphology import DE_GENDER_LABELS

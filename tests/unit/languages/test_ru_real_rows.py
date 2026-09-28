@@ -131,7 +131,11 @@ def test_the_yo_fold_merges_nebo_and_nyobo_on_purpose(tmp_path, config):
 
 
 def test_an_openrussian_block_answers_from_the_morph_alone(tmp_path):
-    """opr has no head line and uncategorised tags (plan D10): gender/aspect come from the tagger, no partner."""
+    """opr has no head line and uncategorised tags (plan D10): gender comes from the tagger, no partner.
+
+    Its aspect chips (``pf``/``ipf``/``both``, empty category) are read by title, so a chip that excludes the
+    tagger's aspect wins: ru_core_news tags perfective non-past forms ``Aspect=Imp``.
+    """
     opr = _provider(tmp_path, "opr")
     assert _render("NOUN", opr.lookup("книга") or "", morph="Animacy=Inan|Case=Nom|Gender=Fem|Number=Sing") == {
         "noun_gender": "ж."
@@ -139,4 +143,8 @@ def test_an_openrussian_block_answers_from_the_morph_alone(tmp_path):
     assert _render("VERB", opr.lookup("читать") or "", morph="Aspect=Imp|VerbForm=Inf") == {
         "aspect_pair": "imperfective"
     }
+    assert _render("VERB", opr.lookup("прочитать") or "", morph="Aspect=Imp|VerbForm=Fin") == {
+        "aspect_pair": "perfective"
+    }
+    assert _render("VERB", opr.lookup("читать") or "") == {"aspect_pair": "imperfective"}
     assert _render("NOUN", opr.lookup("книга") or "") == {}
