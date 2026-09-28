@@ -63,11 +63,11 @@ def test_every_row_renders_the_committed_html_and_a_capital_finds_it(provider):
         ("bok", "Case=Nom|Definite=Ind|Gender=Com|Number=Sing", {"noun_article": "en"}),
         ("katt", "Case=Nom|Definite=Ind|Gender=Com|Number=Sing", {"noun_article": "en"}),
         ("bord", "Case=Nom|Definite=Ind|Gender=Neut|Number=Sing", {"noun_article": "ett"}),
-        # a Grammar head line fills the plural too, and answers without any morph
-        ("ord", "Case=Nom|Definite=Ind|Gender=Neut|Number=Sing", {"noun_article": "ett", "noun_plural": "ord"}),
-        ("apa", "Case=Nom|Definite=Ind|Gender=Com|Number=Sing", {"noun_article": "en", "noun_plural": "apor"}),
-        ("ord", "", {"noun_article": "ett", "noun_plural": "ord"}),
-        ("apa", "", {"noun_article": "en", "noun_plural": "apor"}),
+        # a Grammar head line answers without any morph; its plural is not a card field (almost no row has one)
+        ("ord", "Case=Nom|Definite=Ind|Gender=Neut|Number=Sing", {"noun_article": "ett"}),
+        ("apa", "Case=Nom|Definite=Ind|Gender=Com|Number=Sing", {"noun_article": "en"}),
+        ("ord", "", {"noun_article": "ett"}),
+        ("apa", "", {"noun_article": "en"}),
         # no chip, no head line: only the morph can say "common", so a token without one prints nothing
         ("bok", "", {}),
         ("katt", "", {}),
@@ -79,7 +79,7 @@ def test_every_row_renders_the_committed_html_and_a_capital_finds_it(provider):
         ("maka", "Case=Nom|Definite=Ind|Gender=Com|Number=Sing", {"noun_article": "en"}),
     ],
 )
-def test_en_ett_and_the_plural_from_real_rows(word, morph, expected):
+def test_en_ett_from_real_rows(word, morph, expected):
     assert hook().render(noun(word, morph), config=AnkiMinerConfig()) == expected
 
 

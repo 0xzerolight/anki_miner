@@ -28,9 +28,9 @@ join, and ``SeparableVerbPass`` then keeps the model's bare lemma: ``komma tillb
 ``en`` (the nl "every non-neuter takes de" shape). The morphologizer's ``Gender=Com``/``Gender=Neut`` answers for
 every noun; wty-sv-en's chip vocabulary is ``fem``/``masc``/``neut`` with no common chip, and 62 rows put a masc or
 fem chip on an ordinary common-gender noun (``maka``, ``grip``, ``kasus``), so without those two keys the chip
-would resolve to "" and suppress the ``en`` the morph already knew. The head line spells the letter
-(``apa c (plural apor)``), which is also where ``noun_plural`` comes from, so the default source order (morph,
-chips, head) needs no override.
+would resolve to "" and suppress the ``en`` the morph already knew. The head line, where a row has one, spells the
+letter (``apa c (plural apor)``), so the default source order (morph, chips, head) needs no override. Its plural is
+not a card field: 45 of 38,241 noun lemma rows name one.
 
 ``SV_SUBTITLE_REGEX``: Nordic subtitles write the speaker dash unspaced (``-Kom hit.``), where the shipped Latin
 rule needs a space and spaCy glues ``-Kom`` into one PUNCT token, losing the word. The shared

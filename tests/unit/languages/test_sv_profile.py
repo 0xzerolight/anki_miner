@@ -8,7 +8,7 @@ from pathlib import Path
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.config.config import _LANGUAGE_CODES, AudioSourceEntry
 from anki_miner.languages import AVAILABLE_LANGUAGES
-from anki_miner.languages._spaced.fields import NOUN_ARTICLE_FIELD, NOUN_PLURAL_FIELD, POS_FIELD
+from anki_miner.languages._spaced.fields import NOUN_ARTICLE_FIELD, POS_FIELD
 from anki_miner.languages._spaced.form_of import FormOfLemmaPass, OrderedPasses
 from anki_miner.languages._spaced.grammar_hook import GrammarTagHook
 from anki_miner.languages._spaced.keys import CasefoldDictKeys
@@ -45,11 +45,12 @@ def test_the_profile_is_built_from_the_shared_substrate():
     assert profile.audio_track_codes == frozenset({"swe", "sv", "swedish"})
     assert profile.import_encodings == ("utf-8-sig", "cp1252")
     assert profile.normalize is sv_normalize and profile.wiktionary_code == ""
-    assert profile.capabilities == frozenset({"pos_tag", "noun_article", "noun_plural", "lemmatised_frequency"})
-    assert profile.extra_card_fields == (POS_FIELD, NOUN_ARTICLE_FIELD, NOUN_PLURAL_FIELD)
+    # No noun_plural: 45 of wty-sv-en's 38,241 noun lemma rows name a plural, so the field was empty on every card.
+    assert profile.capabilities == frozenset({"pos_tag", "noun_article", "lemmatised_frequency"})
+    assert profile.extra_card_fields == (POS_FIELD, NOUN_ARTICLE_FIELD)
     hooks = profile.render_hooks
     assert isinstance(hooks[0], PosHook) and isinstance(hooks[1], GrammarTagHook)
-    assert hooks[1].field_names() == ("noun_article", "noun_plural")
+    assert hooks[1].field_names() == ("noun_article",)
     assert profile.smoke_sentence == "Studenten läste en intressant bok."
 
 
@@ -58,7 +59,7 @@ def test_the_scoped_defaults_carry_the_swedish_subtitle_filter_and_pos_gate():
     assert config.language == "sv" and config.subtitle_regex_filter == SV_SUBTITLE_REGEX
     assert config.excluded_subtypes == SV_EXCLUDED_SUBTYPES
     assert config.downloader_subtitle_langs == "sv"
-    assert config.anki_fields["noun_article"] == "" and config.anki_fields["noun_plural"] == ""
+    assert config.anki_fields["noun_article"] == "" and "noun_plural" not in config.anki_fields
     assert config.expression_audio_chain == (AudioSourceEntry(kind="googletts"),)
 
 
