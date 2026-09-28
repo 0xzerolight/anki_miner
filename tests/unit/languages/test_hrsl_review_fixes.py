@@ -15,7 +15,8 @@ import zipfile
 
 import pytest
 
-from anki_miner.languages._spaced.form_of import FormOfLemmaPass
+from anki_miner.languages._spaced.form_of import FormOfLemmaPass, OrderedPasses
+from anki_miner.languages.hr.morphology import hr_short_infinitive_pass
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.token import LanguageToken
 from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip
@@ -35,6 +36,46 @@ class FoldedForms(Forms):
     def __call__(self, terms: list[str]) -> dict[str, list[tuple[str, str]]]:
         self.calls.append(list(terms))
         return {term: self._rows[self._fold(term)] for term in terms if self._fold(term) in self._rows}
+
+
+# --------------------------------------------------------------------------
+# HRSL-01: hr fronts from the form rows, after the short-infinitive repair
+# --------------------------------------------------------------------------
+
+
+def test_hr_runs_the_short_infinitive_repair_then_the_form_of_repair(monkeypatch):
+    injected = _injected(monkeypatch, "hr")
+    assert isinstance(injected, OrderedPasses)
+    short, repair = injected._passes  # noqa: SLF001 - the order is the contract
+    assert short is hr_short_infinitive_pass and isinstance(repair, FormOfLemmaPass)
+
+
+@pytest.mark.parametrize(
+    ("surface", "pos1", "rows", "front"),
+    [
+        # The tagger's NOUN čekam (feminine) is the first person of the verb.
+        ("Čekam", "NOUN", {"čekam": [form("čekati")], "čekati": [lemma("v impf")]}, ("čekati", "VERB")),
+        ("Uzmi", "NOUN", {"uzmi": [form("uzeti")], "uzeti": [lemma("v vt pf"), form("uzet")]}, ("uzeti", "VERB")),
+        # Three form rows, one target.
+        (
+            "Idemo",
+            "VERB",
+            {"idemo": [form("ići"), form("ići"), form("ići")], "ići": [lemma("v impf")]},
+            ("ići", "VERB"),
+        ),
+    ],
+)
+def test_hr_an_inflected_front_becomes_the_headword_its_form_rows_name(monkeypatch, surface, pos1, rows, front):
+    token = tok(surface, pos1, surface.lower())
+    assert run(_injected(monkeypatch, "hr"), FoldedForms("hr", rows), token) == [front]
+
+
+def test_hr_a_toned_target_reaches_its_plain_headword(monkeypatch):
+    """wty-sh-en keys ``prevesti`` plain, but ``preveo``'s form row names it with its tone mark."""
+    rows = {"preveo": [form("prèvesti")], "prevesti": [lemma("v vt pf")]}
+    assert run(_injected(monkeypatch, "hr"), FoldedForms("hr", rows), tok("preveo", "VERB", "preveo")) == [
+        ("prevesti", "VERB")
+    ]
 
 
 # --------------------------------------------------------------------------
@@ -113,15 +154,21 @@ def test_sl_an_accent_notation_form_row_is_reachable_after_import(tmp_path):
 
 @pytest.fixture(scope="module")
 def taggers():
+    from anki_miner.languages.hr.tokenizer import build_tagger as hr_tagger
     from anki_miner.languages.sl.tokenizer import build_tagger as sl_tagger
 
-    return {"sl": sl_tagger()}
+    return {"hr": hr_tagger(), "sl": sl_tagger()}
 
 
 def _fronts(monkeypatch, taggers, code, line, rows):
     tokens: list[LanguageToken] = taggers[code](line)
     _injected(monkeypatch, code)(tokens, lambda words: set(), FoldedForms(code, rows))
     return {token.surface: (token.feature.lemma, token.feature.pos1) for token in tokens}
+
+
+def test_hr_real_first_person_verb_the_tagger_calls_a_noun(monkeypatch, taggers):
+    rows = {"čekam": [form("čekati")], "čekati": [lemma("v impf")], "brata": [form("brat")], "brat": [lemma("n")]}
+    assert _fronts(monkeypatch, taggers, "hr", "- Čekam brata.", rows)["Čekam"] == ("čekati", "VERB")
 
 
 def test_sl_real_first_person_verb(monkeypatch, taggers):
