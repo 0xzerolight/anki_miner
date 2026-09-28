@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import pytest
 
+from anki_miner.languages._spaced.form_of import FormOfLemmaPass
 from anki_miner.languages.el.morphology import EL_CLOSED_CLASS
+from anki_miner.languages.el.parser import greek_row_targets
 from anki_miner.languages.el.tokenizer import fold_enclitic_accent, retag_greek_tokens
 from anki_miner.languages.token import LanguageToken
 
@@ -131,8 +133,182 @@ def test_the_real_tagger_retags_the_closed_classes(el_tagger, sentence, surface,
 
 
 # --------------------------------------------------------------------------
+# EL-01: fronts from wty-el-en's form rows, and its lemma-tagged inflection rows
+# --------------------------------------------------------------------------
+
+_TAG_SG = (
+    '<div class="gloss-sc-div" data-sc-content="tags"><span class="gloss-sc-span" data-sc-content="tag" '
+    'data-sc-category="number" title="singular">sg</span></div>'
+)
+_EXAMPLE = (
+    '<details class="gloss-sc-details" data-sc-content="details-entry-examples"><summary class="gloss-sc-summary" '
+    'data-sc-content="summary-entry">1 example</summary><div class="gloss-sc-div" data-sc-content="extra-info">'
+    '<div class="gloss-sc-div" data-sc-content="example-sentence-a">το όνομά μου είναι …</div></div></details>'
+)
+
+
+def head(tags: str, *glosses: str) -> tuple[str, str]:
+    """A lemma-tagged row in the rendered shape: preamble, the glosses list, the backlink."""
+    items = "".join(f'<li class="gloss-sc-li"><div class="gloss-sc-div">{gloss}</div></li>' for gloss in glosses)
+    return (
+        '<li class="gloss-item"><div class="gloss-content"><div class="gloss-sc-div"><div class="gloss-sc-div" '
+        'data-sc-content="preamble"><details class="gloss-sc-details" data-sc-content="details-entry-Grammar">'
+        '<summary class="gloss-sc-summary" data-sc-content="summary-entry">Grammar</summary>'
+        '<div class="gloss-sc-div" data-sc-content="Grammar-content">λέξη • (léxi)</div></details></div></div>'
+        f'<ol class="gloss-sc-ol" data-sc-content="glosses">{items}</ol><div class="gloss-sc-div" '
+        'data-sc-content="backlink"><a class="gloss-sc-a" href="https://en.wiktionary.org/wiki/λέξη#Greek">'
+        "Wiktionary</a></div></div></li>",
+        tags,
+    )
+
+
+def form(*targets: str) -> tuple[str, str]:
+    """A ``non-lemma`` row naming ``targets``, single- or multi-target as the importer renders them."""
+    if len(targets) == 1:
+        return (f'<li class="gloss-item"><div class="gloss-content">{targets[0]}</div></li>', "non-lemma")
+    items = "".join(f'<li class="gloss-sc-li">{target}</li>' for target in targets)
+    return (
+        f'<li class="gloss-item"><div class="gloss-content"><ul class="gloss-sc-ul">{items}</ul></div></li>',
+        "non-lemma",
+    )
+
+
+class Forms:
+    """``FormLookup``: casefolded keys as ``CasefoldDictKeys`` stores them (``πήγεσ``), answered under the asked spelling."""
+
+    def __init__(self, rows: dict[str, list[tuple[str, str]]]) -> None:
+        self._rows = {key.casefold(): value for key, value in rows.items()}
+
+    def __call__(self, terms: list[str]) -> dict[str, list[tuple[str, str]]]:
+        return {term: self._rows[term.casefold()] for term in terms if term.casefold() in self._rows}
+
+
+ECHEIS = head("v sg", "second-person singular present of έχω (écho): &quot;you have&quot;")
+EINAI = head("v", f"{_TAG_SG}third-person singular present of είμαι (eímai): &quot;he is&quot;{_EXAMPLE}")
+EL_ROWS: dict[str, list[tuple[str, str]]] = {
+    "έχεις": [ECHEIS, form("έχω")],
+    "έχω": [head("v", "to have")],
+    "πήγες": [form("πηγαίνω", "πηγαίνω")],
+    "πηγαίνω": [head("v", "to go")],
+    "χθες": [head("adv", "yesterday")],
+    "χρόνο": [form("χρόνος")],
+    "χρόνος": [head("n masc", "time"), head("n masc", "year")],
+    "θόρυβος": [head("n masc", "noise")],
+}
+
+
+@pytest.mark.parametrize(
+    ("row", "targets"),
+    [
+        (ECHEIS, ["έχω"]),
+        (EINAI, ["είμαι"]),
+        (
+            head("v pf sg", "second-person singular perfective imperative of παίρνω (paírno): &quot;take&quot;"),
+            ["παίρνω"],
+        ),
+        (head("v", "active nonfinite form of βλασταίνω (vlastaíno)"), ["βλασταίνω"]),
+        (head("n neut pl", "nominative/accusative/vocative plural of αδέλφι (adélfi), siblings"), ["αδέλφι"]),
+        (
+            head(
+                "v",
+                "colloquial variation of συντριφτήκαν (syntriftíkan), third-person plural simple past of "
+                "συντρίβομαι (syntrívomai)",
+            ),
+            ["συντρίβομαι"],
+        ),
+        (form("πηγαίνω", "πηγαίνω"), ["πηγαίνω", "πηγαίνω"]),
+    ],
+)
+def test_an_inflection_row_names_its_lemma_whatever_its_tags(row, targets):
+    assert greek_row_targets(*row) == targets
+
+
+@pytest.mark.parametrize(
+    "row",
+    [
+        head("v", "to write"),
+        head("v", "passive of δηλώνω (dilóno): &quot;be reported, be stated&quot;"),
+        head("v", "synonym of γυρίζω (gyrízo)"),
+        head("v", "a more formal variant of μιλάω (miláo)"),
+        head("v indecl ptcpl", "present participle of βλέπω (vlépo): seeing, observing"),
+        head("n dim neut", "diminutive of καφές (kafés): a small cup of coffee"),
+        head(
+            "v", f"{_TAG_SG}third-person singular present of βρέχω (vrécho) he/she/it dampens", "&quot;it rains&quot;"
+        ),
+    ],
+)
+def test_a_row_with_a_sense_of_its_own_is_a_headword(row):
+    assert greek_row_targets(*row) is None
+
+
+def _el_pass(monkeypatch):
+    from anki_miner.config import AnkiMinerConfig
+    from anki_miner.languages.registry import get_profile
+
+    seen: dict[str, object] = {}
+
+    def fake(config, **kwargs):
+        seen.update(kwargs)
+        return "parser"
+
+    monkeypatch.setattr("anki_miner.languages._spaced.create_spaced_parser", fake)
+    assert get_profile("el").create_parser(AnkiMinerConfig()) == "parser"
+    return seen["token_post_pass"]
+
+
+def _fronts(monkeypatch, *tokens: LanguageToken, rows=EL_ROWS) -> list[tuple[str, str]]:
+    return [(t.feature.lemma, t.feature.pos1) for t in _el_pass(monkeypatch)(list(tokens), None, Forms(rows))]
+
+
+def test_the_greek_parser_wires_the_form_row_repair(monkeypatch):
+    assert isinstance(_el_pass(monkeypatch), FormOfLemmaPass)
+
+
+def test_an_inflected_verb_fronts_its_lemma_and_takes_the_verb_class(monkeypatch):
+    """``έχεις`` tagged ADJ carried a noun gender on its card; its lemma-tagged row reads "... of έχω"."""
+    assert _fronts(monkeypatch, tok("Έχεις", "ADJ", "έχεις"), tok("πήγες", "ADJ", "πήγα")) == [
+        ("έχω", "VERB"),
+        ("πηγαίνω", "VERB"),
+    ]
+
+
+def test_a_surface_front_keeps_its_final_sigma(monkeypatch):
+    """The dictionary key folds ``ς`` to ``σ``; the card front must not."""
+    assert _fronts(monkeypatch, tok("Θόρυβος", "NOUN", "θόρυβο")) == [("θόρυβος", "NOUN")]
+
+
+def test_without_a_dictionary_the_greek_pass_changes_nothing(monkeypatch):
+    assert [
+        (t.feature.lemma, t.feature.pos1) for t in _el_pass(monkeypatch)([tok("πήγες", "ADJ", "πήγα")], None, None)
+    ] == [("πήγα", "ADJ")]
+
+
+def test_the_real_parser_fronts_the_dictionary_lemma(el_parser):
+    fronts = {word.surface: (word.mined_form, word.pos) for word in _words(el_parser, "Πού πήγες χθες;")}
+    assert fronts["πήγες"] == ("πηγαίνω", "VERB")
+    fronts = {word.surface: (word.mined_form, word.pos) for word in _words(el_parser, "Έχεις χρόνο;")}
+    assert fronts == {"Έχεις": ("έχω", "VERB"), "χρόνο": ("χρόνος", "NOUN")}
+
+
+# --------------------------------------------------------------------------
 # Real engine
 # --------------------------------------------------------------------------
+
+
+def _words(parser, sentence: str):
+    from anki_miner.models.reading import ReadingUnit
+
+    words, _index, _counts = parser.parse_text_units([ReadingUnit(text=sentence, index=0, location_label="t")], False)
+    return words
+
+
+@pytest.fixture(scope="module")
+def el_parser():
+    from anki_miner.config import AnkiMinerConfig
+    from anki_miner.languages.registry import get_profile
+    from anki_miner.languages.switching import switch_language
+
+    return get_profile("el").create_parser(switch_language(AnkiMinerConfig(), "el"), form_lookup=Forms(EL_ROWS))
 
 
 @pytest.fixture(scope="module")
