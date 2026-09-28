@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import unicodedata
+
 import pytest
 
 from anki_miner.languages._spaced.keys import CasefoldDictKeys, spaced_dedup_fold
 from anki_miner.languages._spaced.sentence import LATIN_TERMINATORS
 from anki_miner.languages.el.morphology import (
     EL_ABBREVIATIONS,
+    EL_CLOSED_CLASS,
     EL_EXCLUDED_SUBTYPES,
     EL_GENDER_LABELS,
     EL_LEADING_WORDS,
@@ -59,6 +62,12 @@ def test_final_sigma_folds_symmetrically_and_the_tonos_stays_a_key():
     assert KEYS.fold_term("οδός") == KEYS.fold_term("ΟΔΌΣ") == KEYS.fold_term("οδ\u1f79σ") == "οδόσ"
     assert KEYS.fold_term("ΟΔΟΣ") != KEYS.fold_term("οδός")
     assert KEYS.fold_term("πότε") != KEYS.fold_term("ποτέ")
+
+
+def test_closed_class_keys_are_lowered_nfc_surfaces_in_three_classes():
+    """``retag_greek_tokens`` looks up ``surface.lower()``: a casefolded or decomposed key would never match."""
+    assert all(key == key.lower() == unicodedata.normalize("NFC", key) and key[-1] != "σ" for key in EL_CLOSED_CLASS)
+    assert set(EL_CLOSED_CLASS.values()) == {"PRON", "PART", "AUX"}
 
 
 def test_gender_prints_the_article():
