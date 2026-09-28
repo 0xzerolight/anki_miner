@@ -496,6 +496,99 @@ def test_balanced_quote_with_attribution_stays_one_unit(tmp_path):
     assert [u.text for u in doc.units] == ["「行くぞ。」と彼は言った。"]
 
 
+# --- a space-delimited plain .txt is hard-wrapped ------------------------
+
+
+def _en_doc(tmp_path, text, name="en-novel.txt"):
+    """Load *text* the way Reading → Novels loads an English novel."""
+    p = _write(tmp_path, text, "utf-8", name=name)
+    profile = get_profile("en")
+    (ref,) = detector.detect(p)
+    return detector.load(
+        ref,
+        encodings=profile.import_encodings,
+        rules=profile.sentence_rules,
+        script_check=profile.script.contains_target_script,
+    )
+
+
+def test_space_aware_plain_paragraph_joins_its_hard_wrapped_lines(tmp_path):
+    # Project Gutenberg wraps at ~70 columns with a blank line between
+    # paragraphs; a physical line is a fragment, not a paragraph.
+    text = (
+        "It is a truth universally acknowledged, that a single man in possession\n"
+        "of a good fortune must be in want of a wife.\n"
+        "\n"
+        "However little known the feelings or views of such a man may be on his\n"
+        "first entering a neighbourhood, this truth is so well fixed.  It is.\n"
+    )
+    doc = _en_doc(tmp_path, text)
+    assert [u.text for u in doc.units] == [
+        "It is a truth universally acknowledged, that a single man in possession"
+        " of a good fortune must be in want of a wife.",
+        "However little known the feelings or views of such a man may be on his"
+        " first entering a neighbourhood, this truth is so well fixed.",
+        "It is.",
+    ]
+    assert [u.location_label for u in doc.units] == ["¶1", "¶2", "¶2"]
+
+
+# --- a bare ruler is a scene break, not an Aozora symbol block -------------
+
+_STORY = "\n".join(
+    [
+        "Chapter One",
+        "",
+        "The rain had not stopped.",
+        "",
+        "--------",
+        "",
+        "In the morning the water reached the garden.",
+        "",
+        "--------",
+        "",
+        "By noon the bridge was gone.",
+    ]
+)
+
+
+def test_scene_break_rulers_do_not_make_a_plain_novel_aozora(tmp_path):
+    doc = _en_doc(tmp_path, _STORY, name="story.txt")
+    assert doc.title == "story"  # no header extraction
+    words = " ".join(u.text for u in doc.units)
+    assert "Chapter One" in words
+    assert "In the morning the water reached the garden." in words
+    assert "By noon the bridge was gone." in words
+
+
+def test_symbol_block_heading_alone_marks_aozora(tmp_path):
+    # A real Aozora file with a symbol block but neither ［＃ nor kana ruby in
+    # its body still loses its header and its symbol block.
+    text = "\n".join(
+        [
+            "題名",
+            "著者",
+            "",
+            "-------------------------------------------------------",
+            "【テキスト中に現れる記号について】",
+            "",
+            "《》：ルビ",
+            "-------------------------------------------------------",
+            "",
+            "本文だ。",
+        ]
+    )
+    doc = load(_ref(_write(tmp_path, text, "utf-8")))
+    assert doc.title == "題名"
+    assert [u.text for u in doc.units] == ["本文だ。"]
+
+
+def test_aozora_body_rulers_without_the_heading_keep_their_text(tmp_path):
+    text = "\n".join(["題名", "著者", "", "前だ［＃「前」に傍点］。", "--------", "中だ。", "--------", "後だ。"])
+    doc = load(_ref(_write(tmp_path, text, "utf-8")))
+    assert [u.text for u in doc.units if u.text != "--------"] == ["前だ。", "中だ。", "後だ。"]
+
+
 # --- Bug Y4: bare 《…》 must not misclassify a plain novel as Aozora ---------
 
 

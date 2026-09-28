@@ -22,6 +22,7 @@ declaration, and the Text sub-tab hands over an already-decoded string.
 
 from __future__ import annotations
 
+import codecs
 import dataclasses
 import importlib
 from pathlib import Path
@@ -34,7 +35,7 @@ from anki_miner.exceptions import SetupError
 from anki_miner.languages.registry import get_profile
 from anki_miner.models.reading import ReadingSourceRef
 from anki_miner.services.reading import detector
-from anki_miner.services.reading._util import _decode
+from anki_miner.services.reading._util import _decode, decode_with_ladder
 
 #: Every byte shape the built-in Japanese path is documented to handle. Each
 #: decodes to its own text, so a ladder that mishandles one is visible.
@@ -119,6 +120,54 @@ def test_a_supplied_ladder_handles_empty_and_unknown_names() -> None:
         _decode("かな".encode("euc_jp"), encodings=("ascii",))
     with pytest.raises(SetupError):
         _decode(b"x", encodings=())
+
+
+_WORDS = "Apfel\nStraße\n"
+
+
+@pytest.mark.parametrize(
+    ("raw", "codec"),
+    [
+        (codecs.BOM_UTF16_LE + _WORDS.encode("utf-16-le"), "utf_16"),
+        (codecs.BOM_UTF16_BE + _WORDS.encode("utf-16-be"), "utf_16"),
+        # FF FE 00 00 also starts with the UTF-16 LE BOM, so UTF-32 goes first.
+        (codecs.BOM_UTF32_LE + _WORDS.encode("utf-32-le"), "utf_32"),
+        (codecs.BOM_UTF32_BE + _WORDS.encode("utf-32-be"), "utf_32"),
+    ],
+    ids=["utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be"],
+)
+def test_a_utf16_or_utf32_bom_wins_before_the_single_byte_leg(raw: bytes, codec: str) -> None:
+    """Excel's "Unicode Text": the cp1252 leg read it as NUL-riddled words."""
+    assert decode_with_ladder(raw, encodings=("utf-8-sig", "cp1252")) == (_WORDS, codec)
+
+
+def test_a_truncated_utf16_file_raises_rather_than_falling_to_the_ladder() -> None:
+    with pytest.raises(SetupError):
+        decode_with_ladder("Apfel".encode("utf-16") + b"\x00", encodings=("utf-8-sig", "cp1252"))
+
+
+def test_one_stray_byte_keeps_a_utf8_file_utf8() -> None:
+    """The cp1252 leg read the whole novel as mojibake ('pÃ¥') for one bad byte."""
+    good = "Jag mår bra.\nVi måste gå till trädgården på söndag.\n" * 5
+    raw = good.encode() + b"\xff" + "Hon är här.\n".encode()
+
+    text, winner = decode_with_ladder(raw, encodings=("utf-8-sig", "cp1252"))
+
+    assert text == good + "�" + "Hon är här.\n"
+    assert winner == "utf-8-sig"
+
+
+@pytest.mark.parametrize(
+    ("text", "ladder", "codec"),
+    [
+        ("Jag mår bra. Vi måste gå till trädgården på söndag.", ("utf-8-sig", "cp1252"), "cp1252"),
+        ("Он сказал, что всё будет хорошо, и Фёдор ушёл.", ("utf-8-sig", "cp1251"), "cp1251"),
+        ("他昨天读了红楼梦，觉得很有意思。", ("utf-8-sig", "gb18030", "big5"), "gb18030"),
+        ("日本語のテキストです。漢字とかなが混ざる。", ("utf-8-sig", "cp932", "euc_jp"), "cp932"),
+    ],
+)
+def test_a_real_legacy_file_still_picks_its_legacy_leg(text: str, ladder: tuple[str, ...], codec: str) -> None:
+    assert decode_with_ladder(text.encode(codec), encodings=ladder) == (text, codec)
 
 
 # ---------------------------------------------------------------------------

@@ -23,6 +23,72 @@ def test_unicode_bom_bypasses_cp932_empty_parse(tmp_path, encoding):
 
 
 # ---------------------------------------------------------------------------
+# A UTF-8 file with a stray byte is still UTF-8
+# ---------------------------------------------------------------------------
+
+_NORDIC = [
+    "Jag mår bra.",
+    "Vi måste gå till trädgården på söndag.",
+    "Hon är här.",
+    "Både Åsa och Örjan kör bil.",
+    "Pojken är trött på skolan.",
+    "Det är söndag.",
+]
+_NORDIC_LADDER = ("utf-8-sig", "cp1252")
+
+
+def _nordic_srt(encoding: str) -> bytes:
+    cues = [f"{i}\r\n00:00:0{i},000 --> 00:00:0{i},500\r\n{line}\r\n\r\n" for i, line in enumerate(_NORDIC, 1)]
+    return "".join(cues).encode(encoding)
+
+
+def _latin(text: str) -> bool:
+    return any("a" <= ch.lower() <= "z" for ch in text)
+
+
+def _utf8_error(data: bytes) -> UnicodeDecodeError:
+    with pytest.raises(UnicodeDecodeError) as exc_info:
+        data.decode("utf-8")
+    return exc_info.value
+
+
+def test_one_stray_byte_keeps_a_utf8_subtitle_utf8(tmp_path):
+    # One line fixed in a cp1252 editor turned every å/ä/ö of the episode into
+    # cp1252 mojibake ('mÃ¥r'); only that one byte is lost now.
+    data = _nordic_srt("utf-8").replace("Det är".encode(), "Det är".encode("cp1252"), 1)
+    path = tmp_path / "sv.srt"
+    path.write_bytes(data)
+
+    subs = load_with_fallback_encoding(path, _utf8_error(data), encodings=_NORDIC_LADDER, script_check=_latin)
+
+    assert [line.text for line in subs] == [*_NORDIC[:-1], "Det �r söndag."]
+    assert detect_subtitle_encoding(path, encodings=_NORDIC_LADDER, script_check=_latin) == "utf-8"
+
+
+def test_a_real_cp1252_subtitle_still_decodes_as_cp1252(tmp_path):
+    data = _nordic_srt("cp1252")
+    path = tmp_path / "sv.srt"
+    path.write_bytes(data)
+
+    subs = load_with_fallback_encoding(path, _utf8_error(data), encodings=_NORDIC_LADDER, script_check=_latin)
+
+    assert [line.text for line in subs] == _NORDIC
+    assert detect_subtitle_encoding(path, encodings=_NORDIC_LADDER, script_check=_latin) == "windows-1252"
+
+
+def test_a_real_cp932_subtitle_still_decodes_as_cp932(tmp_path):
+    text = "1\r\n00:00:01,000 --> 00:00:03,000\r\n日本語のテキストです。漢字とかなが混ざる。\r\n\r\n"
+    data = text.encode("cp932")
+    path = tmp_path / "ja.srt"
+    path.write_bytes(data)
+
+    subs = load_with_fallback_encoding(path, _utf8_error(data))
+
+    assert subs[0].text == "日本語のテキストです。漢字とかなが混ざる。"
+    assert detect_subtitle_encoding(path) == "shift_jis"
+
+
+# ---------------------------------------------------------------------------
 # detect_subtitle_encoding — names an encoding for an external consumer (alass)
 # ---------------------------------------------------------------------------
 

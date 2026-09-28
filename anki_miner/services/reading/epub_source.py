@@ -47,7 +47,10 @@ from anki_miner.models.reading import (
     ReadingUnit,
 )
 from anki_miner.services.dictionary.zip_safety import MAX_UNCOMPRESSED_BYTES, validate_zip_safe
-from anki_miner.services.reading._util import READING_CANCELLED
+
+# _line_join's home is _util (shared with the plain-text loaders); imported
+# here both for load() and as a re-export for tests that call it.
+from anki_miner.services.reading._util import READING_CANCELLED, _line_join
 from anki_miner.services.reading.sentence_splitter import split_sentences
 from anki_miner.utils.logging_ext import log_summary
 
@@ -116,12 +119,6 @@ _CONTENT_EXTS = (".xhtml", ".html", ".htm")
 # space-delimited language joins with " " (see _line_join), or the wrap fuses
 # two words into one fabricated card front.
 _INTERNAL_LINEBREAK = re.compile(r"[ \t]*\n[ \t]*")
-
-
-def _line_join(rules: SentenceRules | None) -> str:
-    """What a source line wrap becomes inside a paragraph for this language."""
-    return " " if rules is not None and rules.space_aware else ""
-
 
 # Cap on any single decompressed member read out of the EPUB. Every fully-read
 # member is text (container/OPF/encryption/spine XHTML/nav/NCX); real chapters
