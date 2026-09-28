@@ -24,12 +24,16 @@ the glued elided article (``l'home`` meets the mined ``home``).
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from types import MappingProxyType
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+from anki_miner.languages._spaced.form_of import form_targets, is_lemma_row
 from anki_miner.languages._spaced.pos import UPOS_ALLOWED
 from anki_miner.languages._spaced.script import nbsp_shy_normalize
+
+if TYPE_CHECKING:  # annotation-only: services must not load at profile build
+    from anki_miner.services.morphology import AttestLookup, FormLookup
 
 #: The model package the tokenizer loads and the availability probe looks for.
 CA_MODEL_PACKAGE = "ca_core_news_sm"
@@ -187,3 +191,77 @@ def install_enclitic_host_rule(nlp: Any) -> None:
     if not Language.has_factory(ENCLITIC_HOST_PIPE):
         Language.component(ENCLITIC_HOST_PIPE, func=verb_before_enclitic)
     nlp.add_pipe(ENCLITIC_HOST_PIPE, before="lemmatizer")
+
+
+def _is_feminine_noun_row(tags: str) -> bool:
+    """A wty headword row filed as a feminine noun and not also as a masculine one (``noia``: ``n fem``)."""
+    parts = tags.split(" ")
+    return is_lemma_row(tags) and parts[0] == "n" and "fem" in parts and "masc" not in parts
+
+
+class FeminineNounPass:
+    """``token_post_pass``: a feminine noun fronts its own headword, not its masculine (IBER-01).
+
+    ``ca_core_news_sm`` lemmatises ``filla``/``senyora``/``esposa`` as ``fill``/``senyor``/``espòs``, and
+    ``install_lemma_correction`` takes its lookup table's ``noi``/``nen``/``nuvi`` for ``noia``/``nena``/
+    ``núvia``: ``La meva filla`` is carded ``fill`` (son) under ``el``. wty-ca-en files each of those
+    feminines as a headword of its own (``noia`` ``n fem``, girl). So a NOUN the model tags
+    ``Gender=Fem`` takes:
+
+    * singular: its lowercased surface, when that has a feminine-noun row of its own;
+    * plural: when the model's lemma is one of the targets the surface's form rows name, the one
+      target that has one (``noies`` names ``noi`` and ``noia``: ``noia``).
+
+    A feminine the dictionary files only as a form of the masculine (``amiga`` -> ``amic``) keeps the
+    model's front. One batched read per line, and one more for the plurals' targets. The pass runs in
+    the parser only: the frequency lemmatiser still ranks the model's lemma (as for he and it).
+    ``forms is None`` (no offline dictionary) leaves every token as the tagger built it.
+    """
+
+    def __call__(self, tokens: list[Any], attest: AttestLookup | None, forms: FormLookup | None) -> list[Any]:
+        del attest  # existence is not enough: the pass reads the rows' tags
+        if forms is None:
+            return tokens
+        nouns = [t for t in tokens if t.feature.pos1 == "NOUN" and "Gender=Fem" in t.morph.split("|")]
+        if not nouns:
+            return tokens
+        rows = forms(list(dict.fromkeys(token.surface.lower() for token in nouns)))
+        wanted = [
+            target
+            for token in nouns
+            if "Number=Plur" in token.morph.split("|")
+            for target in self._targets(rows.get(token.surface.lower(), ()))
+            if target not in rows
+        ]
+        if wanted:
+            rows = {**rows, **forms(list(dict.fromkeys(wanted)))}
+        for token in nouns:
+            front = self._front(token, rows)
+            if front is not None:
+                token.feature.lemma = front
+        return tokens
+
+    @staticmethod
+    def _targets(rows: Sequence[tuple[str, str]]) -> list[str]:
+        return [target for content, tags in rows if not is_lemma_row(tags) for target in form_targets(content)]
+
+    def _front(self, token: Any, rows: Mapping[str, Sequence[tuple[str, str]]]) -> str | None:
+        surface: str = token.surface.lower()
+        features = token.morph.split("|")
+        candidates: list[str]
+        if "Number=Sing" in features:
+            candidates = [surface]
+        elif "Number=Plur" in features:
+            candidates = self._targets(rows.get(surface, ()))
+            if token.feature.lemma not in candidates:
+                return None  # not a fold to a sibling the same rows name: ses (its, a headword) is no son
+        else:
+            return None
+        feminine = [
+            candidate
+            for candidate in dict.fromkeys(candidates)
+            if any(_is_feminine_noun_row(tags) for _content, tags in rows.get(candidate, ()))
+        ]
+        if len(feminine) != 1 or feminine[0] == token.feature.lemma:
+            return None
+        return feminine[0]

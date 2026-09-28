@@ -16,7 +16,7 @@ from anki_miner.languages._spaced.morphology import LatinLookupStrategy, SpacedM
 from anki_miner.languages._spaced.render import PosHook
 from anki_miner.languages._spaced.script import LATIN_SUBTITLE_REGEX, LatinScript
 from anki_miner.languages.ca.catalog import CA_CATALOG
-from anki_miner.languages.ca.morphology import CA_ABBREVIATIONS, ca_normalize
+from anki_miner.languages.ca.morphology import CA_ABBREVIATIONS, FeminineNounPass, ca_normalize
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.switching import switch_language
 
@@ -96,11 +96,11 @@ def test_the_lookup_ladder_restores_a_degraded_interpunct_before_the_hyphen_part
     assert lookup.candidates("llibres", "", None) == []  # the PROBE word shape: nothing to vary, never itself
 
 
-def test_the_parser_is_the_spaced_factory():
+def test_the_parser_is_the_spaced_factory_with_the_feminine_noun_front():
     profile = get_profile("ca")
     parser = profile.create_parser(switch_language(AnkiMinerConfig(), "ca"))
     assert parser.normalize is profile.normalize
-    assert parser._compound_matcher is None and parser._token_post_pass is None
+    assert parser._compound_matcher is None and isinstance(parser._token_post_pass, FeminineNounPass)
 
 
 def test_the_catalogue_ships_wiktionary_and_a_lemmatised_frequency_list():
