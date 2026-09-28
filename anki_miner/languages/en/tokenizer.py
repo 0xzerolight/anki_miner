@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from anki_miner.languages._spaced.morphology import APOSTROPHE_FOLD
 from anki_miner.languages._spaced.tokenizer import build_spacy_tagger
-from anki_miner.languages.en.morphology import EN_ABBREVIATIONS, EN_MODEL_PACKAGE
+from anki_miner.languages.en.morphology import EN_ABBREVIATIONS, EN_MODEL_PACKAGE, keep_plurale_tantum
 from anki_miner.services.tagger import LockedTagger
 
 
@@ -19,8 +19,12 @@ def build_tagger() -> LockedTagger:
 
     ``abbreviations`` prunes the model's ``Mass.``/``Co.``-style exceptions so a
     sentence-final word keeps its own token; the set is the one the sentence
-    splitter uses.
+    splitter uses. ``keep_plurale_tantum`` keeps ``clothes``/``thanks`` as their own lemma.
     """
     return build_spacy_tagger(
-        EN_MODEL_PACKAGE, join_hyphenated=True, tag_char_map=APOSTROPHE_FOLD, abbreviations=EN_ABBREVIATIONS
+        EN_MODEL_PACKAGE,
+        join_hyphenated=True,
+        tag_char_map=APOSTROPHE_FOLD,
+        post_passes=(keep_plurale_tantum,),
+        abbreviations=EN_ABBREVIATIONS,
     )

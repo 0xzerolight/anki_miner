@@ -42,6 +42,18 @@ def is_dotted_abbreviation(surface: str) -> bool:
     )
 
 
+def is_hyphenated_number(tok: Any) -> bool:
+    """Every ``-`` part is ``like_num`` in the model's own vocabulary (en ``thirty-two``, fr ``trente-deux``).
+
+    ``join_hyphenated`` keeps such a numeral one token, which the language's
+    ``like_num`` never matches whole, so the model tags it ADJ/NOUN/PROPN. The
+    language's own lex_attrs decide the parts; ``one-way`` and ``second-hand``
+    each have a part that is not a number.
+    """
+    parts = tok.text.split("-")
+    return len(parts) > 1 and all(part and tok.vocab[part].like_num for part in parts)
+
+
 def to_duck_tokens(
     doc: Iterable[Any],
     text: str,
@@ -54,7 +66,8 @@ def to_duck_tokens(
     ``pos1`` is UPOS, or ``"X"`` for a URL/e-mail token (spaCy's lexical
     ``like_url``/``like_email``) or a dotted abbreviation
     (``is_dotted_abbreviation``); each passes a Latin script gate and none is
-    vocabulary. ``pos2`` is the fine tag when it says more than UPOS.
+    vocabulary. A hyphen-joined numeral (``is_hyphenated_number``) is ``"NUM"``,
+    whatever the model tagged it. ``pos2`` is the fine tag when it says more than UPOS.
     ``particle_deps`` is the language's separable-verb dependency labels: a
     token carrying one, whose head is a different VERB/AUX token, stashes its
     casefolded surface on the head as ``feature.particle`` (first one wins) and
@@ -66,7 +79,12 @@ def to_duck_tokens(
     out: list[LanguageToken] = []
     for tok in kept:
         surface = text[tok.idx : tok.idx + len(tok.text)]
-        pos1 = "X" if (tok.like_url or tok.like_email or is_dotted_abbreviation(surface)) else tok.pos_
+        if tok.like_url or tok.like_email or is_dotted_abbreviation(surface):
+            pos1 = "X"
+        elif is_hyphenated_number(tok):
+            pos1 = "NUM"
+        else:
+            pos1 = tok.pos_
         token = LanguageToken(
             surface=surface,
             pos1=pos1,

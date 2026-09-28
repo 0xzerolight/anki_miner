@@ -1,4 +1,4 @@
-"""English POS gate, sentence abbreviations and the known-word leading-word table.
+"""English POS gate, sentence abbreviations, the known-word leading-word table and plural-only nouns.
 
 ``EN_EXCLUDED_SUBTYPES`` is empty on evidence, not by default: over
 ``tests/fixtures/en/pos_corpus.jsonl`` the real ``en_core_web_sm`` output puts
@@ -17,6 +17,7 @@ abbreviations spaCy leaves out (``etc u.s u.k capt col lt sgt sr``).
 from __future__ import annotations
 
 from anki_miner.languages._spaced.pos import UPOS_ALLOWED
+from anki_miner.languages.token import LanguageToken
 
 EN_ALLOWED_POS: tuple[str, ...] = UPOS_ALLOWED
 EN_EXCLUDED_SUBTYPES: tuple[str, ...] = ()
@@ -37,6 +38,28 @@ EN_ABBREVIATIONS: frozenset[str] = frozenset(
 
 #: Leading words a deck front carries that the mined lemma never does (S3): ``to go`` meets ``go``.
 EN_LEADING_WORDS: frozenset[str] = frozenset({"a", "an", "the", "to"})
+
+
+#: Plural-only nouns: ``en_core_web_sm`` lemmatises them to a different word
+#: (``clothes`` → the verb ``clothe``, ``thanks`` → ``thank``, ``pants`` → ``pant``)
+#: that the dictionary answers, so the card front would be that word. Plurals
+#: whose singular is an ordinary noun (``glasses goods shorts stairs``) stay out.
+EN_PLURALE_TANTUM: frozenset[str] = frozenset(
+    {
+        "clothes", "pants", "jeans", "trousers", "scissors", "sunglasses", "headphones", "earphones",
+        "pajamas", "pyjamas", "tweezers", "pliers", "binoculars", "leggings", "tights", "outskirts",
+        "belongings", "surroundings", "congratulations", "thanks", "whereabouts",
+    }
+)  # fmt: skip
+
+
+def keep_plurale_tantum(tokens: list[LanguageToken]) -> list[LanguageToken]:
+    """Tokenizer post-pass (``build_spacy_tagger(post_passes=...)``): an ``EN_PLURALE_TANTUM`` NOUN is its own lemma."""
+    for token in tokens:
+        key = token.surface.casefold()
+        if token.feature.pos1 == "NOUN" and key in EN_PLURALE_TANTUM:
+            token.feature.lemma = key
+    return tokens
 
 
 #: The model package the tokenizer loads and the availability probe looks for.
