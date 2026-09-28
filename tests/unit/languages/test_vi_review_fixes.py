@@ -1,5 +1,5 @@
-"""vi review fixes: wty rows ranked by the token's VLSP tag, letter rows last, and the
-full-reduplication rung.
+"""vi review fixes: wty rows ranked by the token's VLSP tag, letter rows last, the full-reduplication
+rung, and the Hán Việt field read from the definition's first row only.
 
 Rows are wty-vi-en's own (revision 2026.09.19): tags, first gloss and etymology, shortened.
 """
@@ -7,11 +7,15 @@ Rows are wty-vi-en's own (revision 2026.09.19): tags, first gloss and etymology,
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
+from anki_miner.config import AnkiMinerConfig
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.vi.morphology import VietnameseLookup, reduplicative_base
+from anki_miner.languages.vi.render import HanVietHook
+from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
 from anki_miner.services.dictionary.storage import (
     SCHEMA_VERSION,
     DictRow,
@@ -119,6 +123,13 @@ def wty_db(tmp_path_factory) -> Path:
     return db
 
 
+@pytest.fixture(scope="module")
+def provider(wty_db) -> IndexedDictProvider:
+    loaded = IndexedDictProvider("wty-vi-en", wty_db, keys=KEYS)
+    assert loaded.load()
+    return loaded
+
+
 def _rows(db: Path, word: str, pos: str | None) -> list[tuple[str, str, int | None]]:
     conn = open_readonly(db)
     try:
@@ -192,3 +203,31 @@ def test_a_same_onset_compound_offers_no_first_syllable(word):
 def test_a_full_reduplication_offers_its_syllable(word, base):
     assert reduplicative_base(word) == base
     assert VietnameseLookup().candidates(word, "", None) == [(base, 0)]
+
+
+# --- the Hán Việt field: the first row's etymology only ---------------------------------------------
+
+
+def _hanviet(html: str | None) -> dict[str, str]:
+    word = SimpleNamespace(mined_form="x", surface="x", definition_html=html or "")
+    return HanVietHook().render(word, config=AnkiMinerConfig())
+
+
+@pytest.mark.parametrize(("word", "pos"), [("bố", "N"), ("khi", "N"), ("đồng", "N")])
+def test_a_native_first_row_leaves_the_field_blank(provider, word, pos):
+    """bố 'father' took 布 from the burlap row, khi 'when' 欺, đồng 童 from the shaman row (THVI-10)."""
+    assert _hanviet(provider.lookup_many([(word, None)], pos={word: pos})[word]) == {}
+
+
+@pytest.mark.parametrize(
+    ("word", "pos", "hanzi"), [("bị", "V", "被"), ("lương", "N", "糧"), ("lương", None, "良"), ("bác sĩ", "N", "博士")]
+)
+def test_the_field_is_the_first_row_etymon(provider, word, pos, hanzi):
+    """The first row is the one the card opens on: lương 'salary' (N) is 糧, its dated adjective row 良."""
+    html = provider.lookup_many([(word, None)], pos={word: pos} if pos else None)[word]
+    assert _hanviet(html) == {"hanviet": hanzi}
+
+
+def test_no_row_no_field():
+    assert _hanviet("") == {}
+    assert _hanviet("Sino-Vietnamese word from 和平.") == {}
