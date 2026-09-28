@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import unicodedata
 
+from anki_miner.languages._spaced.keys import wty_row_rank
 from anki_miner.languages._spaced.script import BRACKETS_PATTERN, MUSIC_PATTERN, PARENS_PATTERN
 from anki_miner.languages.profile import ScriptFilterOption, SentenceRules
 
@@ -122,7 +123,8 @@ class HebrewScript:
 
 
 class HebrewDictKeys:
-    """DictKeyFolding: ``he_fold`` term keys, NFC readings, Rule-A-only homograph mask (the ko/zh shape).
+    """DictKeyFolding: ``he_fold`` term keys, NFC readings, Rule-A-only homograph mask (the ko/zh shape),
+    and the shared wty row rank.
 
     ``fold_reading`` is a passthrough in practice: the reading column is empty in every row of
     ``wty-he-en``, so nothing is ever keyed on it.
@@ -140,6 +142,17 @@ class HebrewDictKeys:
             return [True] * len(rows)
         contents = {content for (_, content), hit in zip(rows, exact, strict=True) if hit}
         return [hit or content in contents for (_, content), hit in zip(rows, exact, strict=True)]
+
+    def sense_rank(self, content: str, tags: str, pos: str | None) -> int:
+        """:func:`wty_row_rank`: the token's own part of speech leads, proper-name rows trail.
+
+        wty-he-en files a root's noun and verb under one consonantal key, noun first more often
+        than not (382 of its 586 keys with both), so a verb front whose Pos and Reading say
+        zakhar 'to remember' opened its Definition on "man, male", halakh on "traveler", avad on
+        "slave". The form resolver's ``pos1`` is the first tag of the chosen lemma row through
+        ``HE_TAG_TO_POS``, the same tag names the rank reads. Rows are only reordered.
+        """
+        return wty_row_rank(tags, pos)
 
 
 HE_SENTENCE_RULES = SentenceRules(

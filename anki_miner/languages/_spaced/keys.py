@@ -34,6 +34,27 @@ ROW_TAGS_BY_UPOS: Mapping[str, frozenset[str]] = MappingProxyType(
 )
 
 
+def wty_row_rank(tags: str, pos: str | None) -> int:
+    """Where a wty row sorts among the rows sharing its term/reading priority.
+
+    wty stores one row per part of speech and gives every row score 0 and
+    sequence 0, so without this the import id orders them, and the casefolded
+    key puts a word's place-name and surname rows beside it: ``airport`` opened
+    on "A census-designated place", nl ``komen`` on "Comines (a city in
+    Belgium)", de ``Essen`` on "to eat", he zakhar (a verb) on "man, male". The
+    row's first tag names its part of speech. ``0`` for a row of the token's
+    own part of speech (``ROW_TAGS_BY_UPOS``); ``2`` for a proper-name row
+    unless the token is itself a proper noun; ``1`` for every other row,
+    form-of rows included. Nothing is dropped, and storage keeps the index order
+    inside each rank. The profiles whose dictionary is a wty dump and whose
+    token POS is UPOS rank with this (``CasefoldDictKeys``, ``HebrewDictKeys``).
+    """
+    first = tags.split(" ", 1)[0]
+    if first in NAME_ROW_TAGS and pos != "PROPN":
+        return 2
+    return 0 if first in ROW_TAGS_BY_UPOS.get(pos or "", frozenset()) else 1
+
+
 class CasefoldDictKeys:
     """DictKeyFolding: NFC + optional extra fold + casefold; Rule A then Rule A′.
 
@@ -67,22 +88,8 @@ class CasefoldDictKeys:
         return [True] * len(rows)
 
     def sense_rank(self, content: str, tags: str, pos: str | None) -> int:
-        """Where a wty row sorts among the rows sharing its term/reading priority.
-
-        wty stores one row per part of speech and gives every row score 0 and
-        sequence 0, so without this the import id orders them, and the casefolded
-        key puts a word's place-name and surname rows beside it: ``airport`` opened
-        on "A census-designated place", nl ``komen`` on "Comines (a city in
-        Belgium)", de ``Essen`` on "to eat". The row's first tag names its part of
-        speech. ``0`` for a row of the token's own part of speech
-        (``ROW_TAGS_BY_UPOS``); ``2`` for a proper-name row unless the token is
-        itself a proper noun; ``1`` for every other row, form-of rows included.
-        Nothing is dropped, and storage keeps the index order inside each rank.
-        """
-        first = tags.split(" ", 1)[0]
-        if first in NAME_ROW_TAGS and pos != "PROPN":
-            return 2
-        return 0 if first in ROW_TAGS_BY_UPOS.get(pos or "", frozenset()) else 1
+        """The shared wty row rank, :func:`wty_row_rank`; ``content`` is not read."""
+        return wty_row_rank(tags, pos)
 
 
 def _strip_trailing_punctuation(text: str) -> str:
