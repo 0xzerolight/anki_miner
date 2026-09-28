@@ -331,7 +331,7 @@
     </message>
     <message>
         <source>Stores the word's pinyin reading. Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>単語のピンイン読みを格納します。空欄 = スキップ。</translation>
     </message>
     <message>
         <source>Traditional Field</source>
@@ -483,7 +483,7 @@
     </message>
     <message>
         <source>Stores the jyutping reading. Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>Jyutping の読みを格納します。空欄 = スキップ。</translation>
     </message>
     <message>
         <source>Transliteration Field</source>
@@ -511,7 +511,7 @@
     </message>
     <message>
         <source>Default http://127.0.0.1:8765. Change if AnkiConnect uses a different port.</source>
-        <translation type="unfinished" />
+        <translation>既定値は http://127.0.0.1:8765 です。AnkiConnect が別のポートを使用している場合は変更してください。</translation>
     </message>
     <message>
         <source>Card tags</source>
@@ -755,7 +755,7 @@
     </message>
     <message>
         <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Sentences). Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>例文の翻訳字幕の行を格納します（動画 -&gt; 単一、「文」で翻訳字幕を有効にしている場合）。空欄 = スキップ。</translation>
     </message>
     <message>
         <source>Card Type</source>
@@ -815,7 +815,7 @@
     </message>
     <message>
         <source>Card Creation</source>
-        <translation type="unfinished" />
+        <translation>カード作成</translation>
     </message>
     <message>
         <source>Create cards in order of appearance</source>
@@ -1149,7 +1149,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <name>AudioPackSettingsPanel</name>
     <message>
         <source>Word Audio</source>
-        <translation type="unfinished" />
+        <translation>単語音声</translation>
     </message>
     <message>
         <source>Loading…</source>
@@ -1249,11 +1249,11 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>More</source>
-        <translation type="unfinished" />
+        <translation>その他</translation>
     </message>
     <message>
         <source>More actions</source>
-        <translation type="unfinished" />
+        <translation>その他の操作</translation>
     </message>
     <message>
         <source>Audio Pack…</source>
@@ -1621,11 +1621,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Add to Queue</source>
-        <translation type="unfinished" />
+        <translation>キューに追加</translation>
     </message>
     <message>
         <source>Add this folder pair to the queue below as a new series</source>
-        <translation type="unfinished" />
+        <translation>このフォルダのペアを新しいシリーズとして下のキューに追加します</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -2035,7 +2035,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Sentences.</source>
-        <translation type="unfinished" />
+        <translation>マイニング言語の字幕と並べて、自分の言語の字幕ファイルをもう一つ読み込みます。その行は単語キュレーターのプレビューで例文の下に表示され、翻訳フィールドに保存できます。動画 -&gt; バッチでは、代わりに翻訳字幕のフォルダを指定すると、エピソード番号で動画とペアリングされます。「設定 -&gt; 文」で有効にしてください。</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2407,19 +2407,19 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Set the alass binary (subtitle alignment)</source>
-        <translation type="unfinished" />
+        <translation>alass バイナリを設定（字幕のアラインメント）</translation>
     </message>
     <message>
         <source>Point alass, the subtitle re-timing tool, at a specific executable, or download it in-app (Linux/Windows; macOS installs it with Homebrew).</source>
-        <translation type="unfinished" />
+        <translation>字幕リタイミングツールの alass に特定の実行ファイルを指定するか、アプリ内でダウンロードします（Linux/Windows。macOS では Homebrew でインストールします）。</translation>
     </message>
     <message>
         <source>Export / import resources</source>
-        <translation type="unfinished" />
+        <translation>リソースのエクスポート／インポート</translation>
     </message>
     <message>
         <source>Pack this language's dictionaries, frequency and pitch lists, ignore list and word lists into one file, and install them on another machine -- Export or Import, then Resources, in the Settings footer.</source>
-        <translation type="unfinished" />
+        <translation>この言語の辞書、頻度リスト、ピッチリスト、無視リスト、単語リストを 1 つのリソースバンドルファイルにまとめ、別のマシンにインストールできます — 設定画面のフッターで「エクスポート」または「インポート」を押し、「リソース」を選択します。</translation>
     </message>
     <message>
         <source>Word pronunciation audio</source>
@@ -2531,7 +2531,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Cards &amp; Anki.</source>
-        <translation type="unfinished" />
+        <translation>単語のピンインをカードに載せ、各音節を声調の色で表示します — 色分けは「設定 -&gt; カードと Anki」の「読みを声調で色分けする」で設定します。</translation>
     </message>
     <message>
         <source>Colour the reading by tone</source>
@@ -2539,7 +2539,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Cards &amp; Anki.</source>
-        <translation type="unfinished" />
+        <translation>ピンインまたは Jyutping の読みの各音節を声調ごとに色分けします（設定 -&gt; カードと Anki）。</translation>
     </message>
     <message>
         <source>Measure word field</source>
@@ -2583,11 +2583,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Themes, dark mode &amp; zoom</source>
-        <translation type="unfinished" />
+        <translation>テーマ、ダークモード、ズーム</translation>
     </message>
     <message>
         <source>Switch light/dark themes and adjust UI zoom.</source>
-        <translation type="unfinished" />
+        <translation>ライト／ダークテーマを切り替え、UI のズームを調整します。</translation>
     </message>
     <message>
         <source>Change the app language</source>
@@ -2619,7 +2619,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
-        <translation type="unfinished" />
+        <translation>使わないユーティリティのツールを「設定 -&gt; 一般」で非表示にしたり、再表示したりできます。非表示にしたツールもここに項目が残り、その「開く」ボタンから該当のチェックボックスに移動できます。</translation>
     </message>
     <message>
         <source>Search the settings</source>
@@ -2643,7 +2643,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings -&gt; General.</source>
-        <translation type="unfinished" />
+        <translation>ヘルプメニューから Anki Miner の新しいバージョンを確認するか、「設定 -&gt; 一般」で起動時の自動確認を切り替えます。</translation>
     </message>
     <message>
         <source>Download videos or audio</source>
@@ -2659,7 +2659,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from its setup card on Utilities -&gt; Manga OCR.</source>
-        <translation type="unfinished" />
+        <translation>巻フォルダまたはシリーズ全体に対して mokuro の日本語 OCR を実行すると、「リーディング -&gt; マンガ」でマイニングできるようになります。mokuro は「ユーティリティ -&gt; マンガ OCR」のセットアップカードからインストールしてください。</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -2675,7 +2675,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities -&gt; Card Backfill.</source>
-        <translation type="unfinished" />
+        <translation>以前マイニングしたカードに、最新の Anki Miner スタイルを再適用します — ユーティリティ -&gt; カードの一括補完。</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -2845,7 +2845,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation type="unfinished" />
+        <translation>上書きしたカードのスタイルを更新するには、「カードのスタイルを再適用…」を使う必要がある場合があります。</translation>
     </message>
     <message>
         <source>Scan Anki (read-only)</source>
@@ -2853,11 +2853,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Restyle cards…</source>
-        <translation type="unfinished" />
+        <translation>カードのスタイルを再適用…</translation>
     </message>
     <message>
         <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation type="unfinished" />
+        <translation>ノートタイプのすべてのカードで辞書のスタイルを更新します</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3731,7 +3731,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>Copy the worth-learning part of a premade deck into a new deck. Filters come from Settings → Word Filters; the source deck is not modified.</source>
-        <translation type="unfinished" />
+        <translation>既存デッキのうち学ぶ価値がある部分を新しいデッキにコピーします。フィルターは「設定 → 単語フィルター」の設定を使用し、元のデッキは変更されません。</translation>
     </message>
     <message>
         <source>Source deck:</source>
@@ -4257,11 +4257,11 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>More</source>
-        <translation type="unfinished" />
+        <translation>その他</translation>
     </message>
     <message>
         <source>More actions</source>
-        <translation type="unfinished" />
+        <translation>その他の操作</translation>
     </message>
     <message>
         <source>%1 entries</source>
@@ -4707,7 +4707,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Word-audio source is too slow — audio skipped; reorder or disable it in Settings → Word Audio.</source>
-        <translation type="unfinished" />
+        <translation>単語音声ソースの応答が遅すぎます — 音声をスキップしました。設定 → 単語音声で並べ替えるか、無効にしてください。</translation>
     </message>
     <message>
         <source>Word-audio source connection/certificate failure — audio skipped this run, will retry next run</source>
@@ -5149,7 +5149,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Word Filters</source>
-        <translation type="unfinished" />
+        <translation>単語フィルター</translation>
     </message>
     <message>
         <source>Word Frequency</source>
@@ -5205,11 +5205,11 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Keep words known after their cards are deleted</source>
-        <translation type="unfinished" />
+        <translation>カードを削除しても単語を既知のままにする</translation>
     </message>
     <message>
         <source>Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild forgets them.</source>
-        <translation type="unfinished" />
+        <translation>Anki のカードを削除したり、除外するデッキに移動したりしても、単語は既知のまま残ります。再構築すると、これらの単語は既知から外れます。</translation>
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -5305,15 +5305,15 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Sentence Rule</source>
-        <translation type="unfinished" />
+        <translation>文のルール</translation>
     </message>
     <message>
         <source>Mine every unknown word</source>
-        <translation type="unfinished" />
+        <translation>未知語をすべてマイニング</translation>
     </message>
     <message>
         <source>One card per sentence</source>
-        <translation type="unfinished" />
+        <translation>1 文につきカード 1 枚</translation>
     </message>
     <message>
         <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped.</source>
@@ -5321,7 +5321,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
-        <translation type="unfinished" />
+        <translation>i+1 の文のみ（未知語がちょうど 1 つ）</translation>
     </message>
     <message>
         <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication.</source>
@@ -5353,7 +5353,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Set either limit above 0 to turn the filter on.</source>
-        <translation type="unfinished" />
+        <translation>いずれかの上限を 0 より大きい値にすると、フィルターが有効になります。</translation>
     </message>
     <message>
         <source> s</source>
@@ -5643,11 +5643,11 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>More</source>
-        <translation type="unfinished" />
+        <translation>その他</translation>
     </message>
     <message>
         <source>More actions</source>
-        <translation type="unfinished" />
+        <translation>その他の操作</translation>
     </message>
     <message>
         <source>%1 entries</source>
@@ -5911,11 +5911,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Decks this language's known-words scan skips: %1. Change them in Settings → Word Filters.</source>
-        <translation type="unfinished" />
+        <translation>この言語の既知単語スキャンが除外するデッキ: %1。設定 → 単語フィルターで変更できます。</translation>
     </message>
     <message>
         <source>Every deck is scanned for this language, including decks in another language written in the same script. Exclude them in Settings → Word Filters.</source>
-        <translation type="unfinished" />
+        <translation>この言語では、同じ文字体系で書かれた別言語のデッキも含め、すべてのデッキがスキャンされます。設定 → 単語フィルターで除外してください。</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -6347,7 +6347,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Navigate between Video, Audiobooks, Reading, Analytics, Utilities, and Settings</source>
-        <translation type="unfinished" />
+        <translation>動画、オーディオブック、リーディング、分析、ユーティリティ、設定の間を移動</translation>
     </message>
     <message>
         <source>Application Header</source>
@@ -6701,7 +6701,7 @@ Continue?</source>
     </message>
     <message>
         <source>Sentence Audio</source>
-        <translation type="unfinished" />
+        <translation>文章音声</translation>
     </message>
     <message>
         <source>Audio Format</source>
@@ -6741,19 +6741,19 @@ Continue?</source>
     </message>
     <message>
         <source>Google, then Papago</source>
-        <translation type="unfinished" />
+        <translation>Google、次に Papago</translation>
     </message>
     <message>
         <source>Google only</source>
-        <translation type="unfinished" />
+        <translation>Google のみ</translation>
     </message>
     <message>
         <source>Papago only</source>
-        <translation type="unfinished" />
+        <translation>Papago のみ</translation>
     </message>
     <message>
         <source>Spoken sentences for manga and books</source>
-        <translation type="unfinished" />
+        <translation>マンガ・書籍の文章読み上げ</translation>
     </message>
     <message>
         <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>
@@ -6761,7 +6761,7 @@ Continue?</source>
     </message>
     <message>
         <source>Screenshot</source>
-        <translation type="unfinished" />
+        <translation>スクリーンショット</translation>
     </message>
     <message>
         <source>Screenshot Offset</source>
@@ -6805,27 +6805,27 @@ Continue?</source>
     </message>
     <message>
         <source>Small</source>
-        <translation type="unfinished" />
+        <translation>小さめ</translation>
     </message>
     <message>
         <source>Balanced</source>
-        <translation type="unfinished" />
+        <translation>バランス</translation>
     </message>
     <message>
         <source>High</source>
-        <translation type="unfinished" />
+        <translation>高画質</translation>
     </message>
     <message>
         <source>Frame rate, height and quality for the animated clip.</source>
-        <translation type="unfinished" />
+        <translation>アニメーションクリップのフレームレート、高さ、品質です。</translation>
     </message>
     <message>
         <source>Size</source>
-        <translation type="unfinished" />
+        <translation>サイズ</translation>
     </message>
     <message>
         <source>Custom (%1 fps · %2 px · quality %3)</source>
-        <translation type="unfinished" />
+        <translation>カスタム（%1 fps · %2 px · 品質 %3）</translation>
     </message>
 </context><context>
     <name>MiniJobMonitor</name>
@@ -6879,7 +6879,7 @@ Continue?</source>
     </message>
     <message>
         <source>Switching swaps dictionaries, filters, deck and card fields to that language's own settings. The interface language is separate (Settings → General).</source>
-        <translation type="unfinished" />
+        <translation>切り替えると、辞書・フィルター・デッキ・カードフィールドがその言語専用の設定に入れ替わります。インターフェース言語は別です（設定 → 一般）。</translation>
     </message>
     <message>
         <source>Script Variants</source>
@@ -7065,7 +7065,7 @@ Continue?</source>
     </message>
     <message>
         <source>mokuro not found. Install it in the Manga OCR setup section below, or set its path there.</source>
-        <translation type="unfinished" />
+        <translation>mokuro が見つかりません。下の「マンガ OCR のセットアップ」でインストールするか、そこでパスを設定してください。</translation>
     </message>
     <message>
         <source>Run mokuro's OCR on a folder of page images, or a series folder of volumes. Each volume gets a .mokuro file beside it for Reading → Manga.</source>
@@ -7081,11 +7081,11 @@ Continue?</source>
     </message>
     <message>
         <source>Manga OCR setup</source>
-        <translation type="unfinished" />
+        <translation>マンガ OCR のセットアップ</translation>
     </message>
     <message>
         <source>mokuro executable:</source>
-        <translation type="unfinished" />
+        <translation>mokuro 実行ファイル:</translation>
     </message>
     <message>
         <source>Optional: path to the mokuro executable</source>
@@ -7509,11 +7509,11 @@ Continue?</source>
     </message>
     <message>
         <source>More</source>
-        <translation type="unfinished" />
+        <translation>その他</translation>
     </message>
     <message>
         <source>More actions</source>
-        <translation type="unfinished" />
+        <translation>その他の操作</translation>
     </message>
     <message>
         <source>%1 entries</source>
@@ -8679,202 +8679,203 @@ No index files are deleted.</source>
     <name>ResourceBundleDialog</name>
     <message>
         <source>Dictionaries</source>
-        <translation type="unfinished">辞書</translation>
+        <translation>辞書</translation>
     </message>
     <message>
         <source>Frequency lists</source>
-        <translation type="unfinished">頻度リスト</translation>
+        <translation>頻度リスト</translation>
     </message>
     <message>
         <source>Pitch accent</source>
-        <translation type="unfinished">ピッチアクセント</translation>
+        <translation>ピッチアクセント</translation>
     </message>
     <message>
         <source>Known words</source>
-        <translation type="unfinished" />
+        <translation>既知単語</translation>
     </message>
     <message>
         <source>Word lists</source>
-        <translation type="unfinished" />
+        <translation>単語リスト</translation>
     </message>
     <message>
         <source>Known-words ignore list</source>
-        <translation type="unfinished" />
+        <translation>既知単語の無視リスト</translation>
     </message>
     <message>
         <source>Blacklist</source>
-        <translation type="unfinished" />
+        <translation>ブラックリスト</translation>
     </message>
     <message>
         <source>Whitelist</source>
-        <translation type="unfinished" />
+        <translation>ホワイトリスト</translation>
     </message>
 </context><context>
     <name>ResourceBundleFlow</name>
     <message>
         <source>Your installed resources could not be checked.</source>
-        <translation type="unfinished" />
+        <translation>インストール済みのリソースを確認できませんでした。</translation>
     </message>
     <message>
         <source>Nothing to Export</source>
-        <translation type="unfinished" />
+        <translation>エクスポートする内容はありません</translation>
     </message>
     <message>
         <source>Your %1 setup has no dictionary, frequency or pitch list, ignore list or word list that can be exported.</source>
-        <translation type="unfinished" />
+        <translation>%1 の設定には、エクスポートできる辞書、頻度リスト、ピッチリスト、無視リスト、単語リストがありません。</translation>
     </message>
     <message>
         <source>Export Resources</source>
-        <translation type="unfinished" />
+        <translation>リソースをエクスポート</translation>
     </message>
     <message>
         <source>Choose what goes into the %1 resource bundle. Dictionaries and lists travel as their original files and are rebuilt when the bundle is imported.</source>
-        <translation type="unfinished" />
+        <translation>%1 のリソースバンドルに含める項目を選択してください。辞書とリストは元のファイルのまま格納され、バンドルのインポート時に再構築されます。</translation>
     </message>
     <message>
         <source>Export…</source>
-        <translation type="unfinished">エクスポート…</translation>
+        <translation>エクスポート…</translation>
     </message>
     <message>
         <source>Resource bundles (*.zip)</source>
-        <translation type="unfinished" />
+        <translation>リソースバンドル (*.zip)</translation>
     </message>
     <message>
         <source>no original file was kept; add it again from its file to include it</source>
-        <translation type="unfinished" />
+        <translation>元のファイルが保存されていません。含めるには、そのファイルから追加し直してください</translation>
     </message>
     <message>
         <source>imported for another mining language</source>
-        <translation type="unfinished" />
+        <translation>別のマイニング言語用にインポート済み</translation>
     </message>
     <message>
         <source>%1 words</source>
-        <translation type="unfinished" />
+        <translation>%1 語</translation>
     </message>
     <message>
         <source>Exporting resources…</source>
-        <translation type="unfinished" />
+        <translation>リソースをエクスポート中…</translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">キャンセル</translation>
+        <translation>キャンセル</translation>
     </message>
     <message>
         <source>The resources could not be exported.</source>
-        <translation type="unfinished" />
+        <translation>リソースをエクスポートできませんでした。</translation>
     </message>
     <message>
         <source>A resource export or import is still finishing. Try again in a moment.</source>
-        <translation type="unfinished" />
+        <translation>リソースのエクスポートまたはインポートがまだ完了していません。しばらくしてから再試行してください。</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">キャンセル中…</translation>
+        <translation>キャンセル中…</translation>
     </message>
     <message>
         <source>The export stopped without reporting a result.</source>
-        <translation type="unfinished" />
+        <translation>エクスポートは結果を報告せずに停止しました。</translation>
     </message>
     <message>
         <source>Resources Exported</source>
-        <translation type="unfinished" />
+        <translation>リソースをエクスポートしました</translation>
     </message>
     <message>
         <source>Resources written: %1 (%2)
 %3</source>
-        <translation type="unfinished" />
+        <translation>%1 件のリソースを書き出しました（%2）
+%3</translation>
     </message>
     <message>
         <source>Import Resources</source>
-        <translation type="unfinished" />
+        <translation>リソースをインポート</translation>
     </message>
     <message>
         <source>Resource bundles (*.zip);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>リソースバンドル (*.zip);;すべてのファイル (*)</translation>
     </message>
     <message>
         <source>That file is not a resource bundle Anki Miner can read.</source>
-        <translation type="unfinished" />
+        <translation>このファイルは Anki Miner が読み込めるリソースバンドルではありません。</translation>
     </message>
     <message>
         <source>This bundle holds %1 resources. Switch the mining language to %1, then import it again.</source>
-        <translation type="unfinished" />
+        <translation>このバンドルには %1 のリソースが含まれています。マイニング言語を %1 に切り替えてから、もう一度インポートしてください。</translation>
     </message>
     <message>
         <source>Nothing to Import</source>
-        <translation type="unfinished" />
+        <translation>インポートする内容はありません</translation>
     </message>
     <message>
         <source>You already have everything this bundle holds, so nothing was changed.</source>
-        <translation type="unfinished" />
+        <translation>このバンドルの内容はすべてインストール済みのため、何も変更されませんでした。</translation>
     </message>
     <message>
         <source>Choose what to install. Each dictionary and list is rebuilt from its original file, which can take several minutes for a large dictionary. New dictionaries go to the top of your list; the bundle's ignore list is added to yours; nothing you already have is replaced.</source>
-        <translation type="unfinished" />
+        <translation>インストールする項目を選択してください。各辞書とリストは元のファイルから再構築されるため、大きな辞書では数分かかることがあります。新しい辞書はリストの先頭に追加され、バンドルの無視リストはお使いの無視リストに追加されます。既存のものが置き換えられることはありません。</translation>
     </message>
     <message>
         <source>Import</source>
-        <translation type="unfinished" />
+        <translation>インポート</translation>
     </message>
     <message>
         <source>Importing resources…</source>
-        <translation type="unfinished" />
+        <translation>リソースをインポート中…</translation>
     </message>
     <message>
         <source>The resources could not be imported.</source>
-        <translation type="unfinished" />
+        <translation>リソースをインポートできませんでした。</translation>
     </message>
     <message>
         <source>The import stopped without reporting a result.</source>
-        <translation type="unfinished" />
+        <translation>インポートは結果を報告せずに停止しました。</translation>
     </message>
     <message>
         <source>The resources were installed, but your settings could not be updated to use them.</source>
-        <translation type="unfinished" />
+        <translation>リソースはインストールされましたが、それらを使用するように設定を更新できませんでした。</translation>
     </message>
     <message>
         <source>already installed</source>
-        <translation type="unfinished" />
+        <translation>インストール済み</translation>
     </message>
     <message>
         <source>you already use one</source>
-        <translation type="unfinished" />
+        <translation>すでに使用中のものがあります</translation>
     </message>
     <message>
         <source>None of the chosen resources could be installed.</source>
-        <translation type="unfinished" />
+        <translation>選択したリソースを 1 つもインストールできませんでした。</translation>
     </message>
     <message>
         <source>Installed:</source>
-        <translation type="unfinished" />
+        <translation>インストールしたもの:</translation>
     </message>
     <message>
         <source>Not installed:</source>
-        <translation type="unfinished" />
+        <translation>インストールされなかったもの:</translation>
     </message>
     <message>
         <source>The import was cancelled. What finished installing is kept.</source>
-        <translation type="unfinished" />
+        <translation>インポートはキャンセルされました。インストールが完了したものは保持されます。</translation>
     </message>
     <message>
         <source>Nothing was installed.</source>
-        <translation type="unfinished" />
+        <translation>何もインストールされませんでした。</translation>
     </message>
     <message>
         <source>Resources Imported</source>
-        <translation type="unfinished" />
+        <translation>リソースをインポートしました</translation>
     </message>
     <message>
         <source>Your ignore list (%1 new words)</source>
-        <translation type="unfinished" />
+        <translation>無視リスト（新しい単語 %1 語）</translation>
     </message>
     <message>
         <source>Blacklist</source>
-        <translation type="unfinished" />
+        <translation>ブラックリスト</translation>
     </message>
     <message>
         <source>Whitelist</source>
-        <translation type="unfinished" />
+        <translation>ホワイトリスト</translation>
     </message>
 </context><context>
     <name>ResourceChain</name>
@@ -9606,7 +9607,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Save this language's dictionaries, frequency and pitch lists, ignore list and word lists to one file.</source>
-        <translation type="unfinished" />
+        <translation>この言語の辞書、頻度リスト、ピッチリスト、無視リスト、単語リストを 1 つのファイルに保存します。</translation>
     </message>
     <message>
         <source>Export</source>
@@ -9614,7 +9615,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export your settings, or this language's resources, to a file.</source>
-        <translation type="unfinished" />
+        <translation>設定、またはこの言語のリソースをファイルにエクスポートします。</translation>
     </message>
     <message>
         <source>Apply settings from an exported file; anything not in the file is kept.</source>
@@ -9622,7 +9623,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Install resources from a bundle file. Nothing you already have is replaced.</source>
-        <translation type="unfinished" />
+        <translation>リソースバンドルファイルからリソースをインストールします。既存のものは置き換えられません。</translation>
     </message>
     <message>
         <source>Import</source>
@@ -9630,7 +9631,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Import settings, or resources, from a file.</source>
-        <translation type="unfinished" />
+        <translation>設定またはリソースをファイルからインポートします。</translation>
     </message>
     <message>
         <source>Cards</source>
@@ -9654,7 +9655,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Word Audio</source>
-        <translation type="unfinished" />
+        <translation>単語音声</translation>
     </message>
     <message>
         <source>Frequency</source>
@@ -9674,7 +9675,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Word Filters</source>
-        <translation type="unfinished" />
+        <translation>単語フィルター</translation>
     </message>
     <message>
         <source>Sentences</source>
@@ -9698,7 +9699,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>General</source>
-        <translation type="unfinished" />
+        <translation>一般</translation>
     </message>
     <message>
         <source>Keyboard</source>
@@ -9778,7 +9779,7 @@ A source that stopped working after an app upgrade is repaired by Reimport All, 
     </message>
     <message>
         <source>subtitle regex (Sentences)</source>
-        <translation type="unfinished" />
+        <translation>字幕の正規表現（文）</translation>
     </message>
     <message>
         <source>⚠ Saved — kept previous: %1</source>
@@ -10062,7 +10063,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>No subtitle lines to preview — check the filter in Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>プレビューする字幕行がありません — 設定 → 文のフィルターを確認してください。</translation>
     </message>
     <message>
         <source>The subtitles could not be read. Check the file format.</source>
@@ -11176,11 +11177,11 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Appearance</source>
-        <translation type="unfinished" />
+        <translation>外観</translation>
     </message>
     <message>
         <source>Scale the entire interface, including text size and font, plus spacing and controls. Applies after restart.</source>
-        <translation type="unfinished" />
+        <translation>テキストのサイズとフォント、間隔、コントロールを含むインターフェース全体を拡大縮小します。再起動後に適用されます。</translation>
     </message>
     <message>
         <source>Zoom</source>

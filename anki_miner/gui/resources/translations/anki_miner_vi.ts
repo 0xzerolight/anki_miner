@@ -331,7 +331,7 @@
     </message>
     <message>
         <source>Stores the word's pinyin reading. Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>Lưu cách đọc pinyin của từ. Để trống = bỏ qua.</translation>
     </message>
     <message>
         <source>Traditional Field</source>
@@ -483,7 +483,7 @@
     </message>
     <message>
         <source>Stores the jyutping reading. Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>Lưu cách đọc jyutping. Để trống = bỏ qua.</translation>
     </message>
     <message>
         <source>Transliteration Field</source>
@@ -511,7 +511,7 @@
     </message>
     <message>
         <source>Default http://127.0.0.1:8765. Change if AnkiConnect uses a different port.</source>
-        <translation type="unfinished" />
+        <translation>Mặc định http://127.0.0.1:8765. Thay đổi nếu AnkiConnect dùng cổng khác.</translation>
     </message>
     <message>
         <source>Card tags</source>
@@ -755,7 +755,7 @@
     </message>
     <message>
         <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Sentences). Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>Lưu dòng phụ đề ngôn ngữ thứ hai của câu (Video -&gt; Đơn lẻ, khi đã bật phụ đề ngôn ngữ thứ hai trong mục Câu). Để trống = bỏ qua.</translation>
     </message>
     <message>
         <source>Card Type</source>
@@ -815,7 +815,7 @@
     </message>
     <message>
         <source>Card Creation</source>
-        <translation type="unfinished" />
+        <translation>Tạo thẻ</translation>
     </message>
     <message>
         <source>Create cards in order of appearance</source>
@@ -1149,7 +1149,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <name>AudioPackSettingsPanel</name>
     <message>
         <source>Word Audio</source>
-        <translation type="unfinished" />
+        <translation>Âm thanh từ</translation>
     </message>
     <message>
         <source>Loading…</source>
@@ -1249,11 +1249,11 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>More</source>
-        <translation type="unfinished" />
+        <translation>Khác</translation>
     </message>
     <message>
         <source>More actions</source>
-        <translation type="unfinished" />
+        <translation>Thao tác khác</translation>
     </message>
     <message>
         <source>Audio Pack…</source>
@@ -1621,11 +1621,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Add to Queue</source>
-        <translation type="unfinished" />
+        <translation>Thêm vào hàng đợi</translation>
     </message>
     <message>
         <source>Add this folder pair to the queue below as a new series</source>
-        <translation type="unfinished" />
+        <translation>Thêm cặp thư mục này vào hàng đợi bên dưới như một series mới</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -2035,7 +2035,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Sentences.</source>
-        <translation type="unfinished" />
+        <translation>Tải thêm một tệp phụ đề bằng ngôn ngữ của bạn bên cạnh tệp phụ đề ngôn ngữ khai thác: phụ đề này hiển thị dưới dòng trong bản xem trước Word Curator và có thể được lưu vào trường Bản dịch. Ở Video -&gt; Hàng loạt, thay vào đó hãy trỏ nó tới một thư mục phụ đề bản dịch; chúng sẽ được ghép với video theo số tập. Bật tính năng này trong Cài đặt -&gt; Câu.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2407,19 +2407,19 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Set the alass binary (subtitle alignment)</source>
-        <translation type="unfinished" />
+        <translation>Đặt tệp nhị phân alass (căn chỉnh phụ đề)</translation>
     </message>
     <message>
         <source>Point alass, the subtitle re-timing tool, at a specific executable, or download it in-app (Linux/Windows; macOS installs it with Homebrew).</source>
-        <translation type="unfinished" />
+        <translation>Trỏ alass, công cụ chỉnh lại thời gian phụ đề, tới một tệp thực thi cụ thể, hoặc tải nó ngay trong ứng dụng (Linux/Windows; trên macOS cài đặt bằng Homebrew).</translation>
     </message>
     <message>
         <source>Export / import resources</source>
-        <translation type="unfinished" />
+        <translation>Xuất / nhập tài nguyên</translation>
     </message>
     <message>
         <source>Pack this language's dictionaries, frequency and pitch lists, ignore list and word lists into one file, and install them on another machine -- Export or Import, then Resources, in the Settings footer.</source>
-        <translation type="unfinished" />
+        <translation>Đóng gói từ điển, danh sách tần suất và trọng âm cao độ, danh sách bỏ qua và danh sách từ của ngôn ngữ này vào một tệp gói tài nguyên, rồi cài đặt chúng trên máy khác — Xuất hoặc Nhập, rồi Tài nguyên, ở chân trang Cài đặt.</translation>
     </message>
     <message>
         <source>Word pronunciation audio</source>
@@ -2531,7 +2531,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Cards &amp; Anki.</source>
-        <translation type="unfinished" />
+        <translation>Đưa pinyin của từ lên thẻ, mỗi âm tiết mang màu của thanh điệu — tùy chọn tô màu là Tô màu cách đọc theo thanh điệu, trong Cài đặt -&gt; Thẻ &amp; Anki.</translation>
     </message>
     <message>
         <source>Colour the reading by tone</source>
@@ -2539,7 +2539,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Cards &amp; Anki.</source>
-        <translation type="unfinished" />
+        <translation>Tô màu từng âm tiết của cách đọc pinyin hoặc jyutping theo thanh điệu, trong Cài đặt -&gt; Thẻ &amp; Anki.</translation>
     </message>
     <message>
         <source>Measure word field</source>
@@ -2583,11 +2583,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Themes, dark mode &amp; zoom</source>
-        <translation type="unfinished" />
+        <translation>Chủ đề, chế độ tối và thu phóng</translation>
     </message>
     <message>
         <source>Switch light/dark themes and adjust UI zoom.</source>
-        <translation type="unfinished" />
+        <translation>Chuyển đổi chủ đề sáng/tối và điều chỉnh mức thu phóng giao diện.</translation>
     </message>
     <message>
         <source>Change the app language</source>
@@ -2619,7 +2619,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
-        <translation type="unfinished" />
+        <translation>Ẩn các công cụ Tiện ích không dùng đến, hoặc hiện lại chúng, trong Cài đặt -&gt; Chung. Công cụ bị ẩn vẫn giữ mục của nó ở đây; nút Mở của nó dẫn tới ô đánh dấu đó.</translation>
     </message>
     <message>
         <source>Search the settings</source>
@@ -2643,7 +2643,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings -&gt; General.</source>
-        <translation type="unfinished" />
+        <translation>Kiểm tra phiên bản Anki Miner mới từ menu Trợ giúp, hoặc bật/tắt việc tự động kiểm tra khi khởi động trong Cài đặt -&gt; Chung.</translation>
     </message>
     <message>
         <source>Download videos or audio</source>
@@ -2659,7 +2659,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from its setup card on Utilities -&gt; Manga OCR.</source>
-        <translation type="unfinished" />
+        <translation>Chạy OCR tiếng Nhật của mokuro trên thư mục của một tập hoặc cả một bộ truyện để Đọc -&gt; Manga có thể khai thác. Cài đặt mokuro từ mục thiết lập của nó trong Tiện ích -&gt; Manga OCR.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -2675,7 +2675,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities -&gt; Card Backfill.</source>
-        <translation type="unfinished" />
+        <translation>Áp dụng lại kiểu định dạng Anki Miner mới nhất cho các thẻ đã khai thác trước đây — Tiện ích -&gt; Điền dữ liệu còn thiếu cho thẻ.</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -2845,7 +2845,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation type="unfinished" />
+        <translation>Thẻ bị ghi đè có thể cần dùng Tạo lại kiểu thẻ… để làm mới kiểu định dạng.</translation>
     </message>
     <message>
         <source>Scan Anki (read-only)</source>
@@ -2853,11 +2853,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Restyle cards…</source>
-        <translation type="unfinished" />
+        <translation>Tạo lại kiểu thẻ…</translation>
     </message>
     <message>
         <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation type="unfinished" />
+        <translation>Làm mới kiểu định dạng từ điển trên mọi thẻ thuộc loại ghi chú của bạn</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3731,7 +3731,7 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
     </message>
     <message>
         <source>Copy the worth-learning part of a premade deck into a new deck. Filters come from Settings → Word Filters; the source deck is not modified.</source>
-        <translation type="unfinished" />
+        <translation>Sao chép phần đáng học của một bộ thẻ dựng sẵn sang một bộ thẻ mới. Bộ lọc lấy từ Cài đặt → Bộ lọc từ; bộ thẻ nguồn không bị thay đổi.</translation>
     </message>
     <message>
         <source>Source deck:</source>
@@ -4257,11 +4257,11 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
     </message>
     <message>
         <source>More</source>
-        <translation type="unfinished" />
+        <translation>Khác</translation>
     </message>
     <message>
         <source>More actions</source>
-        <translation type="unfinished" />
+        <translation>Thao tác khác</translation>
     </message>
     <message>
         <source>%1 entries</source>
@@ -4707,7 +4707,7 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>Word-audio source is too slow — audio skipped; reorder or disable it in Settings → Word Audio.</source>
-        <translation type="unfinished" />
+        <translation>Nguồn âm thanh từ quá chậm — đã bỏ qua âm thanh; sắp xếp lại hoặc tắt nguồn này trong Cài đặt → Âm thanh từ.</translation>
     </message>
     <message>
         <source>Word-audio source connection/certificate failure — audio skipped this run, will retry next run</source>
@@ -5149,7 +5149,7 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>Word Filters</source>
-        <translation type="unfinished" />
+        <translation>Bộ lọc từ</translation>
     </message>
     <message>
         <source>Word Frequency</source>
@@ -5205,11 +5205,11 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>Keep words known after their cards are deleted</source>
-        <translation type="unfinished" />
+        <translation>Giữ từ ở trạng thái đã biết sau khi thẻ của chúng bị xóa</translation>
     </message>
     <message>
         <source>Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild forgets them.</source>
-        <translation type="unfinished" />
+        <translation>Từ vẫn được tính là đã biết sau khi thẻ Anki của chúng bị xóa hoặc chuyển sang bộ thẻ bị loại trừ. Xây dựng lại CSDL sẽ xóa chúng.</translation>
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -5305,15 +5305,15 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>Sentence Rule</source>
-        <translation type="unfinished" />
+        <translation>Quy tắc câu</translation>
     </message>
     <message>
         <source>Mine every unknown word</source>
-        <translation type="unfinished" />
+        <translation>Khai thác mọi từ chưa biết</translation>
     </message>
     <message>
         <source>One card per sentence</source>
-        <translation type="unfinished" />
+        <translation>Mỗi câu một thẻ</translation>
     </message>
     <message>
         <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped.</source>
@@ -5321,7 +5321,7 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
-        <translation type="unfinished" />
+        <translation>Chỉ câu i+1 (đúng một từ chưa biết)</translation>
     </message>
     <message>
         <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication.</source>
@@ -5353,7 +5353,7 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>Set either limit above 0 to turn the filter on.</source>
-        <translation type="unfinished" />
+        <translation>Đặt một trong hai giới hạn lớn hơn 0 để bật bộ lọc.</translation>
     </message>
     <message>
         <source> s</source>
@@ -5643,11 +5643,11 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>More</source>
-        <translation type="unfinished" />
+        <translation>Khác</translation>
     </message>
     <message>
         <source>More actions</source>
-        <translation type="unfinished" />
+        <translation>Thao tác khác</translation>
     </message>
     <message>
         <source>%1 entries</source>
@@ -5911,11 +5911,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Decks this language's known-words scan skips: %1. Change them in Settings → Word Filters.</source>
-        <translation type="unfinished" />
+        <translation>Các bộ thẻ mà lượt quét từ đã biết của ngôn ngữ này bỏ qua: %1. Thay đổi trong Cài đặt → Bộ lọc từ.</translation>
     </message>
     <message>
         <source>Every deck is scanned for this language, including decks in another language written in the same script. Exclude them in Settings → Word Filters.</source>
-        <translation type="unfinished" />
+        <translation>Mọi bộ thẻ đều được quét cho ngôn ngữ này, kể cả các bộ thẻ bằng ngôn ngữ khác dùng cùng loại chữ viết. Loại trừ chúng trong Cài đặt → Bộ lọc từ.</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -6347,7 +6347,7 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
     </message>
     <message>
         <source>Navigate between Video, Audiobooks, Reading, Analytics, Utilities, and Settings</source>
-        <translation type="unfinished" />
+        <translation>Điều hướng giữa Video, Sách nói, Đọc, Phân tích, Tiện ích và Cài đặt</translation>
     </message>
     <message>
         <source>Application Header</source>
@@ -6701,7 +6701,7 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>Sentence Audio</source>
-        <translation type="unfinished" />
+        <translation>Âm thanh câu</translation>
     </message>
     <message>
         <source>Audio Format</source>
@@ -6741,19 +6741,19 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>Google, then Papago</source>
-        <translation type="unfinished" />
+        <translation>Google, sau đó Papago</translation>
     </message>
     <message>
         <source>Google only</source>
-        <translation type="unfinished" />
+        <translation>Chỉ Google</translation>
     </message>
     <message>
         <source>Papago only</source>
-        <translation type="unfinished" />
+        <translation>Chỉ Papago</translation>
     </message>
     <message>
         <source>Spoken sentences for manga and books</source>
-        <translation type="unfinished" />
+        <translation>Câu được đọc thành tiếng cho manga và sách</translation>
     </message>
     <message>
         <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>
@@ -6761,7 +6761,7 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>Screenshot</source>
-        <translation type="unfinished" />
+        <translation>Ảnh chụp màn hình</translation>
     </message>
     <message>
         <source>Screenshot Offset</source>
@@ -6805,27 +6805,27 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>Small</source>
-        <translation type="unfinished" />
+        <translation>Nhỏ</translation>
     </message>
     <message>
         <source>Balanced</source>
-        <translation type="unfinished" />
+        <translation>Cân bằng</translation>
     </message>
     <message>
         <source>High</source>
-        <translation type="unfinished" />
+        <translation>Cao</translation>
     </message>
     <message>
         <source>Frame rate, height and quality for the animated clip.</source>
-        <translation type="unfinished" />
+        <translation>Tốc độ khung hình, chiều cao và chất lượng của đoạn clip động.</translation>
     </message>
     <message>
         <source>Size</source>
-        <translation type="unfinished" />
+        <translation>Kích thước</translation>
     </message>
     <message>
         <source>Custom (%1 fps · %2 px · quality %3)</source>
-        <translation type="unfinished" />
+        <translation>Tùy chỉnh (%1 fps · %2 px · chất lượng %3)</translation>
     </message>
 </context><context>
     <name>MiniJobMonitor</name>
@@ -6879,7 +6879,7 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>Switching swaps dictionaries, filters, deck and card fields to that language's own settings. The interface language is separate (Settings → General).</source>
-        <translation type="unfinished" />
+        <translation>Việc chuyển đổi sẽ thay từ điển, bộ lọc, bộ thẻ và trường thẻ bằng cài đặt riêng của ngôn ngữ đó. Ngôn ngữ giao diện là thiết lập riêng (Cài đặt → Chung).</translation>
     </message>
     <message>
         <source>Script Variants</source>
@@ -7065,7 +7065,7 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>mokuro not found. Install it in the Manga OCR setup section below, or set its path there.</source>
-        <translation type="unfinished" />
+        <translation>Không tìm thấy mokuro. Hãy cài đặt trong mục thiết lập Manga OCR bên dưới, hoặc đặt đường dẫn của nó tại đó.</translation>
     </message>
     <message>
         <source>Run mokuro's OCR on a folder of page images, or a series folder of volumes. Each volume gets a .mokuro file beside it for Reading → Manga.</source>
@@ -7081,11 +7081,11 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>Manga OCR setup</source>
-        <translation type="unfinished" />
+        <translation>Thiết lập Manga OCR</translation>
     </message>
     <message>
         <source>mokuro executable:</source>
-        <translation type="unfinished" />
+        <translation>Tệp thực thi mokuro:</translation>
     </message>
     <message>
         <source>Optional: path to the mokuro executable</source>
@@ -7509,11 +7509,11 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>More</source>
-        <translation type="unfinished" />
+        <translation>Khác</translation>
     </message>
     <message>
         <source>More actions</source>
-        <translation type="unfinished" />
+        <translation>Thao tác khác</translation>
     </message>
     <message>
         <source>%1 entries</source>
@@ -8679,202 +8679,203 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <name>ResourceBundleDialog</name>
     <message>
         <source>Dictionaries</source>
-        <translation type="unfinished">Từ điển</translation>
+        <translation>Từ điển</translation>
     </message>
     <message>
         <source>Frequency lists</source>
-        <translation type="unfinished">Danh sách tần suất</translation>
+        <translation>Danh sách tần suất</translation>
     </message>
     <message>
         <source>Pitch accent</source>
-        <translation type="unfinished">Trọng âm cao độ</translation>
+        <translation>Trọng âm cao độ</translation>
     </message>
     <message>
         <source>Known words</source>
-        <translation type="unfinished" />
+        <translation>Từ đã biết</translation>
     </message>
     <message>
         <source>Word lists</source>
-        <translation type="unfinished" />
+        <translation>Danh sách từ</translation>
     </message>
     <message>
         <source>Known-words ignore list</source>
-        <translation type="unfinished" />
+        <translation>Danh sách bỏ qua từ đã biết</translation>
     </message>
     <message>
         <source>Blacklist</source>
-        <translation type="unfinished" />
+        <translation>Danh sách đen</translation>
     </message>
     <message>
         <source>Whitelist</source>
-        <translation type="unfinished" />
+        <translation>Danh sách trắng</translation>
     </message>
 </context><context>
     <name>ResourceBundleFlow</name>
     <message>
         <source>Your installed resources could not be checked.</source>
-        <translation type="unfinished" />
+        <translation>Không thể kiểm tra các tài nguyên đã cài đặt.</translation>
     </message>
     <message>
         <source>Nothing to Export</source>
-        <translation type="unfinished" />
+        <translation>Không có gì để xuất</translation>
     </message>
     <message>
         <source>Your %1 setup has no dictionary, frequency or pitch list, ignore list or word list that can be exported.</source>
-        <translation type="unfinished" />
+        <translation>Thiết lập %1 hiện không có từ điển, danh sách tần suất hay trọng âm cao độ, danh sách bỏ qua hoặc danh sách từ nào có thể xuất.</translation>
     </message>
     <message>
         <source>Export Resources</source>
-        <translation type="unfinished" />
+        <translation>Xuất tài nguyên</translation>
     </message>
     <message>
         <source>Choose what goes into the %1 resource bundle. Dictionaries and lists travel as their original files and are rebuilt when the bundle is imported.</source>
-        <translation type="unfinished" />
+        <translation>Chọn nội dung đưa vào gói tài nguyên %1. Từ điển và danh sách được đóng gói dưới dạng tệp gốc và sẽ được xây dựng lại khi nhập gói tài nguyên.</translation>
     </message>
     <message>
         <source>Export…</source>
-        <translation type="unfinished">Xuất…</translation>
+        <translation>Xuất…</translation>
     </message>
     <message>
         <source>Resource bundles (*.zip)</source>
-        <translation type="unfinished" />
+        <translation>Gói tài nguyên (*.zip)</translation>
     </message>
     <message>
         <source>no original file was kept; add it again from its file to include it</source>
-        <translation type="unfinished" />
+        <translation>không còn giữ tệp gốc; hãy thêm lại từ tệp gốc để đưa vào gói</translation>
     </message>
     <message>
         <source>imported for another mining language</source>
-        <translation type="unfinished" />
+        <translation>đã nhập cho một ngôn ngữ khai thác khác</translation>
     </message>
     <message>
         <source>%1 words</source>
-        <translation type="unfinished" />
+        <translation>%1 từ</translation>
     </message>
     <message>
         <source>Exporting resources…</source>
-        <translation type="unfinished" />
+        <translation>Đang xuất tài nguyên…</translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Hủy</translation>
+        <translation>Hủy</translation>
     </message>
     <message>
         <source>The resources could not be exported.</source>
-        <translation type="unfinished" />
+        <translation>Không thể xuất tài nguyên.</translation>
     </message>
     <message>
         <source>A resource export or import is still finishing. Try again in a moment.</source>
-        <translation type="unfinished" />
+        <translation>Một lượt xuất hoặc nhập tài nguyên vẫn đang hoàn tất. Hãy thử lại sau giây lát.</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Đang hủy…</translation>
+        <translation>Đang hủy…</translation>
     </message>
     <message>
         <source>The export stopped without reporting a result.</source>
-        <translation type="unfinished" />
+        <translation>Quá trình xuất đã dừng mà không báo kết quả.</translation>
     </message>
     <message>
         <source>Resources Exported</source>
-        <translation type="unfinished" />
+        <translation>Đã xuất tài nguyên</translation>
     </message>
     <message>
         <source>Resources written: %1 (%2)
 %3</source>
-        <translation type="unfinished" />
+        <translation>Đã ghi tài nguyên: %1 (%2)
+%3</translation>
     </message>
     <message>
         <source>Import Resources</source>
-        <translation type="unfinished" />
+        <translation>Nhập tài nguyên</translation>
     </message>
     <message>
         <source>Resource bundles (*.zip);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Gói tài nguyên (*.zip);;Tất cả tệp (*)</translation>
     </message>
     <message>
         <source>That file is not a resource bundle Anki Miner can read.</source>
-        <translation type="unfinished" />
+        <translation>Tệp đó không phải là gói tài nguyên mà Anki Miner có thể đọc.</translation>
     </message>
     <message>
         <source>This bundle holds %1 resources. Switch the mining language to %1, then import it again.</source>
-        <translation type="unfinished" />
+        <translation>Gói tài nguyên này chứa tài nguyên %1. Hãy chuyển ngôn ngữ khai thác sang %1, rồi nhập lại.</translation>
     </message>
     <message>
         <source>Nothing to Import</source>
-        <translation type="unfinished" />
+        <translation>Không có gì để nhập</translation>
     </message>
     <message>
         <source>You already have everything this bundle holds, so nothing was changed.</source>
-        <translation type="unfinished" />
+        <translation>Mọi thứ trong gói tài nguyên này đều đã có sẵn, nên không có gì thay đổi.</translation>
     </message>
     <message>
         <source>Choose what to install. Each dictionary and list is rebuilt from its original file, which can take several minutes for a large dictionary. New dictionaries go to the top of your list; the bundle's ignore list is added to yours; nothing you already have is replaced.</source>
-        <translation type="unfinished" />
+        <translation>Chọn nội dung cần cài đặt. Mỗi từ điển và danh sách được xây dựng lại từ tệp gốc, việc này có thể mất vài phút với từ điển lớn. Từ điển mới được đặt lên đầu danh sách; danh sách bỏ qua của gói tài nguyên được thêm vào danh sách hiện có; không có gì đang có bị thay thế.</translation>
     </message>
     <message>
         <source>Import</source>
-        <translation type="unfinished" />
+        <translation>Nhập</translation>
     </message>
     <message>
         <source>Importing resources…</source>
-        <translation type="unfinished" />
+        <translation>Đang nhập tài nguyên…</translation>
     </message>
     <message>
         <source>The resources could not be imported.</source>
-        <translation type="unfinished" />
+        <translation>Không thể nhập tài nguyên.</translation>
     </message>
     <message>
         <source>The import stopped without reporting a result.</source>
-        <translation type="unfinished" />
+        <translation>Quá trình nhập đã dừng mà không báo kết quả.</translation>
     </message>
     <message>
         <source>The resources were installed, but your settings could not be updated to use them.</source>
-        <translation type="unfinished" />
+        <translation>Đã cài đặt tài nguyên, nhưng không thể cập nhật cài đặt để sử dụng chúng.</translation>
     </message>
     <message>
         <source>already installed</source>
-        <translation type="unfinished" />
+        <translation>đã được cài đặt</translation>
     </message>
     <message>
         <source>you already use one</source>
-        <translation type="unfinished" />
+        <translation>đã có danh sách đang dùng</translation>
     </message>
     <message>
         <source>None of the chosen resources could be installed.</source>
-        <translation type="unfinished" />
+        <translation>Không thể cài đặt tài nguyên nào trong số đã chọn.</translation>
     </message>
     <message>
         <source>Installed:</source>
-        <translation type="unfinished" />
+        <translation>Đã cài đặt:</translation>
     </message>
     <message>
         <source>Not installed:</source>
-        <translation type="unfinished" />
+        <translation>Chưa cài đặt:</translation>
     </message>
     <message>
         <source>The import was cancelled. What finished installing is kept.</source>
-        <translation type="unfinished" />
+        <translation>Đã hủy quá trình nhập. Những gì đã cài đặt xong được giữ lại.</translation>
     </message>
     <message>
         <source>Nothing was installed.</source>
-        <translation type="unfinished" />
+        <translation>Không có gì được cài đặt.</translation>
     </message>
     <message>
         <source>Resources Imported</source>
-        <translation type="unfinished" />
+        <translation>Đã nhập tài nguyên</translation>
     </message>
     <message>
         <source>Your ignore list (%1 new words)</source>
-        <translation type="unfinished" />
+        <translation>Danh sách bỏ qua của bạn (%1 từ mới)</translation>
     </message>
     <message>
         <source>Blacklist</source>
-        <translation type="unfinished" />
+        <translation>Danh sách đen</translation>
     </message>
     <message>
         <source>Whitelist</source>
-        <translation type="unfinished" />
+        <translation>Danh sách trắng</translation>
     </message>
 </context><context>
     <name>ResourceChain</name>
@@ -9606,7 +9607,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Save this language's dictionaries, frequency and pitch lists, ignore list and word lists to one file.</source>
-        <translation type="unfinished" />
+        <translation>Lưu từ điển, danh sách tần suất và trọng âm cao độ, danh sách bỏ qua và danh sách từ của ngôn ngữ này vào một tệp.</translation>
     </message>
     <message>
         <source>Export</source>
@@ -9614,7 +9615,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Export your settings, or this language's resources, to a file.</source>
-        <translation type="unfinished" />
+        <translation>Xuất cài đặt, hoặc tài nguyên của ngôn ngữ này, ra một tệp.</translation>
     </message>
     <message>
         <source>Apply settings from an exported file; anything not in the file is kept.</source>
@@ -9622,7 +9623,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Install resources from a bundle file. Nothing you already have is replaced.</source>
-        <translation type="unfinished" />
+        <translation>Cài đặt tài nguyên từ một tệp gói tài nguyên. Không có gì đang có bị thay thế.</translation>
     </message>
     <message>
         <source>Import</source>
@@ -9630,7 +9631,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Import settings, or resources, from a file.</source>
-        <translation type="unfinished" />
+        <translation>Nhập cài đặt, hoặc tài nguyên, từ một tệp.</translation>
     </message>
     <message>
         <source>Cards</source>
@@ -9654,7 +9655,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Word Audio</source>
-        <translation type="unfinished" />
+        <translation>Âm thanh từ</translation>
     </message>
     <message>
         <source>Frequency</source>
@@ -9674,7 +9675,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Word Filters</source>
-        <translation type="unfinished" />
+        <translation>Bộ lọc từ</translation>
     </message>
     <message>
         <source>Sentences</source>
@@ -9698,7 +9699,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>General</source>
-        <translation type="unfinished" />
+        <translation>Chung</translation>
     </message>
     <message>
         <source>Keyboard</source>
@@ -9778,7 +9779,7 @@ Nguồn không còn hoạt động sau khi ứng dụng nâng cấp được s�
     </message>
     <message>
         <source>subtitle regex (Sentences)</source>
-        <translation type="unfinished" />
+        <translation>regex phụ đề (Câu)</translation>
     </message>
     <message>
         <source>⚠ Saved — kept previous: %1</source>
@@ -10062,7 +10063,7 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     </message>
     <message>
         <source>No subtitle lines to preview — check the filter in Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>Không có dòng phụ đề nào để xem trước — hãy kiểm tra bộ lọc trong Cài đặt → Câu.</translation>
     </message>
     <message>
         <source>The subtitles could not be read. Check the file format.</source>
@@ -11176,11 +11177,11 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     </message>
     <message>
         <source>Appearance</source>
-        <translation type="unfinished" />
+        <translation>Giao diện</translation>
     </message>
     <message>
         <source>Scale the entire interface, including text size and font, plus spacing and controls. Applies after restart.</source>
-        <translation type="unfinished" />
+        <translation>Thay đổi tỷ lệ toàn bộ giao diện, bao gồm cỡ chữ và phông chữ, cùng khoảng cách và các điều khiển. Áp dụng sau khi khởi động lại.</translation>
     </message>
     <message>
         <source>Zoom</source>

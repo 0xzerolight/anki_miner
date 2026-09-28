@@ -334,7 +334,7 @@
     </message>
     <message>
         <source>Stores the word's pinyin reading. Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>Speichert die Pinyin-Lesung des Wortes. Leer = überspringen.</translation>
     </message>
     <message>
         <source>Traditional Field</source>
@@ -486,7 +486,7 @@
     </message>
     <message>
         <source>Stores the jyutping reading. Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>Speichert die Jyutping-Lesung. Leer = überspringen.</translation>
     </message>
     <message>
         <source>Transliteration Field</source>
@@ -514,7 +514,7 @@
     </message>
     <message>
         <source>Default http://127.0.0.1:8765. Change if AnkiConnect uses a different port.</source>
-        <translation type="unfinished" />
+        <translation>Standard: http://127.0.0.1:8765. Ändern Sie dies, wenn AnkiConnect einen anderen Port verwendet.</translation>
     </message>
     <message>
         <source>Card tags</source>
@@ -758,7 +758,7 @@
     </message>
     <message>
         <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Sentences). Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>Speichert die zweitsprachige Untertitelzeile zum Satz (Video -&gt; Einzeln, mit aktivierten zweitsprachigen Untertiteln unter Sätze). Leer = überspringen.</translation>
     </message>
     <message>
         <source>Card Type</source>
@@ -818,7 +818,7 @@
     </message>
     <message>
         <source>Card Creation</source>
-        <translation type="unfinished" />
+        <translation>Kartenerstellung</translation>
     </message>
     <message>
         <source>Create cards in order of appearance</source>
@@ -1152,7 +1152,7 @@ Unterstützte Formate: AJT (index.json + media/), NHK16 (entries.json + audio/),
     <name>AudioPackSettingsPanel</name>
     <message>
         <source>Word Audio</source>
-        <translation type="unfinished" />
+        <translation>Wort-Audio</translation>
     </message>
     <message>
         <source>Loading…</source>
@@ -1252,11 +1252,11 @@ Unterstützte Formate: AJT (index.json + media/), NHK16 (entries.json + audio/),
     </message>
     <message>
         <source>More</source>
-        <translation type="unfinished" />
+        <translation>Mehr</translation>
     </message>
     <message>
         <source>More actions</source>
-        <translation type="unfinished" />
+        <translation>Weitere Aktionen</translation>
     </message>
     <message>
         <source>Audio Pack…</source>
@@ -1624,11 +1624,11 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Add to Queue</source>
-        <translation type="unfinished" />
+        <translation>Zur Warteschlange hinzufügen</translation>
     </message>
     <message>
         <source>Add this folder pair to the queue below as a new series</source>
-        <translation type="unfinished" />
+        <translation>Dieses Ordnerpaar als neue Serie zur Warteschlange unten hinzufügen</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -2039,7 +2039,7 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Sentences.</source>
-        <translation type="unfinished" />
+        <translation>Eine zweite Untertiteldatei in Ihrer eigenen Sprache neben der Datei in der Mining-Sprache laden: Sie erscheint in der Vorschau des Wort-Kurators unter der Zeile und kann in einem Übersetzungsfeld gespeichert werden. Unter Video -&gt; Stapel wählen Sie stattdessen einen Ordner mit Übersetzungsuntertiteln; diese werden den Videos anhand der Folgennummer zugeordnet. Aktivieren Sie dies unter Einstellungen -&gt; Sätze.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2411,19 +2411,19 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Set the alass binary (subtitle alignment)</source>
-        <translation type="unfinished" />
+        <translation>alass-Binärdatei festlegen (Untertitel-Ausrichtung)</translation>
     </message>
     <message>
         <source>Point alass, the subtitle re-timing tool, at a specific executable, or download it in-app (Linux/Windows; macOS installs it with Homebrew).</source>
-        <translation type="unfinished" />
+        <translation>alass, das Werkzeug zur Neutaktung von Untertiteln, auf eine bestimmte ausführbare Datei verweisen oder es in der App herunterladen (Linux/Windows; unter macOS wird es mit Homebrew installiert).</translation>
     </message>
     <message>
         <source>Export / import resources</source>
-        <translation type="unfinished" />
+        <translation>Ressourcen exportieren / importieren</translation>
     </message>
     <message>
         <source>Pack this language's dictionaries, frequency and pitch lists, ignore list and word lists into one file, and install them on another machine -- Export or Import, then Resources, in the Settings footer.</source>
-        <translation type="unfinished" />
+        <translation>Die Wörterbücher, Häufigkeits- und Tonhöhenlisten, die Ignorierliste und die Wortlisten dieser Sprache in eine Datei (ein Ressourcenpaket) packen und auf einem anderen Rechner installieren — Exportieren oder Importieren, dann Ressourcen, in der Fußzeile der Einstellungen.</translation>
     </message>
     <message>
         <source>Word pronunciation audio</source>
@@ -2535,7 +2535,7 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Cards &amp; Anki.</source>
-        <translation type="unfinished" />
+        <translation>Die Pinyin-Lesung des Wortes auf Ihre Karten setzen, jede Silbe in der Farbe ihres Tons — die Einfärbung ist „Lesung nach Ton einfärben“ unter Einstellungen -&gt; Karten &amp; Anki.</translation>
     </message>
     <message>
         <source>Colour the reading by tone</source>
@@ -2543,7 +2543,7 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Cards &amp; Anki.</source>
-        <translation type="unfinished" />
+        <translation>Jede Silbe der Pinyin- oder Jyutping-Lesung nach ihrem Ton einfärben, unter Einstellungen -&gt; Karten &amp; Anki.</translation>
     </message>
     <message>
         <source>Measure word field</source>
@@ -2587,11 +2587,11 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Themes, dark mode &amp; zoom</source>
-        <translation type="unfinished" />
+        <translation>Designs, Dunkelmodus &amp; Zoom</translation>
     </message>
     <message>
         <source>Switch light/dark themes and adjust UI zoom.</source>
-        <translation type="unfinished" />
+        <translation>Zwischen hellen und dunklen Designs wechseln und den Zoom der Oberfläche anpassen.</translation>
     </message>
     <message>
         <source>Change the app language</source>
@@ -2623,7 +2623,7 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
-        <translation type="unfinished" />
+        <translation>Nicht genutzte Werkzeuge im Tab Werkzeuge ausblenden oder wieder einblenden, unter Einstellungen -&gt; Allgemein. Ein ausgeblendetes Werkzeug behält hier seinen Eintrag; seine Schaltfläche „Öffnen“ führt zu diesem Kontrollkästchen.</translation>
     </message>
     <message>
         <source>Search the settings</source>
@@ -2647,7 +2647,7 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings -&gt; General.</source>
-        <translation type="unfinished" />
+        <translation>Über das Hilfe-Menü nach einer neuen Version von Anki Miner suchen oder die automatische Prüfung beim Start unter Einstellungen -&gt; Allgemein ein- oder ausschalten.</translation>
     </message>
     <message>
         <source>Download videos or audio</source>
@@ -2663,7 +2663,7 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from its setup card on Utilities -&gt; Manga OCR.</source>
-        <translation type="unfinished" />
+        <translation>mokuros japanische OCR auf einen Bandordner oder eine ganze Serie anwenden, damit Lesen -&gt; Manga daraus sammeln kann. Installieren Sie mokuro über seine Einrichtungskarte unter Werkzeuge -&gt; Manga-OCR.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -2679,7 +2679,7 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities -&gt; Card Backfill.</source>
-        <translation type="unfinished" />
+        <translation>Die aktuelle Anki-Miner-Gestaltung erneut auf früher gesammelte Karten anwenden — Werkzeuge -&gt; Karten-Nachbefüllung.</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -2849,7 +2849,7 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation type="unfinished" />
+        <translation>Überschriebene Karten benötigen eventuell „Karten neu gestalten…“, um ihre Gestaltung zu aktualisieren.</translation>
     </message>
     <message>
         <source>Scan Anki (read-only)</source>
@@ -2857,11 +2857,11 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Restyle cards…</source>
-        <translation type="unfinished" />
+        <translation>Karten neu gestalten…</translation>
     </message>
     <message>
         <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation type="unfinished" />
+        <translation>Die Wörterbuch-Gestaltung auf jeder Karte Ihres Notiztyps aktualisieren</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3736,7 +3736,7 @@ Zu ändernde Notizen: {notes}; zu ändernde Felder: {fields}. Die betroffenen No
     </message>
     <message>
         <source>Copy the worth-learning part of a premade deck into a new deck. Filters come from Settings → Word Filters; the source deck is not modified.</source>
-        <translation type="unfinished" />
+        <translation>Den lernenswerten Teil eines vorgefertigten Stapels in einen neuen Stapel kopieren. Die Filter stammen aus Einstellungen → Wortfilter; der Quellstapel wird nicht verändert.</translation>
     </message>
     <message>
         <source>Source deck:</source>
@@ -4262,11 +4262,11 @@ Zu ändernde Notizen: {notes}; zu ändernde Felder: {fields}. Die betroffenen No
     </message>
     <message>
         <source>More</source>
-        <translation type="unfinished" />
+        <translation>Mehr</translation>
     </message>
     <message>
         <source>More actions</source>
-        <translation type="unfinished" />
+        <translation>Weitere Aktionen</translation>
     </message>
     <message>
         <source>%1 entries</source>
@@ -4712,7 +4712,7 @@ Es werden keine Dateien von der Festplatte gelöscht.</translation>
     </message>
     <message>
         <source>Word-audio source is too slow — audio skipped; reorder or disable it in Settings → Word Audio.</source>
-        <translation type="unfinished" />
+        <translation>Wort-Audio-Quelle ist zu langsam — Audio übersprungen; ändern Sie ihre Reihenfolge oder deaktivieren Sie sie unter Einstellungen → Wort-Audio.</translation>
     </message>
     <message>
         <source>Word-audio source connection/certificate failure — audio skipped this run, will retry next run</source>
@@ -5165,7 +5165,7 @@ Es werden keine Dateien von der Festplatte gelöscht.</translation>
     </message>
     <message>
         <source>Word Filters</source>
-        <translation type="unfinished" />
+        <translation>Wortfilter</translation>
     </message>
     <message>
         <source>Word Frequency</source>
@@ -5221,11 +5221,11 @@ Es werden keine Dateien von der Festplatte gelöscht.</translation>
     </message>
     <message>
         <source>Keep words known after their cards are deleted</source>
-        <translation type="unfinished" />
+        <translation>Wörter nach dem Löschen ihrer Karten als bekannt behalten</translation>
     </message>
     <message>
         <source>Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild forgets them.</source>
-        <translation type="unfinished" />
+        <translation>Wörter bleiben bekannt, nachdem ihre Anki-Karten gelöscht oder in einen ausgeschlossenen Stapel verschoben wurden. Beim Neuaufbau werden sie vergessen.</translation>
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -5321,15 +5321,15 @@ Es werden keine Dateien von der Festplatte gelöscht.</translation>
     </message>
     <message>
         <source>Sentence Rule</source>
-        <translation type="unfinished" />
+        <translation>Satzregel</translation>
     </message>
     <message>
         <source>Mine every unknown word</source>
-        <translation type="unfinished" />
+        <translation>Jedes unbekannte Wort sammeln</translation>
     </message>
     <message>
         <source>One card per sentence</source>
-        <translation type="unfinished" />
+        <translation>Eine Karte pro Satz</translation>
     </message>
     <message>
         <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped.</source>
@@ -5337,7 +5337,7 @@ Es werden keine Dateien von der Festplatte gelöscht.</translation>
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
-        <translation type="unfinished" />
+        <translation>Nur i+1-Sätze (genau ein unbekanntes Wort)</translation>
     </message>
     <message>
         <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication.</source>
@@ -5369,7 +5369,7 @@ Es werden keine Dateien von der Festplatte gelöscht.</translation>
     </message>
     <message>
         <source>Set either limit above 0 to turn the filter on.</source>
-        <translation type="unfinished" />
+        <translation>Setzen Sie einen der beiden Grenzwerte über 0, um den Filter zu aktivieren.</translation>
     </message>
     <message>
         <source> s</source>
@@ -5659,11 +5659,11 @@ Es werden keine Dateien von der Festplatte gelöscht.</translation>
     </message>
     <message>
         <source>More</source>
-        <translation type="unfinished" />
+        <translation>Mehr</translation>
     </message>
     <message>
         <source>More actions</source>
-        <translation type="unfinished" />
+        <translation>Weitere Aktionen</translation>
     </message>
     <message>
         <source>%1 entries</source>
@@ -5927,11 +5927,11 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Decks this language's known-words scan skips: %1. Change them in Settings → Word Filters.</source>
-        <translation type="unfinished" />
+        <translation>Stapel, die die Suche nach bekannten Wörtern für diese Sprache überspringt: %1. Ändern Sie sie unter Einstellungen → Wortfilter.</translation>
     </message>
     <message>
         <source>Every deck is scanned for this language, including decks in another language written in the same script. Exclude them in Settings → Word Filters.</source>
-        <translation type="unfinished" />
+        <translation>Für diese Sprache wird jeder Stapel durchsucht, auch Stapel in einer anderen Sprache mit derselben Schrift. Schließen Sie sie unter Einstellungen → Wortfilter aus.</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -6364,7 +6364,7 @@ Hinzuzufügende Wörter: %3. Fortfahren?</translation>
     </message>
     <message>
         <source>Navigate between Video, Audiobooks, Reading, Analytics, Utilities, and Settings</source>
-        <translation type="unfinished" />
+        <translation>Zwischen Video, Hörbücher, Lesen, Analytik, Werkzeuge und Einstellungen wechseln</translation>
     </message>
     <message>
         <source>Application Header</source>
@@ -6718,7 +6718,7 @@ Fortfahren?</translation>
     </message>
     <message>
         <source>Sentence Audio</source>
-        <translation type="unfinished" />
+        <translation>Satz-Audio</translation>
     </message>
     <message>
         <source>Audio Format</source>
@@ -6758,19 +6758,19 @@ Fortfahren?</translation>
     </message>
     <message>
         <source>Google, then Papago</source>
-        <translation type="unfinished" />
+        <translation>Google, dann Papago</translation>
     </message>
     <message>
         <source>Google only</source>
-        <translation type="unfinished" />
+        <translation>Nur Google</translation>
     </message>
     <message>
         <source>Papago only</source>
-        <translation type="unfinished" />
+        <translation>Nur Papago</translation>
     </message>
     <message>
         <source>Spoken sentences for manga and books</source>
-        <translation type="unfinished" />
+        <translation>Gesprochene Sätze für Manga und Bücher</translation>
     </message>
     <message>
         <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>
@@ -6778,7 +6778,7 @@ Fortfahren?</translation>
     </message>
     <message>
         <source>Screenshot</source>
-        <translation type="unfinished" />
+        <translation>Screenshot</translation>
     </message>
     <message>
         <source>Screenshot Offset</source>
@@ -6822,27 +6822,27 @@ Fortfahren?</translation>
     </message>
     <message>
         <source>Small</source>
-        <translation type="unfinished" />
+        <translation>Klein</translation>
     </message>
     <message>
         <source>Balanced</source>
-        <translation type="unfinished" />
+        <translation>Ausgewogen</translation>
     </message>
     <message>
         <source>High</source>
-        <translation type="unfinished" />
+        <translation>Hoch</translation>
     </message>
     <message>
         <source>Frame rate, height and quality for the animated clip.</source>
-        <translation type="unfinished" />
+        <translation>Bildrate, Höhe und Qualität des animierten Clips.</translation>
     </message>
     <message>
         <source>Size</source>
-        <translation type="unfinished" />
+        <translation>Größe</translation>
     </message>
     <message>
         <source>Custom (%1 fps · %2 px · quality %3)</source>
-        <translation type="unfinished" />
+        <translation>Benutzerdefiniert (%1 fps · %2 px · Qualität %3)</translation>
     </message>
 </context><context>
     <name>MiniJobMonitor</name>
@@ -6896,7 +6896,7 @@ Fortfahren?</translation>
     </message>
     <message>
         <source>Switching swaps dictionaries, filters, deck and card fields to that language's own settings. The interface language is separate (Settings → General).</source>
-        <translation type="unfinished" />
+        <translation>Beim Wechsel werden Wörterbücher, Filter, Stapel und Kartenfelder auf die eigenen Einstellungen dieser Sprache umgestellt. Die Oberflächensprache ist davon getrennt (Einstellungen → Allgemein).</translation>
     </message>
     <message>
         <source>Script Variants</source>
@@ -7082,7 +7082,7 @@ Fortfahren?</translation>
     </message>
     <message>
         <source>mokuro not found. Install it in the Manga OCR setup section below, or set its path there.</source>
-        <translation type="unfinished" />
+        <translation>mokuro nicht gefunden. Installieren Sie es unten im Bereich Manga-OCR-Einrichtung oder legen Sie dort seinen Pfad fest.</translation>
     </message>
     <message>
         <source>Run mokuro's OCR on a folder of page images, or a series folder of volumes. Each volume gets a .mokuro file beside it for Reading → Manga.</source>
@@ -7098,11 +7098,11 @@ Fortfahren?</translation>
     </message>
     <message>
         <source>Manga OCR setup</source>
-        <translation type="unfinished" />
+        <translation>Manga-OCR-Einrichtung</translation>
     </message>
     <message>
         <source>mokuro executable:</source>
-        <translation type="unfinished" />
+        <translation>Ausführbare mokuro-Datei:</translation>
     </message>
     <message>
         <source>Optional: path to the mokuro executable</source>
@@ -7526,11 +7526,11 @@ Fortfahren?</translation>
     </message>
     <message>
         <source>More</source>
-        <translation type="unfinished" />
+        <translation>Mehr</translation>
     </message>
     <message>
         <source>More actions</source>
-        <translation type="unfinished" />
+        <translation>Weitere Aktionen</translation>
     </message>
     <message>
         <source>%1 entries</source>
@@ -8697,202 +8697,203 @@ Es werden keine Indexdateien gelöscht.</translation>
     <name>ResourceBundleDialog</name>
     <message>
         <source>Dictionaries</source>
-        <translation type="unfinished">Wörterbücher</translation>
+        <translation>Wörterbücher</translation>
     </message>
     <message>
         <source>Frequency lists</source>
-        <translation type="unfinished">Häufigkeitslisten</translation>
+        <translation>Häufigkeitslisten</translation>
     </message>
     <message>
         <source>Pitch accent</source>
-        <translation type="unfinished">Tonhöhenakzent</translation>
+        <translation>Tonhöhenakzent</translation>
     </message>
     <message>
         <source>Known words</source>
-        <translation type="unfinished" />
+        <translation>Bekannte Wörter</translation>
     </message>
     <message>
         <source>Word lists</source>
-        <translation type="unfinished" />
+        <translation>Wortlisten</translation>
     </message>
     <message>
         <source>Known-words ignore list</source>
-        <translation type="unfinished" />
+        <translation>Ignorierliste bekannter Wörter</translation>
     </message>
     <message>
         <source>Blacklist</source>
-        <translation type="unfinished" />
+        <translation>Blacklist</translation>
     </message>
     <message>
         <source>Whitelist</source>
-        <translation type="unfinished" />
+        <translation>Whitelist</translation>
     </message>
 </context><context>
     <name>ResourceBundleFlow</name>
     <message>
         <source>Your installed resources could not be checked.</source>
-        <translation type="unfinished" />
+        <translation>Ihre installierten Ressourcen konnten nicht geprüft werden.</translation>
     </message>
     <message>
         <source>Nothing to Export</source>
-        <translation type="unfinished" />
+        <translation>Nichts zu exportieren</translation>
     </message>
     <message>
         <source>Your %1 setup has no dictionary, frequency or pitch list, ignore list or word list that can be exported.</source>
-        <translation type="unfinished" />
+        <translation>Ihre Einrichtung für %1 enthält kein Wörterbuch, keine Häufigkeits- oder Tonhöhenliste, keine Ignorierliste und keine Wortliste, die exportiert werden kann.</translation>
     </message>
     <message>
         <source>Export Resources</source>
-        <translation type="unfinished" />
+        <translation>Ressourcen exportieren</translation>
     </message>
     <message>
         <source>Choose what goes into the %1 resource bundle. Dictionaries and lists travel as their original files and are rebuilt when the bundle is imported.</source>
-        <translation type="unfinished" />
+        <translation>Wählen Sie, was in das Ressourcenpaket für %1 aufgenommen wird. Wörterbücher und Listen werden als ihre Originaldateien übertragen und beim Import des Pakets neu aufgebaut.</translation>
     </message>
     <message>
         <source>Export…</source>
-        <translation type="unfinished">Exportieren…</translation>
+        <translation>Exportieren…</translation>
     </message>
     <message>
         <source>Resource bundles (*.zip)</source>
-        <translation type="unfinished" />
+        <translation>Ressourcenpakete (*.zip)</translation>
     </message>
     <message>
         <source>no original file was kept; add it again from its file to include it</source>
-        <translation type="unfinished" />
+        <translation>keine Originaldatei aufbewahrt; fügen Sie die Ressource erneut aus ihrer Datei hinzu, um sie einzuschließen</translation>
     </message>
     <message>
         <source>imported for another mining language</source>
-        <translation type="unfinished" />
+        <translation>für eine andere Mining-Sprache importiert</translation>
     </message>
     <message>
         <source>%1 words</source>
-        <translation type="unfinished" />
+        <translation>%1 Wörter</translation>
     </message>
     <message>
         <source>Exporting resources…</source>
-        <translation type="unfinished" />
+        <translation>Ressourcen werden exportiert…</translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Abbrechen</translation>
+        <translation>Abbrechen</translation>
     </message>
     <message>
         <source>The resources could not be exported.</source>
-        <translation type="unfinished" />
+        <translation>Die Ressourcen konnten nicht exportiert werden.</translation>
     </message>
     <message>
         <source>A resource export or import is still finishing. Try again in a moment.</source>
-        <translation type="unfinished" />
+        <translation>Ein Ressourcen-Export oder -Import wird noch abgeschlossen. Versuchen Sie es gleich noch einmal.</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Wird abgebrochen…</translation>
+        <translation>Wird abgebrochen…</translation>
     </message>
     <message>
         <source>The export stopped without reporting a result.</source>
-        <translation type="unfinished" />
+        <translation>Der Export wurde beendet, ohne ein Ergebnis zu melden.</translation>
     </message>
     <message>
         <source>Resources Exported</source>
-        <translation type="unfinished" />
+        <translation>Ressourcen exportiert</translation>
     </message>
     <message>
         <source>Resources written: %1 (%2)
 %3</source>
-        <translation type="unfinished" />
+        <translation>Ressourcen geschrieben: %1 (%2)
+%3</translation>
     </message>
     <message>
         <source>Import Resources</source>
-        <translation type="unfinished" />
+        <translation>Ressourcen importieren</translation>
     </message>
     <message>
         <source>Resource bundles (*.zip);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Ressourcenpakete (*.zip);;Alle Dateien (*)</translation>
     </message>
     <message>
         <source>That file is not a resource bundle Anki Miner can read.</source>
-        <translation type="unfinished" />
+        <translation>Diese Datei ist kein Ressourcenpaket, das Anki Miner lesen kann.</translation>
     </message>
     <message>
         <source>This bundle holds %1 resources. Switch the mining language to %1, then import it again.</source>
-        <translation type="unfinished" />
+        <translation>Dieses Paket enthält Ressourcen für %1. Stellen Sie die Mining-Sprache auf %1 um und importieren Sie es dann erneut.</translation>
     </message>
     <message>
         <source>Nothing to Import</source>
-        <translation type="unfinished" />
+        <translation>Nichts zu importieren</translation>
     </message>
     <message>
         <source>You already have everything this bundle holds, so nothing was changed.</source>
-        <translation type="unfinished" />
+        <translation>Sie haben bereits alles, was dieses Paket enthält; es wurde nichts geändert.</translation>
     </message>
     <message>
         <source>Choose what to install. Each dictionary and list is rebuilt from its original file, which can take several minutes for a large dictionary. New dictionaries go to the top of your list; the bundle's ignore list is added to yours; nothing you already have is replaced.</source>
-        <translation type="unfinished" />
+        <translation>Wählen Sie, was installiert werden soll. Jedes Wörterbuch und jede Liste wird aus der Originaldatei neu aufgebaut, was bei einem großen Wörterbuch mehrere Minuten dauern kann. Neue Wörterbücher kommen an den Anfang Ihrer Liste; die Ignorierliste des Pakets wird zu Ihrer hinzugefügt; nichts, was Sie bereits haben, wird ersetzt.</translation>
     </message>
     <message>
         <source>Import</source>
-        <translation type="unfinished" />
+        <translation>Importieren</translation>
     </message>
     <message>
         <source>Importing resources…</source>
-        <translation type="unfinished" />
+        <translation>Ressourcen werden importiert…</translation>
     </message>
     <message>
         <source>The resources could not be imported.</source>
-        <translation type="unfinished" />
+        <translation>Die Ressourcen konnten nicht importiert werden.</translation>
     </message>
     <message>
         <source>The import stopped without reporting a result.</source>
-        <translation type="unfinished" />
+        <translation>Der Import wurde beendet, ohne ein Ergebnis zu melden.</translation>
     </message>
     <message>
         <source>The resources were installed, but your settings could not be updated to use them.</source>
-        <translation type="unfinished" />
+        <translation>Die Ressourcen wurden installiert, aber Ihre Einstellungen konnten nicht für deren Nutzung aktualisiert werden.</translation>
     </message>
     <message>
         <source>already installed</source>
-        <translation type="unfinished" />
+        <translation>bereits installiert</translation>
     </message>
     <message>
         <source>you already use one</source>
-        <translation type="unfinished" />
+        <translation>Sie verwenden bereits eine</translation>
     </message>
     <message>
         <source>None of the chosen resources could be installed.</source>
-        <translation type="unfinished" />
+        <translation>Keine der ausgewählten Ressourcen konnte installiert werden.</translation>
     </message>
     <message>
         <source>Installed:</source>
-        <translation type="unfinished" />
+        <translation>Installiert:</translation>
     </message>
     <message>
         <source>Not installed:</source>
-        <translation type="unfinished" />
+        <translation>Nicht installiert:</translation>
     </message>
     <message>
         <source>The import was cancelled. What finished installing is kept.</source>
-        <translation type="unfinished" />
+        <translation>Der Import wurde abgebrochen. Bereits fertig Installiertes bleibt erhalten.</translation>
     </message>
     <message>
         <source>Nothing was installed.</source>
-        <translation type="unfinished" />
+        <translation>Es wurde nichts installiert.</translation>
     </message>
     <message>
         <source>Resources Imported</source>
-        <translation type="unfinished" />
+        <translation>Ressourcen importiert</translation>
     </message>
     <message>
         <source>Your ignore list (%1 new words)</source>
-        <translation type="unfinished" />
+        <translation>Ihre Ignorierliste (%1 neue Wörter)</translation>
     </message>
     <message>
         <source>Blacklist</source>
-        <translation type="unfinished" />
+        <translation>Blacklist</translation>
     </message>
     <message>
         <source>Whitelist</source>
-        <translation type="unfinished" />
+        <translation>Whitelist</translation>
     </message>
 </context><context>
     <name>ResourceChain</name>
@@ -9624,7 +9625,7 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Save this language's dictionaries, frequency and pitch lists, ignore list and word lists to one file.</source>
-        <translation type="unfinished" />
+        <translation>Die Wörterbücher, Häufigkeits- und Tonhöhenlisten, die Ignorierliste und die Wortlisten dieser Sprache in einer Datei speichern.</translation>
     </message>
     <message>
         <source>Export</source>
@@ -9632,7 +9633,7 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Export your settings, or this language's resources, to a file.</source>
-        <translation type="unfinished" />
+        <translation>Ihre Einstellungen oder die Ressourcen dieser Sprache in eine Datei exportieren.</translation>
     </message>
     <message>
         <source>Apply settings from an exported file; anything not in the file is kept.</source>
@@ -9640,7 +9641,7 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Install resources from a bundle file. Nothing you already have is replaced.</source>
-        <translation type="unfinished" />
+        <translation>Ressourcen aus einem Ressourcenpaket installieren. Nichts, was Sie bereits haben, wird ersetzt.</translation>
     </message>
     <message>
         <source>Import</source>
@@ -9648,7 +9649,7 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Import settings, or resources, from a file.</source>
-        <translation type="unfinished" />
+        <translation>Einstellungen oder Ressourcen aus einer Datei importieren.</translation>
     </message>
     <message>
         <source>Cards</source>
@@ -9672,7 +9673,7 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Word Audio</source>
-        <translation type="unfinished" />
+        <translation>Wort-Audio</translation>
     </message>
     <message>
         <source>Frequency</source>
@@ -9692,7 +9693,7 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Word Filters</source>
-        <translation type="unfinished" />
+        <translation>Wortfilter</translation>
     </message>
     <message>
         <source>Sentences</source>
@@ -9716,7 +9717,7 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>General</source>
-        <translation type="unfinished" />
+        <translation>Allgemein</translation>
     </message>
     <message>
         <source>Keyboard</source>
@@ -9796,7 +9797,7 @@ Eine Quelle, die nach einem App-Upgrade nicht mehr funktioniert, wird durch Alle
     </message>
     <message>
         <source>subtitle regex (Sentences)</source>
-        <translation type="unfinished" />
+        <translation>Untertitel-Regex (Sätze)</translation>
     </message>
     <message>
         <source>⚠ Saved — kept previous: %1</source>
@@ -10080,7 +10081,7 @@ Ihre installierten Ressourcen und Ihr Design bleiben erhalten.</translation>
     </message>
     <message>
         <source>No subtitle lines to preview — check the filter in Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>Keine Untertitelzeilen für die Vorschau — prüfen Sie den Filter unter Einstellungen → Sätze.</translation>
     </message>
     <message>
         <source>The subtitles could not be read. Check the file format.</source>
@@ -11196,11 +11197,11 @@ Ihre installierten Ressourcen und Ihr Design bleiben erhalten.</translation>
     </message>
     <message>
         <source>Appearance</source>
-        <translation type="unfinished" />
+        <translation>Erscheinungsbild</translation>
     </message>
     <message>
         <source>Scale the entire interface, including text size and font, plus spacing and controls. Applies after restart.</source>
-        <translation type="unfinished" />
+        <translation>Skaliert die gesamte Oberfläche, einschließlich Textgröße und Schriftart sowie Abstände und Bedienelemente. Wird nach einem Neustart wirksam.</translation>
     </message>
     <message>
         <source>Zoom</source>
