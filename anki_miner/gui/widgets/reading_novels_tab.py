@@ -54,6 +54,7 @@ from anki_miner.gui.widgets.base import (
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
+from anki_miner.gui.widgets.reading_subtitles_tab import _SUBTITLE_EXTS
 from anki_miner.models import MiningOutcome, result_error_text
 from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.models.reading_queue import ReadingQueueItem
@@ -71,10 +72,10 @@ if TYPE_CHECKING:
 _BOOK_FILTER_GLOB = "*.epub *.txt"
 
 # Extensions this tab mines. A manga-kind (dirs always) or subtitle-kind drop
-# earns a cross-tab hint instead of being mined here.
+# earns a cross-tab hint instead of being mined here; the subtitle set is the
+# Subtitles tab's own, imported so the hint covers every format it mines.
 _NOVEL_EXTS = (".epub", ".txt")
 _MANGA_EXTS = (".mokuro", ".cbz", ".zip")
-_SUBTITLE_EXTS = (".srt", ".ass", ".ssa", ".vtt")
 
 
 class ReadingNovelsTab(_ReadingMiningTabBase):
