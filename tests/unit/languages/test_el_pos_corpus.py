@@ -109,6 +109,6 @@ def test_a_capitalised_inflected_content_word_is_relemmatised(tagger):
 
 
 def test_a_function_word_tagged_capital_verb_is_not_touched(tagger):
-    """R keeps POS: Κλείσε tagged PROPN stays out of mining (el16's class of miss)."""
+    """R keeps POS: the tagger leaves Κλείσε PROPN (el16's class); only the parser's dictionary pass recovers it."""
     tokens = {token.surface: token for token in tagger("Κλείσε την πόρτα.")}
     assert tokens["Κλείσε"].feature.pos1 == "PROPN"

@@ -73,6 +73,8 @@ def load_spacy_model(package: str, *, keep_parser: bool) -> Any:
 
 #: A pure, dictionary-free repair over one line's duck tokens (it ``prendere lo``). Runs inside every tagger call.
 TokenPass = Callable[[list[LanguageToken]], list[LanguageToken]]
+#: A rewrite of the tagging copy that keeps its length (el: the enclitic second accent, ``αυτοκίνητό μου``).
+TextFold = Callable[[str], str]
 
 
 class SpacyTagger:
@@ -85,6 +87,7 @@ class SpacyTagger:
         title_case_pos: frozenset[str] = frozenset(),
         particle_deps: frozenset[str] = frozenset(),
         tag_char_map: Mapping[str, str] = EMPTY_MAP,
+        tag_fold: TextFold | None = None,
         post_passes: Sequence[TokenPass] = (),
         relemmatise_capitalised: bool = False,
         relemmatise_pos: frozenset[str] = CAPITALISED_LEMMA_POS,
@@ -95,6 +98,7 @@ class SpacyTagger:
         self._title_case_pos = title_case_pos
         self._particle_deps = particle_deps
         self._tag_char_map = tag_char_map
+        self._tag_fold = tag_fold
         self._post_passes = tuple(post_passes)
         self._relemmatise_capitalised = relemmatise_capitalised
         self._relemmatise_pos = relemmatise_pos
@@ -106,9 +110,14 @@ class SpacyTagger:
         parser, because Card Backfill and the word filter call the tagger
         directly; a dictionary-gated repair stays the parser's ``token_post_pass``.
         ``relemmatise_capitalised`` repairs the doc's raw lemmas before the duck
-        tokens (and so the casing rule) see them.
+        tokens (and so the casing rule) see them. ``tag_fold`` rewrites the copy
+        after ``tag_char_map``; it must keep the length, because surfaces are
+        sliced from the original by offset.
         """
-        doc = self.nlp(tagging_copy(text, self._tag_char_map))
+        copy = tagging_copy(text, self._tag_char_map)
+        if self._tag_fold is not None:
+            copy = self._tag_fold(copy)
+        doc = self.nlp(copy)
         if self._relemmatise_capitalised:
             _relemmatise_capitalised(doc, self._lemmatise_alone, pos=self._relemmatise_pos)
         tokens = to_duck_tokens(doc, text, title_case_pos=self._title_case_pos, particle_deps=self._particle_deps)
@@ -184,6 +193,7 @@ def build_spacy_tagger(
     particle_deps: frozenset[str] = frozenset(),
     join_hyphenated: bool = False,
     tag_char_map: Mapping[str, str] = EMPTY_MAP,
+    tag_fold: TextFold | None = None,
     post_passes: Sequence[TokenPass] = (),
     abbreviations: frozenset[str] | None = None,
     relemmatise_capitalised: bool = False,
@@ -200,7 +210,9 @@ def build_spacy_tagger(
     pruned (``_prune_dotted_rules``). ``relemmatise_capitalised`` opts into
     ``morphology.relemmatise_capitalised`` (sv: ``Huset`` → ``hus``) over
     ``relemmatise_pos`` (ro adds ``AUX``); a language that builds its own tagger
-    over the returned ``.nlp`` (pt) must call that function itself.
+    over the returned ``.nlp`` (pt) must call that function itself. ``tag_fold``
+    rewrites the tagging copy after ``tag_char_map`` and must keep its length
+    (el drops the enclitic second accent).
     """
     if particle_deps and not keep_parser:
         raise ValueError("particle_deps need the dependency parser: pass keep_parser=True")
@@ -214,6 +226,7 @@ def build_spacy_tagger(
             title_case_pos=title_case_pos,
             particle_deps=particle_deps,
             tag_char_map=tag_char_map,
+            tag_fold=tag_fold,
             post_passes=post_passes,
             relemmatise_capitalised=relemmatise_capitalised,
             relemmatise_pos=relemmatise_pos,

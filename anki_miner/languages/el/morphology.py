@@ -32,10 +32,16 @@ BLOCKER — ``ΓΙΑΝΝΗΣ: [χτυπάει η πόρτα] -Η …`` left ``-�
 ``el_sentence_rules``: the Latin rules plus both Greek question marks, ASCII ``;`` and U+037E.
 ``normalize`` (NFC) already folds U+037E to ``;`` on the mining path, but the reading-tab splitter
 sees raw book text.
+
+``fold_enclitic_accent``: the second acute a proparoxytone takes before an enclitic
+(``αυτοκίνητό μου``) dropped per letter run. The tokenizer folds the tagging copy with it, and the
+parser's form-row pass reads the surface through it.
 """
 
 from __future__ import annotations
 
+import re
+import unicodedata
 from collections.abc import Mapping
 from dataclasses import replace
 from types import MappingProxyType
@@ -71,6 +77,43 @@ EL_ABBREVIATIONS: frozenset[str] = frozenset(
     }
 )  # fmt: skip
 
+#: The two classes ``el_core_news_sm`` gives a capitalised cue-initial content word (``Κλείσε`` PROPN,
+#: ``Μιλάς`` X): the parser recovers content words from them through the dictionary.
+EL_RECOVERED_POS: frozenset[str] = frozenset({"X", "PROPN"})
+
+
+def _classed(pos: str, words: str) -> dict[str, str]:
+    return dict.fromkeys(words.split(), pos)
+
+
+#: Closed-class words, keyed on the lowered surface, with their UD Greek GDT class. The model tags
+#: them as content (``σου`` NOUN, ``εσύ``/``μην``/``που``/``είσαι`` ADV, ``ποιος`` ADJ) or X/PROPN
+#: line-initially, and a card fronts a function word. Accent-sensitive on purpose: relative ``που``
+#: is here and interrogative ``πού`` (where, ADV) is not; ``κανείς`` (nobody) is and ``κάνεις`` (you do)
+#: is not. The whole ``είμαι`` paradigm is listed, because its forms are form rows naming ``είμαι``.
+EL_CLOSED_CLASS: Mapping[str, str] = MappingProxyType(
+    {
+        # personal pronouns, weak then strong, and αυτός
+        **_classed("PRON", "μου σου του της μας σας τους με σε τον την τη το τα τις των"),
+        **_classed("PRON", "εγώ εσύ εμείς εσείς εμένα εσένα εμάς εσάς"),
+        **_classed("PRON", "αυτός αυτή αυτό αυτού αυτής αυτόν αυτήν αυτοί αυτές αυτά αυτών αυτούς"),
+        # interrogative, indefinite and relative pronouns
+        **_classed("PRON", "ποιος ποια ποιο ποιου ποιας ποιον ποιοι ποιες ποιων ποιους"),
+        **_classed("PRON", "πόσος πόση πόσο πόσου πόσης πόσον πόσοι πόσες πόσα πόσων πόσους"),
+        **_classed("PRON", "κανείς κανένας καμία καμιά κανένα κανέναν κανενός καμίας καμιάς"),
+        **_classed("PRON", "κάποιος κάποια κάποιο κάποιου κάποιας κάποιον κάποιοι κάποιες κάποιων κάποιους"),
+        **_classed("PRON", "κάτι τίποτα τίποτε τι που"),
+        # negation
+        **_classed("PART", "δεν δε μη μην"),
+        # the copula
+        **_classed(
+            "AUX",
+            "είμαι είσαι είναι είμαστε είστε είσαστε ήμουν ήμουνα ήσουν ήσουνα ήταν ήτανε "
+            "ήμασταν ήμαστε ήσασταν ήσαστε",
+        ),
+    }
+)
+
 #: Leading words a deck front carries that the mined lemma never does (S3, E.10 D18).
 EL_LEADING_WORDS: frozenset[str] = frozenset({"ο", "η", "το", "οι", "τα", "ένας", "μία", "μια", "ένα", "να"})
 
@@ -98,3 +141,41 @@ EL_TERMINATORS: frozenset[str] = LATIN_TERMINATORS | {";", "\u037e"}
 def el_sentence_rules() -> SentenceRules:
     """The Latin sentence rules with the Greek terminators and abbreviation set."""
     return replace(sentence_rules(EL_ABBREVIATIONS), terminators=EL_TERMINATORS)
+
+
+_ACUTE = "́"
+_LETTER_RUN = re.compile(r"[^\W\d_]+")
+
+
+def _without_acute(char: str) -> str:
+    return unicodedata.normalize("NFC", unicodedata.normalize("NFD", char).replace(_ACUTE, ""))
+
+
+#: Every precomposed Greek letter with an acute (tonos), to the same letter without it: one code point
+#: each (``ό`` -> ``ο``, ``ΐ`` -> ``ϊ``), so a folded string keeps its length.
+_UNACCENTED: dict[str, str] = {
+    char: _without_acute(char)
+    for char in map(chr, range(0x0370, 0x0400))
+    if _ACUTE in unicodedata.normalize("NFD", char) and len(_without_acute(char)) == 1
+}
+
+
+def _fold_run(match: re.Match[str]) -> str:
+    run = match.group()
+    accents = [index for index, char in enumerate(run) if char in _UNACCENTED]
+    if len(accents) < 2:
+        return run
+    chars = list(run)
+    for index in accents[1:]:
+        chars[index] = _UNACCENTED[chars[index]]
+    return "".join(chars)
+
+
+def fold_enclitic_accent(text: str) -> str:
+    """Every accented letter after the first in a letter run loses its acute; the length never changes.
+
+    A monotonic Greek word carries one accent, and a second one only before an enclitic, always
+    later in the word (``το αυτοκίνητό μου``, ``άκουσέ με``). Per letter run, not per whitespace
+    token: ``νωρίς—αλλά`` is two words.
+    """
+    return _LETTER_RUN.sub(_fold_run, text)
