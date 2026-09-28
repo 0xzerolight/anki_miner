@@ -160,6 +160,56 @@ def test_a_stutter_line_keeps_its_one_syllable_word(ko_parser, line, word):
     assert word in {w.mined_form for w in words}
 
 
+#: A Korean fansub SAMI file, cp949 like most of them: each cue is cleared by an
+#: ``&nbsp;`` SYNC, the time the cue stops showing.
+_SMI_HEAD = """<SAMI><HEAD><STYLE TYPE="text/css"><!--
+.KRCC { Name:Korean; lang:ko-KR; SAMIType:CC; }
+.ENCC { Name:English; lang:en-US; SAMIType:CC; }
+--></STYLE></HEAD><BODY>
+"""
+SMI = _SMI_HEAD + """<SYNC Start=1000><P Class=KRCC>어제 시장에서 사과를 샀어요.
+<SYNC Start=3500><P Class=KRCC>&nbsp;
+<SYNC Start=4000><P Class=KRCC>날씨가 추워서<br>집에 있었어요.
+<SYNC Start=6500><P Class=KRCC>&nbsp;
+</BODY></SAMI>"""
+#: The bilingual shape: one SYNC per language class at each time.
+BILINGUAL_SMI = _SMI_HEAD + """<SYNC Start=1000><P Class=KRCC>어제 시장에서 사과를 샀어.
+<SYNC Start=1000><P Class=ENCC>I bought apples at the market yesterday.
+<SYNC Start=3000><P Class=KRCC>&nbsp;
+<SYNC Start=3000><P Class=ENCC>&nbsp;
+<SYNC Start=4000><P Class=KRCC>날씨가 너무 춥다.
+<SYNC Start=4000><P Class=ENCC>The weather is so cold.
+<SYNC Start=6000><P Class=KRCC>&nbsp;
+<SYNC Start=6000><P Class=ENCC>&nbsp;
+</BODY></SAMI>"""
+
+
+def _smi(tmp_path, text: str):
+    path = tmp_path / "ep01.smi"
+    path.write_bytes(text.encode("cp949"))
+    return path
+
+
+def test_a_smi_cue_lasts_until_the_sync_that_clears_it(ko_parser, tmp_path):
+    """pysubs2 guesses a SAMI end from the text length (2.57 s here), which cut the sentence audio short."""
+    assert ko_parser.parse_raw_entries(_smi(tmp_path, SMI)) == [
+        (1.0, 3.5, "어제 시장에서 사과를 샀어요."),
+        (4.0, 6.5, "날씨가 추워서 집에 있었어요."),
+    ]
+
+
+def test_a_bilingual_smi_mines_each_korean_cue_for_its_shown_time(ko_parser, tmp_path):
+    """Each class is its own SYNC at one time; per-SYNC events gave the Korean cue zero length."""
+    path = _smi(tmp_path, BILINGUAL_SMI)
+    assert ko_parser.parse_raw_entries(path) == [
+        (1.0, 3.0, "어제 시장에서 사과를 샀어."),
+        (4.0, 6.0, "날씨가 너무 춥다."),
+    ]
+    words = ko_parser.parse_subtitle_file(path)
+    assert {w.mined_form for w in words} >= {"시장", "사과", "날씨", "춥다"}
+    assert all(w.end_time > w.start_time for w in words)
+
+
 @pytest.mark.parametrize("text", ["학생이 밥을 먹었다."])
 def test_real_kiwi_tokenizes_into_duck_tokens(text):
     pytest.importorskip("kiwipiepy")
