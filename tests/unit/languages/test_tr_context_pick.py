@@ -43,10 +43,12 @@ def test_a_command_before_an_exclamation_mark_mines_the_verb(tagger, line, surfa
     [
         ("Biraz su ister misin?", "ister", "istemek"),  # was the conjunction ister, never mined
         ("Beni bekler misin?", "bekler", "beklemek"),  # not bek
-        ("Anlar mısın beni?", "Anlar", "anlamak"),  # not an "moment"
+        ("Anlar mısın beni?", "Anlar", "anlamak"),  # not an "moment": a person ending makes it the request
         ("Onu sever misin?", "sever", "sevmek"),  # not the given name
         ("Yarın bize gelir misin?", "gelir", "gelmek"),  # not gelir "income"
         ("Kapıyı açar mısın?", "açar", "açmak"),  # not açar "key, opener"
+        ("Bu olur mu?", "olur", "olmak"),  # the demonstrative is the verb's subject, not a determiner
+        ("Gelirler mi?", "Gelirler", "gelmek"),  # gelmek's 3pl aorist: gelmek is no -lA verb of gelir
     ],
 )
 def test_an_aorist_before_a_question_particle_mines_the_verb(tagger, line, surface, lemma):
@@ -58,6 +60,11 @@ def test_an_aorist_before_a_question_particle_mines_the_verb(tagger, line, surfa
     [
         ("Kaza mı?", "Kaza", ("kaza", "NOUN")),  # kazmak's optative is no request
         ("Aç mısın?", "Aç", ("aç", "ADJ")),  # "are you hungry": açmak has no aorist reading here
+        ("Bu bir karar mı?", "karar", ("karar", "NOUN")),  # a determiner before a bare mI: not karmak
+        ("Bu bir sır mı?", "sır", ("sır", "NOUN")),
+        ("Köpekler mi havlıyor?", "Köpekler", ("köpek", "NOUN")),  # köpek's plural, not köpeklemek's aorist
+        ("Yollar mı kapalı?", "Yollar", ("yol", "NOUN")),  # not yollamak
+        ("O günler mi geri gelecek?", "günler", ("gün", "NOUN")),
         ("Ne güzel bir yaz!", "yaz", ("yaz", "NOUN")),  # a determiner makes it a noun phrase
         ("Bir at!", "at", ("at", "NOUN")),
         ("Yangın var!", "var", ("var", "ADJ")),  # existential, not varmak "arrive!"

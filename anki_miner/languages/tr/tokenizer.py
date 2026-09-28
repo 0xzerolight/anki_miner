@@ -26,6 +26,9 @@ TOKEN_RE = re.compile(r"[^\W\d_]+(?:['’ʼ][^\W\d_]+)?|\d+(?:[.,]\d+)*(?:['’�
 _APOSTROPHE = re.compile(r"['’ʼ]")
 #: Existential predicates keep their reading before ``!``: ``Yangın var!`` is "there is a fire", not ``varmak``.
 _EXISTENTIAL = frozenset({"var", "yok"})
+#: The question particle with no person ending. It also follows a noun predicate (``Köpekler mi?``); a person
+#: ending (``misin``, ``miyiz``) is the ``-Ar mI`` request itself.
+_BARE_QUESTION = frozenset({"mi", "mı", "mu", "mü"})
 #: Tokens that may stand between a sentence's end and its first word: dashes, quotes, opening brackets.
 _OPENERS = frozenset("-‐‑‒–—―\"'“”„‟«»‘’‚‛‹›([{")
 #: Tokens that end a sentence. Turkish capitalises after a colon only when a new sentence follows it.
@@ -92,7 +95,10 @@ def _pick(
     - Before ``!``: the imperative (``Yardım et!`` is ``etmek``, not ``et`` "meat"), unless a determiner makes
       the word a noun phrase (``Ne güzel bir yaz!``) or it is the existential ``var``/``yok``.
     - Before a question particle: the aorist, the ``-Ar mI`` request (``Beni bekler misin?`` is ``beklemek``); an
-      optative or participle homograph is no request (``Kaza mı?`` stays ``kaza``).
+      optative or participle homograph is no request (``Kaza mı?`` stays ``kaza``). A bare ``mI`` also asks about
+      a noun, so there the first reading stays after a determiner that is no pronoun (``Bu bir karar mı?``; the
+      pronoun in ``Bu olur mu?`` is the verb's subject), and when the aorist is the ``-lA`` verb made from that
+      reading's noun, whose plural it spells (``Köpekler mi havlıyor?`` is ``köpek``, not ``köpeklemek``).
     """
     own = readings[index]
     surface = surfaces[index]
@@ -106,7 +112,15 @@ def _pick(
         if own[0].lemma not in _EXISTENTIAL and not (previous and previous.feature.pos1 == "DET"):
             return next((reading for reading in own if reading.imperative), own[0])
     elif following and readings[index + 1] and readings[index + 1][0].pos1 == "PART":
-        return next((reading for reading in own if reading.aorist), own[0])
+        aorist = next((reading for reading in own if reading.aorist), own[0])
+        determiner = (
+            previous is not None
+            and previous.feature.pos1 == "DET"
+            and all(reading.pos1 != "PRON" for reading in readings[index - 1])
+        )
+        plural = aorist.lemma in (own[0].lemma + "lamak", own[0].lemma + "lemek")
+        if not (tr_casefold(following) in _BARE_QUESTION and (determiner or plural)):
+            return aorist
     return own[0]
 
 
