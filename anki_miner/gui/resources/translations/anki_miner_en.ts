@@ -2093,6 +2093,14 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Mine an existing Anki deck</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine the sentences of a deck already in Anki, such as a subs2srs, movies2anki or asbplayer deck, as if they were subtitle lines. New cards reuse each card's audio and picture; the source deck is not changed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Generate subtitles from audio</source>
         <translation type="unfinished" />
     </message>
@@ -6594,6 +6602,10 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Anki Deck</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Single</source>
         <translation type="unfinished" />
     </message>
@@ -8093,6 +8105,158 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>ReadingDeckTab</name>
+    <message>
+        <source>Review words before mining</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Show the word-selection popup before creating cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki Deck</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine the sentences of a deck already in Anki, such as a subs2srs deck. Each new card reuses that card's audio and picture. The deck itself is not changed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Deck:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence field:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio field:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Picture field:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Translation field:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select a deck…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The deck to mine. Its subdecks are included.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select a field…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The field that holds the subtitle line to mine.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>(none)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The field with the line's audio clip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The field with the line's picture.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The field with the line's translation, if the deck has one.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine the deck's sentences into Anki cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki. Is Anki running?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reading the deck…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Couldn't read the deck: </source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The selected deck has no notes.</source>
+        <translation type="unfinished" />
+    </message>
+    <message numerus="yes">
+        <source>%n note(s) in the deck.</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
+    </message>
+    <message>
+        <source>Pick a deck and its sentence field first.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No sentence-audio field is mapped in Settings → Cards &amp; Anki, so the deck's audio won't be copied.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No Picture field is mapped in Settings → Cards &amp; Anki, so the deck's pictures won't be copied.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Starting…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining %1…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mined %1 cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed: %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This screen mines a deck already in Anki. Pick it from the Deck list above.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>ReadingMangaTab</name>
     <message>
         <source>Review words before mining</source>
@@ -8490,6 +8654,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Complete — %1 cards created</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki deck mining</source>
+        <extracomment>Name this run carries away from this screen.</extracomment>
         <translation type="unfinished" />
     </message>
     <message>
@@ -11430,6 +11599,14 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>Reset columns</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Play card audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Play this card's own sentence audio from the deck.</source>
         <translation type="unfinished" />
     </message>
     <message>

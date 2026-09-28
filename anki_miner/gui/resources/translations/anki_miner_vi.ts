@@ -2102,6 +2102,14 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Khai thác từ vựng trực tiếp từ tệp phụ đề (.srt/.ass/.vtt) dưới dạng văn bản -- không cần video.</translation>
     </message>
     <message>
+        <source>Mine an existing Anki deck</source>
+        <translation>Khai thác một bộ thẻ Anki có sẵn</translation>
+    </message>
+    <message>
+        <source>Mine the sentences of a deck already in Anki, such as a subs2srs, movies2anki or asbplayer deck, as if they were subtitle lines. New cards reuse each card's audio and picture; the source deck is not changed.</source>
+        <translation>Khai thác các câu của một bộ thẻ đã có trong Anki, chẳng hạn bộ thẻ subs2srs, movies2anki hoặc asbplayer, như thể chúng là các dòng phụ đề. Thẻ mới dùng lại âm thanh và hình ảnh của từng thẻ; bộ thẻ nguồn không bị thay đổi.</translation>
+    </message>
+    <message>
         <source>Generate subtitles from audio</source>
         <translation>Tạo phụ đề từ âm thanh</translation>
     </message>
@@ -6626,6 +6634,10 @@ Tiếp tục?</translation>
         <translation>Văn bản</translation>
     </message>
     <message>
+        <source>Anki Deck</source>
+        <translation>Bộ thẻ Anki</translation>
+    </message>
+    <message>
         <source>Single</source>
         <translation>Đơn lẻ</translation>
     </message>
@@ -8130,6 +8142,158 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Hoàn tất</translation>
     </message>
 </context><context>
+    <name>ReadingDeckTab</name>
+    <message>
+        <source>Review words before mining</source>
+        <translation>Xem lại từ trước khi khai thác</translation>
+    </message>
+    <message>
+        <source>Show the word-selection popup before creating cards.</source>
+        <translation>Hiển thị cửa sổ chọn từ trước khi tạo thẻ.</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>Tiến độ</translation>
+    </message>
+    <message>
+        <source>Anki Deck</source>
+        <translation>Bộ thẻ Anki</translation>
+    </message>
+    <message>
+        <source>Mine the sentences of a deck already in Anki, such as a subs2srs deck. Each new card reuses that card's audio and picture. The deck itself is not changed.</source>
+        <translation>Khai thác các câu của một bộ thẻ đã có trong Anki, chẳng hạn bộ thẻ subs2srs. Mỗi thẻ mới dùng lại âm thanh và hình ảnh của thẻ tương ứng. Bản thân bộ thẻ không bị thay đổi.</translation>
+    </message>
+    <message>
+        <source>Deck:</source>
+        <translation>Bộ thẻ:</translation>
+    </message>
+    <message>
+        <source>Sentence field:</source>
+        <translation>Trường câu:</translation>
+    </message>
+    <message>
+        <source>Audio field:</source>
+        <translation>Trường âm thanh:</translation>
+    </message>
+    <message>
+        <source>Picture field:</source>
+        <translation>Trường hình ảnh:</translation>
+    </message>
+    <message>
+        <source>Translation field:</source>
+        <translation>Trường bản dịch:</translation>
+    </message>
+    <message>
+        <source>Select a deck…</source>
+        <translation>Chọn bộ thẻ…</translation>
+    </message>
+    <message>
+        <source>The deck to mine. Its subdecks are included.</source>
+        <translation>Bộ thẻ cần khai thác. Bao gồm cả các bộ thẻ con.</translation>
+    </message>
+    <message>
+        <source>Select a field…</source>
+        <translation>Chọn trường…</translation>
+    </message>
+    <message>
+        <source>The field that holds the subtitle line to mine.</source>
+        <translation>Trường chứa dòng phụ đề cần khai thác.</translation>
+    </message>
+    <message>
+        <source>(none)</source>
+        <translation>(không có)</translation>
+    </message>
+    <message>
+        <source>The field with the line's audio clip.</source>
+        <translation>Trường chứa đoạn âm thanh của dòng.</translation>
+    </message>
+    <message>
+        <source>The field with the line's picture.</source>
+        <translation>Trường chứa hình ảnh của dòng.</translation>
+    </message>
+    <message>
+        <source>The field with the line's translation, if the deck has one.</source>
+        <translation>Trường chứa bản dịch của dòng, nếu bộ thẻ có.</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>Khai thác</translation>
+    </message>
+    <message>
+        <source>Mine the deck's sentences into Anki cards.</source>
+        <translation>Khai thác các câu của bộ thẻ thành thẻ Anki.</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Hủy</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation>Hủy lần chạy đang hoạt động.</translation>
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki. Is Anki running?</source>
+        <translation>Không thể lấy tên bộ thẻ từ Anki. Anki có đang chạy không?</translation>
+    </message>
+    <message>
+        <source>Reading the deck…</source>
+        <translation>Đang đọc bộ thẻ…</translation>
+    </message>
+    <message>
+        <source>Couldn't read the deck: </source>
+        <translation>Không thể đọc bộ thẻ: </translation>
+    </message>
+    <message>
+        <source>The selected deck has no notes.</source>
+        <translation>Bộ thẻ đã chọn không có ghi chú nào.</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n note(s) in the deck.</source>
+        <translation>
+            <numerusform>Bộ thẻ có %n ghi chú.</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Pick a deck and its sentence field first.</source>
+        <translation>Hãy chọn bộ thẻ và trường câu của nó trước.</translation>
+    </message>
+    <message>
+        <source>No sentence-audio field is mapped in Settings → Cards &amp; Anki, so the deck's audio won't be copied.</source>
+        <translation>Chưa ánh xạ trường âm thanh câu trong Cài đặt → Thẻ &amp; Anki, nên âm thanh của bộ thẻ sẽ không được sao chép.</translation>
+    </message>
+    <message>
+        <source>No Picture field is mapped in Settings → Cards &amp; Anki, so the deck's pictures won't be copied.</source>
+        <translation>Chưa ánh xạ trường Hình ảnh trong Cài đặt → Thẻ &amp; Anki, nên hình ảnh của bộ thẻ sẽ không được sao chép.</translation>
+    </message>
+    <message>
+        <source>Starting…</source>
+        <translation>Đang bắt đầu…</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Đang hủy…</translation>
+    </message>
+    <message>
+        <source>Mining %1…</source>
+        <translation>Đang khai thác %1…</translation>
+    </message>
+    <message>
+        <source>Mined %1 cards.</source>
+        <translation>Đã khai thác %1 thẻ.</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>Đã hủy.</translation>
+    </message>
+    <message>
+        <source>Failed: %1.</source>
+        <translation>Thất bại: %1.</translation>
+    </message>
+    <message>
+        <source>This screen mines a deck already in Anki. Pick it from the Deck list above.</source>
+        <translation>Màn hình này khai thác một bộ thẻ đã có trong Anki. Hãy chọn nó trong danh sách Bộ thẻ ở trên.</translation>
+    </message>
+</context><context>
     <name>ReadingMangaTab</name>
     <message>
         <source>Review words before mining</source>
@@ -8528,6 +8692,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <message>
         <source>Complete — %1 cards created</source>
         <translation>Hoàn tất — đã tạo %1 thẻ</translation>
+    </message>
+    <message>
+        <source>Anki deck mining</source>
+        <extracomment>Name this run carries away from this screen.</extracomment>
+        <translation>Khai thác bộ thẻ Anki</translation>
     </message>
     <message>
         <source>Manga mining</source>
@@ -11488,6 +11657,14 @@ Sắp xếp theo cột này để duyệt hết một bản thu dài theo thứ 
     <message>
         <source>Reset columns</source>
         <translation>Đặt lại cột</translation>
+    </message>
+    <message>
+        <source>Play card audio</source>
+        <translation>Phát âm thanh thẻ</translation>
+    </message>
+    <message>
+        <source>Play this card's own sentence audio from the deck.</source>
+        <translation>Phát âm thanh câu có sẵn của chính thẻ này trong bộ thẻ.</translation>
     </message>
     <message>
         <source>+ Previous line</source>

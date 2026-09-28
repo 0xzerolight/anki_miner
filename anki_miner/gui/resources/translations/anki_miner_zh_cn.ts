@@ -2102,6 +2102,14 @@ No index files are deleted.</source>
         <translation>直接从字幕文件（.srt/.ass/.vtt）作为文本挖取词汇 — 无需视频。</translation>
     </message>
     <message>
+        <source>Mine an existing Anki deck</source>
+        <translation>从现有 Anki 牌组挖词</translation>
+    </message>
+    <message>
+        <source>Mine the sentences of a deck already in Anki, such as a subs2srs, movies2anki or asbplayer deck, as if they were subtitle lines. New cards reuse each card's audio and picture; the source deck is not changed.</source>
+        <translation>挖取 Anki 中已有牌组（如 subs2srs、movies2anki 或 asbplayer 牌组）的句子，将其视为字幕行。新卡片会复用每张原卡片的音频和图片；源牌组不会被修改。</translation>
+    </message>
+    <message>
         <source>Generate subtitles from audio</source>
         <translation>从音频生成字幕</translation>
     </message>
@@ -6626,6 +6634,10 @@ Continue?</source>
         <translation>文本</translation>
     </message>
     <message>
+        <source>Anki Deck</source>
+        <translation>Anki 牌组</translation>
+    </message>
+    <message>
         <source>Single</source>
         <translation>单个</translation>
     </message>
@@ -8130,6 +8142,158 @@ No index files are deleted.</source>
         <translation>完成</translation>
     </message>
 </context><context>
+    <name>ReadingDeckTab</name>
+    <message>
+        <source>Review words before mining</source>
+        <translation>挖词前先审阅单词</translation>
+    </message>
+    <message>
+        <source>Show the word-selection popup before creating cards.</source>
+        <translation>在创建卡片前显示单词选择弹窗。</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>进度</translation>
+    </message>
+    <message>
+        <source>Anki Deck</source>
+        <translation>Anki 牌组</translation>
+    </message>
+    <message>
+        <source>Mine the sentences of a deck already in Anki, such as a subs2srs deck. Each new card reuses that card's audio and picture. The deck itself is not changed.</source>
+        <translation>挖取 Anki 中已有牌组（如 subs2srs 牌组）的句子。每张新卡片都会复用原卡片的音频和图片。牌组本身不会被修改。</translation>
+    </message>
+    <message>
+        <source>Deck:</source>
+        <translation>牌组：</translation>
+    </message>
+    <message>
+        <source>Sentence field:</source>
+        <translation>句子字段：</translation>
+    </message>
+    <message>
+        <source>Audio field:</source>
+        <translation>音频字段：</translation>
+    </message>
+    <message>
+        <source>Picture field:</source>
+        <translation>图片字段：</translation>
+    </message>
+    <message>
+        <source>Translation field:</source>
+        <translation>翻译字段：</translation>
+    </message>
+    <message>
+        <source>Select a deck…</source>
+        <translation>选择牌组…</translation>
+    </message>
+    <message>
+        <source>The deck to mine. Its subdecks are included.</source>
+        <translation>要挖取的牌组。其子牌组也包含在内。</translation>
+    </message>
+    <message>
+        <source>Select a field…</source>
+        <translation>选择字段…</translation>
+    </message>
+    <message>
+        <source>The field that holds the subtitle line to mine.</source>
+        <translation>存放要挖取的字幕行的字段。</translation>
+    </message>
+    <message>
+        <source>(none)</source>
+        <translation>（无）</translation>
+    </message>
+    <message>
+        <source>The field with the line's audio clip.</source>
+        <translation>存放该行音频片段的字段。</translation>
+    </message>
+    <message>
+        <source>The field with the line's picture.</source>
+        <translation>存放该行图片的字段。</translation>
+    </message>
+    <message>
+        <source>The field with the line's translation, if the deck has one.</source>
+        <translation>存放该行翻译的字段（如果牌组中有）。</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>挖词</translation>
+    </message>
+    <message>
+        <source>Mine the deck's sentences into Anki cards.</source>
+        <translation>将牌组中的句子挖词为 Anki 卡片。</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation>取消正在进行的运行。</translation>
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki. Is Anki running?</source>
+        <translation>无法从 Anki 获取牌组名称。Anki 正在运行吗？</translation>
+    </message>
+    <message>
+        <source>Reading the deck…</source>
+        <translation>正在读取牌组…</translation>
+    </message>
+    <message>
+        <source>Couldn't read the deck: </source>
+        <translation>无法读取牌组：</translation>
+    </message>
+    <message>
+        <source>The selected deck has no notes.</source>
+        <translation>所选牌组没有笔记。</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n note(s) in the deck.</source>
+        <translation>
+            <numerusform>牌组中有 %n 条笔记。</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Pick a deck and its sentence field first.</source>
+        <translation>请先选择牌组及其句子字段。</translation>
+    </message>
+    <message>
+        <source>No sentence-audio field is mapped in Settings → Cards &amp; Anki, so the deck's audio won't be copied.</source>
+        <translation>未在“设置 → 卡片和 Anki”中映射句子音频字段，因此不会复制牌组的音频。</translation>
+    </message>
+    <message>
+        <source>No Picture field is mapped in Settings → Cards &amp; Anki, so the deck's pictures won't be copied.</source>
+        <translation>未在“设置 → 卡片和 Anki”中映射图片字段，因此不会复制牌组的图片。</translation>
+    </message>
+    <message>
+        <source>Starting…</source>
+        <translation>正在启动…</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
+    </message>
+    <message>
+        <source>Mining %1…</source>
+        <translation>正在挖取 %1…</translation>
+    </message>
+    <message>
+        <source>Mined %1 cards.</source>
+        <translation>已挖出 %1 张卡片。</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>已取消。</translation>
+    </message>
+    <message>
+        <source>Failed: %1.</source>
+        <translation>失败：%1。</translation>
+    </message>
+    <message>
+        <source>This screen mines a deck already in Anki. Pick it from the Deck list above.</source>
+        <translation>此界面用于挖取 Anki 中已有的牌组。请从上方的“牌组”列表中选择。</translation>
+    </message>
+</context><context>
     <name>ReadingMangaTab</name>
     <message>
         <source>Review words before mining</source>
@@ -8528,6 +8692,11 @@ No index files are deleted.</source>
     <message>
         <source>Complete — %1 cards created</source>
         <translation>完成——已创建 %1 张卡片</translation>
+    </message>
+    <message>
+        <source>Anki deck mining</source>
+        <extracomment>Name this run carries away from this screen.</extracomment>
+        <translation>Anki 牌组挖词</translation>
     </message>
     <message>
         <source>Manga mining</source>
@@ -11488,6 +11657,14 @@ Sort by it to work through a long recording in order — then highlight the rows
     <message>
         <source>Reset columns</source>
         <translation>重置列</translation>
+    </message>
+    <message>
+        <source>Play card audio</source>
+        <translation>播放卡片音频</translation>
+    </message>
+    <message>
+        <source>Play this card's own sentence audio from the deck.</source>
+        <translation>播放牌组中这张卡片自带的句子音频。</translation>
     </message>
     <message>
         <source>+ Previous line</source>

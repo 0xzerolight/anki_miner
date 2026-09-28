@@ -2106,6 +2106,14 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Vokabeln direkt aus Untertiteldateien (.srt/.ass/.vtt) als Text sammeln -- kein Video nötig.</translation>
     </message>
     <message>
+        <source>Mine an existing Anki deck</source>
+        <translation>Einen vorhandenen Anki-Stapel sammeln</translation>
+    </message>
+    <message>
+        <source>Mine the sentences of a deck already in Anki, such as a subs2srs, movies2anki or asbplayer deck, as if they were subtitle lines. New cards reuse each card's audio and picture; the source deck is not changed.</source>
+        <translation>Die Sätze eines bereits in Anki vorhandenen Stapels, etwa eines subs2srs-, movies2anki- oder asbplayer-Stapels, wie Untertitelzeilen sammeln. Neue Karten übernehmen Audio und Bild der jeweiligen Karte; der Quellstapel wird nicht verändert.</translation>
+    </message>
+    <message>
         <source>Generate subtitles from audio</source>
         <translation>Untertitel aus Audio erzeugen</translation>
     </message>
@@ -6643,6 +6651,10 @@ Fortfahren?</translation>
         <translation>Text</translation>
     </message>
     <message>
+        <source>Anki Deck</source>
+        <translation>Anki-Stapel</translation>
+    </message>
+    <message>
         <source>Single</source>
         <translation>Einzeln</translation>
     </message>
@@ -8147,6 +8159,159 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Abgeschlossen</translation>
     </message>
 </context><context>
+    <name>ReadingDeckTab</name>
+    <message>
+        <source>Review words before mining</source>
+        <translation>Wörter vor dem Sammeln prüfen</translation>
+    </message>
+    <message>
+        <source>Show the word-selection popup before creating cards.</source>
+        <translation>Das Wortauswahl-Popup vor dem Erstellen von Karten anzeigen.</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>Fortschritt</translation>
+    </message>
+    <message>
+        <source>Anki Deck</source>
+        <translation>Anki-Stapel</translation>
+    </message>
+    <message>
+        <source>Mine the sentences of a deck already in Anki, such as a subs2srs deck. Each new card reuses that card's audio and picture. The deck itself is not changed.</source>
+        <translation>Sammelt die Sätze eines bereits in Anki vorhandenen Stapels, etwa eines subs2srs-Stapels. Jede neue Karte übernimmt Audio und Bild der jeweiligen Karte. Der Stapel selbst wird nicht verändert.</translation>
+    </message>
+    <message>
+        <source>Deck:</source>
+        <translation>Stapel:</translation>
+    </message>
+    <message>
+        <source>Sentence field:</source>
+        <translation>Satzfeld:</translation>
+    </message>
+    <message>
+        <source>Audio field:</source>
+        <translation>Audiofeld:</translation>
+    </message>
+    <message>
+        <source>Picture field:</source>
+        <translation>Bildfeld:</translation>
+    </message>
+    <message>
+        <source>Translation field:</source>
+        <translation>Übersetzungsfeld:</translation>
+    </message>
+    <message>
+        <source>Select a deck…</source>
+        <translation>Stapel auswählen…</translation>
+    </message>
+    <message>
+        <source>The deck to mine. Its subdecks are included.</source>
+        <translation>Der zu sammelnde Stapel. Seine Unterstapel werden einbezogen.</translation>
+    </message>
+    <message>
+        <source>Select a field…</source>
+        <translation>Feld auswählen…</translation>
+    </message>
+    <message>
+        <source>The field that holds the subtitle line to mine.</source>
+        <translation>Das Feld mit der zu sammelnden Untertitelzeile.</translation>
+    </message>
+    <message>
+        <source>(none)</source>
+        <translation>(keines)</translation>
+    </message>
+    <message>
+        <source>The field with the line's audio clip.</source>
+        <translation>Das Feld mit dem Audioclip der Zeile.</translation>
+    </message>
+    <message>
+        <source>The field with the line's picture.</source>
+        <translation>Das Feld mit dem Bild der Zeile.</translation>
+    </message>
+    <message>
+        <source>The field with the line's translation, if the deck has one.</source>
+        <translation>Das Feld mit der Übersetzung der Zeile, falls der Stapel eine hat.</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>Sammeln</translation>
+    </message>
+    <message>
+        <source>Mine the deck's sentences into Anki cards.</source>
+        <translation>Die Sätze des Stapels in Anki-Karten sammeln.</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Abbrechen</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation>Bricht den aktiven Durchlauf ab.</translation>
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki. Is Anki running?</source>
+        <translation>Stapelnamen konnten nicht von Anki abgerufen werden. Läuft Anki?</translation>
+    </message>
+    <message>
+        <source>Reading the deck…</source>
+        <translation>Stapel wird gelesen…</translation>
+    </message>
+    <message>
+        <source>Couldn't read the deck: </source>
+        <translation>Der Stapel konnte nicht gelesen werden: </translation>
+    </message>
+    <message>
+        <source>The selected deck has no notes.</source>
+        <translation>Der ausgewählte Stapel hat keine Notizen.</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n note(s) in the deck.</source>
+        <translation>
+            <numerusform>%n Notiz im Stapel.</numerusform>
+            <numerusform>%n Notizen im Stapel.</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Pick a deck and its sentence field first.</source>
+        <translation>Wählen Sie zuerst einen Stapel und dessen Satzfeld aus.</translation>
+    </message>
+    <message>
+        <source>No sentence-audio field is mapped in Settings → Cards &amp; Anki, so the deck's audio won't be copied.</source>
+        <translation>Unter Einstellungen → Karten &amp; Anki ist kein Satz-Audiofeld zugeordnet, daher wird das Audio des Stapels nicht kopiert.</translation>
+    </message>
+    <message>
+        <source>No Picture field is mapped in Settings → Cards &amp; Anki, so the deck's pictures won't be copied.</source>
+        <translation>Unter Einstellungen → Karten &amp; Anki ist kein Bildfeld zugeordnet, daher werden die Bilder des Stapels nicht kopiert.</translation>
+    </message>
+    <message>
+        <source>Starting…</source>
+        <translation>Wird gestartet…</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Wird abgebrochen…</translation>
+    </message>
+    <message>
+        <source>Mining %1…</source>
+        <translation>%1 wird gesammelt…</translation>
+    </message>
+    <message>
+        <source>Mined %1 cards.</source>
+        <translation>%1 Karten gesammelt.</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>Abgebrochen.</translation>
+    </message>
+    <message>
+        <source>Failed: %1.</source>
+        <translation>Fehlgeschlagen: %1.</translation>
+    </message>
+    <message>
+        <source>This screen mines a deck already in Anki. Pick it from the Deck list above.</source>
+        <translation>Dieser Bildschirm sammelt einen bereits in Anki vorhandenen Stapel. Wählen Sie ihn oben in der Liste „Stapel“ aus.</translation>
+    </message>
+</context><context>
     <name>ReadingMangaTab</name>
     <message>
         <source>Review words before mining</source>
@@ -8545,6 +8710,11 @@ Es werden keine Indexdateien gelöscht.</translation>
     <message>
         <source>Complete — %1 cards created</source>
         <translation>Abgeschlossen — %1 Karten erstellt</translation>
+    </message>
+    <message>
+        <source>Anki deck mining</source>
+        <extracomment>Name this run carries away from this screen.</extracomment>
+        <translation>Anki-Stapel-Mining</translation>
     </message>
     <message>
         <source>Manga mining</source>
@@ -11508,6 +11678,14 @@ Danach sortieren, um eine lange Aufnahme der Reihe nach durchzuarbeiten — dann
     <message>
         <source>Reset columns</source>
         <translation>Spalten zurücksetzen</translation>
+    </message>
+    <message>
+        <source>Play card audio</source>
+        <translation>Karten-Audio abspielen</translation>
+    </message>
+    <message>
+        <source>Play this card's own sentence audio from the deck.</source>
+        <translation>Das eigene Satz-Audio dieser Karte aus dem Stapel abspielen.</translation>
     </message>
     <message>
         <source>+ Previous line</source>
