@@ -56,8 +56,12 @@ _NEWMM_EXCLUDED: frozenset[str] = frozenset({"บอ"})
 
 
 @functools.cache
-def _newmm_dictionary() -> Any:
-    """newmm's own dictionary minus ``_NEWMM_EXCLUDED``: built once per process (0.2 s), like newmm's."""
+def newmm_dictionary() -> Any:
+    """newmm's own dictionary minus ``_NEWMM_EXCLUDED``: built once per process (0.2 s), like newmm's.
+
+    Also the split pass's word list (``th/parser.py``): a part it cuts off is a
+    word this segmenter knows.
+    """
     from pythainlp.corpus.common import thai_words
     from pythainlp.util import Trie
 
@@ -80,7 +84,7 @@ class ThaiTagger:
             if not chunk:
                 continue
             engine = "newmm-safe" if len(chunk) > _SAFE_MODE_CHARS and " " not in chunk else "newmm"
-            tokens = self._tokenize(chunk, custom_dict=_newmm_dictionary(), engine=engine, keep_whitespace=False)
+            tokens = self._tokenize(chunk, custom_dict=newmm_dictionary(), engine=engine, keep_whitespace=False)
             out += [tok for tok in tokens if tok.strip()]
         return out
 
@@ -89,8 +93,14 @@ class ThaiTagger:
             return "mark"
         return "stopword" if surface in TH_STOPWORDS else ""
 
-    def __call__(self, text: str) -> list[LanguageToken]:
-        segments = self._segments(text)
+    def __call__(self, text: str, segments: list[str] | None = None) -> list[LanguageToken]:
+        """Tokenize ``text``, or tag ``segments``, a segmentation of it the caller already made.
+
+        The parser's split pass (``th/parser.py``) re-tags a re-segmented line
+        through ``segments``, so the call stays under ``LockedTagger``'s lock.
+        """
+        if segments is None:
+            segments = self._segments(text)
         if not segments:
             return []
         tokens: list[LanguageToken] = []
