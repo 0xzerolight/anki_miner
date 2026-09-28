@@ -53,12 +53,14 @@ class PymorphyLemmaRepair:
     3. A content token whose lemma is its own surface under ``fold`` takes the one normal form that
        pymorphy3's known parses of the same UPOS agree on (вяжет -> вязать, сховалася ->
        сховатися), else the lower-cased ``analysis_form`` of its surface.
-    4. An ADV token whose lemma is not its own surface, and whose every known parse is a
-       non-comparative adjective or a vocative noun, takes the lower-cased ``analysis_form`` of its
-       surface: pymorphy3-dicts-uk knows можна only as the adjective можний, уже and варто only as
-       the vocatives of уж and варта, so the lookup lemmatiser fronted another word. A comparative
-       keeps its adjective on purpose (громче -> громкий), and a verb or a numeral the model tagged
-       ADV (врёте -> врать) keeps the lemma its own parse accounts for.
+    4. An ADV token whose lemma is not its own surface, and whose every known parse is a form an
+       adverb can share its spelling with (a vocative noun, a short neuter adjective, a singular
+       full adjective in the nominative or vocative), takes the lower-cased ``analysis_form`` of
+       its surface: pymorphy3-dicts-uk knows можна only as the adjective можний, уже and варто only
+       as the vocatives of уж and варта, so the lookup lemmatiser fronted another word. A
+       comparative keeps its adjective on purpose (громче -> громкий); so does a short adjective
+       the model tagged ADV (глуп -> глупый), and a verb or a numeral (врёте -> врать) keeps the
+       lemma its own parse accounts for.
 
     ``fold`` is what "the lemma is the surface" means for the language, and it exists because the
     tagging copy rewrites the surface before the model sees it: ``str.lower`` by default, yo-blind
@@ -94,25 +96,32 @@ class PymorphyLemmaRepair:
             raise RuntimeError("PymorphyLemmaRepair runs only after bind()")
         for token in tokens:
             pos = token.feature.pos1
-            hyphenated = _HYPHENATED.fullmatch(token.surface) is not None
-            identity = pos in self._allowed_pos and self._fold(token.feature.lemma) == self._fold(token.surface)
-            if not (hyphenated or identity or pos in _VERB_MISTAGS or pos == "ADV"):
-                continue
-            # One analyser call per token, whichever branch reads it.
             form = self._analysis_form(token.surface)
+            hyphenated = _HYPHENATED.fullmatch(token.surface) is not None
+            echoed = self._fold(token.feature.lemma) == self._fold(token.surface)
+            identity = pos in self._allowed_pos and echoed
+            # spaCy lemmatises a NOUN/PROPN/ADJ that no parse of its POS matches to its own text,
+            # so a verb the model mistagged always echoes its surface.
+            verb_mistag = pos in _VERB_MISTAGS and echoed
+            other_adverb = (
+                pos == "ADV" and token.feature.lemma != form.lower() and "Degree=Cmp" not in token.morph.split("|")
+            )
+            # The cheap checks above decide whether the token needs the analyser at all.
+            if not (hyphenated or identity or verb_mistag or other_adverb):
+                continue
             analyses = [
                 (parse, *self._to_upos(str(parse.tag))) for parse in self._analyzer.parse(form) if parse.is_known
             ]
             if hyphenated:
                 _retag(token, analyses)
-            elif pos in _VERB_MISTAGS and _only_verbs(analyses):
+            elif verb_mistag and _only_verbs(analyses):
                 _retag(token, analyses)
                 # The lemma the verb parses agree on, as for an identity lemma: Стой is the
                 # imperative of стоять and of стоить, and the first parse would front the wrong one.
                 token.feature.lemma = _agreed_lemma(analyses, "VERB", form)
             elif identity:
                 token.feature.lemma = _agreed_lemma(analyses, pos, form)
-            elif pos == "ADV" and _names_another_word(token, form.lower(), analyses):
+            elif other_adverb and _spells_only_the_adverb(analyses):
                 token.feature.lemma = form.lower()
         return tokens
 
@@ -144,14 +153,22 @@ def _only_verbs(analyses: list[Analysis]) -> bool:
     )
 
 
-def _names_another_word(token: LanguageToken, own: str, analyses: list[Analysis]) -> bool:
-    """An adverb the analyser knows only as an adjective or a vocative noun (можна, уже, варто).
+def _spells_only_the_adverb(analyses: list[Analysis]) -> bool:
+    """Some parse is known, and every one is a form an adverb shares its spelling with (можна, уже)."""
+    return bool(analyses) and all(_adverb_homograph(pos, features) for _parse, pos, features in analyses)
 
-    Not a comparative, by the model's morph or by any parse, and not a lemma already ``own``.
+
+def _adverb_homograph(pos: str, features: dict[str, str]) -> bool:
+    """A vocative noun (uk уже: уж), a short neuter adjective (пытливо), or a singular full adjective
+    in the nominative or vocative (uk можна: можний).
+
+    A comparative, a plural, an oblique case or a masculine or feminine short form is the adjective
+    itself, which the model tagged ADV: глуп, смешна, внутреннею and uk сиромудрі keep its lemma.
     """
-    if "Degree=Cmp" in token.morph.split("|") or token.feature.lemma == own:
+    if pos == "NOUN":
+        return features.get("Case") == "Voc"
+    if pos != "ADJ" or features.get("Degree") == "Cmp" or features.get("Number") == "Plur":
         return False
-    return bool(analyses) and all(
-        (pos == "ADJ" and features.get("Degree") != "Cmp") or (pos == "NOUN" and features.get("Case") == "Voc")
-        for _parse, pos, features in analyses
-    )
+    if features.get("Variant") == "Brev":
+        return features.get("Gender") == "Neut"
+    return features.get("Case") in ("Nom", "Voc")

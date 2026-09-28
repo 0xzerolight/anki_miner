@@ -36,6 +36,11 @@ class _Analyzer:
 #: The stub tags: an OpenCorpora POS (plus ``voct`` where the case matters), mapped as ``oc2ud`` maps it.
 _UPOS: dict[str, tuple[str, dict[str, str]]] = {
     "ADJF": ("ADJ", {"Case": "Nom"}),
+    "ADJF ablt": ("ADJ", {"Case": "Ins", "Gender": "Fem", "Number": "Sing"}),
+    "ADJF plur": ("ADJ", {"Case": "Nom", "Number": "Plur"}),
+    "ADJS femn": ("ADJ", {"Gender": "Fem", "Number": "Sing", "Variant": "Brev"}),
+    "ADJS masc": ("ADJ", {"Gender": "Masc", "Number": "Sing", "Variant": "Brev"}),
+    "ADJS neut": ("ADJ", {"Gender": "Neut", "Number": "Sing", "Variant": "Brev"}),
     "ADVB": ("ADV", {}),
     "COMP": ("ADJ", {"Degree": "Cmp"}),
     "GRND": ("VERB", {"VerbForm": "Conv"}),
@@ -204,6 +209,7 @@ def test_a_word_with_any_other_parse_keeps_the_models_pos(parses):
         ("Можна", "можний", [_Parse("можний", "ADJF")]),  # pymorphy3-dicts-uk knows можна only as an adjective
         ("уже", "уж", [_Parse("уж", "NOUN voct")]),  # ... and уже only as the vocative of уж
         ("варто", "варта", [_Parse("варта", "NOUN voct"), _Parse("варта", "NOUN voct")]),
+        ("пытливо", "пытливый", [_Parse("пытливый", "ADJS neut")]),  # the short neuter is the adverb's spelling
     ],
 )
 def test_an_adverb_fronting_a_word_it_is_no_form_of_takes_its_own_spelling(surface, lemma, parses):
@@ -229,6 +235,10 @@ def test_the_adverb_repair_writes_the_analysis_form():
         ("тринадцати", "тринадцать", "", [_Parse("тринадцать", "NUMR")]),  # ... and a numeral
         ("щодня", "щодень", "", [_Parse("щодня", "ADVB"), _Parse("щодень", "NOUN")]),  # an adverb parse exists
         ("ранком", "ранок", "", [_Parse("ранок", "NOUN")]),  # a noun parse that is not a vocative
+        ("глуп", "глупый", "", [_Parse("глупый", "ADJS masc")]),  # a short adjective the model tagged ADV
+        ("смешна", "смешной", "", [_Parse("смешной", "ADJS femn")]),
+        ("внутреннею", "внутренний", "", [_Parse("внутренний", "ADJF ablt")]),  # an oblique case
+        ("сиромудрі", "сиромудрий", "", [_Parse("сиромудрий", "ADJF plur")]),  # a plural
     ],
 )
 def test_an_adverb_lemma_the_analyser_can_account_for_is_left_alone(surface, lemma, morph, parses):
@@ -238,6 +248,18 @@ def test_an_adverb_lemma_the_analyser_can_account_for_is_left_alone(surface, lem
     token.morph = morph
     (token,) = repair([token])
     assert (token.feature.pos1, token.feature.lemma) == ("ADV", lemma)
+
+
+def test_a_token_no_branch_can_change_never_reaches_the_analyser():
+    """An inflected noun or name (never a mistagged verb: spaCy lemmatises one to its own text) and
+    a comparative adverb cost no parse."""
+    analyzer = _Analyzer({})
+    repair = PymorphyLemmaRepair()
+    repair.bind(analyzer, _to_upos)
+    comparative = _token("громче", "громкий", "ADV")
+    comparative.morph = "Degree=Cmp"
+    repair([_token("столе", "стол", "NOUN"), _token("Москве", "москва", "PROPN"), comparative])
+    assert analyzer.asked == []
 
 
 def test_an_unbound_repair_refuses_to_run():

@@ -98,6 +98,22 @@ def test_a_russian_comparative_still_fronts_its_adjective(ru_tagger, text, surfa
     assert _token(ru_tagger, text, surface) == ("ADV", lemma)
 
 
+@pytest.mark.parametrize(
+    "text,surface,lemma",
+    [
+        ("Он глуп.", "глуп", "глупый"),  # a masculine short form is the adjective, not an adverb
+        ("Она была смешна и наивна.", "смешна", "смешной"),  # ... and so is a feminine one
+    ],
+)
+def test_a_russian_short_adjective_tagged_adv_keeps_its_adjective(ru_tagger, text, surface, lemma):
+    assert _token(ru_tagger, text, surface) == ("ADV", lemma)
+
+
+def test_a_russian_adverb_the_analyser_knows_only_as_a_short_neuter_fronts_itself(ru_tagger):
+    text = "Мать пытливо посмотрела на неё."
+    assert _token(ru_tagger, text, "пытливо") == ("ADV", "пытливо")  # was пытливый
+
+
 # RUUK-05: uk stress from the lemma row's head line, never another lexeme's form row.
 
 
