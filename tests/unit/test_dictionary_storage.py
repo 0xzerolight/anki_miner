@@ -916,6 +916,45 @@ class TestReadingBoost:
         finally:
             conn.close()
 
+    def _seed_mai(self, db_path: Path) -> None:
+        """wty-ro-en's shape: the lemma rows carry no reading, the form-of rows do."""
+        create_index(db_path)
+        bulk_insert(
+            db_path,
+            [
+                DictRow(term="mai", reading=None, content="<div>more</div>", tags="adv"),
+                DictRow(term="mai", reading="mâi", content="<div>form of mâna</div>", tags="non-lemma"),
+                DictRow(term="mai", reading=None, content="<div>May</div>", tags="n"),
+            ],
+        )
+
+    def test_a_row_without_a_reading_is_a_plain_non_match(self, tmp_path: Path):
+        """A boost no row matches leaves the index order alone: a NULL reading
+        ranks like a differing one, not after it."""
+        db_path = tmp_path / "t.sqlite"
+        self._seed_mai(db_path)
+        conn = open_readonly(db_path)
+        try:
+            boosted = [c for c, _, _ in lookup(conn, "mai", "mai")]
+            wildcard = [c for c, _, _ in lookup(conn, "mai", None)]
+            batch = lookup_many(conn, [("mai", "mai")])["mai"]
+            assert batch == lookup(conn, "mai", "mai")
+        finally:
+            conn.close()
+        assert boosted == ["<div>more</div>", "<div>form of mâna</div>", "<div>May</div>"]
+        assert boosted == wildcard
+
+    def test_a_matching_reading_still_outranks_a_missing_one(self, tmp_path: Path):
+        db_path = tmp_path / "t.sqlite"
+        self._seed_mai(db_path)
+        conn = open_readonly(db_path)
+        try:
+            contents = [c for c, _, _ in lookup(conn, "mai", "mâi")]
+            assert lookup_many(conn, [("mai", "mâi")])["mai"] == lookup(conn, "mai", "mâi")
+        finally:
+            conn.close()
+        assert contents == ["<div>form of mâna</div>", "<div>more</div>", "<div>May</div>"]
+
 
 # ---------------------------------------------------------------------------
 # 5.1: structural perf guards (no wall-time assertions — see brief)

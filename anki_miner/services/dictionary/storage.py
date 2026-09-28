@@ -126,8 +126,13 @@ _LOOKUP_LIMIT = 20
 # not filter). ``score DESC, sequence, id`` remain the lower tiebreaks.
 #
 # NULL-binding semantics: with no reading bound (wildcard), ``(reading = NULL)``
-# is NULL for every row, so the key is inert and the ordering collapses to the
-# pre-boost cascade — the ``reading=None`` path is byte-identical to 4.6 output.
+# is NULL for every row and ``COALESCE`` makes it 0, so the key is inert and the
+# ordering collapses to the pre-boost cascade — the ``reading=None`` path is
+# byte-identical to 4.6 output.
+# A row with no reading of its own is a non-match like any other: ``COALESCE``
+# turns its NULL into 0, where plain ``DESC`` would sort it after every row whose
+# reading merely differs. wty-ro-en stores readings on its form-of rows only, so
+# that NULL-last put "lucra lucra lucra" ahead of "to work" (ROM-05).
 #
 # Explicit ``, id`` tiebreak makes single-word ordering fully deterministic (rows
 # with equal priority/score and equal/NULL ``sequence`` would otherwise come back
@@ -143,7 +148,7 @@ _LOOKUP_LIMIT = 20
 _LOOKUP_SQL = (
     "SELECT content, tags, sequence, term, reading FROM entries "
     "WHERE term = ? OR reading = ? "
-    "ORDER BY (term = ?) DESC, (reading = ?) DESC, score DESC, sequence, id"
+    "ORDER BY (term = ?) DESC, COALESCE(reading = ?, 0) DESC, score DESC, sequence, id"
 )
 
 # Same shape as _LOOKUP_SQL but also returns the ``rules`` column and takes no
@@ -868,13 +873,14 @@ def lookup_many(
 
         # Bucket each fetched row under its own req_idx-tagged word. Each entry
         # carries the sort keys that reproduce _LOOKUP_SQL's
-        # "ORDER BY (term=?) DESC, (reading=?) DESC, score DESC, sequence", plus a
+        # "ORDER BY (term=?) DESC, COALESCE(reading=?, 0) DESC, score DESC, sequence", plus a
         # final ``id`` tiebreak:
         #   * term_priority: 0 when this row's term equals the word (DESC puts
         #     term matches first), else 1.
-        #   * reading_priority: mirrors the reading boost ``(reading=?) DESC``
-        #     against THIS word's contextual reading (0 match / 1 differ / 2 NULL;
-        #     constant when the word has no boost). See _reading_priority.
+        #   * reading_priority: mirrors the reading boost
+        #     ``COALESCE(reading=?, 0) DESC`` against THIS word's contextual
+        #     reading (0 match / 1 differ or NULL; constant when the word has no
+        #     boost). See _reading_priority.
         #   * sense_rank: the profile's optional row demotion (see
         #     _sense_rank_fn); constant 0 without one, so the cascade is
         #     unchanged for every profile that has none.
@@ -1176,16 +1182,14 @@ def attest_detail(conn: sqlite3.Connection, words: list[str], include_readings: 
     return result
 
 
-# Sort key mirroring SQLite "ORDER BY (reading = ?) DESC" for the reading boost.
-# With no boost bound (folded_boost is None), the SQL predicate is NULL for every
-# row so all rows tie — return a constant. With a boost: a row whose folded
-# reading equals it ranks first (SQL true 1), a differing non-NULL reading next
-# (SQL false 0), and a NULL reading last (SQL NULL sorts last under DESC).
+# Sort key mirroring SQLite "ORDER BY COALESCE(reading = ?, 0) DESC" for the
+# reading boost. With no boost bound (folded_boost is None), the SQL predicate is
+# NULL for every row, COALESCE makes it 0, so all rows tie — return a constant.
+# With a boost: a row whose folded reading equals it ranks first (SQL true 1);
+# a differing reading and a NULL one tie next (SQL false 0, NULL coalesced to 0).
 def _reading_priority(folded_row_reading: str | None, folded_boost: str | None) -> int:
     if folded_boost is None:
         return 0
-    if folded_row_reading is None:
-        return 2
     return 0 if folded_row_reading == folded_boost else 1
 
 
