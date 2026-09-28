@@ -102,8 +102,199 @@ def _resolve(entries: dict[str, list[tuple[str, str]]], surface: str) -> tuple[s
     return token.feature.lemma, token.feature.pos1, token.feature.pos2, token.feature.vocalised
 
 
+# --------------------------------------------------------------------------
+# HE-01: a lemma-tagged row whose every sense gloss is "<inflection> of X" fronts X
+# --------------------------------------------------------------------------
+
 LAASOT = _word("LAMED", "AYIN", "SHIN", "VAV", "TAV")
 ASA = _word("AYIN", "SHIN", "HE")
+ASOT = _word("AYIN", "SHIN", "VAV", "TAV")
+RAITI = _word("RESH", "ALEF", "YOD", "TAV", "YOD")
+RAA = _word("RESH", "ALEF", "HE")
+OVED = _word("AYIN", "VAV", "BET", "DALET")
+AVAD = _word("AYIN", "BET", "DALET")
+SHARA = _word("SHIN", "RESH", "HE")
+SHAR = _word("SHIN", "RESH")
+
+
+def test_an_infinitive_row_fronts_the_verb_it_names():
+    """la'asot is filed 'v' with the gloss 'to-infinitive of asa': the front is asa, from asa's own row."""
+    entries = {
+        LAASOT: [_lemma("v", f"to-infinitive of {_pointed(ASA)} (asa).", head=_pointed(LAASOT))],
+        ASA: [_lemma("v vt", "to do, to make", head=_pointed(ASA))],
+    }
+    assert _resolve(entries, LAASOT) == (ASA, "VERB", "", _pointed(ASA))
+
+
+def test_the_entry_names_its_lemma_so_no_strip_second_guesses_it():
+    """The strip rung asot is a headword of its own; the entry's gloss still decides, as a lemma row does."""
+    entries = {
+        LAASOT: [_lemma("v", f"to-infinitive of {_pointed(ASA)} (asa).")],
+        ASA: [_lemma("v", "to do, to make")],
+        ASOT: [_lemma("n fem", "an unrelated noun")],
+    }
+    assert _resolve(entries, LAASOT)[:2] == (ASA, "VERB")
+
+
+def test_a_past_form_row_and_its_form_row_agree_on_one_lemma():
+    entries = {
+        RAITI: [
+            _lemma("v sg suf", f"First-person singular past (suffix conjugation) of {_pointed(RAA)} (raa).", head="x"),
+            _form(RAA),
+        ],
+        RAA: [_lemma("v", "to see")],
+    }
+    assert _resolve(entries, RAITI)[:2] == (RAA, "VERB")
+
+
+def test_an_etymology_that_reads_like_a_form_of_line_is_not_a_gloss():
+    """oved: 'Present participle of avad' is its Etymology; its sense is 'worker', so oved stays."""
+    entries = {
+        OVED: [
+            _lemma(
+                "n masc", "worker, employee", head=_pointed(OVED), etymology=f"Present participle of {_pointed(AVAD)}."
+            ),
+            _form(AVAD),
+        ],
+        AVAD: [_lemma("v", "to work")],
+    }
+    assert _resolve(entries, OVED)[:2] == (OVED, "NOUN")
+
+
+def test_one_real_sense_on_any_lemma_row_keeps_the_candidate():
+    """Only a key whose EVERY lemma row is a form-of row is a form: a real noun row keeps it a headword."""
+    entries = {
+        OVED: [
+            _lemma("v masc ptcpl sg", f"Masculine singular present participle and present tense of {_pointed(AVAD)}."),
+            _lemma("n masc", "worker, employee"),
+        ],
+        AVAD: [_lemma("v", "to work")],
+    }
+    assert _resolve(entries, OVED)[:2] == (OVED, "VERB")
+
+
+def test_a_gloss_behind_its_own_tag_chip_is_still_read():
+    """shara 'v fem sg': each gloss opens with a part-of-speech chip ('suf', 'ptcpl') before its text."""
+    entries = {
+        SHARA: [
+            _lemma(
+                "v fem sg",
+                f"Third-person feminine singular past (suffix conjugation) of {_pointed(SHAR)} (shar).",
+                f"Feminine singular present participle and present tense of {_pointed(SHAR)} (shar).",
+                gloss_tag="suf",
+            )
+        ],
+        SHAR: [_lemma("v", "to sing")],
+    }
+    assert _resolve(entries, SHARA)[:2] == (SHAR, "VERB")
+
+
+def test_a_gloss_that_is_not_an_inflection_line_is_not_a_form_of_row():
+    """'female equivalent of X', 'synonym of X', 'verbal noun of X' name a different word, not a form."""
+    for gloss in ("female equivalent of", "synonym of", "verbal noun of", "abbreviation of"):
+        entries = {OVED: [_lemma("n", f"{gloss} {_pointed(AVAD)}")], AVAD: [_lemma("v", "to work")]}
+        assert _resolve(entries, OVED)[:2] == (OVED, "NOUN"), gloss
+
+
+# --------------------------------------------------------------------------
+# HE-02: a key with form rows only never fronts itself
+# --------------------------------------------------------------------------
+
+MEVIN = _word("MEM", "BET", "YOD", "FINAL NUN")
+HEVIN = _word("HE", "BET", "YOD", "FINAL NUN")
+BEIN = _word("BET", "YOD", "FINAL NUN")
+SHAMATA = _word("SHIN", "MEM", "AYIN", "TAV")
+SHAMA = _word("SHIN", "MEM", "AYIN")
+ET = _word("AYIN", "TAV")
+VEGAN = _word("VAV", "GIMEL", "FINAL NUN")
+GAN = _word("GIMEL", "FINAL NUN")
+GANAN = _word("GIMEL", "NUN", "FINAL NUN")
+
+
+def test_a_disjoint_mem_word_fronts_its_target():
+    """mevin: its form row names hevin, the strip bein ('between') disagrees; a mem-initial word is a participle."""
+    entries = {
+        MEVIN: [_form(HEVIN)],
+        HEVIN: [_lemma("v", "to understand", head=_pointed(HEVIN))],
+        BEIN: [_lemma("prep", "between")],
+    }
+    assert _resolve(entries, MEVIN)[:2] == (HEVIN, "VERB")
+
+
+def test_a_disjoint_shin_word_fronts_its_target():
+    """shamata: the form row names shama, the strip et ('time') disagrees; shin is a root letter here."""
+    entries = {
+        SHAMATA: [_form(SHAMA)],
+        SHAMA: [_lemma("v", "to hear")],
+        ET: [_lemma("n fem", "time")],
+    }
+    assert _resolve(entries, SHAMATA)[:2] == (SHAMA, "VERB")
+
+
+def test_a_disjoint_vav_word_fronts_its_strip():
+    """ve-gan: the form row names an unrelated verb, the strip gan is a headword: 'and a garden'."""
+    entries = {
+        VEGAN: [_form(GANAN)],
+        GANAN: [_lemma("v", "to protect")],
+        GAN: [_lemma("n masc", "garden", head=_pointed(GAN))],
+    }
+    assert _resolve(entries, VEGAN) == (GAN, "NOUN", "", _pointed(GAN))
+
+
+# --------------------------------------------------------------------------
+# HE-06: a proper-name row does not hide a common word
+# --------------------------------------------------------------------------
+
+YETER = _word("YOD", "TAV", "RESH")
+TSARFAT = _word("TSADI", "RESH", "PE", "TAV")
+TSIREF = _word("TSADI", "YOD", "RESH", "FINAL PE")
+HAMAKOM = _word("HE", "MEM", "QOF", "VAV", "FINAL MEM")
+MAKOM = _word("MEM", "QOF", "VAV", "FINAL MEM")
+MIKUM = _word("MEM", "YOD", "QOF", "VAV", "FINAL MEM")
+
+
+def test_a_common_row_after_a_name_row_is_the_front():
+    """yeter: wty files the given name Jether first, then the noun 'remainder'."""
+    entries = {YETER: [_lemma("name masc", "a male given name, Jether"), _lemma("n masc", "remainder, rest")]}
+    assert _resolve(entries, YETER)[:2] == (YETER, "NOUN")
+
+
+def test_a_name_with_form_rows_and_no_strip_stays_a_name():
+    """tsarfat (France) also has form rows naming tsiref; with no strip to confirm them the name stands."""
+    entries = {
+        TSARFAT: [_lemma("name fem", "France"), _form(TSIREF), _form(TSIREF)],
+        TSIREF: [_lemma("v", "to attach")],
+    }
+    assert _resolve(entries, TSARFAT)[:2] == (TSARFAT, "PROPN")
+
+
+def test_a_name_with_form_rows_a_strip_confirms_fronts_the_common_word():
+    """ha-makom is a name for God, and its form rows name makom, which the strip makom confirms."""
+    entries = {
+        HAMAKOM: [_lemma("name masc", "God"), _form(MAKOM), _form(MIKUM)],
+        MAKOM: [_lemma("n masc", "place", head=_pointed(MAKOM)), _form(MIKUM)],
+        MIKUM: [_lemma("n masc", "location")],
+    }
+    assert _resolve(entries, HAMAKOM)[:2] == (MAKOM, "NOUN")
+
+
+# --------------------------------------------------------------------------
+# HE-07: an article strip's own headword beats agreement through its form rows -- for he only
+# --------------------------------------------------------------------------
+
+MEVAKESH = _word("MEM", "BET", "QOF", "SHIN")
+BAKESH = _word("BET", "QOF", "SHIN")
+BIKESH = _word("BET", "YOD", "QOF", "SHIN")
+
+
+def test_a_mem_strip_that_agrees_through_its_form_rows_keeps_the_target():
+    """mevakesh -> bikesh: the strip baqesh (a noun and a haser spelling of bikesh) confirms the verb."""
+    entries = {
+        MEVAKESH: [_form(BIKESH)],
+        BAKESH: [_lemma("n fem", "request"), _form(BIKESH)],
+        BIKESH: [_lemma("v", "to ask for")],
+    }
+    assert _resolve(entries, MEVAKESH)[:2] == (BIKESH, "VERB")
 
 
 # --------------------------------------------------------------------------
