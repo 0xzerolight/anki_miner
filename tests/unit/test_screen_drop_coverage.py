@@ -265,6 +265,45 @@ class TestBackfillRefusesEverything:
 
 
 # ---------------------------------------------------------------------------
+# Anki Deck: the deck is picked from Anki, never dropped
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def deck_tab(qtbot, test_config):
+    from anki_miner.gui.widgets.reading_deck_tab import ReadingDeckTab
+
+    with patch("anki_miner.gui.widgets._reading_mining_base.ReadingQueueWorker"):
+        widget = ReadingDeckTab(config=test_config, processor=MagicMock(), presenter=MagicMock())
+        qtbot.addWidget(widget)
+        yield widget
+        widget.deleteLater()
+
+
+class TestAnkiDeckRefusesFiles:
+    def test_the_drop_is_refused_and_points_at_the_deck_picker(self, deck_tab, tmp_path):
+        episode = tmp_path / "ep01.mkv"
+        episode.touch()
+
+        _enter(deck_tab, _mime(urls=(_local(episode),)))
+        assert "Deck list" in deck_tab.status_label.text()
+
+        event = _drop(deck_tab, _mime(urls=(_local(episode),)))
+
+        assert event.isAccepted() is False
+        assert deck_tab.focusWidget() is deck_tab.deck_combo
+
+    def test_the_reason_is_taken_back_down_when_the_drag_leaves(self, deck_tab, tmp_path):
+        episode = tmp_path / "ep01.mkv"
+        episode.touch()
+        _enter(deck_tab, _mime(urls=(_local(episode),)))
+
+        deck_tab.dragLeaveEvent(QDragLeaveEvent())
+
+        assert deck_tab.status_label.text() == ""
+
+
+# ---------------------------------------------------------------------------
 # The four selector screens: the file kind is checked at the field
 # ---------------------------------------------------------------------------
 

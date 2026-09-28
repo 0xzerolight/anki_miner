@@ -81,7 +81,7 @@ UTILITY_SUBTABS: tuple[str, ...] = (
 SUBTAB_KEYS: dict[str, frozenset[str]] = {
     "settings": SETTINGS_SUBTABS,
     "video": frozenset({"single", "batch", "youtube", "deckbuilder"}),
-    "reading": frozenset({"manga", "novels", "subtitles", "text"}),
+    "reading": frozenset({"manga", "novels", "subtitles", "text", "deck"}),
     "subtitles": frozenset(UTILITY_SUBTABS),
 }
 
@@ -332,6 +332,30 @@ CAPABILITIES: tuple[Capability, ...] = (
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("reading", "subtitles"),
         keywords=("subtitle only", "srt", "ass", "vtt", "no video", "script", "transcript"),
+    ),
+    Capability(
+        id="anki-deck-mining",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Mine an existing Anki deck"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Mine the sentences of a deck already in Anki, such as a subs2srs, movies2anki or "
+            "asbplayer deck, as if they were subtitle lines. New cards reuse each card's audio "
+            "and picture; the source deck is not changed.",
+        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("reading", "deck"),
+        keywords=(
+            "subs2srs",
+            "movies2anki",
+            "asbplayer",
+            "sentence deck",
+            "sentence cards",
+            "premade deck",
+            "shared deck",
+            "anki deck",
+            "morphman",
+            "ankimorphs",
+        ),
     ),
     Capability(
         id="subtitle-generate",

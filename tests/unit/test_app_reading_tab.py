@@ -13,6 +13,7 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
+from anki_miner.gui.widgets.reading_deck_tab import ReadingDeckTab
 from anki_miner.gui.widgets.reading_manga_tab import ReadingMangaTab
 from anki_miner.gui.widgets.reading_novels_tab import ReadingNovelsTab
 from anki_miner.gui.widgets.reading_subtitles_tab import ReadingSubtitlesTab
@@ -42,27 +43,29 @@ def test_reading_tab_before_analytics(wired_window):
     assert titles.index("Reading") < titles.index("Analytics")
 
 
-def test_reading_tab_nests_four_inner_tabs(wired_window):
-    """The container holds exactly four inner tabs: Manga / Novels / Subtitles / Text."""
+def test_reading_tab_nests_five_inner_tabs(wired_window):
+    """The container holds exactly five inner tabs: Manga / Novels / Subtitles / Text / Anki Deck."""
     _window, _titles, tabs = wired_window
     reading = tabs["Reading"]
-    assert reading._inner_tabs.count() == 4
+    assert reading._inner_tabs.count() == 5
     labels = [reading._inner_tabs.tabText(i) for i in range(reading._inner_tabs.count())]
-    assert labels == ["Manga", "Novels", "Subtitle Files", "Text"]
+    assert labels == ["Manga", "Novels", "Subtitle Files", "Text", "Anki Deck"]
 
 
 def test_reading_tab_inner_child_types(wired_window):
-    """Inner tabs are the Manga, Novels, Subtitles, and Text sub-tabs, in order."""
+    """Inner tabs are the Manga, Novels, Subtitles, Text, and Anki Deck sub-tabs, in order."""
     _window, _titles, tabs = wired_window
     reading = tabs["Reading"]
     assert isinstance(reading._inner_tabs.widget(0), ReadingMangaTab)
     assert isinstance(reading._inner_tabs.widget(1), ReadingNovelsTab)
     assert isinstance(reading._inner_tabs.widget(2), ReadingSubtitlesTab)
     assert isinstance(reading._inner_tabs.widget(3), ReadingTextTab)
+    assert isinstance(reading._inner_tabs.widget(4), ReadingDeckTab)
     assert reading.manga_tab is reading._inner_tabs.widget(0)
     assert reading.novels_tab is reading._inner_tabs.widget(1)
     assert reading.subtitles_tab is reading._inner_tabs.widget(2)
     assert reading.text_tab is reading._inner_tabs.widget(3)
+    assert reading.deck_tab is reading._inner_tabs.widget(4)
 
 
 def test_reading_tab_shares_one_presenter(wired_window):
@@ -72,4 +75,5 @@ def test_reading_tab_shares_one_presenter(wired_window):
     assert reading.manga_tab._presenter is reading.novels_tab._presenter
     assert reading.subtitles_tab._presenter is reading.manga_tab._presenter
     assert reading.text_tab._presenter is reading.manga_tab._presenter
+    assert reading.deck_tab._presenter is reading.manga_tab._presenter
     assert reading.manga_tab._presenter is not None

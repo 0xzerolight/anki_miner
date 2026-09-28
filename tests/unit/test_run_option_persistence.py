@@ -67,6 +67,7 @@ _CURATION_SCREENS = (
     "ReadingNovelsTab",
     "ReadingSubtitlesTab",
     "ReadingTextTab",
+    "ReadingDeckTab",
 )
 
 
