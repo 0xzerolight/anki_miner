@@ -305,9 +305,17 @@ def test_the_particle_languages_repair_before_they_join(monkeypatch, code):
     assert isinstance(repair, FormOfLemmaPass) and isinstance(join, SeparableVerbPass)
 
 
-@pytest.mark.parametrize("code", ["pl", "lt"])
-def test_pl_and_lt_wire_the_repair_alone(monkeypatch, code):
-    assert isinstance(_injected(monkeypatch, code), FormOfLemmaPass)
+def test_pl_wires_the_repair_alone(monkeypatch):
+    assert isinstance(_injected(monkeypatch, "pl"), FormOfLemmaPass)
+
+
+def test_lt_strips_a_negative_form_before_the_repair(monkeypatch):
+    from anki_miner.languages.lt.parser import NegatedVerbPass
+
+    injected = _injected(monkeypatch, "lt")
+    assert isinstance(injected, OrderedPasses)
+    negation, repair = injected._passes  # noqa: SLF001 - the order is the contract
+    assert isinstance(negation, NegatedVerbPass) and isinstance(repair, FormOfLemmaPass)
 
 
 def test_german_fronts_take_the_tokenizer_s_title_case_classes(monkeypatch):

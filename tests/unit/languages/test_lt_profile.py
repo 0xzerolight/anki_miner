@@ -9,7 +9,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.config.config import _LANGUAGE_CODES
 from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages._spaced.fields import NOUN_GENDER_FIELD, POS_FIELD
-from anki_miner.languages._spaced.form_of import FormOfLemmaPass
+from anki_miner.languages._spaced.form_of import FormOfLemmaPass, OrderedPasses
 from anki_miner.languages._spaced.grammar_hook import GrammarTagHook
 from anki_miner.languages._spaced.keys import CasefoldDictKeys
 from anki_miner.languages._spaced.morphology import LatinLookupStrategy, SpacedMinedForm
@@ -18,6 +18,7 @@ from anki_miner.languages._spaced.script import LatinScript
 from anki_miner.languages.lt import catalog as lt_catalog
 from anki_miner.languages.lt.catalog import LT_CATALOG
 from anki_miner.languages.lt.morphology import LT_ABBREVIATIONS, LT_CLOSERS, LT_OPENERS, LT_SUBTITLE_REGEX, lt_normalize
+from anki_miner.languages.lt.parser import NegatedVerbPass
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.switching import switch_language
 
@@ -112,7 +113,9 @@ def test_the_parser_is_the_spaced_factory_with_the_form_of_repair():
     parser = profile.create_parser(switch_language(AnkiMinerConfig(), "lt"))
     assert parser.normalize is profile.normalize
     assert parser._compound_matcher is None
-    assert isinstance(parser._token_post_pass, FormOfLemmaPass)
+    assert isinstance(parser._token_post_pass, OrderedPasses)
+    negation, repair = parser._token_post_pass._passes
+    assert isinstance(negation, NegatedVerbPass) and isinstance(repair, FormOfLemmaPass)
 
 
 def test_the_catalogue_ships_wiktionary_and_a_lemmatised_frequency_list():
