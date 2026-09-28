@@ -1,5 +1,7 @@
 """Tests for Yomitan structured-content HTML renderer."""
 
+import re
+
 import pytest
 
 from anki_miner.services.dictionary.yomitan_renderer import (
@@ -1051,20 +1053,37 @@ class TestDeinflectionGlossaryItem:
     """Term-bank v3 permits a glossary item to be a deinflection pair
     [uninflected_term, rule_chain]. Yomitan consumes these to build its
     deinflection DB, never as prose. Rendering the whole list as SC concatenated
-    the term and rule strings into garbage; we render just the base form."""
+    the term and rule strings into garbage; we render just the base form. The rule
+    chain rides along as an attribute: the text shows the base form only, and a
+    form resolver reads the chain (he: a past-tense form fronts its target's verb row)."""
 
     def test_deinflection_pair_renders_uninflected_term_only(self):
         html = render_glossary_entry([["のたまう", ["past"]]])
-        assert html == ('<li class="gloss-item"><div class="gloss-content">のたまう</div></li>')
+        assert html == (
+            '<li class="gloss-item"><div class="gloss-content">'
+            '<span data-inflection="past">のたまう</span></div></li>'
+        )
 
     def test_deinflection_pair_escapes_term(self):
         html = render_glossary_entry([["<x>", ["past"]]])
-        assert html == ('<li class="gloss-item"><div class="gloss-content">&lt;x&gt;</div></li>')
+        assert html == (
+            '<li class="gloss-item"><div class="gloss-content">'
+            '<span data-inflection="past">&lt;x&gt;</span></div></li>'
+        )
 
-    def test_deinflection_pair_does_not_emit_rule_strings(self):
+    def test_deinflection_pair_keeps_rule_strings_out_of_the_text(self):
         html = render_glossary_entry([["oppidum", ["genitive plural"]]])
-        assert "genitive" not in html
-        assert "oppidum" in html
+        assert re.sub(r"<[^>]+>", "", html) == "oppidum"
+        assert 'data-inflection="genitive plural"' in html
+
+    def test_deinflection_rule_chain_is_joined_and_escaped(self):
+        html = render_glossary_entry([["x", ['a "b"', "<c> & d"]]])
+        assert 'data-inflection="a &quot;b&quot;; &lt;c&gt; &amp; d"' in html
+
+    def test_deinflection_pair_without_rules_renders_the_bare_term(self):
+        for pair in (["x", []], ["x"], ["x", "past"]):
+            html = render_glossary_entry([pair])
+            assert html == '<li class="gloss-item"><div class="gloss-content">x</div></li>', pair
 
     def test_deinflection_non_string_term_empty(self):
         html = render_glossary_entry([[123, ["past"]]])

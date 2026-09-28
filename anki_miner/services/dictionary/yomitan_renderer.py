@@ -807,8 +807,15 @@ def render_glossary_entry(
             # glossary prose; we have no deinflection UI, so render just the
             # uninflected base form. Rendering the pair as structured content
             # would concatenate the term with the rule strings into garbage.
+            # The rule chain stays on the term as an attribute, out of the text:
+            # it is what tells a verb form of a target from a noun form of the
+            # same spelling (he: a past-tense form fronts its target's verb row).
             term = item[0] if item and isinstance(item[0], str) else ""
             inner = _text_to_html(term)
+            chain = item[1] if len(item) > 1 and isinstance(item[1], list) else []
+            rules = "; ".join(rule for rule in chain if isinstance(rule, str) and rule)
+            if term and rules:
+                inner = f'<span data-inflection="{escape(rules, quote=True)}">{inner}</span>'
         else:
             inner = structured_content_to_html(item, dict_id=dict_id, media_collector=media_collector)
         members.append(inner)
