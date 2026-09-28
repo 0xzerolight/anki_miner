@@ -43,6 +43,9 @@ DE_SMOKE_SENTENCE = "Er sieht sich den Film an."
 DE_EXTRA_CARD_FIELDS = (POS_FIELD, NOUN_GENDER_FIELD, NOUN_PLURAL_FIELD)
 DE_CARD_FIELDS = spaced_card_fields(DE_EXTRA_CARD_FIELDS)
 DE_KEYS = CasefoldDictKeys()
+#: The words before a dotted ordinal in a date or a rank (``am 3. Oktober``, ``im 19. Jahrhundert``,
+#: ``der 2. Weltkrieg``): after one of them ``<number>.`` continues the sentence, while ``ist 30.`` still ends it.
+DE_ORDINAL_LEADS = frozenset({"am", "im", "zum", "zur", "vom", "beim", "der", "die", "das", "den", "dem", "des"})
 
 DE_AUDIO = AudioDefaults(
     gtts_lang="de",
@@ -78,7 +81,9 @@ def build_profile() -> LanguageProfile:
             card_fields=DE_CARD_FIELDS,
         ),
         # German closes a quote with “, which the shared Latin set opens with.
-        sentence_rules=dataclasses.replace(sentence_rules(DE_ABBREVIATIONS), openers=DE_OPENERS, closers=DE_CLOSERS),
+        sentence_rules=dataclasses.replace(
+            sentence_rules(DE_ABBREVIATIONS), openers=DE_OPENERS, closers=DE_CLOSERS, ordinal_leads=DE_ORDINAL_LEADS
+        ),
         normalize=nfc_normalize,
         dict_keys=DE_KEYS,
         audio=DE_AUDIO,

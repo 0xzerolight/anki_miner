@@ -86,7 +86,15 @@ def test_book_sentences_hold_together_over_hungarian_abbreviations():
     ]
 
 
-def test_an_ordinal_still_ends_a_book_sentence():
-    """Known miss (the de 'am 3. Oktober' case): a Hungarian ordinal is a digit plus a full stop."""
-    rules = get_profile("hu").sentence_rules
-    assert split_sentences("A 3. emeleten lakom.", rules=rules) == ["A 3.", "emeleten lakom."]
+@pytest.mark.parametrize(
+    "text",
+    [
+        "A 3. emeleten lakom.",
+        "2003. szeptember 1-jén Anna elkezdte az egyetemet.",
+        "A vizsgaidőszak május 20. és június 30. között volt.",
+        "– Szereted a munkádat? – kérdezik tőle gyakran.",
+    ],
+)
+def test_an_ordinal_or_a_speech_tag_does_not_end_a_book_sentence(text):
+    """A Hungarian ordinal or date is a number plus a full stop, and the word after it is lowercase."""
+    assert split_sentences(text, rules=get_profile("hu").sentence_rules) == [text]

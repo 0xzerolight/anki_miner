@@ -16,7 +16,11 @@ The module constants below are the Japanese policy and stay the behaviour of a
 contains ``.`` (Korean's) leave ``3.14`` and ``Dr.`` alone, by requiring the run
 to be followed by whitespace or end-of-text. ``abbreviations`` adds the period
 model for a language whose ``.`` is also an abbreviation dot (``Dr.``, ``z.B.``)
-and whose ``...`` is an ellipsis; an empty set keeps that model off.
+and whose ``...`` is an ellipsis; an empty set keeps that model off. Under
+``space_aware``, a run followed by whitespace, an optional dialogue dash and a
+lowercase letter does not end the sentence either (``A 3. emeleten``,
+``¿Vienes? —preguntó``): a cased sentence never starts lowercase, and an
+uncased script has no lowercase letter to trip it.
 """
 
 from __future__ import annotations
@@ -37,6 +41,12 @@ _SENTENCE_PUNCT = _HARD_TERMINATORS | _ELLIPSIS | {_DOT}
 # The ASCII period of a language's period model (SentenceRules.abbreviations).
 _ASCII_DOT = "."
 _WHITESPACE_RE = re.compile(r"\s")
+# What follows a space_aware terminator run: whitespace, an optional dialogue
+# dash (hyphen, en dash, em dash, or the "--" plain-text books write for the em
+# dash) and its optional space, then the next character.
+_NEXT_WORD_RE = re.compile(r"\s+(?:(?:--?|[–—])\s*)?(\S)")
+# The number of an ordinal (``am 3. Oktober``) that SentenceRules.ordinal_leads gates.
+_ORDINAL_RE = re.compile(r"[0-9]{1,3}")
 
 # Bracket/quote pairs; depth rises on an opener, falls on a matching closer.
 _OPENERS = frozenset("「｢『（〔［｛〈《【([{｟〝")
@@ -56,22 +66,49 @@ def _policy(
     return rules.terminators, rules.openers, rules.closers, punct, rules.space_aware, rules.abbreviations
 
 
-def _period_continues(run: str, buf: list[str], abbreviations: frozenset[str], openers: frozenset[str]) -> bool:
-    """Whether a terminating ASCII-dot run is an abbreviation dot or an ellipsis.
+def _period_continues(
+    run: str,
+    buf: list[str],
+    abbreviations: frozenset[str],
+    openers: frozenset[str],
+    ordinal_leads: frozenset[str],
+) -> bool:
+    """Whether a terminating ASCII-dot run is an abbreviation dot, an ordinal dot or an ellipsis.
 
     Only consulted when a language declares abbreviations (the period model).
     A run of two or more ASCII dots and nothing else is an ellipsis — the Latin
     mirror of the full-width ``．．`` rule. A lone dot continues the sentence
     when the text back to the previous whitespace, minus leading openers and
-    the dot itself, casefolds to a declared key.
+    the dot itself, casefolds to a declared key, or is a 1-3 digit number whose
+    preceding word casefolds to one of ``ordinal_leads`` (``am 3.``, not ``ist 30.``).
     """
     if len(run) >= 2 and set(run) == {_ASCII_DOT}:
         return True
     if run != _ASCII_DOT:
         return False
     before = "".join(buf)[: -len(run)]
-    word = _WHITESPACE_RE.split(before)[-1].lstrip("".join(openers))
-    return bool(word) and word.casefold() in abbreviations
+    strip = "".join(openers)
+    word = _WHITESPACE_RE.split(before)[-1].lstrip(strip)
+    if not word:
+        return False
+    if word.casefold() in abbreviations:
+        return True
+    if not (ordinal_leads and _ORDINAL_RE.fullmatch(word)):
+        return False
+    words = before.split()
+    return len(words) >= 2 and words[-2].lstrip(strip).casefold() in ordinal_leads
+
+
+def _lowercase_follows(text: str, j: int) -> bool:
+    """Whether the word after the whitespace at ``j`` (past a dialogue dash) starts lowercase.
+
+    A cased sentence never starts lowercase, so such a word continues the
+    sentence: the rest of a date or ordinal (hu ``2003. szeptember``, hr
+    ``12. svibnja``, nb ``17. mai``) or a speech tag after ``?``/``!`` (es
+    ``¿Vienes? —preguntó``, pl ``— zapytała``, tr ``Nereye? diye sordu``).
+    """
+    match = _NEXT_WORD_RE.match(text, j)
+    return match is not None and match.group(1).islower()
 
 
 def _run_is_terminating(run: str, terminators: frozenset[str]) -> bool:
@@ -133,6 +170,8 @@ def split_sentences(
     # S9, read from `rules` rather than through _policy: services/cue_merge.py:71
     # unpacks the same six values, so the tuple's shape is shared API.
     split_on_whitespace = rules is not None and rules.split_on_whitespace
+    ordinal_leads = rules.ordinal_leads if rules is not None else frozenset()
+    joiners = rules.whitespace_joiners if rules is not None else frozenset()
     matched_openers = _matched_openers(text, openers, closers)
     segments: list[str] = []
     buf: list[str] = []
@@ -162,19 +201,28 @@ def split_sentences(
             buf.append(run)
             i = j
             # space_aware: a terminator set containing "." only splits when the
-            # run is followed by whitespace or end-of-text, so "3.14" survives.
+            # run is followed by whitespace or end-of-text, so "3.14" survives,
+            # and not when the next word (past a dialogue dash) is lowercase.
             # The period model (abbreviations) keeps "Dr." and "..." in the sentence.
-            terminates = _run_is_terminating(run, terminators) and (not space_aware or j >= n or text[j].isspace())
-            if terminates and not (abbreviations and _period_continues(run, buf, abbreviations, openers)):
+            terminates = _run_is_terminating(run, terminators) and (
+                not space_aware or j >= n or (text[j].isspace() and not _lowercase_follows(text, j))
+            )
+            if terminates and not (
+                abbreviations and _period_continues(run, buf, abbreviations, openers, ordinal_leads)
+            ):
                 segments.append("".join(buf))
                 buf = []
         elif split_on_whitespace and depth == 0 and c.isspace():
             # A whitespace RUN is one boundary, and it belongs to neither side:
             # the trailing .strip() would drop it anyway, and absorbing it here
             # keeps a multi-space gap from yielding an empty middle segment.
+            # A joiner on either side (th ๆ, a numeral) keeps the run in the sentence.
+            start = i
             while i < n and text[i].isspace():
                 i += 1
-            if buf:
+            if joiners and ((start > 0 and text[start - 1] in joiners) or (i < n and text[i] in joiners)):
+                buf.append(text[start:i])
+            elif buf:
                 segments.append("".join(buf))
                 buf = []
         else:
