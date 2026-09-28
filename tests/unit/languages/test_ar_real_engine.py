@@ -94,7 +94,7 @@ def test_the_pos_corpus_mines_its_pinned_fronts(ar_parser, case):
 def test_a_vocalised_line_mines_bare_fronts_with_vocalised_readings_and_keeps_its_sentence(ar_parser):
     line = "\u0630\u064e\u0647\u064e\u0628\u064e \u0627\u0644\u0648\u064e\u0644\u064e\u062f\u064f \u0625\u0650\u0644\u064e\u0649 \u0627\u0644\u0628\u064e\u064a\u0652\u062a\u0650."  # dhahaba al-waladu ilaa al-bayti
     words = {word.mined_form: word for word in _mine(ar_parser, line)}
-    assert words["\u0630\u0647\u0628"].expression_reading == "\u0630\u064e\u0647\u064e\u0628"
+    assert words["\u0630\u0647\u0628"].expression_reading == "\u0630\u064e\u0647\u064e\u0628\u064e"  # citation form
     assert words["\u0630\u0647\u0628"].sentence == line
     assert "Segmentation=" in words["\u0648\u0644\u062f"].morph  # al+ is a clitic
 
@@ -231,3 +231,16 @@ def test_the_common_subtitle_words_take_their_common_analysis(tagger, surface, f
 def test_a_same_spelling_homograph_takes_the_common_reading(tagger, surface, reading):
     (token,) = tagger(surface)
     assert token.feature.reading == reading
+
+
+@pytest.mark.parametrize(
+    ("surface", "reading"),
+    [
+        ("\u0630\u0647\u0628", "\u0630\u064e\u0647\u064e\u0628\u064e"),  # dhahaba "go", not dhahab "gold"
+        ("\u0623\u062d\u0628\u0643", "\u0623\u064e\u062d\u064e\u0628\u064e\u0651"),  # ahabba "love", not "dearer"
+        ("\u064a\u0645\u0643\u0646\u0646\u064a", "\u0623\u064e\u0645\u0652\u0643\u064e\u0646\u064e"),  # amkana "can"
+    ],
+)
+def test_a_verb_reading_is_the_citation_form_wty_heads_its_verb_rows_with(tagger, surface, reading):
+    (token,) = tagger(surface)
+    assert (token.feature.pos1, token.feature.reading) == ("verb", reading)

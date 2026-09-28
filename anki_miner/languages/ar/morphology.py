@@ -22,6 +22,7 @@ from typing import Any
 
 from anki_miner.languages.ar._calima.charsets import dediac_ar
 from anki_miner.languages.ar.overrides import AR_LEX_REPAIRS, AR_PICK_OVERRIDES
+from anki_miner.languages.ar.script import is_arabic_letter
 
 AR_UNKNOWN_POS = "unknown"
 AR_CLITIC_SUBTYPE = "clitic"
@@ -30,6 +31,10 @@ FATHATAN = "\N{ARABIC FATHATAN}"
 AR_TANWEEN = (FATHATAN, "\N{ARABIC DAMMATAN}", "\N{ARABIC KASRATAN}")
 _ALEF = "\N{ARABIC LETTER ALEF}"
 _ALEF_WASLA = "\N{ARABIC LETTER ALEF WASLA}"
+_FATHA = "\N{ARABIC FATHA}"
+_SHADDA = "\N{ARABIC SHADDA}"
+#: A verb lexeme ending in a long-vowel letter takes no citation fatha (``\u062f\u064e\u0639\u0627``, ``\u0631\u064e\u0623\u064e\u0649``).
+_OPEN_FINALS = frozenset({_ALEF, "\N{ARABIC LETTER ALEF MAKSURA}"})
 _CONJUNCTIONS = ("\N{ARABIC LETTER WAW}", "\N{ARABIC LETTER FEH}")  # wa, fa
 _HAMZA_SEATS = str.maketrans({"\u0625": "\u0627", "\u0623": "\u0627", "\u0622": "\u0627", "\u0671": "\u0627"})
 
@@ -175,14 +180,31 @@ class AnalysisSummary:
     morph: str  # "Root=\u0643.\u062a.\u0628|Segmentation=\u0648\u064e+ \u0633\u064e+ \u064a\u064e\u0643\u0652\u062a\u064f\u0628\u064f\u0648\u0646\u064e +\u0647\u0627"
 
 
+def citation_form(verb: str) -> str:
+    """A verb lexeme as wty heads its verb rows: a final bare consonant takes the perfect's fatha.
+
+    calima writes ``\u0630\u064e\u0647\u064e\u0628``, which is wty's noun "gold"; the verb "go" is ``\u0630\u064e\u0647\u064e\u0628\u064e``, and
+    the reading is the lookup's ranking boost, so without the fatha the noun leads the card. The fatha
+    goes before a final shadda (``\u0623\u064e\u062d\u064e\u0628\u0651`` -> ``\u0623\u064e\u062d\u064e\u0628\u064e\u0651``), the NFC order wty stores. An
+    alef or alef maqsura ending (``\u0631\u064e\u0623\u064e\u0649``) and one already vowelled stay as they are.
+    """
+    stem = verb.removesuffix(_SHADDA)
+    if not stem or not is_arabic_letter(stem[-1]) or stem[-1] in _OPEN_FINALS:
+        return verb
+    return stem + _FATHA + verb[len(stem) :]
+
+
 def summarise(analysis: Mapping[str, Any]) -> AnalysisSummary:
     """Reduce one analysis to the token fields (hamzat wasl reads as a plain alef, like wty headwords).
 
-    The lexeme passes ``AR_LEX_REPAIRS`` first; the lemma and the reading follow the repaired lexeme.
+    The lexeme passes ``AR_LEX_REPAIRS`` first, and a verb's reading is its ``citation_form``; the
+    lemma (the card front) carries no marks, so neither changes it beyond the repair.
     """
     pos = str(analysis.get("pos", ""))
     lex = str(analysis.get("lex", ""))
     reading = AR_LEX_REPAIRS.get((lex, pos), lex).replace(_ALEF_WASLA, _ALEF)
+    if pos == "verb":
+        reading = citation_form(reading)
     d3tok = str(analysis.get("d3tok", ""))
     base = next((part for part in d3tok.split("_") if part and not part.startswith("+") and not part.endswith("+")), "")
     clitic = "+" in d3tok

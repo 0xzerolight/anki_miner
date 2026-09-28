@@ -1,13 +1,19 @@
 """Arabic analysis fixes from the 2026-09 mining review (T24), engine-free.
 
-The rhubarb lexeme repair and the pick override table, on hand-built analyses. The real-database half lives in
+The rhubarb lexeme repair, the pick override table and the verb citation fatha, on hand-built
+analyses. The real-database half lives in
 ``test_ar_real_engine.py``.
 """
 
 from __future__ import annotations
 
+import pytest
+
 from anki_miner.languages.ar.morphology import pick_analysis, summarise
 from anki_miner.languages.ar.overrides import AR_LEX_REPAIRS, AR_PICK_OVERRIDES
+
+FATHA = "\u064e"
+SHADDA = "\u0651"
 
 
 def _a(lex, pos, logprob, *, source="lex", d3tok="") -> dict:
@@ -76,3 +82,46 @@ def test_a_key_outside_the_table_keeps_the_argmax():
 def test_come_is_not_in_the_table():
     """ta'aal has one analysis only (the imperative known miss): no row can pick among one."""
     assert "\u062a\u0639\u0627\u0644" not in AR_PICK_OVERRIDES
+
+
+# --------------------------------------------------------------------------
+# ARFA-03: a verb's reading is its citation form, the way wty heads its verb rows
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("lex", "reading"),
+    [
+        ("\u0630\u064e\u0647\u064e\u0628", "\u0630\u064e\u0647\u064e\u0628\u064e"),  # dhahab -> dhahaba "go"
+        ("\u0623\u064e\u062d\u064e\u0628\u0651", "\u0623\u064e\u062d\u064e\u0628\u064e\u0651"),  # ahabba: fatha, shadda
+        ("\u0628\u064e\u062f\u064e\u0623", "\u0628\u064e\u062f\u064e\u0623\u064e"),  # bada'a: a hamza takes it too
+        (
+            "\u0634\u064e\u0642\u0650\u064a",
+            "\u0634\u064e\u0642\u0650\u064a\u064e",
+        ),  # shaqiya: a final ya is a consonant
+        (RAAA, RAAA),  # ra'aa ends in alef maqsura
+        ("\u062f\u064e\u0639\u0627", "\u062f\u064e\u0639\u0627"),  # da'aa ends in alef
+        ("\u0647\u064e\u064a\u0651\u0627", "\u0647\u064e\u064a\u0651\u0627"),  # hayyaa
+        ("\u062d\u064e\u0628\u0651\u0650", "\u062d\u064e\u0628\u0651\u0650"),  # already vowelled
+    ],
+)
+def test_a_verb_reading_ends_in_its_citation_fatha(lex, reading):
+    summary = summarise(_a(lex, "verb", -4.0))
+    assert summary.reading == reading
+    assert summary.lemma == summarise(_a(lex, "noun", -4.0)).lemma  # the front never changes
+
+
+def test_a_noun_reading_keeps_the_bare_lexeme():
+    """wty heads the noun dhahab 'gold' without the fatha: that is what keeps the two apart."""
+    assert summarise(_a("\u0630\u064e\u0647\u064e\u0628", "noun", -4.0)).reading == "\u0630\u064e\u0647\u064e\u0628"
+
+
+def test_hamzat_wasl_and_the_citation_fatha_compose():
+    summary = summarise(_a("\u0671\u0650\u0633\u0652\u062a\u064e\u062e\u0652\u062f\u064e\u0645", "verb", -6.0))
+    assert summary.reading == "\u0627\u0650\u0633\u0652\u062a\u064e\u062e\u0652\u062f\u064e\u0645" + FATHA
+
+
+def test_shadda_is_the_last_mark_of_a_citation_form():
+    """NFC puts fatha (ccc 30) before shadda (ccc 33): the order wty's readings are stored in."""
+    reading = summarise(_a("\u0645\u064e\u0631\u0651", "verb", -4.0)).reading  # marr -> marra "pass"
+    assert reading.endswith(FATHA + SHADDA)
