@@ -1,0 +1,12 @@
+# preferred_present_stems.tsv -- infinitive <TAB> present stem. The stem the
+# Present stem card field shows when hazm 0.12.1 verbs.dat (MIT) lists another
+# line for the same infinitive first: nevesht#navard (line 639) before
+# nevesht#nevis (640), forukht#foruz (495, afruxtan's stem) before
+# forukht#forush (496), bud#ast (143, the copula) before bud#bash (144), and
+# kasht#kar (523, kashtan "to plant") before kosht#kosh (524, koshtan "to
+# kill"). Each row is one of the infinitive's own verbs.dat lines; words.dat
+# holds no conjugated forms, so the pick cannot be measured from the pack.
+نوشتن	نویس
+فروختن	فروش
+بودن	باش
+کشتن	کش

@@ -25,10 +25,11 @@ from anki_miner.languages.fa._hazm.data import HazmData
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 
-#: Where the two committed tables live (package data, both build paths).
+#: Where the committed tables live (package data, both build paths).
 DATA_PACKAGE = "anki_miner.languages.fa.data"
 COMPOUND_VERBS_FILE = "compound_verbs.tsv"
 COLLOQUIAL_FILE = "colloquial.tsv"
+PREFERRED_PRESENT_STEMS_FILE = "preferred_present_stems.tsv"
 
 ZWNJ = "\N{ZERO WIDTH NON-JOINER}"
 
@@ -142,6 +143,7 @@ class PersianLexicon:
 
 def _build_formal(
     verb_lines: Iterable[str],
+    preferred_stems: dict[str, str],
 ) -> tuple[dict[str, str], dict[str, str]]:
     verbs: dict[str, str] = {}
     present_stems: dict[str, str] = {}
@@ -150,7 +152,11 @@ def _build_formal(
         if _is_malformed(past, present):
             continue
         infinitive = conjugation.infinitive(line)
-        present_stems.setdefault(infinitive, present)
+        # First line wins here too, except where verbs.dat lists a rarer stem
+        # first (nevesht#navard before nevesht#nevis, bud#ast before bud#bash):
+        # the committed override names the stem a learner conjugates on, and
+        # the Present stem field exists to teach exactly that.
+        present_stems.setdefault(infinitive, preferred_stems.get(infinitive, present))
         for form in conjugation.expand(past, present):
             # The first verbs.dat line wins: 2,681 forms are ambiguous across
             # homograph past stems (raft#ro "go" is line 360, raft#rub "sweep"
@@ -176,8 +182,9 @@ def _build_informal(rows: Iterable[tuple[str, str]]) -> dict[str, tuple[str, str
 
 
 def build(hazm_data: HazmData) -> PersianLexicon:
-    """Build every table from one loaded pack plus the two committed TSVs."""
-    verbs, present_stems = _build_formal(hazm_data.verb_lines)
+    """Build every table from one loaded pack plus the committed TSVs."""
+    preferred_stems = {row[0]: row[1] for row in _read_tsv(PREFERRED_PRESENT_STEMS_FILE) if len(row) == 2}
+    verbs, present_stems = _build_formal(hazm_data.verb_lines, preferred_stems)
 
     colloquial: dict[str, str] = {}
     for row in _read_tsv(COLLOQUIAL_FILE):

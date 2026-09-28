@@ -76,6 +76,16 @@ THIS_ARABIC = _ALEF + _ARABIC_YEH + _NOON
 THIS_FARSI = _ALEF + _YEH + _NOON
 KOJAST = _KEHEH + _JEEM + _ALEF + _SEEN + _TEH
 
+BUDAN = _BEH + _WAW + _DAL + _NOON
+BASH = _BEH + _ALEF + _SHEEN
+KESH = _KEHEH + _SHEEN
+KOSHTAN = _KEHEH + _SHEEN + _TEH + _NOON
+# neveshtan / forukhtan: verbs.dat lists a dead present stem first
+NEVESHTAN = _NOON + _WAW + _SHEEN + _TEH + _NOON
+NEVIS = _NOON + _WAW + _YEH + _SEEN
+FORUKHTAN = _FEH + _REH + _WAW + _KHAH + _TEH + _NOON
+FORUSH = _FEH + _REH + _WAW + _SHEEN
+
 
 @pytest.fixture(scope="module")
 def fa_lexicon():
@@ -196,6 +206,23 @@ class TestLexiconTables:
         tracemalloc.stop()
         assert built.verb_count
         assert peak < 40 * 1024 * 1024, peak
+
+
+class TestPreferredPresentStems:
+    def test_the_live_present_stem_beats_the_first_verbs_line(self, fa_lexicon):
+        assert fa_lexicon.present_stem(NEVESHTAN) == NEVIS
+        assert fa_lexicon.present_stem(FORUKHTAN) == FORUSH
+        assert fa_lexicon.present_stem(BUDAN) == BASH
+        assert fa_lexicon.present_stem(KOSHTAN) == KESH
+
+    def test_every_preferred_stem_is_one_of_the_infinitives_own_lines(self):
+        # The fixture carries verbs.dat whole, so this is the real file.
+        lines = set(data.load(FIXTURES).verb_lines)
+        rows = list(lexicon._read_tsv(lexicon.PREFERRED_PRESENT_STEMS_FILE))
+        assert rows
+        for infinitive, present in rows:
+            assert infinitive.endswith(_NOON)
+            assert f"{infinitive[:-1]}#{present}" in lines, infinitive
 
 
 def test_building_arms_the_separate_mi_hook(monkeypatch):
