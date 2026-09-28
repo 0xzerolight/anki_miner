@@ -8,6 +8,10 @@ present of έχω (écho)"). ``greek_row_targets`` reads the second shape as a f
 with any sense of its own (``βρέχει`` "it rains"), or whose gloss is a derivation rather than an
 inflection (``δηλώνομαι`` "passive of δηλώνω", a participle, a synonym, a variant), stays a headword.
 
+The same pass recovers the content words the model tags X or PROPN, mostly a capitalised cue-initial
+verb (``Κλείσε την πόρτα.``, ``Θυμάσαι;``): the dictionary decides, never the capital, so
+Ruling S2's rejection of lowercasing the tagging copy stands. ``admit_front`` keeps names out.
+
 The it-style attested-lemma pass was measured and left out: on UD Greek GDT test it moves lemma
 accuracy from 81.1 % to 81.2 % (plan 2026-09-17-el, "Lemma quality").
 """
@@ -15,9 +19,11 @@ accuracy from 81.1 % to 81.2 % (plan 2026-09-17-el, "Lemma quality").
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from typing import Any
 
 from anki_miner.languages._spaced.form_of import lemma_row_targets, rendered_text
+from anki_miner.languages.el.morphology import EL_RECOVERED_POS
 
 _GLOSSES = re.compile(r'<ol class="gloss-sc-ol" data-sc-content="glosses">(.*?)</ol>', re.S)
 _GLOSS = re.compile(r'<li class="gloss-sc-li">(.*?)</li>', re.S)
@@ -47,9 +53,23 @@ def greek_row_targets(content: str, tags: str) -> list[str] | None:
     return targets if targets is not None else _inflection_targets(content)
 
 
+def admit_front(token: Any, front: str, heads: Sequence[tuple[str, str]]) -> bool:
+    """A content token takes any front; a recovered X/PROPN token only a lowercase one no name row files.
+
+    ``Μαρία`` has a ``name`` row, ``σοφία`` (wisdom) one beside its noun row, and ``Γιάννης`` names the
+    capitalised ``Ιωάννης``. A name filed only as a common noun (``Ελπίδα``, hope) still passes.
+    """
+    if token.feature.pos1 not in EL_RECOVERED_POS:
+        return True
+    return not front[:1].isupper() and not any("name" in tags.split(" ") for _content, tags in heads)
+
+
 def create_parser(config: Any, **kwargs: Any) -> Any:
     from anki_miner.languages._spaced import create_spaced_parser
     from anki_miner.languages._spaced.form_of import FormOfLemmaPass
 
-    kwargs.setdefault("token_post_pass", FormOfLemmaPass(row_targets=greek_row_targets))
+    kwargs.setdefault(
+        "token_post_pass",
+        FormOfLemmaPass(row_targets=greek_row_targets, recover_pos=EL_RECOVERED_POS, accept=admit_front),
+    )
     return create_spaced_parser(config, **kwargs)

@@ -218,6 +218,32 @@ def test_a_row_reading_can_class_a_lemma_tagged_row_as_a_form_row():
     assert run(FormOfLemmaPass(row_targets=of_rows), forms, tok("μιλάς", "VERB", "μιλάς")) == [("μιλάω", "VERB")]
 
 
+def test_a_recovered_class_is_read_from_its_surface_and_becomes_a_content_word():
+    """el ``Κλείσε``/``Γράφω``: cue-initial verbs tagged PROPN/X, even when the lemma is itself a headword."""
+    forms = Forms(
+        {
+            "κλείσε": [form("κλείνω")],
+            "κλείνω": [lemma("v")],
+            "γράφω": [lemma("v"), form("γράφομαι")],
+            "μαρία": [lemma("name fem")],
+            "τι": [lemma("pron")],
+        }
+    )
+    line = [
+        tok("Κλείσε", "PROPN", "Κλείσε"),
+        tok("Γράφω", "X", "γράφω"),
+        tok("Μαρία", "X", "μαρία"),
+        tok("Τι", "X", "τι"),
+    ]
+    assert run(FormOfLemmaPass(recover_pos=frozenset({"X", "PROPN"})), forms, *line) == [
+        ("κλείνω", "VERB"),
+        ("γράφω", "VERB"),
+        ("μαρία", "X"),
+        ("τι", "X"),
+    ]
+    assert run(FormOfLemmaPass(), forms, tok("Κλείσε", "PROPN", "Κλείσε")) == [("Κλείσε", "PROPN")]
+
+
 def test_ordered_passes_run_in_order_with_the_same_arguments():
     seen: list[tuple[str, object, object]] = []
 

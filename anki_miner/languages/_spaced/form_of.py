@@ -16,8 +16,9 @@ its targets in ``<li class="gloss-sc-li">``.
 The pass touches only an ADJ/ADV/NOUN/VERB token whose lemma has no lemma row: a lemma the
 dictionary files as a headword is never second-guessed, whatever its part of speech (de
 ``Hochdeutsch`` stays, although ``hochdeutsch`` also has a form row naming ``Hochdeutsche``), and
-neither is a separable-verb head the tagger already joined (``_tagger_joined``). Its candidates are
-read in order, and the first one the dictionary has any row for decides:
+neither is a separable-verb head the tagger already joined (``_tagger_joined``). A language may add
+the classes its tagger puts content words in by mistake (``recover_pos``, el ``X``/``PROPN``). Its
+candidates are read in order, and the first one the dictionary has any row for decides:
 
 * the lowercased SURFACE first -- it is what the text holds, where the lemma is the tagger's guess
   (sv ``Mötet``: the surface's row names the noun ``möte``, the lemma ``möt``'s the verb ``möta``);
@@ -155,6 +156,10 @@ class FormOfLemmaPass:
     * ``row_targets(content, tags)`` -- how a row is read: ``None`` for a lemma row, else the
       targets it names (a dictionary whose form rows are tagged as lemmas, or whose targets carry
       marks its keys fold away).
+    * ``recover_pos`` -- classes the tagger puts content words in by mistake (el ``X``/``PROPN`` for
+      a cue-initial verb). Such a token is read like a content token but never kept on its own
+      lemma, since its class is the mistake; it changes only into a content word, taking the
+      front's class, and ``accept`` decides which fronts it may take.
 
     One batched read per line for the candidates and one for the targets they name, both through a
     per-key cache. The surface is lowered with ``str.lower()``, never ``casefold``, which would
@@ -170,6 +175,7 @@ class FormOfLemmaPass:
         same_pos: bool = False,
         extra_candidates: ExtraCandidates | None = None,
         row_targets: RowTargets = lemma_row_targets,
+        recover_pos: frozenset[str] = frozenset(),
     ) -> None:
         self._title_case_pos = title_case_pos
         self._surface_first = surface_first
@@ -177,13 +183,15 @@ class FormOfLemmaPass:
         self._same_pos = same_pos
         self._extra_candidates = extra_candidates
         self._row_targets = row_targets
+        self._recover_pos = recover_pos
+        self._read_pos = frozenset(UPOS_ALLOWED) | recover_pos
         self._cache: dict[str, list[Row]] = {}
 
     def __call__(self, tokens: list[Any], attest: AttestLookup | None, forms: FormLookup | None) -> list[Any]:
         del attest  # existence is not enough: this pass needs the rows themselves
         if forms is None:
             return tokens
-        content = [token for token in tokens if token.feature.pos1 in UPOS_ALLOWED and not _tagger_joined(token)]
+        content = [token for token in tokens if token.feature.pos1 in self._read_pos and not _tagger_joined(token)]
         if not content:
             return tokens
         rows = self._read(forms, [key for token in content for key in self._candidates(token)])
@@ -223,7 +231,7 @@ class FormOfLemmaPass:
 
     def _choice(self, token: Any, rows: Mapping[str, list[Row]]) -> str | None:
         """The front the dictionary points at, before its own lemma rows are checked; ``None`` keeps the token."""
-        if self._heads(rows.get(token.feature.lemma, ())):
+        if token.feature.pos1 not in self._recover_pos and self._heads(rows.get(token.feature.lemma, ())):
             return None
         for candidate in self._candidates(token):
             found = rows.get(candidate)
@@ -243,6 +251,8 @@ class FormOfLemmaPass:
         if not heads or (self._accept is not None and not self._accept(token, front, heads)):
             return None
         pos1 = WTY_TAG_TO_UPOS.get(heads[0][1].split(" ")[0], token.feature.pos1)
+        if token.feature.pos1 in self._recover_pos and pos1 not in UPOS_ALLOWED:
+            return None
         return case_lemma(front, pos1, self._title_case_pos), pos1
 
 

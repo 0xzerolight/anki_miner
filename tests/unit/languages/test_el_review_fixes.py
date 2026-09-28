@@ -194,6 +194,18 @@ EL_ROWS: dict[str, list[tuple[str, str]]] = {
     "χρόνο": [form("χρόνος")],
     "χρόνος": [head("n masc", "time"), head("n masc", "year")],
     "θόρυβος": [head("n masc", "noise")],
+    # EL-03: cue-initial content words tagged X/PROPN, and the names that must stay out
+    "κλείσε": [form("κλείνω")],
+    "κλείνω": [head("v", "to close"), form("κλείνομαι")],
+    "πόρτα": [head("n fem", "door")],
+    "θυμάσαι": [head("v sg", "second-person singular present of θυμάμαι (thymámai)"), form("θυμάμαι", "θυμάμαι")],
+    "θυμάμαι": [head("v", "to remember")],
+    "καλά": [head("adv", "well"), form("καλός", "καλός"), form("καλό", "καλό")],
+    "καλημέρα": [head("intj", "good morning"), head("n fem", "good morning, hello")],
+    "μαρία": [head("name fem", "Mary, a female given name")],
+    "σοφία": [head("n fem", "wisdom"), head("name fem", "a female given name, Sofia")],
+    "γιάννης": [form("Ιωάννης")],
+    "ιωάννης": [head("name masc", "a male given name, John")],
 }
 
 
@@ -288,6 +300,51 @@ def test_the_real_parser_fronts_the_dictionary_lemma(el_parser):
     assert fronts["πήγες"] == ("πηγαίνω", "VERB")
     fronts = {word.surface: (word.mined_form, word.pos) for word in _words(el_parser, "Έχεις χρόνο;")}
     assert fronts == {"Έχεις": ("έχω", "VERB"), "χρόνο": ("χρόνος", "NOUN")}
+
+
+# --------------------------------------------------------------------------
+# EL-03: content words tagged X/PROPN, recovered through the dictionary
+# --------------------------------------------------------------------------
+
+
+def test_a_cue_initial_word_tagged_x_or_propn_takes_its_dictionary_front(monkeypatch):
+    assert _fronts(
+        monkeypatch,
+        tok("Κλείσε", "PROPN", "Κλείσε"),
+        tok("Θυμάσαι", "PROPN", "Θυμάσαι"),
+        tok("Καλά", "PROPN", "Καλά"),
+    ) == [("κλείνω", "VERB"), ("θυμάμαι", "VERB"), ("καλά", "ADV")]
+
+
+def test_a_name_stays_out(monkeypatch):
+    """``Μαρία`` is a name row; ``σοφία`` (wisdom) also has one; ``Γιάννης`` names ``Ιωάννης``."""
+    assert _fronts(
+        monkeypatch,
+        tok("Μαρία", "X", "μαρία"),
+        tok("Σοφία", "PROPN", "Σοφία"),
+        tok("Γιάννης", "PROPN", "Γιάννη"),
+    ) == [("μαρία", "X"), ("Σοφία", "PROPN"), ("Γιάννη", "PROPN")]
+
+
+def test_a_capitalised_target_stays_out_even_when_filed_as_a_noun(monkeypatch):
+    rows = {"έλληνες": [form("Έλληνας")], "Έλληνας": [head("n masc", "Greek (person)")]}
+    assert _fronts(monkeypatch, tok("Έλληνες", "PROPN", "Έλληνες"), rows=rows) == [("Έλληνες", "PROPN")]
+    assert _fronts(monkeypatch, tok("Έλληνες", "NOUN", "έλληνες"), rows=rows) == [("έλληνας", "NOUN")]
+
+
+def test_a_recovered_word_must_become_a_content_word(monkeypatch):
+    """``Καλημέρα`` tagged X: its first headword row is an interjection, so it stays out."""
+    assert _fronts(monkeypatch, tok("Καλημέρα", "X", "καλημέρα")) == [("καλημέρα", "X")]
+
+
+def test_the_real_parser_recovers_a_cue_initial_verb_and_keeps_names_out(el_parser):
+    assert {(word.mined_form, word.pos) for word in _words(el_parser, "Κλείσε την πόρτα.")} == {
+        ("κλείνω", "VERB"),
+        ("πόρτα", "NOUN"),
+    }
+    names = {"Μαρία", "Σοφία", "Γιάννης"}
+    for line in ("Μαρία, έλα εδώ.", "Σοφία, φύγε!", "Γιάννης, πού είσαι;"):
+        assert not names & {word.surface for word in _words(el_parser, line)}, line
 
 
 # --------------------------------------------------------------------------
