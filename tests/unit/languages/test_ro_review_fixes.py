@@ -1,6 +1,6 @@
-"""Romanian review fixes: verb fronts from wty-ro-en's form rows (ROM-06).
+"""Romanian review fixes: verb fronts from wty-ro-en's form rows (ROM-06), „…” quotes in Reading (ROM-07).
 
-wty-ro-en keys a form row without diacritics and stores the real spelling as its reading (``lasa`` / ``lasă``
+ROM-06: wty-ro-en keys a form row without diacritics and stores the real spelling as its reading (``lasa`` / ``lasă``
 -> ``lăsa``), so the Romanian keys declare the reading column for the form lookup, and the parser runs the
 shared form-of repair with ``front_pos={"VERB"}``. The index below holds the rows wty-ro-en holds for these keys
 (term, reading, tags and named targets; the glosses cut), written and read through the Romanian keys. The
@@ -9,17 +9,21 @@ tagger is module-scoped because the autouse conftest fixture clears the tagger c
 
 from __future__ import annotations
 
+import dataclasses
+
 import pytest
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.languages._spaced.form_of import FormOfLemmaPass
 from anki_miner.languages._spaced.keys import CasefoldDictKeys
+from anki_miner.languages._spaced.sentence import sentence_rules
 from anki_miner.languages.registry import get_profile
-from anki_miner.languages.ro.morphology import ro_fold_cedilla
+from anki_miner.languages.ro.morphology import RO_ABBREVIATIONS, ro_fold_cedilla
 from anki_miner.languages.token import LanguageToken
 from anki_miner.services.dictionary import storage
 from anki_miner.services.dictionary.storage import DictRow
 from anki_miner.services.dictionary.yomitan_renderer import render_glossary_entry
+from anki_miner.services.reading.sentence_splitter import split_sentences
 
 KEYS = get_profile("ro").dict_keys
 
@@ -153,3 +157,32 @@ def test_no_dictionary_leaves_the_tokens_as_the_tagger_built_them(monkeypatch, t
     before = [(t.surface, t.feature.lemma, t.feature.pos1) for t in tokens]
     _injected(monkeypatch)(tokens, None, None)
     assert [(t.surface, t.feature.lemma, t.feature.pos1) for t in tokens] == before
+
+
+# --------------------------------------------------------------------------
+# ROM-07: „ opens a quotation, so Reading keeps a quoted sentence whole
+# --------------------------------------------------------------------------
+
+RULES = get_profile("ro").sentence_rules
+
+
+@pytest.mark.parametrize(
+    ("text", "sentences"),
+    [
+        (
+            "„Am uitat pâinea! Mă întorc imediat.” Mama a zâmbit. „Nu-i nimic.”",
+            ["„Am uitat pâinea! Mă întorc imediat.” Mama a zâmbit.", "„Nu-i nimic.”"],
+        ),
+        ("El a spus: „Vin mâine. Sigur.” Apoi a plecat.", ["El a spus: „Vin mâine. Sigur.” Apoi a plecat."]),
+        ("Dl. Popescu a venit. Bine.", ["Dl. Popescu a venit.", "Bine."]),
+    ],
+)
+def test_romanian_quotes_keep_a_quoted_sentence_whole(text, sentences):
+    assert split_sentences(text, rules=RULES) == sentences
+
+
+def test_the_opener_is_added_to_the_shared_latin_rules():
+    base = sentence_rules(RO_ABBREVIATIONS)
+    assert base.openers < RULES.openers and RULES.openers - base.openers == {"„"}
+    assert "”" in RULES.closers and "«" in RULES.openers  # the inner «…» pair was already shared
+    assert dataclasses.replace(base, openers=RULES.openers) == RULES

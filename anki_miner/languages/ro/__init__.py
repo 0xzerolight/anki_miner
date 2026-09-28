@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import dataclasses
+
 from anki_miner.config.config import AudioSourceEntry
 from anki_miner.languages._spaced.audio import spaced_audio_candidates, spaced_speakable
 from anki_miner.languages._spaced.availability import spaced_missing_reason
@@ -55,6 +57,10 @@ class RomanianDictKeys(CasefoldDictKeys):
 
 #: R35: the cedilla map runs inside the key fold, at import and at query alike.
 RO_KEYS = RomanianDictKeys(extra_fold=ro_fold_cedilla)
+#: Romanian opens a quotation with „ (its closer ” is already a shared closer, and so is the inner «…» pair).
+#: Additive, so a shared opener added later reaches Romanian too (the pl shape).
+_LATIN_RULES = sentence_rules(RO_ABBREVIATIONS)
+RO_SENTENCE_RULES = dataclasses.replace(_LATIN_RULES, openers=_LATIN_RULES.openers | frozenset("„"))
 
 RO_AUDIO = AudioDefaults(
     gtts_lang="ro",
@@ -94,7 +100,7 @@ def build_profile() -> LanguageProfile:
             card_fields=RO_CARD_FIELDS,
             subtitle_regex=RO_SUBTITLE_REGEX,
         ),
-        sentence_rules=sentence_rules(RO_ABBREVIATIONS),
+        sentence_rules=RO_SENTENCE_RULES,
         normalize=ro_normalize,
         dict_keys=RO_KEYS,
         audio=RO_AUDIO,
