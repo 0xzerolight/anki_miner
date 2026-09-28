@@ -903,7 +903,8 @@ def create_services(
         # R36: the row read a language's token post-pass resolves its card fronts
         # with (he). Gated on the same indexed-dict probe as its five siblings and
         # built the same way — but reachable ONLY through a profile's
-        # token_post_pass, so a language without one is unaffected by its presence.
+        # token_post_pass or its create_parser (uk's S24 stress), so any other
+        # language is unaffected by its presence.
         form_lookup = definition_service.offline_term_rows if has_indexed_dict else None
         name_lookup = wordset_service.excluded_terms if wordset_service is not None else None
         subtitle_parser = _create_subtitle_parser(

@@ -3,8 +3,10 @@
 **Dictionary — wty-uk-en** (``yomidevs/wiktionary-to-yomitan``, revision 2026.09.19, HuggingFace
 ``daxida/wty-release``, 9,780,618 B): Wiktionary via kaikki.org, CC BY-SA 4.0. Its Grammar head
 lines name gender, animacy and the aspect partner (``чита<acute>ти • (čytáty) impf (perfective
-прочита<acute>ти)``), and although its LEMMA rows carry no reading, every non-lemma row does --
-which is where the S24 stressed headword on the card comes from (plan P7). It is the only
+прочита<acute>ти)``). Its LEMMA rows carry no reading and every non-lemma row does, but a non-lemma
+row can be another word's form, so the S24 stressed headword on the card is read off the lemma
+row's head line, and only a word with no lemma row takes a non-lemma row's reading (plan P7,
+``uk.morphology.lemma_row_stress``). It is the only
 Ukrainian dictionary offered: the app needs a Yomitan artefact and nothing else redistributable
 exists (spec B.6; the Ukrainian СУМ has no machine-readable form).
 
