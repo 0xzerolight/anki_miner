@@ -7,6 +7,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
+## [3.5.0] - 2026-09-28
+
+Eleven more mining languages, and a quality pass over the rest. Turkish, Indonesian, Thai, Slovenian, Arabic, Russian, Persian, Ukrainian, Vietnamese, Cantonese and Hebrew join the twenty-one 3.4.0 shipped, for 32 in all: Arabic, Persian and Hebrew read right to left in bundled faces, Thai and Cantonese are cut into words by their own engines, Indonesian, Hebrew and Persian need no engine download, and Slovenian and Persian speak through Microsoft Edge's voices where Google has none. Across the languages that were already there, card fronts now come from the dictionary's own headwords, definitions open on the sense for the word's part of speech, and a deck front's plural or gender note no longer hides a known word, so some words carded under 3.4.0 come back with a new front and a few drop out; frequency lists and KRDICT installed under 3.4.0 need re-importing to pick up the new keys and homograph blocks. Other programs can mine through Anki Miner from the command line (`anki-miner mine`, `AnkiMiner --api mine`), resources export and import as one file, SAMI subtitles are read in every language, and Settings is reorganised: Word Filters and a new Sentences page replace Filtering, keyboard shortcuts can be rebound, and the Utilities tab shows only the tools you pick. On macOS, and in the AppImage outside Debian-based distributions, Check for Updates and the yt-dlp install now work.
+
+### Added
 - **Export and import your resources as one file (Settings → Export / Import → Resources…).** Exporting packs the active mining language's dictionaries, frequency and pitch lists, known-words ignore list, and blacklist/whitelist into a zip; a checklist picks what goes in. Importing rebuilds them on another install from their original files, adds them to your lists (new dictionaries on top), and never replaces anything already installed. Audio packs are not included: their audio lives outside the app. The footer's Export Settings… and Import Settings… buttons are now the Settings… entries of these two menus.
 - **Other tools can drive Anki Miner from the command line.** `anki-miner mine batch|pairs|reading|youtube …` mines with your saved settings and prints one JSON object per line — progress, per-episode results with note IDs, and a final result — with exit codes for busy, setup and usage errors; `anki-miner version` prints the installed version. It is the same installed program (`AnkiMiner.exe mine …` on Windows, `/usr/bin/anki-miner mine …` from the .deb). It never opens the word curator and refuses to run while any Anki Miner window is open, including one opened past its "already running" warning. See CLI.md; for a program that names the words itself, see `--api` below.
 - **Other programs can mine with one call (`AnkiMiner --api mine`).** The calling program names the words to mine and, optionally, the subtitle line each card uses (by its start time or its text); Anki Miner reports each word's note ID, or why there is none (already in Anki, no definition, not in the episode, …). The calling program can override the deck, note type, fields and filters for the run without changing your settings, follows progress in a file, and cancels a run by creating one. `check`, `profiles`, `settings-export` and `version` let it reuse your setup. API runs leave your known-words list and statistics alone. See API.md.
