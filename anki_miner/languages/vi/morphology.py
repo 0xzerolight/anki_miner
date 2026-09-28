@@ -2,11 +2,18 @@
 
 The card front is the folded surface (tokenizer.py: NFC -> old style ->
 casefold), probed first by the definition chain. On a miss the candidates are,
-in order, all with conditions 0: the y-to-i monophthong spelling, a
-reduplicative's base syllable, and the Icelandic-eth repair for text that
-reached the ladder without the P3 normaliser. No new-style tone rung (plan
-decision 8): every vi index key and every query is folded to old style by
+in order, all with conditions 0: the y-to-i monophthong spelling, a full
+reduplication's syllable (xanh xanh -> xanh), and the Icelandic-eth repair for
+text that reached the ladder without the P3 normaliser. No new-style tone rung
+(plan decision 8): every vi index key and every query is folded to old style by
 ``VI_KEYS``, so it could only re-probe the key that just missed.
+
+No same-onset rung for partial reduplicatives (spec C.4 names đẹp đẽ): wty-vi-en
+lists đẹp đẽ, lung linh, xinh xắn and nhỏ nhắn as headwords, so the rung only ever
+answered words the dictionary lacks, and there it read two syllables sharing an
+onset as a reduplicative. Over 3,627 wty example lines 28 of 72 clean hits got an
+unrelated word (một mạch "in one go" -> một "one", táo tợn "daring" -> táo
+"jujube", đông đủ -> "east"); a miss is better than a false gloss.
 """
 
 from __future__ import annotations
@@ -25,7 +32,6 @@ _TONE_MARKS = frozenset(map(chr, (0x0300, 0x0301, 0x0303, 0x0309, 0x0323)))
 _Y_TO_I = str.maketrans("yýỳỷỹỵYÝỲỶỸỴ", "iíìỉĩịIÍÌỈĨỊ")
 #: Onsets before which a lone ``y`` is the ``i`` monophthong (spec C.4: never after ``qu``).
 _Y_ONSET = re.compile(r"ngh|ng|nh|ch|gh|kh|ph|th|tr|[bcdđghklmnprstvx]")
-_ONSET = re.compile(r"ngh|ng|nh|ch|gh|gi|kh|ph|qu|th|tr|[bcdđghklmnprstvx]")
 
 
 def _toneless(syllable: str) -> str:
@@ -46,16 +52,9 @@ def y_to_i(word: str) -> str:
 
 
 def reduplicative_base(word: str) -> str:
-    """The first syllable of a two-syllable word whose syllables share an onset."""
+    """The syllable of a full reduplication (two identical syllables); ``""`` for any other word."""
     syllables = word.split(" ")
-    if len(syllables) != 2:
-        return ""
-    if syllables[0] == syllables[1]:
-        return syllables[0]
-    first, second = (_ONSET.match(_toneless(syllable)) for syllable in syllables)
-    if first is not None and second is not None and first.group(0) == second.group(0):
-        return syllables[0]
-    return ""
+    return syllables[0] if len(syllables) == 2 and syllables[0] == syllables[1] else ""
 
 
 class VietnameseLookup:

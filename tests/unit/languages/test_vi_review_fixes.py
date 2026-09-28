@@ -1,4 +1,5 @@
-"""vi review fixes: wty rows ranked by the token's VLSP tag, letter rows last.
+"""vi review fixes: wty rows ranked by the token's VLSP tag, letter rows last, and the
+full-reduplication rung.
 
 Rows are wty-vi-en's own (revision 2026.09.19): tags, first gloss and etymology, shortened.
 """
@@ -10,6 +11,7 @@ from pathlib import Path
 import pytest
 
 from anki_miner.languages.registry import get_profile
+from anki_miner.languages.vi.morphology import VietnameseLookup, reduplicative_base
 from anki_miner.services.dictionary.storage import (
     SCHEMA_VERSION,
     DictRow,
@@ -174,3 +176,19 @@ def test_a_tag_outside_the_map_ranks_no_row_ahead():
     """R (adverb), E, P ... are not mapped: only names and letters move."""
     for tags in ("n", "v", "adj", "adv", "", "non-lemma"):
         assert KEYS.sense_rank("<li>x</li>", tags, "R") == 1
+
+
+# --- the reduplicative rung: full reduplication only ------------------------------------------------
+
+
+@pytest.mark.parametrize("word", ["một mạch", "táo tợn", "đông đủ", "nhà nho", "bài bạc", "cây cau", "son sắt"])
+def test_a_same_onset_compound_offers_no_first_syllable(word):
+    """một mạch 'in one go' got một 'one', táo tợn 'daring' got táo 'jujube' (THVI-09)."""
+    assert reduplicative_base(word) == ""
+    assert VietnameseLookup().candidates(word, "", None) == []
+
+
+@pytest.mark.parametrize(("word", "base"), [("xanh xanh", "xanh"), ("từ từ", "từ"), ("hay hay", "hay")])
+def test_a_full_reduplication_offers_its_syllable(word, base):
+    assert reduplicative_base(word) == base
+    assert VietnameseLookup().candidates(word, "", None) == [(base, 0)]
