@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.languages._spaced.form_of import FormOfLemmaPass, OrderedPasses
 from anki_miner.languages._spaced.morphology import SeparableVerbPass
 from anki_miner.languages.sv.morphology import swedish_particle_candidates
 from anki_miner.languages.sv.parser import create_parser
@@ -45,6 +46,8 @@ def test_the_parser_carries_the_swedish_particle_order(monkeypatch):
 
     monkeypatch.setattr("anki_miner.languages._spaced.create_spaced_parser", fake)
     assert create_parser(AnkiMinerConfig()) == "parser"
-    pass_ = seen["token_post_pass"]
-    assert isinstance(pass_, SeparableVerbPass)
-    assert pass_._candidates is swedish_particle_candidates  # noqa: SLF001 - the injected order is the contract
+    passes = seen["token_post_pass"]
+    assert isinstance(passes, OrderedPasses)
+    repair, join = passes._passes  # noqa: SLF001 - the repair runs before the join
+    assert isinstance(repair, FormOfLemmaPass) and isinstance(join, SeparableVerbPass)
+    assert join._candidates is swedish_particle_candidates  # noqa: SLF001 - the injected order is the contract

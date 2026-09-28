@@ -30,6 +30,8 @@ from anki_miner.languages.de.morphology import (
 from anki_miner.services.tagger import LockedTagger
 
 ES_CLITIC_SUFFIX = r"(?<=[^\W\d_])'[sS]"
+#: The classes whose lemma keeps a capital; the parser's form-of repair cases its fronts the same way.
+DE_TITLE_CASE_POS: frozenset[str] = frozenset({"NOUN"})
 
 
 def _split_es_clitic(nlp: Any) -> None:
@@ -43,7 +45,7 @@ def build_tagger() -> LockedTagger:
     tagger = build_spacy_tagger(
         DE_MODEL_PACKAGE,
         keep_parser=True,
-        title_case_pos=frozenset({"NOUN"}),
+        title_case_pos=DE_TITLE_CASE_POS,
         particle_deps=SEPARABLE_VERB_DEPS,
         tag_char_map=APOSTROPHE_FOLD,
         post_passes=(adjd_as_adjective,),
