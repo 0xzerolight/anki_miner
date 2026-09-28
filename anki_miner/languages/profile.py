@@ -163,6 +163,11 @@ class SentenceRules:
     #: sentence; the space IS its clause boundary. Reading-tab loaders only —
     #: subtitle cues are already sentences. Terminators still apply.
     split_on_whitespace: bool = False
+    #: Casefolded words after which ``<1-3 digits>.`` is an ordinal, not a sentence end
+    #: (de ``am 3. Oktober``, ``im 19. Jahrhundert``). Part of the period model, so it
+    #: only acts when ``abbreviations`` is non-empty. German capitalises the noun after
+    #: the ordinal, which the splitter's lowercase-continuation rule cannot see.
+    ordinal_leads: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)

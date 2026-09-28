@@ -45,6 +45,8 @@ _WHITESPACE_RE = re.compile(r"\s")
 # dash (hyphen, en dash, em dash, or the "--" plain-text books write for the em
 # dash) and its optional space, then the next character.
 _NEXT_WORD_RE = re.compile(r"\s+(?:(?:--?|[–—])\s*)?(\S)")
+# The number of an ordinal (``am 3. Oktober``) that SentenceRules.ordinal_leads gates.
+_ORDINAL_RE = re.compile(r"[0-9]{1,3}")
 
 # Bracket/quote pairs; depth rises on an opener, falls on a matching closer.
 _OPENERS = frozenset("「｢『（〔［｛〈《【([{｟〝")
@@ -64,22 +66,37 @@ def _policy(
     return rules.terminators, rules.openers, rules.closers, punct, rules.space_aware, rules.abbreviations
 
 
-def _period_continues(run: str, buf: list[str], abbreviations: frozenset[str], openers: frozenset[str]) -> bool:
-    """Whether a terminating ASCII-dot run is an abbreviation dot or an ellipsis.
+def _period_continues(
+    run: str,
+    buf: list[str],
+    abbreviations: frozenset[str],
+    openers: frozenset[str],
+    ordinal_leads: frozenset[str],
+) -> bool:
+    """Whether a terminating ASCII-dot run is an abbreviation dot, an ordinal dot or an ellipsis.
 
     Only consulted when a language declares abbreviations (the period model).
     A run of two or more ASCII dots and nothing else is an ellipsis — the Latin
     mirror of the full-width ``．．`` rule. A lone dot continues the sentence
     when the text back to the previous whitespace, minus leading openers and
-    the dot itself, casefolds to a declared key.
+    the dot itself, casefolds to a declared key, or is a 1-3 digit number whose
+    preceding word casefolds to one of ``ordinal_leads`` (``am 3.``, not ``ist 30.``).
     """
     if len(run) >= 2 and set(run) == {_ASCII_DOT}:
         return True
     if run != _ASCII_DOT:
         return False
     before = "".join(buf)[: -len(run)]
-    word = _WHITESPACE_RE.split(before)[-1].lstrip("".join(openers))
-    return bool(word) and word.casefold() in abbreviations
+    strip = "".join(openers)
+    word = _WHITESPACE_RE.split(before)[-1].lstrip(strip)
+    if not word:
+        return False
+    if word.casefold() in abbreviations:
+        return True
+    if not (ordinal_leads and _ORDINAL_RE.fullmatch(word)):
+        return False
+    words = before.split()
+    return len(words) >= 2 and words[-2].lstrip(strip).casefold() in ordinal_leads
 
 
 def _lowercase_follows(text: str, j: int) -> bool:
@@ -153,6 +170,7 @@ def split_sentences(
     # S9, read from `rules` rather than through _policy: services/cue_merge.py:71
     # unpacks the same six values, so the tuple's shape is shared API.
     split_on_whitespace = rules is not None and rules.split_on_whitespace
+    ordinal_leads = rules.ordinal_leads if rules is not None else frozenset()
     matched_openers = _matched_openers(text, openers, closers)
     segments: list[str] = []
     buf: list[str] = []
@@ -188,7 +206,9 @@ def split_sentences(
             terminates = _run_is_terminating(run, terminators) and (
                 not space_aware or j >= n or (text[j].isspace() and not _lowercase_follows(text, j))
             )
-            if terminates and not (abbreviations and _period_continues(run, buf, abbreviations, openers)):
+            if terminates and not (
+                abbreviations and _period_continues(run, buf, abbreviations, openers, ordinal_leads)
+            ):
                 segments.append("".join(buf))
                 buf = []
         elif split_on_whitespace and depth == 0 and c.isspace():

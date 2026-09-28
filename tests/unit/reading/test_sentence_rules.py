@@ -72,3 +72,32 @@ def test_a_lowercase_continuation_does_not_end_the_sentence(code, text):
 )
 def test_a_capital_after_the_terminator_still_ends_the_sentence(code, text, sentences):
     assert split_sentences(text, rules=get_profile(code).sentence_rules) == sentences
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Am 3. Oktober ist Feiertag.",
+        "Das war im 19. Jahrhundert.",
+        "Der Klub spielt in der 5. Liga.",
+        "Kroatien trat am 1. Januar 2023 der Eurozone bei.",
+    ],
+)
+def test_a_german_ordinal_after_its_lead_word_does_not_end_the_sentence(text):
+    assert split_sentences(text, rules=get_profile("de").sentence_rules) == [text]
+
+
+@pytest.mark.parametrize(
+    ("text", "sentences"),
+    [
+        ("Er ist 30. Sie ist 25.", ["Er ist 30.", "Sie ist 25."]),
+        ("Wir treffen uns um 8. Nein, um 9.", ["Wir treffen uns um 8.", "Nein, um 9."]),
+    ],
+)
+def test_a_german_number_after_any_other_word_still_ends_the_sentence(text, sentences):
+    assert split_sentences(text, rules=get_profile("de").sentence_rules) == sentences
+
+
+def test_ordinal_leads_default_empty():
+    rules = SentenceRules(terminators=frozenset("."), ellipses=frozenset(), openers=frozenset(), closers=frozenset())
+    assert rules.ordinal_leads == frozenset()
