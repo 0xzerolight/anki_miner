@@ -40,6 +40,8 @@ CASES = [
     ("menyapu", "sapu"), ("memukul", "pukul"), ("melihat", "lihat"), ("mengecat", "cat"), ("mengetik", "ketik"),
     ("pembeli", "beli"), ("penulis", "tulis"), ("penyanyi", "nyanyi"), ("berjalan", "jalan"), ("bekerja", "kerja"),
     ("belajar", "ajar"), ("terbeli", "beli"),
+    # ber-/ter- before a vowel: the prefix's r may be the r of an r-initial root (berV -> ber-V | be-rV)
+    ("berencana", "rencana"), ("bereaksi", "reaksi"), ("berambut", "rambut"), ("terencana", "rencana"),
     # P12-P15 di- ku- ke- se-: a passive first offers its active form; a glued preposition its noun
     ("dibeli", "membeli"), ("kubeli", "membeli"), ("dirumah", "rumah"),
     # confixes
@@ -71,6 +73,8 @@ def test_every_row_group_offers_its_expected_candidate(word, expected):
         ("dirumah", {"rumah"}, "rumah"),
         ("bukunya", {"buku"}, "buku"),
         ("buku2", {"buku-buku", "buku"}, "buku-buku"),
+        ("berencana", {"rencana"}, "rencana"),
+        ("berasa", {"asa", "rasa"}, "asa"),  # ber-V before be-rV, the algorithm's order
     ],
 )
 def test_the_first_dictionary_hit_is_the_fewest_steps(word, headwords, hit):

@@ -78,6 +78,16 @@ def _nasal(rest: str, nasal: str) -> list[str]:
     return []
 
 
+def _r_stems(w: str) -> list[str]:
+    """Stems behind ``ber-``/``ter-``: the rest, then before a vowel the r-initial root (berV -> ber-V | be-rV).
+
+    ``ber`` + ``rencana`` is written ``berencana``: the prefix and the root share one r. ``per-`` needs no
+    such case, the ``pe-`` + r-root stem (``perusak`` -> ``rusak``) is already the ``pe``/``me`` branch's.
+    """
+    rest = w[3:]
+    return [rest, "r" + rest] if _vowel_at(rest, 0) else [rest]
+
+
 #: One stripped layer: (family, stems). A prefix family keys :data:`INVALID_CONFIXES`.
 Hit = tuple[str, list[str]]
 
@@ -116,12 +126,14 @@ def prefix_layer(w: str) -> list[Hit]:
         add("pe", w[3:])
     if w.startswith("pel") and _vowel_at(w, 3):
         add("pe", w[3:])
-    if w.startswith("ber") or (w.startswith("bel") and _vowel_at(w, 3)):
+    if w.startswith("ber"):
+        add("be", *_r_stems(w))
+    elif w.startswith("bel") and _vowel_at(w, 3):
         add("be", w[3:])
     elif w.startswith("be"):
         add("be", w[2:])
     if w.startswith("ter"):
-        add("te", w[3:])
+        add("te", *_r_stems(w))
     if len(w) >= 5:
         if w.startswith("nge"):
             add("me", w[3:])
