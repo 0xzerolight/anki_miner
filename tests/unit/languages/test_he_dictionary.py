@@ -114,6 +114,21 @@ NISHLACH = _word("NUN", "SHIN", "LAMED", "HET")
 KELEV = _word("KAF", "LAMED", "BET")
 HALAKH = _word("HE", "LAMED", "FINAL KAF")
 KARA = _word("QOF", "RESH", "ALEF")
+KOL = _word("KAF", "LAMED")
+YOM = _word("YOD", "VAV", "FINAL MEM")
+GAN = _word("GIMEL", "FINAL NUN")
+CHADASH = _word("HET", "DALET", "SHIN")
+CHAZAR = _word("HET", "ZAYIN", "RESH")
+LIROT = _word("LAMED", "RESH", "ALEF", "VAV", "TAV")
+RAA = _word("RESH", "ALEF", "HE")
+NASHIM = _word("NUN", "SHIN", "YOD", "FINAL MEM")
+MEANYEN = _word("MEM", "AYIN", "NUN", "YOD", "YOD", "FINAL NUN")
+ELOHIM = _word("ALEF", "LAMED", "VAV", "HE", "YOD", "FINAL MEM")
+DVARIM = _word("DALET", "BET", "RESH", "YOD", "FINAL MEM")
+MIRYAM = _word("MEM", "RESH", "YOD", "FINAL MEM")
+SHELO = _word("SHIN", "LAMED", "ALEF")
+LO = _word("LAMED", "ALEF")
+EGROF = _word("ALEF", "GIMEL", "RESH", "VAV", "FINAL PE")
 
 
 @pytest.mark.parametrize(
@@ -121,27 +136,45 @@ KARA = _word("QOF", "RESH", "ALEF")
     [
         (KATAVTI, KATAV, "VERB", "one distinct target: the form table answers"),
         (SFARIM, SEFER, "NOUN", "three rows collapsing to one target"),
-        (HOLEKHET, HOLEKHET, "WORD", "two distinct targets: the surface stays"),
+        (HOLEKHET, HALAKH, "NOUN", "two distinct targets: the first in row order"),
         (BE_SEFER, SEFER, "NOUN", "the whole word has no key; the strip rung is a headword"),
         (VEHAYELADIM, YELED, "NOUN", "a stack strip, then its target"),
-        (HABAYIT, HABAYIT, "NOUN", "a lemma row on the whole word wins outright"),
+        (HABAYIT, BAYIT, "NOUN", "a lemma row whose gloss is 'singular definite form of bayit'"),
         (BABAYIT, BAYIT, "NOUN", "the assimilated definite article needs the stack list"),
         (SHEANI, ANI, "FUNC", "a pronoun behind a relativiser"),
-        (HAKOL, HAKOL, "WORD", "cross-check: the target is disjoint from the strip"),
-        (BAYOM, BAYOM, "WORD", "cross-check: ba-yom does not become biyem"),
-        (LAGAN, LAGAN, "WORD", "cross-check: la-gan does not become log"),
+        (HAKOL, KOL, "NOUN", "cross-check disjoint behind the article: the strip is the front"),
+        (BAYOM, YOM, "NOUN", "cross-check disjoint behind be-: ba-yom is yom, never biyem"),
+        (LAGAN, GAN, "NOUN", "cross-check disjoint behind le-: la-gan is gan, never log"),
         (HADVARIM, DAVAR, "NOUN", "cross-check: the strip's own targets agree"),
-        (HACHADASH, CHODESH, "NOUN", "cross-check: agreement through the strip's form rows"),
+        (HACHADASH, CHADASH, "ADJ", "an article strip's own headword beats agreement through its form rows"),
         (MALON, MALON, "NOUN", "a lemma row wins, so malon never becomes lon"),
-        (LACHZOR, LACHZOR, "WORD", "a STRIPPED rung with two targets: the surface stays"),
+        (LACHZOR, CHAZAR, "VERB", "a STRIPPED rung with two targets: the first in row order"),
         (NISHLECHA, NISHLACH, "VERB", "a single target with its own lemma row"),
         (KELEV, KELEV, "NOUN", "a plain headword"),
         (HALAKH, HALAKH, "NOUN", "a homograph: the first lemma row in storage order wins"),
         (KARA, KARA, "VERB", "a plain headword from the smoke line"),
+        (LIROT, RAA, "WORD", "a 'v' row glossed 'to-infinitive of ra'a' fronts ra'a (not in the subset)"),
+        (NASHIM, NASHIM, "NOUN", "one real sense ('women') keeps a key with a form-of row a headword"),
+        (MEANYEN, MEANYEN, "ADJ", "an adjective row beside a participle row keeps the word"),
+        (ELOHIM, ELOHIM, "NOUN", "a common row after the name row is the front"),
+        (DVARIM, DVARIM, "PROPN", "a name whose form rows no strip confirms stays a name"),
+        (MIRYAM, MIRYAM, "PROPN", "a key whose only lemma row is a name stays a name"),
     ],
 )
 def test_the_measured_case_table(form_lookup, surface, front, pos1, why):
     assert _resolve(form_lookup, surface) == (front, pos1), why
+
+
+@pytest.mark.parametrize(("surface", "front"), [(SHELO, LO), (HAKOL, KOL)])
+def test_a_proclitic_form_of_a_function_word_is_a_stopword(form_lookup, surface, front):
+    """The tier the tokenizer applies to a bare surface applies to the resolved front too."""
+    [token] = HebrewLemmaPass()(to_duck_tokens(surface), None, form_lookup)
+    assert (token.feature.lemma, token.feature.pos2) == (front, "stopword")
+
+
+def test_a_resolved_content_word_keeps_an_empty_subtype(form_lookup):
+    [token] = HebrewLemmaPass()(to_duck_tokens(KATAVTI), None, form_lookup)
+    assert (token.feature.lemma, token.feature.pos2) == (KATAV, "")
 
 
 def test_an_abbreviation_reaches_its_gershayim_key(form_lookup):
@@ -192,8 +225,19 @@ def test_the_reading_is_filled_before_word_reading_is_called(form_lookup, row):
 
 
 def test_an_unresolved_word_has_no_reading(form_lookup):
-    tokens = HebrewLemmaPass()(to_duck_tokens(LACHZOR), None, form_lookup)
+    from anki_miner.languages.he.script import GERESH
+
+    missing = _word("PE", "RESH", "VAV", "PE") + GERESH
+    tokens = HebrewLemmaPass()(to_duck_tokens(missing), None, form_lookup)
     assert HebrewReadingSupport().word_reading(tokens[0]) == ""
+
+
+def test_a_head_with_a_plene_and_a_pointed_spelling_reads_as_one(form_lookup):
+    """egrof's Grammar head lists two pointed spellings; the reading (and the voice) takes the first."""
+    [token] = HebrewLemmaPass()(to_duck_tokens(EGROF), None, form_lookup)
+    reading = HebrewReadingSupport().word_reading(token)
+    assert " / " not in reading
+    assert he_fold(reading) == EGROF
 
 
 # --------------------------------------------------------------------------
