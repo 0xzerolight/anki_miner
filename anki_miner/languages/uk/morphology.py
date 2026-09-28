@@ -20,7 +20,8 @@ readings are one-vowel-with-acute and the fold changes the ambiguous count by ze
 
 ``UK_SENTENCE_RULES``: Ukrainian quotes with guillemets and, inside those, the low quote, which the
 left double quote closes -- so that quote leaves the shared openers (where it is the English
-opener) for the closers.
+opener) for the closers. It also continues a sentence after the spaced abbreviations the derived
+tokenizer set leaves out (``1814 р.``, ``5 год.``, ``т. д.``).
 """
 
 from __future__ import annotations
@@ -106,11 +107,17 @@ class StressedHeadwordReading:
         return ""
 
 
+#: Stems that end in a dot inside a sentence but stay out of the derived tokenizer set: р. (рік,
+#: 1814 р.), год. (година) and the т. of т. д. / т. п. A sentence that really ends on one runs into
+#: the next.
+UK_SENTENCE_ONLY_ABBREVIATIONS: frozenset[str] = frozenset({"р", "год", "т"})
+
 _BASE_RULES = sentence_rules(UK_ABBREVIATIONS)
 UK_SENTENCE_RULES = dataclasses.replace(
     _BASE_RULES,
     openers=(_BASE_RULES.openers - {"“"}) | {"„"},
     closers=_BASE_RULES.closers | {"“"},
+    abbreviations=_BASE_RULES.abbreviations | UK_SENTENCE_ONLY_ABBREVIATIONS,
 )
 
 #: ``ІВАН:``, ``ОЛЕНА ПЕТРІВНА:`` — the shared Latin speaker rule with the Ukrainian capitals.

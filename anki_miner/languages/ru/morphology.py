@@ -15,7 +15,8 @@ it): over the 1,500 most frequent content lemmas the fold takes S24's ambiguous 
 
 ``RU_SENTENCE_RULES``: Russian quotes with guillemets and, inside those, the low quote, which the left
 double quote closes — so that quote leaves the shared openers (where it is the English opener) for the
-closers.
+closers. It also continues a sentence after the spaced abbreviations the derived tokenizer set leaves
+out (``т. е.``, ``5 ч.``).
 """
 
 from __future__ import annotations
@@ -97,11 +98,17 @@ class StressedHeadwordReading:
         return ""
 
 
+#: Stems that end in a dot inside a sentence but stay out of the derived tokenizer set: the spaced
+#: т. д. / т. е. (the set holds only the unspaced т.д, т.е) and the time units ч. (час), мин.
+#: (минута). A sentence that really ends on one runs into the next, the trade-off т.д already makes.
+RU_SENTENCE_ONLY_ABBREVIATIONS: frozenset[str] = frozenset({"т", "е", "ч", "мин"})
+
 _BASE_RULES = sentence_rules(RU_ABBREVIATIONS)
 RU_SENTENCE_RULES = dataclasses.replace(
     _BASE_RULES,
     openers=(_BASE_RULES.openers - {"“"}) | {"„"},
     closers=_BASE_RULES.closers | {"“"},
+    abbreviations=_BASE_RULES.abbreviations | RU_SENTENCE_ONLY_ABBREVIATIONS,
 )
 
 #: ``ИВАН:``, ``МАША ПЕТРОВА:`` — the shared Latin speaker rule with the Russian capitals.
