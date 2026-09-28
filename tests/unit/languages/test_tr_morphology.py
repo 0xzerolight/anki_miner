@@ -46,11 +46,36 @@ def test_index_keys_and_the_comparison_fold_use_the_same_letters(text, folded):
     assert TR_DEDUP_FOLD(text) == folded
 
 
+CIRCUMFLEX_PAIRS = [
+    ("pekâlâ", "pekala"),
+    ("PEKÂLÂ", "pekala"),
+    ("hikâye", "hikaye"),
+    ("Kâğıt", "kağıt"),
+    ("mahkûm", "mahkum"),
+    ("resmî", "resmi"),
+    ("RESMÎ", "resmi"),  # Î is a dotted i: the capital i pair must not turn it into ı
+]
+
+
+@pytest.mark.parametrize(("text", "folded"), CIRCUMFLEX_PAIRS)
+def test_index_keys_and_the_comparison_fold_drop_the_circumflex(text, folded):
+    """Subtitles mostly write pekala and hikaye; wty-tr-en keys those headwords pekâlâ and hikâye."""
+    assert TR_KEYS.fold_term(text) == TR_KEYS.fold_term(folded) == folded
+    assert TR_DEDUP_FOLD(text) == folded
+
+
+def test_the_lemma_fold_keeps_the_circumflex_the_subtitle_wrote():
+    """Lemma lowering is not the key fold: a front follows the subtitle's spelling (plan decision 6)."""
+    assert tr_casefold("Kâğıt") == "kâğıt" and tr_casefold("HİKÂYE") == "hikâye"
+    assert tr_casefold("C\N{COMBINING CEDILLA}OCUK") == "çocuk"
+
+
 def test_both_folds_are_idempotent_and_compose_nfd():
-    for text, _ in PAIRS:
+    for text, _ in PAIRS + CIRCUMFLEX_PAIRS:
         assert TR_KEYS.fold_term(TR_KEYS.fold_term(text)) == TR_KEYS.fold_term(text)
         assert TR_DEDUP_FOLD(TR_DEDUP_FOLD(text)) == TR_DEDUP_FOLD(text)
     assert TR_KEYS.fold_term("c\u0327ocuk") == "çocuk"
+    assert TR_KEYS.fold_term("hika\N{COMBINING CIRCUMFLEX ACCENT}ye") == "hikaye"
 
 
 def test_the_comparison_fold_drops_trailing_punctuation_and_no_leading_word():

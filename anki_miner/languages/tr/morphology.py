@@ -32,15 +32,34 @@ def tr_upper_i(text: str) -> str:
     return text.replace("İ", "i").replace("I", "ı")
 
 
-#: B.1 key fold: NFC, the capital i pair, casefold. One instance serves the importer and the provider (S4).
-TR_KEYS = CasefoldDictKeys(extra_fold=tr_upper_i)
+_CIRCUMFLEXES = "âîûÂÎÛ"
+_CIRCUMFLEX_FOLD = str.maketrans(_CIRCUMFLEXES, "aiuAIU")
+
+
+def tr_key_fold(text: str) -> str:
+    """The key fold before casefold: the capital i pair, then the circumflex off (``pekâlâ`` → ``pekala``).
+
+    Subtitles mostly write ``pekala``, ``hikaye``, ``kağıt``; wty-tr-en keys those headwords with the circumflex and
+    has the bare spelling at most as a ``non-lemma`` pointer. The i pair runs first, so the ``I`` that ``Î`` becomes
+    casefolds to ``i``, not ``ı``. Homographs share a key (``kar``/``kâr``, ``hala``/``hâlâ``): the plain spelling's
+    rows were imported first, so its sense still leads.
+    """
+    return tr_upper_i(text).translate(_CIRCUMFLEX_FOLD)
+
+
+#: B.1 key fold: NFC, the capital i pair, the circumflex, casefold. One instance serves the importer and the provider
+#: (S4).
+TR_KEYS = CasefoldDictKeys(extra_fold=tr_key_fold)
 #: S3 comparison fold: the key fold, trailing punctuation off; Turkish has no article to drop.
 TR_DEDUP_FOLD = spaced_dedup_fold(TR_KEYS)
 
 
 def tr_casefold(text: str) -> str:
-    """B.1 ``tr_casefold``: the fold the tokenizer applies to every non-PROPN lemma (== ``TR_KEYS.fold_term``)."""
-    return TR_KEYS.fold_term(text)
+    """B.1 ``tr_casefold``: NFC, the capital i pair, casefold - the fold the tokenizer applies to every non-PROPN lemma.
+
+    Unlike ``TR_KEYS`` it keeps the circumflex, so a front follows the subtitle's spelling (``kâğıdı`` → ``kâğıt``).
+    """
+    return tr_upper_i(nfc_normalize(text)).casefold()
 
 
 _NORMALIZE_MAP = str.maketrans({"\u00a0": " ", "\u00ad": None})
@@ -94,10 +113,6 @@ def upos(primary: str, secondary: str) -> str:
     if secondary == "Abbrv":
         return "X"
     return ZEYREK_TO_UPOS.get(primary, "X")
-
-
-_CIRCUMFLEXES = "âîûÂÎÛ"
-_CIRCUMFLEX_FOLD = str.maketrans(_CIRCUMFLEXES, "aiuAIU")
 
 
 def front_spelling(lemma: str, surface: str) -> str:
