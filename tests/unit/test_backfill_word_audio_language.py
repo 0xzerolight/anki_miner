@@ -189,6 +189,8 @@ def test_empty_profile_ladder_fetches_nothing(zh_config, no_tagger, monkeypatch)
         # none rather than let the stub's shape decide what the scan proposes.
         extra_card_fields=(),
         render_hooks=(),
+        # The definition lookup's recipe, read per chunk whatever was ticked.
+        stacked_definition=False,
     )
     monkeypatch.setattr("anki_miner.services.card_backfiller.get_profile", lambda code: profile)
     anki = FakeAnkiService(
