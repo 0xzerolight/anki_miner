@@ -20,6 +20,7 @@ from anki_miner.languages.hu.morphology import (
     HU_PREVERB_DEPS,
     HU_PREVERBS,
     HU_SUBTITLE_REGEX,
+    demote_negation_particles,
     demote_question_clitic,
     hungarian_preverb_candidates,
     preverb_less_verb,
@@ -90,6 +91,21 @@ def test_the_question_clitic_becomes_a_particle():
         LanguageToken("hol", "ADV", "", "hol", ""),
     ]
     assert [token.feature.pos1 for token in demote_question_clitic(tokens)] == ["VERB", "PART", "ADV"]
+
+
+def test_the_negation_particles_become_particles():
+    """UD Hungarian tags nem/ne/sem/se ADV with ``PronType=Neg``; the fr ``ne`` shape makes them PART."""
+    tokens = [
+        LanguageToken("Nem", "ADV", "", "nem", "", "PronType=Neg"),
+        LanguageToken("ne", "ADV", "", "ne", "", "PronType=Neg"),
+        LanguageToken("sem", "ADV", "", "sem", "", "PronType=Neg"),
+        LanguageToken("se", "ADV", "", "se", "", "PronType=Neg"),
+        LanguageToken("soha", "ADV", "", "soha", "", "PronType=Tot"),  # never: vocabulary
+        LanguageToken("Nélküle", "ADV", "", "nélküle", "", "PronType=Neg"),  # a Neg label on a content word
+        LanguageToken("sem", "CCONJ", "", "sem", "", ""),  # sem ... sem: the conjunction stays
+    ]
+    pos = [token.feature.pos1 for token in demote_negation_particles(tokens)]
+    assert pos == ["PART", "PART", "PART", "PART", "ADV", "ADV", "CCONJ"]
 
 
 def test_the_leading_word_fold_and_the_double_acute_keys():
