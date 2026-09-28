@@ -89,8 +89,11 @@ def test_the_kiwipiepy_wheels_declare_their_root_level_extension_module():
 
 
 #: Components whose payload has a declared piece outside the package dir: kiwipiepy's extension module,
-#: and the pymorphy3 dictionaries' .dist-info (pymorphy3 finds dictionaries only through their entry point).
-_ROOT_MEMBER_COMPONENTS = frozenset({"kiwipiepy", "pymorphy3_dicts_ru", "pymorphy3_dicts_uk"})
+#: the pymorphy3 dictionaries' .dist-info (pymorphy3 finds dictionaries only through their entry point),
+#: and pycantonese's and rustling's .dist-info (each reads its own version from it at import).
+_ROOT_MEMBER_COMPONENTS = frozenset(
+    {"kiwipiepy", "pymorphy3_dicts_ru", "pymorphy3_dicts_uk", "pycantonese", "rustling"}
+)
 
 
 def test_only_declared_root_members_are_promoted_to_a_pack_root():
