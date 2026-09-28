@@ -2562,6 +2562,26 @@ class TestFormOfRows:
             conn.close()
         assert spliced == direct and self._contents(spliced)[0] == _PICK_VERB.content
 
+    def test_the_targets_of_a_run_of_form_rows_rank_together(self, tmp_path: Path):
+        """uk мене names Мен before я: the place name still sorts after the pronoun."""
+        keys = get_profile("uk").dict_keys
+        conn = self._open(
+            tmp_path,
+            [
+                _form_of("мене", "Мен"),
+                _form_of("мене", "я"),
+                _lemma("Мен", "Maine", "name"),
+                _lemma("я", "I", "pron"),
+            ],
+            keys,
+        )
+        try:
+            single = self._contents(lookup(conn, "мене", keys=keys, pos="PRON"))
+            batch = self._contents(lookup_many(conn, [("мене", None)], keys=keys, pos={"мене": "PRON"})["мене"])
+        finally:
+            conn.close()
+        assert single == batch == ["<div>I</div>", "<div>Maine</div>"]
+
     def test_lookup_many_matches_lookup_with_one_shared_target_read(self, tmp_path: Path):
         keys = get_profile("fi").dict_keys
         rows = [

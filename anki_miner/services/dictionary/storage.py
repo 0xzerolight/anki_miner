@@ -755,28 +755,33 @@ def _splice_form_rows(
     Same contract as :func:`_substitute_redirect_rows`: no form row ⇒ input
     returned as-is with no query; ``lemma_rows_by_term`` lets ``lookup_many``
     share one batch-wide fetch. A spliced row takes the shape of ``rows`` (its
-    ``rules`` only when they carry theirs). A target's rows keep their index
-    order under the token's own ``rank``, as a lookup of the target would."""
+    ``rules`` only when they carry theirs). The targets of a run of form rows
+    are ranked together under the token's own ``rank``, target then index order
+    inside a rank, as one lookup of them would be: uk ``мене`` (PRON) names
+    ``Мен`` before ``я``, and the pronoun must still lead."""
     targets = _form_row_targets(rows, fold_term)
     if not targets:
         return rows
     if lemma_rows_by_term is None:
         lemma_rows_by_term = _fetch_lemma_rows_for_terms(conn, targets)
+
+    def ranked(run: list[_Row]) -> list[_Row]:
+        return run if rank is None else sorted(run, key=lambda r: rank(r[0], r[1]))
+
     out: list[_Row] = []
+    run: list[_Row] = []
     spliced: set[str] = set()
     for row in rows:
         if is_lemma_row(row[1]):
-            out.append(row)
+            out += ranked(run) + [row]
+            run = []
             continue
         for target in dict.fromkeys(fold_term(name) for name in form_targets(row[0])):
             if target in spliced:
                 continue
             spliced.add(target)
-            found = lemma_rows_by_term.get(target, [])
-            if rank is not None:
-                found = sorted(found, key=lambda r: rank(r[0], r[1]))
-            out.extend(cast(_Row, target_row[: len(row)]) for target_row in found)
-    return out
+            run.extend(cast(_Row, target_row[: len(row)]) for target_row in lemma_rows_by_term.get(target, []))
+    return out + ranked(run)
 
 
 def lookup(
