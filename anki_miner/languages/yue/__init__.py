@@ -104,12 +104,13 @@ def build_profile() -> LanguageProfile:
         import_encodings=("utf-8-sig", "gb18030", "big5hkscs"),
         scoped_defaults=_scoped_defaults(),
         # zh's literal, copied not imported (R32). S8 is inert for a dot-free
-        # script, so abbreviations stays empty.
+        # script, so abbreviations stays empty. Curly quotes join the corner
+        # brackets (zh's ZH-045): HK web fiction and forum posts quote with both.
         sentence_rules=SentenceRules(
             terminators=frozenset("。｡！？!?‼⁉⁇⁈"),
             ellipses=frozenset("…‥"),
-            openers=frozenset("「｢『（〔［｛〈《【([{｟〝"),
-            closers=frozenset("」｣』）〕］｝〉》】)]}｠〟"),
+            openers=frozenset("「｢『（〔［｛〈《【([{｟〝“‘"),
+            closers=frozenset("」｣』）〕］｝〉》】)]}｠〟”’"),
             space_aware=False,
             split_on_whitespace=False,
         ),
