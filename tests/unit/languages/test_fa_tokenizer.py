@@ -195,6 +195,68 @@ class TestLadder:
             assert token.feature.kana == ""
 
 
+class TestVerbTables:
+    """The verb forms spoken and written Persian use that the 79 formal patterns miss."""
+
+    def test_a_formal_present_carries_no_register(self, armed):
+        # xar- is kharidan's informal stem AND its formal one; the textbook
+        # mi-xaram must not come back as slang with a Colloquial field.
+        mixaram = MI + ZWNJ + _KHAH + _REH + _MEEM
+        (token,) = fa_tokenizer.to_duck_tokens(mixaram, armed)
+        assert token.feature.pos1 == "V"
+        assert token.feature.lemma == _KHAH + _REH + _YEH + _DAL + _NOON
+        assert token.feature.pos2 == ""
+        assert token.feature.surface_formal == ""
+        assert token.morph == "PresentStem=" + _KHAH + _REH
+
+    def test_a_colloquial_person_ending_is_an_informal_verb(self, armed):
+        mige = MI + _GAF + _HEH
+        (token,) = fa_tokenizer.to_duck_tokens(mige, armed)
+        assert token.feature.pos1 == "V"
+        assert token.feature.lemma == GOFT + _NOON
+        assert token.feature.pos2 == "informal"
+        assert token.feature.surface_formal == MI + ZWNJ + _GAF + _WAW + _YEH + _DAL
+
+    def test_the_colloquial_word_map_answers_before_the_endings(self, armed):
+        # xune is xundan + -e as well; the house wins, as it did before.
+        xune = _KHAH + _WAW + _NOON + _HEH
+        assert armed.colloquial_ending_verb(xune) is not None
+        (token,) = fa_tokenizer.to_duck_tokens(xune, armed)
+        assert token.feature.lemma == _KHAH + _ALEF + _NOON + _HEH
+        assert token.feature.pos1 == "N"
+
+    def test_an_untagged_colloquial_word_goes_through_the_verb_table(self, armed):
+        # colloquial.tsv answers mishe -> mi-shavad, which words.dat does not tag.
+        mishe = MI + _SHEEN + _HEH
+        formal = MI + ZWNJ + _SHEEN + _WAW + _DAL
+        assert armed.colloquial(mishe) == formal
+        (token,) = fa_tokenizer.to_duck_tokens(mishe, armed)
+        assert token.feature.pos1 == "V"
+        assert token.feature.lemma == SHOD + _NOON
+        assert token.feature.surface_formal == formal
+        assert token.feature.present_stem == _SHEEN + _WAW
+
+    def test_bashe_is_budan_not_bashidan(self, armed):
+        bashe = _BEH + _ALEF + _SHEEN + _HEH
+        (token,) = fa_tokenizer.to_duck_tokens(bashe, armed)
+        assert token.feature.pos1 == "V"
+        assert token.feature.lemma == BUD + _NOON
+
+    def test_a_compound_merges_over_a_colloquial_ending(self, armed):
+        line = KAR + " " + MI + _KEHEH + _NOON + _HEH
+        tokens = fa_tokenizer.to_duck_tokens(line, armed)
+        assert len(tokens) == 1
+        assert tokens[0].surface == line
+        assert tokens[0].feature.lemma == KAR + " " + KARDAN
+
+    def test_a_preverb_present_is_a_verb(self, armed):
+        bar_mi_gardam = _BEH + _REH + MI + _GAF + _REH + _DAL + _MEEM
+        (token,) = fa_tokenizer.to_duck_tokens(bar_mi_gardam, armed)
+        assert token.feature.pos1 == "V"
+        assert token.feature.lemma == _BEH + _REH + _GAF + _SHEEN + _TEH + _NOON
+        assert token.feature.present_stem == _BEH + _REH + _GAF + _REH + _DAL
+
+
 class TestTagger:
     def test_the_tagger_is_callable_like_fugashi(self, armed, monkeypatch):
         monkeypatch.setattr(fa_tokenizer, "_load_lexicon", lambda: armed)

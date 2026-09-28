@@ -29,6 +29,7 @@ _ZAIN = "\N{ARABIC LETTER ZAIN}"
 _SEEN = "\N{ARABIC LETTER SEEN}"
 _SHEEN = "\N{ARABIC LETTER SHEEN}"
 _FEH = "\N{ARABIC LETTER FEH}"
+_GAF = "\N{ARABIC LETTER GAF}"
 _KEHEH = "\N{ARABIC LETTER KEHEH}"
 _LAM = "\N{ARABIC LETTER LAM}"
 _MEEM = "\N{ARABIC LETTER MEEM}"
@@ -75,6 +76,52 @@ MAN = _MEEM + _NOON
 THIS_ARABIC = _ALEF + _ARABIC_YEH + _NOON
 THIS_FARSI = _ALEF + _YEH + _NOON
 KOJAST = _KEHEH + _JEEM + _ALEF + _SEEN + _TEH
+
+# dashtan, "to have": dare / darin are the colloquial 3sg / 2pl of darad / darid
+DASHTAN = _DAL + _ALEF + _SHEEN + _TEH + _NOON
+DARE = _DAL + _ALEF + _REH + _HEH
+DARAD = _DAL + _ALEF + _REH + _DAL
+DARIN = _DAL + _ALEF + _REH + _YEH + _NOON
+DARID = _DAL + _ALEF + _REH + _YEH + _DAL
+# mikone / konan: the colloquial 3sg and 3pl of kardan
+MIKONE = MI + _KEHEH + _NOON + _HEH
+MI_ZWNJ_KONE = MI + ZWNJ + _KEHEH + _NOON + _HEH
+MIKONAD = MI + ZWNJ + _KEHEH + _NOON + _DAL
+KONAN = _KEHEH + _NOON + _NOON
+KONAND = _KEHEH + _NOON + _NOON + _DAL
+# mire: raftan on its colloquial stem r-, never mordan
+MIRE = MI + _REH + _HEH
+MIRAVAD = MI + ZWNJ + RO + _DAL
+# shun (the clitic "their") is the formal stem shav- plus -an; beshin is "sit!"
+SHUN = _SHEEN + _WAW + _NOON
+BESHIN = _BEH + _SHEEN + _YEH + _NOON
+# mi + xa + e: the 3sg of a vowel-final stem keeps -ad (mixad), never -e
+MIXAE = MI + _KHAH + _WAW + _ALEF + _HEH
+# bargashtan, "to come back": the preverb bar- goes in front of mi-
+BARGASHTAN = _BEH + _REH + _GAF + _SHEEN + _TEH + _NOON
+GARD = _GAF + _REH + _DAL
+GASHT = _GAF + _SHEEN + _TEH
+BAR_MI_GARDAM = _BEH + _REH + MI + ZWNJ + GARD + _MEEM
+BAR_MIGARDAM = _BEH + _REH + MI + GARD + _MEEM
+BAR_NEMI_GARDAM = _BEH + _REH + _NOON + MI + ZWNJ + GARD + _MEEM
+BAR_MI_GASHTAM = _BEH + _REH + MI + ZWNJ + GASHT + _MEEM
+# the seven iverbs.dat rows whose informal stem IS the formal one (kharidan here)
+MIXARAM = MI + ZWNJ + _KHAH + _REH + _MEEM
+XARIDAN = _KHAH + _REH + _YEH + _DAL + _NOON
+# bashad is budan's, though bashidan's verbs.dat line comes first
+BASHAD = _BEH + _ALEF + _SHEEN + _DAL
+BUDAN = _BEH + _WAW + _DAL + _NOON
+BASH = _BEH + _ALEF + _SHEEN
+# mikeshand is keshidan's (to pull), though koshtan's line (to kill) comes first
+MIKESHAND = MI + ZWNJ + _KEHEH + _SHEEN + _NOON + _DAL
+KESHIDAN = _KEHEH + _SHEEN + _YEH + _DAL + _NOON
+KESH = _KEHEH + _SHEEN
+KOSHTAN = _KEHEH + _SHEEN + _TEH + _NOON
+# neveshtan / forukhtan: verbs.dat lists a dead present stem first
+NEVESHTAN = _NOON + _WAW + _SHEEN + _TEH + _NOON
+NEVIS = _NOON + _WAW + _YEH + _SEEN
+FORUKHTAN = _FEH + _REH + _WAW + _KHAH + _TEH + _NOON
+FORUSH = _FEH + _REH + _WAW + _SHEEN
 
 
 @pytest.fixture(scope="module")
@@ -142,9 +189,10 @@ class TestLexiconGuards:
 
 class TestLexiconTables:
     def test_the_verb_table_is_the_probed_size(self, fa_lexicon):
-        # 47,925 keys over the whole verbs.dat (probe P-3); the fixture carries
-        # the file whole, so this is the real number.
-        assert 47_000 <= fa_lexicon.verb_count <= 49_000
+        # 47,787 keys from the 79 patterns over the whole verbs.dat (probe P-3
+        # counted 47,925) plus 1,544 bar-mi-gardam preverb forms; the fixture
+        # carries the file whole, so this is the real number.
+        assert 48_500 <= fa_lexicon.verb_count <= 50_000
 
     def test_the_informal_table_beats_the_formal_one(self, fa_lexicon):
         assert fa_lexicon.informal_verb(MIRAM) == (RAFTAN, MIRAVAM)
@@ -196,6 +244,89 @@ class TestLexiconTables:
         tracemalloc.stop()
         assert built.verb_count
         assert peak < 40 * 1024 * 1024, peak
+
+
+class TestColloquialEndings:
+    """3sg -e, 3pl -an and 2pl -in: the endings Tehrani speech puts on every present."""
+
+    def test_each_colloquial_ending_pairs_with_a_formal_present_pattern(self):
+        assert len(conjugation.COLLOQUIAL_PRESENT_PATTERNS) == 15
+        for colloquial, formal in conjugation.COLLOQUIAL_PRESENT_PATTERNS:
+            assert formal in conjugation.PRESENT_PATTERNS
+            assert colloquial not in conjugation.PATTERNS
+
+    def test_a_colloquial_ending_resolves_to_the_infinitive_and_its_formal_spelling(self, fa_lexicon):
+        assert fa_lexicon.colloquial_ending_verb(DARE) == (DASHTAN, DARAD)
+        assert fa_lexicon.colloquial_ending_verb(DARIN) == (DASHTAN, DARID)
+        assert fa_lexicon.colloquial_ending_verb(KONAN) == (KARDAN, KONAND)
+        assert fa_lexicon.colloquial_ending_verb(MIKONE) == (KARDAN, MIKONAD)
+        assert fa_lexicon.colloquial_ending_verb(MI_ZWNJ_KONE) == (KARDAN, MIKONAD)
+
+    def test_the_endings_go_on_the_colloquial_stem(self, fa_lexicon):
+        # mire is raftan on r-; the formal stems are not expanded, which is also
+        # what keeps shun (shav- + -an) from turning the clitic "their" into shodan.
+        assert fa_lexicon.colloquial_ending_verb(MIRE) == (RAFTAN, MIRAVAD)
+        assert fa_lexicon.colloquial_ending_verb(SHUN) is None
+
+    def test_beshin_is_not_read_as_shodan(self, fa_lexicon):
+        # "sit!" (neshastan) far more often than "that you become".
+        assert fa_lexicon.colloquial_ending_verb(BESHIN) is None
+
+    def test_a_vowel_final_stem_takes_no_e(self, fa_lexicon):
+        assert fa_lexicon.colloquial_ending_verb(MIXAE) is None
+
+    def test_the_endings_are_a_table_of_their_own(self, fa_lexicon):
+        # The informal tier runs before colloquial.tsv; the endings must not
+        # (xune is xane "house" before it is xundan "read").
+        assert fa_lexicon.informal_verb(DARE) is None
+        assert fa_lexicon.colloquial_ending_verb(XUNE) is not None
+
+
+class TestPreverbForms:
+    """bar-mi-gardam: a separable preverb goes in front of mi-, not behind it."""
+
+    def test_the_progressive_present_puts_mi_after_the_preverb(self, fa_lexicon):
+        assert fa_lexicon.verb_form(BAR_MI_GARDAM) == BARGASHTAN
+        assert fa_lexicon.verb_form(BAR_NEMI_GARDAM) == BARGASHTAN
+
+    def test_the_zwnj_less_spelling_resolves_too(self, fa_lexicon):
+        # seperate_mi only splits a word-initial mi-, so nothing restores this ZWNJ.
+        assert fa_lexicon.verb_form(BAR_MIGARDAM) == BARGASHTAN
+
+    def test_the_past_progressive_puts_mi_after_the_preverb(self, fa_lexicon):
+        assert fa_lexicon.verb_form(BAR_MI_GASHTAM) == BARGASHTAN
+
+
+class TestFormalPresentIsNotInformal:
+    """An iverbs.dat row whose informal stem is the formal one adds no colloquial form."""
+
+    def test_a_formal_present_is_absent_from_the_informal_table(self, fa_lexicon):
+        assert fa_lexicon.informal_verb(MIXARAM) is None
+        assert fa_lexicon.verb_form(MIXARAM) == XARIDAN
+
+    def test_the_row_still_names_the_verb_that_owns_a_shared_stem(self, fa_lexicon):
+        # verbs.dat lists bashid#bash (line 117) before bud#bash (144) and
+        # kosht#kesh (524) before keshid#kesh (525); the iverbs.dat row keeps
+        # the everyday verb, as the informal tier did when it answered first.
+        assert fa_lexicon.verb_form(BASHAD) == BUDAN
+        assert fa_lexicon.verb_form(MIKESHAND) == KESHIDAN
+
+
+class TestPreferredPresentStems:
+    def test_the_live_present_stem_beats_the_first_verbs_line(self, fa_lexicon):
+        assert fa_lexicon.present_stem(NEVESHTAN) == NEVIS
+        assert fa_lexicon.present_stem(FORUKHTAN) == FORUSH
+        assert fa_lexicon.present_stem(BUDAN) == BASH
+        assert fa_lexicon.present_stem(KOSHTAN) == KESH
+
+    def test_every_preferred_stem_is_one_of_the_infinitives_own_lines(self):
+        # The fixture carries verbs.dat whole, so this is the real file.
+        lines = set(data.load(FIXTURES).verb_lines)
+        rows = list(lexicon._read_tsv(lexicon.PREFERRED_PRESENT_STEMS_FILE))
+        assert rows
+        for infinitive, present in rows:
+            assert infinitive.endswith(_NOON)
+            assert f"{infinitive[:-1]}#{present}" in lines, infinitive
 
 
 def test_building_arms_the_separate_mi_hook(monkeypatch):

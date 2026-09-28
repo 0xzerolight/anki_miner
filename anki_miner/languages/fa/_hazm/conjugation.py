@@ -22,10 +22,15 @@ PRESENT = "{present}"
 
 ZWNJ = "\N{ZERO WIDTH NON-JOINER}"
 _ALEF = "\N{ARABIC LETTER ALEF}"
+_ALEF_MADDA = "\N{ARABIC LETTER ALEF WITH MADDA ABOVE}"
 _BEH = "\N{ARABIC LETTER BEH}"
 _DAL = "\N{ARABIC LETTER DAL}"
+_REH = "\N{ARABIC LETTER REH}"
+_ZAIN = "\N{ARABIC LETTER ZAIN}"
+_FEH = "\N{ARABIC LETTER FEH}"
 _MEEM = "\N{ARABIC LETTER MEEM}"
 _NOON = "\N{ARABIC LETTER NOON}"
+_WAW = "\N{ARABIC LETTER WAW}"
 _HEH = "\N{ARABIC LETTER HEH}"
 _YEH = "\N{ARABIC LETTER FARSI YEH}"
 #: mi-, the imperfective prefix; na-, the negative one.
@@ -59,6 +64,38 @@ PRESENT_PATTERNS: tuple[str, ...] = tuple(
     prefix + PRESENT + suffix for prefix in _PRESENT_PREFIXES for suffix in _PRESENT_SUFFIXES
 )
 
+#: Tehrani speech's present person endings, each with the formal one it stands
+#: for: 3sg -e for -ad, 3pl -an for -and, 2pl -in for -id (mikone, mikonan,
+#: mikonin). The other three persons are spelt as the formal ones are.
+_COLLOQUIAL_SUFFIXES = ((_HEH, _DAL), (_NOON, _NOON + _DAL), (_YEH + _NOON, _YEH + _DAL))
+#: The 3sg -e follows a consonant only: a stem ending in a or u keeps -ad
+#: (mixad, miad), which the informal table already spells.
+_VOWEL_FINAL = (_ALEF, _ALEF_MADDA, _WAW)
+
+#: 15 ``(colloquial, formal)`` template pairs over the same five prefixes.
+COLLOQUIAL_PRESENT_PATTERNS: tuple[tuple[str, str], ...] = tuple(
+    (prefix + PRESENT + colloquial, prefix + PRESENT + formal)
+    for prefix in _PRESENT_PREFIXES
+    for colloquial, formal in _COLLOQUIAL_SUFFIXES
+)
+
+#: The separable preverbs (bar-, dar-, baz-, foru-, var-, va-). verbs.dat keeps
+#: one inside the stem (bargasht#bargard), so the plain templates put mi- in
+#: front of it; the grammatical spelling is bar-mi-gardam.
+PREVERBS = (
+    _BEH + _REH,
+    _DAL + _REH,
+    _BEH + _ALEF + _ZAIN,
+    _FEH + _REH + _WAW,
+    _WAW + _REH,
+    _WAW + _ALEF,
+)
+#: The mi- and nami- templates of the present and the past progressive: the
+#: forms a preverb goes in front of.
+IMPERFECTIVE_PATTERNS: tuple[str, ...] = tuple(
+    prefix + PAST + suffix for prefix in (_MI, _NA + _MI) for suffix in _PAST_SUFFIXES
+) + tuple(prefix + PRESENT + suffix for prefix in (_MI, _NA + _MI) for suffix in _PRESENT_SUFFIXES)
+
 #: All 79 single-token templates: infinitive, simple past, past participle,
 #: present.
 PATTERNS: tuple[str, ...] = (
@@ -77,6 +114,33 @@ def apply(pattern: str, past: str = "", present: str = "") -> str:
 def expand(past: str, present: str) -> list[str]:
     """Every single-token form of one verb, infinitive included."""
     return [apply(pattern, past, present) for pattern in PATTERNS]
+
+
+def expand_colloquial(informal: str, present: str) -> list[tuple[str, str]]:
+    """``(colloquial form, formal spelling)`` for every colloquial-ending present.
+
+    The endings go on the INFORMAL stem (mi-r-e for raftan, not mi-rav-e): a
+    formal stem with a colloquial ending is not how anyone speaks, and it is
+    what turns the clitic shun ("their") into shav- + -an.
+    """
+    return [
+        (apply(colloquial, present=informal), apply(formal, present=present))
+        for colloquial, formal in COLLOQUIAL_PRESENT_PATTERNS
+        if not (colloquial.endswith(PRESENT + _HEH) and informal.endswith(_VOWEL_FINAL))
+    ]
+
+
+def split_preverb(past: str, present: str) -> tuple[str, str, str] | None:
+    """``(preverb, past, present)`` when both stems open with the same preverb."""
+    for preverb in PREVERBS:
+        if past.startswith(preverb) and present.startswith(preverb):
+            return preverb, past[len(preverb) :], present[len(preverb) :]
+    return None
+
+
+def expand_preverb(preverb: str, past: str, present: str) -> list[str]:
+    """The mi-/nami- forms of a preverb verb with the prefix after the preverb."""
+    return [preverb + apply(pattern, past, present) for pattern in IMPERFECTIVE_PATTERNS]
 
 
 def split_stems(verb_line: str) -> tuple[str, str]:
