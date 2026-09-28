@@ -11,6 +11,12 @@ dasht, dad, saxt, shekast, xast and konad all mine as infinitives (judge r1 B1,
 measured in plan probe P-9). The refinement is that only a TAGGED row wins:
 158,034 of the 193,350 rows carry no part of speech at all, and letting bare
 attestation beat the verb tables would lose real verb forms for nothing.
+
+P-9 compared raw fa_50k keys, so it never saw the Arabic-yeh kardi, beri and
+nadari that ``fa_normalize`` turns into tagged nouns ("Kurdish", "brie",
+"poverty"), nor colloquial kone ("tick"), which is no verb-table key at all:
+185,342 tokens between them. ``verb_first.tsv`` names those four, and only
+those, as surfaces whose verb reading answers first.
 """
 
 from __future__ import annotations
@@ -81,7 +87,8 @@ def _informal_verb(surface: str, infinitive: str, formal: str, lexicon: PersianL
 def _classify(surface: str, lexicon: PersianLexicon) -> LanguageToken:
     """One token, through the ladder's tiers in order."""
     tags = lexicon.tags(surface)
-    if tags:
+    verb_first = lexicon.is_verb_first(surface)
+    if tags and not verb_first:
         # hazm's opening rule, tagged rows only (judge r1 B1).
         return _token(surface, tags[0], surface)
 
@@ -98,7 +105,8 @@ def _classify(surface: str, lexicon: PersianLexicon) -> LanguageToken:
         formal_tags = lexicon.tags(formal_word)
         # colloquial.tsv answers mishe -> mi-shavad and bashe -> bashad, which
         # words.dat does not tag: an untagged formal word asks the verb table.
-        infinitive = None if formal_tags else lexicon.verb_form(formal_word)
+        # So does a verb-first one: kone's konad is tagged "blunt" as well.
+        infinitive = None if formal_tags and not verb_first else lexicon.verb_form(formal_word)
         if infinitive is not None:
             return _informal_verb(surface, infinitive, formal_word, lexicon)
         return _token(

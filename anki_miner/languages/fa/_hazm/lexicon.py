@@ -32,6 +32,7 @@ DATA_PACKAGE = "anki_miner.languages.fa.data"
 COMPOUND_VERBS_FILE = "compound_verbs.tsv"
 COLLOQUIAL_FILE = "colloquial.tsv"
 PREFERRED_PRESENT_STEMS_FILE = "preferred_present_stems.tsv"
+VERB_FIRST_FILE = "verb_first.tsv"
 
 ZWNJ = "\N{ZERO WIDTH NON-JOINER}"
 
@@ -94,6 +95,7 @@ class PersianLexicon:
         tags: dict[str, tuple[str, ...]],
         stopwords: frozenset[str],
         present_stems: dict[str, str],
+        verb_first: frozenset[str],
     ) -> None:
         self._verbs = verbs
         self._informal = informal
@@ -103,6 +105,7 @@ class PersianLexicon:
         self._tags = tags
         self._stopwords = stopwords
         self._present_stems = present_stems
+        self._verb_first = verb_first
 
     @property
     def verb_count(self) -> int:
@@ -141,6 +144,10 @@ class PersianLexicon:
         """The ``words.dat`` POS tags: empty for an attested-only row and for a miss."""
         hit = self._tags.get(word)
         return hit if hit is not None else self._tags.get(fa_script.fa_fold(word), ())
+
+    def is_verb_first(self, word: str) -> bool:
+        """True for a ``verb_first.tsv`` surface: its verb reading answers before its tagged row."""
+        return fa_script.fa_fold(word) in self._verb_first
 
     def is_attested(self, word: str) -> bool:
         """True when ``words.dat`` holds the word at all, tagged or not."""
@@ -283,6 +290,7 @@ def build(hazm_data: HazmData) -> PersianLexicon:
         tags=tags,
         stopwords=hazm_data.stopwords,
         present_stems=present_stems,
+        verb_first=frozenset(fa_script.fa_fold(row[0]) for row in _read_tsv(VERB_FIRST_FILE)),
     )
     # Arm the normaliser's hook last: script.py must not import this module (it
     # is imported BY it, for fa_fold), so the engine hands itself over instead.
