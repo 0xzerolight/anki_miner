@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 
+from anki_miner.languages._spaced.keys import wty_row_rank
 from anki_miner.languages.he.script import (
     HE_LETTER_RANGES,
     HE_MARK_CLASS,
@@ -25,6 +26,7 @@ from anki_miner.languages.he.script import (
     is_he_letter,
     is_he_mark,
 )
+from anki_miner.services.dictionary.storage import DictRow, bulk_insert, create_index, lookup, open_readonly
 
 FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "he"
 ENCODINGS = json.loads((FIXTURES / "encodings.json").read_text(encoding="utf-8"))
@@ -139,6 +141,47 @@ def test_the_dict_keys_bind_the_same_function_at_both_seams():
 def test_a_final_letter_is_never_folded_to_its_medial_form():
     [row] = [row for row in FOLD_SITES if "final kaf" in row["note"]]
     assert he_fold(row["raw"]).endswith(chr(0x05DA))
+
+
+# --------------------------------------------------------------------------
+# The wty row rank (E2E-3-04): the card opens on the token's own part of speech
+# --------------------------------------------------------------------------
+
+#: zayin kaf resh: wty-he-en files "man, male" (n masc), "remembrance" (n), then "to remember" (v).
+ZAKHAR = chr(0x05D6) + chr(0x05DB) + chr(0x05E8)
+ZAKHAR_ROWS = (("n masc", "man, male"), ("n", "remembrance"), ("v", "to remember"))
+
+
+def test_the_dict_keys_rank_rows_with_the_shared_wty_rank():
+    keys = HebrewDictKeys()
+    for tags in ("n masc", "v", "adv", "adj", "intj", "name fem", "non-lemma", "r", ""):
+        for pos in ("NOUN", "VERB", "ADJ", "ADV", "PROPN", "FUNC", "WORD", None):
+            assert keys.sense_rank("<div>x</div>", tags, pos) == wty_row_rank(tags, pos)
+
+
+@pytest.mark.parametrize(
+    "pos, lead",
+    [("VERB", "to remember"), ("NOUN", "man, male"), ("WORD", "man, male"), (None, "man, male")],
+)
+def test_a_verb_token_opens_on_the_verb_row_and_nothing_is_dropped(tmp_path, pos, lead):
+    db = tmp_path / "index.sqlite"
+    create_index(db)
+    keys = HebrewDictKeys()
+    bulk_insert(
+        db,
+        [
+            DictRow(term=ZAKHAR, reading=None, content=f"<div>{gloss}</div>", tags=tags, sequence=0)
+            for tags, gloss in ZAKHAR_ROWS
+        ],
+        keys=keys,
+    )
+    conn = open_readonly(db)
+    try:
+        rows = lookup(conn, ZAKHAR, None, keys=keys, pos=pos)
+    finally:
+        conn.close()
+    assert rows[0][0] == f"<div>{lead}</div>"
+    assert sorted(content for content, _tags, _seq in rows) == sorted(f"<div>{g}</div>" for _t, g in ZAKHAR_ROWS)
 
 
 # --------------------------------------------------------------------------

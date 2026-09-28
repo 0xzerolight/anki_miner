@@ -22,6 +22,7 @@ from anki_miner.services.dictionary.storage import (
 )
 
 KEYS = CasefoldDictKeys()
+DE_KEYS = get_profile("de").dict_keys
 ROW = "<li>any content</li>"
 
 
@@ -38,6 +39,19 @@ def test_a_proper_name_row_trails_a_common_row(tags, pos):
 
 def test_a_proper_noun_token_keeps_its_name_rows_in_place():
     assert _rank("name", "PROPN") == _rank("n", "PROPN") == _rank("adj", "PROPN")
+
+
+@pytest.mark.parametrize("tags", ["name neut no-pl prop-n", "name dated neut no-pl prop-n", "name fem no-pl"])
+@pytest.mark.parametrize("pos", ["NOUN", "VERB", "ADJ", "ADV", "PROPN", None])
+def test_a_no_plural_name_row_ranks_as_a_noun_row(tags, pos):
+    """wty-de-en files a language's name as ``name neut no-pl prop-n``: de Russisch is a noun (E2E-1-01)."""
+    assert _rank(tags, pos) == _rank("n", pos)
+
+
+def test_a_country_row_still_trails_a_noun_row():
+    """Countries, places and people carry no ``no-pl``: their rows stay demoted."""
+    assert _rank("name neut prop-n", "NOUN") > _rank("n neut strong", "NOUN")
+    assert _rank("name neut prop-n", "NOUN") > _rank("adj", "NOUN")
 
 
 @pytest.mark.parametrize(
@@ -133,6 +147,50 @@ def test_the_card_opens_on_the_right_row(wty_db, word, pos, lead):
     finally:
         conn.close()
     assert rows[0][0] == f"<div>{lead}</div>"
+
+
+#: wty-de-en's rows under two language names, in their import order (E2E-1-01).
+DE_LANGUAGE_ROWS = {
+    "Spanisch": (
+        ("adj", "Spanish"),
+        ("name neut no-pl prop-n", "the Spanish language"),
+        ("n neut no-pl strong", "Ruy Lopez (chess opening)"),
+    ),
+    "Russisch": (
+        ("name neut no-pl prop-n", "Russian (language)"),
+        ("n neut no-pl sl strong", "thighing, intercrural sex"),
+        ("adj reltnl", "Russian"),
+    ),
+}
+
+
+@pytest.fixture(scope="module")
+def de_db(tmp_path_factory) -> Path:
+    db = tmp_path_factory.mktemp("wty-de") / "index.sqlite"
+    create_index(db)
+    bulk_insert(db, [row for term, rows in DE_LANGUAGE_ROWS.items() for row in _wty(term, *rows)], keys=DE_KEYS)
+    return db
+
+
+@pytest.mark.parametrize(
+    "word, pos, lead",
+    [
+        ("Spanisch", "NOUN", "the Spanish language"),
+        ("Russisch", "NOUN", "Russian (language)"),
+        ("spanisch", "ADJ", "Spanish"),
+    ],
+)
+def test_a_german_language_noun_opens_on_the_language(de_db, word, pos, lead):
+    conn = open_readonly(de_db)
+    try:
+        rows = lookup_many(conn, [(word, None)], pos={word: pos}, keys=DE_KEYS)[word]
+        assert rows == lookup(conn, word, None, pos=pos, keys=DE_KEYS)
+    finally:
+        conn.close()
+    assert rows[0][0] == f"<div>{lead}</div>"
+    assert sorted(content for content, _tags, _seq in rows) == sorted(
+        f"<div>{gloss}</div>" for _tags, gloss in DE_LANGUAGE_ROWS[word.capitalize()]
+    )
 
 
 def test_rows_are_only_reordered_never_dropped(wty_db):
