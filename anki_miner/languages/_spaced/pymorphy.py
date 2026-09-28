@@ -1,9 +1,12 @@
 """The pymorphy3 token post-pass shared by the Cyrillic spaCy languages (ru, uk).
 
 ``ru_core_news_sm`` and ``uk_core_news_sm`` both lemmatise through pymorphy3, and both need the same
-two repairs over the duck tokens: a joined hyphenated token the model never saw as one word, and a
-content token whose lemma is its own surface because no pymorphy3 parse matched the morphologizer's
-features (``spacy/lang/ru/lemmatizer.py``: ``if not len(filtered_analyses): return [string.lower()]``).
+repairs over the duck tokens: a joined hyphenated token the model never saw as one word; a verb the
+model tagged as a noun or an adjective (sentence-initial imperatives: Подожди, Відчини); a content
+token whose lemma is its own surface because no pymorphy3 parse matched the morphologizer's features
+(``spacy/lang/ru/lemmatizer.py``: ``if not len(filtered_analyses): return [string.lower()]``); and an
+adverb the lookup lemmatiser gave another word's normal form (``_pymorphy_lookup_lemmatize`` takes
+the normal form of ANY parse, so uk можна fronted можний).
 The analyser is injected by ``bind``, so this module imports neither spaCy nor pymorphy3 and a
 profile still builds on a machine without the engine.
 """
@@ -19,6 +22,10 @@ from anki_miner.languages._spaced.pos import UPOS_ALLOWED
 from anki_miner.languages.token import LanguageToken
 
 _HYPHENATED = re.compile(r"[^\W\d_]+(?:-[^\W\d_]+)+")
+#: The model's tags for a verb it misreads (a capitalised imperative as a name, a noun, an adjective).
+_VERB_MISTAGS = frozenset({"NOUN", "PROPN", "ADJ"})
+#: ``oc2ud``'s VerbForm for OpenCorpora VERB and INFN; a gerund (Conv) or participle (Part) is not one.
+_VERB_FORMS = frozenset({"Fin", "Inf"})
 
 #: ``spacy.lang.ru.lemmatizer.oc2ud``: an OpenCorpora tag string -> (UPOS, features). uk's
 #: dictionaries use the same tagset, and ``UkrainianLemmatizer`` subclasses ``RussianLemmatizer``.
@@ -37,20 +44,32 @@ class PymorphyLemmaRepair:
        morph from pymorphy3's first known parse: the model never saw these as one token and tags
        them at random (Когда-то as PUNCT, по-українськи as a feminine NOUN). An unknown one
        (диван-кровать) keeps the model's answer.
-    2. A content token whose lemma is its own surface under ``fold`` takes the one normal form that
+    2. A NOUN, PROPN or ADJ token whose every known parse is a finite verb or an infinitive
+       becomes a VERB with the first parse's morph and the lemma branch 3 would give it: the model
+       reads a capitalised dialogue-initial imperative as a name or a noun (Смотри PROPN, Подожди
+       a masculine NOUN, uk Закрий ADJ), and the dictionary knows the word only as a verb. A
+       gerund (дыша) or participle parse, or any non-verb parse, leaves the model's answer. It
+       runs before the ``allowed_pos`` gate, which PROPN is outside.
+    3. A content token whose lemma is its own surface under ``fold`` takes the one normal form that
        pymorphy3's known parses of the same UPOS agree on (вяжет -> вязать, сховалася ->
        сховатися), else the lower-cased ``analysis_form`` of its surface.
+    4. An ADV token whose lemma is not its own surface, and whose every known parse is a
+       non-comparative adjective or a vocative noun, takes the lower-cased ``analysis_form`` of its
+       surface: pymorphy3-dicts-uk knows можна only as the adjective можний, уже and варто only as
+       the vocatives of уж and варта, so the lookup lemmatiser fronted another word. A comparative
+       keeps its adjective on purpose (громче -> громкий), and a verb or a numeral the model tagged
+       ADV (врёте -> врать) keeps the lemma its own parse accounts for.
 
     ``fold`` is what "the lemma is the surface" means for the language, and it exists because the
     tagging copy rewrites the surface before the model sees it: ``str.lower`` by default, yo-blind
     for ru (ё -> е), apostrophe-blind for uk. ``analysis_form`` is the spelling the analyser is
-    asked for, in both branches, and the base of the ambiguous fallback: identity by default,
+    asked for, in every branch, and the base of the surface fallbacks: identity by default,
     because ru's dictionaries know its surfaces as written, and the U+0027 canonicaliser for uk,
     whose dictionaries know only that one apostrophe -- ask them about a typographic ``м'яча`` and
     every parse comes back ``is_known=False``, so the repair would fall back onto the inflected
     form it exists to fix. ``allowed_pos`` is the language's ``allowed_pos`` gate.
 
-    Not repaired: a token whose POS no parse shares (дыша as NOUN), a participle tagged ADJ.
+    Not repaired: a gerund tagged NOUN (дыша), a participle tagged ADJ.
     """
 
     def __init__(
@@ -74,28 +93,65 @@ class PymorphyLemmaRepair:
         if self._analyzer is None or self._to_upos is None:
             raise RuntimeError("PymorphyLemmaRepair runs only after bind()")
         for token in tokens:
-            if _HYPHENATED.fullmatch(token.surface):
-                self._retag(token, self._to_upos)
-            elif token.feature.pos1 in self._allowed_pos and self._fold(token.feature.lemma) == self._fold(
-                token.surface
-            ):
-                self._relemmatise(token, self._to_upos)
+            pos = token.feature.pos1
+            hyphenated = _HYPHENATED.fullmatch(token.surface) is not None
+            identity = pos in self._allowed_pos and self._fold(token.feature.lemma) == self._fold(token.surface)
+            if not (hyphenated or identity or pos in _VERB_MISTAGS or pos == "ADV"):
+                continue
+            # One analyser call per token, whichever branch reads it.
+            form = self._analysis_form(token.surface)
+            analyses = [
+                (parse, *self._to_upos(str(parse.tag))) for parse in self._analyzer.parse(form) if parse.is_known
+            ]
+            if hyphenated:
+                _retag(token, analyses)
+            elif pos in _VERB_MISTAGS and _only_verbs(analyses):
+                _retag(token, analyses)
+                # The lemma the verb parses agree on, as for an identity lemma: Стой is the
+                # imperative of стоять and of стоить, and the first parse would front the wrong one.
+                token.feature.lemma = _agreed_lemma(analyses, "VERB", form)
+            elif identity:
+                token.feature.lemma = _agreed_lemma(analyses, pos, form)
+            elif pos == "ADV" and _names_another_word(token, form.lower(), analyses):
+                token.feature.lemma = form.lower()
         return tokens
 
-    def _known(self, word: str) -> list[Any]:
-        return [parse for parse in self._analyzer.parse(word) if parse.is_known]
 
-    def _retag(self, token: LanguageToken, to_upos: ToUpos) -> None:
-        parses = self._known(self._analysis_form(token.surface))
-        if not parses:
-            return
-        pos, features = to_upos(str(parses[0].tag))
-        token.feature.pos1 = pos
-        token.feature.lemma = case_lemma(parses[0].normal_form, pos)
-        token.morph = "|".join(f"{name}={value}" for name, value in sorted(features.items()))
+#: A known parse with what ``to_upos`` makes of its tag: (parse, UPOS, UD features).
+Analysis = tuple[Any, str, dict[str, str]]
 
-    def _relemmatise(self, token: LanguageToken, to_upos: ToUpos) -> None:
-        pos = token.feature.pos1
-        form = self._analysis_form(token.surface)
-        lemmas = {parse.normal_form for parse in self._known(form) if to_upos(str(parse.tag))[0] == pos}
-        token.feature.lemma = lemmas.pop() if len(lemmas) == 1 else form.lower()
+
+def _retag(token: LanguageToken, analyses: list[Analysis]) -> None:
+    """POS, lemma and morph from the first known parse; no known parse keeps the model's answer."""
+    if not analyses:
+        return
+    parse, pos, features = analyses[0]
+    token.feature.pos1 = pos
+    token.feature.lemma = case_lemma(parse.normal_form, pos)
+    token.morph = "|".join(f"{name}={value}" for name, value in sorted(features.items()))
+
+
+def _agreed_lemma(analyses: list[Analysis], pos: str, form: str) -> str:
+    """The one normal form the ``pos`` parses agree on, else the lower-cased ``form``."""
+    lemmas = {parse.normal_form for parse, upos, _features in analyses if upos == pos}
+    return lemmas.pop() if len(lemmas) == 1 else form.lower()
+
+
+def _only_verbs(analyses: list[Analysis]) -> bool:
+    """Some parse is known, and every one is a finite verb or an infinitive."""
+    return bool(analyses) and all(
+        pos == "VERB" and features.get("VerbForm") in _VERB_FORMS for _parse, pos, features in analyses
+    )
+
+
+def _names_another_word(token: LanguageToken, own: str, analyses: list[Analysis]) -> bool:
+    """An adverb the analyser knows only as an adjective or a vocative noun (можна, уже, варто).
+
+    Not a comparative, by the model's morph or by any parse, and not a lemma already ``own``.
+    """
+    if "Degree=Cmp" in token.morph.split("|") or token.feature.lemma == own:
+        return False
+    return bool(analyses) and all(
+        (pos == "ADJ" and features.get("Degree") != "Cmp") or (pos == "NOUN" and features.get("Case") == "Voc")
+        for _parse, pos, features in analyses
+    )
