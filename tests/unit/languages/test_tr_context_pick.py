@@ -1,6 +1,7 @@
 """The Turkish tagger picks a word's reading from its clause (real engine).
 
-A command before ``!`` and an ``-Ar mI`` request mine the verb, not a noun homograph.
+A command before ``!`` and an ``-Ar mI`` request mine the verb, not a noun homograph; a capitalised word inside a
+sentence takes zeyrek's own proper-noun reading, not the common word it also spells.
 """
 
 from __future__ import annotations
@@ -64,4 +65,37 @@ def test_an_aorist_before_a_question_particle_mines_the_verb(tagger, line, surfa
     ],
 )
 def test_nouns_and_existentials_keep_their_reading(tagger, line, surface, pick):
+    assert _pick(tagger, line, surface) == pick
+
+
+@pytest.mark.parametrize(
+    ("line", "surface"),
+    [
+        ("Merhaba Selin, nasılsın?", "Selin"),  # not sel "flood"
+        ("Bunu bana Emre söyledi.", "Emre"),  # not emir "order"
+        ("Dün akşam Can geldi.", "Can"),
+        ("Yarın Murat ile buluşacağız.", "Murat"),
+        ("Bence Umut haklı.", "Umut"),
+        ("Bunu Selim bilir.", "Selim"),
+    ],
+)
+def test_a_capital_inside_a_sentence_takes_the_proper_noun_reading(tagger, line, surface):
+    assert _pick(tagger, line, surface) == (surface, "PROPN")
+
+
+@pytest.mark.parametrize(
+    ("line", "surface", "pick"),
+    [
+        ("Selin nerede?", "Selin", ("sel", "NOUN")),  # a sentence start carries no capital evidence
+        ("Tamam. Umut var.", "Umut", ("umut", "NOUN")),  # nor does one after a full stop
+        ("- Nereye? - Umut var.", "Umut", ("umut", "NOUN")),  # or after a dialogue dash (a cue's joined lines)
+        ("— Umut var mı? diye sordu.", "Umut", ("umut", "NOUN")),  # a book's dialogue dash opens the line
+        ("“Umut var,” dedi.", "Umut", ("umut", "NOUN")),  # or after an opening quote
+        ("Annem dedi ki: Umut var.", "Umut", ("umut", "NOUN")),  # or after a colon
+        ("BUNU EMRE SÖYLEDİ.", "EMRE", ("emir", "NOUN")),  # an all-caps line has no capitals to read
+        ("Bunu Deniz söyledi.", "Deniz", ("deniz", "NOUN")),  # zeyrek has no proper-noun Deniz
+        ("Çok Uzun bir yol.", "Uzun", ("uzun", "ADJ")),  # Uz + suffix is not a bare name
+    ],
+)
+def test_capital_evidence_needs_a_mid_sentence_word_with_a_bare_proper_noun_reading(tagger, line, surface, pick):
     assert _pick(tagger, line, surface) == pick

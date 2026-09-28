@@ -26,12 +26,24 @@ TOKEN_RE = re.compile(r"[^\W\d_]+(?:['’ʼ][^\W\d_]+)?|\d+(?:[.,]\d+)*(?:['’�
 _APOSTROPHE = re.compile(r"['’ʼ]")
 #: Existential predicates keep their reading before ``!``: ``Yangın var!`` is "there is a fire", not ``varmak``.
 _EXISTENTIAL = frozenset({"var", "yok"})
+#: Tokens that may stand between a sentence's end and its first word: dashes, quotes, opening brackets.
+_OPENERS = frozenset("-‐‑‒–—―\"'“”„‟«»‘’‚‛‹›([{")
+#: Tokens that end a sentence. Turkish capitalises after a colon only when a new sentence follows it.
+_SENTENCE_ENDS = frozenset(".!?…:")
 
 
 def _proper_head(surface: str) -> str:
     """The stem of a capital-headed apostrophe word (``İstanbul'da`` → ``İstanbul``), else ``""``."""
     head = _APOSTROPHE.split(surface, maxsplit=1)[0]
     return head if head != surface and head[0].isupper() else ""
+
+
+def _starts_sentence(surfaces: list[str], index: int) -> bool:
+    """No word of its sentence comes before this token. A cue's lines arrive joined by a space, not a break."""
+    for before in reversed(surfaces[:index]):
+        if before not in _OPENERS:
+            return before in _SENTENCE_ENDS
+    return True
 
 
 class TurkishTagger:
@@ -73,12 +85,22 @@ def _pick(
 ) -> TrAnalysis:
     """The analyzer's first reading, unless the clause names another one of the word's own readings.
 
+    - A capital inside a sentence (not all caps): the proper-noun reading that is the whole word, when zeyrek has
+      one (``Merhaba Selin`` is ``Selin``, not ``sel`` + genitive). The analyzer ranks proper nouns last because
+      it sees the lowercased word; mid-sentence, Turkish capitalises only proper nouns. A sentence's first word
+      carries no evidence (``Selin nerede?`` stays ``sel``), nor does a name zeyrek lacks (``Deniz``).
     - Before ``!``: the imperative (``Yardım et!`` is ``etmek``, not ``et`` "meat"), unless a determiner makes
       the word a noun phrase (``Ne güzel bir yaz!``) or it is the existential ``var``/``yok``.
     - Before a question particle: the aorist, the ``-Ar mI`` request (``Beni bekler misin?`` is ``beklemek``); an
       optative or participle homograph is no request (``Kaza mı?`` stays ``kaza``).
     """
     own = readings[index]
+    surface = surfaces[index]
+    if surface[0].isupper() and not surface.isupper() and not _starts_sentence(surfaces, index):
+        name = tr_casefold(surface)
+        for reading in own:
+            if reading.pos2 == "Prop" and tr_casefold(reading.lemma) == name:
+                return reading
     following = surfaces[index + 1] if index + 1 < len(surfaces) else ""
     if following == "!":
         if own[0].lemma not in _EXISTENTIAL and not (previous and previous.feature.pos1 == "DET"):
