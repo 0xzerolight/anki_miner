@@ -3,7 +3,9 @@
 Measured gaps, each on subtitle-frequent words the 300-row fixture subset never holds:
 
 * verb-first surfaces: words.dat tags kone, kardi, beri and nadari as nouns only ("tick",
-  "Kurdish", "brie", "poverty"), and tier 1 answered before any verb table (fa_50k: 185k tokens).
+  "Kurdish", "brie", "poverty"), and tier 1 answered before any verb table (fa_50k: 185k tokens);
+* the stem tier's choice: hazm strips the LONGEST suffix, so -ay/-am ate the alef of sedaye,
+  babam and aqaye (sad "hundred", bab, aq) where the one-letter strip leaves the word.
 
 The pack is hard-required and the lexicon is module-scoped, as in ``test_fa_real_data.py``.
 """
@@ -16,8 +18,9 @@ import pytest
 
 from anki_miner.languages.fa import script as fa_script
 from anki_miner.languages.fa import tokenizer as fa_tokenizer
-from anki_miner.languages.fa._hazm import data, lexicon
+from anki_miner.languages.fa._hazm import data, lexicon, stemmer
 from anki_miner.languages.fa.availability import FA_DATA_COMPONENT
+from anki_miner.languages.fa.script import ZWNJ
 from tests._pack_seeds import seeded_component
 
 DATA = Path(__file__).resolve().parents[3] / "anki_miner" / "languages" / "fa" / "data"
@@ -102,3 +105,39 @@ class TestVerbFirst:
         assert raw.startswith(b"#")
         assert not raw.startswith(b"\xef\xbb\xbf")
         assert b"\r" not in raw
+
+
+class TestStemChoice:
+    @pytest.mark.parametrize(
+        ("surface", "stem"),
+        [
+            ("صدای", "صدا"),  # "voice of", not sad "hundred"
+            ("صداش", "صدا"),
+            ("بابام", "بابا"),  # "my dad", not bab
+            ("آقای", "آقا"),
+            ("دنیای", "دنیا"),
+            ("بالای", "بالا"),
+        ],
+    )
+    def test_the_longest_tagged_remainder_is_the_front(self, surface, stem, armed):
+        assert stemmer.stem(surface) != stem, "the premise: hazm's own strip is shorter"
+        assert _one(surface, armed).feature.lemma == stem
+
+    @pytest.mark.parametrize(
+        ("surface", "noun"),
+        [("کارهای", "کار"), (f"کار{ZWNJ}های", "کار"), (f"کتاب{ZWNJ}ها", "کتاب")],
+    )
+    def test_a_plural_strip_still_answers_first(self, surface, noun, armed):
+        # kar-haye also strips to kare ("worker"), which is longer and tagged.
+        assert _one(surface, armed).feature.lemma == noun
+
+    def test_the_tier_answers_no_word_hazms_own_stem_did_not(self, armed):
+        # The standalone superlative: hazm strips all of -tarin, which is no row,
+        # and the -in strip must not answer instead with tar "wet".
+        tarin = "ترین"
+        assert not armed.tags(stemmer.stem(tarin))
+        assert _one(tarin, armed).feature.pos1 == "unknown"
+
+    def test_the_ported_stemmer_itself_stays_hazm_exact(self):
+        assert stemmer.stem("صدای") == "صد"
+        assert stemmer.stem("بابام") == "باب"

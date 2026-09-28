@@ -36,6 +36,11 @@ if TYPE_CHECKING:
 #: The tags a light-verb compound's first token may carry.
 COMPOUND_HEAD_TAGS = frozenset({"N", "AJ"})
 
+#: hazm's plural suffixes all open with -ha (ha, haye, hayi, hayeman, ...).
+_PLURAL = "\N{ARABIC LETTER HEH}\N{ARABIC LETTER ALEF}"
+_HEH = "\N{ARABIC LETTER HEH}"
+_HEH_WITH_YEH = "\N{ARABIC LETTER HEH WITH YEH ABOVE}"
+
 #: The lexicon the last ``build_tagger`` produced, or None on a fresh install.
 #: The lookup ladder reads it for its present-stem rung and NEVER builds one:
 #: a definition lookup must not pull 14 MB of tables into a process that has not
@@ -82,6 +87,42 @@ def _informal_verb(surface: str, infinitive: str, formal: str, lexicon: PersianL
         surface_formal=formal,
         present_stem=lexicon.present_stem(infinitive) or "",
     )
+
+
+def _tagged_stem(surface: str, lexicon: PersianLexicon) -> str | None:
+    """The stem tier's front, or ``None`` when hazm's own stem is not a tagged row.
+
+    hazm's ``stem`` takes the LONGEST suffix, which is right for a retrieval aid
+    and wrong for a card front: -ay and -am eat the alef of an alef-final noun
+    (sedaye -> sad "hundred", babam -> bab, aqaye -> aq) where the one-letter
+    strip leaves the word itself. So once hazm's stem has said the word is
+    stem-plus-suffix, every strip hazm's rules allow is a candidate and the
+    LONGEST TAGGED remainder is the front (measured over the 300 stem-tier
+    answers in the top 3,000 fa_50k surfaces: 16 change, 14 of them right; kara-ye,
+    the colloquial plural of kar, is one of the two wrong) -- except that a
+    plural -ha strip goes first, because kar-haye also strips to kare ("worker").
+
+    Which words the tier answers does not change: letting another strip answer
+    where hazm's stem is untagged would front the standalone superlative -tarin
+    (10,223 fa_50k tokens) as tar "wet". ``stemmer.stem`` itself stays hazm-exact.
+    """
+    stemmed = stemmer.stem(surface)
+    if stemmed == surface or not lexicon.tags(stemmed):
+        return None
+    candidates: list[tuple[bool, int, str]] = []
+    for suffix in stemmer.SUFFIXES:
+        if not surface.endswith(suffix) or (len(suffix) == 1 and len(surface) - 1 < stemmer.MIN_STEM):
+            continue
+        remainder = surface[: -len(suffix)]
+        # stemmer.stem's own tidy-up after its strip.
+        if remainder.endswith(_HEH_WITH_YEH):
+            remainder = remainder[:-1] + _HEH
+        remainder = remainder.removesuffix(stemmer.ZWNJ)
+        if lexicon.tags(remainder):
+            candidates.append((not suffix.startswith(_PLURAL), -len(remainder), remainder))
+    # hazm's stem is one of the candidates, unless no suffix matched and only
+    # its heh-yeh tidy-up changed the word.
+    return min(candidates)[2] if candidates else stemmed
 
 
 def _classify(surface: str, lexicon: PersianLexicon) -> LanguageToken:
@@ -133,10 +174,9 @@ def _classify(surface: str, lexicon: PersianLexicon) -> LanguageToken:
     # therefore outside the default allowed_pos, i.e. unmineable. The committed
     # 300-row subset holds none of those rows, which is why only the real-data
     # corpus parity test could see it.
-    stemmed = stemmer.stem(surface)
-    stem_tags = lexicon.tags(stemmed) if stemmed != surface else ()
-    if stem_tags:
-        return _token(surface, stem_tags[0], stemmed)
+    stemmed = _tagged_stem(surface, lexicon)
+    if stemmed is not None:
+        return _token(surface, lexicon.tags(stemmed)[0], stemmed)
 
     if lexicon.is_attested(surface):
         # Attested without a POS and without a tagged stem: real, but never
