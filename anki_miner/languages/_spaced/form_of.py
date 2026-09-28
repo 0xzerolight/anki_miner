@@ -52,6 +52,7 @@ if TYPE_CHECKING:  # annotation-only: services must not load at profile build
     from anki_miner.services.morphology import AttestLookup, FormLookup, TokenPostPass
 
 __all__ = [
+    "GLOSS_ITEM_RE",
     "WTY_TAG_TO_UPOS",
     "FormOfLemmaPass",
     "OrderedPasses",
@@ -62,7 +63,8 @@ __all__ = [
 ]
 
 _GLOSS_CONTENT_RE = re.compile(r'<div class="gloss-content">(.*?)</div>', re.S)
-_GLOSS_ITEM_RE = re.compile(r'<li class="gloss-sc-li">(.*?)</li>', re.S)
+#: One item of a rendered glossary list: a multi-target form row's target, or a lemma row's gloss.
+GLOSS_ITEM_RE = re.compile(r'<li class="gloss-sc-li">(.*?)</li>', re.S)
 _TAG_RE = re.compile(r"<[^>]+>")
 _NON_LEMMA = "non-lemma"
 #: One line's worth of keys is small; the cache exists so a repeated word in a long corpus
@@ -87,7 +89,7 @@ def form_targets(content: str) -> list[str]:
     """The lemmas a form row's rendered content names, in order (spec F.2, measured shapes)."""
     found: list[str] = []
     for block in _GLOSS_CONTENT_RE.findall(content or ""):
-        items = _GLOSS_ITEM_RE.findall(block)
+        items = GLOSS_ITEM_RE.findall(block)
         for item in items or [block]:
             target = rendered_text(item)
             if target:
