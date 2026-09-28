@@ -96,6 +96,22 @@ def test_a_token_the_pass_does_not_split_keeps_its_first_tag(tagger):
     assert all(new is old for new, old in zip(tokens[:3] + tokens[5:], raw[:3] + raw[4:], strict=True))
 
 
+@pytest.mark.parametrize(
+    ("line", "pieces", "word"),
+    [
+        ("這件事情跟你沒有關係。", ("這", "件"), "這"),
+        ("他們在公司開會。", ("他們", "在"), "他們"),
+        ("他說他不會來了。", ("說", "他", "不會", "來", "了"), "了"),
+    ],
+)
+def test_a_written_chinese_function_word_a_split_frees_is_not_mined(tagger, line, pieces, word):
+    # Written-Chinese lines glue 這, 他們 and 了 onto the next word, and freed
+    # they came out VERB, ADJ and VERB: each became a card.
+    tokens = split(tagger, line, *pieces)
+
+    assert {t.feature.lemma: t.feature.pos1 for t in tokens}[word] not in YUE_ALLOWED_POS
+
+
 def test_a_proper_noun_is_never_split(tagger):
     raw = tagger.parse("阿明鍾意睇Netflix。")
     assert raw[0].feature.pos1 == "PROPN"

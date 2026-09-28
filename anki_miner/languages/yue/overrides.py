@@ -45,4 +45,15 @@ YUE_TAG_OVERRIDES: Mapping[str, str] = {
     # every glued verb (瞓緊覺 -> 瞓 緊 覺).
     "緊": "PART",
     "咗": "PART",
+    # Written Chinese (書面語) pronouns, demonstratives and the aspect particle.
+    # The segmenter glues them onto the next word (這件, 他們在, 來了), the split
+    # pass frees them, and the model tags them as content words (這 VERB, 他們
+    # ADJ, 了 VERB, 她 VERB), so they became cards. 在, 上 and 裏 are left out:
+    # they are verbs in context (上車).
+    "他們": "PRON",
+    "他": "PRON",
+    "她": "PRON",
+    "這": "DET",
+    "那": "DET",
+    "了": "PART",
 }
