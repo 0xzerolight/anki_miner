@@ -56,7 +56,12 @@ from types import MappingProxyType
 
 from anki_miner.languages._spaced.keys import CasefoldDictKeys, spaced_dedup_fold
 from anki_miner.languages._spaced.pos import UPOS_ALLOWED
-from anki_miner.languages._spaced.script import BRACKETS_PATTERN, DIALOGUE_DASH_PATTERN, MUSIC_PATTERN, PARENS_PATTERN
+from anki_miner.languages._spaced.script import (
+    BRACKETS_PATTERN,
+    MUSIC_PATTERN,
+    NORDIC_DIALOGUE_DASH_PATTERN,
+    PARENS_PATTERN,
+)
 from anki_miner.languages._spaced.sentence import sentence_rules
 from anki_miner.languages.token import LanguageToken
 
@@ -92,9 +97,11 @@ PL_SENTENCE_RULES = dataclasses.replace(_LATIN_RULES, openers=_LATIN_RULES.opene
 #: capital but Ó lies outside the shared class ``A-ZÀ-ÖØ-Þ``, so the shared preset leaves the label
 #: in the cue and the parser mines it (probed: ``MAREK:`` strips, ``ŁUKASZ:`` does not).
 PL_SPEAKER_PATTERN = r"^[A-ZÀ-ÖØ-ÞĄĆĘŁŃŚŹŻ][A-ZÀ-ÖØ-ÞĄĆĘŁŃŚŹŻ0-9 .'-]*[A-ZÀ-ÖØ-ÞĄĆĘŁŃŚŹŻ]:\s*"
-#: The S10 default for Polish: the shared parts with the Polish speaker rule. No inline flags.
+#: The S10 default for Polish: the shared parts with the Polish speaker rule and the unspaced dash rule
+#: (``-Chodź tutaj!``: spaCy keeps ``-Chodź`` one token, so the spaced-only rule lost the word in 8 of 8
+#: probe cues). No inline flags.
 PL_SUBTITLE_REGEX = "|".join(
-    (BRACKETS_PATTERN, PARENS_PATTERN, MUSIC_PATTERN, PL_SPEAKER_PATTERN, DIALOGUE_DASH_PATTERN)
+    (BRACKETS_PATTERN, PARENS_PATTERN, MUSIC_PATTERN, PL_SPEAKER_PATTERN, NORDIC_DIALOGUE_DASH_PATTERN)
 )
 
 #: noun_gender labels: the spec's pl m/f/n (§4.8).

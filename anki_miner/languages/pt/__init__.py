@@ -24,7 +24,7 @@ from anki_miner.languages._spaced.keys import CasefoldDictKeys, spaced_dedup_fol
 from anki_miner.languages._spaced.morphology import LatinLookupStrategy, SpacedMinedForm
 from anki_miner.languages._spaced.pos import UPOS_LABELS
 from anki_miner.languages._spaced.render import PosHook
-from anki_miner.languages._spaced.script import LatinScript, nfc_normalize
+from anki_miner.languages._spaced.script import LATIN_UNSPACED_DASH_SUBTITLE_REGEX, LatinScript, nfc_normalize
 from anki_miner.languages._spaced.sentence import sentence_rules
 from anki_miner.languages._spaced.style import SPACED_CONTENT_STYLE
 from anki_miner.languages.profile import AudioDefaults, CaptionLangs, LanguageProfile, PosDefaults
@@ -87,6 +87,8 @@ def _scoped_defaults() -> dict[str, object]:
         allowed_pos=PT_ALLOWED_POS,
         excluded_subtypes=PT_EXCLUDED_SUBTYPES,
         card_fields=PT_CARD_FIELDS,
+        # Unspaced dialogue dashes (``-Você vem?``) lose the turn's first word under the Latin default.
+        subtitle_regex=LATIN_UNSPACED_DASH_SUBTITLE_REGEX,
     )
     defaults["script_variant"] = "br"
     return defaults

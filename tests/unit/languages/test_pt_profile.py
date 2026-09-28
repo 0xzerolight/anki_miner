@@ -18,7 +18,7 @@ from anki_miner.languages._spaced.grammar_hook import GrammarTagHook
 from anki_miner.languages._spaced.keys import CasefoldDictKeys
 from anki_miner.languages._spaced.morphology import LatinLookupStrategy, SpacedMinedForm
 from anki_miner.languages._spaced.render import PosHook
-from anki_miner.languages._spaced.script import LATIN_SUBTITLE_REGEX, LatinScript
+from anki_miner.languages._spaced.script import LATIN_UNSPACED_DASH_SUBTITLE_REGEX, LatinScript
 from anki_miner.languages.pt import pt_normalize
 from anki_miner.languages.pt.catalog import PT_CATALOG
 from anki_miner.languages.pt.morphology import PT_ABBREVIATIONS, PT_EXCLUDED_SUBTYPES
@@ -90,7 +90,8 @@ def test_scoped_defaults_start_brazilian_with_the_latin_sdh_filter():
     assert config.language == "pt" and config.script_variant == "br"
     assert get_profile("pt").scoped_defaults["script_variant"] in SCRIPT_VARIANT_IDS
     assert config.allowed_pos == ("ADJ", "ADV", "NOUN", "VERB")
-    assert config.use_subtitle_regex_filter is True and config.subtitle_regex_filter == LATIN_SUBTITLE_REGEX
+    assert config.use_subtitle_regex_filter is True
+    assert config.subtitle_regex_filter == LATIN_UNSPACED_DASH_SUBTITLE_REGEX
     assert config.anki_fields["pos"] == "" and config.anki_fields["noun_gender"] == ""
     assert config.downloader_subtitle_langs == "pt,pt-BR,pt-PT"
 

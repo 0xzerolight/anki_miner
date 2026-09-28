@@ -11,7 +11,7 @@ from anki_miner.languages._spaced.keys import CasefoldDictKeys, spaced_dedup_fol
 from anki_miner.languages._spaced.morphology import LatinLookupStrategy, SpacedMinedForm
 from anki_miner.languages._spaced.pos import UPOS_LABELS
 from anki_miner.languages._spaced.render import PosHook
-from anki_miner.languages._spaced.script import LatinScript, nfc_normalize
+from anki_miner.languages._spaced.script import LATIN_UNSPACED_DASH_SUBTITLE_REGEX, LatinScript, nfc_normalize
 from anki_miner.languages._spaced.sentence import sentence_rules
 from anki_miner.languages._spaced.style import SPACED_CONTENT_STYLE
 from anki_miner.languages.es.catalog import ES_CATALOG
@@ -68,6 +68,8 @@ def build_profile() -> LanguageProfile:
             allowed_pos=ES_ALLOWED_POS,
             excluded_subtypes=ES_EXCLUDED_SUBTYPES,
             card_fields=ES_CARD_FIELDS,
+            # Spanish subtitles write the dialogue dash unspaced (``-¿Vienes?``).
+            subtitle_regex=LATIN_UNSPACED_DASH_SUBTITLE_REGEX,
         ),
         sentence_rules=sentence_rules(ES_ABBREVIATIONS),
         normalize=nfc_normalize,
