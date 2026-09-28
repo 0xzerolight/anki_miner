@@ -20,7 +20,7 @@ from anki_miner.languages.token import LanguageToken
 from anki_miner.models.reading import ReadingUnit
 
 
-def _lemma(*glosses: str) -> tuple[str, str]:
+def _lemma(*glosses: str, tag: str = "v") -> tuple[str, str]:
     items = "".join(f'<li class="gloss-sc-li"><div class="gloss-sc-div">{gloss}</div></li>' for gloss in glosses)
     content = (
         '<li class="gloss-item"><div class="gloss-content"><div class="gloss-sc-div">'
@@ -29,7 +29,7 @@ def _lemma(*glosses: str) -> tuple[str, str]:
         'Etymology</summary><div class="gloss-sc-div" data-sc-content="Etymology-content">ne- + x</div></details>'
         f'</div></div><ol class="gloss-sc-ol" data-sc-content="glosses">{items}</ol></div></li>'
     )
-    return content, "v"
+    return content, tag
 
 
 def _form(*targets: str) -> tuple[str, str]:
@@ -59,6 +59,8 @@ ROWS: dict[str, list[tuple[str, str]]] = {
     "pasakyti": [_lemma("to say")],
     "turėti": [_lemma("to have")],
     "kęsti": [_lemma("to endure")],
+    "bėra": [_form("bėras")],
+    "bėras": [_lemma("bay (reddish-brown)", tag="adj")],
 }
 
 
@@ -96,6 +98,11 @@ def test_a_negated_verb_fronts_its_positive_verb(parser, line, surface, front):
 def test_a_ne_verb_with_a_sense_of_its_own_keeps_it(parser):
     """``nekęsti`` (to hate) is ne- + ``kęsti`` (to endure), but its row is a sense, not a negative form."""
     assert _fronts(parser, "Aš jo nekenčiu.")["nekenčiu"] == "nekęsti"
+
+
+def test_a_negated_verb_never_fronts_a_non_verb_homograph(parser):
+    """``Nebėra`` (nebe- + būti) is lemmatised ``nebebūti``, no row: ``bėra`` names the adjective ``bėras``."""
+    assert _fronts(parser, "Nebėra duonos.")["Nebėra"] == "nebebūti"
 
 
 def test_a_negated_verb_the_dictionary_cannot_resolve_keeps_its_front(parser):
