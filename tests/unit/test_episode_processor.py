@@ -185,7 +185,13 @@ class TestLemmaContextCallShape:
                 return ["1. def"] * len(words)
 
             def get_glossaries_batch(
-                words, progress_callback=None, *, is_cancelled=None, lemma_context, pos_context=None
+                words,
+                progress_callback=None,
+                fallback_context=None,
+                *,
+                is_cancelled=None,
+                lemma_context,
+                pos_context=None,
             ):
                 assert lemma_context
                 return ["1. gloss"] * len(words)
@@ -197,7 +203,9 @@ class TestLemmaContextCallShape:
             ):
                 return ["1. def"] * len(words)
 
-            def get_glossaries_batch(words, progress_callback=None, *, is_cancelled=None, pos_context=None):
+            def get_glossaries_batch(
+                words, progress_callback=None, fallback_context=None, *, is_cancelled=None, pos_context=None
+            ):
                 return ["1. gloss"] * len(words)
 
         service.get_definitions_batch = get_definitions_batch
@@ -274,7 +282,7 @@ class TestPosContextCallShape:
             seen.append(("definitions", kw))
             return ["1. def"] * len(words)
 
-        def get_glossaries_batch(words, progress_callback=None, *, is_cancelled=None, **kw):
+        def get_glossaries_batch(words, progress_callback=None, fallback_context=None, *, is_cancelled=None, **kw):
             seen.append(("glossaries", kw))
             return ["1. gloss"] * len(words)
 
@@ -4524,39 +4532,13 @@ class TestGlossaryFetch:
 
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
+        mock_services["definition_service"].get_glossaries_batch.assert_called_once()
         glossary_call = mock_services["definition_service"].get_glossaries_batch.call_args
-        assert glossary_call.args == ([("殺る", "やる")], None)
+        # The ladder gets no alternate: a different-kanji lemma may be another homograph.
+        assert glossary_call.args == ([("殺る", "やる")], None, {"殺る": ("", None)})
         assert glossary_call.kwargs["is_cancelled"]() is False
         payload = mock_services["anki_service"].create_cards_batch.call_args[0][0][0]
         assert "glossary" not in (payload.extra_fields or {})
-
-    def test_glossary_miss_retries_same_stem_lemma(self, test_config, mock_services, tmp_path):
-        cfg = replace(test_config, anki_fields={**test_config.anki_fields, "glossary": "Glossary"})
-        processor = build_processor(config=cfg, **mock_services)
-
-        word = _make_word(lemma="探す", surface="探し", pos="名詞")
-        word.lemma_reading = "さがす"
-        word.expression_reading = "さがし"
-        media = _make_media("sagashi")
-        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
-        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
-        mock_services["word_filter"].filter_unknown.return_value = [word]
-        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
-        mock_services["definition_service"].get_definitions_batch.return_value = ["1. search"]
-        mock_services["anki_service"].create_cards_batch.return_value = [1]
-
-        lemma_glossary = '<div class="yomitan-glossary"><ol><li>search</li></ol></div>'
-        mock_services["definition_service"].get_glossaries_batch.side_effect = [[None], [lemma_glossary]]
-        mock_services["definition_service"].css_entries.return_value = []
-
-        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
-
-        glossary_calls = mock_services["definition_service"].get_glossaries_batch.call_args_list
-        assert [glossary_call.args for glossary_call in glossary_calls] == [
-            ([("探し", "さがし")], None),
-            ([("探す", "さがす")], None),
-        ]
-        assert all(glossary_call.kwargs["is_cancelled"]() is False for glossary_call in glossary_calls)
 
     def test_glossary_miss_no_retry_for_non_variant(self, test_config, mock_services, tmp_path):
         """A miss on a word whose mined_form == lemma retries nothing — there is

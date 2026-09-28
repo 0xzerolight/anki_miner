@@ -149,4 +149,10 @@ def build_profile() -> LanguageProfile:
         # yue is traditional-only in v1, so a word has one spelling and the term
         # key IS the duplicate-card key (zh needs script_key; yue does not).
         dedup_fold=YueDictKeyFolding().dedup_fold,
+        # CC-CEDICT-Canto answers most everyday words with the Mandarin sense
+        # and hides CC-Canto's Cantonese one (蚊 'mosquito' over 'dollar', 平
+        # 'flat' over 'cheap'); putting CC-Canto first instead would cost 101 of
+        # the 1000 most frequent words their main sense (可以 'so so', 四
+        # 'labourer'). The Definition keeps both, in chain order.
+        stacked_definition=True,
     )

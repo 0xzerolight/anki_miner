@@ -124,7 +124,7 @@ def _make_processor(
             pc.on_complete()
         return ["<def>"] * len(pairs)
 
-    def _gloss(pairs, pc=None, *, is_cancelled, lemma_context=None, pos_context=None):
+    def _gloss(pairs, pc=None, fb=None, *, is_cancelled, lemma_context=None, pos_context=None):
         assert is_cancelled() is False
         if pc is not None:
             pc.on_start(len(pairs), "glossaries")

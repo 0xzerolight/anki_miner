@@ -339,28 +339,27 @@ class DefinitionService:
             return self._fallback_candidates(word, orth_base, ctype)
         return self._lookup.candidates(word, orth_base, ctype)
 
-    def _fallback_lookup_offline(
+    def _fallback_hits_offline(
         self,
         word: str,
         orth_base: str,
         ctype: str | None,
         is_cancelled: Callable[[], bool] | None = None,
-    ) -> str | None:
-        """First rules-validated fallback hit across offline providers, else None.
+    ) -> list[str]:
+        """Every offline provider's rules-validated hit for the first candidate any of them answers.
 
         Candidates are tried in priority order (variants, then fewest-step
-        deinflections); for each, offline providers are walked in chain order and
-        the first hit wins (mirrors ``get_definitions_batch`` first-hit-wins).
-        Online providers and providers lacking ``lookup_fallback`` are skipped.
-        Never raises: a provider that throws degrades to "skip + continue".
+        deinflections); for each, offline providers are walked in chain order,
+        and the first candidate with a hit ends the walk, so a deeper candidate
+        never mixes into a nearer one's hits. Online providers and providers
+        lacking ``lookup_fallback`` are skipped. Never raises: a provider that
+        throws degrades to "skip + continue". Cancellation returns the hits so far.
         """
-        candidates = self.fallback_candidates(word, orth_base, ctype)
-        if not candidates:
-            return None
-        for cand_text, cand_conditions in candidates:
+        hits: list[str] = []
+        for cand_text, cand_conditions in self.fallback_candidates(word, orth_base, ctype):
             for provider in self._providers:
                 if is_cancelled is not None and is_cancelled():
-                    return None
+                    return hits
                 if provider.is_online or not provider.is_available():
                     continue
                 fb = getattr(provider, "lookup_fallback", None)
@@ -372,8 +371,25 @@ class DefinitionService:
                     _log_provider_failure(provider, "lookup_fallback", e, subject=cand_text)
                     continue
                 if html:
-                    return html
-        return None
+                    hits.append(html)
+            if hits:
+                return hits
+        return hits
+
+    def _fallback_lookup_offline(
+        self,
+        word: str,
+        orth_base: str,
+        ctype: str | None,
+        is_cancelled: Callable[[], bool] | None = None,
+    ) -> str | None:
+        """First rules-validated fallback hit across offline providers, else None.
+
+        The first of ``_fallback_hits_offline`` (mirrors ``get_definitions_batch``
+        first-hit-wins).
+        """
+        hits = self._fallback_hits_offline(word, orth_base, ctype, is_cancelled)
+        return hits[0] if hits else None
 
     def _chain_description(self) -> list[str]:
         """Render the walked chain as ``name:dict_id:availability`` per provider.
@@ -984,6 +1000,7 @@ class DefinitionService:
         self,
         words: list[tuple[str, str | None]],
         progress_callback: ProgressCallback | None = None,
+        fallback_context: dict[str, tuple[str, str | None]] | None = None,
         *,
         is_cancelled: Callable[[], bool] | None = None,
         lemma_context: dict[str, str] | None = None,
@@ -1004,6 +1021,11 @@ class DefinitionService:
           offline provider returned a hit for that word — they act as a fallback.
         Providers lacking ``lookup_many`` (e.g. legacy offline or online Jisho)
         are consulted per-word, matching the old behaviour.
+
+        ``fallback_context`` is ``get_definitions_batch``'s lookup-miss ladder:
+        a word nothing answered, offline or online, retries the candidates, and
+        every offline provider's hit for the first candidate any of them answers
+        is concatenated. Absent (``None``) ⇒ no ladder.
 
         ``lemma_context`` mirrors ``get_definitions_batch``: word → token lemma,
         forwarded to batch-capable offline providers for the Rule A′ kana-front
@@ -1094,6 +1116,18 @@ class DefinitionService:
                         break
                 else:
                     online_results[pair] = None
+
+        # Miss-only ladder, after the whole chain as in get_definitions_batch.
+        if fallback_context:
+            for pair in unique_pairs:
+                if cancellation_requested():
+                    break
+                word, _reading = pair
+                ctx = fallback_context.get(word)
+                if ctx is None or offline_hits[pair] or online_results.get(pair):
+                    continue
+                orth_base, ctype = ctx
+                offline_hits[pair] = self._fallback_hits_offline(word, orth_base, ctype, is_cancelled)
 
         results: list[str | None] = []
         for i, pair in enumerate(words, 1):

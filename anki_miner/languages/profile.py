@@ -388,3 +388,8 @@ class LanguageProfile:
     #: function from ``dict_keys.fold_term`` (R7): index keys are never
     #: article-stripped.
     dedup_fold: Callable[[str], str] | None = None
+    #: The Definition carries every enabled dictionary's hit in chain order (the
+    #: Glossary's stacking) instead of the first dictionary's. For a language
+    #: whose dictionaries answer the same word with different senses and no
+    #: chain order serves every word. ``False`` is first hit wins.
+    stacked_definition: bool = False
