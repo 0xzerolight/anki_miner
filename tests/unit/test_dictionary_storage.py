@@ -34,6 +34,7 @@ from anki_miner.services.dictionary.storage import (
     read_meta_cached,
     read_tags,
     row_is_common,
+    term_rows,
     terms_exist,
     terms_readings,
     write_meta,
@@ -2664,3 +2665,89 @@ class TestFormOfRows:
             ]
         finally:
             conn.close()
+
+
+class _ReadingFormKeys(_PlainKeys):
+    """A profile whose form lookup also matches the reading column (wty-ro-en's shape)."""
+
+    term_rows_match_reading = True
+
+
+class _CasefoldReadingFormKeys(_ReadingFormKeys):
+    """The same, with a casefolding term key (the Latin profiles' fold)."""
+
+    def fold_term(self, s: str) -> str:
+        return unicodedata.normalize("NFC", s).casefold()
+
+
+class TestTermRowsReadingMatch:
+    """``term_rows`` is exact-term by default; a profile's keys may declare the reading column too.
+
+    wty-ro-en keys a form row without diacritics and stores the real spelling as its reading
+    (``lasa`` / ``lasă`` -> ``lăsa``), so the exact-term read of ``lasă`` finds nothing.
+    """
+
+    _LASA = _form_of("lasa", "lăsa", reading="lasă")
+    _LASHA = _form_of("lasa", "laș", reading="lașă")
+    _LASA_LEMMA = _lemma("lăsa", "to leave", "v")
+
+    @staticmethod
+    def _open(tmp_path: Path, rows: list[DictRow], keys) -> sqlite3.Connection:
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        bulk_insert(db, rows, keys=keys)
+        return open_readonly(db)
+
+    def test_the_default_read_ignores_the_reading_column(self, tmp_path: Path):
+        conn = self._open(tmp_path, [self._LASA, self._LASA_LEMMA], _PlainKeys())
+        try:
+            for keys in (None, _PlainKeys()):
+                assert term_rows(conn, ["lasă"], keys=keys) == {}
+        finally:
+            conn.close()
+
+    def test_declared_keys_reach_a_form_row_through_its_reading(self, tmp_path: Path):
+        keys = _ReadingFormKeys()
+        conn = self._open(tmp_path, [self._LASA, self._LASHA, self._LASA_LEMMA], keys)
+        try:
+            found = term_rows(conn, ["lasă", "lăsa", "absent"], keys=keys)
+        finally:
+            conn.close()
+        assert found == {
+            "lasă": [(self._LASA.content, "non-lemma")],
+            "lăsa": [(self._LASA_LEMMA.content, "v")],
+        }
+
+    def test_term_matches_lead_and_a_row_matching_both_ways_comes_once(self, tmp_path: Path):
+        """``căuta``: its own lemma row by term, the ``cauta`` form row spelt ``căuta`` by reading."""
+        keys = _ReadingFormKeys()
+        spelt = _form_of("cauta", "căta", reading="căuta")
+        both = _form_of("căuta", "căuta", reading="căuta")
+        conn = self._open(tmp_path, [spelt, _lemma("căuta", "to look for", "v"), both], keys)
+        try:
+            found = term_rows(conn, ["căuta"], keys=keys)
+        finally:
+            conn.close()
+        assert found == {
+            "căuta": [("<div>to look for</div>", "v"), (both.content, "non-lemma"), (spelt.content, "non-lemma")]
+        }
+
+    def test_the_terms_are_folded_before_both_matches(self, tmp_path: Path):
+        keys = _CasefoldReadingFormKeys()
+        conn = self._open(tmp_path, [self._LASA, self._LASA_LEMMA], keys)
+        try:
+            found = term_rows(conn, ["Lasă", "LĂSA"], keys=keys)
+        finally:
+            conn.close()
+        assert found == {"Lasă": [(self._LASA.content, "non-lemma")], "LĂSA": [(self._LASA_LEMMA.content, "v")]}
+
+    def test_a_request_spanning_several_chunks_is_answered_whole(self, tmp_path: Path):
+        keys = _ReadingFormKeys()
+        rows = [_form_of(f"f{i}", f"l{i}", reading=f"r{i}") for i in range(2 * _BIND_CHUNK)]
+        conn = self._open(tmp_path, rows, keys)
+        try:
+            found = term_rows(conn, [f"r{i}" for i in range(2 * _BIND_CHUNK + 50)], keys=keys)
+        finally:
+            conn.close()
+        assert set(found) == {f"r{i}" for i in range(2 * _BIND_CHUNK)}
+        assert found["r0"] == [(rows[0].content, "non-lemma")]

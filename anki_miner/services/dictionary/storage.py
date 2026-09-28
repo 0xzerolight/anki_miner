@@ -355,6 +355,19 @@ def _sense_rank_fn(keys: DictKeyFolding | None) -> Callable[[str, str, str | Non
     return None if keys is None else getattr(keys, "sense_rank", None)
 
 
+def _term_rows_match_reading(keys: DictKeyFolding | None) -> bool:
+    """Whether the profile's form lookup (:func:`term_rows`) also matches the reading column.
+
+    Optional profile capability, probed like ``sense_rank``. wty-ro-en keys its
+    form rows without diacritics and stores the real spelling as the reading
+    (``lasa`` / ``lasă`` -> ``lăsa``), so those rows answer only through that
+    column, as they do on the definition lookup (``_LOOKUP_SQL``). ``False`` for
+    the Japanese pair and every profile without the attribute: their passes read
+    exact headwords.
+    """
+    return bool(getattr(keys, "term_rows_match_reading", False))
+
+
 def _connect_for_bulk_write(db_path: Path) -> sqlite3.Connection:
     """Open *db_path* tuned for a one-shot bulk load.
 
@@ -1146,13 +1159,19 @@ def term_rows(
     the answered terms from its remaining list, so an empty-list entry would mark the term answered
     and every provider after the first would be skipped.
 
+    Keys that declare ``term_rows_match_reading`` (see :func:`_term_rows_match_reading`) also get the
+    rows whose reading equals the folded term, after its term matches and each row once: the
+    ``term = ? OR reading = ?`` of ``_LOOKUP_SQL``.
+
     ``keys`` folds the term key; ``None`` is the Japanese pair (see :func:`_folders`).
     """
-    fold_t, _fold_r = _folders(keys)
+    fold_t, fold_r = _folders(keys)
     unique = list(dict.fromkeys(terms))
     requested_by_term: dict[str, list[str]] = {}
     for requested in unique:
         requested_by_term.setdefault(fold_t(requested), []).append(requested)
+    if _term_rows_match_reading(keys):
+        return _term_or_reading_rows(conn, requested_by_term, fold_r)
     canonical_terms = list(requested_by_term)
     found: dict[str, list[tuple[str, str]]] = {}
     for start in range(0, len(canonical_terms), _EXIST_CHUNK):
@@ -1167,6 +1186,43 @@ def term_rows(
             for requested in requested_by_term.get(term, ()):
                 found.setdefault(requested, []).append((content, tags or ""))
     return found
+
+
+def _term_or_reading_rows(
+    conn: sqlite3.Connection,
+    requested_by_term: dict[str, list[str]],
+    fold_reading: Callable[[str | None], str | None],
+) -> dict[str, list[tuple[str, str]]]:
+    """:func:`term_rows` for keys that declare the reading column: term matches first, then reading matches."""
+    by_term: dict[str, list[tuple[str, str]]] = {}
+    by_reading: dict[str, list[tuple[str, str]]] = {}
+    canonical_terms = list(requested_by_term)
+    # Two binds per term (term IN + reading IN), so _BIND_CHUNK terms stay under sqlite's 999 cap.
+    for start in range(0, len(canonical_terms), _BIND_CHUNK):
+        chunk = canonical_terms[start : start + _BIND_CHUNK]
+        readings = [fold_reading(term) for term in chunk]
+        requested_by_reading: dict[str, list[str]] = {}
+        for term, reading in zip(chunk, readings, strict=True):
+            if reading is not None:
+                requested_by_reading.setdefault(reading, []).extend(requested_by_term[term])
+        placeholders = ", ".join("?" for _ in chunk)
+        rows = conn.execute(
+            f"SELECT term, reading, content, tags FROM entries "
+            f"WHERE term IN ({placeholders}) OR reading IN ({placeholders}) ORDER BY score DESC, sequence, id",
+            (*chunk, *readings),
+        ).fetchall()
+        in_chunk = set(chunk)
+        for term, reading, content, tags in rows:
+            row = (content, tags or "")
+            term_hits = requested_by_term[term] if term in in_chunk else []
+            for requested in term_hits:
+                by_term.setdefault(requested, []).append(row)
+            for requested in requested_by_reading.get(reading, []) if reading is not None else []:
+                if requested not in term_hits:
+                    by_reading.setdefault(requested, []).append(row)
+    return {
+        requested: by_term.get(requested, []) + by_reading.get(requested, []) for requested in {**by_term, **by_reading}
+    }
 
 
 def terms_readings(conn: sqlite3.Connection, terms: list[str]) -> dict[str, list[str]]:

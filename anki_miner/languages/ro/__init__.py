@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import dataclasses
+
 from anki_miner.config.config import AudioSourceEntry
 from anki_miner.languages._spaced.audio import spaced_audio_candidates, spaced_speakable
 from anki_miner.languages._spaced.availability import spaced_missing_reason
@@ -39,8 +41,26 @@ __all__ = ["build_profile"]
 RO_SMOKE_SENTENCE = "Studentul a citit o carte interesantă ieri."
 RO_EXTRA_CARD_FIELDS = (POS_FIELD, NOUN_GENDER_FIELD)
 RO_CARD_FIELDS = spaced_card_fields(RO_EXTRA_CARD_FIELDS)
+
+
+class RomanianDictKeys(CasefoldDictKeys):
+    """The Latin key fold, whose form lookup also matches the reading column.
+
+    wty-ro-en keys a form row without diacritics and stores the real spelling as its reading
+    (``lasa`` / ``lasă`` -> ``lăsa``, ``mananca`` / ``mănâncă`` -> ``mânca``), so an exact-term read of
+    ``lasă`` finds nothing. ``storage.term_rows`` then matches the reading as well, as the definition
+    lookup does. Its lemma rows carry no reading, so a reading match is only ever a form row.
+    """
+
+    term_rows_match_reading = True
+
+
 #: R35: the cedilla map runs inside the key fold, at import and at query alike.
-RO_KEYS = CasefoldDictKeys(extra_fold=ro_fold_cedilla)
+RO_KEYS = RomanianDictKeys(extra_fold=ro_fold_cedilla)
+#: Romanian opens a quotation with „ (its closer ” is already a shared closer, and so is the inner «…» pair).
+#: Additive, so a shared opener added later reaches Romanian too (the pl shape).
+_LATIN_RULES = sentence_rules(RO_ABBREVIATIONS)
+RO_SENTENCE_RULES = dataclasses.replace(_LATIN_RULES, openers=_LATIN_RULES.openers | frozenset("„"))
 
 RO_AUDIO = AudioDefaults(
     gtts_lang="ro",
@@ -80,7 +100,7 @@ def build_profile() -> LanguageProfile:
             card_fields=RO_CARD_FIELDS,
             subtitle_regex=RO_SUBTITLE_REGEX,
         ),
-        sentence_rules=sentence_rules(RO_ABBREVIATIONS),
+        sentence_rules=RO_SENTENCE_RULES,
         normalize=ro_normalize,
         dict_keys=RO_KEYS,
         audio=RO_AUDIO,
