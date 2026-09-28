@@ -24,12 +24,12 @@ the glued elided article (``l'home`` meets the mined ``home``).
 from __future__ import annotations
 
 import re
-import unicodedata
 from collections.abc import Mapping
 from types import MappingProxyType
 from typing import Any
 
 from anki_miner.languages._spaced.pos import UPOS_ALLOWED
+from anki_miner.languages._spaced.script import nbsp_shy_normalize
 
 #: The model package the tokenizer loads and the availability probe looks for.
 CA_MODEL_PACKAGE = "ca_core_news_sm"
@@ -62,12 +62,12 @@ _INTERPUNCT = "·"
 
 
 def ca_normalize(text: str) -> str:
-    """``LanguageProfile.normalize``: NFC, then the legacy ``ŀ``/``Ŀ`` letters as ``l·``/``L·``.
+    """``LanguageProfile.normalize``: the sv shape (NBSP, soft hyphen, NFC), then ``ŀ``/``Ŀ`` as ``l·``/``L·``.
 
     Never NFKC: U+00B7 must survive (R35). Apostrophes stay verbatim; the
     tagger folds curly ones in its own copy.
     """
-    return unicodedata.normalize("NFC", text).translate(_L_DOT_LETTERS)
+    return nbsp_shy_normalize(text).translate(_L_DOT_LETTERS)
 
 
 def _restored_interpunct(text: str) -> list[str]:

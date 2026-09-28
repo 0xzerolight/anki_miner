@@ -11,7 +11,7 @@ from anki_miner.languages._spaced.keys import CasefoldDictKeys, spaced_dedup_fol
 from anki_miner.languages._spaced.morphology import LatinLookupStrategy, SpacedMinedForm
 from anki_miner.languages._spaced.pos import UPOS_LABELS
 from anki_miner.languages._spaced.render import PosHook
-from anki_miner.languages._spaced.script import LATIN_UNSPACED_DASH_SUBTITLE_REGEX, LatinScript, nfc_normalize
+from anki_miner.languages._spaced.script import LATIN_UNSPACED_DASH_SUBTITLE_REGEX, LatinScript, nbsp_shy_normalize
 from anki_miner.languages._spaced.sentence import sentence_rules
 from anki_miner.languages._spaced.style import SPACED_CONTENT_STYLE
 from anki_miner.languages.es.catalog import ES_CATALOG
@@ -72,7 +72,8 @@ def build_profile() -> LanguageProfile:
             subtitle_regex=LATIN_UNSPACED_DASH_SUBTITLE_REGEX,
         ),
         sentence_rules=sentence_rules(ES_ABBREVIATIONS),
-        normalize=nfc_normalize,
+        # An e-book's soft hyphen would stay inside its word, where no dictionary row meets it.
+        normalize=nbsp_shy_normalize,
         dict_keys=ES_KEYS,
         audio=ES_AUDIO,
         asr_language="es",
