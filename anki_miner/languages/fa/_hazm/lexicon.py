@@ -3,7 +3,8 @@
 The formal verb table is the 79 patterns expanded over ``verbs.dat``, plus the
 mi-/nami- forms of its preverb verbs spelt bar-mi-gardam; the informal one is
 the 30 present patterns expanded over ``iverbs.dat``'s informal stems, paired
-form for form with the formal spelling they stand for. hazm's own
+form for form with the formal spelling they stand for; the colloquial-ending one
+is the -e/-an/-in presents over the same stems. hazm's own
 ``informal_to_formal_conjucation`` is NOT ported: it zips two conjugation lists
 at hard-coded offsets and is wrong upstream (probe P-5 -- it maps miram to a
 three-word string meaning "they had been going").
@@ -24,7 +25,7 @@ from anki_miner.languages.fa._hazm import conjugation
 from anki_miner.languages.fa._hazm.data import HazmData
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Callable, Iterable, Iterator
 
 #: Where the committed tables live (package data, both build paths).
 DATA_PACKAGE = "anki_miner.languages.fa.data"
@@ -33,6 +34,17 @@ COLLOQUIAL_FILE = "colloquial.tsv"
 PREFERRED_PRESENT_STEMS_FILE = "preferred_present_stems.tsv"
 
 ZWNJ = "\N{ZERO WIDTH NON-JOINER}"
+
+#: Colloquial-ending forms another word owns first, measured over fa_50k:
+#: beshin is "sit!" (neshastan) far more often than "that you become"
+#: (shodan), and xare is "the donkey" (xar + the spoken definite -e) once the
+#: normaliser has joined mi- xare into one word.
+_NOT_COLLOQUIAL_ENDINGS = frozenset(
+    {
+        "\N{ARABIC LETTER BEH}\N{ARABIC LETTER SHEEN}\N{ARABIC LETTER FARSI YEH}\N{ARABIC LETTER NOON}",
+        "\N{ARABIC LETTER KHAH}\N{ARABIC LETTER REH}\N{ARABIC LETTER HEH}",
+    }
+)
 
 
 def _read_tsv(name: str) -> Iterator[list[str]]:
@@ -76,6 +88,7 @@ class PersianLexicon:
         *,
         verbs: dict[str, str],
         informal: dict[str, tuple[str, str]],
+        colloquial_endings: dict[str, tuple[str, str]],
         colloquial: dict[str, str],
         compounds: frozenset[tuple[str, str]],
         tags: dict[str, tuple[str, ...]],
@@ -84,6 +97,7 @@ class PersianLexicon:
     ) -> None:
         self._verbs = verbs
         self._informal = informal
+        self._colloquial_endings = colloquial_endings
         self._colloquial = colloquial
         self._compounds = compounds
         self._tags = tags
@@ -104,6 +118,11 @@ class PersianLexicon:
         """``(infinitive, formal spelling)`` for a colloquial verb form, or ``None``."""
         hit = self._informal.get(word)
         return hit if hit is not None else self._informal.get(fa_script.fa_fold(word))
+
+    def colloquial_ending_verb(self, word: str) -> tuple[str, str] | None:
+        """``(infinitive, formal spelling)`` for a -e/-an/-in present (dare, mikonan), or ``None``."""
+        hit = self._colloquial_endings.get(word)
+        return hit if hit is not None else self._colloquial_endings.get(fa_script.fa_fold(word))
 
     def colloquial(self, word: str) -> str | None:
         """The formal spelling of a colloquial word, or ``None``."""
@@ -200,29 +219,44 @@ def _build_formal(
     return verbs, present_stems
 
 
-def _build_informal(rows: Iterable[tuple[str, str]]) -> dict[str, tuple[str, str]]:
+def _build_informal(
+    rows: Iterable[tuple[str, str]],
+    expand: Callable[[str, str], Iterable[tuple[str, str]]],
+) -> dict[str, tuple[str, str]]:
+    """``form -> (infinitive, formal spelling)`` over the ``iverbs.dat`` rows."""
     informal: dict[str, tuple[str, str]] = {}
     for verb_line, informal_present in rows:
         past, present = conjugation.split_stems(verb_line)
-        # A row whose informal stem is the formal one would pair every formal
-        # form with itself and tag the textbook spelling Informal;
-        # _build_formal keeps its verb instead.
-        if _is_malformed(past, present) or informal_present == present:
+        if _is_malformed(past, present):
             continue
         infinitive = conjugation.infinitive(verb_line)
-        for pattern in conjugation.PRESENT_PATTERNS:
-            form = conjugation.apply(pattern, present=informal_present)
-            formal = conjugation.apply(pattern, present=present)
+        for form, formal in expand(informal_present, present):
             informal.setdefault(form, (infinitive, formal))
             # The ZWNJ-less spelling is how people actually type it (probe P-5).
             informal.setdefault(form.replace(ZWNJ, ""), (infinitive, formal))
     return informal
 
 
+def _informal_presents(informal_present: str, present: str) -> list[tuple[str, str]]:
+    # A row whose informal stem is the formal one would pair every formal form
+    # with itself and tag the textbook spelling Informal; _build_formal keeps
+    # its verb instead.
+    if informal_present == present:
+        return []
+    return [
+        (conjugation.apply(pattern, present=informal_present), conjugation.apply(pattern, present=present))
+        for pattern in conjugation.PRESENT_PATTERNS
+    ]
+
+
 def build(hazm_data: HazmData) -> PersianLexicon:
     """Build every table from one loaded pack plus the committed TSVs."""
     preferred_stems = {row[0]: row[1] for row in _read_tsv(PREFERRED_PRESENT_STEMS_FILE) if len(row) == 2}
     verbs, present_stems = _build_formal(hazm_data.verb_lines, hazm_data.iverb_rows, preferred_stems)
+
+    colloquial_endings = _build_informal(hazm_data.iverb_rows, conjugation.expand_colloquial)
+    for form in _NOT_COLLOQUIAL_ENDINGS:
+        colloquial_endings.pop(form, None)
 
     colloquial: dict[str, str] = {}
     for row in _read_tsv(COLLOQUIAL_FILE):
@@ -242,7 +276,8 @@ def build(hazm_data: HazmData) -> PersianLexicon:
 
     lexicon = PersianLexicon(
         verbs=verbs,
-        informal=_build_informal(hazm_data.iverb_rows),
+        informal=_build_informal(hazm_data.iverb_rows, _informal_presents),
+        colloquial_endings=colloquial_endings,
         colloquial=colloquial,
         compounds=compounds,
         tags=tags,

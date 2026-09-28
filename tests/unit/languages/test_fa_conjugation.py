@@ -77,6 +77,26 @@ THIS_ARABIC = _ALEF + _ARABIC_YEH + _NOON
 THIS_FARSI = _ALEF + _YEH + _NOON
 KOJAST = _KEHEH + _JEEM + _ALEF + _SEEN + _TEH
 
+# dashtan, "to have": dare / darin are the colloquial 3sg / 2pl of darad / darid
+DASHTAN = _DAL + _ALEF + _SHEEN + _TEH + _NOON
+DARE = _DAL + _ALEF + _REH + _HEH
+DARAD = _DAL + _ALEF + _REH + _DAL
+DARIN = _DAL + _ALEF + _REH + _YEH + _NOON
+DARID = _DAL + _ALEF + _REH + _YEH + _DAL
+# mikone / konan: the colloquial 3sg and 3pl of kardan
+MIKONE = MI + _KEHEH + _NOON + _HEH
+MI_ZWNJ_KONE = MI + ZWNJ + _KEHEH + _NOON + _HEH
+MIKONAD = MI + ZWNJ + _KEHEH + _NOON + _DAL
+KONAN = _KEHEH + _NOON + _NOON
+KONAND = _KEHEH + _NOON + _NOON + _DAL
+# mire: raftan on its colloquial stem r-, never mordan
+MIRE = MI + _REH + _HEH
+MIRAVAD = MI + ZWNJ + RO + _DAL
+# shun (the clitic "their") is the formal stem shav- plus -an; beshin is "sit!"
+SHUN = _SHEEN + _WAW + _NOON
+BESHIN = _BEH + _SHEEN + _YEH + _NOON
+# mi + xa + e: the 3sg of a vowel-final stem keeps -ad (mixad), never -e
+MIXAE = MI + _KHAH + _WAW + _ALEF + _HEH
 # bargashtan, "to come back": the preverb bar- goes in front of mi-
 BARGASHTAN = _BEH + _REH + _GAF + _SHEEN + _TEH + _NOON
 GARD = _GAF + _REH + _DAL
@@ -224,6 +244,42 @@ class TestLexiconTables:
         tracemalloc.stop()
         assert built.verb_count
         assert peak < 40 * 1024 * 1024, peak
+
+
+class TestColloquialEndings:
+    """3sg -e, 3pl -an and 2pl -in: the endings Tehrani speech puts on every present."""
+
+    def test_each_colloquial_ending_pairs_with_a_formal_present_pattern(self):
+        assert len(conjugation.COLLOQUIAL_PRESENT_PATTERNS) == 15
+        for colloquial, formal in conjugation.COLLOQUIAL_PRESENT_PATTERNS:
+            assert formal in conjugation.PRESENT_PATTERNS
+            assert colloquial not in conjugation.PATTERNS
+
+    def test_a_colloquial_ending_resolves_to_the_infinitive_and_its_formal_spelling(self, fa_lexicon):
+        assert fa_lexicon.colloquial_ending_verb(DARE) == (DASHTAN, DARAD)
+        assert fa_lexicon.colloquial_ending_verb(DARIN) == (DASHTAN, DARID)
+        assert fa_lexicon.colloquial_ending_verb(KONAN) == (KARDAN, KONAND)
+        assert fa_lexicon.colloquial_ending_verb(MIKONE) == (KARDAN, MIKONAD)
+        assert fa_lexicon.colloquial_ending_verb(MI_ZWNJ_KONE) == (KARDAN, MIKONAD)
+
+    def test_the_endings_go_on_the_colloquial_stem(self, fa_lexicon):
+        # mire is raftan on r-; the formal stems are not expanded, which is also
+        # what keeps shun (shav- + -an) from turning the clitic "their" into shodan.
+        assert fa_lexicon.colloquial_ending_verb(MIRE) == (RAFTAN, MIRAVAD)
+        assert fa_lexicon.colloquial_ending_verb(SHUN) is None
+
+    def test_beshin_is_not_read_as_shodan(self, fa_lexicon):
+        # "sit!" (neshastan) far more often than "that you become".
+        assert fa_lexicon.colloquial_ending_verb(BESHIN) is None
+
+    def test_a_vowel_final_stem_takes_no_e(self, fa_lexicon):
+        assert fa_lexicon.colloquial_ending_verb(MIXAE) is None
+
+    def test_the_endings_are_a_table_of_their_own(self, fa_lexicon):
+        # The informal tier runs before colloquial.tsv; the endings must not
+        # (xune is xane "house" before it is xundan "read").
+        assert fa_lexicon.informal_verb(DARE) is None
+        assert fa_lexicon.colloquial_ending_verb(XUNE) is not None
 
 
 class TestPreverbForms:

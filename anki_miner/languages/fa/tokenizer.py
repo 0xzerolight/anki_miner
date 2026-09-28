@@ -67,6 +67,17 @@ def _token(
     return token
 
 
+def _informal_verb(surface: str, infinitive: str, formal: str, lexicon: PersianLexicon) -> LanguageToken:
+    return _token(
+        surface,
+        "V",
+        infinitive,
+        pos2="informal",
+        surface_formal=formal,
+        present_stem=lexicon.present_stem(infinitive) or "",
+    )
+
+
 def _classify(surface: str, lexicon: PersianLexicon) -> LanguageToken:
     """One token, through the ladder's tiers in order."""
     tags = lexicon.tags(surface)
@@ -76,15 +87,7 @@ def _classify(surface: str, lexicon: PersianLexicon) -> LanguageToken:
 
     informal = lexicon.informal_verb(surface)
     if informal is not None:
-        informal_infinitive, formal = informal
-        return _token(
-            surface,
-            "V",
-            informal_infinitive,
-            pos2="informal",
-            surface_formal=formal,
-            present_stem=lexicon.present_stem(informal_infinitive) or "",
-        )
+        return _informal_verb(surface, *informal, lexicon)
 
     formal_infinitive = lexicon.verb_form(surface)
     if formal_infinitive is not None:
@@ -93,6 +96,11 @@ def _classify(surface: str, lexicon: PersianLexicon) -> LanguageToken:
     formal_word = lexicon.colloquial(surface)
     if formal_word is not None:
         formal_tags = lexicon.tags(formal_word)
+        # colloquial.tsv answers mishe -> mi-shavad and bashe -> bashad, which
+        # words.dat does not tag: an untagged formal word asks the verb table.
+        infinitive = None if formal_tags else lexicon.verb_form(formal_word)
+        if infinitive is not None:
+            return _informal_verb(surface, infinitive, formal_word, lexicon)
         return _token(
             surface,
             formal_tags[0] if formal_tags else "unknown",
@@ -100,6 +108,13 @@ def _classify(surface: str, lexicon: PersianLexicon) -> LanguageToken:
             pos2="informal",
             surface_formal=formal_word,
         )
+
+    # The -e/-an/-in presents (dare, mikone, konan). After colloquial.tsv,
+    # because xune "house" and neshun "sign" are also xundan + -e and
+    # neshandan + -an; before the stemmer, which reads darin as dar + -in.
+    ending = lexicon.colloquial_ending_verb(surface)
+    if ending is not None:
+        return _informal_verb(surface, *ending, lexicon)
 
     # A TAGGED stem beats an UNTAGGED whole-word row, the same rule as tier 1
     # (judge r1 B1): 158,034 of the 193,350 words.dat rows carry no POS, and
@@ -155,6 +170,10 @@ def _merged_compound(
     verb = line[spans[index + 1][0] : spans[index + 1][1]]
     informal = lexicon.informal_verb(verb)
     infinitive = informal[0] if informal is not None else lexicon.verb_form(verb)
+    if infinitive is None:
+        # kar mikone: the light verb in its colloquial -e/-an/-in present.
+        ending = lexicon.colloquial_ending_verb(verb)
+        infinitive = ending[0] if ending is not None else None
     if infinitive is None or not lexicon.compound(noun, infinitive):
         return None
     # The verbatim span, space and all: the shared span locator finds a

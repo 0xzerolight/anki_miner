@@ -24,6 +24,40 @@ from anki_miner.languages.fa.availability import FA_DATA_COMPONENT
 from anki_miner.languages.fa.script import ZWNJ
 from tests._pack_seeds import seeded_component
 
+#: (surface as fa_50k spells it, infinitive): colloquial -e/-an/-in presents
+#: that came back "unknown" (or as a noun, via the stemmer) before, and the
+#: colloquial.tsv words whose formal spelling only the verb table knows.
+COLLOQUIAL_PRESENTS = (
+    ("باشه", "بودن"),
+    ("داره", "داشتن"),
+    ("ميشه", "شدن"),
+    ("بده", "دادن"),
+    ("بشه", "شدن"),
+    ("نداره", "داشتن"),
+    ("ميکنه", "کردن"),
+    ("دارن", "داشتن"),
+    ("کنن", "کردن"),
+    ("ميده", "دادن"),
+    ("ميتونه", "توانستن"),
+    ("ميگه", "گفتن"),
+    ("ميره", "رفتن"),
+    ("بمونه", "ماندن"),
+    ("مياد", "آمدن"),
+    ("دارين", "داشتن"),
+    ("کنين", "کردن"),
+)
+
+#: (surface, the word it must stay): colloquial nouns the -e/-an/-in forms of
+#: xundan, neshandan, javidan, danestan and dadan would otherwise swallow.
+COLLOQUIAL_NOUNS = (
+    ("خونه", "خانه"),
+    ("نشون", "نشان"),
+    ("جون", "جان"),
+    ("دونه", "دانه"),
+    ("نشونه", "نشانه"),
+    ("دهن", "دهان"),
+)
+
 
 @pytest.fixture(scope="module")
 def real_lexicon():
@@ -47,6 +81,28 @@ def _one(surface: str, lexicon_: lexicon.PersianLexicon):
     ]
     assert len(tokens) == 1, [token.surface for token in tokens]
     return tokens[0]
+
+
+@pytest.mark.parametrize(("surface", "infinitive"), COLLOQUIAL_PRESENTS)
+def test_a_colloquial_present_resolves_to_its_infinitive(surface, infinitive, armed):
+    token = _one(surface, armed)
+    assert token.feature.pos1 == "V"
+    assert token.feature.lemma == infinitive
+    assert token.feature.surface_formal
+
+
+@pytest.mark.parametrize(("surface", "word"), COLLOQUIAL_NOUNS)
+def test_a_colloquial_noun_stays_a_noun(surface, word, armed):
+    token = _one(surface, armed)
+    assert token.feature.pos1 != "V"
+    assert token.feature.lemma == word
+
+
+@pytest.mark.parametrize(("surface", "verb"), [("شون", "شدن"), ("بشين", "شدن"), ("خره", "خریدن")])
+def test_a_word_another_reading_owns_is_not_the_verb(surface, verb, armed):
+    # shun is "their"; beshin is "sit!" far more often than "that you become";
+    # xare is "the donkey".
+    assert _one(surface, armed).feature.lemma != verb
 
 
 @pytest.mark.parametrize(
