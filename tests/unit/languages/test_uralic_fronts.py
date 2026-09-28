@@ -13,6 +13,7 @@ from __future__ import annotations
 import pytest
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.languages._spaced.morphology import StashedParticle, stash_particle
 from anki_miner.languages.fi.morphology import finnish_suffix_candidates
 from anki_miner.languages.token import LanguageToken
 from tests.unit.languages.test_spaced_form_of import Forms, form, lemma
@@ -135,7 +136,7 @@ def test_hu_only_a_potential_verb_front_is_repaired(monkeypatch):
 def test_hu_the_potential_repair_runs_after_the_preverb_join(monkeypatch):
     """``teheted … fel``: the join builds ``feltehet``, whose own row names ``feltesz``."""
     head = tok("teheted", "VERB", "tehet")
-    head.feature.particle = "fel"
+    stash_particle(head, StashedParticle("fel", tok("fel", "ADV", "fel"), "compound:preverb"))
     rows = {"feltehet": [form("feltesz")], "feltesz": [lemma("v vt")], "tehet": [form("tesz")], "tesz": [lemma("v")]}
     assert fronts(monkeypatch, "hu", rows, head, attested={"feltehet"}) == [("feltesz", "VERB")]
 
