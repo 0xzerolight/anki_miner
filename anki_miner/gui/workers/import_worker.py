@@ -275,8 +275,13 @@ class ImportWorker(CancellableWorker):
         *,
         source_id: str,
         source_name: str,
+        dicts_root: Path | None = None,
     ) -> ImportWorker:
-        """Build a worker for explicit repair of one frequency slot."""
+        """Build a worker for explicit repair of one frequency slot.
+
+        ``dicts_root`` is what a lemmatised slot's rebuild keys words by (see
+        ``repair_frequency_source``).
+        """
 
         def runner(progress_fn: ProgressFn, cancel_fn: CancelFn) -> tuple[str, dict[str, Any]]:
             result = repair_frequency_source(
@@ -286,6 +291,7 @@ class ImportWorker(CancellableWorker):
                 source_name=source_name,
                 progress=progress_fn,
                 cancel_check=cancel_fn,
+                dicts_root=dicts_root,
             )
             meta: dict[str, Any] = {
                 "entry_count": result.entry_count,

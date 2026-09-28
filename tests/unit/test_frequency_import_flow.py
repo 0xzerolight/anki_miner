@@ -617,6 +617,7 @@ class TestReimportSource:
             tab.config.freqs_root,
             source_id="jpdb",
             source_name="jpdb",
+            dicts_root=tab.config.dicts_root,
         )
 
     def test_reimport_uses_stored_source_and_id(self, tab, monkeypatch, stub_worker):

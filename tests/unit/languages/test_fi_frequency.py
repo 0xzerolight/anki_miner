@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import json
+import zipfile
 from pathlib import Path
 
 import pytest
 
 from anki_miner.languages import tagger_provider
 from anki_miner.languages.fi.tokenizer import build_tagger
+from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip
 from anki_miner.services.frequency import mode_probe, source_importer
 from anki_miner.services.frequency.lemmatize import build_frequency_lemmatizer, manual_import_lemmatizer
 from anki_miner.services.frequency.providers.indexed_freq_provider import IndexedFreqProvider
@@ -65,7 +68,38 @@ def test_the_catalogue_import_ranks_by_lemma_not_by_surface(tmp_path):
     # talo 58,224 over six case forms > auto 26,893 > kirja 26,316 over six forms
     assert (provider.lookup("talo"), provider.lookup("auto"), provider.lookup("kirja")) == (1, 2, 3)
     assert provider.lookup("talon") is None and provider.lookup("kirjassa") is None
-    assert provider.lookup("kirjasta") == 4  # documented miss (F6): tagged alone, the elative keeps its surface
+    # F6 with no dictionary to repair from: tagged alone, the elative keeps its surface.
+    assert provider.lookup("kirjasta") == 4
+
+
+def _install_wty_fi(dicts_root: Path) -> None:
+    """The wty-fi-en rows the repair reads for SAMPLE: three headwords and the elative form row."""
+    rows = [
+        ["talo", "", "n", "", 0, ["house"], 1, ""],
+        ["auto", "", "n", "", 0, ["car"], 2, ""],
+        ["kirja", "", "n", "", 0, ["book"], 3, ""],
+        ["kirjasta", "", "non-lemma", "", 0, [["kirja", ["elative singular"]]], 0, ""],
+    ]
+    archive = dicts_root.parent / "wty-fi-en.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("index.json", json.dumps({"title": "wty-fi-en", "format": 3, "revision": "t"}))
+        zf.writestr("term_bank_1.json", json.dumps(rows))
+    import_yomitan_zip(archive, dicts_root, dict_id="wty-fi-en", language="fi")
+
+
+def test_with_wty_fi_en_installed_the_elative_joins_its_lemma(tmp_path):
+    """F6's miss, fixed by the card-front repair (SHARED-06): kirjasta's form row names kirja, which overtakes auto."""
+    _install_wty_fi(tmp_path / "dicts")
+    result, provider = _import(
+        tmp_path,
+        SAMPLE,
+        declared_mode=mode_probe.OCCURRENCE_BASED,
+        lemmatize=build_frequency_lemmatizer("fi", tmp_path / "dicts"),
+    )
+    assert result.entry_count == 3
+    # talo 58,224 > kirja 28,492 over seven forms > auto 26,893
+    assert (provider.lookup("talo"), provider.lookup("kirja"), provider.lookup("auto")) == (1, 2, 3)
+    assert provider.lookup("kirjasta") is None
 
 
 def test_without_lemmatisation_the_surface_ranks_stand(tmp_path):
