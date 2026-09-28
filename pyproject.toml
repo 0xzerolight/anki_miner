@@ -52,6 +52,13 @@ license-files = [
     # viet_text_tools (MIT) travels with the tone fold ported into languages/vi/tones.py.
     "licenses/viet_text_tools/LICENSE",
     "licenses/viet_text_tools/README.md",
+    # The two Cantonese tables in anki_miner/languages/yue/data/ are derived data inside
+    # the wheel: the spoken-jyutping overrides (HKCanCor) and the simplified-only set
+    # (CC-CEDICT Canto).
+    "licenses/hkcancor/LICENSE.CC-BY-4.0",
+    "licenses/hkcancor/README.md",
+    "licenses/cc-cedict-canto/LICENSE.CC-BY-SA-3.0",
+    "licenses/cc-cedict-canto/README.md",
 ]
 authors = [
     {name = "Anki Miner Contributors"}

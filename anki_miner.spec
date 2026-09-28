@@ -444,6 +444,19 @@ if os.path.isdir(viet_text_tools_license_dir):
     viet_text_tools_license_datas.append(
         (viet_text_tools_license_dir, os.path.join("licenses", "viet_text_tools"))
     )
+# HKCanCor (CC BY 4.0) and CC-CEDICT Canto (CC BY-SA 3.0) notices for the derived tables in
+# anki_miner/languages/yue/data/ (spoken-jyutping overrides, simplified-only set), which the
+# bundle carries. Land at sys._MEIPASS/licenses/hkcancor/ and licenses/cc-cedict-canto/.
+hkcancor_license_dir = os.path.join(project_root, "licenses", "hkcancor")
+hkcancor_license_datas = []
+if os.path.isdir(hkcancor_license_dir):
+    hkcancor_license_datas.append((hkcancor_license_dir, os.path.join("licenses", "hkcancor")))
+cc_cedict_canto_license_dir = os.path.join(project_root, "licenses", "cc-cedict-canto")
+cc_cedict_canto_license_datas = []
+if os.path.isdir(cc_cedict_canto_license_dir):
+    cc_cedict_canto_license_datas.append(
+        (cc_cedict_canto_license_dir, os.path.join("licenses", "cc-cedict-canto"))
+    )
 
 # Embed a Windows PE VERSIONINFO resource (company/product/version/copyright). An
 # unsigned, metadata-less PyInstaller exe is a textbook Defender false-positive: the
@@ -643,7 +656,9 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
     + camel_tools_license_datas
     + calima_msa_r13_license_datas
     + sl_core_news_sm_license_datas
-    + viet_text_tools_license_datas,
+    + viet_text_tools_license_datas
+    + hkcancor_license_datas
+    + cc_cedict_canto_license_datas,
     hiddenimports=[
         "unidic_lite",
         "fugashi",

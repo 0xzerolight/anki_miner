@@ -84,6 +84,10 @@ REQUIRED_WHEEL_LICENSES = [
     "licenses/camel-tools/README.md",
     "licenses/viet_text_tools/LICENSE",
     "licenses/viet_text_tools/README.md",
+    "licenses/hkcancor/LICENSE.CC-BY-4.0",
+    "licenses/hkcancor/README.md",
+    "licenses/cc-cedict-canto/LICENSE.CC-BY-SA-3.0",
+    "licenses/cc-cedict-canto/README.md",
 ]
 
 EXCLUDE_DIRS = {"__pycache__"}
