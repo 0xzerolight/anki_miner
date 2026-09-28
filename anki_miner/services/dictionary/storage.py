@@ -18,10 +18,11 @@ import sqlite3
 import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Iterable, NamedTuple
+from typing import TYPE_CHECKING, Callable, Iterable, NamedTuple, TypeVar, cast
 
 import anki_miner.services._sqlite_index as _sqlite_index
 from anki_miner.exceptions import OperationCancelled
+from anki_miner.languages._spaced.form_of import form_targets, is_lemma_row
 from anki_miner.services._sqlite_index import open_readonly as open_readonly
 from anki_miner.services._sqlite_index import read_meta as read_meta
 from anki_miner.utils.text_utils import _is_kana_only, _is_kanji, katakana_to_hiragana
@@ -661,6 +662,128 @@ def _substitute_redirect_rows(
     return out
 
 
+# ---------------------------------------------------------------------------
+# Form-of rows — the Wiktionary-derived exports (wty-*, opr-ru-en).
+#
+# Those dictionaries file every inflected or variant form they know as a row
+# tagged ``non-lemma`` whose glossary is a Yomitan deinflection pair
+# ``[target, [rules]]``, which the importer stores as the bare target
+# (``yomitan_renderer.render_glossary_entry``). As a definition that is a bare
+# word, often ANOTHER word (uk зараз -> "зараза", ru потом -> "пот"), under a
+# "non-lemma" chip; a form with no other row (vi cảm ơn -> "cám ơn", id dibawa
+# -> "bawa") gets no meaning at all. So, over one dictionary's scoped rows for
+# one word, the render read paths below:
+#
+# * drop each form row beside a lemma row, unless the profile's ``sense_rank``
+#   puts it strictly AHEAD of every lemma row: the profile has then chosen the
+#   form's meaning for this token. With no rank every row ties, so a lemma row
+#   always wins. The reading boost does not count: uk and ro file readings on
+#   their form rows only, so the boost is what put the form row first.
+# * replace each form row still there by the LEMMA rows of the terms it names,
+#   at its own rank. One hop, never a target's own form rows (wty also files
+#   the reverse pointers, menjual -> dijual, cám ơn -> cảm ơn), each target
+#   once. A target the dictionary does not file as a headword adds nothing, so
+#   a hit whose targets are all absent collapses to a miss and the profile's
+#   variant ladder gets its turn.
+#
+# Nothing is re-imported: stored rows are read as they are, with the same
+# ``form_targets`` the front repair uses. ``term_rows`` (the R36 form lookup)
+# stays raw, since its readers need exactly these rows. Only the ``non-lemma``
+# tag triggers any of this; JMdict, Jitendex, CC-CEDICT, KRDICT and the CC-Canto
+# dictionaries carry none.
+_RowRank = Callable[[str, str], int]
+#: One projected result row: ``(content, tags, sequence)``, or with ``rules`` appended.
+_Row = TypeVar("_Row", tuple[str, str, int | None], tuple[str, str, int | None, str])
+
+
+def _bound_rank(sense_rank: Callable[[str, str, str | None], int] | None, pos: str | None) -> _RowRank | None:
+    """The profile's row rank for one token's part of speech, over ``(content, tags)``."""
+    if sense_rank is None:
+        return None
+    return lambda content, tags: sense_rank(content, tags, pos)
+
+
+def _drop_shadowed_form_rows(rows: list[_Row], rank: _RowRank | None) -> list[_Row]:
+    """Drop the form rows a lemma row shadows (see the section comment); input as-is when none."""
+    lemma = [is_lemma_row(row[1]) for row in rows]
+    if all(lemma) or not any(lemma):
+        return rows
+    if rank is None:
+        return [row for row, is_lemma in zip(rows, lemma, strict=True) if is_lemma]
+    best = min(rank(row[0], row[1]) for row, is_lemma in zip(rows, lemma, strict=True) if is_lemma)
+    return [row for row, is_lemma in zip(rows, lemma, strict=True) if is_lemma or rank(row[0], row[1]) < best]
+
+
+def _form_row_targets(rows: list[_Row], fold_term: Callable[[str], str]) -> list[str]:
+    """The folded terms the form rows among ``rows`` name, first-seen order, deduped."""
+    return list(
+        dict.fromkeys(fold_term(target) for row in rows if not is_lemma_row(row[1]) for target in form_targets(row[0]))
+    )
+
+
+def _fetch_lemma_rows_for_terms(
+    conn: sqlite3.Connection, terms: list[str]
+) -> dict[str, list[tuple[str, str, int | None, str]]]:
+    """(content, tags, sequence, rules) LEMMA rows per exact (already folded) term,
+    each list in ``score DESC, sequence, id`` order. A term with none is absent."""
+    found: dict[str, list[tuple[str, str, int | None, str]]] = {}
+    for start in range(0, len(terms), _EXIST_CHUNK):
+        chunk = terms[start : start + _EXIST_CHUNK]
+        placeholders = ", ".join("?" for _ in chunk)
+        rows = conn.execute(
+            f"SELECT term, content, tags, sequence, rules FROM entries WHERE term IN ({placeholders}) "
+            "ORDER BY score DESC, sequence, id",
+            chunk,
+        ).fetchall()
+        for term, content, tags, sequence, rules in rows:
+            tags_val = tags if tags is not None else ""
+            if is_lemma_row(tags_val):
+                found.setdefault(term, []).append((content, tags_val, sequence, rules if rules is not None else ""))
+    return found
+
+
+def _splice_form_rows(
+    conn: sqlite3.Connection,
+    rows: list[_Row],
+    lemma_rows_by_term: dict[str, list[tuple[str, str, int | None, str]]] | None = None,
+    *,
+    fold_term: Callable[[str], str],
+    rank: _RowRank | None,
+) -> list[_Row]:
+    """Replace each form row by its targets' lemma rows (see the section comment).
+
+    Same contract as :func:`_substitute_redirect_rows`: no form row ⇒ input
+    returned as-is with no query; ``lemma_rows_by_term`` lets ``lookup_many``
+    share one batch-wide fetch. A spliced row takes the shape of ``rows`` (its
+    ``rules`` only when they carry theirs). The targets of a run of form rows
+    are ranked together under the token's own ``rank``, target then index order
+    inside a rank, as one lookup of them would be: uk ``мене`` (PRON) names
+    ``Мен`` before ``я``, and the pronoun must still lead."""
+    targets = _form_row_targets(rows, fold_term)
+    if not targets:
+        return rows
+    if lemma_rows_by_term is None:
+        lemma_rows_by_term = _fetch_lemma_rows_for_terms(conn, targets)
+
+    def ranked(run: list[_Row]) -> list[_Row]:
+        return run if rank is None else sorted(run, key=lambda r: rank(r[0], r[1]))
+
+    out: list[_Row] = []
+    run: list[_Row] = []
+    spliced: set[str] = set()
+    for row in rows:
+        if is_lemma_row(row[1]):
+            out += ranked(run) + [row]
+            run = []
+            continue
+        for target in dict.fromkeys(fold_term(name) for name in form_targets(row[0])):
+            if target in spliced:
+                continue
+            spliced.add(target)
+            run.extend(cast(_Row, target_row[: len(row)]) for target_row in lemma_rows_by_term.get(target, []))
+    return out + ranked(run)
+
+
 def lookup(
     conn: sqlite3.Connection,
     word: str,
@@ -719,9 +842,12 @@ def lookup(
                 sense_rank(row[0], row[1], pos),
             )
         )
-    # Redirect substitution BEFORE the pool cap (matching lookup_many) so a
-    # resolved canonical entry can't be truncated by its own pointer row.
-    projected = _substitute_redirect_rows(conn, [(row[0], row[1], row[2]) for row in kept])
+    # Form-of and redirect substitution BEFORE the pool cap (matching
+    # lookup_many) so a resolved entry can't be truncated by its own pointer row.
+    rank = _bound_rank(sense_rank, pos)
+    rows3 = _drop_shadowed_form_rows([(row[0], row[1], row[2]) for row in kept], rank)
+    rows3 = _splice_form_rows(conn, rows3, fold_term=fold_t, rank=rank)
+    projected = _substitute_redirect_rows(conn, rows3)
     return projected[:_LOOKUP_LIMIT]  # type: ignore[return-value]
 
 
@@ -754,11 +880,12 @@ def lookup_with_rules(
         # reading boost): a card reached through the variant fallback opens on
         # the same row a direct hit with no token in hand would.
         kept.sort(key=lambda row: (0 if row[4] == word else 1, sense_rank(row[0], row[1], None)))
-    projected = _substitute_redirect_rows(
-        conn,
-        [(row[0], row[1], row[2], row[3] if row[3] is not None else "") for row in kept],
-        with_rules=True,
+    rank = _bound_rank(sense_rank, None)
+    rows4 = _drop_shadowed_form_rows(
+        [(row[0], row[1], row[2], row[3] if row[3] is not None else "") for row in kept], rank
     )
+    rows4 = _splice_form_rows(conn, rows4, fold_term=fold_t, rank=rank)
+    projected = _substitute_redirect_rows(conn, rows4, with_rules=True)
     return projected[:_LOOKUP_LIMIT]  # type: ignore[return-value]
 
 
@@ -929,7 +1056,21 @@ def lookup_many(
                 keep = keep_mask(normalized_by_word[w], [(e[6], e[7]) for e in entries], normalized_lemma)
                 entries = [e for e, k in zip(entries, keep, strict=True) if k]
             entries.sort(key=lambda e: (e[0], e[1], e[2], e[3], e[4], e[5]))
-            pending[w] = [(content, tags, seq) for *_keys, content, tags, seq in entries]
+            pending[w] = _drop_shadowed_form_rows(
+                [(content, tags, seq) for *_keys, content, tags, seq in entries],
+                _bound_rank(sense_rank, pos_by_word.get(w)),
+            )
+
+        # Form-of substitution BEFORE the pool cap, sharing ONE lemma-row fetch
+        # across the chunk; per-word splice order matches ``lookup``'s.
+        form_targets_in_chunk = list(
+            dict.fromkeys(target for rows3 in pending.values() for target in _form_row_targets(rows3, fold_t))
+        )
+        lemma_rows_by_term = _fetch_lemma_rows_for_terms(conn, form_targets_in_chunk) if form_targets_in_chunk else {}
+        for w, rows3 in pending.items():
+            pending[w] = _splice_form_rows(
+                conn, rows3, lemma_rows_by_term, fold_term=fold_t, rank=_bound_rank(sense_rank, pos_by_word.get(w))
+            )
 
         # Redirect substitution BEFORE the pool cap, sharing ONE target fetch
         # across the whole chunk (a table scan on pre-idx_sequence indexes must

@@ -136,6 +136,7 @@ def test_the_card_opens_on_the_right_row(wty_db, word, pos, lead):
 
 
 def test_rows_are_only_reordered_never_dropped(wty_db):
+    """The rank drops nothing: both paths lose only the form row, which a lemma row shadows (storage)."""
     conn = open_readonly(wty_db)
     try:
         ranked = lookup(conn, "pick", None, pos="VERB", keys=KEYS)
@@ -146,6 +147,5 @@ def test_rows_are_only_reordered_never_dropped(wty_db):
     assert [content for content, _tags, _seq in ranked] == [
         "<div>To choose</div>",
         "<div>A pickaxe</div>",
-        "<div>pick 'em</div>",
         "<div>A surname</div>",
     ]

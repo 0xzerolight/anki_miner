@@ -39,6 +39,7 @@ from anki_miner.services.dictionary.storage import (
     write_meta,
     write_tags,
 )
+from anki_miner.services.dictionary.yomitan_renderer import render_glossary_entry
 
 
 class _ExecSpy:
@@ -917,13 +918,18 @@ class TestReadingBoost:
             conn.close()
 
     def _seed_mai(self, db_path: Path) -> None:
-        """wty-ro-en's shape: the lemma rows carry no reading, the form-of rows do."""
+        """wty-ro-en's shape: most rows carry no reading, one does.
+
+        There the row with the reading is a form-of row, which the render path
+        now drops beside a lemma row (TestFormOfRows); the ordering under test
+        is the boost's, so the row with the reading here is a lemma row.
+        """
         create_index(db_path)
         bulk_insert(
             db_path,
             [
                 DictRow(term="mai", reading=None, content="<div>more</div>", tags="adv"),
-                DictRow(term="mai", reading="mâi", content="<div>form of mâna</div>", tags="non-lemma"),
+                DictRow(term="mai", reading="mâi", content="<div>form of mâna</div>", tags="v"),
                 DictRow(term="mai", reading=None, content="<div>May</div>", tags="n"),
             ],
         )
@@ -2432,3 +2438,229 @@ class TestSenseRankSeesTagsAndPos:
         finally:
             conn.close()
         assert with_pos == without == batch
+
+
+def _form_of(term: str, *targets: str, reading: str | None = None) -> DictRow:
+    """A wty ``non-lemma`` row as the importer stores it: one deinflection pair per named target."""
+    return DictRow(
+        term=term,
+        reading=reading,
+        content=render_glossary_entry([[target, ["form-of"]] for target in targets]),
+        tags="non-lemma",
+    )
+
+
+def _lemma(term: str, gloss: str, tags: str, rules: str = "") -> DictRow:
+    return DictRow(term=term, reading=None, content=f"<div>{gloss}</div>", tags=tags, rules=rules)
+
+
+class _PromotingKeys(_PlainKeys):
+    """A rank that puts a form row naming ``tahu`` ahead of every other row (a profile's own choice)."""
+
+    def sense_rank(self, content: str, tags: str, pos: str | None) -> int:
+        return 0 if tags == "non-lemma" and "tahu" in content else 1
+
+
+class TestFormOfRows:
+    """wty ``non-lemma`` rows on the render read paths.
+
+    A form row beside a lemma row is dropped; a form row left alone is replaced
+    by the lemma rows of the terms it names, one hop; targets the dictionary
+    does not file as headwords add nothing, so an all-pointer hit can be a miss.
+    """
+
+    @staticmethod
+    def _open(tmp_path: Path, rows: list[DictRow], keys=None) -> sqlite3.Connection:
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        bulk_insert(db, rows, keys=keys)
+        return open_readonly(db)
+
+    @staticmethod
+    def _contents(rows) -> list[str]:
+        return [row[0] for row in rows]
+
+    def test_a_lemma_row_drops_the_form_rows_beside_it(self, tmp_path: Path):
+        """uk зараз: the form row naming зараза carries the reading S24 boosts, and still goes."""
+        keys = get_profile("uk").dict_keys
+        conn = self._open(
+            tmp_path,
+            [
+                _lemma("зараз", "now", "adv"),
+                _form_of("зараз", "зараза", reading="зара́з"),
+                _form_of("зараз", "зара́за"),
+                _lemma("зараза", "infection", "n"),
+            ],
+            keys,
+        )
+        try:
+            for pos in (None, "ADV", "NOUN"):
+                assert self._contents(lookup(conn, "зараз", "зара́з", keys=keys, pos=pos)) == ["<div>now</div>"]
+            assert lookup_many(conn, [("зараз", "зара́з")], keys=keys)["зараз"] == [("<div>now</div>", "adv", None)]
+        finally:
+            conn.close()
+
+    def test_a_pointer_only_hit_reads_its_targets_lemma_rows_one_hop(self, tmp_path: Path):
+        """vi cảm ơn names cám ơn, whose own reverse pointer back to cảm ơn is never followed."""
+        keys = get_profile("vi").dict_keys
+        conn = self._open(
+            tmp_path,
+            [_form_of("cảm ơn", "cám ơn"), _lemma("cám ơn", "thank you", "v"), _form_of("cám ơn", "cảm ơn", "cảm ơn")],
+            keys,
+        )
+        try:
+            assert lookup(conn, "cảm ơn", keys=keys) == [("<div>thank you</div>", "v", None)]
+            assert lookup(conn, "cám ơn", keys=keys) == [("<div>thank you</div>", "v", None)]
+        finally:
+            conn.close()
+
+    def test_a_pointer_whose_target_has_no_lemma_row_is_a_miss(self, tmp_path: Path):
+        """công ty names công ti, which this dictionary lacks; mailem names mail, itself only a form row."""
+        conn = self._open(
+            tmp_path,
+            [
+                _form_of("công ty", "công ti"),
+                _form_of("mailem", "mail"),
+                _form_of("mail", "maila"),
+                _lemma("maila", "x", "n"),
+            ],
+        )
+        try:
+            for word in ("công ty", "mailem"):
+                assert lookup(conn, word) == []
+                assert lookup_many(conn, [(word, None)])[word] == []
+                assert lookup_with_rules(conn, word) == []
+        finally:
+            conn.close()
+
+    def test_each_target_is_read_once_and_absent_ones_add_nothing(self, tmp_path: Path):
+        """fi kahvi: repeated members and repeated rows naming kaffi splice its rows once."""
+        keys = get_profile("fi").dict_keys
+        conn = self._open(
+            tmp_path,
+            [
+                _form_of("kahvi", "kaffi", "kaffi", "kaffi"),
+                _form_of("kahvi", "kahwi"),
+                _form_of("kahvi", "kaffi"),
+                _lemma("kaffi", "coffee", "n"),
+                _lemma("kaffi", "café", "n"),
+            ],
+            keys,
+        )
+        try:
+            assert self._contents(lookup(conn, "kahvi", keys=keys)) == ["<div>coffee</div>", "<div>café</div>"]
+        finally:
+            conn.close()
+
+    def test_the_targets_rows_rank_as_a_lookup_of_the_target_would(self, tmp_path: Path):
+        keys = _TagPosKeys()
+        conn = self._open(tmp_path, [_form_of("picked", "pick"), _PICK_NAME, _PICK_NOUN, _PICK_VERB])
+        try:
+            spliced = lookup(conn, "picked", pos="v", keys=keys)
+            direct = lookup(conn, "pick", pos="v", keys=keys)
+        finally:
+            conn.close()
+        assert spliced == direct and self._contents(spliced)[0] == _PICK_VERB.content
+
+    def test_the_targets_of_a_run_of_form_rows_rank_together(self, tmp_path: Path):
+        """uk мене names Мен before я: the place name still sorts after the pronoun."""
+        keys = get_profile("uk").dict_keys
+        conn = self._open(
+            tmp_path,
+            [
+                _form_of("мене", "Мен"),
+                _form_of("мене", "я"),
+                _lemma("Мен", "Maine", "name"),
+                _lemma("я", "I", "pron"),
+            ],
+            keys,
+        )
+        try:
+            single = self._contents(lookup(conn, "мене", keys=keys, pos="PRON"))
+            batch = self._contents(lookup_many(conn, [("мене", None)], keys=keys, pos={"мене": "PRON"})["мене"])
+        finally:
+            conn.close()
+        assert single == batch == ["<div>I</div>", "<div>Maine</div>"]
+
+    def test_lookup_many_matches_lookup_with_one_shared_target_read(self, tmp_path: Path):
+        keys = get_profile("fi").dict_keys
+        rows = [
+            _form_of("haluatko", "haluta"),
+            _lemma("haluta", "to want", "v"),
+            _form_of("söit", "syödä"),
+            _lemma("syödä", "to eat", "v"),
+            _lemma("eilen", "yesterday", "adv"),
+            _form_of("eilen", "eilenä", "eilenä"),
+        ]
+        conn = self._open(tmp_path, rows, keys)
+        try:
+            words = ["haluatko", "söit", "eilen", "kahvi"]
+            spy = _ExecSpy(conn)
+            batch = lookup_many(spy, [(w, None) for w in words], keys=keys)
+            assert spy.calls == 2
+            for word in words:
+                assert batch[word] == lookup(conn, word, keys=keys)
+            assert self._contents(batch["haluatko"]) == ["<div>to want</div>"]
+            assert self._contents(batch["eilen"]) == ["<div>yesterday</div>"]
+        finally:
+            conn.close()
+
+    def test_the_variant_fallback_splices_and_carries_the_targets_rules(self, tmp_path: Path):
+        keys = get_profile("vi").dict_keys
+        conn = self._open(
+            tmp_path, [_form_of("kỹ thuật", "kĩ thuật"), _lemma("kĩ thuật", "technology", "n", "n")], keys
+        )
+        try:
+            assert lookup_with_rules(conn, "kỹ thuật", keys=keys) == [("<div>technology</div>", "n", None, "n")]
+        finally:
+            conn.close()
+
+    def test_a_form_row_the_profile_ranks_first_survives_and_reads_its_target(self, tmp_path: Path):
+        """The rank decides: id tau's pointer to tahu, promoted by the profile, leads with tahu's meaning."""
+        rows = [
+            _lemma("tau", "the Greek letter tau", "n"),
+            _form_of("tau", "tahu"),
+            _form_of("tau", "tahu"),
+            _lemma("tahu", "to know", "v"),
+        ]
+        conn = self._open(tmp_path, rows)
+        try:
+            promoted = self._contents(lookup(conn, "tau", keys=_PromotingKeys()))
+            batch = lookup_many(conn, [("tau", None)], keys=_PromotingKeys())["tau"]
+            plain = self._contents(lookup(conn, "tau", keys=_PlainKeys()))
+        finally:
+            conn.close()
+        assert promoted == ["<div>to know</div>", "<div>the Greek letter tau</div>"]
+        assert self._contents(batch) == promoted
+        assert plain == ["<div>the Greek letter tau</div>"]
+
+    def test_a_wty_profile_ranks_a_form_row_over_name_only_lemma_rows(self, tmp_path: Path):
+        """uk августа: for a common noun the genitive of август beats the given name; for a name it does not."""
+        keys = get_profile("uk").dict_keys
+        conn = self._open(
+            tmp_path,
+            [_lemma("августа", "Augusta", "name"), _form_of("августа", "август"), _lemma("август", "August", "n")],
+            keys,
+        )
+        try:
+            noun = self._contents(lookup(conn, "августа", keys=keys, pos="NOUN"))
+            name = self._contents(lookup(conn, "августа", keys=keys, pos="PROPN"))
+        finally:
+            conn.close()
+        assert noun == ["<div>August</div>", "<div>Augusta</div>"]
+        assert name == ["<div>Augusta</div>"]
+
+    def test_a_dictionary_without_form_rows_is_untouched(self, tmp_path: Path):
+        """JMdict/CC-CEDICT shapes: no ``non-lemma`` tag, so no extra query and the same rows."""
+        conn = self._open(tmp_path, [_JA_ARCHAIC, _JA_SENSE, _JA_OTHER_READING, _SENSE, _SURNAME])
+        try:
+            spy = _ExecSpy(conn)
+            lookup_many(spy, [("辛い", "からい"), ("干", "gān")], keys=get_profile("ja").dict_keys)
+            assert spy.calls == 1
+            assert self._contents(lookup(conn, "辛い", "からい")) == [
+                _JA_ARCHAIC.content,
+                _JA_SENSE.content,
+                _JA_OTHER_READING.content,
+            ]
+        finally:
+            conn.close()

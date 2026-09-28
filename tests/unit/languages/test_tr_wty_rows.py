@@ -83,9 +83,10 @@ def test_the_mined_fronts_are_headwords(index):
 
 
 def test_the_surface_rung_reaches_the_inflected_forms_row(index):
-    """Plan decision 4: a wrong analyzer pick still finds the entry through the surface's non-lemma row."""
+    """Plan decision 4: a wrong analyzer pick still finds the entry through the surface's non-lemma row,
+    which the read path replaces by the entry it names (storage form-of rows)."""
     provider = _provider(index, get_profile("tr").dict_keys)
     candidates = [text for text, _conditions in get_profile("tr").lookup.candidates("kitab", "KİTAPLARI", None)]
     assert candidates[0] == "KİTAPLARI"
     html = provider.lookup(candidates[0]) or ""
-    assert "non-lemma" in html and "kitap" in html
+    assert html == provider.lookup("kitap") and "non-lemma" not in html

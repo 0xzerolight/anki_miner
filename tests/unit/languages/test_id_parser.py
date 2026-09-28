@@ -111,7 +111,11 @@ def test_an_unequal_reduplication_is_looked_up_whole(provider):
         ("keadaban", {"root": "adab", "affixes": "ke- + adab + -an"}),
         ("berjalan", {"root": "jalan", "affixes": "ber- + jalan"}),
         ("beli", {}),
-        ("dibeli", {}),  # a non-lemma row: no etymology, no guessed root
+        # Form rows only: the card shows the meN- entry they name, whose meng- the di- front does not carry.
+        ("dibeli", {}),
+        ("dijual", {}),
+        ("ditulis", {}),  # names tulis and menulis
+        ("menulis", {"root": "tulis", "affixes": "meng- + tulis"}),
         ("nggak", {}),
     ],
 )
@@ -119,6 +123,14 @@ def test_the_root_hook_reads_the_real_etymology_lines(provider, headword, fields
     hook = get_profile("id").render_hooks[0]
     word = SimpleNamespace(definition_html=provider.lookup(headword) or "", mined_form=headword)
     assert hook.render(word, config=CONFIG) == fields
+
+
+def test_form_rows_never_reach_the_card(provider):
+    """membeli's own form rows (naming beli and dibeli) go beside its lemma row; dibeli, a form row only,
+    reads the membeli entry it names, one hop (storage form-of rows)."""
+    membeli = provider.lookup("membeli")
+    assert membeli is not None and "non-lemma" not in membeli and "to buy" in membeli
+    assert provider.lookup("dibeli") == membeli
 
 
 def test_the_frequency_lemmatizer_only_folds():

@@ -13,6 +13,7 @@ import re
 from typing import TYPE_CHECKING, Any
 
 from anki_miner.languages.id.colloquial import ID_COLLOQUIAL
+from anki_miner.languages.id.morphology import id_fold
 
 if TYPE_CHECKING:  # annotation-only, the ko/render.py pattern
     from anki_miner.config.config import AnkiMinerConfig
@@ -61,7 +62,13 @@ def etymology_parse(definition_html: str) -> tuple[str, str] | None:
 
 
 class RootAffixHook:
-    """``root`` and ``affixes`` from the entry's etymology; nothing when it has no affix formula."""
+    """``root`` and ``affixes`` from the entry's etymology; nothing when it has no affix formula.
+
+    The card can show another word's entry: a form (``dibeli``, ``kulakukan``) reads the entry it names or the
+    ladder reaches (``membeli``, ``melakukan``), whose ``meng- + beli`` is not the front's analysis. So a formula
+    with a prefix counts only when the front, or a colloquial front's formal spelling (``ngerti`` -> ``mengerti``),
+    opens with one of its prefixes; two letters cover the allomorphs (``mem-``, ``meny-``, ``be-``, ``bel-``).
+    """
 
     def field_names(self) -> tuple[str, ...]:
         return ("root", "affixes")
@@ -72,6 +79,10 @@ class RootAffixHook:
         if parsed is None:
             return {}
         root, affixes = parsed
+        openings = tuple(p[:-1][:2] for p in affixes.split(" + ") if p.endswith("-") and not p.startswith("-"))
+        front = id_fold(str(getattr(word, "mined_form", "") or ""))
+        if openings and not any(form.startswith(openings) for form in (front, ID_COLLOQUIAL.get(front, ""))):
+            return {}
         return {"root": root, "affixes": affixes}
 
 

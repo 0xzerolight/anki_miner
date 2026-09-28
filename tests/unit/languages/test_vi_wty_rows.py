@@ -49,17 +49,19 @@ def test_both_tone_styles_and_every_case_meet_one_key(provider, query):
     assert html == provider.lookup("hòa bình")
 
 
-def test_the_y_spelling_hits_a_form_stub_and_the_ladder_reaches_the_lemma(provider):
-    """Decision 9: kỹ thuật exists only as a non-lemma row naming kĩ thuật; the y→i rung reaches the entry."""
-    stub = provider.lookup("kỹ thuật")
-    assert stub is not None and "kĩ thuật" in stub and "技術" not in stub
+def test_the_y_spelling_reads_the_entry_its_form_row_names(provider):
+    """Decision 9: kỹ thuật exists only as a non-lemma row naming kĩ thuật, and the read path puts that entry
+    on the card (storage form-of rows); the y→i rung stays for a y spelling wty does not file at all."""
+    lemma = provider.lookup("kĩ thuật")
+    assert lemma is not None and "技術" in lemma
+    assert provider.lookup("kỹ thuật") == lemma
     candidate, conditions = get_profile("vi").lookup.candidates("kỹ thuật", "", None)[0]
     assert (candidate, conditions) == ("kĩ thuật", 0)
-    lemma = provider.lookup(candidate)
-    assert lemma is not None and "技術" in lemma
 
 
-@pytest.mark.parametrize(("term", "hanzi"), [("hòa bình", "和平"), ("bác sĩ", "博士"), ("kĩ thuật", "技術")])
+@pytest.mark.parametrize(
+    ("term", "hanzi"), [("hòa bình", "和平"), ("bác sĩ", "博士"), ("kĩ thuật", "技術"), ("kỹ thuật", "技術")]
+)
 def test_the_hook_reads_the_sino_vietnamese_etymology(provider, term, hanzi):
     assert _hanviet(provider.lookup(term)) == {"hanviet": hanzi}
 
