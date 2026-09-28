@@ -149,12 +149,19 @@ ROWS = {
     "м'яч": [_lemma_row("м&#x27;яч • (mʺjač) m inan (genitive м&#x27;яча́)", "n inanim masc")],
     "будь ласка": [_lemma_row(f"будь ла{A}ска • (budʹ láska)", "intj")],
     "адам": [_lemma_row(f"Ада{A}м • (Adám) m pers", "name masc"), _form_row("ада")],
+    # wty's head line spells the verb with a Latin c: it names no Cyrillic стривати at all.
+    "стривати": [_lemma_row(f"cтрива{A}ти • (ctryváty) pf", "v pf"), _form_row("стривати")],
     "читала": [_form_row("читати")],
     "варто": [_lemma_row(f"ва{A}рто • (várto)(+ dative case (optional))")],
     "дуже": [_lemma_row(f"ду{A}же • (dúže)"), _lemma_row(f"дуже • (duže) (ду{A}же)")],
     "дім": [_lemma_row("дім • (dim) m inan (genitive до́му)", "n inanim masc")],
 }
-FORM_ROW_READINGS = {"зараз": [f"зара{A}з"], "адам": [f"а{A}дам"], "читала": [f"чита{A}ла"]}
+FORM_ROW_READINGS = {
+    "зараз": [f"зара{A}з"],
+    "адам": [f"а{A}дам"],
+    "читала": [f"чита{A}ла"],
+    "стривати": [f"стрива{A}ти"],
+}
 
 
 def _rows(terms: list[str]) -> dict[str, list[tuple[str, str]]]:
@@ -191,9 +198,17 @@ def test_the_name_row_never_stresses_the_noun():
 
 
 def test_a_lemma_row_that_does_not_spell_the_term_leaves_it_blank_not_form_stressed():
-    """адам has only the name's lemma row: blank beats the form row's а́дам (a form of ада)."""
+    readings = _Readings()
+    probe = lemma_row_stress(readings, _rows)
+    assert probe(["стривати"]) == {}
+    assert readings.asked == []
+
+
+def test_a_term_that_is_only_a_name_takes_the_names_stress_in_any_case():
+    """адам (the tagger lower-cases the NOUN it makes of Адам) has only the name's lemma row: Ада́м,
+    not the form row's а́дам (a form of ада)."""
     probe = lemma_row_stress(_Readings(), _rows)
-    assert probe(["адам"]) == {}
+    assert probe(["адам"]) == {"адам": [f"Ада{A}м"]}
 
 
 def test_two_lemma_rows_answer_both_stresses_and_s24_blanks_them():

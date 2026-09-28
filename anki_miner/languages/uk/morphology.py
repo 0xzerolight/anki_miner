@@ -37,7 +37,7 @@ from typing import TYPE_CHECKING, Any
 
 from anki_miner.languages._spaced.form_of import is_lemma_row, rendered_text
 from anki_miner.languages._spaced.grammar_hook import drop_romanisation
-from anki_miner.languages._spaced.keys import CasefoldDictKeys, ReadingProbe, spaced_dedup_fold
+from anki_miner.languages._spaced.keys import NAME_ROW_TAGS, CasefoldDictKeys, ReadingProbe, spaced_dedup_fold
 from anki_miner.languages._spaced.pos import UPOS_ALLOWED
 from anki_miner.languages._spaced.script import (
     BRACKETS_PATTERN,
@@ -120,19 +120,23 @@ class StressedHeadwordReading:
 _GRAMMAR_HEAD_RE = re.compile(r'data-sc-content="Grammar-content"[^>]*>(.*?)</div>', re.S)
 
 
-def lemma_row_headword(content: str, term: str) -> str:
+def lemma_row_headword(content: str, term: str, *, any_case: bool = False) -> str:
     """The spelling a lemma row's Grammar head line prints for *term*, stress marks kept, or ``""``.
 
     ``за́раз • (záraz)``: the romanisation dropped, the words before any bracket (``ва́рто • (várto)(+
     dative``), as many as *term* has, when they spell *term* once stress and apostrophes are folded.
-    Case is compared as written, so the name ``Наді́я`` never stresses the noun ``надія``.
+    Case is compared as written, so the name ``Наді́я`` never stresses the noun ``надія``, unless
+    *any_case*.
     """
     match = _GRAMMAR_HEAD_RE.search(content)
     if match is None:
         return ""
     words = drop_romanisation(rendered_text(match.group(1))).split("(", 1)[0].split()
     head = unicodedata.normalize("NFC", " ".join(words[: len(term.split())]))
-    return head if uk_key_fold(head) == uk_key_fold(term) else ""
+    folded, wanted = uk_key_fold(head), uk_key_fold(term)
+    if any_case:
+        folded, wanted = folded.casefold(), wanted.casefold()
+    return head if folded == wanted else ""
 
 
 def lemma_row_stress(readings: ReadingProbe, rows: FormLookup) -> ReadingProbe:
@@ -145,7 +149,9 @@ def lemma_row_stress(readings: ReadingProbe, rows: FormLookup) -> ReadingProbe:
     headwords ``lemma_row_headword`` reads off those rows, and none when no head line spells it
     (blank beats another word's stress). A head printed without a mark states no stress, so it
     counts only when no head is marked: дуже's unmarked second row must not blank ду́же, while a
-    one-syllable дім keeps its only, unmarked, head. Only a term with no lemma row asks *readings*.
+    one-syllable дім keeps its only, unmarked, head. A term whose every lemma row is a name
+    (нью-йорк, the tagger's lower-cased NOUN for Нью-Йорку) is that name, so its heads match in
+    any case. Only a term with no lemma row asks *readings*.
     """
 
     def probe(terms: list[str]) -> dict[str, list[str]]:
@@ -153,11 +159,13 @@ def lemma_row_stress(readings: ReadingProbe, rows: FormLookup) -> ReadingProbe:
         answered: dict[str, list[str]] = {}
         rest: list[str] = []
         for term in dict.fromkeys(terms):
-            lemma_rows = [content for content, tags in found.get(term, ()) if is_lemma_row(tags)]
+            lemma_rows = [(content, tags) for content, tags in found.get(term, ()) if is_lemma_row(tags)]
             if not lemma_rows:
                 rest.append(term)
                 continue
-            heads = [head for head in dict.fromkeys(lemma_row_headword(c, term) for c in lemma_rows) if head]
+            names_only = all(tags.split(" ", 1)[0] in NAME_ROW_TAGS for _content, tags in lemma_rows)
+            spelled = (lemma_row_headword(content, term, any_case=names_only) for content, _tags in lemma_rows)
+            heads = [head for head in dict.fromkeys(spelled) if head]
             marked = [head for head in heads if strip_cyrillic_stress(head) != head]
             if heads:
                 answered[term] = marked or heads
