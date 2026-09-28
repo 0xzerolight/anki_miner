@@ -165,6 +165,23 @@ def test_the_measured_case_table(form_lookup, surface, front, pos1, why):
     assert _resolve(form_lookup, surface) == (front, pos1), why
 
 
+DOKTOR_TYPED = _word("DALET") + '"' + _word("RESH")
+DOKTOR = _word("DALET") + "\N{HEBREW PUNCTUATION GERSHAYIM}" + _word("RESH")
+
+
+@pytest.mark.parametrize(
+    ("surface", "front", "pos1", "why"),
+    [
+        (_word("VAV") + HAKOL, KOL, "NOUN", "the article cross-check runs at the strip rung: ve-ha-kol is kol"),
+        (_word("SHIN") + HAKOL, KOL, "NOUN", "she-ha-kol is kol, never hekhil"),
+        (_word("BET") + DOKTOR_TYPED, DOKTOR, "NOUN", "a strip remainder reaches its gershayim key"),
+        (_word("LAMED") + BAYIT + "-" + SEFER, BAYIT + " " + SEFER, "NOUN", "a strip remainder reaches its phrase key"),
+    ],
+)
+def test_the_ladder_composes_a_strip_with_the_rungs_behind_it(form_lookup, surface, front, pos1, why):
+    assert _resolve(form_lookup, surface) == (front, pos1), why
+
+
 @pytest.mark.parametrize(("surface", "front"), [(SHELO, LO), (HAKOL, KOL)])
 def test_a_proclitic_form_of_a_function_word_is_a_stopword(form_lookup, surface, front):
     """The tier the tokenizer applies to a bare surface applies to the resolved front too."""

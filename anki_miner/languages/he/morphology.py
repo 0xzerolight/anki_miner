@@ -34,10 +34,11 @@ The resolution rules, in order, and what each is for (the first candidate with a
   ``lachzor`` -> ``chazor`` -> ``chazar``), right in 55 of a 64-form sample of the 421 ambiguous
   top-5,000 forms; its misses include ``yamim`` -> ``yam`` (sea, not day) and ``mimeni`` ->
   ``mimen``.
-* the whole word hit form rows only AND a strip rung is a headword: consult the strip before
-  accepting a single target. Whole-word-first is a hazard, not a singleton -- 791 of the 2,966
-  proclitic-initial forms in the top 5,000 hit form rows only, and 295 of those have a strip rung
-  on a lemma row of another key.
+* a candidate -- the whole word, or a strip rung -- hit form rows only AND one of its own strip
+  rungs is a headword: consult the strip before accepting a single target. Whole-word-first is a
+  hazard, not a singleton -- 791 of the 2,966 proclitic-initial forms in the top 5,000 hit form
+  rows only, and 295 of those have a strip rung on a lemma row of another key. A strip rung is
+  held to the same check (``she-ha-kol``'s rung ``ha-kol`` is ``kol``, as ``ha-kol`` alone is).
 
   - If the strip's own resolutions intersect the target, the target stands (206 cases:
     ``ha-dvarim`` -> ``davar``) -- except behind the single article he, when the agreement came
@@ -47,7 +48,7 @@ The resolution rules, in order, and what each is for (the first candidate with a
     ``ha-gadol``, ``ha-malon``, ``he-chashuv``. 15 top-5,000 forms change this way, one of them
     for the worse (``ha-elim`` "the gods" -> ``alim`` "violent"). A mem or shin strip keeps the
     target (``mevakesh`` -> ``bikesh``).
-  - If they are disjoint (89 cases), the word's first letter decides: mem (the participle prefix)
+  - If they are disjoint (89 cases), the candidate's first letter decides: mem (the participle prefix)
     and shin front the target (``mevin`` -> ``hevin``), he/bet/kaf/lamed/vav front the strip
     (``ha-kol`` -> ``kol``, not ``hekhil``; ``ba-yom`` -> ``yom``; ``la-gan`` -> ``gan``).
     Measured over the 85 non-stopword disjoint forms: right 63 times, against 0 for the surface;
@@ -307,8 +308,7 @@ class HebrewLemmaPass:
 
     def _resolve(self, key: str, rows: _Rows) -> _Resolution:
         """The module docstring's rules, in order, over the key's ladder."""
-        candidates = self._candidates(key)
-        for index, candidate in enumerate(candidates):
+        for candidate in self._candidates(key):
             found = rows.get(candidate) or []
             if not found:
                 continue
@@ -317,7 +317,9 @@ class HebrewLemmaPass:
                 return resolved
             names_only = any(is_lemma_row(tags) for _content, tags in found)
             targets = _form_row_targets(found)
-            strip = self._strip_head(candidates[1:], rows) if index == 0 and targets else None
+            # The candidate's OWN strips, at a strip rung as at the whole word: she-ha-kol's rung
+            # ha-kol is checked against kol exactly as ha-kol alone is.
+            strip = self._strip_head(rungs(candidate), rows) if targets else None
             agrees = strip is not None and not self._own(strip, rows).isdisjoint(targets)
             if names_only and not agrees:
                 # Every lemma row a proper name, and no strip confirms its form rows: the name stands.
@@ -326,13 +328,13 @@ class HebrewLemmaPass:
                 # Form rows that name nothing the renderer can read: nothing better to front.
                 return _Resolution(key, "WORD", "", "")
             if strip is not None and len(targets) == 1:
-                if agrees and strip not in targets and key == _ARTICLE + strip:
+                if agrees and strip not in targets and candidate == _ARTICLE + strip:
                     # Agreement only through the strip's own (haser) form rows, behind the
                     # article: the strip's own headword (he-chadash is chadash, not chodesh).
                     resolved = self._headword(strip, rows)
                     if resolved is not None:
                         return resolved
-                elif not agrees and key[0] not in _STEM_INITIALS:
+                elif not agrees and candidate[0] not in _STEM_INITIALS:
                     # Disjoint behind he/bet/kaf/lamed/vav: the strip (ha-kol is kol, not hekhil).
                     return self._headword(strip, rows) or self._front(strip, rows)
             return self._front(targets[0], rows)

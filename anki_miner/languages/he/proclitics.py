@@ -19,7 +19,15 @@ from __future__ import annotations
 
 from anki_miner.languages.he.script import GERESH, GERSHAYIM, MAQAF, he_fold
 
-__all__ = ["HE_STACKS", "HE_SINGLES", "MAX_CANDIDATES", "MIN_STEM", "rungs", "HebrewLookupStrategy"]
+__all__ = [
+    "HE_LEADING_STACKS",
+    "HE_STACKS",
+    "HE_SINGLES",
+    "MAX_CANDIDATES",
+    "MIN_STEM",
+    "rungs",
+    "HebrewLookupStrategy",
+]
 
 #: Proclitic STACKS, longest first at match time. The definite ``he`` assimilates into ``be``,
 #: ``ke`` and ``le``, so ``bevayit`` -> ``bayit`` needs the stack list and not just the singles.
@@ -41,6 +49,18 @@ HE_STACKS: tuple[str, ...] = (
     "\N{HEBREW LETTER MEM}\N{HEBREW LETTER HE}",  # me-ha-
 )
 
+#: The stacks tried BEFORE the single letter: kshe- ("when") and me-ha- ("from the"), whose
+#: one-letter strip leaves a different word (keshe-yesh -> shayish "marble", me-ha-ir -> he'ir
+#: "remarked"). Every other stack comes AFTER it: ve-lechem is "and bread", and the ve-la- stack
+#: read first made it chem "hot"; she-kvar made bar.
+HE_LEADING_STACKS: tuple[str, ...] = (
+    "\N{HEBREW LETTER VAV}\N{HEBREW LETTER KAF}\N{HEBREW LETTER SHIN}",
+    "\N{HEBREW LETTER LAMED}\N{HEBREW LETTER KAF}\N{HEBREW LETTER SHIN}",
+    "\N{HEBREW LETTER KAF}\N{HEBREW LETTER SHIN}",
+    "\N{HEBREW LETTER MEM}\N{HEBREW LETTER HE}",
+)
+_TRAILING_STACKS = tuple(stack for stack in HE_STACKS if stack not in HE_LEADING_STACKS)
+
 #: The single proclitics: vav, he, bet, kaf, lamed, mem, shin.
 HE_SINGLES: tuple[str, ...] = (
     "\N{HEBREW LETTER VAV}",
@@ -58,12 +78,38 @@ MAX_CANDIDATES = 8
 MIN_STEM = 2
 
 
+def _spellings(word: str) -> list[str]:
+    """Rungs (1)-(3): the same word at the spellings wty keys."""
+    out: list[str] = []
+    # (1) A subtitle types ASCII quotes; wty keys 183 gershayim and 397 geresh forms.
+    if '"' in word or "'" in word:
+        out.append(word.replace('"', GERSHAYIM).replace("'", GERESH))
+    # (2) The maqaf pair: the 7,426 maqaf keys and the 2,396 space-keyed phrases.
+    if "-" in word:
+        out.append(word.replace("-", MAQAF))
+        out.append(word.replace("-", " "))
+    # (3) A construct surface keyed without its maqaf.
+    if MAQAF in word:
+        out.append(word.replace(MAQAF, ""))
+    return out
+
+
+def _strip(word: str, proclitics: tuple[str, ...]) -> str:
+    """*word* behind the longest of *proclitics* it opens with, or ``""``."""
+    for proclitic in sorted(proclitics, key=len, reverse=True):
+        if word.startswith(proclitic) and len(word) - len(proclitic) >= MIN_STEM:
+            return word[len(proclitic) :]
+    return ""
+
+
 def rungs(word: str) -> list[str]:
     """Every ladder rung for a FOLDED *word*, minus the word itself, first-seen, capped at 8.
 
     Order (spec F.2): the ASCII-typed gershayim and geresh a subtitle writes, the maqaf pair, the
-    maqaf-stripped construct form, the longest matching proclitic stack, then the single letter.
-    A rung that leaves the string unchanged emits nothing.
+    maqaf-stripped construct form; then one strip each -- a leading stack (kshe-, me-ha-), the
+    single letter, another stack -- every strip followed by its own spellings, so ``be-`` + a
+    typed ``arhab`` reaches the gershayim key. A rung that leaves the string unchanged emits
+    nothing.
     """
     out: list[str] = []
 
@@ -71,26 +117,14 @@ def rungs(word: str) -> list[str]:
         if candidate and candidate != word and candidate not in out and len(candidate) >= MIN_STEM:
             out.append(candidate)
 
-    # (1) A subtitle types ASCII quotes; wty keys 183 gershayim and 397 geresh forms.
-    if '"' in word or "'" in word:
-        add(word.replace('"', GERSHAYIM).replace("'", GERESH))
-    # (2) The maqaf pair: the 7,426 maqaf keys and the 2,396 space-keyed phrases.
-    if "-" in word:
-        add(word.replace("-", MAQAF))
-        add(word.replace("-", " "))
-    # (3) A construct surface keyed without its maqaf.
-    if MAQAF in word:
-        add(word.replace(MAQAF, ""))
-    # (4) One proclitic stack, longest first.
-    for stack in sorted(HE_STACKS, key=len, reverse=True):
-        if word.startswith(stack) and len(word) - len(stack) >= MIN_STEM:
-            add(word[len(stack) :])
-            break
-    # (5) One single proclitic.
-    for single in HE_SINGLES:
-        if word.startswith(single) and len(word) - len(single) >= MIN_STEM:
-            add(word[len(single) :])
-            break
+    for spelling in _spellings(word):
+        add(spelling)
+    for proclitics in (HE_LEADING_STACKS, HE_SINGLES, _TRAILING_STACKS):
+        strip = _strip(word, proclitics)
+        if strip:
+            add(strip)
+            for spelling in _spellings(strip):
+                add(spelling)
     return out[:MAX_CANDIDATES]
 
 
