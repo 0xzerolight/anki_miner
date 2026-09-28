@@ -53,11 +53,18 @@ def tr_normalize(text: str) -> str:
 
 @dataclass(frozen=True)
 class TrAnalysis:
-    """One zeyrek reading of a word: card-front lemma, UPOS, and zeyrek's secondary POS (``Pers``, ``Time``...)."""
+    """One zeyrek reading of a word: card-front lemma, UPOS, and zeyrek's secondary POS (``Pers``, ``Time``...).
+
+    ``imperative`` and ``aorist`` say that a reading of this verb carries zeyrek's ``Imp`` or ``Aor`` morpheme
+    (``at`` is ``atmak``'s imperative, ``bekler`` ``beklemek``'s aorist; the aorist participle ``AorPart`` does not
+    count). The tagger reads them from the clause: a command before ``!``, a request before ``mI``.
+    """
 
     lemma: str
     pos1: str
     pos2: str = ""
+    imperative: bool = False
+    aorist: bool = False
 
 
 #: B.1's zeyrek primary POS → UPOS map; anything else is ``X``.
