@@ -44,9 +44,12 @@ SL_SMOKE_SENTENCE = "Študent je včeraj prebral zanimivo knjigo."
 #: told. The dictionary would rarely fill it anyway - 6.8 % of noun rows carry a Grammar head line.
 SL_EXTRA_CARD_FIELDS = (POS_FIELD, NOUN_GENDER_FIELD, ASPECT_PAIR_FIELD)
 SL_CARD_FIELDS = spaced_card_fields(SL_EXTRA_CARD_FIELDS)
-#: NFC + casefold: Slovenian spells c/s/z with a caron the shared normaliser already composes, and
-#: no term carries a ligature, so an extra NFKC would only add unrelated compatibility folds.
-SL_KEYS = CasefoldDictKeys()
+#: NFC + the accent-notation fold + casefold. wty-sl-en writes 41,212 of its keys - nearly all of them
+#: form rows - in accent notation (``čȃkam``, ``učím``, ``mȃma``), which no Slovenian text spells, so
+#: the fold runs inside the key at import and at query alike (the ro precedent). It keeps the caron and
+#: is the identity on Slovenian spelling, so an index imported before it keeps answering as it did until
+#: wty-sl-en is re-imported. No NFKC: no term carries a ligature.
+SL_KEYS = CasefoldDictKeys(extra_fold=sl_tone_fold)
 
 SL_AUDIO = AudioDefaults(
     # gTTS has no Slovenian voice (tts_langs() 2.5.4), so the synthetic leg is Microsoft Edge
