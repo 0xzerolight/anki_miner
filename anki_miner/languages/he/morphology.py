@@ -38,7 +38,7 @@ from typing import Any
 from anki_miner.languages._spaced.form_of import form_targets, is_lemma_row, rendered_text
 from anki_miner.languages.he.pos import pos_from_tags
 from anki_miner.languages.he.proclitics import rungs
-from anki_miner.languages.he.script import he_fold
+from anki_miner.languages.he.script import he_fold, is_he_mark
 from anki_miner.services.morphology import AttestLookup, FormLookup
 
 __all__ = [
@@ -52,6 +52,9 @@ __all__ = [
 
 _GRAMMAR_HEAD_RE = re.compile(r'data-sc-content="Grammar-content"[^>]*>(.*?)</div>', re.S)
 _BULLET = "\N{BULLET}"
+#: How a Grammar head lists a lemma's spellings: ``akhshav / akhshav-pointed``,
+#: ``likhtov \ likhtov``, ``chatsi or chetsi``, ``et, et-``.
+_SPELLINGS_RE = re.compile(r" / | or | \\ |, ")
 #: One line's worth of surfaces is small; the cache exists so a repeated word in a long corpus
 #: (count_lemmas) is resolved once per parser, not once per occurrence.
 _CACHE_MAX = 4096
@@ -61,14 +64,20 @@ def vocalised_from_content(content: str) -> str:
     """The vocalised headword a lemma row's Grammar line opens with, or ``""``.
 
     ``kelev (bullet) (kelev, ...) m (plural ...)`` -- everything before the bullet. Present on
-    15,243 of the 15,308 lemma rows of revision 2026.09.19.
+    15,243 of the 15,308 lemma rows of revision 2026.09.19. A head that lists several spellings
+    (``akhshav / akhshav-pointed``: 337 of 1,927 mined top-5,000 fronts) gives its first pointed
+    one, else its first: the reading is ONE word, and the voice speaks it once.
     """
     match = _GRAMMAR_HEAD_RE.search(content or "")
     if match is None:
         return ""
     head = rendered_text(match.group(1))
     bullet = head.find(_BULLET)
-    return head[:bullet].strip() if bullet > 0 else ""
+    if bullet <= 0:
+        return ""
+    spellings = [spelling.strip() for spelling in _SPELLINGS_RE.split(head[:bullet]) if spelling.strip()]
+    pointed = [spelling for spelling in spellings if any(is_he_mark(char) for char in spelling)]
+    return (pointed or spellings or [""])[0]
 
 
 class _Resolution:

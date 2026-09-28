@@ -114,6 +114,7 @@ NISHLACH = _word("NUN", "SHIN", "LAMED", "HET")
 KELEV = _word("KAF", "LAMED", "BET")
 HALAKH = _word("HE", "LAMED", "FINAL KAF")
 KARA = _word("QOF", "RESH", "ALEF")
+EGROF = _word("ALEF", "GIMEL", "RESH", "VAV", "FINAL PE")
 
 
 @pytest.mark.parametrize(
@@ -194,6 +195,14 @@ def test_the_reading_is_filled_before_word_reading_is_called(form_lookup, row):
 def test_an_unresolved_word_has_no_reading(form_lookup):
     tokens = HebrewLemmaPass()(to_duck_tokens(LACHZOR), None, form_lookup)
     assert HebrewReadingSupport().word_reading(tokens[0]) == ""
+
+
+def test_a_head_with_a_plene_and_a_pointed_spelling_reads_as_one(form_lookup):
+    """egrof's Grammar head lists two pointed spellings; the reading (and the voice) takes the first."""
+    [token] = HebrewLemmaPass()(to_duck_tokens(EGROF), None, form_lookup)
+    reading = HebrewReadingSupport().word_reading(token)
+    assert " / " not in reading
+    assert he_fold(reading) == EGROF
 
 
 # --------------------------------------------------------------------------
