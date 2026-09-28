@@ -2,10 +2,12 @@
 
 A Wiktionary-derived dictionary (``wty-*``) keys every inflected form it knows as a ``non-lemma``
 row whose glossary names the lemma it belongs to. ``service_factory`` wires those rows into every
-parser as R36's ``form_lookup`` (``DefinitionService.offline_term_rows``), and a ``token_post_pass``
-is their only reader. Hebrew's ``HebrewLemmaPass`` reads them to build a front the tokenizer
-cannot; ``FormOfLemmaPass`` reads them to repair a front the tagger got wrong (sv ``fönstret``
-lemmatised ``fönstr``, pl ``Zapomniałeś`` lemmatised ``zapomniać``, de ``Äpfel`` left unlemmatised).
+parser as R36's ``form_lookup`` (``DefinitionService.offline_term_rows``). A ``token_post_pass``
+reads them: Hebrew's ``HebrewLemmaPass`` to build a front the tokenizer cannot, ``FormOfLemmaPass``
+to repair a front the tagger got wrong (sv ``fönstret`` lemmatised ``fönstr``, pl ``Zapomniałeś``
+lemmatised ``zapomniać``, de ``Äpfel`` left unlemmatised). uk's S24 stressed reading reads them too
+(``uk/parser.py`` through ``lemma_row_stress``): a term with a lemma row takes the stress its head
+line prints.
 
 **A form row's target is parsed out of the RENDERED content, not out of raw JSON.** The Yomitan
 importer stores ``render_glossary_entry(...)`` output in the ``content`` column
