@@ -58,6 +58,7 @@ from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaCon
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
+from anki_miner.gui.widgets.reading_subtitles_tab import _SUBTITLE_EXTS
 from anki_miner.models import MiningOutcome, result_error_text
 from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.models.reading_queue import ReadingQueueItem
@@ -73,10 +74,10 @@ if TYPE_CHECKING:
 
 # Extensions accepted from a drag-drop (directories are always accepted). Manga
 # files fill the Volume selector, directories the Folder selector; novel/
-# subtitle drops earn a cross-tab hint.
+# subtitle drops earn a cross-tab hint. The subtitle set is the Subtitles tab's
+# own, imported so the hint covers every format it mines.
 _MANGA_EXTS = (".mokuro", ".cbz", ".zip")
 _NOVEL_EXTS = (".epub", ".txt")
-_SUBTITLE_EXTS = (".srt", ".ass", ".ssa", ".vtt")
 
 # File-selector filter glob for the Volume File field. The human label
 # ("Manga") is tr()'d at call time; only the literal extension glob lives here.

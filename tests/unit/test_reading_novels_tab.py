@@ -685,9 +685,10 @@ class TestDragDrop:
             tab.dropEvent(event)
         assert tab.folder_selector.get_path() == str(first)
 
-    def test_drop_subtitle_file_hints_no_path(self, tab):
+    @pytest.mark.parametrize("name", ["/src/ep01.srt", "/src/ep01.smi"])
+    def test_drop_subtitle_file_hints_no_path(self, tab, name):
         event = MagicMock()
-        with patch(_URLS, return_value=[_url("/src/ep01.srt")]):
+        with patch(_URLS, return_value=[_url(name)]):
             tab.dropEvent(event)
         assert tab.book_selector.get_path() == ""
         assert "Subtitles tab" in tab.log_widget.text_edit.toPlainText()
@@ -698,7 +699,7 @@ class TestDragDrop:
         assert tab.book_selector.get_path() == ""
 
     def test_drag_enter_accepts_book_manga_and_subtitle(self, tab):
-        for name in ("/src/a.epub", "/src/a.txt", "/src/a.mokuro", "/src/a.cbz", "/src/a.srt"):
+        for name in ("/src/a.epub", "/src/a.txt", "/src/a.mokuro", "/src/a.cbz", "/src/a.srt", "/src/a.smi"):
             event = MagicMock()
             with patch(_URLS, return_value=[_url(name)]):
                 tab.dragEnterEvent(event)
