@@ -533,6 +533,62 @@ def test_space_aware_plain_paragraph_joins_its_hard_wrapped_lines(tmp_path):
     assert [u.location_label for u in doc.units] == ["¶1", "¶2", "¶2"]
 
 
+# --- a bare ruler is a scene break, not an Aozora symbol block -------------
+
+_STORY = "\n".join(
+    [
+        "Chapter One",
+        "",
+        "The rain had not stopped.",
+        "",
+        "--------",
+        "",
+        "In the morning the water reached the garden.",
+        "",
+        "--------",
+        "",
+        "By noon the bridge was gone.",
+    ]
+)
+
+
+def test_scene_break_rulers_do_not_make_a_plain_novel_aozora(tmp_path):
+    doc = _en_doc(tmp_path, _STORY, name="story.txt")
+    assert doc.title == "story"  # no header extraction
+    words = " ".join(u.text for u in doc.units)
+    assert "Chapter One" in words
+    assert "In the morning the water reached the garden." in words
+    assert "By noon the bridge was gone." in words
+
+
+def test_symbol_block_heading_alone_marks_aozora(tmp_path):
+    # A real Aozora file with a symbol block but neither ［＃ nor kana ruby in
+    # its body still loses its header and its symbol block.
+    text = "\n".join(
+        [
+            "題名",
+            "著者",
+            "",
+            "-------------------------------------------------------",
+            "【テキスト中に現れる記号について】",
+            "",
+            "《》：ルビ",
+            "-------------------------------------------------------",
+            "",
+            "本文だ。",
+        ]
+    )
+    doc = load(_ref(_write(tmp_path, text, "utf-8")))
+    assert doc.title == "題名"
+    assert [u.text for u in doc.units] == ["本文だ。"]
+
+
+def test_aozora_body_rulers_without_the_heading_keep_their_text(tmp_path):
+    text = "\n".join(["題名", "著者", "", "前だ［＃「前」に傍点］。", "--------", "中だ。", "--------", "後だ。"])
+    doc = load(_ref(_write(tmp_path, text, "utf-8")))
+    assert [u.text for u in doc.units if u.text != "--------"] == ["前だ。", "中だ。", "後だ。"]
+
+
 # --- Bug Y4: bare 《…》 must not misclassify a plain novel as Aozora ---------
 
 

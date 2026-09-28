@@ -218,6 +218,11 @@ def _strip_annotations(line: str) -> tuple[str, bool, bool, bool]:
 # --- header / footer -----------------------------------------------------
 
 _RULE_RE = re.compile(r"^-{8,}$")
+# Every Aozora symbol block opens with this heading. A bare ruler is no signal:
+# a plain novel writes one as a scene or chapter break (Project Gutenberg's
+# The Great Gatsby), and taking it for Aozora dropped the file's first block
+# and everything between its first two rulers.
+_SYMBOL_BLOCK_HEADING = "【テキスト中に現れる記号について】"
 _FOOTER_PREFIXES = ("底本：", "底本:", "青空文庫作成ファイル：")
 
 
@@ -239,12 +244,16 @@ def _cut_footer(lines: list[str]) -> list[str]:
 
 
 def _drop_symbol_block(lines: list[str]) -> list[str]:
-    """Drop the optional ``-{8,}``…``-{8,}`` 記号説明 block (first pair)."""
+    """Drop the optional ``-{8,}``…``-{8,}`` 記号説明 block (first pair).
+
+    Only when the pair encloses the block's heading: any other ruler pair is a
+    scene break around body text.
+    """
     r1 = next((i for i, ln in enumerate(lines) if _RULE_RE.match(ln)), None)
     if r1 is None:
         return lines
     r2 = next((i for i in range(r1 + 1, len(lines)) if _RULE_RE.match(lines[i])), None)
-    if r2 is None:
+    if r2 is None or not any(_SYMBOL_BLOCK_HEADING in ln for ln in lines[r1 + 1 : r2]):
         return lines
     return lines[:r1] + lines[r2 + 1 :]
 
@@ -256,13 +265,14 @@ def _is_aozora(text: str) -> bool:
     work title / quotation with the double-angle bracket, and treating that as
     Aozora dropped its first block as a "header" and stripped every ``《…》``
     span (Bug Y4). Require a real Aozora signal: an accent/annotation marker
-    ``［＃``, a kana ruby *attached* to a base, or a header ruler line.
+    ``［＃``, a kana ruby *attached* to a base, or the symbol-block heading
+    (never a bare ruler line, see ``_SYMBOL_BLOCK_HEADING``).
     """
     if "［＃" in text:
         return True
     if _RUBY_ATTACHED_RE.search(text):
         return True
-    return any(_RULE_RE.match(ln) for ln in _splitlines(text))
+    return _SYMBOL_BLOCK_HEADING in text
 
 
 def _extract_header(lines: list[str]) -> tuple[str, list[str]]:
