@@ -17,7 +17,8 @@ from anki_miner.models.reading import ReadingUnit
 CORPUS = Path(__file__).resolve().parents[2] / "fixtures" / "it" / "pos_corpus.jsonl"
 RECORDS = [json.loads(line) for line in CORPUS.read_text(encoding="utf-8").splitlines() if line.strip()]
 #: Every fine tag it_core_news_sm put under ADJ/ADV/NOUN/VERB over this corpus (D4). A new one fails here.
-EXPECTED_FINE_TAGS = {"A", "NO", "B", "BN", "S", "V", "V_PC", "V_PC_PC"}
+#: ``VM`` arrives under VERB through ``lift_modal_verbs`` (the model tags the modals AUX).
+EXPECTED_FINE_TAGS = {"A", "NO", "B", "BN", "S", "V", "VM", "V_PC", "V_PC_PC"}
 
 
 @pytest.fixture

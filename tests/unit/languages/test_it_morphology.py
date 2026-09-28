@@ -16,6 +16,7 @@ from anki_miner.languages.it.morphology import (
     it_relemmatize,
     italian_article,
     keep_lemma_head,
+    lift_modal_verbs,
 )
 from anki_miner.languages.token import LanguageToken
 
@@ -142,3 +143,17 @@ def test_the_lemma_head_pass_keeps_the_first_word_of_a_multi_word_lemma():
     ]
     assert keep_lemma_head(tokens) is tokens
     assert [token.feature.lemma for token in tokens] == ["lavare", "andare", "mano", " "]
+
+
+def test_the_modal_pass_lifts_dovere_potere_volere_out_of_aux():
+    """ROM-04: ISDT tags the modals AUX VM even with an object (``Voglio un gelato``); ro's main_verb_pos shape."""
+    tokens = [
+        LanguageToken("Voglio", "AUX", "VM", "volere"),
+        LanguageToken("devi", "AUX", "V", "dovere"),
+        LanguageToken("Posso", "AUX", "VM", "posso"),
+        LanguageToken("ho", "AUX", "VA", "avere"),
+        LanguageToken("è", "AUX", "VA", "essere"),
+        LanguageToken("potere", "NOUN", "S", "potere"),
+    ]
+    assert lift_modal_verbs(tokens) is tokens
+    assert [token.feature.pos1 for token in tokens] == ["VERB", "VERB", "VERB", "AUX", "AUX", "NOUN"]
