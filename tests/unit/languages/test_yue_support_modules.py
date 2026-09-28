@@ -70,7 +70,7 @@ def test_the_mined_form_prefers_the_lemma():
     assert policy.mined_form("NOUN", "orth", "", "") == "orth"
 
 
-def test_the_seven_hk_pairs_are_the_fixture_pairs():
+def test_the_nine_hk_pairs_are_the_fixture_pairs():
     assert [list(pair) for pair in HK_VARIANT_PAIRS] == [row["pair"] for row in variant_rows()]
 
 
