@@ -12,8 +12,9 @@ import unicodedata
 from collections.abc import Mapping
 from types import MappingProxyType
 
+from anki_miner.languages._spaced.form_of import form_targets, is_lemma_row
 from anki_miner.languages._spaced.keys import CasefoldDictKeys
-from anki_miner.languages.id.colloquial import ID_COLLOQUIAL, ID_COLLOQUIAL_CORE
+from anki_miner.languages.id.colloquial import ID_COLLOQUIAL, ID_COLLOQUIAL_CORE, ID_COLLOQUIAL_HOMOGRAPHS
 from anki_miner.languages.id.rules import deinflection_candidates
 from anki_miner.languages.id.stopwords import ID_STOPWORDS
 
@@ -43,6 +44,10 @@ ID_ABBREVIATIONS: frozenset[str] = frozenset(
 )  # fmt: skip
 
 
+#: The formal words whose form pointers ``IndonesianDictKeys.sense_rank`` promotes, read off the curated rows.
+_HOMOGRAPH_TARGETS: frozenset[str] = frozenset(ID_COLLOQUIAL_HOMOGRAPHS.values())
+
+
 def id_fold(text: str) -> str:
     """NFC -> casefold -> NFD -> drop combining marks -> NFC (C.5): ``Mengérti`` -> ``mengerti``. Idempotent."""
     decomposed = unicodedata.normalize("NFD", unicodedata.normalize("NFC", text).casefold())
@@ -69,6 +74,20 @@ class IndonesianDictKeys(CasefoldDictKeys):
 
     def fold_term(self, s: str) -> str:
         return id_fold(s)
+
+    def sense_rank(self, content: str, tags: str, pos: str | None) -> int:
+        """``-1`` for a form pointer to a colloquial homograph's formal word, else the inherited rank.
+
+        ``tau`` ``kalo`` ``liat`` ``abis`` are also unrelated wty-id-en headwords (the Greek letter, a bamboo
+        sieve, clayey soil, the abyssal zone), and their colloquial sense is only the pointer row naming
+        tahu / kalau / lihat / habis. Ranked ahead of every lemma row, the pointer survives the shadowing
+        drop and is spliced into its target's meaning, which leads the card; the headword's rows follow.
+        Rows are only reordered (ID-02). ``melihat``'s pointer to ``lihat`` is promoted too: the same
+        meaning, ahead of its thin "active of lihat" row.
+        """
+        if not is_lemma_row(tags) and any(target in _HOMOGRAPH_TARGETS for target in form_targets(content)):
+            return -1
+        return super().sense_rank(content, tags, pos)
 
 
 class IndonesianLookupStrategy:

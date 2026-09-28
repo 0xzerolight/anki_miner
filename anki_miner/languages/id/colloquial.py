@@ -9,10 +9,10 @@ that are English words, not Indonesian spellings (``it`` -> ``itu``, ``is`` -> `
 code-switched ``I love it`` misses instead of carding ``itu``: a key in stopwords-iso ``stopwords-en`` (commit
 ccc8898188850d8fb019d5f69c14a6635c3bd115; less the country codes and domains only its seobook source lists, which
 here are chat abbreviations such as ``tp`` -> ``tetapi``, ``org`` -> ``orang``) that is no wty-id-en (revision
-2026.09.20) headword. Loans outside that list stay (``bro``, ``app``, ``congrats``). The 29-row C.5 curated core is
+2026.09.20) headword. Loans outside that list stay (``bro``, ``app``, ``congrats``). The 33-row C.5 curated core is
 laid over it (``lo``/``lu`` -> ``kamu``, ``bgt``/``banget`` -> ``sangat``, ``bikin`` -> ``membuat``, ``bang`` ->
-``abang`` over IndoCollex's backslang ``ngab``); ``gue``/``gua``/``gw`` keep IndoCollex's formal ``saya`` (plan D7).
-1920 pairs, one per line, ``informal formal``.
+``abang`` over IndoCollex's backslang ``ngab``; ``tau`` ``kalo`` ``liat`` ``abis`` -> ``tahu`` ``kalau`` ``lihat`` ``habis``, ruling ID-02);
+``gue``/``gua``/``gw`` keep IndoCollex's formal ``saya`` (plan D7). 1924 pairs, one per line, ``informal formal``.
 
 ``ID_COLLOQUIAL_CORE`` is the curated core alone. Only it expands the stopword tier
 (:func:`anki_miner.languages.id.morphology.is_stopword`): IndoCollex is crowd-derived and its formal side is
@@ -32,6 +32,7 @@ aamiin amin
 aamin amin
 abg remaja tanggung
 abi ayah
+abis habis
 abng abang
 acheh aceh
 activities aktifitas
@@ -855,6 +856,7 @@ kaks kak
 kalbar kalimantan barat
 kalean kalian
 kalii kali
+kalo kalau
 kalok kalau
 kaltim kalimantan timur
 kalu kalau
@@ -1027,6 +1029,7 @@ lgsung langsung
 lheue lho
 lhok lho
 lhooo loh
+liat lihat
 liatin lihatkan
 lies bohong
 lifes kehidupan-kehidupan
@@ -1757,6 +1760,7 @@ tampol pukul
 tanggungjawab tanggung jawab
 taon tahun
 taqwa takwa
+tau tahu
 taunya tahu-tahu
 tauu tahu
 tb tiba
@@ -1980,6 +1984,16 @@ udh sudah
 yg yang
 """
 
+#: Curated core rows whose colloquial spelling wty-id-en also files as an unrelated headword (the Greek letter
+#: tau, a bamboo sieve, clayey soil, the abyssal zone). The lookup hits, so the ladder never runs; the colloquial
+#: sense is the row's form pointer, which ``IndonesianDictKeys.sense_rank`` ranks first by these targets (ID-02).
+_HOMOGRAPH_PAIRS = """
+abis habis
+kalo kalau
+liat lihat
+tau tahu
+"""
+
 
 def _parse(text: str) -> Mapping[str, str]:
     table: dict[str, str] = {}
@@ -1990,4 +2004,5 @@ def _parse(text: str) -> Mapping[str, str]:
 
 
 ID_COLLOQUIAL: Mapping[str, str] = _parse(_PAIRS)
-ID_COLLOQUIAL_CORE: Mapping[str, str] = _parse(_CORE_PAIRS)
+ID_COLLOQUIAL_HOMOGRAPHS: Mapping[str, str] = _parse(_HOMOGRAPH_PAIRS)
+ID_COLLOQUIAL_CORE: Mapping[str, str] = MappingProxyType({**_parse(_CORE_PAIRS), **ID_COLLOQUIAL_HOMOGRAPHS})
