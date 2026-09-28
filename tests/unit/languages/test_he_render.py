@@ -95,6 +95,7 @@ class _Word:
         self.definition_html = definition_html
         self.pos = pos
         self.mined_form = ""
+        self.expression_reading = ""
 
 
 # --------------------------------------------------------------------------
@@ -176,6 +177,30 @@ def test_a_verb_renders_its_binyan_and_no_noun_fields(lookup):
     assert out["binyan"] == "nif'al"
     assert "noun_gender" not in out
     assert "noun_plural" not in out
+
+
+def test_the_fields_come_from_the_row_the_reading_came_from(lookup):
+    """halakh files the noun helekh first; a card the resolver read as the verb (its Reading is the
+    v row's vocalised head) takes that row's romanisation and binyan, not the noun's."""
+    from anki_miner.languages.he.morphology import vocalised_from_content
+
+    definition = lookup(HALAKH)
+    heads = [row for row in WTY["term_rows"] if row[0] == HALAKH and str(row[2]).split(" ")[0] in ("n", "v")]
+    assert str(heads[0][2]).startswith("n"), "the fixture must keep the noun row first"
+    verb_reading = next(
+        vocalised_from_content(render_glossary_entry(row[5], definition_tags=["v"], dict_id="wty-he-en"))
+        for row in heads
+        if str(row[2]) == "v"
+    )
+    word = _Word(definition, "VERB")
+    word.expression_reading = verb_reading
+    out = HebrewGrammarHook().render(word, config=CONFIG)
+    assert out["binyan"] == "pa'al"
+    assert out["transliteration"] == transliteration(definition, verb_reading) != transliteration(definition)
+
+
+def test_a_reading_no_head_line_names_keeps_the_first_head_line(lookup):
+    assert transliteration(lookup(KELEV), "NOT A HEAD") == transliteration(lookup(KELEV))
 
 
 def test_a_feminine_noun_renders_the_feminine_label(lookup):

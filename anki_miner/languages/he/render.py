@@ -3,7 +3,8 @@
 Four of the six come from ONE line -- the dictionary's own Grammar head line, which
 ``wty-he-en`` renders as ``<vocalised> (bullet) (<romanisation>) <gender> (plural indefinite
 <form>, ...)`` and, for a verb, ``(<binyan> construction, infinitive ...)``. One hook parses it
-once and emits all four rather than four hooks parsing it four times.
+once and emits all four rather than four hooks parsing it four times. The line is that of the row
+the card's Reading came from, so a homograph's fields describe the word the resolver chose.
 
 The head-line and bracket-reading helpers are COPIED from ``fa/render.py``, not imported: language
 packages do not import each other, and the item brief orders the copy. Their shape is fa's -- count
@@ -28,6 +29,7 @@ import re
 from typing import TYPE_CHECKING, Any
 
 from anki_miner.languages._spaced.render import PosHook
+from anki_miner.languages.he.morphology import vocalised_from_content
 from anki_miner.languages.he.pos import HE_POS_LABELS
 from anki_miner.languages.he.script import GERESH, HE_MARK_CLASS, MAQAF, he_fold
 from anki_miner.languages.profile import CardFieldSpec
@@ -78,13 +80,20 @@ def _text(block: str) -> str:
     return " ".join(html.unescape(_TAG_RE.sub(" ", block)).split())
 
 
-def head_line(definition_html: str) -> str:
-    """The first Grammar head line of a definition, tags stripped, marks intact."""
-    for block in _HEAD_RE.findall(definition_html or ""):
-        line = _text(block)
-        if line:
+def head_line(definition_html: str, reading: str = "") -> str:
+    """The Grammar head line of the row *reading* was read from, else the first; tags stripped.
+
+    *reading* is the vocalised head the resolver took from the row it chose (a verb form of
+    halakh reads from its v row, which wty files after the noun helekh), so the romanisation and
+    the binyan describe the same word as the Reading and the POS.
+    """
+    first = ""
+    for match in _HEAD_RE.finditer(definition_html or ""):
+        line = _text(match.group(1))
+        if line and reading and vocalised_from_content(match.group(0)) == reading:
             return line
-    return ""
+        first = first or line
+    return first
 
 
 def _bracketed(text: str) -> str:
@@ -125,31 +134,31 @@ def _after_romanisation(head: str) -> str:
     return ""
 
 
-def transliteration(definition_html: str) -> str:
+def transliteration(definition_html: str, reading: str = "") -> str:
     """The dictionary's own romanisation of the headword: ``kelev``, ``halakh``.
 
     The first of the bracket group's comma-separated spellings -- wty lists the everyday one first
     and a scholarly transcription after it.
     """
-    capture = _bracketed(head_line(definition_html))
+    capture = _bracketed(head_line(definition_html, reading))
     return capture.split(",")[0].strip() if capture else ""
 
 
-def binyan(definition_html: str) -> str:
+def binyan(definition_html: str, reading: str = "") -> str:
     """The verb's construction, as wty's head line names it (``pa'al``, ``nif'al``)."""
-    match = _BINYAN_RE.search(head_line(definition_html))
+    match = _BINYAN_RE.search(head_line(definition_html, reading))
     return match.group(1) if match else ""
 
 
-def noun_plural(definition_html: str) -> str:
+def noun_plural(definition_html: str, reading: str = "") -> str:
     """The indefinite plural, marks intact. Blank when the entry names none."""
-    match = _PLURAL_RE.search(head_line(definition_html))
+    match = _PLURAL_RE.search(head_line(definition_html, reading))
     return match.group(1) if match else ""
 
 
-def gender(definition_html: str) -> str:
+def gender(definition_html: str, reading: str = "") -> str:
     """``m`` or ``f`` from the head line, read AFTER the romanisation clause."""
-    match = _GENDER_RE.search(_after_romanisation(head_line(definition_html)))
+    match = _GENDER_RE.search(_after_romanisation(head_line(definition_html, reading)))
     return match.group(1) if match else ""
 
 
@@ -181,19 +190,20 @@ class HebrewGrammarHook:
         if not definition:
             return {}
         pos = str(getattr(word, "pos", "") or "")
+        reading = str(getattr(word, "expression_reading", "") or "")
         out: dict[str, str] = {}
-        romanised = transliteration(definition)
+        romanised = transliteration(definition, reading)
         if romanised:
             out["transliteration"] = romanised
         if pos == "VERB":
-            construction = binyan(definition)
+            construction = binyan(definition, reading)
             if construction:
                 out["binyan"] = construction
         if pos == "NOUN":
-            letter = gender(definition)
+            letter = gender(definition, reading)
             if letter in _GENDER_LABELS:
                 out["noun_gender"] = _GENDER_LABELS[letter]
-            plural = noun_plural(definition)
+            plural = noun_plural(definition, reading)
             if plural:
                 out["noun_plural"] = plural
         return out
