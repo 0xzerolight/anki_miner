@@ -5,7 +5,10 @@ stable ABI, so one per-platform pin covers every CPython minor -- ``abi=None``),
 and PyPI publishes ``manylinux_2_17_aarch64`` for both, so ``("linux","aarch64")``
 pins like ko with no gap. Both compiled cores sit INSIDE their package
 directories (``pycantonese/_rust.abi3.so``, ``rustling/_lib_name.abi3.so``), so
-``member_prefix`` captures them and there are no root members.
+``member_prefix`` captures them. The only root members are the two dist-info
+directories: each package's ``__init__`` calls ``importlib.metadata.version()`` on
+itself at import, so a pack without them dies on ``PackageNotFoundError`` before
+segmenting a word (the pip install never sees this; the frozen app does).
 
 ``exclude`` drops what the runtime path never opens: the GPL-3 CantoMap data
 (which therefore never lands on disk and owes no ``licenses/`` notice), the CTCPC
@@ -25,6 +28,10 @@ macOS x86_64's floor is 10.12, read off the platform tag by
 from __future__ import annotations
 
 from anki_miner.languages.pack_spec import ArtifactSpec, LanguagePack, PackComponent
+
+#: Promoted to the pack root beside the package, where importlib.metadata finds them.
+_PYCANTONESE_DIST_INFO = ("pycantonese-5.0.0.dist-info/",)
+_RUSTLING_DIST_INFO = ("rustling-0.9.0.dist-info/",)
 
 _PYCANTONESE_EXCLUDE = (
     "data/ctcpc/",  # 6.4 MB, the parallel corpus the segmenter was TRAINED on
@@ -61,6 +68,7 @@ _PYCANTONESE = PackComponent(
             sha256="4a010973683fb8d14313ef44cdf7a4ded1adbe1a1bc64c93d0f75e65f141dd1a",
             kind="wheel",
             member_prefix="pycantonese/",
+            root_members=_PYCANTONESE_DIST_INFO,
             exclude=_PYCANTONESE_EXCLUDE,
         ),
         ("linux", "aarch64"): ArtifactSpec(
@@ -73,6 +81,7 @@ _PYCANTONESE = PackComponent(
             sha256="609d14a588cb0b39fe1644347609677dbda77e25978dfd34f1f9de455f88637b",
             kind="wheel",
             member_prefix="pycantonese/",
+            root_members=_PYCANTONESE_DIST_INFO,
             exclude=_PYCANTONESE_EXCLUDE,
         ),
         ("win32", "AMD64"): ArtifactSpec(
@@ -85,6 +94,7 @@ _PYCANTONESE = PackComponent(
             sha256="8f7bdc1e9a37b5e164cd57f22aecae8532d4d0b74ff5b6f5e28480a657fa53f9",
             kind="wheel",
             member_prefix="pycantonese/",
+            root_members=_PYCANTONESE_DIST_INFO,
             exclude=_PYCANTONESE_EXCLUDE,
         ),
         ("darwin", "arm64"): ArtifactSpec(
@@ -97,6 +107,7 @@ _PYCANTONESE = PackComponent(
             sha256="b33d794ea43c8bb7e18699e561fa51a0f48dfb5a033d569b99b733b6ffc30917",
             kind="wheel",
             member_prefix="pycantonese/",
+            root_members=_PYCANTONESE_DIST_INFO,
             exclude=_PYCANTONESE_EXCLUDE,
         ),
         ("darwin", "x86_64"): ArtifactSpec(
@@ -109,6 +120,7 @@ _PYCANTONESE = PackComponent(
             sha256="587387ffe61969d95a5ee5f3f47eb74712c50e76dbc00d578dfb59b45934e3f5",
             kind="wheel",
             member_prefix="pycantonese/",
+            root_members=_PYCANTONESE_DIST_INFO,
             exclude=_PYCANTONESE_EXCLUDE,
         ),
     },
@@ -130,6 +142,7 @@ _RUSTLING = PackComponent(
             sha256="91b3bddab02d7ed48ff6adc5829cbb8675509f1b9166223b2cd592c0a1f24335",
             kind="wheel",
             member_prefix="rustling/",
+            root_members=_RUSTLING_DIST_INFO,
         ),
         ("linux", "aarch64"): ArtifactSpec(
             # rustling-0.9.0-cp310-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (3,028,200 B)
@@ -141,6 +154,7 @@ _RUSTLING = PackComponent(
             sha256="2467d93f82c00e2eb2d11efe14be42aa71cabb4f7d60ef554e113e2efc11ebc5",
             kind="wheel",
             member_prefix="rustling/",
+            root_members=_RUSTLING_DIST_INFO,
         ),
         ("win32", "AMD64"): ArtifactSpec(
             # rustling-0.9.0-cp310-abi3-win_amd64.whl (2,543,968 B)
@@ -152,6 +166,7 @@ _RUSTLING = PackComponent(
             sha256="e78ce1bc7b9167d251d53541ffe8c978836bff2c0a6af992974f039eb2ad5c30",
             kind="wheel",
             member_prefix="rustling/",
+            root_members=_RUSTLING_DIST_INFO,
         ),
         ("darwin", "arm64"): ArtifactSpec(
             # rustling-0.9.0-cp310-abi3-macosx_11_0_arm64.whl (2,690,618 B)
@@ -163,6 +178,7 @@ _RUSTLING = PackComponent(
             sha256="94d0938e910df2f41aa5bb8d69ce71262c9e17eff04824e660c49bd3808825ab",
             kind="wheel",
             member_prefix="rustling/",
+            root_members=_RUSTLING_DIST_INFO,
         ),
         ("darwin", "x86_64"): ArtifactSpec(
             # rustling-0.9.0-cp310-abi3-macosx_10_12_x86_64.whl (2,824,392 B)
@@ -174,6 +190,7 @@ _RUSTLING = PackComponent(
             sha256="44c99629f7b251a740920837fea12653537e1b97281cdcfe8993ac93588576b3",
             kind="wheel",
             member_prefix="rustling/",
+            root_members=_RUSTLING_DIST_INFO,
         ),
     },
 )

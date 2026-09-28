@@ -42,7 +42,20 @@ def test_the_pack_is_two_abi3_components_over_five_platforms():
             assert spec.url.startswith("https://files.pythonhosted.org/")
             assert "-cp310-abi3-" in spec.url
             assert spec.member_prefix == f"{component.import_name}/"
-            assert spec.root_members == ()  # both extension modules live INSIDE the package
+
+
+@pytest.mark.parametrize("component", PACK.components, ids=lambda c: c.import_name)
+def test_each_wheel_ships_the_dist_info_its_import_reads(component):
+    # rustling/__init__.py and pycantonese/__init__.py call importlib.metadata.version()
+    # at import time. A pack keeps only member_prefix, so without its dist-info the
+    # frozen app died on PackageNotFoundError before segmenting a word.
+    source = Path(__import__(component.import_name).__file__).read_text(encoding="utf-8")
+    assert f'version("{component.import_name}")' in source
+    assert component.per_platform is not None
+    for spec in component.per_platform.values():
+        name, version = spec.url.rsplit("/", 1)[1].split("-")[:2]
+        # The extension modules live INSIDE the package; the dist-info is the only root member.
+        assert spec.root_members == (f"{name}-{version}.dist-info/",)
 
 
 def test_the_macos_x86_64_floor_is_read_off_the_tag():
