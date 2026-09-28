@@ -39,8 +39,22 @@ __all__ = ["build_profile"]
 RO_SMOKE_SENTENCE = "Studentul a citit o carte interesantă ieri."
 RO_EXTRA_CARD_FIELDS = (POS_FIELD, NOUN_GENDER_FIELD)
 RO_CARD_FIELDS = spaced_card_fields(RO_EXTRA_CARD_FIELDS)
+
+
+class RomanianDictKeys(CasefoldDictKeys):
+    """The Latin key fold, whose form lookup also matches the reading column.
+
+    wty-ro-en keys a form row without diacritics and stores the real spelling as its reading
+    (``lasa`` / ``lasă`` -> ``lăsa``, ``mananca`` / ``mănâncă`` -> ``mânca``), so an exact-term read of
+    ``lasă`` finds nothing. ``storage.term_rows`` then matches the reading as well, as the definition
+    lookup does. Its lemma rows carry no reading, so a reading match is only ever a form row.
+    """
+
+    term_rows_match_reading = True
+
+
 #: R35: the cedilla map runs inside the key fold, at import and at query alike.
-RO_KEYS = CasefoldDictKeys(extra_fold=ro_fold_cedilla)
+RO_KEYS = RomanianDictKeys(extra_fold=ro_fold_cedilla)
 
 RO_AUDIO = AudioDefaults(
     gtts_lang="ro",

@@ -26,7 +26,7 @@ from anki_miner.services.subtitle_parser import SubtitleParserService
 #: languages wired to the form-of front repair (``_spaced/form_of.py``). Named, so the sweep below
 #: stays a real assertion for every other language rather than a list someone can edit away.
 FORM_LOOKUP_READERS = frozenset(
-    {"he", "de", "nl", "sv", "nb", "da", "pl", "lt", "fr", "it", "fi", "hu", "hr", "sl", "tr", "pt", "el", "ar"}
+    {"he", "de", "nl", "sv", "nb", "da", "pl", "lt", "fr", "it", "ro", "fi", "hu", "hr", "sl", "tr", "pt", "el", "ar"}
 )
 
 

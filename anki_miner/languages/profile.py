@@ -118,6 +118,11 @@ class DictKeyFolding(Protocol):
     being defined (``TokenizedWord.pos``; ``None`` with no token in hand).
     ``ZhDictKeyFolding`` ranks by content alone; ``CasefoldDictKeys`` ranks the
     wty rows of the token's part of speech first and proper-name rows last.
+
+    One OPTIONAL flag, probed the same way: ``term_rows_match_reading = True``
+    makes the form lookup (``storage.term_rows``) match the reading column as
+    well as the term (``RomanianDictKeys``: wty-ro-en spells its form rows in
+    the reading).
     """
 
     def fold_term(self, s: str) -> str: ...
