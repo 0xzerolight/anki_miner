@@ -18,7 +18,7 @@ import pytest
 from anki_miner.config.config import AnkiMinerConfig
 from anki_miner.languages import registry
 from anki_miner.languages.registry import get_profile
-from anki_miner.languages.switching import LANGUAGE_SCOPED_FIELDS, switch_language
+from anki_miner.languages.switching import LANGUAGE_SCOPED_FIELDS, blank_scoped_defaults, switch_language
 
 #: Registered with a stub builder in `_register`; no real zh profile exists yet.
 STUB_CODE = "zh"
@@ -28,6 +28,8 @@ def _sentinel_for(value: object) -> object:
     """A value of the same shape as `value` that can never equal the ja one."""
     if isinstance(value, bool):
         return not value
+    if isinstance(value, int):
+        return value + 1
     if isinstance(value, str):
         return "__stub__"
     if isinstance(value, tuple):
@@ -255,3 +257,44 @@ def test_same_code_is_a_no_op(monkeypatch):
 def test_unknown_code_raises_valueerror():
     with pytest.raises(ValueError):
         switch_language(AnkiMinerConfig(), "qq")
+
+
+#: The frequency band: its ranks index the language's own frequency_chain, so it is scoped with it.
+BAND = ("min_frequency_rank", "max_frequency_rank", "frequency_keep_unranked")
+
+
+def _band(config: AnkiMinerConfig) -> tuple[object, ...]:
+    return tuple(getattr(config, name) for name in BAND)
+
+
+def test_a_first_visit_opens_the_frequency_band_and_the_ja_band_comes_back():
+    """A ja band ("skip the 3,000 commonest") never reaches a first de visit, where it would
+    drop German's commonest words; it is parked with ja and restored on the way back."""
+    ja = dataclasses.replace(
+        AnkiMinerConfig(), min_frequency_rank=3000, max_frequency_rank=10000, frequency_keep_unranked=True
+    )
+
+    de = switch_language(ja, "de")
+
+    assert _band(de) == (0, 0, False)
+    assert _band(switch_language(de, "ja")) == (3000, 10000, True)
+
+
+def test_the_blank_band_is_an_open_band():
+    blank = blank_scoped_defaults()
+    assert [(blank[name], type(blank[name])) for name in BAND] == [(0, int), (0, int), (False, bool)]
+
+
+def test_the_first_switch_after_the_band_became_scoped_gives_old_snapshots_the_shared_band():
+    """Snapshots parked before the band was scoped already carry the Stage S regex trio but no band.
+    The band was global, so the first switch completes each of them with the live band once, even
+    though another formerly global name is already present; a later change reaches no one else."""
+    old = {name: getattr(AnkiMinerConfig(), name) for name in LANGUAGE_SCOPED_FIELDS if name not in BAND}
+    on_ja = dataclasses.replace(AnkiMinerConfig(), min_frequency_rank=3000, language_stash={"de": old, "fr": old})
+
+    on_de = switch_language(on_ja, "de")
+    assert on_de.min_frequency_rank == 3000
+
+    on_fr = switch_language(dataclasses.replace(on_de, min_frequency_rank=500), "fr")
+    assert on_fr.min_frequency_rank == 3000
+    assert switch_language(on_fr, "it").min_frequency_rank == 0  # a first visit still opens the band

@@ -71,6 +71,10 @@ NORDIC_LINES = [
     ("-5 grader ute.", "-5 grader ute."),
     ("Det var -10 igår. -20 i natt.", "Det var -10 igår. -20 i natt."),
     ("Ett e-postmeddelande.", "Ett e-postmeddelande."),
+    # Spanish opens a question or an exclamation with ¿ / ¡, right after the unspaced dash.
+    ("-¿Vienes a cenar?", "¿Vienes a cenar?"),
+    ("-No puedo. -¡Qué pena!", "No puedo. ¡Qué pena!"),
+    ("- ¿Vienes?", "¿Vienes?"),
 ]
 
 
@@ -86,3 +90,27 @@ def test_the_nordic_dash_is_the_shipped_norwegian_pattern():
     assert NB_DIALOGUE_DASH_PATTERN is script.NORDIC_DIALOGUE_DASH_PATTERN
     assert NB_SUBTITLE_REGEX.endswith(script.NORDIC_DIALOGUE_DASH_PATTERN)
     compile_subtitle_regex_filter(script.NORDIC_DIALOGUE_DASH_PATTERN, "")  # ReDoS screen
+
+
+#: Two-speaker cues written with the unspaced dash (the Spanish subtitling norm; es/pt/pl/lt probes).
+UNSPACED_DASH_CUES = [
+    ("es", "-¿Vienes a cenar? -No puedo, tengo que trabajar.", "¿Vienes a cenar? No puedo, tengo que trabajar."),
+    ("pt", "-Você vem jantar? -Não posso.", "Você vem jantar? Não posso."),
+    ("pl", "-Chodź tutaj! -Już idę.", "Chodź tutaj! Już idę."),
+    ("lt", "-Eik čia. -Jau einu.", "Eik čia. Jau einu."),
+]
+
+
+@pytest.mark.parametrize(("code", "cue", "expected"), UNSPACED_DASH_CUES)
+def test_the_first_visit_filter_strips_an_unspaced_dialogue_dash(code, cue, expected):
+    from anki_miner.languages.registry import get_profile
+
+    pattern = get_profile(code).scoped_defaults["subtitle_regex_filter"]
+    assert isinstance(pattern, str)
+    assert compile_subtitle_regex_filter(pattern, "").sub("", cue) == expected
+
+
+def test_the_latin_unspaced_dash_default_swaps_only_the_dash_rule():
+    parts = (*PARTS[:-1], script.NORDIC_DIALOGUE_DASH_PATTERN)
+    assert "|".join(parts) == script.LATIN_UNSPACED_DASH_SUBTITLE_REGEX
+    compile_subtitle_regex_filter(script.LATIN_UNSPACED_DASH_SUBTITLE_REGEX, "")  # ReDoS screen
