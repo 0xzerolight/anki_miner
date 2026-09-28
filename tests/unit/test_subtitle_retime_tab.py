@@ -466,6 +466,24 @@ def test_pair_preview_lists_matches_and_unmatched(qtbot, tmp_path):
     assert "2" in tab.pair_preview_label.text()
 
 
+def test_retime_takes_no_smi(qtbot, tmp_path):
+    """Mining reads SAMI, but Retime writes its output in the input's format and pysubs2 cannot write SAMI."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    video_dir, sub_dir = _folder_fixture(tmp_path)
+    (sub_dir / "jp 03.smi").touch()
+
+    accepted, _reason = tab.subtitle_file_selector._drop_validator(sub_dir / "jp 03.smi")
+    assert not accepted
+    assert tab.subtitle_file_selector._drop_validator(sub_dir / "jp 01.srt")[0]
+
+    tab._on_folder_mode()
+    tab.video_folder_selector.set_path(str(video_dir))
+    tab.subtitle_folder_selector.set_path(str(sub_dir))
+    qtbot.waitUntil(lambda: tab.pair_preview.count() == 3, timeout=3000)
+    items = [tab.pair_preview.item(i).text() for i in range(tab.pair_preview.count())]
+    assert any("Show - 03.mkv" in t and "no matching subtitle" in t for t in items)
+
+
 def test_pair_preview_omits_appledouble_sidecars(qtbot, tmp_path):
     """macOS ``._`` sidecars keep the video extension; they are not listed as
     unmatched videos (and do not pair)."""

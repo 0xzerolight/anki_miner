@@ -5,9 +5,13 @@ import threading
 
 import pytest
 
+from anki_miner.config import AnkiMinerConfig
 from anki_miner.languages import tagger_provider
 from anki_miner.languages.ko import tokenizer as ko_tokenizer
+from anki_miner.languages.registry import get_profile
+from anki_miner.languages.switching import switch_language
 from anki_miner.languages.token import LanguageToken
+from anki_miner.models.reading import ReadingUnit
 from anki_miner.services.tagger import LockedTagger
 
 
@@ -116,6 +120,94 @@ def test_tagger_provider_resolves_ko_through_the_generic_module_branch(monkeypat
 
 def test_tagger_provider_carries_no_korean_specific_code():
     assert '"ko"' not in inspect.getsource(tagger_provider)
+
+
+def test_factory_closes_the_bilingual_line_and_ellipsis_guard_seams(monkeypatch):
+    """The two seams the zh factory closes, asserted on the kwargs the service receives."""
+    from anki_miner.services import subtitle_parser
+
+    seen: dict[str, object] = {}
+    monkeypatch.setattr(subtitle_parser, "SubtitleParserService", lambda config, **kwargs: seen.update(kwargs))
+    get_profile("ko").create_parser(switch_language(AnkiMinerConfig(), "ko"))
+    assert seen["has_target_script"] == get_profile("ko").script.contains_target_script
+    assert seen["ellipsis_fragment_guard"] is False
+
+
+@pytest.fixture(scope="module")
+def ko_parser():
+    # Module-scoped: tests/conftest.py clears the tagger cache per test, and one kiwi build is enough.
+    pytest.importorskip("kiwipiepy")
+    return get_profile("ko").create_parser(switch_language(AnkiMinerConfig(), "ko"))
+
+
+def test_a_bilingual_cue_keeps_its_english_line_out_of_the_sentence(ko_parser, tmp_path):
+    cues = ["어디 가?\nWhere are you going?", "배고파.\nI'm hungry."]
+    srt = tmp_path / "bilingual.srt"
+    srt.write_text(
+        "".join(f"{i}\n00:00:0{i},000 --> 00:00:0{i},900\n{cue}\n\n" for i, cue in enumerate(cues, 1)),
+        encoding="utf-8",
+    )
+    assert {w.sentence for w in ko_parser.parse_subtitle_file(srt)} == {"어디 가?", "배고파."}
+
+
+@pytest.mark.parametrize(
+    ("line", "word"),
+    [("눈… 눈이 와…", "오다"), ("물… 물 좀 줘…", "주다"), ("돈…돈이 없어…", "돈")],
+)
+def test_a_stutter_line_keeps_its_one_syllable_word(ko_parser, line, word):
+    """와 = 오다 and 줘 = 주다 are one syllable; the Japanese truncation guard read them as severed fragments."""
+    words, _index, _counts = ko_parser.parse_text_units([ReadingUnit(text=line, index=0, location_label="t")], False)
+    assert word in {w.mined_form for w in words}
+
+
+#: A Korean fansub SAMI file, cp949 like most of them: each cue is cleared by an
+#: ``&nbsp;`` SYNC, the time the cue stops showing.
+_SMI_HEAD = """<SAMI><HEAD><STYLE TYPE="text/css"><!--
+.KRCC { Name:Korean; lang:ko-KR; SAMIType:CC; }
+.ENCC { Name:English; lang:en-US; SAMIType:CC; }
+--></STYLE></HEAD><BODY>
+"""
+SMI = _SMI_HEAD + """<SYNC Start=1000><P Class=KRCC>어제 시장에서 사과를 샀어요.
+<SYNC Start=3500><P Class=KRCC>&nbsp;
+<SYNC Start=4000><P Class=KRCC>날씨가 추워서<br>집에 있었어요.
+<SYNC Start=6500><P Class=KRCC>&nbsp;
+</BODY></SAMI>"""
+#: The bilingual shape: one SYNC per language class at each time.
+BILINGUAL_SMI = _SMI_HEAD + """<SYNC Start=1000><P Class=KRCC>어제 시장에서 사과를 샀어.
+<SYNC Start=1000><P Class=ENCC>I bought apples at the market yesterday.
+<SYNC Start=3000><P Class=KRCC>&nbsp;
+<SYNC Start=3000><P Class=ENCC>&nbsp;
+<SYNC Start=4000><P Class=KRCC>날씨가 너무 춥다.
+<SYNC Start=4000><P Class=ENCC>The weather is so cold.
+<SYNC Start=6000><P Class=KRCC>&nbsp;
+<SYNC Start=6000><P Class=ENCC>&nbsp;
+</BODY></SAMI>"""
+
+
+def _smi(tmp_path, text: str):
+    path = tmp_path / "ep01.smi"
+    path.write_bytes(text.encode("cp949"))
+    return path
+
+
+def test_a_smi_cue_lasts_until_the_sync_that_clears_it(ko_parser, tmp_path):
+    """pysubs2 guesses a SAMI end from the text length (2.57 s here), which cut the sentence audio short."""
+    assert ko_parser.parse_raw_entries(_smi(tmp_path, SMI)) == [
+        (1.0, 3.5, "어제 시장에서 사과를 샀어요."),
+        (4.0, 6.5, "날씨가 추워서 집에 있었어요."),
+    ]
+
+
+def test_a_bilingual_smi_mines_each_korean_cue_for_its_shown_time(ko_parser, tmp_path):
+    """Each class is its own SYNC at one time; per-SYNC events gave the Korean cue zero length."""
+    path = _smi(tmp_path, BILINGUAL_SMI)
+    assert ko_parser.parse_raw_entries(path) == [
+        (1.0, 3.0, "어제 시장에서 사과를 샀어."),
+        (4.0, 6.0, "날씨가 너무 춥다."),
+    ]
+    words = ko_parser.parse_subtitle_file(path)
+    assert {w.mined_form for w in words} >= {"시장", "사과", "날씨", "춥다"}
+    assert all(w.end_time > w.start_time for w in words)
 
 
 @pytest.mark.parametrize("text", ["학생이 밥을 먹었다."])
