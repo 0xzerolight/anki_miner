@@ -18,10 +18,11 @@ from pathlib import Path
 import pytest
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.languages._spaced.form_of import FormOfLemmaPass
+from anki_miner.languages._spaced.form_of import FormOfLemmaPass, OrderedPasses
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.switching import switch_language
-from anki_miner.languages.tr.morphology import tr_row_targets
+from anki_miner.languages.token import LanguageToken
+from anki_miner.languages.tr.morphology import HeadwordPosPass, tr_row_targets
 from anki_miner.models.reading import ReadingUnit
 from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip
 from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
@@ -58,6 +59,11 @@ ROWS = [
     _lemma("Evin", "name", "a female given name"),
     _form("evin", "ev", "ev"),
     _lemma("ev", "n", "house, home"),
+    _lemma("çocuk", "n", "child"),
+    _lemma("dakika", "n", "minute (unit of time)"),
+    _lemma("güzel", "adj", "beautiful"),
+    _lemma("güzel", "n", "beauty"),
+    _lemma("Güzel", "name", "a female given name"),
 ]
 
 
@@ -105,10 +111,12 @@ def _mined(parser, line: str) -> dict[str, tuple[str, str | None]]:
     return {word.surface: (word.mined_form, word.pos) for word in words}
 
 
-def test_the_parser_repairs_fronts_lemma_rows_first_and_reads_names_as_no_headword(parser):
+def test_the_parser_labels_then_repairs_fronts_lemma_rows_first_and_reads_names_as_no_headword(parser):
     injected = parser._token_post_pass  # noqa: SLF001
-    assert isinstance(injected, FormOfLemmaPass)
-    assert injected._surface_first is False and injected._row_targets is tr_row_targets  # noqa: SLF001
+    assert isinstance(injected, OrderedPasses)
+    label, repair = injected._passes  # noqa: SLF001
+    assert isinstance(label, HeadwordPosPass) and isinstance(repair, FormOfLemmaPass)
+    assert repair._surface_first is False and repair._row_targets is tr_row_targets  # noqa: SLF001
 
 
 @pytest.mark.parametrize(
@@ -131,3 +139,79 @@ def test_a_form_of_two_headwords_keeps_the_tagger_s_front(parser):
 def test_a_spelling_without_the_circumflex_is_a_headword_not_a_form(parser):
     """``hikaye`` reaches ``hikâye``'s rows through the key fold; the front keeps the subtitle's spelling."""
     assert _mined(parser, "Bana bir hikaye anlat.")["hikaye"] == ("hikaye", "NOUN")
+
+
+# --------------------------------------------------------------------------
+# The part of speech the dictionary gives
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("line", "surface", "front"),
+    [
+        ("Çocuk uyuyor.", "Çocuk", ("çocuk", "NOUN")),  # zeyrek ranks the zero-morpheme Adj reading first
+        ("Bir dakika bekle.", "dakika", ("dakika", "NOUN")),  # ... and Adv here
+        ("Pekala, gidelim.", "Pekala", ("pekala", "ADV")),  # pekâlâ's rows, through the circumflex fold
+        ("Çok güzel.", "güzel", ("güzel", "ADJ")),  # an adj row supports the pick
+    ],
+)
+def test_the_pos_is_the_one_the_lemma_s_headword_rows_give(parser, line, surface, front):
+    assert _mined(parser, line)[surface] == front
+
+
+class Rows:
+    """``FormLookup`` over a few lemmas' ``(content, tags)`` rows; records every batch it is asked."""
+
+    def __init__(self, **rows: str) -> None:
+        self._rows = {
+            lemma: [("<li>a sense</li>", tags) for tags in all_tags.split(",")] for lemma, all_tags in rows.items()
+        }
+        self.calls: list[list[str]] = []
+
+    def __call__(self, terms: list[str]) -> dict[str, list[tuple[str, str]]]:
+        self.calls.append(list(terms))
+        return {term: self._rows[term] for term in terms if term in self._rows}
+
+
+def _labelled(forms: Rows | None, lemma: str, pos1: str, *lemma_pos: str, label: HeadwordPosPass | None = None) -> str:
+    token = LanguageToken(lemma, pos1, lemma=lemma)
+    token.feature.lemma_pos = lemma_pos
+    (token,) = (label or HeadwordPosPass())([token], None, forms)
+    return token.feature.pos1
+
+
+def test_a_pick_the_rows_do_not_support_takes_a_reading_they_do():
+    assert _labelled(Rows(çocuk="n"), "çocuk", "ADJ", "ADJ", "NOUN") == "NOUN"
+    assert _labelled(Rows(dakika="n"), "dakika", "ADV", "ADV", "NOUN") == "NOUN"
+    assert _labelled(Rows(hayır="intj,n,name"), "hayır", "ADJ", "ADJ", "ADV", "NOUN", "INTJ") == "NOUN"
+
+
+def test_zeyrek_s_order_picks_between_two_readings_the_rows_support():
+    """wty-tr-en ``artık`` opens on the noun "remnant"; subtitles mean the adverb "anymore", which zeyrek ranks first."""
+    assert _labelled(Rows(artık="n,adv"), "artık", "ADJ", "ADJ", "ADV", "NOUN") == "ADV"
+
+
+def test_a_pick_the_rows_support_keeps_its_label():
+    assert _labelled(Rows(güzel="adj,n,name"), "güzel", "ADJ", "ADJ", "ADV", "NOUN") == "ADJ"
+
+
+def test_a_noun_pick_keeps_its_label():
+    """An inflected noun wins zeyrek's count through its ending: ``zorunda`` is ``zor`` + possessive + locative."""
+    assert _labelled(Rows(zor="adj"), "zor", "NOUN", "NOUN", "ADJ") == "NOUN"
+
+
+def test_form_and_name_rows_support_no_label_and_only_mined_classes_trade():
+    assert _labelled(Rows(sevgili="name,non-lemma"), "sevgili", "ADJ", "ADJ", "NOUN") == "ADJ"
+    assert _labelled(Rows(aman="intj"), "aman", "ADJ", "ADJ", "INTJ") == "ADJ"  # INTJ is never mined
+
+
+def test_nothing_is_read_without_a_dictionary_or_a_second_reading():
+    assert _labelled(None, "çocuk", "ADJ", "ADJ", "NOUN") == "ADJ"
+    forms = Rows(kitap="n")
+    assert _labelled(forms, "kitap", "NOUN", "NOUN") == "NOUN" and forms.calls == []
+
+
+def test_a_lemma_is_read_once_per_pass():
+    forms, label = Rows(çocuk="n"), HeadwordPosPass()
+    assert [_labelled(forms, "çocuk", "ADJ", "ADJ", "NOUN", label=label) for _ in range(2)] == ["NOUN", "NOUN"]
+    assert forms.calls == [["çocuk"]]
