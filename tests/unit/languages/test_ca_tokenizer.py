@@ -9,7 +9,12 @@ from types import SimpleNamespace
 import pytest
 
 from anki_miner.languages._spaced.tokenizer import load_spacy_model
-from anki_miner.languages.ca.morphology import CA_MODEL_PACKAGE, install_lemma_correction
+from anki_miner.languages.ca.morphology import (
+    CA_MODEL_PACKAGE,
+    ENCLITIC_HOST_PIPE,
+    install_lemma_correction,
+    verb_before_enclitic,
+)
 from anki_miner.languages.ca.tokenizer import build_tagger
 from anki_miner.services.tagger import LockedTagger
 
@@ -90,7 +95,8 @@ def test_the_raw_model_matches_the_recorded_pipeline():
 
 def test_build_tagger_is_locked_and_corrects_the_probe_word(catalan):
     assert isinstance(catalan, LockedTagger)
-    assert catalan.nlp.pipe_names == PIPELINE["pipeline"]
+    *tagging, lemmatizer = PIPELINE["pipeline"]
+    assert catalan.nlp.pipe_names == [*tagging, ENCLITIC_HOST_PIPE, lemmatizer]  # the host rule feeds the lemmatizer
     tokens = {t.surface: t for t in catalan(PIPELINE["sentence"])}
     assert (tokens["llibres"].feature.pos1, tokens["llibres"].feature.lemma) == ("NOUN", "llibre")
     assert tokens["llibres"].morph == "Gender=Masc|Number=Plur"  # a LanguageToken slot (Stage S core)
@@ -155,6 +161,49 @@ def test_the_pronom_feble_infix_is_spacy_catalan_evidence():
     clitics += ("-nos", "-te", "-vos", "-se", "-hi", "-ne", "-ho", "-l'", "-m'", "-t'", "-n'")
     for clitic in clitics:
         assert clitic in infix
+
+
+@pytest.mark.parametrize(
+    ("line", "host", "lemma"),
+    [
+        # IBER-04: the model tags a cue-initial host PROPN (dropped) and a mid-line one NOUN (dona 'woman')
+        ("Dona'm les claus.", "Dona", "donar"),
+        ("Bé, dona'm les claus.", "dona", "donar"),
+        ("Aixeca't, que és tard.", "Aixeca", "aixecar"),
+        ("Porta-m'ho demà.", "Porta", "portar"),
+        ("Mira'm als ulls.", "Mira", "mirar"),
+        ("Calla't una estona.", "Calla", "callar"),
+        ("Truca’m demà.", "Truca", "trucar"),  # a curly apostrophe, folded in the tagging copy
+        ("Digues-me la veritat.", "Digues", "dir"),
+        ("Vés-te'n a casa.", "Vés", "anar"),
+    ],
+)
+def test_a_word_joined_to_an_enclitic_is_a_verb(catalan, line, host, lemma):
+    features = {t.surface: t.feature for t in catalan(line)}
+    assert (features[host].pos1, features[host].pos2, features[host].lemma) == ("VERB", "", lemma)
+
+
+def _doc(*tokens: tuple[str, str, str]) -> list[SimpleNamespace]:
+    """A stand-in doc: ``(text, pos, whitespace)`` per token."""
+    return [SimpleNamespace(text=text, pos_=pos, whitespace_=space) for text, pos, space in tokens]
+
+
+@pytest.mark.parametrize(
+    ("doc", "pos"),
+    [
+        (_doc(("Dona", "PROPN", ""), ("'m", "PRON", " ")), ["VERB", "PRON"]),
+        (_doc(("dona", "NOUN", ""), ("’m", "PRON", " ")), ["VERB", "PRON"]),
+        (_doc(("Porta", "ADJ", ""), ("-m'", "PRON", ""), ("ho", "PRON", " ")), ["VERB", "PRON", "PRON"]),
+        (_doc(("Te", "PROPN", ""), ("'n", "PRON", " ")), ["PROPN", "PRON"]),  # a pronoun is never a host
+        (_doc(("-vos", "NOUN", ""), ("-en", "PRON", " ")), ["NOUN", "PRON"]),  # nor is a clitic itself
+        (_doc(("casa", "NOUN", " "), ("-m'", "PRON", "")), ["NOUN", "PRON"]),  # a space joins nothing
+        (_doc(("nord", "NOUN", ""), ("-est", "NOUN", " ")), ["NOUN", "NOUN"]),  # est is no clitic
+        (_doc(("escolta", "ADP", ""), ("'m", "PRON", " ")), ["ADP", "PRON"]),  # only a nominal tag is repaired
+    ],
+)
+def test_the_host_rule_reads_the_spelling_only(doc, pos):
+    assert verb_before_enclitic(doc) is doc
+    assert [token.pos_ for token in doc] == pos
 
 
 def test_curly_apostrophes_tag_from_the_folded_copy(catalan):

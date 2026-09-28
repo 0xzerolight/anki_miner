@@ -140,3 +140,50 @@ def install_lemma_correction(nlp: Any) -> None:
         return forms
 
     lemmatizer.lemmatize = lemmatize
+
+
+#: Weak pronouns written joined to the verb before them, full and reduced: ``Porta-m'ho``, ``Dona'ns``.
+CA_ENCLITICS: frozenset[str] = frozenset(
+    {"me", "te", "se", "nos", "vos", "lo", "la", "los", "les", "li", "ho", "hi", "en", "ne"}
+    | {"m", "t", "s", "l", "n", "ns", "ls", "us"}
+)
+#: A weak pronoun is never a host: a proclitic chain is written the same way (``Te'n vas?``).
+_WEAK_PRONOUNS = CA_ENCLITICS | {"ens", "els"}
+_CLITIC_MARKS = "-'’"
+#: The tags the model gives a host it misreads: PROPN at a cue start, NOUN or ADJ mid-line.
+_MISREAD_HOST_POS = frozenset({"PROPN", "NOUN", "ADJ"})
+#: The spaCy component name ``install_enclitic_host_rule`` registers.
+ENCLITIC_HOST_PIPE = "anki_miner_ca_enclitic_host"
+
+
+def verb_before_enclitic(doc: Any) -> Any:
+    """spaCy component: a word joined to a following enclitic is a verb, by spelling (IBER-04).
+
+    ``ca_core_news_sm`` tags a cue-initial ``Dona'm`` / ``Aixeca't`` / ``Porta-m'ho`` host PROPN (never
+    mined) and a mid-line ``dona'm`` NOUN (carded ``dona`` 'woman'). Only a verb takes an enclitic, so a
+    PROPN/NOUN/ADJ token with no space after it, followed by a token that opens with ``-`` or an
+    apostrophe and is a weak pronoun, is retagged VERB before the lemmatizer reads the tag. The host must
+    not be a weak pronoun itself. pt reads its hyphen enclisis the same way (pt plan D5). A host the model
+    tags anything else (``escolta'm`` ADP) is left alone. ``tag_`` moves with ``pos_``: the model has no
+    tagger, so ``tag_`` copies ``pos_`` everywhere and ``pos2`` stays dead (C5).
+    """
+    for index in range(len(doc) - 1):
+        host, clitic = doc[index], doc[index + 1]
+        if (
+            host.pos_ in _MISREAD_HOST_POS
+            and not host.whitespace_
+            and host.text.strip(_CLITIC_MARKS).lower() not in _WEAK_PRONOUNS
+            and clitic.text[:1] in _CLITIC_MARKS
+            and clitic.text.strip(_CLITIC_MARKS).lower() in CA_ENCLITICS
+        ):
+            host.pos_ = host.tag_ = "VERB"
+    return doc
+
+
+def install_enclitic_host_rule(nlp: Any) -> None:
+    """Put ``verb_before_enclitic`` into the pipeline just before the lemmatizer (once per loaded pipeline)."""
+    from spacy.language import Language
+
+    if not Language.has_factory(ENCLITIC_HOST_PIPE):
+        Language.component(ENCLITIC_HOST_PIPE, func=verb_before_enclitic)
+    nlp.add_pipe(ENCLITIC_HOST_PIPE, before="lemmatizer")
