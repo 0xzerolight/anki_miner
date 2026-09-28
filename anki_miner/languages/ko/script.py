@@ -12,6 +12,7 @@ a hangul-only gate would silently drop them.
 
 from __future__ import annotations
 
+import re
 import unicodedata
 
 from anki_miner.languages.profile import ScriptFilterOption, SentenceRules
@@ -107,6 +108,16 @@ class KoreanScript:
         return any(is_hangul(c) or is_hanja(c) for c in text)
 
 
+#: A KRDICT row that only redirects (카톨릭 → 가톨릭, 팔-(팔고, 팔아…)→ 팔다) carries
+#: the arrow and no English gloss.
+_POINTER = "→"
+_ENGLISH_GLOSS = 'lang="en"'
+#: The row's headword as rendered: its first bold Korean span.
+_HEADWORD = re.compile(r'lang="ko" style="font-weight: bold">([^<]*)<')
+#: KRDICT's beginner grade (초급), one tag token.
+_BASIC_GRADE = "⭐⭐⭐"
+
+
 class KoreanDictKeys:
     """DictKeyFolding for Korean: NFC only, Rule-A-only homograph mask.
 
@@ -132,3 +143,27 @@ class KoreanDictKeys:
             return [True] * len(rows)
         exact_contents = {content for (_, content), ex in zip(rows, term_exact, strict=True) if ex}
         return [ex or content in exact_contents for (_, content), ex in zip(rows, term_exact, strict=True)]
+
+    def sense_rank(self, content: str, tags: str, pos: str | None) -> int:
+        """Where a KRDICT row sorts among the rows sharing its term/reading priority.
+
+        KRDICT gives every row score 0 and sequence 1, so without this the
+        homograph number orders them: 먹다 1 "be deaf" opened the card before
+        먹다 2 "eat", the -하다 suffix before the verb 하다, and 팔's stem pointer
+        (팔- → 팔다) before "arm" - 22 of 197 and 19 of 151 cards on two
+        dialogue corpora. ``3`` for a pointer row (an arrow and no English
+        gloss); ``2`` for an affix or ending row, whose bold headword starts or
+        ends with a hyphen (-하다, 맨-); ``0`` for a row graded ⭐⭐⭐, KRDICT's
+        beginner vocabulary, a tag of its own beside the part of speech; ``1``
+        for every other row. Nothing is dropped, and storage keeps the index
+        order inside each rank. ``pos`` is part of the one cross-language
+        signature and unused: KRDICT's part-of-speech tags are English words
+        (Verb, Noun), not the tokenizer's Sejong tags.
+        """
+        if _POINTER in content and _ENGLISH_GLOSS not in content:
+            return 3
+        match = _HEADWORD.search(content)
+        headword = match.group(1) if match else ""
+        if headword.startswith("-") or headword.endswith("-"):
+            return 2
+        return 0 if _BASIC_GRADE in tags.split(" ") else 1
