@@ -111,5 +111,5 @@ def adjd_as_adjective(tokens: list[LanguageToken]) -> list[LanguageToken]:
 DE_OPENERS: frozenset[str] = frozenset("([{„‚»›")
 DE_CLOSERS: frozenset[str] = frozenset(")]}“‘«‹")
 
-#: The article in the gender field (A.3: gender is the first German card field).
-DE_GENDER_LABELS: Mapping[str, str] = MappingProxyType({"masc": "der", "fem": "die", "neut": "das"})
+#: The article in the gender field (A.3: gender is the first German card field); a plural-only noun takes ``die``.
+DE_GENDER_LABELS: Mapping[str, str] = MappingProxyType({"masc": "der", "fem": "die", "neut": "das", "plural": "die"})

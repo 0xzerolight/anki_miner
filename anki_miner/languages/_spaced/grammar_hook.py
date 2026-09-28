@@ -20,7 +20,8 @@ on odd HTML; ``{}`` for a non-noun.
 Aspect (``aspect_pair``, Ruling S1) is the verb path of the same hook: the same
 three rules in the same ``sources`` order — ``morph`` ``Aspect=`` unless the
 first block's aspect chips exclude it; exactly one aspect chip (wty unions every
-row of a term, so both chips can be two lexemes: sh ``kupiti``); the head line's
+row of a term, so both chips can be two lexemes: sh ``kupiti``; OpenRussian's
+uncategorised chips are read by title, ``both`` naming the two); the head line's
 closing aspect word(s) (``čìtati impf (…``, ``impf or pf``). The partner is the
 head line's opposite-aspect clause (``perfective pročìtati``), qualifiers
 dropped, kept verbatim unless the language passes ``partner_fold``: the D2 mark
@@ -52,7 +53,8 @@ _EMPTY: Mapping[str, str] = MappingProxyType({})
 
 _MORPH_GENDER = {"Masc": "masc", "Fem": "fem", "Neut": "neut", "Com": "common"}
 _CHIP_GENDER = {"masculine": "masc", "feminine": "fem", "neuter": "neut", "common": "common"}
-_HEAD_GENDER = {"m": "masc", "f": "fem", "n": "neut", "c": "common"}
+#: ``pl`` closes a plural-only noun's head (``Eltern pl (plural only)``); a language names its article under ``plural``.
+_HEAD_GENDER = {"m": "masc", "f": "fem", "n": "neut", "c": "common", "pl": "plural"}
 
 #: A masculine animacy qualifier a wty head line puts after the gender letter (pl ``stół m inan``, ``pies m animal``).
 _HEAD_ANIMACY = {"pers": "pers", "anim": "anim", "animal": "anim", "inan": "inan"}
@@ -71,6 +73,9 @@ _OPPOSITE_ASPECT = {"impf": "pf", "pf": "impf"}
 #: The English word a wty head line names an aspect with: ``(…, perfective pročìtati)``.
 _HEAD_ASPECT_WORD = {"impf": "imperfective", "pf": "perfective"}
 _ASPECT_CHIP_RE = re.compile(r'<span class="gloss-tag" data-category="aspect"[^>]*>([^<]+)</span>')
+#: OpenRussian files its aspect tags (``pf``/``ipf``/``both``) with no category; the title names the aspect.
+_TITLE_ASPECTS = {"perfective": ("pf",), "imperfective": ("impf",), "perfective and imperfective": ("impf", "pf")}
+_TITLE_ASPECT_CHIP_RE = re.compile(r'<span class="gloss-tag" data-category="" title="([^"]+)"')
 _QUALIFIER_RE = re.compile(r"\([^()]*\)")
 #: pl motion verbs qualify the partner: ``imperfective determinate czytać``.
 _PARTNER_LEAD_WORDS = frozenset({"determinate", "indeterminate"})
@@ -248,7 +253,8 @@ def _partner(head: str, aspect: str, fold: Callable[[str], str] | None) -> tuple
 class GrammarTagHook:
     """One hook for ``noun_gender`` / ``noun_article`` / ``noun_plural`` (R17 — no per-field classes).
 
-    ``article_map`` and ``gender_labels`` are keyed by ``masc fem neut common``.
+    ``article_map`` and ``gender_labels`` are keyed by ``masc fem neut common``
+    and ``plural`` (a plural-only noun); a missing key prints nothing.
     ``article_rule(gender, headword)`` (headword = the card front) covers
     articles that depend on the word's spelling (it ``lo``/``l'``, fr ``l'``);
     it wins over ``article_map`` and ``""`` omits the field.
@@ -356,7 +362,9 @@ class GrammarTagHook:
 
     def _aspect(self, word: Any, block: str, head: str) -> str | None:
         """The verb's aspect from the first source that answers, mirroring ``_gender``."""
-        chips = frozenset(_CHIP_ASPECT[name] for name in _ASPECT_CHIP_RE.findall(block) if name in _CHIP_ASPECT)
+        chips = frozenset(_CHIP_ASPECT[name] for name in _ASPECT_CHIP_RE.findall(block) if name in _CHIP_ASPECT) | {
+            aspect for title in _TITLE_ASPECT_CHIP_RE.findall(block) for aspect in _TITLE_ASPECTS.get(title, ())
+        }
         for source in self._sources:
             if source == "morph":
                 found = _morph_values(str(getattr(word, "morph", "") or ""), feature="Aspect", table=_MORPH_ASPECT)
