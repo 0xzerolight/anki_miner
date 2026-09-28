@@ -9,6 +9,7 @@ is 34 MB.
 from __future__ import annotations
 
 import json
+import unicodedata
 from pathlib import Path
 
 import pytest
@@ -98,3 +99,15 @@ def test_a_particle_is_tagged_part_wherever_the_engine_puts_it(tagger, line, par
     # a dictionary headword, so any content tag turned it into a card.
     tags = {t.feature.lemma: t.feature.pos1 for t in tagger.parse(line)}
     assert tags[particle] == "PART"
+
+
+@pytest.mark.parametrize(
+    "line", ["前面塞緊車，行告士打道好唔好？", "我唔係唔覆，係真係好忙咋。", "快啲啦，戲就開場喇。"]
+)
+def test_no_token_spans_a_punctuation_mark(tagger, line):
+    # The segmenter only strips punctuation off a word's ends, so a whole-line
+    # segment glued 塞緊車，行告士打道 into one dictionary miss.
+    surfaces = [t.surface for t in tagger.parse(line)]
+    assert "，" in surfaces
+    for surface in surfaces:
+        assert len(surface) == 1 or not any(unicodedata.category(char).startswith("P") for char in surface), surface
