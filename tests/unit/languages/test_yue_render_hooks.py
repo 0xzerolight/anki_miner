@@ -11,7 +11,7 @@ import pytest
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.languages.yue.reading import YueReadingSupport, jyutping_syllables, word_jyutping
-from anki_miner.languages.yue.render import _TONE_COLORS, YUE_RENDER_HOOKS, YueJyutpingHook
+from anki_miner.languages.yue.render import _TONE_COLORS, YUE_RENDER_HOOKS, YueJyutpingHook, YueMeasureWordHook
 from tests.unit.languages.test_zh_render import CARD_BACKGROUNDS, MIN_CONTRAST, wcag_contrast
 
 FIXTURE = Path(__file__).parents[2] / "fixtures" / "yue" / "jyutping.jsonl"
@@ -63,12 +63,37 @@ def test_the_hook_emits_nothing_for_a_word_with_no_reading():
     assert YueJyutpingHook().render(SimpleNamespace(mined_form=""), config=config) == {}
 
 
-def test_the_measure_word_hook_is_the_zh_one_unchanged():
-    from anki_miner.languages.zh.render import ZhMeasureWordHook
-
-    assert [type(hook) for hook in YUE_RENDER_HOOKS] == [ZhMeasureWordHook, YueJyutpingHook]
+def test_the_measure_word_hook_passes_the_zh_classifier_through():
+    assert [type(hook) for hook in YUE_RENDER_HOOKS] == [YueMeasureWordHook, YueJyutpingHook]
     word = SimpleNamespace(definition_html="to watch/CL:套[tou3]", mined_form="戲")
     assert YUE_RENDER_HOOKS[0].render(word, config=AnkiMinerConfig()) == {"measure_word": "套"}
+
+
+@pytest.mark.parametrize(
+    ("front", "gloss", "expected"),
+    [
+        ("公司", "company; CL:家[jiā],個|个[gè]", "間"),
+        ("電腦", "computer; CL:臺|台[tái]", "部"),
+        ("電視", "television; CL:台[tái]", "部"),
+    ],
+)
+def test_the_mandarin_only_classifiers_become_the_cantonese_ones(front, gloss, expected):
+    """CC-CEDICT's CL: is Mandarin; Hong Kong counts shops and firms with 間 and machines with 部."""
+    config = replace(AnkiMinerConfig(), script_variant="")
+    word = SimpleNamespace(definition_html=gloss, mined_form=front, sentence="")
+    assert YUE_RENDER_HOOKS[0].render(word, config=config) == {"measure_word": expected}
+
+
+def test_zh_keeps_the_mandarin_classifier():
+    from anki_miner.languages.zh.render import ZH_RENDER_HOOKS
+
+    word = SimpleNamespace(definition_html="company; CL:家[jiā]", mined_form="公司", sentence="")
+    assert ZH_RENDER_HOOKS[0].render(word, config=AnkiMinerConfig()) == {"measure_word": "家"}
+
+
+def test_the_measure_word_hook_emits_nothing_without_a_classifier():
+    word = SimpleNamespace(definition_html="company", mined_form="公司", sentence="")
+    assert YUE_RENDER_HOOKS[0].render(word, config=AnkiMinerConfig()) == {}
 
 
 def test_a_two_script_classifier_takes_the_traditional_half_on_a_yue_card():

@@ -7,7 +7,8 @@ Availability is reported by ``languages.yue.availability``.
 
 **Contract with zh (R32).** This package imports from zh exactly one symbol,
 ``zh.render.ZhMeasureWordHook``, which it constructs traditional-first and
-neither subclasses nor branches on. That hook pulls ``zh.reading`` and
+neither subclasses nor branches on; ``render.YueMeasureWordHook`` wraps it to
+swap two Mandarin-only classifiers. That hook pulls ``zh.reading`` and
 ``zh.variants`` at module level, but both import their engines
 function-locally, so no jieba, pypinyin or opencc is loaded.
 ``zh.tokenizer``, ``zh.audio``, ``zh.catalog``, ``zh.pack``, ``zh.support`` and
