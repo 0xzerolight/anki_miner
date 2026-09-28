@@ -51,6 +51,21 @@ REPAIRED = [
     (("VERB", "créeme", "créeme"), ("VERB", "creer")),
     (("NOUN", "tráemelo", "tráemelo"), ("VERB", "traer")),
     (("PROPN", "Mírame", "Mírame"), ("VERB", "mirar")),
+    # IBER-03: ustedes imperatives (an accented -n stem) read by the model's verb_fin_sub_pres_plur_3 rules
+    (("NOUN", "cállense", "cállense"), ("VERB", "callar")),
+    (("VERB", "déjenme", "déjenmar"), ("VERB", "dejar")),
+    (("VERB", "muévanse", "muévansir"), ("VERB", "mover")),
+    (("NOUN", "siéntense", "siéntense"), ("VERB", "sentar")),
+    (("ADJ", "váyanse", "váyanse"), ("VERB", "ir")),
+    (("VERB", "pónganse", "póngansar"), ("VERB", "poner")),
+    (("ADJ", "dígannos", "díganno"), ("VERB", "decir")),  # a single nos clitic passes the nominal gate here
+    (("VERB", "síganme", "síganmir"), ("VERB", "seguir")),  # the rules also give ser: the first hit stands
+    (("VERB", "cuéntenme", "cuéntenme"), ("VERB", "contar")),  # the tú rule alone would read contener
+    (("NOUN", "póntelo", "póntelo"), ("VERB", "poner")),  # an accented -n stem the tú rule owns: pón + te + lo
+    # nosotros imperatives: an accented -mo stem before nos drops its s (sentemos + nos)
+    (("NOUN", "sentémonos", "sentémono"), ("VERB", "sentar")),
+    (("NOUN", "démonos", "démono"), ("VERB", "dar")),
+    (("NOUN", "vámonos", "vámono"), ("VERB", "ir")),  # vamos is ir's own form; the rules would say ver
     (("VERB", "dijiste", "dijistir"), ("VERB", "decir")),  # unique attested infinitive over every verb rule
     (("VERB", "llamaste", "llamastir"), ("VERB", "llamar")),
     (("AUX", "estábamos", "estár"), ("AUX", "estar")),
@@ -114,6 +129,8 @@ def test_real_lines_carry_repaired_fronts(tagger):
     assert _features(tagger, "Hay que levantarse temprano para trabajar.")["levantarse"] == ("VERB", "levantar")
     assert _features(tagger, "¿Qué me dijiste ayer por la tarde?")["dijiste"] == ("VERB", "decir")
     assert _features(tagger, "¿De qué te estás riendo?")["riendo"] == ("VERB", "reír")
+    assert _features(tagger, "Bueno, cállense, por favor.")["cállense"] == ("VERB", "callar")
+    assert _features(tagger, "Bueno, vámonos, por favor.")["vámonos"] == ("VERB", "ir")
 
 
 @pytest.mark.parametrize(
