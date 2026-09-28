@@ -30,9 +30,9 @@ def test_only_the_curated_core_carries_the_stopword_read_through():
     """IndoCollex is crowd-derived: its formal side never makes a word a stopword (D6).
 
     ``morphology.is_stopword`` reads :data:`ID_COLLOQUIAL_CORE` alone; the counts here are what that
-    decision costs and saves. The whole table would add 332 words nobody reviewed.
+    decision costs and saves. The whole table would add 315 words nobody reviewed.
     """
-    assert len(ID_COLLOQUIAL_CORE) == 28
+    assert len(ID_COLLOQUIAL_CORE) == 29
     assert ID_COLLOQUIAL_CORE.items() <= ID_COLLOQUIAL.items()
     assert len([key for key, formal in ID_COLLOQUIAL_CORE.items() if formal in ID_STOPWORDS]) == 23
     unreviewed = [
@@ -40,11 +40,11 @@ def test_only_the_curated_core_carries_the_stopword_read_through():
         for key, formal in ID_COLLOQUIAL.items()
         if formal in ID_STOPWORDS and key not in ID_STOPWORDS and key not in ID_COLLOQUIAL_CORE
     ]
-    assert len(unreviewed) == 332
+    assert len(unreviewed) == 315
 
 
 def test_the_colloquial_table_is_indocollex_under_the_curated_core():
-    assert len(ID_COLLOQUIAL) == 1988
+    assert len(ID_COLLOQUIAL) == 1920
     core = {
         "lo": "kamu",
         "nggak": "tidak",
@@ -67,6 +67,22 @@ def test_the_colloquial_table_is_indocollex_under_the_curated_core():
     assert all(key == key.casefold() and key.isascii() and " " not in key for key in ID_COLLOQUIAL)
     with pytest.raises(TypeError):
         ID_COLLOQUIAL["x"] = "y"  # type: ignore[index]
+
+
+def test_an_english_word_is_not_a_colloquial_spelling():
+    """IndoCollex translates English (``it`` -> ``itu``): a code-switched ``I love it`` must miss, not card ``itu``.
+
+    Only English function words go; loans (``bro``, ``app``) and chat abbreviations that stopwords-iso lists as
+    country codes (``tp`` -> ``tetapi``, ``org`` -> ``orang``) stay.
+    """
+    assert not {"it", "is", "me", "by", "in", "of", "if", "at", "up", "us", "things", "wanted"} & ID_COLLOQUIAL.keys()
+    assert (ID_COLLOQUIAL["bro"], ID_COLLOQUIAL["app"], ID_COLLOQUIAL["tp"], ID_COLLOQUIAL["org"]) == (
+        "mas",
+        "aplikasi",
+        "tetapi",
+        "orang",
+    )
+    assert ID_COLLOQUIAL["bang"] == ID_COLLOQUIAL_CORE["bang"] == "abang"  # never the backslang ngab
 
 
 def test_both_tables_record_their_source_and_notice():
