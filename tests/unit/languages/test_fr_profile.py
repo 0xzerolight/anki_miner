@@ -14,6 +14,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.config.config import _LANGUAGE_CODES
 from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages._spaced.fields import NOUN_GENDER_FIELD, POS_FIELD
+from anki_miner.languages._spaced.form_of import FormOfLemmaPass, OrderedPasses
 from anki_miner.languages._spaced.grammar_hook import GrammarTagHook
 from anki_miner.languages._spaced.keys import CasefoldDictKeys
 from anki_miner.languages._spaced.morphology import LatinLookupStrategy, SpacedMinedForm
@@ -188,7 +189,9 @@ def test_the_parser_is_the_spaced_factory_with_the_verb_repair():
     profile = get_profile("fr")
     parser = profile.create_parser(switch_language(AnkiMinerConfig(), "fr"))
     assert parser.normalize is profile.normalize
-    assert parser._compound_matcher is None and isinstance(parser._token_post_pass, FrenchVerbLemmaPass)
+    assert parser._compound_matcher is None and isinstance(parser._token_post_pass, OrderedPasses)
+    repair, verb_repair = parser._token_post_pass._passes
+    assert isinstance(repair, FormOfLemmaPass) and isinstance(verb_repair, FrenchVerbLemmaPass)
 
 
 def test_an_attested_infinitive_reaches_the_card_front():

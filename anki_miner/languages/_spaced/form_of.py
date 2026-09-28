@@ -151,6 +151,8 @@ class FormOfLemmaPass:
     * ``surface_first`` -- ``False`` reads the tagger's lemma before the surface.
     * ``accept(token, front, lemma_rows)`` -- a gate every front must pass.
     * ``same_pos`` -- only a lemma row of the token's own UPOS may make the front.
+    * ``front_pos`` -- only a lemma row of these classes may make the front, and its class is the
+      new ``pos1`` (fr/it ``{"VERB"}``: ``devrai`` -> ``devoir``, whose noun row comes first).
     * ``extra_candidates(token)`` -- more surface spellings, tried right after the surface.
     * ``row_targets(content, tags)`` -- how a row is read: ``None`` for a lemma row, else the
       targets it names (a dictionary whose form rows are tagged as lemmas, or whose targets carry
@@ -168,6 +170,7 @@ class FormOfLemmaPass:
         surface_first: bool = True,
         accept: FrontPredicate | None = None,
         same_pos: bool = False,
+        front_pos: frozenset[str] | None = None,
         extra_candidates: ExtraCandidates | None = None,
         row_targets: RowTargets = lemma_row_targets,
     ) -> None:
@@ -175,6 +178,7 @@ class FormOfLemmaPass:
         self._surface_first = surface_first
         self._accept = accept
         self._same_pos = same_pos
+        self._front_pos = front_pos
         self._extra_candidates = extra_candidates
         self._row_targets = row_targets
         self._cache: dict[str, list[Row]] = {}
@@ -240,6 +244,8 @@ class FormOfLemmaPass:
         heads = self._heads(rows.get(front, ()))
         if self._same_pos:
             heads = [row for row in heads if WTY_TAG_TO_UPOS.get(row[1].split(" ")[0]) == token.feature.pos1]
+        if self._front_pos is not None:
+            heads = [row for row in heads if WTY_TAG_TO_UPOS.get(row[1].split(" ")[0]) in self._front_pos]
         if not heads or (self._accept is not None and not self._accept(token, front, heads)):
             return None
         pos1 = WTY_TAG_TO_UPOS.get(heads[0][1].split(" ")[0], token.feature.pos1)
