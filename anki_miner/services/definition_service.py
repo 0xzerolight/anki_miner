@@ -88,6 +88,24 @@ def _word_unique_batches(
         pending = deferred
 
 
+def _token_kwargs(
+    batch: list[tuple[str, str | None]],
+    lemma_context: dict[str, str] | None,
+    pos_context: dict[str, str] | None,
+) -> dict[str, dict[str, str]]:
+    """The ``lemmas=`` / ``pos=`` kwargs a batch provider's ``lookup_many`` takes for ``batch``.
+
+    Each is passed only when some word of the batch has one, so providers and
+    stubs predating the kwarg keep working (the legacy call shape).
+    """
+    kwargs: dict[str, dict[str, str]] = {}
+    for name, context in (("lemmas", lemma_context), ("pos", pos_context)):
+        scoped = {w: context[w] for w, _ in batch if w in context} if context else {}
+        if scoped:
+            kwargs[name] = scoped
+    return kwargs
+
+
 def collect_dictionary_css_entries(config: AnkiMinerConfig) -> list[tuple[str, str, str]]:
     """Collect ``(dict_id, display_name, scoped_css)`` for every enabled
     dictionary that ships a ``styles.css``.
@@ -384,6 +402,7 @@ class DefinitionService:
         *,
         is_cancelled: Callable[[], bool] | None = None,
         lemma_context: dict[str, str] | None = None,
+        pos_context: dict[str, str] | None = None,
     ) -> list[str | None]:
         """Resolve definitions for a list of ``(word, reading | None)`` pairs,
         preserving first-hit-wins. The reading is a per-word ranking BOOST
@@ -415,6 +434,11 @@ class DefinitionService:
         the folded-reading scan keeps its own lexeme's rows instead of the
         highest-scored same-reading homograph (有/夕/結う). Absent/empty ⇒
         providers are called with the legacy shape, so older stubs keep working.
+
+        ``pos_context`` maps a lookup word to its token's part of speech,
+        forwarded the same way as ``pos=`` for the profile's row rank: a wty
+        verb opens on its verb row, not on the noun row the index put first.
+        Absent/empty ⇒ no ``pos`` kwarg, as with ``lemma_context``.
         """
         if progress_callback:
             progress_callback.on_start(
@@ -460,13 +484,8 @@ class DefinitionService:
                 for batch_index, batch in enumerate(batches):
                     if cancellation_requested():
                         break
-                    # Legacy call shape when no lemma applies to this batch, so
-                    # providers/stubs predating the ``lemmas`` kwarg keep working.
-                    batch_lemmas = (
-                        {w: lemma_context[w] for w, _ in batch if w in lemma_context} if lemma_context else {}
-                    )
                     try:
-                        hits = batch_fn(batch, lemmas=batch_lemmas) if batch_lemmas else batch_fn(batch)
+                        hits = batch_fn(batch, **_token_kwargs(batch, lemma_context, pos_context))
                     except Exception as e:
                         _log_provider_failure(provider, "lookup_many", e)
                         still_remaining.extend(batch)
@@ -968,6 +987,7 @@ class DefinitionService:
         *,
         is_cancelled: Callable[[], bool] | None = None,
         lemma_context: dict[str, str] | None = None,
+        pos_context: dict[str, str] | None = None,
     ) -> list[str | None]:
         """Collect glossary HTML for ``(word, reading | None)`` pairs, preserving
         input order. The reading is a per-word ranking BOOST threaded to each
@@ -988,6 +1008,7 @@ class DefinitionService:
         ``lemma_context`` mirrors ``get_definitions_batch``: word → token lemma,
         forwarded to batch-capable offline providers for the Rule A′ kana-front
         homograph scope; absent/empty keeps the legacy call shape.
+        ``pos_context`` (word → token part of speech) likewise mirrors it.
         """
         if progress_callback:
             progress_callback.on_start(
@@ -1030,12 +1051,8 @@ class DefinitionService:
                 for batch in _word_unique_batches(unique_pairs):
                     if cancellation_requested():
                         break
-                    # Same legacy-shape guard as get_definitions_batch.
-                    batch_lemmas = (
-                        {w: lemma_context[w] for w, _ in batch if w in lemma_context} if lemma_context else {}
-                    )
                     try:
-                        provider_results = batch_fn(batch, lemmas=batch_lemmas) if batch_lemmas else batch_fn(batch)
+                        provider_results = batch_fn(batch, **_token_kwargs(batch, lemma_context, pos_context))
                     except Exception as e:
                         _log_provider_failure(provider, "lookup_many", e)
                         break

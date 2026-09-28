@@ -337,15 +337,19 @@ def _keep_mask_fn(
     return _homograph_keep_mask if keys is None else keys.homograph_keep_mask
 
 
-def _sense_rank_fn(keys: DictKeyFolding | None) -> Callable[[str], int] | None:
-    """Resolve the profile's optional row-demotion rank once per call.
+def _sense_rank_fn(keys: DictKeyFolding | None) -> Callable[[str, str, str | None], int] | None:
+    """Resolve the profile's optional row rank once per call.
 
-    Optional profile capability, probed like ``term_variants``: a language whose
-    dictionary carries rows stating no live sense of their own — zh's CC-CEDICT
-    surname, archaic-only and cross-reference rows — ranks them after the rows
-    that do, and only among the rows already sharing a term/reading priority. ``None`` (the
-    Japanese pair and every profile without the method) leaves the SQL cascade
-    untouched.
+    Optional profile capability, probed like ``term_variants``, and called as
+    ``sense_rank(content, tags, pos)``: the row's content and tags, and the
+    part of speech of the token being defined (``None`` when no token is in
+    hand). A language whose dictionary carries rows stating no live sense of
+    their own — zh's CC-CEDICT surname, archaic-only and cross-reference rows —
+    ranks them after the rows that do; a wty language ranks the rows of the
+    token's own part of speech first and its proper-name rows last. Either way
+    it reorders only among the rows already sharing a term/reading priority.
+    ``None`` (the Japanese pair and every profile without the method) leaves
+    the SQL cascade untouched.
     """
     return None if keys is None else getattr(keys, "sense_rank", None)
 
@@ -664,6 +668,7 @@ def lookup(
     lemma: str | None = None,
     *,
     keys: DictKeyFolding | None = None,
+    pos: str | None = None,
 ) -> list[tuple[str, str, int | None]]:
     """Return up to ``_LOOKUP_LIMIT`` (content, tags, sequence) triples matching
     word (term or folded reading), reading-boosted then ranked.
@@ -676,6 +681,9 @@ def lookup(
     (see :func:`_homograph_keep_mask`) so a kana front (ゆう, lemma 言う) keeps
     its own lexeme's rows instead of every same-reading homograph. ``None``
     keeps pre-A′ behavior.
+
+    ``pos`` is the token's part of speech (``TokenizedWord.pos``), handed to the
+    profile's optional row rank (see :func:`_sense_rank_fn`); inert without one.
 
     Readings are stored hiragana-folded, so the reading-match WHERE clause binds
     the folded query word and the boost binds the folded contextual reading,
@@ -702,13 +710,13 @@ def lookup(
     sense_rank = _sense_rank_fn(keys)
     if sense_rank is not None:
         # Stable re-sort on the ORDER BY's own two leading keys plus the rank,
-        # so score/sequence/id order survives untouched and a row stating no
-        # sense can only move behind rows sharing its term/reading priority.
+        # so score/sequence/id order survives untouched and a row can only
+        # move among the rows sharing its term/reading priority.
         kept.sort(
             key=lambda row: (
                 0 if row[3] == word else 1,
                 _reading_priority(fold_r(row[4]), folded_boost),
-                sense_rank(row[0]),
+                sense_rank(row[0], row[1], pos),
             )
         )
     # Redirect substitution BEFORE the pool cap (matching lookup_many) so a
@@ -742,10 +750,10 @@ def lookup_with_rules(
     kept = [row for row, k in zip(rows, keep, strict=True) if k]
     sense_rank = _sense_rank_fn(keys)
     if sense_rank is not None:
-        # Same demotion as ``lookup``, over this SQL's one leading key (it binds
-        # no reading boost): a card reached through the variant fallback opens on
-        # the same row a direct hit would.
-        kept.sort(key=lambda row: (0 if row[4] == word else 1, sense_rank(row[0])))
+        # Same rank as ``lookup``, over this SQL's one leading key (it binds no
+        # reading boost): a card reached through the variant fallback opens on
+        # the same row a direct hit with no token in hand would.
+        kept.sort(key=lambda row: (0 if row[4] == word else 1, sense_rank(row[0], row[1], None)))
     projected = _substitute_redirect_rows(
         conn,
         [(row[0], row[1], row[2], row[3] if row[3] is not None else "") for row in kept],
@@ -786,6 +794,7 @@ def lookup_many(
     lemmas: dict[str, str] | None = None,
     *,
     keys: DictKeyFolding | None = None,
+    pos: dict[str, str] | None = None,
 ) -> dict[str, list[tuple[str, str, int | None]]]:
     """Batch variant of :func:`lookup`.
 
@@ -802,6 +811,8 @@ def lookup_many(
     ``lemmas`` optionally maps a requested word to its token's UniDic lemma,
     threaded into the Rule A′ homograph scope per word (see
     :func:`_homograph_keep_mask`); inert when ``scope_homographs`` is False.
+    ``pos`` likewise maps a requested word to its token's part of speech, handed
+    to the profile's row rank per word (see :func:`lookup`).
 
     ``scope_homographs`` (default ``True``) applies the render-path Rule A/B
     homograph scope (:func:`_homograph_keep_mask`) per word before the sort/cap,
@@ -839,6 +850,7 @@ def lookup_many(
     # Per-word folded boost reading (hiragana-folded to match stored readings);
     # None keeps the wildcard (no-boost) ordering for that word.
     boost_by_word: dict[str, str | None] = {w: fold_r(r) for w, r in unique_pairs}
+    pos_by_word = pos or {}
     unique_words = [w for w, _ in unique_pairs]
 
     for start in range(0, len(unique_words), _LOOKUP_MANY_CHUNK):
@@ -881,9 +893,10 @@ def lookup_many(
         #     ``COALESCE(reading=?, 0) DESC`` against THIS word's contextual
         #     reading (0 match / 1 differ or NULL; constant when the word has no
         #     boost). See _reading_priority.
-        #   * sense_rank: the profile's optional row demotion (see
-        #     _sense_rank_fn); constant 0 without one, so the cascade is
-        #     unchanged for every profile that has none.
+        #   * sense_rank: the profile's optional row rank over this row's
+        #     content and tags and THIS word's token POS (see _sense_rank_fn);
+        #     constant 0 without one, so the cascade is unchanged for every
+        #     profile that has none.
         #   * score_key: (is_null, -score) mirrors ``score DESC`` with NULL last.
         #   * _seq_key(sequence): NULL-aware ascending sequence tiebreak.
         #   * row_id: SQLite resolves equal (priority, score, sequence) ties by
@@ -900,7 +913,7 @@ def lookup_many(
             score_key = _score_key(score)
             term_priority = 0 if term == normalized_by_word[w] else 1
             reading_priority = _reading_priority(folded_reading, boost_by_word[w])
-            rank = sense_rank(content) if sense_rank is not None else 0
+            rank = sense_rank(content, tags_val, pos_by_word.get(w)) if sense_rank is not None else 0
             buckets[w].append(
                 (term_priority, reading_priority, rank, score_key, seq_key, row_id, term, content, tags_val, sequence)
             )

@@ -625,6 +625,43 @@ class TestGetDefinitionsBatchFastPath:
         _args, kwargs = provider.lookup_many.call_args
         assert "lemmas" not in kwargs
 
+    def test_pos_context_forwarded_to_offline_batch_providers(self, test_config):
+        """The token POS reaches lookup_many so the profile's row rank can open a
+        verb's card on its verb row (wty "pick" VERB, not "a pickaxe")."""
+        seen: list[tuple[dict[str, str] | None, dict[str, str] | None]] = []
+        provider = make_batch_provider("pos-aware")
+
+        def lookup_many(pairs, scope_homographs=True, lemmas=None, pos=None):
+            seen.append((lemmas, pos))
+            return {word: "hit" for word, _ in pairs}
+
+        provider.lookup_many.side_effect = lookup_many
+        service = DefinitionService(test_config, providers=[provider])
+
+        results = service.get_definitions_batch(
+            [("pick", "pick"), ("go", "went")],
+            lemma_context={"go": "go"},
+            pos_context={"pick": "VERB", "go": "VERB", "unrequested": "NOUN"},
+        )
+        assert results == ["hit", "hit"]
+        assert seen == [({"go": "go"}, {"pick": "VERB", "go": "VERB"})]
+
+    def test_no_pos_context_keeps_legacy_call_shape(self, test_config):
+        seen: list[dict[str, str] | None] = []
+        provider = make_batch_provider("lemma-only")
+
+        def lookup_many(pairs, scope_homographs=True, lemmas=None):
+            seen.append(lemmas)
+            return {word: "hit" for word, _ in pairs}
+
+        provider.lookup_many.side_effect = lookup_many
+        service = DefinitionService(test_config, providers=[provider])
+
+        assert service.get_definitions_batch([("ゆう", "ゆう")], lemma_context={"ゆう": "言う"}, pos_context={}) == [
+            "hit"
+        ]
+        assert seen == [{"ゆう": "言う"}]
+
     def test_cancellation_stops_before_next_provider(self, test_config):
         cancelled = False
         first = make_batch_provider("first")
@@ -899,6 +936,21 @@ class TestGetGlossariesBatchFastPath:
         )
         assert results == ["<div>hit</div>"]
         assert seen == [{"ゆう": "言う"}]
+
+    def test_pos_context_forwarded_to_offline_glossary_providers(self, test_config):
+        seen: list[dict[str, str] | None] = []
+        provider = make_batch_offline_provider("pos-aware")
+
+        def lookup_many(pairs, scope_homographs=True, pos=None):
+            seen.append(pos)
+            return {word: "<div>hit</div>" for word, _ in pairs}
+
+        provider.lookup_many.side_effect = lookup_many
+        service = DefinitionService(test_config, providers=[provider])
+
+        results = service.get_glossaries_batch([("pick", "pick")], pos_context={"pick": "VERB"})
+        assert results == ["<div>hit</div>"]
+        assert seen == [{"pick": "VERB"}]
 
     def test_cancellation_stops_before_next_online_request(self, test_config):
         cancelled = False

@@ -117,7 +117,7 @@ class ZhDictKeyFolding:
         exact_contents = {content for (_, content), keep in zip(rows, term_exact, strict=True) if keep}
         return [keep or content in exact_contents for (_, content), keep in zip(rows, term_exact, strict=True)]
 
-    def sense_rank(self, content: str) -> int:
+    def sense_rank(self, content: str, tags: str, pos: str | None) -> int:
         """Where this row sorts among the rows sharing its reading priority.
 
         ``0`` for a row stating a live sense; ``1`` when its every gloss is a
@@ -128,6 +128,10 @@ class ZhDictKeyFolding:
         read gān opens on "old variant of 乾|干[gān]" and 还 read huán on
         "surname Huan", because index order is all that separates rows sharing
         a reading.
+
+        ``tags`` and ``pos`` (the row's tags, the token's part of speech) are
+        part of the one cross-language signature and unused: CC-CEDICT rows
+        carry no part-of-speech tag to match a token against.
 
         The middle rank is what keeps 刘 on "surname Liu" rather than on its
         "(classical) a type of battle-ax" row while both still lead the pure
