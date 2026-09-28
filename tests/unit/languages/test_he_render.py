@@ -139,6 +139,15 @@ def test_a_root_is_read_out_of_the_etymology_block(lookup):
     assert found and found.count("\N{HEBREW PUNCTUATION MAQAF}") == 2
 
 
+def test_a_pointed_root_is_read_whole_and_shown_bare():
+    """wty spells chashav's root with the shin dot inside it (``root het-shin+dot-bet``); a
+    ``\\w`` letter class stopped at the dot and the card showed two letters."""
+    maqaf = "\N{HEBREW PUNCTUATION MAQAF}"
+    pointed = maqaf.join((_word("HET"), _word("SHIN") + "\N{HEBREW POINT SHIN DOT}", _word("BET")))
+    etymology = f'<div data-sc-content="Etymology-content">From the root {pointed}.</div>'
+    assert root(etymology) == maqaf.join((_word("HET"), _word("SHIN"), _word("BET")))
+
+
 def test_an_entry_without_a_root_gives_nothing(lookup):
     assert root(lookup(KELEV)) == ""
 

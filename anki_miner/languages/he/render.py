@@ -29,7 +29,7 @@ from typing import TYPE_CHECKING, Any
 
 from anki_miner.languages._spaced.render import PosHook
 from anki_miner.languages.he.pos import HE_POS_LABELS
-from anki_miner.languages.he.script import GERESH, MAQAF
+from anki_miner.languages.he.script import GERESH, HE_MARK_CLASS, MAQAF, he_fold
 from anki_miner.languages.profile import CardFieldSpec
 
 if TYPE_CHECKING:  # annotation-only, the ko/render.py pattern
@@ -60,8 +60,11 @@ _BINYAN_RE = re.compile(r"\((" + "|".join(re.escape(name) for name in _BINYANIM)
 #: The plural form follows BOTH words: the shared hook's rule stops at the first and captures
 #: "indefinite".
 _PLURAL_RE = re.compile(r"plural indefinite ([^\s,()]+)")
-#: A Semitic root, spelled out with maqafs in the Etymology prose: ``k-t-b``.
-_ROOT_RE = re.compile(r"root ((?:\w" + re.escape(MAQAF) + r")+\w)")
+#: A Semitic root, spelled out with maqafs in the Etymology prose: ``k-t-b``. A letter may carry
+#: points (``ch-sh-v`` is written with its shin dot), and ``\w`` does not match a combining mark,
+#: so the letter class is the tokenizer's: a letter, then any Hebrew marks.
+_ROOT_LETTER = r"[^\W\d_][" + HE_MARK_CLASS + r"]*"
+_ROOT_RE = re.compile(r"root ((?:" + _ROOT_LETTER + re.escape(MAQAF) + r")+" + _ROOT_LETTER + r")")
 #: The gender letter, taken after the romanisation clause so a bracketed romanisation cannot
 #: supply one.
 _GENDER_RE = re.compile(r"^\s*(m|f)\b")
@@ -151,11 +154,14 @@ def gender(definition_html: str) -> str:
 
 
 def root(definition_html: str) -> str:
-    """The Semitic root the Etymology block spells out, or ``""`` for the ~97 % that do not."""
+    """The Semitic root the Etymology block spells out, or ``""`` for the ~97 % that do not.
+
+    Shown bare: a root names consonants, and the points some entries write inside it do not.
+    """
     for block in _ETYMOLOGY_RE.findall(definition_html or ""):
         match = _ROOT_RE.search(_text(block))
         if match:
-            return match.group(1)
+            return he_fold(match.group(1))
     return ""
 
 
