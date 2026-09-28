@@ -136,7 +136,7 @@ EGROF = _word("ALEF", "GIMEL", "RESH", "VAV", "FINAL PE")
     [
         (KATAVTI, KATAV, "VERB", "one distinct target: the form table answers"),
         (SFARIM, SEFER, "NOUN", "three rows collapsing to one target"),
-        (HOLEKHET, HALAKH, "NOUN", "two distinct targets: the first in row order"),
+        (HOLEKHET, HALAKH, "VERB", "two distinct targets: the first in row order, a present form: its v row"),
         (BE_SEFER, SEFER, "NOUN", "the whole word has no key; the strip rung is a headword"),
         (VEHAYELADIM, YELED, "NOUN", "a stack strip, then its target"),
         (HABAYIT, BAYIT, "NOUN", "a lemma row whose gloss is 'singular definite form of bayit'"),
@@ -162,6 +162,109 @@ EGROF = _word("ALEF", "GIMEL", "RESH", "VAV", "FINAL PE")
     ],
 )
 def test_the_measured_case_table(form_lookup, surface, front, pos1, why):
+    assert _resolve(form_lookup, surface) == (front, pos1), why
+
+
+def test_a_verb_form_fronts_its_targets_verb_row(form_lookup):
+    """holekhet 'singular feminine present' names halakh, whose FIRST lemma row is the noun helekh
+    'traveler': the form's own tags pick the v row, so the card is the verb and reads as it."""
+    [token] = HebrewLemmaPass()(to_duck_tokens(HOLEKHET), None, form_lookup)
+    heads = [(content, tags) for content, tags in form_lookup([HALAKH])[HALAKH] if is_lemma_row(tags)]
+    assert heads[0][1].split(" ")[0] == "n", "the fixture must keep the noun row first"
+    verb = next(content for content, tags in heads if tags.split(" ")[0] == "v")
+    assert (token.feature.lemma, token.feature.pos1) == (HALAKH, "VERB")
+    assert token.feature.vocalised == vocalised_from_content(verb)
+
+
+def _with(form_lookup, key: str, rows: list[tuple[str, str]]):
+    """The subset's lookup with *key*'s rows replaced by *rows*."""
+
+    def forms(terms):
+        found = form_lookup([term for term in terms if term != key])
+        if key in terms:
+            found[key] = rows
+        return found
+
+    return forms
+
+
+def _pairs(*rules: str) -> list[tuple[str, str]]:
+    """One wty form row per rule chain, each naming halakh, rendered the way the importer renders it."""
+    return [
+        (render_glossary_entry([[HALAKH, [rule]]], definition_tags=["non-lemma"], dict_id="wty-he-en"), "non-lemma")
+        for rule in rules
+    ]
+
+
+HALKHU = _word("HE", "LAMED", "KAF", "VAV")
+
+
+@pytest.mark.parametrize(
+    ("rules", "pos1", "why"),
+    [
+        (("third-person plural masculine feminine past",), "VERB", "a past form"),
+        (("passive participle", "singular masculine imperative"), "VERB", "a participle is a verb form"),
+        (("plural indefinite", "plural masculine present"), "NOUN", "banim: a noun plural beside a participle"),
+        (("feminine", "third-person singular feminine past"), "NOUN", "chayevet: an adjective beside a past form"),
+        (("third-person singular masculine possessed-form", "third-person plural past"), "VERB", "halkhu, not halakho"),
+        (("first-person singular possessed-form", "singular feminine imperative"), "NOUN", "darki, not dirkhi"),
+    ],
+)
+def test_the_pairs_own_rules_decide_the_targets_row(form_lookup, rules, pos1, why):
+    """Every pair a verb form, or a tensed form against possessed nouns only: the target's v row.
+    A form the dictionary also files as a noun or adjective form keeps the first row."""
+    assert _resolve(_with(form_lookup, HALKHU, _pairs(*rules)), HALKHU) == (HALAKH, pos1), why
+
+
+def test_a_form_row_stored_without_its_rules_keeps_the_first_row(form_lookup):
+    """An index imported before the rules were kept: no tags, so the first lemma row still decides."""
+    bare = ('<li class="gloss-item"><div class="gloss-content">' + HALAKH + "</div></li>", "non-lemma")
+    assert _resolve(_with(form_lookup, HOLEKHET, [bare]), HOLEKHET) == (HALAKH, "NOUN")
+
+
+def test_a_verb_entry_that_names_its_lemma_fronts_the_lemmas_verb_row(form_lookup):
+    """holekh is filed 'v masc ptcpl sg' and glossed 'present participle of halakh': a verb form,
+    so halakh's v row, not the noun helekh wty files first."""
+    holekh = _word("HE", "VAV", "LAMED", "FINAL KAF")
+    gloss = f"Masculine singular present participle and present tense of {HALAKH} (halakh)."
+    senses = {
+        "tag": "ol",
+        "data": {"content": "glosses"},
+        "content": [{"tag": "li", "content": [{"tag": "div", "content": gloss}]}],
+    }
+    entry = render_glossary_entry(
+        [{"type": "structured-content", "content": [senses]}],
+        definition_tags=["v", "masc", "ptcpl", "sg"],
+        dict_id="wty-he-en",
+        media_collector=None,
+    )
+    assert _resolve(_with(form_lookup, holekh, [(entry, "v masc ptcpl sg")]), holekh) == (HALAKH, "VERB")
+    # An entry filed as a noun as well (shmo 'his name' beside samu 'they put') keeps the first row.
+    noun = render_glossary_entry(
+        [{"type": "structured-content", "content": [senses]}], definition_tags=["n"], dict_id="wty-he-en"
+    )
+    assert _resolve(_with(form_lookup, holekh, [(noun, "n"), (entry, "v")]), holekh) == (HALAKH, "NOUN")
+
+
+def test_a_noun_form_keeps_the_first_row(form_lookup):
+    """sfarim 'plural indefinite' is no verb form: sefer's first lemma row stands."""
+    assert _resolve(form_lookup, SFARIM) == (SEFER, "NOUN")
+
+
+DOKTOR_TYPED = _word("DALET") + '"' + _word("RESH")
+DOKTOR = _word("DALET") + "\N{HEBREW PUNCTUATION GERSHAYIM}" + _word("RESH")
+
+
+@pytest.mark.parametrize(
+    ("surface", "front", "pos1", "why"),
+    [
+        (_word("VAV") + HAKOL, KOL, "NOUN", "the article cross-check runs at the strip rung: ve-ha-kol is kol"),
+        (_word("SHIN") + HAKOL, KOL, "NOUN", "she-ha-kol is kol, never hekhil"),
+        (_word("BET") + DOKTOR_TYPED, DOKTOR, "NOUN", "a strip remainder reaches its gershayim key"),
+        (_word("LAMED") + BAYIT + "-" + SEFER, BAYIT + " " + SEFER, "NOUN", "a strip remainder reaches its phrase key"),
+    ],
+)
+def test_the_ladder_composes_a_strip_with_the_rungs_behind_it(form_lookup, surface, front, pos1, why):
     assert _resolve(form_lookup, surface) == (front, pos1), why
 
 

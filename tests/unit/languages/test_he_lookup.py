@@ -48,11 +48,41 @@ def test_a_single_proclitic_is_stripped_once():
     assert rungs(b_sefer) == [b_sefer[1:]]
 
 
-def test_the_stack_comes_before_the_single_and_both_are_offered():
-    """ve-ha-yeladim yields the stack strip first, then the one-letter strip."""
+def test_the_single_comes_before_the_stack_and_both_are_offered():
+    """ve-ha-yeladim yields the one-letter strip first, then the stack strip: ve-lechem is "and
+    bread", and the ve-la- stack read first made it chem "hot"."""
     word = he_fold("\N{HEBREW LETTER VAV}\N{HEBREW LETTER HE}") + _surface("he08", 4)
-    assert rungs(word)[0] == word[2:]
-    assert rungs(word)[1] == word[1:]
+    assert rungs(word)[0] == word[1:]
+    assert rungs(word)[1] == word[2:]
+
+
+@pytest.mark.parametrize(
+    "stack",
+    [
+        "\N{HEBREW LETTER KAF}\N{HEBREW LETTER SHIN}",  # kshe-: keshe-yesh is yesh, not shayish
+        "\N{HEBREW LETTER VAV}\N{HEBREW LETTER KAF}\N{HEBREW LETTER SHIN}",
+        "\N{HEBREW LETTER MEM}\N{HEBREW LETTER HE}",  # me-ha-: me-ha-ir is ir, not he'ir
+    ],
+)
+def test_kshe_and_me_ha_come_before_the_single(stack):
+    word = stack + _surface("he08", 4)
+    assert rungs(word)[0] == word[len(stack) :]
+    assert word[1:] in rungs(word)
+
+
+def test_a_strip_remainder_gets_the_quote_rung():
+    """be + an ASCII-quoted abbreviation reaches the gershayim key behind the proclitic."""
+    abbreviation = _surface("he05", 0)
+    word = "\N{HEBREW LETTER BET}" + abbreviation
+    assert abbreviation.replace('"', GERSHAYIM) in rungs(word)
+
+
+def test_a_strip_remainder_gets_the_hyphen_rungs():
+    compound = _surface("he04", 0)
+    word = "\N{HEBREW LETTER LAMED}" + compound
+    found = rungs(word)
+    assert compound.replace("-", MAQAF) in found
+    assert compound.replace("-", " ") in found
 
 
 def test_the_ascii_quote_rung_reaches_the_gershayim_key():
