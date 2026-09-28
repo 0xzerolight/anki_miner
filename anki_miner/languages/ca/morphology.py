@@ -213,8 +213,9 @@ class FeminineNounPass:
       target that has one (``noies`` names ``noi`` and ``noia``: ``noia``).
 
     A feminine the dictionary files only as a form of the masculine (``amiga`` -> ``amic``) keeps the
-    model's front. One batched read per line, and one more for the plurals' targets. The pass runs in
-    the parser only: the frequency lemmatiser still ranks the model's lemma (as for he and it).
+    model's front. One batched read per line, and one more for the plurals' targets. The frequency
+    lemmatiser (``services/frequency/lemmatize.py``) runs the parser's post-pass too, so the frequency
+    list ranks a feminine noun under its own headword (``filla``, ``noia``), the key the card looks up.
     ``forms is None`` (no offline dictionary) leaves every token as the tagger built it.
     """
 

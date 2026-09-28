@@ -44,6 +44,11 @@ def form(*targets: str) -> tuple[str, str]:
     )
 
 
+def labelled(*members: tuple[str, str]) -> tuple[str, str]:
+    """A ``non-lemma`` row of deinflection pairs: each ``(rules, target)`` as the importer renders the pair."""
+    return form(*(f'<span data-inflection="{rules}">{target}</span>' for rules, target in members))
+
+
 class Forms:
     """``FormLookup``: casefolded keys as ``CasefoldDictKeys`` stores them, answered under the asked spelling."""
 
@@ -86,6 +91,13 @@ def test_the_row_readers_read_the_rendered_shapes():
     assert is_lemma_row("n neut") and is_lemma_row("") and not is_lemma_row("non-lemma")
     assert lemma_row_targets(*lemma("v")) is None
     assert lemma_row_targets(*form("möte")) == ["möte"]
+
+
+def test_an_aspect_partner_row_still_names_its_partner_for_the_definition_splice():
+    """The splice reads ``form_targets``: the card keeps showing the partner's gloss."""
+    partner = labelled(("perfective", "brati"))
+    assert form_targets(partner[0]) == ["brati"]
+    assert lemma_row_targets(*partner) == ["brati"]
 
 
 # --------------------------------------------------------------------------
@@ -325,6 +337,64 @@ def test_german_fronts_take_the_tokenizer_s_title_case_classes(monkeypatch):
     assert repair._title_case_pos is DE_TITLE_CASE_POS  # noqa: SLF001
 
 
+@pytest.mark.parametrize(
+    ("code", "token", "rows"),
+    [
+        (
+            "sl",
+            tok("prebrala", "VERB", "prebrati"),
+            {"prebrati": [labelled(("perfective", "brati"))], "brati": [lemma("v impf")]},
+        ),
+        (
+            "pl",
+            tok("Ochrzcili", "VERB", "ochrzcić"),
+            {"ochrzcić": [labelled(("perfective", "chrzcić"))], "chrzcić": [lemma("v impf")]},
+        ),
+        (
+            "hr",
+            tok("slamao", "VERB", "slamati"),
+            {"slamati": [labelled(("imperfective form", "slòmiti"))], "slomiti": [lemma("v vr vt pf")]},
+        ),
+    ],
+)
+def test_a_verb_filed_only_as_an_aspect_partner_keeps_its_own_front(monkeypatch, code, token, rows):
+    """The partner row names another verb; the verb in the text is this one (hr and sl read through their folds)."""
+    own = token.feature.lemma
+    assert run(_injected(monkeypatch, code), Forms(rows), token) == [(own, "VERB")]
+
+
+def test_an_aspect_partner_row_stops_the_candidate_before_its_other_rows():
+    """hr ``dobivati``: also an ``alternative`` of the Serbian ``dobijati``, which must not become the front."""
+    rows = {
+        "dobivati": [labelled(("alternative", "dobijati")), labelled(("imperfective form", "dòbiti"))],
+        "dobijati": [lemma("v impf")],
+        "dobiti": [lemma("v vt pf")],
+    }
+    assert run(FormOfLemmaPass(), Forms(rows), tok("Dobivali", "VERB", "dobivati")) == [("dobivati", "VERB")]
+
+
+def test_a_row_mixing_an_aspect_chain_with_others_is_an_ordinary_form_row():
+    """pl ``mielać``: wty splits the alternative form's tags into one pair each, ``imperfective`` among them."""
+    forms = Forms(
+        {
+            "mielać": [labelled(("alt-of", "melać"), ("alternative", "melać"), ("imperfective", "melać"))],
+            "melać": [lemma("v col impf vi vulg")],
+        }
+    )
+    assert run(FormOfLemmaPass(), forms, tok("mielał", "VERB", "mielać")) == [("melać", "VERB")]
+
+
+def test_an_inflection_that_names_its_aspect_is_still_an_inflection():
+    """sl ``bombardirat``: the supine of ``bombardirati``, whose chain opens with the aspect."""
+    forms = Forms(
+        {
+            "bombardirat": [labelled(("imperfective/perfective supine", "bombardirati"))],
+            "bombardirati": [lemma("v impf pf")],
+        }
+    )
+    assert run(FormOfLemmaPass(), forms, tok("bombardirat", "VERB", "bombardirat")) == [("bombardirati", "VERB")]
+
+
 def test_lithuanian_targets_lose_their_stress_marks(monkeypatch):
     """wty-lt-en keys every lemma row unstressed and names many targets twice, plain and stressed."""
     forms = Forms({"paliko": [form("palikti"), form("pali̇̀kti")], "palikti": [lemma("v")]})
@@ -379,3 +449,9 @@ def test_pl_real_verb(monkeypatch, taggers):
     rows = {"zapomniałeś": [form("zapomnieć")], "zapomnieć": [lemma("v pf")]}
     fronts = _fronts(monkeypatch, taggers, "pl", "Zapomniałeś kluczy?", rows)
     assert fronts["Zapomniałeś"] == ("zapomnieć", "VERB")
+
+
+def test_pl_real_perfective_verb_filed_as_an_aspect_partner(monkeypatch, taggers):
+    rows = {"ochrzcić": [labelled(("perfective", "chrzcić"))], "chrzcić": [lemma("v impf")]}
+    fronts = _fronts(monkeypatch, taggers, "pl", "Ochrzcili go w niedzielę.", rows)
+    assert fronts["Ochrzcili"] == ("ochrzcić", "VERB")

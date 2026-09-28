@@ -7,7 +7,9 @@ the noun ``pravo``, and a noun or adverb front must not turn into either. The ga
 the model tags as nouns (``Čakam``, ``pojdi``) as they are. A target carrying accent notation (``bank`` names
 ``bánka``) is read through the same fold, so the card front carries no mark. On 135 dialogue lines, with
 wty-sl-en imported under the folded keys, the wrong fronts go from 58 of 317 parsed words to 41 of 310. The
-one right front it changes is a cost of the dictionary: it files ``prebrati`` only as a form of ``brati``.
+one right front that measurement saw it change, ``prebrati`` -> ``brati``, now stays: the dictionary files
+``prebrati`` only as the ``perfective`` partner of ``brati``, and the pass keeps a verb named only as another
+verb's aspect partner.
 """
 
 from __future__ import annotations

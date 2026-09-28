@@ -2,16 +2,19 @@
 
 A Wiktionary-derived dictionary (``wty-*``) keys every inflected form it knows as a ``non-lemma``
 row whose glossary names the lemma it belongs to. ``service_factory`` wires those rows into every
-parser as R36's ``form_lookup`` (``DefinitionService.offline_term_rows``), and a ``token_post_pass``
-is their only reader. Hebrew's ``HebrewLemmaPass`` reads them to build a front the tokenizer
-cannot; ``FormOfLemmaPass`` reads them to repair a front the tagger got wrong (sv ``fönstret``
-lemmatised ``fönstr``, pl ``Zapomniałeś`` lemmatised ``zapomniać``, de ``Äpfel`` left unlemmatised).
+parser as R36's ``form_lookup`` (``DefinitionService.offline_term_rows``). A ``token_post_pass``
+reads them: Hebrew's ``HebrewLemmaPass`` to build a front the tokenizer cannot, ``FormOfLemmaPass``
+to repair a front the tagger got wrong (sv ``fönstret`` lemmatised ``fönstr``, pl ``Zapomniałeś``
+lemmatised ``zapomniać``, de ``Äpfel`` left unlemmatised). uk's S24 stressed reading reads them too
+(``uk/parser.py`` through ``lemma_row_stress``): a term with a lemma row takes the stress its head
+line prints.
 
 **A form row's target is parsed out of the RENDERED content, not out of raw JSON.** The Yomitan
 importer stores ``render_glossary_entry(...)`` output in the ``content`` column
 (``yomitan_importer.py``), so a single-target row arrives as
 ``<li class="gloss-item"><div class="gloss-content">LEMMA</div></li>`` and a multi-target row wraps
-its targets in ``<li class="gloss-sc-li">``.
+its targets in ``<li class="gloss-sc-li">``. A deinflection pair's target keeps its rule chain as
+``<span data-inflection="RULES">LEMMA</span>``.
 
 The pass touches only an ADJ/ADV/NOUN/VERB token whose lemma has no lemma row: a lemma the
 dictionary files as a headword is never second-guessed, whatever its part of speech (de
@@ -27,7 +30,15 @@ candidates are read in order, and the first one the dictionary has any row for d
   target is the front. Several targets, or one the dictionary does not file as a headword, and the
   token stays as the tagger built it: pl ``mili`` names ``miły`` and ``mila``, and falling through
   to its lemma ``mić`` would front ``nić`` (thread); pl ``mailem`` names ``mail``, itself a form row;
+* a candidate the dictionary names as another verb's aspect partner (``_names_aspect_partner``) is a
+  verb of its own, and the token stays as the tagger built it: wty-sl-en files ``prebrati`` only as
+  ``perfective`` of ``brati``, so ``prebrala`` keeps ``prebrati``. Its other rows do not decide
+  either: hr ``dobivati`` is also filed as an ``alternative`` of ``dobijati``, which is not the word
+  in the text;
 * then the tagger's lemma, through its form rows the same way.
+
+Only the front reads a partner row this way. The Definition splice (``storage._splice_form_rows``)
+reads it through ``form_targets``, so the card still shows the partner's gloss.
 
 The new front's ``pos1`` is the part of speech its first lemma row opens with (de ``Hör``, tagged a
 noun, becomes the verb ``hören``), and the front is cased the way the tokenizer cases every lemma:
@@ -66,6 +77,13 @@ _GLOSS_CONTENT_RE = re.compile(r'<div class="gloss-content">(.*?)</div>', re.S)
 #: One item of a rendered glossary list: a multi-target form row's target, or a lemma row's gloss.
 GLOSS_ITEM_RE = re.compile(r'<li class="gloss-sc-li">(.*?)</li>', re.S)
 _TAG_RE = re.compile(r"<[^>]+>")
+#: The rule chain the importer keeps on a deinflection pair's target (``yomitan_renderer``).
+_INFLECTION_RE = re.compile(r'<span data-inflection="([^"]*)">')
+#: Rule chains that name a verb's aspect partner, a different lexeme, rather than an inflection of it:
+#: wty-pl-en files ``ochrzcić`` as ``perfective`` of ``chrzcić``, wty-sh-en ``slamati`` as
+#: ``imperfective form`` of ``slomiti``. Exact chains only: an inflection carrying its aspect (sl
+#: ``imperfective/perfective supine``) is still an inflection.
+_ASPECT_PARTNER_RULES = frozenset({"perfective", "imperfective", "perfective form", "imperfective form"})
 _NON_LEMMA = "non-lemma"
 #: One line's worth of keys is small; the cache exists so a repeated word in a long corpus
 #: (count_lemmas) is read once per parser, not once per occurrence.
@@ -85,16 +103,28 @@ def is_lemma_row(tags: str) -> bool:
     return _NON_LEMMA not in tags.split(" ")
 
 
+def _form_items(content: str) -> list[str]:
+    """The markup of each target a form row's rendered content names, in order."""
+    return [
+        item for block in _GLOSS_CONTENT_RE.findall(content or "") for item in GLOSS_ITEM_RE.findall(block) or [block]
+    ]
+
+
 def form_targets(content: str) -> list[str]:
     """The lemmas a form row's rendered content names, in order (spec F.2, measured shapes)."""
-    found: list[str] = []
-    for block in _GLOSS_CONTENT_RE.findall(content or ""):
-        items = GLOSS_ITEM_RE.findall(block)
-        for item in items or [block]:
-            target = rendered_text(item)
-            if target:
-                found.append(target)
-    return found
+    return [target for target in map(rendered_text, _form_items(content)) if target]
+
+
+def _names_aspect_partner(content: str) -> bool:
+    """A form row that names the key's aspect partner: every target it names carries a partner rule chain.
+
+    A row mixing chains is an ordinary form row: wty splits an alternative form's tags into one pair each,
+    so pl ``mielać`` names ``melać`` as ``alt-of``, ``alternative`` and ``imperfective`` at once.
+    """
+    chains = [_INFLECTION_RE.match(item) for item in _form_items(content)]
+    return bool(chains) and all(
+        chain is not None and html.unescape(chain.group(1)) in _ASPECT_PARTNER_RULES for chain in chains
+    )
 
 
 def lemma_row_targets(content: str, tags: str) -> list[str] | None:
@@ -245,6 +275,8 @@ class FormOfLemmaPass:
                 continue
             if self._heads(found):
                 return candidate
+            if any(_names_aspect_partner(content) for content, _tags in found):
+                return None
             targets = {target: None for content, tags in found for target in self._row_targets(content, tags) or ()}
             return next(iter(targets)) if len(targets) == 1 else None
         return None
