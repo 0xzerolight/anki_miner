@@ -25,7 +25,7 @@ from anki_miner.services.subtitle_parser import SubtitleParserService
 #: Languages whose post-pass is EXPECTED to read the third argument: he's resolver and the spaCy
 #: languages wired to the form-of front repair (``_spaced/form_of.py``). Named, so the sweep below
 #: stays a real assertion for every other language rather than a list someone can edit away.
-FORM_LOOKUP_READERS = frozenset({"he", "de", "nl", "sv", "nb", "da", "pl", "lt"})
+FORM_LOOKUP_READERS = frozenset({"he", "de", "nl", "sv", "nb", "da", "pl", "lt", "fi"})
 
 
 class _Spy:
