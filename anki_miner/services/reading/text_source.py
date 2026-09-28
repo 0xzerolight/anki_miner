@@ -22,7 +22,7 @@ from anki_miner.exceptions import raise_if_cancelled
 from anki_miner.models.reading import ImageRef, ReadingDocument, ReadingSourceRef, ReadingUnit
 from anki_miner.utils.logging_ext import log_summary
 
-from ._util import READING_CANCELLED
+from ._util import READING_CANCELLED, join_hard_wraps
 from .sentence_splitter import split_sentences
 
 if TYPE_CHECKING:
@@ -39,10 +39,12 @@ def load(
 ) -> ReadingDocument:
     """Split pasted text into sentence units and return a book document.
 
-    Blank lines delimit paragraphs (the ``¶N`` location label); each non-blank
-    physical line is stripped (including full-width indents) and sentence-split.
-    Empty or whitespace-only text yields an empty-units document —
-    ``process_reading`` surfaces the "no words" outcome.
+    Blank lines delimit paragraphs (the ``¶N`` location label). In a
+    space-delimited language each run of non-blank lines is one hard-wrapped
+    paragraph (``_util.join_hard_wraps``); otherwise each non-blank physical
+    line is one. A paragraph is stripped (including full-width indents) and
+    sentence-split. Empty or whitespace-only text yields an empty-units
+    document — ``process_reading`` surfaces the "no words" outcome.
 
     ``rules`` is the mining language's sentence-splitting policy; ``None`` is
     the splitter's built-in Japanese one.
@@ -61,7 +63,7 @@ def load(
     index = 0
     para_no = 0
     skipped = 0
-    for raw in text.split("\n"):
+    for raw in join_hard_wraps(text.split("\n"), rules):
         raise_if_cancelled(cancel_check, READING_CANCELLED)
         stripped = raw.strip()
         if not stripped:

@@ -496,6 +496,43 @@ def test_balanced_quote_with_attribution_stays_one_unit(tmp_path):
     assert [u.text for u in doc.units] == ["「行くぞ。」と彼は言った。"]
 
 
+# --- a space-delimited plain .txt is hard-wrapped ------------------------
+
+
+def _en_doc(tmp_path, text, name="en-novel.txt"):
+    """Load *text* the way Reading → Novels loads an English novel."""
+    p = _write(tmp_path, text, "utf-8", name=name)
+    profile = get_profile("en")
+    (ref,) = detector.detect(p)
+    return detector.load(
+        ref,
+        encodings=profile.import_encodings,
+        rules=profile.sentence_rules,
+        script_check=profile.script.contains_target_script,
+    )
+
+
+def test_space_aware_plain_paragraph_joins_its_hard_wrapped_lines(tmp_path):
+    # Project Gutenberg wraps at ~70 columns with a blank line between
+    # paragraphs; a physical line is a fragment, not a paragraph.
+    text = (
+        "It is a truth universally acknowledged, that a single man in possession\n"
+        "of a good fortune must be in want of a wife.\n"
+        "\n"
+        "However little known the feelings or views of such a man may be on his\n"
+        "first entering a neighbourhood, this truth is so well fixed.  It is.\n"
+    )
+    doc = _en_doc(tmp_path, text)
+    assert [u.text for u in doc.units] == [
+        "It is a truth universally acknowledged, that a single man in possession"
+        " of a good fortune must be in want of a wife.",
+        "However little known the feelings or views of such a man may be on his"
+        " first entering a neighbourhood, this truth is so well fixed.",
+        "It is.",
+    ]
+    assert [u.location_label for u in doc.units] == ["¶1", "¶2", "¶2"]
+
+
 # --- Bug Y4: bare 《…》 must not misclassify a plain novel as Aozora ---------
 
 

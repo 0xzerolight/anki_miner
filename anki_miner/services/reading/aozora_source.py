@@ -29,7 +29,7 @@ from anki_miner.models.reading import (
 
 # _decode's canonical home is _util (shared with subtitle_source); imported
 # here both for load() and as a re-export for tests that patch/call it.
-from anki_miner.services.reading._util import READING_CANCELLED, _decode
+from anki_miner.services.reading._util import READING_CANCELLED, _decode, join_hard_wraps
 from anki_miner.services.reading.sentence_splitter import split_sentences
 from anki_miner.utils.logging_ext import log_summary
 
@@ -295,6 +295,11 @@ def _emit_units(
     current_chapter: str | None = None
     heading_block = False
     heading_buf: list[str] = []
+
+    # An Aozora file writes one paragraph per line; a plain one in a
+    # space-delimited language is hard-wrapped.
+    if not aozora:
+        body_lines = join_hard_wraps(body_lines, rules)
 
     for raw in body_lines:
         raise_if_cancelled(cancel_check, READING_CANCELLED)

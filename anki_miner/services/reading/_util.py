@@ -17,6 +17,7 @@ import unicodedata
 import zipfile
 from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from anki_miner.exceptions import SetupError
 from anki_miner.utils.cjk_encoding import prefers_big5
@@ -25,6 +26,9 @@ from anki_miner.utils.subtitle_encoding import (
     is_single_byte_codec,
     plausible_single_byte_text,
 )
+
+if TYPE_CHECKING:
+    from anki_miner.languages.profile import SentenceRules
 
 logger = logging.getLogger(__name__)
 
@@ -131,6 +135,46 @@ def natural_sort_key(s: str) -> list[int | str]:
     numeric chunks are int-cast so "Vol2" sorts before "Vol10".
     """
     return [int(chunk) if chunk.isdigit() else chunk for chunk in _NUM_RE.split(s)]
+
+
+# --- line wraps (shared by the aozora, text and epub loaders) --------------
+
+
+def _line_join(rules: SentenceRules | None) -> str:
+    """What a source line wrap becomes inside a paragraph for this language."""
+    return " " if rules is not None and rules.space_aware else ""
+
+
+def join_hard_wraps(lines: list[str], rules: SentenceRules | None) -> list[str]:
+    """Join each run of non-blank plain-text lines into one paragraph line.
+
+    Plain text in a space-delimited language (a Project Gutenberg ``.txt``, a
+    paste of one) is hard-wrapped at about 70 columns with a blank line between
+    paragraphs, so a physical line is a sentence fragment: split alone, it
+    becomes a half-sentence card. Each run is stripped line by line and joined
+    with :func:`_line_join`; blank lines stay, so the caller still counts them.
+
+    Text in a language that is not ``space_aware`` (CJK, Thai) comes back
+    unchanged: CJK plain text writes a paragraph per line, often with no blank
+    line anywhere, so there a physical line already is the paragraph.
+    """
+    joiner = _line_join(rules)
+    if not joiner:
+        return lines
+    out: list[str] = []
+    run: list[str] = []
+    for line in lines:
+        stripped = line.strip()
+        if stripped:
+            run.append(stripped)
+            continue
+        if run:
+            out.append(joiner.join(run))
+            run = []
+        out.append(line)
+    if run:
+        out.append(joiner.join(run))
+    return out
 
 
 # --- decoding (shared by the aozora and subtitle loaders) ------------------
