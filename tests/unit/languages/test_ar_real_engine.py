@@ -244,3 +244,25 @@ def test_a_same_spelling_homograph_takes_the_common_reading(tagger, surface, rea
 def test_a_verb_reading_is_the_citation_form_wty_heads_its_verb_rows_with(tagger, surface, reading):
     (token,) = tagger(surface)
     assert (token.feature.pos1, token.feature.reading) == ("verb", reading)
+
+
+def test_a_pointer_only_front_takes_its_lemma_through_the_parser_s_pass(tagger):
+    """calima lexes al-maadii as maadii; wty-ar-en files maadii only as a form of maad."""
+    from anki_miner.languages.ar.morphology import ArabicFormOfPass
+
+    rows = {
+        "\u0645\u0627\u0636\u064a": [
+            ('<li class="gloss-item"><div class="gloss-content">\u0645\u0627\u0636</div></li>', "non-lemma")
+        ],
+        "\u0645\u0627\u0636": [
+            (
+                '<div class="gloss-sc-div" data-sc-content="Grammar-content">'
+                "\u0645\u064e\u0627\u0636\u064d \u2022 (m\u0101\u1e0din) m</div>",
+                "n masc",
+            )
+        ],
+    }
+    tokens = tagger("\u0641\u064a \u0627\u0644\u0645\u0627\u0636\u064a")  # fii al-maadii "in the past"
+    ArabicFormOfPass()(tokens, None, lambda keys: {key: rows[key] for key in keys if key in rows})
+    past = tokens[-1]
+    assert (past.feature.lemma, past.feature.reading) == ("\u0645\u0627\u0636", "\u0645\u064e\u0627\u0636\u064d")

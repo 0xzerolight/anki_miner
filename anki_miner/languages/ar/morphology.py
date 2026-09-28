@@ -11,18 +11,26 @@ case-bearing noun/verb/adjective reading (the raw argmax sends ``\u0634\u0643\u0
 function-word winner on an unmarked surface keeps its reading (``\u0625\u0630\u0627`` "if", not ``\u0625\u0650\u0630\u0627\u064b``). No
 dictionary probe is involved: wty-ar-en has non-lemma rows for plain accusatives (``\u0643\u062a\u0627\u0628\u0627``), so an
 existence test would front ``\u0643\u062a\u0627\u0628\u0627\u064b`` as ``\u0643\u062a\u0627\u0628\u0627``.
+
+The dictionary does come in after the pick, in ``ArabicFormOfPass``: a front wty-ar-en files only as a
+form of one lemma takes that lemma.
 """
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+from anki_miner.languages._spaced.form_of import form_targets, is_lemma_row, rendered_text
 from anki_miner.languages.ar._calima.charsets import dediac_ar
 from anki_miner.languages.ar.overrides import AR_LEX_REPAIRS, AR_PICK_OVERRIDES
-from anki_miner.languages.ar.script import is_arabic_letter
+from anki_miner.languages.ar.script import ar_fold, is_arabic_letter
+
+if TYPE_CHECKING:  # annotation-only: services must not load at profile build
+    from anki_miner.services.morphology import AttestLookup, FormLookup
 
 AR_UNKNOWN_POS = "unknown"
 AR_CLITIC_SUBTYPE = "clitic"
@@ -362,6 +370,89 @@ class ArabicLookupStrategy:
             for text in _clitic_strips(word):
                 add(text)
         return out
+
+
+_GRAMMAR_HEAD_RE = re.compile(r'data-sc-content="Grammar-content"[^>]*>(.*?)</div>', re.S)
+#: One line's worth of fronts is small; the cache exists so a word repeated across a long corpus
+#: (count_lemmas) is read once per parser, not once per occurrence.
+_FORM_CACHE_MAX = 4096
+
+
+def vocalised_head(content: str) -> str:
+    """The vocalised headword a wty lemma row's Grammar line opens with, or ``""``.
+
+    ``\u0645\u064e\u0627\u0636\u064d • (māḍin) m (construct state ...)`` -- everything before the bullet.
+    """
+    match = _GRAMMAR_HEAD_RE.search(content)
+    head, bullet, _rest = rendered_text(match.group(1)).partition("\N{BULLET}") if match else ("", "", "")
+    return head.strip() if bullet else ""
+
+
+class ArabicFormOfPass:
+    """``token_post_pass``: a front wty-ar-en files only as a form of one lemma takes that lemma.
+
+    calima lexes manqus nouns with their final ya (``\u0645\u0627\u0636\u064a``, ``\u062b\u0627\u0646\u064a``) and fronts words wty-ar-en
+    keeps only as forms (``\u0623\u062e\u0631\u0649`` of ``\u0622\u062e\u0631``); the lookup then hits a pointer row and the card
+    shows no English. HebrewLemmaPass's rule, on the analysed lemma: every row of the front is a form
+    row, their targets fold (``ar_fold``) to exactly one lemma, and that lemma has a lemma row -> the
+    front is that lemma. The reading is the vocalised head of the lemma row the pointer names by its
+    vocalised spelling, else of the first one: ``\u0623\u062e\u0631\u0649`` names ``\u0622\u062e\u064e\u0631`` "other", whose row comes after
+    two headed ``\u0622\u062e\u0650\u0631`` "last" (blank when the row has no Grammar line). A headword front, several
+    targets (``\u0642\u064a\u0627\u0645``: ``\u0642\u0627\u0645`` and ``\u0642\u0627\u0626\u0645``), a target that is itself only a form, or no rows
+    leave the token as the analyzer built it; the surface and the analyzer's POS always stay.
+
+    Not ``_spaced.form_of.FormOfLemmaPass``: that pass selects tokens by UPOS tag, rewrites ``pos1``
+    to UPOS (which the CAMeL ``allowed_pos`` gate would then drop), reads the surface, and sets no
+    reading. Only an analysed token (one carrying a reading) is read; ``forms is None`` (no offline
+    dictionary) makes the pass a no-op.
+    """
+
+    def __init__(self) -> None:
+        self._cache: dict[str, list[tuple[str, str]]] = {}
+
+    def __call__(self, tokens: list[Any], attest: AttestLookup | None, forms: FormLookup | None) -> list[Any]:
+        del attest  # existence is not enough: this pass needs the rows themselves
+        if forms is None:
+            return tokens
+        analysed = [token for token in tokens if token.feature.reading]
+        pointers = {
+            front: _pointer(rows) for front, rows in self._read(forms, [t.feature.lemma for t in analysed]).items()
+        }
+        # A target is a key of its own that the first read did not ask for: its lemma rows (and the
+        # vocalised heads on them) need one more batched read.
+        targets = self._read(forms, [target for target, _named in pointers.values()])
+        for token in analysed:
+            target, named = pointers.get(token.feature.lemma, ("", frozenset()))
+            heads = [vocalised_head(content) for content, tags in targets.get(target, ()) if is_lemma_row(tags)]
+            if heads:
+                token.feature.lemma = target
+                token.feature.reading = next((head for head in heads if head in named), heads[0])
+        return tokens
+
+    def _read(self, forms: FormLookup, keys: list[str]) -> dict[str, list[tuple[str, str]]]:
+        """Every key's rows (``[]`` for none): the cached ones, and one batched read for the rest."""
+        keys = [key for key in dict.fromkeys(keys) if key]
+        found = {key: self._cache[key] for key in keys if key in self._cache}
+        wanted = [key for key in keys if key not in found]
+        if wanted:
+            read = forms(wanted)
+            if len(self._cache) + len(wanted) > _FORM_CACHE_MAX:
+                self._cache.clear()
+            for key in wanted:
+                found[key] = self._cache[key] = read.get(key, [])
+        return found
+
+
+def _pointer(rows: list[tuple[str, str]]) -> tuple[str, frozenset[str]]:
+    """``(the one folded lemma a pointer-only front's rows name, every spelling they name it by)``.
+
+    ``("", ...)`` for a front with a lemma row, no rows, or targets that fold to more than one lemma.
+    """
+    if not rows or any(is_lemma_row(tags) for _content, tags in rows):
+        return "", frozenset()
+    named = frozenset(target for content, _tags in rows for target in form_targets(content))
+    folded = {ar_fold(target) for target in named}
+    return (next(iter(folded)), named) if len(folded) == 1 else ("", frozenset())
 
 
 class ArabicReadingSupport:

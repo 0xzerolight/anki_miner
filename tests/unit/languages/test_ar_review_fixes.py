@@ -1,16 +1,19 @@
 """Arabic analysis fixes from the 2026-09 mining review (T24), engine-free.
 
-The rhubarb lexeme repair, the pick override table and the verb citation fatha, on hand-built
-analyses. The real-database half lives in
-``test_ar_real_engine.py``.
+The rhubarb lexeme repair, the pick override table, the verb citation fatha and the form-of front
+repair, each on hand-built analyses or duck tokens. The maadii, ukhraa and qiyaam rows below are the
+ones wty-ar-en holds (read through ``storage.term_rows``), cut to what the pass reads; the others are
+built to the shape one rule needs. The real-database half lives in ``test_ar_real_engine.py``.
 """
 
 from __future__ import annotations
 
 import pytest
 
-from anki_miner.languages.ar.morphology import pick_analysis, summarise
+from anki_miner.config import AnkiMinerConfig
+from anki_miner.languages.ar.morphology import ArabicFormOfPass, pick_analysis, summarise
 from anki_miner.languages.ar.overrides import AR_LEX_REPAIRS, AR_PICK_OVERRIDES
+from anki_miner.languages.token import LanguageToken
 
 FATHA = "\u064e"
 SHADDA = "\u0651"
@@ -125,3 +128,151 @@ def test_shadda_is_the_last_mark_of_a_citation_form():
     """NFC puts fatha (ccc 30) before shadda (ccc 33): the order wty's readings are stored in."""
     reading = summarise(_a("\u0645\u064e\u0631\u0651", "verb", -4.0)).reading  # marr -> marra "pass"
     assert reading.endswith(FATHA + SHADDA)
+
+
+# --------------------------------------------------------------------------
+# ARFA-07: a front the dictionary files only as a form of one lemma takes that lemma
+# --------------------------------------------------------------------------
+
+
+def form(*targets: str) -> tuple[str, str]:
+    """A ``non-lemma`` row naming ``targets``, single- or multi-target as the importer renders them."""
+    if len(targets) == 1:
+        return (f'<li class="gloss-item"><div class="gloss-content">{targets[0]}</div></li>', "non-lemma")
+    items = "".join(f'<li class="gloss-sc-li">{target}</li>' for target in targets)
+    return (
+        f'<li class="gloss-item"><div class="gloss-content"><ul class="gloss-sc-ul">{items}</ul></div></li>',
+        "non-lemma",
+    )
+
+
+def lemma(head: str, tags: str) -> tuple[str, str]:
+    """A headword row whose Grammar line opens with ``head`` (the vocalised headword)."""
+    grammar = f"{head} \N{BULLET} (romanisation) m" if head else ""
+    return (
+        '<li class="gloss-item"><div class="gloss-content"><div class="gloss-sc-div">'
+        '<div class="gloss-sc-div" data-sc-content="Grammar-content">'
+        f"{grammar}</div></div></div></li>",
+        tags,
+    )
+
+
+class Forms:
+    """``FormLookup`` answering under the asked spelling, recording every batch."""
+
+    def __init__(self, rows: dict[str, list[tuple[str, str]]]) -> None:
+        self._rows = rows
+        self.calls: list[list[str]] = []
+
+    def __call__(self, terms: list[str]) -> dict[str, list[tuple[str, str]]]:
+        self.calls.append(list(terms))
+        return {term: self._rows[term] for term in terms if term in self._rows}
+
+
+MADI = "\u0645\u0627\u0636\u064a"  # maadii, calima's lexeme for "past"
+MAD = "\u0645\u0627\u0636"  # maad, wty's headword
+MADIN = "\u0645\u064e\u0627\u0636\u064d"  # maadin, its vocalised head
+AKHAR = "\u0622\u062e\u0631"  # aakhar "other"
+QIYAM = "\u0642\u064a\u0627\u0645"  # qiyaam, a form of qaama and of qaa'im
+WTY = {
+    MADI: [form(MAD), form(MAD, MAD, MAD)],
+    MAD: [lemma(MADIN, "adj"), lemma(MADIN, "n masc"), form("\u0645\u0636\u0649")],
+    "\u0623\u062e\u0631\u0649": [form("\u0622\u062e\u064e\u0631"), form(AKHAR, AKHAR)],  # ukhraa -> aakhar, vocalised
+    # aakhir "last" heads the first two rows; aakhar "other", the one ukhraa names, the third
+    AKHAR: [
+        lemma("\u0622\u062e\u0650\u0631", "adj"),
+        lemma("\u0622\u062e\u0650\u0631", "n masc"),
+        lemma("\u0622\u062e\u064e\u0631", "adj"),
+    ],
+    QIYAM: [form("\u0642\u064e\u0627\u0645\u064e"), form(QIYAM, QIYAM), form("\u0642\u064e\u0627\u0626\u0650\u0645")],
+    "\u0642\u0627\u0645": [lemma("\u0642\u064e\u0627\u0645\u064e", "v")],
+    "\u0642\u0627\u0626\u0645": [lemma("\u0642\u064e\u0627\u0626\u0650\u0645", "adj")],
+    "\u0643\u062a\u0627\u0628": [lemma("\u0643\u0650\u062a\u064e\u0627\u0628", "n masc"), form("\u0643\u062a\u0628")],
+    "\u0645\u0624\u062e\u0631": [form("\u0623\u062e\u0631")],  # a target with form rows only
+    "\u0623\u062e\u0631": [form("\u0622\u062e\u0631")],
+    "\u0635\u0631\u0628": [form("\u0635\u0631\u0628\u064a")],  # a target whose lemma row has no Grammar line
+    "\u0635\u0631\u0628\u064a": [lemma("", "n masc")],
+}
+
+
+def ar_tok(surface: str, pos1: str, lemma_: str, reading: str) -> LanguageToken:
+    """A token as ``ArabicTagger`` builds it: every token carries a reading field, blank when unanalysed."""
+    token = LanguageToken(surface=surface, pos1=pos1, lemma=lemma_)
+    token.feature.reading = reading
+    return token
+
+
+def run(forms: Forms | None, *tokens: LanguageToken) -> list[tuple[str, str, str, str]]:
+    out = ArabicFormOfPass()(list(tokens), None, forms)
+    return [(t.surface, t.feature.pos1, t.feature.lemma, t.feature.reading) for t in out]
+
+
+def test_a_pointer_only_front_takes_its_one_target_and_the_target_s_vocalised_head():
+    surface = "\u0627\u0644\u0645\u0627\u0636\u064a"  # al-maadii "the past"
+    got = run(Forms(WTY), ar_tok(surface, "noun", MADI, "\u0645\u0627\u0636\u0650\u064a"))
+    assert got == [(surface, "noun", MAD, MADIN)]  # the surface and the analyzer's POS stay
+
+
+def test_targets_are_folded_before_they_are_counted_and_the_named_row_gives_the_reading():
+    """ukhraa names aakhar twice, once vocalised: one target, and the reading is the row it names."""
+    got = run(
+        Forms(WTY),
+        ar_tok(
+            "\u0623\u062e\u0631\u0649", "adj", "\u0623\u062e\u0631\u0649", "\u0623\u064f\u062e\u0652\u0631\u064e\u0649"
+        ),
+    )
+    assert got[0][2:] == (AKHAR, "\u0622\u062e\u064e\u0631")
+
+
+@pytest.mark.parametrize(
+    ("front", "reading"),
+    [
+        (QIYAM, "\u0642\u0650\u064a\u0627\u0645"),  # three targets: qaama, qiyaam itself, qaa'im
+        ("\u0643\u062a\u0627\u0628", "\u0643\u0650\u062a\u0627\u0628"),  # a headword is never second-guessed
+        ("\u0645\u0624\u062e\u0631", "\u0645\u064f\u0624\u064e\u062e\u0651\u064e\u0631"),  # the target is a form too
+        ("\u062d\u0633\u0646\u0627\u0621", "\u062d\u064e\u0633\u0652\u0646\u0627\u0621"),  # no rows at all
+    ],
+)
+def test_every_other_front_stays_as_the_analyzer_built_it(front, reading):
+    assert run(Forms(WTY), ar_tok(front, "noun", front, reading)) == [(front, "noun", front, reading)]
+
+
+def test_a_target_without_a_grammar_line_takes_no_reading():
+    """No vocalised head to read: a blank reading, never the pointer word's own vocalisation."""
+    got = run(Forms(WTY), ar_tok("\u0635\u0631\u0628", "noun", "\u0635\u0631\u0628", "\u0635\u064e\u0631\u0652\u0628"))
+    assert got[0][2:] == ("\u0635\u0631\u0628\u064a", "")
+
+
+def test_unanalysed_tokens_are_never_read():
+    """The tokenizer gives every token a reading field; only an analysed one fills it."""
+    forms = Forms(WTY)
+    unknown = ar_tok(MADI, "unknown", MADI, "")
+    punc = ar_tok("\u061f", "punc", "\u061f", "")
+    ArabicFormOfPass()([unknown, punc], None, forms)
+    assert forms.calls == [] and unknown.feature.lemma == MADI
+
+
+def test_no_dictionary_leaves_the_line_alone():
+    assert run(None, ar_tok(MADI, "noun", MADI, "\u0645\u0627\u0636\u0650\u064a"))[0][2] == MADI
+
+
+def test_a_repeated_front_is_read_once():
+    forms = Forms(WTY)
+    pass_ = ArabicFormOfPass()
+    for _ in range(2):
+        pass_([ar_tok(MADI, "noun", MADI, "\u0645\u0627\u0636\u0650\u064a")], None, forms)
+    assert sum(MADI in call for call in forms.calls) == 1
+
+
+def test_the_arabic_parser_wires_the_form_of_pass(monkeypatch):
+    from anki_miner.languages.registry import get_profile
+
+    seen: dict[str, object] = {}
+
+    def fake(config, **kwargs):
+        seen.update(kwargs)
+        return "parser"
+
+    monkeypatch.setattr("anki_miner.languages._spaced.create_spaced_parser", fake)
+    assert get_profile("ar").create_parser(AnkiMinerConfig()) == "parser"
+    assert isinstance(seen["token_post_pass"], ArabicFormOfPass)
