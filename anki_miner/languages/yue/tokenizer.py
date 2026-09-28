@@ -36,6 +36,7 @@ dictionary miss that cost every word in it. The tags still come from ONE
 from __future__ import annotations
 
 import unicodedata
+from collections.abc import Sequence
 
 from anki_miner.languages.token import LanguageToken
 from anki_miner.languages.yue.overrides import YUE_TAG_OVERRIDES
@@ -57,8 +58,14 @@ class YueTagger:
         # the 34 MB segmenter and the 785 KB tagger load on their first call.
         self._stop_words = frozenset(pycantonese.stop_words())
 
-    def __call__(self, text: str) -> list[LanguageToken]:
-        spans = self._segment_runs(text)
+    def __call__(self, text: str, spans: Sequence[Span] | None = None) -> list[LanguageToken]:
+        """Tokenize ``text``, or tag ``spans``, a segmentation of it the caller already made.
+
+        The parser's split pass (``yue/parser.py``) re-tags a re-segmented line
+        through ``spans``, so the call stays under ``LockedTagger``'s lock.
+        """
+        if spans is None:
+            spans = self._segment_runs(text)
         if not spans:
             return []
         words = [word for word, _offsets in spans]

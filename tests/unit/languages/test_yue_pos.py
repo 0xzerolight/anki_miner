@@ -40,5 +40,6 @@ def test_the_content_words_of_the_smoke_line_do_mine():
 
 def test_the_measured_mis_tags_still_pass_the_gate():
     # 緊飯 NOUN and 靚啦 ADJ are glued mis-segmentations the POS gate cannot
-    # catch; the dictionary miss is what stops them (spec F.1 risk row).
+    # catch; they miss every dictionary, and the parser's split pass takes them
+    # apart (test_yue_decompound.py).
     assert {t["lemma"] for t in tokens() if mined(t)} >= {"緊飯", "靚啦"}

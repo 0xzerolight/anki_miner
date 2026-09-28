@@ -18,7 +18,9 @@ Two measured consequences, accepted rather than papered over:
   PROPN) and files set phrases under X (唔該, 對唔住). A dictionary miss cannot
   stop the particles -- standalone 啦 and 吧 are headwords in both catalogue
   rows -- so ``yue/overrides.py`` retags them PART and the set phrases into this
-  set, in the tagger, by word.
+  set, in the tagger, by word. A particle glued onto a word (緊飯 NOUN, 靚啦
+  ADJ) is a dictionary miss, which the parser's ``YueDecompoundPass`` takes
+  apart into attested words.
 
 PART, INTJ, PRON, PROPN, NUM, ADP, AUX, DET, CCONJ, SCONJ, PUNCT, SYM and X need
 no exclusion entry -- their tag is outside ``YUE_ALLOWED_POS`` already.

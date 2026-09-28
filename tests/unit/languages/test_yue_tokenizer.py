@@ -111,3 +111,11 @@ def test_no_token_spans_a_punctuation_mark(tagger, line):
     assert "，" in surfaces
     for surface in surfaces:
         assert len(surface) == 1 or not any(unicodedata.category(char).startswith("P") for char in surface), surface
+
+
+def test_a_segmentation_given_by_the_caller_is_tagged_in_place_of_the_segmenter(tagger):
+    # The seam the parser's split pass re-tags a line through, under the lock.
+    tokens = tagger("今 日好忙", spans=[("今日", (0, 3)), ("好", (3, 4)), ("忙", (4, 5))])
+
+    assert [(t.surface, t.feature.lemma) for t in tokens] == [("今 日", "今日"), ("好", "好"), ("忙", "忙")]
+    assert tokens[1].feature.pos2 == "stopword"

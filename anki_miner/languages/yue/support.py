@@ -90,9 +90,10 @@ class YueLookupStrategy:
     Two rungs, both pure spelling. First the radical-normalised form, which
     matters only against an index built from OCR or legacy sources that
     substituted a Kangxi radical glyph for the ideograph. Then the Hong Kong
-    variant pairs, both ways. No per-character fallback (zh has none either), so
-    a multi-character miss yields no card; dictionary-driven decompounding and
-    glued-particle joins stay deferred (spec section 9).
+    variant pairs, both ways. No per-character fallback (zh has none either): a
+    glued multi-character miss is split upstream, by the parser's
+    ``YueDecompoundPass``, into the words it is made of when the dictionary
+    attests every one, and a miss it cannot split yields no card.
 
     The ``0`` is the Yomitan deinflection bitmask value
     ``DefinitionService._fallback_candidates`` already uses for pure spelling
