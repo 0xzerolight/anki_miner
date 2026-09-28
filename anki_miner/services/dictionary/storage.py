@@ -368,6 +368,23 @@ def _term_rows_match_reading(keys: DictKeyFolding | None) -> bool:
     return bool(getattr(keys, "term_rows_match_reading", False))
 
 
+def _splice_row_fits(keys: DictKeyFolding | None, pos: str | None) -> Callable[[str], bool] | None:
+    """The test a spliced target lemma row's ``tags`` must pass for one token, or ``None`` to splice every row.
+
+    Optional profile capability, probed like ``sense_rank`` and called as
+    ``splice_row_fits(tags, pos)``: whether the form-row splice may read a
+    target lemma row with these tags for a token of this part of speech.
+    wty-sl-en files ``mȃma`` as a form of the verb ``imeti``, and a noun card
+    must not read "to have" (``SlovenianDictKeys``). ``None`` with no token
+    part of speech in hand (the curator, a backfill without a stored Pos) and
+    for every profile without the method.
+    """
+    fits = getattr(keys, "splice_row_fits", None)
+    if fits is None or pos is None:
+        return None
+    return lambda tags: bool(fits(tags, pos))
+
+
 def _connect_for_bulk_write(db_path: Path) -> sqlite3.Connection:
     """Open *db_path* tuned for a one-shot bulk load.
 
@@ -697,7 +714,9 @@ def _substitute_redirect_rows(
 #   the reverse pointers, menjual -> dijual, cám ơn -> cảm ơn), each target
 #   once. A target the dictionary does not file as a headword adds nothing, so
 #   a hit whose targets are all absent collapses to a miss and the profile's
-#   variant ladder gets its turn.
+#   variant ladder gets its turn. A profile may also splice only the target
+#   rows that fit the token's part of speech (see :func:`_splice_row_fits`);
+#   a target with none of those adds nothing either.
 #
 # Nothing is re-imported: stored rows are read as they are, with the same
 # ``form_targets`` the front repair uses. ``term_rows`` (the R36 form lookup)
@@ -762,6 +781,7 @@ def _splice_form_rows(
     *,
     fold_term: Callable[[str], str],
     rank: _RowRank | None,
+    row_fits: Callable[[str], bool] | None = None,
 ) -> list[_Row]:
     """Replace each form row by its targets' lemma rows (see the section comment).
 
@@ -771,7 +791,9 @@ def _splice_form_rows(
     ``rules`` only when they carry theirs). The targets of a run of form rows
     are ranked together under the token's own ``rank``, target then index order
     inside a rank, as one lookup of them would be: uk ``мене`` (PRON) names
-    ``Мен`` before ``я``, and the pronoun must still lead."""
+    ``Мен`` before ``я``, and the pronoun must still lead. ``row_fits`` (from
+    :func:`_splice_row_fits`) keeps only the target rows whose tags pass it;
+    ``None`` keeps them all."""
     targets = _form_row_targets(rows, fold_term)
     if not targets:
         return rows
@@ -793,7 +815,11 @@ def _splice_form_rows(
             if target in spliced:
                 continue
             spliced.add(target)
-            run.extend(cast(_Row, target_row[: len(row)]) for target_row in lemma_rows_by_term.get(target, []))
+            run.extend(
+                cast(_Row, target_row[: len(row)])
+                for target_row in lemma_rows_by_term.get(target, [])
+                if row_fits is None or row_fits(target_row[1])
+            )
     return out + ranked(run)
 
 
@@ -819,7 +845,8 @@ def lookup(
     keeps pre-A′ behavior.
 
     ``pos`` is the token's part of speech (``TokenizedWord.pos``), handed to the
-    profile's optional row rank (see :func:`_sense_rank_fn`); inert without one.
+    profile's optional row rank (see :func:`_sense_rank_fn`) and its optional
+    splice test (see :func:`_splice_row_fits`); inert without either.
 
     Readings are stored hiragana-folded, so the reading-match WHERE clause binds
     the folded query word and the boost binds the folded contextual reading,
@@ -859,13 +886,13 @@ def lookup(
     # lookup_many) so a resolved entry can't be truncated by its own pointer row.
     rank = _bound_rank(sense_rank, pos)
     rows3 = _drop_shadowed_form_rows([(row[0], row[1], row[2]) for row in kept], rank)
-    rows3 = _splice_form_rows(conn, rows3, fold_term=fold_t, rank=rank)
+    rows3 = _splice_form_rows(conn, rows3, fold_term=fold_t, rank=rank, row_fits=_splice_row_fits(keys, pos))
     projected = _substitute_redirect_rows(conn, rows3)
     return projected[:_LOOKUP_LIMIT]  # type: ignore[return-value]
 
 
 def lookup_with_rules(
-    conn: sqlite3.Connection, word: str, *, keys: DictKeyFolding | None = None
+    conn: sqlite3.Connection, word: str, *, keys: DictKeyFolding | None = None, pos: str | None = None
 ) -> list[tuple[str, str, int | None, str]]:
     """Return (content, tags, sequence, rules) rows matching ``word`` by term or
     folded reading, ranked like :func:`lookup` (no reading boost).
@@ -875,6 +902,12 @@ def lookup_with_rules(
     rendering. A NULL/absent ``rules`` column normalises to ``""`` (accept
     unconditionally at the caller). Katakana folding matches ``lookup``: a
     katakana candidate still matches a kanji headword's hiragana-folded reading.
+
+    ``pos`` is the part of speech of the token the candidate was derived from,
+    handed only to the profile's optional splice test (see
+    :func:`_splice_row_fits`): sl ``mamo`` (a form of the verb ``imeti``) must
+    not read "to have" for the noun ``mama``. The row rank stays the no-token
+    one. ``None`` (the curator, a backfill) splices every target row.
 
     ``keys`` folds both key spaces; ``None`` is the Japanese pair (see
     :func:`_folders`).
@@ -897,7 +930,7 @@ def lookup_with_rules(
     rows4 = _drop_shadowed_form_rows(
         [(row[0], row[1], row[2], row[3] if row[3] is not None else "") for row in kept], rank
     )
-    rows4 = _splice_form_rows(conn, rows4, fold_term=fold_t, rank=rank)
+    rows4 = _splice_form_rows(conn, rows4, fold_term=fold_t, rank=rank, row_fits=_splice_row_fits(keys, pos))
     projected = _substitute_redirect_rows(conn, rows4, with_rules=True)
     return projected[:_LOOKUP_LIMIT]  # type: ignore[return-value]
 
@@ -952,7 +985,7 @@ def lookup_many(
     threaded into the Rule A′ homograph scope per word (see
     :func:`_homograph_keep_mask`); inert when ``scope_homographs`` is False.
     ``pos`` likewise maps a requested word to its token's part of speech, handed
-    to the profile's row rank per word (see :func:`lookup`).
+    to the profile's row rank and splice test per word (see :func:`lookup`).
 
     ``scope_homographs`` (default ``True``) applies the render-path Rule A/B
     homograph scope (:func:`_homograph_keep_mask`) per word before the sort/cap,
@@ -1082,7 +1115,12 @@ def lookup_many(
         lemma_rows_by_term = _fetch_lemma_rows_for_terms(conn, form_targets_in_chunk) if form_targets_in_chunk else {}
         for w, rows3 in pending.items():
             pending[w] = _splice_form_rows(
-                conn, rows3, lemma_rows_by_term, fold_term=fold_t, rank=_bound_rank(sense_rank, pos_by_word.get(w))
+                conn,
+                rows3,
+                lemma_rows_by_term,
+                fold_term=fold_t,
+                rank=_bound_rank(sense_rank, pos_by_word.get(w)),
+                row_fits=_splice_row_fits(keys, pos_by_word.get(w)),
             )
 
         # Redirect substitution BEFORE the pool cap, sharing ONE target fetch

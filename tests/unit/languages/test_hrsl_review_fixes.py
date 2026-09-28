@@ -1,8 +1,8 @@
-"""Croatian and Slovenian: form-row fronts, sl tone-folded keys, the Latin-2 ladder and „…“ quotes.
+"""Croatian and Slovenian: form-row fronts, tone-folded keys, the Latin-2 ladder and „…“ quotes.
 
 The front half drives each profile's own ``token_post_pass`` with duck tokens and a stand-in for R36's
 ``form_lookup``; every row set is the one wty-sh-en 2026.08.29 / wty-sl-en 2026.09.19 hold for those keys,
-cut to the rows the rule reads. The sl stand-in folds its keys through the profile's own ``dict_keys``, as
+cut to the rows the rule reads. The stand-in folds its keys through the profile's own ``dict_keys``, as
 the index does on import and query. The real-engine cases run the injected pass over the real tagger's
 tokens; the taggers are module-scoped because the autouse conftest fixture clears the tagger cache around
 every test.
@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import zipfile
+from dataclasses import replace
 
 import pytest
 
@@ -19,6 +20,7 @@ from anki_miner.languages._spaced.form_of import FormOfLemmaPass, OrderedPasses
 from anki_miner.languages.hr.morphology import hr_short_infinitive_pass
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.token import LanguageToken
+from anki_miner.services.definition_service import DefinitionService
 from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip
 from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
 from anki_miner.services.reading._util import decode_with_ladder
@@ -124,27 +126,120 @@ def test_sl_keys_fold_the_accent_notation_and_keep_the_caron():
     assert keys.fold_term("Žena šla") == "žena šla"  # plain orthography is unchanged: old indexes still answer
 
 
-def test_sl_an_accent_notation_form_row_is_reachable_after_import(tmp_path):
-    """41,212 wty-sl-en keys are written in accent notation; the import folds them like the query."""
-    index = {"title": "wty-sl-en", "format": 3, "revision": "2026.09.19", "sequenced": True, "sourceLanguage": "sl"}
-    term_rows = [
-        ["čakati", "", "v vt impf", "", 0, ["to wait"], 1, ""],
-        ["čȃkam", "", "non-lemma", "", 0, [["čakati", ["first-person singular present"]]], 2, ""],
-    ]
+def _imported(tmp_path, code: str, dict_id: str, term_rows: list[list[object]]) -> IndexedDictProvider:
+    """A loaded provider over a wty dictionary holding ``term_rows``, imported and queried with the profile's keys."""
+    index = {"title": dict_id, "format": 3, "revision": "2026.09.19", "sequenced": True, "sourceLanguage": code}
     tag_bank = [["non-lemma", "", 10, "non-lemma", -10], ["v", "partOfSpeech", -2, "verb", 2]]
-    archive = tmp_path / "wty-sl-en.zip"
+    archive = tmp_path / f"{dict_id}.zip"
     with zipfile.ZipFile(archive, "w") as zf:
         zf.writestr("index.json", json.dumps(index))
         zf.writestr("tag_bank_1.json", json.dumps(tag_bank))
         zf.writestr("term_bank_1.json", json.dumps(term_rows))
-    import_yomitan_zip(archive, tmp_path / "dicts", dict_id="wty-sl-en", language="sl")
+    import_yomitan_zip(archive, tmp_path / "dicts", dict_id=dict_id, language=code)
     provider = IndexedDictProvider(
-        "wty-sl-en", tmp_path / "dicts" / "wty-sl-en" / "index.sqlite", keys=get_profile("sl").dict_keys
+        dict_id, tmp_path / "dicts" / dict_id / "index.sqlite", keys=get_profile(code).dict_keys
     )
     assert provider.load()
+    return provider
+
+
+def test_sl_an_accent_notation_form_row_is_reachable_after_import(tmp_path):
+    """41,212 wty-sl-en keys are written in accent notation; the import folds them like the query."""
+    provider = _imported(
+        tmp_path,
+        "sl",
+        "wty-sl-en",
+        [
+            ["čakati", "", "v vt impf", "", 0, ["to wait"], 1, ""],
+            ["čȃkam", "", "non-lemma", "", 0, [["čakati", ["first-person singular present"]]], 2, ""],
+        ],
+    )
     rows = provider.term_rows(["čakam"])
     assert [tags for _content, tags in rows["čakam"]] == ["non-lemma"]
     assert "čakati" in rows["čakam"][0][0]
+
+
+# --------------------------------------------------------------------------
+# E2E-2-02: the sl Definition splice reads only the target rows of the token's own class
+# --------------------------------------------------------------------------
+
+#: wty-sl-en files ``mȃma`` (folded ``mama``) as a form of the verb ``imeti``, and ``ima`` as another; ``prav``
+#: as a form of the noun ``pravo``; the adverb ``lepo`` only as a form of the adjective ``lep``.
+_SL_ROWS = [
+    ["imeti", "", "v impf pf", "", 0, ["to have"], 1, ""],
+    ["mȃma", "", "non-lemma", "", 0, [["imeti", ["first-person present indicative negative dual"]]], 2, ""],
+    ["ima", "", "non-lemma", "", 0, [["imeti", ["third-person singular present"]]], 3, ""],
+    ["pravo", "", "n neut", "", 0, ["law"], 4, ""],
+    ["prav", "", "non-lemma", "", 0, [["pravo", ["genitive dual/plural"]]], 5, ""],
+    ["lep", "", "adj", "", 0, ["beautiful"], 6, ""],
+    ["lepo", "", "non-lemma", "", 0, [["lep", ["nominative/accusative singular neuter"]]], 7, ""],
+]
+
+
+def test_sl_a_card_reads_no_gloss_of_another_class_through_its_form_row(tmp_path):
+    provider = _imported(tmp_path, "sl", "wty-sl-en", _SL_ROWS)
+    pos = {"mama": "NOUN", "prav": "ADV", "ima": "VERB", "lepo": "ADV"}
+    found = provider.lookup_many([(word, None) for word in pos], pos=pos)
+    assert found["mama"] is None and found["prav"] is None
+    assert found["ima"] is not None and "to have" in found["ima"]
+    # An adverb in -o is its adjective's neuter form: the adjective's meaning is the adverb's.
+    assert found["lepo"] is not None and "beautiful" in found["lepo"]
+
+
+def test_sl_a_lookup_with_no_token_class_splices_as_before(tmp_path):
+    """The curator and a backfill without a stored Pos hand no class: nothing to compare, nothing dropped."""
+    provider = _imported(tmp_path, "sl", "wty-sl-en", _SL_ROWS)
+    found = provider.lookup_many([("mama", None)])["mama"]
+    assert found is not None and "to have" in found
+
+
+#: wty-sl-en's ``mamo``: the accusative of the noun ``mama``, filed only as a form of the verb ``imeti``.
+_SL_MAMO = ["mamo", "", "non-lemma", "", 0, [["imeti", ["first-person plural present indicative negative"]]], 8, ""]
+
+
+@pytest.mark.parametrize("batch", ["get_definitions_batch", "get_glossaries_batch"])
+def test_sl_the_variant_ladder_reads_the_tokens_class_too(tmp_path, test_config, batch):
+    """The noun ``mama`` misses, and the ladder retries its surface: ``mamo`` and a line-initial ``Mama``."""
+    provider = _imported(tmp_path, "sl", "wty-sl-en", [*_SL_ROWS, _SL_MAMO])
+    service = DefinitionService(replace(test_config, language="sl"), [provider], lookup=get_profile("sl").lookup)
+    fetch = getattr(service, batch)
+    for surface in ("mamo", "Mama"):
+        ladder = {"mama": (surface, None)}
+        assert fetch([("mama", None)], None, ladder, pos_context={"mama": "NOUN"}) == [None], surface
+        # No token class in hand (a backfill): every target row, as before.
+        (found,) = fetch([("mama", None)], None, ladder)
+        assert found is not None and "to have" in found, surface
+    # A verb the tagger lemmatised wrongly still reaches imeti through its surface.
+    (found,) = fetch([("mamiti", None)], None, {"mamiti": ("mamo", None)}, pos_context={"mamiti": "VERB"})
+    assert found is not None and "to have" in found
+
+
+# --------------------------------------------------------------------------
+# E2E-2-01: hr keys fold the tone marks, so the splice reaches a toned target
+# --------------------------------------------------------------------------
+
+
+def test_hr_keys_fold_the_tone_marks_and_keep_every_letter():
+    keys = get_profile("hr").dict_keys
+    assert keys.fold_term("prímiti") == keys.fold_term("Primiti") == "primiti"
+    assert keys.fold_term("spȁsti") == "spasti"
+    # Croatian spelling is unchanged, so an index imported before the fold keeps answering.
+    assert keys.fold_term("Ćup, đak, Čekam, šuma, žena, dž") == "ćup, đak, čekam, šuma, žena, dž"
+
+
+def test_hr_an_imperfective_reads_its_toned_perfectives_lemma_rows(tmp_path):
+    """wty-sh-en keys ``primiti`` plain, but ``primati``'s one row names it ``prímiti``."""
+    provider = _imported(
+        tmp_path,
+        "hr",
+        "wty-sh-en",
+        [
+            ["primiti", "", "v pf", "", 0, ["to receive"], 1, ""],
+            ["primati", "", "non-lemma", "", 0, [["prímiti", ["imperfective form"]]], 2, ""],
+        ],
+    )
+    found = provider.lookup_many([("primati", None)], pos={"primati": "VERB"})["primati"]
+    assert found is not None and "to receive" in found
 
 
 # --------------------------------------------------------------------------
