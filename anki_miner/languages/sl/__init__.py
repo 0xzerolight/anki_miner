@@ -75,7 +75,9 @@ def build_profile() -> LanguageProfile:
         script=LatinScript(),
         # slv is ISO 639-2; sl and the English name are the ko shape (D20).
         audio_track_codes=frozenset({"slv", "sl", "slovenian"}),
-        import_encodings=("utf-8-sig", "cp1250"),
+        # Latin-2 before cp1250: the two differ on š ž Š Ž, so a Latin-2 file read as cp1250 mines ąola and
+        # moąki. A cp1250 file fails the Latin-2 leg on its first š ž „ “ – …, which are C1 controls there.
+        import_encodings=("utf-8-sig", "iso8859_2", "cp1250"),
         scoped_defaults=spaced_scoped_defaults(
             subtitle_langs="sl",
             audio=SL_AUDIO,

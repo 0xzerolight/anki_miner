@@ -27,7 +27,7 @@ def test_the_identity_fields(profile):
     assert (profile.code, profile.english_name, profile.display_name) == ("sl", "Slovenian", "Slovenščina")
     assert profile.asr_language == "sl"
     assert profile.wiktionary_code == ""  # wty-sl-en declares sourceLanguage "sl"
-    assert profile.import_encodings == ("utf-8-sig", "cp1250")
+    assert profile.import_encodings == ("utf-8-sig", "iso8859_2", "cp1250")
     assert profile.audio_track_codes == frozenset({"slv", "sl", "slovenian"})
 
 
