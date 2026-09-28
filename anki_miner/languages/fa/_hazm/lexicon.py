@@ -36,6 +36,18 @@ VERB_FIRST_FILE = "verb_first.tsv"
 
 ZWNJ = "\N{ZERO WIDTH NON-JOINER}"
 
+#: The seated hamzas flattened onto their bare seat: the spelling subtitles use
+#: (soal 9,562 in fa_50k against so'al's 1,622). ``fa_fold`` keeps them apart on
+#: purpose -- it is the dictionary key -- so only the word table learns the alias.
+_SEAT_FLAT = str.maketrans(
+    {
+        "\N{ARABIC LETTER WAW WITH HAMZA ABOVE}": "\N{ARABIC LETTER WAW}",
+        "\N{ARABIC LETTER YEH WITH HAMZA ABOVE}": "\N{ARABIC LETTER FARSI YEH}",
+        "\N{ARABIC LETTER ALEF WITH HAMZA ABOVE}": "\N{ARABIC LETTER ALEF}",
+        "\N{ARABIC LETTER ALEF WITH HAMZA BELOW}": "\N{ARABIC LETTER ALEF}",
+    }
+)
+
 #: Colloquial-ending forms another word owns first, measured over fa_50k:
 #: beshin is "sit!" (neshastan) far more often than "that you become"
 #: (shodan), and xare is "the donkey" (xar + the spoken definite -e) once the
@@ -68,6 +80,21 @@ def _add_folded(mapping: dict[str, object]) -> None:
             mapping.setdefault(folded, value)
 
 
+def _hamza_spellings(tags: dict[str, tuple[str, ...]]) -> dict[str, str]:
+    """``flat spelling -> hamza spelling`` for every TAGGED row a seated hamza sets apart.
+
+    words.dat holds the flat spellings too, but as untagged count-0 rows (soal,
+    bel-akhare, ma'mur), so an alias kept only where no tagged row answers the
+    flat key never overrides one: reyis is tagged in its own right and stays.
+    """
+    spellings: dict[str, str] = {}
+    for key, key_tags in tags.items():
+        flat = key.translate(_SEAT_FLAT)
+        if key_tags and flat != key and not tags.get(flat) and not tags.get(fa_script.fa_fold(flat)):
+            spellings.setdefault(flat, key)
+    return spellings
+
+
 def _is_malformed(past: str, present: str) -> bool:
     """A ``verbs.dat`` row no paradigm should be expanded over.
 
@@ -96,6 +123,7 @@ class PersianLexicon:
         stopwords: frozenset[str],
         present_stems: dict[str, str],
         verb_first: frozenset[str],
+        hamza_spellings: dict[str, str],
     ) -> None:
         self._verbs = verbs
         self._informal = informal
@@ -106,6 +134,7 @@ class PersianLexicon:
         self._stopwords = stopwords
         self._present_stems = present_stems
         self._verb_first = verb_first
+        self._hamza_spellings = hamza_spellings
 
     @property
     def verb_count(self) -> int:
@@ -144,6 +173,14 @@ class PersianLexicon:
         """The ``words.dat`` POS tags: empty for an attested-only row and for a miss."""
         hit = self._tags.get(word)
         return hit if hit is not None else self._tags.get(fa_script.fa_fold(word), ())
+
+    def hamza_spelling(self, word: str) -> str | None:
+        """The tagged hamza spelling of a flat one (soal -> so'al), or ``None``.
+
+        Never answers for a word with a tagged row of its own (``_hamza_spellings``).
+        """
+        hit = self._hamza_spellings.get(word)
+        return hit if hit is not None else self._hamza_spellings.get(fa_script.fa_fold(word))
 
     def is_verb_first(self, word: str) -> bool:
         """True for a ``verb_first.tsv`` surface: its verb reading answers before its tagged row."""
@@ -291,6 +328,8 @@ def build(hazm_data: HazmData) -> PersianLexicon:
         stopwords=hazm_data.stopwords,
         present_stems=present_stems,
         verb_first=frozenset(fa_script.fa_fold(row[0]) for row in _read_tsv(VERB_FIRST_FILE)),
+        # Built over the folded keys as well, so a ZWNJ-less spelling finds its row.
+        hamza_spellings=_hamza_spellings(tags),
     )
     # Arm the normaliser's hook last: script.py must not import this module (it
     # is imported BY it, for fa_fold), so the engine hands itself over instead.

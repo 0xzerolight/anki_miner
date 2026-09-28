@@ -178,6 +178,15 @@ def _classify(surface: str, lexicon: PersianLexicon) -> LanguageToken:
     if stemmed is not None:
         return _token(surface, lexicon.tags(stemmed)[0], stemmed)
 
+    # soal for so'al: words.dat tags only the hamza spelling and keeps the flat
+    # one as an untagged count-0 row, so without this it ends "unknown" below.
+    # The card front is the standard spelling. Last of the answering rungs, like
+    # any other untagged row: a hamza reading must not take tu-am "you too" from
+    # the stem tier as tow'am "twin", nor baraye-t "for you" as bara'at.
+    standard = lexicon.hamza_spelling(surface)
+    if standard is not None:
+        return _token(surface, lexicon.tags(standard)[0], standard)
+
     if lexicon.is_attested(surface):
         # Attested without a POS and without a tagged stem: real, but never
         # silently admitted to the default allowed_pos.

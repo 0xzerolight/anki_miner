@@ -5,7 +5,9 @@ Measured gaps, each on subtitle-frequent words the 300-row fixture subset never 
 * verb-first surfaces: words.dat tags kone, kardi, beri and nadari as nouns only ("tick",
   "Kurdish", "brie", "poverty"), and tier 1 answered before any verb table (fa_50k: 185k tokens);
 * the stem tier's choice: hazm strips the LONGEST suffix, so -ay/-am ate the alef of sedaye,
-  babam and aqaye (sad "hundred", bab, aq) where the one-letter strip leaves the word.
+  babam and aqaye (sad "hundred", bab, aq) where the one-letter strip leaves the word;
+* hamza-less spellings: subtitles write soal 9,562 times to so'al's 1,622, and words.dat tags
+  only the hamza spelling.
 
 The pack is hard-required and the lexicon is module-scoped, as in ``test_fa_real_data.py``.
 """
@@ -141,3 +143,41 @@ class TestStemChoice:
     def test_the_ported_stemmer_itself_stays_hazm_exact(self):
         assert stemmer.stem("صدای") == "صد"
         assert stemmer.stem("بابام") == "باب"
+
+
+class TestHamzaLessSpelling:
+    @pytest.mark.parametrize(
+        ("surface", "standard"),
+        [
+            ("سوال", "سؤال"),
+            ("بالاخره", "بالأخره"),
+            ("مامور", "مأمور"),
+            ("ماموریت", "مأموریت"),
+            ("تایید", "تأیید"),
+            ("تاثیر", "تأثیر"),
+            ("رويا", "رؤیا"),
+        ],
+    )
+    def test_the_hamza_less_spelling_reaches_the_tagged_row(self, surface, standard, armed):
+        assert not armed.tags(fa_script.fa_normalize(surface)), "the premise: words.dat leaves it untagged"
+        token = _one(surface, armed)
+        assert token.surface == fa_script.fa_normalize(surface)
+        assert token.feature.lemma == standard
+        assert token.feature.pos1 == armed.tags(standard)[0]
+
+    def test_a_flat_spelling_with_its_own_tagged_row_keeps_it(self, armed):
+        # reyis is tagged in its own right: the alias never overrides a row.
+        assert armed.tags("رییس")
+        assert _one("رییس", armed).feature.lemma == "رییس"
+
+    @pytest.mark.parametrize(("surface", "stem"), [("توام", "تو"), ("برایت", "برای")])
+    def test_a_stem_reading_answers_before_the_hamza_alias(self, surface, stem, armed):
+        # tu-am "you too" is not tow'am "twin"; baraye-t "for you" is not bara'at.
+        assert armed.hamza_spelling(surface) is not None
+        assert _one(surface, armed).feature.lemma == stem
+
+    def test_the_clitic_shan_stays_a_stopword(self, armed):
+        assert _one("شان", armed).feature.pos2 == "stopword"
+
+    def test_the_dictionary_fold_is_unchanged(self):
+        assert fa_script.fa_fold("سوال") != fa_script.fa_fold("سؤال")
