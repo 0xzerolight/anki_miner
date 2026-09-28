@@ -8,7 +8,7 @@ import re
 import pytest
 
 from anki_miner.languages._spaced.keys import CasefoldDictKeys, spaced_dedup_fold
-from anki_miner.languages._spaced.morphology import SeparableVerbPass
+from anki_miner.languages._spaced.morphology import SeparableVerbPass, StashedParticle, stash_particle
 from anki_miner.languages._spaced.script import LATIN_SUBTITLE_REGEX
 from anki_miner.languages._spaced.sentence import sentence_rules
 from anki_miner.languages.hu.abbreviations import HU_ABBREVIATION_DROPS, HU_ABBREVIATIONS
@@ -32,7 +32,7 @@ RULES = dataclasses.replace(sentence_rules(HU_ABBREVIATIONS), openers=HU_OPENERS
 
 def head(lemma: str, particle: str) -> LanguageToken:
     token = LanguageToken("olvasta", "VERB", "", lemma, "", "VerbForm=Fin")
-    token.feature.particle = particle
+    stash_particle(token, StashedParticle(particle, LanguageToken(particle, "ADV", "", particle), "compound:preverb"))
     return token
 
 

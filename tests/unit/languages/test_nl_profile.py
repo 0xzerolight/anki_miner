@@ -88,7 +88,7 @@ def test_the_tagger_repairs_hyphens_stashes_particles_and_splits_sentence_final_
     tagger = get_tagger("nl")
     features = {t.surface: t.feature for t in tagger("Hij had een auto-ongeluk en belde zijn broer op.")}
     assert features["auto-ongeluk"].lemma == "auto-ongeluk"
-    assert features["belde"].particle == "op" and features["op"].pos1 == "PART"
+    assert features["belde"].particle == "op" and [p.text for p in features["belde"].particles] == ["op"]
     assert [(t.surface, t.feature.pos1) for t in tagger("Geef me je hand.")][-2:] == [("hand", "NOUN"), (".", "PUNCT")]
     assert ("Dhr.", "X") in [(t.surface, t.feature.pos1) for t in tagger("Dhr. Jansen komt.")]
 

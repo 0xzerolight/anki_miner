@@ -157,7 +157,7 @@ def test_casing_follows_the_title_case_classes():
     assert [t.feature.lemma for t in tokens] == ["Haus", "London", "laufen"]
 
 
-def test_a_particle_is_stashed_on_its_verb_head_and_demoted():
+def test_a_particle_is_stashed_on_its_verb_head_and_left_to_the_join_to_demote():
     text = "Er sieht den Film an"
     rows = [
         ("Er", "PRON", "PPER", "er", "sb", 1),
@@ -168,7 +168,8 @@ def test_a_particle_is_stashed_on_its_verb_head_and_demoted():
     ]
     tokens = to_duck_tokens(fake_doc(text, rows), text, particle_deps=frozenset({"svp"}))
     assert tokens[1].feature.particle == "an"
-    assert tokens[4].feature.pos1 == "PART"
+    assert [(p.text, p.token, p.dep) for p in tokens[1].feature.particles] == [("an", tokens[4], "svp")]
+    assert tokens[4].feature.pos1 == "ADP"  # SeparableVerbPass demotes it once it takes the join
     assert not getattr(tokens[3].feature, "particle", "")
 
 
@@ -198,7 +199,7 @@ def _stashed_tokens():
 
 def test_the_pass_reattaches_unconditionally_without_a_dictionary():
     tokens = SeparableVerbPass()(_stashed_tokens(), None, None)
-    assert tokens[1].feature.lemma == "ansehen"
+    assert tokens[1].feature.lemma == "ansehen" and tokens[4].feature.pos1 == "PART"
     assert not tokens[1].feature.particle  # cleared: a second run cannot prefix again
     assert SeparableVerbPass()(tokens, None, None)[1].feature.lemma == "ansehen"
 
@@ -211,7 +212,7 @@ def test_the_pass_needs_the_headword_when_a_dictionary_is_wired():
         return set()
 
     tokens = SeparableVerbPass()(_stashed_tokens(), attest, None)
-    assert tokens[1].feature.lemma == "sehen"
+    assert tokens[1].feature.lemma == "sehen" and tokens[4].feature.pos1 == "ADP"
     assert calls == [["ansehen"]]
     assert SeparableVerbPass()(_stashed_tokens(), lambda words: {"ansehen"}, None)[1].feature.lemma == "ansehen"
 

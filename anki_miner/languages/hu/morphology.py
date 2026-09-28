@@ -13,8 +13,9 @@ debated or limited rows included. The parser labels a separated preverb ``compou
 of those hang a word that is no preverb (``volna``, ``legalább``, ``hogy``, a closing quote).
 ``hungarian_preverb_candidates`` offers a join only for a listed preverb: without a dictionary ``SeparableVerbPass``
 takes the first candidate, which would print ``volnatör``. The 36 arcs on a non-verb head (X, ADJ, PROPN, NOUN, ADV,
-NUM) are skipped before the demotion, so their dependent mines as its own ADV (``nem érhető el`` mines ``el``), and a
-head with two arcs keeps the first (``hitte volna el`` stashes ``volna``, so the front stays ``hisz``).
+NUM) are never stashed, so their dependent mines as its own ADV (``nem érhető el`` mines ``el``). A head with two
+arcs stashes both and the pass tries them in order: ``hitte volna el`` joins ``el`` (``elhisz``), because ``volna``
+offers no join; a stashed word the pass does not join keeps its own class (``legalább`` stays an adverb).
 
 ``preverb_less_verb`` is the lookup rung (E.2.8, the German rung's shape): wty-hu-en lacks many preverb verbs the
 lemmatiser builds (``elkap``, ``elenged``, ``behoz``). It reads the front only, has no POS gate and emits every
