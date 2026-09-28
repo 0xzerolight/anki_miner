@@ -51,7 +51,10 @@ def config():
 
 def _readings(config, providers, text: str) -> dict[str, tuple[str, str, str]]:
     service = DefinitionService(config, providers)
-    parser = get_profile("uk").create_parser(config, reading_lookup=service.offline_term_readings)
+    # Both probes, as service_factory wires every parser.
+    parser = get_profile("uk").create_parser(
+        config, reading_lookup=service.offline_term_readings, form_lookup=service.offline_term_rows
+    )
     words, _index, _counts = parser.parse_text_units([ReadingUnit(text=text, index=0, location_label="t")], False)
     return {w.mined_form: (w.expression_reading, w.expression_furigana, w.resolved_reading) for w in words}
 
@@ -68,16 +71,15 @@ def test_an_apostrophe_and_a_capital_query_find_the_folded_row(tmp_path):
 
 
 def test_wiktionary_puts_the_stressed_headword_on_the_smoke_words(tmp_path, config):
-    """P7: the non-lemma rows attest the stress the lemma row omits - where wty files one at all."""
+    """RUUK-05: each smoke word's stress is the one its lemma row's head line prints."""
     got = _readings(config, [_provider(tmp_path)], SMOKE)
     assert {front: reading for front, (reading, _f, _r) in got.items()} == {
         "студент": f"студе{A}нт",
         "учора": f"учо{A}ра",
         "прочитати": f"прочита{A}ти",
         "цікавий": f"ціка{A}вий",
-        # книжка is defined but filed only as a lemma row, so nothing is attested: the 40% gap,
-        # pinned so an upstream revision that closes it is noticed rather than assumed.
-        "книжка": "",
+        # Filed only as a lemma row, with no reading of its own: the head line prints кни́жка.
+        "книжка": f"кни{A}жка",
     }
     assert all(furigana == "" and resolved == "" for _reading, furigana, resolved in got.values())
 
@@ -90,10 +92,11 @@ def test_two_stresses_stay_blank(tmp_path, config):
 
 
 def test_an_apostrophe_front_reaches_its_folded_row(tmp_path, config):
-    """м'яч has no attested reading, but здоров'я does - both must reach their row through the fold."""
+    """Both fronts reach their lemma row's head line through the fold (м'яч is one syllable: unmarked)."""
     wty = _provider(tmp_path)
     got = _readings(config, [wty], f"Він грає у м{RSQUO}яч, бо здоров{RSQUO}я найдорожче.")
     assert {"м'яч", "здоров'я"} <= set(got)
+    assert got["м'яч"][0] == "м'яч"
     assert got["здоров'я"][0] == f"здоро{A}в'я"
     assert wty.lookup(f"м{RSQUO}яч") != ""
 

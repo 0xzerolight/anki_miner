@@ -456,12 +456,13 @@ class SubtitleParserService:
             form_lookup: Optional batch read of a term's ``(content, tags)`` rows
                 from the enabled offline chain (spec R36,
                 ``DefinitionService.offline_term_rows``). Handed to
-                ``token_post_pass`` as its third argument and read NOWHERE else,
-                so only a language that injects a post-pass can reach it: every
-                other path — ja/ko/zh included — is byte-identical whether this
-                is wired or not. Hebrew's ``HebrewLemmaPass`` is its only reader
-                today; it resolves a card front against the dictionary's own form
-                table, which the existence-only ``term_lookup`` cannot do.
+                ``token_post_pass`` as its third argument and read NOWHERE else
+                in this service, so only a language that injects a post-pass (or
+                whose ``create_parser`` composes it into ``reading_lookup``, as uk
+                does for S24) can reach it: every other path — ja/ko/zh included
+                — is byte-identical whether this is wired or not. Hebrew's
+                ``HebrewLemmaPass`` resolves a card front against the dictionary's
+                own form table, which the existence-only ``term_lookup`` cannot do.
             token_post_pass: Optional language post-pass over the RAW tagger
                 tokens (spec §4.3 item 2(b): separable-verb reattachment gated on
                 dictionary attestation). Called once per line as
