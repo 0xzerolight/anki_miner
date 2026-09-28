@@ -55,8 +55,9 @@ def test_the_data_ships_in_the_wheel():
     assert pyproject["tool"]["setuptools"]["package-data"]["anki_miner.languages.yue.data"] == ["*.txt"]
 
 
-def test_the_bundle_collects_no_yue_data():
-    # Nothing reads it at runtime (the S15 predicate is deferred), so unlike
-    # fa's tables it is wheel-only and the .spec collects nothing for it.
+def test_the_bundle_collects_the_yue_data_directory():
+    # Nothing reads this set at runtime (the S15 predicate is deferred), but
+    # reading.py opens jyutping_overrides.txt beside it, so the .spec collects
+    # the directory the way it collects fa's tables.
     spec = (ROOT / "anki_miner.spec").read_text(encoding="utf-8")
-    assert '"yue", "data"' not in spec
+    assert 'os.path.join("anki_miner", "languages", "yue", "data")' in spec
