@@ -3,7 +3,15 @@ field auto-detection, and the per-note loader."""
 
 from __future__ import annotations
 
+from pathlib import Path
+from unittest.mock import MagicMock
+
+import pytest
+
+from anki_miner.exceptions import AnkiConnectionError, OperationCancelled, SetupError
 from anki_miner.languages.registry import get_profile
+from anki_miner.models.reading import DeckFieldMap, ImageRef, ReadingSourceRef
+from anki_miner.services.reading import anki_deck_source
 from anki_miner.services.reading.anki_deck_source import (
     field_text,
     image_filename,
@@ -136,3 +144,150 @@ def test_no_qualifying_field_leaves_the_sentence_for_the_user():
 def test_no_samples_suggests_nothing():
     fmap = suggest_field_map(["Expression", "Audio"], [], contains_target_script=_JA)
     assert (fmap.sentence, fmap.audio, fmap.picture, fmap.translation) == ("", "", "", "")
+
+
+# ---------------------------------------------------------------------------
+# load(): one unit per note
+# ---------------------------------------------------------------------------
+
+
+class FakeAnki:
+    """Answers the three reads a deck load makes, like AnkiConnect does."""
+
+    def __init__(self, notes: list[dict], media_dir: Path | None) -> None:
+        self._by_id = {note["noteId"]: note for note in notes}
+        self._media_dir = media_dir
+        self.queries: list[str] = []
+
+    def find_notes(self, query: str) -> list[int]:
+        self.queries.append(query)
+        return list(self._by_id)
+
+    def notes_info(self, note_ids: list[int]) -> list[dict]:
+        # In the order asked; a deleted note comes back as {}.
+        return [self._by_id[i] if "fields" in self._by_id[i] else {} for i in note_ids]
+
+    def media_dir_path(self) -> Path | None:
+        return self._media_dir
+
+
+def _note(nid: int, expression: str, audio: str = "", snapshot: str = "", meaning: str = "") -> dict:
+    values = {"Expression": expression, "Audio": audio, "Snapshot": snapshot, "Meaning": meaning}
+    return {
+        "noteId": nid,
+        "modelName": "subs2srs",
+        "fields": {name: {"value": value, "order": i} for i, (name, value) in enumerate(values.items())},
+    }
+
+
+_FIELDS = DeckFieldMap(sentence="Expression", audio="Audio", picture="Snapshot", translation="Meaning")
+
+
+def _ref(title: str = "D", fields: DeckFieldMap = _FIELDS) -> ReadingSourceRef:
+    return ReadingSourceRef(kind="deck", title=title, deck_fields=fields)
+
+
+def _media(tmp_path: Path, *names: str) -> Path:
+    media = tmp_path / "collection.media"
+    media.mkdir()
+    for name in names:
+        (media / name).write_bytes(b"x")
+    return media
+
+
+def test_each_note_becomes_a_unit_with_its_own_media(tmp_path):
+    media = _media(tmp_path, "a.mp3", "a.jpg")
+    anki = FakeAnki(
+        [_note(2, "猫だ", "[sound:a.mp3]", '<img src="a.jpg">', "It's a <b>cat</b>"), _note(1, "犬だ")],
+        media,
+    )
+    doc = anki_deck_source.load(_ref('My "Deck"'), anki)
+    assert anki.queries == ['deck:"My \\"Deck\\""']
+    assert [u.text for u in doc.units] == ["犬だ", "猫だ"]  # note-id (creation) order
+    first, second = doc.units
+    assert first.audio_ref is None and first.image_ref is None and first.translation == ""
+    assert second.audio_ref == media / "a.mp3"
+    assert second.image_ref == ImageRef(media / "a.jpg")
+    assert second.translation == "It's a cat"
+    assert (doc.kind, doc.title, doc.series, doc.episode) == ("deck", 'My "Deck"', 'My "Deck"', 'My "Deck"')
+    assert [u.index for u in doc.units] == [0, 1]
+    assert [u.location_label for u in doc.units] == ["#1", "#2"]
+    assert doc.warnings == []
+
+
+def test_missing_media_degrades_with_one_warning(tmp_path):
+    anki = FakeAnki([_note(1, "猫だ", "[sound:gone.mp3]", '<img src="gone.jpg">')], _media(tmp_path))
+    doc = anki_deck_source.load(_ref(), anki)
+    assert doc.units[0].audio_ref is None and doc.units[0].image_ref is None
+    assert len(doc.warnings) == 1 and doc.warnings[0].startswith("2 ")
+
+
+def test_names_that_leave_the_media_folder_are_refused(tmp_path):
+    media = _media(tmp_path)
+    (tmp_path / "x.mp3").write_bytes(b"x")
+    anki = FakeAnki(
+        [
+            _note(1, "猫だ", "[sound:../x.mp3]"),
+            _note(2, "犬だ", "[sound:..\\x.mp3]"),
+            _note(3, "鳥だ", "[sound:C:x.mp3]"),  # a Windows drive-relative join drops media_dir
+        ],
+        media,
+    )
+    doc = anki_deck_source.load(_ref(), anki)
+    assert all(u.audio_ref is None for u in doc.units)
+
+
+def test_unreadable_media_folder_mines_text_only(tmp_path):
+    anki = FakeAnki([_note(1, "猫だ", "[sound:a.mp3]")], tmp_path / "not-here")
+    doc = anki_deck_source.load(_ref(), anki)
+    assert doc.units[0].text == "猫だ" and doc.units[0].audio_ref is None
+    assert len(doc.warnings) == 1 and "not-here" in doc.warnings[0]
+
+
+def test_an_anki_error_on_the_media_folder_degrades_instead_of_failing(tmp_path):
+    anki = FakeAnki([_note(1, "猫だ", "[sound:a.mp3]")], tmp_path)
+    anki.media_dir_path = MagicMock(side_effect=AnkiConnectionError("unsupported action"))  # type: ignore[method-assign]
+    doc = anki_deck_source.load(_ref(), anki)
+    assert doc.units[0].text == "猫だ"
+    assert len(doc.warnings) == 1 and "None" not in doc.warnings[0]
+
+
+def test_a_picked_audio_field_with_non_audio_clips_is_counted_not_silent(tmp_path):
+    anki = FakeAnki([_note(1, "猫だ", "[sound:v.mp4]")], _media(tmp_path, "v.mp4"))
+    doc = anki_deck_source.load(_ref(), anki)
+    assert doc.units[0].audio_ref is None
+    assert len(doc.warnings) == 1
+
+
+def test_no_media_fields_never_asks_for_the_media_folder(tmp_path):
+    anki = FakeAnki([_note(1, "猫だ", "[sound:a.mp3]")], None)
+    anki.media_dir_path = MagicMock()  # type: ignore[method-assign]
+    doc = anki_deck_source.load(_ref(fields=DeckFieldMap(sentence="Expression")), anki)
+    anki.media_dir_path.assert_not_called()
+    assert doc.warnings == [] and doc.units[0].audio_ref is None
+
+
+def test_a_deck_with_no_sentences_fails_with_a_reason(tmp_path):
+    anki = FakeAnki([_note(1, ""), {"noteId": 3}], tmp_path)  # empty line, deleted note
+    with pytest.raises(SetupError, match="Expression"):
+        anki_deck_source.load(_ref(), anki)
+
+
+def test_notes_of_another_type_without_the_field_are_skipped(tmp_path):
+    other = {"noteId": 5, "modelName": "Basic", "fields": {"Front": {"value": "猫", "order": 0}}}
+    anki = FakeAnki([_note(1, "犬だ"), other], tmp_path)
+    doc = anki_deck_source.load(_ref(), anki)
+    assert [u.text for u in doc.units] == ["犬だ"]
+
+
+def test_sentence_markup_is_cleaned_like_a_cue(tmp_path):
+    anki = FakeAnki([_note(1, "<div>今日は</div><div>いい天気だね[sound:x.mp3]</div>")], tmp_path)
+    doc = anki_deck_source.load(_ref(), anki)
+    assert "<" not in doc.units[0].text and "sound" not in doc.units[0].text
+    assert "今日は" in doc.units[0].text and "いい天気だね" in doc.units[0].text
+
+
+def test_cancel_before_reading_raises(tmp_path):
+    anki = FakeAnki([_note(1, "猫だ")], tmp_path)
+    with pytest.raises(OperationCancelled):
+        anki_deck_source.load(_ref(), anki, cancel_check=lambda: True)

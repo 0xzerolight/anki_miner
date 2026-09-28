@@ -13,11 +13,24 @@ Config-free and Qt-free like the other loaders: warnings are plain strings.
 from __future__ import annotations
 
 import html
+import logging
 import re
 from collections.abc import Callable, Mapping, Sequence
-from pathlib import PurePath
+from pathlib import Path, PurePath
+from typing import Protocol
 
-from anki_miner.models.reading import DeckFieldMap
+from anki_miner.exceptions import AnkiConnectionError, SetupError, raise_if_cancelled
+from anki_miner.models.reading import DeckFieldMap, ImageRef, ReadingDocument, ReadingSourceRef, ReadingUnit
+
+# The escaping Deck Filter's deck query uses (quotes, backslash, and the `_`/`*`
+# wildcards a subs2srs name like "Show_01" is full of), imported from its
+# definition as card_backfiller does.
+from anki_miner.services.card_restyler import _escape_note_type as _escape_anki_search
+from anki_miner.services.reading._util import READING_CANCELLED
+from anki_miner.utils.logging_ext import log_summary
+from anki_miner.utils.text_utils import clean_subtitle_text
+
+logger = logging.getLogger(__name__)
 
 #: Extensions a ``[sound:]`` ref must have to count as sentence audio. The
 #: subs2srs Video field is also a ``[sound:]`` ref (.avi/.mp4) and must not win;
@@ -129,3 +142,136 @@ def suggest_field_map(
     ]
     translation = min(hinted)[3] if hinted else ""
     return DeckFieldMap(sentence=sentence, audio=audio, picture=picture, translation=translation)
+
+
+# ---------------------------------------------------------------------------
+# Loading
+# ---------------------------------------------------------------------------
+
+_NOTES_CHUNK = 500  # every notesInfo caller chunks at 500 (deck_filter, card_backfiller)
+
+
+class DeckNoteReader(Protocol):
+    """The three AnkiConnect reads a deck load needs (AnkiService satisfies it)."""
+
+    def find_notes(self, query: str) -> list[int]: ...
+    def notes_info(self, note_ids: list[int]) -> list[dict]: ...
+    def media_dir_path(self) -> Path | None: ...
+
+
+def _value(fields: Mapping[str, object], name: str) -> str:
+    entry = fields.get(name) if name else None
+    value = entry.get("value") if isinstance(entry, dict) else None
+    return value if isinstance(value, str) else ""
+
+
+def _media_file(media_dir: Path, name: str | None) -> Path | None:
+    """Resolve ``name`` inside ``media_dir``; refuse anything that is not a bare file name.
+
+    A shared deck is untrusted input: a separator, ``..`` or a Windows drive
+    prefix (``C:x.mp3`` makes the join drop ``media_dir``) would read a file
+    from elsewhere and upload it into the collection. Anki never writes ``:``
+    into a media file name, so refusing it costs nothing.
+    """
+    if not name or name in {".", ".."} or any(ch in name for ch in "/\\:"):
+        return None
+    path = media_dir / name
+    return path if path.is_file() else None
+
+
+def load(
+    ref: ReadingSourceRef,
+    anki: DeckNoteReader,
+    *,
+    cancel_check: Callable[[], bool] | None = None,
+    normalize: Callable[[str], str] | None = None,
+    has_target_script: Callable[[str], bool] | None = None,
+) -> ReadingDocument:
+    """Read every note of ``ref.title`` (subdecks included) into one unit per card.
+
+    Lines are cleaned with the run parser's ``normalize`` / bilingual-cue gate,
+    as the subtitle loader does. Media that cannot be found stays off that card
+    and is counted into one warning; an unreadable media folder is one warning.
+
+    Raises:
+        SetupError: no note of the deck has text in the sentence field.
+        AnkiConnectionError: Anki is unreachable.
+    """
+    raise_if_cancelled(cancel_check, READING_CANCELLED)
+    fields = ref.deck_fields
+    assert ref.kind == "deck" and fields is not None  # ReadingSourceRef.__post_init__ enforces it
+    deck = ref.title
+    note_ids = sorted(anki.find_notes(f'deck:"{_escape_anki_search(deck)}"'))
+    wants_media = bool(fields.audio or fields.picture)
+    media_dir: Path | None = None
+    if wants_media:
+        try:
+            media_dir = anki.media_dir_path()
+        except AnkiConnectionError as exc:
+            # findNotes just worked, so this is AnkiConnect refusing the action
+            # (an old add-on); degrade like an unreadable folder, never fail.
+            logger.warning("Anki media dir lookup failed: error=%s", type(exc).__name__)
+    media_ok = media_dir is not None and media_dir.is_dir()
+    warnings: list[str] = []
+    if wants_media and not media_ok:
+        where = f" ({media_dir})" if media_dir is not None else ""
+        warnings.append(
+            f"Anki's media folder{where} can't be read from here, so cards from "
+            f"'{deck}' get no audio or picture from the deck."
+        )
+    units: list[ReadingUnit] = []
+    missing = 0
+    for start in range(0, len(note_ids), _NOTES_CHUNK):
+        raise_if_cancelled(cancel_check, READING_CANCELLED)
+        for offset, note in enumerate(anki.notes_info(note_ids[start : start + _NOTES_CHUNK])):
+            values = note.get("fields")
+            if not isinstance(values, dict):
+                continue
+            text = clean_subtitle_text(
+                field_text(_value(values, fields.sentence)),
+                normalize=normalize,
+                has_target_script=has_target_script,
+            )
+            if not text:
+                continue
+            audio_ref: Path | None = None
+            picture: Path | None = None
+            if media_ok:
+                assert media_dir is not None
+                if fields.audio:
+                    raw_audio = _value(values, fields.audio)
+                    audio_ref = _media_file(media_dir, sound_filename(raw_audio))
+                    # A ref that is missing on disk OR not audio (a video clip
+                    # in a hand-picked field) is counted, never dropped silently.
+                    missing += audio_ref is None and "[sound:" in raw_audio
+                if fields.picture:
+                    raw_picture = _value(values, fields.picture)
+                    picture = _media_file(media_dir, image_filename(raw_picture))
+                    missing += picture is None and "<img" in raw_picture.casefold()
+            units.append(
+                ReadingUnit(
+                    text=text,
+                    index=len(units),
+                    location_label=f"#{start + offset + 1}",
+                    image_ref=ImageRef(picture) if picture is not None else None,
+                    audio_ref=audio_ref,
+                    translation=" ".join(field_text(_value(values, fields.translation)).splitlines()),
+                )
+            )
+    if not units:
+        raise SetupError(f"No sentences found in the '{fields.sentence}' field of deck '{deck}'.")
+    if missing:
+        warnings.append(
+            f"{missing} audio or picture file(s) used by deck '{deck}' are missing from "
+            "Anki's media folder or are not audio; those cards go without them."
+        )
+    log_summary(
+        logger,
+        "Anki deck load",
+        deck=deck,
+        notes=len(note_ids),
+        units=len(units),
+        missing_media=missing,
+        media_dir_readable=media_ok,
+    )
+    return ReadingDocument(title=deck, kind="deck", series=deck, episode=deck, units=units, warnings=warnings)

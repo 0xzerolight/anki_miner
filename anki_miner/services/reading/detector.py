@@ -38,6 +38,8 @@ from ._util import (
 if TYPE_CHECKING:
     from anki_miner.languages.profile import SentenceRules
 
+    from .anki_deck_source import DeckNoteReader
+
 logger = logging.getLogger(__name__)
 
 # Required top-level keys in a ``.mokuro`` sidecar. Unknown keys are ignored —
@@ -172,6 +174,7 @@ def load(
     script_check: Callable[[str], bool] | None = None,
     normalize: Callable[[str], str] | None = None,
     has_target_script: Callable[[str], bool] | None = None,
+    anki: DeckNoteReader | None = None,
 ) -> ReadingDocument:
     """Dispatch a ref to its source loader and return the loaded document.
 
@@ -191,9 +194,13 @@ def load(
     other way round: it splits nothing, so it takes the ladder but not the
     rules.
 
-    ``normalize`` and ``has_target_script`` reach the subtitle loader only —
-    the other kinds are normalised per unit by the parser, and a cue is the one
-    unit that can carry two languages on two physical lines.
+    ``normalize`` and ``has_target_script`` reach the subtitle and Anki-deck
+    loaders only — the other kinds are normalised per unit by the parser, and a
+    cue (or a deck card's subtitle line) is the one unit that can carry two
+    languages on two physical lines.
+
+    ``anki`` reaches the Anki-deck loader only (``kind="deck"`` refs are
+    pathless, built by the Anki Deck sub-tab, and read through AnkiConnect).
 
     Each optional argument is built as its own fragment and omitted when
     ``None``, so a call that supplies none is the pre-transition
@@ -231,6 +238,15 @@ def load(
         from . import text_source
 
         return text_source.load(ref, **common, **splitting)
+    if ref.kind == "deck":
+        from . import anki_deck_source
+
+        if anki is None:
+            raise SetupError("Mining an Anki deck needs a connection to Anki.")
+        deck_cleaning: dict[str, Any] = {} if normalize is None else {"normalize": normalize}
+        if has_target_script is not None:
+            deck_cleaning["has_target_script"] = has_target_script
+        return anki_deck_source.load(ref, anki, **common, **deck_cleaning)
 
     raise SetupError(f"Unknown reading source kind: {ref.kind!r}")
 
