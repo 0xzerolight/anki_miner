@@ -71,6 +71,7 @@ from anki_miner.gui.widgets.audio_clip_editor import MAX_CLIP_SECONDS, AudioClip
 from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost
 from anki_miner.gui.widgets.base.eliding_label import ElidingLabel
 from anki_miner.gui.widgets.base.sizing import metric_row_height
+from anki_miner.gui.widgets.clip_audio_player import ClipAudioPlayer
 from anki_miner.gui.widgets.dialogs.sentence_edit_dialog import SentenceEditDialog
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.page_image_view import PageImageView, load_page_qimage
@@ -85,6 +86,7 @@ from anki_miner.services.secondary_subtitles import match_secondary_line
 from anki_miner.services.word_filter import MergedLineWindow, find_cue_index, merge_cue_window
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.mpv_loader import mpv_available
 
 logger = logging.getLogger(__name__)
 
@@ -262,6 +264,13 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # _closing blocks any dispatch once teardown has run (see _stop_player).
         self._page_units = ctx.page_units if ctx is not None else None
         self._show_image = bool(self._page_units)
+        # Anki-deck runs: units carry their card's own clip, played from a
+        # button under the picture (the player pane seeks one source by time,
+        # which a clip-per-card deck does not have).
+        self._clip_audio: ClipAudioPlayer | None = None
+        if self._page_units and any(u.audio_ref for u in self._page_units.values()) and mpv_available():
+            self._clip_audio = ClipAudioPlayer()
+        self._focused_unit_index: int | None = None
         self._page_cache: OrderedDict[ImageRef, tuple[QPixmap, int]] = OrderedDict()
         self._page_request_gen = 0
         self._closing = False
@@ -1076,7 +1085,24 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             # Mutually exclusive with the player in practice (manga has no
             # video), but the panes-list pattern composes either way.
             self.page_image_view = PageImageView()
-            panes.append(("image", self.page_image_view, 3, 0))
+            image_pane: QWidget = self.page_image_view
+            if self._clip_audio is not None:
+                # Same pane name either way, so _side_key and every saved
+                # splitter layout stay put.
+                image_pane = QWidget()
+                image_box = QVBoxLayout(image_pane)
+                image_box.setContentsMargins(0, 0, 0, 0)
+                image_box.setSpacing(SPACING.xs)
+                image_box.addWidget(self.page_image_view, 1)
+                self.play_clip_button = ModernButton(self.tr("Play card audio"), variant="ghost")
+                self.play_clip_button.setToolTip(self.tr("Play this card's own sentence audio from the deck."))
+                self.play_clip_button.setEnabled(False)
+                self.play_clip_button.clicked.connect(self._play_focused_clip)
+                play_row = QHBoxLayout()
+                play_row.addWidget(self.play_clip_button)
+                play_row.addStretch(1)
+                image_box.addLayout(play_row)
+            panes.append(("image", image_pane, 3, 0))
 
         if self._has_candidates:
             # Stretch 0: a picker that shows its candidates is done. Extra
@@ -1719,9 +1745,12 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
 
     def _toggle_play_pause(self) -> None:
         """The play/pause key: toggle player play/pause (no-op when the player pane is hidden,
-        or while a season-curation source swap is still in flight)."""
+        or while a season-curation source swap is still in flight). On an Anki-deck run it
+        plays the focused card's own clip instead."""
         if self._show_player and hasattr(self, "player_widget") and self._chosen_episode_displayed():
             self.player_widget.toggle_play_pause()
+        elif self._clip_audio is not None:
+            self._play_focused_clip()
 
     # ------------------------------------------------------------------
     # Table helpers
@@ -2671,7 +2700,28 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             # Parked on the card's frame, but Play hears the line from its start.
             self.player_widget.set_play_from(start_time)
         if self._show_image:
+            self._focused_unit_index = int(start_time)
+            if self._clip_audio is not None:
+                # A new card: the previous card's line stops, and Play follows
+                # this card's own clip (disabled when it has none).
+                self._clip_audio.stop()
+                self.play_clip_button.setEnabled(self._focused_clip() is not None)
             self._request_page_image(int(start_time))
+
+    def _focused_clip(self) -> Path | None:
+        """The focused card's own audio file (Anki-deck runs), if it is on disk."""
+        if self._focused_unit_index is None or self._page_units is None:
+            return None
+        unit = self._page_units.get(self._focused_unit_index)
+        clip = unit.audio_ref if unit is not None else None
+        return clip if clip is not None and clip.is_file() else None
+
+    def _play_focused_clip(self) -> None:
+        """Play the focused card's own clip from its start."""
+        clip = self._focused_clip()
+        if self._closing or self._clip_audio is None or clip is None:
+            return
+        self._clip_audio.play(clip)
 
     def _ensure_player_source(self, video_file: Path | None) -> bool:
         """Point the player at ``video_file``'s episode (season curation).
@@ -2891,6 +2941,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             worker.setParent(None)
         if self._show_player and hasattr(self, "player_widget"):
             self.player_widget.release()
+        if self._clip_audio is not None:
+            self._clip_audio.release()
 
     # ------------------------------------------------------------------
     # Right-click context menu (#43)
