@@ -89,6 +89,20 @@ def test_the_root_hook_fills_both_fields_or_neither():
     assert hook.render(SimpleNamespace(definition_html="", mined_form="beli"), config=AnkiMinerConfig()) == {}
 
 
+@pytest.mark.parametrize(
+    ("etymology", "front", "fields"),
+    [
+        ("Equivalent to ber- + ajar.", "belajar", {"root": "ajar", "affixes": "ber- + ajar"}),  # an allomorph
+        ("From meng- + erti.", "ngerti", {"root": "erti", "affixes": "meng- + erti"}),  # formal: mengerti
+        ("From meng- + beli.", "dibeli", {}),  # the entry its form row names
+        ("From meng- + beli.", "kubeli", {}),  # the entry the ladder reaches
+    ],
+)
+def test_the_root_hook_takes_a_prefix_only_the_front_opens_with(etymology, front, fields):
+    word = SimpleNamespace(definition_html=_html(etymology), mined_form=front)
+    assert RootAffixHook().render(word, config=AnkiMinerConfig()) == fields
+
+
 def test_the_formal_hook_names_the_formal_spelling_of_a_colloquial_front():
     hook = FormalFormHook()
     assert hook.field_names() == ("formal_form",)

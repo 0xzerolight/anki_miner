@@ -1,5 +1,5 @@
 {
- "license": "Wiktionary content via kaikki.org, CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/); rows copied verbatim from wty-id-en revision 2026.09.19 (yomidevs/wiktionary-to-yomitan).",
+ "license": "Wiktionary content via kaikki.org, CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/); rows copied verbatim from wty-id-en revision 2026.09.19 (menjual, dijual, tulis, menulis, ditulis: 2026.09.20) (yomidevs/wiktionary-to-yomitan).",
  "index": {
   "title": "wty-id-en",
   "format": 3,
@@ -92,6 +92,13 @@
    10,
    "non-lemma",
    -10
+  ],
+  [
+   "inanim",
+   "animacy",
+   0,
+   "inanimate",
+   0
   ]
  ],
  "term_rows": [
@@ -3167,6 +3174,488 @@
      "sayur",
      [
       "plural"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "menjual",
+   "",
+   "v inanim vt",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Malay menjual, from Classical Malay menjual. Equivalent to meng- + jual."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to sell, to market",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Aku dengar ia telah ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "menjual"
+                   },
+                   " rumahnya."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "I hear that he ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "sold"
+                   },
+                   " his house."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/menjual#Indonesian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Indonesian/meaning/m/me/menjual.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "menjual",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "dijual",
+     [
+      "active"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "dijual",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "menjual",
+     [
+      "passive"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "tulis",
+   "",
+   "v",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "tulis (active menulis, passive ditulis)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Malay tulis."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to write"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/tulis#Indonesian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Indonesian/meaning/t/tu/tulis.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "tulis",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "toelis",
+     [
+      "alt-of"
+     ]
+    ],
+    [
+     "toelis",
+     [
+      "archaic"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "menulis",
+   "",
+   "v",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "mênulis (basic-imperative-informal tulis, active menulis, passive ditulis)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From meng- + tulis."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to write"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/menulis#Indonesian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Indonesian/meaning/m/me/menulis.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "menulis",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "tulis",
+     [
+      "active"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "ditulis",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "tulis",
+     [
+      "passive"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "ditulis",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "menulis",
+     [
+      "passive"
      ]
     ]
    ],

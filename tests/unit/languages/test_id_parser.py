@@ -111,8 +111,11 @@ def test_an_unequal_reduplication_is_looked_up_whole(provider):
         ("keadaban", {"root": "adab", "affixes": "ke- + adab + -an"}),
         ("berjalan", {"root": "jalan", "affixes": "ber- + jalan"}),
         ("beli", {}),
-        # Only a form row naming membeli: the card shows membeli's entry, so the hook reads membeli's etymology.
-        ("dibeli", {"root": "beli", "affixes": "meng- + beli"}),
+        # Form rows only: the card shows the meN- entry they name, whose meng- the di- front does not carry.
+        ("dibeli", {}),
+        ("dijual", {}),
+        ("ditulis", {}),  # names tulis and menulis
+        ("menulis", {"root": "tulis", "affixes": "meng- + tulis"}),
         ("nggak", {}),
     ],
 )
