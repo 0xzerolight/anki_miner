@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import sqlite3
+import tempfile
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -850,6 +852,61 @@ def test_catalog_jiten_download_replaces_a_hand_imported_jiten(tmp_path, monkeyp
     assert sorted(p.name for p in freqs.iterdir() if not p.name.startswith(".")) == ["jiten"]
 
 
+def test_single_file_freq_list_lands_in_its_catalog_slot_under_its_display_name(tmp_path, monkeypatch):
+    # download_to_temp stages every download under a fresh mkstemp name, and a
+    # .txt list's slot and card label come from the file stem: unpinned, each
+    # download forks a "tmpXXXXXXXX" slot and every card shows that name.
+    spec = ResourceSpec(
+        id="opensubtitles-fr",
+        kind="freq",
+        display_name="OpenSubtitles 2018 frequency (French)",
+        url="https://example.test/fr/fr_50k.txt",
+        license_note="note",
+    )
+    download_dir = tmp_path / "downloads"
+    download_dir.mkdir()
+
+    def fake_download(
+        url,
+        *,
+        dest_dir,
+        progress=None,
+        cancelled_check=None,
+        read_timeout_seconds=None,
+        resume_key=None,
+        resume_root=None,
+    ):
+        _assert_stable_resume_key(resume_key)
+        fd, name = tempfile.mkstemp(dir=dest_dir, suffix=".part")
+        os.close(fd)
+        temp = Path(name)
+        temp.write_text("de 50\nla 40\n", encoding="utf-8")
+        return temp
+
+    monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
+
+    results = []
+    for _ in range(2):  # Tools → Download Recommended Resources, then again
+        worker = ResourceDownloadWorker(
+            [spec],
+            dicts_root=tmp_path / "dicts",
+            freqs_root=tmp_path / "freqs",
+            pitch_root=tmp_path / "pitch",
+            download_dir=download_dir,
+            language="fr",
+        )
+        _done, _progress, summaries = _connect_capture(worker)
+        worker.run()
+        assert len(summaries[0].succeeded) == 1, summaries[0].failed
+        results.append(summaries[0].succeeded[0].source_id)
+
+    assert results == ["opensubtitles-fr", "opensubtitles-fr"]
+    freqs = tmp_path / "freqs"
+    assert sorted(p.name for p in freqs.iterdir() if not p.name.startswith(".")) == ["opensubtitles-fr"]
+    meta = json.loads((freqs / "opensubtitles-fr" / "meta.json").read_text(encoding="utf-8"))
+    assert meta["source_name"] == "OpenSubtitles 2018 frequency (French)"
+
+
 def test_summary_properties_filter_results():
     summary = ResourceDownloadSummary(
         results=[
@@ -1196,6 +1253,9 @@ def test_entry_counts_promote_to_indexing_and_never_fall_back(tmp_path, monkeypa
     assert [e.entries for e in indexed] == [184200, 184200]
     # Once a count is landing, nothing walks the phase back to installing.
     assert phases.index(resource_download_worker.ResourcePhase.INDEXING) == len(phases) - 2
+    # The dictionary route's current/total is a scaled bank fraction; it stays
+    # out of the step count, so this route's readout is unchanged.
+    assert all(e.step is None and e.steps is None for e in events)
 
 
 def test_file_counting_importers_never_report_a_fabricated_entry_count(tmp_path, monkeypatch):
@@ -1236,6 +1296,84 @@ def test_file_counting_importers_never_report_a_fabricated_entry_count(tmp_path,
 
     assert all(e.entries is None for e in events)
     assert all(e.phase is not resource_download_worker.ResourcePhase.INDEXING for e in events)
+
+
+def _lemmatised_word_list(dest_dir: Path) -> Path:
+    # Three lemmatiser chunks, so the step has to move more than once.
+    staged = Path(dest_dir) / "de_50k.part"
+    terms = 3 * frequency_source_importer._LEMMATISE_CHUNK
+    staged.write_text("".join(f"w{i}s {terms - i}\n" for i in range(terms)), encoding="utf-8")
+    return staged
+
+
+def _three_bank_zip(dest_dir: Path) -> Path:
+    staged = Path(dest_dir) / "freq.part"
+    index = {"title": "Banks", "format": 3, "revision": "r1", "frequencyMode": "rank-based"}
+    with zipfile.ZipFile(staged, "w") as zf:
+        zf.writestr("index.json", json.dumps(index))
+        for bank in range(1, 4):
+            zf.writestr(f"term_meta_bank_{bank}.json", json.dumps([[f"w{bank}", "freq", bank]]))
+    return staged
+
+
+@pytest.mark.parametrize(
+    ("url", "lemmatise", "stage", "steps"),
+    [
+        pytest.param(
+            "https://example.test/de/de_50k.txt",
+            True,
+            _lemmatised_word_list,
+            3 * frequency_source_importer._LEMMATISE_CHUNK,
+            id="lemmatised-list",
+        ),
+        pytest.param("https://example.test/banks.zip", False, _three_bank_zip, 3, id="bank-walk"),
+    ],
+)
+def test_freq_install_carries_the_importers_step_count_and_never_goes_back(
+    tmp_path, monkeypatch, url, lemmatise, stage, steps
+):
+    # WBR-gui-01: the importer's counted pass (terms lemmatised, bank files
+    # read) is a true number, so it reaches the view as step/steps -- never as
+    # an entry count, and never moving backwards within the install phase.
+    (tmp_path / "downloads").mkdir()
+
+    def fake_download(
+        url,
+        *,
+        dest_dir,
+        progress=None,
+        cancelled_check=None,
+        read_timeout_seconds=None,
+        resume_key=None,
+        resume_root=None,
+    ):
+        _assert_stable_resume_key(resume_key)
+        return stage(dest_dir)
+
+    monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
+    monkeypatch.setattr(
+        resource_download_worker,
+        "build_frequency_lemmatizer",
+        lambda language, dicts_root: lambda words: [word.rstrip("s") for word in words],
+    )
+    spec = ResourceSpec(
+        id="freq-list", kind="freq", display_name="Freq list", url=url, license_note="note", lemmatise=lemmatise
+    )
+
+    worker = _make_worker([spec], tmp_path)
+    events = _phase_events(worker)
+    _done, _progress, summaries = _connect_capture(worker)
+    worker.run()
+
+    assert len(summaries[0].succeeded) == 1, summaries[0].failed
+    counted = [e for e in events if e.step is not None]
+    assert {e.phase for e in counted} == {resource_download_worker.ResourcePhase.INSTALLING}
+    assert {e.steps for e in counted} == {steps}
+    positions = [e.step for e in counted]
+    assert len(set(positions)) > 1
+    assert positions == sorted(positions)
+    assert positions[-1] == steps
+    assert all(e.entries is None for e in events)
 
 
 def test_each_resource_starts_its_own_phase_sequence(tmp_path, monkeypatch):

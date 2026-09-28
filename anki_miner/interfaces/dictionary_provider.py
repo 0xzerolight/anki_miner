@@ -62,6 +62,7 @@ class DictionaryProvider(Protocol):
     #         pairs: list[tuple[str, str | None]],
     #         scope_homographs: bool = True,
     #         lemmas: dict[str, str] | None = None,
+    #         pos: dict[str, str] | None = None,
     #     ) -> dict[str, str | None]:
     #         """Batch variant of ``lookup``. ``pairs`` is a list of
     #         ``(word, reading | None)`` — the reading is a per-word ranking BOOST
@@ -70,9 +71,10 @@ class DictionaryProvider(Protocol):
     #         with that word's boost applied (render-path homograph scoping ON);
     #         ``False`` keeps the unfiltered term-OR-reading semantics for the
     #         existence/attestation probes. ``lemmas`` (word → token lemma) feeds
-    #         the Rule A′ kana-front scope; callers pass it only when non-empty,
-    #         so implementations predating the kwarg keep working. Returns a dict
-    #         keyed by every requested word; a miss maps to None."""
+    #         the Rule A′ kana-front scope and ``pos`` (word → token part of
+    #         speech) the profile's row rank; callers pass each only when
+    #         non-empty, so implementations predating the kwargs keep working.
+    #         Returns a dict keyed by every requested word; a miss maps to None."""
     #
     # NOTE: ``has_terms`` is a second OPTIONAL method (compound matching). Only
     # offline providers with an exact-headword index implement it; consumers
@@ -87,9 +89,12 @@ class DictionaryProvider(Protocol):
     # plan item 5.2). Offline indexed providers implement it; consumers probe via
     # ``getattr`` and skip providers without it. Contract:
     #
-    #     def lookup_fallback(self, word: str, conditions: int) -> str | None:
+    #     def lookup_fallback(self, word: str, conditions: int, pos: str | None = None) -> str | None:
     #         """Look up a deinflection/variant candidate, keeping only entries
     #         whose stored ``rules`` (POS) are compatible with the hypothesis
     #         ``conditions`` (0 = spelling/kana variant, passes unconditionally;
     #         empty rules accept unconditionally). Renders identically to
-    #         ``lookup``. Never raises; degrade to None."""
+    #         ``lookup``. ``pos`` is the part of speech of the token the
+    #         candidate came from, for the profile's form-row splice test;
+    #         callers pass it only when known, so implementations predating the
+    #         kwarg keep working. Never raises; degrade to None."""

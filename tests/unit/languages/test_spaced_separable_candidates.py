@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
-from anki_miner.languages._spaced.morphology import SeparableVerbPass, particle_plus_lemma
+from anki_miner.languages._spaced.morphology import (
+    SeparableVerbPass,
+    StashedParticle,
+    particle_plus_lemma,
+    stash_particle,
+)
 from anki_miner.languages.token import LanguageToken
 
 
 def _head(surface: str, lemma: str, particle: str, morph: str = "") -> LanguageToken:
     token = LanguageToken(surface, "VERB", "WW|pv|tgw|ev", lemma, "", morph)
-    token.feature.particle = particle
+    stash_particle(token, StashedParticle(particle, LanguageToken(particle, "ADP", "VZ|fin", particle), "compound:prt"))
     return token
 
 

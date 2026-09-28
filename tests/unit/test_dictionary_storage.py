@@ -34,11 +34,13 @@ from anki_miner.services.dictionary.storage import (
     read_meta_cached,
     read_tags,
     row_is_common,
+    term_rows,
     terms_exist,
     terms_readings,
     write_meta,
     write_tags,
 )
+from anki_miner.services.dictionary.yomitan_renderer import render_glossary_entry
 
 
 class _ExecSpy:
@@ -915,6 +917,50 @@ class TestReadingBoost:
             assert batch["打つ"] == lookup(conn, "打つ", "うつ")
         finally:
             conn.close()
+
+    def _seed_mai(self, db_path: Path) -> None:
+        """wty-ro-en's shape: most rows carry no reading, one does.
+
+        There the row with the reading is a form-of row, which the render path
+        now drops beside a lemma row (TestFormOfRows); the ordering under test
+        is the boost's, so the row with the reading here is a lemma row.
+        """
+        create_index(db_path)
+        bulk_insert(
+            db_path,
+            [
+                DictRow(term="mai", reading=None, content="<div>more</div>", tags="adv"),
+                DictRow(term="mai", reading="mâi", content="<div>form of mâna</div>", tags="v"),
+                DictRow(term="mai", reading=None, content="<div>May</div>", tags="n"),
+            ],
+        )
+
+    def test_a_row_without_a_reading_is_a_plain_non_match(self, tmp_path: Path):
+        """A boost no row matches leaves the index order alone: a NULL reading
+        ranks like a differing one, not after it."""
+        db_path = tmp_path / "t.sqlite"
+        self._seed_mai(db_path)
+        conn = open_readonly(db_path)
+        try:
+            boosted = [c for c, _, _ in lookup(conn, "mai", "mai")]
+            wildcard = [c for c, _, _ in lookup(conn, "mai", None)]
+            batch = lookup_many(conn, [("mai", "mai")])["mai"]
+            assert batch == lookup(conn, "mai", "mai")
+        finally:
+            conn.close()
+        assert boosted == ["<div>more</div>", "<div>form of mâna</div>", "<div>May</div>"]
+        assert boosted == wildcard
+
+    def test_a_matching_reading_still_outranks_a_missing_one(self, tmp_path: Path):
+        db_path = tmp_path / "t.sqlite"
+        self._seed_mai(db_path)
+        conn = open_readonly(db_path)
+        try:
+            contents = [c for c, _, _ in lookup(conn, "mai", "mâi")]
+            assert lookup_many(conn, [("mai", "mâi")])["mai"] == lookup(conn, "mai", "mâi")
+        finally:
+            conn.close()
+        assert contents == ["<div>form of mâna</div>", "<div>more</div>", "<div>May</div>"]
 
 
 # ---------------------------------------------------------------------------
@@ -2146,8 +2192,25 @@ class _RankingKeys(_PlainKeys):
     list: a row whose content says ``pointer`` states no sense of its own.
     """
 
-    def sense_rank(self, content: str) -> int:
+    def sense_rank(self, content: str, tags: str, pos: str | None) -> int:
         return 1 if "pointer" in content else 0
+
+
+class _TagPosKeys(_PlainKeys):
+    """A rank reading only what the seam adds: the row's tags and the token's POS.
+
+    A row tagged with the token's POS leads; a ``name`` row trails. Every call
+    is recorded so a test can see exactly what storage handed over.
+    """
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str, str | None]] = []
+
+    def sense_rank(self, content: str, tags: str, pos: str | None) -> int:
+        self.calls.append((content, tags, pos))
+        if tags == "name":
+            return 2
+        return 0 if pos is not None and tags == pos else 1
 
 
 _SENSE = DictRow(term="干", reading="gān", content="<div>dry</div>", sequence=4429)
@@ -2294,3 +2357,435 @@ class TestSenseRankDemotion:
         finally:
             conn.close()
         assert contents[0] == _SENSE.content
+
+
+_PICK_NAME = DictRow(term="pick", reading=None, content="<div>A surname.</div>", tags="name")
+_PICK_NOUN = DictRow(term="pick", reading=None, content="<div>A pickaxe.</div>", tags="n")
+_PICK_VERB = DictRow(term="pick", reading=None, content="<div>To choose.</div>", tags="v")
+
+
+class TestSenseRankSeesTagsAndPos:
+    """The rank is handed each row's tags and the token's part of speech.
+
+    wty rows all carry score 0 and sequence 0, so without these the import id
+    alone orders a word's parts of speech and its proper-name rows.
+    """
+
+    @pytest.fixture
+    def conn(self, tmp_path: Path):
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        bulk_insert(db, [_PICK_NAME, _PICK_NOUN, _PICK_VERB])
+        conn = open_readonly(db)
+        yield conn
+        conn.close()
+
+    def test_the_token_pos_row_leads_and_the_name_row_trails(self, conn):
+        contents = [c for c, _tags, _seq in lookup(conn, "pick", None, pos="v", keys=_TagPosKeys())]
+        assert contents == [_PICK_VERB.content, _PICK_NOUN.content, _PICK_NAME.content]
+
+    def test_storage_hands_over_the_row_tags_and_the_token_pos(self, conn):
+        keys = _TagPosKeys()
+        lookup(conn, "pick", None, pos="v", keys=keys)
+        assert sorted(keys.calls) == sorted(
+            (row.content, row.tags, "v") for row in (_PICK_NAME, _PICK_NOUN, _PICK_VERB)
+        )
+
+    def test_no_pos_leaves_only_the_tag_rank(self, conn):
+        contents = [c for c, _tags, _seq in lookup(conn, "pick", None, keys=_TagPosKeys())]
+        assert contents == [_PICK_NOUN.content, _PICK_VERB.content, _PICK_NAME.content]
+
+    def test_lookup_many_matches_lookup_row_for_row(self, conn):
+        keys = _TagPosKeys()
+        batch = lookup_many(conn, [("pick", None), ("other", None)], pos={"pick": "v"}, keys=keys)
+        assert batch["pick"] == lookup(conn, "pick", None, pos="v", keys=keys)
+        assert batch["other"] == []
+
+    def test_each_word_ranks_by_its_own_pos(self, tmp_path: Path):
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        bulk_insert(
+            db,
+            [
+                _PICK_NOUN,
+                _PICK_VERB,
+                DictRow(term="watch", reading=None, content="<div>A timepiece.</div>", tags="n"),
+                DictRow(term="watch", reading=None, content="<div>To look at.</div>", tags="v"),
+            ],
+        )
+        conn = open_readonly(db)
+        try:
+            keys = _TagPosKeys()
+            batch = lookup_many(conn, [("pick", None), ("watch", None)], pos={"watch": "v"}, keys=keys)
+        finally:
+            conn.close()
+        assert [c for c, _t, _s in batch["pick"]] == [_PICK_NOUN.content, _PICK_VERB.content]
+        assert [c for c, _t, _s in batch["watch"]] == ["<div>To look at.</div>", "<div>A timepiece.</div>"]
+
+    def test_the_variant_fallback_hands_over_the_row_tags(self, conn):
+        contents = [c for c, _tags, _seq, _rules in lookup_with_rules(conn, "pick", keys=_TagPosKeys())]
+        assert contents == [_PICK_NOUN.content, _PICK_VERB.content, _PICK_NAME.content]
+
+    def test_the_japanese_pair_ignores_the_pos(self, tmp_path: Path):
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        bulk_insert(db, [_JA_ARCHAIC, _JA_SENSE, _JA_OTHER_READING])
+        conn = open_readonly(db)
+        try:
+            keys = get_profile("ja").dict_keys
+            with_pos = lookup(conn, "辛い", "からい", pos="形容詞", keys=keys)
+            batch = lookup_many(conn, [("辛い", "からい")], pos={"辛い": "形容詞"}, keys=keys)["辛い"]
+            without = lookup(conn, "辛い", "からい", keys=keys)
+        finally:
+            conn.close()
+        assert with_pos == without == batch
+
+
+def _form_of(term: str, *targets: str, reading: str | None = None) -> DictRow:
+    """A wty ``non-lemma`` row as the importer stores it: one deinflection pair per named target."""
+    return DictRow(
+        term=term,
+        reading=reading,
+        content=render_glossary_entry([[target, ["form-of"]] for target in targets]),
+        tags="non-lemma",
+    )
+
+
+def _lemma(term: str, gloss: str, tags: str, rules: str = "") -> DictRow:
+    return DictRow(term=term, reading=None, content=f"<div>{gloss}</div>", tags=tags, rules=rules)
+
+
+class _PromotingKeys(_PlainKeys):
+    """A rank that puts a form row naming ``tahu`` ahead of every other row (a profile's own choice)."""
+
+    def sense_rank(self, content: str, tags: str, pos: str | None) -> int:
+        return 0 if tags == "non-lemma" and "tahu" in content else 1
+
+
+class _ClassSpliceKeys(_PlainKeys):
+    """Keys whose splice reads only the target rows tagged with the token's own class (wty-sl-en's shape)."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str]] = []
+
+    def splice_row_fits(self, tags: str, pos: str) -> bool:
+        self.calls.append((tags, pos))
+        return tags.split(" ")[0] == {"NOUN": "n", "VERB": "v"}.get(pos)
+
+
+class TestFormOfRows:
+    """wty ``non-lemma`` rows on the render read paths.
+
+    A form row beside a lemma row is dropped; a form row left alone is replaced
+    by the lemma rows of the terms it names, one hop; targets the dictionary
+    does not file as headwords add nothing, so an all-pointer hit can be a miss.
+    """
+
+    @staticmethod
+    def _open(tmp_path: Path, rows: list[DictRow], keys=None) -> sqlite3.Connection:
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        bulk_insert(db, rows, keys=keys)
+        return open_readonly(db)
+
+    @staticmethod
+    def _contents(rows) -> list[str]:
+        return [row[0] for row in rows]
+
+    def test_a_lemma_row_drops_the_form_rows_beside_it(self, tmp_path: Path):
+        """uk зараз: the form row naming зараза carries the reading S24 boosts, and still goes."""
+        keys = get_profile("uk").dict_keys
+        conn = self._open(
+            tmp_path,
+            [
+                _lemma("зараз", "now", "adv"),
+                _form_of("зараз", "зараза", reading="зара́з"),
+                _form_of("зараз", "зара́за"),
+                _lemma("зараза", "infection", "n"),
+            ],
+            keys,
+        )
+        try:
+            for pos in (None, "ADV", "NOUN"):
+                assert self._contents(lookup(conn, "зараз", "зара́з", keys=keys, pos=pos)) == ["<div>now</div>"]
+            assert lookup_many(conn, [("зараз", "зара́з")], keys=keys)["зараз"] == [("<div>now</div>", "adv", None)]
+        finally:
+            conn.close()
+
+    def test_a_pointer_only_hit_reads_its_targets_lemma_rows_one_hop(self, tmp_path: Path):
+        """vi cảm ơn names cám ơn, whose own reverse pointer back to cảm ơn is never followed."""
+        keys = get_profile("vi").dict_keys
+        conn = self._open(
+            tmp_path,
+            [_form_of("cảm ơn", "cám ơn"), _lemma("cám ơn", "thank you", "v"), _form_of("cám ơn", "cảm ơn", "cảm ơn")],
+            keys,
+        )
+        try:
+            assert lookup(conn, "cảm ơn", keys=keys) == [("<div>thank you</div>", "v", None)]
+            assert lookup(conn, "cám ơn", keys=keys) == [("<div>thank you</div>", "v", None)]
+        finally:
+            conn.close()
+
+    def test_a_pointer_whose_target_has_no_lemma_row_is_a_miss(self, tmp_path: Path):
+        """công ty names công ti, which this dictionary lacks; mailem names mail, itself only a form row."""
+        conn = self._open(
+            tmp_path,
+            [
+                _form_of("công ty", "công ti"),
+                _form_of("mailem", "mail"),
+                _form_of("mail", "maila"),
+                _lemma("maila", "x", "n"),
+            ],
+        )
+        try:
+            for word in ("công ty", "mailem"):
+                assert lookup(conn, word) == []
+                assert lookup_many(conn, [(word, None)])[word] == []
+                assert lookup_with_rules(conn, word) == []
+        finally:
+            conn.close()
+
+    def test_each_target_is_read_once_and_absent_ones_add_nothing(self, tmp_path: Path):
+        """fi kahvi: repeated members and repeated rows naming kaffi splice its rows once."""
+        keys = get_profile("fi").dict_keys
+        conn = self._open(
+            tmp_path,
+            [
+                _form_of("kahvi", "kaffi", "kaffi", "kaffi"),
+                _form_of("kahvi", "kahwi"),
+                _form_of("kahvi", "kaffi"),
+                _lemma("kaffi", "coffee", "n"),
+                _lemma("kaffi", "café", "n"),
+            ],
+            keys,
+        )
+        try:
+            assert self._contents(lookup(conn, "kahvi", keys=keys)) == ["<div>coffee</div>", "<div>café</div>"]
+        finally:
+            conn.close()
+
+    def test_the_targets_rows_rank_as_a_lookup_of_the_target_would(self, tmp_path: Path):
+        keys = _TagPosKeys()
+        conn = self._open(tmp_path, [_form_of("picked", "pick"), _PICK_NAME, _PICK_NOUN, _PICK_VERB])
+        try:
+            spliced = lookup(conn, "picked", pos="v", keys=keys)
+            direct = lookup(conn, "pick", pos="v", keys=keys)
+        finally:
+            conn.close()
+        assert spliced == direct and self._contents(spliced)[0] == _PICK_VERB.content
+
+    def test_the_targets_of_a_run_of_form_rows_rank_together(self, tmp_path: Path):
+        """uk мене names Мен before я: the place name still sorts after the pronoun."""
+        keys = get_profile("uk").dict_keys
+        conn = self._open(
+            tmp_path,
+            [
+                _form_of("мене", "Мен"),
+                _form_of("мене", "я"),
+                _lemma("Мен", "Maine", "name"),
+                _lemma("я", "I", "pron"),
+            ],
+            keys,
+        )
+        try:
+            single = self._contents(lookup(conn, "мене", keys=keys, pos="PRON"))
+            batch = self._contents(lookup_many(conn, [("мене", None)], keys=keys, pos={"мене": "PRON"})["мене"])
+        finally:
+            conn.close()
+        assert single == batch == ["<div>I</div>", "<div>Maine</div>"]
+
+    def test_lookup_many_matches_lookup_with_one_shared_target_read(self, tmp_path: Path):
+        keys = get_profile("fi").dict_keys
+        rows = [
+            _form_of("haluatko", "haluta"),
+            _lemma("haluta", "to want", "v"),
+            _form_of("söit", "syödä"),
+            _lemma("syödä", "to eat", "v"),
+            _lemma("eilen", "yesterday", "adv"),
+            _form_of("eilen", "eilenä", "eilenä"),
+        ]
+        conn = self._open(tmp_path, rows, keys)
+        try:
+            words = ["haluatko", "söit", "eilen", "kahvi"]
+            spy = _ExecSpy(conn)
+            batch = lookup_many(spy, [(w, None) for w in words], keys=keys)
+            assert spy.calls == 2
+            for word in words:
+                assert batch[word] == lookup(conn, word, keys=keys)
+            assert self._contents(batch["haluatko"]) == ["<div>to want</div>"]
+            assert self._contents(batch["eilen"]) == ["<div>yesterday</div>"]
+        finally:
+            conn.close()
+
+    def test_the_variant_fallback_splices_and_carries_the_targets_rules(self, tmp_path: Path):
+        keys = get_profile("vi").dict_keys
+        conn = self._open(
+            tmp_path, [_form_of("kỹ thuật", "kĩ thuật"), _lemma("kĩ thuật", "technology", "n", "n")], keys
+        )
+        try:
+            assert lookup_with_rules(conn, "kỹ thuật", keys=keys) == [("<div>technology</div>", "n", None, "n")]
+        finally:
+            conn.close()
+
+    def test_a_form_row_the_profile_ranks_first_survives_and_reads_its_target(self, tmp_path: Path):
+        """The rank decides: id tau's pointer to tahu, promoted by the profile, leads with tahu's meaning."""
+        rows = [
+            _lemma("tau", "the Greek letter tau", "n"),
+            _form_of("tau", "tahu"),
+            _form_of("tau", "tahu"),
+            _lemma("tahu", "to know", "v"),
+        ]
+        conn = self._open(tmp_path, rows)
+        try:
+            promoted = self._contents(lookup(conn, "tau", keys=_PromotingKeys()))
+            batch = lookup_many(conn, [("tau", None)], keys=_PromotingKeys())["tau"]
+            plain = self._contents(lookup(conn, "tau", keys=_PlainKeys()))
+        finally:
+            conn.close()
+        assert promoted == ["<div>to know</div>", "<div>the Greek letter tau</div>"]
+        assert self._contents(batch) == promoted
+        assert plain == ["<div>the Greek letter tau</div>"]
+
+    def test_a_wty_profile_ranks_a_form_row_over_name_only_lemma_rows(self, tmp_path: Path):
+        """uk августа: for a common noun the genitive of август beats the given name; for a name it does not."""
+        keys = get_profile("uk").dict_keys
+        conn = self._open(
+            tmp_path,
+            [_lemma("августа", "Augusta", "name"), _form_of("августа", "август"), _lemma("август", "August", "n")],
+            keys,
+        )
+        try:
+            noun = self._contents(lookup(conn, "августа", keys=keys, pos="NOUN"))
+            name = self._contents(lookup(conn, "августа", keys=keys, pos="PROPN"))
+        finally:
+            conn.close()
+        assert noun == ["<div>August</div>", "<div>Augusta</div>"]
+        assert name == ["<div>Augusta</div>"]
+
+    def test_declared_keys_splice_only_the_target_rows_of_the_tokens_class(self, tmp_path: Path):
+        """sl mama names the verb imeti, picks the noun and verb pick: a token reads its own class's rows."""
+        rows = [_form_of("mama", "imeti"), _lemma("imeti", "to have", "v impf pf"), _form_of("picks", "pick")]
+        conn = self._open(tmp_path, [*rows, _PICK_NAME, _PICK_NOUN, _PICK_VERB])
+        keys = _ClassSpliceKeys()
+        try:
+            for lookup_pos, word, expected in (
+                ("NOUN", "mama", []),
+                ("VERB", "mama", ["<div>to have</div>"]),
+                ("NOUN", "picks", [_PICK_NOUN.content]),
+                ("VERB", "picks", [_PICK_VERB.content]),
+            ):
+                single = self._contents(lookup(conn, word, keys=keys, pos=lookup_pos))
+                batch = self._contents(lookup_many(conn, [(word, None)], keys=keys, pos={word: lookup_pos})[word])
+                # The variant ladder's read, handed the class of the token the candidate came from.
+                ladder = self._contents(lookup_with_rules(conn, word, keys=keys, pos=lookup_pos))
+                assert single == batch == ladder == expected, (word, lookup_pos)
+            assert ("v impf pf", "NOUN") in keys.calls
+            # No token class in hand, or keys without the test: every target row, as before.
+            keys.calls.clear()
+            assert self._contents(lookup(conn, "mama", keys=keys)) == ["<div>to have</div>"]
+            assert self._contents(lookup_with_rules(conn, "mama", keys=keys)) == ["<div>to have</div>"]
+            assert keys.calls == []
+            assert self._contents(lookup(conn, "mama", keys=_PlainKeys(), pos="NOUN")) == ["<div>to have</div>"]
+        finally:
+            conn.close()
+
+    def test_a_dictionary_without_form_rows_is_untouched(self, tmp_path: Path):
+        """JMdict/CC-CEDICT shapes: no ``non-lemma`` tag, so no extra query and the same rows."""
+        conn = self._open(tmp_path, [_JA_ARCHAIC, _JA_SENSE, _JA_OTHER_READING, _SENSE, _SURNAME])
+        try:
+            spy = _ExecSpy(conn)
+            lookup_many(spy, [("辛い", "からい"), ("干", "gān")], keys=get_profile("ja").dict_keys)
+            assert spy.calls == 1
+            assert self._contents(lookup(conn, "辛い", "からい")) == [
+                _JA_ARCHAIC.content,
+                _JA_SENSE.content,
+                _JA_OTHER_READING.content,
+            ]
+        finally:
+            conn.close()
+
+
+class _ReadingFormKeys(_PlainKeys):
+    """A profile whose form lookup also matches the reading column (wty-ro-en's shape)."""
+
+    term_rows_match_reading = True
+
+
+class _CasefoldReadingFormKeys(_ReadingFormKeys):
+    """The same, with a casefolding term key (the Latin profiles' fold)."""
+
+    def fold_term(self, s: str) -> str:
+        return unicodedata.normalize("NFC", s).casefold()
+
+
+class TestTermRowsReadingMatch:
+    """``term_rows`` is exact-term by default; a profile's keys may declare the reading column too.
+
+    wty-ro-en keys a form row without diacritics and stores the real spelling as its reading
+    (``lasa`` / ``lasă`` -> ``lăsa``), so the exact-term read of ``lasă`` finds nothing.
+    """
+
+    _LASA = _form_of("lasa", "lăsa", reading="lasă")
+    _LASHA = _form_of("lasa", "laș", reading="lașă")
+    _LASA_LEMMA = _lemma("lăsa", "to leave", "v")
+
+    @staticmethod
+    def _open(tmp_path: Path, rows: list[DictRow], keys) -> sqlite3.Connection:
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        bulk_insert(db, rows, keys=keys)
+        return open_readonly(db)
+
+    def test_the_default_read_ignores_the_reading_column(self, tmp_path: Path):
+        conn = self._open(tmp_path, [self._LASA, self._LASA_LEMMA], _PlainKeys())
+        try:
+            for keys in (None, _PlainKeys()):
+                assert term_rows(conn, ["lasă"], keys=keys) == {}
+        finally:
+            conn.close()
+
+    def test_declared_keys_reach_a_form_row_through_its_reading(self, tmp_path: Path):
+        keys = _ReadingFormKeys()
+        conn = self._open(tmp_path, [self._LASA, self._LASHA, self._LASA_LEMMA], keys)
+        try:
+            found = term_rows(conn, ["lasă", "lăsa", "absent"], keys=keys)
+        finally:
+            conn.close()
+        assert found == {
+            "lasă": [(self._LASA.content, "non-lemma")],
+            "lăsa": [(self._LASA_LEMMA.content, "v")],
+        }
+
+    def test_term_matches_lead_and_a_row_matching_both_ways_comes_once(self, tmp_path: Path):
+        """``căuta``: its own lemma row by term, the ``cauta`` form row spelt ``căuta`` by reading."""
+        keys = _ReadingFormKeys()
+        spelt = _form_of("cauta", "căta", reading="căuta")
+        both = _form_of("căuta", "căuta", reading="căuta")
+        conn = self._open(tmp_path, [spelt, _lemma("căuta", "to look for", "v"), both], keys)
+        try:
+            found = term_rows(conn, ["căuta"], keys=keys)
+        finally:
+            conn.close()
+        assert found == {
+            "căuta": [("<div>to look for</div>", "v"), (both.content, "non-lemma"), (spelt.content, "non-lemma")]
+        }
+
+    def test_the_terms_are_folded_before_both_matches(self, tmp_path: Path):
+        keys = _CasefoldReadingFormKeys()
+        conn = self._open(tmp_path, [self._LASA, self._LASA_LEMMA], keys)
+        try:
+            found = term_rows(conn, ["Lasă", "LĂSA"], keys=keys)
+        finally:
+            conn.close()
+        assert found == {"Lasă": [(self._LASA.content, "non-lemma")], "LĂSA": [(self._LASA_LEMMA.content, "v")]}
+
+    def test_a_request_spanning_several_chunks_is_answered_whole(self, tmp_path: Path):
+        keys = _ReadingFormKeys()
+        rows = [_form_of(f"f{i}", f"l{i}", reading=f"r{i}") for i in range(2 * _BIND_CHUNK)]
+        conn = self._open(tmp_path, rows, keys)
+        try:
+            found = term_rows(conn, [f"r{i}" for i in range(2 * _BIND_CHUNK + 50)], keys=keys)
+        finally:
+            conn.close()
+        assert set(found) == {f"r{i}" for i in range(2 * _BIND_CHUNK)}
+        assert found["r0"] == [(rows[0].content, "non-lemma")]

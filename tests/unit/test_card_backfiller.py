@@ -143,6 +143,7 @@ class FakeDefinitionService:
         self.glossaries = glossaries or {}
         self.readings = readings or {}
         self.reading_batches: list[list[str]] = []
+        self.glossary_calls: list[tuple[list, dict | None]] = []
 
     def offline_term_readings(self, terms):
         self.reading_batches.append(list(terms))
@@ -158,8 +159,13 @@ class FakeDefinitionService:
     ):
         return [self.defs.get(word) for word, _reading in pairs]
 
-    def get_glossaries_batch(self, pairs, progress_callback=None, *, is_cancelled=None):
-        return [self.glossaries.get(word) for word, _reading in pairs]
+    def get_glossaries_batch(self, pairs, progress_callback=None, fallback_context=None, *, is_cancelled=None):
+        # The real service's miss-only ladder, reduced to its first candidate.
+        self.glossary_calls.append((list(pairs), fallback_context))
+        ladder = fallback_context or {}
+        return [
+            self.glossaries.get(word) or self.glossaries.get(ladder.get(word, ("",))[0]) for word, _reading in pairs
+        ]
 
 
 class FakeAudioFetcher:
@@ -930,11 +936,46 @@ class TestScanDefinitionGlossary:
         plan = scan_backfill(anki, config, _services(defs=defs), _options({"definition"}))
         assert _changes_by_key(plan, 1)["definition"] == "<p>cat</p>"
 
-    def test_glossary_lemma_retry_on_miss(self, backfill_config):
+    def test_glossary_walks_the_definition_miss_ladder(self, backfill_config):
+        # Phase 4's recipe: one glossary batch carrying the Definition's
+        # fallback context, so a ladder-resolved front (id bukunya -> buku)
+        # gets its Glossary. No second, hand-rolled lemma batch.
         anki = FakeAnkiService({1: _note(1, word="食べた", ExpressionReading="たべた", Glossary="", definition="x")})
         defs = FakeDefinitionService(glossaries={"食べる": "<div>eat</div>"})
         plan = scan_backfill(anki, backfill_config, _services(defs=defs), _options({"glossary"}))
         assert "<div>eat</div>" in _changes_by_key(plan, 1)["glossary"]
+        assert defs.glossary_calls == [([("食べた", "たべた")], {"食べた": ("食べる", None)})]
+
+    def test_yue_definition_stacks_every_dictionary_like_phase_4(self, backfill_config, monkeypatch):
+        # A yue card mining stacked (蚊: CEDICT 'mosquito' + CC-Canto 'dollar')
+        # must not be overwritten with the first hit's Mandarin-only sense. The
+        # Glossary reuses the stacked Definition: one walk per dictionary.
+        monkeypatch.setattr(
+            "anki_miner.services.card_backfiller.get_tagger",
+            lambda language: lambda text: [SyntheticToken(text, "名詞", "*", text, text)],
+        )
+        batches: list[str] = []
+
+        def provider(name: str, gloss: str) -> SimpleNamespace:
+            def lookup_many(pairs):
+                batches.append(name)
+                return {word: gloss for word, _reading in pairs if word == "蚊"}
+
+            return SimpleNamespace(
+                name=name, is_online=False, load=lambda: None, is_available=lambda: True, lookup_many=lookup_many
+            )
+
+        config = replace(backfill_config, language="yue")
+        service = DefinitionService(config, [provider("cedict", "<mosquito>"), provider("canto", "<dollar>")])
+        anki = FakeAnkiService({1: _note(1, word="蚊", ExpressionReading="man1", definition="<mosquito>", Glossary="")})
+
+        plan = scan_backfill(
+            anki, config, _services(defs=service), _options({"definition", "glossary"}, overwrite=True)
+        )
+
+        changes = _changes_by_key(plan, 1)
+        assert changes["definition"] == changes["glossary"] == "<mosquito><dollar>"
+        assert batches == ["cedict", "canto"]
 
 
 class TestScanReadingFurigana:

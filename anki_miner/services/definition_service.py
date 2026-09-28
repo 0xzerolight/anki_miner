@@ -88,6 +88,24 @@ def _word_unique_batches(
         pending = deferred
 
 
+def _token_kwargs(
+    batch: list[tuple[str, str | None]],
+    lemma_context: dict[str, str] | None,
+    pos_context: dict[str, str] | None,
+) -> dict[str, dict[str, str]]:
+    """The ``lemmas=`` / ``pos=`` kwargs a batch provider's ``lookup_many`` takes for ``batch``.
+
+    Each is passed only when some word of the batch has one, so providers and
+    stubs predating the kwarg keep working (the legacy call shape).
+    """
+    kwargs: dict[str, dict[str, str]] = {}
+    for name, context in (("lemmas", lemma_context), ("pos", pos_context)):
+        scoped = {w: context[w] for w, _ in batch if w in context} if context else {}
+        if scoped:
+            kwargs[name] = scoped
+    return kwargs
+
+
 def collect_dictionary_css_entries(config: AnkiMinerConfig) -> list[tuple[str, str, str]]:
     """Collect ``(dict_id, display_name, scoped_css)`` for every enabled
     dictionary that ships a ``styles.css``.
@@ -321,41 +339,65 @@ class DefinitionService:
             return self._fallback_candidates(word, orth_base, ctype)
         return self._lookup.candidates(word, orth_base, ctype)
 
-    def _fallback_lookup_offline(
+    def _fallback_hits_offline(
         self,
         word: str,
         orth_base: str,
         ctype: str | None,
         is_cancelled: Callable[[], bool] | None = None,
-    ) -> str | None:
-        """First rules-validated fallback hit across offline providers, else None.
+        pos: str | None = None,
+    ) -> list[str]:
+        """Every offline provider's rules-validated hit for the first candidate any of them answers.
 
         Candidates are tried in priority order (variants, then fewest-step
-        deinflections); for each, offline providers are walked in chain order and
-        the first hit wins (mirrors ``get_definitions_batch`` first-hit-wins).
-        Online providers and providers lacking ``lookup_fallback`` are skipped.
-        Never raises: a provider that throws degrades to "skip + continue".
+        deinflections); for each, offline providers are walked in chain order,
+        and the first candidate with a hit ends the walk, so a deeper candidate
+        never mixes into a nearer one's hits. Online providers and providers
+        lacking ``lookup_fallback`` are skipped. Never raises: a provider that
+        throws degrades to "skip + continue". Cancellation returns the hits so far.
+
+        ``pos`` is the token's part of speech (the batch's ``pos_context``), so a
+        candidate's form row reads only the target rows the profile lets that
+        class read, as the direct lookup does. Passed only when known, the
+        ``_token_kwargs`` convention.
         """
-        candidates = self.fallback_candidates(word, orth_base, ctype)
-        if not candidates:
-            return None
-        for cand_text, cand_conditions in candidates:
+        token_kwargs = {"pos": pos} if pos else {}
+        hits: list[str] = []
+        for cand_text, cand_conditions in self.fallback_candidates(word, orth_base, ctype):
             for provider in self._providers:
                 if is_cancelled is not None and is_cancelled():
-                    return None
+                    return hits
                 if provider.is_online or not provider.is_available():
                     continue
                 fb = getattr(provider, "lookup_fallback", None)
                 if not callable(fb):
                     continue
                 try:
-                    html: str | None = fb(cand_text, cand_conditions)
+                    html: str | None = fb(cand_text, cand_conditions, **token_kwargs)
                 except Exception as e:
                     _log_provider_failure(provider, "lookup_fallback", e, subject=cand_text)
                     continue
                 if html:
-                    return html
-        return None
+                    hits.append(html)
+            if hits:
+                return hits
+        return hits
+
+    def _fallback_lookup_offline(
+        self,
+        word: str,
+        orth_base: str,
+        ctype: str | None,
+        is_cancelled: Callable[[], bool] | None = None,
+        pos: str | None = None,
+    ) -> str | None:
+        """First rules-validated fallback hit across offline providers, else None.
+
+        The first of ``_fallback_hits_offline`` (mirrors ``get_definitions_batch``
+        first-hit-wins).
+        """
+        hits = self._fallback_hits_offline(word, orth_base, ctype, is_cancelled, pos)
+        return hits[0] if hits else None
 
     def _chain_description(self) -> list[str]:
         """Render the walked chain as ``name:dict_id:availability`` per provider.
@@ -384,6 +426,7 @@ class DefinitionService:
         *,
         is_cancelled: Callable[[], bool] | None = None,
         lemma_context: dict[str, str] | None = None,
+        pos_context: dict[str, str] | None = None,
     ) -> list[str | None]:
         """Resolve definitions for a list of ``(word, reading | None)`` pairs,
         preserving first-hit-wins. The reading is a per-word ranking BOOST
@@ -415,6 +458,12 @@ class DefinitionService:
         the folded-reading scan keeps its own lexeme's rows instead of the
         highest-scored same-reading homograph (有/夕/結う). Absent/empty ⇒
         providers are called with the legacy shape, so older stubs keep working.
+
+        ``pos_context`` maps a lookup word to its token's part of speech,
+        forwarded the same way as ``pos=`` for the profile's row rank: a wty
+        verb opens on its verb row, not on the noun row the index put first.
+        The miss ladder hands it to ``lookup_fallback`` for the profile's
+        splice test. Absent/empty ⇒ no ``pos`` kwarg, as with ``lemma_context``.
         """
         if progress_callback:
             progress_callback.on_start(
@@ -460,13 +509,8 @@ class DefinitionService:
                 for batch_index, batch in enumerate(batches):
                     if cancellation_requested():
                         break
-                    # Legacy call shape when no lemma applies to this batch, so
-                    # providers/stubs predating the ``lemmas`` kwarg keep working.
-                    batch_lemmas = (
-                        {w: lemma_context[w] for w, _ in batch if w in lemma_context} if lemma_context else {}
-                    )
                     try:
-                        hits = batch_fn(batch, lemmas=batch_lemmas) if batch_lemmas else batch_fn(batch)
+                        hits = batch_fn(batch, **_token_kwargs(batch, lemma_context, pos_context))
                     except Exception as e:
                         _log_provider_failure(provider, "lookup_many", e)
                         still_remaining.extend(batch)
@@ -524,6 +568,7 @@ class DefinitionService:
                     orth_base,
                     ctype,
                     is_cancelled,
+                    pos_context.get(word) if pos_context else None,
                 )
                 if html:
                     resolved[pair] = html
@@ -965,9 +1010,11 @@ class DefinitionService:
         self,
         words: list[tuple[str, str | None]],
         progress_callback: ProgressCallback | None = None,
+        fallback_context: dict[str, tuple[str, str | None]] | None = None,
         *,
         is_cancelled: Callable[[], bool] | None = None,
         lemma_context: dict[str, str] | None = None,
+        pos_context: dict[str, str] | None = None,
     ) -> list[str | None]:
         """Collect glossary HTML for ``(word, reading | None)`` pairs, preserving
         input order. The reading is a per-word ranking BOOST threaded to each
@@ -985,9 +1032,15 @@ class DefinitionService:
         Providers lacking ``lookup_many`` (e.g. legacy offline or online Jisho)
         are consulted per-word, matching the old behaviour.
 
+        ``fallback_context`` is ``get_definitions_batch``'s lookup-miss ladder:
+        a word nothing answered, offline or online, retries the candidates, and
+        every offline provider's hit for the first candidate any of them answers
+        is concatenated. Absent (``None``) ⇒ no ladder.
+
         ``lemma_context`` mirrors ``get_definitions_batch``: word → token lemma,
         forwarded to batch-capable offline providers for the Rule A′ kana-front
         homograph scope; absent/empty keeps the legacy call shape.
+        ``pos_context`` (word → token part of speech) likewise mirrors it.
         """
         if progress_callback:
             progress_callback.on_start(
@@ -1030,12 +1083,8 @@ class DefinitionService:
                 for batch in _word_unique_batches(unique_pairs):
                     if cancellation_requested():
                         break
-                    # Same legacy-shape guard as get_definitions_batch.
-                    batch_lemmas = (
-                        {w: lemma_context[w] for w, _ in batch if w in lemma_context} if lemma_context else {}
-                    )
                     try:
-                        provider_results = batch_fn(batch, lemmas=batch_lemmas) if batch_lemmas else batch_fn(batch)
+                        provider_results = batch_fn(batch, **_token_kwargs(batch, lemma_context, pos_context))
                     except Exception as e:
                         _log_provider_failure(provider, "lookup_many", e)
                         break
@@ -1078,6 +1127,20 @@ class DefinitionService:
                 else:
                     online_results[pair] = None
 
+        # Miss-only ladder, after the whole chain as in get_definitions_batch.
+        if fallback_context:
+            for pair in unique_pairs:
+                if cancellation_requested():
+                    break
+                word, _reading = pair
+                ctx = fallback_context.get(word)
+                if ctx is None or offline_hits[pair] or online_results.get(pair):
+                    continue
+                orth_base, ctype = ctx
+                offline_hits[pair] = self._fallback_hits_offline(
+                    word, orth_base, ctype, is_cancelled, pos_context.get(word) if pos_context else None
+                )
+
         results: list[str | None] = []
         for i, pair in enumerate(words, 1):
             word, _reading = pair
@@ -1108,7 +1171,7 @@ class DefinitionService:
             progress_callback.on_complete()
         return results
 
-    def lookup_all_offline(self, word: str, lemma: str | None = None) -> list[tuple[str, str]]:
+    def lookup_all_offline(self, word: str, lemma: str | None = None, pos: str | None = None) -> list[tuple[str, str]]:
         """Aggregate results from all available OFFLINE providers.
 
         Returns a list of (provider_name, html) tuples for every offline
@@ -1141,6 +1204,11 @@ class DefinitionService:
                 offline stub) keeps the arity-1 ``lookup(word)`` path.
                 ``None``/empty skips the probe entirely, so this is
                 byte-identical to pre-A′ behavior for every existing caller.
+            pos: the token's part of speech, for the profile's row rank
+                (mirrors ``get_definitions_batch``'s ``pos_context``): a wty
+                verb's pane opens on the verb row its card opens on. Routed
+                like ``lemma``, and each is passed to ``lookup_many`` only
+                when set; with neither, ``lookup(word)`` runs as before.
 
         Returns:
             List of (provider_name, html) tuples in provider chain order. Empty
@@ -1148,17 +1216,17 @@ class DefinitionService:
         """
         self.ensure_loaded()
         candidates = self.fallback_candidates(word, "", None)
+        pair: list[tuple[str, str | None]] = [(word, None)]
+        token_kwargs = _token_kwargs(pair, {word: lemma} if lemma else None, {word: pos} if pos else None)
+        fallback_kwargs = {"pos": pos} if pos else {}
         out: list[tuple[str, str]] = []
         for p in self._providers:
             if p.is_online or not p.is_available():
                 continue
             seen_html: set[str] = set()
-            batch_fn = getattr(p, "lookup_many", None) if lemma else None
+            batch_fn = getattr(p, "lookup_many", None) if token_kwargs else None
             try:
-                if callable(batch_fn):
-                    html = batch_fn([(word, None)], lemmas={word: lemma}).get(word)
-                else:
-                    html = p.lookup(word)
+                html = batch_fn(pair, **token_kwargs).get(word) if callable(batch_fn) else p.lookup(word)
             except Exception as e:
                 _log_provider_failure(p, "lookup", e, subject=word)
                 html = None
@@ -1170,7 +1238,7 @@ class DefinitionService:
                 continue
             for cand_text, cand_conditions in candidates:
                 try:
-                    fhtml = fb(cand_text, cand_conditions)
+                    fhtml = fb(cand_text, cand_conditions, **fallback_kwargs)
                 except Exception as e:
                     _log_provider_failure(p, "lookup_fallback", e, subject=cand_text)
                     continue

@@ -39,7 +39,7 @@ def test_surfaces_cover_the_line(german, line):
 def test_the_particle_is_stashed_on_its_verb(german):
     tokens = _by_surface(german, "Er sieht sich den Film an.")
     assert tokens["sieht"].feature.lemma == "sehen" and tokens["sieht"].feature.particle == "an"
-    assert tokens["an"].feature.pos1 == "PART"
+    assert tokens["sieht"].feature.particles[0].token is tokens["an"]  # SeparableVerbPass demotes it on the join
     assert (tokens["Film"].feature.lemma, tokens["Film"].feature.pos2) == ("Film", "NN")
     assert "Gender=Masc" in tokens["Film"].morph  # morph is a LanguageToken slot, not a feature field
 

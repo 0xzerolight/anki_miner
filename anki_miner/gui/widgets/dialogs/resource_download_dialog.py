@@ -722,9 +722,19 @@ class ResourceDownloadSession(QObject):
     # --- rendering ------------------------------------------------------
 
     def _publish(self, event: ResourceProgress, stats: TransferStats | None) -> None:
-        """Render one observation to the window and the registry, once."""
+        """Render one observation to the window and the registry, once.
+
+        Past the download the bar follows the importer's counted pass when it
+        has one (a word list being lemmatised can take minutes); the line above
+        it stays the install copy.
+        """
         detail = resource_detail(event, locale=self._locale, stats=stats)
-        fraction = stats.fraction if stats is not None else None
+        if stats is not None:
+            fraction = stats.fraction
+        elif event.step is not None and event.steps:
+            fraction = event.step / event.steps
+        else:
+            fraction = None
         self._with_window(lambda window: window.show_activity(event.display_name, detail, fraction))
 
         if self._handle is None:

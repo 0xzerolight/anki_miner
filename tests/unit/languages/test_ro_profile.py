@@ -16,6 +16,7 @@ from anki_miner.gui import app as app_module
 from anki_miner.gui.capabilities import CAPABILITIES, search
 from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages._spaced.fields import NOUN_GENDER_FIELD, POS_FIELD
+from anki_miner.languages._spaced.form_of import FormOfLemmaPass
 from anki_miner.languages._spaced.grammar_hook import GrammarTagHook
 from anki_miner.languages._spaced.keys import CasefoldDictKeys
 from anki_miner.languages._spaced.morphology import LatinLookupStrategy, SpacedMinedForm
@@ -102,11 +103,11 @@ def test_the_lookup_ladder_is_the_surface_then_its_casefold():
     assert lookup.candidates("cărți", "", None) == []  # the PROBE word shape: no cedilla rung (E.2.8)
 
 
-def test_the_parser_is_the_spaced_factory():
+def test_the_parser_is_the_spaced_factory_with_the_verb_front_repair():
     profile = get_profile("ro")
     parser = profile.create_parser(switch_language(AnkiMinerConfig(), "ro"))
     assert parser.normalize is profile.normalize
-    assert parser._compound_matcher is None and parser._token_post_pass is None
+    assert parser._compound_matcher is None and isinstance(parser._token_post_pass, FormOfLemmaPass)
 
 
 def test_the_catalogue_ships_wiktionary_and_a_lemmatised_frequency_list():

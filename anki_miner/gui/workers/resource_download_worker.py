@@ -65,31 +65,45 @@ class _LemmatiseKwargs(LemmatizeKwarg, total=False):
     declared_mode: str
 
 
-def _lemmatise_kwargs(spec: ResourceSpec, language: str) -> _LemmatiseKwargs:
+def _lemmatise_kwargs(spec: ResourceSpec, language: str, dicts_root: Path) -> _LemmatiseKwargs:
     """Keywords for a catalogue list the importer must aggregate per lemma.
 
     Only a word-count list is lemmatised, and summing per lemma is only defined
     for occurrence counts, so such a spec declares its mode outright (D11).
-    Empty for every other spec, keeping the pre-S17 call shape.
+    The lemmatizer reads the dictionaries under ``dicts_root``, where the
+    catalogue's own dictionary has just been imported, so each word is keyed by
+    its card front (SHARED-06). Empty for every other spec, keeping the pre-S17
+    call shape.
     """
     if not spec.lemmatise:
         return {}
-    return {"declared_mode": mode_probe.OCCURRENCE_BASED, "lemmatize": build_frequency_lemmatizer(language)}
+    return {
+        "declared_mode": mode_probe.OCCURRENCE_BASED,
+        "lemmatize": build_frequency_lemmatizer(language, dicts_root),
+    }
 
 
 class _PinnedSlotKwargs(TypedDict, total=False):
     source_id: str
+    source_name: str
 
 
-def _pinned_slot_kwargs(spec: ResourceSpec) -> _PinnedSlotKwargs:
-    """Keywords that import a ``pin_slot`` freq spec into its catalogue slot.
+def _pinned_slot_kwargs(spec: ResourceSpec, staged: Path) -> _PinnedSlotKwargs:
+    """Keywords that import a freq spec into its catalogue slot.
 
-    Empty for every other spec: an installed list keeps the title-derived slot
-    it was imported into, and the importer call keeps its pre-pin shape.
+    A single-file list (.csv/.tsv/.txt) always imports into ``spec.id`` under
+    ``spec.display_name``: the importer names its slot and label after the file
+    stem, and a download's stem is the downloader's temp name ("tmpd3n2pl0v"),
+    new on every download. A zip is named by its ``index.json`` title, so only
+    a ``pin_slot`` zip (a moving-URL list) is pinned. Empty for every other
+    zip: an installed list keeps the title-derived slot it was imported into,
+    and the importer call keeps its pre-pin shape.
     """
-    if not spec.pin_slot:
-        return {}
-    return {"source_id": spec.id}
+    if staged.suffix.lower() != ".zip":
+        return {"source_id": spec.id, "source_name": spec.display_name}
+    if spec.pin_slot:
+        return {"source_id": spec.id}
+    return {}
 
 
 def _resume_key(spec: ResourceSpec) -> str:
@@ -149,10 +163,10 @@ class ResourcePhase(Enum):
 class ResourceProgress:
     """One observation about one resource. Every number is one the app has.
 
-    ``total_bytes`` and ``entries`` are ``None`` rather than 0 when unknown —
-    a server that sends no Content-Length has not told us the download is
-    empty, and an importer that counts files has not told us how many entries
-    it wrote.
+    ``total_bytes``, ``entries`` and ``step``/``steps`` are ``None`` rather
+    than 0 when unknown — a server that sends no Content-Length has not told
+    us the download is empty, and an importer that counts files has not told
+    us how many entries it wrote.
     """
 
     spec_id: str
@@ -163,6 +177,11 @@ class ResourceProgress:
     downloaded: int = 0
     total_bytes: int | None = None
     entries: int | None = None
+    #: How far a file-counting importer is through its counted pass: bank
+    #: files read, or terms lemmatised for a word-count list. A position, not
+    #: an entry count.
+    step: int | None = None
+    steps: int | None = None
 
 
 class ResourcePromotionRequest:
@@ -189,9 +208,15 @@ class _ItemPhaseReporter:
     """Folds one resource's two progress streams into one phase sequence.
 
     The download reports bytes; the importer reports either entries (the
-    dictionary route, which inserts row by row) or file indices (the frequency
-    and pitch routes, which walk bank files). Only the first is an entry count,
-    so only the first is allowed to claim one.
+    dictionary route, which inserts row by row) or a counted pass (the
+    frequency and pitch routes: bank files read, or terms lemmatised for a
+    word-count list). Only the first is an entry count, so only the first is
+    allowed to claim one; the second travels as ``step``/``steps``.
+
+    Each catalogue freq/pitch item makes at most one counted pass — a zip walks
+    its banks, and every lemmatised list is a single file — so the step only
+    grows within the install phase. A lemmatised zip would count its banks and
+    then its terms, and its bar would start over.
     """
 
     def __init__(self, spec: ResourceSpec, emit: Callable[[ResourceProgress], None], *, counts_entries: bool) -> None:
@@ -201,6 +226,8 @@ class _ItemPhaseReporter:
         self._downloaded = 0
         self._total_bytes: int | None = None
         self._entries: int | None = None
+        self._step: int | None = None
+        self._steps: int | None = None
 
     def downloading(self, downloaded: int, total: int, _message: str) -> None:
         """Record a byte observation from the downloader."""
@@ -212,7 +239,7 @@ class _ItemPhaseReporter:
         """Announce the download→install transition before the importer runs."""
         self._publish(ResourcePhase.INSTALLING)
 
-    def importing(self, _current: int, _total: int, message: str) -> None:
+    def importing(self, current: int, total: int, message: str) -> None:
         """Record an importer observation, promoting to INDEXING once counting.
 
         The promotion latches: an importer that finishes inserting and then
@@ -225,11 +252,16 @@ class _ItemPhaseReporter:
         surface a bank-derived number as if it were entries. The real count
         only exists in the message text; both sides of this coupling are
         internal English strings, never translated.
+
+        For the other routes ``current``/``total`` is the counted pass, kept
+        as the step whenever the importer states a total.
         """
         if self._counts_entries:
             match = re.match(r"Inserted ([\d,]+) entries", message)
             if match:
                 self._entries = max(int(match.group(1).replace(",", "")), self._entries or 0)
+        elif total > 0:
+            self._step, self._steps = current, total
         self._publish(ResourcePhase.INDEXING if self._entries else ResourcePhase.INSTALLING)
 
     def _publish(self, phase: ResourcePhase) -> None:
@@ -241,6 +273,8 @@ class _ItemPhaseReporter:
                 downloaded=self._downloaded,
                 total_bytes=self._total_bytes,
                 entries=self._entries,
+                step=self._step,
+                steps=self._steps,
             )
         )
 
@@ -461,8 +495,9 @@ class ResourceDownloadWorker(CancellableWorker):
                     # ``.part`` file. Re-suffix the temp from the catalog URL so
                     # the importer routes correctly (and copies a sensibly-named
                     # source.<ext> alongside the index).
-                    # A pin_slot spec (a moving-URL list) imports into its
-                    # catalog id so a newer build replaces it in place.
+                    # A single-file list or a pin_slot zip (a moving-URL list)
+                    # imports into its catalog id so a re-download replaces it
+                    # in place (see _pinned_slot_kwargs).
                     temp = _retype_for_suffix(temp, spec.url)
                     freq_result = import_frequency_source(
                         temp,
@@ -472,8 +507,8 @@ class ResourceDownloadWorker(CancellableWorker):
                         overwrite=True,
                         before_promote=self._require_promotion_allowed,
                         **language_kwarg(self._language),
-                        **_lemmatise_kwargs(spec, self._language),
-                        **_pinned_slot_kwargs(spec),
+                        **_lemmatise_kwargs(spec, self._language, self._dicts_root),
+                        **_pinned_slot_kwargs(spec, temp),
                     )
                     source_id = freq_result.source_id
                     detail = tr_format(

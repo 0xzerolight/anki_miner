@@ -43,6 +43,7 @@ from importlib.util import find_spec
 from typing import Any
 
 from anki_miner.languages.ko.availability import KO_FROZEN_MODEL_REASON, KO_MODEL_DOWNLOAD_HINT
+from anki_miner.languages.ko.overrides import KO_PRE_ANALYZED_FORMS, KO_PRE_ANALYZED_SCORE
 from anki_miner.languages.token import LanguageToken
 from anki_miner.services.tagger import LockedTagger
 from anki_miner.utils.logging_ext import log_summary
@@ -106,14 +107,16 @@ def _create_kiwi() -> Any:
     """Build a raw kiwipiepy.Kiwi against whichever model this install has.
 
     Imported function-locally: an install without the [ko] extra must fail here,
-    with an actionable message, not at module import time.
+    with an actionable message, not at module import time. The forms kiwi's
+    model misreads are registered on the new instance (languages/ko/overrides.py).
     """
     from kiwipiepy import Kiwi
 
     model_path = resolve_model_path()
-    if model_path is None:
-        return Kiwi()
-    return Kiwi(model_path=model_path)
+    kiwi = Kiwi() if model_path is None else Kiwi(model_path=model_path)
+    for form, analysis in KO_PRE_ANALYZED_FORMS.items():
+        kiwi.add_pre_analyzed_word(form, analysis, KO_PRE_ANALYZED_SCORE)
+    return kiwi
 
 
 def base_tag(tag: str) -> str:

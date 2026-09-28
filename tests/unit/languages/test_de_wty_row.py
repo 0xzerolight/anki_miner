@@ -23,7 +23,7 @@ EXPECTED = {
     "Hund": ("Case=Nom|Gender=Masc|Number=Sing", {"noun_gender": "der", "noun_plural": "Hunde"}),
     "Kiefer": ("", {"noun_gender": "die", "noun_plural": "Kiefern"}),  # 3 gender chips -> the first head line
     "E-Mail": ("Case=Acc|Gender=Fem|Number=Sing", {"noun_gender": "die", "noun_plural": "E-Mails"}),
-    "Ferien": ("Case=Acc|Number=Plur", {}),  # plurale tantum: no gender, no plural form
+    "Ferien": ("Case=Acc|Number=Plur", {"noun_gender": "die"}),  # plurale tantum: "die", no plural form
     "Straße": ("", {"noun_gender": "die", "noun_plural": "Straßen"}),
     "Hardware": ("", {"noun_gender": "die", "noun_plural": "Hardwares"}),  # "plural (uncommon) Hardwares"
     "Oma": ("Case=Nom|Gender=Masc|Number=Sing", {"noun_gender": "die", "noun_plural": "Omas"}),  # morph is wrong

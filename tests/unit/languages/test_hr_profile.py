@@ -49,7 +49,7 @@ def test_the_profile_is_built_from_the_shared_substrate():
     assert isinstance(profile.script, LatinScript) and isinstance(profile.dict_keys, CasefoldDictKeys)
     assert profile.reading is None and profile.sentence_annotator is None
     assert profile.normalize is hr_normalize
-    assert profile.import_encodings == ("utf-8-sig", "cp1250")
+    assert profile.import_encodings == ("utf-8-sig", "iso8859_2", "cp1250")
     assert profile.audio_track_codes == frozenset({"hrv", "scr", "hr", "croatian"})
     assert profile.captions.primary == "hr" and profile.captions.codes == ("hr",)
     assert profile.captions.orig_codes == ("hr-orig",) and profile.captions.audio_pattern == "^hr(-|$)"
@@ -60,7 +60,7 @@ def test_the_profile_is_built_from_the_shared_substrate():
     assert profile.pos_defaults.excluded_subtypes == HR_EXCLUDED_SUBTYPES
     assert profile.smoke_sentence == "Student je ju\u010der pro\u010ditao zanimljivu knjigu."
     assert profile.sentence_rules.abbreviations == HR_ABBREVIATIONS
-    assert profile.dict_keys.fold_term("Knjige") == "knjige"  # NFC + casefold, nothing else
+    assert profile.dict_keys.fold_term("Knjige") == "knjige"  # NFC + tone fold + casefold
 
 
 def test_only_the_dictionary_speaks_serbo_croatian():

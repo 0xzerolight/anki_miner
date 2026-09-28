@@ -8417,8 +8417,8 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Dateien hinzufügen…</translation>
     </message>
     <message>
-        <source>Add subtitle files (.srt, .ass, .ssa, .vtt) to the list.</source>
-        <translation>Untertiteldateien (.srt, .ass, .ssa, .vtt) zur Liste hinzufügen.</translation>
+        <source>Add subtitle files (.srt, .ass, .ssa, .vtt, .smi) to the list.</source>
+        <translation>Untertiteldateien (.srt, .ass, .ssa, .vtt, .smi) zur Liste hinzufügen.</translation>
     </message>
     <message>
         <source>Remove Selected</source>

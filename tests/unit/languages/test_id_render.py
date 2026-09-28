@@ -42,6 +42,40 @@ def test_the_etymology_formula(etymology, parsed):
     assert etymology_parse(_html(etymology)) == parsed
 
 
+@pytest.mark.parametrize(
+    ("etymology", "parsed"),
+    [
+        # kopi: the Latin formula of a borrowing chain is not the Indonesian word's root
+        (
+            "From Dutch kopie, from French copie, from Medieval Latin copia (“reproduction, transcript”), from Latin "
+            "cōpia (“plenty, abundance”), from *coopia, from co- (“together”) + ops (“wealth, riches”).",
+            None,
+        ),
+        # kapal: an English sense note after the Tamil step
+        (
+            "From Malay kapal (“ship”), from Classical Malay کاڤل (kapal), from Tamil கப்பல் (kappal, “ship”). In the "
+            "third sense, a mistranslation of English ship (“relationship”), from relation + -ship.",
+            None,
+        ),
+        ("From Old Javanese kagöm (“taken by fright”), from ka- + göm.", None),
+        ("From ka- + göm.", None),  # a component never stops short of a letter
+        # the Malay steps are the word's own history
+        ("From Malay pilihan, from pilih + -an.", ("pilih", "pilih + -an")),
+        ("Inherited from Malay perempuan, from per- -an + empu.", ("empu", "per- + empu + -an")),
+        # an explicit marker still counts after a foreign step
+        ("From English neophobia, from neo- + phobia. Equivalent to neo- + fobia.", ("fobia", "neo- + fobia")),
+        (
+            "From Malay lelaki, from Proto-Malayo-Polynesian (compare Madurese lalake). Partial reduplication of laki "
+            "or infixed from laki + -el-.",
+            ("laki", "laki + -el-"),
+        ),
+    ],
+    ids=["kopi", "kapal", "kagum", "letter-guard", "pilihan", "perempuan", "neofobia", "lelaki"],
+)
+def test_a_bare_formula_after_a_foreign_step_is_not_the_root(etymology, parsed):
+    assert etymology_parse(_html(etymology)) == parsed
+
+
 def test_the_first_formula_wins_and_no_block_is_no_parse():
     assert etymology_parse(_html("From meng- + beli.") + _html("From ber- + jalan.")) == ("beli", "meng- + beli")
     assert etymology_parse("<div>to buy</div>") is None and etymology_parse("") is None
@@ -53,6 +87,20 @@ def test_the_root_hook_fills_both_fields_or_neither():
     word = SimpleNamespace(definition_html=_html("From meng- + beli."), mined_form="membeli")
     assert hook.render(word, config=AnkiMinerConfig()) == {"root": "beli", "affixes": "meng- + beli"}
     assert hook.render(SimpleNamespace(definition_html="", mined_form="beli"), config=AnkiMinerConfig()) == {}
+
+
+@pytest.mark.parametrize(
+    ("etymology", "front", "fields"),
+    [
+        ("Equivalent to ber- + ajar.", "belajar", {"root": "ajar", "affixes": "ber- + ajar"}),  # an allomorph
+        ("From meng- + erti.", "ngerti", {"root": "erti", "affixes": "meng- + erti"}),  # formal: mengerti
+        ("From meng- + beli.", "dibeli", {}),  # the entry its form row names
+        ("From meng- + beli.", "kubeli", {}),  # the entry the ladder reaches
+    ],
+)
+def test_the_root_hook_takes_a_prefix_only_the_front_opens_with(etymology, front, fields):
+    word = SimpleNamespace(definition_html=_html(etymology), mined_form=front)
+    assert RootAffixHook().render(word, config=AnkiMinerConfig()) == fields
 
 
 def test_the_formal_hook_names_the_formal_spelling_of_a_colloquial_front():

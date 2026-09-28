@@ -4,9 +4,15 @@ Generated, never hand-edited. Source: IndoCollex (Wibowo et al., ACL-IJCNLP 2021
 df626e812cd5924794fabf40003368a69f4e953c, ``dict/inforformal-formal-Indonesian-dictionary.tsv`` (MIT, Copyright (c)
 2021 Haryo Akbarianto Wibowo; notice in ``licenses/indocollex/LICENSE``), 2,622 pairs. Kept: lowercase letter
 spellings (hyphens allowed; a formal side may be a phrase) whose every formal word is a wty-id-en (revision
-2026.09.19) headword, which drops the digit rows (``10rb``) and the unattested targets. The 28-row C.5 curated
-core is laid over it (``lo``/``lu`` -> ``kamu``, ``bgt``/``banget`` -> ``sangat``, ``bikin`` -> ``membuat``);
-``gue``/``gua``/``gw`` keep IndoCollex's formal ``saya`` (plan D7). 1988 pairs, one per line, ``informal formal``.
+2026.09.19) headword, which drops the digit rows (``10rb``) and the unattested targets. Dropped too: the 68 keys
+that are English words, not Indonesian spellings (``it`` -> ``itu``, ``is`` -> ``adalah``, ``me`` -> ``aku``), so a
+code-switched ``I love it`` misses instead of carding ``itu``: a key in stopwords-iso ``stopwords-en`` (commit
+ccc8898188850d8fb019d5f69c14a6635c3bd115; less the country codes and domains only its seobook source lists, which
+here are chat abbreviations such as ``tp`` -> ``tetapi``, ``org`` -> ``orang``) that is no wty-id-en (revision
+2026.09.20) headword. Loans outside that list stay (``bro``, ``app``, ``congrats``). The 33-row C.5 curated core is
+laid over it (``lo``/``lu`` -> ``kamu``, ``bgt``/``banget`` -> ``sangat``, ``bikin`` -> ``membuat``, ``bang`` ->
+``abang`` over IndoCollex's backslang ``ngab``; ``tau`` ``kalo`` ``liat`` ``abis`` -> ``tahu`` ``kalau`` ``lihat`` ``habis``, ruling ID-02);
+``gue``/``gua``/``gw`` keep IndoCollex's formal ``saya`` (plan D7). 1924 pairs, one per line, ``informal formal``.
 
 ``ID_COLLOQUIAL_CORE`` is the curated core alone. Only it expands the stopword tier
 (:func:`anki_miner.languages.id.morphology.is_stopword`): IndoCollex is crowd-derived and its formal side is
@@ -26,6 +32,7 @@ aamiin amin
 aamin amin
 abg remaja tanggung
 abi ayah
+abis habis
 abng abang
 acheh aceh
 activities aktifitas
@@ -100,7 +107,6 @@ ank anak
 anter antar
 antum anda
 anying anjing
-anymore lagi
 ap apa
 apaa apa
 apaaa apa
@@ -117,11 +123,8 @@ arep harap
 arrived sampai
 aseli asli
 asik asyik
-asked bertanya
-asking bertanya
 assalammualaikum assalamualaikum
 astagaaa astaga
-at pada
 atjeh aceh
 atlit atlet
 ato atau
@@ -148,7 +151,7 @@ balek kembali
 bales membalas
 balinese orang bali
 bambank bambang
-bang ngab
+bang abang
 banget sangat
 bangett sangat
 bangettt sangat
@@ -178,12 +181,9 @@ bday hari ulang tahun
 beaches pantai-pantai
 beautifull cantik
 beb sayang
-became menjadi
 becanda bercanda
 bedain membedakan
 bedua berdua
-began memulai
-begins mulai
 begitulah seperti itulah
 beliin membelikan
 belom belum
@@ -301,7 +301,6 @@ bullshit kotoran sapi
 bumil ibu hamil
 bw bawa
 bwt buat
-by dengan
 byk banyak
 cafe kafe
 caffe kafe
@@ -326,7 +325,6 @@ cewe perempuan
 challenges tantangan
 champions juara
 changed berubah
-changes merubah
 changing mengganti
 cheers bersulang
 chinese cina
@@ -348,7 +346,6 @@ colours warna
 coment komentar
 congrats selamat
 congratulations selamat
-couldnt tidak bisa
 countries negara-negara
 cowo cowok
 cp capai
@@ -357,7 +354,6 @@ cpt cepat
 cr cara
 created dibuat
 creating menciptakan
-cs layanan pelanggan
 cuan uang
 cucok cocok
 curug air terjun
@@ -538,7 +534,6 @@ emg memang
 emng emang
 enakan lebih enak
 endingnya akhirnya
-ends berakhir
 engga tidak
 england inggris
 english bahasa inggris
@@ -552,12 +547,9 @@ eug saya
 events acara
 everythings semuanya
 everytime setiap saat
-ex eks
 exercising olah raga
 experiences pengalaman-pengalaman
 eyes mata
-faces muka
-facts fakta
 failed gagal
 fak brengsek
 fakenail kuku palsu
@@ -647,7 +639,6 @@ genk geng
 genks kumpulan
 gercep gerak cepat
 germany jerman
-gets mendapatkan
 geus adalah
 gf pacar
 ghibah gosip
@@ -662,7 +653,6 @@ girls para gadis
 gitu begitu
 gituu seperti itu
 gituuu begitu
-gives memberi
 gk tidak
 gmana bagaimana
 gmn bagaimana
@@ -687,8 +677,6 @@ gracias terima kasih
 grande besar
 gratisan gratis
 gratisss gratis
-greatest terbaik
-greetings salam
 grgr gara-gara
 gt begitu
 gtu begitu
@@ -715,13 +703,11 @@ halooo halo
 halu halusinasi
 hands tangan-tangan
 happened terjadi
-happens terjadi
 happines kebahagiaan
 hardcover sampul keras
 hardest tersulit
 hastag tagar
 hatur terima
-having memiliki
 hayam ayam
 hayoo ayo
 hayooo ayo
@@ -736,9 +722,7 @@ held ditahan
 helped ditolong
 helps tolong
 hepi senang
-heres di sini
 heroes pahlawan
-hes dia
 heula dahulu
 hiking mendaki
 hitz populer
@@ -776,15 +760,12 @@ idr rupiah
 idung hidung
 idup hidup
 ieu ini
-if jika
 ijin izin
 ijo hijau
 iki ini
 iku itu
 ikutin mengikuti
 ilang hilang
-im aku sedang
-in di
 including termasuk
 indian orang india
 indo indonesia
@@ -800,15 +781,12 @@ invited diundang
 ipk indeks prestasi kumulatif
 ips ilmu pengetahuan sosial
 ireng hitam
-is adalah
 islands pulau-pulau
-isnt bukan
 isok bisa
 isteri istri
 istighfar istigfar
 istora istana olah raga
 isuk besok
-it itu
 italian italia
 itam hitam
 items barang
@@ -816,7 +794,6 @@ itung hitung
 itupun itu pun
 ituu itu
 ituuu itu
-ive saya sudah
 ja ya
 jadian berhubungan
 jadul jaman dulu
@@ -879,6 +856,7 @@ kaks kak
 kalbar kalimantan barat
 kalean kalian
 kalii kali
+kalo kalau
 kalok kalau
 kaltim kalimantan timur
 kalu kalau
@@ -916,7 +894,6 @@ kedepan ke depan
 kedepannya ke depan
 kedhai kedai
 keempat ke empat
-keeps tetap
 kejepit terjepit
 kel kelurahan
 kelen kalian
@@ -978,7 +955,6 @@ kmrin kemarin
 kmrn kemarin
 kmu kamu
 knapa kenapa
-knows tahu
 knp kenapa
 knpa mengapa
 kntl kontol
@@ -1044,7 +1020,6 @@ leaders pemimpin
 legends legenda
 lemot lambat
 lessons pelajaran
-lets ayo
 lewati melewati
 lewatin melewati
 lg lagi
@@ -1054,12 +1029,12 @@ lgsung langsung
 lheue lho
 lhok lho
 lhooo loh
+liat lihat
 liatin lihatkan
 lies bohong
 lifes kehidupan-kehidupan
 lifestyle gaya hidup
 lights lampu-lampu
-liked disukai
 lines garis
 lips bibir
 lives hidup
@@ -1071,7 +1046,6 @@ loe kamu
 lohh lho
 lohhh lho
 lom belum
-looks wajah
 looo kamu
 loved dicintai
 lovers pasangan
@@ -1109,7 +1083,6 @@ makasih terima kasih
 makasihh terima kasih
 makasihhh terima kasih
 makasii terima kasih
-makes membuat
 maksa memaksa
 malem malam
 males malas
@@ -1153,7 +1126,6 @@ mboh tidak mau
 mboten tidak
 mbuh belum
 mcm macam
-me aku
 medsos sosial media
 mee aku
 meets menemui
@@ -1162,7 +1134,6 @@ megang memegang
 melow lembut
 melu ikut
 meluk memeluk
-members anggota
 memories kenangan
 meneh tetap saja
 mengcape lelah
@@ -1198,7 +1169,6 @@ mkan makan
 mkn makan
 mksh terima kasih
 mksih terima kasih
-ml bercinta
 mlaku berjalan
 mlati melati
 mls malas
@@ -1221,7 +1191,6 @@ motong memotong
 movies film-film
 mreka mereka
 mrk mereka
-mrs ibu
 ms yang benar
 msh masih
 msi masih
@@ -1421,11 +1390,9 @@ nyusul menyusul
 oceans laut
 oct oktober
 october oktober
-of dari
 offers tawaran
 oge juga
 ojo jangan
-okay oke
 okeh oke
 okey oke
 omah rumah
@@ -1435,7 +1402,6 @@ oom om
 ootd pakaian hari ini
 op operator
 openbooking buka pemesanan
-opened terbuka
 opo apa
 or atau
 orangtua orang tua
@@ -1465,7 +1431,6 @@ pantesan pantas saja
 parents orang tua
 parfume parfum
 parpol partai politik
-parts bagian
 pasih apa sih
 paslon pasangan calon
 pc komputer
@@ -1511,7 +1476,6 @@ pk pakai
 pke pakai
 pkl pukul
 pku pusat kesehatan umum
-places tempat-tempat
 planning rencana
 plans rencana-rencana
 played dimainkan
@@ -1528,7 +1492,6 @@ pngen ingin
 pnting penting
 pny punya
 pnya punya
-points poin-poin
 polwan polisi wanita
 ponpes pondok pesantren
 ponsel telepon selular
@@ -1536,14 +1499,11 @@ poto foto
 ppsu penanganan sarana dan prasarana umum
 pr pekerjaan rumah
 prayers doa
-presents hadiah
 prewedding pranikah
 pricelist daftar harga
 prnah pernah
 prnh pernah
-problems masalah
 products produk
-proud bangga
 prov provinsi
 psti pasti
 puede percaya diri
@@ -1558,7 +1518,6 @@ qt kita
 qta kita
 qu ku
 quando kapan
-que kue
 questions pertanyaan-pertanyaan
 rabb allah
 rakor rapat koordinasi
@@ -1588,7 +1547,6 @@ roasted panggang
 robb tuhan
 roemah rumah
 rooftop atap
-rooms ruangan
 roots akar
 roso rasa
 rp rupiah
@@ -1627,7 +1585,6 @@ satnight malam minggu
 satnite sabtu malam
 satpol satuan polisi
 saturday sabtu
-says mengatakan
 sbb maaf baru balas
 sbg sebagai
 sblm sebelum
@@ -1644,7 +1601,6 @@ seasons musim-musim
 sebelom sebelum
 sebenernya sebenarnya
 sebrang seberang
-seconds detik
 sedi sedih
 sedikitpun sedikit pun
 segede sebesar
@@ -1675,13 +1631,11 @@ shades corak
 shalat salat
 shared dibagi
 sharing berbagi
-shes dia
 shit tahi
 shoes sepatu
 sholat salat
 sholeh saleh
 shopz toko-toko
-shows menunjukkan
 shubuh subuh
 siapapun siapa pun
 siapo siapa
@@ -1806,6 +1760,7 @@ tampol pukul
 tanggungjawab tanggung jawab
 taon tahun
 taqwa takwa
+tau tahu
 taunya tahu-tahu
 tauu tahu
 tb tiba
@@ -1846,11 +1801,8 @@ teuing tidak tahu
 tgl tanggal
 thankyou terima kasih
 theatre teater
-things situasi
 thn tahun
-thoughts pikiran
 thousands ribuan
-thru melalui
 thursday kamis
 thx terima kasih
 tiati hati-hati
@@ -1923,10 +1875,7 @@ und dan
 unfaedah tidak berfaedah
 untk untuk
 unyu lucu
-up atas
-us kita
 usa usah
-using memakai
 ustadz ustaz
 utk untuk
 uwu lucu
@@ -1938,15 +1887,12 @@ vid video
 videos video
 views pandangan
 visited berkunjung
-vs melawan
 wagub wakil gubernur
 walks berjalan
 walo walau
 walopun walaupun
 wani berani
 wanna mau
-wanted diinginkan
-wants mau
 warkop warung kopi
 waroeng warung
 waroenk warung
@@ -1962,7 +1908,6 @@ wellcome selamat datang
 wes sudah
 wetan timur
 wheels roda
-whos siapa
 wiken akhir pekan
 wilujeng selamat
 wishes doa
@@ -1973,7 +1918,6 @@ woii woi
 woiii woi
 women perempuan
 womens perempuan-perempuan
-words kata-kata
 worlds dunia
 wrna warna
 xo mengirim ciuman
@@ -1994,8 +1938,6 @@ yo ya
 yokk ayo
 yoo ayo
 yooo hai
-youll kamu akan
-youre kamu
 youu kamu
 yowes ya sudah
 yth yang terhormat
@@ -2012,6 +1954,7 @@ zonk kosong
 
 _CORE_PAIRS = """
 aja saja
+bang abang
 banget sangat
 bgt sangat
 bikin membuat
@@ -2041,6 +1984,16 @@ udh sudah
 yg yang
 """
 
+#: Curated core rows whose colloquial spelling wty-id-en also files as an unrelated headword (the Greek letter
+#: tau, a bamboo sieve, clayey soil, the abyssal zone). The lookup hits, so the ladder never runs; the colloquial
+#: sense is the row's form pointer, which ``IndonesianDictKeys.sense_rank`` ranks first by these targets (ID-02).
+_HOMOGRAPH_PAIRS = """
+abis habis
+kalo kalau
+liat lihat
+tau tahu
+"""
+
 
 def _parse(text: str) -> Mapping[str, str]:
     table: dict[str, str] = {}
@@ -2051,4 +2004,5 @@ def _parse(text: str) -> Mapping[str, str]:
 
 
 ID_COLLOQUIAL: Mapping[str, str] = _parse(_PAIRS)
-ID_COLLOQUIAL_CORE: Mapping[str, str] = _parse(_CORE_PAIRS)
+ID_COLLOQUIAL_HOMOGRAPHS: Mapping[str, str] = _parse(_HOMOGRAPH_PAIRS)
+ID_COLLOQUIAL_CORE: Mapping[str, str] = MappingProxyType({**_parse(_CORE_PAIRS), **ID_COLLOQUIAL_HOMOGRAPHS})

@@ -89,10 +89,22 @@ def test_the_reading_support_owns_the_fields_and_answers_nothing():
         ("Я не знаю, т.е. не уверен. Ладно.", 2),
         ("Это мой кот. Он спит.", 2),
         ("В 2024 г. мы переехали. Всё.", 2),
+        # Spaced т. д. / т. е. and the time units: the stems the tokenizer set leaves out.
+        ("Это важно, т. е. очень важно. Понял?", 2),
+        ("Встретимся в 5 ч. вечера. Хорошо?", 2),
+        ("Жди 10 мин. у входа. Ладно.", 2),
+        ("Мы купили хлеб, сыр и т. д. на рынке. Потом ушли.", 2),
     ],
 )
 def test_sentence_rules(text, sentences):
     assert len(split_sentences(text, rules=RU_SENTENCE_RULES)) == sentences
+
+
+def test_the_sentence_only_stems_stay_out_of_the_derived_tokenizer_set():
+    """They only continue a sentence: the tokenizer set is spaCy's, re-derived below, never hand-edited."""
+    sentence_only = {"т", "е", "ч", "мин"}
+    assert RU_SENTENCE_RULES.abbreviations == RU_ABBREVIATIONS | sentence_only
+    assert not sentence_only & RU_ABBREVIATIONS
 
 
 def test_a_low_quote_holds_its_sentences_together():

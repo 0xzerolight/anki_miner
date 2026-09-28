@@ -14,11 +14,12 @@ from anki_miner.config.config import _LANGUAGE_CODES
 from anki_miner.gui.utils import service_factory
 from anki_miner.languages import AVAILABLE_LANGUAGES, SCRIPT_VARIANT_IDS
 from anki_miner.languages._spaced.fields import NOUN_GENDER_FIELD, POS_FIELD
+from anki_miner.languages._spaced.form_of import FormOfLemmaPass
 from anki_miner.languages._spaced.grammar_hook import GrammarTagHook
 from anki_miner.languages._spaced.keys import CasefoldDictKeys
 from anki_miner.languages._spaced.morphology import LatinLookupStrategy, SpacedMinedForm
 from anki_miner.languages._spaced.render import PosHook
-from anki_miner.languages._spaced.script import LATIN_SUBTITLE_REGEX, LatinScript
+from anki_miner.languages._spaced.script import LATIN_UNSPACED_DASH_SUBTITLE_REGEX, LatinScript
 from anki_miner.languages.pt import pt_normalize
 from anki_miner.languages.pt.catalog import PT_CATALOG
 from anki_miner.languages.pt.morphology import PT_ABBREVIATIONS, PT_EXCLUDED_SUBTYPES
@@ -90,7 +91,8 @@ def test_scoped_defaults_start_brazilian_with_the_latin_sdh_filter():
     assert config.language == "pt" and config.script_variant == "br"
     assert get_profile("pt").scoped_defaults["script_variant"] in SCRIPT_VARIANT_IDS
     assert config.allowed_pos == ("ADJ", "ADV", "NOUN", "VERB")
-    assert config.use_subtitle_regex_filter is True and config.subtitle_regex_filter == LATIN_SUBTITLE_REGEX
+    assert config.use_subtitle_regex_filter is True
+    assert config.subtitle_regex_filter == LATIN_UNSPACED_DASH_SUBTITLE_REGEX
     assert config.anki_fields["pos"] == "" and config.anki_fields["noun_gender"] == ""
     assert config.downloader_subtitle_langs == "pt,pt-BR,pt-PT"
 
@@ -109,11 +111,11 @@ def test_known_word_fronts_meet_the_mined_lemma():
     assert fold("A casa.") == "casa"
 
 
-def test_the_parser_is_the_spaced_factory():
+def test_the_parser_is_the_spaced_factory_with_the_form_of_repair():
     profile = get_profile("pt")
     parser = profile.create_parser(switch_language(AnkiMinerConfig(), "pt"))
     assert parser.normalize is profile.normalize
-    assert parser._compound_matcher is None and parser._token_post_pass is None
+    assert parser._compound_matcher is None and isinstance(parser._token_post_pass, FormOfLemmaPass)
 
 
 def test_the_catalogue_offers_wiktionary_and_one_frequency_list_per_variety():

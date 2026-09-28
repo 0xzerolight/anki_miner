@@ -9,6 +9,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.config.config import _LANGUAGE_CODES
 from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages._spaced.fields import NOUN_ARTICLE_FIELD, NOUN_GENDER_FIELD, POS_FIELD
+from anki_miner.languages._spaced.form_of import FormOfLemmaPass, OrderedPasses
 from anki_miner.languages._spaced.grammar_hook import GrammarTagHook
 from anki_miner.languages._spaced.keys import CasefoldDictKeys
 from anki_miner.languages._spaced.morphology import LatinLookupStrategy, SeparableVerbPass, SpacedMinedForm
@@ -87,7 +88,7 @@ def test_the_tagger_repairs_hyphens_stashes_particles_and_splits_sentence_final_
     tagger = get_tagger("nl")
     features = {t.surface: t.feature for t in tagger("Hij had een auto-ongeluk en belde zijn broer op.")}
     assert features["auto-ongeluk"].lemma == "auto-ongeluk"
-    assert features["belde"].particle == "op" and features["op"].pos1 == "PART"
+    assert features["belde"].particle == "op" and [p.text for p in features["belde"].particles] == ["op"]
     assert [(t.surface, t.feature.pos1) for t in tagger("Geef me je hand.")][-2:] == [("hand", "NOUN"), (".", "PUNCT")]
     assert ("Dhr.", "X") in [(t.surface, t.feature.pos1) for t in tagger("Dhr. Jansen komt.")]
 
@@ -96,8 +97,10 @@ def test_the_parser_joins_separable_verbs_in_the_dutch_order():
     profile = get_profile("nl")
     parser = profile.create_parser(switch_language(AnkiMinerConfig(), "nl"))
     assert parser.normalize is profile.normalize and parser._compound_matcher is None
-    assert isinstance(parser._token_post_pass, SeparableVerbPass)
-    assert parser._token_post_pass._candidates is dutch_particle_candidates
+    assert isinstance(parser._token_post_pass, OrderedPasses)
+    repair, join = parser._token_post_pass._passes
+    assert isinstance(repair, FormOfLemmaPass) and isinstance(join, SeparableVerbPass)
+    assert join._candidates is dutch_particle_candidates
 
 
 def test_the_catalogue_ships_wiktionary_and_a_lemmatised_frequency_list():

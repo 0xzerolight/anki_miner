@@ -17,14 +17,13 @@ from pathlib import Path
 
 import pytest
 
+from anki_miner.languages._spaced.form_of import form_targets, is_lemma_row
 from anki_miner.languages.he.morphology import (
     HebrewLemmaPass,
     HebrewMinedForm,
     HebrewReadingSupport,
-    form_targets,
     he_audio_candidates,
     he_speakable,
-    is_lemma_row,
     vocalised_from_content,
 )
 from anki_miner.languages.he.script import HebrewDictKeys, he_fold
@@ -115,6 +114,21 @@ NISHLACH = _word("NUN", "SHIN", "LAMED", "HET")
 KELEV = _word("KAF", "LAMED", "BET")
 HALAKH = _word("HE", "LAMED", "FINAL KAF")
 KARA = _word("QOF", "RESH", "ALEF")
+KOL = _word("KAF", "LAMED")
+YOM = _word("YOD", "VAV", "FINAL MEM")
+GAN = _word("GIMEL", "FINAL NUN")
+CHADASH = _word("HET", "DALET", "SHIN")
+CHAZAR = _word("HET", "ZAYIN", "RESH")
+LIROT = _word("LAMED", "RESH", "ALEF", "VAV", "TAV")
+RAA = _word("RESH", "ALEF", "HE")
+NASHIM = _word("NUN", "SHIN", "YOD", "FINAL MEM")
+MEANYEN = _word("MEM", "AYIN", "NUN", "YOD", "YOD", "FINAL NUN")
+ELOHIM = _word("ALEF", "LAMED", "VAV", "HE", "YOD", "FINAL MEM")
+DVARIM = _word("DALET", "BET", "RESH", "YOD", "FINAL MEM")
+MIRYAM = _word("MEM", "RESH", "YOD", "FINAL MEM")
+SHELO = _word("SHIN", "LAMED", "ALEF")
+LO = _word("LAMED", "ALEF")
+EGROF = _word("ALEF", "GIMEL", "RESH", "VAV", "FINAL PE")
 
 
 @pytest.mark.parametrize(
@@ -122,27 +136,148 @@ KARA = _word("QOF", "RESH", "ALEF")
     [
         (KATAVTI, KATAV, "VERB", "one distinct target: the form table answers"),
         (SFARIM, SEFER, "NOUN", "three rows collapsing to one target"),
-        (HOLEKHET, HOLEKHET, "WORD", "two distinct targets: the surface stays"),
+        (HOLEKHET, HALAKH, "VERB", "two distinct targets: the first in row order, a present form: its v row"),
         (BE_SEFER, SEFER, "NOUN", "the whole word has no key; the strip rung is a headword"),
         (VEHAYELADIM, YELED, "NOUN", "a stack strip, then its target"),
-        (HABAYIT, HABAYIT, "NOUN", "a lemma row on the whole word wins outright"),
+        (HABAYIT, BAYIT, "NOUN", "a lemma row whose gloss is 'singular definite form of bayit'"),
         (BABAYIT, BAYIT, "NOUN", "the assimilated definite article needs the stack list"),
         (SHEANI, ANI, "FUNC", "a pronoun behind a relativiser"),
-        (HAKOL, HAKOL, "WORD", "cross-check: the target is disjoint from the strip"),
-        (BAYOM, BAYOM, "WORD", "cross-check: ba-yom does not become biyem"),
-        (LAGAN, LAGAN, "WORD", "cross-check: la-gan does not become log"),
+        (HAKOL, KOL, "NOUN", "cross-check disjoint behind the article: the strip is the front"),
+        (BAYOM, YOM, "NOUN", "cross-check disjoint behind be-: ba-yom is yom, never biyem"),
+        (LAGAN, GAN, "NOUN", "cross-check disjoint behind le-: la-gan is gan, never log"),
         (HADVARIM, DAVAR, "NOUN", "cross-check: the strip's own targets agree"),
-        (HACHADASH, CHODESH, "NOUN", "cross-check: agreement through the strip's form rows"),
+        (HACHADASH, CHADASH, "ADJ", "an article strip's own headword beats agreement through its form rows"),
         (MALON, MALON, "NOUN", "a lemma row wins, so malon never becomes lon"),
-        (LACHZOR, LACHZOR, "WORD", "a STRIPPED rung with two targets: the surface stays"),
+        (LACHZOR, CHAZAR, "VERB", "a STRIPPED rung with two targets: the first in row order"),
         (NISHLECHA, NISHLACH, "VERB", "a single target with its own lemma row"),
         (KELEV, KELEV, "NOUN", "a plain headword"),
         (HALAKH, HALAKH, "NOUN", "a homograph: the first lemma row in storage order wins"),
         (KARA, KARA, "VERB", "a plain headword from the smoke line"),
+        (LIROT, RAA, "WORD", "a 'v' row glossed 'to-infinitive of ra'a' fronts ra'a (not in the subset)"),
+        (NASHIM, NASHIM, "NOUN", "one real sense ('women') keeps a key with a form-of row a headword"),
+        (MEANYEN, MEANYEN, "ADJ", "an adjective row beside a participle row keeps the word"),
+        (ELOHIM, ELOHIM, "NOUN", "a common row after the name row is the front"),
+        (DVARIM, DVARIM, "PROPN", "a name whose form rows no strip confirms stays a name"),
+        (MIRYAM, MIRYAM, "PROPN", "a key whose only lemma row is a name stays a name"),
     ],
 )
 def test_the_measured_case_table(form_lookup, surface, front, pos1, why):
     assert _resolve(form_lookup, surface) == (front, pos1), why
+
+
+def test_a_verb_form_fronts_its_targets_verb_row(form_lookup):
+    """holekhet 'singular feminine present' names halakh, whose FIRST lemma row is the noun helekh
+    'traveler': the form's own tags pick the v row, so the card is the verb and reads as it."""
+    [token] = HebrewLemmaPass()(to_duck_tokens(HOLEKHET), None, form_lookup)
+    heads = [(content, tags) for content, tags in form_lookup([HALAKH])[HALAKH] if is_lemma_row(tags)]
+    assert heads[0][1].split(" ")[0] == "n", "the fixture must keep the noun row first"
+    verb = next(content for content, tags in heads if tags.split(" ")[0] == "v")
+    assert (token.feature.lemma, token.feature.pos1) == (HALAKH, "VERB")
+    assert token.feature.vocalised == vocalised_from_content(verb)
+
+
+def _with(form_lookup, key: str, rows: list[tuple[str, str]]):
+    """The subset's lookup with *key*'s rows replaced by *rows*."""
+
+    def forms(terms):
+        found = form_lookup([term for term in terms if term != key])
+        if key in terms:
+            found[key] = rows
+        return found
+
+    return forms
+
+
+def _pairs(*rules: str) -> list[tuple[str, str]]:
+    """One wty form row per rule chain, each naming halakh, rendered the way the importer renders it."""
+    return [
+        (render_glossary_entry([[HALAKH, [rule]]], definition_tags=["non-lemma"], dict_id="wty-he-en"), "non-lemma")
+        for rule in rules
+    ]
+
+
+HALKHU = _word("HE", "LAMED", "KAF", "VAV")
+
+
+@pytest.mark.parametrize(
+    ("rules", "pos1", "why"),
+    [
+        (("third-person plural masculine feminine past",), "VERB", "a past form"),
+        (("passive participle", "singular masculine imperative"), "VERB", "a participle is a verb form"),
+        (("plural indefinite", "plural masculine present"), "NOUN", "banim: a noun plural beside a participle"),
+        (("feminine", "third-person singular feminine past"), "NOUN", "chayevet: an adjective beside a past form"),
+        (("third-person singular masculine possessed-form", "third-person plural past"), "VERB", "halkhu, not halakho"),
+        (("first-person singular possessed-form", "singular feminine imperative"), "NOUN", "darki, not dirkhi"),
+    ],
+)
+def test_the_pairs_own_rules_decide_the_targets_row(form_lookup, rules, pos1, why):
+    """Every pair a verb form, or a tensed form against possessed nouns only: the target's v row.
+    A form the dictionary also files as a noun or adjective form keeps the first row."""
+    assert _resolve(_with(form_lookup, HALKHU, _pairs(*rules)), HALKHU) == (HALAKH, pos1), why
+
+
+def test_a_form_row_stored_without_its_rules_keeps_the_first_row(form_lookup):
+    """An index imported before the rules were kept: no tags, so the first lemma row still decides."""
+    bare = ('<li class="gloss-item"><div class="gloss-content">' + HALAKH + "</div></li>", "non-lemma")
+    assert _resolve(_with(form_lookup, HOLEKHET, [bare]), HOLEKHET) == (HALAKH, "NOUN")
+
+
+def test_a_verb_entry_that_names_its_lemma_fronts_the_lemmas_verb_row(form_lookup):
+    """holekh is filed 'v masc ptcpl sg' and glossed 'present participle of halakh': a verb form,
+    so halakh's v row, not the noun helekh wty files first."""
+    holekh = _word("HE", "VAV", "LAMED", "FINAL KAF")
+    gloss = f"Masculine singular present participle and present tense of {HALAKH} (halakh)."
+    senses = {
+        "tag": "ol",
+        "data": {"content": "glosses"},
+        "content": [{"tag": "li", "content": [{"tag": "div", "content": gloss}]}],
+    }
+    entry = render_glossary_entry(
+        [{"type": "structured-content", "content": [senses]}],
+        definition_tags=["v", "masc", "ptcpl", "sg"],
+        dict_id="wty-he-en",
+        media_collector=None,
+    )
+    assert _resolve(_with(form_lookup, holekh, [(entry, "v masc ptcpl sg")]), holekh) == (HALAKH, "VERB")
+    # An entry filed as a noun as well (shmo 'his name' beside samu 'they put') keeps the first row.
+    noun = render_glossary_entry(
+        [{"type": "structured-content", "content": [senses]}], definition_tags=["n"], dict_id="wty-he-en"
+    )
+    assert _resolve(_with(form_lookup, holekh, [(noun, "n"), (entry, "v")]), holekh) == (HALAKH, "NOUN")
+
+
+def test_a_noun_form_keeps_the_first_row(form_lookup):
+    """sfarim 'plural indefinite' is no verb form: sefer's first lemma row stands."""
+    assert _resolve(form_lookup, SFARIM) == (SEFER, "NOUN")
+
+
+DOKTOR_TYPED = _word("DALET") + '"' + _word("RESH")
+DOKTOR = _word("DALET") + "\N{HEBREW PUNCTUATION GERSHAYIM}" + _word("RESH")
+
+
+@pytest.mark.parametrize(
+    ("surface", "front", "pos1", "why"),
+    [
+        (_word("VAV") + HAKOL, KOL, "NOUN", "the article cross-check runs at the strip rung: ve-ha-kol is kol"),
+        (_word("SHIN") + HAKOL, KOL, "NOUN", "she-ha-kol is kol, never hekhil"),
+        (_word("BET") + DOKTOR_TYPED, DOKTOR, "NOUN", "a strip remainder reaches its gershayim key"),
+        (_word("LAMED") + BAYIT + "-" + SEFER, BAYIT + " " + SEFER, "NOUN", "a strip remainder reaches its phrase key"),
+    ],
+)
+def test_the_ladder_composes_a_strip_with_the_rungs_behind_it(form_lookup, surface, front, pos1, why):
+    assert _resolve(form_lookup, surface) == (front, pos1), why
+
+
+@pytest.mark.parametrize(("surface", "front"), [(SHELO, LO), (HAKOL, KOL)])
+def test_a_proclitic_form_of_a_function_word_is_a_stopword(form_lookup, surface, front):
+    """The tier the tokenizer applies to a bare surface applies to the resolved front too."""
+    [token] = HebrewLemmaPass()(to_duck_tokens(surface), None, form_lookup)
+    assert (token.feature.lemma, token.feature.pos2) == (front, "stopword")
+
+
+def test_a_resolved_content_word_keeps_an_empty_subtype(form_lookup):
+    [token] = HebrewLemmaPass()(to_duck_tokens(KATAVTI), None, form_lookup)
+    assert (token.feature.lemma, token.feature.pos2) == (KATAV, "")
 
 
 def test_an_abbreviation_reaches_its_gershayim_key(form_lookup):
@@ -193,8 +328,19 @@ def test_the_reading_is_filled_before_word_reading_is_called(form_lookup, row):
 
 
 def test_an_unresolved_word_has_no_reading(form_lookup):
-    tokens = HebrewLemmaPass()(to_duck_tokens(LACHZOR), None, form_lookup)
+    from anki_miner.languages.he.script import GERESH
+
+    missing = _word("PE", "RESH", "VAV", "PE") + GERESH
+    tokens = HebrewLemmaPass()(to_duck_tokens(missing), None, form_lookup)
     assert HebrewReadingSupport().word_reading(tokens[0]) == ""
+
+
+def test_a_head_with_a_plene_and_a_pointed_spelling_reads_as_one(form_lookup):
+    """egrof's Grammar head lists two pointed spellings; the reading (and the voice) takes the first."""
+    [token] = HebrewLemmaPass()(to_duck_tokens(EGROF), None, form_lookup)
+    reading = HebrewReadingSupport().word_reading(token)
+    assert " / " not in reading
+    assert he_fold(reading) == EGROF
 
 
 # --------------------------------------------------------------------------

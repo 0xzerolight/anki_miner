@@ -42,11 +42,18 @@ _TAG_RE = re.compile(r"<[^>]+>")
 _WTY_READING_RE = re.compile(r"•\s*\(([^)]+)\)")
 #: Volubilis: the leading bracket group at the start of a gloss.
 _VOL_READING_RE = re.compile(r"(?:^|>|\n)\s*\[([^\]]+)\]")
-#: wty: "(classifier X)", "(classifier X or Y or Z)".
-_WTY_CLASSIFIER_RE = re.compile(r"\(classifiers?\s+([^)]+)\)")
+#: wty: "(classifier X)", "(classifier X or Y or Z)", "(classifier: X (reading) or
+#: Y (reading))". The group runs to ITS closing parenthesis, over one level of
+#: nested reading: with no such stop the colon form ran on through the backlink
+#: (ฟุตบอล -> "ลูก (lûuk))Wiktionary | Kaikki").
+_WTY_CLASSIFIER_RE = re.compile(r"\(classifiers?\s*:?\s*((?:[^()]|\([^()]*\))*)\)")
 #: Volubilis: "classifier: X" (the run stops at the line break the renderer
-#: turned into a newline, or at a comma separating the next field).
-_VOL_CLASSIFIER_RE = re.compile(r"classifiers?\s*:\s*([^\n<,;]+)")
+#: turned into a newline, at a comma separating the next field, or at a
+#: parenthesis).
+_VOL_CLASSIFIER_RE = re.compile(r"classifiers?\s*:\s*([^\n<,;()]+)")
+#: A classifier form is a run of Thai letters. The readings in brackets and the
+#: English notes between forms ("ข้าง for a single one or คู่ for a pair") are not.
+_THAI_RUN_RE = re.compile(r"[ก-ฺเ-๎]+")
 
 
 def _text(definition_html: str) -> str:
@@ -83,12 +90,10 @@ class ThaiClassifierHook:
         del config
         text = _text(getattr(word, "definition_html", "") or "")
         for pattern in (_WTY_CLASSIFIER_RE, _VOL_CLASSIFIER_RE):
-            match = pattern.search(text)
-            if not match:
-                continue
-            forms = [part.strip() for part in re.split(r"\bor\b|,", match.group(1)) if part.strip()]
-            if forms:
-                return {"classifier": " / ".join(dict.fromkeys(forms))}
+            for match in pattern.finditer(text):
+                forms = _THAI_RUN_RE.findall(match.group(1))
+                if forms:
+                    return {"classifier": " / ".join(dict.fromkeys(forms))}
         return {}
 
 

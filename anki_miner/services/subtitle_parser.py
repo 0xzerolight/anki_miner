@@ -350,6 +350,34 @@ def _differs_by_okurigana_only(orth_base: str, lemma: str) -> bool:
     return _is_pure_hiragana(orth_base[i:]) and _is_pure_hiragana(lemma[i:])
 
 
+def _apply_sami_timing(subs: pysubs2.SSAFile) -> None:
+    """Give a SAMI file one cue per SYNC time, shown until the next SYNC time.
+
+    SAMI states no end: a SYNC's text shows until the next SYNC replaces it,
+    and fansub files clear a cue with an ``&nbsp;`` SYNC. pysubs2 instead makes
+    one event per SYNC and guesses its end (start + 500 ms + 67 ms a
+    character, clamped to the next event's start). The guess cut a Korean line
+    off before its clearing SYNC (2.57 s of a cue shown until 3.5 s), and a
+    bilingual Korean file, which writes each language class (KRCC, ENCC) as
+    its own SYNC at one time, clamped the Korean cue to zero length. Events
+    sharing a start are joined line by line, so the language's bilingual-cue
+    gate can drop the other language's line; each then ends where the next
+    SYNC time begins. The last keeps the latest guess among its events, as
+    nothing follows it.
+    """
+    cues: list[pysubs2.SSAEvent] = []
+    for event in subs.events:
+        if cues and event.start == cues[-1].start:
+            cue = cues[-1]
+            cue.text = "\\N".join(text for text in (cue.text, event.text) if text)
+            cue.end = max(cue.end, event.end)
+            continue
+        if cues:
+            cues[-1].end = event.start
+        cues.append(event)
+    subs.events = cues
+
+
 class SubtitleParserService:
     """Parse subtitles and extract Japanese vocabulary words (stateless service)."""
 
@@ -456,12 +484,13 @@ class SubtitleParserService:
             form_lookup: Optional batch read of a term's ``(content, tags)`` rows
                 from the enabled offline chain (spec R36,
                 ``DefinitionService.offline_term_rows``). Handed to
-                ``token_post_pass`` as its third argument and read NOWHERE else,
-                so only a language that injects a post-pass can reach it: every
-                other path — ja/ko/zh included — is byte-identical whether this
-                is wired or not. Hebrew's ``HebrewLemmaPass`` is its only reader
-                today; it resolves a card front against the dictionary's own form
-                table, which the existence-only ``term_lookup`` cannot do.
+                ``token_post_pass`` as its third argument and read NOWHERE else
+                in this service, so only a language that injects a post-pass (or
+                whose ``create_parser`` composes it into ``reading_lookup``, as uk
+                does for S24) can reach it: every other path — ja/ko/zh included
+                — is byte-identical whether this is wired or not. Hebrew's
+                ``HebrewLemmaPass`` resolves a card front against the dictionary's
+                own form table, which the existence-only ``term_lookup`` cannot do.
             token_post_pass: Optional language post-pass over the RAW tagger
                 tokens (spec §4.3 item 2(b): separable-verb reattachment gated on
                 dictionary attestation). Called once per line as
@@ -820,6 +849,11 @@ class SubtitleParserService:
         return self._has_target_script
 
     @property
+    def token_post_pass(self) -> TokenPostPass | None:
+        """The injected post-pass over raw tagger tokens (None = none). Read by the frequency lemmatiser."""
+        return self._token_post_pass
+
+    @property
     def ambiguous_reading_count(self) -> int:
         """Number of distinct real-token card fronts needing reading review."""
         return len(self._ambiguous_readings)
@@ -966,7 +1000,7 @@ class SubtitleParserService:
                 subs = pysubs2.load(str(subtitle_file))
             except UnicodeDecodeError as utf8_error:
                 profile = get_profile(config_language(self.config))
-                return load_with_fallback_encoding(
+                subs = load_with_fallback_encoding(
                     subtitle_file,
                     utf8_error,
                     encodings=profile.import_encodings if encodings is None else encodings,
@@ -974,10 +1008,13 @@ class SubtitleParserService:
                     # is not in the mining language, so its script says nothing.
                     **(script_check_kwarg(profile.import_encodings, profile.script) if encodings is None else {}),
                 )
-            # The ladder writes its own receipt only when UTF-8 failed; the
-            # common case must leave the same trail, or a mojibake report cannot
-            # tell "decoded as UTF-8" from "never decoded at all".
-            _log_decode(subtitle_file, bom="-", ladder=(), tried=("utf-8",), chosen="utf-8", level=logging.DEBUG)
+            else:
+                # The ladder writes its own receipt only when UTF-8 failed; the
+                # common case must leave the same trail, or a mojibake report cannot
+                # tell "decoded as UTF-8" from "never decoded at all".
+                _log_decode(subtitle_file, bom="-", ladder=(), tried=("utf-8",), chosen="utf-8", level=logging.DEBUG)
+            if subs.format == "sami":
+                _apply_sami_timing(subs)
             return subs
         except FileNotFoundError as e:
             raise SubtitleParseError(f"Subtitle file not found: {subtitle_file}") from e

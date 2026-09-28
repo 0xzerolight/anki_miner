@@ -201,7 +201,10 @@ def _install_slot(
             )
         elif item.kind == "frequency":
             options = dict(item.options)
-            lemmatize = build_frequency_lemmatizer(language) if options.get("lemmatised") == "1" else None
+            # Keyed by card front over the language's installed dictionaries,
+            # a bundle's own among them when it listed them first (SHARED-06).
+            lemmatised = options.get("lemmatised") == "1"
+            lemmatize = build_frequency_lemmatizer(language, config.dicts_root) if lemmatised else None
             import_frequency_source(
                 source,
                 config.freqs_root,

@@ -32,6 +32,16 @@ suffix table. That is correct for every suffix kiwi emits here (하 -> 공부하
 the LEMMA carries the regular stem while the SOURCE SLICE carries the contracted
 or irregular spelling (자유 + 롭 -> 자유롭다, surface 자유로운).
 
+The same pass, under the same two rules, joins nouns kiwi cuts into a stem and a
+noun-forming suffix (손 + 님/XSN, 대학 + 생/XSN) or into two nouns (창 + 문): a run
+of a noun and the nouns or XSN suffixes attached to it becomes ONE noun token
+when the joined surface is an exact headword, the longest attested run first.
+Without it the XSN is dropped as a token and the card front is the stem - 손
+"hand" for 손님 "guest" - and 창문 "window" makes two cards. 사람들 and 친구들 are
+no headwords, so the stem stays what the line mines. The noun gets no 다: XSN
+is not a predicate suffix. A predicate pair keeps its head: 방청소했어요 mines
+청소하다, not a noun run 방 + 청소.
+
 The output token is a ``LanguageToken``, never a ``SyntheticToken``: the two
 ``isinstance(t, SyntheticToken)`` gates in ``services/morphology.py`` drive
 Japanese-only attested-reading and span-replacement passes that a Korean token
@@ -55,6 +65,12 @@ AttestLookup = Callable[[list[str]], set[str]]
 #: is mineable and mines as its lemma.
 _SUFFIX_TO_PREDICATE: dict[str, str] = {"XSV": "VV", "XSA": "VA"}
 
+#: The class a merged noun run takes; KoreanMinedForm mines an NN as its surface.
+_NOUN_POS1 = "NN"
+
+#: The noun-forming suffix a noun run may take besides another noun (-님, -생, -들).
+_NOUN_SUFFIX_POS2 = "XSN"
+
 #: Classes a predicate suffix may attach to: nouns and bound roots. XR is the
 #: important one - a bound root is not a word by itself, so merging is the only
 #: way 깨끗한 ever produces a card.
@@ -70,74 +86,96 @@ def _feature(token: Any, name: str) -> str:
     return str(value) if value else ""
 
 
+#: ``id(token) -> (start, end)`` in the source line, from ``iter_token_spans``.
+_Spans = dict[int, tuple[int, int]]
+
+
+def _attached(spans: _Spans, left: Any, right: Any) -> bool:
+    """Whether ``right`` starts exactly where ``left`` ends in the source line.
+
+    Adjacency is checked against the SOURCE spans, not the token order: a merge
+    across whitespace would produce a surface that ``iter_token_spans`` stitches
+    and then drops, silently losing the word.
+    """
+    left_span = spans.get(id(left))
+    right_span = spans.get(id(right))
+    return left_span is not None and right_span is not None and left_span[1] == right_span[0]
+
+
 class KoreanPredicateMerger:
-    """Merge attached nominal + predicate-suffix pairs into one predicate token.
+    """Merge attached nominal + suffix runs into one predicate or noun token.
 
     Stateless: the attestation probe is a per-call parameter, and the parser
-    owns the memoisation. Greedy left to right; a token consumed as a tail can
-    never also start a pair.
+    owns the memoisation. Greedy left to right; a token consumed by one merge
+    is never part of another. Predicate pairs are settled first, so a noun run
+    never takes the head of an attested predicate.
     """
 
     def merge_line(self, text: str, tokens: list, attest: AttestLookup) -> list:
-        """Return ``tokens`` with every attested nominal+suffix pair merged.
+        """Return ``tokens`` with every attested predicate pair and noun run merged.
 
-        Returns the input list object unchanged when the line offers no
-        structural candidate, so a line with nothing to merge costs one scan
-        and no dictionary lookup.
+        Both kinds of candidate go to ``attest`` in one batched call. Returns
+        the input list object unchanged when the line offers no structural
+        candidate, so a line with nothing to merge costs one scan and no
+        dictionary lookup.
         """
-        pairs = self._structural_pairs(text, tokens)
-        if not pairs:
+        spans = {id(token): (start, end) for token, start, end in iter_token_spans(text, tokens)}
+        pairs = self._structural_pairs(tokens, spans)
+        runs = self._noun_runs(tokens, spans)
+        if not pairs and not runs:
             return tokens
-        attested = attest(sorted({candidate for _, candidate, _ in pairs}))
-        firing = {index: (candidate, pos1) for index, candidate, pos1 in pairs if candidate in attested}
-        if not firing:
+        attested = attest(sorted({candidate for _, candidate, _ in pairs} | {candidate for _, _, candidate in runs}))
+
+        # start index -> (stop index, lemma, pos1, pos2)
+        merges: dict[int, tuple[int, str, str, str]] = {
+            index: (index + 2, candidate, pos1, "") for index, candidate, pos1 in pairs if candidate in attested
+        }
+        consumed = {index for head in merges for index in (head, head + 1)}
+        cursor = 0
+        for start, stop, candidate in runs:
+            if start < cursor or candidate not in attested or not consumed.isdisjoint(range(start, stop)):
+                continue
+            merges[start] = (stop, candidate, _NOUN_POS1, _feature(tokens[start], "pos2"))
+            cursor = stop
+        if not merges:
             return tokens
 
         out: list = []
         index = 0
         total = len(tokens)
         while index < total:
-            fired = firing.get(index)
-            if fired is None:
+            merge = merges.get(index)
+            if merge is None:
                 out.append(tokens[index])
                 index += 1
                 continue
-            candidate, pos1 = fired
-            head, tail = tokens[index], tokens[index + 1]
+            stop, candidate, pos1, pos2 = merge
             out.append(
                 LanguageToken(
-                    surface=head.surface + tail.surface,
+                    surface="".join(token.surface for token in tokens[index:stop]),
                     pos1=pos1,
-                    pos2="",
+                    pos2=pos2,
                     lemma=candidate,
                     kana="",
                 )
             )
-            index += 2
+            index = stop
         return out
 
-    def _structural_pairs(self, text: str, tokens: list) -> list[tuple[int, str, str]]:
+    def _structural_pairs(self, tokens: list, spans: _Spans) -> list[tuple[int, str, str]]:
         """``(head index, candidate dictionary form, merged pos1)`` per eligible pair.
 
-        Adjacency is checked against the SOURCE spans, not the token order: a
-        pair separated by whitespace would produce a surface that
-        ``iter_token_spans`` stitches and then drops, silently losing the word.
-        kiwi does not in fact tag a whitespace-separated 하 as XSV, so this is a
-        guard against that guarantee changing, not a live case.
+        kiwi does not in fact tag a whitespace-separated 하 as XSV, so the
+        source-adjacency check is a guard against that guarantee changing, not
+        a live case.
         """
-        spans = {id(token): (start, end) for token, start, end in iter_token_spans(text, tokens)}
         pairs: list[tuple[int, str, str]] = []
         index = 0
         total = len(tokens)
         while index < total - 1:
             head, tail = tokens[index], tokens[index + 1]
             pos1 = _SUFFIX_TO_PREDICATE.get(_feature(tail, "pos2"))
-            if pos1 is None or not self._is_head(head):
-                index += 1
-                continue
-            head_span = spans.get(id(head))
-            tail_span = spans.get(id(tail))
-            if head_span is None or tail_span is None or head_span[1] != tail_span[0]:
+            if pos1 is None or not self._is_head(head) or not _attached(spans, head, tail):
                 index += 1
                 continue
             stem = (_feature(head, "lemma") or head.surface) + (_feature(tail, "lemma") or tail.surface)
@@ -146,8 +184,35 @@ class KoreanPredicateMerger:
             index += 2
         return pairs
 
+    def _noun_runs(self, tokens: list, spans: _Spans) -> list[tuple[int, int, str]]:
+        """``(start, stop, joined surface)`` for every noun run of two or more tokens.
+
+        A run starts at a noun that may head a predicate (a bound noun may not)
+        and extends over the source-attached nouns and XSN suffixes after it.
+        Sorted by start, longest first, which is the order ``merge_line`` takes
+        the first attested one in. The candidate is the joined SOURCE surface:
+        a noun has no stem to restore, and the surface is what a noun mines as.
+        """
+        runs: list[tuple[int, int, str]] = []
+        total = len(tokens)
+        for start in range(total - 1):
+            if _feature(tokens[start], "pos1") != _NOUN_POS1 or not self._is_head(tokens[start]):
+                continue
+            stop = start + 1
+            while (
+                stop < total and self._is_noun_tail(tokens[stop]) and _attached(spans, tokens[stop - 1], tokens[stop])
+            ):
+                stop += 1
+            surfaces = [token.surface for token in tokens[start:stop]]
+            runs.extend((start, end, "".join(surfaces[: end - start])) for end in range(stop, start + 1, -1))
+        return runs
+
     @staticmethod
     def _is_head(token: Any) -> bool:
         if _feature(token, "pos1") not in _HEAD_POS1:
             return False
         return _feature(token, "pos2") not in _HEAD_EXCLUDED_POS2
+
+    @staticmethod
+    def _is_noun_tail(token: Any) -> bool:
+        return _feature(token, "pos1") == _NOUN_POS1 or _feature(token, "pos2") == _NOUN_SUFFIX_POS2

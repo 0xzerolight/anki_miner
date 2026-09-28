@@ -74,6 +74,11 @@ logger = logging.getLogger(__name__)
 # in the first few; a longer list would only push the counts off the line.
 _CSV_SKIP_EXAMPLE_LIMIT = 5
 
+# Terms per lemmatizer call (S17). It bounds how long Cancel and the progress
+# readout wait: hu, the slowest tagger, takes about 10 ms per word, so about
+# 5 s per chunk; most languages finish a chunk in under a second.
+_LEMMATISE_CHUNK = 500
+
 FREQUENCY_SOURCE_SUFFIXES = (".zip", ".csv", ".tsv", ".txt")
 _ZIP_SUFFIXES = frozenset(FREQUENCY_SOURCE_SUFFIXES[:1])
 _CSV_SUFFIXES = frozenset(FREQUENCY_SOURCE_SUFFIXES[1:])
@@ -200,6 +205,7 @@ def import_frequency_source(
             dest_root,
             source_id=source_id,
             source_name=source_name,
+            progress=progress,
             cancel_check=cancel_check,
             overwrite=overwrite,
             before_promote=before_promote,
@@ -220,8 +226,13 @@ def repair_frequency_source(
     source_name: str,
     progress: ProgressFn | None = None,
     cancel_check: Callable[[], bool] | None = None,
+    dicts_root: Path | None = None,
 ) -> FreqSourceImportResult:
-    """Explicitly repair ``source_id``, retaining an invalid prior slot as quarantine."""
+    """Explicitly repair ``source_id``, retaining an invalid prior slot as quarantine.
+
+    ``dicts_root`` is the dictionaries folder a lemmatised list keys its words
+    by (``build_frequency_lemmatizer``); ``None`` keys them by the tagger alone.
+    """
     # Read the stamp before the rebuild: repair_managed_slot may quarantine the
     # slot, and a re-import would otherwise fall back to the "ja" default.
     language = read_slot_language(dest_root / source_id)
@@ -231,7 +242,7 @@ def repair_frequency_source(
     # Function-local like _term_fold: the lemmatizer resolves the tagger lazily.
     from anki_miner.services.frequency.lemmatize import build_frequency_lemmatizer
 
-    lemmatize = build_frequency_lemmatizer(language) if lemmatised else None
+    lemmatize = build_frequency_lemmatizer(language, dicts_root) if lemmatised else None
     return repair_managed_slot(
         input_path,
         dest_root,
@@ -382,7 +393,15 @@ def _import_zip(
                     f"{skipped_display_only} display-only entries). "
                     "The dictionary may use an unsupported data format."
                 )
-            rows, converted = _iter_rank_rows(ranks, declared_mode, language, lemmatize=lemmatize, fold_term=fold)
+            rows, converted = _iter_rank_rows(
+                ranks,
+                declared_mode,
+                language,
+                lemmatize=lemmatize,
+                fold_term=fold,
+                progress=progress,
+                cancel_check=cancel_check,
+            )
             if lemmatize is not None:
                 rows = list(rows)
                 entry_count = len(rows)
@@ -428,6 +447,7 @@ def _import_csv(
     *,
     source_id: str | None,
     source_name: str | None = None,
+    progress: ProgressFn | None = None,
     cancel_check: Callable[[], bool] | None,
     overwrite: bool,
     before_promote: Callable[[], None] | None,
@@ -527,7 +547,15 @@ def _import_csv(
     # header, is authoritative. Headerless and ambiguous CSVs still use the
     # statistical probe.
     mode = declared_mode or header_mode
-    rows, converted = _iter_rank_rows(ranks, mode, language, lemmatize=lemmatize, fold_term=fold)
+    rows, converted = _iter_rank_rows(
+        ranks,
+        mode,
+        language,
+        lemmatize=lemmatize,
+        fold_term=fold,
+        progress=progress,
+        cancel_check=cancel_check,
+    )
     entry_count = len(ranks)
     if lemmatize is not None:
         rows = list(rows)
@@ -568,6 +596,8 @@ def _iter_rank_rows(
     *,
     lemmatize: Callable[[list[str]], list[str]] | None = None,
     fold_term: Callable[[str], str] | None = None,
+    progress: ProgressFn | None = None,
+    cancel_check: Callable[[], bool] | None = None,
 ) -> tuple[Iterable[storage.FreqRow], bool]:
     """Yield stored rows in stable order, re-ranking occurrence sources.
 
@@ -580,8 +610,9 @@ def _iter_rank_rows(
 
     ``lemmatize`` runs only once the source resolved to occurrence counts: the
     probe votes on surface terms, then counts aggregate under
-    ``fold_term(lemma)`` (see :func:`_aggregate_by_lemma`). Ranks cannot be
-    summed, so a rank source is never lemmatised.
+    ``fold_term(lemma)`` (see :func:`_aggregate_by_lemma`, which alone uses
+    ``progress`` and ``cancel_check``). Ranks cannot be summed, so a rank
+    source is never lemmatised.
     """
     # terms_for_language, NOT mode_probe._terms_for: the latter pools every
     # language's terms for an unknown code, which would let ja decide a ko
@@ -602,7 +633,13 @@ def _iter_rank_rows(
 
     if mode_probe.resolve_is_occurrence(declared_mode, term_values, source_language):
         if lemmatize is not None:
-            ranks = _aggregate_by_lemma(ranks, lemmatize, fold_term or _term_fold(source_language))
+            ranks = _aggregate_by_lemma(
+                ranks,
+                lemmatize,
+                fold_term or _term_fold(source_language),
+                progress=progress,
+                cancel_check=cancel_check,
+            )
         ordered = sorted(
             ranks.items(),
             key=lambda item: (
@@ -634,18 +671,35 @@ def _aggregate_by_lemma(
     ranks: Mapping[tuple[str, str | None], int | tuple[int, str | None]],
     lemmatize: Callable[[list[str]], list[str]],
     fold_term: Callable[[str], str],
+    *,
+    progress: ProgressFn | None = None,
+    cancel_check: Callable[[], bool] | None = None,
 ) -> dict[tuple[str, str | None], int]:
     """Sum occurrence counts per ``(fold_term(lemma), reading)`` (S17).
 
     A surface-keyed occurrence list ranks an infinitive by its own occurrences
     only; summing every inflected form under its lemma is what makes
     ``max_frequency_rank`` mean for an inflecting language what it means for
-    ja's lemma-keyed JPDB. The lemmatizer sees every term in one call.
+    ja's lemma-keyed JPDB.
+
+    The lemmatizer sees the terms in chunks of :data:`_LEMMATISE_CHUNK`, with a
+    progress report after each and a Cancel check before each: a 50,000-word
+    list runs for minutes. Each term is lemmatised on its own, so chunking
+    changes no lemma, and the sum runs over the whole list.
     """
     keys = list(ranks)
-    lemmas = lemmatize([term for term, _reading in keys])
-    if len(lemmas) != len(keys):
-        raise SetupError("The lemmatizer returned a different number of lemmas than terms.")
+    terms = [term for term, _reading in keys]
+    lemmas: list[str] = []
+    for start in range(0, len(terms), _LEMMATISE_CHUNK):
+        if cancel_check is not None and cancel_check():
+            raise OperationCancelled("Import cancelled")
+        chunk = terms[start : start + _LEMMATISE_CHUNK]
+        chunk_lemmas = lemmatize(chunk)
+        if len(chunk_lemmas) != len(chunk):
+            raise SetupError("The lemmatizer returned a different number of lemmas than terms.")
+        lemmas.extend(chunk_lemmas)
+        if progress is not None:
+            progress(len(lemmas), len(terms), "Lemmatising")
     aggregated: dict[tuple[str, str | None], int] = {}
     for (term, reading), lemma in zip(keys, lemmas, strict=True):
         value = ranks[(term, reading)]

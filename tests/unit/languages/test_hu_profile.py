@@ -11,13 +11,18 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.config.config import _LANGUAGE_CODES
 from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages._spaced.fields import POS_FIELD
+from anki_miner.languages._spaced.form_of import FormOfLemmaPass, OrderedPasses
 from anki_miner.languages._spaced.keys import CasefoldDictKeys
 from anki_miner.languages._spaced.morphology import LatinLookupStrategy, SeparableVerbPass, SpacedMinedForm
 from anki_miner.languages._spaced.render import PosHook
 from anki_miner.languages._spaced.script import LatinScript, nfc_normalize
 from anki_miner.languages.hu.abbreviations import HU_ABBREVIATIONS
 from anki_miner.languages.hu.catalog import HU_CATALOG
-from anki_miner.languages.hu.morphology import HU_SUBTITLE_REGEX, hungarian_preverb_candidates
+from anki_miner.languages.hu.morphology import (
+    HU_SUBTITLE_REGEX,
+    hungarian_preverb_candidates,
+    potential_verb_front,
+)
 from anki_miner.languages.hu.tokenizer import build_tagger
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.switching import switch_language
@@ -100,18 +105,21 @@ def test_the_tagger_stashes_preverbs_demotes_the_clitic_and_splits_sentence_fina
         "tok2vec", "tagger", "morphologizer", "lookup_lemmatizer", "trainable_lemmatizer", "parser"
     ]  # fmt: skip
     features = {token.surface: token.feature for token in tagger("Nem olvasta el a könyvet.")}
-    assert features["olvasta"].particle == "el" and features["el"].pos1 == "PART"
+    assert features["olvasta"].particle == "el" and [p.text for p in features["olvasta"].particles] == ["el"]
     assert ("-e", "PART") in [(t.surface, t.feature.pos1) for t in tagger("Tudod-e, hol van?")]
     assert [(t.surface, t.feature.pos1) for t in tagger("Ez egy jó út.")][-2:] == [("út", "NOUN"), (".", "PUNCT")]
     assert ("Dr.", "X") in [(t.surface, t.feature.pos1) for t in tagger("Dr. Kovács késett.")]
 
 
-def test_the_parser_joins_preverbs_through_the_listed_candidates():
+def test_the_parser_joins_preverbs_then_repairs_potential_verb_fronts():
     profile = get_profile("hu")
     parser = profile.create_parser(switch_language(AnkiMinerConfig(), "hu"))
     assert parser.normalize is profile.normalize and parser._compound_matcher is None
-    assert isinstance(parser._token_post_pass, SeparableVerbPass)
-    assert parser._token_post_pass._candidates is hungarian_preverb_candidates
+    assert isinstance(parser._token_post_pass, OrderedPasses)
+    join, repair = parser._token_post_pass._passes
+    assert isinstance(join, SeparableVerbPass) and join._candidates is hungarian_preverb_candidates
+    assert isinstance(repair, FormOfLemmaPass) and repair._accept is potential_verb_front
+    assert repair._surface_first is False
 
 
 def test_the_catalogue_ships_wiktionary_and_a_lemmatised_frequency_list():

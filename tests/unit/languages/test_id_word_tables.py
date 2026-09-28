@@ -12,7 +12,7 @@ from anki_miner.languages.id.stopwords import ID_STOPWORDS
 
 
 def test_the_stopword_tier_keeps_function_words_and_drops_content_words():
-    assert len(ID_STOPWORDS) == 532
+    assert len(ID_STOPWORDS) == 322
     assert all(word == word.casefold() and word.isascii() for word in ID_STOPWORDS)
     # the C.5 function-word core: closed classes, monomorphemic (D6)
     assert {"yang", "dan", "ini", "itu", "pada", "di", "ke", "dari", "saya", "dia", "tidak"} <= ID_STOPWORDS
@@ -26,25 +26,40 @@ def test_the_stopword_tier_keeps_function_words_and_drops_content_words():
     assert {"gue", "lo", "nggak", "gak", "udah", "aja", "kayak", "sih", "deh", "kan", "ya", "nya"} <= ID_STOPWORDS
 
 
+def test_a_form_takes_the_tier_status_of_the_lemma_it_reaches():
+    """wty lists ``dilakukan`` only as a form of ``melakukan`` and lacks ``mengira``: the reached lemma decides (D6).
+
+    A form of a content lemma is vocabulary; a form of a function word (``inilah``, ``padanya``) stays in the tier.
+    """
+    derived = {"dilakukan", "dibuat", "dilihat", "diminta", "diberikan", "mengira", "menanyakan", "jelaskan"}
+    assert not (derived | {"menyiapkan", "mengingatkan", "ternyata", "waktunya", "melihatnya"}) & ID_STOPWORDS
+    assert {"inilah", "padanya", "kepadanya", "sepertinya", "tapi", "akulah", "tersebut", "terhadap"} <= ID_STOPWORDS
+    # the pronouns and articles stopwords-iso lacks join the function-word core
+    assert {"kau", "engkau", "dikau", "beliau", "si", "sang"} <= ID_STOPWORDS
+    # wty lacks these function words and the ladder's hit is another word (mau, sela, mata), not their base
+    assert {"maupun", "selaku", "semata-mata"} <= ID_STOPWORDS
+
+
 def test_only_the_curated_core_carries_the_stopword_read_through():
     """IndoCollex is crowd-derived: its formal side never makes a word a stopword (D6).
 
     ``morphology.is_stopword`` reads :data:`ID_COLLOQUIAL_CORE` alone; the counts here are what that
-    decision costs and saves. The whole table would add 332 words nobody reviewed.
+    decision costs and saves. The whole table would add 306 words nobody reviewed.
     """
-    assert len(ID_COLLOQUIAL_CORE) == 28
+    assert len(ID_COLLOQUIAL_CORE) == 33
     assert ID_COLLOQUIAL_CORE.items() <= ID_COLLOQUIAL.items()
-    assert len([key for key, formal in ID_COLLOQUIAL_CORE.items() if formal in ID_STOPWORDS]) == 23
+    # kalo joins with kalau (ID-02); tau liat abis reach content words
+    assert len([key for key, formal in ID_COLLOQUIAL_CORE.items() if formal in ID_STOPWORDS]) == 24
     unreviewed = [
         key
         for key, formal in ID_COLLOQUIAL.items()
         if formal in ID_STOPWORDS and key not in ID_STOPWORDS and key not in ID_COLLOQUIAL_CORE
     ]
-    assert len(unreviewed) == 332
+    assert len(unreviewed) == 306
 
 
 def test_the_colloquial_table_is_indocollex_under_the_curated_core():
-    assert len(ID_COLLOQUIAL) == 1988
+    assert len(ID_COLLOQUIAL) == 1924
     core = {
         "lo": "kamu",
         "nggak": "tidak",
@@ -67,6 +82,22 @@ def test_the_colloquial_table_is_indocollex_under_the_curated_core():
     assert all(key == key.casefold() and key.isascii() and " " not in key for key in ID_COLLOQUIAL)
     with pytest.raises(TypeError):
         ID_COLLOQUIAL["x"] = "y"  # type: ignore[index]
+
+
+def test_an_english_word_is_not_a_colloquial_spelling():
+    """IndoCollex translates English (``it`` -> ``itu``): a code-switched ``I love it`` must miss, not card ``itu``.
+
+    Only English function words go; loans (``bro``, ``app``) and chat abbreviations that stopwords-iso lists as
+    country codes (``tp`` -> ``tetapi``, ``org`` -> ``orang``) stay.
+    """
+    assert not {"it", "is", "me", "by", "in", "of", "if", "at", "up", "us", "things", "wanted"} & ID_COLLOQUIAL.keys()
+    assert (ID_COLLOQUIAL["bro"], ID_COLLOQUIAL["app"], ID_COLLOQUIAL["tp"], ID_COLLOQUIAL["org"]) == (
+        "mas",
+        "aplikasi",
+        "tetapi",
+        "orang",
+    )
+    assert ID_COLLOQUIAL["bang"] == ID_COLLOQUIAL_CORE["bang"] == "abang"  # never the backslang ngab
 
 
 def test_both_tables_record_their_source_and_notice():

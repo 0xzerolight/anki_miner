@@ -101,10 +101,21 @@ def test_the_repair_policies_are_the_tagging_map_in_function_form():
         ("Він живе на вул. Хрещатик. Це центр.", ["Він живе на вул. Хрещатик.", "Це центр."]),
         ("Це мій кіт. Він спить.", ["Це мій кіт.", "Він спить."]),
         ("Він сказав: «Привіт». Потім пішов.", ["Він сказав: «Привіт».", "Потім пішов."]),
+        # р. (рік), год. (година) and the т. of т. д.: the stems the tokenizer set leaves out.
+        ("Він народився у 1814 р. в селі Моринці.", ["Він народився у 1814 р. в селі Моринці."]),
+        ("Зустрінемося о 5 год. вечора. Добре?", ["Зустрінемося о 5 год. вечора.", "Добре?"]),
+        ("Купили хліб, сир і т. д. Потім пішли.", ["Купили хліб, сир і т. д.", "Потім пішли."]),
     ],
 )
 def test_sentence_rules(text, sentences):
     assert split_sentences(text, rules=UK_SENTENCE_RULES) == sentences
+
+
+def test_the_sentence_only_stems_stay_out_of_the_derived_tokenizer_set():
+    """They only continue a sentence: the tokenizer set is spaCy's, re-derived below, never hand-edited."""
+    sentence_only = {"р", "год", "т"}
+    assert UK_SENTENCE_RULES.abbreviations == UK_ABBREVIATIONS | sentence_only
+    assert not sentence_only & UK_ABBREVIATIONS
 
 
 def test_a_low_quote_holds_its_sentences_together():

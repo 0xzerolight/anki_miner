@@ -3,6 +3,7 @@
 import pytest
 
 from anki_miner.exceptions import OperationCancelled
+from anki_miner.languages.registry import get_profile
 from anki_miner.models.reading import ImageRef, ReadingSourceRef
 from anki_miner.services.reading import text_source
 
@@ -55,6 +56,37 @@ def test_exotic_line_breaks_are_not_paragraph_breaks():
     doc = text_source.load(ReadingSourceRef(kind="text", title="Text", text="あ い\fうえ"))
     assert len(doc.units) == 1
     assert [u.location_label for u in doc.units] == ["¶1"]
+
+
+def test_space_aware_paragraph_joins_its_hard_wrapped_lines():
+    # A hard-wrapped paste (a Project Gutenberg page) must not cut its
+    # sentences at each wrap; a blank line still ends the paragraph.
+    text = (
+        "It is a truth universally acknowledged, that a single man in possession\n"
+        "of a good fortune must be in want of a wife.\n"
+        "\n"
+        "Mr. Bennet replied that he had not.\n"
+    )
+    doc = text_source.load(
+        ReadingSourceRef(kind="text", title="Text", text=text),
+        rules=get_profile("en").sentence_rules,
+    )
+    assert [u.text for u in doc.units] == [
+        "It is a truth universally acknowledged, that a single man in possession"
+        " of a good fortune must be in want of a wife.",
+        "Mr. Bennet replied that he had not.",
+    ]
+    assert [u.location_label for u in doc.units] == ["¶1", "¶2"]
+
+
+def test_chinese_lines_stay_one_paragraph_each():
+    # CJK plain text writes one paragraph per line with no blank line between.
+    doc = text_source.load(
+        ReadingSourceRef(kind="text", title="Text", text="我也想看书\n下周去买"),
+        rules=get_profile("zh").sentence_rules,
+    )
+    assert [u.text for u in doc.units] == ["我也想看书", "下周去买"]
+    assert [u.location_label for u in doc.units] == ["¶1", "¶2"]
 
 
 def test_image_root_becomes_one_shared_image_ref(tmp_path):

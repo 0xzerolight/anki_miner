@@ -1,0 +1,15 @@
+# verb_first.tsv -- one surface per row. hazm 0.12.1 words.dat (MIT) tags each
+# as a noun or adjective only, yet in subtitles it is almost always a verb form,
+# so the verb tables answer it before words.dat does (tokenizer._classify).
+# Counts are hermitdave FrequencyWords 2018 fa_50k (OpenSubtitles), every yeh
+# and kaf spelling summed after fa_normalize: 185,342 tokens between them.
+#   kone    88,932  colloquial "does" (konad), not "tick"
+#   kardi   60,206  "you did", not "Kurdish"
+#   beri    23,302  colloquial "you go" (beravi), not "brie"
+#   nadari  12,902  "you don't have", not "poverty"
+# Everywhere else a tagged row still wins (plan probe P-9: mard, dasht, dad,
+# saxt, shekast, xast and konad stay nouns). kist is no verb (ki + ast).
+کنه
+کردی
+بری
+نداری

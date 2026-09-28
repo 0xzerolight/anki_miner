@@ -8400,8 +8400,8 @@ No index files are deleted.</source>
         <translation>新增檔案…</translation>
     </message>
     <message>
-        <source>Add subtitle files (.srt, .ass, .ssa, .vtt) to the list.</source>
-        <translation>將字幕檔案（.srt、.ass、.ssa、.vtt）加入清單。</translation>
+        <source>Add subtitle files (.srt, .ass, .ssa, .vtt, .smi) to the list.</source>
+        <translation>將字幕檔案（.srt、.ass、.ssa、.vtt、.smi）加入清單。</translation>
     </message>
     <message>
         <source>Remove Selected</source>

@@ -17,7 +17,7 @@ this order puts the right verb on 45 cards with a dictionary and 46 without, whe
 dictionaries key the hyphenated spelling.
 
 ``NL_ARTICLE_MAP`` / ``NL_GRAMMAR_SOURCES``: wty tags Dutch nouns masc/fem/neut and the model Com/Neut; every
-non-neuter takes ``de``. The dictionary leads because morph describes the token, not the card front: the
+non-neuter and a plural-only noun (``kleren pl``) take ``de``. The dictionary leads because morph describes the token, not the card front: the
 diminutive ``hondje`` lemmatises to ``hond`` with ``Gender=Neut``, and ``hond``'s entry carries an obsolete
 neuter row beside ``hond m``.
 """
@@ -115,7 +115,9 @@ def restore_compound_hyphens(tokens: list[LanguageToken]) -> list[LanguageToken]
 #: Leading words a deck front carries that the mined lemma never does (S3): ``het boek`` meets ``boek``.
 NL_LEADING_WORDS: frozenset[str] = frozenset({"de", "het", "een", "'t", "’t", "zich"})
 
-NL_ARTICLE_MAP: Mapping[str, str] = MappingProxyType({"masc": "de", "fem": "de", "common": "de", "neut": "het"})
+NL_ARTICLE_MAP: Mapping[str, str] = MappingProxyType(
+    {"masc": "de", "fem": "de", "common": "de", "neut": "het", "plural": "de"}
+)
 NL_GRAMMAR_SOURCES: tuple[str, ...] = ("chips", "head", "morph")
 
 #: ``„`` opens Dutch dialogue (``”`` already closes). ``‘ ’`` never move depth: ``’`` is also the apostrophe.

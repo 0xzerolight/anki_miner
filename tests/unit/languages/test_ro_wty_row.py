@@ -64,11 +64,14 @@ def test_a_cedilla_query_meets_the_comma_below_key(provider):
 
 
 def test_the_probe_word_reaches_its_lemma_through_the_form_of_rows_reading(provider):
-    """R13: wty-ro-en keys form-of rows without diacritics; the real spelling is the reading column."""
+    """R13: wty-ro-en keys form-of rows without diacritics; the real spelling is the reading column.
+
+    The form row names carte, and the read path replaces it by carte's entry (storage form-of rows).
+    """
     (form_of,) = [row for row in FIXTURE["term_rows"] if row[2] == "non-lemma"]
     assert (form_of[0], form_of[1]) == ("carti", CARTI)
     html = provider.lookup(CARTI)
-    assert html == FIXTURE["rendered_html"][CARTI] and "carte" in html
+    assert html == FIXTURE["rendered_html"]["carte"]
     assert provider.lookup(CARTI.capitalize()) == html
 
 

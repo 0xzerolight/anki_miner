@@ -61,6 +61,45 @@ def test_classifier_from_volubilis():
     assert ThaiClassifierHook().render(_word(html), config=CONFIG) == {"classifier": "ตัว"}
 
 
+_BACKLINK = (
+    '<div class="gloss-sc-div" data-sc-content="backlink"><a class="gloss-sc-a" href="https://en.wiktionary.org/">'
+    'Wiktionary</a> | <a class="gloss-sc-a" href="https://kaikki.org/">Kaikki</a></div>'
+)
+
+
+@pytest.mark.parametrize(
+    ("gloss", "expected"),
+    [
+        # ฟุตบอล: the colon form ran past its own ')' into the backlink.
+        ("the inflated ball used in such a game (classifier: ลูก (lûuk))", "ลูก"),
+        # บอล: readings go, both classifiers stay.
+        ("ball (object) (classifier: ลูก (lûuk) or ใบ (bai))", "ลูก / ใบ"),
+        # รถไฟ: English notes between the forms go.
+        (
+            "(classifier: คัน or ตู้ for separate sections, as cars, carriages, coaches, etc.; "
+            "ขบวน for lines or processions) train: connected group of rolling stock",
+            "คัน / ตู้ / ขบวน",
+        ),
+        ("(classifier ข้าง for a single one or คู่ for a pair) ear.", "ข้าง / คู่"),
+        ("(classifiers: แคร่, คัน, หลัง) bogie.", "แคร่ / คัน / หลัง"),
+        ("needle (classifier: เล่ม)</div></li><li><div>stitch", "เล่ม"),
+    ],
+)
+def test_a_wty_classifier_holds_thai_forms_only(gloss, expected):
+    html = f'<ol><li class="gloss-sc-li"><div class="gloss-sc-div">{gloss}</div></li></ol>{_BACKLINK}'
+    assert ThaiClassifierHook().render(_word(html), config=CONFIG) == {"classifier": expected}
+
+
+def test_a_classifier_note_with_no_thai_form_is_no_field():
+    html = f'<div class="gloss-sc-div">(classifier for long, thin objects) line</div>{_BACKLINK}'
+    assert ThaiClassifierHook().render(_word(html, "เส้น"), config=CONFIG) == {}
+
+
+def test_a_later_classifier_group_is_read_past_an_empty_one():
+    html = "From Proto-Tai (classifier for things).<br>item; piece (classifier อัน)"
+    assert ThaiClassifierHook().render(_word(html, "อัน"), config=CONFIG) == {"classifier": "อัน"}
+
+
 def test_an_abstract_noun_line_is_not_a_classifier():
     html = '<div data-sc-content="Grammar-content">พัฒนา (abstract noun การพัฒนา)</div>'
     assert ThaiClassifierHook().render(_word(html, "พัฒนา"), config=CONFIG) == {}

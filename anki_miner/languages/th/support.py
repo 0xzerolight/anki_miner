@@ -21,6 +21,7 @@ from anki_miner.languages.th.tiers import TH_MARK_CODE_POINTS
 #: stated in both modules.
 _THAI_LETTERS = frozenset(chr(cp) for cp in [*range(0x0E01, 0x0E3B), *range(0x0E40, 0x0E4F)]) - TH_MARK_CODE_POINTS
 _PAIYANNOI = "\N{THAI CHARACTER PAIYANNOI}"
+_MAIYAMOK = "\N{THAI CHARACTER MAIYAMOK}"
 
 
 class ThaiScriptSupport:
@@ -96,10 +97,13 @@ class ThaiMinedFormPolicy:
 class ThaiLookupStrategy:
     """Spelling variants of a query, ``conditions=0`` (no deinflection).
 
-    Two rungs: the abbreviation mark stripped (some dictionaries file the
-    abbreviated headword without it), and the normalised spelling when the raw
-    one differs (imported data carries unreordered vowel sequences). The ``0``
-    is the Yomitan deinflection bitmask value ``DefinitionService
+    Up to four rungs: the abbreviation mark stripped (some dictionaries file the
+    abbreviated headword without it), the normalised spelling when the raw one
+    differs (imported data carries unreordered vowel sequences), and for a word
+    ending in mai yamok the spaced spelling, then the base. newmm emits จริงๆ
+    as one token while wty-th-en files 42 of its 43 mai yamok headwords with the
+    Royal Institute space (``จริง ๆ``), and the base (จริง) is a headword too.
+    The ``0`` is the Yomitan deinflection bitmask value ``DefinitionService
     ._fallback_candidates`` already uses for pure spelling variants.
     """
 
@@ -108,4 +112,7 @@ class ThaiLookupStrategy:
         if word.endswith(_PAIYANNOI):
             out.append(word.rstrip(_PAIYANNOI))
         out.append(normalize_th(word))
+        base = word[:-1].rstrip() if word.endswith(_MAIYAMOK) else ""
+        if base:
+            out += [f"{base} {_MAIYAMOK}", base]
         return [(candidate, 0) for candidate in dict.fromkeys(out) if candidate and candidate != word]

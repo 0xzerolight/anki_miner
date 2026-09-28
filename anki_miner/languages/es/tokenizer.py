@@ -31,6 +31,7 @@ from anki_miner.languages.es.morphology import (
     ES_ABBREVIATIONS,
     ES_MODEL_PACKAGE,
     IRREGULAR_IMPERATIVES,
+    IRREGULAR_NOSOTROS_IMPERATIVES,
     enclitic_splits,
     has_acute,
     strip_acute,
@@ -43,6 +44,10 @@ _NOMINAL_POS = frozenset({"NOUN", "ADJ", "PROPN"})
 _INFINITIVE_ENDINGS = ("ar", "er", "ir")
 _GERUND = ["VerbForm=Ger"]
 _IMPERATIVE_2SG = ["Mood=Imp", "Number=Sing", "Person=2", "VerbForm=Fin"]
+#: The model's own rule groups for the ustedes and nosotros imperatives, which Spanish spells with the
+#: present subjunctive: callen (cállense), sentemos (sentémonos).
+_USTEDES_GROUP = "verb_fin_sub_pres_plur_3"
+_NOSOTROS_GROUP = "verb_fin_sub_pres_plur_1"
 #: Distinct (tag, surface, lemma) triples remembered before the memo starts over.
 _MEMO_LIMIT = 50_000
 
@@ -55,6 +60,8 @@ class SpanishVerbRepair:
         self._infinitives: frozenset[str] = frozenset()
         self._accented: dict[str, str] = {}
         self._groups: tuple[tuple[str, list[str]], ...] = ()
+        self._ustedes: list[str] = []
+        self._nosotros: list[str] = []
         self._memo: dict[tuple[str, str, str], tuple[str, str]] = {}
         if lemmatizer is not None:
             self.bind(lemmatizer)
@@ -74,6 +81,9 @@ class SpanishVerbRepair:
         self._groups = tuple(
             (name, list(features)) for name, features in tables.get_table("lemma_rules_groups").get("verb", [])
         )
+        by_name = dict(self._groups)
+        self._ustedes = by_name[_USTEDES_GROUP]
+        self._nosotros = by_name[_NOSOTROS_GROUP]
         self._memo.clear()
 
     def __call__(self, tokens: list[LanguageToken]) -> list[LanguageToken]:
@@ -150,17 +160,36 @@ class SpanishVerbRepair:
                 if irregular is not None:
                     return irregular
                 continue
-            if nominal and len(chain) < 2 and chain[0] not in ("me", "te", "se"):
-                continue
-            hits = self._rule_hits(base, _IMPERATIVE_2SG, self._lemmatizer.select_rule("verb", _IMPERATIVE_2SG))
-            if len(hits) > 1:
-                # tú + te: siéntate (-a stem) is sentar; usted + se: siéntese (-e stem) is sentar too.
-                usted = chain[0] == "se" and "te" not in chain and "os" not in chain
-                wanted = ("er", "ir") if base.endswith("a") == usted else ("ar",)
-                hits = [hit for hit in hits if hit.endswith(wanted)] or hits
+            # The plural rules first: the tú rule reads cuéntenme as contener, and they find nothing in the
+            # accented -n stems the tú rule owns (póntelo, pónmelo: pon).
+            hits = self._plural_imperative(base, chain)
+            if not hits and (not nominal or len(chain) >= 2 or chain[0] in ("me", "te", "se")):
+                hits = self._rule_hits(base, _IMPERATIVE_2SG, self._lemmatizer.select_rule("verb", _IMPERATIVE_2SG))
+                if len(hits) > 1:
+                    # tú + te: siéntate (-a stem) is sentar; usted + se: siéntese (-e stem) is sentar too.
+                    usted = chain[0] == "se" and "te" not in chain and "os" not in chain
+                    wanted = ("er", "ir") if base.endswith("a") == usted else ("ar",)
+                    hits = [hit for hit in hits if hit.endswith(wanted)] or hits
             if hits:
-                return hits[0]
+                return hits[0]  # the first hit, as everywhere here: síganme reads seguir before ser
         return None
+
+    def _plural_imperative(self, base: str, chain: tuple[str, ...]) -> list[str]:
+        """The ustedes or nosotros reading of an accented stem, through the model's own subjunctive rules.
+
+        Spanish spells both imperatives with the present subjunctive: ``cállense`` is ``callen`` + se,
+        ``sentémonos`` is ``sentemos`` + nos with the ``s`` dropped. Both shapes pass the nominal gate:
+        the model tags most of them NOUN or ADJ (``cállense``, ``vámonos`` -> ``vámono``).
+        """
+        assert self._lemmatizer is not None
+        if base.endswith("n"):
+            return self._rule_hits(base, self._ustedes, self._lemmatizer.select_rule("verb", self._ustedes))
+        if base.endswith("mo") and chain[0] == "nos":
+            form = base + "s"
+            if form in IRREGULAR_NOSOTROS_IMPERATIVES:
+                return [IRREGULAR_NOSOTROS_IMPERATIVES[form]]
+            return self._rule_hits(form, self._nosotros, self._lemmatizer.select_rule("verb", self._nosotros))
+        return []
 
     def _unique_rule_lemma(self, surface: str) -> str | None:
         form = surface.casefold()

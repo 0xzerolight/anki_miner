@@ -18,10 +18,11 @@ import sqlite3
 import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Iterable, NamedTuple
+from typing import TYPE_CHECKING, Callable, Iterable, NamedTuple, TypeVar, cast
 
 import anki_miner.services._sqlite_index as _sqlite_index
 from anki_miner.exceptions import OperationCancelled
+from anki_miner.languages._spaced.form_of import form_targets, is_lemma_row
 from anki_miner.services._sqlite_index import open_readonly as open_readonly
 from anki_miner.services._sqlite_index import read_meta as read_meta
 from anki_miner.utils.text_utils import _is_kana_only, _is_kanji, katakana_to_hiragana
@@ -126,8 +127,13 @@ _LOOKUP_LIMIT = 20
 # not filter). ``score DESC, sequence, id`` remain the lower tiebreaks.
 #
 # NULL-binding semantics: with no reading bound (wildcard), ``(reading = NULL)``
-# is NULL for every row, so the key is inert and the ordering collapses to the
-# pre-boost cascade — the ``reading=None`` path is byte-identical to 4.6 output.
+# is NULL for every row and ``COALESCE`` makes it 0, so the key is inert and the
+# ordering collapses to the pre-boost cascade — the ``reading=None`` path is
+# byte-identical to 4.6 output.
+# A row with no reading of its own is a non-match like any other: ``COALESCE``
+# turns its NULL into 0, where plain ``DESC`` would sort it after every row whose
+# reading merely differs. wty-ro-en stores readings on its form-of rows only, so
+# that NULL-last put "lucra lucra lucra" ahead of "to work" (ROM-05).
 #
 # Explicit ``, id`` tiebreak makes single-word ordering fully deterministic (rows
 # with equal priority/score and equal/NULL ``sequence`` would otherwise come back
@@ -143,7 +149,7 @@ _LOOKUP_LIMIT = 20
 _LOOKUP_SQL = (
     "SELECT content, tags, sequence, term, reading FROM entries "
     "WHERE term = ? OR reading = ? "
-    "ORDER BY (term = ?) DESC, (reading = ?) DESC, score DESC, sequence, id"
+    "ORDER BY (term = ?) DESC, COALESCE(reading = ?, 0) DESC, score DESC, sequence, id"
 )
 
 # Same shape as _LOOKUP_SQL but also returns the ``rules`` column and takes no
@@ -332,17 +338,51 @@ def _keep_mask_fn(
     return _homograph_keep_mask if keys is None else keys.homograph_keep_mask
 
 
-def _sense_rank_fn(keys: DictKeyFolding | None) -> Callable[[str], int] | None:
-    """Resolve the profile's optional row-demotion rank once per call.
+def _sense_rank_fn(keys: DictKeyFolding | None) -> Callable[[str, str, str | None], int] | None:
+    """Resolve the profile's optional row rank once per call.
 
-    Optional profile capability, probed like ``term_variants``: a language whose
-    dictionary carries rows stating no live sense of their own — zh's CC-CEDICT
-    surname, archaic-only and cross-reference rows — ranks them after the rows
-    that do, and only among the rows already sharing a term/reading priority. ``None`` (the
-    Japanese pair and every profile without the method) leaves the SQL cascade
-    untouched.
+    Optional profile capability, probed like ``term_variants``, and called as
+    ``sense_rank(content, tags, pos)``: the row's content and tags, and the
+    part of speech of the token being defined (``None`` when no token is in
+    hand). A language whose dictionary carries rows stating no live sense of
+    their own — zh's CC-CEDICT surname, archaic-only and cross-reference rows —
+    ranks them after the rows that do; a wty language ranks the rows of the
+    token's own part of speech first and its proper-name rows last. Either way
+    it reorders only among the rows already sharing a term/reading priority.
+    ``None`` (the Japanese pair and every profile without the method) leaves
+    the SQL cascade untouched.
     """
     return None if keys is None else getattr(keys, "sense_rank", None)
+
+
+def _term_rows_match_reading(keys: DictKeyFolding | None) -> bool:
+    """Whether the profile's form lookup (:func:`term_rows`) also matches the reading column.
+
+    Optional profile capability, probed like ``sense_rank``. wty-ro-en keys its
+    form rows without diacritics and stores the real spelling as the reading
+    (``lasa`` / ``lasă`` -> ``lăsa``), so those rows answer only through that
+    column, as they do on the definition lookup (``_LOOKUP_SQL``). ``False`` for
+    the Japanese pair and every profile without the attribute: their passes read
+    exact headwords.
+    """
+    return bool(getattr(keys, "term_rows_match_reading", False))
+
+
+def _splice_row_fits(keys: DictKeyFolding | None, pos: str | None) -> Callable[[str], bool] | None:
+    """The test a spliced target lemma row's ``tags`` must pass for one token, or ``None`` to splice every row.
+
+    Optional profile capability, probed like ``sense_rank`` and called as
+    ``splice_row_fits(tags, pos)``: whether the form-row splice may read a
+    target lemma row with these tags for a token of this part of speech.
+    wty-sl-en files ``mȃma`` as a form of the verb ``imeti``, and a noun card
+    must not read "to have" (``SlovenianDictKeys``). ``None`` with no token
+    part of speech in hand (the curator, a backfill without a stored Pos) and
+    for every profile without the method.
+    """
+    fits = getattr(keys, "splice_row_fits", None)
+    if fits is None or pos is None:
+        return None
+    return lambda tags: bool(fits(tags, pos))
 
 
 def _connect_for_bulk_write(db_path: Path) -> sqlite3.Connection:
@@ -652,6 +692,137 @@ def _substitute_redirect_rows(
     return out
 
 
+# ---------------------------------------------------------------------------
+# Form-of rows — the Wiktionary-derived exports (wty-*, opr-ru-en).
+#
+# Those dictionaries file every inflected or variant form they know as a row
+# tagged ``non-lemma`` whose glossary is a Yomitan deinflection pair
+# ``[target, [rules]]``, which the importer stores as the bare target
+# (``yomitan_renderer.render_glossary_entry``). As a definition that is a bare
+# word, often ANOTHER word (uk зараз -> "зараза", ru потом -> "пот"), under a
+# "non-lemma" chip; a form with no other row (vi cảm ơn -> "cám ơn", id dibawa
+# -> "bawa") gets no meaning at all. So, over one dictionary's scoped rows for
+# one word, the render read paths below:
+#
+# * drop each form row beside a lemma row, unless the profile's ``sense_rank``
+#   puts it strictly AHEAD of every lemma row: the profile has then chosen the
+#   form's meaning for this token. With no rank every row ties, so a lemma row
+#   always wins. The reading boost does not count: uk and ro file readings on
+#   their form rows only, so the boost is what put the form row first.
+# * replace each form row still there by the LEMMA rows of the terms it names,
+#   at its own rank. One hop, never a target's own form rows (wty also files
+#   the reverse pointers, menjual -> dijual, cám ơn -> cảm ơn), each target
+#   once. A target the dictionary does not file as a headword adds nothing, so
+#   a hit whose targets are all absent collapses to a miss and the profile's
+#   variant ladder gets its turn. A profile may also splice only the target
+#   rows that fit the token's part of speech (see :func:`_splice_row_fits`);
+#   a target with none of those adds nothing either.
+#
+# Nothing is re-imported: stored rows are read as they are, with the same
+# ``form_targets`` the front repair uses. ``term_rows`` (the R36 form lookup)
+# stays raw, since its readers need exactly these rows. Only the ``non-lemma``
+# tag triggers any of this; JMdict, Jitendex, CC-CEDICT, KRDICT and the CC-Canto
+# dictionaries carry none.
+_RowRank = Callable[[str, str], int]
+#: One projected result row: ``(content, tags, sequence)``, or with ``rules`` appended.
+_Row = TypeVar("_Row", tuple[str, str, int | None], tuple[str, str, int | None, str])
+
+
+def _bound_rank(sense_rank: Callable[[str, str, str | None], int] | None, pos: str | None) -> _RowRank | None:
+    """The profile's row rank for one token's part of speech, over ``(content, tags)``."""
+    if sense_rank is None:
+        return None
+    return lambda content, tags: sense_rank(content, tags, pos)
+
+
+def _drop_shadowed_form_rows(rows: list[_Row], rank: _RowRank | None) -> list[_Row]:
+    """Drop the form rows a lemma row shadows (see the section comment); input as-is when none."""
+    lemma = [is_lemma_row(row[1]) for row in rows]
+    if all(lemma) or not any(lemma):
+        return rows
+    if rank is None:
+        return [row for row, is_lemma in zip(rows, lemma, strict=True) if is_lemma]
+    best = min(rank(row[0], row[1]) for row, is_lemma in zip(rows, lemma, strict=True) if is_lemma)
+    return [row for row, is_lemma in zip(rows, lemma, strict=True) if is_lemma or rank(row[0], row[1]) < best]
+
+
+def _form_row_targets(rows: list[_Row], fold_term: Callable[[str], str]) -> list[str]:
+    """The folded terms the form rows among ``rows`` name, first-seen order, deduped."""
+    return list(
+        dict.fromkeys(fold_term(target) for row in rows if not is_lemma_row(row[1]) for target in form_targets(row[0]))
+    )
+
+
+def _fetch_lemma_rows_for_terms(
+    conn: sqlite3.Connection, terms: list[str]
+) -> dict[str, list[tuple[str, str, int | None, str]]]:
+    """(content, tags, sequence, rules) LEMMA rows per exact (already folded) term,
+    each list in ``score DESC, sequence, id`` order. A term with none is absent."""
+    found: dict[str, list[tuple[str, str, int | None, str]]] = {}
+    for start in range(0, len(terms), _EXIST_CHUNK):
+        chunk = terms[start : start + _EXIST_CHUNK]
+        placeholders = ", ".join("?" for _ in chunk)
+        rows = conn.execute(
+            f"SELECT term, content, tags, sequence, rules FROM entries WHERE term IN ({placeholders}) "
+            "ORDER BY score DESC, sequence, id",
+            chunk,
+        ).fetchall()
+        for term, content, tags, sequence, rules in rows:
+            tags_val = tags if tags is not None else ""
+            if is_lemma_row(tags_val):
+                found.setdefault(term, []).append((content, tags_val, sequence, rules if rules is not None else ""))
+    return found
+
+
+def _splice_form_rows(
+    conn: sqlite3.Connection,
+    rows: list[_Row],
+    lemma_rows_by_term: dict[str, list[tuple[str, str, int | None, str]]] | None = None,
+    *,
+    fold_term: Callable[[str], str],
+    rank: _RowRank | None,
+    row_fits: Callable[[str], bool] | None = None,
+) -> list[_Row]:
+    """Replace each form row by its targets' lemma rows (see the section comment).
+
+    Same contract as :func:`_substitute_redirect_rows`: no form row ⇒ input
+    returned as-is with no query; ``lemma_rows_by_term`` lets ``lookup_many``
+    share one batch-wide fetch. A spliced row takes the shape of ``rows`` (its
+    ``rules`` only when they carry theirs). The targets of a run of form rows
+    are ranked together under the token's own ``rank``, target then index order
+    inside a rank, as one lookup of them would be: uk ``мене`` (PRON) names
+    ``Мен`` before ``я``, and the pronoun must still lead. ``row_fits`` (from
+    :func:`_splice_row_fits`) keeps only the target rows whose tags pass it;
+    ``None`` keeps them all."""
+    targets = _form_row_targets(rows, fold_term)
+    if not targets:
+        return rows
+    if lemma_rows_by_term is None:
+        lemma_rows_by_term = _fetch_lemma_rows_for_terms(conn, targets)
+
+    def ranked(run: list[_Row]) -> list[_Row]:
+        return run if rank is None else sorted(run, key=lambda r: rank(r[0], r[1]))
+
+    out: list[_Row] = []
+    run: list[_Row] = []
+    spliced: set[str] = set()
+    for row in rows:
+        if is_lemma_row(row[1]):
+            out += ranked(run) + [row]
+            run = []
+            continue
+        for target in dict.fromkeys(fold_term(name) for name in form_targets(row[0])):
+            if target in spliced:
+                continue
+            spliced.add(target)
+            run.extend(
+                cast(_Row, target_row[: len(row)])
+                for target_row in lemma_rows_by_term.get(target, [])
+                if row_fits is None or row_fits(target_row[1])
+            )
+    return out + ranked(run)
+
+
 def lookup(
     conn: sqlite3.Connection,
     word: str,
@@ -659,6 +830,7 @@ def lookup(
     lemma: str | None = None,
     *,
     keys: DictKeyFolding | None = None,
+    pos: str | None = None,
 ) -> list[tuple[str, str, int | None]]:
     """Return up to ``_LOOKUP_LIMIT`` (content, tags, sequence) triples matching
     word (term or folded reading), reading-boosted then ranked.
@@ -671,6 +843,10 @@ def lookup(
     (see :func:`_homograph_keep_mask`) so a kana front (ゆう, lemma 言う) keeps
     its own lexeme's rows instead of every same-reading homograph. ``None``
     keeps pre-A′ behavior.
+
+    ``pos`` is the token's part of speech (``TokenizedWord.pos``), handed to the
+    profile's optional row rank (see :func:`_sense_rank_fn`) and its optional
+    splice test (see :func:`_splice_row_fits`); inert without either.
 
     Readings are stored hiragana-folded, so the reading-match WHERE clause binds
     the folded query word and the boost binds the folded contextual reading,
@@ -697,23 +873,26 @@ def lookup(
     sense_rank = _sense_rank_fn(keys)
     if sense_rank is not None:
         # Stable re-sort on the ORDER BY's own two leading keys plus the rank,
-        # so score/sequence/id order survives untouched and a row stating no
-        # sense can only move behind rows sharing its term/reading priority.
+        # so score/sequence/id order survives untouched and a row can only
+        # move among the rows sharing its term/reading priority.
         kept.sort(
             key=lambda row: (
                 0 if row[3] == word else 1,
                 _reading_priority(fold_r(row[4]), folded_boost),
-                sense_rank(row[0]),
+                sense_rank(row[0], row[1], pos),
             )
         )
-    # Redirect substitution BEFORE the pool cap (matching lookup_many) so a
-    # resolved canonical entry can't be truncated by its own pointer row.
-    projected = _substitute_redirect_rows(conn, [(row[0], row[1], row[2]) for row in kept])
+    # Form-of and redirect substitution BEFORE the pool cap (matching
+    # lookup_many) so a resolved entry can't be truncated by its own pointer row.
+    rank = _bound_rank(sense_rank, pos)
+    rows3 = _drop_shadowed_form_rows([(row[0], row[1], row[2]) for row in kept], rank)
+    rows3 = _splice_form_rows(conn, rows3, fold_term=fold_t, rank=rank, row_fits=_splice_row_fits(keys, pos))
+    projected = _substitute_redirect_rows(conn, rows3)
     return projected[:_LOOKUP_LIMIT]  # type: ignore[return-value]
 
 
 def lookup_with_rules(
-    conn: sqlite3.Connection, word: str, *, keys: DictKeyFolding | None = None
+    conn: sqlite3.Connection, word: str, *, keys: DictKeyFolding | None = None, pos: str | None = None
 ) -> list[tuple[str, str, int | None, str]]:
     """Return (content, tags, sequence, rules) rows matching ``word`` by term or
     folded reading, ranked like :func:`lookup` (no reading boost).
@@ -723,6 +902,12 @@ def lookup_with_rules(
     rendering. A NULL/absent ``rules`` column normalises to ``""`` (accept
     unconditionally at the caller). Katakana folding matches ``lookup``: a
     katakana candidate still matches a kanji headword's hiragana-folded reading.
+
+    ``pos`` is the part of speech of the token the candidate was derived from,
+    handed only to the profile's optional splice test (see
+    :func:`_splice_row_fits`): sl ``mamo`` (a form of the verb ``imeti``) must
+    not read "to have" for the noun ``mama``. The row rank stays the no-token
+    one. ``None`` (the curator, a backfill) splices every target row.
 
     ``keys`` folds both key spaces; ``None`` is the Japanese pair (see
     :func:`_folders`).
@@ -737,15 +922,16 @@ def lookup_with_rules(
     kept = [row for row, k in zip(rows, keep, strict=True) if k]
     sense_rank = _sense_rank_fn(keys)
     if sense_rank is not None:
-        # Same demotion as ``lookup``, over this SQL's one leading key (it binds
-        # no reading boost): a card reached through the variant fallback opens on
-        # the same row a direct hit would.
-        kept.sort(key=lambda row: (0 if row[4] == word else 1, sense_rank(row[0])))
-    projected = _substitute_redirect_rows(
-        conn,
-        [(row[0], row[1], row[2], row[3] if row[3] is not None else "") for row in kept],
-        with_rules=True,
+        # Same rank as ``lookup``, over this SQL's one leading key (it binds no
+        # reading boost): a card reached through the variant fallback opens on
+        # the same row a direct hit with no token in hand would.
+        kept.sort(key=lambda row: (0 if row[4] == word else 1, sense_rank(row[0], row[1], None)))
+    rank = _bound_rank(sense_rank, None)
+    rows4 = _drop_shadowed_form_rows(
+        [(row[0], row[1], row[2], row[3] if row[3] is not None else "") for row in kept], rank
     )
+    rows4 = _splice_form_rows(conn, rows4, fold_term=fold_t, rank=rank, row_fits=_splice_row_fits(keys, pos))
+    projected = _substitute_redirect_rows(conn, rows4, with_rules=True)
     return projected[:_LOOKUP_LIMIT]  # type: ignore[return-value]
 
 
@@ -781,6 +967,7 @@ def lookup_many(
     lemmas: dict[str, str] | None = None,
     *,
     keys: DictKeyFolding | None = None,
+    pos: dict[str, str] | None = None,
 ) -> dict[str, list[tuple[str, str, int | None]]]:
     """Batch variant of :func:`lookup`.
 
@@ -797,6 +984,8 @@ def lookup_many(
     ``lemmas`` optionally maps a requested word to its token's UniDic lemma,
     threaded into the Rule A′ homograph scope per word (see
     :func:`_homograph_keep_mask`); inert when ``scope_homographs`` is False.
+    ``pos`` likewise maps a requested word to its token's part of speech, handed
+    to the profile's row rank and splice test per word (see :func:`lookup`).
 
     ``scope_homographs`` (default ``True``) applies the render-path Rule A/B
     homograph scope (:func:`_homograph_keep_mask`) per word before the sort/cap,
@@ -834,6 +1023,7 @@ def lookup_many(
     # Per-word folded boost reading (hiragana-folded to match stored readings);
     # None keeps the wildcard (no-boost) ordering for that word.
     boost_by_word: dict[str, str | None] = {w: fold_r(r) for w, r in unique_pairs}
+    pos_by_word = pos or {}
     unique_words = [w for w, _ in unique_pairs]
 
     for start in range(0, len(unique_words), _LOOKUP_MANY_CHUNK):
@@ -868,16 +1058,18 @@ def lookup_many(
 
         # Bucket each fetched row under its own req_idx-tagged word. Each entry
         # carries the sort keys that reproduce _LOOKUP_SQL's
-        # "ORDER BY (term=?) DESC, (reading=?) DESC, score DESC, sequence", plus a
+        # "ORDER BY (term=?) DESC, COALESCE(reading=?, 0) DESC, score DESC, sequence", plus a
         # final ``id`` tiebreak:
         #   * term_priority: 0 when this row's term equals the word (DESC puts
         #     term matches first), else 1.
-        #   * reading_priority: mirrors the reading boost ``(reading=?) DESC``
-        #     against THIS word's contextual reading (0 match / 1 differ / 2 NULL;
-        #     constant when the word has no boost). See _reading_priority.
-        #   * sense_rank: the profile's optional row demotion (see
-        #     _sense_rank_fn); constant 0 without one, so the cascade is
-        #     unchanged for every profile that has none.
+        #   * reading_priority: mirrors the reading boost
+        #     ``COALESCE(reading=?, 0) DESC`` against THIS word's contextual
+        #     reading (0 match / 1 differ or NULL; constant when the word has no
+        #     boost). See _reading_priority.
+        #   * sense_rank: the profile's optional row rank over this row's
+        #     content and tags and THIS word's token POS (see _sense_rank_fn);
+        #     constant 0 without one, so the cascade is unchanged for every
+        #     profile that has none.
         #   * score_key: (is_null, -score) mirrors ``score DESC`` with NULL last.
         #   * _seq_key(sequence): NULL-aware ascending sequence tiebreak.
         #   * row_id: SQLite resolves equal (priority, score, sequence) ties by
@@ -894,7 +1086,7 @@ def lookup_many(
             score_key = _score_key(score)
             term_priority = 0 if term == normalized_by_word[w] else 1
             reading_priority = _reading_priority(folded_reading, boost_by_word[w])
-            rank = sense_rank(content) if sense_rank is not None else 0
+            rank = sense_rank(content, tags_val, pos_by_word.get(w)) if sense_rank is not None else 0
             buckets[w].append(
                 (term_priority, reading_priority, rank, score_key, seq_key, row_id, term, content, tags_val, sequence)
             )
@@ -910,7 +1102,26 @@ def lookup_many(
                 keep = keep_mask(normalized_by_word[w], [(e[6], e[7]) for e in entries], normalized_lemma)
                 entries = [e for e, k in zip(entries, keep, strict=True) if k]
             entries.sort(key=lambda e: (e[0], e[1], e[2], e[3], e[4], e[5]))
-            pending[w] = [(content, tags, seq) for *_keys, content, tags, seq in entries]
+            pending[w] = _drop_shadowed_form_rows(
+                [(content, tags, seq) for *_keys, content, tags, seq in entries],
+                _bound_rank(sense_rank, pos_by_word.get(w)),
+            )
+
+        # Form-of substitution BEFORE the pool cap, sharing ONE lemma-row fetch
+        # across the chunk; per-word splice order matches ``lookup``'s.
+        form_targets_in_chunk = list(
+            dict.fromkeys(target for rows3 in pending.values() for target in _form_row_targets(rows3, fold_t))
+        )
+        lemma_rows_by_term = _fetch_lemma_rows_for_terms(conn, form_targets_in_chunk) if form_targets_in_chunk else {}
+        for w, rows3 in pending.items():
+            pending[w] = _splice_form_rows(
+                conn,
+                rows3,
+                lemma_rows_by_term,
+                fold_term=fold_t,
+                rank=_bound_rank(sense_rank, pos_by_word.get(w)),
+                row_fits=_splice_row_fits(keys, pos_by_word.get(w)),
+            )
 
         # Redirect substitution BEFORE the pool cap, sharing ONE target fetch
         # across the whole chunk (a table scan on pre-idx_sequence indexes must
@@ -986,13 +1197,19 @@ def term_rows(
     the answered terms from its remaining list, so an empty-list entry would mark the term answered
     and every provider after the first would be skipped.
 
+    Keys that declare ``term_rows_match_reading`` (see :func:`_term_rows_match_reading`) also get the
+    rows whose reading equals the folded term, after its term matches and each row once: the
+    ``term = ? OR reading = ?`` of ``_LOOKUP_SQL``.
+
     ``keys`` folds the term key; ``None`` is the Japanese pair (see :func:`_folders`).
     """
-    fold_t, _fold_r = _folders(keys)
+    fold_t, fold_r = _folders(keys)
     unique = list(dict.fromkeys(terms))
     requested_by_term: dict[str, list[str]] = {}
     for requested in unique:
         requested_by_term.setdefault(fold_t(requested), []).append(requested)
+    if _term_rows_match_reading(keys):
+        return _term_or_reading_rows(conn, requested_by_term, fold_r)
     canonical_terms = list(requested_by_term)
     found: dict[str, list[tuple[str, str]]] = {}
     for start in range(0, len(canonical_terms), _EXIST_CHUNK):
@@ -1007,6 +1224,43 @@ def term_rows(
             for requested in requested_by_term.get(term, ()):
                 found.setdefault(requested, []).append((content, tags or ""))
     return found
+
+
+def _term_or_reading_rows(
+    conn: sqlite3.Connection,
+    requested_by_term: dict[str, list[str]],
+    fold_reading: Callable[[str | None], str | None],
+) -> dict[str, list[tuple[str, str]]]:
+    """:func:`term_rows` for keys that declare the reading column: term matches first, then reading matches."""
+    by_term: dict[str, list[tuple[str, str]]] = {}
+    by_reading: dict[str, list[tuple[str, str]]] = {}
+    canonical_terms = list(requested_by_term)
+    # Two binds per term (term IN + reading IN), so _BIND_CHUNK terms stay under sqlite's 999 cap.
+    for start in range(0, len(canonical_terms), _BIND_CHUNK):
+        chunk = canonical_terms[start : start + _BIND_CHUNK]
+        readings = [fold_reading(term) for term in chunk]
+        requested_by_reading: dict[str, list[str]] = {}
+        for term, reading in zip(chunk, readings, strict=True):
+            if reading is not None:
+                requested_by_reading.setdefault(reading, []).extend(requested_by_term[term])
+        placeholders = ", ".join("?" for _ in chunk)
+        rows = conn.execute(
+            f"SELECT term, reading, content, tags FROM entries "
+            f"WHERE term IN ({placeholders}) OR reading IN ({placeholders}) ORDER BY score DESC, sequence, id",
+            (*chunk, *readings),
+        ).fetchall()
+        in_chunk = set(chunk)
+        for term, reading, content, tags in rows:
+            row = (content, tags or "")
+            term_hits = requested_by_term[term] if term in in_chunk else []
+            for requested in term_hits:
+                by_term.setdefault(requested, []).append(row)
+            for requested in requested_by_reading.get(reading, []) if reading is not None else []:
+                if requested not in term_hits:
+                    by_reading.setdefault(requested, []).append(row)
+    return {
+        requested: by_term.get(requested, []) + by_reading.get(requested, []) for requested in {**by_term, **by_reading}
+    }
 
 
 def terms_readings(conn: sqlite3.Connection, terms: list[str]) -> dict[str, list[str]]:
@@ -1176,16 +1430,14 @@ def attest_detail(conn: sqlite3.Connection, words: list[str], include_readings: 
     return result
 
 
-# Sort key mirroring SQLite "ORDER BY (reading = ?) DESC" for the reading boost.
-# With no boost bound (folded_boost is None), the SQL predicate is NULL for every
-# row so all rows tie — return a constant. With a boost: a row whose folded
-# reading equals it ranks first (SQL true 1), a differing non-NULL reading next
-# (SQL false 0), and a NULL reading last (SQL NULL sorts last under DESC).
+# Sort key mirroring SQLite "ORDER BY COALESCE(reading = ?, 0) DESC" for the
+# reading boost. With no boost bound (folded_boost is None), the SQL predicate is
+# NULL for every row, COALESCE makes it 0, so all rows tie — return a constant.
+# With a boost: a row whose folded reading equals it ranks first (SQL true 1);
+# a differing reading and a NULL one tie next (SQL false 0, NULL coalesced to 0).
 def _reading_priority(folded_row_reading: str | None, folded_boost: str | None) -> int:
     if folded_boost is None:
         return 0
-    if folded_row_reading is None:
-        return 2
     return 0 if folded_row_reading == folded_boost else 1
 
 

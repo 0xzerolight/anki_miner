@@ -20,17 +20,24 @@ readings are one-vowel-with-acute and the fold changes the ambiguous count by ze
 
 ``UK_SENTENCE_RULES``: Ukrainian quotes with guillemets and, inside those, the low quote, which the
 left double quote closes -- so that quote leaves the shared openers (where it is the English
-opener) for the closers.
+opener) for the closers. It also continues a sentence after the spaced abbreviations the derived
+tokenizer set leaves out (``1814 р.``, ``5 год.``, ``т. д.``).
+
+``lemma_row_stress``: S24's reading probe, which takes a term's stress from its own lemma rows.
 """
 
 from __future__ import annotations
 
 import dataclasses
+import re
+import unicodedata
 from collections.abc import Mapping
 from types import MappingProxyType
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from anki_miner.languages._spaced.keys import CasefoldDictKeys, spaced_dedup_fold
+from anki_miner.languages._spaced.form_of import is_lemma_row, rendered_text
+from anki_miner.languages._spaced.grammar_hook import drop_romanisation
+from anki_miner.languages._spaced.keys import NAME_ROW_TAGS, CasefoldDictKeys, ReadingProbe, spaced_dedup_fold
 from anki_miner.languages._spaced.pos import UPOS_ALLOWED
 from anki_miner.languages._spaced.script import (
     BRACKETS_PATTERN,
@@ -41,6 +48,9 @@ from anki_miner.languages._spaced.script import (
 )
 from anki_miner.languages._spaced.sentence import sentence_rules
 from anki_miner.languages.uk.abbreviations import UK_ABBREVIATIONS
+
+if TYPE_CHECKING:  # annotation-only: services must not load at profile build
+    from anki_miner.services.morphology import FormLookup
 
 UK_MODEL_PACKAGE = "uk_core_news_sm"
 #: What spaCy's Ukrainian lemmatizer imports beside the model; both travel in the uk pack. The
@@ -96,21 +106,87 @@ class StressedHeadwordReading:
     """``ReadingSupport`` (spec B.2, S24): uk owns the reading fields and has no reading of its own.
 
     ``word_reading`` answers ``""``; with ``attested_reading_fallback`` (set by ``uk/parser.py``)
-    the parser then takes the one stressed headword the dictionary attests. wty-uk-en leaves its
-    LEMMA rows blank but fills every non-lemma row, so the field is filled for roughly six of ten
-    defined fronts and left blank for a homograph like ``замок`` (plan P7). Without a support the
-    JA-shaped derivation would run and print the stressed spelling as furigana.
+    the parser then takes the one stressed headword the dictionary attests, through
+    ``lemma_row_stress``: a lemma row's head line where the term has one, else its form rows'
+    readings. A homograph like ``замок`` (two lemma rows, за́мок and замо́к) stays blank (plan P7).
+    Without a support the JA-shaped derivation would run and print the stressed spelling as furigana.
     """
 
     def word_reading(self, token: Any) -> str:
         return ""
 
 
+#: wty's Grammar head line inside a row's rendered content (the shape he/fa read theirs from).
+_GRAMMAR_HEAD_RE = re.compile(r'data-sc-content="Grammar-content"[^>]*>(.*?)</div>', re.S)
+
+
+def lemma_row_headword(content: str, term: str, *, any_case: bool = False) -> str:
+    """The spelling a lemma row's Grammar head line prints for *term*, stress marks kept, or ``""``.
+
+    ``за́раз • (záraz)``: the romanisation dropped, the words before any bracket (``ва́рто • (várto)(+
+    dative``), as many as *term* has, when they spell *term* once stress and apostrophes are folded.
+    Case is compared as written, so the name ``Наді́я`` never stresses the noun ``надія``, unless
+    *any_case*.
+    """
+    match = _GRAMMAR_HEAD_RE.search(content)
+    if match is None:
+        return ""
+    words = drop_romanisation(rendered_text(match.group(1))).split("(", 1)[0].split()
+    head = unicodedata.normalize("NFC", " ".join(words[: len(term.split())]))
+    folded, wanted = uk_key_fold(head), uk_key_fold(term)
+    if any_case:
+        folded, wanted = folded.casefold(), wanted.casefold()
+    return head if folded == wanted else ""
+
+
+def lemma_row_stress(readings: ReadingProbe, rows: FormLookup) -> ReadingProbe:
+    """S24's probe: a term with a lemma row is stressed only as its lemma rows' head lines print it.
+
+    wty-uk-en leaves every lemma row's reading blank and fills its non-lemma rows, but a form row
+    filed under a term can belong to another lexeme: зараз's one filled row is зара́з, the genitive
+    plural of зараза, while the adverb is за́раз, as its own head line prints. So *rows*
+    (``DefinitionService.offline_term_rows``) answer first: a term with a lemma row gets the
+    headwords ``lemma_row_headword`` reads off those rows, and none when no head line spells it
+    (blank beats another word's stress). A head printed without a mark states no stress, so it
+    counts only when no head is marked: дуже's unmarked second row must not blank ду́же, while a
+    one-syllable дім keeps its only, unmarked, head. A term whose every lemma row is a name
+    (нью-йорк, the tagger's lower-cased NOUN for Нью-Йорку) is that name, so its heads match in
+    any case. Only a term with no lemma row asks *readings*.
+    """
+
+    def probe(terms: list[str]) -> dict[str, list[str]]:
+        found = rows(terms)
+        answered: dict[str, list[str]] = {}
+        rest: list[str] = []
+        for term in dict.fromkeys(terms):
+            lemma_rows = [(content, tags) for content, tags in found.get(term, ()) if is_lemma_row(tags)]
+            if not lemma_rows:
+                rest.append(term)
+                continue
+            names_only = all(tags.split(" ", 1)[0] in NAME_ROW_TAGS for _content, tags in lemma_rows)
+            spelled = (lemma_row_headword(content, term, any_case=names_only) for content, _tags in lemma_rows)
+            heads = [head for head in dict.fromkeys(spelled) if head]
+            marked = [head for head in heads if strip_cyrillic_stress(head) != head]
+            if heads:
+                answered[term] = marked or heads
+        if rest:
+            answered.update(readings(rest))
+        return answered
+
+    return probe
+
+
+#: Stems that end in a dot inside a sentence but stay out of the derived tokenizer set: р. (рік,
+#: 1814 р.), год. (година) and the т. of т. д. / т. п. A sentence that really ends on one runs into
+#: the next.
+UK_SENTENCE_ONLY_ABBREVIATIONS: frozenset[str] = frozenset({"р", "год", "т"})
+
 _BASE_RULES = sentence_rules(UK_ABBREVIATIONS)
 UK_SENTENCE_RULES = dataclasses.replace(
     _BASE_RULES,
     openers=(_BASE_RULES.openers - {"“"}) | {"„"},
     closers=_BASE_RULES.closers | {"“"},
+    abbreviations=_BASE_RULES.abbreviations | UK_SENTENCE_ONLY_ABBREVIATIONS,
 )
 
 #: ``ІВАН:``, ``ОЛЕНА ПЕТРІВНА:`` — the shared Latin speaker rule with the Ukrainian capitals.

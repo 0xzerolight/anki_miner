@@ -15,7 +15,7 @@ import re
 from collections.abc import Iterable
 from typing import Any
 
-from anki_miner.languages._spaced.morphology import case_lemma
+from anki_miner.languages._spaced.morphology import StashedParticle, case_lemma, stash_particle
 from anki_miner.languages.token import LanguageToken
 
 #: Heads a separable particle can belong to (§4.3 item 2(a)).
@@ -42,6 +42,18 @@ def is_dotted_abbreviation(surface: str) -> bool:
     )
 
 
+def is_hyphenated_number(tok: Any) -> bool:
+    """Every ``-`` part is ``like_num`` in the model's own vocabulary (en ``thirty-two``, fr ``trente-deux``).
+
+    ``join_hyphenated`` keeps such a numeral one token, which the language's
+    ``like_num`` never matches whole, so the model tags it ADJ/NOUN/PROPN. The
+    language's own lex_attrs decide the parts; ``one-way`` and ``second-hand``
+    each have a part that is not a number.
+    """
+    parts = tok.text.split("-")
+    return len(parts) > 1 and all(part and tok.vocab[part].like_num for part in parts)
+
+
 def to_duck_tokens(
     doc: Iterable[Any],
     text: str,
@@ -54,19 +66,27 @@ def to_duck_tokens(
     ``pos1`` is UPOS, or ``"X"`` for a URL/e-mail token (spaCy's lexical
     ``like_url``/``like_email``) or a dotted abbreviation
     (``is_dotted_abbreviation``); each passes a Latin script gate and none is
-    vocabulary. ``pos2`` is the fine tag when it says more than UPOS.
-    ``particle_deps`` is the language's separable-verb dependency labels: a
-    token carrying one, whose head is a different VERB/AUX token, stashes its
-    casefolded surface on the head as ``feature.particle`` (first one wins) and
-    is demoted to ``pos1="PART"``, outside every allowed class.
-    ``SeparableVerbPass`` consumes the stash on the parser side.
+    vocabulary. A hyphen-joined numeral (``is_hyphenated_number``) is ``"NUM"``,
+    whatever the model tagged it. ``pos2`` is the fine tag when it says more than UPOS.
+    ``particle_deps`` is the language's separable-verb dependency labels: every
+    token carrying one, whose head is a different VERB/AUX token, is stashed on
+    the head (``morphology.stash_particle``: ``feature.particles`` in line
+    order, ``feature.particle`` the first one's casefolded text). Nothing is
+    demoted here: ``SeparableVerbPass`` consumes the stash on the parser side
+    and demotes to ``PART`` only the particle whose join it takes, so an
+    unjoined dependant keeps its class (and the tagger's post-passes see it).
     """
     kept = [tok for tok in doc if not tok.is_space]
     by_index: dict[int, LanguageToken] = {}
     out: list[LanguageToken] = []
     for tok in kept:
         surface = text[tok.idx : tok.idx + len(tok.text)]
-        pos1 = "X" if (tok.like_url or tok.like_email or is_dotted_abbreviation(surface)) else tok.pos_
+        if tok.like_url or tok.like_email or is_dotted_abbreviation(surface):
+            pos1 = "X"
+        elif is_hyphenated_number(tok):
+            pos1 = "NUM"
+        else:
+            pos1 = tok.pos_
         token = LanguageToken(
             surface=surface,
             pos1=pos1,
@@ -83,8 +103,6 @@ def to_duck_tokens(
             if tok.dep_ not in particle_deps or head.i == tok.i or head.pos_ not in PARTICLE_HEAD_POS:
                 continue
             head_token = by_index.get(head.i)
-            if head_token is None or getattr(head_token.feature, "particle", None):
-                continue
-            head_token.feature.particle = tok.text.casefold()
-            by_index[tok.i].feature.pos1 = "PART"
+            if head_token is not None:
+                stash_particle(head_token, StashedParticle(tok.text.casefold(), by_index[tok.i], tok.dep_))
     return out

@@ -9,6 +9,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.config.config import _LANGUAGE_CODES
 from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages._spaced.fields import ASPECT_PAIR_FIELD, NOUN_GENDER_FIELD, POS_FIELD
+from anki_miner.languages._spaced.form_of import FormOfLemmaPass
 from anki_miner.languages._spaced.grammar_hook import GrammarTagHook
 from anki_miner.languages._spaced.keys import CasefoldDictKeys
 from anki_miner.languages._spaced.morphology import APOSTROPHE_FOLD, LatinLookupStrategy, SpacedMinedForm
@@ -104,12 +105,12 @@ def test_a_deck_front_with_an_article_meets_the_mined_lemma():
     assert fold(fold("Η Οδός")) == fold("Η Οδός") == fold("οδός")
 
 
-def test_the_parser_is_the_spaced_factory_with_no_post_pass():
+def test_the_parser_is_the_spaced_factory_with_the_form_row_repair():
     profile = get_profile("el")
     parser = profile.create_parser(switch_language(AnkiMinerConfig(), "el"))
     assert parser.normalize is profile.normalize
     assert parser._compound_matcher is None
-    assert parser._token_post_pass is None
+    assert isinstance(parser._token_post_pass, FormOfLemmaPass)
 
 
 def test_the_tagger_folds_apostrophes_and_prunes_dotted_words():

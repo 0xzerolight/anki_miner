@@ -4,7 +4,10 @@ from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
+
 from anki_miner.config import AnkiMinerConfig, ChainEntry
+from anki_miner.languages.registry import get_profile
 from anki_miner.services.definition_service import (
     DefinitionService,
     collect_dictionary_css,
@@ -625,6 +628,43 @@ class TestGetDefinitionsBatchFastPath:
         _args, kwargs = provider.lookup_many.call_args
         assert "lemmas" not in kwargs
 
+    def test_pos_context_forwarded_to_offline_batch_providers(self, test_config):
+        """The token POS reaches lookup_many so the profile's row rank can open a
+        verb's card on its verb row (wty "pick" VERB, not "a pickaxe")."""
+        seen: list[tuple[dict[str, str] | None, dict[str, str] | None]] = []
+        provider = make_batch_provider("pos-aware")
+
+        def lookup_many(pairs, scope_homographs=True, lemmas=None, pos=None):
+            seen.append((lemmas, pos))
+            return {word: "hit" for word, _ in pairs}
+
+        provider.lookup_many.side_effect = lookup_many
+        service = DefinitionService(test_config, providers=[provider])
+
+        results = service.get_definitions_batch(
+            [("pick", "pick"), ("go", "went")],
+            lemma_context={"go": "go"},
+            pos_context={"pick": "VERB", "go": "VERB", "unrequested": "NOUN"},
+        )
+        assert results == ["hit", "hit"]
+        assert seen == [({"go": "go"}, {"pick": "VERB", "go": "VERB"})]
+
+    def test_no_pos_context_keeps_legacy_call_shape(self, test_config):
+        seen: list[dict[str, str] | None] = []
+        provider = make_batch_provider("lemma-only")
+
+        def lookup_many(pairs, scope_homographs=True, lemmas=None):
+            seen.append(lemmas)
+            return {word: "hit" for word, _ in pairs}
+
+        provider.lookup_many.side_effect = lookup_many
+        service = DefinitionService(test_config, providers=[provider])
+
+        assert service.get_definitions_batch([("ゆう", "ゆう")], lemma_context={"ゆう": "言う"}, pos_context={}) == [
+            "hit"
+        ]
+        assert seen == [{"ゆう": "言う"}]
+
     def test_cancellation_stops_before_next_provider(self, test_config):
         cancelled = False
         first = make_batch_provider("first")
@@ -900,6 +940,21 @@ class TestGetGlossariesBatchFastPath:
         assert results == ["<div>hit</div>"]
         assert seen == [{"ゆう": "言う"}]
 
+    def test_pos_context_forwarded_to_offline_glossary_providers(self, test_config):
+        seen: list[dict[str, str] | None] = []
+        provider = make_batch_offline_provider("pos-aware")
+
+        def lookup_many(pairs, scope_homographs=True, pos=None):
+            seen.append(pos)
+            return {word: "<div>hit</div>" for word, _ in pairs}
+
+        provider.lookup_many.side_effect = lookup_many
+        service = DefinitionService(test_config, providers=[provider])
+
+        results = service.get_glossaries_batch([("pick", "pick")], pos_context={"pick": "VERB"})
+        assert results == ["<div>hit</div>"]
+        assert seen == [{"pick": "VERB"}]
+
     def test_cancellation_stops_before_next_online_request(self, test_config):
         cancelled = False
         online = make_provider("Jisho")
@@ -1151,6 +1206,120 @@ class TestLookupAllOffline:
         assert result == [("batch-capable", "<div>x</div>")]
         provider.lookup_many.assert_not_called()
         provider.lookup.assert_called_once_with("x")
+
+    def test_pos_reaches_lookup_many_for_batch_capable_provider(self, test_config):
+        """The token's part of speech reaches lookup_many as ``pos=``, the way
+        get_definitions_batch(pos_context=...) hands it to the card's lookup;
+        each kwarg is passed only when it is set."""
+        seen: list[dict[str, dict[str, str] | None]] = []
+        provider = make_batch_provider("pos-aware")
+        provider.lookup_fallback = None  # unspecced Mock: no deinflection fallback surface
+
+        def lookup_many(pairs, scope_homographs=True, lemmas=None, pos=None):
+            seen.append({"lemmas": lemmas, "pos": pos})
+            return {w: f"<div>{w}</div>" for w, _ in pairs}
+
+        provider.lookup_many.side_effect = lookup_many
+        service = DefinitionService(test_config, providers=[provider])
+
+        assert service.lookup_all_offline("watch", pos="VERB") == [("pos-aware", "<div>watch</div>")]
+        assert service.lookup_all_offline("ゆう", lemma="言う", pos="動詞") == [("pos-aware", "<div>ゆう</div>")]
+        assert seen == [
+            {"lemmas": None, "pos": {"watch": "VERB"}},
+            {"lemmas": {"ゆう": "言う"}, "pos": {"ゆう": "動詞"}},
+        ]
+        provider.lookup.assert_not_called()
+
+    def test_pos_reaches_lookup_fallback_only_when_set(self, test_config):
+        """The pane's miss ladder hands the token's part of speech to
+        ``lookup_fallback`` as the card's does, so the profile's form-row splice
+        test reads the same target rows; unset, the call keeps its arity."""
+        provider = make_batch_provider("fb")
+        provider.lookup_fallback.side_effect = lambda w, c, **kw: f"<div>{w}:{kw.get('pos')}</div>"
+        service = DefinitionService(test_config, providers=[provider])
+        service.fallback_candidates = lambda word, orth_base, ctype: [("cand", 0)]  # type: ignore[method-assign]
+
+        assert ("fb", "<div>cand:VERB</div>") in service.lookup_all_offline("word", pos="VERB")
+        provider.lookup_fallback.assert_called_with("cand", 0, pos="VERB")
+        service.lookup_all_offline("word")
+        provider.lookup_fallback.assert_called_with("cand", 0)
+
+
+def _profile_provider(tmp_path: Path, code: str, rows: list[DictRow]) -> IndexedDictProvider:
+    """A real index read with ``code``'s key folding, as the provider chain builds it."""
+    db = tmp_path / f"{code}.sqlite"
+    create_index(db)
+    bulk_insert(db, rows)
+    write_meta(db, {"schema_version": str(SCHEMA_VERSION), "source_name": code})
+    provider = IndexedDictProvider(f"{code}-dict", db, keys=get_profile(code).dict_keys)
+    provider.load()
+    return provider
+
+
+class TestLookupAllOfflinePosRank:
+    """The curator's pane beside the card ranks a word's rows by the token's part
+    of speech exactly as the card does (WBR-gui-05)."""
+
+    def test_en_verb_token_opens_the_pane_on_the_verb_row(self, test_config, tmp_path: Path):
+        # wty's shape: one row per part of speech, score 0, sequence 0, noun first.
+        provider = _profile_provider(
+            tmp_path,
+            "en",
+            [
+                DictRow(term="watch", reading=None, content="<div>A portable timepiece</div>", tags="n", sequence=0),
+                DictRow(term="watch", reading=None, content="<div>To look at</div>", tags="v", sequence=0),
+            ],
+        )
+        service = DefinitionService(test_config, providers=[provider])
+
+        (card,) = service.get_definitions_batch([("watch", None)], pos_context={"watch": "VERB"})
+        pane = service.lookup_all_offline("watch", pos="VERB")
+
+        assert card is not None
+        assert card.index("To look at") < card.index("A portable timepiece")
+        assert pane == [(provider.name, card)]
+
+    @pytest.mark.parametrize(
+        "code, word, pos, rows",
+        [
+            (
+                "ja",
+                "かける",
+                "動詞",
+                [
+                    DictRow(term="欠ける", reading="かける", content="<div>to be chipped</div>", sequence=2),
+                    DictRow(term="掛ける", reading="かける", content="<div>to hang</div>", sequence=1),
+                ],
+            ),
+            (
+                "zh",
+                "还",
+                "v",
+                [
+                    DictRow(
+                        term="还",
+                        reading="huán",
+                        content='<ul><li class="gloss-sc-li">surname Huan</li></ul>',
+                        sequence=1,
+                    ),
+                    DictRow(
+                        term="还",
+                        reading="huán",
+                        content='<ul><li class="gloss-sc-li">to give back</li></ul>',
+                        sequence=2,
+                    ),
+                ],
+            ),
+        ],
+    )
+    def test_ja_and_zh_panes_do_not_change_with_the_pos(self, test_config, tmp_path: Path, code, word, pos, rows):
+        """ja keys have no row rank and zh's ignores the POS, so the pane is the one it was."""
+        service = DefinitionService(test_config, providers=[_profile_provider(tmp_path, code, rows)])
+
+        plain = service.lookup_all_offline(word)
+
+        assert plain
+        assert service.lookup_all_offline(word, pos=pos) == plain
 
 
 class TestProviderRaisesMidChain:

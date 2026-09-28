@@ -741,6 +741,29 @@ def test_install_and_index_phases_replace_the_transfer_line(parent, monkeypatch,
     _drain(qtbot, worker)
 
 
+def test_install_step_count_drives_the_bar_under_the_same_install_line(parent, monkeypatch, tmp_path, qtbot):
+    # WBR-gui-01: while a word list is lemmatised the bar follows the
+    # importer's step count; the copy stays the existing install line, and a
+    # phase with no count stays indeterminate.
+    worker = _FakeWorker(_successful_summary())
+    session, _dir = _start(monkeypatch, tmp_path, parent, worker)
+    bar = session.window.progress_bar
+    size = 33_792
+
+    session._on_item_progress(_progress(_INSTALL, downloaded=size, total_bytes=size))
+    assert (bar.minimum(), bar.maximum()) == (0, 0)
+    install_line = session.window.detail_label.text()
+
+    readings = []
+    for step in (500, 1500, 3000):
+        session._on_item_progress(_progress(_INSTALL, downloaded=size, total_bytes=size, step=step, steps=3000))
+        readings.append((bar.maximum(), bar.value()))
+        assert session.window.detail_label.text() == install_line
+
+    assert readings == [(1000, 166), (1000, 500), (1000, 1000)]
+    _drain(qtbot, worker)
+
+
 def test_sources_area_carries_the_host_and_licence_not_the_label(parent, monkeypatch, tmp_path, qtbot):
     worker = _FakeWorker(_successful_summary())
     session, _dir = _start(monkeypatch, tmp_path, parent, worker)

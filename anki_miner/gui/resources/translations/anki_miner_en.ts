@@ -8363,7 +8363,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Add subtitle files (.srt, .ass, .ssa, .vtt) to the list.</source>
+        <source>Add subtitle files (.srt, .ass, .ssa, .vtt, .smi) to the list.</source>
         <translation type="unfinished" />
     </message>
     <message>

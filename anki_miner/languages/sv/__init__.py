@@ -3,6 +3,9 @@
 ``code`` is ``sv`` everywhere -- wty, spaCy, the dictionary ``sourceLanguage``, the mode probe, cache stems, DB
 paths, gTTS, Whisper, YouTube captions and hermitdave's ``content/2018/sv/``. No ``noun_gender`` capability: with
 two genders and one article each, a Gender field would print the ``en``/``ett`` the article field already carries.
+No ``noun_plural`` either: the hook reads a plural only off the ``Grammar-content`` head line, and 45 of wty-sv-en
+2026.09.20's 38,241 noun lemma rows name one (``hund``, ``bok``, ``bil`` carry no head line; form rows such as
+``hundar`` name only the lemma), so a mapped Plural field was empty on every card. Add it back with a source.
 """
 
 from __future__ import annotations
@@ -12,7 +15,6 @@ from anki_miner.languages._spaced.audio import spaced_audio_candidates, spaced_s
 from anki_miner.languages._spaced.availability import spaced_missing_reason
 from anki_miner.languages._spaced.fields import (
     NOUN_ARTICLE_FIELD,
-    NOUN_PLURAL_FIELD,
     POS_FIELD,
     spaced_card_fields,
     spaced_scoped_defaults,
@@ -42,7 +44,7 @@ from anki_miner.languages.sv.parser import create_parser
 __all__ = ["build_profile"]
 
 SV_SMOKE_SENTENCE = "Studenten läste en intressant bok."
-SV_EXTRA_CARD_FIELDS = (POS_FIELD, NOUN_ARTICLE_FIELD, NOUN_PLURAL_FIELD)
+SV_EXTRA_CARD_FIELDS = (POS_FIELD, NOUN_ARTICLE_FIELD)
 SV_CARD_FIELDS = spaced_card_fields(SV_EXTRA_CARD_FIELDS)
 SV_KEYS = CasefoldDictKeys()
 
@@ -98,9 +100,9 @@ def build_profile() -> LanguageProfile:
             allowed_pos=SV_ALLOWED_POS, excluded_subtypes=SV_EXCLUDED_SUBTYPES, labels=UPOS_LABELS
         ),
         catalog=SV_CATALOG,
-        capabilities=frozenset({"pos_tag", "noun_article", "noun_plural", "lemmatised_frequency"}),
+        capabilities=frozenset({"pos_tag", "noun_article", "lemmatised_frequency"}),
         card_field_defaults=SV_CARD_FIELDS,
-        render_hooks=(PosHook(), GrammarTagHook(("noun_article", "noun_plural"), article_map=SV_ARTICLE_MAP)),
+        render_hooks=(PosHook(), GrammarTagHook(("noun_article",), article_map=SV_ARTICLE_MAP)),
         content_style=SPACED_CONTENT_STYLE,
         unavailable_reason=spaced_missing_reason("sv", "Swedish", SV_MODEL_PACKAGE),
         extra_card_fields=SV_EXTRA_CARD_FIELDS,

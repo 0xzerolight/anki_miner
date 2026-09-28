@@ -11,20 +11,27 @@ Manage Known Words importer share so the Big5-versus-GB18030 rule exists once.
 
 from __future__ import annotations
 
+import codecs
 import logging
 import re
 import unicodedata
 import zipfile
 from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from anki_miner.exceptions import SetupError
 from anki_miner.utils.cjk_encoding import prefers_big5
 from anki_miner.utils.subtitle_encoding import (
     big5_family_codec,
     is_single_byte_codec,
+    is_utf8_codec,
+    mostly_utf8,
     plausible_single_byte_text,
 )
+
+if TYPE_CHECKING:
+    from anki_miner.languages.profile import SentenceRules
 
 logger = logging.getLogger(__name__)
 
@@ -133,6 +140,46 @@ def natural_sort_key(s: str) -> list[int | str]:
     return [int(chunk) if chunk.isdigit() else chunk for chunk in _NUM_RE.split(s)]
 
 
+# --- line wraps (shared by the aozora, text and epub loaders) --------------
+
+
+def _line_join(rules: SentenceRules | None) -> str:
+    """What a source line wrap becomes inside a paragraph for this language."""
+    return " " if rules is not None and rules.space_aware else ""
+
+
+def join_hard_wraps(lines: list[str], rules: SentenceRules | None) -> list[str]:
+    """Join each run of non-blank plain-text lines into one paragraph line.
+
+    Plain text in a space-delimited language (a Project Gutenberg ``.txt``, a
+    paste of one) is hard-wrapped at about 70 columns with a blank line between
+    paragraphs, so a physical line is a sentence fragment: split alone, it
+    becomes a half-sentence card. Each run is stripped line by line and joined
+    with :func:`_line_join`; blank lines stay, so the caller still counts them.
+
+    Text in a language that is not ``space_aware`` (CJK, Thai) comes back
+    unchanged: CJK plain text writes a paragraph per line, often with no blank
+    line anywhere, so there a physical line already is the paragraph.
+    """
+    joiner = _line_join(rules)
+    if not joiner:
+        return lines
+    out: list[str] = []
+    run: list[str] = []
+    for line in lines:
+        stripped = line.strip()
+        if stripped:
+            run.append(stripped)
+            continue
+        if run:
+            out.append(joiner.join(run))
+            run = []
+        out.append(line)
+    if run:
+        out.append(joiner.join(run))
+    return out
+
+
 # --- decoding (shared by the aozora and subtitle loaders) ------------------
 
 
@@ -178,7 +225,9 @@ def decode_with_ladder(
     here knows which of several successful decodes of another language's bytes
     is the right one. Exhausting the ladder raises rather than returning a
     replacement-character string, because a novel that decoded to U+FFFD noise
-    would mine into cards.
+    would mine into cards. The one lossy success is a UTF-8 leg on a file that
+    is UTF-8 but for a few stray bytes (``mostly_utf8``): only those bytes
+    become U+FFFD, where the next single-byte leg would garble every line.
 
     A single-byte leg (cp1252, cp1258, …) must also pass
     ``plausible_single_byte_text`` with *script_check* — such codecs almost never
@@ -191,7 +240,17 @@ def decode_with_ladder(
     The winning encoding comes back with the text: mojibake is reported as "the
     words are wrong", never as an encoding name, so a caller's receipt cannot
     name the leg that produced it unless this says which one won.
+
+    A UTF-32/UTF-16 BOM replaces the ladder, the precedence the subtitle loader
+    (``utils/subtitle_encoding.py``) applies: every single-byte leg decodes
+    UTF-16 (Excel's "Unicode Text") without raising, into NUL-riddled words
+    that pass its plausibility check. UTF-32 goes first because its
+    little-endian BOM starts with UTF-16's.
     """
+    if raw.startswith((codecs.BOM_UTF32_LE, codecs.BOM_UTF32_BE)):
+        encodings = ("utf_32",)
+    elif raw.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
+        encodings = ("utf_16",)
     for encoding in encodings:
         # gb18030 accepts every valid Big5 sequence and decodes it into PUA
         # garbage without raising, so first-success could never reach a big5
@@ -207,7 +266,11 @@ def decode_with_ladder(
                 continue
         try:
             text = raw.decode(encoding)
-        except (UnicodeDecodeError, LookupError):
+        except UnicodeDecodeError:
+            if not (is_utf8_codec(encoding) and mostly_utf8(raw)):
+                continue
+            text = raw.decode(encoding, errors="replace")
+        except LookupError:
             continue
         if is_single_byte_codec(encoding):
             if not plausible_single_byte_text(text, script_check):

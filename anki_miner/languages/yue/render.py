@@ -13,6 +13,10 @@ CC-CEDICT-Canto slot is the hit -- and the bracketed reading there is Mandarin
 pinyin, which that hook already strips. Importing it pulls ``zh.reading`` and
 ``zh.variants``, whose engine imports are function-local, so no jieba, pypinyin
 or opencc is loaded (pinned by test_yue_imports_no_zh_engine).
+
+The classifier itself is Mandarin data too, so :class:`YueMeasureWordHook`
+wraps that hook and swaps the two Mandarin-only classifiers for the ones Hong
+Kong Cantonese uses with the same nouns.
 """
 
 from __future__ import annotations
@@ -35,6 +39,32 @@ if TYPE_CHECKING:  # annotation-only: keeps profile.py's resource_catalog import
 #: note on ``zh.render._TONE_COLORS``); purple joins them there.
 _TONE_COLORS = {1: "#e75353", 2: "#be7500", 3: "#199a39", 4: "#4286e5", 5: "#a66dd2", 6: "#868686"}
 _NEUTRAL = _TONE_COLORS[6]
+
+#: CC-CEDICT's ``CL:`` classifier -> the one Hong Kong Cantonese uses instead.
+#: CL:家 heads 56 CC-CEDICT-Canto rows (公司 銀行 超市 餐館 郵局), which Hong
+#: Kong counts with 間; CL:臺/台 heads 63 (電腦 空調 計算機 錄音機), counted
+#: with 部 (measured 2026-09-28). A few of those 63 fit 部 no better (話劇, 秤).
+#: Every other classifier passes through unchanged.
+_CANTONESE_CLASSIFIERS = {"家": "間", "臺": "部", "台": "部"}
+
+
+class YueMeasureWordHook:
+    """``ZhMeasureWordHook``, traditional-first, with Mandarin-only classifiers swapped.
+
+    A thin wrapper rather than a subclass (R32): the zh hook picks the
+    classifier and this maps the two that Cantonese does not use with those
+    nouns. zh cards keep the CC-CEDICT classifier unchanged.
+    """
+
+    def __init__(self) -> None:
+        self._zh = ZhMeasureWordHook(prefer="traditional")
+
+    def field_names(self) -> tuple[str, ...]:
+        return self._zh.field_names()
+
+    def render(self, word: Any, *, config: AnkiMinerConfig) -> dict[str, str]:
+        rendered = self._zh.render(word, config=config)
+        return {key: _CANTONESE_CLASSIFIERS.get(value, value) for key, value in rendered.items()}
 
 
 class YueJyutpingHook:
@@ -72,4 +102,4 @@ class YueJyutpingHook:
         return {"expression_jyutping": spans}
 
 
-YUE_RENDER_HOOKS: tuple[CardRenderHook, ...] = (ZhMeasureWordHook(prefer="traditional"), YueJyutpingHook())
+YUE_RENDER_HOOKS: tuple[CardRenderHook, ...] = (YueMeasureWordHook(), YueJyutpingHook())

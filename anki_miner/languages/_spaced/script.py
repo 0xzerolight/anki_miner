@@ -27,6 +27,18 @@ def nfc_normalize(text: str) -> str:
     return unicodedata.normalize("NFC", text)
 
 
+_NBSP_SHY_MAP = str.maketrans({"\N{NO-BREAK SPACE}": " ", "\N{SOFT HYPHEN}": None})
+
+
+def nbsp_shy_normalize(text: str) -> str:
+    """The sv-shape ``LanguageProfile.normalize`` (es ca pt): NBSP -> space, soft hyphens dropped, then NFC.
+
+    An e-book's hyphenation point (U+00AD) stays inside its token (``compu\\u00adtador``), where no
+    dictionary row can meet it. Dropped before NFC, so a mark it separated from its letter composes.
+    """
+    return unicodedata.normalize("NFC", text.translate(_NBSP_SHY_MAP))
+
+
 class LatinScript:
     """ScriptSupport: no script toggles; the ingestion/mining gate is "has a Latin letter".
 
@@ -153,7 +165,14 @@ DIALOGUE_DASH_PATTERN = r"(?:^|(?<=[.!?…]\s))[-–—]\s+"
 #: The Nordic variant: Swedish, Norwegian and Danish subtitles write the second speaker's dash unspaced
 #: (``-Kom hit.``), where the rule above needs a space and spaCy glues ``-Kom`` into one PUNCT token, losing the
 #: word. Requiring a letter after an unspaced dash keeps a negative number intact (``-5 grader ute.``).
-NORDIC_DIALOGUE_DASH_PATTERN = r"(?:^|(?<=[.!?…]\s))[-–—](?:\s+|(?=[^\W\d_]))"
+#: Spanish writes the dash unspaced too (its subtitling norm), often before ``¿``/``¡`` (``-¿Vienes?``), so
+#: those two open an unspaced turn as a letter does. es, pt, pl and lt consume it as well.
+NORDIC_DIALOGUE_DASH_PATTERN = r"(?:^|(?<=[.!?…]\s))[-–—](?:\s+|(?=[^\W\d_]|[¿¡]))"
 LATIN_SUBTITLE_REGEX = "|".join(
     (BRACKETS_PATTERN, PARENS_PATTERN, MUSIC_PATTERN, LATIN_SPEAKER_PATTERN, DIALOGUE_DASH_PATTERN)
+)
+#: The Latin default with the unspaced dash rule, for es and pt: with the default, ``-¿Vienes a cenar? -No
+#: puedo.`` lost 6 of 19 es cards (7 of 20 pt) and fronted junk (``-es``). Other Latin defaults are unmeasured.
+LATIN_UNSPACED_DASH_SUBTITLE_REGEX = "|".join(
+    (BRACKETS_PATTERN, PARENS_PATTERN, MUSIC_PATTERN, LATIN_SPEAKER_PATTERN, NORDIC_DIALOGUE_DASH_PATTERN)
 )

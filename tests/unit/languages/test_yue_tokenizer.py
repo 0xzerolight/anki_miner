@@ -9,10 +9,12 @@ is 34 MB.
 from __future__ import annotations
 
 import json
+import unicodedata
 from pathlib import Path
 
 import pytest
 
+from anki_miner.languages.yue.pos import YUE_ALLOWED_POS
 from anki_miner.languages.yue.tokenizer import build_tagger
 
 FIXTURE = Path(__file__).parents[2] / "fixtures" / "yue" / "tokens.jsonl"
@@ -69,3 +71,69 @@ def test_stop_words_are_tiered_in_pos2(tagger):
 
 def test_an_empty_line_produces_no_tokens(tagger):
     assert tagger.parse("") == []
+
+
+@pytest.mark.parametrize(
+    ("line", "phrase"),
+    [
+        ("埋單，唔該。", "唔該"),
+        ("對唔住，我瞓過咗龍。", "對唔住"),
+        ("唔好意思，我哋淨係收現金。", "唔好意思"),
+        ("知道喇，拜拜。", "拜拜"),
+        ("多謝讚賞，我都想早啲收工啫。", "多謝"),
+    ],
+)
+def test_a_polite_set_phrase_carries_a_mineable_tag(tagger, line, phrase):
+    # The engine tags every one of these X (HKCanCor's fixed expressions),
+    # outside YUE_ALLOWED_POS, so the first-week phrases never became cards.
+    tags = {t.feature.lemma: t.feature.pos1 for t in tagger.parse(line)}
+    assert tags[phrase] in YUE_ALLOWED_POS
+
+
+@pytest.mark.parametrize(
+    ("line", "particle"),
+    [("我哋一齊去睇戲啦。", "啦"), ("我們明天去看電影吧。", "吧"), ("我做緊功課。", "緊")],
+)
+def test_a_particle_is_tagged_part_wherever_the_engine_puts_it(tagger, line, particle):
+    # Measured engine tags: 啦 NOUN, 吧 NOUN, standalone aspect 緊 PROPN. Each is
+    # a dictionary headword, so any content tag turned it into a card.
+    tags = {t.feature.lemma: t.feature.pos1 for t in tagger.parse(line)}
+    assert tags[particle] == "PART"
+
+
+@pytest.mark.parametrize(
+    "line", ["前面塞緊車，行告士打道好唔好？", "我唔係唔覆，係真係好忙咋。", "快啲啦，戲就開場喇。"]
+)
+def test_no_token_spans_a_punctuation_mark(tagger, line):
+    # The segmenter only strips punctuation off a word's ends, so a whole-line
+    # segment glued 塞緊車，行告士打道 into one dictionary miss.
+    surfaces = [t.surface for t in tagger.parse(line)]
+    assert "，" in surfaces
+    for surface in surfaces:
+        assert len(surface) == 1 or not any(unicodedata.category(char).startswith("P") for char in surface), surface
+
+
+@pytest.mark.parametrize(("line", "word"), [("要唔要飲嘢？", "飲嘢"), ("寫得幾好，不過有幾個錯字。", "錯字")])
+def test_a_run_is_segmented_with_the_mark_that_closes_it(tagger, line, word):
+    # The segmenter decides a run's last word by the character after it: without
+    # the mark 飲嘢 comes out 飲 嘢 and 錯字 comes out 錯 字.
+    assert word in [t.feature.lemma for t in tagger.parse(line)]
+
+
+def test_a_closing_mark_the_segmenter_glues_on_is_cut_back_off(tagger):
+    # pycantonese strips only its own marks off a word's ends; 』 is not one of them.
+    import pycantonese
+
+    assert ("攰』", (2, 5)) in pycantonese.segment("我好攰 』", offsets=True)
+
+    tokens = tagger.parse("我好攰 』")
+
+    assert [(t.surface, t.feature.lemma) for t in tokens] == [("我", "我"), ("好", "好"), ("攰", "攰"), ("』", "』")]
+
+
+def test_a_segmentation_given_by_the_caller_is_tagged_in_place_of_the_segmenter(tagger):
+    # The seam the parser's split pass re-tags a line through, under the lock.
+    tokens = tagger("今 日好忙", spans=[("今日", (0, 3)), ("好", (3, 4)), ("忙", (4, 5))])
+
+    assert [(t.surface, t.feature.lemma) for t in tokens] == [("今 日", "今日"), ("好", "好"), ("忙", "忙")]
+    assert tokens[1].feature.pos2 == "stopword"

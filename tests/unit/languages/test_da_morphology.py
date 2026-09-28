@@ -8,6 +8,7 @@ import unicodedata
 from anki_miner.languages._spaced.script import LATIN_SUBTITLE_REGEX, NORDIC_DIALOGUE_DASH_PATTERN
 from anki_miner.languages.da.abbreviations import DA_ABBREVIATION_ADDITIONS, DA_ABBREVIATION_DROPS, DA_ABBREVIATIONS
 from anki_miner.languages.da.morphology import (
+    DA_ADVERBIAL_PARTICLE_DEPS,
     DA_ALLOWED_POS,
     DA_ARTICLE_MAP,
     DA_CLOSERS,
@@ -20,6 +21,7 @@ from anki_miner.languages.da.morphology import (
     DA_SUBTITLE_REGEX,
     da_normalize,
     danish_particle_candidates,
+    ikke_as_particle,
 )
 from anki_miner.languages.token import LanguageToken
 
@@ -29,9 +31,21 @@ def test_the_pos_gate_is_upos_only():
     assert DA_ALLOWED_POS == ("ADJ", "ADV", "NOUN", "VERB") and DA_EXCLUDED_SUBTYPES == ()
 
 
-def test_only_the_dedicated_particle_arc_is_taken():
-    # The nb/nl shape. advmod/advmod:lmod would join 50 more verbs and silently demote ~170 more adverbs (DA5).
-    assert frozenset({"compound:prt"}) == DA_SEPARABLE_VERB_DEPS
+def test_the_adverbial_arcs_are_taken_and_join_only_on_attestation():
+    # The model puts most Danish particles on advmod/advmod:lmod (DA5); they carry every other adverb too.
+    assert frozenset({"advmod", "advmod:lmod"}) == DA_ADVERBIAL_PARTICLE_DEPS
+    assert frozenset({"compound:prt"}) | DA_ADVERBIAL_PARTICLE_DEPS == DA_SEPARABLE_VERB_DEPS
+
+
+def test_the_negation_is_a_particle_as_the_nb_and_sv_models_tag_it():
+    tokens = [
+        LanguageToken("Jeg", "PRON", "", "jeg"),
+        LanguageToken("ved", "VERB", "", "vide"),
+        LanguageToken("ikke", "ADV", "", "ikke"),
+        LanguageToken("Ikke", "ADV", "", "ikke"),
+        LanguageToken("aldrig", "ADV", "", "aldrig"),
+    ]
+    assert [token.feature.pos1 for token in ikke_as_particle(tokens)] == ["PRON", "VERB", "PART", "PART", "ADV"]
 
 
 def test_the_join_puts_the_particle_after_the_verb_as_wiktionary_keys_it():

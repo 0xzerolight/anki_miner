@@ -26,6 +26,7 @@ from anki_miner.models.youtube import FetchedMedia
 from anki_miner.orchestration.episode_processor import (
     EpisodeProcessor,
     _build_lemma_context,
+    _build_pos_context,
     _EpisodeContext,
     sanitize_source_label,
 )
@@ -166,25 +167,45 @@ class TestLemmaContextCallShape:
     """
 
     def _strict_service(self, *, requires_lemma_context: bool) -> MagicMock:
+        # ``pos_context`` is accepted by both variants: it follows its own
+        # convention, pinned by TestPosContextCallShape.
         service = MagicMock(name="definition_service")
         if requires_lemma_context:
 
             def get_definitions_batch(
-                words, progress_callback=None, fallback_context=None, *, is_cancelled=None, lemma_context
+                words,
+                progress_callback=None,
+                fallback_context=None,
+                *,
+                is_cancelled=None,
+                lemma_context,
+                pos_context=None,
             ):
                 assert lemma_context
                 return ["1. def"] * len(words)
 
-            def get_glossaries_batch(words, progress_callback=None, *, is_cancelled=None, lemma_context):
+            def get_glossaries_batch(
+                words,
+                progress_callback=None,
+                fallback_context=None,
+                *,
+                is_cancelled=None,
+                lemma_context,
+                pos_context=None,
+            ):
                 assert lemma_context
                 return ["1. gloss"] * len(words)
 
         else:
 
-            def get_definitions_batch(words, progress_callback=None, fallback_context=None, *, is_cancelled=None):
+            def get_definitions_batch(
+                words, progress_callback=None, fallback_context=None, *, is_cancelled=None, pos_context=None
+            ):
                 return ["1. def"] * len(words)
 
-            def get_glossaries_batch(words, progress_callback=None, *, is_cancelled=None):
+            def get_glossaries_batch(
+                words, progress_callback=None, fallback_context=None, *, is_cancelled=None, pos_context=None
+            ):
                 return ["1. gloss"] * len(words)
 
         service.get_definitions_batch = get_definitions_batch
@@ -234,6 +255,65 @@ class TestLemmaContextCallShape:
 
         assert result.errors == []
         assert result.cards_created == 1
+
+
+class TestBuildPosContext:
+    """The token POS for the batches' row rank: wty rows of one headword differ
+    only by part of speech, so it is what opens a verb's card on its verb row."""
+
+    def test_maps_mined_form_to_pos(self):
+        assert _build_pos_context([make_word("pick", surface="pick", pos="VERB")]) == {"pick": "VERB"}
+
+    def test_a_token_without_pos_is_skipped(self):
+        words = [make_word("pick", surface="pick", pos=None), make_word("go", surface="go", pos="")]
+        assert _build_pos_context(words) == {}
+
+    def test_first_seen_wins_for_duplicate_mined_forms(self):
+        words = [make_word("watch", surface="watch", pos="VERB"), make_word("watch", surface="watch", pos="NOUN")]
+        assert _build_pos_context(words) == {"watch": "VERB"}
+
+
+class TestPosContextCallShape:
+    """``pos_context`` reaches both batches when a token has a POS, and is left
+    out entirely when none has (the legacy call shape)."""
+
+    def _run(self, test_config, mock_services, tmp_path, word, seen):
+        def get_definitions_batch(words, progress_callback=None, fallback_context=None, *, is_cancelled=None, **kw):
+            seen.append(("definitions", kw))
+            return ["1. def"] * len(words)
+
+        def get_glossaries_batch(words, progress_callback=None, fallback_context=None, *, is_cancelled=None, **kw):
+            seen.append(("glossaries", kw))
+            return ["1. gloss"] * len(words)
+
+        service = MagicMock(name="definition_service")
+        service.get_definitions_batch = get_definitions_batch
+        service.get_glossaries_batch = get_glossaries_batch
+        service.has_usable_offline_provider.return_value = True
+        cfg = replace(test_config, anki_fields={**test_config.anki_fields, "glossary": "Glossary"})
+        mock_services["definition_service"] = service
+        proc = build_processor(config=cfg, **mock_services, presenter=NullPresenter())
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media("w"))]
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
+        return proc.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+    def test_the_token_pos_reaches_both_batches(self, test_config, mock_services, tmp_path):
+        seen: list[tuple[str, dict]] = []
+        result = self._run(test_config, mock_services, tmp_path, _make_word("食べる"), seen)
+        assert result.errors == []
+        assert seen == [
+            ("definitions", {"pos_context": {"食べる": "動詞"}}),
+            ("glossaries", {"pos_context": {"食べる": "動詞"}}),
+        ]
+
+    def test_no_pos_leaves_the_kwarg_out(self, test_config, mock_services, tmp_path):
+        seen: list[tuple[str, dict]] = []
+        result = self._run(test_config, mock_services, tmp_path, make_word("食べる", surface="食べる", pos=None), seen)
+        assert result.errors == []
+        assert seen == [("definitions", {}), ("glossaries", {})]
 
 
 class TestProcessEpisode:
@@ -4452,39 +4532,13 @@ class TestGlossaryFetch:
 
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
+        mock_services["definition_service"].get_glossaries_batch.assert_called_once()
         glossary_call = mock_services["definition_service"].get_glossaries_batch.call_args
-        assert glossary_call.args == ([("殺る", "やる")], None)
+        # The ladder gets no alternate: a different-kanji lemma may be another homograph.
+        assert glossary_call.args == ([("殺る", "やる")], None, {"殺る": ("", None)})
         assert glossary_call.kwargs["is_cancelled"]() is False
         payload = mock_services["anki_service"].create_cards_batch.call_args[0][0][0]
         assert "glossary" not in (payload.extra_fields or {})
-
-    def test_glossary_miss_retries_same_stem_lemma(self, test_config, mock_services, tmp_path):
-        cfg = replace(test_config, anki_fields={**test_config.anki_fields, "glossary": "Glossary"})
-        processor = build_processor(config=cfg, **mock_services)
-
-        word = _make_word(lemma="探す", surface="探し", pos="名詞")
-        word.lemma_reading = "さがす"
-        word.expression_reading = "さがし"
-        media = _make_media("sagashi")
-        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
-        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
-        mock_services["word_filter"].filter_unknown.return_value = [word]
-        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
-        mock_services["definition_service"].get_definitions_batch.return_value = ["1. search"]
-        mock_services["anki_service"].create_cards_batch.return_value = [1]
-
-        lemma_glossary = '<div class="yomitan-glossary"><ol><li>search</li></ol></div>'
-        mock_services["definition_service"].get_glossaries_batch.side_effect = [[None], [lemma_glossary]]
-        mock_services["definition_service"].css_entries.return_value = []
-
-        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
-
-        glossary_calls = mock_services["definition_service"].get_glossaries_batch.call_args_list
-        assert [glossary_call.args for glossary_call in glossary_calls] == [
-            ([("探し", "さがし")], None),
-            ([("探す", "さがす")], None),
-        ]
-        assert all(glossary_call.kwargs["is_cancelled"]() is False for glossary_call in glossary_calls)
 
     def test_glossary_miss_no_retry_for_non_variant(self, test_config, mock_services, tmp_path):
         """A miss on a word whose mined_form == lemma retries nothing — there is

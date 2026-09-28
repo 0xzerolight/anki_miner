@@ -77,6 +77,24 @@ def test_the_sentence_rules_are_the_han_ones(profile):
     assert rules.abbreviations == frozenset()
 
 
+def test_curly_quotes_close_with_their_sentence(profile):
+    """ZH-045 for yue: HK web fiction and forum posts quote speech with “ ” as often as 「 」."""
+    from anki_miner.services.cue_merge import ends_sentence
+    from anki_miner.services.reading.sentence_splitter import split_sentences
+
+    rules = profile.sentence_rules
+    assert split_sentences("阿明話：“我聽日唔返工。”跟住佢就走咗。", rules=rules) == [
+        "阿明話：“我聽日唔返工。”跟住佢就走咗。"
+    ]
+    # The curly pairs split exactly where the corner brackets always have.
+    to_corner = str.maketrans("“”‘’", "「」『』")
+    to_curly = str.maketrans("「」『』", "“”‘’")
+    for text in ("“唔好走！”佢嗌咗一聲。", "我同佢講：‘冇問題。’佢好開心。"):
+        as_corner = split_sentences(text.translate(to_corner), rules=rules)
+        assert split_sentences(text, rules=rules) == [s.translate(to_curly) for s in as_corner]
+    assert ends_sentence("佢話：“我唔去喇。”", rules)
+
+
 def test_asr_and_downloader_codes(profile):
     assert profile.asr_language == "yue"
     assert profile.scoped_defaults["downloader_subtitle_langs"] == "yue"

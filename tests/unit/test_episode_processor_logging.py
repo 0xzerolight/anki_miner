@@ -57,7 +57,7 @@ def _processor_for_words(test_config, words: list[TokenizedWord]):
     definition_service.has_offline_definitions.side_effect = lambda terms: dict.fromkeys(terms, True)
     definition_service.offline_term_identities.return_value = {}
 
-    def _definitions(pairs, *_args, is_cancelled):
+    def _definitions(pairs, *_args, is_cancelled, pos_context=None):
         assert is_cancelled() is False
         return ["definition"] * len(pairs)
 

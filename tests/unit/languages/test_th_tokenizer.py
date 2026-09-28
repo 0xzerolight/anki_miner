@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from anki_miner.languages.th.tokenizer import ZWSP, build_tagger
+from anki_miner.languages.th.tokenizer import _SAFE_MODE_CHARS, ZWSP, build_tagger
 
 TOKENS = Path(__file__).resolve().parents[2] / "fixtures" / "th" / "tokens.jsonl"
 ROWS = [json.loads(line) for line in TOKENS.read_text(encoding="utf-8").splitlines() if line.strip()]
@@ -35,6 +35,29 @@ def test_surfaces_are_verbatim_slices_of_the_input(tagger):
         found = line.find(surface, cursor)
         assert found >= 0, surface
         cursor = found + len(surface)
+
+
+@pytest.mark.parametrize(
+    ("line", "expected"),
+    [
+        ("เขาบอกว่าจะมา", ["เขา", "บอก", "ว่า", "จะ", "มา"]),
+        ("บอกรักเธอ", ["บอก", "รัก", "เธอ"]),
+        # The comparative and the reduplicated บ้าๆบอๆ are untouched.
+        ("ดีกว่า", ["ดีกว่า"]),
+        ("บ้าๆบอๆ", ["บ้าๆบอๆ"]),
+    ],
+)
+def test_bok_is_one_word_before_waa_and_rak(tagger, line, expected):
+    # newmm's own dictionary holds the rare บอ ('near crazy') and cut บอ|กว่า, บอ|กรัก.
+    assert [s for s, _, _ in _tags(tagger, line)] == expected
+
+
+def test_the_safe_engine_uses_the_same_dictionary(tagger):
+    # An unspaced run over _SAFE_MODE_CHARS goes through newmm-safe.
+    line = "เขาบอกว่าจะมา" * 10
+    assert len(line) > _SAFE_MODE_CHARS
+    surfaces = [s for s, _, _ in _tags(tagger, line)]
+    assert "บอ" not in surfaces and surfaces.count("บอก") == 10
 
 
 def test_zero_width_space_is_dropped_not_tagged(tagger):

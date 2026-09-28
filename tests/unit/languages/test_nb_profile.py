@@ -11,6 +11,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.config.config import _LANGUAGE_CODES
 from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages._spaced.fields import NOUN_ARTICLE_FIELD, NOUN_GENDER_FIELD, POS_FIELD
+from anki_miner.languages._spaced.form_of import FormOfLemmaPass, OrderedPasses
 from anki_miner.languages._spaced.grammar_hook import GrammarTagHook
 from anki_miner.languages._spaced.keys import CasefoldDictKeys
 from anki_miner.languages._spaced.morphology import LatinLookupStrategy, SeparableVerbPass, SpacedMinedForm
@@ -83,7 +84,7 @@ def test_a_known_word_front_meets_the_mined_lemma():
 
 def test_the_tagger_stashes_particles_and_splits_word_final_dots(tagger):
     features = {t.surface: t.feature for t in tagger("Jeg står opp klokka sju.")}
-    assert features["står"].particle == "opp" and features["opp"].pos1 == "PART"
+    assert features["står"].particle == "opp" and [p.text for p in features["står"].particles] == ["opp"]
     assert [(t.surface, t.feature.pos1) for t in tagger("God jul.")] == [
         ("God", "ADJ"),
         ("jul", "NOUN"),
@@ -97,8 +98,10 @@ def test_the_parser_joins_particle_verbs_written_apart():
     profile = get_profile("nb")
     parser = profile.create_parser(switch_language(AnkiMinerConfig(), "nb"))
     assert parser.normalize is profile.normalize and parser._compound_matcher is None
-    assert isinstance(parser._token_post_pass, SeparableVerbPass)
-    assert parser._token_post_pass._candidates is norwegian_particle_candidates
+    assert isinstance(parser._token_post_pass, OrderedPasses)
+    repair, join = parser._token_post_pass._passes
+    assert isinstance(repair, FormOfLemmaPass) and isinstance(join, SeparableVerbPass)
+    assert join._candidates is norwegian_particle_candidates
 
 
 def test_the_catalogue_ships_wiktionary_and_the_norwegian_subtitle_list():

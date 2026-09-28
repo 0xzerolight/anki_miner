@@ -165,6 +165,45 @@ def test_an_article_rule_sees_the_headword_and_wins_over_the_map():
     assert render(("noun_article",), word("", "Gender=Masc", mined_form="x"), article_rule=lambda g, h: "") == {}
 
 
+@pytest.mark.parametrize(
+    ("title", "morph", "aspect"),
+    [
+        ("perfective", "Aspect=Imp|VerbForm=Inf", "perfective"),
+        ("imperfective", "Aspect=Perf|VerbForm=Inf", "imperfective"),
+        ("imperfective", "", "imperfective"),
+        ("perfective and imperfective", "Aspect=Imp", "imperfective"),
+        ("perfective and imperfective", "", None),
+    ],
+)
+def test_an_uncategorised_aspect_chip_is_read_by_its_title(title, morph, aspect):
+    """OpenRussian files ``pf``/``ipf``/``both`` with an empty category; the title names the aspect."""
+    name = {"perfective": "pf", "imperfective": "ipf"}.get(title, "both")
+    chips = f'<span class="gloss-tag" data-category="" title="{title}">{name}</span>'
+    opr = f'<li data-dictionary="opr-ru-en" data-dictionary-id="opr-ru-en">{chips}<i>(opr-ru-en)</i></li>'
+    out = render(("aspect_pair",), word(html(opr), morph, pos="VERB"))
+    assert out == ({} if aspect is None else {"aspect_pair": aspect})
+
+
+def test_a_plural_only_head_takes_the_plural_article_where_a_language_names_one():
+    """wty heads a plural-only noun ``Eltern pl (plural only)``: de prints ``die``, nl ``de``; others print nothing."""
+    from anki_miner.languages.de.morphology import DE_GENDER_LABELS
+    from anki_miner.languages.it.morphology import italian_article
+    from anki_miner.languages.nl.morphology import NL_ARTICLE_MAP, NL_GRAMMAR_SOURCES
+
+    eltern = word(html(block(chip("partOfSpeech", "n"), "Eltern pl (plural only)")))
+    assert render(("noun_gender", "noun_plural"), eltern, gender_labels=DE_GENDER_LABELS) == {"noun_gender": "die"}
+    kleren = word(html(block("", "kleren pl (plural only, diminutive kleertjes n)", dictionary="wty-nl-en")))
+    assert render(("noun_article", "noun_gender"), kleren, article_map=NL_ARTICLE_MAP, sources=NL_GRAMMAR_SOURCES) == {
+        "noun_article": "de"
+    }
+    gens = word(html(block("", "gens m pl (plural only)")), mined_form="gens")
+    assert render(("noun_gender",), gens) == {}
+    assert render(("noun_article",), gens, article_rule=italian_article) == {}
+    assert render(("noun_gender",), word(html(block("", "Hund m (plural Hunde)"))), gender_labels=DE_GENDER_LABELS) == {
+        "noun_gender": "der"
+    }
+
+
 def test_misconfiguration_is_refused():
     with pytest.raises(ValueError, match="unknown"):
         GrammarTagHook(("gender",))

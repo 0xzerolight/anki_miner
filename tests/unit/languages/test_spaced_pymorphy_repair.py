@@ -33,8 +33,28 @@ class _Analyzer:
         return self.table.get(word, [])
 
 
+#: The stub tags: an OpenCorpora POS (plus ``voct`` where the case matters), mapped as ``oc2ud`` maps it.
+_UPOS: dict[str, tuple[str, dict[str, str]]] = {
+    "ADJF": ("ADJ", {"Case": "Nom"}),
+    "ADJF ablt": ("ADJ", {"Case": "Ins", "Gender": "Fem", "Number": "Sing"}),
+    "ADJF plur": ("ADJ", {"Case": "Nom", "Number": "Plur"}),
+    "ADJS femn": ("ADJ", {"Gender": "Fem", "Number": "Sing", "Variant": "Brev"}),
+    "ADJS masc": ("ADJ", {"Gender": "Masc", "Number": "Sing", "Variant": "Brev"}),
+    "ADJS neut": ("ADJ", {"Gender": "Neut", "Number": "Sing", "Variant": "Brev"}),
+    "ADVB": ("ADV", {}),
+    "COMP": ("ADJ", {"Degree": "Cmp"}),
+    "GRND": ("VERB", {"VerbForm": "Conv"}),
+    "INFN": ("VERB", {"VerbForm": "Inf"}),
+    "NOUN": ("NOUN", {"Case": "Nom"}),
+    "NOUN voct": ("NOUN", {"Case": "Voc"}),
+    "NUMR": ("NUM", {"Case": "Gen"}),
+    "PRTF": ("VERB", {"VerbForm": "Part"}),
+    "VERB": ("VERB", {"Mood": "Imp", "VerbForm": "Fin"}),
+}
+
+
 def _to_upos(tag: str) -> tuple[str, dict[str, str]]:
-    return {"ADVB": ("ADV", {}), "NOUN": ("NOUN", {"Case": "Nom"}), "VERB": ("VERB", {})}[str(tag)]
+    return _UPOS[str(tag)]
 
 
 def _token(surface: str, lemma: str, pos: str) -> LanguageToken:
@@ -133,6 +153,113 @@ def test_the_default_analysis_form_leaves_ru_asking_for_the_raw_surface():
     (token,) = russian([_token("Ёлка", "елка", "NOUN")])
     assert analyzer.asked == ["Ёлка"]
     assert token.feature.lemma == "ёлка"
+
+
+@pytest.mark.parametrize("pos", ["NOUN", "PROPN", "ADJ"])
+def test_a_word_the_analyser_knows_only_as_a_verb_is_retagged_a_verb(pos):
+    """A sentence-initial imperative the model tags NOUN (Подожди), PROPN (Смотри) or ADJ (Закрий)."""
+    repair = PymorphyLemmaRepair()
+    repair.bind(_Analyzer({"Подожди": [_Parse("подождать", "VERB")]}), _to_upos)
+    (token,) = repair([_token("Подожди", "подожди", pos)])
+    assert (token.feature.pos1, token.feature.lemma, token.morph) == ("VERB", "подождать", "Mood=Imp|VerbForm=Fin")
+
+
+def test_two_verbs_behind_one_imperative_front_the_surface_not_the_first_parse():
+    """Стой is стоять's imperative and стоить's: the first parse would front 'to cost'."""
+    repair = PymorphyLemmaRepair()
+    repair.bind(_Analyzer({"Стой": [_Parse("стоить", "VERB"), _Parse("стоять", "VERB")]}), _to_upos)
+    (token,) = repair([_token("Стой", "стой", "PROPN")])
+    assert (token.feature.pos1, token.feature.lemma) == ("VERB", "стой")
+
+
+def test_an_infinitive_counts_as_a_verb_parse():
+    repair = PymorphyLemmaRepair()
+    repair.bind(_Analyzer({"набути": [_Parse("набути", "INFN")]}), _to_upos)
+    (token,) = repair([_token("набути", "набути", "NOUN")])
+    assert (token.feature.pos1, token.feature.lemma) == ("VERB", "набути")
+
+
+def test_the_verb_retag_asks_the_analyser_for_the_analysis_form():
+    analyzer = _Analyzer({"З'їж": [_Parse("з'їсти", "VERB")]})
+    repair = PymorphyLemmaRepair(fold=_apostrophe_blind, analysis_form=_canonical)
+    repair.bind(analyzer, _to_upos)
+    (token,) = repair([_token(f"З{RSQUO}їж", f"з{RSQUO}їж", "NOUN")])
+    assert analyzer.asked == ["З'їж"] and (token.feature.pos1, token.feature.lemma) == ("VERB", "з'їсти")
+
+
+@pytest.mark.parametrize(
+    "parses",
+    [
+        [_Parse("дышать", "GRND")],  # a gerund is not a finite verb (дыша)
+        [_Parse("читать", "PRTF")],  # nor is a participle, which the model rightly tags ADJ
+        [_Parse("сталь", "NOUN"), _Parse("стать", "VERB")],  # a noun parse keeps the model's noun
+        [_Parse("дотку", "VERB", is_known=False)],  # an unknown word is no evidence at all
+    ],
+)
+def test_a_word_with_any_other_parse_keeps_the_models_pos(parses):
+    repair = PymorphyLemmaRepair(allowed_pos=("VERB",))
+    repair.bind(_Analyzer({"слово": parses}), _to_upos)
+    (token,) = repair([_token("слово", "слово", "NOUN")])
+    assert (token.feature.pos1, token.feature.lemma) == ("NOUN", "слово")
+
+
+@pytest.mark.parametrize(
+    "surface,lemma,parses",
+    [
+        ("Можна", "можний", [_Parse("можний", "ADJF")]),  # pymorphy3-dicts-uk knows можна only as an adjective
+        ("уже", "уж", [_Parse("уж", "NOUN voct")]),  # ... and уже only as the vocative of уж
+        ("варто", "варта", [_Parse("варта", "NOUN voct"), _Parse("варта", "NOUN voct")]),
+        ("пытливо", "пытливый", [_Parse("пытливый", "ADJS neut")]),  # the short neuter is the adverb's spelling
+    ],
+)
+def test_an_adverb_fronting_a_word_it_is_no_form_of_takes_its_own_spelling(surface, lemma, parses):
+    repair = PymorphyLemmaRepair()
+    repair.bind(_Analyzer({surface: parses}), _to_upos)
+    (token,) = repair([_token(surface, lemma, "ADV")])
+    assert (token.feature.pos1, token.feature.lemma) == ("ADV", surface.lower())
+
+
+def test_the_adverb_repair_writes_the_analysis_form():
+    repair = PymorphyLemmaRepair(fold=_apostrophe_blind, analysis_form=_canonical)
+    repair.bind(_Analyzer({"Обов'язково": [_Parse("обов'язковий", "ADJF")]}), _to_upos)
+    (token,) = repair([_token(f"Обов{RSQUO}язково", "обов'язковий", "ADV")])
+    assert token.feature.lemma == "обов'язково"
+
+
+@pytest.mark.parametrize(
+    "surface,lemma,morph,parses",
+    [
+        ("громче", "громкий", "Degree=Cmp", [_Parse("громкий", "COMP")]),  # ru36: a comparative fronts its adjective
+        ("Раньше", "ранний", "", [_Parse("ранний", "COMP")]),  # ... also where only the parse says so
+        ("врёте", "врать", "", [_Parse("врать", "VERB")]),  # a verb the model tagged ADV
+        ("тринадцати", "тринадцать", "", [_Parse("тринадцать", "NUMR")]),  # ... and a numeral
+        ("щодня", "щодень", "", [_Parse("щодня", "ADVB"), _Parse("щодень", "NOUN")]),  # an adverb parse exists
+        ("ранком", "ранок", "", [_Parse("ранок", "NOUN")]),  # a noun parse that is not a vocative
+        ("глуп", "глупый", "", [_Parse("глупый", "ADJS masc")]),  # a short adjective the model tagged ADV
+        ("смешна", "смешной", "", [_Parse("смешной", "ADJS femn")]),
+        ("внутреннею", "внутренний", "", [_Parse("внутренний", "ADJF ablt")]),  # an oblique case
+        ("сиромудрі", "сиромудрий", "", [_Parse("сиромудрий", "ADJF plur")]),  # a plural
+    ],
+)
+def test_an_adverb_lemma_the_analyser_can_account_for_is_left_alone(surface, lemma, morph, parses):
+    repair = PymorphyLemmaRepair()
+    repair.bind(_Analyzer({surface: parses}), _to_upos)
+    token = _token(surface, lemma, "ADV")
+    token.morph = morph
+    (token,) = repair([token])
+    assert (token.feature.pos1, token.feature.lemma) == ("ADV", lemma)
+
+
+def test_a_token_no_branch_can_change_never_reaches_the_analyser():
+    """An inflected noun or name (never a mistagged verb: spaCy lemmatises one to its own text) and
+    a comparative adverb cost no parse."""
+    analyzer = _Analyzer({})
+    repair = PymorphyLemmaRepair()
+    repair.bind(analyzer, _to_upos)
+    comparative = _token("громче", "громкий", "ADV")
+    comparative.morph = "Degree=Cmp"
+    repair([_token("столе", "стол", "NOUN"), _token("Москве", "москва", "PROPN"), comparative])
+    assert analyzer.asked == []
 
 
 def test_an_unbound_repair_refuses_to_run():

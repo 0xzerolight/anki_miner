@@ -233,6 +233,21 @@ def _build_lemma_context(words: list[TokenizedWord]) -> dict[str, str]:
     return context
 
 
+def _build_pos_context(words: list[TokenizedWord]) -> dict[str, str]:
+    """Map each word's ``mined_form`` to its token's part of speech for the
+    definition / glossary batches' row rank (``DictKeyFolding.sense_rank``).
+
+    wty rows of one headword differ only by part of speech and import order, so
+    the POS is what opens a verb's card on its verb row. First-seen wins, like
+    :func:`_build_lemma_context`; a token with no POS is skipped.
+    """
+    context: dict[str, str] = {}
+    for w in words:
+        if w.pos:
+            context.setdefault(w.mined_form, w.pos)
+    return context
+
+
 @dataclass
 class _EpisodeContext:
     """Mutable accumulator carried through the five phase helpers.
@@ -557,7 +572,7 @@ class EpisodeProcessor:
     # ------------------------------------------------------------------
 
     @property
-    def offline_lookup_fn(self) -> Callable[[str], list[tuple[str, str]]]:
+    def offline_lookup_fn(self) -> Callable[..., list[tuple[str, str]]]:
         """Offline-dictionary lookup for interactive UI (curation dialog).
 
         Bound form of :meth:`DefinitionService.lookup_all_offline`: takes a
@@ -1757,13 +1772,24 @@ class EpisodeProcessor:
         # the same legacy-call-shape convention the service applies toward
         # providers, so kanji-only runs keep the pre-A′ call signature.
         lemma_context = _build_lemma_context(words_with_media)
-        lemma_kwargs: dict[str, dict[str, str]] = {"lemma_context": lemma_context} if lemma_context else {}
-        definitions = self.definition_service.get_definitions_batch(
+        token_kwargs: dict[str, dict[str, str]] = {"lemma_context": lemma_context} if lemma_context else {}
+        # The token's part of speech feeds the profile's row rank the same way
+        # (a wty verb opens on its verb row), under the same convention.
+        pos_context = _build_pos_context(words_with_media)
+        if pos_context:
+            token_kwargs["pos_context"] = pos_context
+        # A stacking profile (yue) fills the Definition the way the Glossary is
+        # built: every enabled dictionary's hit in chain order, same miss ladder.
+        stacked = self.profile.stacked_definition
+        lookup_batch = (
+            self.definition_service.get_glossaries_batch if stacked else self.definition_service.get_definitions_batch
+        )
+        definitions = lookup_batch(
             lookup_pairs,
             progress_callback,
             fallback_context,
             is_cancelled=lambda: self.cancelled,
-            **lemma_kwargs,
+            **token_kwargs,
         )
         self.presenter.show_success(
             QCoreApplication.translate(
@@ -1773,44 +1799,22 @@ class EpisodeProcessor:
 
         # Optional: fetch concatenated multi-dict glossary if the user mapped
         # the Glossary field. Skipped otherwise to avoid the extra chain walk
-        # per word.
+        # per word. It walks the Definition's miss ladder (fallback_context; for
+        # ja the ladder opens on the same-kanji, okurigana-only lemma alternate),
+        # so a ladder-resolved front never gets a Definition and a blank Glossary.
         glossaries: list[str | None] = [None] * len(words_with_media)
         if self.config.anki_fields.get("glossary"):
-            glossaries = self.definition_service.get_glossaries_batch(
-                lookup_pairs,
-                progress_callback,
-                is_cancelled=lambda: self.cancelled,
-                **lemma_kwargs,
-            )
-            # get_glossaries_batch has no miss-fallback mechanism, so a miss may
-            # retry once under a same-kanji, okurigana-only lemma alternate.
-            # Different-kanji UniDic lemmas may be another homograph and are
-            # excluded. Hits pay nothing; None progress avoids a second cycle.
-            retry_idx = [
-                i
-                for i, g in enumerate(glossaries)
-                if not g
-                and words_with_media[i].lemma != words_with_media[i].mined_form
-                and _differs_by_okurigana_only(
-                    words_with_media[i].mined_form,
-                    words_with_media[i].lemma,
-                )
-            ]
-            if retry_idx:
-                retry_pairs: list[tuple[str, str | None]] = [
-                    (
-                        words_with_media[i].lemma,
-                        katakana_to_hiragana(words_with_media[i].lemma_reading or words_with_media[i].reading),
-                    )
-                    for i in retry_idx
-                ]
-                retry_glossaries = self.definition_service.get_glossaries_batch(
-                    retry_pairs,
-                    None,
+            glossaries = (
+                list(definitions)
+                if stacked
+                else self.definition_service.get_glossaries_batch(
+                    lookup_pairs,
+                    progress_callback,
+                    fallback_context,
                     is_cancelled=lambda: self.cancelled,
+                    **token_kwargs,
                 )
-                for i, g in zip(retry_idx, retry_glossaries, strict=True):
-                    glossaries[i] = g
+            )
 
         # Pitch follows the same identity ladder as definitions/audio: the card
         # front and its selected reading first, then only a same-kanji,

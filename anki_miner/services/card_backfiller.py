@@ -589,6 +589,7 @@ def _scan_backfill_impl(
             definition_service,
             contexts,
             definition_lookups,
+            stacked_definition=profile.stacked_definition,
             is_cancelled=is_cancelled,
         )
 
@@ -879,12 +880,20 @@ def _chunk_definition_lookups(
     contexts: list[_NoteContext],
     lookups: Collection[str],
     *,
+    stacked_definition: bool,
     is_cancelled: Callable[[], bool] | None = None,
 ) -> tuple[list[str | None], list[str | None]]:
-    """Batch the chunk's definition/glossary lookups (the _phase4 recipe).
+    """Batch the chunk's definition/glossary lookups (the _phase4_lookup recipe).
 
-    Includes the miss-only lemma retry for glossaries and the
-    mined_form → (lemma, None) fallback context for definitions.
+    Both lookups carry the same mined_form → (lemma, None) fallback context,
+    so a front the profile's miss ladder resolves gets a Glossary as well as a
+    Definition. ``stacked_definition`` is the active profile's: a stacking
+    profile (yue) fills the Definition the way the Glossary is built, every
+    enabled dictionary's hit in chain order, and its Glossary reuses that
+    Definition instead of walking the chain a second time.
+
+    Unlike phase 4, no ``pos_context`` rides along: a note carries no token
+    part of speech, only the rendered Pos label.
 
     ``lookups`` is which of the two to run, which is the selected keys plus the
     definition when a render hook needs a gloss to read — a lookup is not a
@@ -892,56 +901,25 @@ def _chunk_definition_lookups(
     """
     definitions: list[str | None] = [None] * len(contexts)
     glossaries: list[str | None] = [None] * len(contexts)
-    if definition_service is None:
+    if definition_service is None or not contexts:
         return definitions, glossaries
 
-    for key, results in (("definition", definitions), ("glossary", glossaries)):
-        if is_cancelled and is_cancelled():
-            break
-        if key not in lookups:
-            continue
-        idx_map: list[int] = []
-        pairs: list[tuple[str, str | None]] = []
-        fallback_context: dict[str, tuple[str, str | None]] = {}
-        for i, ctx in enumerate(contexts):
-            idx_map.append(i)
-            pairs.append((ctx.mined_form, ctx.reading or None))
-            fallback_context.setdefault(ctx.mined_form, (ctx.lemma, None))
-        if not pairs:
-            continue
-        if key == "definition":
-            found = definition_service.get_definitions_batch(
-                pairs,
-                None,
-                fallback_context,
-                is_cancelled=is_cancelled,
-            )
-        else:
-            found = definition_service.get_glossaries_batch(
-                pairs,
-                None,
-                is_cancelled=is_cancelled,
-            )
-            # Miss-only lemma retry (mirrors _phase4: get_glossaries_batch has
-            # no fallback mechanism of its own).
-            retry_idx = [
-                j
-                for j, g in enumerate(found)
-                if not g and contexts[idx_map[j]].lemma != contexts[idx_map[j]].mined_form
-            ]
-            if retry_idx:
-                retry_pairs: list[tuple[str, str | None]] = [
-                    (contexts[idx_map[j]].lemma, contexts[idx_map[j]].reading or None) for j in retry_idx
-                ]
-                retried = definition_service.get_glossaries_batch(
-                    retry_pairs,
-                    None,
-                    is_cancelled=is_cancelled,
-                )
-                for j, g in zip(retry_idx, retried, strict=True):
-                    found[j] = g
-        for j, value in enumerate(found):
-            results[idx_map[j]] = value
+    pairs: list[tuple[str, str | None]] = [(ctx.mined_form, ctx.reading or None) for ctx in contexts]
+    fallback_context: dict[str, tuple[str, str | None]] = {}
+    for ctx in contexts:
+        fallback_context.setdefault(ctx.mined_form, (ctx.lemma, None))
+
+    if "definition" in lookups and not (is_cancelled and is_cancelled()):
+        lookup_batch = (
+            definition_service.get_glossaries_batch if stacked_definition else definition_service.get_definitions_batch
+        )
+        definitions = lookup_batch(pairs, None, fallback_context, is_cancelled=is_cancelled)
+    if "glossary" in lookups and not (is_cancelled and is_cancelled()):
+        glossaries = (
+            list(definitions)
+            if stacked_definition and "definition" in lookups
+            else definition_service.get_glossaries_batch(pairs, None, fallback_context, is_cancelled=is_cancelled)
+        )
 
     return definitions, glossaries
 

@@ -25,7 +25,8 @@ Quotes: Lithuanian opens with ``„`` and closes with ``“`` (ALKSNIS text: 498
 never opens a quote here (the de shape).
 
 ``LT_SUBTITLE_REGEX``: the Latin SDH filter with a speaker-label class that includes the Lithuanian capitals;
-the Latin class stops at Latin-1 and leaves ``ŠARŪNAS:`` in the card sentence (the fr precedent).
+the Latin class stops at Latin-1 and leaves ``ŠARŪNAS:`` in the card sentence (the fr precedent). Its dash rule
+also takes an unspaced dialogue dash (``-Eik čia.``).
 """
 
 from __future__ import annotations
@@ -35,8 +36,8 @@ import unicodedata
 from anki_miner.languages._spaced.pos import UPOS_ALLOWED
 from anki_miner.languages._spaced.script import (
     BRACKETS_PATTERN,
-    DIALOGUE_DASH_PATTERN,
     MUSIC_PATTERN,
+    NORDIC_DIALOGUE_DASH_PATTERN,
     PARENS_PATTERN,
 )
 
@@ -68,9 +69,11 @@ LT_CLOSERS: frozenset[str] = frozenset(")]}“”»")
 _CAPITALS = "A-ZÀ-ÖØ-ÞĄČĘĖĮŠŲŪŽ"
 #: ``JONAS:``, ``ŠARŪNAS:`` — two or more capitals, Lithuanian ones included, then a colon at the cue start.
 LT_SPEAKER_PATTERN = rf"^[{_CAPITALS}][{_CAPITALS}0-9 .'-]*[{_CAPITALS}]:\s*"
-#: The S10 default for Lithuanian: the Latin parts with the Lithuanian speaker rule. No inline flags.
+#: The S10 default for Lithuanian: the Latin parts with the Lithuanian speaker rule and the unspaced dash
+#: rule (``-Eik čia.``: the spaced-only rule left ``-Eik`` one token, lost as PUNCT or fronted ``-palik``).
+#: No inline flags.
 LT_SUBTITLE_REGEX = "|".join(
-    (BRACKETS_PATTERN, PARENS_PATTERN, MUSIC_PATTERN, LT_SPEAKER_PATTERN, DIALOGUE_DASH_PATTERN)
+    (BRACKETS_PATTERN, PARENS_PATTERN, MUSIC_PATTERN, LT_SPEAKER_PATTERN, NORDIC_DIALOGUE_DASH_PATTERN)
 )
 
 _STRESS_MARKS = frozenset("\u0300\u0301\u0303")

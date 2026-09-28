@@ -89,15 +89,16 @@ def test_y_to_i_leaves_every_other_y(word):
     assert y_to_i(word) == ""
 
 
-@pytest.mark.parametrize(
-    ("word", "base"),
-    [("đẹp đẽ", "đẹp"), ("lung linh", "lung"), ("xinh xắn", "xinh"), ("nhỏ nhắn", "nhỏ"), ("xanh xanh", "xanh")],
-)
-def test_a_reduplicative_offers_its_base_syllable(word, base):
+@pytest.mark.parametrize(("word", "base"), [("xanh xanh", "xanh"), ("từ từ", "từ")])
+def test_a_full_reduplication_offers_its_syllable(word, base):
     assert reduplicative_base(word) == base
 
 
-@pytest.mark.parametrize("word", ["bác sĩ", "bây giờ", "hòa bình", "đẹp", "trần thị bích hằng", "ung thư"])
+#: Partial reduplicatives are wty-vi-en headwords; the same-onset guess misread compounds (một mạch).
+PARTIAL_OR_NONE = ["đẹp đẽ", "lung linh", "xinh xắn", "nhỏ nhắn", "một mạch", "bác sĩ", "bây giờ", "hòa bình"]
+
+
+@pytest.mark.parametrize("word", [*PARTIAL_OR_NONE, "đẹp", "trần thị bích hằng", "ung thư"])
 def test_other_words_have_no_reduplicative_base(word):
     assert reduplicative_base(word) == ""
 
@@ -105,7 +106,8 @@ def test_other_words_have_no_reduplicative_base(word):
 def test_the_ladder_order_and_shape():
     lookup = VietnameseLookup()
     assert lookup.candidates("kỹ thuật", "Kỹ thuật", None) == [("kĩ thuật", 0)]
-    assert lookup.candidates("đẹp đẽ", "", None) == [("đẹp", 0)]
-    assert lookup.candidates("lý lẽ", "", None) == [("lí lẽ", 0), ("lý", 0)]
+    assert lookup.candidates("xanh xanh", "", None) == [("xanh", 0)]
+    assert lookup.candidates("đẹp đẽ", "", None) == []
+    assert lookup.candidates("lý lẽ", "", None) == [("lí lẽ", 0)]
     assert lookup.candidates("ðẹp đẽ", "", None) == [("đẹp đẽ", 0)]
     assert lookup.candidates("bác sĩ", "Bác sĩ", None) == []

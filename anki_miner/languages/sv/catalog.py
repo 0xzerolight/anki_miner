@@ -4,8 +4,10 @@
 2026.08.29, hosted on HuggingFace ``daxida/wty-release``; 8,197,851 bytes).
 English Wiktionary's Swedish entries extracted through kaikki.org, CC BY-SA 4.0;
 the zip's ``index.json`` carries ``attribution: https://kaikki.org/`` and
-``sourceLanguage: sv``. Its noun rows carry the gender chips and the
-``Grammar-content`` head line (``apa c (plural apor)``) the en/ett hook reads.
+``sourceLanguage: sv``. Its noun rows carry the gender chips and, on a few, the
+``Grammar-content`` head line (``apa c (plural apor)``) the en/ett hook reads:
+2,636 of 38,241 noun lemma rows in 2026.09.20 have one and 45 name a plural, so
+the profile offers no Plural field.
 Rejected: SAOL/SO (no redistributable machine-readable form). There is no
 monolingual ``wty-sv-sv`` to offer as a manual import: wiktionary-to-yomitan
 builds none (``latest/dict/sv/`` has no ``sv`` target, checked 2026-09-23).

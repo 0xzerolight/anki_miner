@@ -9,13 +9,19 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.config.config import _LANGUAGE_CODES
 from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages._spaced.fields import POS_FIELD
+from anki_miner.languages._spaced.form_of import FormOfLemmaPass
 from anki_miner.languages._spaced.keys import CasefoldDictKeys
 from anki_miner.languages._spaced.morphology import LatinLookupStrategy, SpacedMinedForm
 from anki_miner.languages._spaced.render import PosHook
 from anki_miner.languages._spaced.script import LATIN_SUBTITLE_REGEX, LatinScript
 from anki_miner.languages._spaced.style import SPACED_CONTENT_STYLE
 from anki_miner.languages.fi.catalog import FI_CATALOG
-from anki_miner.languages.fi.morphology import FI_ABBREVIATIONS, FI_EXCLUDED_SUBTYPES, fi_normalize
+from anki_miner.languages.fi.morphology import (
+    FI_ABBREVIATIONS,
+    FI_EXCLUDED_SUBTYPES,
+    fi_normalize,
+    finnish_suffix_candidates,
+)
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.switching import switch_language
 from anki_miner.services.reading.sentence_splitter import split_sentences
@@ -106,10 +112,11 @@ def test_the_lookup_ladder_is_surface_then_casefold_with_no_suffix_rung():
     assert lookup.candidates("linja-auton", "linja-auton", None) == [("linja", 0), ("auton", 0)]
 
 
-def test_the_parser_takes_the_shared_seams_and_no_post_pass():
+def test_the_parser_takes_the_shared_seams_and_the_form_of_repair():
     profile = get_profile("fi")
     parser = profile.create_parser(switch_language(AnkiMinerConfig(), "fi"))
-    assert parser._token_post_pass is None
+    assert isinstance(parser._token_post_pass, FormOfLemmaPass)
+    assert parser._token_post_pass._extra_candidates is finnish_suffix_candidates
     assert parser.normalize is profile.normalize and parser._compound_matcher is None
 
 

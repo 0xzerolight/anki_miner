@@ -74,8 +74,8 @@ if TYPE_CHECKING:
 
 # Extensions this tab mines (mirrors detector._SUBTITLE_EXTS; no MicroDVD .sub
 # — frame-based, needs a media fps). Manga/novel drops earn a cross-tab hint.
-_SUBTITLE_EXTS = (".srt", ".ass", ".ssa", ".vtt")
-_SUBTITLE_FILTER_GLOB = "*.srt *.ass *.ssa *.vtt"
+_SUBTITLE_EXTS = (".srt", ".ass", ".ssa", ".vtt", ".smi")
+_SUBTITLE_FILTER_GLOB = "*.srt *.ass *.ssa *.vtt *.smi"
 _MANGA_EXTS = (".mokuro", ".cbz", ".zip")
 _NOVEL_EXTS = (".epub", ".txt")
 
@@ -244,7 +244,7 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         list_button_row.setSpacing(SPACING.sm)
 
         self.add_files_button = ModernButton(self.tr("Add Files…"), variant="secondary")
-        self.add_files_button.setToolTip(self.tr("Add subtitle files (.srt, .ass, .ssa, .vtt) to the list."))
+        self.add_files_button.setToolTip(self.tr("Add subtitle files (.srt, .ass, .ssa, .vtt, .smi) to the list."))
         self.add_files_button.clicked.connect(self._on_add_files_clicked)
         list_button_row.addWidget(self.add_files_button)
 

@@ -8417,8 +8417,8 @@ Nessun file indice viene eliminato.</translation>
         <translation>Aggiungi file…</translation>
     </message>
     <message>
-        <source>Add subtitle files (.srt, .ass, .ssa, .vtt) to the list.</source>
-        <translation>Aggiungi file dei sottotitoli (.srt, .ass, .ssa, .vtt) all'elenco.</translation>
+        <source>Add subtitle files (.srt, .ass, .ssa, .vtt, .smi) to the list.</source>
+        <translation>Aggiungi file dei sottotitoli (.srt, .ass, .ssa, .vtt, .smi) all'elenco.</translation>
     </message>
     <message>
         <source>Remove Selected</source>

@@ -8400,8 +8400,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Thêm tệp…</translation>
     </message>
     <message>
-        <source>Add subtitle files (.srt, .ass, .ssa, .vtt) to the list.</source>
-        <translation>Thêm tệp phụ đề (.srt, .ass, .ssa, .vtt) vào danh sách.</translation>
+        <source>Add subtitle files (.srt, .ass, .ssa, .vtt, .smi) to the list.</source>
+        <translation>Thêm tệp phụ đề (.srt, .ass, .ssa, .vtt, .smi) vào danh sách.</translation>
     </message>
     <message>
         <source>Remove Selected</source>

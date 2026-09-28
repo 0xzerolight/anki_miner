@@ -11,13 +11,15 @@ content CC BY-SA 4.0 (the repository's code is MIT): headerless ``word count`` l
 imported in occurrence mode and lemmatised in-app (``lemmatise=True``). A fifteen-case language spreads one word over
 many rows (``talo talon talossa taloon talosta taloa``); only the aggregate ranks the word.
 
-The aggregate is approximate, and its error moves ranks. On the full list the model leaves 5.5 % of the occurrence
-mass on the surface (``oletko``, ``haluatko``) and puts 6.3 % on a lemma that is not a word (``tiedtaa``,
-``tarvitnen``): 15,348 of 33,230 aggregated entries are no dictionary term, 9.05 % of the mass. That mass is taken
-from the true lemma rather than lost, so a frequent verb can rank about three times worse than it should
-(``kuunnella`` 671 against an oracle 223, ``tarvita`` 100 against 54) and a ``max_frequency_rank`` cutoff can drop it.
-Aggregating correctly would need a Finnish morphological analyser the app does not ship; the ranks are useful, not
-exact.
+The aggregate is approximate. Tagged alone, a word can stay on its surface (``oletko``, ``haluatko``) or land on a
+lemma that is not a word (``tiedtaa``, ``tarvitnen``): 14.7 % of the full list's occurrence mass sits on a key
+wty-fi-en has no headword for, taken from the true lemma, so ``kuunnella`` ranked 671 against an oracle 223 and
+``tarvita`` 100 against 54. The importer therefore keys each word by its card front: with wty-fi-en installed (the
+catalogue imports it first), the word also runs through the parser's form-row repair (``fi/parser.py``), which reads
+the form rows of the surface and of its clitic-free spelling (``tiedät`` -> ``tietää``, ``haluatko`` -> ``haluta``).
+That leaves 6.8 % of the mass on a non-headword key and 22,892 aggregated entries instead of 33,230; ``kuunnella``
+ranks 196 and ``tarvita`` 48. What the repair cannot resolve stays where the model put it, so the ranks are useful,
+not exact.
 
 Not listed: Leipzig Corpora ``Leipzig.Finnish.Newscrawl.Rank.zip`` (``StefanVukovic99/leipzig-to-yomitan``) is a
 surface-keyed rank list that in-app lemmatisation cannot aggregate, from a converter repository with no licence file,

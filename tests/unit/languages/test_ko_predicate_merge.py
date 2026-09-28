@@ -86,12 +86,98 @@ def test_unattested_candidate_leaves_tokens_untouched():
     assert out == tokens
 
 
-def test_noun_forming_suffix_never_merges():
-    # 선생 + 님 is XSN: a noun-forming suffix, not a predicate.
+def test_noun_forming_suffix_merges_as_a_noun_never_as_a_predicate():
+    # 선생 + 님 is XSN: a noun-forming suffix. The attested headword is the noun
+    # 선생님 - never a 선생님다 predicate candidate. 선생님들 is not a headword, so
+    # the plural 들 stays its own (unmineable) token.
+    seen: list[str] = []
+
+    def _attest(terms):
+        seen.extend(terms)
+        return {t for t in terms if t == "선생님"}
+
+    text = "선생님들이"
+    tokens = [tok("선생", "NN", "NNG"), tok("님", "XS", "XSN"), tok("들", "XS", "XSN"), tok("이", "JK", "JKS")]
+    out = KoreanPredicateMerger().merge_line(text, tokens, _attest)
+    assert sorted(seen) == ["선생님", "선생님들"]
+    assert [t.surface for t in out] == ["선생님", "들", "이"]
+    assert out[0].feature.pos1 == "NN"
+    assert out[0].feature.pos2 == "NNG"
+    assert out[0].feature.lemma == "선생님"
+    assert out[1] is tokens[2]
+
+
+def test_noun_plus_noun_merges_into_the_attested_compound():
+    # 창문 'window': kiwi cuts it 창/NNG + 문/NNG, and the learner got two cards.
+    text = "창문 좀"
+    tokens = [tok("창", "NN", "NNG"), tok("문", "NN", "NNG"), tok("좀", "MA", "MAG")]
+    out = KoreanPredicateMerger().merge_line(text, tokens, attest_only("창문"))
+    assert [t.surface for t in out] == ["창문", "좀"]
+    assert out[0].feature.lemma == "창문"
+    assert out[0].feature.pos1 == "NN"
+    assert isinstance(out[0], LanguageToken)
+
+
+def test_longest_attested_noun_run_wins():
     text = "선생님들이"
     tokens = [tok("선생", "NN", "NNG"), tok("님", "XS", "XSN"), tok("들", "XS", "XSN")]
-    out = KoreanPredicateMerger().merge_line(text, tokens, attest_all)
+    out = KoreanPredicateMerger().merge_line(text, tokens, attest_only("선생님", "선생님들"))
+    assert [t.feature.lemma for t in out] == ["선생님들"]
+
+
+def test_noun_run_may_start_inside_a_longer_run():
+    text = "우리집창문"
+    tokens = [tok("우리집", "NN", "NNG"), tok("창", "NN", "NNG"), tok("문", "NN", "NNG")]
+    out = KoreanPredicateMerger().merge_line(text, tokens, attest_only("창문"))
+    assert [t.surface for t in out] == ["우리집", "창문"]
+
+
+def test_unattested_noun_run_stays_split():
+    # 사람들 is no headword: the stem 사람 is what a learner should card.
+    tokens = [tok("사람", "NN", "NNG"), tok("들", "XS", "XSN")]
+    out = KoreanPredicateMerger().merge_line("사람들", tokens, attest_only("사람"))
+    assert out is tokens
+
+
+def test_noun_run_never_crosses_whitespace():
+    tokens = [tok("창", "NN", "NNG"), tok("문", "NN", "NNG")]
+    out = KoreanPredicateMerger().merge_line("창 문", tokens, attest_all)
     assert out == tokens
+
+
+def test_bound_noun_never_heads_a_noun_run():
+    tokens = [tok("것", "NN", "NNB"), tok("들", "XS", "XSN")]
+    out = KoreanPredicateMerger().merge_line("것들", tokens, attest_all)
+    assert out == tokens
+
+
+def test_predicate_pair_keeps_its_head_noun():
+    # 방청소했어요: 청소 heads the attested 청소하다, so the noun run 방 + 청소 is
+    # not formed and the line mines what it mined before the noun branch.
+    text = "방청소했어요"
+    tokens = [tok("방", "NN", "NNG"), tok("청소", "NN", "NNG"), tok("했", "XS", "XSV", lemma="하")]
+    out = KoreanPredicateMerger().merge_line(text, tokens, attest_all)
+    assert [(t.surface, t.feature.lemma) for t in out] == [("방", "방"), ("청소했", "청소하다")]
+
+
+def test_noun_and_predicate_candidates_share_one_lookup():
+    calls: list[list[str]] = []
+
+    def _attest(terms):
+        calls.append(list(terms))
+        return set(terms)
+
+    text = "손님이 공부해요"
+    tokens = [
+        tok("손", "NN", "NNG"),
+        tok("님", "XS", "XSN"),
+        tok("이", "JK", "JKS"),
+        tok("공부", "NN", "NNG"),
+        tok("해", "XS", "XSV", lemma="하"),
+    ]
+    out = KoreanPredicateMerger().merge_line(text, tokens, _attest)
+    assert calls == [["공부하다", "손님"]]
+    assert [t.feature.lemma for t in out] == ["손님", "이", "공부하다"]
 
 
 def test_bound_noun_head_never_merges():
@@ -287,3 +373,38 @@ def test_real_kiwi_leaves_a_separated_hada_alone():
     mined = forms(parser, "공부를 했어요")
     assert "공부" in mined
     assert "공부하다" not in mined
+
+
+@pytest.fixture(scope="module")
+def kiwi_tagger():
+    # Built once: tests/conftest.py clears the shared tagger cache per test.
+    pytest.importorskip("kiwipiepy")
+    from anki_miner.languages.ko.tokenizer import build_tagger
+
+    return build_tagger()
+
+
+@pytest.mark.parametrize(
+    ("text", "noun", "stem"),
+    [
+        ("손님, 음식 나왔습니다.", "손님", "손"),
+        ("저는 대학생이에요.", "대학생", "대학"),
+        ("부모님께 전화했어요.", "부모님", "부모"),
+        ("중학생 때 처음 만났어.", "중학생", "중학"),
+        ("창문 좀 열어 줄래?", "창문", "창"),
+        ("점심시간이야.", "점심시간", "점심"),
+        ("선생님들이 왔어요.", "선생님", "선생"),
+    ],
+)
+def test_real_kiwi_mines_the_attested_noun_not_its_stem(monkeypatch, kiwi_tagger, text, noun, stem):
+    monkeypatch.setattr("anki_miner.services.subtitle_parser.get_tagger", lambda language: kiwi_tagger)
+    parser = get_profile("ko").create_parser(ko_config(), term_lookup=lambda terms: {t for t in terms if t == noun})
+    mined = forms(parser, text)
+    assert noun in mined
+    assert stem not in mined
+
+
+def test_real_kiwi_keeps_the_stem_of_an_unattested_plural(monkeypatch, kiwi_tagger):
+    monkeypatch.setattr("anki_miner.services.subtitle_parser.get_tagger", lambda language: kiwi_tagger)
+    parser = get_profile("ko").create_parser(ko_config(), term_lookup=lambda terms: {t for t in terms if t == "사람"})
+    assert "사람" in forms(parser, "사람들이 많아요.")

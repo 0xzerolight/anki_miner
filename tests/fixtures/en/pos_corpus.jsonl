@@ -16,3 +16,8 @@
 {"id":"en16","sentence":"To go or not to go, that is the question.","must_mine":["go","question"],"must_not_mine":["to","not","that","be","or"],"note":"infinitive marker excluded; the known-word front to go folds to go"}
 {"id":"en17","sentence":"Mr. Smith arrived at 3 p.m. yesterday.","must_mine":["arrive","yesterday"],"must_not_mine":["Mr.","mr.","Smith","smith","3","p.m.","p.m"],"note":"title + name are PROPN; p.m. is tagged NOUN and demoted to X as a dotted abbreviation (D3)"}
 {"id":"en18","sentence":"Uh-huh, that's exactly what happened.","must_mine":["exactly","happen"],"must_not_mine":["uh-huh","Uh-huh","that"],"note":"interjection excluded"}
+{"id":"en19","sentence":"Your clothes are on the bed.","must_mine":["clothes","bed"],"must_not_mine":["clothe"],"note":"plural-only noun keeps its own front; the model lemmatises it to the verb clothe"}
+{"id":"en20","sentence":"Thanks for helping me out.","must_mine":["thanks","help"],"must_not_mine":["thank"],"note":"plural-only noun thanks; the verb thank keeps its lemma"}
+{"id":"en21","sentence":"Put your pants on, we're leaving.","must_mine":["pants","leave"],"must_not_mine":["pant"],"note":"plural-only noun pants, not the verb pant"}
+{"id":"en22","sentence":"I'm thirty-two years old.","must_mine":["year","old"],"must_not_mine":["thirty-two"],"note":"mid-sentence hyphenated numeral is tagged ADJ; every hyphen part is like_num, so it is NUM"}
+{"id":"en23","sentence":"That's forty-five dollars, and he died at ninety-nine.","must_mine":["dollar","die"],"must_not_mine":["forty-five","ninety-nine"],"note":"hyphenated numerals tagged ADJ/NOUN become NUM"}

@@ -18,9 +18,10 @@ from anki_miner.models.reading import ReadingUnit
 
 CORPUS = Path(__file__).resolve().parents[2] / "fixtures" / "de" / "pos_corpus.jsonl"
 RECORDS = [json.loads(line) for line in CORPUS.read_text(encoding="utf-8").splitlines() if line.strip()]
-#: Every STTS tag de_core_news_sm put under ADJ/ADV/NOUN/VERB over this corpus once the particle stash and the
-#: abbreviation rule ran. A new one fails here and is judged against DE_EXCLUDED_SUBTYPES.
-DE_OBSERVED_FINE_TAGS = {"ADJA", "ADJD", "NN", "PWAV", "VAFIN", "VVFIN", "VVINF", "VVIZU", "VVPP"}
+#: Every STTS tag de_core_news_sm put under ADJ/ADV/NOUN/VERB over this corpus once the abbreviation rule ran (a
+#: stashed separable particle keeps its PTKVZ ADV until the parser's join demotes it). A new one fails here and is
+#: judged against DE_EXCLUDED_SUBTYPES.
+DE_OBSERVED_FINE_TAGS = {"ADJA", "ADJD", "NN", "PTKVZ", "PWAV", "VAFIN", "VVFIN", "VVINF", "VVIZU", "VVPP"}
 
 
 @pytest.fixture(scope="module")

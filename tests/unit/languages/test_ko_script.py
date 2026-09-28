@@ -6,6 +6,7 @@ import unicodedata
 from anki_miner.languages.ko import script as ko_script
 from anki_miner.languages.token import LanguageToken
 from anki_miner.services.morphology import TokenInclusionRule
+from anki_miner.services.reading.sentence_splitter import split_sentences
 from anki_miner.services.subtitle_parser import SubtitleParserService
 
 
@@ -53,6 +54,19 @@ def test_sentence_rules_carry_cjk_and_ascii_terminators_and_are_space_aware():
     assert "…" in rules.ellipses
     assert "「" in rules.openers and "」" in rules.closers
     assert rules.space_aware is True
+
+
+def test_sentence_rules_keep_curly_quotations_whole():
+    """Korean prose writes dialogue in “ ” and inner speech in ‘ ’; a mark inside one is no sentence end."""
+    text = (
+        "민수는 문을 열고 들어왔다. “엄마, 나 왔어! 밥 있어?” 엄마는 부엌에서 대답했다. "
+        "‘오늘도 늦었네. 내일은 일찍 와야지.’ 그는 속으로 생각했다."
+    )
+    assert split_sentences(text, rules=ko_script.KO_SENTENCE_RULES) == [
+        "민수는 문을 열고 들어왔다.",
+        "“엄마, 나 왔어! 밥 있어?” 엄마는 부엌에서 대답했다.",
+        "‘오늘도 늦었네. 내일은 일찍 와야지.’ 그는 속으로 생각했다.",
+    ]
 
 
 def test_dict_keys_fold_to_nfc_and_preserve_none():

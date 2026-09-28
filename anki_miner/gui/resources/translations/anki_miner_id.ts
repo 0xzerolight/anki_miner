@@ -8400,8 +8400,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Tambah Berkas…</translation>
     </message>
     <message>
-        <source>Add subtitle files (.srt, .ass, .ssa, .vtt) to the list.</source>
-        <translation>Tambahkan berkas subtitel (.srt, .ass, .ssa, .vtt) ke daftar.</translation>
+        <source>Add subtitle files (.srt, .ass, .ssa, .vtt, .smi) to the list.</source>
+        <translation>Tambahkan berkas subtitel (.srt, .ass, .ssa, .vtt, .smi) ke daftar.</translation>
     </message>
     <message>
         <source>Remove Selected</source>

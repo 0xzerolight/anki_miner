@@ -1,0 +1,48 @@
+# Spoken jyutping for yue words whose engine reading HKCanCor contradicts.
+#
+# Built by scripts/build_yue_jyutping_overrides.py from HKCanCor (Luke and Wong
+# 2015, CC BY 4.0), as bundled with pycantonese 5.0.0. Do not edit by hand:
+# change the script and rerun it; it records the thresholds and the hand review.
+#
+# word<TAB>jyutping<TAB>tokens read so/HKCanCor tokens
+會	wui5	808/810
+咪	mai6	398/402
+嗰個	go2 go3	380/380
+返	faan1	347/347
+揾	wan2	227/227
+聽	teng1	176/176
+成日	seng4 jat6	163/163
+阿	aa3	151/151
+間	gaan1	145/145
+驚	geng1	107/107
+行	haang4	72/81
+種	zung2	71/71
+請	ceng2	71/71
+平	peng4	62/63
+裏邊	leoi5 bin6	63/63
+正	zeng3	50/52
+即刻	zik1 haak1	45/45
+使	sai2	44/44
+英文	jing1 man2	40/44
+生	saang1	39/39
+碟	dip2	37/38
+儲	cou5	35/37
+位	wai2	33/33
+爭	zaang1	33/33
+零	leng4	28/32
+今年	gam1 nin2	30/30
+名	meng2	27/30
+袋	doi2	24/28
+意思	ji3 si1	27/27
+長	coeng4	27/27
+好玩	hou2 waan2	26/26
+訂	deng6	23/23
+聲	seng1	22/22
+雀	zoek2	18/22
+有錢	jau5 cin2	16/16
+中文	zung1 man2	14/15
+不嬲	bat1 nau1	14/14
+房	fong2	13/13
+相	soeng2	13/13
+唔見	m4 gin3	10/10
+紅籌	hung4 cau2	10/10

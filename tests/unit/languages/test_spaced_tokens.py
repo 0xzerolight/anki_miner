@@ -8,8 +8,22 @@ from anki_miner.languages._spaced.morphology import SeparableVerbPass
 from anki_miner.languages._spaced.tokens import to_duck_tokens
 
 
-def fake_doc(text: str, rows: list[tuple]) -> list[SimpleNamespace]:
-    """rows: (text, pos, tag, lemma, dep, head_index[, morph[, like_url]]); idx found left to right in *text*."""
+class _StubVocab:
+    """``vocab[text].like_num``, the one lexeme attribute the tokens read."""
+
+    def __init__(self, numbers: frozenset[str]) -> None:
+        self._numbers = numbers
+
+    def __getitem__(self, text: str) -> SimpleNamespace:
+        return SimpleNamespace(like_num=text.casefold() in self._numbers)
+
+
+def fake_doc(text: str, rows: list[tuple], numbers: frozenset[str] = frozenset()) -> list[SimpleNamespace]:
+    """rows: (text, pos, tag, lemma, dep, head_index[, morph[, like_url]]); idx found left to right in *text*.
+
+    ``numbers`` is what the stub vocabulary calls ``like_num``.
+    """
+    vocab = _StubVocab(numbers)
     tokens: list[SimpleNamespace] = []
     cursor = 0
     lowered = text.lower()
@@ -21,7 +35,7 @@ def fake_doc(text: str, rows: list[tuple]) -> list[SimpleNamespace]:
             SimpleNamespace(
                 i=i, idx=idx, text=word, pos_=pos, tag_=tag, lemma_=lemma, dep_=dep,
                 morph=row[6] if len(row) > 6 else "", is_space=False,
-                like_url=row[7] if len(row) > 7 else False, like_email=False, head=None,
+                like_url=row[7] if len(row) > 7 else False, like_email=False, head=None, vocab=vocab,
             )
         )  # fmt: skip
     for token, row in zip(tokens, rows, strict=True):
@@ -83,6 +97,21 @@ def test_an_abbreviation_whose_final_dot_was_split_off_is_x_too():
     assert [t.feature.pos1 for t in to_duck_tokens(fake_doc(text, rows), text)] == ["X", "PUNCT", "X", "NUM", "X"]
 
 
+def test_a_hyphen_compound_of_numbers_is_num_and_other_compounds_keep_their_tag():
+    """EN-06: a joined ``thirty-two`` is tagged ADJ; the model's own ``like_num`` on every part decides."""
+    text = "Thirty-two one-way trente-deux -le -"
+    rows = [
+        ("Thirty-two", "PROPN", "NNP", "Thirty-two", "nsubj", 0),
+        ("one-way", "ADJ", "JJ", "one-way", "amod", 0),
+        ("trente-deux", "ADJ", "ADJ", "trente-deux", "amod", 0),
+        ("-le", "PRON", "PRON", "le", "obj", 0),
+        ("-", "PUNCT", "HYPH", "-", "punct", 0),
+    ]
+    numbers = frozenset({"thirty", "two", "one", "trente", "deux"})
+    tokens = to_duck_tokens(fake_doc(text, rows, numbers), text)
+    assert [t.feature.pos1 for t in tokens] == ["NUM", "ADJ", "NUM", "PRON", "PUNCT"]
+
+
 def test_space_tokens_are_dropped_and_urls_become_x():
     text = "see  www.example.com"
     doc = fake_doc(
@@ -128,7 +157,7 @@ def test_casing_follows_the_title_case_classes():
     assert [t.feature.lemma for t in tokens] == ["Haus", "London", "laufen"]
 
 
-def test_a_particle_is_stashed_on_its_verb_head_and_demoted():
+def test_a_particle_is_stashed_on_its_verb_head_and_left_to_the_join_to_demote():
     text = "Er sieht den Film an"
     rows = [
         ("Er", "PRON", "PPER", "er", "sb", 1),
@@ -139,7 +168,8 @@ def test_a_particle_is_stashed_on_its_verb_head_and_demoted():
     ]
     tokens = to_duck_tokens(fake_doc(text, rows), text, particle_deps=frozenset({"svp"}))
     assert tokens[1].feature.particle == "an"
-    assert tokens[4].feature.pos1 == "PART"
+    assert [(p.text, p.token, p.dep) for p in tokens[1].feature.particles] == [("an", tokens[4], "svp")]
+    assert tokens[4].feature.pos1 == "ADP"  # SeparableVerbPass demotes it once it takes the join
     assert not getattr(tokens[3].feature, "particle", "")
 
 
@@ -169,7 +199,7 @@ def _stashed_tokens():
 
 def test_the_pass_reattaches_unconditionally_without_a_dictionary():
     tokens = SeparableVerbPass()(_stashed_tokens(), None, None)
-    assert tokens[1].feature.lemma == "ansehen"
+    assert tokens[1].feature.lemma == "ansehen" and tokens[4].feature.pos1 == "PART"
     assert not tokens[1].feature.particle  # cleared: a second run cannot prefix again
     assert SeparableVerbPass()(tokens, None, None)[1].feature.lemma == "ansehen"
 
@@ -182,7 +212,7 @@ def test_the_pass_needs_the_headword_when_a_dictionary_is_wired():
         return set()
 
     tokens = SeparableVerbPass()(_stashed_tokens(), attest, None)
-    assert tokens[1].feature.lemma == "sehen"
+    assert tokens[1].feature.lemma == "sehen" and tokens[4].feature.pos1 == "ADP"
     assert calls == [["ansehen"]]
     assert SeparableVerbPass()(_stashed_tokens(), lambda words: {"ansehen"}, None)[1].feature.lemma == "ansehen"
 

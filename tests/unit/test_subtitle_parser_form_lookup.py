@@ -4,7 +4,8 @@ The seam is one constructor argument read at exactly one line -- inside the
 ``self._token_post_pass is not None`` branch of ``_build_line_state``. So the languages at risk are
 NOT ja/ko/zh, which inject no post-pass at all; they are the ones that DO, because the builder in
 ``service_factory`` is language-blind and their third argument flips from ``None`` to a real
-callable. Every one of them must ignore it, and the parametrised case below is what proves that.
+callable. Every one of them but the named readers must ignore it, and the parametrised case below
+is what proves that.
 """
 
 from __future__ import annotations
@@ -21,9 +22,12 @@ from anki_miner.languages.registry import get_profile
 from anki_miner.languages.switching import switch_language
 from anki_miner.services.subtitle_parser import SubtitleParserService
 
-#: Languages whose post-pass is EXPECTED to read the third argument. Named, so the sweep below
+#: Languages whose post-pass is EXPECTED to read the third argument: the he and ar resolvers and the
+#: languages wired to the form-of front repair (``_spaced/form_of.py``). Named, so the sweep below
 #: stays a real assertion for every other language rather than a list someone can edit away.
-FORM_LOOKUP_READERS = frozenset({"he"})
+FORM_LOOKUP_READERS = frozenset(
+    {"he", "de", "nl", "sv", "nb", "da", "pl", "lt", "fr", "it", "ro", "fi", "hu", "hr", "sl", "tr", "pt", "el", "ar"}
+)
 
 
 class _Spy:

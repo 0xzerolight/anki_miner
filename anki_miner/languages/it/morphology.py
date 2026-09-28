@@ -124,6 +124,26 @@ def keep_lemma_head(tokens: list[LanguageToken]) -> list[LanguageToken]:
     return tokens
 
 
+#: The modal verbs ISDT files under AUX (fine tag ``VM``): lexical verbs a learner must card.
+_MODAL_LEMMAS = frozenset({"dovere", "potere", "volere"})
+
+
+def lift_modal_verbs(tokens: list[LanguageToken]) -> list[LanguageToken]:
+    """Tokenizer post-pass: an AUX modal (fine tag ``VM``, or lemma dovere/potere/volere) is a VERB.
+
+    ``it_core_news_sm`` follows ISDT and tags the modals AUX even as main verbs
+    (``Voglio un gelato``), so the POS gate dropped three of the ~35 commonest
+    Italian words (frequency ranks: potere 21, volere 26, dovere 32). The
+    lemma catches the few tagged AUX ``V``; the tense auxiliaries essere/avere
+    (``VA``) stay AUX. ro's ``main_verb_pos`` is the same shape.
+    """
+    for token in tokens:
+        feature = token.feature
+        if feature.pos1 == "AUX" and (feature.pos2 == "VM" or feature.lemma in _MODAL_LEMMAS):
+            feature.pos1 = "VERB"
+    return tokens
+
+
 #: Classes a card can front (the shared UPOS gate); other tokens keep the model's lemma untouched.
 _CONTENT_POS = frozenset(UPOS_ALLOWED)
 

@@ -238,6 +238,12 @@ def import_yomitan_zip(
             raise SetupError(f"Unsupported Yomitan format version {format_version!r}; need format >= 3")
         if not title:
             raise SetupError("index.json missing required 'title'")
+        # Term-bank sequence numbers mean something only in a dictionary that
+        # declares itself sequenced (Yomitan's optional flag, false when absent).
+        # KRDICT declares false yet writes 1 on every row; stored, that number
+        # put every homograph of a word into one render group under one merged
+        # tag line (못: "Noun, ⭐⭐, Adverb, ⭐⭐⭐" over both "nail" and "not").
+        sequenced = index.get("sequenced") is True
 
         # A caller-supplied slot pins the on-disk folder to a stable name; else
         # derive it from title+revision (the historical behavior).
@@ -334,7 +340,7 @@ def import_yomitan_zip(
                     # instead, matching how malformed entries are handled above.
                     try:
                         score = int(entry[4]) if len(entry) > 4 and entry[4] is not None else 0
-                        sequence = int(entry[6]) if len(entry) > 6 and entry[6] is not None else None
+                        sequence = int(entry[6]) if sequenced and len(entry) > 6 and entry[6] is not None else None
                     except (TypeError, ValueError):
                         skipped_malformed += 1
                         _record_skip(skipped, skip_examples, "term_bank_numeric", member)

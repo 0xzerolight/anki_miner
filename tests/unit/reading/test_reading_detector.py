@@ -549,7 +549,7 @@ def test_unknown_extension_errors(tmp_path):
         detector.detect(movie)
 
     # The guidance message names every supported input class.
-    assert ".srt/.ass/.ssa/.vtt" in str(excinfo.value)
+    assert ".srt/.ass/.ssa/.vtt/.smi" in str(excinfo.value)
 
 
 # --------------------------------------------------------------------------- #
@@ -557,7 +557,7 @@ def test_unknown_extension_errors(tmp_path):
 # --------------------------------------------------------------------------- #
 
 
-@pytest.mark.parametrize("ext", [".srt", ".ass", ".ssa", ".vtt"])
+@pytest.mark.parametrize("ext", [".srt", ".ass", ".ssa", ".vtt", ".smi"])
 def test_subtitle_ref_provisional_fill(tmp_path, ext):
     sub = tmp_path / f"Ep01{ext}"
     sub.write_text("stub", encoding="utf-8")
@@ -585,6 +585,21 @@ def test_subtitle_ref_does_not_open_the_file(tmp_path):
     refs = detector.detect(tmp_path / "ghost.srt")
     assert refs[0].kind == "subtitle"
     assert refs[0].title == "ghost"
+
+
+def test_a_cp949_smi_loads_as_one_unit_per_cue(tmp_path):
+    """SAMI, the long-standing Korean fansub format, read with the ko decode ladder."""
+    from anki_miner.languages.registry import get_profile
+
+    smi = tmp_path / "ep01.smi"
+    smi.write_bytes(
+        "<SAMI><BODY>\n<SYNC Start=1000><P Class=KRCC>어제 시장에서 사과를 샀어요.\n"
+        "<SYNC Start=3500><P Class=KRCC>&nbsp;\n</BODY></SAMI>".encode("cp949")
+    )
+    profile = get_profile("ko")
+    (ref,) = detector.detect(smi)
+    document = detector.load(ref, encodings=profile.import_encodings, rules=profile.sentence_rules)
+    assert [unit.text for unit in document.units] == ["어제 시장에서 사과를 샀어요."]
 
 
 def test_microdvd_sub_not_recognized(tmp_path):

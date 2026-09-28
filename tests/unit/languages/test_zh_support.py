@@ -158,6 +158,11 @@ def _cedict_row(*glosses: str) -> str:
     )
 
 
+def _rank(content: str) -> int:
+    """The rank storage computes for a row with no tags and no token POS."""
+    return ZhDictKeyFolding().sense_rank(content, "", None)
+
+
 class TestSenseRank:
     """Rows that state no live sense rank after the rows that do."""
 
@@ -177,7 +182,7 @@ class TestSenseRank:
         ],
     )
     def test_a_row_that_only_points_elsewhere_sorts_last(self, gloss):
-        assert ZhDictKeyFolding().sense_rank(_cedict_row(gloss)) == 2
+        assert _rank(_cedict_row(gloss)) == 2
 
     @pytest.mark.parametrize(
         "glosses",
@@ -194,7 +199,7 @@ class TestSenseRank:
     def test_a_surname_or_archaic_row_ranks_between(self, glosses):
         """Between a surname row and an archaic-only row the index's own order
         decides, and both still lead a row that only points elsewhere."""
-        assert ZhDictKeyFolding().sense_rank(_cedict_row(*glosses)) == 1
+        assert _rank(_cedict_row(*glosses)) == 1
 
     @pytest.mark.parametrize(
         "gloss",
@@ -209,18 +214,25 @@ class TestSenseRank:
         ],
     )
     def test_a_row_that_states_a_sense_keeps_its_rank(self, gloss):
-        assert ZhDictKeyFolding().sense_rank(_cedict_row(gloss)) == 0
+        assert _rank(_cedict_row(gloss)) == 0
 
     def test_a_surname_beside_a_real_sense_keeps_its_rank(self):
-        assert ZhDictKeyFolding().sense_rank(_cedict_row("surname Wang", "king")) == 0
+        assert _rank(_cedict_row("surname Wang", "king")) == 0
 
     def test_an_archaic_sense_beside_a_modern_one_keeps_its_rank(self):
         row = _cedict_row("(archaic) navy", "person employed to post messages on the Internet")
-        assert ZhDictKeyFolding().sense_rank(row) == 0
+        assert _rank(row) == 0
 
     def test_every_gloss_must_point_elsewhere(self):
-        assert ZhDictKeyFolding().sense_rank(_cedict_row("variant of 乾|干[gān]", "surname Gan")) == 1
+        assert _rank(_cedict_row("variant of 乾|干[gān]", "surname Gan")) == 1
 
     def test_content_with_no_gloss_items_keeps_its_rank(self):
         """A dictionary this predicate cannot read is left where the index put it."""
-        assert ZhDictKeyFolding().sense_rank("<div>bank</div>") == 0
+        assert _rank("<div>bank</div>") == 0
+
+    @pytest.mark.parametrize("tags, pos", [("name", None), ("n", "NOUN"), ("v", "VERB"), ("", "PROPN")])
+    def test_the_row_tags_and_the_token_pos_change_nothing(self, tags, pos):
+        """CC-CEDICT rows carry no part-of-speech tags, so zh ranks by content alone."""
+        keys = ZhDictKeyFolding()
+        for content in (_cedict_row("dry"), _cedict_row("surname Gan"), _cedict_row("see 基友[jīyǒu]")):
+            assert keys.sense_rank(content, tags, pos) == _rank(content)

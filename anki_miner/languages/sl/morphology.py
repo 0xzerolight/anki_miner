@@ -18,14 +18,17 @@ Slovenian orthography never writes - U+0300 grave, U+0301 acute, U+0302 circumfl
 U+030F double grave, U+0311 inverted breve and U+0323 dot below, on a vowel or ``r``. U+030C caron
 is NEVER folded: it IS the letter in c/s/z. Stacked marks fall out in one pass because NFD orders
 the dot below before the marks above, so the lower one is dropped first and the upper one then sees
-the bare vowel. The fold is the hook's ``partner_fold`` and nothing else; all 21 aspect partners in
-the dictionary fold to plain Slovene.
+the bare vowel. The fold is the hook's ``partner_fold`` (all 21 aspect partners in the dictionary fold
+to plain Slovene), the ``extra_fold`` inside ``SL_KEYS`` (41,212 wty-sl-en keys, nearly all form rows,
+are stored in accent notation) and the parser's reading of form-row targets (``bánka``).
 
 The schwa and the stroked l are deliberately untouched, and so is a mark sitting ON a schwa: the
 bases are the vowels and ``r``, hr's set exactly, so the ``pes`` head line comes back unchanged.
 Both are dictionary-notation LETTERS, not marks - no mark fold can turn the schwa spelling of
-``pes`` into ``pes`` - and they occur in 0 of the 21 aspect partners, which is the only place the
-fold prints, so widening the base set would be a mechanism with no caller. 212 head-line headwords
+``pes`` into ``pes`` - and they occur in 0 of the 21 aspect partners and in no form-row target that
+names a headword (83 targets such as ``várən`` keep a schwa, and none is a headword's key), which are
+the only places the fold prints, so widening the base set would be a mechanism with no caller. The
+1,100 keys that keep a schwa or stroked l stay unreachable, as they were. 212 head-line headwords
 carry a schwa and 27 a stroked l. The gender read is unaffected: the hook's own D2
 ``_without_combining_marks`` strips every mark before it looks for the letter, so the ``pes`` head
 line still reads masculine.
@@ -136,6 +139,11 @@ SL_EXCLUDED_SUBTYPES: tuple[str, ...] = (
 _TONE_MARKS = frozenset({"\u0300", "\u0301", "\u0302", "\u0304", "\u030f", "\u0311", "\u0323"})
 #: Bases the notation marks: the vowels and syllabic r. The schwa is a LETTER here, not a base.
 _TONE_BASES = frozenset("aeiourAEIOUR")
+
+#: Slovenian quotes „…“ and »…«: the shared Latin set opens with « and “, which Slovenian closes with.
+#: ” keeps closing, as in the shared set, for text typed „…”.
+SL_OPENERS: frozenset[str] = frozenset("([{„»")
+SL_CLOSERS: frozenset[str] = frozenset(")]}“”«")
 
 #: Slovenian speaker cues; the filter runs after the shared NFC normaliser.
 SL_SPEAKER_PATTERN = (
