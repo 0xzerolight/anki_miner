@@ -136,3 +136,30 @@ def test_the_in_app_lemmatiser_folds_surfaces_to_mined_fronts(tagger, monkeypatc
         "\u060c",
     ]
     assert manual_import_lemmatizer("ar") is not None  # the lemmatised_frequency capability
+
+
+# --------------------------------------------------------------------------
+# The 2026-09 review fixes (T24) against the real database
+# --------------------------------------------------------------------------
+
+#: Forms of ra'aa "see": calima files their stems under the lexeme raawand "rhubarb".
+SEE_FORMS = (
+    "\u0623\u0631\u0649",  # araa "I see"
+    "\u0631\u0623\u064a\u062a",  # ra'aytu "I saw"
+    "\u062a\u0631\u0649",  # taraa "you see"
+    "\u064a\u0631\u0649",  # yaraa "he sees"
+    "\u0631\u0623\u0649",  # ra'aa "he saw"
+    "\u0623\u0631\u0627\u0643",  # araaka "I see you"
+    "\u0631\u0623\u064a\u062a\u0647",  # ra'aytuhu "I saw him"
+    "\u0646\u0631\u0649",  # naraa "we see"
+)
+
+
+@pytest.mark.parametrize("surface", SEE_FORMS)
+def test_every_form_of_see_fronts_see_not_rhubarb(tagger, surface):
+    (token,) = tagger(surface)
+    assert (token.feature.pos1, token.feature.lemma, token.feature.reading) == (
+        "verb",
+        "\u0631\u0623\u0649",
+        "\u0631\u064e\u0623\u064e\u0649",
+    )

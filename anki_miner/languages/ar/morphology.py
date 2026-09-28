@@ -19,6 +19,7 @@ from types import MappingProxyType
 from typing import Any
 
 from anki_miner.languages.ar._calima.charsets import dediac_ar
+from anki_miner.languages.ar.overrides import AR_LEX_REPAIRS
 
 AR_UNKNOWN_POS = "unknown"
 AR_CLITIC_SUBTYPE = "clitic"
@@ -168,8 +169,13 @@ class AnalysisSummary:
 
 
 def summarise(analysis: Mapping[str, Any]) -> AnalysisSummary:
-    """Reduce one analysis to the token fields (hamzat wasl reads as a plain alef, like wty headwords)."""
-    reading = str(analysis.get("lex", "")).replace(_ALEF_WASLA, _ALEF)
+    """Reduce one analysis to the token fields (hamzat wasl reads as a plain alef, like wty headwords).
+
+    The lexeme passes ``AR_LEX_REPAIRS`` first; the lemma and the reading follow the repaired lexeme.
+    """
+    pos = str(analysis.get("pos", ""))
+    lex = str(analysis.get("lex", ""))
+    reading = AR_LEX_REPAIRS.get((lex, pos), lex).replace(_ALEF_WASLA, _ALEF)
     d3tok = str(analysis.get("d3tok", ""))
     base = next((part for part in d3tok.split("_") if part and not part.startswith("+") and not part.endswith("+")), "")
     clitic = "+" in d3tok
@@ -177,7 +183,7 @@ def summarise(analysis: Mapping[str, Any]) -> AnalysisSummary:
     segmentation = d3tok.replace("_", " ") if clitic else ""
     morph = "|".join(f"{name}={value}" for name, value in (("Root", root), ("Segmentation", segmentation)) if value)
     return AnalysisSummary(
-        pos=str(analysis.get("pos", "")),
+        pos=pos,
         clitic=clitic,
         lemma=dediac_ar(reading),
         orth_base=dediac_ar(base).replace(_ALEF_WASLA, _ALEF),
