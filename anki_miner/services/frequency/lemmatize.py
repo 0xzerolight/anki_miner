@@ -12,9 +12,10 @@ back with a lemma no dictionary knows (de ``welt`` -> ``Weln``, it ``ragazza``
 so the card's front never met the list's key and the common word had no rank.
 Given the dictionaries folder, each word is therefore also a one-word line
 through that post-pass, over the dictionaries installed there for the language
-and with the two lookups ``service_factory`` hands the parser. With no such
-dictionary, or for a language whose parser has no post-pass, the key is the
-tagger's lemma, as before.
+and with the two lookups ``service_factory`` hands the parser; one move that
+rides on the lone word's part-of-speech guess is undone (``_FrontRepair``). With
+no such dictionary, or for a language whose parser has no post-pass, the key is
+the tagger's lemma, as before.
 """
 
 from __future__ import annotations
@@ -27,13 +28,14 @@ from typing import TYPE_CHECKING, Any, TypedDict, cast
 
 if TYPE_CHECKING:
     from anki_miner.config import AnkiMinerConfig
+    from anki_miner.services.definition_service import DefinitionService
     from anki_miner.services.dictionary.registry import DictionaryRegistry
     from anki_miner.services.morphology import TokenPostPass
     from anki_miner.services.subtitle_parser import SubtitleParserService
 
 Lemmatizer = Callable[[list[str]], list[str]]
-#: One line's raw tagger tokens -> the tokens a card front is read from.
-_LinePass = Callable[[list[Any]], list[Any]]
+#: One list word and its raw tagger tokens -> the key its count is filed under.
+_WordKey = Callable[[str, list[Any]], str]
 
 
 class LemmatizeKwarg(TypedDict, total=False):
@@ -71,27 +73,47 @@ def build_frequency_lemmatizer(language: str, dicts_root: Path | None = None) ->
 
     def lemmatize(words: list[str]) -> list[str]:
         from anki_miner.languages.tagger_provider import get_tagger
-        from anki_miner.services.morphology import extract_lemma
 
         tagger = get_tagger(language)
         repair = front_repair()
-        lemmas: list[str] = []
-        with repair.opened() if repair is not None else nullcontext(list) as line_pass:
-            for word in words:
-                tokens = line_pass(list(tagger(word)))
-                lemmas.append(extract_lemma(tokens[0]) if len(tokens) == 1 else word)
-        return lemmas
+        with repair.opened() if repair is not None else nullcontext(_tagger_key) as key:
+            return [key(word, list(tagger(word))) for word in words]
 
     return lemmatize
 
 
-class _FrontRepair:
-    """*language*'s parser post-pass over the dictionaries installed for *language*."""
+def _tagger_key(word: str, tokens: list[Any]) -> str:
+    """The lone token's lemma; a word split into several tokens keeps its own spelling."""
+    from anki_miner.services.morphology import extract_lemma
 
-    def __init__(self, post_pass: TokenPostPass, config: AnkiMinerConfig, registry: DictionaryRegistry) -> None:
+    return extract_lemma(tokens[0]) if len(tokens) == 1 else word
+
+
+class _FrontRepair:
+    """*language*'s parser post-pass over the dictionaries installed for *language*.
+
+    The post-pass trusts the token's part of speech, and a word tagged alone carries only the
+    tagger's guess at one: fr_core_news_sm tags a lone ``gare`` VERB with lemma ``gare``, and the
+    ``-e`` repair files it under ``garer``, while the card for ``la gare`` fronts ``gare``. So a word
+    the tagger keeps as its own lemma keeps it when the post-pass moves it to a class none of the
+    word's own headword rows has (the surface-first rule of ``_spaced/form_of.py``). The move stands
+    for a word the dictionary files only as forms or names (fr ``parle`` -> ``parler``, tr ``sever``
+    -> ``sevmek``), for a move inside the word's class (el ``ξέρεις`` -> ``ξέρω``: its ``v`` row is an
+    inflection gloss), and for a word the tagger lemmatised to another spelling (``viens`` ->
+    ``vien`` -> ``venir``, ``est`` -> ``être``).
+    """
+
+    def __init__(
+        self,
+        post_pass: TokenPostPass,
+        config: AnkiMinerConfig,
+        registry: DictionaryRegistry,
+        fold: Callable[[str], str],
+    ) -> None:
         self._post_pass = post_pass
         self._config = config
         self._registry = registry
+        self._fold = fold
 
     @classmethod
     def find(cls, language: str, dicts_root: Path) -> _FrontRepair | None:
@@ -108,8 +130,9 @@ class _FrontRepair:
         from anki_miner.services.dictionary.registry import DictionaryRegistry
 
         config = AnkiMinerConfig(language=language, dicts_root=dicts_root, dictionary_chain=())
+        profile = get_profile(language)
         # Every factory builds a SubtitleParserService (service_factory.create_profile_parser casts alike).
-        post_pass = cast("SubtitleParserService", get_profile(language).create_parser(config)).token_post_pass
+        post_pass = cast("SubtitleParserService", profile.create_parser(config)).token_post_pass
         if post_pass is None:
             return None
         registry = DictionaryRegistry(dicts_root)
@@ -120,11 +143,13 @@ class _FrontRepair:
             for meta in registry.unlisted(config)
             if meta.language == language
         )
-        return cls(post_pass, replace(config, dictionary_chain=chain), registry) if chain else None
+        if not chain:
+            return None
+        return cls(post_pass, replace(config, dictionary_chain=chain), registry, profile.dict_keys.fold_term)
 
     @contextmanager
-    def opened(self) -> Iterator[_LinePass]:
-        """The line pass over freshly opened dictionaries, closed on exit.
+    def opened(self) -> Iterator[_WordKey]:
+        """The word key over freshly opened dictionaries, closed on exit.
 
         Built like ``service_factory.build_definition_service``; its
         ``offline_terms_exist`` and ``offline_term_rows`` are the probe and the
@@ -137,9 +162,23 @@ class _FrontRepair:
         )
         try:
             service.ensure_loaded()
-            yield lambda tokens: list(self._post_pass(tokens, service.offline_terms_exist, service.offline_term_rows))
+            yield functools.partial(self._key, service)
         finally:
             service.close()
+
+    def _key(self, service: DefinitionService, word: str, tokens: list[Any]) -> str:
+        """*word*'s key: the post-pass front, unless that moves a headword out of its class (class docstring)."""
+        from anki_miner.languages._spaced.form_of import WTY_TAG_TO_UPOS, is_lemma_row
+
+        tagged = _tagger_key(word, tokens)  # read first: the post-pass rewrites the tokens in place
+        tokens = list(self._post_pass(tokens, service.offline_terms_exist, service.offline_term_rows))
+        key = _tagger_key(word, tokens)
+        if self._fold(tagged) != self._fold(word) or self._fold(key) == self._fold(word):
+            return key
+        rows = service.offline_term_rows([word]).get(word, ())
+        classes = {WTY_TAG_TO_UPOS.get(tags.split(" ")[0]) for _content, tags in rows if is_lemma_row(tags)}
+        classes -= {None, "PROPN"}
+        return word if classes and tokens[0].feature.pos1 not in classes else key
 
 
 def manual_import_lemmatizer(language: str, dicts_root: Path | None = None) -> Lemmatizer | None:
