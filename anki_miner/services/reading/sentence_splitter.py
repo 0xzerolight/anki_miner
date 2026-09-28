@@ -171,6 +171,7 @@ def split_sentences(
     # unpacks the same six values, so the tuple's shape is shared API.
     split_on_whitespace = rules is not None and rules.split_on_whitespace
     ordinal_leads = rules.ordinal_leads if rules is not None else frozenset()
+    joiners = rules.whitespace_joiners if rules is not None else frozenset()
     matched_openers = _matched_openers(text, openers, closers)
     segments: list[str] = []
     buf: list[str] = []
@@ -215,9 +216,13 @@ def split_sentences(
             # A whitespace RUN is one boundary, and it belongs to neither side:
             # the trailing .strip() would drop it anyway, and absorbing it here
             # keeps a multi-space gap from yielding an empty middle segment.
+            # A joiner on either side (th ๆ, a numeral) keeps the run in the sentence.
+            start = i
             while i < n and text[i].isspace():
                 i += 1
-            if buf:
+            if joiners and ((start > 0 and text[start - 1] in joiners) or (i < n and text[i] in joiners)):
+                buf.append(text[start:i])
+            elif buf:
                 segments.append("".join(buf))
                 buf = []
         else:

@@ -98,6 +98,20 @@ def test_a_german_number_after_any_other_word_still_ends_the_sentence(text, sent
     assert split_sentences(text, rules=get_profile("de").sentence_rules) == sentences
 
 
-def test_ordinal_leads_default_empty():
+@pytest.mark.parametrize(
+    ("text", "sentences"),
+    [
+        ("เด็ก ๆ ในหมู่บ้านวิ่งเล่น แม่เรียกลูก", ["เด็ก ๆ ในหมู่บ้านวิ่งเล่น", "แม่เรียกลูก"]),
+        ("มะลิอายุ 12 ปี เธอเรียนเก่ง", ["มะลิอายุ 12 ปี", "เธอเรียนเก่ง"]),
+        ("เขาใช้ iPhone ทุกวัน ฝนตก", ["เขาใช้ iPhone ทุกวัน", "ฝนตก"]),
+        ("ไปกรุงเทพฯ ในวันเสาร์ ฝนตก", ["ไปกรุงเทพฯ ในวันเสาร์", "ฝนตก"]),
+    ],
+)
+def test_a_thai_space_beside_a_joiner_is_not_a_boundary(text, sentences):
+    """Royal Institute spacing puts a space around ๆ, numerals and Latin words: none of them ends a clause."""
+    assert split_sentences(text, rules=get_profile("th").sentence_rules) == sentences
+
+
+def test_the_new_rule_data_defaults_empty():
     rules = SentenceRules(terminators=frozenset("."), ellipses=frozenset(), openers=frozenset(), closers=frozenset())
-    assert rules.ordinal_leads == frozenset()
+    assert rules.ordinal_leads == frozenset() and rules.whitespace_joiners == frozenset()

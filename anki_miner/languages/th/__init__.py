@@ -8,6 +8,7 @@ this package — and building the th LanguageProfile — never needs the
 
 from __future__ import annotations
 
+import string
 from collections.abc import Mapping
 
 from anki_miner.languages._spaced.script import BRACKETS_PATTERN, MUSIC_PATTERN, PARENS_PATTERN
@@ -47,6 +48,15 @@ TH_DIALOGUE_DASH_PATTERN = r"(?:^|(?<=\s))[-–—]\s+"
 #: 10 SDH cues mined 16 words (เสียงดนตรี, กรีดร้อง). No speaker-label rule: Thai has no capitals to tell
 #: a ``name:`` label from speech. No inline flags.
 TH_SUBTITLE_REGEX = "|".join((BRACKETS_PATTERN, PARENS_PATTERN, MUSIC_PATTERN, TH_DIALOGUE_DASH_PATTERN))
+
+#: S9 joiners: Royal Institute spacing sets ๆ (mai yamok), ฯ (paiyannoi), numerals and Latin words
+#: off with spaces (``เด็ก ๆ``, ``อายุ 12 ปี``, ``กรุงเทพฯ ใน``), and none of those spaces ends a clause.
+TH_WHITESPACE_JOINERS = frozenset(
+    "\N{THAI CHARACTER MAIYAMOK}\N{THAI CHARACTER PAIYANNOI}"
+    + string.digits
+    + "".join(chr(code) for code in range(ord("\N{THAI DIGIT ZERO}"), ord("\N{THAI DIGIT NINE}") + 1))
+    + string.ascii_letters
+)
 
 
 def _scoped_defaults() -> Mapping[str, object]:
@@ -102,6 +112,7 @@ def build_profile() -> LanguageProfile:
             closers=frozenset('”’)"'),
             space_aware=False,
             split_on_whitespace=True,
+            whitespace_joiners=TH_WHITESPACE_JOINERS,
         ),
         normalize=normalize_th,
         dict_keys=ThaiDictKeyFolding(),

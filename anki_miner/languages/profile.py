@@ -168,6 +168,9 @@ class SentenceRules:
     #: only acts when ``abbreviations`` is non-empty. German capitalises the noun after
     #: the ordinal, which the splitter's lowercase-continuation rule cannot see.
     ordinal_leads: frozenset[str] = frozenset()
+    #: Under ``split_on_whitespace``, a whitespace run with one of these characters on
+    #: either side is not a boundary (th: ``เด็ก ๆ``, ``อายุ 12 ปี``, a Latin word).
+    whitespace_joiners: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)
