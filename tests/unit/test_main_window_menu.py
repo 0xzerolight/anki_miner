@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import pytest
 from PyQt6.QtCore import QSize, Qt, QUrl
+from PyQt6.QtGui import QImage
 from PyQt6.QtWidgets import QToolButton, QWidget
 
 
@@ -219,6 +220,73 @@ def test_star_button_opens_repo_url(main_window, monkeypatch):
 
     assert len(captured) == 1
     assert captured[0].toString() == "https://github.com/0xzerolight/anki_miner"
+
+
+@pytest.fixture
+def themed_app():
+    """Apply the real theme stylesheet; its corner-button padding exposed the lopsided layout."""
+    from PyQt6.QtWidgets import QApplication
+
+    from anki_miner.gui.resources.styles.theme import Theme
+
+    app = QApplication.instance()
+    assert isinstance(app, QApplication)
+    app.setStyleSheet(Theme.get_stylesheet("light"))
+    yield
+    app.setStyleSheet("")
+
+
+def _ink_columns(button: QToolButton) -> list[int]:
+    """Columns of ``button``'s rendering that carry mark or label ink."""
+    # The window is never shown, so give the corner container its size hint and lay
+    # it out, as QMenuBar does; otherwise it keeps the 100px default and squeezes
+    # every button.
+    corner = button.parentWidget()
+    assert corner is not None
+    layout = corner.layout()
+    assert layout is not None
+    corner.resize(corner.sizeHint())
+    layout.activate()
+    assert button.size() == button.sizeHint()
+    image = QImage(button.size(), QImage.Format.Format_ARGB32)
+    image.fill(Qt.GlobalColor.transparent)
+    button.render(image)
+    background = image.pixelColor(0, image.height() // 2)
+
+    def is_ink(x: int, y: int) -> bool:
+        pixel = image.pixelColor(x, y)
+        return (
+            abs(pixel.red() - background.red())
+            + abs(pixel.green() - background.green())
+            + abs(pixel.blue() - background.blue())
+            + abs(pixel.alpha() - background.alpha())
+            > 120
+        )
+
+    return [x for x in range(image.width()) if any(is_ink(x, y) for y in range(image.height()))]
+
+
+@pytest.mark.parametrize("object_name", ["discord_button"])
+def test_corner_mark_and_label_are_centred_with_a_gap(main_window, themed_app, object_name):
+    """The mark and label sit centred, with clear space between them.
+
+    Qt's TextBesideIcon layout packs [2px | mark | 2px | label] against the left
+    edge and the QSS padding only widened the button, so the mark touched the
+    label and ~27px of slack sat right of it against ~3px on the left.
+    """
+    button = _corner_container(main_window).findChild(QToolButton, object_name)
+    assert button is not None
+    ink = _ink_columns(button)
+    assert ink, "nothing rendered"
+
+    left_pad = ink[0]
+    right_pad = button.width() - 1 - ink[-1]
+    assert abs(left_pad - right_pad) <= 3, (left_pad, right_pad)
+
+    mark_width = button.iconSize().width()
+    mark_end = max(x for x in ink if x < ink[0] + mark_width)
+    label_start = min(x for x in ink if x >= ink[0] + mark_width)
+    assert label_start - mark_end - 1 >= 5, (mark_end, label_start)
 
 
 def test_discord_button_opens_invite_url(main_window, monkeypatch):

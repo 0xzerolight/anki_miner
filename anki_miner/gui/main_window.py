@@ -16,7 +16,6 @@ from PyQt6.QtCore import QEvent, QRect, QSize, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import (
     QAction,
     QGuiApplication,
-    QIcon,
     QShortcut,
     QShowEvent,
     QWindowStateChangeEvent,
@@ -63,6 +62,7 @@ from anki_miner.gui.utils.key_bindings import about_rows, resolve_bindings, tab_
 from anki_miner.gui.utils.qt_helpers import fit_window_minimum, widget_alive
 from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
 from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost, install_animated_tab_bar
+from anki_miner.gui.widgets.base.icon_link_button import IconLinkButton
 from anki_miner.gui.widgets.dialogs.results_dialog import ResultsDialog
 from anki_miner.gui.widgets.dialogs.system_health_window import (
     HEALTH_KEYS,
@@ -542,21 +542,11 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         corner_layout.addWidget(star_button)
 
         # "Join Discord" button — brand mark beside the label.
-        discord_button = QToolButton(corner_widget)
+        discord_button = IconLinkButton(corner_widget)
         discord_button.setObjectName("discord_button")
         discord_button.setText(self.tr("Join Discord"))
         discord_button.setAutoRaise(True)
-        # Guard on the loaded icon (covers a missing OR unparseable SVG): a
-        # TextBesideIcon button with a null icon would leave a blank gap, so fall
-        # back to text-only if the brand mark fails to load.
-        discord_icon = QIcon(str(get_resource_dir() / "icons" / "discord.svg"))
-        if not discord_icon.isNull():
-            discord_button.setIcon(discord_icon)
-            # Pin the glyph size so it stays independent of Qt/QSS icon defaults.
-            discord_button.setIconSize(QSize(16, 16))
-            discord_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-        else:
-            discord_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        discord_button.set_mark(get_resource_dir() / "icons" / "discord.svg")
         discord_button.clicked.connect(self._open_discord)
         corner_layout.addWidget(discord_button)
 
