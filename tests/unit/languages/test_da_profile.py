@@ -9,6 +9,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.config.config import _LANGUAGE_CODES
 from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages._spaced.fields import NOUN_ARTICLE_FIELD, NOUN_GENDER_FIELD, POS_FIELD
+from anki_miner.languages._spaced.form_of import FormOfLemmaPass, OrderedPasses
 from anki_miner.languages._spaced.grammar_hook import GrammarTagHook
 from anki_miner.languages._spaced.keys import CasefoldDictKeys
 from anki_miner.languages._spaced.morphology import LatinLookupStrategy, SeparableVerbPass, SpacedMinedForm
@@ -110,8 +111,10 @@ def test_the_parser_joins_particle_verbs_after_the_verb():
     profile = get_profile("da")
     parser = profile.create_parser(switch_language(AnkiMinerConfig(), "da"))
     assert parser.normalize is profile.normalize and parser._compound_matcher is None
-    assert isinstance(parser._token_post_pass, SeparableVerbPass)
-    assert parser._token_post_pass._candidates is danish_particle_candidates
+    assert isinstance(parser._token_post_pass, OrderedPasses)
+    repair, join = parser._token_post_pass._passes
+    assert isinstance(repair, FormOfLemmaPass) and isinstance(join, SeparableVerbPass)
+    assert join._candidates is danish_particle_candidates
 
 
 def test_the_catalogue_ships_wiktionary_and_a_lemmatised_frequency_list():

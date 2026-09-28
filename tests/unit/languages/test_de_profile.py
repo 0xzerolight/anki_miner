@@ -9,6 +9,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.config.config import _LANGUAGE_CODES
 from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages._spaced.fields import NOUN_GENDER_FIELD, NOUN_PLURAL_FIELD, POS_FIELD
+from anki_miner.languages._spaced.form_of import FormOfLemmaPass, OrderedPasses
 from anki_miner.languages._spaced.grammar_hook import GrammarTagHook
 from anki_miner.languages._spaced.keys import CasefoldDictKeys
 from anki_miner.languages._spaced.morphology import LatinLookupStrategy, SeparableVerbPass, SpacedMinedForm
@@ -101,10 +102,12 @@ def test_the_lookup_ladder_offers_the_particle_less_verb():
     assert get_profile("de").lookup.candidates("sah", "", None) == []
 
 
-def test_the_parser_carries_the_separable_verb_pass():
+def test_the_parser_carries_the_form_of_repair_then_the_separable_verb_pass():
     profile = get_profile("de")
     parser = profile.create_parser(switch_language(AnkiMinerConfig(), "de"))
-    assert isinstance(parser._token_post_pass, SeparableVerbPass)
+    assert isinstance(parser._token_post_pass, OrderedPasses)
+    repair, join = parser._token_post_pass._passes
+    assert isinstance(repair, FormOfLemmaPass) and isinstance(join, SeparableVerbPass)
     assert parser.normalize is profile.normalize and parser._compound_matcher is None
 
 

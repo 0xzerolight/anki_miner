@@ -9,6 +9,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.config.config import _LANGUAGE_CODES, AudioSourceEntry
 from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages._spaced.fields import NOUN_ARTICLE_FIELD, NOUN_PLURAL_FIELD, POS_FIELD
+from anki_miner.languages._spaced.form_of import FormOfLemmaPass, OrderedPasses
 from anki_miner.languages._spaced.grammar_hook import GrammarTagHook
 from anki_miner.languages._spaced.keys import CasefoldDictKeys
 from anki_miner.languages._spaced.morphology import LatinLookupStrategy, SeparableVerbPass, SpacedMinedForm
@@ -70,6 +71,8 @@ def test_the_sentence_rules_take_the_swedish_abbreviations_and_leave_the_quote_a
 def test_the_parser_and_tagger_resolve_through_the_registry():
     config = switch_language(AnkiMinerConfig(), "sv")
     parser = get_profile("sv").create_parser(config)
-    assert isinstance(parser._token_post_pass, SeparableVerbPass)  # noqa: SLF001 - the nl/de profile tests read it
-    assert parser._token_post_pass._candidates is swedish_particle_candidates  # noqa: SLF001
+    assert isinstance(parser._token_post_pass, OrderedPasses)  # noqa: SLF001 - the nl/de profile tests read it
+    repair, join = parser._token_post_pass._passes  # noqa: SLF001
+    assert isinstance(repair, FormOfLemmaPass) and isinstance(join, SeparableVerbPass)
+    assert join._candidates is swedish_particle_candidates  # noqa: SLF001
     assert get_tagger("sv") is not None
