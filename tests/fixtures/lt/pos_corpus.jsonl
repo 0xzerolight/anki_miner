@@ -17,6 +17,6 @@
 {"id": "lt17", "sentence": "Vilnius yra Lietuvos sostinė.", "must_mine": [], "must_not_mine": ["Vilnius", "vilnius", "Lietuva", "lietuva", "būti"], "note": "place names are PROPN. Documented miss: sostinė tagged ADJ with lemma sostinis"}
 {"id": "lt18", "sentence": "Mergaitė gražiai dainuoja.", "must_mine": ["gražiai", "dainuoti"], "must_not_mine": [], "note": "Documented miss: the sentence-initial Mergaitė is tagged PROPN"}
 {"id": "lt19", "sentence": "Aš tave myliu.", "must_mine": ["mylėti"], "must_not_mine": ["aš", "tu"], "note": "object pronoun tave lemmatises to tu"}
-{"id": "lt20", "sentence": "Jis atėjo, pamatė ir nugalėjo.", "must_mine": ["atėti", "nugalėti"], "must_not_mine": ["jis", "ir"], "note": "Documented miss: pamatė stays pamatė (pamatyti)"}
+{"id": "lt20", "sentence": "Jis atėjo, pamatė ir nugalėjo.", "must_mine": ["nugalėti"], "must_not_mine": ["jis", "ir"], "note": "Documented misses: atėjo -> fabricated atėti (ateiti); pamatė stays pamatė (pamatyti)"}
 {"id": "lt21", "sentence": "Duok man vandens, prašau.", "must_mine": ["vanduo"], "must_not_mine": ["aš"], "note": "Documented misses: the imperative duok and prašau keep their surfaces (duoti, prašyti)"}
 {"id": "lt22", "sentence": "Mūsų namas didelis ir šviesus.", "must_mine": ["namas", "didelis"], "must_not_mine": ["aš", "ir"], "note": "Documented miss: šviesus lemmatises to šviesas"}
