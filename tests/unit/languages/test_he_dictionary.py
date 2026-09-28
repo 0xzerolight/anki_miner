@@ -17,14 +17,13 @@ from pathlib import Path
 
 import pytest
 
+from anki_miner.languages._spaced.form_of import form_targets, is_lemma_row
 from anki_miner.languages.he.morphology import (
     HebrewLemmaPass,
     HebrewMinedForm,
     HebrewReadingSupport,
-    form_targets,
     he_audio_candidates,
     he_speakable,
-    is_lemma_row,
     vocalised_from_content,
 )
 from anki_miner.languages.he.script import HebrewDictKeys, he_fold

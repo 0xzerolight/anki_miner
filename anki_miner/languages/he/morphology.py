@@ -5,12 +5,10 @@ keys 146,419 inflected forms as ``non-lemma`` rows whose glossary names the lemm
 The R36 seam (``SubtitleParserService(form_lookup=)``) is what lets this read them: the shipped
 ``AttestLookup`` answers "does this string exist" and cannot read a row's target.
 
-**A form row's target is parsed out of the RENDERED content, not out of raw JSON.** The Yomitan
-importer stores ``render_glossary_entry(...)`` output in the ``content`` column
-(``yomitan_importer.py``), so a single-target row arrives as
-``<li class="gloss-item"><div class="gloss-content">LEMMA</div></li>`` and a multi-target row wraps
-its targets in ``<li class="gloss-sc-li">``. Reading the head line back out of rendered HTML is the
-shape ``fa/render.py`` already uses for its romanisation.
+**A form row's target is parsed out of the RENDERED content, not out of raw JSON**
+(``is_lemma_row`` and ``form_targets``, shared with the spaCy languages' front repair in
+``_spaced/form_of.py``). Reading the head line back out of rendered HTML is the shape
+``fa/render.py`` already uses for its romanisation.
 
 The resolution rules, in order, and what each is for:
 
@@ -37,6 +35,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from anki_miner.languages._spaced.form_of import form_targets, is_lemma_row, rendered_text
 from anki_miner.languages.he.pos import pos_from_tags
 from anki_miner.languages.he.proclitics import rungs
 from anki_miner.languages.he.script import he_fold
@@ -46,45 +45,16 @@ __all__ = [
     "HebrewLemmaPass",
     "HebrewMinedForm",
     "HebrewReadingSupport",
-    "form_targets",
     "he_audio_candidates",
     "he_speakable",
-    "is_lemma_row",
     "vocalised_from_content",
 ]
 
-_GLOSS_CONTENT_RE = re.compile(r'<div class="gloss-content">(.*?)</div>', re.S)
-_GLOSS_ITEM_RE = re.compile(r'<li class="gloss-sc-li">(.*?)</li>', re.S)
 _GRAMMAR_HEAD_RE = re.compile(r'data-sc-content="Grammar-content"[^>]*>(.*?)</div>', re.S)
-_TAG_RE = re.compile(r"<[^>]+>")
 _BULLET = "\N{BULLET}"
-_NON_LEMMA = "non-lemma"
 #: One line's worth of surfaces is small; the cache exists so a repeated word in a long corpus
 #: (count_lemmas) is resolved once per parser, not once per occurrence.
 _CACHE_MAX = 4096
-
-
-def _text(html: str) -> str:
-    import html as html_lib
-
-    return html_lib.unescape(_TAG_RE.sub("", html)).strip()
-
-
-def is_lemma_row(tags: str) -> bool:
-    """A row the dictionary files as a headword rather than as an inflected form."""
-    return _NON_LEMMA not in tags.split(" ")
-
-
-def form_targets(content: str) -> list[str]:
-    """The lemmas a form row's rendered content names, in order (spec F.2, measured shapes)."""
-    found: list[str] = []
-    for block in _GLOSS_CONTENT_RE.findall(content or ""):
-        items = _GLOSS_ITEM_RE.findall(block)
-        for item in items or [block]:
-            target = _text(item)
-            if target:
-                found.append(target)
-    return found
 
 
 def vocalised_from_content(content: str) -> str:
@@ -96,7 +66,7 @@ def vocalised_from_content(content: str) -> str:
     match = _GRAMMAR_HEAD_RE.search(content or "")
     if match is None:
         return ""
-    head = _text(match.group(1))
+    head = rendered_text(match.group(1))
     bullet = head.find(_BULLET)
     return head[:bullet].strip() if bullet > 0 else ""
 
