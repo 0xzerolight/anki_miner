@@ -24,6 +24,8 @@ model gets wrong. Surfaces are always slices of the original line.
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
+from types import MappingProxyType
 from typing import Any
 
 from anki_miner.languages._spaced.morphology import APOSTROPHE_FOLD
@@ -48,6 +50,17 @@ _CLITIC_TOKEN = re.compile(rf"[{_WORD_HYPHENS}](?:{_CLITICS})")
 _ENDS_IN_CLITIC = re.compile(rf"(?i)[{_WORD_HYPHENS}](?:{_CLITICS})$")
 #: Text before a zero-width elision split that ends in "<letter>-d'" or "<letter>-l'" (the tagging copy is ASCII).
 _HYPHEN_ELISION = re.compile(rf"[^\W\d_][{_WORD_HYPHENS}][dDlL]'$")
+
+#: Bare personal pronouns the model puts in other classes, keyed by the folded surface, with their
+#: lemma. Over 68 dialogue lines ``tu`` was tagged PRON 0 of 13 times (ADP, DET, AUX, CCONJ, ADV,
+#: ADJ lemma ``taire``), ``te`` ADV, ``t'`` VERB; the ones tagged ADJ/ADV/VERB became cards.
+_PERSONAL_PRONOUNS: Mapping[str, str] = MappingProxyType({"tu": "tu", "te": "te", "t'": "te", "me": "me", "m'": "me"})
+#: Possessive determiners, demoted from ADJ only: ``ton`` tagged NOUN is the noun (hausser le ton).
+_POSSESSIVE_DETERMINERS: frozenset[str] = frozenset(
+    {"mon", "ma", "mes", "ton", "ta", "tes", "son", "sa", "ses", "notre", "nos", "votre", "vos", "leur", "leurs"}
+)
+#: A ``tu`` right after one of these is taire's participle (``il s'est tu``, tagged ADJ lemma ``taire``).
+_PARTICIPLE_AUXILIARIES: frozenset[str] = frozenset({"être", "avoir"})
 
 
 def customise_tokenizer(nlp: Any) -> None:
@@ -93,8 +106,13 @@ def retag_french_tokens(tokens: list[LanguageToken]) -> list[LanguageToken]:
     Hyphen clitics → PRON (lemma without the hyphen); undotted title
     abbreviations → X; ``FR_FIXED_TOKENS`` → their POS and headword; ADV ``ne``
     → PART (UD French tags the negation particle ADV; en's ``not`` is PART).
-    Table lookups, never capitalisation heuristics (§2).
+    ``tu te t' me m'`` outside PRON → PRON, except a ``tu`` that is taire's
+    participle (tagged VERB, or right after a form of être/avoir); a possessive
+    determiner tagged ADJ → DET; ADV ``que``/``qu'`` → PRON; ``as`` right after
+    ``tu`` → AUX ``avoir`` (the model reads the ace). Table lookups and one
+    token of context, never capitalisation heuristics (§2).
     """
+    previous: LanguageToken | None = None
     for token in tokens:
         feature = token.feature
         key = fold_apostrophes(token.surface).casefold()
@@ -106,7 +124,22 @@ def retag_french_tokens(tokens: list[LanguageToken]) -> list[LanguageToken]:
             feature.pos1, feature.lemma = FR_FIXED_TOKENS[key]
         elif feature.pos1 == "ADV" and feature.lemma == "ne":
             feature.pos1 = "PART"
+        elif key in _PERSONAL_PRONOUNS and feature.pos1 != "PRON" and not _is_participle_tu(key, feature, previous):
+            feature.pos1, feature.lemma = "PRON", _PERSONAL_PRONOUNS[key]
+        elif key in _POSSESSIVE_DETERMINERS and feature.pos1 == "ADJ":
+            feature.pos1 = "DET"
+        elif key in ("que", "qu'") and feature.pos1 == "ADV":
+            feature.pos1 = "PRON"
+        elif key == "as" and previous is not None and previous.surface.casefold() == "tu":
+            feature.pos1, feature.lemma = "AUX", "avoir"
+        previous = token
     return tokens
+
+
+def _is_participle_tu(key: str, feature: Any, previous: LanguageToken | None) -> bool:
+    return key == "tu" and (
+        feature.pos1 == "VERB" or (previous is not None and previous.feature.lemma in _PARTICIPLE_AUXILIARIES)
+    )
 
 
 def build_tagger() -> LockedTagger:
