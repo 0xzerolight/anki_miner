@@ -64,6 +64,7 @@ no-op, so the tokens reach the card exactly as the tokenizer built them.
 
 from __future__ import annotations
 
+import html
 import re
 from typing import Any
 
@@ -151,6 +152,18 @@ _INFLECTION_WORDS = frozenset(
 #: cross-check fronts its target; the other proclitic letters front the strip.
 _STEM_INITIALS = frozenset("\N{HEBREW LETTER MEM}\N{HEBREW LETTER SHIN}")
 _ARTICLE = "\N{HEBREW LETTER HE}"
+#: A form row's deinflection pair keeps its rule chain on the target it names
+#: (``yomitan_renderer.render_glossary_entry``): ``<span data-inflection="singular feminine
+#: present">TARGET</span>``.
+_PAIR_RE = re.compile(r'<span data-inflection="([^"]*)">(.*?)</span>', re.S)
+#: The rules only a verb form carries: "third-person plural past", "singular feminine present",
+#: "passive participle". A noun or adjective form reads "plural indefinite", "feminine".
+_VERB_RULE_RE = re.compile(r"\b(?:past|future|present|imperative|infinitive|participle|passive|active)\b")
+#: A tensed form outranks a possessed noun form of the same spelling -- halkhu 'they went', not
+#: halakho 'his going' -- as modern speech says shel (spec section 9); an imperative does not
+#: (darki 'my way', not dirkhi 'tread!').
+_TENSE_RULE_RE = re.compile(r"\b(?:past|future)\b")
+_POSSESSED = "possessed-form"
 
 
 def vocalised_from_content(content: str) -> str:
@@ -220,6 +233,31 @@ def _form_row_targets(found: list[tuple[str, str]]) -> list[str]:
             if folded not in targets:
                 targets.append(folded)
     return targets
+
+
+def _verb_form_of(found: list[tuple[str, str]], target: str) -> bool:
+    """Whether a key's form rows name *target* as a verb form, by the pairs' own rules.
+
+    Every pair naming it a verb form, or a tensed one against possessed forms only. A spelling
+    the dictionary also files as a noun or adjective form of the target (banim 'sons', chayevet
+    'must') is no verb form, and neither is a row imported before the renderer kept the rules.
+    Measured over the top 5,000: 27 forms carry both kinds of pair. Any verb pair would make all
+    27 verbs, 13 of them wrongly (129k tokens, chayevet alone 60k); this rule is wrong on 3.
+    """
+    rules = [
+        html.unescape(chain)
+        for content, tags in found
+        if not is_lemma_row(tags)
+        for chain, term in _PAIR_RE.findall(content)
+        if he_fold(rendered_text(term)) == target
+    ]
+    if not rules:
+        return False
+    if all(_VERB_RULE_RE.search(chain) for chain in rules):
+        return True
+    return any(_TENSE_RULE_RE.search(chain) for chain in rules) and all(
+        _VERB_RULE_RE.search(chain) or _POSSESSED in chain for chain in rules
+    )
 
 
 def _is_name(tags: str) -> bool:
@@ -337,18 +375,20 @@ class HebrewLemmaPass:
                 elif not agrees and candidate[0] not in _STEM_INITIALS:
                     # Disjoint behind he/bet/kaf/lamed/vav: the strip (ha-kol is kol, not hekhil).
                     return self._headword(strip, rows) or self._front(strip, rows)
-            return self._front(targets[0], rows)
+            return self._front(targets[0], rows, _verb_form_of(found, targets[0]))
         return _Resolution(key, "WORD", "", "")
 
     def _headword(self, key: str, rows: _Rows) -> _Resolution | None:
         """The key's answer from its own lemma rows; ``None`` when it has none, or only proper names.
 
-        Every lemma row an inflection line: the lemma the first one names. Otherwise the key itself.
+        Every lemma row an inflection line: the lemma the first one names, through its verb row when
+        the entry is filed as a verb (holekh 'v masc ptcpl sg' is halakh, not helekh). Otherwise the
+        key itself.
         """
         heads = [(content, tags) for content, tags in rows.get(key) or [] if is_lemma_row(tags)]
         named = _lemma_of(heads)
         if named:
-            return self._front(named[0], rows)
+            return self._front(named[0], rows, all(pos_from_tags(tags) == "VERB" for _content, tags in heads))
         if any(not _is_name(tags) for _content, tags in heads):
             return self._front(key, rows)
         return None
@@ -367,11 +407,17 @@ class HebrewLemmaPass:
         return {strip, *_form_row_targets(rows.get(strip) or [])}
 
     @staticmethod
-    def _front(lemma: str, rows: _Rows) -> _Resolution:
+    def _front(lemma: str, rows: _Rows, verb_form: bool = False) -> _Resolution:
         """*lemma* as the front, its pos1 and vocalisation from its first lemma row that is not a
-        proper name (the first lemma row when every one is), when the batch has it."""
+        proper name (the first lemma row when every one is), when the batch has it.
+
+        ``verb_form``: the form that named *lemma* is a verb inflection, so its first ``v`` row is
+        the one (halkhu is halakh 'went', never helekh 'traveler', wty's first row).
+        """
         heads = [(content, tags) for content, tags in rows.get(lemma) or [] if is_lemma_row(tags)]
         chosen = [row for row in heads if not _is_name(row[1])] or heads
+        if verb_form:
+            chosen = [row for row in chosen if pos_from_tags(row[1]) == "VERB"] or chosen
         if not chosen:
             return _Resolution(lemma, "WORD", "", "")
         content, tags = chosen[0]
