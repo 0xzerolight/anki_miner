@@ -3,9 +3,10 @@
 Imported only by ``tokenizer.build_tagger``, function-locally, so zeyrek loads on first use. Uses
 ``MorphAnalyzer._parse`` per word: the public ``analyze`` tokenizes with nltk's punkt data, which nobody downloads.
 
-Three zeyrek bugs made stock analyses depend on history or on ``PYTHONHASHSEED``. Over zeyrek's own 9,984-word
-``first-10K`` list, a second pass changed 322 words' analyses and 441 words ended with none; the hash seed changed
-the lexicon (``adı`` lost every ``ad`` reading, ``tıbbı`` and ``zıddı`` every reading at all, under seed 2).
+Four zeyrek bugs are fixed here. The first three made stock analyses depend on history or on ``PYTHONHASHSEED``.
+Over zeyrek's own 9,984-word ``first-10K`` list, a second pass changed 322 words' analyses and 441 words ended with
+none; the hash seed changed the lexicon (``adı`` lost every ``ad`` reading, ``tıbbı`` and ``zıddı`` every reading at
+all, under seed 2).
 
 1. Lexicon build: ``TurkishMorphotactics`` stores the cached set on stem transitions and adds attributes to it, so
    every item sharing the cache entry inherits them. ``_uncached_phonetics`` points ``zeyrek.morphotactics`` at
@@ -19,6 +20,14 @@ the lexicon (``adı`` lost every ``ad`` reading, ``tıbbı`` and ``zıddı`` eve
    ``hash(self._name_)``, so that walk follows ``PYTHONHASHSEED``: ``reddi`` analysed to the roots ``redd`` and
    ``ret`` under seed 0 but only ``redd`` under seed 2. ``_ordered_lexicon`` gives every item an
    ``_OrderedRootAttributes``, which iterates in declaration order - the order of Zemberek's own ``EnumSet``.
+4. In-template harmony: ``generate_surface`` picks every ``A``/``I`` of a suffix template from the attributes of
+   what the suffix follows, so ``konuş`` + ``mAlI`` gave ``malu`` and every necessitative of a rounded-vowel verb
+   (``konuşmalıyız``, ``olmalısın``) had no reading; ``dönmeliyim`` kept only the noun ``dönme``. Zemberek's
+   ``AttributesHelper.getMorphemicAttributes`` recomputes the attributes from the surface built so far before each
+   token. ``_generate_surface`` ports that (MIT, as fix 2) for the ported ``advance``. Measured trade: over the
+   OpenSubtitles top 50,000 words, 74 unanalysed surfaces became verbs (131,523 tokens); six nouns whose ending is
+   also a newly reachable ``-yAlI``/``-yAsI`` verb form now tie on morpheme count and lose to it (``kuralı`` →
+   ``kurmak``, ``süresi`` → ``sürmek``, ``süreli``, ``buralı``, ``doğası``, ``düşesi``; 11,539 tokens).
 
 ``analyse`` orders readings by ``_ranked`` (plan decision 2).
 """
@@ -33,9 +42,10 @@ from typing import Any
 import zeyrek
 import zeyrek.attributes
 import zeyrek.morphotactics
+from zeyrek import tr as zeyrek_tr
 from zeyrek.attributes import PhoneticAttribute, RootAttribute, calculate_phonetic_attributes
 from zeyrek.lexicon import RootLexicon
-from zeyrek.morphotactics import SurfaceTransition, generate_surface
+from zeyrek.morphotactics import SurfaceTransition
 from zeyrek.rulebasedanalyzer import RuleBasedAnalyzer
 
 from anki_miner.languages.tr.morphology import TrAnalysis, front_spelling, tr_casefold, upos
@@ -46,6 +56,9 @@ MARKED_SECONDARY_POS = frozenset({"Prop", "Abbrv"})
 CLOSED_CLASS_POS = frozenset({"Pron", "Postp", "Conj", "Det", "Ques"})
 _APOSTROPHES = str.maketrans({"’": "'", "ʼ": "'"})
 _ROOT_ATTRIBUTE_ORDER = {attribute: index for index, attribute in enumerate(RootAttribute)}
+#: Fix 4's recompute: zeyrek's undecorated function takes the predecessor's set as is (the cache would hash it).
+_phonetics = zeyrek.attributes.calculate_phonetic_attributes.__wrapped__
+_VOWELS = zeyrek_tr.vowels_lower_set
 
 
 def _uncached_phonetics() -> None:
@@ -68,6 +81,49 @@ def _ordered_lexicon() -> Any:
     for item in lexicon.item_set:
         item.attributes = _OrderedRootAttributes(item.attributes)
     return lexicon
+
+
+def _generate_surface(transition: Any, phonetic_attributes: set[Any]) -> str:
+    """Fix 4: zeyrek 0.1.3 ``generate_surface`` (MIT, Olga Bulat), each token read against the surface so far.
+
+    Zemberek's ``generateSurface`` recomputes the attributes from the partial surface before every token. A partial
+    with no vowel carries the predecessor's vowel attributes over, so a vowel token only needs the recompute once
+    the partial holds a vowel (parsing takes about 1.5x stock's time; a recompute before every token took 1.9x).
+    """
+    surface = ""
+    for index, token in enumerate(transition.token_list):
+        kind = token.type_
+        if kind in ("LETTER", "LAST_VOICED", "LAST_NOT_VOICED"):
+            surface += token.letter
+            continue
+        if kind in ("A_VOWEL", "I_VOWEL") and index == 0 and PhoneticAttribute.LastLetterVowel in phonetic_attributes:
+            continue
+        if surface and (kind in ("APPEND", "DEVOICE_FIRST") or not _VOWELS.isdisjoint(surface)):
+            attributes = _phonetics(surface, phonetic_attributes)
+        else:
+            attributes = phonetic_attributes
+        if kind == "A_VOWEL":
+            if PhoneticAttribute.LastVowelBack in attributes:
+                surface += "a"
+            elif PhoneticAttribute.LastVowelFrontal in attributes:
+                surface += "e"
+            else:
+                raise ValueError(f"Cannot generate A form from {attributes}")
+        elif kind == "I_VOWEL":
+            unrounded = PhoneticAttribute.LastVowelUnrounded in attributes
+            if PhoneticAttribute.LastVowelFrontal in attributes:
+                surface += "i" if unrounded else "ü"
+            elif PhoneticAttribute.LastVowelBack in attributes:
+                surface += "ı" if unrounded else "u"
+            else:
+                raise ValueError(f"Cannot generate I form from {attributes}")
+        elif kind == "APPEND":
+            if PhoneticAttribute.LastLetterVowel in attributes:
+                surface += token.letter
+        elif kind == "DEVOICE_FIRST":
+            voiceless = PhoneticAttribute.LastLetterVoiceless in attributes
+            surface += zeyrek_tr.devoice(token.letter) if voiceless else token.letter
+    return surface
 
 
 class _DeterministicAnalyzer(RuleBasedAnalyzer):
@@ -94,7 +150,7 @@ class _DeterministicAnalyzer(RuleBasedAnalyzer):
         for transition in path.current_state.outgoing:
             if not path.tail and transition.has_surface_form:
                 continue
-            surface = generate_surface(transition, path.phonetic_attributes)
+            surface = _generate_surface(transition, path.phonetic_attributes)
             if not path.tail.startswith(surface) or not transition.can_pass(path):
                 continue
             if not transition.has_surface_form:
