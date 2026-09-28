@@ -8434,8 +8434,8 @@ No index files are deleted.</source>
         <translation>Добавить файлы…</translation>
     </message>
     <message>
-        <source>Add subtitle files (.srt, .ass, .ssa, .vtt) to the list.</source>
-        <translation>Добавить файлы субтитров (.srt, .ass, .ssa, .vtt) в список.</translation>
+        <source>Add subtitle files (.srt, .ass, .ssa, .vtt, .smi) to the list.</source>
+        <translation>Добавить файлы субтитров (.srt, .ass, .ssa, .vtt, .smi) в список.</translation>
     </message>
     <message>
         <source>Remove Selected</source>
