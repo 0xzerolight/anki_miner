@@ -2676,7 +2676,9 @@ class TestFormOfRows:
             ):
                 single = self._contents(lookup(conn, word, keys=keys, pos=lookup_pos))
                 batch = self._contents(lookup_many(conn, [(word, None)], keys=keys, pos={word: lookup_pos})[word])
-                assert single == batch == expected, (word, lookup_pos)
+                # The variant ladder's read, handed the class of the token the candidate came from.
+                ladder = self._contents(lookup_with_rules(conn, word, keys=keys, pos=lookup_pos))
+                assert single == batch == ladder == expected, (word, lookup_pos)
             assert ("v impf pf", "NOUN") in keys.calls
             # No token class in hand, or keys without the test: every target row, as before.
             keys.calls.clear()

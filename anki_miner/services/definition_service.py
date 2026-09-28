@@ -345,6 +345,7 @@ class DefinitionService:
         orth_base: str,
         ctype: str | None,
         is_cancelled: Callable[[], bool] | None = None,
+        pos: str | None = None,
     ) -> list[str]:
         """Every offline provider's rules-validated hit for the first candidate any of them answers.
 
@@ -354,7 +355,13 @@ class DefinitionService:
         never mixes into a nearer one's hits. Online providers and providers
         lacking ``lookup_fallback`` are skipped. Never raises: a provider that
         throws degrades to "skip + continue". Cancellation returns the hits so far.
+
+        ``pos`` is the token's part of speech (the batch's ``pos_context``), so a
+        candidate's form row reads only the target rows the profile lets that
+        class read, as the direct lookup does. Passed only when known, the
+        ``_token_kwargs`` convention.
         """
+        token_kwargs = {"pos": pos} if pos else {}
         hits: list[str] = []
         for cand_text, cand_conditions in self.fallback_candidates(word, orth_base, ctype):
             for provider in self._providers:
@@ -366,7 +373,7 @@ class DefinitionService:
                 if not callable(fb):
                     continue
                 try:
-                    html: str | None = fb(cand_text, cand_conditions)
+                    html: str | None = fb(cand_text, cand_conditions, **token_kwargs)
                 except Exception as e:
                     _log_provider_failure(provider, "lookup_fallback", e, subject=cand_text)
                     continue
@@ -382,13 +389,14 @@ class DefinitionService:
         orth_base: str,
         ctype: str | None,
         is_cancelled: Callable[[], bool] | None = None,
+        pos: str | None = None,
     ) -> str | None:
         """First rules-validated fallback hit across offline providers, else None.
 
         The first of ``_fallback_hits_offline`` (mirrors ``get_definitions_batch``
         first-hit-wins).
         """
-        hits = self._fallback_hits_offline(word, orth_base, ctype, is_cancelled)
+        hits = self._fallback_hits_offline(word, orth_base, ctype, is_cancelled, pos)
         return hits[0] if hits else None
 
     def _chain_description(self) -> list[str]:
@@ -454,7 +462,8 @@ class DefinitionService:
         ``pos_context`` maps a lookup word to its token's part of speech,
         forwarded the same way as ``pos=`` for the profile's row rank: a wty
         verb opens on its verb row, not on the noun row the index put first.
-        Absent/empty ⇒ no ``pos`` kwarg, as with ``lemma_context``.
+        The miss ladder hands it to ``lookup_fallback`` for the profile's
+        splice test. Absent/empty ⇒ no ``pos`` kwarg, as with ``lemma_context``.
         """
         if progress_callback:
             progress_callback.on_start(
@@ -559,6 +568,7 @@ class DefinitionService:
                     orth_base,
                     ctype,
                     is_cancelled,
+                    pos_context.get(word) if pos_context else None,
                 )
                 if html:
                     resolved[pair] = html
@@ -1127,7 +1137,9 @@ class DefinitionService:
                 if ctx is None or offline_hits[pair] or online_results.get(pair):
                     continue
                 orth_base, ctype = ctx
-                offline_hits[pair] = self._fallback_hits_offline(word, orth_base, ctype, is_cancelled)
+                offline_hits[pair] = self._fallback_hits_offline(
+                    word, orth_base, ctype, is_cancelled, pos_context.get(word) if pos_context else None
+                )
 
         results: list[str | None] = []
         for i, pair in enumerate(words, 1):

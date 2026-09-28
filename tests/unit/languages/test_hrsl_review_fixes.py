@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import zipfile
+from dataclasses import replace
 
 import pytest
 
@@ -19,6 +20,7 @@ from anki_miner.languages._spaced.form_of import FormOfLemmaPass, OrderedPasses
 from anki_miner.languages.hr.morphology import hr_short_infinitive_pass
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.token import LanguageToken
+from anki_miner.services.definition_service import DefinitionService
 from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip
 from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
 from anki_miner.services.reading._util import decode_with_ladder
@@ -191,12 +193,25 @@ def test_sl_a_lookup_with_no_token_class_splices_as_before(tmp_path):
     assert found is not None and "to have" in found
 
 
-def test_sl_the_variant_ladder_never_retries_the_probe_word_under_its_key():
-    """A line-initial ``Mama`` is ``mama`` under the key: retried with no class, it read "to have" again."""
-    ladder = get_profile("sl").lookup
-    assert ladder.candidates("mama", "Mama", None) == []
-    assert ladder.candidates("mama", "MȂMA", None) == []
-    assert ("goste", 0) in ladder.candidates("gost", "goste", None)
+#: wty-sl-en's ``mamo``: the accusative of the noun ``mama``, filed only as a form of the verb ``imeti``.
+_SL_MAMO = ["mamo", "", "non-lemma", "", 0, [["imeti", ["first-person plural present indicative negative"]]], 8, ""]
+
+
+@pytest.mark.parametrize("batch", ["get_definitions_batch", "get_glossaries_batch"])
+def test_sl_the_variant_ladder_reads_the_tokens_class_too(tmp_path, test_config, batch):
+    """The noun ``mama`` misses, and the ladder retries its surface: ``mamo`` and a line-initial ``Mama``."""
+    provider = _imported(tmp_path, "sl", "wty-sl-en", [*_SL_ROWS, _SL_MAMO])
+    service = DefinitionService(replace(test_config, language="sl"), [provider], lookup=get_profile("sl").lookup)
+    fetch = getattr(service, batch)
+    for surface in ("mamo", "Mama"):
+        ladder = {"mama": (surface, None)}
+        assert fetch([("mama", None)], None, ladder, pos_context={"mama": "NOUN"}) == [None], surface
+        # No token class in hand (a backfill): every target row, as before.
+        (found,) = fetch([("mama", None)], None, ladder)
+        assert found is not None and "to have" in found, surface
+    # A verb the tagger lemmatised wrongly still reaches imeti through its surface.
+    (found,) = fetch([("mamiti", None)], None, {"mamiti": ("mamo", None)}, pos_context={"mamiti": "VERB"})
+    assert found is not None and "to have" in found
 
 
 # --------------------------------------------------------------------------

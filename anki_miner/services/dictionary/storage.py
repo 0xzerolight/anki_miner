@@ -892,7 +892,7 @@ def lookup(
 
 
 def lookup_with_rules(
-    conn: sqlite3.Connection, word: str, *, keys: DictKeyFolding | None = None
+    conn: sqlite3.Connection, word: str, *, keys: DictKeyFolding | None = None, pos: str | None = None
 ) -> list[tuple[str, str, int | None, str]]:
     """Return (content, tags, sequence, rules) rows matching ``word`` by term or
     folded reading, ranked like :func:`lookup` (no reading boost).
@@ -902,6 +902,12 @@ def lookup_with_rules(
     rendering. A NULL/absent ``rules`` column normalises to ``""`` (accept
     unconditionally at the caller). Katakana folding matches ``lookup``: a
     katakana candidate still matches a kanji headword's hiragana-folded reading.
+
+    ``pos`` is the part of speech of the token the candidate was derived from,
+    handed only to the profile's optional splice test (see
+    :func:`_splice_row_fits`): sl ``mamo`` (a form of the verb ``imeti``) must
+    not read "to have" for the noun ``mama``. The row rank stays the no-token
+    one. ``None`` (the curator, a backfill) splices every target row.
 
     ``keys`` folds both key spaces; ``None`` is the Japanese pair (see
     :func:`_folders`).
@@ -924,7 +930,7 @@ def lookup_with_rules(
     rows4 = _drop_shadowed_form_rows(
         [(row[0], row[1], row[2], row[3] if row[3] is not None else "") for row in kept], rank
     )
-    rows4 = _splice_form_rows(conn, rows4, fold_term=fold_t, rank=rank)
+    rows4 = _splice_form_rows(conn, rows4, fold_term=fold_t, rank=rank, row_fits=_splice_row_fits(keys, pos))
     projected = _substitute_redirect_rows(conn, rows4, with_rules=True)
     return projected[:_LOOKUP_LIMIT]  # type: ignore[return-value]
 

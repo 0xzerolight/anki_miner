@@ -259,7 +259,7 @@ class IndexedDictProvider:
         # requested word (preserving duplicates) for caller convenience.
         return {w: self._render(rows_by_word.get(w, [])) for w, _ in pairs}
 
-    def lookup_fallback(self, word: str, conditions: int) -> str | None:
+    def lookup_fallback(self, word: str, conditions: int, pos: str | None = None) -> str | None:
         """Rules-validated lookup for a deinflection/variant fallback candidate.
 
         Ported from Yomitan ``Translator._matchEntriesToDeinflections``
@@ -274,6 +274,8 @@ class IndexedDictProvider:
         :meth:`lookup`, so a validated fallback hit is byte-identical to a direct
         hit. Optional method (probed via ``getattr`` like ``lookup_many`` /
         ``has_terms``); never raises — a corrupt index degrades to a miss.
+        ``pos`` is the part of speech of the token the candidate came from, for
+        the profile's splice test (see ``storage.lookup_with_rules``).
         """
         if self._conn is None:
             return None
@@ -282,7 +284,7 @@ class IndexedDictProvider:
         from anki_miner.services.deinflection import condition_flags_from_rules, conditions_match
 
         try:
-            rows = storage_lookup_with_rules(self._conn, word, keys=self._keys)
+            rows = storage_lookup_with_rules(self._conn, word, keys=self._keys, pos=pos)
         except sqlite3.DatabaseError as e:
             logger.warning(
                 "Dictionary '%s' (%s) raised DatabaseError during lookup_fallback; treating as miss: %s",

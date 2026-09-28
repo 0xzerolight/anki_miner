@@ -89,9 +89,12 @@ class DictionaryProvider(Protocol):
     # plan item 5.2). Offline indexed providers implement it; consumers probe via
     # ``getattr`` and skip providers without it. Contract:
     #
-    #     def lookup_fallback(self, word: str, conditions: int) -> str | None:
+    #     def lookup_fallback(self, word: str, conditions: int, pos: str | None = None) -> str | None:
     #         """Look up a deinflection/variant candidate, keeping only entries
     #         whose stored ``rules`` (POS) are compatible with the hypothesis
     #         ``conditions`` (0 = spelling/kana variant, passes unconditionally;
     #         empty rules accept unconditionally). Renders identically to
-    #         ``lookup``. Never raises; degrade to None."""
+    #         ``lookup``. ``pos`` is the part of speech of the token the
+    #         candidate came from, for the profile's form-row splice test;
+    #         callers pass it only when known, so implementations predating the
+    #         kwarg keep working. Never raises; degrade to None."""
