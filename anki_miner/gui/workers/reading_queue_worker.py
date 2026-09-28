@@ -83,6 +83,9 @@ def load_reading_source(
         loader_kwargs["normalize"] = normalize
     if has_target_script is not None:
         loader_kwargs["has_target_script"] = has_target_script
+    if source.kind == "deck":
+        # An Anki deck is read through AnkiConnect, with the run's own service.
+        loader_kwargs["anki"] = processor.anki_service
     return detector.load(
         source,
         cancel_check=cancel_check,

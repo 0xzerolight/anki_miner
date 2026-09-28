@@ -13,6 +13,7 @@ from anki_miner.exceptions.youtube import BotDetectionError, YouTubeFetchError
 from anki_miner.gui.workers import reading_queue_worker, youtube_queue_worker
 from anki_miner.gui.workers._queue_worker_base import anki_write_state_of, exception_retry_eligible
 from anki_miner.models import AnkiWriteState
+from anki_miner.models.reading import DeckFieldMap, ReadingSourceRef
 
 
 def test_classify_probe_result_moved_and_widget_alias_is_same_function() -> None:
@@ -64,6 +65,23 @@ def test_load_reading_source_passes_parser_seams_and_cancel_check(test_config) -
     assert kwargs["normalize"] is parser.normalize
     assert kwargs["has_target_script"] is parser.has_target_script
     assert "encodings" in kwargs and "rules" in kwargs
+
+
+def test_load_reading_source_hands_a_deck_ref_the_anki_service(test_config) -> None:
+    anki = object()
+    processor = SimpleNamespace(subtitle_parser=None, anki_service=anki)
+    ref = ReadingSourceRef(kind="deck", title="Show", deck_fields=DeckFieldMap(sentence="Expression"))
+    with patch.object(reading_queue_worker.detector, "load", return_value="DOC") as load:
+        reading_queue_worker.load_reading_source(processor, test_config, ref, cancel_check=lambda: False)
+    assert load.call_args.kwargs["anki"] is anki
+
+
+def test_load_reading_source_keeps_anki_away_from_file_refs(test_config, tmp_path) -> None:
+    processor = SimpleNamespace(subtitle_parser=None, anki_service=object())
+    ref = ReadingSourceRef(kind="subtitle", path=tmp_path / "a.srt")
+    with patch.object(reading_queue_worker.detector, "load", return_value="DOC") as load:
+        reading_queue_worker.load_reading_source(processor, test_config, ref, cancel_check=lambda: False)
+    assert "anki" not in load.call_args.kwargs
 
 
 def test_load_reading_source_omits_absent_parser_seams(test_config) -> None:

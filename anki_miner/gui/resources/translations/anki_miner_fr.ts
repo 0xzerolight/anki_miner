@@ -2106,6 +2106,14 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Extrayez le vocabulaire directement depuis des fichiers de sous-titres (.srt/.ass/.vtt) en tant que texte — aucune vidéo nécessaire.</translation>
     </message>
     <message>
+        <source>Mine an existing Anki deck</source>
+        <translation>Extraire un paquet Anki existant</translation>
+    </message>
+    <message>
+        <source>Mine the sentences of a deck already in Anki, such as a subs2srs, movies2anki or asbplayer deck, as if they were subtitle lines. New cards reuse each card's audio and picture; the source deck is not changed.</source>
+        <translation>Extrayez les phrases d'un paquet déjà présent dans Anki, tel qu'un paquet subs2srs, movies2anki ou asbplayer, comme s'il s'agissait de lignes de sous-titres. Les nouvelles cartes réutilisent l'audio et l'image de chaque carte ; le paquet source n'est pas modifié.</translation>
+    </message>
+    <message>
         <source>Generate subtitles from audio</source>
         <translation>Générer des sous-titres depuis l'audio</translation>
     </message>
@@ -6643,6 +6651,10 @@ Continuer ?</translation>
         <translation>Texte</translation>
     </message>
     <message>
+        <source>Anki Deck</source>
+        <translation>Paquet Anki</translation>
+    </message>
+    <message>
         <source>Single</source>
         <translation>Unique</translation>
     </message>
@@ -8147,6 +8159,159 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Terminé</translation>
     </message>
 </context><context>
+    <name>ReadingDeckTab</name>
+    <message>
+        <source>Review words before mining</source>
+        <translation>Réviser les mots avant l'extraction</translation>
+    </message>
+    <message>
+        <source>Show the word-selection popup before creating cards.</source>
+        <translation>Affiche la fenêtre de sélection des mots avant la création des cartes.</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>Progression</translation>
+    </message>
+    <message>
+        <source>Anki Deck</source>
+        <translation>Paquet Anki</translation>
+    </message>
+    <message>
+        <source>Mine the sentences of a deck already in Anki, such as a subs2srs deck. Each new card reuses that card's audio and picture. The deck itself is not changed.</source>
+        <translation>Extrayez les phrases d'un paquet déjà présent dans Anki, tel qu'un paquet subs2srs. Chaque nouvelle carte réutilise l'audio et l'image de la carte d'origine. Le paquet lui-même n'est pas modifié.</translation>
+    </message>
+    <message>
+        <source>Deck:</source>
+        <translation>Paquet :</translation>
+    </message>
+    <message>
+        <source>Sentence field:</source>
+        <translation>Champ de la phrase :</translation>
+    </message>
+    <message>
+        <source>Audio field:</source>
+        <translation>Champ audio :</translation>
+    </message>
+    <message>
+        <source>Picture field:</source>
+        <translation>Champ image :</translation>
+    </message>
+    <message>
+        <source>Translation field:</source>
+        <translation>Champ de traduction :</translation>
+    </message>
+    <message>
+        <source>Select a deck…</source>
+        <translation>Sélectionner un paquet…</translation>
+    </message>
+    <message>
+        <source>The deck to mine. Its subdecks are included.</source>
+        <translation>Le paquet à extraire. Ses sous-paquets sont inclus.</translation>
+    </message>
+    <message>
+        <source>Select a field…</source>
+        <translation>Sélectionner un champ…</translation>
+    </message>
+    <message>
+        <source>The field that holds the subtitle line to mine.</source>
+        <translation>Le champ qui contient la ligne de sous-titres à extraire.</translation>
+    </message>
+    <message>
+        <source>(none)</source>
+        <translation>(aucun)</translation>
+    </message>
+    <message>
+        <source>The field with the line's audio clip.</source>
+        <translation>Le champ contenant le clip audio de la ligne.</translation>
+    </message>
+    <message>
+        <source>The field with the line's picture.</source>
+        <translation>Le champ contenant l'image de la ligne.</translation>
+    </message>
+    <message>
+        <source>The field with the line's translation, if the deck has one.</source>
+        <translation>Le champ contenant la traduction de la ligne, si le paquet en a une.</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>Extraire</translation>
+    </message>
+    <message>
+        <source>Mine the deck's sentences into Anki cards.</source>
+        <translation>Extraire les phrases du paquet dans des cartes Anki.</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Annuler</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation>Annuler l'exécution en cours.</translation>
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki. Is Anki running?</source>
+        <translation>Impossible de récupérer les noms de paquets depuis Anki. Anki est-il en cours d'exécution ?</translation>
+    </message>
+    <message>
+        <source>Reading the deck…</source>
+        <translation>Lecture du paquet…</translation>
+    </message>
+    <message>
+        <source>Couldn't read the deck: </source>
+        <translation>Impossible de lire le paquet : </translation>
+    </message>
+    <message>
+        <source>The selected deck has no notes.</source>
+        <translation>Le paquet sélectionné n'a aucune note.</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n note(s) in the deck.</source>
+        <translation>
+            <numerusform>%n note dans le paquet.</numerusform>
+            <numerusform>%n notes dans le paquet.</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Pick a deck and its sentence field first.</source>
+        <translation>Choisissez d'abord un paquet et son champ de phrase.</translation>
+    </message>
+    <message>
+        <source>No sentence-audio field is mapped in Settings → Cards &amp; Anki, so the deck's audio won't be copied.</source>
+        <translation>Aucun champ d'audio de phrase n'est mappé dans Paramètres → Cartes et Anki, donc l'audio du paquet ne sera pas copié.</translation>
+    </message>
+    <message>
+        <source>No Picture field is mapped in Settings → Cards &amp; Anki, so the deck's pictures won't be copied.</source>
+        <translation>Aucun champ Image n'est mappé dans Paramètres → Cartes et Anki, donc les images du paquet ne seront pas copiées.</translation>
+    </message>
+    <message>
+        <source>Starting…</source>
+        <translation>Démarrage…</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Annulation…</translation>
+    </message>
+    <message>
+        <source>Mining %1…</source>
+        <translation>Extraction de %1…</translation>
+    </message>
+    <message>
+        <source>Mined %1 cards.</source>
+        <translation>%1 cartes extraites.</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>Annulé.</translation>
+    </message>
+    <message>
+        <source>Failed: %1.</source>
+        <translation>Échec : %1.</translation>
+    </message>
+    <message>
+        <source>This screen mines a deck already in Anki. Pick it from the Deck list above.</source>
+        <translation>Cet écran extrait un paquet déjà présent dans Anki. Choisissez-le dans la liste « Paquet » ci-dessus.</translation>
+    </message>
+</context><context>
     <name>ReadingMangaTab</name>
     <message>
         <source>Review words before mining</source>
@@ -8545,6 +8710,11 @@ Aucun fichier d'index n'est supprimé.</translation>
     <message>
         <source>Complete — %1 cards created</source>
         <translation>Terminé — %1 cartes créées</translation>
+    </message>
+    <message>
+        <source>Anki deck mining</source>
+        <extracomment>Name this run carries away from this screen.</extracomment>
+        <translation>Extraction de paquets Anki</translation>
     </message>
     <message>
         <source>Manga mining</source>
@@ -11508,6 +11678,14 @@ Triez selon cette colonne pour parcourir un long enregistrement dans l'ordre —
     <message>
         <source>Reset columns</source>
         <translation>Réinitialiser les colonnes</translation>
+    </message>
+    <message>
+        <source>Play card audio</source>
+        <translation>Lire l'audio de la carte</translation>
+    </message>
+    <message>
+        <source>Play this card's own sentence audio from the deck.</source>
+        <translation>Lire l'audio de phrase propre à cette carte, tiré du paquet.</translation>
     </message>
     <message>
         <source>+ Previous line</source>

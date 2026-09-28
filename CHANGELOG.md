@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **Mine a deck that is already in Anki (Reading → Anki Deck, #131).** Pick a subs2srs, movies2anki, asbplayer or other sentence-card deck and each card's line is mined like a subtitle line: known words are filtered out, the Word Curator shows the card's picture and plays its audio, and the new cards reuse that audio, picture and translation line alongside the usual definition, reading, pitch and frequency. The sentence, audio, picture and translation fields are detected from the deck's notes and can be changed before mining; subdecks are included. The source deck is only read, and each mined card keeps its own copy of the media, so the old deck can be deleted afterwards.
 
 ### Changed
 

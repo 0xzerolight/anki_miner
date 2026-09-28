@@ -2993,7 +2993,8 @@ class EpisodeProcessor:
         run_temp_folder: Path,
     ) -> list[tuple[TokenizedWord, MediaData]]:
         """Phase 3' (reading): materialize each word's page/cover image, then fetch
-        expression audio. No ffmpeg, no sentence audio.
+        expression audio. No ffmpeg. Sentence audio is the unit's own clip (an
+        Anki deck card, which also brings its translation line) or TTS.
 
         Each surviving word maps back to its source unit via
         ``int(word.start_time)`` (the parser stamps the unit index as the dummy
@@ -3018,9 +3019,10 @@ class EpisodeProcessor:
         """
         # Label-only kind split: manga cards carry a distinct page image each,
         # while a book attaches one cover to every card (txt and subtitles have
-        # none) — so the image-stage wording differs. Only the text varies.
+        # none, an Anki deck card brings its own picture) — so the image-stage
+        # wording differs. Only the text varies.
         # Derived once here, used at the two sites below.
-        is_book = document.kind in ("book", "subtitle")
+        is_book = document.kind in ("book", "subtitle", "deck")
         image_stage_desc = (
             QCoreApplication.translate("EpisodeProcessor", "Preparing card images")
             if is_book
@@ -3035,6 +3037,7 @@ class EpisodeProcessor:
         images_dir = run_temp_folder / "images"
         units_by_index = {unit.index: unit for unit in document.units}
         picture_mapped = bool(self.config.anki_fields.get("picture"))
+        audio_mapped = bool(self.config.anki_fields.get("audio"))
 
         # YOU own the per-run bookkeeping: a unique-ref → materialized-path memo,
         # a set of archives whose safety gate failed or that are corrupt (skip
@@ -3151,6 +3154,14 @@ class EpisodeProcessor:
                     if image_path is not None:
                         media.screenshot_path = image_path
                         media.screenshot_filename = image_path.name
+                if unit is not None:
+                    # kind="deck": the card brought its own recording and
+                    # translation line. Every other kind leaves both empty.
+                    if audio_mapped and unit.audio_ref is not None:
+                        media.audio_path = unit.audio_ref
+                        media.audio_filename = unit.audio_ref.name
+                    if unit.translation:
+                        word.sentence_translation = unit.translation
                 media_results.append((word, media))
                 if progress_callback is not None:
                     progress_callback.on_progress(
@@ -3218,9 +3229,11 @@ class EpisodeProcessor:
                 index needs reimport, or no usable offline dictionary is installed.
             AnkiConnectionError: AnkiConnect is unreachable.
         """
-        self._sentence_parse_cleanup = document.kind == "subtitle"
+        # Per-cue kinds: subtitle files, and an Anki deck's subtitle lines.
+        self._sentence_parse_cleanup = document.kind in ("subtitle", "deck")
         # Manga and subtitle sources carry a meaningful series (mokuro title /
-        # parent folder), so prefix it; books use the bare episode title.
+        # parent folder), so prefix it; books use the bare episode title, and
+        # an Anki deck its name (episode), which is its whole identity.
         if document.kind in ("manga", "subtitle"):
             source_label = sanitize_source_label(f"{document.series} — {document.episode}")
         else:
@@ -3288,10 +3301,11 @@ class EpisodeProcessor:
                 )
             )
             with timed_phase("parse", logger):
-                # Only the per-cue subtitle kind gets the video path's annotation
-                # strip + regex filter; manga/OCR and book text pass it through.
+                # Only the per-cue kinds (subtitle files, an Anki deck's lines)
+                # get the video path's annotation strip + regex filter;
+                # manga/OCR and book text pass it through.
                 all_words, line_index, counts = self.subtitle_parser.parse_text_units(
-                    document.units, want_line_index, subtitle_cleanup=document.kind == "subtitle"
+                    document.units, want_line_index, subtitle_cleanup=document.kind in ("subtitle", "deck")
                 )
                 log_summary(
                     logger,

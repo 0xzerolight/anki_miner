@@ -514,6 +514,18 @@ class AnkiService:
         logger.debug("Anki find notes done: notes=%d", len(note_ids))
         return note_ids
 
+    def media_dir_path(self) -> Path | None:
+        """Return Anki's ``collection.media`` folder (AnkiConnect ``getMediaDirPath``).
+
+        None when AnkiConnect answers with something that is not a path. An
+        unreachable Anki raises AnkiConnectionError, like :meth:`find_notes`.
+        """
+        result = post_action(self.config.ankiconnect_url, "getMediaDirPath", timeout=15)
+        if not isinstance(result, str) or not result:
+            logger.warning("Anki media dir unavailable: result_type=%s", type(result).__name__)
+            return None
+        return Path(result)
+
     def notes_info(self, note_ids: list[int]) -> list[dict]:
         """Return per-note info dicts for ``note_ids`` (``notesInfo``); ``[]`` for empty input.
 

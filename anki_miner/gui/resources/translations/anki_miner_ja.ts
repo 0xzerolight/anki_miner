@@ -2102,6 +2102,14 @@ No index files are deleted.</source>
         <translation>字幕ファイル（.srt/.ass/.vtt）からテキストとして直接語彙をマイニングします — 動画は不要です。</translation>
     </message>
     <message>
+        <source>Mine an existing Anki deck</source>
+        <translation>既存の Anki デッキをマイニング</translation>
+    </message>
+    <message>
+        <source>Mine the sentences of a deck already in Anki, such as a subs2srs, movies2anki or asbplayer deck, as if they were subtitle lines. New cards reuse each card's audio and picture; the source deck is not changed.</source>
+        <translation>subs2srs、movies2anki、asbplayer のデッキなど、Anki にすでにあるデッキの文を字幕行と同じようにマイニングします。新しいカードには各カードの音声と画像が再利用され、元のデッキは変更されません。</translation>
+    </message>
+    <message>
         <source>Generate subtitles from audio</source>
         <translation>音声から字幕を生成</translation>
     </message>
@@ -6626,6 +6634,10 @@ Continue?</source>
         <translation>テキスト</translation>
     </message>
     <message>
+        <source>Anki Deck</source>
+        <translation>Anki デッキ</translation>
+    </message>
+    <message>
         <source>Single</source>
         <translation>単一</translation>
     </message>
@@ -8130,6 +8142,158 @@ No index files are deleted.</source>
         <translation>完了</translation>
     </message>
 </context><context>
+    <name>ReadingDeckTab</name>
+    <message>
+        <source>Review words before mining</source>
+        <translation>マイニング前に単語を確認</translation>
+    </message>
+    <message>
+        <source>Show the word-selection popup before creating cards.</source>
+        <translation>カードを作成する前に単語選択ポップアップを表示します。</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>進捗</translation>
+    </message>
+    <message>
+        <source>Anki Deck</source>
+        <translation>Anki デッキ</translation>
+    </message>
+    <message>
+        <source>Mine the sentences of a deck already in Anki, such as a subs2srs deck. Each new card reuses that card's audio and picture. The deck itself is not changed.</source>
+        <translation>subs2srs のデッキなど、Anki にすでにあるデッキの文をマイニングします。新しいカードには、元のカードの音声と画像が再利用されます。デッキ自体は変更されません。</translation>
+    </message>
+    <message>
+        <source>Deck:</source>
+        <translation>デッキ：</translation>
+    </message>
+    <message>
+        <source>Sentence field:</source>
+        <translation>例文フィールド：</translation>
+    </message>
+    <message>
+        <source>Audio field:</source>
+        <translation>音声フィールド：</translation>
+    </message>
+    <message>
+        <source>Picture field:</source>
+        <translation>画像フィールド：</translation>
+    </message>
+    <message>
+        <source>Translation field:</source>
+        <translation>翻訳フィールド：</translation>
+    </message>
+    <message>
+        <source>Select a deck…</source>
+        <translation>デッキを選択…</translation>
+    </message>
+    <message>
+        <source>The deck to mine. Its subdecks are included.</source>
+        <translation>マイニングするデッキ。サブデッキも含まれます。</translation>
+    </message>
+    <message>
+        <source>Select a field…</source>
+        <translation>フィールドを選択…</translation>
+    </message>
+    <message>
+        <source>The field that holds the subtitle line to mine.</source>
+        <translation>マイニングする字幕行が入っているフィールド。</translation>
+    </message>
+    <message>
+        <source>(none)</source>
+        <translation>（なし）</translation>
+    </message>
+    <message>
+        <source>The field with the line's audio clip.</source>
+        <translation>その行の音声クリップが入っているフィールド。</translation>
+    </message>
+    <message>
+        <source>The field with the line's picture.</source>
+        <translation>その行の画像が入っているフィールド。</translation>
+    </message>
+    <message>
+        <source>The field with the line's translation, if the deck has one.</source>
+        <translation>その行の翻訳が入っているフィールド（デッキにある場合）。</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>マイニング</translation>
+    </message>
+    <message>
+        <source>Mine the deck's sentences into Anki cards.</source>
+        <translation>デッキの文を Anki カードにマイニングします。</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>キャンセル</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation>実行中の処理をキャンセルします。</translation>
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki. Is Anki running?</source>
+        <translation>Anki からデッキ名を取得できませんでした。Anki は起動していますか？</translation>
+    </message>
+    <message>
+        <source>Reading the deck…</source>
+        <translation>デッキを読み込んでいます…</translation>
+    </message>
+    <message>
+        <source>Couldn't read the deck: </source>
+        <translation>デッキを読み取れませんでした: </translation>
+    </message>
+    <message>
+        <source>The selected deck has no notes.</source>
+        <translation>選択したデッキにノートがありません。</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n note(s) in the deck.</source>
+        <translation>
+            <numerusform>デッキには %n 件のノートがあります。</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Pick a deck and its sentence field first.</source>
+        <translation>先にデッキと例文フィールドを選択してください。</translation>
+    </message>
+    <message>
+        <source>No sentence-audio field is mapped in Settings → Cards &amp; Anki, so the deck's audio won't be copied.</source>
+        <translation>設定 → カードと Anki で文章音声フィールドがマッピングされていないため、デッキの音声はコピーされません。</translation>
+    </message>
+    <message>
+        <source>No Picture field is mapped in Settings → Cards &amp; Anki, so the deck's pictures won't be copied.</source>
+        <translation>設定 → カードと Anki で画像フィールドがマッピングされていないため、デッキの画像はコピーされません。</translation>
+    </message>
+    <message>
+        <source>Starting…</source>
+        <translation>開始しています…</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>キャンセル中…</translation>
+    </message>
+    <message>
+        <source>Mining %1…</source>
+        <translation>%1 をマイニング中…</translation>
+    </message>
+    <message>
+        <source>Mined %1 cards.</source>
+        <translation>%1 枚のカードをマイニングしました。</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>キャンセルしました。</translation>
+    </message>
+    <message>
+        <source>Failed: %1.</source>
+        <translation>失敗: %1。</translation>
+    </message>
+    <message>
+        <source>This screen mines a deck already in Anki. Pick it from the Deck list above.</source>
+        <translation>この画面では Anki にすでにあるデッキをマイニングします。上の「デッキ」リストから選択してください。</translation>
+    </message>
+</context><context>
     <name>ReadingMangaTab</name>
     <message>
         <source>Review words before mining</source>
@@ -8528,6 +8692,11 @@ No index files are deleted.</source>
     <message>
         <source>Complete — %1 cards created</source>
         <translation>完了 — %1 枚のカードを作成しました</translation>
+    </message>
+    <message>
+        <source>Anki deck mining</source>
+        <extracomment>Name this run carries away from this screen.</extracomment>
+        <translation>Anki デッキのマイニング</translation>
     </message>
     <message>
         <source>Manga mining</source>
@@ -11488,6 +11657,14 @@ Sort by it to work through a long recording in order — then highlight the rows
     <message>
         <source>Reset columns</source>
         <translation>列をリセット</translation>
+    </message>
+    <message>
+        <source>Play card audio</source>
+        <translation>カードの音声を再生</translation>
+    </message>
+    <message>
+        <source>Play this card's own sentence audio from the deck.</source>
+        <translation>デッキにある、このカード自身の文章音声を再生します。</translation>
     </message>
     <message>
         <source>+ Previous line</source>

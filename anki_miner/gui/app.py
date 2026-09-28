@@ -1149,14 +1149,16 @@ def _connect_settings_validation(window: MainWindow, settings_tab: SettingsTab) 
     settings_tab.validation_requested.connect(run_live_validation)
 
 
-def _connect_anki_reachable(window: MainWindow, settings_tab: SettingsTab, subtitles_tab: SubtitlesTab) -> None:
+def _connect_anki_reachable(
+    window: MainWindow, settings_tab: SettingsTab, subtitles_tab: SubtitlesTab, reading_tab: ReadingTab
+) -> None:
     """Re-drive the deck / note-type fetches once a sweep has reached Anki.
 
-    Three screens fetch a list from AnkiConnect when they are first shown. Start
-    Anki Miner before Anki and all three fail, and their ``showEvent`` has
+    Four screens fetch a list from AnkiConnect when they are first shown. Start
+    Anki Miner before Anki and all four fail, and their ``showEvent`` has
     already fired — so System Health's "Re-check now" repainted the health rows
-    while "Could not load decks" stayed on screen, with Deck Filter and Card
-    Backfill offering no refresh button at all.
+    while "Could not load decks" stayed on screen, with Deck Filter, Card
+    Backfill and Reading → Anki Deck offering no refresh button at all.
 
     Every slot no-ops when its list is already loaded, so this costs nothing on
     a healthy session. Extracted from ``main()`` so the connections are
@@ -1165,6 +1167,7 @@ def _connect_anki_reachable(window: MainWindow, settings_tab: SettingsTab, subti
     window.anki_reachable.connect(settings_tab.ensure_anki_name_lists)
     window.anki_reachable.connect(subtitles_tab.deck_filter_tab.ensure_decks)
     window.anki_reachable.connect(subtitles_tab.backfill_tab.ensure_decks)
+    window.anki_reachable.connect(reading_tab.deck_tab.ensure_decks)
 
 
 def _start_stats_load(window: QWidget, stats_service: StatsService, analytics_tab: AnalyticsTab) -> None:
@@ -1850,9 +1853,9 @@ def compose_main_window(
     # button re-emits, and the window still owns the AnkiService + worker.
     subtitles_tab.backfill_tab.restyle_requested.connect(window.restyle_mined_cards)
 
-    # A validation sweep that reached Anki re-drives the three deck / note-type
+    # A validation sweep that reached Anki re-drives the four deck / note-type
     # fetches that failed while Anki was closed.
-    _connect_anki_reachable(window, settings_tab, subtitles_tab)
+    _connect_anki_reachable(window, settings_tab, subtitles_tab, reading_tab)
 
     # --- task-registry publication (W5) -----------------------------------
     # Until now only the two list queues published, so only they had the
@@ -1869,6 +1872,7 @@ def compose_main_window(
         reading_tab.novels_tab,
         reading_tab.subtitles_tab,
         reading_tab.text_tab,
+        reading_tab.deck_tab,
         subtitles_tab.generate_tab,
         subtitles_tab.retime_tab,
         subtitles_tab.condense_tab,

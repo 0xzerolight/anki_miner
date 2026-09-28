@@ -188,6 +188,19 @@ class TestInspectDeck:
         assert inspection.note_count == 0
         assert inspection.models == ()
         assert inspection.field_names == ()
+        assert inspection.samples == ()
+
+    def test_inspect_keeps_plain_field_samples_in_deck_order(self, test_config):
+        anki = FakeAnkiService(
+            notes={
+                1: _note(1, "subs2srs", {"Expression": "猫だ", "Audio": "[sound:a.mp3]"}),
+                2: _note(2, "subs2srs", {"Expression": "犬だ", "Audio": ""}),
+                3: _note(3, "subs2srs", {"Expression": "鳥だ", "Audio": "[sound:c.mp3]"}),
+            }
+        )
+        inspection = inspect_deck(anki, "Premade")
+        assert inspection.samples[0] == {"Expression": "猫だ", "Audio": "[sound:a.mp3]"}
+        assert [s["Expression"] for s in inspection.samples] == ["猫だ", "犬だ", "鳥だ"]
 
 
 # ---------------------------------------------------------------------------

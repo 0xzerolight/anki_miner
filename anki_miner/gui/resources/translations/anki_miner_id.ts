@@ -2102,6 +2102,14 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Mining kosakata langsung dari berkas subtitel (.srt/.ass/.vtt) sebagai teks -- tanpa perlu video.</translation>
     </message>
     <message>
+        <source>Mine an existing Anki deck</source>
+        <translation>Mining dek Anki yang sudah ada</translation>
+    </message>
+    <message>
+        <source>Mine the sentences of a deck already in Anki, such as a subs2srs, movies2anki or asbplayer deck, as if they were subtitle lines. New cards reuse each card's audio and picture; the source deck is not changed.</source>
+        <translation>Mining kalimat dari dek yang sudah ada di Anki, seperti dek subs2srs, movies2anki, atau asbplayer, seolah-olah kalimat tersebut adalah baris subtitel. Kartu baru memakai ulang audio dan gambar dari setiap kartu; dek sumber tidak diubah.</translation>
+    </message>
+    <message>
         <source>Generate subtitles from audio</source>
         <translation>Buat subtitel dari audio</translation>
     </message>
@@ -6626,6 +6634,10 @@ Lanjutkan?</translation>
         <translation>Teks</translation>
     </message>
     <message>
+        <source>Anki Deck</source>
+        <translation>Dek Anki</translation>
+    </message>
+    <message>
         <source>Single</source>
         <translation>Tunggal</translation>
     </message>
@@ -8130,6 +8142,158 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Selesai</translation>
     </message>
 </context><context>
+    <name>ReadingDeckTab</name>
+    <message>
+        <source>Review words before mining</source>
+        <translation>Tinjau kata sebelum mining</translation>
+    </message>
+    <message>
+        <source>Show the word-selection popup before creating cards.</source>
+        <translation>Tampilkan popup pemilihan kata sebelum membuat kartu.</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>Progres</translation>
+    </message>
+    <message>
+        <source>Anki Deck</source>
+        <translation>Dek Anki</translation>
+    </message>
+    <message>
+        <source>Mine the sentences of a deck already in Anki, such as a subs2srs deck. Each new card reuses that card's audio and picture. The deck itself is not changed.</source>
+        <translation>Mining kalimat dari dek yang sudah ada di Anki, seperti dek subs2srs. Setiap kartu baru memakai ulang audio dan gambar dari kartu tersebut. Dek itu sendiri tidak diubah.</translation>
+    </message>
+    <message>
+        <source>Deck:</source>
+        <translation>Dek:</translation>
+    </message>
+    <message>
+        <source>Sentence field:</source>
+        <translation>Bidang kalimat:</translation>
+    </message>
+    <message>
+        <source>Audio field:</source>
+        <translation>Bidang audio:</translation>
+    </message>
+    <message>
+        <source>Picture field:</source>
+        <translation>Bidang gambar:</translation>
+    </message>
+    <message>
+        <source>Translation field:</source>
+        <translation>Bidang terjemahan:</translation>
+    </message>
+    <message>
+        <source>Select a deck…</source>
+        <translation>Pilih dek…</translation>
+    </message>
+    <message>
+        <source>The deck to mine. Its subdecks are included.</source>
+        <translation>Dek yang akan di-mining. Sub-deknya ikut disertakan.</translation>
+    </message>
+    <message>
+        <source>Select a field…</source>
+        <translation>Pilih bidang…</translation>
+    </message>
+    <message>
+        <source>The field that holds the subtitle line to mine.</source>
+        <translation>Bidang yang berisi baris subtitel untuk di-mining.</translation>
+    </message>
+    <message>
+        <source>(none)</source>
+        <translation>(tidak ada)</translation>
+    </message>
+    <message>
+        <source>The field with the line's audio clip.</source>
+        <translation>Bidang yang berisi klip audio baris tersebut.</translation>
+    </message>
+    <message>
+        <source>The field with the line's picture.</source>
+        <translation>Bidang yang berisi gambar baris tersebut.</translation>
+    </message>
+    <message>
+        <source>The field with the line's translation, if the deck has one.</source>
+        <translation>Bidang yang berisi terjemahan baris tersebut, jika dek memilikinya.</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>Mining</translation>
+    </message>
+    <message>
+        <source>Mine the deck's sentences into Anki cards.</source>
+        <translation>Mining kalimat dek ini menjadi kartu Anki.</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Batal</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation>Batalkan proses yang aktif.</translation>
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki. Is Anki running?</source>
+        <translation>Tidak dapat mengambil nama dek dari Anki. Apakah Anki berjalan?</translation>
+    </message>
+    <message>
+        <source>Reading the deck…</source>
+        <translation>Membaca dek…</translation>
+    </message>
+    <message>
+        <source>Couldn't read the deck: </source>
+        <translation>Tidak dapat membaca dek: </translation>
+    </message>
+    <message>
+        <source>The selected deck has no notes.</source>
+        <translation>Dek yang dipilih tidak memiliki catatan.</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n note(s) in the deck.</source>
+        <translation>
+            <numerusform>%n catatan dalam dek.</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Pick a deck and its sentence field first.</source>
+        <translation>Pilih dek dan bidang kalimatnya terlebih dahulu.</translation>
+    </message>
+    <message>
+        <source>No sentence-audio field is mapped in Settings → Cards &amp; Anki, so the deck's audio won't be copied.</source>
+        <translation>Tidak ada bidang audio kalimat yang dipetakan di Pengaturan → Kartu &amp; Anki, jadi audio dek tidak akan disalin.</translation>
+    </message>
+    <message>
+        <source>No Picture field is mapped in Settings → Cards &amp; Anki, so the deck's pictures won't be copied.</source>
+        <translation>Tidak ada bidang Picture yang dipetakan di Pengaturan → Kartu &amp; Anki, jadi gambar dek tidak akan disalin.</translation>
+    </message>
+    <message>
+        <source>Starting…</source>
+        <translation>Memulai…</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Membatalkan…</translation>
+    </message>
+    <message>
+        <source>Mining %1…</source>
+        <translation>Mining %1…</translation>
+    </message>
+    <message>
+        <source>Mined %1 cards.</source>
+        <translation>Berhasil mining %1 kartu.</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>Dibatalkan.</translation>
+    </message>
+    <message>
+        <source>Failed: %1.</source>
+        <translation>Gagal: %1.</translation>
+    </message>
+    <message>
+        <source>This screen mines a deck already in Anki. Pick it from the Deck list above.</source>
+        <translation>Layar ini melakukan mining pada dek yang sudah ada di Anki. Pilih dek dari daftar Dek di atas.</translation>
+    </message>
+</context><context>
     <name>ReadingMangaTab</name>
     <message>
         <source>Review words before mining</source>
@@ -8528,6 +8692,11 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <message>
         <source>Complete — %1 cards created</source>
         <translation>Selesai — %1 kartu dibuat</translation>
+    </message>
+    <message>
+        <source>Anki deck mining</source>
+        <extracomment>Name this run carries away from this screen.</extracomment>
+        <translation>Mining dek Anki</translation>
     </message>
     <message>
         <source>Manga mining</source>
@@ -11488,6 +11657,14 @@ Urutkan berdasarkan kolom ini untuk menelusuri rekaman panjang secara berurutan 
     <message>
         <source>Reset columns</source>
         <translation>Atur ulang kolom</translation>
+    </message>
+    <message>
+        <source>Play card audio</source>
+        <translation>Putar audio kartu</translation>
+    </message>
+    <message>
+        <source>Play this card's own sentence audio from the deck.</source>
+        <translation>Putar audio kalimat milik kartu ini sendiri dari dek.</translation>
     </message>
     <message>
         <source>+ Previous line</source>

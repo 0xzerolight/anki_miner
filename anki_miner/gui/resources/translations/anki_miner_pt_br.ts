@@ -2106,6 +2106,14 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Minere vocabulário diretamente de arquivos de legenda (.srt/.ass/.vtt) como texto -- sem necessidade de vídeo.</translation>
     </message>
     <message>
+        <source>Mine an existing Anki deck</source>
+        <translation>Minerar um baralho existente do Anki</translation>
+    </message>
+    <message>
+        <source>Mine the sentences of a deck already in Anki, such as a subs2srs, movies2anki or asbplayer deck, as if they were subtitle lines. New cards reuse each card's audio and picture; the source deck is not changed.</source>
+        <translation>Minere as frases de um baralho que já está no Anki, como um baralho do subs2srs, movies2anki ou asbplayer, tratando-as como linhas de legenda. Os novos cartões reutilizam o áudio e a imagem de cada cartão; o baralho de origem não é alterado.</translation>
+    </message>
+    <message>
         <source>Generate subtitles from audio</source>
         <translation>Gerar legendas a partir do áudio</translation>
     </message>
@@ -6643,6 +6651,10 @@ Continuar?</translation>
         <translation>Texto</translation>
     </message>
     <message>
+        <source>Anki Deck</source>
+        <translation>Baralho do Anki</translation>
+    </message>
+    <message>
         <source>Single</source>
         <translation>Único</translation>
     </message>
@@ -8147,6 +8159,159 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Concluído</translation>
     </message>
 </context><context>
+    <name>ReadingDeckTab</name>
+    <message>
+        <source>Review words before mining</source>
+        <translation>Revisar palavras antes de minerar</translation>
+    </message>
+    <message>
+        <source>Show the word-selection popup before creating cards.</source>
+        <translation>Mostrar o popup de seleção de palavras antes de criar cartões.</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>Progresso</translation>
+    </message>
+    <message>
+        <source>Anki Deck</source>
+        <translation>Baralho do Anki</translation>
+    </message>
+    <message>
+        <source>Mine the sentences of a deck already in Anki, such as a subs2srs deck. Each new card reuses that card's audio and picture. The deck itself is not changed.</source>
+        <translation>Minere as frases de um baralho que já está no Anki, como um baralho do subs2srs. Cada novo cartão reutiliza o áudio e a imagem do cartão de origem. O baralho em si não é alterado.</translation>
+    </message>
+    <message>
+        <source>Deck:</source>
+        <translation>Baralho:</translation>
+    </message>
+    <message>
+        <source>Sentence field:</source>
+        <translation>Campo da frase:</translation>
+    </message>
+    <message>
+        <source>Audio field:</source>
+        <translation>Campo de áudio:</translation>
+    </message>
+    <message>
+        <source>Picture field:</source>
+        <translation>Campo de imagem:</translation>
+    </message>
+    <message>
+        <source>Translation field:</source>
+        <translation>Campo de tradução:</translation>
+    </message>
+    <message>
+        <source>Select a deck…</source>
+        <translation>Selecionar um baralho…</translation>
+    </message>
+    <message>
+        <source>The deck to mine. Its subdecks are included.</source>
+        <translation>O baralho a minerar. Os subbaralhos também são incluídos.</translation>
+    </message>
+    <message>
+        <source>Select a field…</source>
+        <translation>Selecionar um campo…</translation>
+    </message>
+    <message>
+        <source>The field that holds the subtitle line to mine.</source>
+        <translation>O campo que contém a linha de legenda a minerar.</translation>
+    </message>
+    <message>
+        <source>(none)</source>
+        <translation>(nenhum)</translation>
+    </message>
+    <message>
+        <source>The field with the line's audio clip.</source>
+        <translation>O campo com o clipe de áudio da linha.</translation>
+    </message>
+    <message>
+        <source>The field with the line's picture.</source>
+        <translation>O campo com a imagem da linha.</translation>
+    </message>
+    <message>
+        <source>The field with the line's translation, if the deck has one.</source>
+        <translation>O campo com a tradução da linha, se o baralho tiver uma.</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>Minerar</translation>
+    </message>
+    <message>
+        <source>Mine the deck's sentences into Anki cards.</source>
+        <translation>Minere as frases do baralho em cartões do Anki.</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation>Cancela a execução ativa.</translation>
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki. Is Anki running?</source>
+        <translation>Não foi possível obter os nomes dos baralhos do Anki. O Anki está em execução?</translation>
+    </message>
+    <message>
+        <source>Reading the deck…</source>
+        <translation>Lendo o baralho…</translation>
+    </message>
+    <message>
+        <source>Couldn't read the deck: </source>
+        <translation>Não foi possível ler o baralho: </translation>
+    </message>
+    <message>
+        <source>The selected deck has no notes.</source>
+        <translation>O baralho selecionado não tem notas.</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n note(s) in the deck.</source>
+        <translation>
+            <numerusform>%n nota no baralho.</numerusform>
+            <numerusform>%n notas no baralho.</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Pick a deck and its sentence field first.</source>
+        <translation>Escolha primeiro um baralho e o campo da frase.</translation>
+    </message>
+    <message>
+        <source>No sentence-audio field is mapped in Settings → Cards &amp; Anki, so the deck's audio won't be copied.</source>
+        <translation>Nenhum campo de áudio da frase está mapeado em Configurações → Cartões e Anki, então o áudio do baralho não será copiado.</translation>
+    </message>
+    <message>
+        <source>No Picture field is mapped in Settings → Cards &amp; Anki, so the deck's pictures won't be copied.</source>
+        <translation>Nenhum campo de Imagem está mapeado em Configurações → Cartões e Anki, então as imagens do baralho não serão copiadas.</translation>
+    </message>
+    <message>
+        <source>Starting…</source>
+        <translation>Iniciando…</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Cancelando…</translation>
+    </message>
+    <message>
+        <source>Mining %1…</source>
+        <translation>Minerando %1…</translation>
+    </message>
+    <message>
+        <source>Mined %1 cards.</source>
+        <translation>%1 cartões minerados.</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>Cancelado.</translation>
+    </message>
+    <message>
+        <source>Failed: %1.</source>
+        <translation>Falha: %1.</translation>
+    </message>
+    <message>
+        <source>This screen mines a deck already in Anki. Pick it from the Deck list above.</source>
+        <translation>Esta tela minera um baralho que já está no Anki. Escolha-o na lista Baralho acima.</translation>
+    </message>
+</context><context>
     <name>ReadingMangaTab</name>
     <message>
         <source>Review words before mining</source>
@@ -8545,6 +8710,11 @@ Nenhum arquivo de índice é excluído.</translation>
     <message>
         <source>Complete — %1 cards created</source>
         <translation>Concluído — %1 cartões criados</translation>
+    </message>
+    <message>
+        <source>Anki deck mining</source>
+        <extracomment>Name this run carries away from this screen.</extracomment>
+        <translation>Mineração de baralho do Anki</translation>
     </message>
     <message>
         <source>Manga mining</source>
@@ -11508,6 +11678,14 @@ Ordene por ela para percorrer uma gravação longa em ordem — depois selecione
     <message>
         <source>Reset columns</source>
         <translation>Redefinir colunas</translation>
+    </message>
+    <message>
+        <source>Play card audio</source>
+        <translation>Reproduzir áudio do cartão</translation>
+    </message>
+    <message>
+        <source>Play this card's own sentence audio from the deck.</source>
+        <translation>Reproduz o próprio áudio da frase deste cartão, vindo do baralho.</translation>
     </message>
     <message>
         <source>+ Previous line</source>

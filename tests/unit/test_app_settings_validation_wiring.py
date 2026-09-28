@@ -280,7 +280,9 @@ class TestAnkiReachableRefetch:
             deck_filter_tab=SimpleNamespace(ensure_decks=MagicMock()),
             backfill_tab=SimpleNamespace(ensure_decks=MagicMock()),
         )
-        app_module._connect_anki_reachable(window, settings_tab, subtitles_tab)
+        reading_tab = SimpleNamespace(deck_tab=SimpleNamespace(ensure_decks=MagicMock()))
+        app_module._connect_anki_reachable(window, settings_tab, subtitles_tab, reading_tab)
+        subtitles_tab.reading_tab = reading_tab  # one handle back to the test
         return names, subtitles_tab
 
     def test_reachable_sweep_refetches_every_deck_list(self, controlled_validation, monkeypatch):
@@ -293,6 +295,7 @@ class TestAnkiReachableRefetch:
         names.assert_called_once_with()
         subtitles_tab.deck_filter_tab.ensure_decks.assert_called_once_with()
         subtitles_tab.backfill_tab.ensure_decks.assert_called_once_with()
+        subtitles_tab.reading_tab.deck_tab.ensure_decks.assert_called_once_with()
 
     def test_unreachable_sweep_refetches_nothing(self, controlled_validation, monkeypatch):
         window, settings_tab, _errors, _validation_service_type = controlled_validation
@@ -312,3 +315,4 @@ class TestAnkiReachableRefetch:
         names.assert_not_called()
         subtitles_tab.deck_filter_tab.ensure_decks.assert_not_called()
         subtitles_tab.backfill_tab.ensure_decks.assert_not_called()
+        subtitles_tab.reading_tab.deck_tab.ensure_decks.assert_not_called()

@@ -67,6 +67,10 @@ logger = logging.getLogger(__name__)
 
 DECKFILTER_TAG = "anki-miner::deckfilter"
 _NOTES_CHUNK = 500
+# Notes kept as plain {field: value} samples by inspect_deck, for the Anki Deck
+# sub-tab's field detection (a sample is enough; matches
+# expression_field.SAMPLE_NOTES).
+_INSPECT_SAMPLES = 200
 _ADD_CHUNK = 100
 
 # Drop reasons in application order. Stable keys — the tab maps them to
@@ -105,6 +109,7 @@ class DeckInspection:
     models: tuple[str, ...]  # dominant (most notes) first
     field_names: tuple[str, ...]  # union; dominant model's order first
     first_field_by_model: Mapping[str, str]
+    samples: tuple[Mapping[str, str], ...] = ()  # first notes as {field: value}, deck order
 
 
 @dataclass(frozen=True)
@@ -152,6 +157,7 @@ def inspect_deck(
     note_ids = anki_service.find_notes(f'deck:"{_escape_anki_search(source_deck)}"')
     model_counts: Counter[str] = Counter()
     fields_by_model: dict[str, tuple[str, ...]] = {}
+    samples: list[dict[str, str]] = []
     for chunk in _chunks(note_ids, _NOTES_CHUNK):
         if is_cancelled and is_cancelled():
             break
@@ -161,6 +167,10 @@ def inspect_deck(
             if not isinstance(fields, dict) or not fields or not isinstance(model, str):
                 continue
             model_counts[model] += 1
+            if len(samples) < _INSPECT_SAMPLES:
+                samples.append(
+                    {name: (entry.get("value") or "") for name, entry in fields.items() if isinstance(entry, dict)}
+                )
             if model not in fields_by_model:
                 # notesInfo preserves field order; first note of a model is
                 # representative for the whole model.
@@ -177,6 +187,7 @@ def inspect_deck(
         models=models,
         field_names=tuple(union),
         first_field_by_model=first_field_by_model,
+        samples=tuple(samples),
     )
 
 

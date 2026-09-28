@@ -13,7 +13,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from anki_miner.exceptions import SetupError
-from anki_miner.models.reading import ReadingSourceRef
+from anki_miner.models.reading import DeckFieldMap, ReadingSourceRef
 from anki_miner.services.reading import detector
 
 _LOADER_MODULES = {
@@ -775,6 +775,28 @@ def test_load_does_not_import_sibling_modules():
         text=True,
     )
     assert result.returncode == 0, result.stderr
+
+
+def _deck_ref() -> ReadingSourceRef:
+    return ReadingSourceRef(kind="deck", title="Show", deck_fields=DeckFieldMap(sentence="Expression"))
+
+
+def test_load_dispatches_a_deck_ref_with_its_anki_reader(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = importlib.import_module("anki_miner.services.reading.anki_deck_source")
+    sentinel = object()
+    fake_load = MagicMock(return_value=sentinel)
+    monkeypatch.setattr(module, "load", fake_load)
+    anki, normalize, gate = object(), MagicMock(), MagicMock()
+
+    result = detector.load(_deck_ref(), anki=anki, normalize=normalize, has_target_script=gate)
+
+    assert result is sentinel
+    fake_load.assert_called_once_with(_deck_ref(), anki, normalize=normalize, has_target_script=gate)
+
+
+def test_load_refuses_a_deck_ref_without_anki():
+    with pytest.raises(SetupError, match="connection to Anki"):
+        detector.load(_deck_ref())
 
 
 def test_load_unknown_kind_errors():

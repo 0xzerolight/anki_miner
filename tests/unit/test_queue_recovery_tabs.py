@@ -429,3 +429,9 @@ class TestPastedTextIsNeverPersisted:
         from anki_miner.gui.widgets.reading_text_tab import ReadingTextTab
 
         assert getattr(ReadingTextTab, "QUEUE_STATE_KEY", None) is None
+
+    def test_the_anki_deck_tab_declares_no_queue_state_key(self):
+        """A deck run is one ephemeral item picked from a live Anki: nothing to restore."""
+        from anki_miner.gui.widgets.reading_deck_tab import ReadingDeckTab
+
+        assert getattr(ReadingDeckTab, "QUEUE_STATE_KEY", None) is None

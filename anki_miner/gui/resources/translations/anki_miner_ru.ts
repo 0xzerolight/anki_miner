@@ -2110,6 +2110,14 @@ No index files are deleted.</source>
         <translation>Майньте словарь прямо из файлов субтитров (.srt/.ass/.vtt) как текст — видео не требуется.</translation>
     </message>
     <message>
+        <source>Mine an existing Anki deck</source>
+        <translation>Майнить существующую колоду Anki</translation>
+    </message>
+    <message>
+        <source>Mine the sentences of a deck already in Anki, such as a subs2srs, movies2anki or asbplayer deck, as if they were subtitle lines. New cards reuse each card's audio and picture; the source deck is not changed.</source>
+        <translation>Майньте предложения колоды, которая уже есть в Anki, например колоды subs2srs, movies2anki или asbplayer, как если бы это были строки субтитров. Новые карточки используют аудио и изображение каждой исходной карточки; исходная колода не изменяется.</translation>
+    </message>
+    <message>
         <source>Generate subtitles from audio</source>
         <translation>Генерировать субтитры из аудио</translation>
     </message>
@@ -6660,6 +6668,10 @@ Continue?</source>
         <translation>Текст</translation>
     </message>
     <message>
+        <source>Anki Deck</source>
+        <translation>Колода Anki</translation>
+    </message>
+    <message>
         <source>Single</source>
         <translation>Один</translation>
     </message>
@@ -8164,6 +8176,160 @@ No index files are deleted.</source>
         <translation>Завершено</translation>
     </message>
 </context><context>
+    <name>ReadingDeckTab</name>
+    <message>
+        <source>Review words before mining</source>
+        <translation>Просмотреть слова перед майнингом</translation>
+    </message>
+    <message>
+        <source>Show the word-selection popup before creating cards.</source>
+        <translation>Показывать окно выбора слов перед созданием карточек.</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>Прогресс</translation>
+    </message>
+    <message>
+        <source>Anki Deck</source>
+        <translation>Колода Anki</translation>
+    </message>
+    <message>
+        <source>Mine the sentences of a deck already in Anki, such as a subs2srs deck. Each new card reuses that card's audio and picture. The deck itself is not changed.</source>
+        <translation>Майньте предложения колоды, которая уже есть в Anki, например колоды subs2srs. Каждая новая карточка использует аудио и изображение исходной карточки. Сама колода не изменяется.</translation>
+    </message>
+    <message>
+        <source>Deck:</source>
+        <translation>Колода:</translation>
+    </message>
+    <message>
+        <source>Sentence field:</source>
+        <translation>Поле предложения:</translation>
+    </message>
+    <message>
+        <source>Audio field:</source>
+        <translation>Поле аудио:</translation>
+    </message>
+    <message>
+        <source>Picture field:</source>
+        <translation>Поле изображения:</translation>
+    </message>
+    <message>
+        <source>Translation field:</source>
+        <translation>Поле перевода:</translation>
+    </message>
+    <message>
+        <source>Select a deck…</source>
+        <translation>Выберите колоду…</translation>
+    </message>
+    <message>
+        <source>The deck to mine. Its subdecks are included.</source>
+        <translation>Колода для майнинга. Её подколоды тоже включаются.</translation>
+    </message>
+    <message>
+        <source>Select a field…</source>
+        <translation>Выберите поле…</translation>
+    </message>
+    <message>
+        <source>The field that holds the subtitle line to mine.</source>
+        <translation>Поле, в котором хранится строка субтитров для майнинга.</translation>
+    </message>
+    <message>
+        <source>(none)</source>
+        <translation>(нет)</translation>
+    </message>
+    <message>
+        <source>The field with the line's audio clip.</source>
+        <translation>Поле с аудиоклипом строки.</translation>
+    </message>
+    <message>
+        <source>The field with the line's picture.</source>
+        <translation>Поле с изображением строки.</translation>
+    </message>
+    <message>
+        <source>The field with the line's translation, if the deck has one.</source>
+        <translation>Поле с переводом строки, если он есть в колоде.</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>Майнить</translation>
+    </message>
+    <message>
+        <source>Mine the deck's sentences into Anki cards.</source>
+        <translation>Майнить предложения колоды в карточки Anki.</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Отмена</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation>Отменить активный запуск.</translation>
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki. Is Anki running?</source>
+        <translation>Не удалось получить названия колод из Anki. Anki запущен?</translation>
+    </message>
+    <message>
+        <source>Reading the deck…</source>
+        <translation>Чтение колоды…</translation>
+    </message>
+    <message>
+        <source>Couldn't read the deck: </source>
+        <translation>Не удалось прочитать колоду: </translation>
+    </message>
+    <message>
+        <source>The selected deck has no notes.</source>
+        <translation>В выбранной колоде нет заметок.</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n note(s) in the deck.</source>
+        <translation>
+            <numerusform>В колоде %n заметка.</numerusform>
+            <numerusform>В колоде %n заметки.</numerusform>
+            <numerusform>В колоде %n заметок.</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Pick a deck and its sentence field first.</source>
+        <translation>Сначала выберите колоду и её поле предложения.</translation>
+    </message>
+    <message>
+        <source>No sentence-audio field is mapped in Settings → Cards &amp; Anki, so the deck's audio won't be copied.</source>
+        <translation>В разделе Настройки → Карточки и Anki не сопоставлено поле аудио предложений, поэтому аудио колоды не будет скопировано.</translation>
+    </message>
+    <message>
+        <source>No Picture field is mapped in Settings → Cards &amp; Anki, so the deck's pictures won't be copied.</source>
+        <translation>В разделе Настройки → Карточки и Anki не сопоставлено поле изображения, поэтому изображения колоды не будут скопированы.</translation>
+    </message>
+    <message>
+        <source>Starting…</source>
+        <translation>Запуск…</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Отмена…</translation>
+    </message>
+    <message>
+        <source>Mining %1…</source>
+        <translation>Майнинг «%1»…</translation>
+    </message>
+    <message>
+        <source>Mined %1 cards.</source>
+        <translation>Намайнено карточек: %1.</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>Отменено.</translation>
+    </message>
+    <message>
+        <source>Failed: %1.</source>
+        <translation>Ошибка: %1.</translation>
+    </message>
+    <message>
+        <source>This screen mines a deck already in Anki. Pick it from the Deck list above.</source>
+        <translation>Этот экран майнит колоду, которая уже есть в Anki. Выберите её в списке «Колода» выше.</translation>
+    </message>
+</context><context>
     <name>ReadingMangaTab</name>
     <message>
         <source>Review words before mining</source>
@@ -8562,6 +8728,11 @@ No index files are deleted.</source>
     <message>
         <source>Complete — %1 cards created</source>
         <translation>Завершено — создано карточек: %1</translation>
+    </message>
+    <message>
+        <source>Anki deck mining</source>
+        <extracomment>Name this run carries away from this screen.</extracomment>
+        <translation>Майнинг колоды Anki</translation>
     </message>
     <message>
         <source>Manga mining</source>
@@ -11528,6 +11699,14 @@ Sort by it to work through a long recording in order — then highlight the rows
     <message>
         <source>Reset columns</source>
         <translation>Сбросить столбцы</translation>
+    </message>
+    <message>
+        <source>Play card audio</source>
+        <translation>Воспроизвести аудио карточки</translation>
+    </message>
+    <message>
+        <source>Play this card's own sentence audio from the deck.</source>
+        <translation>Воспроизвести собственное аудио предложения этой карточки из колоды.</translation>
     </message>
     <message>
         <source>+ Previous line</source>

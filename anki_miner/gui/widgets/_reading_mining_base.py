@@ -103,7 +103,7 @@ class _ReadingMiningTabBase(_QueueMiningTabBase):
 
     _shutdown_log_name = "Reading"
     #: Name this screen's run carries in the task registry. Each sub-tab sets it
-    #: with ``QT_TRANSLATE_NOOP("ReadingTab", ...)``, keeping the four literals
+    #: with ``QT_TRANSLATE_NOOP("ReadingTab", ...)``, keeping the five literals
     #: in the one tr-context this family shares.
     TASK_TITLE: str = ""
     # Enable the promoted stranded-PROCESSING recovery sweep for reading too.
@@ -212,7 +212,7 @@ class _ReadingMiningTabBase(_QueueMiningTabBase):
     def _record_item_outcome(self, result: object, error: object) -> MiningOutcome:
         """Classify and accumulate one worker item outcome.
 
-        All four reading tabs forward their results from their own
+        All five reading tabs forward their results from their own
         ``_on_item_finished`` -- they share no list-queue base -- but every one
         of them routes the outcome through here, so this is where the run
         receipt is fed for reading (D20).
@@ -231,7 +231,7 @@ class _ReadingMiningTabBase(_QueueMiningTabBase):
     def _freeze_run_bar(self, widget) -> None:
         """Hold the run bar where it truly was when Cancel was pressed.
 
-        Shared by the four reading sub-tabs' cancel handlers. Everything the run
+        Shared by the five reading sub-tabs' cancel handlers. Everything the run
         reports from here on concerns work it is abandoning, so the bar must
         stop advancing — and must not be zeroed at the end either, because how
         far the run actually got is exactly what the user stopped it to find out.
@@ -247,8 +247,8 @@ class _ReadingMiningTabBase(_QueueMiningTabBase):
 
         Reads only the per-run flags/accumulators seeded in :meth:`_launch_run`
         — never ``_run_items``, which is already cleared when the cleanup hook
-        calls this. Also seals the run receipt, so the four reading tabs get
-        their durable summary from the one hook all four already call.
+        calls this. Also seals the run receipt, so the five reading tabs get
+        their durable summary from the one hook all five already call.
         """
         cancelled = bool(getattr(self, "_cancel_requested", False) or self._run_cancelled_count)
         fatal = bool(getattr(self, "_run_failed", False))

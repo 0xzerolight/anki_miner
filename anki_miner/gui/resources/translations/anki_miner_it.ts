@@ -2106,6 +2106,14 @@ Nessun file indice viene eliminato.</translation>
         <translation>Estrai il vocabolario direttamente dai file di sottotitoli (.srt/.ass/.vtt) come testo, senza bisogno di un video.</translation>
     </message>
     <message>
+        <source>Mine an existing Anki deck</source>
+        <translation>Estrai da un mazzo Anki esistente</translation>
+    </message>
+    <message>
+        <source>Mine the sentences of a deck already in Anki, such as a subs2srs, movies2anki or asbplayer deck, as if they were subtitle lines. New cards reuse each card's audio and picture; the source deck is not changed.</source>
+        <translation>Estrai le frasi di un mazzo già presente in Anki, ad esempio un mazzo subs2srs, movies2anki o asbplayer, come se fossero righe di sottotitoli. Le nuove carte riutilizzano l'audio e l'immagine di ciascuna carta; il mazzo di origine non viene modificato.</translation>
+    </message>
+    <message>
         <source>Generate subtitles from audio</source>
         <translation>Genera sottotitoli dall'audio</translation>
     </message>
@@ -6643,6 +6651,10 @@ Continuare?</translation>
         <translation>Testo</translation>
     </message>
     <message>
+        <source>Anki Deck</source>
+        <translation>Mazzo Anki</translation>
+    </message>
+    <message>
         <source>Single</source>
         <translation>Singolo</translation>
     </message>
@@ -8147,6 +8159,159 @@ Nessun file indice viene eliminato.</translation>
         <translation>Completato</translation>
     </message>
 </context><context>
+    <name>ReadingDeckTab</name>
+    <message>
+        <source>Review words before mining</source>
+        <translation>Rivedi le parole prima del mining</translation>
+    </message>
+    <message>
+        <source>Show the word-selection popup before creating cards.</source>
+        <translation>Mostra il popup di selezione delle parole prima di creare le carte.</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>Avanzamento</translation>
+    </message>
+    <message>
+        <source>Anki Deck</source>
+        <translation>Mazzo Anki</translation>
+    </message>
+    <message>
+        <source>Mine the sentences of a deck already in Anki, such as a subs2srs deck. Each new card reuses that card's audio and picture. The deck itself is not changed.</source>
+        <translation>Estrai le frasi di un mazzo già presente in Anki, ad esempio un mazzo subs2srs. Ogni nuova carta riutilizza l'audio e l'immagine della carta di origine. Il mazzo stesso non viene modificato.</translation>
+    </message>
+    <message>
+        <source>Deck:</source>
+        <translation>Mazzo:</translation>
+    </message>
+    <message>
+        <source>Sentence field:</source>
+        <translation>Campo frase:</translation>
+    </message>
+    <message>
+        <source>Audio field:</source>
+        <translation>Campo audio:</translation>
+    </message>
+    <message>
+        <source>Picture field:</source>
+        <translation>Campo immagine:</translation>
+    </message>
+    <message>
+        <source>Translation field:</source>
+        <translation>Campo traduzione:</translation>
+    </message>
+    <message>
+        <source>Select a deck…</source>
+        <translation>Selezionare un mazzo…</translation>
+    </message>
+    <message>
+        <source>The deck to mine. Its subdecks are included.</source>
+        <translation>Il mazzo da cui estrarre. Sono inclusi anche i relativi sotto-mazzi.</translation>
+    </message>
+    <message>
+        <source>Select a field…</source>
+        <translation>Selezionare un campo…</translation>
+    </message>
+    <message>
+        <source>The field that holds the subtitle line to mine.</source>
+        <translation>Il campo che contiene la riga di sottotitoli da estrarre.</translation>
+    </message>
+    <message>
+        <source>(none)</source>
+        <translation>(nessuno)</translation>
+    </message>
+    <message>
+        <source>The field with the line's audio clip.</source>
+        <translation>Il campo con la clip audio della riga.</translation>
+    </message>
+    <message>
+        <source>The field with the line's picture.</source>
+        <translation>Il campo con l'immagine della riga.</translation>
+    </message>
+    <message>
+        <source>The field with the line's translation, if the deck has one.</source>
+        <translation>Il campo con la traduzione della riga, se il mazzo ne ha una.</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>Estrai</translation>
+    </message>
+    <message>
+        <source>Mine the deck's sentences into Anki cards.</source>
+        <translation>Estrai le frasi del mazzo in carte Anki.</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Annulla</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation>Annulla l'esecuzione attiva.</translation>
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki. Is Anki running?</source>
+        <translation>Impossibile recuperare i nomi dei mazzi da Anki. Anki è in esecuzione?</translation>
+    </message>
+    <message>
+        <source>Reading the deck…</source>
+        <translation>Lettura del mazzo…</translation>
+    </message>
+    <message>
+        <source>Couldn't read the deck: </source>
+        <translation>Impossibile leggere il mazzo: </translation>
+    </message>
+    <message>
+        <source>The selected deck has no notes.</source>
+        <translation>Il mazzo selezionato non contiene note.</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n note(s) in the deck.</source>
+        <translation>
+            <numerusform>%n nota nel mazzo.</numerusform>
+            <numerusform>%n note nel mazzo.</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Pick a deck and its sentence field first.</source>
+        <translation>Scegliere prima un mazzo e il relativo campo frase.</translation>
+    </message>
+    <message>
+        <source>No sentence-audio field is mapped in Settings → Cards &amp; Anki, so the deck's audio won't be copied.</source>
+        <translation>Nessun campo audio delle frasi è mappato in Impostazioni → Carte e Anki, quindi l'audio del mazzo non verrà copiato.</translation>
+    </message>
+    <message>
+        <source>No Picture field is mapped in Settings → Cards &amp; Anki, so the deck's pictures won't be copied.</source>
+        <translation>Nessun campo immagine è mappato in Impostazioni → Carte e Anki, quindi le immagini del mazzo non verranno copiate.</translation>
+    </message>
+    <message>
+        <source>Starting…</source>
+        <translation>Avvio…</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Annullamento…</translation>
+    </message>
+    <message>
+        <source>Mining %1…</source>
+        <translation>Mining di %1…</translation>
+    </message>
+    <message>
+        <source>Mined %1 cards.</source>
+        <translation>Estratte %1 carte.</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>Annullato.</translation>
+    </message>
+    <message>
+        <source>Failed: %1.</source>
+        <translation>Operazione non riuscita: %1.</translation>
+    </message>
+    <message>
+        <source>This screen mines a deck already in Anki. Pick it from the Deck list above.</source>
+        <translation>Questa schermata estrae da un mazzo già presente in Anki. Selezionarlo dall'elenco Mazzo qui sopra.</translation>
+    </message>
+</context><context>
     <name>ReadingMangaTab</name>
     <message>
         <source>Review words before mining</source>
@@ -8545,6 +8710,11 @@ Nessun file indice viene eliminato.</translation>
     <message>
         <source>Complete — %1 cards created</source>
         <translation>Completato — %1 carte create</translation>
+    </message>
+    <message>
+        <source>Anki deck mining</source>
+        <extracomment>Name this run carries away from this screen.</extracomment>
+        <translation>Mining mazzo Anki</translation>
     </message>
     <message>
         <source>Manga mining</source>
@@ -11508,6 +11678,14 @@ Ordina in base a questa colonna per affrontare in ordine una registrazione lunga
     <message>
         <source>Reset columns</source>
         <translation>Reimposta colonne</translation>
+    </message>
+    <message>
+        <source>Play card audio</source>
+        <translation>Riproduci audio della carta</translation>
+    </message>
+    <message>
+        <source>Play this card's own sentence audio from the deck.</source>
+        <translation>Riproduci l'audio della frase che questa carta ha nel mazzo.</translation>
     </message>
     <message>
         <source>+ Previous line</source>

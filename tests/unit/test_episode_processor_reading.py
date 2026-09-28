@@ -324,7 +324,7 @@ def test_d4_line_index_fused_for_iplus_one(test_config):
     assert result.cards_created > 0
 
 
-@pytest.mark.parametrize("kind,expected", [("subtitle", True), ("manga", False), ("book", False)])
+@pytest.mark.parametrize("kind,expected", [("subtitle", True), ("deck", True), ("manga", False), ("book", False)])
 def test_subtitle_kind_enables_cleanup(test_config, kind, expected):
     """Only the per-cue subtitle kind passes subtitle_cleanup=True into
     parse_text_units; manga/OCR and book documents pass False (U7 wiring)."""
@@ -1604,3 +1604,83 @@ def test_wrong_script_document_names_the_document_not_subtitles(test_config):
 
     warnings = [str(c.args[0]) for c in presenter.show_warning.call_args_list]
     assert "This document contains no 日本語 text" in warnings, warnings
+
+
+# --------------------------------------------------------------------------- #
+# kind="deck": an existing Anki deck's card brings its own audio + translation
+# --------------------------------------------------------------------------- #
+def _deck_unit(index: int, *, audio_ref: Path | None = None, translation: str = "") -> ReadingUnit:
+    return ReadingUnit(
+        text=f"unit{index}",
+        index=index,
+        location_label=f"#{index + 1}",
+        audio_ref=audio_ref,
+        translation=translation,
+    )
+
+
+def _deck_document(units: list[ReadingUnit]) -> ReadingDocument:
+    return _document(units, kind="deck", series="My Deck", episode="My Deck", title="My Deck")
+
+
+def _run_deck(config, units, *, fetcher=None, rec=None):
+    words = [_word("犬", 0)]
+    counts = collections.Counter({"犬": 1})
+    sp = MagicMock()
+    sp.parse_text_units.side_effect = _parse_returning(words, None, counts)
+    anki = _make_anki_service()
+    presenter = MagicMock(name="Presenter")
+    proc = _make_processor(
+        config, subtitle_parser=sp, anki_service=anki, presenter=presenter, sentence_audio_fetcher=fetcher
+    )
+    with patch(_IMG):
+        proc.process_reading(_deck_document(units), progress_callback=rec)
+    return anki, presenter
+
+
+def test_deck_unit_audio_and_translation_reach_the_card(test_config, tmp_path):
+    clip = tmp_path / "line.mp3"
+    clip.write_bytes(b"ID3")
+    anki, _ = _run_deck(test_config, [_deck_unit(0, audio_ref=clip, translation="I like dogs")])
+
+    (payload,) = anki.last_card_data
+    assert payload.media.audio_path == clip
+    assert payload.media.audio_filename == "line.mp3"
+    assert payload.word.sentence_translation == "I like dogs"
+
+
+def test_deck_audio_stays_off_when_no_audio_field_is_mapped(test_config, tmp_path):
+    clip = tmp_path / "line.mp3"
+    clip.write_bytes(b"ID3")
+    cfg = replace(test_config, anki_fields={**dict(test_config.anki_fields), "audio": ""})
+    anki, _ = _run_deck(cfg, [_deck_unit(0, audio_ref=clip)])
+
+    assert anki.last_card_data[0].media.audio_path is None
+
+
+def test_deck_kind_labels_the_card_with_the_deck_and_says_card_images(test_config):
+    rec = _RecordingProgress()
+    anki, presenter = _run_deck(test_config, [_deck_unit(0)], rec=rec)
+
+    assert _sources(anki)[0] == "My Deck @ #1"
+    stages = [c.args for c in presenter.show_stage.call_args_list]
+    assert (3, 5, "Preparing card images") in stages
+    assert rec.start_descs[0] == "Preparing card images"
+
+
+def test_sentence_tts_never_replaces_the_decks_own_audio(test_config, tmp_path):
+    clip = tmp_path / "line.mp3"
+    clip.write_bytes(b"ID3")
+    fetcher = _make_sentence_fetcher()
+    anki, _ = _run_deck(_tts_config(test_config), [_deck_unit(0, audio_ref=clip)], fetcher=fetcher)
+
+    fetcher.fetch.assert_not_called()
+    assert anki.last_card_data[0].media.audio_path == clip
+
+
+def test_sentence_tts_still_voices_a_deck_card_without_audio(test_config):
+    fetcher = _make_sentence_fetcher()
+    anki, _ = _run_deck(_tts_config(test_config), [_deck_unit(0)], fetcher=fetcher)
+
+    fetcher.fetch.assert_called_once()
+    assert anki.last_card_data[0].media.audio_filename == "sentencetts_google_abc.mp3"
