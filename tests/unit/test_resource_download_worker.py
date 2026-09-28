@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import sqlite3
+import tempfile
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -848,6 +850,61 @@ def test_catalog_jiten_download_replaces_a_hand_imported_jiten(tmp_path, monkeyp
     assert [r.source_id for r in summaries[0].succeeded] == ["jiten"], summaries[0].failed
     freqs = tmp_path / "freqs"
     assert sorted(p.name for p in freqs.iterdir() if not p.name.startswith(".")) == ["jiten"]
+
+
+def test_single_file_freq_list_lands_in_its_catalog_slot_under_its_display_name(tmp_path, monkeypatch):
+    # download_to_temp stages every download under a fresh mkstemp name, and a
+    # .txt list's slot and card label come from the file stem: unpinned, each
+    # download forks a "tmpXXXXXXXX" slot and every card shows that name.
+    spec = ResourceSpec(
+        id="opensubtitles-fr",
+        kind="freq",
+        display_name="OpenSubtitles 2018 frequency (French)",
+        url="https://example.test/fr/fr_50k.txt",
+        license_note="note",
+    )
+    download_dir = tmp_path / "downloads"
+    download_dir.mkdir()
+
+    def fake_download(
+        url,
+        *,
+        dest_dir,
+        progress=None,
+        cancelled_check=None,
+        read_timeout_seconds=None,
+        resume_key=None,
+        resume_root=None,
+    ):
+        _assert_stable_resume_key(resume_key)
+        fd, name = tempfile.mkstemp(dir=dest_dir, suffix=".part")
+        os.close(fd)
+        temp = Path(name)
+        temp.write_text("de 50\nla 40\n", encoding="utf-8")
+        return temp
+
+    monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
+
+    results = []
+    for _ in range(2):  # Tools → Download Recommended Resources, then again
+        worker = ResourceDownloadWorker(
+            [spec],
+            dicts_root=tmp_path / "dicts",
+            freqs_root=tmp_path / "freqs",
+            pitch_root=tmp_path / "pitch",
+            download_dir=download_dir,
+            language="fr",
+        )
+        _done, _progress, summaries = _connect_capture(worker)
+        worker.run()
+        assert len(summaries[0].succeeded) == 1, summaries[0].failed
+        results.append(summaries[0].succeeded[0].source_id)
+
+    assert results == ["opensubtitles-fr", "opensubtitles-fr"]
+    freqs = tmp_path / "freqs"
+    assert sorted(p.name for p in freqs.iterdir() if not p.name.startswith(".")) == ["opensubtitles-fr"]
+    meta = json.loads((freqs / "opensubtitles-fr" / "meta.json").read_text(encoding="utf-8"))
+    assert meta["source_name"] == "OpenSubtitles 2018 frequency (French)"
 
 
 def test_summary_properties_filter_results():
