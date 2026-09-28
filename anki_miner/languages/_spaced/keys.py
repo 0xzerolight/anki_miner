@@ -19,6 +19,15 @@ Fold = Callable[[str], str]
 #: First tags of the wty rows that define a proper noun: a place, a surname, a given name.
 NAME_ROW_TAGS = frozenset({"name", "prop-n", "surn"})
 
+#: The tag that marks a wty-de-en proper-name row as a language, which ranks as the noun it is.
+#: The language sits under the adjective's key as ``name neut no-pl prop-n`` (Russisch,
+#: Spanisch); demoted, it fell behind the key's other noun row and the card opened on slang or
+#: a chess opening. 361 of the 373 name rows with the tag have that shape (languages, dialects,
+#: registers such as Amtsdeutsch). Of the other 12, only Stier (Taurus) and Bundesrepublik share
+#: a key with a noun row, and that row comes first in index order. Countries carry no ``no-pl``
+#: (Japan: ``name neut prop-n``). In the other wty dumps no name row with the tag shares its key.
+LANGUAGE_NAME_TAG = "no-pl"
+
 #: A token's UPOS -> the first tags of the wty rows stating that part of speech, which then lead
 #: the definition. Measured class by class on ordinary subtitle lines (en de nl sv fr it es pt ru
 #: pl ro tr), cards whose lead row got better/worse: VERB 43/0, NOUN 34/5, ADV 52/7 (the losses
@@ -44,13 +53,18 @@ def wty_row_rank(tags: str, pos: str | None) -> int:
     Belgium)", de ``Essen`` on "to eat", he zakhar (a verb) on "man, male". The
     row's first tag names its part of speech. ``0`` for a row of the token's
     own part of speech (``ROW_TAGS_BY_UPOS``); ``2`` for a proper-name row
-    unless the token is itself a proper noun; ``1`` for every other row,
-    form-of rows included. Nothing is dropped, and storage keeps the index order
-    inside each rank. The profiles whose dictionary is a wty dump and whose
-    token POS is UPOS rank with this (``CasefoldDictKeys``, ``HebrewDictKeys``).
+    unless the token is itself a proper noun, or the row names a language
+    (``LANGUAGE_NAME_TAG``), which ranks as a noun row; ``1`` for every other
+    row, form-of rows included. Nothing is dropped, and storage keeps the index
+    order inside each rank. The profiles whose dictionary is a wty dump and
+    whose token POS is UPOS rank with this (``CasefoldDictKeys``,
+    ``HebrewDictKeys``).
     """
-    first = tags.split(" ", 1)[0]
-    if first in NAME_ROW_TAGS and pos != "PROPN":
+    parts = tags.split(" ")
+    first = parts[0]
+    if first in NAME_ROW_TAGS and LANGUAGE_NAME_TAG in parts:
+        first = "n"
+    elif first in NAME_ROW_TAGS and pos != "PROPN":
         return 2
     return 0 if first in ROW_TAGS_BY_UPOS.get(pos or "", frozenset()) else 1
 
