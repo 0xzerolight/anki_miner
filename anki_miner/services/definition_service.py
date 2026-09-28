@@ -1218,6 +1218,7 @@ class DefinitionService:
         candidates = self.fallback_candidates(word, "", None)
         pair: list[tuple[str, str | None]] = [(word, None)]
         token_kwargs = _token_kwargs(pair, {word: lemma} if lemma else None, {word: pos} if pos else None)
+        fallback_kwargs = {"pos": pos} if pos else {}
         out: list[tuple[str, str]] = []
         for p in self._providers:
             if p.is_online or not p.is_available():
@@ -1237,7 +1238,7 @@ class DefinitionService:
                 continue
             for cand_text, cand_conditions in candidates:
                 try:
-                    fhtml = fb(cand_text, cand_conditions)
+                    fhtml = fb(cand_text, cand_conditions, **fallback_kwargs)
                 except Exception as e:
                     _log_provider_failure(p, "lookup_fallback", e, subject=cand_text)
                     continue

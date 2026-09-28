@@ -1230,6 +1230,20 @@ class TestLookupAllOffline:
         ]
         provider.lookup.assert_not_called()
 
+    def test_pos_reaches_lookup_fallback_only_when_set(self, test_config):
+        """The pane's miss ladder hands the token's part of speech to
+        ``lookup_fallback`` as the card's does, so the profile's form-row splice
+        test reads the same target rows; unset, the call keeps its arity."""
+        provider = make_batch_provider("fb")
+        provider.lookup_fallback.side_effect = lambda w, c, **kw: f"<div>{w}:{kw.get('pos')}</div>"
+        service = DefinitionService(test_config, providers=[provider])
+        service.fallback_candidates = lambda word, orth_base, ctype: [("cand", 0)]  # type: ignore[method-assign]
+
+        assert ("fb", "<div>cand:VERB</div>") in service.lookup_all_offline("word", pos="VERB")
+        provider.lookup_fallback.assert_called_with("cand", 0, pos="VERB")
+        service.lookup_all_offline("word")
+        provider.lookup_fallback.assert_called_with("cand", 0)
+
 
 def _profile_provider(tmp_path: Path, code: str, rows: list[DictRow]) -> IndexedDictProvider:
     """A real index read with ``code``'s key folding, as the provider chain builds it."""
