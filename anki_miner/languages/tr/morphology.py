@@ -1,7 +1,7 @@
-"""Turkish folds, normaliser, POS map and SDH default (spec §4.4, B.1, B.2) - engine-free.
+"""Turkish folds, normaliser, POS map, SDH default and wty row reading (spec §4.4, B.1, B.2) - engine-free.
 
-``analyzer.py`` (zeyrek) and ``tokenizer.py`` share these; nothing here imports zeyrek, so the profile builds
-on a machine without the Turkish pack.
+``analyzer.py`` (zeyrek), ``tokenizer.py`` and ``parser.py`` share these; nothing here imports zeyrek, so the
+profile builds on a machine without the Turkish pack.
 """
 
 from __future__ import annotations
@@ -10,7 +10,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
 
-from anki_miner.languages._spaced.keys import CasefoldDictKeys, spaced_dedup_fold
+from anki_miner.languages._spaced.form_of import lemma_row_targets
+from anki_miner.languages._spaced.keys import NAME_ROW_TAGS, CasefoldDictKeys, spaced_dedup_fold
 from anki_miner.languages._spaced.pos import UPOS_ALLOWED
 from anki_miner.languages._spaced.script import (
     BRACKETS_PATTERN,
@@ -120,6 +121,17 @@ def front_spelling(lemma: str, surface: str) -> str:
     if any(char in surface for char in _CIRCUMFLEXES):
         return lemma
     return lemma.translate(_CIRCUMFLEX_FOLD)
+
+
+def tr_row_targets(content: str, tags: str) -> list[str] | None:
+    """How the form-of pass reads a wty-tr-en row: a name row is no headword of a common word, and names no lemma.
+
+    ``evin`` holds a given name and a form row naming ``ev``. Read as a headword, the name kept ``evine``'s front
+    ``evin``, whose card offered only the pointer to ``ev`` and the name.
+    """
+    if tags.split(" ", 1)[0] in NAME_ROW_TAGS:
+        return []
+    return lemma_row_targets(content, tags)
 
 
 #: The shared speaker label plus the three Turkish capitals outside Latin-1 (``Ğ İ Ş``): ``AYŞE:`` escaped it.

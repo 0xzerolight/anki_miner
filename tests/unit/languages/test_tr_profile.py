@@ -12,6 +12,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.config.config import _LANGUAGE_CODES
 from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages._spaced.fields import POS_FIELD
+from anki_miner.languages._spaced.form_of import FormOfLemmaPass
 from anki_miner.languages._spaced.morphology import LatinLookupStrategy, SpacedMinedForm
 from anki_miner.languages._spaced.render import PosHook
 from anki_miner.languages._spaced.script import LatinScript
@@ -98,10 +99,10 @@ def parser():
     return get_profile("tr").create_parser(switch_language(AnkiMinerConfig(), "tr"))
 
 
-def test_the_parser_is_the_spaced_factory_without_a_post_pass(parser):
+def test_the_parser_is_the_spaced_factory_with_the_form_of_repair(parser):
     profile = get_profile("tr")
     assert parser.normalize is profile.normalize and parser._compound_matcher is None
-    assert parser._token_post_pass is None
+    assert isinstance(parser._token_post_pass, FormOfLemmaPass)  # test_tr_form_rows.py drives it
 
 
 def test_a_line_mines_turkish_dictionary_forms_through_the_parser(parser):
