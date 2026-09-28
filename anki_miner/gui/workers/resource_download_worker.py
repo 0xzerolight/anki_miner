@@ -163,10 +163,10 @@ class ResourcePhase(Enum):
 class ResourceProgress:
     """One observation about one resource. Every number is one the app has.
 
-    ``total_bytes`` and ``entries`` are ``None`` rather than 0 when unknown —
-    a server that sends no Content-Length has not told us the download is
-    empty, and an importer that counts files has not told us how many entries
-    it wrote.
+    ``total_bytes``, ``entries`` and ``step``/``steps`` are ``None`` rather
+    than 0 when unknown — a server that sends no Content-Length has not told
+    us the download is empty, and an importer that counts files has not told
+    us how many entries it wrote.
     """
 
     spec_id: str
@@ -177,6 +177,11 @@ class ResourceProgress:
     downloaded: int = 0
     total_bytes: int | None = None
     entries: int | None = None
+    #: How far a file-counting importer is through its counted pass: bank
+    #: files read, or terms lemmatised for a word-count list. A position, not
+    #: an entry count.
+    step: int | None = None
+    steps: int | None = None
 
 
 class ResourcePromotionRequest:
@@ -203,9 +208,15 @@ class _ItemPhaseReporter:
     """Folds one resource's two progress streams into one phase sequence.
 
     The download reports bytes; the importer reports either entries (the
-    dictionary route, which inserts row by row) or file indices (the frequency
-    and pitch routes, which walk bank files). Only the first is an entry count,
-    so only the first is allowed to claim one.
+    dictionary route, which inserts row by row) or a counted pass (the
+    frequency and pitch routes: bank files read, or terms lemmatised for a
+    word-count list). Only the first is an entry count, so only the first is
+    allowed to claim one; the second travels as ``step``/``steps``.
+
+    Each catalogue freq/pitch item makes at most one counted pass — a zip walks
+    its banks, and every lemmatised list is a single file — so the step only
+    grows within the install phase. A lemmatised zip would count its banks and
+    then its terms, and its bar would start over.
     """
 
     def __init__(self, spec: ResourceSpec, emit: Callable[[ResourceProgress], None], *, counts_entries: bool) -> None:
@@ -215,6 +226,8 @@ class _ItemPhaseReporter:
         self._downloaded = 0
         self._total_bytes: int | None = None
         self._entries: int | None = None
+        self._step: int | None = None
+        self._steps: int | None = None
 
     def downloading(self, downloaded: int, total: int, _message: str) -> None:
         """Record a byte observation from the downloader."""
@@ -226,7 +239,7 @@ class _ItemPhaseReporter:
         """Announce the download→install transition before the importer runs."""
         self._publish(ResourcePhase.INSTALLING)
 
-    def importing(self, _current: int, _total: int, message: str) -> None:
+    def importing(self, current: int, total: int, message: str) -> None:
         """Record an importer observation, promoting to INDEXING once counting.
 
         The promotion latches: an importer that finishes inserting and then
@@ -239,11 +252,16 @@ class _ItemPhaseReporter:
         surface a bank-derived number as if it were entries. The real count
         only exists in the message text; both sides of this coupling are
         internal English strings, never translated.
+
+        For the other routes ``current``/``total`` is the counted pass, kept
+        as the step whenever the importer states a total.
         """
         if self._counts_entries:
             match = re.match(r"Inserted ([\d,]+) entries", message)
             if match:
                 self._entries = max(int(match.group(1).replace(",", "")), self._entries or 0)
+        elif total > 0:
+            self._step, self._steps = current, total
         self._publish(ResourcePhase.INDEXING if self._entries else ResourcePhase.INSTALLING)
 
     def _publish(self, phase: ResourcePhase) -> None:
@@ -255,6 +273,8 @@ class _ItemPhaseReporter:
                 downloaded=self._downloaded,
                 total_bytes=self._total_bytes,
                 entries=self._entries,
+                step=self._step,
+                steps=self._steps,
             )
         )
 
