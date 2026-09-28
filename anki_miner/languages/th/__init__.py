@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+from anki_miner.languages._spaced.script import BRACKETS_PATTERN, MUSIC_PATTERN, PARENS_PATTERN
 from anki_miner.languages.profile import (
     CaptionLangs,
     LanguageProfile,
@@ -39,6 +40,14 @@ __all__ = ["build_profile"]
 #: and the line has to mine with the sentence rules the profile actually ships.
 TH_SMOKE_SENTENCE = "วันนี้อากาศดีมาก"
 
+#: A dialogue dash at the cue start or after a space: Thai writes almost no terminators (the space is
+#: the boundary), so unlike the Latin rule this one needs none before the dash.
+TH_DIALOGUE_DASH_PATTERN = r"(?:^|(?<=\s))[-–—]\s+"
+#: The S10 SDH default (the he shape): ``[เสียงดนตรี]``, ``(หัวเราะ)``, ``♪`` and the dash rule. Unfiltered,
+#: 10 SDH cues mined 16 words (เสียงดนตรี, กรีดร้อง). No speaker-label rule: Thai has no capitals to tell
+#: a ``name:`` label from speech. No inline flags.
+TH_SUBTITLE_REGEX = "|".join((BRACKETS_PATTERN, PARENS_PATTERN, MUSIC_PATTERN, TH_DIALOGUE_DASH_PATTERN))
+
 
 def _scoped_defaults() -> Mapping[str, object]:
     """Derive a value for EVERY LANGUAGE_SCOPED_FIELDS name, then override."""
@@ -55,6 +64,9 @@ def _scoped_defaults() -> Mapping[str, object]:
             # ja-specific, so th ships empty and the user picks (zh precedent).
             "anki_deck_name": "Anki Miner",
             "anki_note_type": "",
+            # S10: the SDH filter is on for a first visit; parked values stay.
+            "use_subtitle_regex_filter": True,
+            "subtitle_regex_filter": TH_SUBTITLE_REGEX,
         }
     )
     return defaults

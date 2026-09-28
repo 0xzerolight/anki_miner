@@ -3,6 +3,12 @@
 from __future__ import annotations
 
 from anki_miner.languages._spaced.fields import spaced_card_fields
+from anki_miner.languages._spaced.script import (
+    BRACKETS_PATTERN,
+    DIALOGUE_DASH_PATTERN,
+    MUSIC_PATTERN,
+    PARENS_PATTERN,
+)
 from anki_miner.languages.ko import morphology as ko_morphology
 from anki_miner.languages.ko.audio import KO_AUDIO
 from anki_miner.languages.ko.availability import ko_missing_required_reason
@@ -38,6 +44,12 @@ KO_EXTRA_CARD_FIELDS: tuple[CardFieldSpec, ...] = (CardFieldSpec(key="hanja", ca
 #: the ko render hook's own key and follows the same convention: the mapped
 #: field name is the switch, so an unmapped key writes nothing.
 KO_CARD_FIELDS: dict[str, str] = dict(spaced_card_fields(KO_EXTRA_CARD_FIELDS))
+
+#: The S10 SDH default for Korean CC: ``[문 닫히는 소리]`` and ``(한숨)`` tags (mid-line too), ``♪`` around
+#: lyrics, and ``- `` dialogue dashes after the Latin terminators Korean uses. Unfiltered, 10 of 17 words
+#: mined from 8 SDH cues came only from the tags (소리, 음악, 전화벨). No speaker-label rule: Hangul has
+#: no capitals to tell a ``name:`` label from speech. No inline flags.
+KO_SUBTITLE_REGEX = "|".join((BRACKETS_PATTERN, PARENS_PATTERN, MUSIC_PATTERN, DIALOGUE_DASH_PATTERN))
 
 #: Face candidates for surfaces showing MINED Korean text (not chrome).
 KO_FONT_FAMILIES: tuple[str, ...] = (
@@ -96,6 +108,10 @@ def _scoped_defaults() -> dict[str, object]:
     defaults["anki_deck_name"] = "Anki Miner"
     defaults["script_variant"] = ""
     defaults["reading_tone_color"] = False
+    # S10: the SDH filter is on for a first visit, as in the _spaced languages;
+    # a Korean user's parked values stay parked.
+    defaults["use_subtitle_regex_filter"] = True
+    defaults["subtitle_regex_filter"] = KO_SUBTITLE_REGEX
     return defaults
 
 
