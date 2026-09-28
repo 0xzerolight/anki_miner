@@ -65,7 +65,25 @@ def test_dedup_fold_drops_a_leading_article_only_when_something_remains(front, f
     assert FOLD(front) == folded
 
 
-@pytest.mark.parametrize("text", ["to go", "The  Dog!", "the the the", "to.", "Café au lait ", "a b c d.", "…", "  "])
+@pytest.mark.parametrize(
+    "text",
+    [
+        "to go",
+        "The  Dog!",
+        "the the the",
+        "to.",
+        "Café au lait ",
+        "a b c d.",
+        "…",
+        "  ",
+        "(m)",
+        "dog (n).",
+        "x (a), -e",
+        "the, a, to",
+        "the dog, a (b)",
+        "a b c d, -s",
+    ],
+)
 def test_dedup_fold_is_idempotent(text):
     assert FOLD(FOLD(text)) == FOLD(text)
 
@@ -87,6 +105,57 @@ CATALAN = spaced_dedup_fold(KEYS, frozenset({"el", "la", "l'", "els", "les"}))
 def test_a_glued_elided_article_is_stripped(front, folded):
     assert CATALAN(front) == folded
     assert CATALAN(CATALAN(front)) == CATALAN(front)
+
+
+GERMAN = spaced_dedup_fold(KEYS, frozenset({"der", "die", "das", "sich"}))
+DUTCH = spaced_dedup_fold(KEYS, frozenset({"de", "het", "een", "'t", "zich"}))
+
+
+@pytest.mark.parametrize(
+    ("fold", "front", "folded"),
+    [
+        (GERMAN, "der Hund, -e", "hund"),
+        (GERMAN, "die Katze, -n", "katze"),
+        (GERMAN, "das Haus, ¨-er", "haus"),
+        (GERMAN, "das Haus, Häuser", "haus"),
+        (GERMAN, "Hund, der", "hund"),
+        (GERMAN, "Hund, die", "hund"),
+        (GERMAN, "Haus, ¨er", "haus"),
+        (GERMAN, "Hund (m)", "hund"),
+        (GERMAN, "der Hund (-e)", "hund"),
+        (GERMAN, "freuen (sich)", "freuen"),
+        (GERMAN, "anfangen (fängt an)", "anfangen"),
+        (GERMAN, "Hund (m) (pl. Hunde)", "hund"),
+        (DUTCH, "hond (de)", "hond"),
+        (DUTCH, "huis (het)", "huis"),
+        (DUTCH, "de hond, honden", "hond"),
+        (DUTCH, "het boek (boeken)", "boek"),
+        (DUTCH, "hond, de", "hond"),
+        (CATALAN, "l'home, els homes", "home"),
+        (FOLD, "the dog, dogs", "dog"),
+    ],
+)
+def test_a_plural_or_gender_note_after_the_word_is_dropped(fold, front, folded):
+    """Vocab decks write the plural or article after the noun (Goethe lists ``der Hund, -e``)."""
+    assert fold(front) == folded
+    assert fold(fold(front)) == fold(front)
+
+
+@pytest.mark.parametrize(
+    ("front", "folded"),
+    [
+        ("Gut, danke.", "gut, danke"),
+        ("Ja, gerne.", "ja, gerne"),
+        ("Hund, Katze", "hund, katze"),
+        ("(m)", "(m"),
+        ("der Mann ist hier, oder", "der mann ist hier, oder"),
+        ("sich (nicht) freuen", "(nicht) freuen"),
+    ],
+)
+def test_a_comma_is_cut_only_before_a_note(front, folded):
+    """The scan covers the whole collection: a phrase front must not fold onto its first word."""
+    assert GERMAN(front) == folded
+    assert GERMAN(GERMAN(front)) == GERMAN(front)
 
 
 def test_mined_form_and_deck_front_meet():
