@@ -14,6 +14,7 @@ from anki_miner.config.config import _LANGUAGE_CODES
 from anki_miner.gui.utils import service_factory
 from anki_miner.languages import AVAILABLE_LANGUAGES, SCRIPT_VARIANT_IDS
 from anki_miner.languages._spaced.fields import NOUN_GENDER_FIELD, POS_FIELD
+from anki_miner.languages._spaced.form_of import FormOfLemmaPass
 from anki_miner.languages._spaced.grammar_hook import GrammarTagHook
 from anki_miner.languages._spaced.keys import CasefoldDictKeys
 from anki_miner.languages._spaced.morphology import LatinLookupStrategy, SpacedMinedForm
@@ -110,11 +111,11 @@ def test_known_word_fronts_meet_the_mined_lemma():
     assert fold("A casa.") == "casa"
 
 
-def test_the_parser_is_the_spaced_factory():
+def test_the_parser_is_the_spaced_factory_with_the_form_of_repair():
     profile = get_profile("pt")
     parser = profile.create_parser(switch_language(AnkiMinerConfig(), "pt"))
     assert parser.normalize is profile.normalize
-    assert parser._compound_matcher is None and parser._token_post_pass is None
+    assert parser._compound_matcher is None and isinstance(parser._token_post_pass, FormOfLemmaPass)
 
 
 def test_the_catalogue_offers_wiktionary_and_one_frequency_list_per_variety():

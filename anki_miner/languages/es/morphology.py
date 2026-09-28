@@ -79,6 +79,10 @@ IRREGULAR_IMPERATIVES: Mapping[str, str] = MappingProxyType(
     }
 )
 
+#: The nosotros imperative that is not the present subjunctive: ir's ``vamos`` (``vámonos``), where the
+#: subjunctive rules would read ``ver``. Keyed on the stem with its ``s`` back (``vámo`` + ``nos``).
+IRREGULAR_NOSOTROS_IMPERATIVES: Mapping[str, str] = MappingProxyType({"vamos": "ir"})
+
 _ACUTE = "\u0301"  # COMBINING ACUTE ACCENT
 
 

@@ -40,6 +40,9 @@ def test_the_pos_gate_and_model():
         ("col·legi", "col·legi"),  # U+00B7 survives: never NFKC
         (unicodedata.normalize("NFD", "això és"), "això és"),
         ("L’home d’aquell poble", "L’home d’aquell poble"),  # apostrophes stay verbatim
+        ("pel·lí\N{SOFT HYPHEN}cula", "pel·lícula"),  # an e-book's soft hyphen goes (IBER-05)
+        ("coŀle\N{SOFT HYPHEN}gi", "col·legi"),
+        ("Bon\N{NO-BREAK SPACE}dia", "Bon dia"),  # a no-break space is a space
     ],
 )
 def test_normalize_composes_and_maps_the_legacy_l_dot_letters(text, normalized):

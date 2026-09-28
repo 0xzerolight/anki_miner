@@ -27,6 +27,18 @@ def nfc_normalize(text: str) -> str:
     return unicodedata.normalize("NFC", text)
 
 
+_NBSP_SHY_MAP = str.maketrans({"\N{NO-BREAK SPACE}": " ", "\N{SOFT HYPHEN}": None})
+
+
+def nbsp_shy_normalize(text: str) -> str:
+    """The sv-shape ``LanguageProfile.normalize`` (es ca pt): NBSP -> space, soft hyphens dropped, then NFC.
+
+    An e-book's hyphenation point (U+00AD) stays inside its token (``compu\\u00adtador``), where no
+    dictionary row can meet it. Dropped before NFC, so a mark it separated from its letter composes.
+    """
+    return unicodedata.normalize("NFC", text.translate(_NBSP_SHY_MAP))
+
+
 class LatinScript:
     """ScriptSupport: no script toggles; the ingestion/mining gate is "has a Latin letter".
 
