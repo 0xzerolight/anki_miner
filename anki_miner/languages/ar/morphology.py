@@ -2,8 +2,10 @@
 
 The analyzer (``_calima``) returns every analysis the database licenses; ``pick_analysis`` chooses one:
 the highest ``pos_lex_logprob`` among ``lex``/``spvar`` analyses (what CAMeL's MLE disambiguator does for
-a word it has no statistics for), ties to a ``lex`` source and then to a clitic-free reading. One
-exception: the database lexicalises 173 tanween adverbs and interjections (``\u0634\u064f\u0643\u0652\u0631\u0627\u064b``, ``\u062c\u0650\u062f\u0651\u0627\u064b``,
+a word it has no statistics for), ties to a ``lex`` source and then to a clitic-free reading. Two
+exceptions. A token key in ``overrides.AR_PICK_OVERRIDES`` takes the analysis that table names, because
+calima gives many of the commonest words no statistics at all (``-99``). And the database lexicalises
+173 tanween adverbs and interjections (``\u0634\u064f\u0643\u0652\u0631\u0627\u064b``, ``\u062c\u0650\u062f\u0651\u0627\u064b``,
 ``\u0623\u064e\u0628\u064e\u062f\u0627\u064b``); such a lexeme wins when the surface carries fathatan or when the plain winner is a
 case-bearing noun/verb/adjective reading (the raw argmax sends ``\u0634\u0643\u0631\u0627\u064b`` to the verb ``\u0634\u064e\u0643\u064e\u0631``). A
 function-word winner on an unmarked surface keeps its reading (``\u0625\u0630\u0627`` "if", not ``\u0625\u0650\u0630\u0627\u064b``). No
@@ -19,7 +21,7 @@ from types import MappingProxyType
 from typing import Any
 
 from anki_miner.languages.ar._calima.charsets import dediac_ar
-from anki_miner.languages.ar.overrides import AR_LEX_REPAIRS
+from anki_miner.languages.ar.overrides import AR_LEX_REPAIRS, AR_PICK_OVERRIDES
 
 AR_UNKNOWN_POS = "unknown"
 AR_CLITIC_SUBTYPE = "clitic"
@@ -140,11 +142,16 @@ def _spells_the_token(lex: str, key: str) -> bool:
 def pick_analysis(analyses: list[dict[str, Any]], key: str, *, surface_has_tanween: bool) -> dict[str, Any] | None:
     """The analysis a token takes, or None when the database licenses no lex/spvar reading.
 
-    ``key`` is the token's folded spelling (what the analyzer was asked about).
+    ``key`` is the token's folded spelling (what the analyzer was asked about). An override row picks
+    only among the key's own analyses: the best-ranked one with the row's ``(lex, pos)``.
     """
     analysed = [analysis for analysis in analyses if analysis.get("source") in _ANALYSED_SOURCES]
     if not analysed:
         return None
+    named = AR_PICK_OVERRIDES.get(key)
+    chosen = [analysis for analysis in analysed if (analysis.get("lex"), analysis.get("pos")) == named]
+    if chosen:
+        return max(chosen, key=_rank)
     best = max(analysed, key=_rank)
     lexicalised = [
         analysis

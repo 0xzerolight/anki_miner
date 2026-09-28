@@ -30,8 +30,13 @@ CORPUS = [json.loads(line) for line in (FIXTURES / "pos_corpus.jsonl").read_text
 
 
 @pytest.fixture(scope="module")
-def tagger() -> ArabicTagger:
-    return ArabicTagger(Analyzer(MorphologyDB(seeded_component("ar", "calima_msa", "morphology.db"))))
+def analyzer() -> Analyzer:
+    return Analyzer(MorphologyDB(seeded_component("ar", "calima_msa", "morphology.db")))
+
+
+@pytest.fixture(scope="module")
+def tagger(analyzer) -> ArabicTagger:
+    return ArabicTagger(analyzer)
 
 
 @pytest.mark.parametrize("row", TOKENS, ids=[f"{i:02d}-{row['pos1']}" for i, row in enumerate(TOKENS)])
@@ -163,3 +168,66 @@ def test_every_form_of_see_fronts_see_not_rhubarb(tagger, surface):
         "\u0631\u0623\u0649",
         "\u0631\u064e\u0623\u064e\u0649",
     )
+
+
+def test_every_override_row_names_one_of_its_key_s_own_analyses(analyzer):
+    """The table only chooses: a row the database does not offer would silently fall to the argmax."""
+    from anki_miner.languages.ar.overrides import AR_PICK_OVERRIDES
+
+    missing = {
+        key: wanted
+        for key, wanted in AR_PICK_OVERRIDES.items()
+        if wanted
+        not in {(a.get("lex"), a.get("pos")) for a in analyzer.analyze(key) if a.get("source") in ("lex", "spvar")}
+    }
+    assert missing == {}
+
+
+@pytest.mark.parametrize(
+    ("surface", "front", "pos1"),
+    [
+        ("\u0643\u0644", "\u0643\u0644", "noun"),  # kull "every", not kul! "eat"
+        ("\u0643\u0644\u0651", "\u0643\u0644", "noun"),
+        ("\u0648\u0643\u0644", "\u0643\u0644", "noun"),
+        ("\u0628\u0643\u0644", "\u0643\u0644", "noun"),  # not bukla "clasp"
+        ("\u0641\u0643\u0644", "\u0643\u0644", "noun"),
+        ("\u0627\u0644\u0622\u0646", "\u0627\u0644\u0622\u0646", "adv"),  # al-aan "now", not aan "time"
+        ("\u0644\u0630\u0627", "\u0644\u0630\u0627", "conj"),  # lidhaa "so", not ladhiidh "delicious"
+        ("\u0637\u0648\u0627\u0644", "\u0637\u0648\u0627\u0644", "prep"),  # tiwaala "during", not tawiil "long"
+        ("\u0645\u0647\u0645\u0627", "\u0645\u0647\u0645\u0627", "conj"),  # mahmaa "whatever", not muhimm
+        ("\u062e\u0637\u0623", "\u062e\u0637\u0623", "noun"),  # khata' "mistake", not khatt "line"
+        ("\u0646\u0635\u0641", "\u0646\u0635\u0641", "noun"),  # nisf "half", not wasafa "describe"
+        ("\u0628\u0644\u0627", "\u0628\u0644\u0627", "prep"),  # bilaa "without", not ball "moisture"
+        ("\u0648\u0634\u0643", "\u0648\u0634\u0643", "noun"),  # washk "verge", not wa+shakk "doubt"
+        ("\u0623\u0644\u0641", "\u0623\u0644\u0641", "noun"),  # alf "thousand", not ilf "companion"
+        ("\u062a\u0631\u0643", "\u062a\u0631\u0643", "verb"),  # taraka "leave", not taraa+ka "see you"
+        ("\u0641\u062a\u0631\u0629", "\u0641\u062a\u0631\u0629", "noun"),  # fatra "period", not fa+taraa+hu
+        ("\u0644\u0633\u062a", "\u0644\u064a\u0633", "verb"),  # lastu "I am not", not laasa "taste"
+        ("\u0645\u0639\u0643", "\u0645\u0639", "prep"),  # ma'aka "with you", not ma'aka "rub"
+        ("\u0645\u0639\u0646\u0627", "\u0645\u0639", "prep"),  # ma'anaa "with us", not maa'a "melt"
+        ("\u064a\u062c\u0631\u064a", "\u062c\u0631\u0649", "verb"),  # yajrii "it runs", not ajraa "conduct"
+        ("\u0643\u064a", "\u0643\u064a", "conj"),  # kay "in order to", not kayy "cauterisation"
+        ("\u0642\u0628\u0644", "\u0642\u0628\u0644", "prep"),  # qabla "before", not qabila "accept"
+        ("\u0623\u062d\u062f", "\u0623\u062d\u062f", "noun"),  # ahad "someone", not ahadd "sharper"
+        ("\u062b\u0645", "\u062b\u0645", "adv"),  # thumma "then", not thamma "there"
+        ("\u0647\u064a\u0627", "\u0647\u064a\u0627", "verb"),  # hayyaa "come on", not hayya'a "prepare"
+        ("\u0628\u0639\u0636", "\u0628\u0639\u0636", "adj"),  # ba'd "some", not ba''ada "divide"
+        ("\u062d\u0633\u0646\u0627\u064b", "\u062d\u0633\u0646", "adv"),  # hasanan "okay", not husn "beauty"
+        ("\u062d\u0633\u0646\u0627", "\u062d\u0633\u0646", "adv"),
+    ],
+)
+def test_the_common_subtitle_words_take_their_common_analysis(tagger, surface, front, pos1):
+    (token,) = tagger(surface)
+    assert (token.feature.lemma, token.feature.pos1) == (front, pos1)
+
+
+@pytest.mark.parametrize(
+    ("surface", "reading"),
+    [
+        ("\u0623\u062d\u062f", "\u0623\u064e\u062d\u064e\u062f"),  # ahad "someone": the front was right, the word not
+        ("\u062b\u0645", "\u062b\u064f\u0645\u0651\u064e"),  # thumma "then"
+    ],
+)
+def test_a_same_spelling_homograph_takes_the_common_reading(tagger, surface, reading):
+    (token,) = tagger(surface)
+    assert token.feature.reading == reading
