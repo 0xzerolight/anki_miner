@@ -12015,11 +12015,11 @@ Danach sortieren, um eine lange Aufnahme der Reihe nach durchzuarbeiten — dann
     </message>
     <message>
         <source>Add to Known Words</source>
-        <translation>Als bekannt markieren</translation>
+        <translation>Als bekannt merken</translation>
     </message>
     <message>
         <source>Remove from Known Words</source>
-        <translation>Markierung aufheben</translation>
+        <translation>Nicht mehr merken</translation>
     </message>
     <message>
         <source>Take the Known · pending mark back off the highlighted rows and return them to this review.</source>
