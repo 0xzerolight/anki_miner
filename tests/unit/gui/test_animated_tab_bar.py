@@ -38,7 +38,7 @@ def _known_stylesheet(qapp):
 def tabs(qtbot):
     """A three-page QTabWidget wearing the animated bar, shown and laid out."""
     widget = QTabWidget()
-    install_animated_tab_bar(widget)
+    install_animated_tab_bar(widget, primary=True)
     for name in ("Single", "Batch", "YouTube"):
         page = QLabel(name)
         page.setObjectName(f"page-{name}")

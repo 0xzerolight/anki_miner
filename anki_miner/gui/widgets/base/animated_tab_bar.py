@@ -22,8 +22,15 @@ from PyQt6.QtWidgets import QTabBar, QTabWidget
 from anki_miner.gui.resources.styles import MOTION
 from anki_miner.gui.utils import motion
 
-#: Thickness of the indicator, matching the border the stylesheet used to draw.
+#: Thickness of the main row's indicator, matching the border the stylesheet used to draw.
 _UNDERLINE_HEIGHT = 3
+#: A sub-tab row is one level down (E01): same accent, thinner line.
+_SUBTAB_UNDERLINE_HEIGHT = 2
+
+#: Object names ``common.qss`` styles the two levels by. The main window's row is
+#: the only primary one; every container's inner row is a sub-tab row.
+MAIN_TAB_BAR_OBJECT_NAME = "main-tab-bar"
+SUBTAB_BAR_OBJECT_NAME = "subtab-bar"
 
 
 class AnimatedTabBar(QTabBar):
@@ -39,6 +46,8 @@ class AnimatedTabBar(QTabBar):
         # selection later, and the gap between those two is where a relayout
         # lands. See relayout_underline().
         self._anchor = -1
+        # Set by install_animated_tab_bar; the main row's thickness until then.
+        self._underline_height = _UNDERLINE_HEIGHT
         super().__init__(parent)
         self._accent = self.palette().color(QPalette.ColorRole.Highlight)
 
@@ -82,9 +91,9 @@ class AnimatedTabBar(QTabBar):
             return QRectF()
         return QRectF(
             float(rect.x()),
-            float(rect.y() + rect.height() - _UNDERLINE_HEIGHT),
+            float(rect.y() + rect.height() - self._underline_height),
             float(rect.width()),
-            float(_UNDERLINE_HEIGHT),
+            float(self._underline_height),
         )
 
     def slide_underline(self, *_signal_args) -> None:
@@ -192,15 +201,22 @@ class AnimatedTabBar(QTabBar):
         painter.end()
 
 
-def install_animated_tab_bar(tabs: QTabWidget) -> AnimatedTabBar:
+def install_animated_tab_bar(tabs: QTabWidget, *, primary: bool = False) -> AnimatedTabBar:
     """Give ``tabs`` a sliding underline. Call this before adding any tabs.
 
     ``QTabWidget.setTabBar()`` is documented as undefined once tabs exist, and
     the underline binds to ``QTabWidget.currentChanged`` -- which Qt emits
     *after* the page has switched, so the animation can never be in front of
     the navigation it decorates.
+
+    ``primary`` marks the main window's own row. Every other row is a sub-tab
+    row: ``common.qss`` draws it one level quieter (smaller text, a narrower
+    inset) and it gets a thinner underline, so the two rows stop reading as two
+    copies of the same thing (E01).
     """
     bar = AnimatedTabBar(tabs)
+    bar.setObjectName(MAIN_TAB_BAR_OBJECT_NAME if primary else SUBTAB_BAR_OBJECT_NAME)
+    bar._underline_height = _UNDERLINE_HEIGHT if primary else _SUBTAB_UNDERLINE_HEIGHT
     # The tab-bar base is the one piece of tab chrome the stylesheet cannot
     # reach: Qt paints it through the platform style's ``PE_FrameTabBarBase``,
     # and ``common.qss`` only ever addresses ``QTabBar::tab`` and

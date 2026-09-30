@@ -216,12 +216,23 @@ QTabWidget::pane {
     top: -1px;
 }
 
+/* E01: a tab is its text plus 6 px above and below, over a 24 px floor, not the
+   32 px floor plus 8 px it used to be. The main row keeps body text. */
 QTabBar::tab {
-    min-height: ${spacing-xl}px;
-    padding: ${spacing-xs}px ${spacing-md}px;
+    min-height: 24px;
+    padding: 6px ${spacing-md}px;
     font-size: ${font-size-body}px;
     font-weight: 500;
     border: none;
+}
+
+/* The second level (the Video, Reading and Utilities sub-tabs, named by
+   install_animated_tab_bar): smaller text and a narrower inset, so the row
+   reads as a level under the main one instead of a copy of it (E01). */
+AnimatedTabBar#subtab-bar::tab {
+    min-height: 20px;
+    padding: 6px ${spacing-sm}px;
+    font-size: ${font-size-body-sm}px;
 }
 
 QTabBar::tab:selected {
@@ -1067,6 +1078,12 @@ AnimatedTabBar {
 
 AnimatedTabBar::tab:selected {
     border-bottom-color: transparent;
+}
+
+/* The sub-tab row's reserved indicator is 2 px, matching the thinner line
+   AnimatedTabBar paints for it (E01). Transparent: the painter draws it. */
+AnimatedTabBar#subtab-bar::tab:selected {
+    border-bottom: 2px solid transparent;
 }
 
 /* --- Text Edit / Log --- */

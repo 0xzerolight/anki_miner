@@ -387,7 +387,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
 
         # Create tab widget
         self.tabs = QTabWidget()
-        install_animated_tab_bar(self.tabs)
+        install_animated_tab_bar(self.tabs, primary=True)
         self.central_layout.addWidget(self.tabs)
 
         central_widget.setLayout(self.central_layout)
