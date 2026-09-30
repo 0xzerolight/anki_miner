@@ -2038,8 +2038,8 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Zweitsprachige Untertitel</translation>
     </message>
     <message>
-        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Sentences.</source>
-        <translation>Eine zweite Untertiteldatei in Ihrer eigenen Sprache neben der Datei in der Mining-Sprache laden: Sie erscheint in der Vorschau des Wort-Kurators unter der Zeile und kann in einem Übersetzungsfeld gespeichert werden. Unter Video -&gt; Stapel wählen Sie stattdessen einen Ordner mit Übersetzungsuntertiteln; diese werden den Videos anhand der Folgennummer zugeordnet. Aktivieren Sie dies unter Einstellungen -&gt; Sätze.</translation>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
+        <translation>Eine zweite Untertiteldatei in Ihrer eigenen Sprache neben der Datei in der Mining-Sprache laden: Sie erscheint in der Vorschau des Wort-Kurators unter der Zeile und kann in einem Übersetzungsfeld gespeichert werden. Unter Video → Stapel wählen Sie stattdessen einen Ordner mit Übersetzungsuntertiteln; diese werden den Videos anhand der Folgennummer zugeordnet. Aktivieren Sie dies unter Einstellungen → Sätze.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2342,8 +2342,8 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Vereinfachte oder traditionelle Zeichen</translation>
     </message>
     <message>
-        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
-        <translation>Der Zeichensatz legt fest, welche Schreibweise die Kartenvorderseite und die Wörterbuchsuche verwenden: Vereinfacht, Traditionell oder Wie geschrieben, um die Ausgangsschreibweise jedes Wortes zu behalten. Das Langzeichen-Feld unter Einstellungen -&gt; Karten &amp; Anki trägt die andere Schreibweise, wenn sie von der Vorderseite abweicht.</translation>
+        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings → Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
+        <translation>Der Zeichensatz legt fest, welche Schreibweise die Kartenvorderseite und die Wörterbuchsuche verwenden: Vereinfacht, Traditionell oder Wie geschrieben, um die Ausgangsschreibweise jedes Wortes zu behalten. Das Langzeichen-Feld unter Einstellungen → Karten &amp; Anki trägt die andere Schreibweise, wenn sie von der Vorderseite abweicht.</translation>
     </message>
     <message>
         <source>Use &amp; order multiple dictionaries</source>
@@ -2542,16 +2542,16 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Pinyin-Lesungen &amp; Tonfarben</translation>
     </message>
     <message>
-        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Cards &amp; Anki.</source>
-        <translation>Die Pinyin-Lesung des Wortes auf Ihre Karten setzen, jede Silbe in der Farbe ihres Tons — die Einfärbung ist „Lesung nach Ton einfärben“ unter Einstellungen -&gt; Karten &amp; Anki.</translation>
+        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings → Cards &amp; Anki.</source>
+        <translation>Die Pinyin-Lesung des Wortes auf Ihre Karten setzen, jede Silbe in der Farbe ihres Tons — die Einfärbung ist „Lesung nach Ton einfärben“ unter Einstellungen → Karten &amp; Anki.</translation>
     </message>
     <message>
         <source>Colour the reading by tone</source>
         <translation>Lesung nach Ton einfärben</translation>
     </message>
     <message>
-        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Cards &amp; Anki.</source>
-        <translation>Jede Silbe der Pinyin- oder Jyutping-Lesung nach ihrem Ton einfärben, unter Einstellungen -&gt; Karten &amp; Anki.</translation>
+        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings → Cards &amp; Anki.</source>
+        <translation>Jede Silbe der Pinyin- oder Jyutping-Lesung nach ihrem Ton einfärben, unter Einstellungen → Karten &amp; Anki.</translation>
     </message>
     <message>
         <source>Measure word field</source>
@@ -2630,8 +2630,8 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Die Werkzeuge im Werkzeuge-Tab auswählen</translation>
     </message>
     <message>
-        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
-        <translation>Nicht genutzte Werkzeuge im Tab Werkzeuge ausblenden oder wieder einblenden, unter Einstellungen -&gt; Allgemein. Ein ausgeblendetes Werkzeug behält hier seinen Eintrag; seine Schaltfläche „Öffnen“ führt zu diesem Kontrollkästchen.</translation>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings → General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation>Nicht genutzte Werkzeuge im Tab Werkzeuge ausblenden oder wieder einblenden, unter Einstellungen → Allgemein. Ein ausgeblendetes Werkzeug behält hier seinen Eintrag; seine Schaltfläche „Öffnen“ führt zu diesem Kontrollkästchen.</translation>
     </message>
     <message>
         <source>Search the settings</source>
@@ -2654,8 +2654,8 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Auf App-Updates prüfen</translation>
     </message>
     <message>
-        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings -&gt; General.</source>
-        <translation>Über das Hilfe-Menü nach einer neuen Version von Anki Miner suchen oder die automatische Prüfung beim Start unter Einstellungen -&gt; Allgemein ein- oder ausschalten.</translation>
+        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings → General.</source>
+        <translation>Über das Hilfe-Menü nach einer neuen Version von Anki Miner suchen oder die automatische Prüfung beim Start unter Einstellungen → Allgemein ein- oder ausschalten.</translation>
     </message>
     <message>
         <source>Download videos or audio</source>
@@ -2670,24 +2670,24 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>.mokuro-Dateien aus Manga-Bildern erstellen</translation>
     </message>
     <message>
-        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from its setup card on Utilities -&gt; Manga OCR.</source>
-        <translation>mokuros japanische OCR auf einen Bandordner oder eine ganze Serie anwenden, damit Lesen -&gt; Manga daraus sammeln kann. Installieren Sie mokuro über seine Einrichtungskarte unter Werkzeuge -&gt; Manga-OCR.</translation>
+        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
+        <translation>mokuros japanische OCR auf einen Bandordner oder eine ganze Serie anwenden, damit Lesen → Manga daraus sammeln kann. Installieren Sie mokuro über seine Einrichtungskarte unter Werkzeuge → Manga-OCR.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
         <translation>Ein Hörbuch mit seinem EPUB synchronisieren</translation>
     </message>
     <message>
-        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitle Files or a reader can use.</source>
-        <translation>Transkribiert ein Hörbuch und ordnet ihm die eigenen Sätze des Buches zeitlich zu, wodurch eine .srt-Datei entsteht, die der Tab Hörbücher, Lesen -&gt; Untertiteldateien oder eine Lese-App nutzen kann.</translation>
+        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use.</source>
+        <translation>Transkribiert ein Hörbuch und ordnet ihm die eigenen Sätze des Buches zeitlich zu, wodurch eine .srt-Datei entsteht, die der Tab Hörbücher, Lesen → Untertiteldateien oder eine Lese-App nutzen kann.</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
         <translation>Gesammelte Karten neu gestalten</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities -&gt; Card Backfill.</source>
-        <translation>Die aktuelle Anki-Miner-Gestaltung erneut auf früher gesammelte Karten anwenden — Werkzeuge -&gt; Karten-Nachbefüllung.</translation>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
+        <translation>Die aktuelle Anki-Miner-Gestaltung erneut auf früher gesammelte Karten anwenden — Werkzeuge → Karten-Nachbefüllung.</translation>
     </message>
     <message>
         <source>System health check</source>

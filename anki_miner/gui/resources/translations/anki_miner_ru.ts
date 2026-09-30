@@ -2042,8 +2042,8 @@ No index files are deleted.</source>
         <translation>Субтитры перевода</translation>
     </message>
     <message>
-        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Sentences.</source>
-        <translation>Загрузите второй файл субтитров на своём языке рядом с файлом на языке майнинга: его строка показывается под основной в предпросмотре Куратора слов и может сохраняться в поле перевода. В разделе Видео -&gt; Пакет укажите вместо этого папку с субтитрами перевода — они сопоставятся с видео по номеру эпизода. Включается в разделе Настройки -&gt; Предложения.</translation>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
+        <translation>Загрузите второй файл субтитров на своём языке рядом с файлом на языке майнинга: его строка показывается под основной в предпросмотре Куратора слов и может сохраняться в поле перевода. В разделе Видео → Пакет укажите вместо этого папку с субтитрами перевода — они сопоставятся с видео по номеру эпизода. Включается в разделе Настройки → Предложения.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2346,8 +2346,8 @@ No index files are deleted.</source>
         <translation>Упрощённые или традиционные иероглифы</translation>
     </message>
     <message>
-        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
-        <translation>Набор иероглифов задаёт написание, которое используют лицевая сторона карточки и поиск в словаре: Упрощённое, Традиционное или Как в источнике, чтобы сохранить исходное написание каждого слова. Поле традиционного написания в разделе Настройки -&gt; Карточки и Anki содержит другое написание, когда оно отличается от лицевой стороны.</translation>
+        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings → Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
+        <translation>Набор иероглифов задаёт написание, которое используют лицевая сторона карточки и поиск в словаре: Упрощённое, Традиционное или Как в источнике, чтобы сохранить исходное написание каждого слова. Поле традиционного написания в разделе Настройки → Карточки и Anki содержит другое написание, когда оно отличается от лицевой стороны.</translation>
     </message>
     <message>
         <source>Use &amp; order multiple dictionaries</source>
@@ -2546,16 +2546,16 @@ No index files are deleted.</source>
         <translation>Чтения в пиньине и цвета тонов</translation>
     </message>
     <message>
-        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Cards &amp; Anki.</source>
-        <translation>Добавляйте пиньинь слова на карточки, окрашивая каждый слог в цвет его тона — за окраску отвечает параметр «Раскрашивать чтение по тонам» в разделе Настройки -&gt; Карточки и Anki.</translation>
+        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings → Cards &amp; Anki.</source>
+        <translation>Добавляйте пиньинь слова на карточки, окрашивая каждый слог в цвет его тона — за окраску отвечает параметр «Раскрашивать чтение по тонам» в разделе Настройки → Карточки и Anki.</translation>
     </message>
     <message>
         <source>Colour the reading by tone</source>
         <translation>Раскрашивать чтение по тонам</translation>
     </message>
     <message>
-        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Cards &amp; Anki.</source>
-        <translation>Раскрашивайте каждый слог чтения в пиньине или Jyutping в цвет его тона — в разделе Настройки -&gt; Карточки и Anki.</translation>
+        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings → Cards &amp; Anki.</source>
+        <translation>Раскрашивайте каждый слог чтения в пиньине или Jyutping в цвет его тона — в разделе Настройки → Карточки и Anki.</translation>
     </message>
     <message>
         <source>Measure word field</source>
@@ -2634,8 +2634,8 @@ No index files are deleted.</source>
         <translation>Выбрать инструменты на вкладке «Утилиты»</translation>
     </message>
     <message>
-        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
-        <translation>Скрывайте неиспользуемые инструменты вкладки «Утилиты» или возвращайте их в разделе Настройки -&gt; Общие. Скрытый инструмент сохраняет здесь свою запись; его кнопка «Открыть» ведёт к этому флажку.</translation>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings → General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation>Скрывайте неиспользуемые инструменты вкладки «Утилиты» или возвращайте их в разделе Настройки → Общие. Скрытый инструмент сохраняет здесь свою запись; его кнопка «Открыть» ведёт к этому флажку.</translation>
     </message>
     <message>
         <source>Search the settings</source>
@@ -2658,8 +2658,8 @@ No index files are deleted.</source>
         <translation>Проверка обновлений приложения</translation>
     </message>
     <message>
-        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings -&gt; General.</source>
-        <translation>Проверяйте наличие новой версии Anki Miner через меню «Справка» или включайте и отключайте автоматическую проверку при запуске в разделе Настройки -&gt; Общие.</translation>
+        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings → General.</source>
+        <translation>Проверяйте наличие новой версии Anki Miner через меню «Справка» или включайте и отключайте автоматическую проверку при запуске в разделе Настройки → Общие.</translation>
     </message>
     <message>
         <source>Download videos or audio</source>
@@ -2674,24 +2674,24 @@ No index files are deleted.</source>
         <translation>Создать файлы .mokuro из изображений манги</translation>
     </message>
     <message>
-        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from its setup card on Utilities -&gt; Manga OCR.</source>
-        <translation>Запустите OCR mokuro для японского текста в папке тома или целой серии, чтобы майнить результат в разделе Чтение -&gt; Манга. Установите mokuro из блока установки в разделе Утилиты -&gt; OCR манги.</translation>
+        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
+        <translation>Запустите OCR mokuro для японского текста в папке тома или целой серии, чтобы майнить результат в разделе Чтение → Манга. Установите mokuro из блока установки в разделе Утилиты → OCR манги.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
         <translation>Синхронизация аудиокниги с её EPUB</translation>
     </message>
     <message>
-        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitle Files or a reader can use.</source>
-        <translation>Транскрибировать аудиокнигу и синхронизировать с ней предложения самой книги, записывая файл .srt, который можно использовать на вкладке «Аудиокниги», в разделе Чтение -&gt; Файлы субтитров или в приложении для чтения.</translation>
+        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use.</source>
+        <translation>Транскрибировать аудиокнигу и синхронизировать с ней предложения самой книги, записывая файл .srt, который можно использовать на вкладке «Аудиокниги», в разделе Чтение → Файлы субтитров или в приложении для чтения.</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
         <translation>Изменить стиль намайненных карточек</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities -&gt; Card Backfill.</source>
-        <translation>Повторно примените актуальное оформление Anki Miner к ранее намайненным карточкам — Утилиты -&gt; Дозаполнение карточек.</translation>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
+        <translation>Повторно примените актуальное оформление Anki Miner к ранее намайненным карточкам — Утилиты → Дозаполнение карточек.</translation>
     </message>
     <message>
         <source>System health check</source>

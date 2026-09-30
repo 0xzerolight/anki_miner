@@ -2034,8 +2034,8 @@ No index files are deleted.</source>
         <translation>翻訳字幕</translation>
     </message>
     <message>
-        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Sentences.</source>
-        <translation>マイニング言語の字幕と並べて、自分の言語の字幕ファイルをもう一つ読み込みます。その行は単語キュレーターのプレビューで例文の下に表示され、翻訳フィールドに保存できます。動画 -&gt; バッチでは、代わりに翻訳字幕のフォルダを指定すると、エピソード番号で動画とペアリングされます。「設定 -&gt; 文」で有効にしてください。</translation>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
+        <translation>マイニング言語の字幕と並べて、自分の言語の字幕ファイルをもう一つ読み込みます。その行は単語キュレーターのプレビューで例文の下に表示され、翻訳フィールドに保存できます。動画 → バッチでは、代わりに翻訳字幕のフォルダを指定すると、エピソード番号で動画とペアリングされます。「設定 → 文」で有効にしてください。</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2338,8 +2338,8 @@ No index files are deleted.</source>
         <translation>簡体字または繁体字</translation>
     </message>
     <message>
-        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
-        <translation>文字セットでは、カードの表面と辞書検索に使う表記を選びます: 簡体字、繁体字、または各単語の元の表記をそのまま保つ「原文のまま」です。表面と異なる場合、もう一方の表記は設定 -&gt; カードと Anki の繁体字フィールドに格納されます。</translation>
+        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings → Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
+        <translation>文字セットでは、カードの表面と辞書検索に使う表記を選びます: 簡体字、繁体字、または各単語の元の表記をそのまま保つ「原文のまま」です。表面と異なる場合、もう一方の表記は設定 → カードと Anki の繁体字フィールドに格納されます。</translation>
     </message>
     <message>
         <source>Use &amp; order multiple dictionaries</source>
@@ -2538,16 +2538,16 @@ No index files are deleted.</source>
         <translation>ピンインの読みと声調の色分け</translation>
     </message>
     <message>
-        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Cards &amp; Anki.</source>
-        <translation>単語のピンインをカードに載せ、各音節を声調の色で表示します — 色分けは「設定 -&gt; カードと Anki」の「読みを声調で色分けする」で設定します。</translation>
+        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings → Cards &amp; Anki.</source>
+        <translation>単語のピンインをカードに載せ、各音節を声調の色で表示します — 色分けは「設定 → カードと Anki」の「読みを声調で色分けする」で設定します。</translation>
     </message>
     <message>
         <source>Colour the reading by tone</source>
         <translation>読みを声調で色分けする</translation>
     </message>
     <message>
-        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Cards &amp; Anki.</source>
-        <translation>ピンインまたは Jyutping の読みの各音節を声調ごとに色分けします（設定 -&gt; カードと Anki）。</translation>
+        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings → Cards &amp; Anki.</source>
+        <translation>ピンインまたは Jyutping の読みの各音節を声調ごとに色分けします（設定 → カードと Anki）。</translation>
     </message>
     <message>
         <source>Measure word field</source>
@@ -2626,8 +2626,8 @@ No index files are deleted.</source>
         <translation>「ユーティリティ」タブのツールを選択</translation>
     </message>
     <message>
-        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
-        <translation>使わないユーティリティのツールを「設定 -&gt; 一般」で非表示にしたり、再表示したりできます。非表示にしたツールもここに項目が残り、その「開く」ボタンから該当のチェックボックスに移動できます。</translation>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings → General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation>使わないユーティリティのツールを「設定 → 一般」で非表示にしたり、再表示したりできます。非表示にしたツールもここに項目が残り、その「開く」ボタンから該当のチェックボックスに移動できます。</translation>
     </message>
     <message>
         <source>Search the settings</source>
@@ -2650,8 +2650,8 @@ No index files are deleted.</source>
         <translation>アプリの更新を確認</translation>
     </message>
     <message>
-        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings -&gt; General.</source>
-        <translation>ヘルプメニューから Anki Miner の新しいバージョンを確認するか、「設定 -&gt; 一般」で起動時の自動確認を切り替えます。</translation>
+        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings → General.</source>
+        <translation>ヘルプメニューから Anki Miner の新しいバージョンを確認するか、「設定 → 一般」で起動時の自動確認を切り替えます。</translation>
     </message>
     <message>
         <source>Download videos or audio</source>
@@ -2666,24 +2666,24 @@ No index files are deleted.</source>
         <translation>マンガ画像から .mokuro ファイルを作成</translation>
     </message>
     <message>
-        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from its setup card on Utilities -&gt; Manga OCR.</source>
-        <translation>巻フォルダまたはシリーズ全体に対して mokuro の日本語 OCR を実行すると、「リーディング -&gt; マンガ」でマイニングできるようになります。mokuro は「ユーティリティ -&gt; マンガ OCR」のセットアップカードからインストールしてください。</translation>
+        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
+        <translation>巻フォルダまたはシリーズ全体に対して mokuro の日本語 OCR を実行すると、「リーディング → マンガ」でマイニングできるようになります。mokuro は「ユーティリティ → マンガ OCR」のセットアップカードからインストールしてください。</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
         <translation>オーディオブックを EPUB に同期</translation>
     </message>
     <message>
-        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitle Files or a reader can use.</source>
-        <translation>オーディオブックを文字起こしし、書籍自体の文をそれに合わせてタイミング調整して、「オーディオブック」タブ、リーディング -&gt; 字幕ファイル、またはリーダーアプリで使える .srt を書き出します。</translation>
+        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use.</source>
+        <translation>オーディオブックを文字起こしし、書籍自体の文をそれに合わせてタイミング調整して、「オーディオブック」タブ、リーディング → 字幕ファイル、またはリーダーアプリで使える .srt を書き出します。</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
         <translation>マイニングしたカードのスタイルを再適用</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities -&gt; Card Backfill.</source>
-        <translation>以前マイニングしたカードに、最新の Anki Miner スタイルを再適用します — ユーティリティ -&gt; カードの一括補完。</translation>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
+        <translation>以前マイニングしたカードに、最新の Anki Miner スタイルを再適用します — ユーティリティ → カードの一括補完。</translation>
     </message>
     <message>
         <source>System health check</source>

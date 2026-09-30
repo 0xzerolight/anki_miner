@@ -224,8 +224,8 @@ CAPABILITIES: tuple[Capability, ...] = (
             "Capabilities",
             "Load a second subtitle file in your own language beside the mining-language one: it shows under "
             "the line in the Word Curator preview and can be saved to a Translation field. "
-            "On Video -> Batch, point it at a folder of translation subtitles instead and they pair to the "
-            "videos by episode number. Turn it on under Settings -> Sentences.",
+            "On Video → Batch, point it at a folder of translation subtitles instead and they pair to the "
+            "videos by episode number. Turn it on under Settings → Sentences.",
         ),
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("video", "single"),
@@ -801,7 +801,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "Capabilities",
             "Character Set picks the spelling the card front and the dictionary lookup use: Simplified, "
             "Traditional, or As written to keep each word's source spelling. The Traditional Field, under "
-            "Settings -> Cards & Anki, carries the other spelling when it differs from the front.",
+            "Settings → Cards & Anki, carries the other spelling when it differs from the front.",
         ),
         category=_CAT_FILTERING,
         target=CapabilityTarget("settings", "mining_language"),
@@ -1101,7 +1101,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
             "Put the word's pinyin on your cards, each syllable in its tone's colour -- "
-            "the colouring is Colour the reading by tone, under Settings -> Cards & Anki.",
+            "the colouring is Colour the reading by tone, under Settings → Cards & Anki.",
         ),
         category=_CAT_CARDS,
         target=CapabilityTarget("settings", "anki"),
@@ -1113,7 +1113,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Colour the reading by tone"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -> Cards & Anki.",
+            "Colour each syllable of the pinyin or jyutping reading by its tone, under Settings → Cards & Anki.",
         ),
         category=_CAT_CARDS,
         target=CapabilityTarget("settings", "anki"),
@@ -1227,7 +1227,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Choose the tools on the Utilities tab"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Hide the Utilities tools you do not use, or bring them back, under Settings -> General. "
+            "Hide the Utilities tools you do not use, or bring them back, under Settings → General. "
             "A hidden tool keeps its entry here; its Open button leads to that checkbox.",
         ),
         category=_CAT_APPEARANCE,
@@ -1261,7 +1261,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Check for app updates"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings -> General.",
+            "Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings → General.",
         ),
         category=_CAT_APPEARANCE,
         target=CapabilityTarget("settings", "ui"),
@@ -1295,8 +1295,8 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Create .mokuro files from manga images"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -> Manga can mine it. "
-            "Install mokuro from its setup card on Utilities -> Manga OCR.",
+            "Run mokuro's Japanese OCR on a volume folder or a whole series so Reading → Manga can mine it. "
+            "Install mokuro from its setup card on Utilities → Manga OCR.",
         ),
         category=_CAT_TOOLS,
         target=CapabilityTarget("subtitles", "mokuro"),
@@ -1308,7 +1308,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
             "Transcribe an audiobook and time the book's own sentences to it, writing an .srt the "
-            "Audiobook tab, Reading -> Subtitle Files or a reader can use.",
+            "Audiobook tab, Reading → Subtitle Files or a reader can use.",
         ),
         category=_CAT_TOOLS,
         target=CapabilityTarget("subtitles", "booksync"),
@@ -1319,7 +1319,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Restyle mined cards"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities -> Card Backfill.",
+            "Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.",
         ),
         category=_CAT_TOOLS,
         target=CapabilityTarget("subtitles", "backfill"),

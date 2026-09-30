@@ -2034,8 +2034,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Subtitel bahasa sekunder</translation>
     </message>
     <message>
-        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Sentences.</source>
-        <translation>Muat berkas subtitel kedua dalam bahasa Anda sendiri di samping subtitel bahasa mining: subtitel ini tampil di bawah baris pada pratinjau Word Curator dan dapat disimpan ke bidang Terjemahan. Di Video -&gt; Batch, arahkan ke folder subtitel terjemahan sebagai gantinya, dan subtitel akan dipasangkan ke video berdasarkan nomor episode. Aktifkan di Pengaturan -&gt; Kalimat.</translation>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
+        <translation>Muat berkas subtitel kedua dalam bahasa Anda sendiri di samping subtitel bahasa mining: subtitel ini tampil di bawah baris pada pratinjau Word Curator dan dapat disimpan ke bidang Terjemahan. Di Video → Batch, arahkan ke folder subtitel terjemahan sebagai gantinya, dan subtitel akan dipasangkan ke video berdasarkan nomor episode. Aktifkan di Pengaturan → Kalimat.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2338,8 +2338,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Karakter sederhana atau tradisional</translation>
     </message>
     <message>
-        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
-        <translation>Set Karakter memilih ejaan yang dipakai sisi depan kartu dan pencarian kamus: Sederhana, Tradisional, atau Sesuai tulisan untuk mempertahankan ejaan asal setiap kata. Bidang Aksara Tradisional, di Pengaturan -&gt; Kartu &amp; Anki, memuat ejaan lainnya bila berbeda dari sisi depan.</translation>
+        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings → Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
+        <translation>Set Karakter memilih ejaan yang dipakai sisi depan kartu dan pencarian kamus: Sederhana, Tradisional, atau Sesuai tulisan untuk mempertahankan ejaan asal setiap kata. Bidang Aksara Tradisional, di Pengaturan → Kartu &amp; Anki, memuat ejaan lainnya bila berbeda dari sisi depan.</translation>
     </message>
     <message>
         <source>Use &amp; order multiple dictionaries</source>
@@ -2538,16 +2538,16 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Bacaan pinyin &amp; warna nada</translation>
     </message>
     <message>
-        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Cards &amp; Anki.</source>
-        <translation>Tampilkan pinyin kata pada kartu Anda, setiap suku kata dengan warna nadanya — pewarnaannya diatur oleh Warnai bacaan berdasarkan nada, di Pengaturan -&gt; Kartu &amp; Anki.</translation>
+        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings → Cards &amp; Anki.</source>
+        <translation>Tampilkan pinyin kata pada kartu Anda, setiap suku kata dengan warna nadanya — pewarnaannya diatur oleh Warnai bacaan berdasarkan nada, di Pengaturan → Kartu &amp; Anki.</translation>
     </message>
     <message>
         <source>Colour the reading by tone</source>
         <translation>Warnai bacaan berdasarkan nada</translation>
     </message>
     <message>
-        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Cards &amp; Anki.</source>
-        <translation>Warnai setiap suku kata bacaan pinyin atau jyutping berdasarkan nadanya, di Pengaturan -&gt; Kartu &amp; Anki.</translation>
+        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings → Cards &amp; Anki.</source>
+        <translation>Warnai setiap suku kata bacaan pinyin atau jyutping berdasarkan nadanya, di Pengaturan → Kartu &amp; Anki.</translation>
     </message>
     <message>
         <source>Measure word field</source>
@@ -2626,8 +2626,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Pilih alat pada tab Utilitas</translation>
     </message>
     <message>
-        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
-        <translation>Sembunyikan alat Utilitas yang tidak Anda gunakan, atau tampilkan kembali, di Pengaturan -&gt; Umum. Alat yang disembunyikan tetap memiliki entrinya di sini; tombol Buka-nya mengarah ke kotak centang tersebut.</translation>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings → General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation>Sembunyikan alat Utilitas yang tidak Anda gunakan, atau tampilkan kembali, di Pengaturan → Umum. Alat yang disembunyikan tetap memiliki entrinya di sini; tombol Buka-nya mengarah ke kotak centang tersebut.</translation>
     </message>
     <message>
         <source>Search the settings</source>
@@ -2650,8 +2650,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Periksa pembaruan aplikasi</translation>
     </message>
     <message>
-        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings -&gt; General.</source>
-        <translation>Periksa versi Anki Miner terbaru dari menu Bantuan, atau aktifkan/nonaktifkan pemeriksaan otomatis saat memulai di Pengaturan -&gt; Umum.</translation>
+        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings → General.</source>
+        <translation>Periksa versi Anki Miner terbaru dari menu Bantuan, atau aktifkan/nonaktifkan pemeriksaan otomatis saat memulai di Pengaturan → Umum.</translation>
     </message>
     <message>
         <source>Download videos or audio</source>
@@ -2666,24 +2666,24 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Buat berkas .mokuro dari gambar manga</translation>
     </message>
     <message>
-        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from its setup card on Utilities -&gt; Manga OCR.</source>
-        <translation>Jalankan OCR bahasa Jepang mokuro pada folder volume atau seluruh seri agar dapat di-mining di Bacaan -&gt; Manga. Pasang mokuro dari kartu penyiapannya di Utilitas -&gt; Manga OCR.</translation>
+        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
+        <translation>Jalankan OCR bahasa Jepang mokuro pada folder volume atau seluruh seri agar dapat di-mining di Bacaan → Manga. Pasang mokuro dari kartu penyiapannya di Utilitas → Manga OCR.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
         <translation>Sinkronkan buku audio dengan EPUB-nya</translation>
     </message>
     <message>
-        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitle Files or a reader can use.</source>
-        <translation>Transkripsikan buku audio dan atur waktu kalimat buku itu sendiri terhadapnya, lalu tulis .srt yang dapat digunakan tab Buku Audio, Bacaan -&gt; Berkas Subtitel, atau pembaca lain.</translation>
+        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use.</source>
+        <translation>Transkripsikan buku audio dan atur waktu kalimat buku itu sendiri terhadapnya, lalu tulis .srt yang dapat digunakan tab Buku Audio, Bacaan → Berkas Subtitel, atau pembaca lain.</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
         <translation>Ubah gaya kartu hasil mining</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities -&gt; Card Backfill.</source>
-        <translation>Terapkan ulang gaya Anki Miner terbaru ke kartu yang sudah Anda mining sebelumnya — Utilitas -&gt; Pengisian Bidang Kartu.</translation>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
+        <translation>Terapkan ulang gaya Anki Miner terbaru ke kartu yang sudah Anda mining sebelumnya — Utilitas → Pengisian Bidang Kartu.</translation>
     </message>
     <message>
         <source>System health check</source>
