@@ -180,8 +180,10 @@ class SubtitlesSettingsPanel(FormPanel):
         # override leaves the GUI; macOS keeps it, because Homebrew installs to
         # /opt/homebrew/bin, which a Finder-launched app does not search. Read
         # from the platform check, not _alass_supported, which startup
-        # suppression also turns off.
-        self._alass_path_offered = not alass_installer.alass_install_supported()
+        # suppression also turns off. Suppressed startup (the installer smoke)
+        # must not run that check at all; without the row, contribute leaves
+        # alass_location as loaded, so nothing is lost.
+        self._alass_path_offered = False if suppress_optional_startup else not alass_installer.alass_install_supported()
         # Vulkan ASR is "offerable" only where it can actually run: non-macOS AND
         # the whisper.cpp Vulkan backend lib (libggml-vulkan) is installed. That
         # lib ships only in the bundled release (built from source with the Vulkan
