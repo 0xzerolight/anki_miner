@@ -109,6 +109,12 @@ AUDIO_COLUMN = 10
 #: stamp covers every mining path (Issue #129).
 POSITION_COLUMN = 11
 
+#: Data columns hidden when every row's cell is empty or "-" (A07): Reading (3),
+#: Freq. Rank (5) and Unknowns in line (7). A new user with no frequency list
+#: saw a whole column of "-". Gated like Audio: force-hidden, and left out of
+#: the header menu, so an empty column can neither show nor be "lost".
+_EMPTY_GATED_COLUMNS = (3, 5, 7)
+
 #: Table column : side column, as stretch factors. Also the ratio the split
 #: opens at, so the first frame and every resize after it agree.
 _MAIN_SPLIT_STRETCH = (3, 2)
@@ -258,6 +264,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # so only its presence is kept: it is None exactly when the run maps no
         # expression-audio field, which is the Audio column's gate.
         self._has_expression_audio = expression_audio_fetch_fn is not None
+        self._empty_columns: frozenset[int] = frozenset()  # filled by _populate_table (A07)
         # Manga page pane: gated on page_units exactly like the player gates
         # on video_file. Cache holds converted QPixmaps (GUI-thread only);
         # _page_request_gen is the stale-guard for off-thread loads and
@@ -850,6 +857,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             self._apply_header_resize_modes()
         self._apply_translation_column_gate()
         self._apply_audio_column_gate()
+        self._apply_empty_column_gate()
 
     def _is_on_a_live_screen(self) -> bool:
         """True when the window's centre sits on a screen that exists."""
@@ -984,6 +992,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 continue
             if column == AUDIO_COLUMN and not self._has_expression_audio:
                 continue
+            if column in self._empty_columns:
+                continue
             header_item = self.table.horizontalHeaderItem(column)
             action = QAction(header_item.text() if header_item is not None else str(column), self)
             action.setCheckable(True)
@@ -1024,6 +1034,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self._apply_header_resize_modes()
         self._apply_translation_column_gate()
         self._apply_audio_column_gate()
+        self._apply_empty_column_gate()
 
     def _apply_translation_column_gate(self) -> None:
         self.table.setColumnHidden(TRANSLATION_COLUMN, not self._has_translations)
@@ -1038,6 +1049,23 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         """
         if not self._has_expression_audio:
             self.table.setColumnHidden(AUDIO_COLUMN, True)
+
+    def _all_empty_columns(self) -> frozenset[int]:
+        """The gated data columns whose every cell is empty or "-" (A07)."""
+        empty: set[int] = set()
+        for column in _EMPTY_GATED_COLUMNS:
+            cell_texts = []
+            for table_row in range(self.table.rowCount()):
+                cell = self.table.item(table_row, column)
+                cell_texts.append(cell.text().strip() if cell is not None else "")
+            if cell_texts and all(cell_text in ("", "-") for cell_text in cell_texts):
+                empty.add(column)
+        return frozenset(empty)
+
+    def _apply_empty_column_gate(self) -> None:
+        """Force-hide a data column with nothing in it (A07). One-directional, like Audio."""
+        for column in self._empty_columns:
+            self.table.setColumnHidden(column, True)
 
     def _build_right_pane(self) -> QWidget:
         """Build the right pane from whichever optional sub-panes are enabled.
@@ -1873,6 +1901,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # vertical-header resize mode to Interactive, which drops the shared
         # Fixed row height. Re-applying here keeps it in effect.
         self._apply_data_surface()
+
+        # A07: decided once, on the rows as they arrive.
+        self._empty_columns = self._all_empty_columns()
+        self._apply_empty_column_gate()
 
     def _make_readonly_item(
         self,
