@@ -492,6 +492,16 @@ CAPABILITIES: tuple[Capability, ...] = (
         keywords=("playlist limit", "max videos", "duration", "length cap", "too long"),
     ),
     Capability(
+        id="youtube-align-captions",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Align YouTube captions to the audio"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities", "Retime YouTube's own captions against the video's audio before mining."
+        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("settings", "youtube"),
+        keywords=("align captions", "caption timing", "subtitle timing", "out of sync", "retime"),
+    ),
+    Capability(
         id="ytdlp-maintenance",
         title=QT_TRANSLATE_NOOP("Capabilities", "Keep yt-dlp up to date"),
         description=QT_TRANSLATE_NOOP(

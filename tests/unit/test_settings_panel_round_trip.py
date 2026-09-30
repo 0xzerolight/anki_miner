@@ -126,6 +126,7 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         youtube_cookies_file=cookies_txt,
         youtube_max_duration_s=3600,
         youtube_playlist_max=50,
+        youtube_align_captions=True,
     )
 
 
@@ -189,6 +190,7 @@ _SAVE_PATH_FIELDS = frozenset(
         "youtube_cookies_file",
         "youtube_max_duration_s",
         "youtube_playlist_max",
+        "youtube_align_captions",
     }
 )
 
@@ -426,6 +428,7 @@ class TestSavePathRoundTrip:
             "youtube_cookies_file",
             "youtube_max_duration_s",
             "youtube_playlist_max",
+            "youtube_align_captions",
         ):
             assert getattr(result, field_name) == getattr(original, field_name), field_name
 

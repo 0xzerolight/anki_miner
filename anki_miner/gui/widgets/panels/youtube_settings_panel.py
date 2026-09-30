@@ -44,6 +44,7 @@ class YouTubeSettingsPanel(FormPanel):
     Provides:
     - Cookies: none, a browser, or a cookies.txt file, as one choice (C10)
     - Max video duration cap (in minutes)
+    - Whether YouTube captions are aligned to the audio (D6 item 2)
     - A manual "Update yt-dlp now" trigger + status line
     """
 
@@ -100,6 +101,19 @@ class YouTubeSettingsPanel(FormPanel):
             self.tr("Playlist max videos"),
             self.playlist_max_spinbox,
             helper=self.tr("When adding a playlist, at most this many videos are queued."),
+        )
+
+        # D6 item 2: aligning captions is a standing choice, not a per-run one,
+        # so it moved here from Video → YouTube. The worker reads the config.
+        self.align_captions_checkbox = QCheckBox(self.tr("Align captions to audio"))
+        self.add_field(
+            "",
+            self.align_captions_checkbox,
+            helper=self.tr(
+                "Retime YouTube's captions against the video's audio before mining. "
+                "Ignored when the subtitle was transcribed locally."
+            ),
+            anchor="align_captions_checkbox",
         )
 
         # Keep yt-dlp current. This had no UI at all, so the only way to change it was
@@ -317,6 +331,7 @@ class YouTubeSettingsPanel(FormPanel):
         self.set_cookies_file(config.youtube_cookies_file)
         self.set_max_duration_seconds(config.youtube_max_duration_s)
         self.set_playlist_max(config.youtube_playlist_max)
+        self.align_captions_checkbox.setChecked(bool(config.youtube_align_captions))
         self.set_auto_update_ytdlp(config.auto_update_ytdlp)
         self.set_ytdlp_prerelease(config.ytdlp_prerelease)
 
@@ -340,6 +355,7 @@ class YouTubeSettingsPanel(FormPanel):
             youtube_cookies_file=Path(cookies_file_str) if cookies_file_str else None,
             youtube_max_duration_s=self.get_max_duration_seconds(),
             youtube_playlist_max=self.get_playlist_max(),
+            youtube_align_captions=self.align_captions_checkbox.isChecked(),
             auto_update_ytdlp=self.get_auto_update_ytdlp(),
             ytdlp_prerelease=self.get_ytdlp_prerelease(),
         )
