@@ -276,3 +276,62 @@ def test_add_widget_anchors_only_when_asked(qapp, qtbot):
     anchors = panel.setting_anchors()
     assert [a.stable_id for a in anchors] == ["demo.excluded_decks"]
     assert anchors[0].focus_widget is panel.decks
+
+
+# ---------------------------------------------------------------------------
+# Render order equals call order (C01, UI/UX audit 2026-09-29)
+# ---------------------------------------------------------------------------
+
+
+def _top_in(panel, widget) -> int:
+    from PyQt6.QtCore import QPoint
+
+    return widget.mapTo(panel, QPoint(0, 0)).y()
+
+
+def test_add_widget_renders_between_the_fields_around_it(qapp, qtbot):
+    """A status line or button added after a row must sit under that row."""
+    panel = FormPanel("Test")
+    qtbot.addWidget(panel)
+    first = QCheckBox("first")
+    panel.add_field("First", first)
+    status = QLabel("status line")
+    panel.add_widget(status)
+    second = QCheckBox("second")
+    panel.add_field("Second", second)
+    panel.resize(600, 400)
+    panel.show()
+    qtbot.waitExposed(panel)
+
+    assert _top_in(panel, first) < _top_in(panel, status) < _top_in(panel, second)
+
+
+def test_add_layout_renders_between_the_fields_around_it(qapp, qtbot):
+    from PyQt6.QtWidgets import QHBoxLayout, QPushButton
+
+    panel = FormPanel("Test")
+    qtbot.addWidget(panel)
+    first = QCheckBox("first")
+    panel.add_field("First", first)
+    row = QHBoxLayout()
+    button = QPushButton("Action")
+    row.addWidget(button)
+    panel.add_layout(row)
+    second = QCheckBox("second")
+    panel.add_field("Second", second)
+    panel.resize(600, 400)
+    panel.show()
+    qtbot.waitExposed(panel)
+
+    assert _top_in(panel, first) < _top_in(panel, button) < _top_in(panel, second)
+
+
+def test_a_field_after_a_widget_lands_in_a_fresh_form(qapp, qtbot):
+    panel = FormPanel("Test")
+    qtbot.addWidget(panel)
+    panel.add_field("First", QCheckBox())
+    panel.add_widget(QLabel("between"))
+    panel.add_field("Second", QCheckBox())
+
+    forms = [item for kind, item in _layout_sequence(panel.main_layout) if kind == "form"]
+    assert [form.rowCount() for form in forms] == [1, 1]

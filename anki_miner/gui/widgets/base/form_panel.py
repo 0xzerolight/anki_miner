@@ -114,6 +114,20 @@ class FormPanel(SettingAnchorHost, QFrame):
         layout.setFormAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
         return layout
 
+    def _open_form_after_block(self) -> None:
+        """Start a fresh form below whatever was just appended to the card (C01).
+
+        ``add_widget`` and ``add_layout`` append to the card's main column, but
+        the fields around them live in form layouts that were added earlier. So
+        without a new form, every field added after a status line or a button
+        row still rendered ABOVE it, and statuses floated under the whole
+        section. Opening a form here makes render order equal call order. An
+        unused (empty) form layout takes no space: ``QBoxLayout`` skips empty
+        items.
+        """
+        self._active_form_layout = self._new_form_layout()
+        self._main_layout.addLayout(self._active_form_layout)
+
     def _apply_field_cap(self) -> None:
         """Stop the fields growing with the card (D5).
 
@@ -245,6 +259,7 @@ class FormPanel(SettingAnchorHost, QFrame):
             The widget that was added
         """
         self._main_layout.addWidget(widget, stretch)
+        self._open_form_after_block()
         self._register_setting_anchor(
             widget,
             field_label=None,
@@ -263,6 +278,7 @@ class FormPanel(SettingAnchorHost, QFrame):
             layout: Layout to add
         """
         self._main_layout.addLayout(layout)
+        self._open_form_after_block()
 
     def add_section(self, title: str) -> None:
         """Add a section divider with title.
