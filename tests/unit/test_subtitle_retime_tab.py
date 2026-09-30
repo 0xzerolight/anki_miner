@@ -1,8 +1,8 @@
 """Tests for SubtitleRetimeTab.
 
 Covers:
-- alass-availability guard: present → Retime enabled, notice hidden;
-  absent → button disabled, notice visible.
+- alass-availability guard: Retime stays enabled either way; the cached
+  verdict only feeds the failure banner's "Download alass" repair (E13).
 - Single-mode pair collection: both set → [(video, sub)]; missing one → warning, [].
 - Folder-mode pair collection: patched matcher → tuples + "Matched N of M" logged;
   unmatched case logs a warning.
@@ -83,22 +83,24 @@ def test_update_config_swaps_config(qtbot, tmp_path):
 
 
 def test_alass_present_enables_retime(qtbot, tmp_path):
-    """alass present → Retime enabled, notice hidden."""
+    """alass present → Retime enabled, alass cached as available."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
     assert tab.retime_button.isEnabled()
-    assert tab.engine_notice_label.isHidden()
+    # The verdict lands on a queued callback; the button does not wait for it.
+    qtbot.waitUntil(tab._alass_available, timeout=3000)
+    assert tab._alass_available() is True
 
 
-def test_alass_absent_keeps_retime_enabled_with_notice(qtbot, tmp_path):
-    """alass absent → notice visible, but Retime stays enabled (ffsubsync runs)."""
+def test_alass_absent_keeps_retime_enabled(qtbot, tmp_path):
+    """alass absent → Retime stays enabled (ffsubsync runs); no notice (E08)."""
     config = _make_config(tmp_path)
     with patch(_COMPUTE_AVAILABLE, return_value=False):
         tab = SubtitleRetimeTab(config)
         assert tab._availability_worker.wait(3000)
-        qtbot.waitUntil(lambda: not tab.engine_notice_label.isHidden(), timeout=3000)
+        qtbot.wait(100)
     qtbot.addWidget(tab)
     assert tab.retime_button.isEnabled()
-    assert not tab.engine_notice_label.isHidden()
+    assert tab._alass_available() is False
 
 
 def test_alass_available_via_path_check(qtbot, tmp_path):
@@ -116,7 +118,7 @@ def test_alass_available_via_path_check(qtbot, tmp_path):
 
 
 def test_alass_unavailable_via_path_check(qtbot, tmp_path):
-    """resolve_alass returns 'alass' but shutil.which → None → notice shown."""
+    """resolve_alass returns 'alass' but shutil.which → None → unavailable."""
     config = _make_config(tmp_path)
     with (
         patch("anki_miner.gui.widgets.subtitle_retime_tab.resolve_alass", return_value="alass"),
@@ -124,20 +126,22 @@ def test_alass_unavailable_via_path_check(qtbot, tmp_path):
     ):
         tab = SubtitleRetimeTab(config)
         assert tab._availability_worker.wait(3000)
-        qtbot.waitUntil(lambda: not tab.engine_notice_label.isHidden(), timeout=3000)
+        qtbot.wait(100)
     qtbot.addWidget(tab)
+    assert tab._alass_available() is False
     assert tab.retime_button.isEnabled()
 
 
 def test_alass_resolved_path_missing_unavailable(qtbot, tmp_path):
-    """resolve_alass returns an explicit path that does not exist → notice shown."""
+    """resolve_alass returns an explicit path that does not exist → unavailable."""
     config = _make_config(tmp_path)
     missing = str(tmp_path / "nope" / "alass")
     with patch("anki_miner.gui.widgets.subtitle_retime_tab.resolve_alass", return_value=missing):
         tab = SubtitleRetimeTab(config)
         assert tab._availability_worker.wait(3000)
-        qtbot.waitUntil(lambda: not tab.engine_notice_label.isHidden(), timeout=3000)
+        qtbot.wait(100)
     qtbot.addWidget(tab)
+    assert tab._alass_available() is False
     assert tab.retime_button.isEnabled()
 
 
@@ -1066,14 +1070,14 @@ def test_update_config_recomputes_alass_cache(qtbot, tmp_path):
         tab = SubtitleRetimeTab(config)
         qtbot.addWidget(tab)
         assert tab._availability_worker.wait(3000)
-        qtbot.waitUntil(lambda: not tab.engine_notice_label.isHidden(), timeout=3000)
+        qtbot.wait(100)
         assert which.call_count == 1
 
         # alass now appears on PATH; a config refresh must flip the cached bool.
         which.return_value = "/usr/bin/alass"
         tab.update_config(dataclasses.replace(config, alass_location="/x"))
         assert tab._availability_worker.wait(3000)
-        qtbot.waitUntil(tab.engine_notice_label.isHidden, timeout=3000)
+        qtbot.waitUntil(lambda: tab._alass_is_available, timeout=3000)
         assert which.call_count == 2
         assert tab.retime_button.isEnabled()
         assert tab._alass_is_available is True

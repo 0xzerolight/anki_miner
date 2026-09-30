@@ -135,7 +135,7 @@ class SubtitleRetimeTab(_ToolTabBase):
                 "Enable Overwrite to replace it."
             ),
             select_output_folder=self.tr("Select Output Folder"),
-            output_default=self.tr("Next to source video"),
+            output_default=self.tr("Next to source video, as name_retimed.srt"),
             task_title=self.tr("Subtitle retiming"),
         )
 
@@ -205,17 +205,6 @@ class SubtitleRetimeTab(_ToolTabBase):
         configure_card_layout(layout)
 
         layout.addWidget(SectionHeader(self.tr("Input")))
-
-        # alass notice (shown when alass unavailable; retiming still works)
-        self.engine_notice_label = QLabel(
-            self.tr(
-                "alass not found; retiming uses ffsubsync only. Install it in Settings → Transcription & Alignment."
-            )
-        )
-        self.engine_notice_label.setObjectName("helper-text")
-        self.engine_notice_label.setWordWrap(True)
-        self.engine_notice_label.hide()
-        layout.addWidget(self.engine_notice_label)
 
         # Input description
         input_desc = QLabel(self.tr("Resync a subtitle file to its video by matching audio."))
@@ -419,13 +408,6 @@ class SubtitleRetimeTab(_ToolTabBase):
         )
         layout.addWidget(self.overwrite_checkbox)
 
-        # Alignment tunes itself (engine chain + result validation); a result
-        # that cannot be trusted never overwrites the original subtitle.
-        auto_hint = QLabel(self.tr("Alignment is automatic; the result is written to a separate _retimed file."))
-        auto_hint.setObjectName("helper-text")
-        auto_hint.setWordWrap(True)
-        layout.addWidget(auto_hint)
-
         group.setLayout(layout)
         return group
 
@@ -449,11 +431,13 @@ class SubtitleRetimeTab(_ToolTabBase):
     # ------------------------------------------------------------------
 
     def _refresh_engine_state(self) -> None:
-        """Probe alass availability off-thread, then update the notice.
+        """Probe alass availability off-thread and cache the verdict.
 
         alass is optional now: ffsubsync ships with the app as the primary
         engine, so a missing alass shortens the fallback chain instead of
-        disabling retiming. The probe only drives the informational notice.
+        disabling retiming. The probe only feeds the failure banner's
+        "Download alass" repair (E13); a missing alass is not announced up
+        front (E08).
         """
         config = self.config
         self.retime_button.setEnabled(True)
@@ -462,7 +446,6 @@ class SubtitleRetimeTab(_ToolTabBase):
 
         def _apply(result: object) -> None:
             self._alass_is_available = bool(result)
-            self.engine_notice_label.setVisible(not self._alass_is_available)
 
         def _on_error(message: str) -> None:
             logger.warning("alass availability probe failed: %s", message)

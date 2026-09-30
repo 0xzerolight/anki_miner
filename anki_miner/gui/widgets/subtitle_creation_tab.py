@@ -249,19 +249,15 @@ class SubtitleCreationTab(_ToolTabBase):
 
         layout.addWidget(SectionHeader(self.tr("Output")))
 
-        # Output description
-        out_desc = QLabel(
-            self.tr("Generated .srt files are saved next to each source file unless you choose a folder.")
-        )
-        out_desc.setObjectName("helper-text")
-        out_desc.setWordWrap(True)
-        layout.addWidget(out_desc)
-
         self._build_output_row(
             layout,
             output_label=self.tr("Output:"),
             choose_label=self.tr("Choose Folder…"),
             reset_label=self.tr("Reset"),
+        )
+        # E08: the helper line became the Choose Folder… tooltip.
+        self.choose_output_button.setToolTip(
+            self.tr("Generated .srt files are saved next to each source file unless you choose a folder.")
         )
 
         # Overwrite checkbox

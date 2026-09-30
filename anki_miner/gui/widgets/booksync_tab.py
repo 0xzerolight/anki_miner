@@ -241,16 +241,15 @@ class BookSyncTab(_ToolTabBase):
 
         layout.addWidget(SectionHeader(self.tr("Output")))
 
-        out_desc = QLabel(self.tr("Each .srt is saved next to its audio file unless you choose a folder."))
-        out_desc.setObjectName("helper-text")
-        out_desc.setWordWrap(True)
-        layout.addWidget(out_desc)
-
         self._build_output_row(
             layout,
             output_label=self.tr("Output:"),
             choose_label=self.tr("Choose Folder…"),
             reset_label=self.tr("Reset"),
+        )
+        # E08: the helper line became the Choose Folder… tooltip.
+        self.choose_output_button.setToolTip(
+            self.tr("Each .srt is saved next to its audio file unless you choose a folder.")
         )
 
         # Deliberately NOT persisted. Off-by-default each launch is the safety

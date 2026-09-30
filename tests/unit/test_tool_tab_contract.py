@@ -357,3 +357,28 @@ def test_file_skipped_logs_skipped_not_done(spec, qtbot, tmp_path):
     assert "episode.out" in log_text
     assert "Skipped, exists" in log_text
     assert "Done" not in log_text
+
+
+def test_retime_says_where_and_how_it_writes_in_the_output_value(qtbot, tmp_path):
+    """E08: the bottom helper is folded into the Output value; no top alass notice."""
+    tab = _make_tab(_RETIME, qtbot, tmp_path)
+
+    assert tab.output_location_label.text() == "Next to source video, as name_retimed.srt"
+    assert not hasattr(tab, "engine_notice_label")
+
+
+@pytest.mark.parametrize(
+    ("spec", "sentence"),
+    [
+        (_CREATION, "Generated .srt files are saved next to each source file unless you choose a folder."),
+        (_BOOKSYNC, "Each .srt is saved next to its audio file unless you choose a folder."),
+    ],
+    ids=["Generate", "AudiobookSync"],
+)
+def test_the_output_hint_moves_into_the_choose_folder_tooltip(spec, sentence, qtbot, tmp_path):
+    from PyQt6.QtWidgets import QLabel
+
+    tab = _make_tab(spec, qtbot, tmp_path)
+
+    assert tab.choose_output_button.toolTip() == sentence
+    assert [label for label in tab.findChildren(QLabel) if label.text() == sentence] == []
