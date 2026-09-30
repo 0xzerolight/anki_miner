@@ -24,7 +24,7 @@ from functools import partial
 from time import monotonic, time
 from typing import TYPE_CHECKING, cast
 
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import QCoreApplication, pyqtSignal
 from PyQt6.QtGui import QDragMoveEvent
 from PyQt6.QtWidgets import (
     QAbstractButton,
@@ -49,6 +49,7 @@ from anki_miner.gui.utils.run_off_thread import join_or_retain, run_off_thread, 
 from anki_miner.gui.utils.run_options import RunOptionsMixin
 from anki_miner.gui.widgets.base import (
     PageWidth,
+    ScreenIssue,
     ScreenIssueHost,
     TaskPublisherMixin,
     WorkflowActionBar,
@@ -284,6 +285,7 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         index = layout.indexOf(anchor)
         layout.insertWidget(index + 1 if index >= 0 else layout.count(), receipt)
         receipt.details_requested.connect(self._open_run_details)
+        receipt.show_in_anki_requested.connect(self._show_run_in_anki)
         self._receipt_widget = receipt
         self._receipt_noun = item_noun
         return receipt
@@ -499,6 +501,40 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
                     exc,
                     exc_info=None if isinstance(exc, AnkiMinerException) else exc,
                 )
+
+    def _show_run_in_anki(self, note_ids: list) -> None:
+        """Open Anki's card browser on this run's cards (D4). Off the GUI thread.
+
+        ``guiBrowse`` is one AnkiConnect call, but a closed Anki is a connect
+        timeout, and the window must not freeze for it. A failure is a banner
+        on this screen, never a modal (D24).
+        """
+        ids = [int(note_id) for note_id in note_ids]
+        if not ids:
+            return
+        from anki_miner.services.anki_service import AnkiService
+
+        try:
+            service = AnkiService(self.config)
+        except ValueError as exc:
+            self._report_show_in_anki_failure(str(exc))
+            return
+
+        def _on_error(message: str) -> None:
+            # bucket C: the screen can be gone by the time Anki answers.
+            with contextlib.suppress(RuntimeError):
+                self._report_show_in_anki_failure(message)
+
+        run_off_thread(self, partial(service.gui_browse_notes, ids), lambda _result: None, _on_error)
+
+    def _report_show_in_anki_failure(self, details: str) -> None:
+        """One banner for every way Show in Anki can fail; the raw text under Details."""
+        self.show_screen_issue(
+            ScreenIssue(
+                summary=QCoreApplication.translate("MiningTabBase", "Anki Miner couldn't open these cards in Anki."),
+                details=details,
+            )
+        )
 
     @staticmethod
     def _receipt_now() -> tuple[float, float]:
