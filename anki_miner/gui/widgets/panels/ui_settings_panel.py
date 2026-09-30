@@ -46,9 +46,11 @@ from anki_miner.gui.resources.styles.theme import (
     Theme,
     assess_theme_contrast,
 )
+from anki_miner.gui.utils.language_gate import apply_language_gate
 from anki_miner.gui.widgets.base import FormPanel, ScreenIssue, ScreenIssueHost
 from anki_miner.gui.widgets.enhanced import ModernButton, ThemeGalleryWidget
 from anki_miner.gui.widgets.enhanced.theme_preview import clear_thumbnail_cache
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
@@ -545,8 +547,12 @@ class UISettingsPanel(ScreenIssueHost, FormPanel):
         )
 
     def _sync_utility_lock(self) -> None:
-        """Disable the only checked box, so the Utilities tab always keeps a tool."""
-        checked = sum(box.isChecked() for box in self.utility_checkboxes.values())
+        """Disable the only checked box, so the Utilities tab always keeps a tool.
+
+        Counts only the boxes on screen: a language-gated box (Manga OCR outside
+        Japanese) stays checked but is no tool the user can see (E17).
+        """
+        checked = sum(box.isChecked() for box in self.utility_checkboxes.values() if not box.isHidden())
         for box in self.utility_checkboxes.values():
             box.setEnabled(checked > 1 or not box.isChecked())
 
@@ -657,6 +663,13 @@ class UISettingsPanel(ScreenIssueHost, FormPanel):
                 box.setChecked(key not in hidden)
             finally:
                 box.blockSignals(False)
+        # E17: Manga OCR reads Japanese only; its box follows the tab's
+        # language gate (SubtitlesTab), never the stored hidden list. Gated
+        # before the lock, which counts only the boxes the user can see (P1).
+        apply_language_gate(
+            [(self.utility_checkboxes["mokuro"], "manga_ocr")],
+            get_profile(config_language(config)).capabilities,
+        )
         self._sync_utility_lock()
 
         # The themes folder button and its tooltip must name the config's root;

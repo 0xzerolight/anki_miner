@@ -152,3 +152,25 @@ def test_reset_to_defaults_restores_the_new_install_tool_set(test_config, qtbot,
 
     assert received[-1].hidden_utilities == ("deckfilter", "download")
     assert tab.ui_panel.utility_checkboxes["retime"].isChecked()
+
+
+class TestMangaOcrLanguageGate:
+    """E17: the Manga OCR box shows only for a language that can use the tool."""
+
+    def test_hidden_for_another_language(self, panel, test_config):
+        panel.load_from_config(replace(test_config, language="zh"))
+
+        assert panel.utility_checkboxes["mokuro"].isHidden()
+        assert not panel.utility_checkboxes["generate"].isHidden()
+
+    def test_shown_for_japanese(self, panel, test_config):
+        panel.load_from_config(replace(test_config, language="zh"))
+        panel.load_from_config(replace(test_config, language="ja"))
+
+        assert not panel.utility_checkboxes["mokuro"].isHidden()
+
+    def test_the_last_visible_tool_stays_locked(self, panel, test_config):
+        hidden = tuple(k for k in panel.utility_checkboxes if k not in ("generate", "mokuro"))
+        panel.load_from_config(replace(test_config, language="zh", hidden_utilities=hidden))
+
+        assert not panel.utility_checkboxes["generate"].isEnabled()
