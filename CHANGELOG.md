@@ -34,6 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - English plural forms ("1 card", "2 cards") are used everywhere, and a fresh install is told to download its dictionary rather than to import it again.
 - The deck-exclusion question after setup is skipped when Anki holds no cards yet.
 - Status-bar badges keep painting after the window is resized.
+- Dialogs' Close button is translated, and the Word Curator, Known Words, System Health and Results windows no longer cut off buttons or scroll sideways at their smallest size.
 
 ### Removed
 - "Finish current, then stop" on running queues: press Pause, then Cancel.
