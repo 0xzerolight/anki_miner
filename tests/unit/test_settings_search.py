@@ -30,7 +30,9 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.gui.widgets.base.sizing import metric_row_height
 from anki_miner.gui.widgets.settings_search import (
     BREADCRUMB_SEPARATOR,
     SEARCH_HIT_PROPERTY,
@@ -313,6 +315,25 @@ class TestSearchBox:
         qtbot.keyClick(tab.search_box.input, Qt.Key.Key_Down)
 
         assert tab.search_box.results.currentRow() == 1
+
+    def test_a_long_result_list_shows_six_rows(self, tab):
+        """C05: a maximum height alone let the page squeeze the list to three rows."""
+        results = tab.search_box.results
+        tab.search_box.input.setText("Field")
+        assert results.count() > 6
+
+        expected = 6 * metric_row_height(results) + 2 * SPACING.xxs
+        assert results.minimumHeight() == expected
+        assert results.maximumHeight() == expected
+
+    def test_a_short_result_list_is_only_as_tall_as_its_rows(self, tab):
+        results = tab.search_box.results
+        tab.search_box.input.setText("zzz-nothing-matches-this")
+        assert results.count() == 1
+
+        expected = metric_row_height(results) + 2 * SPACING.xxs
+        assert results.minimumHeight() == expected
+        assert results.maximumHeight() == expected
 
     def test_return_with_nothing_listed_emits_nothing(self, qtbot):
         box = SettingsSearchBox()
