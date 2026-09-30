@@ -97,3 +97,37 @@ def test_no_copy_summary_without_a_receipt(qtbot):
     dialog = ResultsDialog(_result())
     qtbot.addWidget(dialog)
     assert dialog._copy_button is None
+
+
+def test_no_tile_label_is_cut_off_at_the_minimum_size(qtbot):
+    """Z.5 (UI audit 2026-09-29): shrunk to its minimum at 1024x768, the German
+    window cut "ENTDECKTE WÖRTER" off: a flat setMinimumWidth(600) replaced the
+    layout's own minimum instead of flooring it. The long label stands in for
+    a wider face and a longer locale.
+    """
+    from PyQt6.QtCore import QTranslator
+
+    class _Longer(QTranslator):
+        def translate(self, context, source, disambiguation=None, n=-1):  # noqa: N802
+            return (
+                "Words discovered across every subtitle line of this whole run"
+                if source == "Words Discovered"
+                else None
+            )
+
+    app = QApplication.instance()
+    assert app is not None
+    translator = _Longer()
+    app.installTranslator(translator)
+    try:
+        dialog = ResultsDialog(_result())
+        qtbot.addWidget(dialog)
+        dialog.show()
+        qtbot.waitExposed(dialog)
+        dialog.resize(1, 1)
+        qtbot.wait(20)
+        for card in dialog.findChildren(StatCard):
+            label = card.label_widget
+            assert label.width() >= label.sizeHint().width(), label.text()
+    finally:
+        app.removeTranslator(translator)

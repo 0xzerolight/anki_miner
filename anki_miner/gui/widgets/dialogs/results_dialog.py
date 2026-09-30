@@ -63,7 +63,11 @@ class ResultsDialog(EnhancedDialog):
 
     def _setup_content(self) -> None:
         """Set up the dialog content."""
-        self.setMinimumWidth(600)
+        # A 600px floor the tiles can raise. setMinimumWidth would replace the
+        # layout's minimum instead of flooring it, and a longer locale's tile
+        # label was cut off at the window's minimum (Z.5).
+        margins = self._main_layout.contentsMargins()
+        self._main_layout.addStrut(600 - margins.left() - margins.right())
         self.setMinimumHeight(400)
 
         # Set header based on result. A successful run states what it produced
