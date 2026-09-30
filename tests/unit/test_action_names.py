@@ -107,9 +107,10 @@ class TestBackfillSaysWhatItTouches:
     are the assertions worth holding.
     """
 
-    def test_the_screen_is_named_for_the_tool(self, backfill):
+    def test_the_page_does_not_repeat_the_tab_label(self, backfill):
+        """E07: the Utilities sub-tab names the screen (next test); no page heading echoes it."""
         headings = [w.text() for w in backfill.findChildren(type(backfill.status_label)) if w.text()]
-        assert "Card Backfill" in headings
+        assert "Card Backfill" not in headings
 
     def test_scan_declares_itself_read_only(self, backfill):
         assert backfill.scan_button.text() == "Scan Anki (read-only)"
