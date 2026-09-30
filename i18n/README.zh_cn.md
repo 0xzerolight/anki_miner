@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:06b01f0d7cb8ab71 -->
+<!-- i18n-source: README.md sha256:18fca8a7ef9c5169 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -194,7 +194,7 @@ anki_miner_gui
 | 日志在哪里？      | 使用 帮助 -> 打开日志文件夹，或在 Windows 上打开 `%USERPROFILE%\.anki_miner\anki_miner.log`，在 macOS/Linux 上打开 `~/.anki_miner/anki_miner.log`。轮转日志使用 `.1` 到 `.5` 后缀。 如果有 `anki_miner.crash` 也请一并发送：让应用崩溃的故障会把调用栈写入该文件而非日志；保存辅助进程输出的 `anki_miner.child.log` 同样如此。 |
 | 报告缺陷          | 帮助 -> 导出诊断信息… 会把日志（`anki_miner.log` 及其轮转文件、`anki_miner.crash`、`anki_miner.child.log`）、你的 `settings.json`、配置与界面状态文件、队列快照与下载清单，以及关于本机和应用状态的生成报告（`environment.txt`、`health.txt`、`resources.txt`、`stores.txt`、`disk.txt`、`screens.txt`）写入一个 ZIP，保存到你选择的位置。上传前请先检查内容，因为其中含有你电脑上的文件路径和文件名。不会自动上传任何内容。 |
 | 更详细的诊断日志 | 启动 Anki Miner 前设置 `ANKI_MINER_LOG_LEVEL=DEBUG`，即可记录第三方 yt-dlp、urllib3 和 fugashi 的详细信息。默认为 `WARNING`；Anki Miner 自身的日志仍为 DEBUG。 |
-| 音频语言不对  | 本工具会选择挖词语言的音轨，没有则用第一条音轨。可用 音轨（视频 -> 单个）自行选择。      |
+| 音频语言不对  | 本工具会选择挖词语言的音轨，没有则用第一条音轨。可用 音轨…（视频 -> 单个）自行选择。      |
 | 字幕不同步    | 使用 GUI 中的字幕偏移控件（范围 ±300 秒）。                 |
 
 ## 路线图

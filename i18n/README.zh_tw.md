@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:06b01f0d7cb8ab71 -->
+<!-- i18n-source: README.md sha256:18fca8a7ef9c5169 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -194,7 +194,7 @@ anki_miner_gui
 | 記錄檔在哪裡？      | 使用說明 -> 開啟記錄資料夾，或在 Windows 上開啟 `%USERPROFILE%\.anki_miner\anki_miner.log`，macOS/Linux 上開啟 `~/.anki_miner/anki_miner.log`。輪替後的記錄檔使用 `.1` 到 `.5` 的後綴。 若有 `anki_miner.crash` 也請一併提供：讓應用程式崩潰的錯誤會把呼叫堆疊寫進該檔案而非記錄檔；保存輔助行程輸出的 `anki_miner.child.log` 同樣如此。 |
 | 回報錯誤          | 說明 -> 匯出診斷資訊… 會把記錄檔（`anki_miner.log` 及其輪替檔、`anki_miner.crash`、`anki_miner.child.log`）、你的 `settings.json`、設定與介面狀態檔案、佇列快照與下載清單，以及關於本機和應用程式狀態的產生報告（`environment.txt`、`health.txt`、`resources.txt`、`stores.txt`、`disk.txt`、`screens.txt`）寫成 ZIP，存到你選擇的位置。上傳前請先檢視內容，因為其中包含你電腦上的檔案路徑與檔名。程式不會自動上傳任何東西。 |
 | 更詳細的診斷記錄 | 啟動 Anki Miner 前設定 `ANKI_MINER_LOG_LEVEL=DEBUG`，以擷取第三方 yt-dlp、urllib3 與 fugashi 的細節。預設為 `WARNING`；Anki Miner 本身的記錄維持在 DEBUG。 |
-| 音訊語言不對  | 程式會選擇採集語言的音軌，沒有則用第一條音軌。可用音軌（影片 -> 單一）自行選擇。      |
+| 音訊語言不對  | 程式會選擇採集語言的音軌，沒有則用第一條音軌。可用音軌…（影片 -> 單一）自行選擇。      |
 | 字幕不同步    | 使用 GUI 中的字幕位移控制項（範圍 ±300 秒）。                 |
 
 ## 藍圖

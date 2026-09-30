@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:06b01f0d7cb8ab71 -->
+<!-- i18n-source: README.md sha256:18fca8a7ef9c5169 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -194,7 +194,7 @@ Utilizza insiemi di nomi in bundle derivati da [JMnedict](https://www.edrdg.org/
 | Dove si trovano i log?      | Usa Aiuto -> Apri cartella dei registri, oppure apri `%USERPROFILE%\.anki_miner\anki_miner.log` su Windows o `~/.anki_miner/anki_miner.log` su macOS/Linux. I log ruotati usano i suffissi da `.1` a `.5`. Invia anche `anki_miner.crash`, se c'è: un crash che ha chiuso l'app scrive lì il proprio stack anziché nel log, e `anki_miner.child.log`, che contiene l'output di un processo ausiliario. |
 | Segnalare un bug          | Aiuto -> Esporta diagnostica… scrive uno ZIP in una posizione a tua scelta, con i log (`anki_miner.log` e le sue rotazioni, `anki_miner.crash`, `anki_miner.child.log`), il tuo `settings.json`, i file di configurazione e di stato dell'interfaccia, gli snapshot delle code e i manifest dei download, e alcuni report generati su macchina e stato dell'app (`environment.txt`, `health.txt`, `resources.txt`, `stores.txt`, `disk.txt`, `screens.txt`). Controllalo prima di caricarlo perché contiene percorsi e nomi di file del tuo computer. Nulla viene caricato automaticamente. |
 | Più log diagnostici | Imposta `ANKI_MINER_LOG_LEVEL=DEBUG` prima di avviare Anki Miner per acquisire i dettagli di terze parti di yt-dlp, urllib3 e fugashi. Il valore predefinito è `WARNING`; i log di Anki Miner restano a DEBUG. |
-| L'audio è nella lingua sbagliata  | Lo strumento sceglie la traccia audio nella lingua di mining, altrimenti la prima. Sceglila tu con Tracce (Video -> Singolo).      |
+| L'audio è nella lingua sbagliata  | Lo strumento sceglie la traccia audio nella lingua di mining, altrimenti la prima. Sceglila tu con Traccia audio… (Video -> Singolo).      |
 | Sottotitoli non sincronizzati    | Usa il controllo di offset dei sottotitoli nell'interfaccia grafica (intervallo ±300 secondi).                 |
 
 ## Roadmap

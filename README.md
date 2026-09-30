@@ -192,7 +192,7 @@ Uses bundled name wordsets derived from [JMnedict](https://www.edrdg.org/enamdic
 | Where are the logs?      | Use Help -> Open Log Folder, or open `%USERPROFILE%\.anki_miner\anki_miner.log` on Windows or `~/.anki_miner/anki_miner.log` on macOS/Linux. Rotated logs use the `.1` through `.5` suffixes. Send `anki_miner.crash` too if it is there (a crash that took the app down writes its stack to that file, not to the log), and `anki_miner.child.log`, which holds a helper process's output. |
 | Reporting a bug          | Help -> Export Diagnostics… writes a ZIP to a location you choose, holding the logs (`anki_miner.log` and its rotations, `anki_miner.crash`, `anki_miner.child.log`), your `settings.json`, your config and UI-state files, queue snapshots and download manifests, and generated reports of the machine and app state (`environment.txt`, `health.txt`, `resources.txt`, `stores.txt`, `disk.txt`, `screens.txt`). Review it before uploading because it contains file paths and file names from your computer. Nothing is uploaded automatically. |
 | More diagnostic logging | Set `ANKI_MINER_LOG_LEVEL=DEBUG` before starting Anki Miner to capture third-party yt-dlp, urllib3, and fugashi details. The default is `WARNING`; Anki Miner logs remain at DEBUG. |
-| Audio is wrong language  | The tool picks the mining language's audio track, else the first one. Choose it yourself with Tracks (Video -> Single). |
+| Audio is wrong language  | The tool picks the mining language's audio track, else the first one. Choose it yourself with Audio track… (Video -> Single). |
 | Subtitles out of sync    | Use the subtitle offset control in the GUI (range ±300 seconds).                 |
 
 ## Roadmap

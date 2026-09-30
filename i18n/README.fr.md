@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:06b01f0d7cb8ab71 -->
+<!-- i18n-source: README.md sha256:18fca8a7ef9c5169 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -194,7 +194,7 @@ Utilise des ensembles de noms propres regroupés dérivés de [JMnedict](https:/
 | Où sont les journaux ?      | Utilisez Aide -> Ouvrir le dossier des journaux, ou ouvrez `%USERPROFILE%\.anki_miner\anki_miner.log` sous Windows ou `~/.anki_miner/anki_miner.log` sous macOS/Linux. Les journaux archivés utilisent les suffixes `.1` à `.5`. Envoyez aussi `anki_miner.crash` s'il existe : un plantage qui a fait tomber l'application y écrit sa pile plutôt que dans le journal, ainsi que `anki_miner.child.log`, qui contient la sortie d'un processus auxiliaire. |
 | Signaler un bug          | Aide -> Exporter les diagnostics… écrit une archive ZIP à l'emplacement de votre choix, contenant les journaux (`anki_miner.log` et ses rotations, `anki_miner.crash`, `anki_miner.child.log`), votre `settings.json`, vos fichiers de configuration et d'état de l'interface, les instantanés des files d'attente et les manifestes de téléchargement, ainsi que des rapports générés sur la machine et l'état de l'application (`environment.txt`, `health.txt`, `resources.txt`, `stores.txt`, `disk.txt`, `screens.txt`). Vérifiez-la avant de l'envoyer car elle contient des chemins et noms de fichiers de votre ordinateur. Rien n'est envoyé automatiquement. |
 | Journalisation de diagnostic supplémentaire | Définissez `ANKI_MINER_LOG_LEVEL=DEBUG` avant de démarrer Anki Miner pour capturer les détails tiers de yt-dlp, urllib3 et fugashi. La valeur par défaut est `WARNING` ; les journaux d'Anki Miner restent en DEBUG. |
-| L'audio est dans la mauvaise langue  | L'outil choisit la piste audio de la langue d'extraction, sinon la première. Choisissez-la vous-même avec Pistes (Vidéo -> Unique).      |
+| L'audio est dans la mauvaise langue  | L'outil choisit la piste audio de la langue d'extraction, sinon la première. Choisissez-la vous-même avec Piste audio… (Vidéo -> Unique).      |
 | Sous-titres désynchronisés    | Utilisez le réglage de décalage des sous-titres dans l'interface (plage ±300 secondes).                 |
 
 ## Feuille de route

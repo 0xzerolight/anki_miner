@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:06b01f0d7cb8ab71 -->
+<!-- i18n-source: README.md sha256:18fca8a7ef9c5169 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -194,7 +194,7 @@ Usa conjuntos de nomes derivados do [JMnedict](https://www.edrdg.org/enamdict/en
 | Onde estão os registros?      | Use Ajuda -> Abrir Pasta de Registros, ou abra `%USERPROFILE%\.anki_miner\anki_miner.log` no Windows ou `~/.anki_miner/anki_miner.log` no macOS/Linux. Os registros usam os sufixos `.1` a `.5`. Envie também `anki_miner.crash`, se existir - uma queda que derrubou o aplicativo grava a pilha nesse arquivo, não no registro - e `anki_miner.child.log`, que guarda a saída de um processo auxiliar. |
 | Reportando um bug          | Ajuda -> Exportar Diagnósticos… grava um ZIP no local que você escolher, contendo os registros (`anki_miner.log` e suas rotações, `anki_miner.crash`, `anki_miner.child.log`), o seu `settings.json`, os arquivos de configuração e de estado da interface, os "snapshots" das filas e os manifestos de download, além de relatórios gerados sobre a máquina e o estado do aplicativo (`environment.txt`, `health.txt`, `resources.txt`, `stores.txt`, `disk.txt`, `screens.txt`). Revise-o antes de enviar, pois ele contém caminhos e nomes de arquivos do seu computador. Nada é enviado automaticamente. |
 | Mais registros de diagnóstico | Defina `ANKI_MINER_LOG_LEVEL=DEBUG` antes de iniciar o Anki Miner para capturar detalhes de terceiros do yt-dlp, urllib3 e fugashi. O padrão é `WARNING`; os registros do Anki Miner permanecem em DEBUG. |
-| O áudio está no idioma errado  | A ferramenta escolhe a faixa de áudio do idioma de mineração ou, se não houver, a primeira. Escolha você mesmo em Faixas (Vídeo -> Único).      |
+| O áudio está no idioma errado  | A ferramenta escolhe a faixa de áudio do idioma de mineração ou, se não houver, a primeira. Escolha você mesmo em Faixa de áudio… (Vídeo -> Único).      |
 | Legendas fora de sincronia    | Use o controle de deslocamento de legenda na interface (faixa de ±300 segundos).                 |
 
 ## Roteiro

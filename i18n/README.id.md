@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:06b01f0d7cb8ab71 -->
+<!-- i18n-source: README.md sha256:18fca8a7ef9c5169 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -194,7 +194,7 @@ Menggunakan kumpulan kata nama bawaan yang berasal dari [JMnedict](https://www.e
 | Di mana letak lognya?      | Gunakan Bantuan -> Buka Folder Log, atau buka `%USERPROFILE%\.anki_miner\anki_miner.log` di Windows atau `~/.anki_miner/anki_miner.log` di macOS/Linux. Log yang dirotasi memakai akhiran `.1` sampai `.5`. Kirim juga `anki_miner.crash` bila ada - crash yang mematikan aplikasi menulis stack-nya ke berkas itu, bukan ke log - dan `anki_miner.child.log`, yang memuat keluaran proses pembantu. |
 | Melaporkan bug          | Bantuan -> Ekspor Diagnostik… menulis ZIP ke lokasi pilihan Anda, berisi log (`anki_miner.log` beserta rotasinya, `anki_miner.crash`, `anki_miner.child.log`), `settings.json` Anda, berkas konfigurasi dan status antarmuka, snapshot antrean dan manifes unduhan, serta laporan yang dihasilkan tentang mesin dan status aplikasi (`environment.txt`, `health.txt`, `resources.txt`, `stores.txt`, `disk.txt`, `screens.txt`). Tinjau dulu sebelum mengunggahnya karena berisi jalur berkas dan nama berkas dari komputer Anda. Tidak ada yang diunggah otomatis. |
 | Logging diagnostik lebih rinci | Atur `ANKI_MINER_LOG_LEVEL=DEBUG` sebelum menjalankan Anki Miner untuk menangkap detail yt-dlp, urllib3, dan fugashi pihak ketiga. Default-nya `WARNING`; log Anki Miner tetap di DEBUG. |
-| Audio bahasanya salah  | Alat ini memilih trek audio bahasa mining, atau trek pertama jika tidak ada. Pilih sendiri lewat Trek (Video -> Tunggal).      |
+| Audio bahasanya salah  | Alat ini memilih trek audio bahasa mining, atau trek pertama jika tidak ada. Pilih sendiri lewat Trek Audio… (Video -> Tunggal).      |
 | Subtitel tidak sinkron    | Gunakan kontrol offset subtitel di GUI (rentang ±300 detik).                 |
 
 ## Peta Jalan

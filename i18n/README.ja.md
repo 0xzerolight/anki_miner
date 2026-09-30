@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:06b01f0d7cb8ab71 -->
+<!-- i18n-source: README.md sha256:18fca8a7ef9c5169 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -194,7 +194,7 @@ anki_miner_gui
 | ログはどこにありますか？ | ヘルプ -> ログフォルダを開く を使うか、Windows では `%USERPROFILE%\.anki_miner\anki_miner.log`、macOS/Linux では `~/.anki_miner/anki_miner.log` を開いてください。ローテーションされたログには `.1` から `.5` の接尾辞が付きます。 `anki_miner.crash` があれば一緒に送ってください。アプリを落としたクラッシュは、ログではなくこのファイルにスタックを書き出します。補助プロセスの出力が入る `anki_miner.child.log` も同じです。 |
 | バグを報告する           | ヘルプ -> 診断情報をエクスポート… で、ログ（`anki_miner.log` とそのローテーション、`anki_miner.crash`、`anki_miner.child.log`）、`settings.json`、設定と UI 状態のファイル、キューのスナップショットとダウンロードのマニフェスト、そしてマシンとアプリの状態をまとめたレポート（`environment.txt`、`health.txt`、`resources.txt`、`stores.txt`、`disk.txt`、`screens.txt`）を含む ZIP を任意の場所に書き出します。お使いのコンピューターのファイルパスやファイル名が含まれるため、アップロードする前に内容を確認してください。自動でアップロードされるものはありません。 |
 | 診断ログを増やしたい | Anki Miner を起動する前に `ANKI_MINER_LOG_LEVEL=DEBUG` を設定すると、サードパーティの yt-dlp、urllib3、fugashi の詳細を記録できます。既定は `WARNING` で、Anki Miner 自身のログは DEBUG のままです。 |
-| 音声の言語が違う         | マイニング言語の音声トラックを選び、なければ最初のトラックを使います。音声トラック（動画 -> 単一）で自分で選べます。      |
+| 音声の言語が違う         | マイニング言語の音声トラックを選び、なければ最初のトラックを使います。音声トラック…（動画 -> 単一）で自分で選べます。      |
 | 字幕がずれている         | GUI の字幕オフセット調整を使ってください（範囲は ±300 秒）。                     |
 
 ## ロードマップ

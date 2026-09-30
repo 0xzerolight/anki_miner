@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:06b01f0d7cb8ab71 -->
+<!-- i18n-source: README.md sha256:18fca8a7ef9c5169 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -194,7 +194,7 @@ Verwendet mitgelieferte Namens-Wortgruppen, abgeleitet von [JMnedict](https://ww
 | Wo sind die Logs?      | Hilfe -> Protokollordner öffnen verwenden, oder unter Windows `%USERPROFILE%\.anki_miner\anki_miner.log` bzw. unter macOS/Linux `~/.anki_miner/anki_miner.log` öffnen. Rotierte Logs verwenden die Endungen `.1` bis `.5`. Sende auch `anki_miner.crash`, falls vorhanden - ein Absturz, der die App beendet hat, schreibt seinen Stack in diese Datei und nicht ins Log - sowie `anki_miner.child.log` mit der Ausgabe eines Hilfsprozesses. |
 | Einen Fehler melden          | Hilfe -> Diagnose exportieren… schreibt eine ZIP an einen Ort deiner Wahl: die Logs (`anki_miner.log` samt Rotationen, `anki_miner.crash`, `anki_miner.child.log`), deine `settings.json`, die Konfigurations- und UI-Zustandsdateien, Warteschlangen-Snapshots und Download-Manifeste sowie erzeugte Berichte zu Rechner und App-Zustand (`environment.txt`, `health.txt`, `resources.txt`, `stores.txt`, `disk.txt`, `screens.txt`). Vor dem Hochladen prüfen, da sie Dateipfade und Dateinamen von deinem Computer enthält. Es wird nichts automatisch hochgeladen. |
 | Mehr Diagnoseprotokollierung | `ANKI_MINER_LOG_LEVEL=DEBUG` vor dem Start von Anki Miner setzen, um Details von yt-dlp, urllib3 und fugashi (Drittanbieter) zu erfassen. Standard ist `WARNING`; Anki-Miner-Logs bleiben bei DEBUG. |
-| Audio ist in falscher Sprache  | Das Tool wählt die Audiospur in der Mining-Sprache, sonst die erste. Mit Spuren (Video -> Einzeln) selbst wählen. |
+| Audio ist in falscher Sprache  | Das Tool wählt die Audiospur in der Mining-Sprache, sonst die erste. Mit Audiospur… (Video -> Einzeln) selbst wählen. |
 | Untertitel sind nicht synchron    | Die Untertitel-Offset-Steuerung in der GUI verwenden (Bereich ±300 Sekunden).      |
 
 ## Roadmap

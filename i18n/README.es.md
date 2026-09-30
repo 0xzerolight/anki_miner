@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:06b01f0d7cb8ab71 -->
+<!-- i18n-source: README.md sha256:18fca8a7ef9c5169 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -194,7 +194,7 @@ Utiliza conjuntos de palabras de nombres incluidos derivados de [JMnedict](https
 | ¿Dónde están los registros?      | Usa Ayuda -> Abrir carpeta de registros, o abre `%USERPROFILE%\.anki_miner\anki_miner.log` en Windows o `~/.anki_miner/anki_miner.log` en macOS/Linux. Los registros rotados usan los sufijos `.1` a `.5`. Envía también `anki_miner.crash` si existe: un fallo que tumbó la aplicación escribe su traza en ese archivo, no en el registro, y `anki_miner.child.log`, que guarda la salida de un proceso auxiliar. |
 | Informar de un error          | Ayuda -> Exportar diagnósticos… crea un ZIP en la ubicación que elijas con los registros (`anki_miner.log` y sus rotaciones, `anki_miner.crash`, `anki_miner.child.log`), tu `settings.json`, tus archivos de configuración y de estado de la interfaz, las instantáneas de las colas y los manifiestos de descarga, y varios informes generados sobre la máquina y el estado de la aplicación (`environment.txt`, `health.txt`, `resources.txt`, `stores.txt`, `disk.txt`, `screens.txt`). Revísalo antes de subirlo porque contiene rutas de archivos y nombres de archivos de tu ordenador. No se sube nada automáticamente. |
 | Más registro de diagnóstico | Define `ANKI_MINER_LOG_LEVEL=DEBUG` antes de iniciar Anki Miner para capturar detalles de terceros de yt-dlp, urllib3 y fugashi. El valor predeterminado es `WARNING`; los registros de Anki Miner permanecen en DEBUG. |
-| El audio está en el idioma incorrecto  | La herramienta elige la pista de audio del idioma de minería o, si no la hay, la primera. Elígela tú con Pistas (Video -> Único).      |
+| El audio está en el idioma incorrecto  | La herramienta elige la pista de audio del idioma de minería o, si no la hay, la primera. Elígela tú con Pista de audio… (Video -> Único).      |
 | Subtítulos desincronizados    | Usa el control de desplazamiento de subtítulos en la GUI (rango ±300 segundos).                 |
 
 ## Hoja de Ruta

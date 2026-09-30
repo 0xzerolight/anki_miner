@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:06b01f0d7cb8ab71 -->
+<!-- i18n-source: README.md sha256:18fca8a7ef9c5169 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -194,7 +194,7 @@ Sử dụng các tập từ tên riêng đi kèm được dẫn xuất từ [JMn
 | Nhật ký nằm ở đâu?      | Dùng Trợ giúp -> Mở thư mục nhật ký, hoặc mở `%USERPROFILE%\.anki_miner\anki_miner.log` trên Windows hoặc `~/.anki_miner/anki_miner.log` trên macOS/Linux. Nhật ký xoay vòng dùng hậu tố `.1` đến `.5`. Hãy gửi kèm `anki_miner.crash` nếu có - một sự cố làm sập ứng dụng sẽ ghi ngăn xếp vào tệp đó chứ không phải vào nhật ký - và `anki_miner.child.log`, chứa đầu ra của tiến trình phụ trợ. |
 | Báo cáo lỗi          | Trợ giúp -> Xuất chẩn đoán… sẽ ghi một tệp ZIP vào vị trí bạn chọn, chứa nhật ký (`anki_miner.log` cùng các bản xoay vòng, `anki_miner.crash`, `anki_miner.child.log`), tệp `settings.json` của bạn, các tệp cấu hình và trạng thái giao diện, ảnh chụp hàng đợi và tệp kê khai tải xuống, cùng các báo cáo được tạo về máy và trạng thái ứng dụng (`environment.txt`, `health.txt`, `resources.txt`, `stores.txt`, `disk.txt`, `screens.txt`). Hãy xem lại nó trước khi tải lên vì nó chứa đường dẫn và tên tệp từ máy tính của bạn. Không có gì được tải lên tự động. |
 | Nhật ký chẩn đoán chi tiết hơn | Đặt `ANKI_MINER_LOG_LEVEL=DEBUG` trước khi khởi động Anki Miner để ghi lại chi tiết của yt-dlp, urllib3 và fugashi bên thứ ba. Mặc định là `WARNING`; nhật ký của Anki Miner vẫn ở mức DEBUG. |
-| Âm thanh sai ngôn ngữ  | Công cụ chọn bản âm thanh của ngôn ngữ khai thác, nếu không có thì chọn bản đầu tiên. Tự chọn bằng Rãnh (Video -> Đơn lẻ).      |
+| Âm thanh sai ngôn ngữ  | Công cụ chọn bản âm thanh của ngôn ngữ khai thác, nếu không có thì chọn bản đầu tiên. Tự chọn bằng Bản âm thanh… (Video -> Đơn lẻ).      |
 | Phụ đề không khớp tiếng    | Dùng điều khiển bù thời gian phụ đề trong giao diện (khoảng ±300 giây).                 |
 
 ## Lộ trình
