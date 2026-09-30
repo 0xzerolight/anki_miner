@@ -48,9 +48,13 @@ class TestHeaderChromeBudget:
         assert margins.bottom() * 2 <= margins.left()
 
     def test_the_kept_controls_are_still_present(self, qtbot):
-        """The owner kept the frame; this trim removes space, never controls."""
+        """The owner kept the frame; this trim removes space, never controls.
+
+        The "Anki Miner" title is gone on purpose (D16): it repeated the window
+        title. The two selectors are the controls the header still carries.
+        """
         header = HeaderWidget()
         qtbot.addWidget(header)
 
-        labels = [w.text() for w in header.findChildren(QLabel)]
-        assert any("Anki Miner" in text for text in labels)
+        assert header.theme_combo.accessibleName() == "Theme"
+        assert header.profile_combo.accessibleName() == "Settings profile"
