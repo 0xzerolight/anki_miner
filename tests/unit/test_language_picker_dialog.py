@@ -45,12 +45,13 @@ class TestSeeding:
     def test_a_simple_list_ticks_its_codes(self, qtbot: Any) -> None:
         dialog = _make(qtbot, "ja,en")
         assert set(_codes(dialog, checked=True)) == {"ja", "en"}
-        assert dialog.advanced_edit.text() == ""
+        assert dialog.search_edit.text() == ""
 
-    def test_an_expression_lands_in_advanced_with_nothing_ticked(self, qtbot: Any) -> None:
+    def test_an_expression_lands_in_the_search_box_with_nothing_ticked(self, qtbot: Any) -> None:
         dialog = _make(qtbot, "en.*,-live_chat")
         assert _codes(dialog, checked=True) == []
-        assert dialog.advanced_edit.text() == "en.*,-live_chat"
+        assert dialog.search_edit.text() == "en.*,-live_chat"
+        assert dialog.lang_list.isEnabled() is False
 
     def test_a_selected_code_outside_the_curated_list_still_appears_ticked(self, qtbot: Any) -> None:
         dialog = _make(qtbot, "sw")
@@ -102,22 +103,30 @@ class TestResult:
         dialog = _make(qtbot, "en,ja")
         assert dialog.selected_langs() == "ja,en"  # curated order, not seed order
 
-    def test_advanced_text_wins_over_the_boxes(self, qtbot: Any) -> None:
+    def test_an_expression_in_the_search_box_wins_over_the_boxes(self, qtbot: Any) -> None:
         dialog = _make(qtbot, "ja")
-        dialog.advanced_edit.setText("all,-live_chat")
+        dialog.search_edit.setText("all,-live_chat")
         assert dialog.selected_langs() == "all,-live_chat"
 
-    def test_advanced_text_disables_the_list(self, qtbot: Any) -> None:
+    def test_an_expression_disables_the_list_and_says_why(self, qtbot: Any) -> None:
         dialog = _make(qtbot, "ja")
-        dialog.advanced_edit.setText("en.*")
+        dialog.search_edit.setText("en.*")
         assert dialog.lang_list.isEnabled() is False
-        dialog.advanced_edit.setText("")
+        assert dialog.expression_hint.isVisibleTo(dialog) is True
+        dialog.search_edit.setText("")
         assert dialog.lang_list.isEnabled() is True
+        assert dialog.expression_hint.isVisibleTo(dialog) is False
+
+    def test_a_plain_word_is_a_search_not_an_expression(self, qtbot: Any) -> None:
+        dialog = _make(qtbot, "ja")
+        dialog.search_edit.setText("japan")
+        assert dialog.lang_list.isEnabled() is True
+        assert dialog.selected_langs() == "ja"
 
     def test_ok_is_disabled_with_an_empty_selection(self, qtbot: Any) -> None:
         dialog = _make(qtbot, "")
         assert dialog.ok_button.isEnabled() is False
-        dialog.advanced_edit.setText("ja")
+        dialog.search_edit.setText("all")
         assert dialog.ok_button.isEnabled() is True
 
     def test_unticking_the_last_box_disables_ok(self, qtbot: Any) -> None:
@@ -154,3 +163,27 @@ class TestSearch:
         dialog.search_edit.setText("japan")
         dialog.search_edit.setText("")
         assert len(_visible_codes(dialog)) == before
+
+
+class TestFrame:
+    """E12: the standard dialog frame, OK last."""
+
+    def test_there_is_no_advanced_field(self, qtbot: Any) -> None:
+        dialog = _make(qtbot, "ja")
+        assert not hasattr(dialog, "advanced_edit")
+
+    def test_ok_is_the_last_footer_button(self, qtbot: Any) -> None:
+        dialog = _make(qtbot, "ja")
+        layout = dialog.footer_layout
+        buttons = [layout.itemAt(i).widget() for i in range(layout.count()) if layout.itemAt(i).widget() is not None]
+        assert buttons[-1] is dialog.ok_button
+        assert dialog.ok_button.objectName() == "primary"
+
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [("all", True), ("en.*", True), ("-live_chat", True), ("en,ja", True), ("english", False), ("", False)],
+    )
+    def test_what_counts_as_an_expression(self, text: str, expected: bool) -> None:
+        from anki_miner.gui.widgets.dialogs.language_picker_dialog import is_expression
+
+        assert is_expression(text) is expected
