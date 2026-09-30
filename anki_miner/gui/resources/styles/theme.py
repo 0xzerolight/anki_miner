@@ -782,6 +782,10 @@ class Theme:
         theme_data = instance._themes.get(mode)
         if theme_data:
             variables.update(get_color_variables(theme_data))
+            # The arrow and tick files are drawn in this theme's colours (D17).
+            from .glyphs import glyph_variables
+
+            variables.update(glyph_variables(theme_data["colors"]))
 
         def replace_var(match: re.Match) -> str:
             var_name = match.group(1)

@@ -442,9 +442,16 @@ QComboBox::drop-down {
     width: ${spacing-md}px;
 }
 
+/* D17: a chevron, so a combo no longer reads as a text box. The file is drawn
+   in the theme's own text colour (resources/styles/glyphs.py). */
 QComboBox::down-arrow {
     width: ${spacing-sm}px;
     height: ${spacing-sm}px;
+    image: url("${glyph-chevron}");
+}
+
+QComboBox::down-arrow:disabled {
+    image: url("${glyph-chevron-disabled}");
 }
 
 QComboBox QAbstractItemView {
@@ -1311,6 +1318,17 @@ QCheckBox::indicator:hover, QRadioButton::indicator:hover {
 QCheckBox::indicator:checked, QRadioButton::indicator:checked {
     background-color: ${color-primary};
     border-color: ${color-primary};
+}
+
+/* D17: a ticked box carries a tick, drawn in the colour that sits on the accent,
+   so a grid of boxes no longer reads as colour swatches. Radio buttons keep the
+   filled dot. */
+QCheckBox::indicator:checked {
+    image: url("${glyph-check}");
+}
+
+QCheckBox::indicator:checked:disabled {
+    image: url("${glyph-check-disabled}");
 }
 
 /* --- Dialogs --- */
