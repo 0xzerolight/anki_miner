@@ -1668,6 +1668,12 @@ QLabel#validation-status[status="checking"] {
     color: ${color-info};
 }
 
+/* "Not installed" and other plain install facts: ONE neutral grey, the token
+   System Health's pending badge uses (FINDINGS overlap 19: C04, E08, E10). */
+QLabel#validation-status[status="info"] {
+    color: ${color-badge-pending-text};
+}
+
 QLabel#helper-text,
 QLabel#row-detail {
     color: ${color-text-muted};

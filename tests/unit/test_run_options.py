@@ -144,12 +144,10 @@ def _read_download(tab) -> tuple:
 
 def _edit_mokuro(tab, tmp_path: Path) -> None:
     tab.gpu_checkbox.setChecked(False)
-    tab.mokuro_selector.set_path(str(tmp_path / "bin" / "mokuro"))
-    tab.flush_pending_edits()  # commit the debounced path edit now
 
 
 def _read_mokuro(tab) -> tuple:
-    return (tab.gpu_checkbox.isChecked(), tab.mokuro_selector.path_or_none())
+    return (tab.gpu_checkbox.isChecked(),)
 
 
 #: name -> (tab class, edit, read, the exact JSON keys/values a saved file carries)
@@ -185,7 +183,7 @@ _TOOL_TAB_CASES = {
         MokuroTab,
         _edit_mokuro,
         _read_mokuro,
-        lambda tmp: {"mokuro_use_gpu": False, "mokuro_location": str(tmp / "bin" / "mokuro")},
+        lambda tmp: {"mokuro_use_gpu": False},
     ),
 }
 

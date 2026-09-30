@@ -110,7 +110,7 @@ class TestConstruction:
 
 
 class TestSetupCard:
-    """The Manga OCR setup card: mokuro path override + in-app Install."""
+    """The Manga OCR setup card: in-app Install, one line once mokuro is found."""
 
     def test_install_button_visible_and_enabled_when_mokuro_unresolved(self, qtbot, tmp_path):
         """Waits for the (mokuro-unresolved) probe to actually land, then checks
@@ -120,7 +120,8 @@ class TestSetupCard:
             qtbot.addWidget(tab)
             assert tab._availability_worker.wait(3000)
             qtbot.waitUntil(lambda: tab.mokuro_status_label.text() == "Not installed", timeout=3000)
-        assert tab.mokuro_selector is not None
+        assert not tab.setup_row.isHidden()
+        assert tab.installed_row.isHidden()
         assert not tab.install_mokuro_button.isHidden()
         assert tab.install_mokuro_button.isEnabled()
         assert tab.install_mokuro_button.text() == "Install mokuro"
@@ -166,6 +167,39 @@ class TestSetupCard:
         tab._on_worker_finished()
 
         assert tab.install_mokuro_button.isEnabled()
+
+    def test_installed_mokuro_collapses_the_card_to_one_line(self, qtbot, tmp_path):
+        """E08: once found, the setup card is "mokuro is installed · Change…"."""
+        with patch(_COMPUTE_AVAILABLE, return_value=True), patch(_INSTALL_SUPPORTED, return_value=True):
+            tab = MokuroTab(_config(tmp_path))
+            qtbot.addWidget(tab)
+            assert tab._availability_worker.wait(3000)
+            qtbot.waitUntil(lambda: not tab.installed_row.isHidden(), timeout=3000)
+
+        assert tab.setup_row.isHidden()
+
+        tab.change_setup_button.click()
+
+        assert not tab.setup_row.isHidden()
+        assert tab.install_mokuro_button.text() == "Reinstall mokuro"
+
+    def test_there_is_no_path_override(self, qtbot, tmp_path):
+        """D15 item 3: a self-built mokuro is set in gui_config.json (mokuro_location)."""
+        tab = _make_tab(_config(tmp_path), qtbot)
+
+        assert not hasattr(tab, "mokuro_selector")
+        assert not hasattr(tab, "flush_pending_edits")
+
+    def test_the_status_is_not_success_green(self, qtbot, tmp_path):
+        """E08 + overlap 19: "Not installed" is the one neutral colour, "Installed" the success one."""
+        tab = _make_tab(_config(tmp_path), qtbot)
+
+        tab.set_mokuro_status("Not installed")
+        assert tab.mokuro_status_label.objectName() == "validation-status"
+        assert tab.mokuro_status_label.property("status") == "info"
+
+        tab.set_mokuro_status("Installed")
+        assert tab.mokuro_status_label.property("status") == "success"
 
 
 class TestRun:
@@ -275,94 +309,6 @@ class TestPreviewAndPersistence:
         tab.gpu_checkbox.setChecked(False)
         assert seen and seen[-1].mokuro_use_gpu is False
 
-    def test_mokuro_location_edit_debounces_to_one_run_options_changed(self, qtbot, tmp_path):
-        """FileSelector's path_changed fires per keystroke; the setup card must
-        coalesce a burst of edits into exactly one persisted run_options_changed."""
-        tab = _make_tab(_config(tmp_path), qtbot)
-        tab._mokuro_location_debounce_ms = 0
-        seen: list = []
-        tab.run_options_changed.connect(seen.append)
-
-        text = "12345678901234567890"
-        assert len(text) == 20
-        for i in range(1, len(text) + 1):
-            tab.mokuro_selector.set_path(text[:i])
-
-        qtbot.waitUntil(lambda: len(seen) == 1, timeout=3000)
-        assert seen[0].mokuro_location == Path(text)
-
-    def test_no_write_when_the_location_value_is_unchanged(self, qtbot, tmp_path):
-        """The debounce commit's own equality guard, exercised directly: a
-        commit that lands with the selector already matching config must not
-        emit — FileSelector.set_path deduping an identical re-typed string
-        would make this test pass for the wrong reason, so the commit is
-        driven directly instead."""
-        import dataclasses
-
-        existing = tmp_path / "existing_mokuro"
-        tab = _make_tab(dataclasses.replace(_config(tmp_path), mokuro_location=existing), qtbot)
-        assert tab.mokuro_selector.path_or_none() == str(existing)
-        seen: list = []
-        tab.run_options_changed.connect(seen.append)
-
-        tab._commit_mokuro_location()
-
-        assert seen == []
-
-    def test_external_update_with_no_pending_edit_reseeds_the_path_field(self, qtbot, tmp_path):
-        """The IMPORTANT-fix guard (skip reseeding while the debounce is
-        active) must not become "never reseed": a config_refreshed with
-        nothing pending still has to update the field, e.g. a profile switch
-        that changes mokuro_location from elsewhere."""
-        import dataclasses
-
-        tab = _make_tab(_config(tmp_path), qtbot)
-        assert not tab._mokuro_location_timer.isActive()
-        new_location = tmp_path / "from_elsewhere"
-
-        tab.update_config(dataclasses.replace(tab.config, mokuro_location=new_location))
-
-        assert tab.mokuro_selector.path_or_none() == str(new_location)
-
-    def test_pending_location_edit_survives_a_gpu_toggle_echo(self, qtbot, tmp_path):
-        """IMPORTANT fix: a config_refreshed echo landing inside the debounce
-        window (the user ticks GPU right after typing a path) must not clobber
-        the pending edit — the selector wins, and the debounce commit folds
-        onto the latest config once it lands.
-
-        Simulates MainWindow's synchronous round trip (run_options_changed ->
-        window.update_config -> config_refreshed -> back into update_config)
-        by feeding the GPU toggle's own emitted config straight back in,
-        exactly as the real signal chain would deliver it in the same tick.
-        """
-        import dataclasses
-
-        # mokuro_use_gpu defaults to True, so start False to guarantee the
-        # toggle below actually changes state (an unchanged setChecked is a
-        # silent no-op — no toggled signal, no run_options_changed).
-        tab = _make_tab(dataclasses.replace(_config(tmp_path), mokuro_use_gpu=False), qtbot)
-        tab._mokuro_location_debounce_ms = 0
-        custom_path = tmp_path / "custom_mokuro"
-        seen: list = []
-        tab.run_options_changed.connect(seen.append)
-
-        tab.mokuro_selector.set_path(str(custom_path))  # starts the debounce timer
-        assert tab._mokuro_location_timer.isActive()
-
-        tab.gpu_checkbox.setChecked(True)  # emits run_options_changed with the OLD location
-        assert seen and seen[-1].mokuro_use_gpu is True
-        echo = seen[-1]  # what window.update_config would commit and echo back
-        tab.update_config(echo)  # the simulated synchronous config_refreshed round trip
-
-        # The echo must not have reset the pending edit.
-        assert tab.mokuro_selector.path_or_none() == str(custom_path)
-
-        qtbot.waitUntil(lambda: not tab._mokuro_location_timer.isActive(), timeout=3000)
-
-        final = seen[-1]
-        assert final.mokuro_location == custom_path
-        assert final.mokuro_use_gpu is True
-
     def test_redo_toggle_is_transient(self, qtbot, tmp_path):
         tab = _make_tab(_config(tmp_path), qtbot)
         seen: list = []
@@ -397,33 +343,6 @@ class TestPreviewAndPersistence:
             qtbot.waitUntil(tab.run_button.isEnabled, timeout=3000)
         assert compute.call_count == 1
         assert tab.engine_notice_label.isHidden()
-
-
-class TestFlushPendingEdits:
-    """flush_pending_edits: the close-path safety net for a debouncing path edit."""
-
-    def test_flush_commits_a_pending_edit_immediately(self, qtbot, tmp_path):
-        tab = _make_tab(_config(tmp_path), qtbot)
-        seen: list = []
-        tab.run_options_changed.connect(seen.append)
-        pending_path = tmp_path / "flushed_mokuro"
-        tab.mokuro_selector.set_path(str(pending_path))
-        assert tab._mokuro_location_timer.isActive()
-
-        tab.flush_pending_edits()
-
-        assert not tab._mokuro_location_timer.isActive()
-        assert len(seen) == 1
-        assert seen[0].mokuro_location == pending_path
-
-    def test_flush_is_a_noop_without_a_pending_edit(self, qtbot, tmp_path):
-        tab = _make_tab(_config(tmp_path), qtbot)
-        seen: list = []
-        tab.run_options_changed.connect(seen.append)
-
-        tab.flush_pending_edits()
-
-        assert seen == []
 
 
 class TestCancelAndClose:
