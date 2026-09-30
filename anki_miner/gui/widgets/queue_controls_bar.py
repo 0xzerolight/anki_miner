@@ -74,6 +74,7 @@ class QueueControlsBar(QWidget):
         self.filter_buttons: dict[str, ModernButton] = {}
         self._paused = False
         self._running = False
+        self._pause_available = True
         self._setup_ui()
         self.set_counts(total=0, ready=0, failed=0, complete=0)
         self.set_actions_enabled(run=False, retry=False, remove=False)
@@ -133,18 +134,35 @@ class QueueControlsBar(QWidget):
         from the one the progress numbers, the lock state and the final receipt
         were about. Locking is what lets all three be true at once.
 
+        Called on every recompute during a run, so the per-run reset (Pause
+        text, enabled state, availability) happens only when a run starts.
+
         Args:
             running: Whether a run currently owns the queue.
         """
+        starting = running and not self._running
         self._running = running
         if not running:
             self._paused = False
-        self.lock_label.setVisible(running)
-        self.pause_button.setVisible(running)
-        if running:
+        if starting:
+            self._pause_available = True
             self.pause_button.setEnabled(True)
             self.pause_button.setText(self.tr("Pause after current item"))
             self.lock_label.setText(self.tr("Queue locked while processing."))
+        self.lock_label.setVisible(running)
+        self.pause_button.setVisible(running and (self._pause_available or self._paused))
+
+    def set_pause_available(self, available: bool) -> None:
+        """Offer Pause only while another item follows the one being mined (A10).
+
+        Pausing after the last item means nothing, so the control goes. A run
+        that is already paused keeps its Resume whatever follows.
+
+        Args:
+            available: Whether a Ready item follows the current one.
+        """
+        self._pause_available = available
+        self.pause_button.setVisible(self._running and (available or self._paused))
 
     def set_paused(self, paused: bool, *, done: int = 0, total: int = 0) -> None:
         """Report that the run is sitting at an item boundary, and offer Resume.

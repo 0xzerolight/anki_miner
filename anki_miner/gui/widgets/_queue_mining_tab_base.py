@@ -979,6 +979,8 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         )
         self.progress_widget.set_status(self._current_item_label)
         self._publish_task_position(self._current_item_name)
+        # A10: pausing after the last item would stop nothing.
+        self.queue_controls.set_pause_available(any(i.status == self._status_ready for i in self._run_items[idx + 1 :]))
         self._recompute_buttons()
 
     @staticmethod

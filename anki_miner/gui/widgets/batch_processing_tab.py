@@ -745,6 +745,9 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         )
         self.overall_progress_widget.set_status(self._current_item_label)
         self.queue_panel.set_item_status(item_id, "processing")
+        # A10: the series being mined is number _items_done + 1; pausing after
+        # the last one would stop nothing.
+        self.queue_panel.queue_controls.set_pause_available(self._items_done + 1 < self._items_total)
 
     def _on_item_completed(self, item_id: str, cards_created: int) -> None:
         """Called when an item completes successfully.
