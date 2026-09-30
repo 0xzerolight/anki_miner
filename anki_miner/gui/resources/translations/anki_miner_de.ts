@@ -12011,15 +12011,15 @@ Danach sortieren, um eine lange Aufnahme der Reihe nach durchzuarbeiten — dann
     </message>
     <message>
         <source>Include highlighted (%1)</source>
-        <translation>Hervorgehobene einschließen (%1)</translation>
+        <translation>Auswahl einschließen (%1)</translation>
     </message>
     <message>
         <source>Add to Known Words</source>
-        <translation>Zu Bekannten Wörtern hinzufügen</translation>
+        <translation>Als bekannt markieren</translation>
     </message>
     <message>
         <source>Remove from Known Words</source>
-        <translation>Aus bekannten Wörtern entfernen</translation>
+        <translation>Markierung aufheben</translation>
     </message>
     <message>
         <source>Take the Known · pending mark back off the highlighted rows and return them to this review.</source>
