@@ -2,18 +2,18 @@
 
 ``ReadingNovelsTab`` mines ``.epub``/``.txt`` books over the shared
 ``_ReadingMiningTabBase`` lifecycle — there is NO persistent queue UI: every
-run hands the base a list of ephemeral ``ReadingQueueItem``s (one for the
-single-book Novel section, one per top-level book for the Book Folder
-section). Behaviour under test:
+run hands the base a list of ephemeral ``ReadingQueueItem``s (one for a book in
+the one field, one per top-level book for a folder in it, D7-B). Behaviour
+under test:
 
 * Start: a valid book is classified by ``detect`` into one ephemeral item and
   launched via the base (1 item, curation gated by the checkbox,
-  prebuilt-vs-factory processor path). Both Mine buttons give way to the
-  shared Cancel while a run is active.
+  prebuilt-vs-factory processor path). Mine gives way to Cancel while a run is
+  active.
 * Folder runs: ``detect_book_folder`` refs become N sequential items; the bar
   composes "Book N/M" titles that survive progress recomposition; a
   multi-book run logs a succeeded/failed summary.
-* Invalid path (empty / wrong suffix / not a file) warns and starts no worker.
+* Invalid path (empty / wrong suffix / missing) is refused and starts no worker.
 * Per-item signals are READ-ONLY on item state (the worker owns the lifecycle):
   they drive the single progress bar + log the outcome, never write status.
 * Cleanup restores the Cancel button and the progress bar on every exit path.
@@ -112,10 +112,10 @@ def _run(tab, book: Path, refs):
 
 
 def _run_folder(tab, folder: Path, refs):
-    """Select *folder*, patch ``detect_book_folder`` to return *refs*, click Mine Folder."""
-    tab.folder_selector.set_path(str(folder))
+    """Put *folder* in the one field, patch ``detect_book_folder`` to return *refs*, click Mine."""
+    tab.book_selector.set_path(str(folder))
     with patch(_DETECT_FOLDER, return_value=list(refs)):
-        tab._on_folder_mine_clicked()
+        tab._on_mine_clicked()
 
 
 class TestInitialState:
@@ -123,7 +123,7 @@ class TestInitialState:
 
     def test_buttons_idle(self, tab):
         assert not tab.mine_button.isHidden()
-        assert not tab.folder_mine_button.isHidden()
+        assert tab.mine_button.isEnabled()
         assert tab.cancel_button.isHidden()
         assert tab.worker_thread is None
 
@@ -135,11 +135,11 @@ class TestInitialState:
         for attr in ("list_widget", "add_series_button", "add_volumes_button", "process_queue_button", "clear_button"):
             assert not hasattr(tab, attr)
 
-    def test_section_header_says_novel(self, tab):
+    def test_no_section_header_repeats_the_tab(self, tab):
+        """A20: one card, and the sub-tab already names it."""
         from anki_miner.gui.widgets.enhanced import SectionHeader
 
-        headers = tab.findChildren(SectionHeader)
-        assert any(h.title_label.text() == "Novel" for h in headers)
+        assert tab.findChildren(SectionHeader) == []
 
 
 class TestStartRun:
@@ -218,7 +218,7 @@ class TestStartRun:
 
 
 class TestFolderRun:
-    """Mine Folder enqueues one ephemeral item per top-level book."""
+    """A folder in the field enqueues one ephemeral item per top-level book."""
 
     def test_mine_folder_constructs_worker_items_in_order(self, tmp_path, tab):
         queue_cls = tab._queue_worker_cls
@@ -232,42 +232,49 @@ class TestFolderRun:
         tab.worker_thread.start.assert_called_once()
 
     def test_folder_uses_detect_book_folder_not_detect(self, tmp_path, tab):
-        tab.folder_selector.set_path(str(tmp_path))
+        tab.book_selector.set_path(str(tmp_path))
         with (
             patch(_DETECT_FOLDER, return_value=[_make_ref()]) as folder_detect,
             patch(_DETECT) as plain_detect,
         ):
-            tab._on_folder_mine_clicked()
+            tab._on_mine_clicked()
         folder_detect.assert_called_once_with(tmp_path)
         plain_detect.assert_not_called()
 
-    def test_folder_empty_path_warns_no_run(self, tab):
+    def test_empty_field_names_both_kinds(self, tab):
         queue_cls = tab._queue_worker_cls
-        tab._on_folder_mine_clicked()
+        tab._on_mine_clicked()
         assert queue_cls.call_count == 0
         assert tab.worker_thread is None
         assert "folder" in tab.log_widget.text_edit.toPlainText().lower()
 
-    def test_folder_path_is_file_warns_no_run(self, tmp_path, tab):
+    def test_a_book_in_the_field_uses_detect_not_detect_book_folder(self, tmp_path, tab):
+        """The old folder field refused a book; the one field mines it (D7-B)."""
         queue_cls = tab._queue_worker_cls
-        tab.folder_selector.set_path(str(_book_file(tmp_path)))
-        with patch(_DETECT_FOLDER) as folder_detect:
-            tab._on_folder_mine_clicked()
-        folder_detect.assert_not_called()  # rejected before detect
-        assert queue_cls.call_count == 0
+        tab.book_selector.set_path(str(_book_file(tmp_path)))
+        with (
+            patch(_DETECT_FOLDER) as folder_detect,
+            patch(_DETECT, return_value=[_make_ref()]) as plain_detect,
+        ):
+            tab._on_mine_clicked()
+        folder_detect.assert_not_called()
+        plain_detect.assert_called_once()
+        assert queue_cls.call_count == 1
 
     def test_folder_detect_error_surfaced_no_run(self, tmp_path, tab):
         queue_cls = tab._queue_worker_cls
-        tab.folder_selector.set_path(str(tmp_path))
+        tab.book_selector.set_path(str(tmp_path))
         with patch(_DETECT_FOLDER, side_effect=SetupError("No .epub or .txt books found in 'x'.")):
-            tab._on_folder_mine_clicked()
+            tab._on_mine_clicked()
         assert queue_cls.call_count == 0
         assert "No .epub or .txt books found" in tab.log_widget.text_edit.toPlainText()
+        issue = tab.issue_banner().current_issue()
+        assert issue.summary == "Anki Miner can't mine this file."
+        assert issue.details == "No .epub or .txt books found in 'x'."
 
-    def test_folder_run_hides_both_mine_buttons(self, tmp_path, tab):
+    def test_folder_run_swaps_mine_for_cancel(self, tmp_path, tab):
         _run_folder(tab, tmp_path, [_make_ref("epub", "A"), _make_ref("epub", "B")])
         assert tab.mine_button.isHidden()
-        assert tab.folder_mine_button.isHidden()
         assert not tab.cancel_button.isHidden()
 
     def test_folder_run_refused_while_worker_active(self, tmp_path, tab):
@@ -385,21 +392,24 @@ class TestOversizeTxtParts:
 
 
 class TestInvalidPath:
-    """Invalid selections warn and never construct a worker."""
+    """Invalid selections are refused and never construct a worker."""
 
     def test_empty_path_warns_no_run(self, tab):
         queue_cls = tab._queue_worker_cls
         tab._on_mine_clicked()
         assert queue_cls.call_count == 0
         assert tab.worker_thread is None
-        assert "Choose an .epub or .txt book first." in tab.log_widget.text_edit.toPlainText()
+        assert "Choose a book or a folder of books first." in tab.log_widget.text_edit.toPlainText()
+        assert tab.issue_banner().current_issue().summary == "Choose a book or a folder of books first."
 
     def test_nonexistent_file_warns_no_run(self, tab):
         queue_cls = tab._queue_worker_cls
         tab.book_selector.set_path("/no/such/book.epub")
         tab._on_mine_clicked()
         assert queue_cls.call_count == 0
-        assert "Choose an .epub or .txt book first." in tab.log_widget.text_edit.toPlainText()
+        wrong_kind = "Choose an .epub or .txt book, or a folder of books."
+        assert wrong_kind in tab.log_widget.text_edit.toPlainText()
+        assert tab.issue_banner().current_issue().summary == wrong_kind
 
     def test_wrong_suffix_warns_no_run(self, tmp_path, tab):
         queue_cls = tab._queue_worker_cls
@@ -665,25 +675,28 @@ class TestDragDrop:
         assert "manga" in tab.log_widget.text_edit.toPlainText().lower()
         event.acceptProposedAction.assert_called_once()
 
-    def test_drop_folder_fills_folder_selector(self, tmp_path, tab):
-        # Dirs now feed the Book Folder section (no drop-time disk I/O, no
-        # manga hint) — a bookless folder errors at Mine time instead.
+    def test_drop_folder_fills_the_field(self, tmp_path, tab):
+        # Dirs feed the one field (no drop-time disk I/O, no manga hint) — a
+        # bookless folder errors at Mine time instead.
         event = MagicMock()
         with patch(_URLS, return_value=[_url(str(tmp_path))]):
             tab.dropEvent(event)
-        assert tab.folder_selector.get_path() == str(tmp_path)
-        assert tab.book_selector.get_path() == ""
+        assert tab.book_selector.get_path() == str(tmp_path)
         assert "manga" not in tab.log_widget.text_edit.toPlainText().lower()
 
-    def test_drop_first_folder_wins(self, tmp_path, tab):
+    def test_drop_first_book_or_folder_wins(self, tmp_path, tab):
         first = tmp_path / "a"
         second = tmp_path / "b"
         first.mkdir()
         second.mkdir()
         event = MagicMock()
-        with patch(_URLS, return_value=[_url(str(first)), _url(str(second))]):
+        with patch(_URLS, return_value=[_url(str(first)), _url("/src/c.epub"), _url(str(second))]):
             tab.dropEvent(event)
-        assert tab.folder_selector.get_path() == str(first)
+        assert tab.book_selector.get_path() == str(first)
+
+        with patch(_URLS, return_value=[_url("/src/c.epub"), _url(str(second))]):
+            tab.dropEvent(MagicMock())
+        assert tab.book_selector.get_path() == "/src/c.epub"
 
     @pytest.mark.parametrize("name", ["/src/ep01.srt", "/src/ep01.smi"])
     def test_drop_subtitle_file_hints_no_path(self, tab, name):
@@ -691,7 +704,7 @@ class TestDragDrop:
         with patch(_URLS, return_value=[_url(name)]):
             tab.dropEvent(event)
         assert tab.book_selector.get_path() == ""
-        assert "Subtitles tab" in tab.log_widget.text_edit.toPlainText()
+        assert "Reading → Subtitle Files" in tab.log_widget.text_edit.toPlainText()
         event.acceptProposedAction.assert_called_once()
 
     def test_drop_none_event_is_noop(self, tab):

@@ -14,16 +14,20 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from PyQt6.QtGui import QPainter
+
     from anki_miner.gui.widgets.subtitle_player_widget import SubtitlePlayerWidget
     from anki_miner.models.reading import ImageRef, ReadingUnit
 
-from PyQt6.QtCore import QByteArray, QItemSelectionModel, QPoint, Qt, QTimer
+from PyQt6.QtCore import QByteArray, QItemSelectionModel, QModelIndex, QPoint, QSize, Qt, QTimer
 from PyQt6.QtGui import (
     QAction,
     QCloseEvent,
     QColor,
     QFont,
+    QFontMetrics,
     QImage,
+    QPalette,
     QPixmap,
     QShowEvent,
 )
@@ -39,6 +43,9 @@ from PyQt6.QtWidgets import (
     QListWidgetItem,
     QMenu,
     QSplitter,
+    QStyle,
+    QStyledItemDelegate,
+    QStyleOptionViewItem,
     QTableWidget,
     QTableWidgetItem,
     QTextBrowser,
@@ -109,9 +116,90 @@ AUDIO_COLUMN = 10
 #: stamp covers every mining path (Issue #129).
 POSITION_COLUMN = 11
 
+#: Data columns hidden when every row's cell is empty or "-" (A07): Reading (3),
+#: Freq. Rank (5) and Unknowns in line (7). A new user with no frequency list
+#: saw a whole column of "-". Gated like Audio: force-hidden, and left out of
+#: the header menu, so an empty column can neither show nor be "lost".
+_EMPTY_GATED_COLUMNS = (3, 5, 7)
+
+#: "Form in text": the raw surface as it appeared.
+_FORM_COLUMN = 2
+
+#: Columns a first-time user starts without (D5). Form in text is folded into
+#: the Word column (grey, only when it differs); the two sentence signals are a
+#: header-menu click away, and whatever the user chooses is saved.
+_DEFAULT_HIDDEN_COLUMNS = (_FORM_COLUMN, 7, 8)
+
+#: Item role on a Word cell holding the text form to show after the word, or ""
+#: when it matches. Above SORT_ROLE/COPY_ROLE (UserRole + 1/+2).
+_FORM_ROLE = Qt.ItemDataRole.UserRole + 4
+
 #: Table column : side column, as stretch factors. Also the ratio the split
 #: opens at, so the first frame and every resize after it agree.
 _MAIN_SPLIT_STRETCH = (3, 2)
+
+
+class _WordFormDelegate(QStyledItemDelegate):
+    """Paint the text form in grey after the mined word, when they differ (D5).
+
+    Only while the Form in text column is hidden: with it shown, the same
+    words would be on screen twice. The cell's text, sort key and copy value
+    stay the mined form; this is paint only.
+    """
+
+    def __init__(self, table: QTableWidget) -> None:
+        super().__init__(table)
+        self._table = table
+
+    def _form(self, index: QModelIndex) -> str:
+        if not self._table.isColumnHidden(_FORM_COLUMN):
+            return ""
+        form = index.data(_FORM_ROLE)
+        return form if isinstance(form, str) else ""
+
+    def paint(self, painter: QPainter | None, option: QStyleOptionViewItem, index: QModelIndex) -> None:
+        form = self._form(index)
+        if not form or painter is None:
+            super().paint(painter, option, index)
+            return
+        opt = QStyleOptionViewItem(option)
+        self.initStyleOption(opt, index)
+        word = opt.text or ""
+        opt.text = ""
+        widget = opt.widget
+        style = widget.style() if widget is not None else QApplication.style()
+        if style is None:
+            super().paint(painter, option, index)
+            return
+        # Background, selection and focus exactly as every other cell.
+        style.drawControl(QStyle.ControlElement.CE_ItemViewItem, opt, painter, widget)
+        # The same inset Qt gives item text, so this word lines up with the
+        # plain rows above and below it.
+        margin = style.pixelMetric(QStyle.PixelMetric.PM_FocusFrameHMargin, None, widget) + 1
+        text_rect = style.subElementRect(QStyle.SubElement.SE_ItemViewItemText, opt, widget).adjusted(
+            margin, 0, -margin, 0
+        )
+        selected = bool(opt.state & QStyle.StateFlag.State_Selected)
+        metrics = QFontMetrics(opt.font)
+        flags = int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+        painter.save()
+        painter.setFont(opt.font)
+        painter.setPen(opt.palette.color(QPalette.ColorRole.HighlightedText if selected else QPalette.ColorRole.Text))
+        painter.drawText(text_rect, flags, word)
+        rest = text_rect.adjusted(metrics.horizontalAdvance(word + " "), 0, 0, 0)
+        grey = QPalette.ColorRole.HighlightedText if selected else QPalette.ColorRole.PlaceholderText
+        painter.setPen(opt.palette.color(grey))
+        painter.drawText(rest, flags, metrics.elidedText(form, Qt.TextElideMode.ElideRight, max(0, rest.width())))
+        painter.restore()
+
+    def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:  # noqa: N802 - Qt override
+        hint = super().sizeHint(option, index)
+        form = self._form(index)
+        if form:
+            opt = QStyleOptionViewItem(option)
+            self.initStyleOption(opt, index)
+            hint.setWidth(hint.width() + QFontMetrics(opt.font).horizontalAdvance(" " + form))
+        return hint
 
 
 @dataclass(frozen=True)
@@ -258,6 +346,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # so only its presence is kept: it is None exactly when the run maps no
         # expression-audio field, which is the Audio column's gate.
         self._has_expression_audio = expression_audio_fetch_fn is not None
+        self._empty_columns: frozenset[int] = frozenset()  # filled by _populate_table (A07)
+        # The user's own hidden/shown choice for each empty-gated column, which
+        # done() puts back before saving the header, so a per-run gate hide is
+        # never remembered as the user's arrangement.
+        self._pre_gate_hidden: dict[int, bool] = {}
         # Manga page pane: gated on page_units exactly like the player gates
         # on video_file. Cache holds converted QPixmaps (GUI-thread only);
         # _page_request_gen is the stale-guard for off-thread loads and
@@ -385,6 +478,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             # Last, because both calls above go through setWindowFlag, which resets
             # a window's geometry on some platforms.
             self._restore_layout_state()
+            # A06: open on the first word, so the frame, clip and definition
+            # are there when the window appears rather than after a click.
+            # After the restore, which may re-sort the rows.
+            self._focus_first_row()
         except BaseException:
             # getattr twice: the player may not exist yet (the raise came before
             # the pane was built, or there is no player pane at all), and a test
@@ -688,6 +785,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self.table.setSortingEnabled(True)
 
         self._apply_header_resize_modes()
+        # D5: the Word column shows the text form in grey when it differs.
+        self.table.setItemDelegateForColumn(1, _WordFormDelegate(self.table))
         # The Translation column is meaningful only for a run with a second
         # track: forced hidden otherwise, and kept out of the header menu, so
         # an empty column never shows and cannot be "lost" by hiding it. Its
@@ -842,10 +941,23 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # restoreState re-sorts, which needs real rows to sort.
         columns = session_state.load_curator_columns_for(self.table.columnCount())
         header_view = self.table.horizontalHeader()
-        if columns is not None and header_view and header_view.restoreState(columns):
+        restored = columns is not None and header_view is not None and header_view.restoreState(columns)
+        if restored:
             self._apply_header_resize_modes()
+        else:
+            # D5: no saved arrangement yet, so start from the calmer default;
+            # the header menu brings any column back and the choice is saved.
+            for column in _DEFAULT_HIDDEN_COLUMNS:
+                self.table.setColumnHidden(column, True)
+        # Read before the gates run. Without a saved state the table still
+        # carries _populate_table's gate hide, so the intent is the D5 default.
+        self._pre_gate_hidden = {
+            column: self.table.isColumnHidden(column) if restored else column in _DEFAULT_HIDDEN_COLUMNS
+            for column in self._empty_columns
+        }
         self._apply_translation_column_gate()
         self._apply_audio_column_gate()
+        self._apply_empty_column_gate()
 
     def _is_on_a_live_screen(self) -> bool:
         """True when the window's centre sits on a screen that exists."""
@@ -929,7 +1041,14 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 )
                 header_view = self.table.horizontalHeader()
                 if header_view:
-                    session_state.save_curator_columns(header_view.saveState(), self.table.columnCount())
+                    # Save the user's arrangement, not this run's A07 gate:
+                    # a column empty today may hold data next run.
+                    for column, hidden in self._pre_gate_hidden.items():
+                        self.table.setColumnHidden(column, hidden)
+                    try:
+                        session_state.save_curator_columns(header_view.saveState(), self.table.columnCount())
+                    finally:
+                        self._apply_empty_column_gate()
         super().done(a0)
 
     def _apply_header_resize_modes(self) -> None:
@@ -980,6 +1099,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 continue
             if column == AUDIO_COLUMN and not self._has_expression_audio:
                 continue
+            if column in self._empty_columns:
+                continue
             header_item = self.table.horizontalHeaderItem(column)
             action = QAction(header_item.text() if header_item is not None else str(column), self)
             action.setCheckable(True)
@@ -1017,9 +1138,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             self.table.setColumnHidden(column, False)
             if header_view:
                 header_view.moveSection(header_view.visualIndex(column), column)
+        self._pre_gate_hidden = dict.fromkeys(self._empty_columns, False)
         self._apply_header_resize_modes()
         self._apply_translation_column_gate()
         self._apply_audio_column_gate()
+        self._apply_empty_column_gate()
 
     def _apply_translation_column_gate(self) -> None:
         self.table.setColumnHidden(TRANSLATION_COLUMN, not self._has_translations)
@@ -1034,6 +1157,23 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         """
         if not self._has_expression_audio:
             self.table.setColumnHidden(AUDIO_COLUMN, True)
+
+    def _all_empty_columns(self) -> frozenset[int]:
+        """The gated data columns whose every cell is empty or "-" (A07)."""
+        empty: set[int] = set()
+        for column in _EMPTY_GATED_COLUMNS:
+            cell_texts = []
+            for table_row in range(self.table.rowCount()):
+                cell = self.table.item(table_row, column)
+                cell_texts.append(cell.text().strip() if cell is not None else "")
+            if cell_texts and all(cell_text in ("", "-") for cell_text in cell_texts):
+                empty.add(column)
+        return frozenset(empty)
+
+    def _apply_empty_column_gate(self) -> None:
+        """Force-hide a data column with nothing in it (A07). One-directional, like Audio."""
+        for column in self._empty_columns:
+            self.table.setColumnHidden(column, True)
 
     def _build_right_pane(self) -> QWidget:
         """Build the right pane from whichever optional sub-panes are enabled.
@@ -1268,6 +1408,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             for button in (self.expand_prev_button, self.expand_next_button, self.expand_reset_button):
                 button.setEnabled(False)
                 expand_row.addWidget(button)
+            self.expand_reset_button.hide()  # A08: shown only while there is an expansion to undo
             expand_row.addStretch(1)
             vbox.addLayout(expand_row)
         # Screenshot frame pick. Its own row rather than sharing the expansion
@@ -1295,6 +1436,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             for button in (self.use_frame_button, self.frame_reset_button):
                 button.setEnabled(False)
                 frame_row.addWidget(button)
+            self.frame_reset_button.hide()  # A08: shown only while a frame is picked
             frame_row.addStretch(1)
             vbox.addLayout(frame_row)
         return container
@@ -1469,7 +1611,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         MAX_CLIP_SECONDS — the single guardrail against merging across a long
         cue gap. Enforced only here, at stamp time: the processor materializes
         the stamped counts verbatim, so what the preview promised is what the
-        card gets.
+        card gets. Reset shows only while this word has an expansion: a visible
+        reset means an edit is in effect (A08).
         """
         if not hasattr(self, "expand_prev_button"):
             return
@@ -1499,6 +1642,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self.expand_prev_button.setEnabled(prev_ok)
         self.expand_next_button.setEnabled(next_ok)
         self.expand_reset_button.setEnabled(reset_ok)
+        self.expand_reset_button.setVisible(reset_ok)
 
     # ------------------------------------------------------------------
     # Screenshot frame pick
@@ -1544,8 +1688,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         """Recompute the frame buttons' enabled states and the reset tooltip.
 
         Picking needs a focused word whose own episode is the one on screen;
-        resetting needs a live override — the same "an enabled reset means an
-        edit is in effect" convention the expansion row uses. The tooltip names
+        resetting needs a live override — the same "a visible reset means an
+        edit is in effect (A08)" convention the expansion row uses. The tooltip names
         the stamped second, the only visible confirmation the click landed.
         """
         if not hasattr(self, "use_frame_button"):
@@ -1554,6 +1698,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         picked = None if idx is None else self._screenshot_overrides.get(idx)
         self.use_frame_button.setEnabled(word is not None and idx is not None and self._chosen_episode_displayed())
         self.frame_reset_button.setEnabled(picked is not None)
+        self.frame_reset_button.setVisible(picked is not None)
         self.frame_reset_button.setToolTip(
             self.tr("Restore this word's default screenshot frame.")
             if picked is None
@@ -1743,6 +1888,23 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         )
         self.table.scrollTo(index)
 
+    def _focus_first_row(self) -> None:
+        """Put the cursor and the highlight on the first visible word (A06).
+
+        The same explicit selection flags :meth:`_move_focus` uses, never
+        ``setCurrentCell``, whose flags follow whatever modifier keys happen to
+        be held. Column 1 (the word), not the checkbox column.
+        """
+        rows = self._visible_rows()
+        model = self.table.model()
+        selection = self.table.selectionModel()
+        if not rows or model is None or selection is None:
+            return
+        selection.setCurrentIndex(
+            model.index(rows[0], 1),
+            QItemSelectionModel.SelectionFlag.ClearAndSelect | QItemSelectionModel.SelectionFlag.Rows,
+        )
+
     def _toggle_play_pause(self) -> None:
         """The play/pause key: toggle player play/pause (no-op when the player pane is hidden,
         or while a season-curation source swap is still in flight). On an Anki-deck run it
@@ -1801,6 +1963,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                     column,
                     self._make_readonly_item(text, tooltip=tooltip, copy_text=copy_text, japanese=True),
                 )
+            self._stamp_word_form(row, shown)
 
             for column, text, sort_value in self._rank_cell_values(word):
                 self.table.setItem(
@@ -1852,6 +2015,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # vertical-header resize mode to Interactive, which drops the shared
         # Fixed row height. Re-applying here keeps it in effect.
         self._apply_data_surface()
+
+        # A07: decided once, on the rows as they arrive.
+        self._empty_columns = self._all_empty_columns()
+        self._apply_empty_column_gate()
 
     def _make_readonly_item(
         self,
@@ -2008,11 +2175,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         ``surface`` per candidate line, and for surface-mined POS (nouns)
         ``mined_form`` IS the surface, so both move with the pick.
 
-        ``reading`` is not swapped today, so column 3 is a no-op. It stays in the
-        spec anyway because the row's contract is "columns 1-4 are the chosen
-        variant" — leaving one column out is exactly how the row went half stale
-        in the first place (Issue #108 was that leak on ``surface`` alone).
+        Column 3 prints ``expression_reading`` (the card's reading) and falls
+        back to ``reading``; it follows the chosen variant like columns 1, 2 and
+        4 so the row never goes half stale (Issue #108).
         """
+        shown_reading = chosen.expression_reading or chosen.reading
         n_candidates = len(word.sentence_candidates)
         return (
             # Word (mined) — what becomes the Anki Expression (source-orthography
@@ -2020,8 +2187,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             (1, chosen.mined_form, chosen.mined_form, chosen.mined_form),
             # Form in text — the raw surface as it appeared.
             (2, chosen.surface, chosen.surface, chosen.surface),
-            # Reading.
-            (3, chosen.reading, chosen.reading, chosen.reading),
+            # Reading: the one the card will carry (folded, overridden
+            # expression_reading), else the token's own for languages that set
+            # none (A14). The raw token reading of an inflected form (キ for
+            # 来た) is not what the card shows.
+            (3, shown_reading, shown_reading, shown_reading),
             # Sentence, truncated for the cell but copied and hovered in full.
             # A trailing "(N)" flags words with N alternative example sentences.
             (
@@ -2031,6 +2201,12 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 chosen.sentence,
             ),
         )
+
+    def _stamp_word_form(self, row: int, chosen: TokenizedWord) -> None:
+        """Give the Word cell the text form the delegate shows when it differs (D5)."""
+        cell = self.table.item(row, 1)
+        if cell is not None:
+            cell.setData(_FORM_ROLE, chosen.surface if chosen.surface != chosen.mined_form else "")
 
     @staticmethod
     def _sentence_display(sentence: str, n_candidates: int) -> str:
@@ -2632,6 +2808,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 item = self.table.item(row, column)
                 if item is not None:
                     update_table_item(item, text, tooltip=tooltip, copy_text=copy_text)
+            self._stamp_word_form(row, chosen)
             # Inside the same suspension: the sort indicator may sit on a signal
             # column too, and these describe the sentence the pick just changed.
             for column, text, sort_value in self._signal_cell_values(chosen):

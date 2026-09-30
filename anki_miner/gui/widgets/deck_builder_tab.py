@@ -140,10 +140,21 @@ class DeckBuilderTab(FolderSeriesScreenBase):
 
         layout.addWidget(self._create_input_section())
         layout.addWidget(self._create_settings_section())
+
+        # A09: the shared review checkbox sits in one place on every mining
+        # screen: a plain row under the last input card, outside it.
+        # Issue #60: opt-in word curation popup (default off), shared across
+        # all seven mining screens.
+        self.review_words_checkbox = QCheckBox(self.tr("Review words before mining"))
+        self._bind_review_words_checkbox()
+        self.review_words_checkbox.setToolTip(self.tr("Pick which words get cards, once per series."))
+        layout.addWidget(self.review_words_checkbox)
         layout.addWidget(self._create_results_section())
 
-        layout.addWidget(SectionHeader(self.tr("Progress")))
+        # D1: progress lives in the pinned bar; this widget is the run's hidden
+        # state holder and the receipt's anchor.
         self.progress_widget = ProgressWidget()
+        self.progress_widget.hide()
         layout.addWidget(self.progress_widget)
         # The durable end state of this same run (D20); one item per run, so
         # the noun is only ever used above one deck.
@@ -197,7 +208,7 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         self._apply_run_state("idle")
 
     def _create_input_section(self) -> QFrame:
-        """Build the Input card: the season's folder pair, plus their offsets.
+        """Build the Season folders card: the season's folder pair, plus their offsets.
 
         Mirrors Batch's Add Series card (video, subtitle, optional
         translation folder, offsets) -- this screen mines the whole pair as
@@ -208,7 +219,7 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         layout = QVBoxLayout()
         configure_card_layout(layout)
 
-        layout.addWidget(SectionHeader(self.tr("Input")))
+        layout.addWidget(SectionHeader(self.tr("Season folders")))
 
         # Measure the TRANSLATED strings (see single_episode_tab): sizing on
         # the English literals clips every non-English locale.
@@ -347,13 +358,6 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         )
         self.skip_known_checkbox.toggled.connect(self._reset_preview_if_idle)
 
-        # Issue #60: opt-in word curation popup (default off), shared across
-        # all seven mining screens.
-        self.review_words_checkbox = QCheckBox(self.tr("Review words before mining"))
-        self._bind_review_words_checkbox()
-        self.review_words_checkbox.setToolTip(self.tr("Pick which words get cards, once per series."))
-        layout.addWidget(self.review_words_checkbox)
-
         self.top_n_spinbox.valueChanged.connect(lambda value: self.persist_run_options(deck_builder_top_n=value))
         self.coverage_spinbox.valueChanged.connect(
             lambda value: self.persist_run_options(deck_builder_coverage_pct=value)
@@ -368,7 +372,13 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         return section
 
     def _create_results_section(self) -> QFrame:
-        """Build the Results card: the corpus-preview numbers ``_refresh_preview`` fills in."""
+        """Build the Results card; hidden until the first preview arrives (A12).
+
+        The two numbers the user decides on (cards to create, projected
+        coverage) come first, and each value sits right after its label. No
+        number was added or removed (the locked Preview-then-Build flow is
+        unchanged); D20 item 4 renamed two labels to words a non-linguist reads.
+        """
         section = QFrame()
         section.setObjectName("card")
         layout = QVBoxLayout()
@@ -384,30 +394,35 @@ class DeckBuilderTab(FolderSeriesScreenBase):
             "Selected words that won't get a card this run: already in your collection, " "or with no sentence to mine."
         )
 
-        self._result_labels: dict[str, QLabel] = {}
-        for field_key, field_label, tooltip in (
-            ("total_tokens", self.tr("Total tokens:"), ""),
-            ("unique_lemmas", self.tr("Unique lemmas:"), ""),
-            ("candidate_count", self.tr("Candidate words:"), ""),
-            ("projected_coverage_pct", self.tr("Projected coverage:"), ""),
-            ("known_skipped", self.tr("Already known (skipped):"), known_skipped_tooltip),
+        rows = (
             ("card_count", self.tr("Cards to create:"), ""),
-        ):
+            ("projected_coverage_pct", self.tr("Projected coverage:"), ""),
+            ("candidate_count", self.tr("Candidate words:"), ""),
+            ("known_skipped", self.tr("Already known (skipped):"), known_skipped_tooltip),
+            ("total_tokens", self.tr("Words in the season:"), ""),
+            ("unique_lemmas", self.tr("Different words:"), ""),
+        )
+        label_w = field_label_width(*(text for _key, text, _tip in rows))
+        self._result_labels: dict[str, QLabel] = {}
+        for field_key, field_label, tooltip in rows:
             row = QHBoxLayout()
             lbl = QLabel(field_label)
             lbl.setObjectName("field-label")
-            lbl.setMinimumWidth(160)
+            lbl.setMinimumWidth(label_w)
             val = QLabel("—")
-            val.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            val.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
             if tooltip:
                 lbl.setToolTip(tooltip)
                 val.setToolTip(tooltip)
             self._result_labels[field_key] = val
             row.addWidget(lbl)
-            row.addWidget(val, 1)
+            row.addWidget(val)
+            row.addStretch(1)
             layout.addLayout(row)
 
         section.setLayout(layout)
+        section.hide()
+        self._results_section = section
         return section
 
     # ------------------------------------------------------------------
@@ -471,6 +486,7 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         self._corpus = None
         for label in self._result_labels.values():
             label.setText("—")
+        self._results_section.hide()
 
     # ------------------------------------------------------------------
     # Drag-and-drop (locked outside idle)
@@ -551,10 +567,10 @@ class DeckBuilderTab(FolderSeriesScreenBase):
     def _apply_run_state(self, state: str) -> None:
         """Set every run-dependent enable from one table.
 
-        ``idle``: Preview, Build and every input on; Cancel off.
-        ``scanning`` / ``preview_ready``: Build (which pre-confirms or
-        confirms), Cancel and the selection on; Preview and the scan inputs
-        off. ``building``: only Cancel on.
+        ``idle``: Preview and Build shown, every input on; Cancel hidden.
+        ``scanning`` / ``preview_ready``: Cancel and Build shown (Build
+        confirms), the selection on, Preview and the scan inputs off.
+        ``building``: Cancel only.
 
         The scan inputs shaped the corpus a preview describes, so they lock
         for the whole run. The selection stays live until Build, because
@@ -563,8 +579,14 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         self._run_state = state
         idle = state == "idle"
         building = state == "building"
+        # A09: Cancel is hidden at idle; while a run goes it takes the place of
+        # the action it can stop. Build stays through the scan and the preview
+        # gate, because Build is how a preview is confirmed.
+        self.preview_button.setVisible(idle)
         self.preview_button.setEnabled(idle)
+        self.build_button.setVisible(not building)
         self.build_button.setEnabled(not building)
+        self.cancel_button.setVisible(not idle)
         self.cancel_button.setEnabled(not idle)
         self.cancel_button.setText(self.tr("Cancel"))
         for control in (
@@ -640,6 +662,7 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         self._corpus = self._confirmed_selection = None
         for label in self._result_labels.values():
             label.setText("—")
+        self._results_section.hide()
         self.progress_widget.reset()
         self.log_widget.clear_log()
 
@@ -776,6 +799,7 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         labels["projected_coverage_pct"].setText(f"{preview.projected_coverage_pct:.1f}%")
         labels["known_skipped"].setText(f"{preview.known_skipped:,}")
         labels["card_count"].setText(f"{preview.card_count:,}")
+        self._results_section.show()
 
     def _on_item_pairs_progress(self, _item_id: str, done: int, total: int) -> None:
         """Fill the bar by episodes mined, the one count the build can prove."""
@@ -809,7 +833,7 @@ class DeckBuilderTab(FolderSeriesScreenBase):
             return
         self._run_failed = True
         self.presenter.show_error(message)
-        self.show_screen_issue(ScreenIssue(summary=self.tr("The deck could not be built."), details=message))
+        self._show_run_failure(message, self.tr("The deck could not be built."))
 
     def _on_queue_finished(self, total_cards: int, whitelist: object = None) -> None:
         """Fold the run's whitelist into the receipt and draw the terminal progress line."""
@@ -953,6 +977,7 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         self._confirmed_selection = None
         for label in self._result_labels.values():
             label.setText("—")
+        self._results_section.hide()
 
     # ------------------------------------------------------------------
     # Config update

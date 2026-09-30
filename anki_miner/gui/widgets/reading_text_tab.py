@@ -3,7 +3,7 @@
 Mines one pasted snippet per run — no file, no extracted audio (synthetic
 sentence TTS, if enabled in Audio settings, still applies like any
 reading-sourced card) — through the shared reading pipeline. Pasted text has no
-page of its own, so the one optional Card Image the user picks here rides on
+page of its own, so the one optional card picture the user picks here rides on
 the ref as ``image_root`` and lands in the Picture field of every card from the
 run (``services/reading/text_source.py``). Paste text,
 **Mine** launches a single ephemeral :class:`ReadingQueueItem` carrying a
@@ -19,8 +19,9 @@ signals), so this tab's signal slots are READ-ONLY on item state.
 
 No tab-level drag-drop overrides: QPlainTextEdit accepts text drops natively.
 A dragged FILE is refused by :class:`_RefuseFileDrops` rather than inserted as
-its own path (D50). Text curation is table-only (the base ``(None, lookup_fn)``
-context — only manga overrides ``_build_curation_context``).
+its own path (D50); a dragged picture becomes the card picture (A19). Text
+curation is table-only (the base ``(None, lookup_fn)`` context — only manga
+overrides ``_build_curation_context``).
 """
 
 from __future__ import annotations
@@ -31,10 +32,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import QT_TRANSLATE_NOOP, QEvent, QObject
-from PyQt6.QtGui import QFont, QTextBlockFormat, QTextCursor, QTextDocument
+from PyQt6.QtGui import QDropEvent, QTextBlockFormat, QTextCursor, QTextDocument
 from PyQt6.QtWidgets import (
     QCheckBox,
     QFrame,
+    QHBoxLayout,
     QLabel,
     QPlainTextEdit,
     QScrollArea,
@@ -44,12 +46,14 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.capabilities import CapabilityTarget
-from anki_miner.gui.resources.styles import FONT_SIZES, SPACING, TYPOGRAPHY
+from anki_miner.gui.resources.styles import SPACING, TYPOGRAPHY
+from anki_miner.gui.utils import file_dialogs, session_state
 from anki_miner.gui.utils.content_text import apply_content_font
+from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.fonts import JAPANESE_BODY, apply_japanese_block_format
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
-from anki_miner.gui.widgets.base import PageWidth, configure_card_layout, field_label_width
-from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
+from anki_miner.gui.widgets.base import PageWidth, configure_card_layout
+from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.languages.registry import config_language, get_profile
@@ -64,6 +68,9 @@ from anki_miner.utils.i18n import tr_format
 #: re-encodes everything to JPEG, so the list is about what Pillow can read.
 _IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp")
 _IMAGE_FILTER_GLOB = " ".join(f"*{ext}" for ext in _IMAGE_EXTS)
+
+#: Where the picture picker reopens (D7); the same key the old picker used.
+_HISTORY_KEY = "reading.text.inputs"
 
 if TYPE_CHECKING:
     from anki_miner.config import AnkiMinerConfig
@@ -105,17 +112,26 @@ class _RefuseFileDrops(QObject):
     #: the cursor says "yes" right up to the moment the drop is refused.
     _DRAG_STAGES = (QEvent.Type.DragEnter, QEvent.Type.DragMove, QEvent.Type.Drop)
 
-    def __init__(self, parent: QObject, *, reason: str, report: Callable[[str], None]) -> None:
+    def __init__(
+        self,
+        parent: QObject,
+        *,
+        reason: str,
+        report: Callable[[str], None],
+        on_picture: Callable[[Path], None] | None = None,
+    ) -> None:
         """Initialize the filter.
 
         Args:
             parent: Owner; keeps the filter alive as long as the editor.
             reason: The already-translated sentence shown on refusal.
             report: Where the reason goes -- the tab's Activity log.
+            on_picture: Given a dragged picture file (A19); None refuses pictures like any file.
         """
         super().__init__(parent)
         self._reason = reason
         self._report = report
+        self._on_picture = on_picture
 
     def eventFilter(self, obj: QObject | None, event: QEvent | None) -> bool:  # noqa: N802 - Qt override
         """Eat file drags; pass everything else, including text drags, through."""
@@ -125,10 +141,26 @@ class _RefuseFileDrops(QObject):
         data = mime() if callable(mime) else None
         if data is None or not data.hasUrls():
             return super().eventFilter(obj, event)
+        picture = self._dropped_picture(data)
+        if picture is not None and self._on_picture is not None:
+            # A19: the picture button replaced the old picture field, which took
+            # drops. A dragged picture still lands as the card picture.
+            cast(QDropEvent, event).acceptProposedAction()
+            if event.type() == QEvent.Type.Drop:
+                self._on_picture(picture)
+            return True
         event.ignore()
         if event.type() == QEvent.Type.Drop:
             self._report(self._reason)
         return True
+
+    def _dropped_picture(self, data) -> Path | None:
+        """The one local picture file a drag carries, or None for anything else."""
+        urls = data.urls()
+        if len(urls) != 1 or not urls[0].isLocalFile():
+            return None
+        path = Path(urls[0].toLocalFile())
+        return path if path.suffix.lower() in _IMAGE_EXTS and path.is_file() else None
 
 
 class ReadingTextTab(_ReadingMiningTabBase):
@@ -206,8 +238,10 @@ class ReadingTextTab(_ReadingMiningTabBase):
         self.review_words_checkbox.setToolTip(self.tr("Show the word-selection popup before creating cards."))
         layout.addWidget(self.review_words_checkbox)
 
-        layout.addWidget(self._progress_header(self.tr("Progress")))
+        # D1: the pinned bar is the one progress surface; this widget is the
+        # run's hidden state holder and the receipt's anchor.
         self.overall_progress_widget = ProgressWidget()
+        self.overall_progress_widget.hide()
         layout.addWidget(self.overall_progress_widget)
         # The durable end state of this same card (D20). Pasted text is always
         # one item, so the receipt never needs a noun to count.
@@ -228,16 +262,6 @@ class ReadingTextTab(_ReadingMiningTabBase):
         )
         self.setLayout(main_layout)
 
-    def _progress_header(self, text: str) -> QLabel:
-        """Build a bold section-heading label for the progress bar."""
-        header = QLabel(text)
-        header.setObjectName("heading3")
-        font = QFont()
-        font.setPixelSize(FONT_SIZES.body)
-        font.setWeight(QFont.Weight.Bold)
-        header.setFont(font)
-        return header
-
     def _create_text_card(self) -> QFrame:
         """Text card: paste area + Mine/Cancel."""
         card = QFrame()
@@ -245,23 +269,19 @@ class ReadingTextTab(_ReadingMiningTabBase):
         card_layout = QVBoxLayout()
         configure_card_layout(card_layout)
 
-        card_layout.addWidget(SectionHeader(title=self.tr("Pasted Text")))
-
-        note = QLabel(self.tr("Paste text and mine it into Anki cards — no audio is extracted."))
-        note.setObjectName("caption")
-        note.setWordWrap(True)
-        card_layout.addWidget(note)
-
         self.text_edit = QPlainTextEdit()
-        self.text_edit.setPlaceholderText(self.tr("Paste text here…"))
+        self.text_edit.setPlaceholderText(
+            self.tr("Paste the text you want to mine. Cards from pasted text have no sentence audio from a recording.")
+        )
         self.text_edit.setMinimumHeight(140)
         # Text drops land natively; a dragged FILE used to be inserted as its
         # own path, which reads as "accepted" and mines a file name (D50). The
         # filter refuses those and says so in Activity.
         self._file_drop_filter = _RefuseFileDrops(
             self.text_edit,
-            reason=self.tr("Drop or paste text here; files are not supported."),
+            reason=self.tr("Drop or paste text here, or drop a picture for the cards; other files are not supported."),
             report=lambda reason: self.log_widget.append_warning(reason),
+            on_picture=lambda path: self.set_card_picture(path),
         )
         self.text_edit.installEventFilter(self._file_drop_filter)
         viewport = self.text_edit.viewport()
@@ -277,21 +297,36 @@ class ReadingTextTab(_ReadingMiningTabBase):
         card_layout.addWidget(self.text_edit)
 
         # Pasted text has no page of its own, so the one picture every card in
-        # the run shares is a deliberate pick, not an extraction. Optional by
-        # design: an empty field mines imageless cards exactly as before.
-        self.image_selector = FileSelector(
-            label=self.tr("Card Image:"),
-            file_mode=True,
-            file_filter=f"{self.tr('Images')} ({_IMAGE_FILTER_GLOB})",
-            label_width=field_label_width(self.tr("Card Image:")),
-            history_key="reading.text.inputs",
-            drop_validator=accepts_suffixes(_IMAGE_EXTS, self.tr("This field takes an image file.")),
+        # the run shares is a deliberate pick, not an extraction.
+        # A19: the picture is an optional extra, so it starts as one quiet
+        # button and becomes a file name with a small × once chosen. An empty
+        # choice mines imageless cards exactly as before.
+        self._picture_path: Path | None = None
+        self.picture_button = ModernButton(self.tr("Add card picture…"), variant="secondary")
+        self.picture_button.setToolTip(
+            self.tr("Optional. This picture goes in the Picture field of every card from this text.")
         )
-        self.image_selector.setToolTip(
-            self.tr("Optional. This image goes in the Picture field of every card from this text.")
-        )
-        self.image_selector.drop_rejected.connect(self.log_widget.append_warning)
-        card_layout.addWidget(self.image_selector)
+        self.picture_button.clicked.connect(self._on_add_picture_clicked)
+
+        self.picture_row = QWidget()
+        picture_layout = QHBoxLayout(self.picture_row)
+        picture_layout.setContentsMargins(0, 0, 0, 0)
+        picture_layout.setSpacing(SPACING.xs)
+        self.picture_name_label = QLabel()
+        picture_layout.addWidget(self.picture_name_label)
+        self.picture_clear_button = ModernButton("✕", variant="ghost", square=True)
+        self.picture_clear_button.setAccessibleName(self.tr("Remove the card picture"))
+        self.picture_clear_button.setToolTip(self.tr("Remove the card picture"))
+        self.picture_clear_button.clicked.connect(lambda: self.set_card_picture(None))
+        picture_layout.addWidget(self.picture_clear_button)
+
+        picture_line = QHBoxLayout()
+        picture_line.setSpacing(SPACING.xs)
+        picture_line.addWidget(self.picture_button)
+        picture_line.addWidget(self.picture_row)
+        picture_line.addStretch(1)
+        card_layout.addLayout(picture_line)
+        self.set_card_picture(None)
 
         # Mine and Cancel live in the pinned bar (D6), so a long paste cannot
         # push the run button off the screen.
@@ -308,6 +343,30 @@ class ReadingTextTab(_ReadingMiningTabBase):
         card.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         return card
 
+    def _on_add_picture_clicked(self) -> None:
+        """Pick the optional card picture (reopens where the last one came from)."""
+
+        def _on_picked(path: str) -> None:
+            if path:
+                session_state.remember_accepted_path(_HISTORY_KEY, path, file_mode=True)
+                self.set_card_picture(Path(path))
+
+        file_dialogs.pick_open_file(
+            self,
+            self.tr("Choose a card picture"),
+            resolve_start_dir(None, file_mode=True, remembered_dir=session_state.remembered_directory(_HISTORY_KEY)),
+            f"{self.tr('Images')} ({_IMAGE_FILTER_GLOB})",
+            on_done=_on_picked,
+        )
+
+    def set_card_picture(self, path: Path | None) -> None:
+        """Use ``path`` as every card's picture, or none (A19)."""
+        self._picture_path = path
+        self.picture_name_label.setText(path.name if path is not None else "")
+        self.picture_name_label.setToolTip(str(path) if path is not None else "")
+        self.picture_row.setVisible(path is not None)
+        self.picture_button.setVisible(path is None)
+
     # ------------------------------------------------------------------
     # Run lifecycle
     # ------------------------------------------------------------------
@@ -320,9 +379,11 @@ class ReadingTextTab(_ReadingMiningTabBase):
         """
         if self.worker_thread is not None:
             return
+        # A fresh attempt supersedes the last complaint (after the reentrancy guard).
+        self.clear_screen_issue()
         text = self.text_edit.toPlainText()
         if not text.strip():
-            self.log_widget.append_warning(self.tr("Paste some text first."))
+            self._report_refusal(self.tr("Paste some text first."))
             return
 
         usable, image_root = self._picked_image()
@@ -332,12 +393,12 @@ class ReadingTextTab(_ReadingMiningTabBase):
             # episode_processor.py gates image preparation on this same
             # mapping (picture_mapped) — an unmapped field there silently
             # drops the picked image rather than raising. Catch it here,
-            # before the run starts, using the same log_widget mechanism as
-            # the unreadable-image branch above.
-            self.log_widget.append_warning(
+            # before the run starts, the same way as the unreadable-picture
+            # branch above.
+            self._report_refusal(
                 self.tr(
-                    "This card image has no Picture field to land in. Map one"
-                    " in Settings → Cards & Anki, or clear the image."
+                    "This card picture has no Picture field to land in. Map one"
+                    " in Settings → Cards & Anki, or remove the picture."
                 )
             )
             return
@@ -351,21 +412,19 @@ class ReadingTextTab(_ReadingMiningTabBase):
             self._begin_progress()
 
     def _picked_image(self) -> tuple[bool, Path | None]:
-        """Resolve the optional card image as ``(usable, path)``.
+        """Resolve the optional card picture as ``(usable, path)``.
 
-        An empty field and a broken pick must not be confused: ``(True, None)``
+        No picture and a broken pick must not be confused: ``(True, None)``
         = nothing picked, mine imageless; ``(True, path)`` = use it;
         ``(False, None)`` = the user picked something this pipeline cannot
         read, so the run is refused now instead of after mining the whole text.
         """
-        raw = self.image_selector.path_or_none()
-        if raw is None:
+        path = self._picture_path
+        if path is None:
             return True, None
-        # NEVER strip a path — trailing whitespace can be part of a real name.
-        path = Path(raw)
         if not validate_card_image(path):
-            self.log_widget.append_warning(
-                self.tr("That image cannot be read. Pick another, or clear the field to mine without one.")
+            self._report_refusal(
+                self.tr("That picture cannot be read. Pick another, or remove it to mine without one.")
             )
             return False, None
         return True, path
@@ -402,12 +461,15 @@ class ReadingTextTab(_ReadingMiningTabBase):
         """Seed the status label for the (single) started item."""
         if self._item_at(idx) is None:
             return
-        self.overall_progress_widget.set_status(self.tr("Mining pasted text…"))
+        status = self.tr("Mining pasted text…")
+        self.overall_progress_widget.set_status(status)
+        self._publish_reading_status(status)
 
     def _on_item_progress(self, idx: int, label: str) -> None:
         """Say what the run is doing. The bar counts finished items only."""
         if label:
             self.overall_progress_widget.set_status(label)
+            self._publish_reading_status(label)
 
     def _on_item_finished(self, idx: int, result: object, error: object, attempts: int) -> None:
         """Log the outcome and forward a success result to the presenter.
@@ -441,6 +503,7 @@ class ReadingTextTab(_ReadingMiningTabBase):
         # out of items in the run.
         done = sum(1 for i in self._run_items if i.status in (ReadyItemStatus.COMPLETED, ReadyItemStatus.ERROR))
         self.overall_progress_widget.set_composed(done, len(self._run_items))
+        self._publish_reading_done(done)
 
     def _on_queue_finished(self) -> None:
         """Single-item runs are already logged by ``_on_item_finished``."""
@@ -509,11 +572,11 @@ class ReadingTextTab(_ReadingMiningTabBase):
         """Refresh button state from the worker handle and the text edit.
 
         Pure derived state: a live run hides Mine and shows Cancel; idle shows
-        Mine, enabled only when non-blank text is present. The edit stays
-        usable mid-run (the ref snapshotted the text at Mine time).
+        Mine, always enabled, since a refusal (no text, an unreadable picture)
+        explains itself in the banner (A04). The edit stays usable mid-run (the
+        ref snapshotted the text at Mine time).
         """
         run_active = self.worker_thread is not None
-        has_text = bool(self.text_edit.toPlainText().strip())
         self.mine_button.setVisible(not run_active)
-        self.mine_button.setEnabled(not run_active and has_text)
+        self.mine_button.setEnabled(not run_active)  # A04: a refusal explains itself
         self.cancel_button.setVisible(run_active)

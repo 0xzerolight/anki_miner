@@ -24,7 +24,7 @@ from functools import partial
 from time import monotonic, time
 from typing import TYPE_CHECKING, cast
 
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import QCoreApplication, pyqtSignal
 from PyQt6.QtGui import QDragMoveEvent
 from PyQt6.QtWidgets import (
     QAbstractButton,
@@ -49,6 +49,7 @@ from anki_miner.gui.utils.run_off_thread import join_or_retain, run_off_thread, 
 from anki_miner.gui.utils.run_options import RunOptionsMixin
 from anki_miner.gui.widgets.base import (
     PageWidth,
+    ScreenIssue,
     ScreenIssueHost,
     TaskPublisherMixin,
     WorkflowActionBar,
@@ -102,6 +103,11 @@ _LEAKED_RUN_CLOSE_JOIN_MS = 2000
 # means a member is stuck in a socket read, and phase 3 then re-enters the same
 # fetcher alongside it (the log line says exactly that).
 _CURATION_PREFETCH_JOIN_MS = 3000
+
+#: The start of the English sentence ``services/_ankiconnect.py`` raises when
+#: AnkiConnect cannot be reached. Matched so the banner can say it in the
+#: user's language instead of "Mining failed." (A04).
+ANKI_UNREACHABLE_MARKER = "Cannot connect to AnkiConnect"
 
 
 class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidget):
@@ -284,6 +290,7 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         index = layout.indexOf(anchor)
         layout.insertWidget(index + 1 if index >= 0 else layout.count(), receipt)
         receipt.details_requested.connect(self._open_run_details)
+        receipt.show_in_anki_requested.connect(self._show_run_in_anki)
         self._receipt_widget = receipt
         self._receipt_noun = item_noun
         return receipt
@@ -328,6 +335,25 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
             action=action,
             worker=type(worker).__name__ if worker is not None else None,
         )
+
+    def _show_run_failure(self, details: str, summary: str = "") -> None:
+        """Explain a failed run in this screen's banner (A04).
+
+        The summary is a plain translated sentence; the raw error goes under
+        Details, as the ``ScreenIssue`` contract requires. A closed Anki gets its
+        own sentence because it is the most common first-run failure and the fix
+        is in the sentence.
+
+        Args:
+            details: The raw error text the run produced.
+            summary: The screen's own summary for other failures; empty means
+                the shared "Mining failed.".
+        """
+        if ANKI_UNREACHABLE_MARKER in details:
+            summary = QCoreApplication.translate("MiningTabBase", "Cannot connect to AnkiConnect. Is Anki running?")
+        elif not summary:
+            summary = QCoreApplication.translate("MiningTabBase", "Mining failed.")
+        self.show_screen_issue(ScreenIssue(summary=summary, details=details))
 
     def _begin_receipt(
         self,
@@ -500,6 +526,40 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
                     exc_info=None if isinstance(exc, AnkiMinerException) else exc,
                 )
 
+    def _show_run_in_anki(self, note_ids: list) -> None:
+        """Open Anki's card browser on this run's cards (D4). Off the GUI thread.
+
+        ``guiBrowse`` is one AnkiConnect call, but a closed Anki is a connect
+        timeout, and the window must not freeze for it. A failure is a banner
+        on this screen, never a modal (D24).
+        """
+        ids = [int(note_id) for note_id in note_ids]
+        if not ids:
+            return
+        from anki_miner.services.anki_service import AnkiService
+
+        try:
+            service = AnkiService(self.config)
+        except ValueError as exc:
+            self._report_show_in_anki_failure(str(exc))
+            return
+
+        def _on_error(message: str) -> None:
+            # bucket C: the screen can be gone by the time Anki answers.
+            with contextlib.suppress(RuntimeError):
+                self._report_show_in_anki_failure(message)
+
+        run_off_thread(self, partial(service.gui_browse_notes, ids), lambda _result: None, _on_error)
+
+    def _report_show_in_anki_failure(self, details: str) -> None:
+        """One banner for every way Show in Anki can fail; the raw text under Details."""
+        self.show_screen_issue(
+            ScreenIssue(
+                summary=QCoreApplication.translate("MiningTabBase", "Anki Miner couldn't open these cards in Anki."),
+                details=details,
+            )
+        )
+
     @staticmethod
     def _receipt_now() -> tuple[float, float]:
         """Return ``(monotonic, wall)`` now. Patched by tests to fix the clock."""
@@ -514,6 +574,10 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
     #: future subclass outside the D6 work can skip it. Every hook below is a
     #: no-op without a bar.
     action_bar: WorkflowActionBar | None = None
+    #: The bar's "Show review" button (A03), built on the first review.
+    _show_review_button: QAbstractButton | None = None
+    #: ``(stage_index, stage_total, stage_name)`` the run showed before a review.
+    _stage_before_review: tuple[int | None, int | None, str] | None = None
 
     def _install_action_bar(
         self,
@@ -566,6 +630,7 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         seconds_suffix: str,
         offset_tip: str,
         translation_tip: str,
+        trailing: tuple[QWidget, ...] = (),
     ) -> None:
         """Add the Subtitle Offset row and the hideable Translation Offset row to ``layout``.
 
@@ -574,6 +639,10 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         from ``config.subtitle_offset`` (see :meth:`_adopt_offset_config`); the
         translation offset starts at zero. The caller applies its own secondary
         gate afterwards.
+
+        Args:
+            trailing: Widgets placed after the offset spinbox on the same row
+                (Single's Test Timing and Audio track…, A05).
         """
         offset_layout = QHBoxLayout()
         offset_layout.setSpacing(SPACING.xs)
@@ -592,6 +661,8 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
 
         offset_layout.addWidget(label)
         offset_layout.addWidget(self.offset_spinbox)
+        for widget in trailing:
+            offset_layout.addWidget(widget)
         offset_layout.addStretch()
         layout.addLayout(offset_layout)
 
@@ -1271,6 +1342,7 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
             dialog.show()
             dialog.raise_()
             dialog.activateWindow()
+            self._begin_review_wait()
             self._curation_offered = len(words)
             # The single receipt that the curator actually reached the user, and
             # with what: a report of "it opened blank" is unreadable without
@@ -1286,6 +1358,10 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
                 presentation=presentation,
             )
         except Exception:  # noqa: BLE001 — bucket C: cleanup then unchanged failure reaches its owner.
+            # bucket C: undo a half-entered review so the bar never keeps a
+            # Show review button for a window that failed to appear.
+            with contextlib.suppress(RuntimeError):
+                self._end_review_wait()
             self._curation_pending_dialog = 0
             self._active_curation_dialog = None
             self._curation_result = None
@@ -1441,6 +1517,10 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         self._curation_pending_dialog = 0
         self._active_curation_dialog = None
         self._cancel_curation_prefetch()
+        # A03: the run is no longer waiting on the user. Suppressed: the
+        # destroyed fallback can land after this tab's own widgets are gone.
+        with contextlib.suppress(RuntimeError):
+            self._end_review_wait()
 
         selection: list | None = None
         if dialog is not None and code == QDialog.DialogCode.Accepted:
@@ -1543,6 +1623,84 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         and this is a no-op.
         """
         self._resolve_curation(None, presentation, QDialog.DialogCode.Rejected)
+
+    # ------------------------------------------------------------------
+    # Review wait (A03)
+    # ------------------------------------------------------------------
+
+    def _review_button(self) -> QAbstractButton:
+        """The pinned bar's "Show review" button, built once per screen."""
+        button = self._show_review_button
+        if button is None:
+            from anki_miner.gui.widgets.enhanced import ModernButton
+
+            button = ModernButton(QCoreApplication.translate("MiningTabBase", "Show review"), variant="secondary")
+            button.setToolTip(
+                QCoreApplication.translate("MiningTabBase", "Bring the Word Curator window to the front.")
+            )
+            button.clicked.connect(self._raise_curation_dialog)
+            button.hide()
+            self._show_review_button = button
+        return button
+
+    def _raise_curation_dialog(self) -> None:
+        """Bring the open curator back in front of the main window."""
+        dialog = self._active_curation_dialog
+        if dialog is None:
+            return
+        # bucket C: a deleted window has nothing to raise.
+        with contextlib.suppress(RuntimeError):
+            if dialog.isMinimized():
+                dialog.showNormal()
+            dialog.raise_()
+            dialog.activateWindow()
+
+    def _begin_review_wait(self) -> None:
+        """Tell every progress surface the run is waiting for the user (A03).
+
+        The stage name is what the pinned bar prints (it ignores ``detail``
+        while a stage is set). When the run had no stage (the queue screens),
+        index and total are written as 0, which the bar and the job strip
+        render as the bare name. The registry is also told, so the review is
+        never logged as a stalled task.
+        """
+        bar = self.action_bar
+        if bar is not None:
+            button = self._review_button()
+            others = tuple(b for b in bar.current_secondary() if b is not button)
+            bar.set_actions(bar.current_primary(), (button, *others))
+            button.show()
+        handle, registry = self._task_handle, self._task_registry
+        if handle is None or registry is None:
+            return
+        snapshot = registry.snapshot(handle.task_id)
+        if snapshot is None:
+            return
+        self._stage_before_review = (snapshot.stage_index, snapshot.stage_total, snapshot.stage_name)
+        handle.set_awaiting_user(True)
+        handle.stage(
+            index=snapshot.stage_index or 0,
+            total=snapshot.stage_total or 0,
+            name=QCoreApplication.translate("MiningTabBase", "Waiting for your word review"),
+        )
+
+    def _end_review_wait(self) -> None:
+        """Undo :meth:`_begin_review_wait`: the button goes, the stage comes back."""
+        bar = self.action_bar
+        button = self._show_review_button
+        if bar is not None and button is not None:
+            others = tuple(b for b in bar.current_secondary() if b is not button)
+            bar.set_actions(bar.current_primary(), others)
+            button.hide()
+        previous = self._stage_before_review
+        self._stage_before_review = None
+        handle = self._task_handle
+        if handle is None:
+            return
+        handle.set_awaiting_user(False)
+        if previous is not None:
+            index, total, name = previous
+            handle.stage(index=index or 0, total=total or 0, name=name)
 
     def shutdown(self) -> None:
         """Cancel any open curation dialog and poison the gate (OVH-003).

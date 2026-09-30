@@ -32,13 +32,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QT_TRANSLATE_NOOP, Qt
-from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QFont
+from PyQt6.QtGui import QDragEnterEvent, QDropEvent
 from PyQt6.QtWidgets import (
     QCheckBox,
     QFrame,
     QHBoxLayout,
     QLabel,
     QListWidget,
+    QListWidgetItem,
     QScrollArea,
     QSizePolicy,
     QVBoxLayout,
@@ -46,10 +47,11 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.capabilities import CapabilityTarget
-from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import file_dialogs, queue_state_store, session_state
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.qt_helpers import (
+    COPY_ROLE,
     configure_data_view,
     data_row_height,
     install_copy_rows,
@@ -57,8 +59,8 @@ from anki_miner.gui.utils.qt_helpers import (
 )
 from anki_miner.gui.utils.queue_state_store import QueueItemSnapshot, QueueSnapshot
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
-from anki_miner.gui.widgets.base import PageWidth, configure_card_layout
-from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
+from anki_miner.gui.widgets.base import PageWidth, configure_card_layout, page_filler
+from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.models import MiningOutcome, result_error_text
@@ -91,6 +93,12 @@ _VISIBLE_FILE_ROWS = 4
 # worker's identity-keyed skip channel (the worker iterates its own frozen
 # snapshot, not the live list).
 _ITEM_ROLE = Qt.ItemDataRole.UserRole
+
+# Item-data role holding each row's full path (A18). The row itself shows only
+# the file name; the path lives here, in the tooltip, and in COPY_ROLE so a
+# copied row still hands back the whole path. Above SORT_ROLE/COPY_ROLE
+# (UserRole + 1/+2) so the data-surface roles never collide with it.
+_PATH_ROLE = Qt.ItemDataRole.UserRole + 3
 
 
 class ReadingSubtitlesTab(_ReadingMiningTabBase):
@@ -179,14 +187,17 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         )
         layout.addWidget(self.review_words_checkbox)
 
-        # Single whole-run bar: per-file sweeps are composed into it
-        # ((files done + file pct) / total), so a season run reads as one
-        # continuous fill; the status label carries the active file + stage.
-        layout.addWidget(self._progress_header(self.tr("Progress")))
+        # D1: the pinned bar is the one progress surface; this widget is the
+        # run's hidden state holder and the receipt's anchor.
         self.overall_progress_widget = ProgressWidget()
+        self.overall_progress_widget.hide()
         layout.addWidget(self.overall_progress_widget)
         # The durable end state of this same card (D20).
         self._install_receipt(layout, self.overall_progress_widget, item_noun=self.tr("subtitle files"))
+        # Stands in for the file list while an empty list keeps it hidden, so
+        # the page's leftover height pools below the cards (same as the queues).
+        self.page_filler = page_filler()
+        layout.addWidget(self.page_filler)
 
         # LogWidget: own header + Copy/Clear actions; install_workflow_shell moves it into the Activity drawer (D6).
         self.log_widget = LogWidget(source=self.TASK_ID or type(self).__name__)
@@ -206,16 +217,6 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         )
         self.setLayout(main_layout)
 
-    def _progress_header(self, text: str) -> QLabel:
-        """Build a bold section-heading label for the progress bar."""
-        header = QLabel(text)
-        header.setObjectName("heading3")
-        font = QFont()
-        font.setPixelSize(FONT_SIZES.body)
-        font.setWeight(QFont.Weight.Bold)
-        header.setFont(font)
-        return header
-
     def _create_subtitles_card(self) -> QFrame:
         """Subtitles card: file list + Add/Remove/Clear + Mine/Cancel."""
         card = QFrame()
@@ -223,12 +224,15 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         card_layout = QVBoxLayout()
         configure_card_layout(card_layout)
 
-        card_layout.addWidget(SectionHeader(title=self.tr("Subtitle Files")))
-
         note = QLabel(self.tr("Mines subtitle files as text — no screenshots or audio extracted from video."))
         note.setObjectName("caption")
         note.setWordWrap(True)
         card_layout.addWidget(note)
+
+        # A18: an empty list is one line, not an empty box and two dead buttons.
+        self.empty_label = QLabel(self.tr("Add subtitle files, or drop them here."))
+        self.empty_label.setObjectName("helper-text")
+        card_layout.addWidget(self.empty_label)
 
         self.file_list = QListWidget()
         self.file_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
@@ -279,9 +283,23 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
     # ------------------------------------------------------------------
 
     def listed_paths(self) -> list[Path]:
-        """The listed subtitle files, in list order."""
-        items = (self.file_list.item(i) for i in range(self.file_list.count()))
-        return [Path(item.text()) for item in items if item is not None]
+        """The listed subtitle files, in list order (full paths, from ``_PATH_ROLE``)."""
+        paths: list[Path] = []
+        for row in range(self.file_list.count()):
+            item = self.file_list.item(row)
+            raw = item.data(_PATH_ROLE) if item is not None else None
+            if isinstance(raw, str) and raw:
+                paths.append(Path(raw))
+        return paths
+
+    def _append_path_row(self, path: Path) -> QListWidgetItem:
+        """Add one row showing the file name; the full path rides on the item (A18)."""
+        list_item = QListWidgetItem(path.name)
+        list_item.setToolTip(str(path))
+        list_item.setData(_PATH_ROLE, str(path))
+        list_item.setData(COPY_ROLE, str(path))
+        self.file_list.addItem(list_item)
+        return list_item
 
     # ------------------------------------------------------------------
     # Durable queue contents (D16-C)
@@ -355,10 +373,8 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
             elif row.status == queue_state_store.STATUS_ERROR:
                 item.status = ReadyItemStatus.ERROR
                 item.error_message = row.error
-            self.file_list.addItem(path_text)
-            list_item = self.file_list.item(self.file_list.count() - 1)
-            if list_item is not None:
-                list_item.setData(_ITEM_ROLE, item)
+            list_item = self._append_path_row(ref.path)
+            list_item.setData(_ITEM_ROLE, item)
             restored += 1
         self._recompute_buttons()
         return restored
@@ -371,7 +387,7 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
             if text in existing:
                 continue
             existing.add(text)
-            self.file_list.addItem(text)
+            self._append_path_row(path)
         self._recompute_buttons()
 
     def _on_add_files_clicked(self) -> None:
@@ -501,13 +517,15 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         """
         if self.worker_thread is not None:
             return
+        # A fresh attempt supersedes the last complaint (after the reentrancy guard).
+        self.clear_screen_issue()
         paths = self.listed_paths()
         if not paths:
-            self.log_widget.append_warning(self.tr("Add at least one subtitle file first."))
+            self._report_refusal(self.tr("Add at least one subtitle file first."))
             return
         missing = [p for p in paths if not p.is_file()]
         if missing:
-            self.log_widget.append_warning(tr_format(self.tr("File not found: %1"), str(missing[0])))
+            self._report_refusal(self.tr("A listed file no longer exists."), details=str(missing[0]))
             return
 
         items: list[ReadingQueueItem] = []
@@ -529,6 +547,9 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
             if list_item is not None and row_items:
                 list_item.setData(_ITEM_ROLE, row_items[0])
 
+        if not items:
+            self._report_refusal(self.tr("Every listed file has been mined. Add more files, or Clear the list."))
+            return
         if self._launch_run(items):
             self._begin_progress()
 
@@ -579,6 +600,7 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
             self._current_item_title = item.title
         # Status only — the composed whole-run bar never resets between files.
         self.overall_progress_widget.set_status(self._current_item_title)
+        self._publish_reading_status(self._current_item_title)
 
     def _on_item_progress(self, idx: int, label: str) -> None:
         """Say what the file is doing. The bar counts finished files only."""
@@ -592,6 +614,7 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
             status = title or None
         if status:
             self.overall_progress_widget.set_status(status)
+            self._publish_reading_status(status)
 
     def _on_item_finished(self, idx: int, result: object, error: object, attempts: int) -> None:
         """Log the outcome and forward a success result to the presenter.
@@ -637,6 +660,7 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         # as well, which is where the fabricated fraction came in.
         done = sum(1 for i in self._run_items if i.status in (ReadyItemStatus.COMPLETED, ReadyItemStatus.ERROR))
         self.overall_progress_widget.set_composed(done, len(self._run_items))
+        self._publish_reading_done(done)
 
     def _on_queue_finished(self) -> None:
         """Log the whole-run outcome for a multi-file run.
@@ -668,25 +692,28 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
     # ------------------------------------------------------------------
 
     def _recompute_buttons(self) -> None:
-        """Refresh button state from the worker handle and the file list.
+        """Refresh button and list state from the worker handle and the file list.
 
         Pure derived state: a live run hides Mine and shows Cancel; idle shows
-        Mine and hides Cancel. Add locks during a run (a new row would have no
-        queue item), but Remove/Clear stay enabled whenever the list is
-        non-empty — mid-run they drop rows through the worker's skip channel.
+        Mine, always enabled, since a refusal (empty list, vanished file,
+        nothing left to mine) explains itself in the banner (A04). Add locks
+        during a run (a new row would have no queue item), but Remove/Clear stay
+        enabled whenever the list is non-empty — mid-run they drop rows through
+        the worker's skip channel. An empty list shows one helper line instead
+        of the list and its two verbs (A18).
         """
         run_active = self.worker_thread is not None
         has_items = self.file_list.count() > 0
-        has_runnable_items = False
-        for row in range(self.file_list.count()):
-            list_item = self.file_list.item(row)
-            queue_item = list_item.data(_ITEM_ROLE) if list_item is not None else None
-            if not isinstance(queue_item, ReadingQueueItem) or queue_item.status is ReadyItemStatus.READY:
-                has_runnable_items = True
-                break
         self.mine_button.setVisible(not run_active)
-        self.mine_button.setEnabled(not run_active and (not has_items or has_runnable_items))
+        # A04: always offered while idle; a refusal explains itself in the banner.
+        self.mine_button.setEnabled(not run_active)
         self.cancel_button.setVisible(run_active)
         self.add_files_button.setEnabled(not run_active)
         self.remove_selected_button.setEnabled(has_items)
         self.clear_button.setEnabled(has_items)
+        # A18: the list and its two verbs appear with the first file.
+        self.empty_label.setVisible(not has_items)
+        self.file_list.setVisible(has_items)
+        self.remove_selected_button.setVisible(has_items)
+        self.clear_button.setVisible(has_items)
+        self.page_filler.setVisible(not has_items)

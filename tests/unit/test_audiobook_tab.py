@@ -98,12 +98,12 @@ def _add_pair(tab, tmp_path: Path, stem: str = "book"):
 
 
 class TestInitialState:
-    """Empty queue: Add enabled, all action buttons disabled."""
+    """Empty queue: Add and Mine enabled (A04: Mine explains a refusal), Clear disabled."""
 
     def test_empty_queue_buttons(self, tab):
         assert tab._queue.all_items() == []
         assert tab.add_button.isEnabled()
-        assert not tab.mine_button.isEnabled()
+        assert tab.mine_button.isEnabled()
         assert not tab.clear_button.isEnabled()
         assert tab.stop_button.isHidden()
         assert tab.worker_thread is None
@@ -159,7 +159,7 @@ class TestAddPair:
 
         assert tab._queue.all_items() == []
         assert tab.list_widget.count() == 0
-        assert "audio" in tab.log_widget.text_edit.toPlainText().lower()
+        assert tab.issue_banner().current_issue().summary == "That audio file no longer exists."
         # Pickers NOT cleared so the user can see/fix what they selected.
         assert tab.audio_selector.get_path() != ""
 
@@ -171,9 +171,7 @@ class TestAddPair:
         tab._on_add_clicked()
 
         assert tab._queue.all_items() == []
-        log = tab.log_widget.text_edit.toPlainText()
-        assert "Choose an audio file first." in log
-        assert "not found" not in log
+        assert tab.issue_banner().current_issue().summary == "Choose an audio file first."
 
     def test_add_no_subtitle_picked_says_choose_one(self, tab, tmp_path):
         audio, _ = _make_pair(tmp_path)
@@ -183,9 +181,7 @@ class TestAddPair:
         tab._on_add_clicked()
 
         assert tab._queue.all_items() == []
-        log = tab.log_widget.text_edit.toPlainText()
-        assert "Choose a subtitle file first." in log
-        assert "not found" not in log
+        assert tab.issue_banner().current_issue().summary == "Choose a subtitle file first."
 
     def test_add_missing_subtitle_rejected(self, tab, tmp_path):
         audio, _ = _make_pair(tmp_path)
@@ -195,7 +191,7 @@ class TestAddPair:
         tab._on_add_clicked()
 
         assert tab._queue.all_items() == []
-        assert "subtitle" in tab.log_widget.text_edit.toPlainText().lower()
+        assert tab.issue_banner().current_issue().summary == "That subtitle file no longer exists."
 
     def test_add_empty_paths_noop(self, tab):
         tab._on_add_clicked()
@@ -343,7 +339,6 @@ class TestRunStartup:
         assert not tab.clear_button.isEnabled()
         assert not tab.queue_controls.lock_label.isHidden()
         assert not tab.queue_controls.pause_button.isHidden()
-        assert not tab.queue_controls.finish_button.isHidden()
 
     def test_run_callback_follows_checkbox(self, tab, tmp_path):
         queue_cls = tab._queue_worker_cls
@@ -708,9 +703,9 @@ class TestWorkerFinished:
         tab._on_queue_finished()
         tab._on_worker_finished()
 
-        # No more READY items; Mine disabled, Add re-enabled, Stop hidden.
+        # No more READY items; Mine stays offered (A04), Add re-enabled, Stop hidden.
         assert tab.add_button.isEnabled()
-        assert not tab.mine_button.isEnabled()
+        assert tab.mine_button.isEnabled()
         assert tab.stop_button.isHidden()
         assert item.status == ReadyItemStatus.COMPLETED
 

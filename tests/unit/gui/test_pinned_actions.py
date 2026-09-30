@@ -5,12 +5,10 @@ because the property being defended is the same sentence on all of them: the
 button you press to start the job, the button you press to stop it, and the
 activity log are siblings of the scroll area, not children of it.
 
-The alternate launch action is checked here too: the Reading tabs' *Mine
-Folder* acts on a specific card's inputs, so it stays in that card;
-promoting it to the bar would put two run buttons on one screen with no way
-to tell which folder was meant. Batch's *Add to Queue* is checked for the
-same layout reason, though it is not itself a launch action -- it adds a row
-to the queue below, which the pinned *Process Queue* then runs.
+Batch's *Add to Queue* is checked here too: it is not itself a launch
+action -- it adds a row to the queue below, which the pinned *Mine Queue*
+then runs -- so it stays in its card. (Manga and Novels had a card-level
+*Mine Folder*; D7-B folded it into the one Mine.)
 """
 
 from __future__ import annotations
@@ -173,14 +171,6 @@ def test_batch_keeps_add_series_in_its_card(qtbot, test_config: AnkiMinerConfig)
     qtbot.addWidget(widget)
 
     assert _bar(widget) not in _ancestors(widget.add_series_button)
-
-
-@pytest.mark.parametrize("name", ["manga", "novels"])
-def test_reading_folder_runs_keep_mine_folder_in_their_card(qtbot, test_config: AnkiMinerConfig, name):
-    widget = _build(name, test_config)
-    qtbot.addWidget(widget)
-
-    assert _bar(widget) not in _ancestors(widget.folder_mine_button)
 
 
 @pytest.mark.parametrize("name", ["youtube", "audiobook"])

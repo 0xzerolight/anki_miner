@@ -4,6 +4,8 @@ Three surfaces now quote the same run: the strip above a queue, the status bar,
 and the mini job monitor. A third independent renderer is exactly the drift
 D14-B was chosen to prevent, so the sentences live in one module and the widgets
 only place them. These tests pin the two shapes and pin the widgets to them.
+Since D1 the queue strip states the run position instead, and places the
+detailed line only while a run is cancelling or has no item count.
 """
 
 from __future__ import annotations
@@ -77,11 +79,21 @@ class TestTheCompactLine:
 
 
 class TestEverySurfaceUsesThem:
-    def test_the_queue_strip_places_the_detailed_line(self, qtbot, registry):
+    def test_the_queue_strip_places_the_run_line(self, qtbot, registry):
+        """D1: the pinned bar prints the phase, so the strip states the run position."""
         strip = CurrentJobStrip()
         qtbot.addWidget(strip)
         handle = _running(registry)
         strip.bind(registry, handle.task_id, handle.run_token)
+
+        assert strip.line_label.full_text == "8 of 24 · 7 done · Elapsed 01:18"
+
+    def test_the_queue_strip_places_the_detailed_line_while_cancelling(self, qtbot, registry):
+        strip = CurrentJobStrip()
+        qtbot.addWidget(strip)
+        handle = _running(registry)
+        strip.bind(registry, handle.task_id, handle.run_token)
+        handle.cancelling(now=80.0)
 
         assert strip.line_label.full_text == format_task_line(registry.snapshot("queue.youtube"))
 

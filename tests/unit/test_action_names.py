@@ -3,8 +3,9 @@
 Two labels were describing something other than the thing they do:
 
 * **Undo** counted *cards* while deleting *notes*. ``AnkiService`` returns note
-  ids and ``ProcessingResult.card_ids`` holds them, so "Undo (42 cards)" on a
-  note type with two card templates offered to remove 42 and removed 84.
+  ids and ``ProcessingResult.card_ids`` holds them. D46-B made it say "notes";
+  the owner then chose "cards" in D20 item 5, the unit the rest of the app
+  counts in, so the wording is back to cards.
 * **Backfill** is jargon, and its **Scan** / **Apply** pair never said which of
   the two writes to the user's real collection — the read-only half and the
   destructive half were one word each and looked interchangeable.
@@ -43,19 +44,19 @@ def _result_with_notes(count: int) -> ProcessingResult:
     )
 
 
-class TestUndoCountsNotes:
-    """The unit shown must be the unit removed."""
+class TestUndoCountsCards:
+    """The Undo wording counts cards (D20 item 5 reopened D46-B)."""
 
     def test_the_button_counts_notes(self, qtbot):
         dialog = ResultsDialog(_result_with_notes(42), undo_callback=lambda ids: len(ids))
         qtbot.addWidget(dialog)
-        assert dialog._undo_button.text() == "Undo (42 notes)"
+        assert dialog._undo_button.text() == "Undo (42 cards)"
 
     def test_the_undone_label_counts_notes(self, qtbot):
         dialog = ResultsDialog(_result_with_notes(3), undo_callback=lambda ids: len(ids))
         qtbot.addWidget(dialog)
         dialog._on_undo_done(3)
-        assert dialog._undo_button.text() == "Undone (3 notes deleted)"
+        assert dialog._undo_button.text() == "Undone (3 cards deleted)"
 
     def test_a_failed_undo_restores_the_note_wording(self, qtbot, monkeypatch):
         monkeypatch.setattr(
@@ -65,14 +66,14 @@ class TestUndoCountsNotes:
         dialog = ResultsDialog(_result_with_notes(7), undo_callback=lambda ids: len(ids))
         qtbot.addWidget(dialog)
         dialog._on_undo_error("boom")
-        assert dialog._undo_button.text() == "Undo (7 notes)"
+        assert dialog._undo_button.text() == "Undo (7 cards)"
 
     def test_a_single_note_reads_in_the_singular(self, qtbot):
         dialog = ResultsDialog(_result_with_notes(1), undo_callback=lambda ids: len(ids))
         qtbot.addWidget(dialog)
-        assert dialog._undo_button.text() == "Undo (1 note)"
+        assert dialog._undo_button.text() == "Undo (1 card)"
         dialog._on_undo_done(1)
-        assert dialog._undo_button.text() == "Undone (1 note deleted)"
+        assert dialog._undo_button.text() == "Undone (1 card deleted)"
 
     def test_a_failed_undo_keeps_the_diagnostic_behind_details(self, qtbot, monkeypatch):
         """A8-34: the AnkiConnect text names causes the sentence cannot."""

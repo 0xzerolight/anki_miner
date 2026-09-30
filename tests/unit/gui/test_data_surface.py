@@ -256,7 +256,10 @@ class TestCuratorGeometryComesFromMetrics:
         )
         dialog = WordCurationDialog([word])
         qtbot.addWidget(dialog)
-        dialog.table.selectRow(0)
+        # The curator opens with row 0 selected (A06). No selectRow: with a
+        # Ctrl modifier left over from an earlier test it would toggle the row
+        # off again.
+        assert dialog.table.selectionModel().isRowSelected(0)
 
         _trigger_copy(dialog.table)
 

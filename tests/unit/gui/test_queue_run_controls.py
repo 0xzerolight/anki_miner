@@ -86,7 +86,6 @@ def test_run_end_unlocks_everything(audiobook_tab, tmp_path):
     assert tab.clear_button.isEnabled()
     assert tab.queue_controls.lock_label.isHidden()
     assert tab.queue_controls.pause_button.isHidden()
-    assert tab.queue_controls.finish_button.isHidden()
 
 
 # ---------------------------------------------------------------------------
@@ -134,19 +133,6 @@ def test_resume_continues_the_run(audiobook_tab, tmp_path):
     tab._on_run_resumed()
     assert tab.queue_controls.pause_button.text() == "Pause after current item"
     assert tab.queue_controls.lock_label.text() == "Queue locked while processing."
-
-
-def test_finish_current_then_stop_is_a_separate_quiet_control(audiobook_tab, tmp_path):
-    tab = audiobook_tab
-    add_audiobook(tab, tmp_path, "a")
-    tab._on_mine_clicked()
-    worker = tab.worker_thread
-
-    tab.queue_controls.finish_button.click()
-
-    worker.request_stop_after_current.assert_called_once_with()
-    worker.cancel.assert_not_called()
-    assert not tab.queue_controls.finish_button.isEnabled()
 
 
 def test_cancel_still_takes_no_prompt(audiobook_tab, tmp_path, monkeypatch):

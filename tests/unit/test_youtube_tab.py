@@ -1892,11 +1892,10 @@ class TestSubtitleSourceSweep:
 
 
 class TestPerRunSubtitleControls:
-    """The picker and the align checkbox: session-only, read on the GUI thread."""
+    """The subtitle picker: session-only, read on the GUI thread."""
 
     def test_defaults(self, tab):
         assert tab.subtitle_source_combo.currentData() == "auto"
-        assert tab.align_captions_checkbox.isChecked() is False
 
     def test_every_source_is_offered(self, tab):
         data = [tab.subtitle_source_combo.itemData(i) for i in range(tab.subtitle_source_combo.count())]
@@ -1905,15 +1904,6 @@ class TestPerRunSubtitleControls:
     def test_picker_change_reaches_the_add_flow(self, tab):
         tab.subtitle_source_combo.setCurrentIndex(tab.subtitle_source_combo.findData("transcribe"))
         assert tab._add_flow._subtitle_source == "transcribe"
-
-    def test_align_checkbox_reaches_the_worker(self, tab):
-        queue_cls = tab._queue_worker_cls
-        _add_ready_item(tab, "https://youtu.be/v1")
-        tab.align_captions_checkbox.setChecked(True)
-
-        tab._on_mine_clicked()
-
-        assert queue_cls.call_args.kwargs["align_captions"] is True
 
     def test_align_defaults_off_at_the_worker(self, tab):
         queue_cls = tab._queue_worker_cls
@@ -1928,7 +1918,6 @@ class TestPerRunSubtitleControls:
         tab._on_mine_clicked()
 
         assert tab.subtitle_source_combo.isEnabled() is False
-        assert tab.align_captions_checkbox.isEnabled() is False
 
     def test_controls_are_live_again_when_the_run_ends(self, tab):
         _add_ready_item(tab, "https://youtu.be/v1")
@@ -1937,7 +1926,6 @@ class TestPerRunSubtitleControls:
         tab._recompute_buttons()
 
         assert tab.subtitle_source_combo.isEnabled() is True
-        assert tab.align_captions_checkbox.isEnabled() is True
 
 
 class TestTranscriptionPreflight:
@@ -2154,7 +2142,6 @@ class TestLinkBoxMine:
         assert not tab.mine_button.isEnabled()
         assert not tab.stop_button.isHidden()
         assert tab.queue_controls.pause_button.isHidden()
-        assert tab.queue_controls.finish_button.isHidden()
 
     def test_run_starts_when_the_last_probe_lands(self, tab):
         tab.url_edit.setPlainText("https://youtu.be/aaaaaaaaaaa\nhttps://youtu.be/bbbbbbbbbbb")

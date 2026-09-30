@@ -89,8 +89,9 @@ def test_set_processing_item_complete_unknown_id_is_noop(panel):
 
 
 def test_update_stats_text(panel, tmp_path):
-    """Stats line reflects series/episode/card counts across rows."""
-    assert "empty" in panel.queue_stats_label.text().lower()
+    """The counter folds series, episodes and states into one line (A01)."""
+    assert panel.queue_controls.counter_label.isHidden()
+    assert not panel.empty_label.isHidden()
 
     w1 = _add_widget(panel, "A", "id-1")
     w1.set_episode_count(3)
@@ -98,17 +99,12 @@ def test_update_stats_text(panel, tmp_path):
     w2.set_episode_count(2)
     panel._update_stats()
 
-    text = panel.queue_stats_label.text()
-    assert "2 series" in text
-    assert "5 episodes" in text
-    assert "Ready to process" in text
+    assert panel.queue_controls.counter_label.text() == "2 series · 5 episodes · 2 ready"
 
-    # Once cards are created, the line switches to a cards-created summary.
     w1.set_status("complete")
     w1.set_cards_created(4)
-    panel.set_processing_item_complete("id-2", cards_created=0)  # refresh path
     panel._update_stats()
-    assert "4 cards created" in panel.queue_stats_label.text()
+    assert panel.queue_controls.counter_label.text() == "2 series · 5 episodes · 1 ready · 1 complete"
 
 
 def test_get_valid_pairs_and_incomplete_items(panel, tmp_path):
@@ -157,7 +153,7 @@ def test_clear_queue_empties_rows(panel, monkeypatch):
     panel._clear_queue()
 
     assert panel.item_count == 0
-    assert "empty" in panel.queue_stats_label.text().lower()
+    assert not panel.empty_label.isHidden()
 
 
 @pytest.mark.parametrize("cleared_selector", [0, 1], ids=["video", "subtitle"])
@@ -229,50 +225,12 @@ class TestImeSafeDialogs:
         assert not any(b.isDefault() or b.autoDefault() for b in buttons)
 
 
-class TestListMinHeightFitsCardRows:
-    """The list's minimum height is measured in card rows, not text lines.
+def test_the_list_keeps_six_rows_visible(panel):
+    from anki_miner.gui.widgets.base.sizing import metric_row_height
+    from anki_miner.gui.widgets.panels.queue_panel import _VISIBLE_QUEUE_ROWS
 
-    A batch queue row is a multi-line QueueItemWidget card (~150px), so a
-    minimum derived from ``metric_row_height`` (one text line) held less than
-    one card and clipped its Edit/Remove footer in short windows.
-    """
-
-    def _frame(self, panel) -> int:
-        return 2 * panel.list_widget.frameWidth()
-
-    def test_one_row_fits_fully(self, panel):
-        widget = _add_widget(panel, "JJK S1", "id-1")
-        hint = panel._list_items[id(widget)].sizeHint().height()
-
-        assert panel.list_widget.minimumHeight() >= hint + self._frame(panel)
-
-    def test_minimum_caps_at_three_cards(self, panel):
-        widgets = [_add_widget(panel, f"S{i}", f"id-{i}") for i in range(5)]
-        hints = [panel._list_items[id(w)].sizeHint().height() for w in widgets]
-
-        expected = sum(hints[:3]) + self._frame(panel)
-        assert panel.list_widget.minimumHeight() == expected
-        assert panel.list_widget.minimumHeight() < sum(hints) + self._frame(panel)
-
-    def test_all_rows_hidden_falls_back_to_text_floor(self, panel):
-        from anki_miner.gui.widgets.base.sizing import metric_row_height
-        from anki_miner.gui.widgets.panels.queue_panel import _VISIBLE_QUEUE_ROWS
-
-        _add_widget(panel, "JJK S1", "id-1")
-        panel._on_search_changed("no row matches this")
-
-        floor = _VISIBLE_QUEUE_ROWS * metric_row_height(panel.list_widget)
-        assert panel.list_widget.minimumHeight() == floor
-
-    def test_collapsing_a_row_shrinks_the_minimum(self, panel):
-        widget = _add_widget(panel, "JJK S1", "id-1")
-        expanded = panel.list_widget.minimumHeight()
-
-        widget.toggle_expanded()
-
-        collapsed = panel.list_widget.minimumHeight()
-        assert collapsed < expanded
-        assert collapsed >= panel._list_items[id(widget)].sizeHint().height() + self._frame(panel)
+    _add_widget(panel, "JJK S1", "id-1")
+    assert panel.list_widget.minimumHeight() == _VISIBLE_QUEUE_ROWS * metric_row_height(panel.list_widget)
 
 
 class TestClearOnAnEmptyQueue:
@@ -317,11 +275,11 @@ class TestSecondarySubtitleFolder:
         widget = QueueItemWidget(display_name="Show")
         qtbot.addWidget(widget)
         widget.set_folders(tmp_path / "v", tmp_path / "s")
-        assert "Translations" not in widget.stats_label.text()
+        assert "Translation folder" not in widget.toolTip()
 
         widget.secondary_folder = tmp_path / "t"
 
-        assert "Translations" in widget.stats_label.text()
+        assert "Translation folder" in widget.toolTip()
 
     def test_bind_writes_the_translation_folder_onto_the_item(self, panel, tmp_path):
         for name in ("v", "s", "t"):
@@ -395,7 +353,7 @@ class TestSecondarySubtitleFolder:
         assert item.secondary_folder == tmp_path / "t"
         assert item.secondary_offset == -0.5
 
-    def test_edit_counts_episodes_without_scanning_the_translation_folder(self, panel, monkeypatch, tmp_path):
+    def test_edit_counts_episodes_without_scanning_the_translation_folder(self, panel, qtbot, monkeypatch, tmp_path):
         """The count is the video/subtitle pairing's; the translation folder is
         the run's business, not a coverage line logged from a dialog."""
         from PyQt6.QtWidgets import QDialog
@@ -413,7 +371,7 @@ class TestSecondarySubtitleFolder:
 
         panel._edit_item(widget)
 
-        assert len(calls) == 1
+        qtbot.waitUntil(lambda: len(calls) == 1, timeout=5000)
         assert "secondary_folder" not in calls[0]
         assert widget.secondary_folder == tmp_path / "t"
 

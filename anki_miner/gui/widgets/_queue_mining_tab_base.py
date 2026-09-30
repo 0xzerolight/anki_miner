@@ -56,17 +56,16 @@ from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QKeySequence
-from PyQt6.QtWidgets import QBoxLayout, QFrame, QHBoxLayout, QListWidget, QListWidgetItem, QVBoxLayout
+from PyQt6.QtWidgets import QBoxLayout, QListWidget, QListWidgetItem
 
-from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.keyboard_shortcuts import scoped_shortcut
 from anki_miner.gui.utils.qt_helpers import configure_data_view, install_copy_rows
 from anki_miner.gui.utils.run_off_thread import join_or_retain, still_running
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
-from anki_miner.gui.widgets.base import configure_card_layout, page_filler
+from anki_miner.gui.widgets.base import page_filler
 from anki_miner.gui.widgets.base.sizing import metric_row_height
 from anki_miner.gui.widgets.current_job_strip import CurrentJobStrip
-from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
+from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.widgets.queue_controls_bar import QueueControlsBar
@@ -143,13 +142,12 @@ class _QueueListStrings:
     failed_see_log: str  # "Failed — see log"
     complete_succeeded: str  # "Complete — %1 succeeded"
     complete_with_failures: str  # "Complete — %1 succeeded, %2 failed"
-    # The run controls and Progress card built by _ListQueueMiningTabBase. Mine
-    # reuses _QueueRunStrings.mine_label; Cancel reuses stop_all above.
+    # The run controls built by _ListQueueMiningTabBase. Mine reuses
+    # _QueueRunStrings.mine_label; Cancel reuses stop_all above.
     mine_tip: str  # per tab: what Mine does on this screen
     clear: str  # "Clear"
     clear_tip: str  # "Remove every item from the queue."
     cancel_tip: str  # "Cancel the active run."
-    progress: str  # "Progress"
     item_noun: str  # the receipt's plural noun: "audiobooks" / "videos"
 
 
@@ -379,6 +377,7 @@ class _QueueMiningTabBase(MiningTabBase):
         """Run-level fatal: flag for the terminal bar state and log it."""
         self._run_failed = True
         self.log_widget.append_error(message)
+        self._show_run_failure(message)
         # Also to the application log: Activity is per-session and unexported,
         # so a run killed before its first item left no trace a report could
         # carry.
@@ -693,7 +692,8 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
     _row_widgets: dict[Any, Any]
     _list_items: dict[Any, QListWidgetItem]
     list_widget: QListWidget
-    empty_label: QLabel
+    # None on a screen whose input states the instruction itself (YouTube, A11).
+    empty_label: QLabel | None = None
     page_filler: QWidget
     #: AudiobookTab's Add button. YouTube has none: its Mine reads the link box.
     add_button: Any = None
@@ -753,7 +753,6 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         self.queue_controls.remove_selected.connect(self._on_remove_selected)
         self.queue_controls.pause_requested.connect(self._on_pause_requested)
         self.queue_controls.resume_requested.connect(self._on_resume_requested)
-        self.queue_controls.finish_current_requested.connect(self._on_finish_current_requested)
 
         # Scoped to the list itself: Delete and the Alt arrows must not fire
         # from the URL box or the file pickers on the same screen.
@@ -781,16 +780,14 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
     # UI construction
     # ------------------------------------------------------------------
 
-    def _build_queue_actions(self, queue_layout: QBoxLayout) -> None:
-        """Build Mine, Clear and Cancel, and put the Clear row at the foot of the queue card.
+    def _build_queue_actions(self) -> None:
+        """Build Mine, Clear and Cancel; Clear goes into the queue's tools row (A01).
 
-        Clear acts on the list right above it and stays with it. Mine and
-        Cancel are built here but placed by the subclass's
-        ``_install_action_bar`` call, which moves them to the pinned bar (D6).
+        Mine and Cancel are placed by the subclass's ``_install_action_bar``
+        call, which moves them to the pinned bar (D6). Call it after
+        ``queue_controls`` exists.
         """
         strings = self._queue_list_strings
-        button_row = QHBoxLayout()
-        button_row.setSpacing(SPACING.xs)
 
         self.mine_button = ModernButton(self._run_strings.mine_label, variant="primary")
         self.mine_button.setToolTip(strings.mine_tip)
@@ -799,38 +796,30 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         self.clear_button = ModernButton(strings.clear, variant="ghost")
         self.clear_button.setToolTip(strings.clear_tip)
         self.clear_button.clicked.connect(self._on_clear_clicked)
+        self.queue_controls.set_clear_button(self.clear_button)
 
         self.stop_button = ModernButton(strings.stop_all, variant="secondary")
         self.stop_button.setToolTip(strings.cancel_tip)
         self.stop_button.clicked.connect(self._on_stop_all_clicked)
 
-        button_row.addWidget(self.clear_button)
-        button_row.addStretch()
-        queue_layout.addLayout(button_row)
-
     def _build_progress_card(self, layout: QBoxLayout) -> None:
-        """Add the Progress card and the page filler to ``layout``; build the log widget.
+        """Add the hidden run-state widget, the receipt and the page filler; build the log.
 
-        The receipt is the durable end state of the same card (D20). The log
-        widget is not added here: ``install_workflow_shell`` moves it into the
-        Activity drawer (D6). The filler stands in for the queue list while an
-        empty queue keeps it hidden, so the page's leftover height pools below
-        the cards instead of inflating their headings; ``_recompute_buttons``
-        toggles it with the list.
+        D1: the pinned bar is the one live progress surface and the receipt is
+        the one result, so there is no Progress card any more. The widget stays
+        (hidden) as the run's state holder, and the receipt sits right after it
+        -- directly under the queue card. The log widget is not added here:
+        ``install_workflow_shell`` moves it into the Activity drawer (D6). The
+        filler stands in for the queue list while an empty queue keeps it
+        hidden, so the page's leftover height pools below the cards instead of
+        inflating their headings; ``_recompute_buttons`` toggles it with the
+        list.
         """
         strings = self._queue_list_strings
-        progress_card = QFrame()
-        progress_card.setObjectName("card")
-        progress_layout = QVBoxLayout()
-        configure_card_layout(progress_layout)
-
-        progress_layout.addWidget(SectionHeader(strings.progress))
         self.progress_widget = ProgressWidget()
-        progress_layout.addWidget(self.progress_widget)
-        self._install_receipt(progress_layout, self.progress_widget, item_noun=strings.item_noun)
-
-        progress_card.setLayout(progress_layout)
-        layout.addWidget(progress_card)
+        self.progress_widget.hide()
+        layout.addWidget(self.progress_widget)
+        self._install_receipt(layout, self.progress_widget, item_noun=strings.item_noun)
 
         self.log_widget = LogWidget(source=self._run_log_id())
 
@@ -917,21 +906,6 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
             return
         worker.resume()
 
-    def _on_finish_current_requested(self) -> None:
-        """Let the item being mined finish, then end the run.
-
-        Distinct from Cancel, which abandons the item in flight. Neither asks
-        for confirmation: D22 keeps one prompt-free verb for stopping, and this
-        is the quieter option beside it rather than a dialog on top of it.
-        """
-        self._log_run_control("finish_current")
-        worker = self.worker_thread
-        if worker is None:
-            return
-        worker.request_stop_after_current()
-        self.queue_controls.finish_button.setEnabled(False)
-        self.queue_controls.pause_button.setEnabled(False)
-
     def _on_run_paused(self) -> None:
         """Report where the run stopped, and offer to continue from there."""
         self.queue_controls.set_paused(
@@ -956,7 +930,7 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         if not line:
             return
         self.progress_widget.set_status(self._compose_item_status(line))
-        self._publish_task_position(self._join(getattr(self, "_current_item_name", ""), line))
+        self._publish_task_position(line)
 
     # ------------------------------------------------------------------
     # Per-item signal slots
@@ -1000,6 +974,8 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         )
         self.progress_widget.set_status(self._current_item_label)
         self._publish_task_position(self._current_item_name)
+        # A10: pausing after the last item would stop nothing.
+        self.queue_controls.set_pause_available(any(i.status == self._status_ready for i in self._run_items[idx + 1 :]))
         self._recompute_buttons()
 
     @staticmethod
@@ -1018,11 +994,12 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
 
         The bar counts finished items and moves only in :meth:`_on_item_finished`;
         within-item detail goes to the status line and to the task snapshot the
-        current-job strip renders. The strip prints the queue position itself, so
-        what it is given here is the item's name and its current phase.
+        current-job strip renders. The pinned bar prints the snapshot detail, so
+        what it is given here is the phase alone; the current-job strip states
+        the queue position (D1).
         """
         self.progress_widget.set_status(self._compose_item_status(label))
-        self._publish_task_position(self._join(getattr(self, "_current_item_name", ""), label))
+        self._publish_task_position(label)
 
     def _on_item_finished(self, idx: int, result: object, error: object, attempts: int) -> None:
         """Update the item with success/error and forward to the presenter."""
@@ -1213,6 +1190,7 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         the receipt describe without changing what actually gets mined (D29-A).
         """
         selected = self._selected_items()
+        self.queue_controls.set_selection_count(len(selected))
         run_active = self.worker_thread is not None
         runnable = any(i.status == self._status_ready for i in selected)
         retryable = any(self._is_retryable(i) for i in selected)
@@ -1403,7 +1381,7 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
 
         Run active → the whole queue is frozen (D29-A): Add, Mine, Clear and
         every selection verb grey out, reorder is refused, the lock badge and
-        the two boundary controls appear, and Stop is shown. Otherwise Add (when
+        Pause (while an item follows) appear, and Stop is shown. Otherwise Add (when
         the tab has one) is enabled; Mine iff a READY item exists; Clear iff the
         queue is non-empty; Stop hidden.
         """
@@ -1415,6 +1393,8 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         if self.add_button is not None:
             self.add_button.setEnabled(not run_active)
         self.mine_button.setEnabled(has_ready and not run_active)
+        # A09: while a run owns the queue, Cancel takes Mine's place in the bar.
+        self.mine_button.setVisible(not run_active)
         self.clear_button.setEnabled(has_items and not run_active)
         self.queue_controls.set_running(run_active)
 
@@ -1440,7 +1420,8 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         # also hands the page's surplus height back, and with nowhere to pool
         # that height would inflate the headings instead. All three move
         # together or none of them do.
-        self.empty_label.setVisible(not has_items)
+        if self.empty_label is not None:
+            self.empty_label.setVisible(not has_items)
         self.list_widget.setVisible(has_items)
         self.page_filler.setVisible(not has_items)
 

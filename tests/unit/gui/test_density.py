@@ -311,7 +311,7 @@ def quiet_show(monkeypatch):
     monkeypatch.setattr(AnalyticsTab, "refresh_data", lambda self, *a, **k: None)
 
 
-def test_the_mining_form_lost_height_without_losing_a_control(qtbot, test_config, font_scale):
+def test_the_mining_form_lost_height_without_losing_a_control(qtbot, test_config, font_scale, tmp_path):
     """The receipt for the whole task, on the app's flagship screen.
 
     The yardstick is the app's own ``WINDOW_MIN_HEIGHT``: this page used to
@@ -331,6 +331,11 @@ def test_the_mining_form_lost_height_without_losing_a_control(qtbot, test_config
     font_scale(1.0)
     tab = SingleEpisodeTab(config=test_config, presenter=MagicMock(), progress_callback=MagicMock())
     qtbot.addWidget(tab)
+    # A05: Card Source and Audio track… appear once a video is chosen, so
+    # measure the full form, with every control it can show.
+    video = tmp_path / "ep01.mkv"
+    video.touch()
+    tab.video_selector.set_path(str(video))
     tab.resize(1024, 700)
     tab.show()
     qtbot.waitExposed(tab)

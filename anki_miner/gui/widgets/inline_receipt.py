@@ -45,6 +45,8 @@ class InlineReceipt(QWidget):
     details_requested = pyqtSignal()
     #: The user dismissed the receipt. Not emitted when a new run clears it.
     dismissed = pyqtSignal()
+    #: The user asked to see this run's cards in Anki (D4). Carries the note ids.
+    show_in_anki_requested = pyqtSignal(list)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Build the receipt, hidden until a run finishes.
@@ -64,7 +66,7 @@ class InlineReceipt(QWidget):
 
     @property
     def summary_text(self) -> str:
-        """The exact line shown, and the exact line **Copy summary** copies."""
+        """The exact line shown; Copy summary (here, or in View details) copies it (D4)."""
         return self._summary
 
     @property
@@ -90,6 +92,12 @@ class InlineReceipt(QWidget):
         self._summary = self._render(receipt, item_noun)
         self.summary_label.setText(self._summary)
         self.details_button.setVisible(receipt.has_details)
+        # Only a run that added cards has anything to show (D4).
+        self.show_in_anki_button.setVisible(receipt.notes_added > 0 and bool(receipt.note_ids))
+        # D4 moved Copy summary into View details. A run with no details
+        # (every Batch run: its worker reports counts only) keeps it here,
+        # or its summary could not be copied at all.
+        self.copy_button.setVisible(not receipt.has_details)
         whitelist = receipt.whitelist
         self.copy_words_button.setVisible(whitelist is not None and bool(whitelist.missing))
         self.show()
@@ -141,6 +149,12 @@ class InlineReceipt(QWidget):
             return
         clipboard.setText(self._summary)
 
+    def _on_show_in_anki_clicked(self) -> None:
+        """Ask the owning screen to open Anki's browser on this run's cards."""
+        if self._receipt is None:
+            return
+        self.show_in_anki_requested.emit([int(note_id) for note_id in self._receipt.note_ids])
+
     def _on_copy_words_clicked(self) -> None:
         """Put the unmined whitelist words on the clipboard, one per line."""
         clipboard = QApplication.clipboard()
@@ -176,11 +190,20 @@ class InlineReceipt(QWidget):
         self.summary_label.setObjectName("run-receipt-line")
         layout.addWidget(self.summary_label, 1)
 
-        # All three are quiet: the run is over, so none of them is the task
+        # All of them are quiet: the run is over, so none of them is the task
         # action of the screen (D41).
         self.details_button = ModernButton(self.tr("View details"), variant="secondary")
         self.details_button.clicked.connect(self._on_details_clicked)
         layout.addWidget(self.details_button)
+
+        # D4: "where are my cards?" is answered in Anki itself. Copy summary
+        # moved into View details, beside the numbers it summarises; it stays
+        # on this line only for runs that have no View details.
+        self.show_in_anki_button = ModernButton(self.tr("Show in Anki"), variant="secondary")
+        self.show_in_anki_button.setToolTip(self.tr("Open Anki's card browser on the cards this run added."))
+        self.show_in_anki_button.clicked.connect(self._on_show_in_anki_clicked)
+        self.show_in_anki_button.setVisible(False)
+        layout.addWidget(self.show_in_anki_button)
 
         self.copy_button = ModernButton(self.tr("Copy summary"), variant="secondary")
         self.copy_button.clicked.connect(self._on_copy_clicked)

@@ -78,14 +78,14 @@ def test_binding_renders_the_running_task(qtbot, registry) -> None:
 
 
 def test_the_title_gives_way_to_what_the_run_is_doing(qtbot, registry) -> None:
-    """The card above already names the queue; the strip spends its width on the item."""
+    """The card above already names the queue; the strip spends its width on the run position (D1)."""
     strip = _strip(qtbot)
     handle = _start(registry)
     strip.bind(registry, handle.task_id, handle.run_token)
 
     handle.count(current=1, total=3, detail="Episode 2", now=1.0)
 
-    assert "Episode 2" in strip.line_label.full_text
+    assert strip.line_label.full_text == "2 of 3 · 1 done · Elapsed 00:01"
     assert "YouTube queue" not in strip.line_label.full_text
 
 
@@ -109,8 +109,7 @@ def test_counts_render_as_a_real_fraction(qtbot, registry) -> None:
     handle.count(current=3, total=10, detail="Episode 4", now=2.0)
 
     text = strip.line_label.full_text
-    assert "Episode 4" in text
-    assert "3 / 10" in text
+    assert text == "4 of 10 · 3 done · Elapsed 00:02"
 
 
 def test_elapsed_clock_is_shown(qtbot, registry) -> None:
@@ -254,7 +253,7 @@ def test_rebinding_to_a_second_run_switches_the_line(qtbot, registry) -> None:
     strip.bind(registry, second.task_id, second.run_token)
     second.count(current=1, total=9, detail="Something else", now=2.0)
 
-    assert "Something else" in strip.line_label.full_text
+    assert strip.line_label.full_text == "2 of 9 · 1 done · Elapsed 00:02"
 
 
 def test_strip_owns_no_worker(qtbot) -> None:

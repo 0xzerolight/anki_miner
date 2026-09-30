@@ -26,12 +26,13 @@ import logging
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QT_TRANSLATE_NOOP, Qt
-from PyQt6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDropEvent, QFont
+from PyQt6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDropEvent
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFrame,
     QGridLayout,
+    QHBoxLayout,
     QLabel,
     QScrollArea,
     QSizePolicy,
@@ -40,13 +41,13 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.capabilities import CapabilityTarget
-from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.qt_helpers import install_no_scroll_on_inputs, urls_from_event
 from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
-from anki_miner.gui.widgets.base import PageWidth, configure_card_layout, field_label_width
+from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, cap_row_field, configure_card_layout, field_label_width
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext
-from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
+from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.languages.registry import config_language, get_profile
@@ -112,7 +113,9 @@ class ReadingDeckTab(_ReadingMiningTabBase):
         self._deck_worker: SingleCallWorker | None = None
         self._deck_fetch_failed = False
         self._inspect_generation = 0
-        self._note_count = 0
+        # None until the picked deck has been read (an empty deck reads as 0).
+        self._note_count: int | None = None
+        self._deck_fetch_issue: ScreenIssue | None = None
         self._setup_ui()
         self._setup_drag_drop()
         self._recompute_buttons()
@@ -142,8 +145,10 @@ class ReadingDeckTab(_ReadingMiningTabBase):
         self.review_words_checkbox.setToolTip(self.tr("Show the word-selection popup before creating cards."))
         layout.addWidget(self.review_words_checkbox)
 
-        layout.addWidget(self._progress_header(self.tr("Progress")))
+        # D1: the pinned bar is the one progress surface; this widget is the
+        # run's hidden state holder and the receipt's anchor.
         self.overall_progress_widget = ProgressWidget()
+        self.overall_progress_widget.hide()
         layout.addWidget(self.overall_progress_widget)
         # The durable end state of this same card (D20). A run is one deck.
         self._install_receipt(layout, self.overall_progress_widget)
@@ -164,24 +169,12 @@ class ReadingDeckTab(_ReadingMiningTabBase):
         )
         self.setLayout(main_layout)
 
-    def _progress_header(self, text: str) -> QLabel:
-        """Build a bold section-heading label for the progress bar."""
-        header = QLabel(text)
-        header.setObjectName("heading3")
-        font = QFont()
-        font.setPixelSize(FONT_SIZES.body)
-        font.setWeight(QFont.Weight.Bold)
-        header.setFont(font)
-        return header
-
     def _create_deck_card(self) -> QFrame:
         """Deck card: deck picker, four field pickers, status line."""
         card = QFrame()
         card.setObjectName("card")
         card_layout = QVBoxLayout()
         configure_card_layout(card_layout)
-
-        card_layout.addWidget(SectionHeader(title=self.tr("Anki Deck")))
 
         note = QLabel(
             self.tr(
@@ -195,10 +188,10 @@ class ReadingDeckTab(_ReadingMiningTabBase):
 
         labels = (
             self.tr("Deck:"),
-            self.tr("Sentence field:"),
-            self.tr("Audio field:"),
-            self.tr("Picture field:"),
-            self.tr("Translation field:"),
+            self.tr("Sentence from:"),
+            self.tr("Audio from:"),
+            self.tr("Picture from:"),
+            self.tr("Translation from:"),
         )
         label_width = field_label_width(*labels)
 
@@ -222,25 +215,44 @@ class ReadingDeckTab(_ReadingMiningTabBase):
         self.translation_combo.setToolTip(self.tr("The field with the line's translation, if the deck has one."))
         self.sentence_combo.currentIndexChanged.connect(self._recompute_buttons)
 
-        grid = QGridLayout()
-        grid.setHorizontalSpacing(SPACING.sm)
-        grid.setVerticalSpacing(SPACING.xs)
-        combos = (self.deck_combo, self.sentence_combo, self.audio_combo, self.picture_combo, self.translation_combo)
-        for row, (text, combo) in enumerate(zip(labels, combos, strict=True)):
-            label = QLabel(text)
-            label.setObjectName("field-label")
-            label.setFixedWidth(label_width)
-            label.setBuddy(combo)
-            grid.addWidget(label, row, 0)
-            grid.addWidget(combo, row, 1)
-        grid.setColumnStretch(1, 1)
-        card_layout.addLayout(grid)
-        self._set_field_combos_enabled(False)
+        # A17: the deck comes first, on its own row, capped like every other
+        # field; the note count sits right under it.
+        deck_row = QHBoxLayout()
+        deck_row.setSpacing(SPACING.sm)
+        deck_label = QLabel(labels[0])
+        deck_label.setObjectName("field-label")
+        deck_label.setFixedWidth(label_width)
+        deck_label.setBuddy(self.deck_combo)
+        deck_row.addWidget(deck_label)
+        deck_row.addWidget(self.deck_combo)
+        cap_row_field(self.deck_combo, label_width, deck_row.spacing())
+        deck_row.addStretch()
+        card_layout.addLayout(deck_row)
 
         self.status_label = QLabel("")
         self.status_label.setObjectName("caption")
         self.status_label.setWordWrap(True)
         card_layout.addWidget(self.status_label)
+
+        # A17: the four source rows appear once the deck has been read, already
+        # filled by auto-detect (the override combos stay a locked design).
+        self.fields_widget = QWidget()
+        grid = QGridLayout(self.fields_widget)
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setHorizontalSpacing(SPACING.sm)
+        grid.setVerticalSpacing(SPACING.xs)
+        for row, (text, combo) in enumerate(zip(labels[1:], self._field_combos(), strict=True)):
+            label = QLabel(text)
+            label.setObjectName("field-label")
+            label.setFixedWidth(label_width)
+            label.setBuddy(combo)
+            grid.addWidget(label, row, 0)
+            grid.addWidget(combo, row, 1, Qt.AlignmentFlag.AlignLeft)
+            cap_row_field(combo, label_width, grid.horizontalSpacing())
+        grid.setColumnStretch(1, 1)
+        self.fields_widget.hide()
+        card_layout.addWidget(self.fields_widget)
+        self._set_field_combos_enabled(False)
 
         # Mine and Cancel live in the pinned bar (D6).
         self.mine_button = ModernButton(self.tr("Mine"), variant="primary")
@@ -307,11 +319,22 @@ class ReadingDeckTab(_ReadingMiningTabBase):
             # looking at; the run itself reports an unreachable Anki.
             if not listed:
                 self._deck_fetch_failed = True
-                self.status_label.setText(self.tr("Couldn't fetch deck names from Anki. Is Anki running?"))
+                # A17: nothing to pick from, so the picker is off and the
+                # banner says why.
+                self.deck_combo.setEnabled(False)
+                self._deck_fetch_issue = ScreenIssue(
+                    summary=self.tr("Couldn't fetch deck names from Anki. Is Anki running?")
+                )
+                self.show_screen_issue(self._deck_fetch_issue)
             return
         if self._deck_fetch_failed:
             self._deck_fetch_failed = False
-            self.status_label.setText("")
+            self.deck_combo.setEnabled(True)
+            banner = self.issue_banner()
+            # Only the complaint this fetch raised; anything else stays up.
+            if banner is not None and banner.current_issue() is self._deck_fetch_issue:
+                self.clear_screen_issue()
+            self._deck_fetch_issue = None
         if names == listed:
             return
         picked = self._selected_deck()
@@ -343,15 +366,17 @@ class ReadingDeckTab(_ReadingMiningTabBase):
 
     def _on_deck_changed(self, _index: int) -> None:
         self._inspect_generation += 1
-        self._note_count = 0
+        self._note_count = None
         for combo in self._field_combos():
             while combo.count() > 1:
                 combo.removeItem(combo.count() - 1)
             combo.setCurrentIndex(0)
         self._set_field_combos_enabled(False)
+        self.fields_widget.hide()
         self._recompute_buttons()
         deck = self._selected_deck()
         if deck is None:
+            self.status_label.setText("")
             return
         try:
             service = AnkiService(self.config)
@@ -388,6 +413,7 @@ class ReadingDeckTab(_ReadingMiningTabBase):
             index = combo.findText(pick, Qt.MatchFlag.MatchExactly) if pick else -1
             combo.setCurrentIndex(max(index, 0))
         self._set_field_combos_enabled(bool(inspection.field_names))
+        self.fields_widget.setVisible(bool(inspection.field_names))
         self._note_count = inspection.note_count
         if inspection.note_count == 0:
             self.status_label.setText(self.tr("The selected deck has no notes."))
@@ -418,10 +444,17 @@ class ReadingDeckTab(_ReadingMiningTabBase):
         """Mine the picked deck as one ephemeral queue item."""
         if self.worker_thread is not None:
             return
+        # A fresh attempt supersedes the last complaint (after the reentrancy guard).
+        self.clear_screen_issue()
         deck = self._selected_deck()
         fields = self._picked_fields()
+        # An empty deck is named before the field check: with no notes, the
+        # inspection finds no fields, so "pick its sentence field" would mislead.
+        if deck is not None and self._note_count == 0:
+            self._report_refusal(self.tr("The selected deck has no notes."))
+            return
         if deck is None or fields is None:
-            self.log_widget.append_warning(self.tr("Pick a deck and its sentence field first."))
+            self._report_refusal(self.tr("Pick a deck and its sentence field first."))
             return
         # Phase 3' copies deck media only into a mapped field; say so now rather
         # than let the run drop it quietly.
@@ -476,12 +509,15 @@ class ReadingDeckTab(_ReadingMiningTabBase):
         item = self._item_at(idx)
         if item is None:
             return
-        self.overall_progress_widget.set_status(tr_format(self.tr("Mining %1…"), item.title))
+        status = tr_format(self.tr("Mining %1…"), item.title)
+        self.overall_progress_widget.set_status(status)
+        self._publish_reading_status(status)
 
     def _on_item_progress(self, idx: int, label: str) -> None:
         """Say what the run is doing. The bar counts finished items only."""
         if label:
             self.overall_progress_widget.set_status(label)
+            self._publish_reading_status(label)
 
     def _on_item_finished(self, idx: int, result: object, error: object, attempts: int) -> None:
         """Log the outcome and forward a success result to the presenter.
@@ -511,6 +547,7 @@ class ReadingDeckTab(_ReadingMiningTabBase):
 
         done = sum(1 for i in self._run_items if i.status in (ReadyItemStatus.COMPLETED, ReadyItemStatus.ERROR))
         self.overall_progress_widget.set_composed(done, len(self._run_items))
+        self._publish_reading_done(done)
 
     def _on_queue_finished(self) -> None:
         """Single-item runs are already logged by ``_on_item_finished``."""
@@ -523,15 +560,19 @@ class ReadingDeckTab(_ReadingMiningTabBase):
         self._recompute_buttons()
 
     def _recompute_buttons(self) -> None:
-        """Refresh button state from the worker handle and the pickers."""
+        """Refresh button state from the worker handle.
+
+        Idle shows Mine, always enabled: a missing deck or sentence field, or an
+        empty deck, is refused in the banner when Mine is pressed (A04). A run
+        swaps Mine for Cancel.
+        """
         # Built before the buttons exist: the sentence combo's first signal can
         # fire during construction.
         if not hasattr(self, "mine_button"):
             return
         run_active = self.worker_thread is not None
-        ready = self._selected_deck() is not None and self._picked_fields() is not None and self._note_count > 0
         self.mine_button.setVisible(not run_active)
-        self.mine_button.setEnabled(not run_active and ready)
+        self.mine_button.setEnabled(not run_active)  # A04: a refusal explains itself
         self.cancel_button.setVisible(run_active)
 
     # ------------------------------------------------------------------

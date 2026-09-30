@@ -79,7 +79,7 @@ def test_failed_results_are_named_consistently_across_run_surfaces(tab, clock, t
 
     summary = _finish(tab, [failed, succeeded])
 
-    assert summary == "Finished with errors — 1 of 2 series completed; 2 notes added in 00m 00s"
+    assert summary == "Finished with errors — 1 of 2 series completed; 2 cards added in 00m 00s"
     assert tab.overall_progress_widget.status_label.text() == "Finished with errors — see log"
     assert tab._receipt_widget.receipt.outcome is TerminalOutcome.PARTIAL
     assert task_registry.snapshot(tab.TASK_ID).outcome is TaskOutcome.FAILED
@@ -91,7 +91,7 @@ def test_all_success_reads_as_a_complete_run(tab, clock):
 
     summary = _finish(tab, [r1, r2])
 
-    assert summary == "Mining complete — 2 series, 5 notes added in 00m 00s"
+    assert summary == "Mining complete — 2 series, 5 cards added in 00m 00s"
 
 
 def test_no_dialog_is_opened_on_the_queue_path(tab, clock):

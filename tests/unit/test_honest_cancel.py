@@ -202,7 +202,7 @@ def test_a_cancelled_batch_reports_its_cards_without_a_dialog(batch, monkeypatch
     summary = batch._receipt_widget.summary_label.text()
     assert "Cancelled" in summary
     assert "1 of 4 series" in summary
-    assert "7 notes added" in summary
+    assert "7 cards added" in summary
     assert "Complete" not in batch.overall_progress_widget.status_label.text()
 
 

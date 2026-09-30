@@ -5,7 +5,7 @@ click, shift-click takes a range, ``Ctrl+A`` selects all, ``Delete`` removes the
 selection, dragging or ``Alt+Up/Down`` reorders, and the shared
 :class:`~anki_miner.gui.widgets.queue_controls_bar.QueueControlsBar` supplies the
 filter chips, search, counter and selection actions the two list queues already
-had. The same bar carries the D29-A lock badge and the two boundary controls
+had. The same bar carries the D29-A lock badge and the Pause control
 while a run owns the queue.
 
 The queue *model* is not rebuilt for any of that. Rows bind to persistent
@@ -18,11 +18,13 @@ same object.
 
 from __future__ import annotations
 
+import contextlib
 import logging
+from functools import partial
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFont, QKeySequence
+from PyQt6.QtGui import QKeySequence
 from PyQt6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -33,54 +35,47 @@ from PyQt6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QMessageBox,
-    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
 
 from anki_miner.gui.constants import SUBTITLE_OFFSET_MAX, SUBTITLE_OFFSET_MIN
-from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.keyboard_shortcuts import (
     disown_default_buttons,
     primary_action_shortcut,
     scoped_shortcut,
 )
+from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import configure_card_layout, field_label_width
 from anki_miner.gui.widgets.base.sizing import metric_row_height
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.queue_controls_bar import QueueControlsBar
-from anki_miner.gui.widgets.queue_item_widget import QueueItemWidget
+from anki_miner.gui.widgets.queue_item_widget import STATUS_BUCKETS, QueueItemWidget
 from anki_miner.models.batch_queue import BatchQueue, QueueItem, QueueItemStatus
-from anki_miner.utils.file_pairing import is_same_folder
+from anki_miner.utils.file_pairing import FilePairMatcher, is_same_folder
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
-#: Text lines the empty-looking list still reserves when the filter or search
-#: hides every row. Measured in lines, not pixels, so it holds at 1.5x text.
+#: Text lines the list always shows before it scrolls. Batch rows are one line
+#: each (D2), so this is also six rows.
 _VISIBLE_QUEUE_ROWS = 6
 
-#: Card rows the list guarantees visible before it scrolls internally. A batch
-#: queue row is a multi-line QueueItemWidget card, not a text line, so the
-#: minimum is measured in whole cards: anything less clips a card's Edit/Remove
-#: footer once a short window compresses the list to its minimum.
-_VISIBLE_QUEUE_CARDS = 3
+#: Row status -> filter chip, shared with the row so both print the same word.
+_STATUS_BUCKETS = STATUS_BUCKETS
 
-#: Row status -> filter chip. The same four words the row badge prints, so the
-#: Failed chip selects exactly the rows reading "Failed".
-_STATUS_BUCKETS = {
-    "pending": "ready",
-    "processing": "running",
-    "error": "failed",
-    "complete": "complete",
-}
+
+def _episode_count(video: Path, subtitle: Path) -> int:
+    """How many episode pairs the two folders hold. Runs off the GUI thread."""
+    return len(FilePairMatcher.find_pairs_by_episode_number(video, subtitle))
 
 
 class QueuePanel(QFrame):
     """Multi-series queue management panel.
 
     Signals:
-        process_requested: Emitted when user wants to process queue
+        process_requested: Emitted when user wants to mine the queue
         empty_changed: Emitted with whether the queue is now empty. The panel
             hides its own list when it is; the page hosting the panel uses this
             to swap in whatever else takes that height.
@@ -127,16 +122,8 @@ class QueuePanel(QFrame):
         header = SectionHeader(title=self.tr("Multi-Series Queue"))
         layout.addWidget(header)
 
-        self.queue_stats_label = QLabel()
-        self.queue_stats_label.setObjectName("queue-stats")
-        stats_font = QFont()
-        stats_font.setPixelSize(FONT_SIZES.body_sm)
-        stats_font.setWeight(QFont.Weight.Medium)
-        self.queue_stats_label.setFont(stats_font)
-        self.queue_stats_label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
-        layout.addWidget(self.queue_stats_label)
-
         self.queue_controls = QueueControlsBar()
+        self.queue_controls.enable_edit_action()
         # Batch-only amendment to the shared bar's Run tooltip: this is the one
         # queue where selecting a finished row and running it mines it again, so
         # the YouTube and Audiobook bars must keep the plain wording.
@@ -145,22 +132,29 @@ class QueuePanel(QFrame):
         )
         layout.addWidget(self.queue_controls)
 
+        # A01: "Clear", not "Clear All", and in the tools row beside the counter.
+        self.clear_button = ModernButton(self.tr("Clear"), variant="ghost")
+        self.clear_button.clicked.connect(self._clear_queue)
+        self.clear_button.setToolTip(self.tr("Remove all items from queue"))
+        self.queue_controls.set_clear_button(self.clear_button)
+
         self.list_widget = QListWidget()
         self.list_widget.setObjectName("queue-list")
         layout.addWidget(self.list_widget)
 
+        # Replaces the old stats line's "Queue is empty" (A01): the counter
+        # only appears with the first row.
+        self.empty_label = QLabel(self.tr("Queue is empty"))
+        self.empty_label.setObjectName("helper-text")
+        layout.addWidget(self.empty_label)
+
         button_layout = QHBoxLayout()
         button_layout.setSpacing(SPACING.sm)
 
-        self.process_queue_button = ModernButton(self.tr("Process Queue"), variant="primary")
+        self.process_queue_button = ModernButton(self.tr("Mine Queue"), variant="primary")
         self.process_queue_button.clicked.connect(self.process_requested.emit)
-        self.process_queue_button.setToolTip(self.tr("Process all series in queue"))
+        self.process_queue_button.setToolTip(self.tr("Mine every series in the queue"))
         button_layout.addWidget(self.process_queue_button)
-
-        self.clear_button = ModernButton(self.tr("Clear All"), variant="ghost")
-        self.clear_button.clicked.connect(self._clear_queue)
-        self.clear_button.setToolTip(self.tr("Remove all items from queue"))
-        button_layout.addWidget(self.clear_button)
 
         button_layout.addStretch()
         layout.addLayout(button_layout)
@@ -193,6 +187,9 @@ class QueuePanel(QFrame):
         self.queue_controls.run_selected.connect(self.process_requested.emit)
         self.queue_controls.retry_selected.connect(self._retry_selected)
         self.queue_controls.remove_selected.connect(self._remove_selected)
+        self.queue_controls.edit_selected.connect(self._edit_selected)
+        # D2: a one-line row has nothing to expand, so double-click edits it.
+        self.list_widget.itemDoubleClicked.connect(self._on_row_double_clicked)
 
         # Scoped to the list: Delete and the Alt arrows must not fire from the
         # folder pickers or the offset spinbox on the same screen.
@@ -204,30 +201,8 @@ class QueuePanel(QFrame):
         )
 
     def _update_list_min_height(self) -> None:
-        """Size the list's minimum in whole visible cards, not text lines.
-
-        Sums the size hints of the first ``_VISIBLE_QUEUE_CARDS`` rows the
-        filter and search leave visible — the same hints ``register_widget``
-        and ``_resize_row`` maintain from each card's real ``sizeHint()``, so
-        collapsed rows count short and expanded rows tall. A text-line metric
-        here held less than one card and clipped its footer buttons whenever a
-        short window compressed the list to its minimum. Beyond the cap the
-        list scrolls internally; the Expanding size policy still grows it
-        further when the window has height to spare.
-        """
-        hints = [
-            item.sizeHint().height()
-            for widget in self.queue_item_widgets
-            if (item := self._list_items.get(id(widget))) is not None and not item.isHidden()
-        ]
-        if hints:
-            min_h = sum(hints[:_VISIBLE_QUEUE_CARDS]) + 2 * self.list_widget.frameWidth()
-        else:
-            # Filter/search hid every row: reserve a few text lines so the
-            # still-visible list doesn't collapse to nothing. (An empty queue
-            # hides the list entirely; see _update_stats.)
-            min_h = _VISIBLE_QUEUE_ROWS * metric_row_height(self.list_widget)
-        self.list_widget.setMinimumHeight(min_h)
+        """Keep six one-line rows visible before the list scrolls (D2)."""
+        self.list_widget.setMinimumHeight(_VISIBLE_QUEUE_ROWS * metric_row_height(self.list_widget))
 
     # ------------------------------------------------------------------
     # Rows
@@ -243,9 +218,6 @@ class QueuePanel(QFrame):
         list_item.setSizeHint(widget.sizeHint())
         self.list_widget.addItem(list_item)
         self.list_widget.setItemWidget(list_item, widget)
-        # The row expands and collapses; the list item does not learn that on
-        # its own, so a stale hint would clip the details it just opened.
-        widget.size_changed.connect(lambda w=widget: self._resize_row(w))
 
         self.queue_item_widgets.append(widget)
         self._list_items[id(widget)] = list_item
@@ -253,13 +225,6 @@ class QueuePanel(QFrame):
 
         list_item.setHidden(not self._row_visible(widget))
         self._update_stats()
-        self._update_list_min_height()
-
-    def _resize_row(self, widget: QueueItemWidget) -> None:
-        """Re-hint the list item after its row changed height."""
-        list_item = self._list_items.get(id(widget))
-        if list_item is not None:
-            list_item.setSizeHint(widget.sizeHint())
         self._update_list_min_height()
 
     def _bind_widget(self, widget: QueueItemWidget) -> QueueItem | None:
@@ -492,16 +457,9 @@ class QueuePanel(QFrame):
             # Translation fields — what every other missing-translation case does.
             secondary_folder = selected_secondary()
             widget.set_folders(video_folder, subtitle_folder, secondary_folder)
-
-            from anki_miner.utils.file_pairing import FilePairMatcher
-
-            try:
-                # The count is the video/subtitle pairing's alone; the
-                # translation folder never changes it and is scanned at run time.
-                pairs = FilePairMatcher.find_pairs_by_episode_number(video_folder, subtitle_folder)
-                widget.set_episode_count(len(pairs))
-            except Exception as e:
-                logger.warning("Failed to count episodes for %s: %s", widget.display_name, e)
+            # The count is the video/subtitle pairing's alone; the translation
+            # folder never changes it and is scanned at run time.
+            self._count_episodes(widget)
 
             widget.subtitle_offset = offset_spinbox.value()
             if self.secondary_subtitle_enabled:
@@ -510,12 +468,46 @@ class QueuePanel(QFrame):
             self._apply_view()
             self._update_stats()
 
+    def _count_episodes(self, widget: QueueItemWidget) -> None:
+        """Count the row's episode pairs off the GUI thread (A02).
+
+        A large folder can take a while to scan, so the row shows no count until
+        the answer arrives. The answer is dropped if the row was removed first.
+        """
+        video, subtitle = widget.get_folders()
+        if video is None or subtitle is None:
+            return
+
+        def _on_counted(result: object) -> None:
+            # bucket C: the panel can be gone by the time the scan answers.
+            with contextlib.suppress(RuntimeError):
+                if widget in self.queue_item_widgets and isinstance(result, int):
+                    widget.set_episode_count(result)
+                    self._update_stats()
+
+        def _on_error(message: str) -> None:
+            logger.warning("Episode count failed: series=%s error=%s", widget.display_name, message)
+
+        run_off_thread(self, partial(_episode_count, video, subtitle), _on_counted, _on_error)
+
+    def _on_row_double_clicked(self, list_item: QListWidgetItem) -> None:
+        """Double-click edits the row (D2); a one-line row has nothing to expand."""
+        widget = self._widget_at(list_item)
+        if widget is not None:
+            self._edit_item(widget)
+
+    def _edit_selected(self) -> None:
+        """The selection bar's Edit…: edit the one selected row."""
+        selected = self.selected_widgets()
+        if len(selected) == 1:
+            self._edit_item(selected[0])
+
     def _clear_queue(self) -> None:
         """Clear all items from the queue."""
         if self._locked:
             return
         if not self.queue_item_widgets:
-            # Clearing nothing changes nothing; the counter above already reads
+            # Clearing nothing changes nothing; the line below the bar already reads
             # "Queue is empty" (D24 keeps modals for destructive confirmation).
             return
 
@@ -591,6 +583,7 @@ class QueuePanel(QFrame):
         and the receipt describe without changing what actually gets mined.
         """
         selected = self.selected_widgets()
+        self.queue_controls.set_selection_count(len(selected))
         runnable = any(self._items.get(id(w)) is not None for w in selected)
         retryable = any(w.get_status() == "error" for w in selected)
         removable = any(w.get_status() != "processing" for w in selected)
@@ -598,6 +591,7 @@ class QueuePanel(QFrame):
             run=runnable and not self._locked,
             retry=retryable and not self._locked,
             remove=removable and not self._locked,
+            edit=len(selected) == 1 and not self._locked,
         )
 
     def _on_filter_changed(self, key: str) -> None:
@@ -640,6 +634,24 @@ class QueuePanel(QFrame):
             failed=buckets.count("failed"),
             complete=buckets.count("complete"),
         )
+        self.queue_controls.set_counter_text(self._counter_text(buckets))
+
+    def _counter_text(self, buckets: list[str]) -> str:
+        """The counter: "2 series · 5 episodes · 2 ready", plus failed/complete when any (A01)."""
+        series = len(self.queue_item_widgets)
+        episodes = sum(widget.get_episode_count() for widget in self.queue_item_widgets)
+        parts = [
+            self.tr("1 series") if series == 1 else tr_format(self.tr("%1 series"), series),
+            self.tr("1 episode") if episodes == 1 else tr_format(self.tr("%1 episodes"), episodes),
+            tr_format(self.tr("%1 ready"), buckets.count("ready")),
+        ]
+        failed = buckets.count("failed")
+        complete = buckets.count("complete")
+        if failed:
+            parts.append(tr_format(self.tr("%1 failed"), failed))
+        if complete:
+            parts.append(tr_format(self.tr("%1 complete"), complete))
+        return " · ".join(parts)
 
     def _remove_selected(self) -> None:
         """Drop the selected rows. A row being mined is left where it is."""
@@ -761,33 +773,14 @@ class QueuePanel(QFrame):
     # ------------------------------------------------------------------
 
     def _update_stats(self) -> None:
-        """Update the queue statistics display."""
-        series_count = len(self.queue_item_widgets)
-
-        total_episodes = 0
-        total_cards = 0
-        for widget in self.queue_item_widgets:
-            total_episodes += widget.get_episode_count()
-            total_cards += widget.get_cards_created()
-
-        if series_count == 0:
-            text = self.tr("Queue is empty")
-        elif total_cards > 0:
-            text = tr_format(
-                self.tr("%1 series - %2 episodes - %3 cards created"), series_count, total_episodes, total_cards
-            )
-        else:
-            text = tr_format(self.tr("%1 series - %2 episodes - Ready to process"), series_count, total_episodes)
-
-        self.queue_stats_label.setText(text)
+        """Refresh the counter, the empty line and the list's presence."""
         self._refresh_counts()
-
-        # An empty queue reserved six rows of nothing above a line saying the
-        # queue was empty. The list goes away instead and the line stands on its
-        # own. The panel owns the list, so it hides it; the page owns whatever
-        # takes the height that frees up, so it is told rather than reached into.
-        is_empty = series_count == 0
+        # An empty queue shows one line instead of an empty list. The panel owns
+        # the list, so it hides it; the page owns whatever takes the height
+        # that frees up, so it is told rather than reached into.
+        is_empty = not self.queue_item_widgets
         self.list_widget.setVisible(not is_empty)
+        self.empty_label.setVisible(is_empty)
         self.empty_changed.emit(is_empty)
 
     # === Public API ===
@@ -817,12 +810,11 @@ class QueuePanel(QFrame):
         if self._locked:
             return None
         widget = QueueItemWidget(display_name=display_name, parent=self.list_widget)
-        widget.removed.connect(lambda: self._remove_item(widget))
-        widget.edited.connect(lambda: self._edit_item(widget))
         widget.set_folders(video_folder, subtitle_folder, secondary_folder)
         widget.subtitle_offset = subtitle_offset
         widget.secondary_offset = secondary_offset
         self.register_widget(widget)
+        self._count_episodes(widget)
         return self._items.get(id(widget))
 
     def restore_item(
@@ -884,7 +876,7 @@ class QueuePanel(QFrame):
         return bool(bound) and all(w.get_status() == "complete" for w in bound)
 
     def runnable_items(self) -> list[QueueItem]:
-        """The bound, runnable rows a Process Queue click should mine.
+        """The bound, runnable rows a Mine Queue click should mine.
 
         The selection when there is one, in the order the list shows it;
         otherwise every runnable row. A run therefore mines exactly what the user
@@ -899,7 +891,7 @@ class QueuePanel(QFrame):
         known-words filter and ``allow_duplicate_cards`` (False by default) are
         what actually stop a second card for a word already in Anki. Without a
         selection the sweep is unchanged: a finished row is left finished, so
-        Process Queue never silently re-mines the whole cohort.
+        Mine Queue never silently re-mines the whole cohort.
         """
         selection = self.selected_widgets()
         chosen = selection or self.view_order()

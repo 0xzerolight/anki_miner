@@ -111,18 +111,15 @@ def test_a_batch_tab_built_from_an_on_config_opens_ticked(qtbot, test_config):
     assert tab.review_words_checkbox.isChecked() is True
 
 
-def test_the_youtube_caption_controls_reopen_where_they_were(wired_window):
+def test_the_youtube_caption_source_reopens_where_it_was(wired_window):
     window, _titles, _tabs = wired_window
     tab = _screen(window, "YouTubeTab")
 
-    tab.align_captions_checkbox.setChecked(True)
     tab.subtitle_source_combo.setCurrentIndex(tab.subtitle_source_combo.findData("captions"))
 
-    assert window.config.youtube_align_captions is True
     assert window.config.youtube_subtitle_source == "captions"
 
     tab.update_config(window.config)
-    assert tab.align_captions_checkbox.isChecked() is True
     assert tab.subtitle_source_combo.currentData() == "captions"
 
 

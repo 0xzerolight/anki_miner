@@ -18,17 +18,14 @@ from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.queue_item_widget import QueueItemWidget
 
 
-def test_error_status_renders_error_badge(qapp, qtbot):
-    """set_status('error') shows the Error badge with the 'error' style key."""
+def test_error_status_renders_the_failed_word(qapp, qtbot):
+    """set_status('error') reads Failed, the chips' word, never a Ready fallback."""
     widget = QueueItemWidget("Series")
     qtbot.addWidget(widget)
 
     widget.set_status("error")
 
-    assert widget.status_badge.text() == "Error"
-    assert widget.status_badge.property("status") == "error"
-    # Must NOT fall back to the Pending badge.
-    assert widget.status_badge.text() != "Pending"
+    assert widget.state_label.text() == "Failed"
 
 
 def test_complete_zero_card_row_never_says_ready(qapp, qtbot):
@@ -39,9 +36,9 @@ def test_complete_zero_card_row_never_says_ready(qapp, qtbot):
     widget.set_status("complete")
     widget.set_cards_created(0)
 
-    assert widget.status_badge.text() == "Complete"
-    assert widget.stats_label.text() == "2 episodes • 0 cards created"
-    assert "Ready" not in widget.stats_label.text()
+    assert widget.state_label.text() == "Complete"
+    assert widget.aside_label.text() == "2 episodes"
+    assert widget.result_label.text() == "Cards: 0"
 
 
 def test_on_item_failed_sets_error_status(qapp, qtbot, test_config):

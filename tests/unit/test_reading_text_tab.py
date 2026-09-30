@@ -58,39 +58,42 @@ def _mine(tab, text: str = "本文です。"):
 
 
 class TestInitialState:
-    """Idle tab: Mine visible but disabled on empty text, Cancel hidden."""
+    """Idle tab: Mine visible and offered (A04), Cancel hidden."""
 
     def test_buttons_idle(self, tab):
         assert not tab.mine_button.isHidden()
-        assert not tab.mine_button.isEnabled()  # empty edit
+        assert tab.mine_button.isEnabled()  # A04: an empty edit is refused in the banner
         assert tab.cancel_button.isHidden()
         assert tab.worker_thread is None
 
     def test_review_checkbox_default_unchecked(self, tab):
         assert tab.review_words_checkbox.isChecked() is False
 
-    def test_section_header_says_pasted_text(self, tab):
+    def test_no_section_header_repeats_the_tab(self, tab):
+        """A20: the sub-tab already says "Text"; the card has no heading."""
         from anki_miner.gui.widgets.enhanced import SectionHeader
 
-        headers = tab.findChildren(SectionHeader)
-        assert any(h.title_label.text() == "Pasted Text" for h in headers)
+        assert tab.findChildren(SectionHeader) == []
 
 
 class TestMineEnablement:
-    """Mine is derived from the text edit content."""
+    """Mine stays offered whatever the edit holds; a blank one is refused (A04)."""
 
     def test_text_enables_mine(self, tab):
         tab.text_edit.setPlainText("本文")
         assert tab.mine_button.isEnabled()
 
-    def test_clearing_disables_mine(self, tab):
+    def test_clearing_keeps_mine_offered(self, tab):
         tab.text_edit.setPlainText("本文")
         tab.text_edit.clear()
-        assert not tab.mine_button.isEnabled()
+        assert tab.mine_button.isEnabled()
 
-    def test_whitespace_only_keeps_mine_disabled(self, tab):
+    def test_whitespace_only_is_refused_in_the_banner(self, tab):
         tab.text_edit.setPlainText("   \n\t  ")
-        assert not tab.mine_button.isEnabled()
+        assert tab.mine_button.isEnabled()
+        tab._on_mine_clicked()
+        tab._queue_worker_cls.assert_not_called()
+        assert tab.issue_banner().current_issue().summary == "Paste some text first."
 
 
 class TestStartRun:
@@ -152,12 +155,12 @@ class TestStartRun:
 
 
 class TestCardImage:
-    """The optional picked image rides on the ref as ``image_root``."""
+    """The optional card picture rides on the ref as ``image_root``."""
 
     def test_picked_image_rides_on_the_ref(self, tab, tmp_path):
         picture = tmp_path / "shot.png"
         Image.new("RGB", (16, 16), "white").save(picture)
-        tab.image_selector.set_path(str(picture))
+        tab.set_card_picture(picture)
 
         _mine(tab, "今日は晴れ。")
 
@@ -172,21 +175,23 @@ class TestCardImage:
     def test_unreadable_image_refuses_the_run(self, tab, tmp_path):
         bogus = tmp_path / "broken.png"
         bogus.write_text("not an image")
-        tab.image_selector.set_path(str(bogus))
+        tab.set_card_picture(bogus)
 
         _mine(tab, "今日は晴れ。")
 
         tab._queue_worker_cls.assert_not_called()
         assert tab.worker_thread is None
-        assert "image" in tab.log_widget.text_edit.toPlainText().lower()
+        assert tab.issue_banner().current_issue().summary == (
+            "That picture cannot be read. Pick another, or remove it to mine without one."
+        )
 
     def test_missing_image_path_refuses_the_run(self, tab, tmp_path):
-        tab.image_selector.set_path(str(tmp_path / "gone.png"))
+        tab.set_card_picture(tmp_path / "gone.png")
         _mine(tab, "今日は晴れ。")
         tab._queue_worker_cls.assert_not_called()
         assert tab.worker_thread is None
 
-    def test_image_selector_does_not_gate_mine(self, tab):
+    def test_the_picture_does_not_gate_mine(self, tab):
         tab.text_edit.setPlainText("本文")
         assert tab.mine_button.isEnabled()  # the image is optional
 
@@ -195,15 +200,16 @@ class TestCardImage:
         tab.config = dataclasses.replace(tab.config, anki_fields={**tab.config.anki_fields, "picture": ""})
         picture = tmp_path / "shot.png"
         Image.new("RGB", (16, 16), "white").save(picture)
-        tab.image_selector.set_path(str(picture))
+        tab.set_card_picture(picture)
 
         _mine(tab, "今日は晴れ。")
 
         tab._queue_worker_cls.assert_not_called()
         assert tab.worker_thread is None
-        log_text = tab.log_widget.text_edit.toPlainText()
-        assert "Settings" in log_text
-        assert "Anki" in log_text
+        assert tab.issue_banner().current_issue().summary == (
+            "This card picture has no Picture field to land in. Map one"
+            " in Settings → Cards & Anki, or remove the picture."
+        )
 
     def test_no_image_picked_unmapped_picture_does_not_gate(self, tab):
         """Absence stays optional: no picked image never trips the mapping gate."""

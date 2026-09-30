@@ -71,6 +71,7 @@ from PyQt6.QtCore import QCoreApplication
 from anki_miner.exceptions import SetupError
 from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.widgets._queue_mining_tab_base import _QueueMiningTabBase, _QueueRunStrings
+from anki_miner.gui.widgets.base import ScreenIssue
 from anki_miner.gui.workers.reading_queue_worker import ReadingQueueWorker
 from anki_miner.models import MiningOutcome, TerminalOutcome, classify_result, classify_terminal_outcome
 from anki_miner.models.mining_queue import ReadyItemStatus
@@ -78,9 +79,10 @@ from anki_miner.services.reading import detector
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
-    from PyQt6.QtWidgets import QWidget
+    from PyQt6.QtWidgets import QAbstractButton, QBoxLayout, QScrollArea, QWidget
 
     from anki_miner.config import AnkiMinerConfig
+    from anki_miner.gui.widgets.base import PageWidth, WorkflowActionBar
     from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext
     from anki_miner.gui.workers._queue_worker_base import SequentialQueueWorker
     from anki_miner.interfaces.presenter import PresenterProtocol
@@ -186,8 +188,8 @@ class _ReadingMiningTabBase(_QueueMiningTabBase):
         """Classify *path*, reporting any failure.
 
         Shared by the reading sub-tabs (manga folder / novel file / book
-        folder): a ``SetupError`` carries a crafted, user-facing message and is
-        surfaced verbatim; any other failure is logged and shown type-prefixed.
+        folder): either way the screen banner says "Anki Miner can't mine this
+        file." and the reason goes under Details and into Activity (A04).
         Returns the detected refs on success, or ``None`` when detection failed
         (the caller then aborts the Mine without starting a run).
 
@@ -200,11 +202,11 @@ class _ReadingMiningTabBase(_QueueMiningTabBase):
         try:
             return (detect_fn or detector.detect)(path)
         except SetupError as exc:
-            self.log_widget.append_error(str(exc))
+            self._report_unmineable(str(exc))
             return None
-        except Exception as exc:  # noqa: BLE001 - surface any classify failure to the log
+        except Exception as exc:  # noqa: BLE001 - surface any classify failure to the screen
             logger.exception("Reading source detect failed for %s", path)
-            self.log_widget.append_error(
+            self._report_unmineable(
                 tr_format(QCoreApplication.translate("ReadingTab", "Could not process %1: %2"), path.name, exc)
             )
             return None
@@ -241,6 +243,65 @@ class _ReadingMiningTabBase(_QueueMiningTabBase):
         # Told to the registry from the same place, so the pinned bar's clock
         # keeps running and the wait can name what it is waiting on (D22).
         self._publish_task_cancelling()
+
+    # ------------------------------------------------------------------
+    # Screen banner (A04) and pinned-bar progress (D1)
+    # ------------------------------------------------------------------
+
+    def _install_action_bar(
+        self,
+        layout: QBoxLayout,
+        scroll: QScrollArea,
+        content: QWidget,
+        kind: PageWidth,
+        *,
+        primary: QAbstractButton | None,
+        secondary: tuple[QAbstractButton, ...] = (),
+        log: QWidget | None = None,
+    ) -> WorkflowActionBar:
+        """Frame the page and put the screen banner above it (A04).
+
+        Every Reading sub-tab builds its shell through here, so the banner is
+        installed once for all five rather than per tab.
+        """
+        bar = super()._install_action_bar(layout, scroll, content, kind, primary=primary, secondary=secondary, log=log)
+        self.install_issue_banner(layout)
+        return bar
+
+    def _report_refusal(self, summary: str, details: str = "") -> None:
+        """Say why Mine did nothing: in the banner, and in Activity as before (A04).
+
+        Args:
+            summary: The translated sentence, from the calling tab's own context.
+            details: Raw detail (a path, say) shown only under Details.
+        """
+        self.log_widget.append_warning(summary)
+        self.show_screen_issue(ScreenIssue(summary=summary, details=details))
+
+    def _report_unmineable(self, details: str) -> None:
+        """The detector refused the pick: one plain sentence, its reason under Details (A04)."""
+        self.log_widget.append_error(details)
+        self.show_screen_issue(
+            ScreenIssue(
+                summary=QCoreApplication.translate("ReadingTab", "Anki Miner can't mine this file."),
+                details=details,
+            )
+        )
+
+    def _publish_reading_status(self, status: str) -> None:
+        """Mirror the run's status line into the pinned bar (D1).
+
+        Reading runs used to publish nothing, so the bar said only "Text
+        mining" while the (now hidden) page bar told the story.
+        """
+        self._publish_task_detail(status)
+
+    def _publish_reading_done(self, done: int) -> None:
+        """Report how many items finished, keeping the words the bar is showing (D1)."""
+        registry, handle = self._task_registry, self._task_handle
+        snapshot = registry.snapshot(handle.task_id) if registry is not None and handle is not None else None
+        detail = snapshot.detail if snapshot is not None else ""
+        self._publish_task_count(done, len(self._run_items) or None, detail)
 
     def _apply_terminal_bar_state(self, widget) -> None:
         """Set the run's terminal bar state: cancel -> partial -> failed -> success.

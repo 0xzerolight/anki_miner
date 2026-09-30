@@ -6,12 +6,11 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PyQt6.QtGui import QFont, QKeySequence
+from PyQt6.QtGui import QKeySequence
 from PyQt6.QtWidgets import (
     QCheckBox,
     QFrame,
     QHBoxLayout,
-    QLabel,
     QScrollArea,
     QSizePolicy,
     QVBoxLayout,
@@ -21,7 +20,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
-from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import queue_state_store, result_copy
 from anki_miner.gui.utils.keyboard_shortcuts import scoped_shortcut
 from anki_miner.gui.utils.queue_state_store import QueueItemSnapshot, QueueSnapshot
@@ -101,7 +100,7 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         self._run_terminal_ids: set[str] = set()
         self._current_item_label = ""
         # The exact series the next queue run will mine, snapshotted from the
-        # panel when Process Queue is pressed.
+        # panel when Mine Queue is pressed.
         self._run_selection: list = []
 
         # Initialize batch queue
@@ -144,7 +143,6 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         self.queue_panel.process_requested.connect(self._process_queue)
         self.queue_panel.queue_controls.pause_requested.connect(self._on_pause_requested)
         self.queue_panel.queue_controls.resume_requested.connect(self._on_resume_requested)
-        self.queue_panel.queue_controls.finish_current_requested.connect(self._on_finish_current_requested)
         self.queue_panel.empty_changed.connect(self._on_queue_empty_changed)
         # No stretch factor: the panel's own list makes it expand while there is
         # something to show. A stretch would keep the panel expanding even after
@@ -159,26 +157,14 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         self.review_words_checkbox.setToolTip(self.tr("Pick which words get cards, once per series."))
         layout.addWidget(self.review_words_checkbox)
 
-        # Overall Progress (for queue processing)
-        overall_progress_header = QLabel(self.tr("Overall Progress"))
-        overall_progress_header.setObjectName("heading3")
-        font = QFont()
-        font.setPixelSize(FONT_SIZES.body)
-        font.setWeight(QFont.Weight.Bold)
-        overall_progress_header.setFont(font)
-        layout.addWidget(overall_progress_header)
-
+        # D1: progress is shown once, in the pinned bar. The widget stays,
+        # hidden, as the run's state holder and the receipt's anchor.
         self.overall_progress_widget = ProgressWidget()
+        self.overall_progress_widget.hide()
         layout.addWidget(self.overall_progress_widget)
         # The durable end state of this same card (D20). The noun ("series")
         # is set per run at _begin_receipt.
         self._install_receipt(layout, self.overall_progress_widget)
-
-        # Retry Failed button (hidden by default)
-        self.retry_button = ModernButton(self.tr("Retry Failed"), variant="secondary")
-        self.retry_button.setVisible(False)
-        self.retry_button.clicked.connect(self._retry_failed_items)
-        layout.addWidget(self.retry_button)
 
         # Log widget; install_workflow_shell moves it into the Activity drawer (D6).
         self.log_widget = LogWidget(source=self.TASK_ID or type(self).__name__)
@@ -197,7 +183,7 @@ class BatchProcessingTab(FolderSeriesScreenBase):
 
         container.setLayout(layout)
 
-        # Scroll, Activity drawer, pinned bar (D6). Process Queue is the run
+        # Scroll, Activity drawer, pinned bar (D6). Mine Queue is the run
         # this screen is for, so it is the pinned action; Add to Queue stays
         # in its own card with the folders it reads.
         main_layout = QVBoxLayout()
@@ -221,7 +207,7 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         """Set up tab-specific keyboard shortcuts.
 
         Ctrl+Enter is installed by ``_install_action_bar``, which routes it
-        through the queue's own Process Queue button; the copy that used to live
+        through the queue's own Mine Queue button; the copy that used to live
         here called ``_process_queue`` directly, so it ignored whether the button
         was enabled and could start a second run over a first.
         """
@@ -499,9 +485,7 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         # back-to-back-mining freeze: leaked sqlite/Session handles).
         self._teardown_previous_run("batch")
 
-        # The panel's snapshot when Process Queue supplied one; otherwise every
-        # pending row, which is what Retry Failed hands over after resetting
-        # them. Either way the worker is told exactly what it will mine.
+        # The panel's snapshot from Mine Queue; the pending rows are a fallback for a caller that set none.
         items = self._run_selection or [
             item for item in self.batch_queue.get_all_items() if item.status == QueueItemStatus.PENDING
         ]
@@ -564,7 +548,7 @@ class BatchProcessingTab(FolderSeriesScreenBase):
             self._on_run_thread_finished()
 
     def _empty_run_summary(self) -> str:
-        """Why a Process Queue click found nothing to mine."""
+        """Why a Mine Queue click found nothing to mine."""
         if self.queue_panel.has_only_completed_rows():
             return self.tr("Every series is already complete. Select rows, then Run selected.")
         return self.tr("No valid series in the queue to process.")
@@ -626,6 +610,7 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         self.cancel_button.setText(self.tr("Cancel"))
         self.cancel_button.setEnabled(True)
         self.cancel_button.show()
+        self.queue_panel.process_queue_button.hide()  # A09: Cancel takes the primary's place
         self.queue_panel.set_buttons_enabled(False)
         # D29-A: the list is frozen for the duration, so the progress numbers,
         # the lock state and the receipt all describe the same set of series.
@@ -635,6 +620,7 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         """Restore normal button state after processing ends."""
         self._is_processing = False
         self.cancel_button.hide()
+        self.queue_panel.process_queue_button.show()
         self.add_series_button.show()
         self._set_buttons_enabled(True)
         self.queue_panel.set_locked(False)
@@ -671,8 +657,7 @@ class BatchProcessingTab(FolderSeriesScreenBase):
     def _boundary_worker(self) -> BatchQueueWorkerThread | None:
         """The active queue worker, or None when nothing is running.
 
-        Boundaries (pause, finish-current) land only between whole series,
-        never mid-run inside one.
+        Pause lands only between whole series, never mid-run inside one.
         """
         worker = self.worker_thread
         from anki_miner.gui.workers.batch_queue_worker import BatchQueueWorkerThread as _QueueWorker
@@ -702,19 +687,6 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         if worker is not None:
             worker.resume()
 
-    def _on_finish_current_requested(self) -> None:
-        """Let the series being mined finish, then end the run.
-
-        Distinct from Cancel, which abandons the series in flight. Neither asks
-        for confirmation (D22, D24).
-        """
-        worker = self._boundary_worker()
-        if worker is None:
-            return
-        worker.request_stop_after_current()
-        self.queue_panel.queue_controls.finish_button.setEnabled(False)
-        self.queue_panel.queue_controls.pause_button.setEnabled(False)
-
     def _on_run_paused(self) -> None:
         """Report where the run stopped, and offer to continue from there."""
         self.queue_panel.queue_controls.set_paused(True, done=self._items_done, total=self._items_total)
@@ -738,6 +710,7 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         """Run-level fatal from the queue worker: flag it and surface it."""
         self._run_failed = True
         self.presenter.show_error(message)
+        self._show_run_failure(message)
 
     def _on_queue_started(self, total_items: int) -> None:
         """Called when queue processing starts.
@@ -766,6 +739,9 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         )
         self.overall_progress_widget.set_status(self._current_item_label)
         self.queue_panel.set_item_status(item_id, "processing")
+        # A10: the series being mined is number _items_done + 1; pausing after
+        # the last one would stop nothing.
+        self.queue_panel.queue_controls.set_pause_available(self._items_done + 1 < self._items_total)
 
     def _on_item_completed(self, item_id: str, cards_created: int) -> None:
         """Called when an item completes successfully.
@@ -887,13 +863,6 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         for item in self.batch_queue.get_all_items():
             self.queue_panel.set_item_status(item.id, _status_text[item.status])
 
-        # Show retry button if there are failed items that can be retried
-        has_retryable = any(
-            item.status == QueueItemStatus.ERROR and item.retry_count < item.max_retries
-            for item in self.batch_queue.get_all_items()
-        )
-        self.retry_button.setVisible(has_retryable)
-
     # ------------------------------------------------------------------
     # Durable queue contents (D16-C)
     # ------------------------------------------------------------------
@@ -936,7 +905,7 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         """Rebuild the series queue from ``snapshot``; return the row count.
 
         A row that was mid-run comes back as an error saying so, which is what
-        keeps it out of the next Process Queue: only the user pressing Retry
+        keeps it out of the next Mine Queue: only the user pressing Retry
         turns it back into a pending row.
         """
         if self._is_processing or self.batch_queue.get_all_items():
@@ -981,30 +950,6 @@ class BatchProcessingTab(FolderSeriesScreenBase):
             restored += 1
         self.queue_panel.update_stats()
         return restored
-
-    def _retry_failed_items(self) -> None:
-        """Retry failed items in the batch queue."""
-        if self._is_processing:
-            return
-
-        reset_count = self.batch_queue.reset_failed_for_retry()
-        if reset_count == 0:
-            # Nothing to retry is not a failure and not a change: the button
-            # hides itself on the next line, which is the whole answer (D24).
-            self.retry_button.setVisible(False)
-            return
-
-        # Hide retry button and start processing. Use _show_cancel_state()
-        # (not just _set_buttons_enabled(False)) so the Cancel button is
-        # surfaced for the retry run, matching _process_queue — otherwise the
-        # retry run is uncancellable (T-22).
-        self.retry_button.setVisible(False)
-        self._is_processing = True
-        self._begin_run()
-        self._show_cancel_state()
-
-        self.presenter.show_info(tr_format(self.tr("Retrying %1 failed items..."), reset_count))
-        self._start_queue_worker()
 
     def _compose_status(self, item_description: str) -> str | None:
         """Glue the persistent item prefix onto the stage detail.

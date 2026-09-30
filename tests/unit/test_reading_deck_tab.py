@@ -108,8 +108,8 @@ def _pick_first_deck(tab) -> None:
 
 
 class TestDeckAndFields:
-    def test_idle_tab_cannot_mine(self, tab):
-        assert not tab.mine_button.isEnabled()
+    def test_idle_tab_offers_mine(self, tab):
+        assert tab.mine_button.isEnabled()
         assert tab.cancel_button.isHidden()
 
     def test_picking_a_deck_fills_and_preselects_the_fields(self, tab):
@@ -149,7 +149,7 @@ class TestDeckAndFields:
 
         assert tab.deck_combo.currentIndex() == 0
         assert tab.sentence_combo.count() == 1
-        assert not tab.mine_button.isEnabled()
+        assert tab.fields_widget.isHidden()  # A17: no deck, no field rows
 
     def test_a_failed_refresh_keeps_the_list_it_has(self, tab, deck_service):
         _pick_first_deck(tab)
@@ -164,12 +164,12 @@ class TestDeckAndFields:
         deck_service.decks = []
         tab.ensure_decks()
         assert tab.deck_combo.count() == 1
-        assert tab.status_label.text() != ""
+        assert tab.issue_banner().current_issue() is not None
 
         deck_service.decks = ["Show::Ep01"]
         tab.ensure_decks()
         assert tab.deck_combo.count() == 2
-        assert tab.status_label.text() == ""
+        assert tab.issue_banner().current_issue() is None
 
     def test_a_stale_inspection_is_ignored(self, tab, monkeypatch):
         pending: list[tuple] = []
@@ -191,12 +191,14 @@ class TestDeckAndFields:
         monkeypatch.setattr(tab_module, "inspect_deck", lambda service, deck: _inspection(note_count=0))
         _pick_first_deck(tab)
         assert tab.status_label.text() != ""
-        assert not tab.mine_button.isEnabled()
+        tab._on_mine_clicked()
+        assert tab.issue_banner().current_issue().summary == "The selected deck has no notes."
 
-    def test_mine_is_disabled_without_a_sentence_field(self, tab):
+    def test_mine_without_a_sentence_field_explains_itself(self, tab):
         _pick_first_deck(tab)
         tab.sentence_combo.setCurrentIndex(0)
-        assert not tab.mine_button.isEnabled()
+        tab._on_mine_clicked()
+        assert tab.issue_banner().current_issue().summary == "Pick a deck and its sentence field first."
 
 
 class TestMine:
@@ -263,3 +265,58 @@ class TestCurationContext:
         ctx, _ = tab._build_curation_context()
 
         assert ctx is None
+
+
+class TestDeckFirst:
+    """A17: the deck comes first; its field rows appear once it has been read."""
+
+    def test_only_the_deck_is_asked_for_at_first(self, tab):
+        assert tab.fields_widget.isHidden()
+
+    def test_reading_a_deck_reveals_the_field_rows(self, tab):
+        _pick_first_deck(tab)
+        assert not tab.fields_widget.isHidden()
+
+    def test_the_rows_say_where_each_part_comes_from(self, tab):
+        from PyQt6.QtWidgets import QLabel
+
+        texts = [label.text() for label in tab.fields_widget.findChildren(QLabel)]
+        assert texts == ["Sentence from:", "Audio from:", "Picture from:", "Translation from:"]
+
+    def test_the_note_count_sits_right_under_the_deck(self, tab):
+        layout = tab.status_label.parentWidget().layout()
+        assert layout.indexOf(tab.fields_widget) == layout.indexOf(tab.status_label) + 1
+
+    def test_no_heading_repeats_the_tab(self, tab):
+        from PyQt6.QtWidgets import QLabel
+
+        assert "Anki Deck" not in [label.text() for label in tab.findChildren(QLabel)]
+
+    def test_a_failed_deck_fetch_disables_the_deck_and_says_why(self, tab, deck_service):
+        deck_service.decks = []
+        tab.ensure_decks()
+
+        assert not tab.deck_combo.isEnabled()
+        issue = tab.issue_banner().current_issue()
+        assert issue.summary == "Couldn't fetch deck names from Anki. Is Anki running?"
+
+        deck_service.decks = ["Show::Ep01"]
+        tab.ensure_decks()
+
+        assert tab.deck_combo.isEnabled()
+        assert tab.issue_banner().current_issue() is None
+
+    def test_a_truly_empty_deck_is_named_not_its_missing_fields(self, tab, monkeypatch):
+        """With no notes, inspect_deck finds no fields; the refusal names the real cause."""
+        empty = DeckInspection(note_count=0, models=(), field_names=(), first_field_by_model={}, samples=())
+        monkeypatch.setattr(tab_module, "inspect_deck", lambda service, deck: empty)
+        _pick_first_deck(tab)
+
+        assert tab.fields_widget.isHidden()
+        tab._on_mine_clicked()
+        assert tab.issue_banner().current_issue().summary == "The selected deck has no notes."
+
+    def test_mine_is_offered_and_explains_a_missing_deck(self, tab):
+        assert tab.mine_button.isEnabled()
+        tab._on_mine_clicked()
+        assert tab.issue_banner().current_issue().summary == "Pick a deck and its sentence field first."

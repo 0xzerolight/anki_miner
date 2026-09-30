@@ -1,26 +1,25 @@
-"""Novels sub-tab of the Reading tab: single-book and folder mining.
+"""Novels sub-tab of the Reading tab: one path field, one Mine (D7-B).
 
-Two sections share one run lifecycle. The Novel card mines a single
-``.epub``/``.txt`` book; the Book Folder card enumerates a folder's top-level
-books (``detector.detect_book_folder``, non-recursive) and mines them
-sequentially — one ephemeral :class:`ReadingQueueItem` per book through the
-shared :class:`~anki_miner.gui.widgets._reading_mining_base._ReadingMiningTabBase`
-lifecycle. Items are never stored (no persistent queue UI, no Add/Clear rows);
-one composed progress bar covers the whole run, per-book failures don't stop
-the queue.
+The field takes a single ``.epub``/``.txt`` book or a folder; Mine classifies
+it. A folder is enumerated by ``detector.detect_book_folder`` (top-level books,
+non-recursive) and every book is mined in turn — one ephemeral
+:class:`ReadingQueueItem` per book through the shared
+:class:`~anki_miner.gui.widgets._reading_mining_base._ReadingMiningTabBase`
+lifecycle. Items are never stored; one hidden run-state widget covers the run
+and the pinned bar shows it (D1); a failing book doesn't stop the rest.
 
 The worker OWNS the item lifecycle (it sets ``status``/``cards_created``/
 ``error_message`` on the item, on the worker thread, before emitting its
 signals), so this tab's signal slots are READ-ONLY on item state: they update
 the progress bar and log the outcome, never write status/cards/error.
 
-Drag-drop routes through the tab, not the file selectors. The FileSelector's own
+Drag-drop routes through the tab, not the file selector. The FileSelector's own
 ``dropEvent`` sets any dropped path unconditionally and its inner ``QLineEdit``
-accepts URL drops by default, so both selectors have ``setAcceptDrops(False)``
+accepts URL drops by default, so the selector has ``setAcceptDrops(False)``
 applied and every drop is delivered to this tab: the first ``.epub``/``.txt``
-fills the book selector; the first dropped directory fills the folder selector
-(no disk I/O at drop time — a bookless folder errors at Mine time); a manga-file
-drop earns the cross-tab hint immediately.
+or directory fills the field (no disk I/O at drop time — a bookless folder
+errors at Mine time); a manga- or subtitle-file drop earns the cross-tab hint
+immediately.
 """
 
 from __future__ import annotations
@@ -30,12 +29,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QT_TRANSLATE_NOOP
-from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QFont
+from PyQt6.QtGui import QDragEnterEvent, QDropEvent
 from PyQt6.QtWidgets import (
     QCheckBox,
     QFrame,
-    QHBoxLayout,
-    QLabel,
     QScrollArea,
     QSizePolicy,
     QVBoxLayout,
@@ -43,7 +40,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.capabilities import CapabilityTarget
-from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
 from anki_miner.gui.widgets.base import (
@@ -51,7 +48,7 @@ from anki_miner.gui.widgets.base import (
     configure_card_layout,
     field_label_width,
 )
-from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
+from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.widgets.reading_subtitles_tab import _SUBTITLE_EXTS
@@ -67,7 +64,7 @@ if TYPE_CHECKING:
     from anki_miner.models.reading import ReadingSourceRef
     from anki_miner.orchestration import EpisodeProcessor
 
-# File-selector filter glob for the Book File field. The human label ("Books")
+# File-selector filter glob for the book-or-folder field. The human label ("Books")
 # is tr()'d at call time; only the literal extension glob lives here.
 _BOOK_FILTER_GLOB = "*.epub *.txt"
 
@@ -79,14 +76,13 @@ _MANGA_EXTS = (".mokuro", ".cbz", ".zip")
 
 
 class ReadingNovelsTab(_ReadingMiningTabBase):
-    """Novel mining sub-tab: single-book and book-folder sections (no queue UI).
+    """Novel mining sub-tab: one book-or-folder field and one Mine (no queue UI, D7-B).
 
     Owns, via the base, at most one running
     :class:`~anki_miner.gui.workers.reading_queue_worker.ReadingQueueWorker`
     mining a list of ephemeral items — one for a single-book run, one per book
     for a folder run. Button state is purely derived from the worker handle by
-    :meth:`_recompute_buttons`: idle shows both Mine buttons, a run swaps them
-    for the shared Cancel.
+    :meth:`_recompute_buttons`: idle shows Mine, a run swaps it for Cancel.
 
     Novels curation has no media context but shows the definition pane: the
     base's ``_build_curation_context`` returns ``(None, lookup_fn)`` from the
@@ -133,8 +129,6 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
         # by default, so disable both so the drag manager delivers to the tab.
         self.book_selector.setAcceptDrops(False)
         self.book_selector.input.setAcceptDrops(False)
-        self.folder_selector.setAcceptDrops(False)
-        self.folder_selector.input.setAcceptDrops(False)
         self._recompute_buttons()
 
     # ------------------------------------------------------------------
@@ -151,7 +145,6 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
         layout.addWidget(self._create_novel_card())
-        layout.addWidget(self._create_folder_card())
         self._create_cancel_button()
 
         # Issue #65: opt-in per-item word curation popup (default off).
@@ -160,8 +153,10 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
         self.review_words_checkbox.setToolTip(self.tr("Show the word-selection popup before creating cards."))
         layout.addWidget(self.review_words_checkbox)
 
-        layout.addWidget(self._progress_header(self.tr("Progress")))
+        # D1: the pinned bar is the one progress surface; this widget is the
+        # run's hidden state holder and the receipt's anchor.
         self.progress_widget = ProgressWidget()
+        self.progress_widget.hide()
         layout.addWidget(self.progress_widget)
         # The durable end state of this same card (D20).
         self._install_receipt(layout, self.progress_widget, item_noun=self.tr("books"))
@@ -184,73 +179,31 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
         )
         self.setLayout(main_layout)
 
-    def _progress_header(self, text: str) -> QLabel:
-        """Build a bold section-heading label for the progress bar."""
-        header = QLabel(text)
-        header.setObjectName("heading3")
-        font = QFont()
-        font.setPixelSize(FONT_SIZES.body)
-        font.setWeight(QFont.Weight.Bold)
-        header.setFont(font)
-        return header
-
     def _create_novel_card(self) -> QFrame:
-        """Novel card: book-file selector + Mine / Cancel."""
+        """Novel card: one book-or-folder field; Mine lives in the pinned bar."""
         card = QFrame()
         card.setObjectName("card")
         card_layout = QVBoxLayout()
         configure_card_layout(card_layout)
 
-        card_layout.addWidget(SectionHeader(title=self.tr("Novel")))
-
         self.book_selector = FileSelector(
-            label=self.tr("Book File:"),
+            label=self.tr("Book or folder:"),
             file_mode=True,
+            allow_folder=True,
             file_filter=f"{self.tr('Books')} ({_BOOK_FILTER_GLOB})",
-            label_width=field_label_width(self.tr("Book File:")),
+            label_width=field_label_width(self.tr("Book or folder:")),
             history_key="reading.novels.inputs",
+        )
+        self.book_selector.setToolTip(
+            self.tr("An .epub or .txt book, or a folder of books; each book is mined separately.")
         )
         card_layout.addWidget(self.book_selector)
 
         # Mine is this screen's one run action, so it lives in the pinned bar
-        # rather than in the card (D6). Mine Folder stays with its folder card.
+        # rather than in the card (D6). It mines a book or a whole folder (D7-B).
         self.mine_button = ModernButton(self.tr("Mine"), variant="primary")
-        self.mine_button.setToolTip(self.tr("Mine the selected book into Anki cards."))
+        self.mine_button.setToolTip(self.tr("Mine the chosen book, or every book in the chosen folder."))
         self.mine_button.clicked.connect(self._on_mine_clicked)
-
-        card.setLayout(card_layout)
-        card.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-        return card
-
-    def _create_folder_card(self) -> QFrame:
-        """Book Folder card: folder selector + Mine Folder."""
-        card = QFrame()
-        card.setObjectName("card")
-        card_layout = QVBoxLayout()
-        configure_card_layout(card_layout)
-
-        card_layout.addWidget(SectionHeader(title=self.tr("Book Folder")))
-
-        self.folder_selector = FileSelector(
-            label=self.tr("Folder:"),
-            file_mode=False,
-            file_filter="",
-            label_width=field_label_width(self.tr("Folder:")),
-            history_key="reading.novels.inputs",
-        )
-        self.folder_selector.setToolTip(self.tr("A folder of .epub or .txt books; each book is mined separately."))
-        card_layout.addWidget(self.folder_selector)
-
-        button_row = QHBoxLayout()
-        button_row.setSpacing(SPACING.sm)
-
-        self.folder_mine_button = ModernButton(self.tr("Mine Folder"), variant="secondary")
-        self.folder_mine_button.setToolTip(self.tr("Mine every book in the selected folder, one after another."))
-        self.folder_mine_button.clicked.connect(self._on_folder_mine_clicked)
-        button_row.addWidget(self.folder_mine_button)
-
-        button_row.addStretch()
-        card_layout.addLayout(button_row)
 
         card.setLayout(card_layout)
         card.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
@@ -289,9 +242,9 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
                 return
 
     def dropEvent(self, event: QDropEvent | None) -> None:
-        """Fill the selectors from the first dropped book/directory; redirect other kinds.
+        """Fill the field from the first dropped book or directory; redirect other kinds.
 
-        A dropped directory fills the folder selector without any disk I/O
+        A dropped directory fills the field without any disk I/O
         (scanning inside a Qt drop handler risks an uncaught OSError and would
         duplicate ``detect_book_folder``); a bookless folder — e.g. a manga
         series dir — errors at Mine time with the cross-tab hint instead.
@@ -300,19 +253,14 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
             return
         manga_seen = False
         subtitle_seen = False
-        book_set = False
-        folder_set = False
+        source_set = False
         for url in urls_from_event(event):
             local = Path(url.toLocalFile())
             suffix = local.suffix.lower()
-            if suffix in _NOVEL_EXTS:
-                if not book_set:
+            if suffix in _NOVEL_EXTS or local.is_dir():
+                if not source_set:
                     self.book_selector.set_path(str(local))
-                    book_set = True
-            elif local.is_dir():
-                if not folder_set:
-                    self.folder_selector.set_path(str(local))
-                    folder_set = True
+                    source_set = True
             elif suffix in _MANGA_EXTS:
                 manga_seen = True
             elif suffix in _SUBTITLE_EXTS:
@@ -320,7 +268,8 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
         if manga_seen:
             self.log_widget.append_info(self.tr("Manga is mined in the Manga tab."))
         if subtitle_seen:
-            self.log_widget.append_info(self.tr("Subtitle files are mined in the Subtitles tab."))
+            # A22: name a tab that exists.
+            self.log_widget.append_info(self.tr("Subtitle files are mined in Reading → Subtitle Files."))
         event.acceptProposedAction()
 
     # ------------------------------------------------------------------
@@ -328,60 +277,40 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
     # ------------------------------------------------------------------
 
     def _on_mine_clicked(self) -> None:
-        """Mine — validate the book, then mine it."""
+        """Mine — classify the field (a book or a folder), then mine it."""
         self._start_run()
 
     def _start_run(self) -> None:
-        """Validate the selected book and mine it as a single ephemeral item.
+        """Mine whatever the field holds: one book, or every book in a folder (D7-B).
 
-        The book is classified by ``detector.detect`` (one ref for a valid
-        ``.epub``/``.txt``) into an ephemeral :class:`ReadingQueueItem` that is
-        never stored — this tab has no queue. A ``.txt`` over the loader's cap
-        becomes one item per part (:meth:`_items_for`). A ``True`` launch swaps
-        the Mine button for Cancel and resets the progress bar.
+        A book is classified by ``detector.detect``; a folder by
+        ``detector.detect_book_folder`` (natural-sorted, non-recursive). A
+        ``.txt`` over the loader's cap becomes one item per part
+        (:meth:`_items_for`). A ``True`` launch swaps Mine for Cancel.
         """
         if self.worker_thread is not None:
             return
+        # A fresh attempt supersedes the last complaint (after the reentrancy guard).
+        self.clear_screen_issue()
         raw = self.book_selector.path_or_none()
         if raw is None:
-            self.log_widget.append_warning(self.tr("Choose an .epub or .txt book first."))
+            self._report_refusal(self.tr("Choose a book or a folder of books first."))
             return
         path = Path(raw)
-        if path.suffix.lower() not in _NOVEL_EXTS or not path.is_file():
-            self.log_widget.append_warning(self.tr("Choose an .epub or .txt book first."))
+        if path.is_dir():
+            refs = self._detect_or_report(path, detect_fn=detector.detect_book_folder)
+            if refs is None:
+                return
+            items = self._items_for(refs)
+        elif path.is_file() and path.suffix.lower() in _NOVEL_EXTS:
+            refs = self._detect_or_report(path)
+            if refs is None:
+                return
+            items = self._items_for(refs[:1])
+        else:
+            self._report_refusal(self.tr("Choose an .epub or .txt book, or a folder of books."), details=raw)
             return
-
-        refs = self._detect_or_report(path)
-        if refs is None:
-            return
-
-        if self._launch_run(self._items_for(refs[:1])):
-            self._begin_run()
-
-    def _on_folder_mine_clicked(self) -> None:
-        """Mine Folder — enumerate the folder's books and mine them sequentially."""
-        self._start_folder_run()
-
-    def _start_folder_run(self) -> None:
-        """Enumerate top-level books in the selected folder and mine them all.
-
-        ``detect_book_folder`` yields one provisional ref per ``.epub``/``.txt``
-        (natural-sorted, non-recursive); each becomes its own ephemeral item so
-        a failing book (e.g. DRM-protected EPUB) errors alone and the queue
-        continues.
-        """
-        if self.worker_thread is not None:
-            return
-        raw = self.folder_selector.path_or_none()
-        if raw is None or not Path(raw).is_dir():
-            self.log_widget.append_warning(self.tr("Choose a folder of .epub or .txt books first."))
-            return
-
-        refs = self._detect_or_report(Path(raw), detect_fn=detector.detect_book_folder)
-        if refs is None:
-            return
-
-        if self._launch_run(self._items_for(refs)):
+        if self._launch_run(items):
             self._begin_run()
 
     @staticmethod
@@ -447,10 +376,13 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
                 self.tr("Book %1/%2: %3"), books.index(item.source.path) + 1, len(books), item.title
             )
             self.progress_widget.set_status(self._current_item_title)
+            self._publish_reading_status(self._current_item_title)
         else:
             self._current_item_title = item.title
             # Status only — the composed bar never resets between items.
-            self.progress_widget.set_status(tr_format(self.tr("Mining: %1"), item.title))
+            status = tr_format(self.tr("Mining: %1"), item.title)
+            self.progress_widget.set_status(status)
+            self._publish_reading_status(status)
 
     def _on_item_progress(self, idx: int, label: str) -> None:
         """Say what the book is doing. The bar counts finished books only."""
@@ -464,6 +396,7 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
             status = title or None
         if status:
             self.progress_widget.set_status(status)
+            self._publish_reading_status(status)
 
     def _on_item_finished(self, idx: int, result: object, error: object, attempts: int) -> None:
         """Log the outcome and forward a success result to the presenter.
@@ -497,6 +430,7 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
         # (set_progress) are banned on the composition-driven widget.
         done = sum(1 for i in self._run_items if i.status in (ReadyItemStatus.COMPLETED, ReadyItemStatus.ERROR))
         self.progress_widget.set_composed(done, len(self._run_items))
+        self._publish_reading_done(done)
 
     def _on_queue_finished(self) -> None:
         """Run summary for folder runs. Cleanup is elsewhere.
@@ -533,11 +467,9 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
         """Refresh button state from the worker handle.
 
         Pure derived state: a live run hides Mine and shows Cancel; idle
-        shows Mine and hides Cancel.
+        shows the one Mine (A04: always enabled) and hides Cancel.
         """
         run_active = self.worker_thread is not None
         self.mine_button.setVisible(not run_active)
         self.mine_button.setEnabled(not run_active)
-        self.folder_mine_button.setVisible(not run_active)
-        self.folder_mine_button.setEnabled(not run_active)
         self.cancel_button.setVisible(run_active)

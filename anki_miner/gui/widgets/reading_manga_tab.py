@@ -1,12 +1,11 @@
-"""Manga sub-tab of the Reading tab: Volume and Manga Folder cards, no queue.
+"""Manga sub-tab of the Reading tab: one path field, one Mine (D7-B).
 
-Mirrors the Novels tab (Issue #103). The Volume card mines a single
-``.mokuro``/``.cbz``/``.zip`` file; the Manga Folder card mines whatever the
-folder resolves to. Both picks are classified by ``detector.detect`` (a
-single-volume pick resolves to one volume, a series folder to many; a ``.cbz``
-resolves through its sibling ``.mokuro`` or an embedded ``.mokuro`` member).
-There is no queue — each Mine runs its volumes sequentially in one job (one
-ephemeral :class:`ReadingQueueItem` per volume) through the shared
+The field takes a single ``.mokuro``/``.cbz``/``.zip`` volume or a folder (one
+volume, or a series folder of many), and Mine classifies whatever it holds
+through ``detector.detect``. A ``.cbz`` resolves through its sibling
+``.mokuro`` or an embedded ``.mokuro`` member. There is no queue — each Mine
+runs its volumes sequentially in one job (one ephemeral
+:class:`ReadingQueueItem` per volume) through the shared
 :class:`~anki_miner.gui.widgets._reading_mining_base._ReadingMiningTabBase`
 lifecycle. Words are inspected during Mine via the "Review words before
 mining" curation popup.
@@ -19,24 +18,23 @@ The worker OWNS the item lifecycle (it sets ``status``/``cards_created``/
 signals), so this tab's signal slots are READ-ONLY on item state: they update
 the progress bars and log outcomes, never write status/cards/error.
 
-Drag-drop routes through the tab, not the file selectors: the first dropped
-``.mokuro``/``.cbz``/``.zip`` fills the Volume selector and the first dropped
-folder fills the Folder selector; a novel drop earns a cross-tab hint instead.
+Drag-drop routes through the tab, not the file selector: the first dropped
+volume or folder fills the field; a novel or subtitle drop earns a hint naming
+the right sub-tab.
 """
 
 from __future__ import annotations
 
 import contextlib
+from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import QT_TRANSLATE_NOOP
-from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QFont
+from PyQt6.QtGui import QDragEnterEvent, QDropEvent
 from PyQt6.QtWidgets import (
     QCheckBox,
     QFrame,
-    QHBoxLayout,
-    QLabel,
     QScrollArea,
     QSizePolicy,
     QVBoxLayout,
@@ -45,20 +43,22 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.exceptions import SetupError
 from anki_miner.gui.capabilities import CapabilityTarget
-from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
 from anki_miner.gui.widgets.base import (
     PageWidth,
+    ScreenIssue,
     configure_card_layout,
     field_label_width,
 )
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext
-from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
+from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.widgets.reading_subtitles_tab import _SUBTITLE_EXTS
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.models import MiningOutcome, result_error_text
 from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.models.reading_queue import ReadingQueueItem
@@ -72,16 +72,26 @@ if TYPE_CHECKING:
     from anki_miner.models.reading import ReadingSourceRef
     from anki_miner.orchestration import EpisodeProcessor
 
-# Extensions accepted from a drag-drop (directories are always accepted). Manga
-# files fill the Volume selector, directories the Folder selector; novel/
-# subtitle drops earn a cross-tab hint. The subtitle set is the Subtitles tab's
+# Extensions accepted from a drag-drop (directories are always accepted). A
+# manga file or a directory fills the one field; novel/subtitle drops earn a
+# cross-tab hint. The subtitle set is the Subtitles tab's
 # own, imported so the hint covers every format it mines.
 _MANGA_EXTS = (".mokuro", ".cbz", ".zip")
 _NOVEL_EXTS = (".epub", ".txt")
 
-# File-selector filter glob for the Volume File field. The human label
+# File-selector filter glob for the volume-or-folder field. The human label
 # ("Manga") is tr()'d at call time; only the literal extension glob lives here.
 _MANGA_FILTER_GLOB = "*.mokuro *.cbz *.zip"
+
+#: The mining-language capability that offers Utilities → Manga OCR. WS4's E17
+#: adds it to the Japanese profile (mokuro's OCR model is Japanese-only), so
+#: the hand-off is offered exactly where the tool is.
+_MANGA_OCR_CAPABILITY = "manga_ocr"
+
+#: Lower-cased text both "no OCR data" refusals of ``detector`` contain: the
+#: archive one ("No .mokuro data found for …") and the folder one ("… no
+#: .mokuro volumes …").
+_NO_OCR_MARKER = "no .mokuro"
 
 
 def _queue_item_title(ref: ReadingSourceRef) -> str:
@@ -100,13 +110,13 @@ def _queue_item_title(ref: ReadingSourceRef) -> str:
 
 
 class ReadingMangaTab(_ReadingMiningTabBase):
-    """Manga mining sub-tab: Volume-file and Manga-Folder cards (no queue).
+    """Manga mining sub-tab: one path field and one Mine (no queue, D7-B).
 
     Owns, via the base, at most one running
     :class:`~anki_miner.gui.workers.reading_queue_worker.ReadingQueueWorker`
     mining the volume(s) a pick resolves to. Button state is derived from the
     detection and worker handles by :meth:`_recompute_buttons`: pending
-    detection disables both Mine buttons; a run swaps them for shared Cancel.
+    detection disables Mine; a run swaps it for Cancel.
 
     Manga curation shows page images (D8 amended): this tab overrides
     ``_build_curation_context`` to hand the dialog the in-flight volume's
@@ -150,6 +160,8 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         self._detection_worker: SingleCallWorker | None = None
         self._detection_generation = 0
         self._detection_shutdown = False
+        # The path the latest detection was started for (the no-OCR pointer reads it).
+        self._detecting_path: Path | None = None
 
         self._setup_ui()
         self._setup_drag_drop()
@@ -158,8 +170,6 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         # by default, so disable both so the drag manager delivers to the tab.
         self.volume_file_selector.setAcceptDrops(False)
         self.volume_file_selector.input.setAcceptDrops(False)
-        self.volume_folder_selector.setAcceptDrops(False)
-        self.volume_folder_selector.input.setAcceptDrops(False)
         self._recompute_buttons()
 
     # ------------------------------------------------------------------
@@ -167,7 +177,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
     # ------------------------------------------------------------------
 
     def _setup_ui(self) -> None:
-        """Build the tab layout: Volume + Folder cards, checkbox, bar, log."""
+        """Build the tab layout: the source card, checkbox, hidden bar, log."""
         scroll_area = QScrollArea()
 
         container = QWidget()
@@ -175,8 +185,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         layout.setSpacing(SPACING.sm)
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
-        layout.addWidget(self._create_volume_card())
-        layout.addWidget(self._create_folder_card())
+        layout.addWidget(self._create_source_card())
         self._create_cancel_button()
 
         # Issue #65: opt-in per-item word curation popup (default off).
@@ -187,11 +196,10 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         )
         layout.addWidget(self.review_words_checkbox)
 
-        # Single whole-run bar: per-volume sweeps are composed into it
-        # ((volumes done + volume pct) / total), so a series run reads as one
-        # continuous fill; the status label carries the active volume + stage.
-        layout.addWidget(self._progress_header(self.tr("Progress")))
+        # D1: the pinned bar is the one progress surface; this widget is the
+        # run's hidden state holder and the receipt's anchor.
         self.overall_progress_widget = ProgressWidget()
+        self.overall_progress_widget.hide()
         layout.addWidget(self.overall_progress_widget)
         # The durable end state of this same card (D20).
         self._install_receipt(layout, self.overall_progress_widget, item_noun=self.tr("volumes"))
@@ -214,80 +222,33 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         )
         self.setLayout(main_layout)
 
-    def _progress_header(self, text: str) -> QLabel:
-        """Build a bold section-heading label for a progress bar."""
-        header = QLabel(text)
-        header.setObjectName("heading3")
-        font = QFont()
-        font.setPixelSize(FONT_SIZES.body)
-        font.setWeight(QFont.Weight.Bold)
-        header.setFont(font)
-        return header
-
-    def _create_volume_card(self) -> QFrame:
-        """Volume card: manga-file selector + Mine (Issue #103)."""
+    def _create_source_card(self) -> QFrame:
+        """The one card: a volume-or-folder field (D7-B). No heading: the sub-tab names it (A20)."""
         card = QFrame()
         card.setObjectName("card")
         card_layout = QVBoxLayout()
         configure_card_layout(card_layout)
 
-        card_layout.addWidget(SectionHeader(title=self.tr("Volume")))
-
         self.volume_file_selector = FileSelector(
-            label=self.tr("Volume File:"),
+            label=self.tr("Volume or folder:"),
             file_mode=True,
+            allow_folder=True,
             file_filter=f"{self.tr('Manga')} ({_MANGA_FILTER_GLOB})",
-            label_width=field_label_width(self.tr("Volume File:")),
+            label_width=field_label_width(self.tr("Volume or folder:")),
             history_key="reading.manga.inputs",
         )
         self.volume_file_selector.setToolTip(
             self.tr(
-                "A .mokuro volume, or a .cbz/.zip archive with its .mokuro beside or inside it. No extraction needed."
+                "A .mokuro volume, a .cbz/.zip archive with its .mokuro beside or inside it, "
+                "or a folder of volumes. No extraction needed."
             )
         )
         card_layout.addWidget(self.volume_file_selector)
 
-        # Mine is this screen's one run action, so it lives in the pinned bar
-        # rather than in the card (D6). Mine Folder stays with its folder card.
+        # Mine is this screen's one run action, so it lives in the pinned bar (D6).
         self.mine_button = ModernButton(self.tr("Mine"), variant="primary")
-        self.mine_button.setToolTip(self.tr("Mine the selected volume into Anki cards."))
+        self.mine_button.setToolTip(self.tr("Mine the chosen volume, or every volume in the chosen folder."))
         self.mine_button.clicked.connect(self._on_mine_clicked)
-
-        card.setLayout(card_layout)
-        card.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-        return card
-
-    def _create_folder_card(self) -> QFrame:
-        """Manga Folder card: folder selector + Mine Folder."""
-        card = QFrame()
-        card.setObjectName("card")
-        card_layout = QVBoxLayout()
-        configure_card_layout(card_layout)
-
-        card_layout.addWidget(SectionHeader(title=self.tr("Manga Folder")))
-
-        self.volume_folder_selector = FileSelector(
-            label=self.tr("Folder:"),
-            file_mode=False,
-            file_filter="",
-            label_width=field_label_width(self.tr("Folder:")),
-            history_key="reading.manga.inputs",
-        )
-        self.volume_folder_selector.setToolTip(
-            self.tr("A folder with one manga volume, or a series folder of many volumes.")
-        )
-        card_layout.addWidget(self.volume_folder_selector)
-
-        button_row = QHBoxLayout()
-        button_row.setSpacing(SPACING.sm)
-
-        self.folder_mine_button = ModernButton(self.tr("Mine Folder"), variant="secondary")
-        self.folder_mine_button.setToolTip(self.tr("Mine every volume in the selected folder into Anki cards."))
-        self.folder_mine_button.clicked.connect(self._on_folder_mine_clicked)
-        button_row.addWidget(self.folder_mine_button)
-
-        button_row.addStretch()
-        card_layout.addLayout(button_row)
 
         card.setLayout(card_layout)
         card.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
@@ -325,37 +286,28 @@ class ReadingMangaTab(_ReadingMiningTabBase):
                 return
 
     def dropEvent(self, event: QDropEvent | None) -> None:
-        """Fill the selectors from the first dropped manga file/folder; hint others.
-
-        Two-selector routing (novels-tab shape): the first manga *file* fills
-        the Volume selector and the first *directory* fills the Folder
-        selector, independently — one drop can fill both.
-        """
+        """Fill the field from the first dropped volume or folder; hint other kinds."""
         if event is None:
             return
         novel_seen = False
         subtitle_seen = False
-        file_set = False
-        folder_set = False
+        source_set = False
         for url in urls_from_event(event):
             local = Path(url.toLocalFile())
             suffix = local.suffix.lower()
-            if suffix in _MANGA_EXTS:
-                if not file_set:
+            if suffix in _MANGA_EXTS or local.is_dir():
+                if not source_set:
                     self.volume_file_selector.set_path(str(local))
-                    file_set = True
-            elif local.is_dir():
-                if not folder_set:
-                    self.volume_folder_selector.set_path(str(local))
-                    folder_set = True
+                    source_set = True
             elif suffix in _NOVEL_EXTS:
                 novel_seen = True
             elif suffix in _SUBTITLE_EXTS:
                 subtitle_seen = True
-        if novel_seen and not (file_set or folder_set):
+        if novel_seen and not source_set:
             self.log_widget.append_info(self.tr("Novels are mined in the Novels tab."))
-        if subtitle_seen and not (file_set or folder_set):
-            self.log_widget.append_info(self.tr("Subtitle files are mined in the Subtitles tab."))
+        if subtitle_seen and not source_set:
+            # A22: name a tab that exists.
+            self.log_widget.append_info(self.tr("Subtitle files are mined in Reading → Subtitle Files."))
         event.acceptProposedAction()
 
     # ------------------------------------------------------------------
@@ -363,29 +315,20 @@ class ReadingMangaTab(_ReadingMiningTabBase):
     # ------------------------------------------------------------------
 
     def _on_mine_clicked(self) -> None:
-        """Mine — validate the picked volume file, classify it, and mine it."""
+        """Mine: classify whatever the field holds, a volume or a folder (D7-B)."""
         if self.worker_thread is not None or self._detection_pending:
             return
+        # A fresh attempt supersedes the last complaint (after the reentrancy guard).
+        self.clear_screen_issue()
         raw = self.volume_file_selector.path_or_none()
         if raw is None:
-            self.log_widget.append_warning(self.tr("Choose a .mokuro, .cbz, or .zip volume first."))
+            self._report_refusal(self.tr("Choose a manga volume or folder first."))
             return
         path = Path(raw)
-        if path.suffix.lower() not in _MANGA_EXTS or not path.is_file():
-            self.log_widget.append_warning(self.tr("Choose a .mokuro, .cbz, or .zip volume first."))
+        if path.is_dir() or (path.is_file() and path.suffix.lower() in _MANGA_EXTS):
+            self._detect_and_launch(path)
             return
-
-        self._detect_and_launch(path)
-
-    def _on_folder_mine_clicked(self) -> None:
-        """Mine Folder — classify the folder and mine its volume(s) sequentially."""
-        if self.worker_thread is not None or self._detection_pending:
-            return
-        raw = self.volume_folder_selector.path_or_none()
-        if raw is None:
-            self.log_widget.append_warning(self.tr("Choose a manga folder first."))
-            return
-        self._detect_and_launch(Path(raw))
+        self._report_refusal(self.tr("Choose a .mokuro, .cbz or .zip volume, or a manga folder."), details=raw)
 
     def _detect_and_launch(self, path: Path) -> None:
         """Classify ``path`` off-thread, then launch survivors on the GUI thread."""
@@ -394,6 +337,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         self._detection_generation += 1
         generation = self._detection_generation
         self._detection_pending = True
+        self._detecting_path = path
         self._recompute_buttons()
 
         def _detect() -> tuple[list[ReadingSourceRef], list[tuple[Path, str]]]:
@@ -430,9 +374,59 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         self._launch_detected(refs)
 
     def _on_detection_error(self, generation: int, message: str) -> None:
-        """Report a detection failure only while its generation is current."""
+        """Report a detection failure on the screen, only while its generation is current (A04, A16)."""
         if self._is_current_detection(generation):
-            self.log_widget.append_error(message)
+            self._report_detection_failure(self._detecting_path, message)
+
+    def _report_detection_failure(self, path: Path | None, message: str) -> None:
+        """Say why the pick can't be mined; point a text-less manga at Manga OCR (A16).
+
+        A plain ``.cbz`` or a folder of page images has no OCR text layer, which
+        is a dead end on this screen but not in the app: Manga OCR makes one.
+        The hand-off is offered only where the tool is (``manga_ocr``), and the
+        sentence names the folder it will fill in: the picked folder, or the
+        folder a picked archive sits in.
+        """
+        if path is None or _NO_OCR_MARKER not in message.lower():
+            self._report_unmineable(message)
+            return
+        self.log_widget.append_error(message)
+        folder = path if path.is_dir() else path.parent
+        if not self._manga_ocr_offered():
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("This manga has no text layer yet, so it can't be mined."), details=message)
+            )
+            return
+        summary = (
+            self.tr("This manga has no text layer yet. Manga OCR can make one for this folder.")
+            if path.is_dir()
+            else self.tr("This manga has no text layer yet. Manga OCR can make one for the folder this file is in.")
+        )
+        self.show_screen_issue(
+            ScreenIssue(
+                summary=summary,
+                details=message,
+                action_id="tools.mokuro",
+                action_text=self.tr("Open Manga OCR"),
+            ),
+            action=partial(self._open_manga_ocr, folder),
+        )
+
+    def _manga_ocr_offered(self) -> bool:
+        """Whether this mining language has Utilities → Manga OCR (E17's gate)."""
+        return _MANGA_OCR_CAPABILITY in get_profile(config_language(self.config)).capabilities
+
+    def _open_manga_ocr(self, folder: Path) -> None:
+        """Show Utilities → Manga OCR with ``folder`` already in its field (A16)."""
+        from anki_miner.gui.widgets.mokuro_tab import MokuroTab
+
+        window = self.window()
+        reveal = getattr(window, "reveal_capability", None)
+        if callable(reveal):
+            reveal(CapabilityTarget("subtitles", "mokuro"))
+        tool = window.findChild(MokuroTab) if window is not None else None
+        if tool is not None:
+            tool.folder_selector.set_path(str(folder))
 
     def _on_detection_finished(self, generation: int) -> None:
         """Restore start actions after detection succeeds or fails."""
@@ -537,6 +531,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
             self._current_item_title = item.title
         # Status only — the composed whole-run bar never resets between volumes.
         self.overall_progress_widget.set_status(self._current_item_title)
+        self._publish_reading_status(self._current_item_title)
 
     def _on_item_progress(self, idx: int, label: str) -> None:
         """Say what the volume is doing. The bar counts finished volumes only."""
@@ -550,6 +545,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
             status = title or None
         if status:
             self.overall_progress_widget.set_status(status)
+            self._publish_reading_status(status)
 
     def _on_item_finished(self, idx: int, result: object, error: object, attempts: int) -> None:
         """Log the outcome and advance the overall bar (series runs only).
@@ -587,6 +583,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         # writes (set_progress) are banned on the composition-driven widget.
         done = sum(1 for i in self._run_items if i.status in (ReadyItemStatus.COMPLETED, ReadyItemStatus.ERROR))
         self.overall_progress_widget.set_composed(done, len(self._run_items))
+        self._publish_reading_done(done)
 
     def _on_queue_finished(self) -> None:
         """Run summary log over the run snapshot. Cleanup is elsewhere.
@@ -627,9 +624,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         Cancel; idle shows Mine and hides Cancel.
         """
         run_active = self.worker_thread is not None
-        start_enabled = not run_active and not self._detection_pending
         self.mine_button.setVisible(not run_active)
-        self.mine_button.setEnabled(start_enabled)
-        self.folder_mine_button.setVisible(not run_active)
-        self.folder_mine_button.setEnabled(start_enabled)
+        # A04: always offered while idle; only a detection already running holds it.
+        self.mine_button.setEnabled(not run_active and not self._detection_pending)
         self.cancel_button.setVisible(run_active)

@@ -76,7 +76,7 @@ class TestRunSummary:
                 notes_added=486,
                 duration="40m 12s",
             )
-            == "Mining complete — 12 episodes, 486 notes added in 40m 12s"
+            == "Mining complete — 12 episodes, 486 cards added in 40m 12s"
         )
 
     def test_a_cancelled_run_still_reports_what_it_did(self):
@@ -89,7 +89,7 @@ class TestRunSummary:
                 notes_added=84,
                 duration="08m 17s",
             )
-            == "Cancelled — 3 of 12 episodes completed; 84 notes added in 08m 17s"
+            == "Cancelled — 3 of 12 episodes completed; 84 cards added in 08m 17s"
         )
 
     def test_a_partly_failed_run_says_so(self):
@@ -102,7 +102,7 @@ class TestRunSummary:
                 notes_added=400,
                 duration="01m 30s",
             )
-            == "Finished with errors — 10 of 12 videos completed; 400 notes added in 01m 30s"
+            == "Finished with errors — 10 of 12 videos completed; 400 cards added in 01m 30s"
         )
 
     def test_a_failed_run_says_so(self):
@@ -115,7 +115,7 @@ class TestRunSummary:
                 notes_added=0,
                 duration="00m 05s",
             )
-            == "Mining failed — 0 of 12 books completed; 0 notes added in 00m 05s"
+            == "Mining failed — 0 of 12 books completed; 0 cards added in 00m 05s"
         )
 
     def test_a_single_item_run_never_says_one_episodes(self):
@@ -128,7 +128,7 @@ class TestRunSummary:
                 notes_added=7,
                 duration="01m 03s",
             )
-            == "Mining complete — 7 notes added in 01m 03s"
+            == "Mining complete — 7 cards added in 01m 03s"
         )
 
     def test_an_empty_noun_suppresses_the_count(self):
@@ -141,7 +141,7 @@ class TestRunSummary:
                 notes_added=7,
                 duration="01m 03s",
             )
-            == "Mining complete — 7 notes added in 01m 03s"
+            == "Mining complete — 7 cards added in 01m 03s"
         )
 
     def test_a_slept_run_says_the_time_is_active_time(self):

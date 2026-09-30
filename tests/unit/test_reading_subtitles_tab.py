@@ -106,11 +106,11 @@ class TestInitialState:
         assert tab.file_list.count() == 0
         assert tab.mine_button.isEnabled()
 
-    def test_section_header_says_subtitle_files(self, tab):
+    def test_no_section_header_repeats_the_tab(self, tab):
+        """A20: the sub-tab already says "Subtitle Files"; the card has no heading."""
         from anki_miner.gui.widgets.enhanced import SectionHeader
 
-        headers = tab.findChildren(SectionHeader)
-        assert any(h.title_label.text() == "Subtitle Files" for h in headers)
+        assert tab.findChildren(SectionHeader) == []
 
 
 class TestFileList:
@@ -303,7 +303,10 @@ class TestStartRun:
         tab._add_paths([tmp_path / "ghost.srt"])
         tab._on_mine_clicked()
         queue_cls.assert_not_called()
-        assert "not found" in tab.log_widget.text_edit.toPlainText()
+        assert "no longer exists" in tab.log_widget.text_edit.toPlainText()
+        issue = tab.issue_banner().current_issue()
+        assert issue.summary == "A listed file no longer exists."
+        assert issue.details == str(tmp_path / "ghost.srt")
 
     def test_detect_error_surfaced_no_run(self, tab, tmp_path):
         queue_cls = tab._queue_worker_cls
@@ -408,7 +411,7 @@ class TestQueueRecovery:
         assert interrupted.cards_created == 2
         assert interrupted.error_message == "Interrupted when Anki Miner closed"
 
-    def test_restored_terminal_only_rows_disable_mine(self, tab, tmp_path):
+    def test_restored_terminal_only_rows_explain_mine(self, tab, tmp_path):
         completed_path = _sub_file(tmp_path, "completed.srt")
         interrupted_path = _sub_file(tmp_path, "interrupted.srt")
         completed_source = queue_state_store.reading_source(
@@ -438,9 +441,13 @@ class TestQueueRecovery:
         assert tab.restore_queue_snapshot(snapshot) == 2
         tab._launch_run = MagicMock()
 
-        assert not tab.mine_button.isEnabled()
+        # A04: Mine stays offered; the click explains why nothing runs.
+        assert tab.mine_button.isEnabled()
         tab.mine_button.click()
         tab._launch_run.assert_not_called()
+        assert tab.issue_banner().current_issue().summary == (
+            "Every listed file has been mined. Add more files, or Clear the list."
+        )
 
 
 class TestItemSlots:

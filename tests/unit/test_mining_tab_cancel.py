@@ -102,7 +102,7 @@ def test_single_restore_buttons_hides_cancel_and_shows_actions(single_tab):
     assert single_tab.cancel_button.isHidden()
     assert not single_tab.process_button.isHidden()
     assert not single_tab.timing_button.isHidden()
-    assert not single_tab.tracks_button.isHidden()
+    assert single_tab.tracks_button.isHidden()  # A05: no video chosen
     assert single_tab._is_processing is False
 
 
