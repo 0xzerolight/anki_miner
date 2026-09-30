@@ -415,6 +415,10 @@ class _HealthRow(QFrame):
         label_font = QFont()
         label_font.setWeight(QFont.Weight.Medium)
         self.label.setFont(label_font)
+        # Wraps rather than widening the row: the badge, time and Fix columns
+        # are reserved on every row, so an unwrapped name pushed the list past
+        # its viewport at the window's minimum width (Z.5).
+        self.label.setWordWrap(True)
         top.addWidget(self.label, 1)
 
         self.checked_label = QLabel("")

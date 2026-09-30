@@ -548,6 +548,23 @@ def test_the_dialog_subtitle_shares_its_title_left_edge(laid_out_window):
     assert subtitle.x() + subtitle.contentsRect().left() == title.x() + title.contentsRect().left()
 
 
+def test_the_rows_never_scroll_sideways_at_the_minimum_width(laid_out_window, qtbot):
+    """Z.5 (UI audit 2026-09-29): shrunk to its minimum at 1024x768, the list
+    was wider than its viewport and grew a horizontal scrollbar: every row held
+    its whole name on one line beside the reserved time and Fix columns. The
+    long name stands in for the app's wider face and a longer locale; it wraps
+    under itself instead.
+    """
+    row = laid_out_window._rows["tools.ytdlp"]
+    row.label.setText("yt-dlp (YouTube mining, playlists and every other supported video site)")
+    laid_out_window.resize(1, 1)
+    qtbot.wait(20)
+    scroll = laid_out_window._health_scroll
+    viewport = scroll.viewport()
+    assert viewport is not None
+    assert laid_out_window._health_list.minimumSizeHint().width() <= viewport.width()
+
+
 def test_the_window_opens_tall_enough_to_show_every_row(health_window):
     """It opened at 560x533 and showed four of ten rows, with a group heading
     sliced in half at the bottom edge.
