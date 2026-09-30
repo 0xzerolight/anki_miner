@@ -953,13 +953,30 @@ QPushButton#ghost:checked:hover {
     background-color: ${color-primary-hover};
 }
 
-/* Unavailable reads the same in every role. */
+/* Unavailable (D17). A disabled control must weigh less than the enabled ones
+   around it, so the quiet roles give up their fill: every unmarked button,
+   secondary and danger keep an outline and grey text, and ghost keeps only the
+   text. The two filled roles (and Qt's dialog default, which renders as one)
+   keep a grey fill: an outline-only primary would read as an enabled
+   secondary button. Order matters: these tie with the role rules above on
+   specificity and win by coming later. */
 QPushButton:disabled,
-QPushButton#primary:disabled,
 QPushButton#secondary:disabled,
-QPushButton#ghost:disabled,
-QPushButton#danger:disabled,
-QPushButton#critical:disabled {
+QPushButton#danger:disabled {
+    background-color: transparent;
+    color: ${color-text-disabled};
+    border-color: ${color-disabled};
+}
+
+QPushButton#ghost:disabled {
+    background-color: transparent;
+    color: ${color-text-disabled};
+    border-color: transparent;
+}
+
+QPushButton#primary:disabled,
+QPushButton#critical:disabled,
+QPushButton:default:disabled {
     background-color: ${color-disabled};
     color: ${color-text-on-primary};
     border-color: ${color-disabled};
@@ -1329,6 +1346,22 @@ QCheckBox::indicator:checked {
 
 QCheckBox::indicator:checked:disabled {
     image: url("${glyph-check-disabled}");
+}
+
+/* E03: a disabled box looks disabled. Its text and its indicator take the
+   theme's own "unavailable" tokens, the same ones the input :disabled rule uses. */
+QCheckBox:disabled, QRadioButton:disabled {
+    color: ${color-text-disabled};
+}
+
+QCheckBox::indicator:disabled, QRadioButton::indicator:disabled {
+    background-color: ${color-input-disabled-bg};
+    border-color: ${color-disabled};
+}
+
+QCheckBox::indicator:checked:disabled, QRadioButton::indicator:checked:disabled {
+    background-color: ${color-disabled};
+    border-color: ${color-disabled};
 }
 
 /* --- Dialogs --- */

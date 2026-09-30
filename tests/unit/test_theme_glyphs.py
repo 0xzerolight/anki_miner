@@ -121,3 +121,36 @@ def test_an_unchecked_box_draws_no_tick(qtbot):
     image = box.grab().toImage()
 
     assert _count(image, 0, 26, Theme.get_colors(THEME)["text-on-primary"]) == 0
+
+
+def test_a_disabled_checked_box_is_grey_not_accent(qtbot):
+    """E03: a disabled checked box takes the theme's disabled fill."""
+    colors = Theme.get_colors(THEME)
+    box = QCheckBox("")
+    box.setChecked(True)
+    box.setEnabled(False)
+    qtbot.addWidget(box)
+    box.resize(40, 30)
+    box.show()
+    qtbot.waitExposed(box)
+
+    image = box.grab().toImage()
+
+    assert _count(image, 0, 26, colors["primary"]) == 0
+    assert _count(image, 0, 26, colors["disabled"]) > 20
+
+
+def test_a_disabled_box_has_grey_text(qtbot, qapp):
+    """E03: its label no longer renders in the full text colour."""
+    qapp.setStyleSheet(Theme.get_stylesheet("light"))
+    colors = Theme.get_colors("light")
+    box = QCheckBox("MMMM")
+    box.setEnabled(False)
+    qtbot.addWidget(box)
+    box.resize(120, 30)
+    box.show()
+    qtbot.waitExposed(box)
+
+    image = box.grab().toImage()
+
+    assert _count(image, 26, 120, colors["text"]) == 0
