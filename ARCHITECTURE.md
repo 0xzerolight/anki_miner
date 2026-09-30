@@ -293,7 +293,7 @@ There is no separate folder-orchestrator class; batch mining is driven directly 
 - **Language:** `language` (the active mining language) and `language_stash` (parked `LANGUAGE_SCOPED_FIELDS` snapshots for every inactive language — see [Mining Languages](#mining-languages)), plus the scoped `script_variant` and `reading_tone_color`
 - **Card shape:** `card_type` (`Literal["", "word_and_sentence", "click", "sentence", "audio"]`), `card_type_marker_fields`, `strict_card_order` (create cards in order of appearance; off by default), `bold_target_in_sentence`
 - **Downloader (Utilities → Download):** `downloader_format_preset`, `downloader_custom_format`, `downloader_write_subtitles`, `downloader_subtitle_langs`, `downloader_embed_thumbnail`, `downloader_embed_metadata`
-- **Manga OCR (Utilities → Manga OCR):** `mokuro_use_gpu` (persisted), `mokuro_location` (executable override), `uv_root` (the uv-managed Python + mokuro venv, default `ANKI_MINER_HOME/uv/`)
+- **Manga OCR (Utilities → Manga OCR):** `mokuro_use_gpu` (persisted), `mokuro_location` (executable override; config-only, not in the GUI), `uv_root` (the uv-managed Python + mokuro venv, default `ANKI_MINER_HOME/uv/`)
 - **yt-dlp:** `ytdlp_location`, `auto_update_ytdlp`, `ytdlp_prerelease` (selects the nightly channel in `services/ytdlp_updater.py`)
 - **Misc:** `excluded_decks` (negated into the vocab query, so a parent deck covers its subdecks), `bin_root`, `alass_location`, `pitch_category_format`, `subtitle_regex_filter` / `subtitle_regex_replacement` / `use_subtitle_regex_filter`, and `config_version` — a staleness counter on the config object, not to be confused with the `config_schema_version` stamp `gui_config.json` carries
 

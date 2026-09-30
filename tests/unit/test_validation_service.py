@@ -2011,3 +2011,15 @@ class TestValidationCheckLogging:
         assert len(records) == 1
         assert "check=deck" in records[0].getMessage()
         assert f"deck={test_config.anki_deck_name}" in records[0].getMessage()
+
+
+def test_the_missing_mokuro_message_names_no_path_field():
+    """D15 item 3: the mokuro path left the GUI; the hint must not send users to it."""
+    from pathlib import Path
+
+    import anki_miner.services.validation_service as service
+
+    source = Path(service.__file__).read_text(encoding="utf-8")
+
+    assert "mokuro not found — Utilities → Manga OCR is unavailable; install it on that tab" in source
+    assert "set its path on that tab" not in source

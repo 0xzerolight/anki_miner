@@ -651,7 +651,7 @@ class ValidationService:
             return _record(
                 "mokuro",
                 False,
-                "mokuro not found — Utilities → Manga OCR is unavailable; install it or set its path on that tab",
+                "mokuro not found — Utilities → Manga OCR is unavailable; install it on that tab",
             )
         resolved = resolve_mokuro(self.config)
         return _record("mokuro", True, f"mokuro {_classify_resolved('mokuro', resolved)}", path=resolved)
