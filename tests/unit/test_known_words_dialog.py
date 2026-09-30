@@ -588,3 +588,22 @@ class TestFrame:
         footer = dlg._footer_widget.findChildren(QPushButton)
         assert [b.text() for b in footer] == ["Close"]
         assert footer[0].objectName() == "primary"
+
+    def test_the_action_row_is_never_clipped_at_the_minimum_size(self, qtbot, tmp_path):
+        """Z.5 (UI audit 2026-09-29): shrunk to its minimum at 1024x768, the
+        manager was narrower than its action row, so "Remove Selected" and
+        "Reset User List" were cut off on both sides. An explicit minimum width
+        on a window replaces its layout's minimum instead of flooring it. The
+        longer label stands in for the app's wider face and longer locales.
+        """
+        dlg = KnownWordsManagerDialog(_db_with_user_words(tmp_path))
+        qtbot.addWidget(dlg)
+        dlg.reset_button.setText("Reset the whole user list of known words")
+        dlg.show()
+        qtbot.waitExposed(dlg)
+        dlg.resize(1, 1)
+        qtbot.wait(20)
+        for button in (dlg.remove_button, dlg.import_button, dlg.export_button, dlg.reset_button):
+            assert button.width() >= button.sizeHint().width(), button.text()
+        right_edge = dlg.reset_button.mapTo(dlg, dlg.reset_button.rect().topRight()).x()
+        assert right_edge < dlg.width()

@@ -50,12 +50,14 @@ class EnhancedDialog(QDialog):
 
     def _setup_ui(self) -> None:
         """Set up the dialog UI."""
-        self.setMinimumWidth(400)
-
         # Main layout
         self._main_layout = QVBoxLayout()
         self._main_layout.setContentsMargins(SPACING.lg, SPACING.lg, SPACING.lg, SPACING.lg)
         self._main_layout.setSpacing(SPACING.lg)
+        # A 400px floor that the content can still raise. setMinimumWidth(400)
+        # on the window would REPLACE the layout's minimum instead of flooring
+        # it, so a wider row (Known Words' actions at 1024x768) was cut off (Z.5).
+        self._main_layout.addStrut(400 - 2 * SPACING.lg)
 
         # Header area (icon + title + subtitle)
         self._header_widget = QWidget()

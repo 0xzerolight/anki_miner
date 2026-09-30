@@ -86,7 +86,7 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
         self._refresh()
 
     def _build_content(self) -> None:
-        self.setMinimumWidth(480)
+        # No explicit minimum width: the action row sets it (Z.5).
         self.setMinimumHeight(520)
         self.set_header(
             "",
