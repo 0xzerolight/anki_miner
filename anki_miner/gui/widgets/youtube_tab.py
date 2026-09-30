@@ -188,7 +188,6 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
             clear=self.tr("Clear"),
             clear_tip=self.tr("Remove every item from the queue."),
             cancel_tip=self.tr("Cancel the active run."),
-            progress=self.tr("Progress"),
             item_noun=self.tr("videos"),
         )
         # yt-dlp copy, built here so each literal stays in this tab's tr-context.

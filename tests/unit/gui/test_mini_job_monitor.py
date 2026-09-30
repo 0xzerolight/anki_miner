@@ -79,6 +79,7 @@ class TestWindowKind:
 
 class TestItDoesNotDriftFromTheOtherSurfaces:
     def test_it_renders_the_same_snapshot_as_the_queue_strip(self, qtbot, registry, monitor):
+        """Both read one snapshot; since D1 the strip states only its run position."""
         strip = CurrentJobStrip()
         qtbot.addWidget(strip)
         handle = _start(registry)
@@ -86,8 +87,9 @@ class TestItDoesNotDriftFromTheOtherSurfaces:
         handle.stage(index=3, total=5, name="Fetching definitions", now=1.0)
         handle.count(current=7, total=24, detail="18 cards", now=78.0)
 
-        assert monitor.line_label.full_text == strip.line_label.full_text
         assert "Fetching definitions" in monitor.line_label.full_text
+        assert "7 / 24 · Elapsed 01:18" in monitor.line_label.full_text
+        assert strip.line_label.full_text == "8 of 24 · 7 done · Elapsed 01:18"
 
     def test_it_watches_the_run_the_status_strip_is_naming(self, qtbot, registry, monitor):
         bar = StatusBarWidget()

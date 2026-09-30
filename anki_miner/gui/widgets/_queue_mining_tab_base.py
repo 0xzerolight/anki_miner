@@ -56,17 +56,17 @@ from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QKeySequence
-from PyQt6.QtWidgets import QBoxLayout, QFrame, QHBoxLayout, QListWidget, QListWidgetItem, QVBoxLayout
+from PyQt6.QtWidgets import QBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem
 
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.keyboard_shortcuts import scoped_shortcut
 from anki_miner.gui.utils.qt_helpers import configure_data_view, install_copy_rows
 from anki_miner.gui.utils.run_off_thread import join_or_retain, still_running
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
-from anki_miner.gui.widgets.base import configure_card_layout, page_filler
+from anki_miner.gui.widgets.base import page_filler
 from anki_miner.gui.widgets.base.sizing import metric_row_height
 from anki_miner.gui.widgets.current_job_strip import CurrentJobStrip
-from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
+from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.widgets.queue_controls_bar import QueueControlsBar
@@ -143,13 +143,12 @@ class _QueueListStrings:
     failed_see_log: str  # "Failed — see log"
     complete_succeeded: str  # "Complete — %1 succeeded"
     complete_with_failures: str  # "Complete — %1 succeeded, %2 failed"
-    # The run controls and Progress card built by _ListQueueMiningTabBase. Mine
-    # reuses _QueueRunStrings.mine_label; Cancel reuses stop_all above.
+    # The run controls built by _ListQueueMiningTabBase. Mine reuses
+    # _QueueRunStrings.mine_label; Cancel reuses stop_all above.
     mine_tip: str  # per tab: what Mine does on this screen
     clear: str  # "Clear"
     clear_tip: str  # "Remove every item from the queue."
     cancel_tip: str  # "Cancel the active run."
-    progress: str  # "Progress"
     item_noun: str  # the receipt's plural noun: "audiobooks" / "videos"
 
 
@@ -810,28 +809,23 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         queue_layout.addLayout(button_row)
 
     def _build_progress_card(self, layout: QBoxLayout) -> None:
-        """Add the Progress card and the page filler to ``layout``; build the log widget.
+        """Add the hidden run-state widget, the receipt and the page filler; build the log.
 
-        The receipt is the durable end state of the same card (D20). The log
-        widget is not added here: ``install_workflow_shell`` moves it into the
-        Activity drawer (D6). The filler stands in for the queue list while an
-        empty queue keeps it hidden, so the page's leftover height pools below
-        the cards instead of inflating their headings; ``_recompute_buttons``
-        toggles it with the list.
+        D1: the pinned bar is the one live progress surface and the receipt is
+        the one result, so there is no Progress card any more. The widget stays
+        (hidden) as the run's state holder, and the receipt sits right after it
+        -- directly under the queue card. The log widget is not added here:
+        ``install_workflow_shell`` moves it into the Activity drawer (D6). The
+        filler stands in for the queue list while an empty queue keeps it
+        hidden, so the page's leftover height pools below the cards instead of
+        inflating their headings; ``_recompute_buttons`` toggles it with the
+        list.
         """
         strings = self._queue_list_strings
-        progress_card = QFrame()
-        progress_card.setObjectName("card")
-        progress_layout = QVBoxLayout()
-        configure_card_layout(progress_layout)
-
-        progress_layout.addWidget(SectionHeader(strings.progress))
         self.progress_widget = ProgressWidget()
-        progress_layout.addWidget(self.progress_widget)
-        self._install_receipt(progress_layout, self.progress_widget, item_noun=strings.item_noun)
-
-        progress_card.setLayout(progress_layout)
-        layout.addWidget(progress_card)
+        self.progress_widget.hide()
+        layout.addWidget(self.progress_widget)
+        self._install_receipt(layout, self.progress_widget, item_noun=strings.item_noun)
 
         self.log_widget = LogWidget(source=self._run_log_id())
 
@@ -957,7 +951,7 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         if not line:
             return
         self.progress_widget.set_status(self._compose_item_status(line))
-        self._publish_task_position(self._join(getattr(self, "_current_item_name", ""), line))
+        self._publish_task_position(line)
 
     # ------------------------------------------------------------------
     # Per-item signal slots
@@ -1019,11 +1013,12 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
 
         The bar counts finished items and moves only in :meth:`_on_item_finished`;
         within-item detail goes to the status line and to the task snapshot the
-        current-job strip renders. The strip prints the queue position itself, so
-        what it is given here is the item's name and its current phase.
+        current-job strip renders. The pinned bar prints the snapshot detail, so
+        what it is given here is the phase alone; the current-job strip states
+        the queue position (D1).
         """
         self.progress_widget.set_status(self._compose_item_status(label))
-        self._publish_task_position(self._join(getattr(self, "_current_item_name", ""), label))
+        self._publish_task_position(label)
 
     def _on_item_finished(self, idx: int, result: object, error: object, attempts: int) -> None:
         """Update the item with success/error and forward to the presenter."""

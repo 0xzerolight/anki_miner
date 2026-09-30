@@ -102,7 +102,5 @@ def test_list_queue_controls_carry_each_screens_copy(qtbot, test_config, build, 
         "stop": ("Cancel", "Cancel the active run.", "secondary"),
     }
 
-    card = tab.progress_widget.parentWidget()
-    assert card.objectName() == "card"
-    assert card.layout().itemAt(0).widget().title_label.text() == "Progress"
+    assert tab.progress_widget.isHidden()
     assert tab._receipt_noun == noun

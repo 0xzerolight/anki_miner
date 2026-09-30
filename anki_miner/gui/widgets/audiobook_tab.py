@@ -177,7 +177,6 @@ class AudiobookTab(_ListQueueMiningTabBase):
             clear=self.tr("Clear"),
             clear_tip=self.tr("Remove every item from the queue."),
             cancel_tip=self.tr("Cancel the active run."),
-            progress=self.tr("Progress"),
             item_noun=self.tr("audiobooks"),
         )
 

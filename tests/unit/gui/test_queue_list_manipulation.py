@@ -432,7 +432,8 @@ def test_a_run_publishes_a_task_when_a_registry_is_bound(queue, qtbot) -> None:
         registry.shutdown()
 
 
-def test_the_strip_names_the_item_being_mined(queue, qtbot) -> None:
+def test_the_bar_names_the_item_being_mined_and_the_strip_counts_it(queue, qtbot) -> None:
+    """D1: the pinned bar carries the item and its phase; the strip, the run position."""
     tab, add = queue
     registry = TaskRegistry()
     tab.bind_task_registry(registry)
@@ -442,7 +443,8 @@ def test_the_strip_names_the_item_being_mined(queue, qtbot) -> None:
     tab._on_item_started(0)
 
     try:
-        assert "alpha" in tab.current_job_strip.line_label.full_text
+        assert "alpha" in tab.action_bar.stage_label.full_text
+        assert tab.current_job_strip.line_label.full_text.startswith("1 of 1 · 0 done")
     finally:
         registry.shutdown()
 

@@ -2,9 +2,10 @@
 
 The queue rows went calm -- title, state word, result count -- because the
 workers mine strictly one item at a time and per-row telemetry was the same
-sentence repeated on every row but one. This strip is where that sentence now
-lives: it names the run, the phase it is in, how far through the queue it is,
-and how long it has been going.
+sentence repeated on every row but one. This strip carries the run position
+(D1): which item of how many, how many are done, and how long the run has been
+going. The pinned bar below the page carries the phase, so the strip does not
+repeat it.
 
 It renders ``TaskSnapshot``s and stores none of their numbers, so it cannot
 drift from the registry. It is bound to one exact ``(task_id, run_token)``:
@@ -12,19 +13,22 @@ another task changing, or a *later* run of the same task, leaves the line
 alone. And it owns no worker, no timer and no cancellation -- those stay with
 the tab that started the run.
 
-The sentence itself lives in :mod:`anki_miner.gui.utils.task_lines`, shared with
-the mini job monitor, so the two cannot describe the same run differently.
+A cancel, or a run with no item count, falls back to the detailed line in
+:mod:`anki_miner.gui.utils.task_lines`, the one the mini job monitor shares.
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from PyQt6.QtCore import QCoreApplication
 from PyQt6.QtWidgets import QHBoxLayout, QWidget
 
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.progress_telemetry import format_clock
 from anki_miner.gui.utils.task_lines import CANCEL_EXPLANATION_DELAY_S, format_task_line
 from anki_miner.gui.widgets.base.eliding_label import ElidingLabel
+from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
     from anki_miner.gui.controllers.task_registry import TaskRegistry, TaskSnapshot
@@ -114,8 +118,25 @@ class CurrentJobStrip(QWidget):
         return snapshot
 
     def _render(self, snapshot: TaskSnapshot) -> str:
-        """Compose the line, through the formatter every task surface shares."""
-        return format_task_line(snapshot)
+        """The queue's run line: which item of how many, how many are done, the clock.
+
+        D1: the pinned bar below the page already prints the phase, so the strip
+        states the run position instead of repeating it word for word. A cancel,
+        or a run without a real item count, keeps the shared detailed line.
+        """
+        if snapshot.cancelling or not snapshot.total:
+            return format_task_line(snapshot)
+        position = min(snapshot.current + 1, snapshot.total)
+        run_line = tr_format(
+            QCoreApplication.translate("CurrentJobStrip", "%1 of %2 · %3 done"),
+            position,
+            snapshot.total,
+            snapshot.current,
+        )
+        elapsed = tr_format(
+            QCoreApplication.translate("CurrentJobStrip", "Elapsed %1"), format_clock(snapshot.elapsed_s)
+        )
+        return f"{run_line} · {elapsed}"
 
     # ------------------------------------------------------------------
     # Construction
