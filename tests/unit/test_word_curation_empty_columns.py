@@ -54,3 +54,43 @@ def test_reset_columns_keeps_an_empty_column_hidden(qtbot):
     dialog._reset_columns()
 
     assert dialog.table.isColumnHidden(_RANK_COL)
+
+
+def test_a_gate_hide_is_not_saved_as_the_users_arrangement(qtbot):
+    """A run with no ranks must not hide Freq. Rank on the next run that has them."""
+    unranked = WordCurationDialog([_word("食べる", None)])
+    qtbot.addWidget(unranked)
+    assert unranked.table.isColumnHidden(_RANK_COL)
+    unranked.reject()
+
+    ranked = WordCurationDialog([_word("食べる", 120)])
+    qtbot.addWidget(ranked)
+
+    assert not ranked.table.isColumnHidden(_RANK_COL)
+
+
+def test_a_user_hide_of_a_gated_column_still_survives(qtbot):
+    """Only the gate's own hide is dropped; the user's choice is kept."""
+    first = WordCurationDialog([_word("食べる", 120)])
+    qtbot.addWidget(first)
+    first._column_menu_actions()[_RANK_COL].setChecked(False)
+    first.reject()
+
+    unranked = WordCurationDialog([_word("食べる", None)])
+    qtbot.addWidget(unranked)
+    unranked.reject()
+
+    ranked = WordCurationDialog([_word("食べる", 120)])
+    qtbot.addWidget(ranked)
+
+    assert ranked.table.isColumnHidden(_RANK_COL)
+
+
+def test_the_gate_still_holds_after_close(qtbot):
+    """done() puts the user's arrangement back only for the save."""
+    dialog = WordCurationDialog([_word("食べる", None)])
+    qtbot.addWidget(dialog)
+
+    dialog.reject()
+
+    assert dialog.table.isColumnHidden(_RANK_COL)

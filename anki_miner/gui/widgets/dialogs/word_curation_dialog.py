@@ -347,6 +347,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # expression-audio field, which is the Audio column's gate.
         self._has_expression_audio = expression_audio_fetch_fn is not None
         self._empty_columns: frozenset[int] = frozenset()  # filled by _populate_table (A07)
+        # The user's own hidden/shown choice for each empty-gated column, which
+        # done() puts back before saving the header, so a per-run gate hide is
+        # never remembered as the user's arrangement.
+        self._pre_gate_hidden: dict[int, bool] = {}
         # Manga page pane: gated on page_units exactly like the player gates
         # on video_file. Cache holds converted QPixmaps (GUI-thread only);
         # _page_request_gen is the stale-guard for off-thread loads and
@@ -937,13 +941,20 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # restoreState re-sorts, which needs real rows to sort.
         columns = session_state.load_curator_columns_for(self.table.columnCount())
         header_view = self.table.horizontalHeader()
-        if columns is not None and header_view and header_view.restoreState(columns):
+        restored = columns is not None and header_view is not None and header_view.restoreState(columns)
+        if restored:
             self._apply_header_resize_modes()
         else:
             # D5: no saved arrangement yet, so start from the calmer default;
             # the header menu brings any column back and the choice is saved.
             for column in _DEFAULT_HIDDEN_COLUMNS:
                 self.table.setColumnHidden(column, True)
+        # Read before the gates run. Without a saved state the table still
+        # carries _populate_table's gate hide, so the intent is the D5 default.
+        self._pre_gate_hidden = {
+            column: self.table.isColumnHidden(column) if restored else column in _DEFAULT_HIDDEN_COLUMNS
+            for column in self._empty_columns
+        }
         self._apply_translation_column_gate()
         self._apply_audio_column_gate()
         self._apply_empty_column_gate()
@@ -1030,7 +1041,14 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 )
                 header_view = self.table.horizontalHeader()
                 if header_view:
-                    session_state.save_curator_columns(header_view.saveState(), self.table.columnCount())
+                    # Save the user's arrangement, not this run's A07 gate:
+                    # a column empty today may hold data next run.
+                    for column, hidden in self._pre_gate_hidden.items():
+                        self.table.setColumnHidden(column, hidden)
+                    try:
+                        session_state.save_curator_columns(header_view.saveState(), self.table.columnCount())
+                    finally:
+                        self._apply_empty_column_gate()
         super().done(a0)
 
     def _apply_header_resize_modes(self) -> None:
@@ -1120,6 +1138,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             self.table.setColumnHidden(column, False)
             if header_view:
                 header_view.moveSection(header_view.visualIndex(column), column)
+        self._pre_gate_hidden = dict.fromkeys(self._empty_columns, False)
         self._apply_header_resize_modes()
         self._apply_translation_column_gate()
         self._apply_audio_column_gate()
