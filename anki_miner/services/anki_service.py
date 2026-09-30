@@ -4,7 +4,7 @@ import logging
 import re
 import time
 from collections import Counter
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -513,6 +513,27 @@ class AnkiService:
         )
         logger.debug("Anki find notes done: notes=%d", len(note_ids))
         return note_ids
+
+    def gui_browse_notes(self, note_ids: Sequence[int]) -> None:
+        """Open Anki's card browser on ``note_ids`` (AnkiConnect ``guiBrowse``).
+
+        Backs the run receipt's "Show in Anki" (D4): the answer to "where are
+        my cards?" is Anki's own browser, searched by note id so it shows
+        exactly what this run added. Nothing is written.
+
+        Raises:
+            AnkiConnectionError: AnkiConnect is unreachable or refused.
+        """
+        ids = [int(note_id) for note_id in note_ids]
+        if not ids:
+            return
+        log_summary(logger, "Anki browse notes", notes=len(ids))
+        post_action(
+            self.config.ankiconnect_url,
+            "guiBrowse",
+            params={"query": "nid:" + ",".join(str(note_id) for note_id in ids)},
+            timeout=15,
+        )
 
     def media_dir_path(self) -> Path | None:
         """Return Anki's ``collection.media`` folder (AnkiConnect ``getMediaDirPath``).
