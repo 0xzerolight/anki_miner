@@ -1,7 +1,7 @@
 """Anki configuration settings panel."""
 
 import logging
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Iterable, Mapping
 from dataclasses import replace
 from typing import Literal, cast
 
@@ -25,9 +25,12 @@ from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages.profile import CardFieldSpec
 from anki_miner.languages.registry import config_language, get_profile
+from anki_miner.services.note_presets import FIELD_KEYWORDS as _FIELD_KEYWORDS  # noqa: F401 - re-exported
 from anki_miner.services.note_presets import (
     NOTE_PRESETS,
     NotePreset,
+    auto_map_fields,
+    auto_map_profile_fields,
     preset_by_id,
     preset_for_note_type_name,
 )
@@ -203,43 +206,6 @@ _HOOK_FIELD_ROW_TEXTS: dict[str, tuple[str, str]] = {
     ),
 }
 
-# Keywords used by populate_from_field_list to auto-map Anki field names.
-# Each key is a card data type; the list is lowercase/stripped patterns that
-# a field name must match (after lowercasing and removing spaces/underscores).
-# Exported at module level so setup wizards and future callers can reuse the
-# same sets without duplication.
-_FIELD_KEYWORDS: dict[str, list[str]] = {
-    # The Chinese spellings are a subset of the word-field aliases in
-    # services/expression_field.py (which also reads 简体, 簡體, 繁体, 繁體, 生词
-    # and 詞語), and the two match differently: that one looks for an alias
-    # anywhere inside the field name, this one wants the whole normalised name.
-    # The traditional spellings stay out on purpose: zh carries a dedicated
-    # expression_traditional key, and on a note type that lists Traditional
-    # above Simplified it would silently become the card front.
-    "word": ["expression", "word", "vocab", "hanzi", "simplified", "汉字", "漢字", "中文", "单词", "词语"],
-    "sentence": ["sentence", "context", "example"],
-    "definition": ["definition", "meaning", "maindefinition"],
-    "glossary": ["glossary", "definitions", "dictionary"],
-    "picture": ["picture", "image", "screenshot", "photo"],
-    "audio": ["audio", "sound", "sentenceaudio"],
-    "expression_audio": ["expressionaudio", "wordaudio"],
-    "expression_furigana": ["expressionfurigana", "wordfurigana"],
-    "expression_reading": ["expressionreading", "wordreading", "reading"],
-    "sentence_furigana": ["sentencefurigana", "contextfurigana"],
-    "sentence_reading": ["sentencereading", "contextreading"],
-    # The plurals are the names Lapis / Kiku / Senren actually ship. Those three
-    # are matched exactly by note_presets; this table is what a FORK of one of
-    # them falls back to, so it has to know the same spellings.
-    "pitch_position": ["pitchposition", "pitchpositions", "pitchaccent", "pitch"],
-    "pitch_category": ["pitchcategory", "pitchcategories", "accenttype", "accentcategory"],
-    "pitch_graph": ["pitchgraph", "pitchsvg"],
-    "pitch_text": ["pitchtext", "pitchaccents"],
-    "frequency": ["frequency", "frequencies", "freq", "rank", "frequencyrank"],
-    "frequency_sort": ["freqsort", "frequencysort"],
-    "source": ["source", "origin", "miscinfo"],
-    "sentence_translation": ["sentencetranslation", "translation", "sentencemeaning"],
-}
-
 # JP Mining Note card-type marker ids → default field names. Mirrors the
 # AnkiMinerConfig.card_type_marker_fields default factory; duplicated here (like
 # set_card_fields' "Expression"/"Sentence" literals) to prefill the inputs
@@ -250,79 +216,6 @@ _CARD_TYPE_MARKER_DEFAULTS: dict[str, str] = {
     "sentence": "IsSentenceCard",
     "audio": "IsAudioCard",
 }
-
-
-def _normalized_field_name(name: str) -> str:
-    """The spelling both matchers compare on: lowercase, no spaces or underscores."""
-    return name.lower().replace(" ", "").replace("_", "")
-
-
-def auto_map_fields(field_names: list[str]) -> dict[str, str]:
-    """Map Anki field names to card data keys via :data:`_FIELD_KEYWORDS`.
-
-    Pure (Qt-free) so the setup wizard and the settings panel share one
-    matching algorithm. For every key in ``_FIELD_KEYWORDS``, returns the first
-    field name (in ``field_names`` order) that matches after lowercasing and
-    removing spaces/underscores; unmatched keys map to ``""``.
-
-    Args:
-        field_names: Field names fetched from AnkiConnect.
-
-    Returns:
-        ``{field_key: matched_field_name_or_""}`` for every key in
-        ``_FIELD_KEYWORDS``.
-    """
-    mapping: dict[str, str] = {}
-    for key, keywords in _FIELD_KEYWORDS.items():
-        normalized = [kw.lower() for kw in keywords]
-        matched = ""
-        for field_name in field_names:
-            if _normalized_field_name(field_name) in normalized:
-                matched = field_name
-                break
-        mapping[key] = matched
-    return mapping
-
-
-def auto_map_profile_fields(
-    field_names: Sequence[str],
-    specs: Sequence[CardFieldSpec],
-    claimed: Iterable[str],
-) -> dict[str, str]:
-    """Map Anki field names to the card-field keys ``specs`` declares.
-
-    The profile-declared rows match on their own spec's placeholder instead of
-    through :data:`_FIELD_KEYWORDS`: a keyword entry there is stamped into
-    every language's ``anki_fields`` by the wizard's sanitizer, which would
-    seed an empty Pinyin key into a Japanese mapping. So the caller passes only
-    the specs the active language actually shows — a hidden row contributes no
-    key anyway.
-
-    ``claimed`` is the field names :func:`auto_map_fields` already took: th
-    spells its hook field "Reading" and so does ``expression_reading``, and one
-    Anki field cannot carry two logical keys.
-
-    Args:
-        field_names: Field names fetched from AnkiConnect.
-        specs: The card-field specs to match, in priority order.
-        claimed: Field names another key already holds.
-
-    Returns:
-        ``{spec_key: matched_field_name}`` for the specs that matched; a spec
-        with no match is absent, never present as ``""``.
-    """
-    taken = {name for name in claimed if name}
-    mapping: dict[str, str] = {}
-    for spec in specs:
-        placeholder = _normalized_field_name(spec.placeholder)
-        match = next(
-            (n for n in field_names if n not in taken and _normalized_field_name(n) == placeholder),
-            "",
-        )
-        if match:
-            mapping[spec.key] = match
-            taken.add(match)
-    return mapping
 
 
 def select_or_insert(combo: QComboBox, name: str, *, known: bool = True) -> None:

@@ -3,7 +3,7 @@
 Lapis, Kiku and Senren all ship a fixed, documented field list, so the mapping
 Settings -> Anki asks for is knowable without querying AnkiConnect and without
 guessing from field names. Each preset carries three things the keyword matcher
-in ``anki_settings_panel.auto_map_fields`` cannot:
+(``auto_map_fields`` below) cannot:
 
 * the exact names, including the ones the heuristic misses (``PitchCategories``
   is plural; ``MiscInfo`` matches no ``source`` keyword),
@@ -31,9 +31,12 @@ fails the suite.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
+
+if TYPE_CHECKING:  # type-only: this module stays a leaf at runtime
+    from anki_miner.languages.profile import CardFieldSpec
 
 CardTypeId = Literal["", "word_and_sentence", "click", "sentence", "audio"]
 
@@ -274,3 +277,171 @@ def preset_for_field_names(field_names: Iterable[str]) -> NotePreset | None:
         if preset.signature <= available:
             return preset
     return None
+
+
+# ---------------------------------------------------------------------------
+# "Fill in automatically" (D13, UI/UX audit 2026-09-29)
+#
+# One Qt-free pass shared by Settings -> Cards & Anki and the setup wizard, so
+# the two can never map the same note type differently. It recognises Lapis,
+# Kiku and Senren by their field names (the preset carries what keywords
+# cannot: exact plural names, romaji pitch categories, Senren's marker names)
+# and otherwise runs the keyword table below. Moved here from
+# gui/widgets/panels/anki_settings_panel.py, which re-exports the old names.
+# ---------------------------------------------------------------------------
+
+# Keywords used to auto-map Anki field names. Each key is a card data type; the
+# list is lowercase/stripped patterns that a field name must match (after
+# lowercasing and removing spaces/underscores).
+FIELD_KEYWORDS: dict[str, list[str]] = {
+    # The Chinese spellings are a subset of the word-field aliases in
+    # services/expression_field.py (which also reads 简体, 簡體, 繁体, 繁體, 生词
+    # and 詞語), and the two match differently: that one looks for an alias
+    # anywhere inside the field name, this one wants the whole normalised name.
+    # The traditional spellings stay out on purpose: zh carries a dedicated
+    # expression_traditional key, and on a note type that lists Traditional
+    # above Simplified it would silently become the card front.
+    "word": ["expression", "word", "vocab", "hanzi", "simplified", "汉字", "漢字", "中文", "单词", "词语"],
+    "sentence": ["sentence", "context", "example"],
+    "definition": ["definition", "meaning", "maindefinition"],
+    "glossary": ["glossary", "definitions", "dictionary"],
+    "picture": ["picture", "image", "screenshot", "photo"],
+    "audio": ["audio", "sound", "sentenceaudio"],
+    "expression_audio": ["expressionaudio", "wordaudio"],
+    "expression_furigana": ["expressionfurigana", "wordfurigana"],
+    "expression_reading": ["expressionreading", "wordreading", "reading"],
+    "sentence_furigana": ["sentencefurigana", "contextfurigana"],
+    "sentence_reading": ["sentencereading", "contextreading"],
+    # The plurals are the names Lapis / Kiku / Senren actually ship. Those three
+    # are matched exactly by note_presets; this table is what a FORK of one of
+    # them falls back to, so it has to know the same spellings.
+    "pitch_position": ["pitchposition", "pitchpositions", "pitchaccent", "pitch"],
+    "pitch_category": ["pitchcategory", "pitchcategories", "accenttype", "accentcategory"],
+    "pitch_graph": ["pitchgraph", "pitchsvg"],
+    "pitch_text": ["pitchtext", "pitchaccents"],
+    "frequency": ["frequency", "frequencies", "freq", "rank", "frequencyrank"],
+    "frequency_sort": ["freqsort", "frequencysort"],
+    "source": ["source", "origin", "miscinfo"],
+    "sentence_translation": ["sentencetranslation", "translation", "sentencemeaning"],
+}
+
+
+def normalized_field_name(name: str) -> str:
+    """The spelling both matchers compare on: lowercase, no spaces or underscores."""
+    return name.lower().replace(" ", "").replace("_", "")
+
+
+def auto_map_fields(field_names: Sequence[str]) -> dict[str, str]:
+    """Map Anki field names to card data keys via :data:`FIELD_KEYWORDS`.
+
+    Pure (Qt-free) so the setup wizard and the settings panel share one
+    matching algorithm. For every key in ``FIELD_KEYWORDS``, returns the first
+    field name (in ``field_names`` order) that matches after lowercasing and
+    removing spaces/underscores; unmatched keys map to ``""``.
+
+    Args:
+        field_names: Field names fetched from AnkiConnect.
+
+    Returns:
+        ``{field_key: matched_field_name_or_""}`` for every key in
+        ``FIELD_KEYWORDS``.
+    """
+    mapping: dict[str, str] = {}
+    for key, keywords in FIELD_KEYWORDS.items():
+        normalized = [kw.lower() for kw in keywords]
+        matched = ""
+        for field_name in field_names:
+            if normalized_field_name(field_name) in normalized:
+                matched = field_name
+                break
+        mapping[key] = matched
+    return mapping
+
+
+def auto_map_profile_fields(
+    field_names: Sequence[str],
+    specs: Sequence[CardFieldSpec],
+    claimed: Iterable[str],
+) -> dict[str, str]:
+    """Map Anki field names to the card-field keys ``specs`` declares.
+
+    The profile-declared rows match on their own spec's placeholder instead of
+    through :data:`FIELD_KEYWORDS`: a keyword entry there is stamped into
+    every language's ``anki_fields`` by the wizard's sanitizer, which would
+    seed an empty Pinyin key into a Japanese mapping. So the caller passes only
+    the specs the active language actually shows — a hidden row contributes no
+    key anyway.
+
+    ``claimed`` is the field names :func:`auto_map_fields` already took: th
+    spells its hook field "Reading" and so does ``expression_reading``, and one
+    Anki field cannot carry two logical keys.
+
+    Args:
+        field_names: Field names fetched from AnkiConnect.
+        specs: The card-field specs to match, in priority order.
+        claimed: Field names another key already holds.
+
+    Returns:
+        ``{spec_key: matched_field_name}`` for the specs that matched; a spec
+        with no match is absent, never present as ``""``.
+    """
+    taken = {name for name in claimed if name}
+    mapping: dict[str, str] = {}
+    for spec in specs:
+        placeholder = normalized_field_name(spec.placeholder)
+        match = next(
+            (n for n in field_names if n not in taken and normalized_field_name(n) == placeholder),
+            "",
+        )
+        if match:
+            mapping[spec.key] = match
+            taken.add(match)
+    return mapping
+
+
+@dataclass(frozen=True)
+class NoteTypeFill:
+    """What "Fill in automatically" proposes for one note type's field names.
+
+    Attributes:
+        preset: The community note type recognised by its field names, or None.
+            With a preset, ``fields`` is the preset's whole map (``""`` entries
+            included, which are real answers) and the caller also applies the
+            preset's pitch format, marker names and supported card types -- the
+            same writes the old Preset -> Apply made.
+        fields: ``anki_fields`` key -> field name. Without a preset this is the
+            keyword pass: every ``FIELD_KEYWORDS`` key, ``""`` where nothing
+            matched.
+        extra_fields: The active language's extra card fields (Pinyin, Hanja,
+            ...) matched on their own spelling. A spec with no match is absent.
+    """
+
+    preset: NotePreset | None
+    fields: Mapping[str, str]
+    extra_fields: Mapping[str, str]
+
+
+def fill_note_type_fields(
+    field_names: Sequence[str],
+    *,
+    allow_presets: bool,
+    extra_specs: Sequence[CardFieldSpec] = (),
+) -> NoteTypeFill:
+    """Propose every mapping for a note type from the field names Anki reported.
+
+    Args:
+        field_names: The note type's fields, from AnkiConnect ``modelFieldNames``.
+        allow_presets: Whether the active language carries the ``note_presets``
+            capability. All three presets are Japanese note types; applying one
+            elsewhere writes furigana and pitch mappings the language cannot
+            fill, so callers pass ``"note_presets" in profile.capabilities``.
+        extra_specs: The card-field specs the active language shows.
+
+    Returns:
+        The proposal. Callers decide how to write it: Settings overwrites the
+        rows it shows, the wizard stages it on its working config.
+    """
+    preset = preset_for_field_names(field_names) if allow_presets else None
+    fields: Mapping[str, str] = dict(preset.fields) if preset is not None else auto_map_fields(field_names)
+    extra = auto_map_profile_fields(field_names, extra_specs, fields.values())
+    return NoteTypeFill(preset=preset, fields=fields, extra_fields=extra)

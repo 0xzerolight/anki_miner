@@ -175,3 +175,62 @@ def test_note_type_name_lookup_is_case_insensitive():
     assert senren is not None and senren.id == "senren"
     assert preset_for_note_type_name("Lapis-modified") is None
     assert preset_for_note_type_name("") is None
+
+
+# ---------------------------------------------------------------------------
+# fill_note_type_fields: the one "Fill in automatically" pass (D13)
+# ---------------------------------------------------------------------------
+
+from anki_miner.languages.profile import CardFieldSpec  # noqa: E402
+from anki_miner.services.note_presets import (  # noqa: E402
+    FIELD_KEYWORDS,
+    LAPIS,
+    NoteTypeFill,
+    auto_map_fields,
+    fill_note_type_fields,
+)
+
+
+def test_fill_recognises_lapis_and_returns_its_whole_map():
+    fill = fill_note_type_fields(LAPIS_FIELDS, allow_presets=True)
+
+    assert isinstance(fill, NoteTypeFill)
+    assert fill.preset is LAPIS
+    assert dict(fill.fields) == dict(LAPIS.fields)
+
+
+def test_fill_without_presets_runs_the_keyword_pass():
+    fill = fill_note_type_fields(LAPIS_FIELDS, allow_presets=False)
+
+    assert fill.preset is None
+    assert dict(fill.fields) == auto_map_fields(LAPIS_FIELDS)
+    assert set(fill.fields) == set(FIELD_KEYWORDS)
+
+
+def test_fill_falls_back_to_keywords_for_an_unknown_note_type():
+    fill = fill_note_type_fields(["Word", "Sentence", "Meaning"], allow_presets=True)
+
+    assert fill.preset is None
+    assert fill.fields["word"] == "Word"
+    assert fill.fields["sentence"] == "Sentence"
+    assert fill.fields["definition"] == "Meaning"
+
+
+def test_fill_maps_extra_language_fields_without_reusing_a_claimed_field():
+    specs = (
+        CardFieldSpec(key="expression_pinyin", capability="pinyin", placeholder="Pinyin"),
+        CardFieldSpec(key="reading_paiboon", capability="thai", placeholder="Reading"),
+    )
+
+    fill = fill_note_type_fields(["Hanzi", "Sentence", "Pinyin", "Reading"], allow_presets=False, extra_specs=specs)
+
+    assert fill.extra_fields == {"expression_pinyin": "Pinyin"}
+    # "Reading" is already expression_reading's, so the th spec gets nothing.
+    assert fill.fields["expression_reading"] == "Reading"
+
+
+def test_the_panel_module_still_re_exports_the_keyword_helpers():
+    from anki_miner.gui.widgets.panels import anki_settings_panel as panel_module
+
+    assert panel_module._FIELD_KEYWORDS is FIELD_KEYWORDS
+    assert panel_module.auto_map_fields is auto_map_fields
