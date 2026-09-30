@@ -2940,6 +2940,32 @@ def test_notetype_page_applies_a_recognized_preset_on_fetch(qtbot, wiz_config):
     assert page.mapping_summary.text() == "Lapis recognised: 15 fields filled."
 
 
+def test_the_wizard_fills_through_the_shared_helper(qtbot, wiz_config, monkeypatch):
+    """D13: Settings and the wizard map a note type with one helper."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import pages as pages_mod  # noqa: PLC0415
+    from anki_miner.services import note_presets  # noqa: PLC0415
+
+    calls: list[tuple[list[str], bool]] = []
+
+    def spy(field_names, *, allow_presets, extra_specs=()):
+        calls.append((list(field_names), allow_presets))
+        return note_presets.fill_note_type_fields(field_names, allow_presets=allow_presets, extra_specs=extra_specs)
+
+    monkeypatch.setattr(pages_mod, "fill_note_type_fields", spy)
+    wiz = SetupWizard(replace(wiz_config, anki_note_type="Lapis"))
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    page.select_note_type("Lapis", notify=False)
+
+    page._on_fields_fetched("Lapis", _LAPIS_FIELDS)
+
+    assert calls == [(_LAPIS_FIELDS, True)]
+    assert wiz.working_config().anki_fields["pitch_category"] == "PitchCategories"
+    assert page.mapping_summary.text() == "Lapis recognised: 15 fields filled."
+    assert not hasattr(pages_mod, "auto_map_fields")
+
+
 def test_notetype_page_preset_clears_an_unsupported_card_type(qtbot, wiz_config):
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 

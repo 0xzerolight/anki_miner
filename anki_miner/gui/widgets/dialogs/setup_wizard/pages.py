@@ -45,11 +45,6 @@ from anki_miner.gui.utils.language_choices import MiningLanguageChoice, mining_l
 from anki_miner.gui.utils.run_off_thread import still_running
 from anki_miner.gui.utils.task_lines import format_task_line
 from anki_miner.gui.widgets.enhanced import ModernButton
-from anki_miner.gui.widgets.panels.anki_settings_panel import (
-    _FIELD_KEYWORDS,
-    auto_map_fields,
-    auto_map_profile_fields,
-)
 from anki_miner.gui.workers.base_worker import SingleCallWorker
 from anki_miner.gui.workers.fetch_workers import (
     FetchDecksWorker,
@@ -60,7 +55,7 @@ from anki_miner.languages.registry import config_language
 from anki_miner.languages.switching import LANGUAGE_SCOPED_FIELDS, switch_language
 from anki_miner.services.anki_note_builder import configured_target_field_names
 from anki_miner.services.language_pack_installer import ensure_language_packs_on_syspath, language_pack_root
-from anki_miner.services.note_presets import NotePreset, preset_for_field_names
+from anki_miner.services.note_presets import FIELD_KEYWORDS, NotePreset, NoteTypeFill, fill_note_type_fields
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
@@ -1103,26 +1098,15 @@ class NoteTypePage(_WizardSection):
         self._sanitize_field_mappings(note_type, names)
         self._auto_fill(note_type)
 
-    def _matching_preset(self, field_names: list[str]) -> NotePreset | None:
-        """The preset for these field names, but only where presets apply.
-
-        Lapis, Kiku and Senren are Japanese note types and their mappings carry
-        furigana and pitch fields, so they ride the same ``note_presets``
-        capability the Settings Preset row does: applying one elsewhere stages
-        mappings the language cannot fill and every run's field check then
-        rejects. Without it the caller falls through to the keyword pass.
-        """
-        return preset_for_field_names(field_names) if self._presets_apply() else None
-
     @staticmethod
     def _has_mining_shape(field_names: list[str]) -> bool:
         """True if the field list has both a word-ish and a sentence-ish field.
 
-        Normalizes each name the same way :func:`auto_map_fields` does, then
+        Normalizes each name the same way the keyword pass does, then
         checks for ANY match against the word and sentence keyword sets.
         """
-        word_kw = {kw.lower() for kw in _FIELD_KEYWORDS["word"]}
-        sentence_kw = {kw.lower() for kw in _FIELD_KEYWORDS["sentence"]}
+        word_kw = {kw.lower() for kw in FIELD_KEYWORDS["word"]}
+        sentence_kw = {kw.lower() for kw in FIELD_KEYWORDS["sentence"]}
         normalized = {name.lower().replace(" ", "").replace("_", "") for name in field_names}
         return bool(normalized & word_kw) and bool(normalized & sentence_kw)
 
@@ -1144,7 +1128,7 @@ class NoteTypePage(_WizardSection):
         """What any note type needs (D10 = B): the app ships none, any one works once mapped.
 
         The wizard has no field-mapping table: it maps only by name, through
-        the keyword pass (`_FIELD_KEYWORDS`, whole normalised name). So the text
+        the keyword pass (`FIELD_KEYWORDS`, whole normalised name). So the text
         says the word goes in the first field, names field names that pass
         recognises ("Word", "Sentence", ...) and gives the manual route for any
         other naming. It never tells the user to build or rename a note type
@@ -1205,7 +1189,7 @@ class NoteTypePage(_WizardSection):
     def _sanitize_field_mappings(self, note_type: str, field_names: list[str]) -> None:
         config = self._wizard.working_config()
         actual_fields = set(field_names)
-        sanitized_fields = dict.fromkeys(_FIELD_KEYWORDS, "")
+        sanitized_fields = dict.fromkeys(FIELD_KEYWORDS, "")
         sanitized_fields.update(
             {key: value if not value or value in actual_fields else "" for key, value in config.anki_fields.items()}
         )
@@ -1246,41 +1230,35 @@ class NoteTypePage(_WizardSection):
     def _auto_fill(self, note_type: str) -> None:
         """Fill the field mappings the moment a note type's fields arrive (D8).
 
-        A note type Anki Miner can name (Lapis, Kiku, Senren) takes its preset,
-        which also carries the pitch format and card markers; anything else gets
-        the keyword pass, which fills only keys that are still empty. There is
-        no button: picking the note type is the whole action. Cross-workstream
-        task TX.2.02 swaps the mapping part for the helper Settings uses (D13).
+        The same helper as Settings' "Fill in automatically" (D13): a note type
+        it recognises (Lapis, Kiku, Senren) takes its preset, which also carries
+        the pitch format and card markers; anything else gets the keyword pass,
+        which fills only keys that are still empty here.
         """
+        from anki_miner.languages.registry import get_profile  # noqa: PLC0415
+
         names = self._field_names
         if not names or self._field_names_note_type != note_type:
             return
-        preset = self._matching_preset(names)
-        if preset is not None:
-            self._apply_preset(preset)
+        config = self._wizard.working_config()
+        fill = fill_note_type_fields(
+            names,
+            allow_presets=self._presets_apply(),
+            extra_specs=get_profile(config_language(config)).extra_card_fields,
+        )
+        if fill.preset is not None:
+            self._apply_preset(fill.preset)
         else:
-            self._apply_keyword_map()
+            self._apply_keyword_fill(fill)
         self._update_guidance()
         self._show_field_problem()
         self.completeChanged.emit()
 
-    def _apply_keyword_map(self) -> None:
-        """Fill every still-empty key whose Anki field name the keyword table knows."""
-        from anki_miner.languages.registry import get_profile  # noqa: PLC0415
-
-        mapped = auto_map_fields(self._field_names)
+    def _apply_keyword_fill(self, fill: NoteTypeFill) -> None:
+        """Stage the keyword pass: fill every still-empty key it matched."""
+        mapped = dict(fill.fields)
+        mapped.update(fill.extra_fields)
         config = self._wizard.working_config()
-        # The chosen language's own card fields (Pinyin, Hanja, …) get the same
-        # pass against their spec's placeholder, against THIS config's profile:
-        # a learner who finishes setup in the wizard never opens the Settings
-        # panel that would otherwise be the only place they are filled.
-        mapped.update(
-            auto_map_profile_fields(
-                self._field_names,
-                get_profile(config_language(config)).extra_card_fields,
-                mapped.values(),
-            )
-        )
         merged = dict(config.anki_fields)
         for key, value in mapped.items():
             if value and not merged.get(key):
