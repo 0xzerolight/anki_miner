@@ -59,3 +59,14 @@ def test_absent_ytdlp_turns_the_button_into_a_download(qtbot):
 
     panel.set_ytdlp_present(True)
     assert panel.update_ytdlp_button.text() == "Update yt-dlp now"
+
+
+def test_ytdlp_status_label_is_not_success_green(qtbot):
+    from anki_miner.gui.widgets.panels.youtube_settings_panel import YouTubeSettingsPanel
+
+    panel = YouTubeSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_ytdlp_status("yt-dlp could not be updated")
+
+    assert panel.ytdlp_status_label.objectName() == "validation-status"
+    assert panel.ytdlp_status_label.property("status") == "info"

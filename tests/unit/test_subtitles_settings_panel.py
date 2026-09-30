@@ -1658,3 +1658,24 @@ def test_set_asr_pack_status_sets_label(qtbot):
     qtbot.addWidget(panel)
     panel.set_asr_pack_status("Downloading…")
     assert panel.engine_status_label.text() == "Downloading…"
+
+
+def test_install_status_labels_are_neutral_unless_installed(qtbot, monkeypatch):
+    """C04: "Not installed" used to reuse the green settings-save-status style."""
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: True)
+    panel = SubtitlesSettingsPanel(suppress_optional_startup=False)
+    qtbot.addWidget(panel)
+    labels = [
+        panel.engine_status_label,
+        panel.model_status_label,
+        panel.cuda_status_label,
+        panel.vad_status_label,
+        panel.alass_status_label,
+    ]
+    assert all(label.objectName() == "validation-status" for label in labels)
+
+    panel.set_model_status(panel.tr("Not installed"))
+    panel.set_alass_status(panel.tr("Installed"))
+
+    assert panel.model_status_label.property("status") == "info"
+    assert panel.alass_status_label.property("status") == "success"

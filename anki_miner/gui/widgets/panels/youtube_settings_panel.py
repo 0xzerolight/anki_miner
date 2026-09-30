@@ -137,7 +137,7 @@ class YouTubeSettingsPanel(FormPanel):
         self.update_ytdlp_button.clicked.connect(self.update_ytdlp_requested)
 
         self.ytdlp_status_label = QLabel("")
-        self.ytdlp_status_label.setObjectName("settings-save-status")
+        self.ytdlp_status_label.setObjectName("validation-status")
 
         ytdlp_container = QWidget()
         ytdlp_row = QHBoxLayout(ytdlp_container)
@@ -157,7 +157,7 @@ class YouTubeSettingsPanel(FormPanel):
 
     def set_ytdlp_status(self, text: str) -> None:
         """Set the yt-dlp status line (shown next to the Update button)."""
-        self.set_status_text(self.ytdlp_status_label, text)
+        self.set_status_text(self.ytdlp_status_label, text, status="info")
 
     def set_ytdlp_present(self, present: bool) -> None:
         """Say what the button will do, from the validation verdict.

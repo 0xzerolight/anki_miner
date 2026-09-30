@@ -19,7 +19,7 @@ from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.widgets.base.setting_anchor import SettingAnchorHost, SettingTextProvider
 from anki_miner.gui.widgets.base.sizing import configure_card_layout, form_row_cap, make_label_fit_text
 
-#: Longest status line a ``settings-save-status`` label renders before the rest
+#: Longest status line a status label renders before the rest
 #: moves to its tooltip. The label shares a row with its action button inside a
 #: settings card, so a longer line is cut by the card edge anyway.
 STATUS_LINE_MAX_CHARS = 140
@@ -332,7 +332,7 @@ class FormPanel(SettingAnchorHost, QFrame):
         self._main_layout.addStretch(factor)
 
     @staticmethod
-    def set_status_text(label: QLabel, text: str) -> None:
+    def set_status_text(label: QLabel, text: str, *, status: str | None = None) -> None:
         """Put *text* on the one-line status label beside an action, hover-readable.
 
         Every in-app installer routes its outcome here as ``str(exc)`` on failure
@@ -349,16 +349,26 @@ class FormPanel(SettingAnchorHost, QFrame):
         widget's pixel width, and roughly sixty tests assert these labels'
         ``text()`` verbatim. Capping by characters keeps the rendered string a
         function of the message alone.
+
+        ``status``, when given, becomes the label's ``status`` property
+        (``success``, ``error``, ``checking`` or ``info``) and the label is
+        repolished so the stylesheet colour follows (C04). ``info`` has no colour
+        rule, so it reads in the neutral text colour.
         """
         one_line = " ".join(text.split())
         if len(one_line) > STATUS_LINE_MAX_CHARS:
             label.setText(one_line[: STATUS_LINE_MAX_CHARS - 1].rstrip() + "…")
             label.setToolTip(text)
-            return
-        label.setText(one_line)
-        # A tooltip only where the label is not already showing everything; an
-        # unconditional one would repeat the visible line on every hover.
-        label.setToolTip(text if one_line != text else "")
+        else:
+            label.setText(one_line)
+            # A tooltip only where the label is not already showing everything; an
+            # unconditional one would repeat the visible line on every hover.
+            label.setToolTip(text if one_line != text else "")
+        if status is not None:
+            label.setProperty("status", status)
+            if style := label.style():
+                style.unpolish(label)
+                style.polish(label)
 
     @property
     def main_layout(self) -> QVBoxLayout:
