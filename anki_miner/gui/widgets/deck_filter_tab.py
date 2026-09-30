@@ -46,6 +46,7 @@ from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets._anki_plan_tab_base import _AnkiPlanTabBase, _PlanTabStrings
 from anki_miner.gui.widgets.base import (
     PageWidth,
+    ScreenIssue,
     capped_page_column,
     install_workflow_shell,
 )
@@ -91,6 +92,7 @@ class DeckFilterTab(_AnkiPlanTabBase):
             cancelled=self.tr("Cancelled."),
             settings_changed=self.tr("Settings changed since this scan; re-scan before copying."),
             couldnt_fetch_decks=self.tr("Couldn't fetch deck names from Anki — is Anki running?"),
+            worker_failed=self.tr("Deck Filter could not finish."),
         )
         # The Expression column is mined content, so its face follows the mining
         # language; re-derived in update_config when the language changes.
@@ -100,8 +102,8 @@ class DeckFilterTab(_AnkiPlanTabBase):
         self._scan_warnings: tuple[str, ...] = ()
         # "Did a deck list arrive?", NOT "did we ask?" — see ensure_decks.
         self._decks_loaded = False
-        #: True while ``status_label`` carries the deck-fetch failure line, so a
-        #: later success clears that line and nothing else the label may hold.
+        #: True while the banner may carry the deck-fetch failure, so a later
+        #: success clears that banner and nothing else shown since.
         self._deck_fetch_failed = False
         self._deck_worker: SingleCallWorker | None = None
         self._inspect_worker: SingleCallWorker | None = None
@@ -167,7 +169,7 @@ class DeckFilterTab(_AnkiPlanTabBase):
         self.scan_button = ModernButton(self.tr("Scan deck (read-only)"), variant="primary")
         self.scan_button.clicked.connect(self._start_scan)
         self.cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")
-        self.cancel_button.setEnabled(False)
+        self.cancel_button.hide()  # shown only while a scan or copy runs (E07)
         self.cancel_button.clicked.connect(self._cancel)
 
         self.summary_label = QLabel("")
@@ -201,6 +203,7 @@ class DeckFilterTab(_AnkiPlanTabBase):
         # No activity log; Activity stays hidden rather than opening empty.
         self.action_bar = install_workflow_shell(outer, scroll_area, container, self.PAGE_WIDTH, log=None)
         outer.insertWidget(outer.count() - 1, capped_page_column(self._create_run_status(), self.PAGE_WIDTH))
+        self.install_issue_banner(outer)
         self._sync_action_prominence()
         # Ctrl+Enter runs whichever verb the stage is showing (D48-B).
         primary_action_shortcut(self, self.action_bar.trigger_primary)
@@ -344,14 +347,16 @@ class DeckFilterTab(_AnkiPlanTabBase):
     def _build_options(self) -> DeckFilterOptions | None:
         source = self._selected_source_deck()
         if source is None:
-            self.status_label.setText(self.tr("Pick the source deck first."))
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Pick the source deck first.")))
             return None
         target = self.target_edit.text().strip()
         if not target:
-            self.status_label.setText(self.tr("Name the new deck first."))
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Name the new deck first.")))
             return None
         if target == source:
-            self.status_label.setText(self.tr("The new deck needs a different name than the source deck."))
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("The new deck needs a different name than the source deck."))
+            )
             return None
         return DeckFilterOptions(
             source_deck=source,
@@ -361,6 +366,8 @@ class DeckFilterTab(_AnkiPlanTabBase):
         )
 
     def _start_scan(self) -> None:
+        # A fresh attempt supersedes the complaint about the last one (D24).
+        self.clear_screen_issue()
         options = self._build_options()
         if options is None:
             return
@@ -507,6 +514,7 @@ class DeckFilterTab(_AnkiPlanTabBase):
     def _set_running(self, running: bool) -> None:
         self.scan_button.setEnabled(not running)
         self.apply_button.setEnabled(not running and self._plan is not None)
+        self.cancel_button.setVisible(running)
         self.cancel_button.setEnabled(running)
         self.source_combo.setEnabled(not running)
         self.target_edit.setEnabled(not running)
@@ -523,4 +531,5 @@ class DeckFilterTab(_AnkiPlanTabBase):
         logger.warning("Deck Filter worker failed: error=%s", message)
         self._run_failed = True
         self._set_running(False)
-        self.status_label.setText(message)
+        self.status_label.setText("")
+        self.show_screen_issue(ScreenIssue(summary=self._strings.worker_failed, details=message))

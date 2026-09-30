@@ -109,7 +109,7 @@ class TestDeckDropdown:
     def test_empty_fetch_leaves_all_decks_with_status(self, tab):
         tab._on_decks_fetched([])
         assert tab.deck_combo.count() == 1
-        assert tab.status_label.text() != ""
+        assert tab.issue_banner().current_issue() is not None
 
     def test_show_event_starts_fetch_once(self, tab, qtbot):
         from PyQt6.QtGui import QShowEvent
@@ -145,7 +145,7 @@ class TestDeckDropdown:
         assert record.levelno == logging.WARNING
         assert message in record.getMessage()
         assert tab.deck_combo.count() == 1
-        assert "all decks" in tab.status_label.text().lower()
+        assert "all decks" in tab.issue_banner().current_issue().summary.lower()
 
     def test_incomplete_field_mapping_is_logged(self, tab, caplog):
         fields = dict(tab.config.anki_fields)
@@ -190,7 +190,7 @@ class TestScanFlow:
         with patch(f"{_TAB_MOD}.BackfillScanWorker") as factory:
             tab._start_scan()
         factory.assert_not_called()
-        assert tab.status_label.text() != ""
+        assert tab.issue_banner().current_issue().summary == "Select at least one field group to fill."
 
     def test_deck_selection_passed(self, tab):
         tab._on_decks_fetched(["Mining"])

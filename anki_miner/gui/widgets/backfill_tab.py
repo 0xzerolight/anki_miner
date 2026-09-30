@@ -49,6 +49,7 @@ from anki_miner.gui.utils.run_options import RunOptionsMixin
 from anki_miner.gui.widgets._anki_plan_tab_base import _AnkiPlanTabBase, _PlanTabStrings
 from anki_miner.gui.widgets.base import (
     PageWidth,
+    ScreenIssue,
     capped_page_column,
     install_workflow_shell,
 )
@@ -118,6 +119,7 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
             cancelled=self.tr("Cancelled."),
             settings_changed=self.tr("Settings changed since this scan; re-scan before applying."),
             couldnt_fetch_decks=self.tr("Couldn't fetch deck names from Anki — scanning all decks."),
+            worker_failed=self.tr("Card Backfill could not finish."),
         )
         # The Expression column is mined content, so its face follows the mining
         # language; re-derived in update_config when the language changes.
@@ -137,8 +139,8 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         self._scan_warnings: tuple[str, ...] = ()
         # "Did a deck list arrive?", NOT "did we ask?" — see ensure_decks.
         self._decks_loaded = False
-        #: True while ``status_label`` carries the deck-fetch failure line, so a
-        #: later success clears that line and nothing else the label may hold.
+        #: True while the banner may carry the deck-fetch failure, so a later
+        #: success clears that banner and nothing else shown since.
         self._deck_fetch_failed = False
         self._deck_worker: SingleCallWorker | None = None
         # Set by the error slot, read when the thread ends: an error arrives
@@ -241,7 +243,7 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         self.restyle_button.setToolTip(self.tr("Refresh the dictionary styling on every card of your note type"))
         self.restyle_button.clicked.connect(self.restyle_requested.emit)
         self.cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")
-        self.cancel_button.setEnabled(False)
+        self.cancel_button.hide()  # shown only while a scan or apply runs (E07)
         self.cancel_button.clicked.connect(self._cancel)
 
         self.summary_label = QLabel("")
@@ -287,6 +289,7 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         # them, on the same capped column, instead of scrolling away under a
         # 240px preview table.
         outer.insertWidget(outer.count() - 1, capped_page_column(self._create_run_status(), self.PAGE_WIDTH))
+        self.install_issue_banner(outer)
         self._sync_action_prominence()
         # Ctrl+Enter runs whichever verb the stage is showing (D48-B): Scan
         # before a plan exists, Apply after. `_sync_action_prominence` is what
@@ -455,9 +458,11 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         return frozenset(keys)
 
     def _start_scan(self) -> None:
+        # A fresh attempt supersedes the complaint about the last one (D24).
+        self.clear_screen_issue()
         field_keys = self._selected_field_keys()
         if not field_keys:
-            self.status_label.setText(self.tr("Select at least one field group to fill."))
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Select at least one field group to fill.")))
             return
         deck = self.deck_combo.currentText() if self.deck_combo.currentIndex() > 0 else None
         options = BackfillOptions(
@@ -713,6 +718,7 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         self.scan_button.setEnabled(not running)
         self.apply_button.setEnabled(not running and self._can_apply_plan())
         self.restyle_button.setEnabled(not running)
+        self.cancel_button.setVisible(running)
         self.cancel_button.setEnabled(running)
         for checkbox in self.field_checkboxes.values():
             checkbox.setEnabled(not running)
@@ -729,4 +735,5 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         logger.warning("Card Backfill worker failed: error=%s", message)
         self._run_failed = True
         self._set_running(False)
-        self.status_label.setText(message)
+        self.status_label.setText("")
+        self.show_screen_issue(ScreenIssue(summary=self._strings.worker_failed, details=message))

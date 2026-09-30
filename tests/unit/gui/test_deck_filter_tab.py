@@ -67,7 +67,7 @@ class TestScanGating:
             tab._start_scan()
 
         worker_cls.assert_not_called()
-        assert tab.status_label.text() == "Pick the source deck first."
+        assert tab.issue_banner().current_issue().summary == "Pick the source deck first."
 
     def test_empty_target_name_shows_message(self, tab):
         _select_source(tab)
@@ -76,7 +76,7 @@ class TestScanGating:
             tab._start_scan()
 
         worker_cls.assert_not_called()
-        assert tab.status_label.text() == "Name the new deck first."
+        assert tab.issue_banner().current_issue().summary == "Name the new deck first."
 
     def test_target_equal_to_source_is_refused(self, tab):
         _select_source(tab, "Premade")
@@ -85,7 +85,7 @@ class TestScanGating:
             tab._start_scan()
 
         worker_cls.assert_not_called()
-        assert "different name" in tab.status_label.text()
+        assert "different name" in tab.issue_banner().current_issue().summary
 
     def test_valid_inputs_start_the_scan_worker(self, tab):
         _select_source(tab)

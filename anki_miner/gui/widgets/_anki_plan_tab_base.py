@@ -35,7 +35,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.qt_helpers import configure_data_view, data_row_height, urls_from_event
 from anki_miner.gui.utils.run_off_thread import still_running
-from anki_miner.gui.widgets.base import TaskPublisherMixin, WorkflowActionBar
+from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost, TaskPublisherMixin, WorkflowActionBar
 from anki_miner.gui.widgets.enhanced import ModernButton
 
 if TYPE_CHECKING:
@@ -63,11 +63,14 @@ class _PlanTabStrings:
     cancelled: str
     #: Why Apply dropped the held plan instead of writing it.
     settings_changed: str
-    #: The status line while the deck list could not be fetched.
+    #: The banner while the deck list could not be fetched.
     couldnt_fetch_decks: str
+    #: Banner summary when the scan or apply worker failed; its message is the
+    #: Details (D24, D1).
+    worker_failed: str
 
 
-class _AnkiPlanTabBase(TaskPublisherMixin, QWidget):
+class _AnkiPlanTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
     """Behaviour shared by the Anki-plan tool tabs. See module docstring."""
 
     # --- Attributes the subclass provides (declared for the type checker) ---
@@ -85,6 +88,7 @@ class _AnkiPlanTabBase(TaskPublisherMixin, QWidget):
     cancel_button: ModernButton
     summary_label: QLabel
     preview_table: QTableWidget
+    preview_card: QWidget
     action_bar: WorkflowActionBar
     progress_bar: QProgressBar
     status_label: QLabel
@@ -282,10 +286,15 @@ class _AnkiPlanTabBase(TaskPublisherMixin, QWidget):
             self._deck_combo().addItems([str(d) for d in decks])
             if self._deck_fetch_failed:
                 self._deck_fetch_failed = False
-                self.status_label.setText("")
+                # Only the fetch's own banner: anything shown since stays.
+                banner = self.issue_banner()
+                current = banner.current_issue() if banner is not None else None
+                if current is not None and current.summary == self._strings.couldnt_fetch_decks:
+                    self.clear_screen_issue()
         else:
             self._deck_fetch_failed = True
-            self.status_label.setText(self._strings.couldnt_fetch_decks)
+            # A banner, not the run line: the run line is for runs (D1).
+            self.show_screen_issue(ScreenIssue(summary=self._strings.couldnt_fetch_decks))
 
     # ------------------------------------------------------------------
     # Close contract
