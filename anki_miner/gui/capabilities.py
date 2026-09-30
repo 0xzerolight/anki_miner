@@ -1403,10 +1403,10 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Undo a mining run"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Delete the notes a run just created, straight from the results dialog.",
+            "Delete the cards a run just created: press View details on the run's result line, then Undo.",
         ),
         category=_CAT_TOOLS,
-        keywords=("undo", "delete notes", "revert", "rollback", "mistake", "wrong deck"),
+        keywords=("undo", "delete cards", "delete notes", "revert", "rollback", "mistake", "wrong deck"),
     ),
     Capability(
         id="keyboard-shortcuts",
