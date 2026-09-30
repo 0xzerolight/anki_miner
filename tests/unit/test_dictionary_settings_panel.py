@@ -1352,3 +1352,33 @@ def test_context_menu_bails_during_scan_placeholder(qapp, qtbot, tmp_path, monke
     # No menu constructed and nothing removed.
     menu_cls.assert_not_called()
     remove_spy.assert_not_called()
+
+
+def test_the_storage_folder_sits_below_the_dictionary_list(qtbot, tmp_path):
+    """C15: the list is what a user comes here for; the folder is rare."""
+    from PyQt6.QtCore import QPoint
+
+    panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.resize(900, 900)
+    panel.show()
+    qtbot.waitExposed(panel)
+
+    def top(widget):
+        return widget.mapTo(panel, QPoint(0, 0)).y()
+
+    assert top(panel._add_btn) < top(panel.dicts_root_selector)
+
+
+def test_reset_is_offered_only_when_the_folder_is_not_the_default(qtbot, tmp_path):
+    from anki_miner.config.paths import ANKI_MINER_HOME
+
+    panel = DictionarySettingsPanel(ANKI_MINER_HOME / "dicts")
+    qtbot.addWidget(panel)
+    assert panel._reset_dicts_root_btn.isHidden()
+
+    panel.dicts_root_selector.set_path(str(tmp_path))
+    assert not panel._reset_dicts_root_btn.isHidden()
+
+    panel._reset_dicts_root_btn.click()
+    assert panel._reset_dicts_root_btn.isHidden()

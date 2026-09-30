@@ -115,6 +115,7 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         # __init__'s call chain may invoke this method indirectly.
         if hasattr(self, "dicts_root_selector"):
             self.dicts_root_selector.set_path(str(dicts_root))
+            self._sync_reset_visibility()
         # Root changed → cached scan is stale; rescan off-thread (no-op before
         # first show, where _scanned is still False).
         self._scan_and_render_async()
@@ -137,6 +138,12 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         """
         self.dicts_root_selector.set_path(str(ANKI_MINER_HOME / "dicts"))
 
+    def _sync_reset_visibility(self) -> None:
+        """Show "Reset to default" only while the folder differs from the default."""
+        raw = self.dicts_root_selector.get_path()
+        default = ANKI_MINER_HOME / "dicts"
+        self._reset_dicts_root_btn.setVisible(bool(raw) and Path(raw) != default)
+
     def set_per_row_reimport_enabled(self, enabled: bool) -> None:
         """Toggle every stale-row Re-import button.
 
@@ -154,40 +161,6 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         self._restore_btn.setEnabled(enabled)
 
     def _setup_fields(self) -> None:
-        # Storage folder picker — first so it sits above the dictionary chain.
-        # Issue #45: lets users move ``dicts/`` off the home partition (e.g. to
-        # an external SSD) without manually symlinking ``~/.anki_miner/dicts``.
-        storage_container = QWidget()
-        storage_layout = QHBoxLayout(storage_container)
-        storage_layout.setContentsMargins(0, 0, 0, 0)
-
-        self.dicts_root_selector = FileSelector(
-            label="",
-            file_mode=False,
-            placeholder=self.tr("Select dictionary storage folder..."),
-            default_dir=ANKI_MINER_HOME / "dicts",
-        )
-        self.dicts_root_selector.set_path(str(self._dicts_root))
-        storage_layout.addWidget(self.dicts_root_selector, 1)
-
-        self._reset_dicts_root_btn = ModernButton(self.tr("Reset to default"), variant="secondary")
-        self._reset_dicts_root_btn.clicked.connect(self._on_reset_dicts_root)
-        # FileSelector is two rows tall (input+Browse, then status caption); top-
-        # align so Reset lines up with the Browse button in the top row, not the
-        # HBox's default vertical center.
-        storage_layout.addWidget(self._reset_dicts_root_btn, alignment=Qt.AlignmentFlag.AlignTop)
-
-        self.add_field(
-            self.tr("Storage Folder"),
-            storage_container,
-            helper=self.tr(
-                "Where indexed dictionaries are stored. Existing dictionaries at "
-                "the old location are not moved automatically."
-            ),
-            anchor="storage_folder",
-            anchor_focus=self.dicts_root_selector,
-        )
-
         self.add_section(self.tr("Active Dictionaries"))
 
         self._reimport_btn = QAction(self.tr("Reimport All"), self)
@@ -239,6 +212,46 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
                 self._add_btn.text(),
                 self._restore_btn.text(),
             ),
+        )
+
+        self.add_section(self.tr("Storage"))
+        # Storage folder (Issue #45), below the list under its own heading (C15):
+        # rarely changed, so it no longer sits above what the page is for.
+        # It lets users move ``dicts/`` off the home partition (e.g. to
+        # an external SSD) without manually symlinking ``~/.anki_miner/dicts``.
+        storage_container = QWidget()
+        storage_layout = QHBoxLayout(storage_container)
+        storage_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.dicts_root_selector = FileSelector(
+            label="",
+            file_mode=False,
+            placeholder=self.tr("Select dictionary storage folder..."),
+            default_dir=ANKI_MINER_HOME / "dicts",
+        )
+        self.dicts_root_selector.set_path(str(self._dicts_root))
+        storage_layout.addWidget(self.dicts_root_selector, 1)
+
+        self._reset_dicts_root_btn = ModernButton(self.tr("Reset to default"), variant="secondary")
+        self._reset_dicts_root_btn.clicked.connect(self._on_reset_dicts_root)
+        # FileSelector is two rows tall (input+Browse, then status caption); top-
+        # align so Reset lines up with the Browse button in the top row, not the
+        # HBox's default vertical center.
+        storage_layout.addWidget(self._reset_dicts_root_btn, alignment=Qt.AlignmentFlag.AlignTop)
+        # Reset only where it does something (C15). The empty-field behaviour is
+        # unchanged: get_dicts_root keeps the current root on purpose.
+        self.dicts_root_selector.path_changed.connect(lambda _path: self._sync_reset_visibility())
+        self._sync_reset_visibility()
+
+        self.add_field(
+            self.tr("Storage Folder"),
+            storage_container,
+            helper=self.tr(
+                "Where indexed dictionaries are stored. Existing dictionaries at "
+                "the old location are not moved automatically."
+            ),
+            anchor="storage_folder",
+            anchor_focus=self.dicts_root_selector,
         )
 
         # Pitch accent sources now live in their own Settings → Pitch Accent
