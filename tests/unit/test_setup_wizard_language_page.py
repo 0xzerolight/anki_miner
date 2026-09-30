@@ -62,25 +62,22 @@ def _pick(page, code):
 # ---------------------------------------------------------------------------
 
 
-def test_the_language_page_is_the_second_step(wizard_factory, test_config):
+def test_the_language_page_is_the_first_step(wizard_factory, test_config):
     wiz = wizard_factory(test_config)
 
     ids = wiz.pageIds()
-    assert len(ids) == 7
-    assert wiz.page(ids[0]) is wiz.theme_page
-    assert wiz.page(ids[1]) is wiz.language_page
-    assert wiz.page(ids[2]) is wiz.ankiconnect_page
+    assert len(ids) == 6
+    assert wiz.page(ids[0]) is wiz.language_page
+    assert wiz.page(ids[1]) is wiz.ankiconnect_page
 
 
 def test_a_wizard_that_was_not_asked_has_no_language_step(wizard_factory, test_config):
-    """The default shape is the six pages the wizard had before this step existed."""
     wiz = wizard_factory(test_config, offer_mining_language=False)
 
     ids = wiz.pageIds()
-    assert len(ids) == 6
+    assert len(ids) == 5
     assert wiz.language_page is None
-    assert wiz.page(ids[0]) is wiz.theme_page
-    assert wiz.page(ids[1]) is wiz.ankiconnect_page
+    assert wiz.page(ids[0]) is wiz.ankiconnect_page
 
 
 def test_a_wizard_without_the_page_has_nothing_to_revert_on_a_walk_away(wizard_factory, test_config):
@@ -139,9 +136,6 @@ def test_next_is_what_commits_the_pick(qtbot, wizard_factory, test_config):
     """Driven through QWizard itself, not through the page's methods."""
     wiz = wizard_factory(test_config)
     wiz.restart()
-    assert wiz.currentPage() is wiz.theme_page
-
-    wiz.next()
     assert wiz.currentPage() is wiz.language_page
     _pick(wiz.language_page, "zh")
     assert wiz.working_config() == test_config  # still on the page: nothing committed

@@ -37,7 +37,6 @@ from .pages import (
     MiningLanguagePage,
     NoteTypePage,
     ResourcesPage,
-    ThemePage,
 )
 
 __all__ = ["SetupWizard", "SetupWizardOutcome", "run_setup_wizard"]
@@ -128,19 +127,18 @@ class SetupWizard(QWizard):
         # whole change — no extra control, no checkbox to read back.
         self.setButtonText(QWizard.WizardButton.FinishButton, self.tr("Open Video Mining"))
 
-        # Pages in order. Theme goes first: it is the only step with nothing to
-        # detect and nothing that can fail, so it costs the user nothing and
-        # every page after it wears their own pick. When the mining language is
-        # asked at all it comes second, ahead of everything it decides: deck,
-        # note type and the recommended catalog are all that language's own.
-        self.theme_page = ThemePage(self)
+        # Pages in order. When the mining language is asked at all it comes
+        # first, ahead of everything it decides: deck, note type and the
+        # recommended catalog are all that language's own. The theme is not a
+        # setup question (D8): a fresh install starts on the system's light or
+        # dark look (gui/app.py), and the gallery lives in Settings → General.
         self.language_page = MiningLanguagePage(self) if offer_mining_language else None
         self.ankiconnect_page = AnkiConnectPage(self)
         self.deck_page = DeckPage(self)
         self.notetype_page = NoteTypePage(self)
         self.resources_page = ResourcesPage(self)
         self.done_page = DonePage(self)
-        ordered: list[QWizardPage] = [self.theme_page]
+        ordered: list[QWizardPage] = []
         if self.language_page is not None:
             ordered.append(self.language_page)
         ordered += [
@@ -346,7 +344,6 @@ class SetupWizard(QWizard):
         back again by ``done()`` on every path but an accepted Finish. A wizard
         that never registered that page has no such switch to keep or drop.
         """
-        self.theme_page.stage_current_edits()
         self.ankiconnect_page.stage_current_edits()
         self.deck_page.stage_current_edits()
         self.notetype_page.stage_current_edits()
