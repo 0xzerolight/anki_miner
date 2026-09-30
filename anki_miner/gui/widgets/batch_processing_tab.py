@@ -6,12 +6,11 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PyQt6.QtGui import QFont, QKeySequence
+from PyQt6.QtGui import QKeySequence
 from PyQt6.QtWidgets import (
     QCheckBox,
     QFrame,
     QHBoxLayout,
-    QLabel,
     QScrollArea,
     QSizePolicy,
     QVBoxLayout,
@@ -21,7 +20,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
-from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import queue_state_store, result_copy
 from anki_miner.gui.utils.keyboard_shortcuts import scoped_shortcut
 from anki_miner.gui.utils.queue_state_store import QueueItemSnapshot, QueueSnapshot
@@ -159,16 +158,10 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         self.review_words_checkbox.setToolTip(self.tr("Pick which words get cards, once per series."))
         layout.addWidget(self.review_words_checkbox)
 
-        # Overall Progress (for queue processing)
-        overall_progress_header = QLabel(self.tr("Overall Progress"))
-        overall_progress_header.setObjectName("heading3")
-        font = QFont()
-        font.setPixelSize(FONT_SIZES.body)
-        font.setWeight(QFont.Weight.Bold)
-        overall_progress_header.setFont(font)
-        layout.addWidget(overall_progress_header)
-
+        # D1: progress is shown once, in the pinned bar. The widget stays,
+        # hidden, as the run's state holder and the receipt's anchor.
         self.overall_progress_widget = ProgressWidget()
+        self.overall_progress_widget.hide()
         layout.addWidget(self.overall_progress_widget)
         # The durable end state of this same card (D20). The noun ("series")
         # is set per run at _begin_receipt.

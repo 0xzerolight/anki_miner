@@ -201,11 +201,11 @@ class SingleEpisodeTab(MiningTabBase):
         button_layout.addStretch()
         layout.addLayout(button_layout)
 
-        # Progress section
-        progress_header = SectionHeader(self.tr("Progress"))
-        layout.addWidget(progress_header)
-
+        # D1: the pinned bar is this screen's one progress surface. The widget
+        # stays (hidden) because the run still writes its state into it, and
+        # the receipt below is placed after it, directly under the inputs.
         self.progress_widget = ProgressWidget()
+        self.progress_widget.hide()
         layout.addWidget(self.progress_widget)
         # The durable end state of this same card (D20). One episode per run,
         # so the receipt never needs a noun to count.

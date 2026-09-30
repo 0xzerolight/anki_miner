@@ -142,8 +142,10 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         layout.addWidget(self._create_settings_section())
         layout.addWidget(self._create_results_section())
 
-        layout.addWidget(SectionHeader(self.tr("Progress")))
+        # D1: progress lives in the pinned bar; this widget is the run's hidden
+        # state holder and the receipt's anchor.
         self.progress_widget = ProgressWidget()
+        self.progress_widget.hide()
         layout.addWidget(self.progress_widget)
         # The durable end state of this same run (D20); one item per run, so
         # the noun is only ever used above one deck.
