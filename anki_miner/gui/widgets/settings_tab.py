@@ -980,9 +980,9 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         """Arm the auto-save debounce on any user edit in the save-path panels.
 
         Uses recursive ``findChildren`` — load-bearing: the FileSelectors
-        embedded in the Filtering/YouTube panels (blacklist, whitelist,
-        cookies) expose edits only through their NESTED QLineEdit; a
-        direct-children walk would silently never auto-save those fields.
+        embedded in the Filtering panel (blacklist, whitelist) expose edits
+        only through their NESTED QLineEdit; a direct-children walk would
+        silently never auto-save those fields.
         Redundant arming (e.g. a spinbox's inner line edit) is harmless — the
         slot just restarts the timer. Programmatic repopulation is filtered by
         the ``_loading`` guard, not here.
@@ -1021,6 +1021,10 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                 if model is not None:
                     model.rowsInserted.connect(self._on_settings_edited)
                     model.rowsRemoved.connect(self._on_settings_edited)
+
+        # A cookies file picked or dropped through the YouTube combo is not a
+        # widget value the scan above sees (C10).
+        self.youtube_panel.edited.connect(self._on_settings_edited)
 
         # Partly checked -> checked emits no toggled() (Qt keeps isChecked()
         # True for a partial box), so the names box is watched on its state.

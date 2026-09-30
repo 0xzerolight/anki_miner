@@ -3,11 +3,14 @@
 from dataclasses import replace
 from pathlib import Path
 
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QCheckBox, QComboBox, QHBoxLayout, QLabel, QSpinBox, QWidget
 
+from anki_miner.gui.utils import file_dialogs
+from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton
+from anki_miner.utils.i18n import tr_format
 
 # Ordered pairs of (display label, config value) for the browser dropdown.
 # The sentinel "None" label maps to a Python ``None`` value in the config.
@@ -24,12 +27,17 @@ _COOKIE_BROWSER_OPTIONS: list[tuple[str, str | None]] = [
     ("Safari", "safari"),
 ]
 
+#: Item data of the combo entry naming the chosen cookies.txt file (C10).
+_FILE_ITEM = "__cookies_file__"
+#: Item data of the last entry, the action that opens the file picker.
+_PICK_ITEM = "__pick_cookies_file__"
+
 
 class YouTubeSettingsPanel(FormPanel):
     """Panel for YouTube mining settings.
 
     Provides:
-    - Cookies-from-browser selection (bot-detection workaround)
+    - Cookies: none, a browser, or a cookies.txt file, as one choice (C10)
     - Max video duration cap (in minutes)
     - A manual "Update yt-dlp now" trigger + status line
     """
@@ -40,6 +48,10 @@ class YouTubeSettingsPanel(FormPanel):
     #: → MainWindow.background_tasks.start_ytdlp_update) lives outside the panel.
     update_ytdlp_requested = pyqtSignal()
 
+    #: A cookies file was picked or dropped through the combo. The file is not a
+    #: widget value the auto-save can watch, so SettingsTab listens to this.
+    edited = pyqtSignal()
+
     def __init__(self, parent=None):
         """Initialize the YouTube settings panel."""
         super().__init__(self.tr("YouTube"), parent=parent)
@@ -47,30 +59,23 @@ class YouTubeSettingsPanel(FormPanel):
 
     def _setup_fields(self) -> None:
         """Set up the panel fields."""
-        # Cookies from browser
+        # Cookies (C10): one choice -- none, a browser, or a cookies.txt file.
+        # Both config fields stay; a file wins, exactly as it did before.
+        self._cookies_file = ""
+        self._last_cookie_index = 0
         self.cookies_browser_combo = QComboBox()
         for label, _value in _COOKIE_BROWSER_OPTIONS:
             self.cookies_browser_combo.addItem(label)
+        self.cookies_browser_combo.addItem(self.tr("From a cookies.txt file…"), _PICK_ITEM)
+        self.cookies_browser_combo.activated.connect(self._on_cookies_activated)
         self.add_field(
             self.tr("Cookies from browser"),
             self.cookies_browser_combo,
             helper=self.tr(
-                "Pick a browser whose cookies yt-dlp should reuse. "
-                "Leave as 'None' unless YouTube is blocking anonymous fetches."
+                "Reuse a browser's YouTube login, or an exported cookies.txt file, when YouTube blocks "
+                "anonymous fetches. Keep a cookies file private — it holds your login."
             ),
-        )
-
-        # Cookies file (overrides the browser dropdown above)
-        self.cookies_file_selector = FileSelector(
-            label="",
-            file_mode=True,
-            file_filter="Cookies file (*.txt);;All Files (*)",
-            placeholder=self.tr("Optional: path to an exported cookies.txt..."),
-        )
-        self.add_field(
-            self.tr("Cookies file"),
-            self.cookies_file_selector,
-            helper=self.tr("Overrides the browser dropdown. Keep the file private — it holds your YouTube login."),
+            anchor_text=lambda: ("Cookies file", "cookies.txt"),
         )
 
         # Max duration (minutes)
@@ -177,34 +182,81 @@ class YouTubeSettingsPanel(FormPanel):
     # ------------------------------------------------------------------
 
     def set_cookies_from_browser(self, value: str | None) -> None:
-        """Select the dropdown entry matching ``value``.
-
-        Unknown values fall back to "None".
-        """
+        """Select the browser matching ``value`` (unknown -> "None"); this clears a file."""
+        self._set_cookies_file_item("")
+        combo = self.cookies_browser_combo
+        combo.setCurrentIndex(0)
         for index, (_label, option_value) in enumerate(_COOKIE_BROWSER_OPTIONS):
             if option_value == value:
-                self.cookies_browser_combo.setCurrentIndex(index)
-                return
-        self.cookies_browser_combo.setCurrentIndex(0)
+                combo.setCurrentIndex(index)
+                break
+        self._last_cookie_index = combo.currentIndex()
 
     def get_cookies_from_browser(self) -> str | None:
-        """Return the config value currently selected in the dropdown."""
+        """The selected browser's config value; ``None`` for "None" or a file."""
         index = self.cookies_browser_combo.currentIndex()
         if 0 <= index < len(_COOKIE_BROWSER_OPTIONS):
             return _COOKIE_BROWSER_OPTIONS[index][1]
         return None
 
     def set_cookies_file(self, value: object) -> None:
-        """Populate the cookies-file field from a config value (Path/str/None)."""
-        self.cookies_file_selector.set_path(str(value) if value else "")
+        """Choose a cookies file (Path/str), or drop it (None/"")."""
+        path = str(value) if value else ""
+        self._set_cookies_file_item(path)
+        combo = self.cookies_browser_combo
+        if path:
+            combo.setCurrentIndex(combo.findData(_FILE_ITEM))
+        elif combo.currentIndex() < 0 or combo.currentData() == _PICK_ITEM:
+            combo.setCurrentIndex(0)
+        self._last_cookie_index = combo.currentIndex()
 
     def get_cookies_file(self) -> str:
-        """Return the cookies-file path text (empty string when unset).
+        """The cookies-file path ("" when none). Verbatim: a trailing space in a folder name survives."""
+        return self._cookies_file
 
-        Uses ``path_or_none()`` so a cookies file inside a folder whose name
-        ends in a space is preserved verbatim rather than corrupted by strip.
-        """
-        return self.cookies_file_selector.path_or_none() or ""
+    def _set_cookies_file_item(self, path: str) -> None:
+        """Show ``path`` as "<name> (file)" just above the picker action, or remove it."""
+        self._cookies_file = path
+        combo = self.cookies_browser_combo
+        index = combo.findData(_FILE_ITEM)
+        if not path:
+            if index >= 0:
+                combo.removeItem(index)
+            return
+        label = tr_format(self.tr("%1 (file)"), Path(path).name)
+        if index < 0:
+            index = combo.findData(_PICK_ITEM)
+            combo.insertItem(index, label, _FILE_ITEM)
+        else:
+            combo.setItemText(index, label)
+        combo.setItemData(index, path, Qt.ItemDataRole.ToolTipRole)
+
+    def _on_cookies_activated(self, index: int) -> None:
+        """A user choice: the picker action, the file item, or a browser."""
+        combo = self.cookies_browser_combo
+        data = combo.itemData(index)
+        if data == _PICK_ITEM:
+            # Never leave the action itself selected while the picker is open.
+            combo.setCurrentIndex(self._last_cookie_index)
+            file_dialogs.pick_open_file(
+                self,
+                self.tr("Choose a cookies.txt file"),
+                resolve_start_dir(self._cookies_file or None, file_mode=True),
+                self.tr("Cookies file (*.txt);;All Files (*)"),
+                on_done=self._on_cookies_file_picked,
+            )
+            return
+        if data != _FILE_ITEM and self._cookies_file:
+            # Choosing a browser clears the file (C10).
+            self._set_cookies_file_item("")
+            self.edited.emit()
+        self._last_cookie_index = combo.currentIndex()
+
+    def _on_cookies_file_picked(self, path: str) -> None:
+        if not path:
+            return
+        self.set_cookies_file(path)
+        self.edited.emit()
 
     def set_max_duration_seconds(self, seconds: int) -> None:
         """Set the spinbox from a seconds value, rounding up to the next minute."""

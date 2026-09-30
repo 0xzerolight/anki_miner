@@ -179,6 +179,59 @@ class TestYouTubePanelValueHelpers:
         finally:
             panel.deleteLater()
 
+    def test_cookies_are_one_combo_with_a_file_choice(self, qtbot):
+        """C10: browser and file were two rows for one choice."""
+        panel = YouTubeSettingsPanel()
+        qtbot.addWidget(panel)
+        assert not hasattr(panel, "cookies_file_selector")
+        combo = panel.cookies_browser_combo
+        assert combo.itemText(combo.count() - 1) == "From a cookies.txt file…"
+
+    def test_a_cookies_file_shows_as_its_own_item(self, tmp_path, qtbot):
+        panel = YouTubeSettingsPanel()
+        qtbot.addWidget(panel)
+        cookies = tmp_path / "cookies.txt"
+        panel.set_cookies_file(cookies)
+        assert panel.cookies_browser_combo.currentText() == "cookies.txt (file)"
+        assert panel.get_cookies_from_browser() is None
+        assert panel.get_cookies_file() == str(cookies)
+
+    def test_choosing_a_browser_clears_the_file(self, tmp_path, qtbot):
+        panel = YouTubeSettingsPanel()
+        qtbot.addWidget(panel)
+        panel.set_cookies_file(tmp_path / "cookies.txt")
+        combo = panel.cookies_browser_combo
+        combo.setCurrentIndex(combo.findText("Firefox"))
+        combo.activated.emit(combo.currentIndex())
+        assert panel.get_cookies_file() == ""
+        assert panel.get_cookies_from_browser() == "firefox"
+        assert combo.findData("__cookies_file__") == -1
+
+    def test_the_file_action_opens_the_picker_and_selects_the_file(self, tmp_path, qtbot, monkeypatch):
+        from anki_miner.gui.widgets.panels import youtube_settings_panel as module
+
+        cookies = tmp_path / "cookies.txt"
+        monkeypatch.setattr(module.file_dialogs, "pick_open_file", lambda *a, on_done, **k: on_done(str(cookies)))
+        panel = YouTubeSettingsPanel()
+        qtbot.addWidget(panel)
+        combo = panel.cookies_browser_combo
+        with qtbot.waitSignal(panel.edited, timeout=1000):
+            combo.activated.emit(combo.findData("__pick_cookies_file__"))
+        assert panel.get_cookies_file() == str(cookies)
+        assert combo.currentText() == "cookies.txt (file)"
+
+    def test_a_cancelled_picker_keeps_the_previous_choice(self, qtbot, monkeypatch):
+        from anki_miner.gui.widgets.panels import youtube_settings_panel as module
+
+        monkeypatch.setattr(module.file_dialogs, "pick_open_file", lambda *a, on_done, **k: on_done(""))
+        panel = YouTubeSettingsPanel()
+        qtbot.addWidget(panel)
+        panel.set_cookies_from_browser("chrome")
+        combo = panel.cookies_browser_combo
+        combo.activated.emit(combo.findData("__pick_cookies_file__"))
+        assert panel.get_cookies_from_browser() == "chrome"
+        assert panel.get_cookies_file() == ""
+
 
 class TestSettingsTabRoundTrip:
     """Editing widgets and clicking Save should propagate to config_changed."""

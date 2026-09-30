@@ -121,7 +121,8 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         merge_incomplete_cues=True,
         bold_target_in_sentence=True,
         # --- YouTubeSettingsPanel ---
-        youtube_cookies_from_browser="firefox",
+        # C10: a file and a browser are one choice; the file wins, so a config carrying both is not round-trip-stable.
+        youtube_cookies_from_browser=None,
         youtube_cookies_file=cookies_txt,
         youtube_max_duration_s=3600,
         youtube_playlist_max=50,
