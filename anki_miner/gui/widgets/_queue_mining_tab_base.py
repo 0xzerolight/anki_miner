@@ -56,9 +56,8 @@ from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QKeySequence
-from PyQt6.QtWidgets import QBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem
+from PyQt6.QtWidgets import QBoxLayout, QListWidget, QListWidgetItem
 
-from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.keyboard_shortcuts import scoped_shortcut
 from anki_miner.gui.utils.qt_helpers import configure_data_view, install_copy_rows
 from anki_miner.gui.utils.run_off_thread import join_or_retain, still_running
@@ -780,16 +779,14 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
     # UI construction
     # ------------------------------------------------------------------
 
-    def _build_queue_actions(self, queue_layout: QBoxLayout) -> None:
-        """Build Mine, Clear and Cancel, and put the Clear row at the foot of the queue card.
+    def _build_queue_actions(self) -> None:
+        """Build Mine, Clear and Cancel; Clear goes into the queue's tools row (A01).
 
-        Clear acts on the list right above it and stays with it. Mine and
-        Cancel are built here but placed by the subclass's
-        ``_install_action_bar`` call, which moves them to the pinned bar (D6).
+        Mine and Cancel are placed by the subclass's ``_install_action_bar``
+        call, which moves them to the pinned bar (D6). Call it after
+        ``queue_controls`` exists.
         """
         strings = self._queue_list_strings
-        button_row = QHBoxLayout()
-        button_row.setSpacing(SPACING.xs)
 
         self.mine_button = ModernButton(self._run_strings.mine_label, variant="primary")
         self.mine_button.setToolTip(strings.mine_tip)
@@ -798,14 +795,11 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         self.clear_button = ModernButton(strings.clear, variant="ghost")
         self.clear_button.setToolTip(strings.clear_tip)
         self.clear_button.clicked.connect(self._on_clear_clicked)
+        self.queue_controls.set_clear_button(self.clear_button)
 
         self.stop_button = ModernButton(strings.stop_all, variant="secondary")
         self.stop_button.setToolTip(strings.cancel_tip)
         self.stop_button.clicked.connect(self._on_stop_all_clicked)
-
-        button_row.addWidget(self.clear_button)
-        button_row.addStretch()
-        queue_layout.addLayout(button_row)
 
     def _build_progress_card(self, layout: QBoxLayout) -> None:
         """Add the hidden run-state widget, the receipt and the page filler; build the log.
@@ -1195,6 +1189,7 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         the receipt describe without changing what actually gets mined (D29-A).
         """
         selected = self._selected_items()
+        self.queue_controls.set_selection_count(len(selected))
         run_active = self.worker_thread is not None
         runnable = any(i.status == self._status_ready for i in selected)
         retryable = any(self._is_retryable(i) for i in selected)

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
+    QAbstractButton,
     QButtonGroup,
     QHBoxLayout,
     QLabel,
@@ -36,6 +37,10 @@ from anki_miner.utils.i18n import tr_format
 #: the resting state; the rest read left to right in the order a row travels
 #: through them.
 QUEUE_FILTERS: tuple[str, ...] = ("all", "ready", "running", "failed", "complete")
+
+#: Rows a queue needs before its filter chips and search appear (D6 item 3). A
+#: fixed count, never the viewport height, so the tools do not flicker on resize.
+QUEUE_TOOLS_MIN_ROWS = 6
 
 
 class QueueControlsBar(QWidget):
@@ -75,9 +80,15 @@ class QueueControlsBar(QWidget):
         self._paused = False
         self._running = False
         self._pause_available = True
+        # A01: which tools show depends on how many rows there are and how many
+        # are selected, both handed in by the owning queue.
+        self._row_count = 0
+        self._selection_count = 0
+        self._clear_button: QAbstractButton | None = None
         self._setup_ui()
         self.set_counts(total=0, ready=0, failed=0, complete=0)
         self.set_actions_enabled(run=False, retry=False, remove=False)
+        self.set_selection_count(0)
         self.set_running(False)
 
     # ------------------------------------------------------------------
@@ -113,6 +124,8 @@ class QueueControlsBar(QWidget):
                 complete,
             )
         )
+        self._row_count = total
+        self._apply_row_visibility()
 
     def set_actions_enabled(self, *, run: bool, retry: bool, remove: bool) -> None:
         """Enable each selection action independently.
@@ -125,6 +138,56 @@ class QueueControlsBar(QWidget):
         self.run_button.setEnabled(run)
         self.retry_button.setEnabled(retry)
         self.remove_button.setEnabled(remove)
+
+    def set_selection_count(self, count: int) -> None:
+        """Show the selection actions only while at least one row is selected (A01).
+
+        Their enabled states still come from :meth:`set_actions_enabled`.
+
+        Args:
+            count: Selected, visible rows.
+        """
+        self._selection_count = count
+        for button in (self.run_button, self.retry_button, self.remove_button):
+            button.setVisible(count > 0)
+
+    def set_clear_button(self, button: QAbstractButton) -> None:
+        """Host the queue's own Clear button beside the counter (A01).
+
+        The button stays the owner's object (its connections and enabled state
+        are the owner's); this bar only places it and shows it with the first row.
+
+        Args:
+            button: The queue's Clear button.
+        """
+        self._clear_button = button
+        self._clear_slot.addWidget(button)
+        self._apply_row_visibility()
+
+    def _apply_row_visibility(self) -> None:
+        """Counter and Clear from the first row; chips and search from six (A01, D6)."""
+        has_rows = self._row_count > 0
+        many = self._row_count >= QUEUE_TOOLS_MIN_ROWS
+        if not many:
+            self._reset_view_tools()
+        for button in self.filter_buttons.values():
+            button.setVisible(many)
+        self.search_edit.setVisible(many)
+        self.counter_label.setVisible(has_rows)
+        if self._clear_button is not None:
+            self._clear_button.setVisible(has_rows)
+
+    def _reset_view_tools(self) -> None:
+        """Put the filter back to All and clear the search before hiding them.
+
+        A narrowed view with its controls hidden would hide rows with no way
+        back, so hiding the tools always undoes what they did.
+        """
+        if self.active_filter() != "all":
+            self.filter_buttons["all"].setChecked(True)
+            self.filter_changed.emit("all")
+        if self.search_edit.text():
+            self.search_edit.clear()
 
     def set_running(self, running: bool) -> None:
         """Freeze the queue for the duration of a run, and offer where to stop.
@@ -239,11 +302,17 @@ class QueueControlsBar(QWidget):
         self.search_edit.setClearButtonEnabled(True)
         self.search_edit.setPlaceholderText(self.tr("Search the queue…"))
         self.search_edit.textChanged.connect(self.search_changed.emit)
-        row.addWidget(self.search_edit, 1)
+        row.addWidget(self.search_edit, 3)
 
         self.counter_label = QLabel()
         self.counter_label.setObjectName("queue-counter")
         row.addWidget(self.counter_label)
+        row.addStretch(1)
+        # The queue's own Clear lands here (set_clear_button): Clear acts on the
+        # whole list, so it sits with the counter that describes it (A01).
+        self._clear_slot = QHBoxLayout()
+        self._clear_slot.setContentsMargins(0, 0, 0, 0)
+        row.addLayout(self._clear_slot)
 
         return row
 

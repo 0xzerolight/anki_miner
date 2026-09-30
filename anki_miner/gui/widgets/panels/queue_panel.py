@@ -145,6 +145,12 @@ class QueuePanel(QFrame):
         )
         layout.addWidget(self.queue_controls)
 
+        # A01: "Clear", not "Clear All", and in the tools row beside the counter.
+        self.clear_button = ModernButton(self.tr("Clear"), variant="ghost")
+        self.clear_button.clicked.connect(self._clear_queue)
+        self.clear_button.setToolTip(self.tr("Remove all items from queue"))
+        self.queue_controls.set_clear_button(self.clear_button)
+
         self.list_widget = QListWidget()
         self.list_widget.setObjectName("queue-list")
         layout.addWidget(self.list_widget)
@@ -156,11 +162,6 @@ class QueuePanel(QFrame):
         self.process_queue_button.clicked.connect(self.process_requested.emit)
         self.process_queue_button.setToolTip(self.tr("Mine every series in the queue"))
         button_layout.addWidget(self.process_queue_button)
-
-        self.clear_button = ModernButton(self.tr("Clear All"), variant="ghost")
-        self.clear_button.clicked.connect(self._clear_queue)
-        self.clear_button.setToolTip(self.tr("Remove all items from queue"))
-        button_layout.addWidget(self.clear_button)
 
         button_layout.addStretch()
         layout.addLayout(button_layout)
@@ -591,6 +592,7 @@ class QueuePanel(QFrame):
         and the receipt describe without changing what actually gets mined.
         """
         selected = self.selected_widgets()
+        self.queue_controls.set_selection_count(len(selected))
         runnable = any(self._items.get(id(w)) is not None for w in selected)
         retryable = any(w.get_status() == "error" for w in selected)
         removable = any(w.get_status() != "processing" for w in selected)

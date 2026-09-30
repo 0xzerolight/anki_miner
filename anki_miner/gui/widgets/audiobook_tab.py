@@ -275,8 +275,8 @@ class AudiobookTab(_ListQueueMiningTabBase):
         )
         queue_layout.addWidget(self.review_words_checkbox)
 
-        # Mine / Clear / Cancel; only Clear stays in this card (D6).
-        self._build_queue_actions(queue_layout)
+        # Mine / Clear / Cancel; Clear sits in the queue's tools row (A01).
+        self._build_queue_actions()
 
         queue_card.setLayout(queue_layout)
         layout.addWidget(queue_card)
