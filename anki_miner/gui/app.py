@@ -1853,6 +1853,8 @@ def compose_main_window(
     settings_tab.ui_panel.state_changed.connect(lambda *_: window.header.update_theme_selector())
     # D14: the resource bundle's Export / Import live in the Tools menu now.
     window.install_resource_bundle_actions(settings_tab.export_resources_action, settings_tab.import_resources_action)
+    # C09: an empty resource page asks for its own family's recommended download.
+    settings_tab.resource_family_download_requested.connect(window.download_resource_family)
     # The selector only ever PROPOSES a switch: the window runs the guard, shows
     # any refusal itself and re-points the combo on every terminal path.
     settings_tab.mining_language_requested.connect(window.request_mining_language)

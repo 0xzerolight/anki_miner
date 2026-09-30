@@ -138,3 +138,46 @@ def test_activation_clears_only_matching_resource_download_issue(wired_window, m
     window.show_screen_issue(other_issue)
     assert window._activate_downloaded_resources(summary) is window.config
     assert window.issue_banner().current_issue() is other_issue
+
+
+def test_an_empty_page_downloads_only_its_family(wired_window, monkeypatch) -> None:
+    """C09: Frequency's "Download recommended" fetches frequency lists only."""
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog
+
+    window, _titles, tabs = wired_window
+    seen: list[list[str]] = []
+
+    def fake_start(_parent, _config, **kwargs):
+        seen.append([spec.kind for spec in kwargs["specs"]])
+        return None
+
+    monkeypatch.setattr(resource_download_dialog, "start_resource_download", fake_start)
+    monkeypatch.setattr(window.background_tasks, "cancel_jmdict_migration", lambda: None)
+
+    tabs["Settings"].resource_family_download_requested.emit("freq")
+
+    assert len(seen) == 1 and seen[0] and set(seen[0]) == {"freq"}
+
+
+def test_a_blocked_family_download_retries_only_that_family(wired_window, monkeypatch) -> None:
+    """C09: Retry on the contention banner re-runs the family, not the whole catalogue."""
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog
+
+    window, _titles, tabs = wired_window
+    seen: list[list[str]] = []
+
+    def fake_start(_parent, _config, **kwargs):
+        seen.append([spec.kind for spec in kwargs["specs"]])
+        kwargs["blocked"]("Indexed resources are in use.")
+        return None
+
+    monkeypatch.setattr(resource_download_dialog, "start_resource_download", fake_start)
+    monkeypatch.setattr(window.background_tasks, "cancel_jmdict_migration", lambda: None)
+
+    tabs["Settings"].resource_family_download_requested.emit("freq")
+    issue = window.issue_banner().current_issue()
+    assert issue is not None and issue.action_id == "resource-download.retry"
+
+    window.issue_banner().action_button.click()
+
+    assert len(seen) == 2 and set(seen[1]) == {"freq"}

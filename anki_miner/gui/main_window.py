@@ -5,7 +5,7 @@ import os
 import sys
 import time
 from collections import Counter
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import replace
 from datetime import datetime
@@ -81,6 +81,7 @@ from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.models import ProcessingResult, ValidationResult
 from anki_miner.services import ShortcutResult, ShortcutService, ValidationService
 from anki_miner.services.anki_service import AnkiService
+from anki_miner.services.resource_catalog import ResourceSpec
 from anki_miner.utils.bundled_binary import frozen_state
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
@@ -1348,7 +1349,24 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             on_error(str(exc))
 
     def _download_recommended_resources(self) -> None:
-        """Tools-menu handler: start the background recommended-resource run.
+        """Tools-menu handler: the whole recommended set for the mining language."""
+        self._start_recommended_download(get_profile(config_language(self.config)).catalog)
+
+    def download_resource_family(self, kind: str) -> None:
+        """C09: an empty Dictionaries / Frequency / Pitch Accent page downloads its own family only.
+
+        Same activation and mutation handshakes as the Tools run; a kind the
+        catalogue does not have starts nothing (the page shows no button then).
+        """
+        specs = [spec for spec in get_profile(config_language(self.config)).catalog if spec.kind == kind]
+        if specs:
+            self._start_recommended_download(specs, kind)
+
+    def _start_recommended_download(self, specs: Sequence[ResourceSpec], kind: str | None = None) -> None:
+        """Start the background recommended-resource run for ``specs``.
+
+        ``kind`` is the family ("dict" / "freq" / "pitch") when ``specs`` is one
+        family, else ``None``; only it reaches the contention banner's Retry.
 
         Mining stays usable while several hundred megabytes transfer. Settings'
         dictionary mutation token stays held through native worker finish so the
@@ -1369,25 +1387,38 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             activate=self._activate_downloaded_resources,
             release_resources=self.release_dictionary_resources,
             acquire_mutation=self._acquire_resource_download_mutation,
-            blocked=self._show_resource_download_blocked,
+            blocked=lambda message: self._show_resource_download_blocked(message, kind),
             task_registry=self.task_registry,
             adopt_worker=self.background_tasks.adopt_resource_download_worker,
-            specs=get_profile(config_language(self.config)).catalog,
+            specs=specs,
         )
         if session is not None:
             # Retained here, not Qt-parented: the session outlives its window.
             self._resource_download_session = session
             self._clear_resource_download_issue()
 
-    def _show_resource_download_blocked(self, message: str) -> None:
-        """Keep recoverable resource contention on the main issue surface."""
+    def _show_resource_download_blocked(self, message: str, kind: str | None = None) -> None:
+        """Keep recoverable resource contention on the main issue surface.
+
+        Retry re-runs the same family (C09): a family download started from an
+        empty settings page retries that family, not the whole catalogue. Only
+        the kind is carried, never the specs, so Retry re-reads the catalogue of
+        the mining language that is live when the user clicks it.
+        """
+
+        def retry() -> None:
+            if kind is None:
+                self._download_recommended_resources()
+            else:
+                self.download_resource_family(kind)
+
         self.show_screen_issue(
             ScreenIssue(
                 summary=message,
                 action_id="resource-download.retry",
                 action_text=self.tr("Retry"),
             ),
-            action=self._download_recommended_resources,
+            action=retry,
         )
 
     def _clear_resource_download_issue(self) -> None:
