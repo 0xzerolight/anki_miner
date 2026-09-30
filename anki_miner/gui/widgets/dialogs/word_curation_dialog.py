@@ -2029,11 +2029,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         ``surface`` per candidate line, and for surface-mined POS (nouns)
         ``mined_form`` IS the surface, so both move with the pick.
 
-        ``reading`` is not swapped today, so column 3 is a no-op. It stays in the
-        spec anyway because the row's contract is "columns 1-4 are the chosen
-        variant" — leaving one column out is exactly how the row went half stale
-        in the first place (Issue #108 was that leak on ``surface`` alone).
+        Column 3 prints ``expression_reading`` (the card's reading) and falls
+        back to ``reading``; it follows the chosen variant like columns 1, 2 and
+        4 so the row never goes half stale (Issue #108).
         """
+        shown_reading = chosen.expression_reading or chosen.reading
         n_candidates = len(word.sentence_candidates)
         return (
             # Word (mined) — what becomes the Anki Expression (source-orthography
@@ -2041,8 +2041,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             (1, chosen.mined_form, chosen.mined_form, chosen.mined_form),
             # Form in text — the raw surface as it appeared.
             (2, chosen.surface, chosen.surface, chosen.surface),
-            # Reading.
-            (3, chosen.reading, chosen.reading, chosen.reading),
+            # Reading: the one the card will carry (folded, overridden
+            # expression_reading), else the token's own for languages that set
+            # none (A14). The raw token reading of an inflected form (キ for
+            # 来た) is not what the card shows.
+            (3, shown_reading, shown_reading, shown_reading),
             # Sentence, truncated for the cell but copied and hovered in full.
             # A trailing "(N)" flags words with N alternative example sentences.
             (
