@@ -6,7 +6,8 @@ URL draws nothing. So each glyph is written once per colour into a folder that
 lives for the process, under a name derived from the colour, and the compiled
 stylesheet points at it. Every theme draws them in its own colours and no theme
 gains a key: the chevron takes ``text`` (``text-disabled`` when disabled) and
-the tick takes ``text-on-primary``, which is what sits on the accent fill.
+the tick and the partial dash take ``text-on-primary``, which is what sits on
+the accent fill.
 """
 
 from __future__ import annotations
@@ -28,6 +29,12 @@ _CHECK_SVG = (
     '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14">'
     '<path d="M3 7.2 L5.8 10 L11 4" fill="none" stroke="{color}" stroke-width="2" '
     'stroke-linecap="round" stroke-linejoin="round"/></svg>'
+)
+# A partly checked box ("some of it is on"): a dash on the accent fill.
+_PARTIAL_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14">'
+    '<path d="M3.5 7 L10.5 7" fill="none" stroke="{color}" stroke-width="2" '
+    'stroke-linecap="round"/></svg>'
 )
 
 _glyph_dir: Path | None = None
@@ -59,4 +66,6 @@ def glyph_variables(colors: Mapping[str, str]) -> dict[str, str]:
         "glyph-chevron-disabled": _write("chevron", _CHEVRON_SVG, colors.get("text-disabled", text)),
         "glyph-check": _write("check", _CHECK_SVG, colors.get("text-on-primary", "#ffffff")),
         "glyph-check-disabled": _write("check", _CHECK_SVG, colors.get("text-on-primary", "#ffffff")),
+        "glyph-partial": _write("partial", _PARTIAL_SVG, colors.get("text-on-primary", "#ffffff")),
+        "glyph-partial-disabled": _write("partial", _PARTIAL_SVG, colors.get("text-on-primary", "#ffffff")),
     }

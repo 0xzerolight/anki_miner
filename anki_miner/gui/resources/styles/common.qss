@@ -1281,6 +1281,18 @@ QCheckBox::indicator:checked:disabled {
     image: url("${glyph-check-disabled}");
 }
 
+/* WB I2: a partly checked box (D15's one-box controls, "some of it is on") takes
+   the accent fill and a dash, so it never reads as an unchecked box. */
+QCheckBox::indicator:indeterminate {
+    background-color: ${color-primary};
+    border-color: ${color-primary};
+    image: url("${glyph-partial}");
+}
+
+QCheckBox::indicator:indeterminate:disabled {
+    image: url("${glyph-partial-disabled}");
+}
+
 /* E03: a disabled box looks disabled. Its text and its indicator take the
    theme's own "unavailable" tokens, the same ones the input :disabled rule uses. */
 QCheckBox:disabled, QRadioButton:disabled {
@@ -1292,7 +1304,8 @@ QCheckBox::indicator:disabled, QRadioButton::indicator:disabled {
     border-color: ${color-disabled};
 }
 
-QCheckBox::indicator:checked:disabled, QRadioButton::indicator:checked:disabled {
+QCheckBox::indicator:checked:disabled, QRadioButton::indicator:checked:disabled,
+QCheckBox::indicator:indeterminate:disabled {
     background-color: ${color-disabled};
     border-color: ${color-disabled};
 }

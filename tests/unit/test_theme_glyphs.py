@@ -54,7 +54,14 @@ def test_the_variables_name_real_svg_files_in_the_themes_colours():
     colors = Theme.get_colors(THEME)
     variables = glyph_variables(colors)
 
-    assert set(variables) == {"glyph-chevron", "glyph-chevron-disabled", "glyph-check", "glyph-check-disabled"}
+    assert set(variables) == {
+        "glyph-chevron",
+        "glyph-chevron-disabled",
+        "glyph-check",
+        "glyph-check-disabled",
+        "glyph-partial",
+        "glyph-partial-disabled",
+    }
     chevron = Path(variables["glyph-chevron"])
     assert chevron.is_file()
     assert QColor(colors["text"]).name() in chevron.read_text(encoding="utf-8").lower()
@@ -127,6 +134,45 @@ def test_an_unchecked_box_draws_no_tick(qtbot):
     image = box.grab().toImage()
 
     assert _count(image, 0, 26, Theme.get_colors(THEME)["text-on-primary"]) == 0
+
+
+def _grab_box(qtbot, state):
+    from PyQt6.QtCore import Qt
+
+    box = QCheckBox("")
+    box.setTristate(state == Qt.CheckState.PartiallyChecked)
+    box.setCheckState(state)
+    qtbot.addWidget(box)
+    box.resize(40, 30)
+    box.show()
+    qtbot.waitExposed(box)
+    return box.grab().toImage()
+
+
+@pytest.mark.parametrize("theme", sorted(Theme.get_available_themes()))
+def test_a_partly_checked_box_does_not_look_unchecked(qtbot, qapp, theme):
+    """WB I2: D15's one-box controls use the partial state for "some of it is on".
+
+    With no ``:indeterminate`` rule it drew exactly like an unchecked box, so a
+    control that was partly on read as off.
+    """
+    from PyQt6.QtCore import Qt
+
+    qapp.setPalette(Theme.build_palette(theme))
+    qapp.setStyleSheet(Theme.get_stylesheet(theme))
+
+    unchecked = _grab_box(qtbot, Qt.CheckState.Unchecked)
+    partial = _grab_box(qtbot, Qt.CheckState.PartiallyChecked)
+
+    differing = sum(
+        1
+        for x in range(0, 26)
+        for y in range(unchecked.height())
+        if _distance(QColor.fromRgba(unchecked.pixel(x, y)), QColor.fromRgba(partial.pixel(x, y))) > 24
+    )
+    assert differing > 20
+    # And it carries a mark in the on-accent colour, not a bare accent square.
+    assert _count(partial, 0, 26, Theme.get_colors(theme)["text-on-primary"]) > 3
 
 
 def test_a_disabled_checked_box_is_grey_not_accent(qtbot):
