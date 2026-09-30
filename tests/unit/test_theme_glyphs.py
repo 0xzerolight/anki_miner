@@ -21,10 +21,16 @@ THEME = "dark"
 
 @pytest.fixture(autouse=True)
 def _themed(qapp):
-    previous = qapp.styleSheet()
+    # Palette too, not only the sheet: a test file that ran earlier in the same
+    # xdist worker (the player's ``Theme.apply_to_app``) can leave another
+    # theme's palette on the app, and the unchecked box then paints in it.
+    previous_sheet = qapp.styleSheet()
+    previous_palette = qapp.palette()
+    qapp.setPalette(Theme.build_palette(THEME))
     qapp.setStyleSheet(Theme.get_stylesheet(THEME))
     yield
-    qapp.setStyleSheet(previous)
+    qapp.setStyleSheet(previous_sheet)
+    qapp.setPalette(previous_palette)
 
 
 def _distance(color: QColor, other: QColor) -> int:
@@ -142,6 +148,7 @@ def test_a_disabled_checked_box_is_grey_not_accent(qtbot):
 
 def test_a_disabled_box_has_grey_text(qtbot, qapp):
     """E03: its label no longer renders in the full text colour."""
+    qapp.setPalette(Theme.build_palette("light"))
     qapp.setStyleSheet(Theme.get_stylesheet("light"))
     colors = Theme.get_colors("light")
     box = QCheckBox("MMMM")

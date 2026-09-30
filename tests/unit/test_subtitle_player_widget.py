@@ -1061,13 +1061,21 @@ class TestSecondaryStrip:
     def test_the_second_strip_takes_the_strip_rules_not_the_text_edit_frame(self, qtbot, qapp, fake_mpv):
         from anki_miner.gui.resources.styles.theme import Theme
 
+        previous_sheet = qapp.styleSheet()
+        previous_palette = qapp.palette()
         Theme.apply_to_app(qapp)
-        widget = _widget(qtbot)
-        widget.set_source(VIDEO, ENTRIES, secondary_entries=[(0.0, 2.0, "Hello.")])
-        # contentsMargins reflect the sheet's border + padding once polished.
-        primary = widget.subtitle_strip.contentsMargins()
-        secondary = widget.secondary_strip.contentsMargins()
-        assert (secondary.top(), secondary.bottom()) == (primary.top(), primary.bottom())
+        try:
+            widget = _widget(qtbot)
+            widget.set_source(VIDEO, ENTRIES, secondary_entries=[(0.0, 2.0, "Hello.")])
+            # contentsMargins reflect the sheet's border + padding once polished.
+            primary = widget.subtitle_strip.contentsMargins()
+            secondary = widget.secondary_strip.contentsMargins()
+            assert (secondary.top(), secondary.bottom()) == (primary.top(), primary.bottom())
+        finally:
+            # Leave the shared app as found: a later file in this xdist worker
+            # (test_theme_glyphs) reads pixel colours.
+            qapp.setStyleSheet(previous_sheet)
+            qapp.setPalette(previous_palette)
 
 
 class TestPreviewSuppressed:
