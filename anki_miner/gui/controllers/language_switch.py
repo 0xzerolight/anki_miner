@@ -117,8 +117,25 @@ def _first_visit_choice(
     return dialog.choice, dialog.ticked_decks()
 
 
+def _deck_names_with_note_presence(config: Any) -> tuple[list[str], bool]:
+    """Anki's deck names, and whether its collection holds any note. Off the GUI thread.
+
+    One ``findNotes`` call answers "is there anything to exclude at all": a
+    brand-new Anki has only an empty Default deck, and a checklist of empty
+    decks right after setup is a question with no right answer (B07).
+    """
+    service = AnkiService(config)
+    names = [str(name) for name in service.get_deck_names()]
+    return names, bool(service.find_notes("deck:*"))
+
+
 def offer_first_visit_setup(
-    window: Any, previous_config: Any, *, deck_names: list[str] | None = None, language: str | None = None
+    window: Any,
+    previous_config: Any,
+    *,
+    deck_names: list[str] | None = None,
+    language: str | None = None,
+    decks_hold_notes: bool | None = None,
 ) -> None:
     """Offer the deck checklist (and the wizard) on a first visit to a language (S15).
 
@@ -131,6 +148,10 @@ def offer_first_visit_setup(
     is ticked except the new language's own deck and its subdecks; the ticked
     ones land in that language's scoped exclusions. The dialog is skipped only
     when there is neither a deck to list nor a setup to offer.
+
+    ``decks_hold_notes`` is False when Anki answered and its collection holds
+    no note at all; the dialog is then skipped unless it has a setup to offer
+    (B07). None means nobody could ask: Anki closed, or a non-Qt caller.
     """
     from dataclasses import replace
 
@@ -144,10 +165,8 @@ def offer_first_visit_setup(
         fetched_for = config.language
         run_off_thread(
             window,
-            lambda: AnkiService(config).get_deck_names(),
-            on_done=lambda names: _offer_with_names(
-                window, previous_config, [str(name) for name in names] if isinstance(names, list) else [], fetched_for
-            ),
+            lambda: _deck_names_with_note_presence(config),
+            on_done=lambda result: _offer_with_fetch(window, previous_config, result, fetched_for),
             on_error=lambda _message: _offer_with_names(window, previous_config, [], fetched_for),
             error_prefix="Could not read deck names for the first-visit prompt: ",
         )
@@ -159,7 +178,7 @@ def offer_first_visit_setup(
         if name and name not in excluded
     )
     offer_setup = not config.dictionary_chain
-    if not decks and not offer_setup:
+    if not offer_setup and (not decks or decks_hold_notes is False):
         return
     target = config.anki_deck_name
     ticked = tuple(name for name in decks if name != target and not name.startswith(f"{target}::"))
@@ -177,10 +196,26 @@ def offer_first_visit_setup(
             wizard()
 
 
-def _offer_with_names(window: Any, previous_config: Any, names: list[str], language: str) -> None:
+def _offer_with_fetch(window: Any, previous_config: Any, result: object, language: str) -> None:
+    """Unpack the off-thread ``(deck names, collection holds notes)`` answer, then offer."""
+    names: list[str] = []
+    holds_notes: bool | None = None
+    if isinstance(result, tuple) and len(result) == 2:
+        raw_names, raw_holds = result
+        if isinstance(raw_names, list):
+            names = [str(name) for name in raw_names]
+        holds_notes = bool(raw_holds)
+    _offer_with_names(window, previous_config, names, language, decks_hold_notes=holds_notes)
+
+
+def _offer_with_names(
+    window: Any, previous_config: Any, names: list[str], language: str, *, decks_hold_notes: bool | None = None
+) -> None:
     """Delivered on the GUI thread; a failure here must not escape a Qt slot."""
     try:
-        offer_first_visit_setup(window, previous_config, deck_names=names, language=language)
+        offer_first_visit_setup(
+            window, previous_config, deck_names=names, language=language, decks_hold_notes=decks_hold_notes
+        )
     except Exception:
         logger.exception("The first-visit prompt failed after switching to %s", window.get_config().language)
 

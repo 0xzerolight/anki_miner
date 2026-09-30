@@ -74,7 +74,7 @@ def test_a_qt_window_fetches_deck_names_off_thread_then_ticks_all_but_the_target
 
     def fake_run_off_thread(parent, work, on_done, on_error=None, **kwargs):
         works.append(work)
-        on_done(fetched)
+        on_done((fetched, True))
 
     class FakeService:
         def __init__(self, config):
@@ -82,6 +82,10 @@ def test_a_qt_window_fetches_deck_names_off_thread_then_ticks_all_but_the_target
 
         def get_deck_names(self):
             return fetched
+
+        def find_notes(self, query):
+            assert query == "deck:*"
+            return [1]
 
     seen: dict[str, object] = {}
 
@@ -95,7 +99,7 @@ def test_a_qt_window_fetches_deck_names_off_thread_then_ticks_all_but_the_target
 
     language_switch.offer_first_visit_setup(window, previous)
 
-    assert works and works[0]() == fetched
+    assert works and works[0]() == (fetched, True)
     assert seen["decks"] == ("Japanese Mining", "English Vocab", "Anki Miner", "Anki Miner::Sub")
     assert seen["ticked"] == ("Japanese Mining", "English Vocab")
     assert window.config.excluded_decks == ("Japanese Mining", "English Vocab")
@@ -125,7 +129,7 @@ def test_a_switch_during_the_fetch_drops_the_result(qtbot, monkeypatch, test_con
 
     def switch_then_deliver(parent, work, on_done, on_error=None, **kwargs):
         window.config = replace(window.config, language="ko")  # the user moved on while deckNames ran
-        on_done(["Japanese Mining"])
+        on_done((["Japanese Mining"], True))
 
     monkeypatch.setattr(language_switch, "run_off_thread", switch_then_deliver)
     monkeypatch.setattr(
@@ -154,3 +158,51 @@ def test_no_other_deck_still_offers_the_setup(monkeypatch, test_config):
     language_switch.offer_first_visit_setup(Plain(), previous)
 
     assert len(seen) == 1 and seen[0][2] == ("Anki Miner",) and seen[0][3] == () and seen[0][4] is True
+
+
+def test_an_empty_anki_skips_the_dialog_when_there_is_no_setup_to_offer(qtbot, monkeypatch, test_config):
+    """B07: right after setup on a brand-new Anki there is nothing to exclude."""
+    previous = replace(test_config, anki_deck_name="Japanese Mining")
+    window = _QtWindow(replace(previous, language="zh", excluded_decks=(), anki_deck_name="Anki Miner"))
+    assert window.config.dictionary_chain  # a dictionary is set up, so no setup is offered
+    monkeypatch.setattr(
+        language_switch,
+        "run_off_thread",
+        lambda parent, work, on_done, on_error=None, **kw: on_done((["Default", "Anki Miner"], False)),
+    )
+    monkeypatch.setattr(
+        language_switch, "_first_visit_choice", lambda *a, **k: (_ for _ in ()).throw(AssertionError("asked"))
+    )
+
+    language_switch.offer_first_visit_setup(window, previous)
+
+    assert window.config.excluded_decks == ()
+
+
+def test_an_empty_anki_still_offers_the_setup(qtbot, monkeypatch, test_config):
+    previous = replace(test_config, anki_deck_name="Japanese Mining")
+    window = _QtWindow(
+        replace(previous, language="zh", excluded_decks=(), anki_deck_name="Anki Miner", dictionary_chain=())
+    )
+    seen: list[tuple] = []
+    monkeypatch.setattr(
+        language_switch,
+        "run_off_thread",
+        lambda parent, work, on_done, on_error=None, **kw: on_done((["Default", "Anki Miner"], False)),
+    )
+    monkeypatch.setattr(
+        language_switch, "_first_visit_choice", lambda *a: seen.append(a) or (language_switch.FIRST_VISIT_NONE, ())
+    )
+
+    language_switch.offer_first_visit_setup(window, previous)
+
+    assert len(seen) == 1 and seen[0][4] is True
+
+
+def test_the_explanation_says_which_decks_to_tick(qtbot):
+    dialog = _dialog(qtbot, display_name="中文")
+
+    assert dialog.explanation_label.text() == (
+        "Anki Miner skips words you already have in Anki. Tick the decks that are <i>not</i> 中文, "
+        "so their words don't stop 中文 cards from being made."
+    )
