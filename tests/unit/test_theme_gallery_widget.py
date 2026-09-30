@@ -45,26 +45,6 @@ class TestPopulation:
         assert families.issubset(set(gallery.family_titles()))
 
 
-class TestShortlistMode:
-    def test_shortlist_shows_only_the_given_keys_in_order(self, qtbot):
-        gallery = _gallery(qtbot)
-        gallery.set_shortlist(["dark", "nord", "light"])
-        assert list(gallery.card_keys()) == ["dark", "nord", "light"]
-        assert gallery.is_showing_all() is False
-
-    def test_shortlist_drops_unknown_keys(self, qtbot):
-        gallery = _gallery(qtbot)
-        gallery.set_shortlist(["dark", "no-such-theme", "nord"])
-        assert list(gallery.card_keys()) == ["dark", "nord"]
-
-    def test_show_all_expands_back_to_everything(self, qtbot):
-        gallery = _gallery(qtbot)
-        gallery.set_shortlist(["dark"])
-        gallery.show_all_themes()
-        assert set(gallery.card_keys()) == set(Theme.get_available_themes())
-        assert gallery.is_showing_all() is True
-
-
 class TestSelection:
     def test_clicking_a_card_emits_theme_activated(self, qtbot):
         gallery = _gallery(qtbot)
@@ -190,9 +170,18 @@ class TestStarSizing:
 
 class TestThumbnails:
     def test_thumbnail_loads_after_first_paint(self, qtbot, qapp):
-        gallery = _gallery(qtbot)
-        gallery.show()
-        qtbot.waitExposed(gallery)
+        from PyQt6.QtWidgets import QScrollArea
+
+        # The gallery has no scroll area of its own (C08); host it in one the
+        # way the Settings page does, so the page's viewport decides what paints.
+        page = QScrollArea()
+        qtbot.addWidget(page)
+        page.setWidgetResizable(True)
+        gallery = ThemeGalleryWidget()
+        page.setWidget(gallery)
+        page.resize(600, 400)
+        page.show()
+        qtbot.waitExposed(page)
         # First card in display order, top-left of the scroll viewport -- always
         # actually painted on show(). "light" (used in the original brief draft)
         # sorts to discovery position 19 of ~29 and sits below the fold on the
@@ -327,17 +316,12 @@ class TestKeyboardFocus:
         qtbot.waitUntil(lambda: gallery.card(first_key).hasFocus())
 
 
-def test_a_non_scrolling_gallery_has_no_scroll_area_of_its_own(qtbot):
-    """C08: Settings -> General scrolls once, at the page."""
+def test_the_gallery_has_no_scroll_area_of_its_own(qtbot):
+    """C08: Settings -> General scrolls once, at the page; the gallery never adds a second bar."""
     from PyQt6.QtWidgets import QScrollArea
 
-    from anki_miner.gui.widgets.enhanced.theme_gallery import ThemeGalleryWidget
-
-    flat = ThemeGalleryWidget(scrolling=False)
-    qtbot.addWidget(flat)
-    assert flat.findChildren(QScrollArea) == []
-    assert flat.card_keys()
-
-    scrolled = ThemeGalleryWidget()
-    qtbot.addWidget(scrolled)
-    assert len(scrolled.findChildren(QScrollArea)) == 1
+    gallery = ThemeGalleryWidget()
+    qtbot.addWidget(gallery)
+    assert gallery.findChildren(QScrollArea) == []
+    assert gallery.card_keys()
+    assert not hasattr(gallery, "set_shortlist")

@@ -256,7 +256,7 @@ class UISettingsPanel(ScreenIssueHost, FormPanel):
         self.add_widget(intro)
 
         # No scroll of its own (C08): the Settings page already scrolls.
-        self.gallery = ThemeGalleryWidget(self, scrolling=False)
+        self.gallery = ThemeGalleryWidget(self)
         self.gallery.theme_activated.connect(self._on_theme_activated)
         self.gallery.favorite_toggled.connect(self._toggle_favorite)
         self.gallery.family_favorites_toggled.connect(self._toggle_family_favorites)

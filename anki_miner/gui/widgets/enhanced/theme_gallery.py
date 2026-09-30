@@ -1,12 +1,11 @@
-"""A grid of rendered theme cards, scrolling or not, shared by two hosts.
+"""A grid of rendered theme cards for Settings -> General.
 
-Used by the UI settings panel (full set, grouped by family) and by the setup
-wizard's theme step (a shortlist that expands in place). One widget, two hosts:
-the wizard must not grow a second implementation that drifts from the panel.
+The grid has no scroll area of its own: the settings page already scrolls, and
+a second scroll bar inside it was the "two scroll bars" the 2026-09 UI audit
+found (C08).
 
-Thumbnails load lazily. Qt only paints the cards the viewport (its own, or the
-host page's when built with ``scrolling=False``) actually shows, so the first
-``paintEvent`` IS the "this card became visible" signal -- there is no
+Thumbnails load lazily. Qt only paints the cards the page's viewport actually
+shows, so the first ``paintEvent`` IS the "this card became visible" signal -- there is no
 viewport-intersection bookkeeping. The render is deferred out of the
 paint through a zero-interval child timer, because setting a pixmap on a child
 label from inside ``paintEvent`` re-enters layout and repaint.
@@ -28,7 +27,6 @@ signals elsewhere in the GUI (see ``AnkiProbeController._alive``).
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QCursor, QKeyEvent, QMouseEvent, QPaintEvent
@@ -39,7 +37,6 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLayout,
-    QScrollArea,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -253,7 +250,7 @@ class ThemeCard(QFrame):
 
 
 class ThemeGalleryWidget(QWidget):
-    """Scrollable grid of :class:`ThemeCard`, grouped by theme family.
+    """Grid of :class:`ThemeCard`, grouped by theme family.
 
     Signals:
         theme_activated: A card was clicked. Carries the theme key. The host
@@ -268,11 +265,9 @@ class ThemeGalleryWidget(QWidget):
     favorite_toggled = pyqtSignal(str)
     family_favorites_toggled = pyqtSignal(tuple)
 
-    def __init__(self, parent: QWidget | None = None, *, show_stars: bool = True, scrolling: bool = True) -> None:
+    def __init__(self, parent: QWidget | None = None, *, show_stars: bool = True) -> None:
         super().__init__(parent)
         self._show_stars = show_stars
-        #: ``None`` means "every theme, grouped"; a tuple means shortlist mode.
-        self._shortlist: tuple[str, ...] | None = None
         self._cards: dict[str, ThemeCard] = {}
         self._order: list[str] = []
         self._family_stars: dict[str, QToolButton] = {}
@@ -286,36 +281,13 @@ class ThemeGalleryWidget(QWidget):
         self._content_layout = QVBoxLayout(self._content)
         self._content_layout.setContentsMargins(0, 0, 0, 0)
         self._content_layout.setSpacing(SPACING.sm)
-
-        # scrolling=False (C08): the host page already scrolls, and a second
-        # scroll bar inside it is the "two scroll bars" the audit found. Lazy
-        # thumbnails still work -- the page's viewport decides what paints.
-        self._scroll: QScrollArea | None = None
-        if scrolling:
-            self._scroll = QScrollArea(self)
-            self._scroll.setWidgetResizable(True)
-            self._scroll.setFrameShape(QFrame.Shape.NoFrame)
-            self._scroll.setWidget(self._content)
-            outer.addWidget(self._scroll)
-        else:
-            outer.addWidget(self._content)
+        # No scroll area (C08): the host page already scrolls. Lazy thumbnails
+        # still work -- the page's viewport decides what paints.
+        outer.addWidget(self._content)
 
         self.refresh()
 
     # -- public API -----------------------------------------------------
-
-    def set_shortlist(self, keys: Sequence[str]) -> None:
-        """Show only ``keys``, in the given order, with no family headers."""
-        self._shortlist = tuple(keys)
-        self.refresh()
-
-    def show_all_themes(self) -> None:
-        """Expand back to every discovered theme, grouped by family."""
-        self._shortlist = None
-        self.refresh()
-
-    def is_showing_all(self) -> bool:
-        return self._shortlist is None
 
     def card_keys(self) -> tuple[str, ...]:
         """Theme keys of the built cards, in display order."""
@@ -411,20 +383,10 @@ class ThemeGalleryWidget(QWidget):
     def _sections(self) -> list[tuple[str | None, list[ThemeGroupEntry]]]:
         """Display grouping.
 
-        Shortlist mode is one header-less section in the caller's order. In full
-        mode, CONSECUTIVE standalone themes merge into a single header-less
-        section -- rendered one per section they would each get their own
-        one-card row and shred the grid.
+        CONSECUTIVE standalone themes merge into a single header-less section --
+        rendered one per section they would each get their own one-card row and
+        shred the grid.
         """
-        if self._shortlist is not None:
-            available = Theme.get_available_themes()
-            entries = [
-                ThemeGroupEntry(key=k, variant_name=available[k], display_name=available[k])
-                for k in self._shortlist
-                if k in available
-            ]
-            return [(None, entries)]
-
         sections: list[tuple[str | None, list[ThemeGroupEntry]]] = []
         for family, entries in Theme.get_themes_grouped():
             if family is None and sections and sections[-1][0] is None:
