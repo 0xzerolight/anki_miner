@@ -44,6 +44,41 @@ def test_recent_files_shown_once_there_is_history(single_tab, monkeypatch, tmp_p
     assert not single_tab.recent_row.isHidden()
 
 
+def test_building_with_history_shows_no_stray_window(qapp, qtbot, test_config, monkeypatch, tmp_path):
+    # The recent row is revealed while the card is still being built; a row
+    # with no parent yet would flash up as its own top-level window.
+    from unittest.mock import MagicMock
+
+    from PyQt6.QtCore import QEvent, QObject
+    from PyQt6.QtWidgets import QWidget
+
+    from anki_miner.gui.utils.recent_files import RecentFilesManager
+    from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
+
+    entry = {"video": str(tmp_path / "a.mkv"), "subtitle": str(tmp_path / "a.srt")}
+    monkeypatch.setattr(RecentFilesManager, "get_recent", lambda self: [entry])
+
+    shown: list[QWidget] = []
+
+    class _WindowShowSpy(QObject):
+        def eventFilter(self, obj, event):  # noqa: N802 (Qt override)
+            if event.type() == QEvent.Type.Show and isinstance(obj, QWidget) and obj.isWindow():
+                shown.append(obj)
+            return False
+
+    spy = _WindowShowSpy()
+    qapp.installEventFilter(spy)
+    try:
+        tab = SingleEpisodeTab(config=test_config, presenter=MagicMock(), progress_callback=MagicMock())
+        qtbot.addWidget(tab)
+    finally:
+        qapp.removeEventFilter(spy)
+
+    assert shown == []
+    assert not tab.recent_row.isWindow()
+    assert not tab.recent_row.isHidden()
+
+
 def test_one_helper_line_while_both_pickers_are_empty(single_tab, tmp_path):
     assert not single_tab.empty_hint.isHidden()
     assert (

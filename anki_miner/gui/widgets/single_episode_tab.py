@@ -300,8 +300,10 @@ class SingleEpisodeTab(MiningTabBase):
         )
 
         # Recent files dropdown. Wrapped so it can hide while there is no
-        # history (D25-A, A05).
-        self.recent_row = QWidget()
+        # history (D25-A, A05). Parented at birth: _refresh_recent_combo below
+        # reveals it before the card's layout adopts it, and a parentless
+        # widget made visible opens as its own top-level window.
+        self.recent_row = QWidget(group)
         recent_layout = QHBoxLayout(self.recent_row)
         recent_layout.setContentsMargins(0, 0, 0, 0)
         recent_layout.setSpacing(SPACING.xs)
