@@ -1358,8 +1358,8 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
                 presentation=presentation,
             )
         except Exception:  # noqa: BLE001 — bucket C: cleanup then unchanged failure reaches its owner.
-            # bucket C: undo a half-entered review so the bar never keeps a
-            # Show review button for a window that failed to appear.
+            # Undo a half-entered review so the bar never keeps a Show review
+            # button for a window that failed to appear (bucket C: cleanup).
             with contextlib.suppress(RuntimeError):
                 self._end_review_wait()
             self._curation_pending_dialog = 0
@@ -1517,8 +1517,8 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         self._curation_pending_dialog = 0
         self._active_curation_dialog = None
         self._cancel_curation_prefetch()
-        # A03: the run is no longer waiting on the user. Suppressed: the
-        # destroyed fallback can land after this tab's own widgets are gone.
+        # A03: the run is no longer waiting on the user. The destroyed fallback
+        # can land after this tab's widgets are gone (bucket C: cleanup).
         with contextlib.suppress(RuntimeError):
             self._end_review_wait()
 
