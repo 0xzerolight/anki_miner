@@ -332,13 +332,29 @@ def test_rebuild_button_stays_disabled_mid_rebuild_despite_checkbox_toggling(qtb
 
 
 def test_kana_variant_row_lives_in_the_known_words_section(qtbot):
-    # FormPanel.add_section opens a new QFormLayout per section (form_panel.py),
-    # so the two widgets sharing one layout is the proof the row moved.
-    from PyQt6.QtWidgets import QFormLayout
+    # FormPanel opens a new QFormLayout per section and after every add_widget /
+    # add_layout block (C01), so the row may sit in a later form than the
+    # checkbox; what proves it moved is that no other section heading lies
+    # between the Known Words heading and the row.
+    from PyQt6.QtWidgets import QFormLayout, QLabel
 
     panel = FilteringSettingsPanel()
     qtbot.addWidget(panel)
+    main = panel.main_layout
+    items = [main.itemAt(i) for i in range(main.count())]
 
-    layouts = panel.findChildren(QFormLayout)
-    home = next(layout for layout in layouts if layout.indexOf(panel.use_known_words_db_checkbox) >= 0)
-    assert home.indexOf(panel.match_kana_variants_checkbox) >= 0
+    def index_of_form_holding(widget) -> int:
+        return next(
+            i
+            for i, item in enumerate(items)
+            if isinstance(item.layout(), QFormLayout) and item.layout().indexOf(widget) >= 0
+        )
+
+    headings = {i: item.widget().text() for i, item in enumerate(items) if isinstance(item.widget(), QLabel)}
+    checkbox_at = index_of_form_holding(panel.use_known_words_db_checkbox)
+    kana_at = index_of_form_holding(panel.match_kana_variants_checkbox)
+    section_of_checkbox = max(i for i in headings if i < checkbox_at)
+
+    assert headings[section_of_checkbox] == "Known Words Database"
+    assert checkbox_at <= kana_at
+    assert not [i for i in headings if section_of_checkbox < i < kana_at]
