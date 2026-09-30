@@ -41,7 +41,7 @@ from anki_miner.gui.utils.ankiconnect_help import (
     ankiconnect_install_steps,
     launch_anki,
 )
-from anki_miner.gui.utils.language_choices import available_mining_languages
+from anki_miner.gui.utils.language_choices import MiningLanguageChoice, mining_language_choices
 from anki_miner.gui.utils.run_off_thread import still_running
 from anki_miner.gui.utils.task_lines import format_task_line
 from anki_miner.gui.widgets.enhanced import ModernButton
@@ -59,6 +59,7 @@ from anki_miner.gui.workers.fetch_workers import (
 from anki_miner.languages.registry import config_language
 from anki_miner.languages.switching import LANGUAGE_SCOPED_FIELDS, switch_language
 from anki_miner.services.anki_note_builder import configured_target_field_names
+from anki_miner.services.language_pack_installer import ensure_language_packs_on_syspath, language_pack_root
 from anki_miner.services.note_presets import NotePreset, preset_for_field_names
 from anki_miner.utils.i18n import tr_format
 
@@ -116,6 +117,16 @@ def _html_text(text: str) -> str:
     ``&``, ``<`` and ``>`` matter outside an attribute.
     """
     return html.escape(text, quote=False)
+
+
+def _isolated(name: str) -> str:
+    """Wrap a language's own name in Unicode isolates (FSI … PDI) for a sentence.
+
+    A label takes its paragraph direction from its first strong character, so
+    an Arabic or Persian name opening an English sentence would turn the whole
+    line right-to-left (the full stop lands on the far left).
+    """
+    return f"\u2068{name}\u2069"
 
 
 def _add_page_header(layout: QVBoxLayout, title: str, subtitle: str) -> tuple[QLabel, QLabel]:
@@ -221,15 +232,23 @@ class MiningLanguagePage(QWizardPage):
     Japanese setup first. A wizard re-run from Tools does not ask, because by
     then the Settings selector and its guarded switch are a click away.
 
-    The list is the one Settings offers, which already drops a language whose
-    engine this build cannot supply. Installing one stays in Settings -> Mining
-    Language: a download that size does not belong mid-setup, and a second
-    downloader here would be a second thing to keep in step with the first.
+    The list is the one Settings offers (D12): every language this build can
+    mine, plus every language one pack download would unlock, marked
+    "(download)". Picking one of those and pressing Next switches as usual and
+    starts the pack download in the background; the Ready page waits for it
+    like it waits for the dictionary. This reverses the old note that a pack
+    download "does not belong mid-setup": for a bundle user it was the only way
+    to set up in their language.
 
     A pick reaches the working config on Next, because the deck, note type and
     resource steps read it from there; it survives only an accepted Finish.
     See :meth:`revert_language_change`.
     """
+
+    #: The pack download started, moved or ended; the Ready page redraws.
+    pack_state_changed = pyqtSignal()
+    #: The pack download ended; the Ready page re-checks.
+    pack_finished = pyqtSignal()
 
     def __init__(self, wizard: SetupWizard) -> None:
         super().__init__(wizard)
@@ -240,6 +259,12 @@ class MiningLanguagePage(QWizardPage):
         # is gone -- is left alone rather than quietly switched to whatever
         # happens to show first.
         self._touched = False
+        self._choices: dict[str, MiningLanguageChoice] = {}
+        #: The pack being (or last) downloaded from here, and how it is going:
+        #: "" (none), "running", "done" or "failed".
+        self._pack_code: str | None = None
+        self._pack_state = ""
+        self._pack_status = ""
         config = wizard.working_config()
         # The raw field, not config_language: switch_language parks the
         # outgoing snapshot under it, so that is the key a single switch from
@@ -262,20 +287,20 @@ class MiningLanguagePage(QWizardPage):
         )
 
         self.language_combo = QComboBox()
-        for code, display_name in available_mining_languages():
-            self.language_combo.addItem(display_name, code)
+        for choice in mining_language_choices():
+            self._choices[choice.code] = choice
+            text = tr_format(self.tr("%1 (download)"), choice.label) if choice.needs_download else choice.label
+            self.language_combo.addItem(text, choice.code)
         self.language_combo.currentIndexChanged.connect(self._on_language_changed)
         layout.addWidget(self.language_combo)
 
-        helper = QLabel(
-            self.tr(
-                "The deck, note type and resources in the next steps follow this choice. A language "
-                "missing from the list needs its engine pack: Settings → Mining Language."
-            )
-        )
+        helper = QLabel(self.tr("The deck, note type and dictionary in the next steps follow this choice."))
         helper.setObjectName("helper-text")
         helper.setWordWrap(True)
         layout.addWidget(helper)
+        self.download_note = QLabel("")
+        self.download_note.setWordWrap(True)
+        layout.addWidget(self.download_note)
         layout.addStretch(1)
 
         self._point_at_working_config()
@@ -305,6 +330,27 @@ class MiningLanguagePage(QWizardPage):
 
     def _on_language_changed(self, _index: int) -> None:
         self._touched = True
+        self._update_download_note()
+
+    def _current_choice(self) -> MiningLanguageChoice | None:
+        code = self.language_combo.currentData()
+        return self._choices.get(code) if isinstance(code, str) else None
+
+    def _update_download_note(self) -> None:
+        choice = self._current_choice()
+        if choice is None or not choice.needs_download:
+            self.download_note.setText("")
+            return
+        self.download_note.setText(
+            tr_format(
+                self.tr(
+                    "%1 needs a one-time download of about %2 MB. It starts when you press Next and runs "
+                    "while you finish setup."
+                ),
+                _isolated(choice.native_name),
+                choice.download_mb,
+            )
+        )
 
     def _single_switch(self, config: AnkiMinerConfig, code: str) -> AnkiMinerConfig:
         """Switch to ``code``, leaving the stash one switch would have left.
@@ -333,8 +379,87 @@ class MiningLanguagePage(QWizardPage):
         self._wizard.update_working_config(self._single_switch(self._wizard.working_config(), code))
 
     def validatePage(self) -> bool:
+        choice = self._current_choice()
+        if (
+            self._touched
+            and choice is not None
+            and choice.needs_download
+            and not self._start_pack_download(choice.code)
+        ):
+            self.download_note.setText(
+                self.tr(
+                    "This language's download cannot start from setup. Pick it in Settings → Mining Language after setup."
+                )
+            )
+            return False
         self._write_language_to_config()
         return True
+
+    def _start_pack_download(self, code: str) -> bool:
+        """Start (or join) ``code``'s pack download in the background; False when there is no downloader."""
+        if self._pack_code == code and self._pack_state in ("running", "done"):
+            return True
+        tasks = getattr(self._wizard.parent(), "background_tasks", None)
+        start = getattr(tasks, "start_language_pack_download", None)
+        if tasks is None or not callable(start):
+            return False
+        running = tasks.language_pack_workers.get(code)
+        if still_running(running):
+            # Settings is already fetching it: listen to that run instead.
+            running.status.connect(self._on_pack_status)
+            running.result_ready.connect(self._on_pack_finished)
+        else:
+            start(code, language_pack_root(code), self._on_pack_status, self._on_pack_finished)
+        self._pack_code = code
+        self._pack_state = "running"
+        self._pack_status = ""
+        self.pack_state_changed.emit()
+        return True
+
+    def _on_pack_status(self, text: str) -> None:
+        self._pack_status = text
+        self.pack_state_changed.emit()
+
+    def _on_pack_finished(self, ok: bool, message: str) -> None:
+        code = self._pack_code
+        self._pack_state = "done" if ok else "failed"
+        self._pack_status = message
+        if ok and code is not None:
+            # Order is load-bearing (see app._connect_language_pack_download):
+            # the pack must be importable before anything re-probes the language.
+            ensure_language_packs_on_syspath()
+            window = self._wizard.parent()
+            index_of = getattr(window, "_settings_tab_index", None)
+            tabs = getattr(window, "tabs", None)
+            if callable(index_of) and tabs is not None and index_of() >= 0:
+                notify = getattr(tabs.widget(index_of()), "notify_language_pack_download_finished", None)
+                if callable(notify):
+                    notify(code)
+        self.pack_state_changed.emit()
+        self.pack_finished.emit()
+
+    def pack_ready(self) -> bool:
+        """False while the working config's language waits on a pack from here."""
+        language = self._wizard.working_config().language
+        return not (self._pack_code == language and self._pack_state in ("running", "failed"))
+
+    def ready_page_pack_line(self) -> str:
+        """The Ready page's rich-text line for a pack that is not in yet."""
+        choice = self._choices.get(self._pack_code or "")
+        name = _isolated(choice.native_name if choice is not None else (self._pack_code or ""))
+        if self._pack_state == "failed":
+            failed = tr_format(self.tr("%1 language pack: download failed."), name)
+            retry = self.tr("Retry")
+            return f'{_html_text(failed)} <a href="pack">{_html_text(retry)}</a>'
+        if self._pack_status:
+            return _html_text(tr_format(self.tr("%1 language pack: %2"), name, self._pack_status))
+        return _html_text(tr_format(self.tr("%1 language pack: downloading…"), name))
+
+    def activate_link(self, href: str) -> None:
+        """The Ready page's "pack" link: try the failed pack download again."""
+        if href == "pack" and self._pack_code is not None and self._pack_state == "failed":
+            self._pack_state = ""
+            self._start_pack_download(self._pack_code)
 
     def revert_language_change(self) -> None:
         """Put the language back as the wizard was opened on it.
@@ -1842,13 +1967,21 @@ class DonePage(_LiveCheckPage):
         # The dictionary line follows the download live, and its end re-checks.
         wizard.resources_page.download_state_changed.connect(self._redraw)
         wizard.resources_page.download_finished.connect(self._on_download_finished)
+        if wizard.language_page is not None:
+            wizard.language_page.pack_state_changed.connect(self._redraw)
+            wizard.language_page.pack_finished.connect(self._on_download_finished)
 
     def isComplete(self) -> bool:
         # Finish closes the wizard, and closing cancels every worker it owns
-        # (SetupWizard.done), so it waits for the whole download, not just the
-        # dictionary that lands first.
+        # (SetupWizard.done), so it waits for the whole download (T2.14) and
+        # for a language pack started from the first page.
         checks_pass = all(self._results.get(name, False) for name in _FINAL_CHECKS)
-        return checks_pass and not self._wizard.resources_page.download_running()
+        language_page = self._wizard.language_page
+        return (
+            checks_pass
+            and not self._wizard.resources_page.download_running()
+            and (language_page is None or language_page.pack_ready())
+        )
 
     def initializePage(self) -> None:
         """Run one fresh readiness sweep; render it when it lands."""
@@ -1908,13 +2041,15 @@ class DonePage(_LiveCheckPage):
             self._redraw()
 
     def _on_link(self, href: str) -> None:
+        if href == "pack" and self._wizard.language_page is not None:
+            self._wizard.language_page.activate_link(href)
+            return
         self._wizard.resources_page.activate_link(href)
 
     def _summary_html(self) -> str:
         results = self._results
         downloading = self._wizard.resources_page.download_running()
-        checks_pass = all(results.get(name, False) for name in _FINAL_CHECKS)
-        if checks_pass and not downloading:
+        if self.isComplete():
             return _html_text(
                 self.tr(
                     "You're ready. Pick a video and its subtitle file, then press Mine Episode. Books, manga "
@@ -1957,5 +2092,8 @@ class DonePage(_LiveCheckPage):
         if not results.get("dictionary", False) or downloading:
             # While the run goes this reads "Downloads: still running — …".
             lines.append(self._wizard.resources_page.ready_page_dictionary_line())
+        language_page = self._wizard.language_page
+        if language_page is not None and not language_page.pack_ready():
+            lines.insert(0, language_page.ready_page_pack_line())
         intro = _html_text(self.tr("Before you can mine:"))
         return intro + "<br>" + "<br>".join(f"• {line}" for line in lines)

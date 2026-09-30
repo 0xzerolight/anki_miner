@@ -337,7 +337,11 @@ def test_a_language_this_build_cannot_mine_is_not_offered(monkeypatch, wizard_fa
 
 def test_a_config_naming_an_unofferable_language_is_left_alone(monkeypatch, wizard_factory, test_config):
     """The opening selection is a display default, never a switch nobody asked for."""
-    monkeypatch.setattr(wizard_pages, "available_mining_languages", lambda: (("ja", "日本語"),))
+    from anki_miner.gui.utils.language_choices import MiningLanguageChoice
+
+    monkeypatch.setattr(
+        wizard_pages, "mining_language_choices", lambda: (MiningLanguageChoice("ja", "日本語", "日本語", "日本語"),)
+    )
     zh_config = switch_language(test_config, "zh")
     wiz = wizard_factory(zh_config)
 
@@ -365,3 +369,110 @@ def test_the_page_never_routes_through_the_first_visit_controller(monkeypatch, w
     page.validatePage()
 
     assert config_language(wiz.working_config()) == "zh"
+
+
+class _FakeInstallWorker:
+    """Stands in for a running InstallWorker; nothing here ever runs."""
+
+    def isRunning(self) -> bool:  # noqa: N802 - mirrors QThread
+        return True
+
+
+class _FakeBackgroundTasks:
+    def __init__(self) -> None:
+        self.language_pack_workers: dict[str, object] = {}
+        self.started: list[str] = []
+        self.on_status = None
+        self.on_finished = None
+
+    def start_language_pack_download(self, code, root, on_status, on_finished) -> None:
+        self.started.append(code)
+        self.on_status = on_status
+        self.on_finished = on_finished
+        self.language_pack_workers[code] = _FakeInstallWorker()
+
+
+def _choices_with_a_download(monkeypatch):
+    from anki_miner.gui.utils.language_choices import MiningLanguageChoice
+
+    choices = (
+        MiningLanguageChoice("ja", "日本語 — Japanese", "日本語", "Japanese"),
+        MiningLanguageChoice("de", "Deutsch — German", "Deutsch", "German", True, 70),
+    )
+    monkeypatch.setattr(wizard_pages, "mining_language_choices", lambda: choices)
+
+
+def _wizard_with_tasks(qtbot, monkeypatch, test_config):
+    from PyQt6.QtWidgets import QWidget
+
+    parent = QWidget()
+    qtbot.addWidget(parent)
+    tasks = _FakeBackgroundTasks()
+    parent.background_tasks = tasks  # type: ignore[attr-defined]
+    monkeypatch.setattr(SetupWizard, "validation_service", lambda self: _FakeValidation())
+    wiz = SetupWizard(test_config, parent, offer_mining_language=True)
+    return wiz, tasks
+
+
+def test_a_language_needing_a_download_is_offered_with_a_suffix(qtbot, monkeypatch, test_config):
+    _choices_with_a_download(monkeypatch)
+    wiz, _tasks = _wizard_with_tasks(qtbot, monkeypatch, test_config)
+    combo = wiz.language_page.language_combo
+
+    assert combo.itemText(combo.findData("de")) == "Deutsch — German (download)"
+    _pick(wiz.language_page, "de")
+    # The name is wrapped in Unicode isolates so an Arabic name cannot turn
+    # the English sentence right-to-left.
+    assert wiz.language_page.download_note.text() == (
+        "\u2068Deutsch\u2069 needs a one-time download of about 70 MB. It starts when you press Next and runs while "
+        "you finish setup."
+    )
+
+
+def test_next_starts_the_pack_download_and_ready_waits_for_it(qtbot, monkeypatch, test_config):
+    _choices_with_a_download(monkeypatch)
+    monkeypatch.setattr(wizard_pages, "ensure_language_packs_on_syspath", lambda: None)
+    wiz, tasks = _wizard_with_tasks(qtbot, monkeypatch, test_config)
+    page = wiz.language_page
+    _pick(page, "de")
+
+    assert page.validatePage() is True
+
+    assert tasks.started == ["de"]
+    assert config_language(wiz.working_config()) == "de"
+    assert page.pack_ready() is False
+    wiz.done_page._results = dict.fromkeys(wizard_pages._FINAL_CHECKS, True)
+    assert wiz.done_page.isComplete() is False
+    assert "Deutsch" in wiz.done_page._summary_html()
+
+    tasks.on_finished(True, "Deutsch pack installed.")
+
+    assert page.pack_ready() is True
+    assert wiz.done_page.isComplete() is True
+
+
+def test_a_failed_pack_download_offers_retry(qtbot, monkeypatch, test_config):
+    _choices_with_a_download(monkeypatch)
+    wiz, tasks = _wizard_with_tasks(qtbot, monkeypatch, test_config)
+    _pick(wiz.language_page, "de")
+    wiz.language_page.validatePage()
+
+    tasks.on_finished(False, "network down")
+
+    assert wiz.language_page.pack_ready() is False
+    line = wiz.language_page.ready_page_pack_line()
+    assert 'href="pack"' in line
+    tasks.language_pack_workers.clear()
+    wiz.language_page.activate_link("pack")
+    assert tasks.started == ["de", "de"]
+
+
+def test_without_a_downloader_the_pick_is_refused_with_a_reason(qtbot, monkeypatch, test_config):
+    _choices_with_a_download(monkeypatch)
+    wiz = SetupWizard(test_config, offer_mining_language=True)
+    qtbot.addWidget(wiz)
+    _pick(wiz.language_page, "de")
+
+    assert wiz.language_page.validatePage() is False
+    assert "Settings → Mining Language" in wiz.language_page.download_note.text()
+    assert config_language(wiz.working_config()) == "ja"
