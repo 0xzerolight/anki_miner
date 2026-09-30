@@ -133,3 +133,23 @@ def test_skipped_file_without_reason_keeps_bare_line():
     _ToolTabBase._on_file_skipped(tab, 0, "/tmp/ep01.srt", "")
 
     assert logged == ["Skipped: ep01.srt"]
+
+
+def test_the_fatal_exception_is_kept_for_the_tab(qapp):
+    """E13: the tab names a typed fault from the exception itself, not its text."""
+    worker = _SuccessThenFatalWorker()
+    seen = []
+    worker.file_finished.connect(lambda idx, out, err: seen.append(worker.fatal_exception))
+
+    worker.run()
+
+    assert seen[0] is None
+    assert isinstance(seen[1], _FatalQueueError)
+
+
+def test_no_fatal_exception_on_an_ordinary_failure(qapp):
+    worker = _ScriptedWorker(["fail"])
+
+    worker.run()
+
+    assert worker.fatal_exception is None

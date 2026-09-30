@@ -80,6 +80,11 @@ class FileQueueWorker(CancellableWorker):
         self._skipped_count = 0
         self._failed_count = 0
         self._fatal_error = False
+        #: The exception that stopped the queue, when one of
+        #: :attr:`_FATAL_QUEUE_EXCEPTIONS` did. Set before that item's
+        #: ``file_finished`` is emitted, so the tab reading it from the slot sees
+        #: it; lets a tab name a typed fault in its own words (E13).
+        self.fatal_exception: BaseException | None = None
         self.file_finished.connect(self._record_file_finished, Qt.ConnectionType.DirectConnection)  # type: ignore[call-arg]
         self.file_skipped.connect(self._record_file_skipped, Qt.ConnectionType.DirectConnection)  # type: ignore[call-arg]
 
@@ -154,6 +159,7 @@ class FileQueueWorker(CancellableWorker):
                     error_type=type(exc).__name__,
                     error=str(exc),
                 )
+                self.fatal_exception = exc
                 self.file_finished.emit(idx, None, str(exc))
                 self._fatal_error = True
                 self._stop_queue = True

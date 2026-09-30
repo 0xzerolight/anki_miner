@@ -32,6 +32,7 @@ from PyQt6.QtCore import QTimer, pyqtSignal
 from PyQt6.QtWidgets import QCheckBox, QFrame, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.exceptions import MokuroNotFoundError
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
@@ -133,6 +134,7 @@ class MokuroTab(RunOptionsMixin, _ToolTabBase):
             failed=self.tr("Failed — see log"),
             partial=self.tr("Finished with errors — see log"),
             run_problem=self.tr("Some volumes could not be processed."),
+            run_problem_single=self.tr("This volume could not be processed."),
             complete_template=self.tr("Complete — %1 volume(s) processed"),
             complete_skipped_template=self.tr("Complete — %1 processed, %2 already had a .mokuro file"),
             all_skipped_template=self.tr(
@@ -148,6 +150,12 @@ class MokuroTab(RunOptionsMixin, _ToolTabBase):
 
     def _item_total(self) -> int:
         return self._total_volumes
+
+    def _typed_problem_summary(self, exc: BaseException) -> str | None:
+        """No repair here: the install lives on this very screen (E13)."""
+        if isinstance(exc, MokuroNotFoundError):
+            return self.tr("mokuro is not installed. Install it in the Manga OCR setup section.")
+        return None
 
     # ------------------------------------------------------------------
     # Config

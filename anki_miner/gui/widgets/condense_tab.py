@@ -63,6 +63,7 @@ from anki_miner.gui.workers.condense_worker import (
     plan_condense_outputs,
 )
 from anki_miner.languages.registry import config_language, get_profile
+from anki_miner.services.audio_condenser import EncoderUnavailableError, FilterUnavailableError
 from anki_miner.services.audio_tagger import TrackMetadata, prefill_track_metadata
 from anki_miner.utils import list_audio_streams
 from anki_miner.utils.audio_track_detector import list_subtitle_streams, matches_language_tag
@@ -175,6 +176,7 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
             failed=self.tr("Failed — see log"),
             partial=self.tr("Finished with errors — see log"),
             run_problem=self.tr("Some files could not be condensed."),
+            run_problem_single=self.tr("This file could not be condensed."),
             complete_template=self.tr("Complete — %1 files processed"),
             complete_skipped_template=self.tr("Complete — %1 processed, %2 skipped"),
             all_skipped_template=self.tr(
@@ -192,6 +194,16 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
 
     def _item_total(self) -> int:
         return self._total_files
+
+    def _typed_problem_summary(self, exc: BaseException) -> str | None:
+        """ffmpeg-build faults stop the whole queue; say what they mean (E13). No repair."""
+        if isinstance(exc, FilterUnavailableError):
+            return self.tr("This ffmpeg build cannot condense audio. Install a different ffmpeg build.")
+        if isinstance(exc, EncoderUnavailableError):
+            return self.tr(
+                "This ffmpeg build cannot write the chosen format. Pick another format, or install a different ffmpeg build."
+            )
+        return None
 
     # ------------------------------------------------------------------
     # Config refresh

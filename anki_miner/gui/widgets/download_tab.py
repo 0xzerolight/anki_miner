@@ -46,6 +46,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.exceptions import YtdlpNotFoundError
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.language_names import (
@@ -173,6 +174,7 @@ class DownloadTab(RunOptionsMixin, YtdlpAvailabilityMixin, _ToolTabBase):
             failed=self.tr("Failed — see log"),
             partial=self.tr("Finished with errors — see log"),
             run_problem=self.tr("Some URLs could not be downloaded."),
+            run_problem_single=self.tr("This URL could not be downloaded."),
             complete_template=self.tr("Complete — %1 downloaded"),
             complete_skipped_template=self.tr("Complete — %1 downloaded, %2 already present"),
             all_skipped_template=self.tr("Nothing downloaded — all %1 already present in the download folder."),
@@ -187,6 +189,19 @@ class DownloadTab(RunOptionsMixin, YtdlpAvailabilityMixin, _ToolTabBase):
 
     def _item_total(self) -> int:
         return self._total_urls
+
+    def _typed_problem_summary(self, exc: BaseException) -> str | None:
+        if isinstance(exc, YtdlpNotFoundError):
+            return self.tr("yt-dlp is not installed, so downloads cannot run.")
+        return None
+
+    def _problem_repair(self) -> tuple[str, str, Callable[[], None]] | None:
+        """Most download failures are an out-of-date yt-dlp (E13)."""
+        return (
+            "tools.download.ytdlp",
+            self.tr("Update yt-dlp"),
+            lambda: self._reveal_setting("youtube.ytdlp_update"),
+        )
 
     # ------------------------------------------------------------------
     # Config refresh

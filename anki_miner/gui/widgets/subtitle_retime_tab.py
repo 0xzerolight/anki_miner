@@ -127,6 +127,7 @@ class SubtitleRetimeTab(_ToolTabBase):
             failed=self.tr("Failed — see log"),
             partial=self.tr("Finished with errors — see log"),
             run_problem=self.tr("Some files could not be retimed."),
+            run_problem_single=self.tr("This file could not be retimed."),
             complete_template=self.tr("Complete — %1 files processed"),
             complete_skipped_template=self.tr("Complete — %1 processed, %2 skipped"),
             all_skipped_template=self.tr(
@@ -143,6 +144,16 @@ class SubtitleRetimeTab(_ToolTabBase):
 
     def _item_total(self) -> int:
         return self._total_pairs
+
+    def _problem_repair(self) -> tuple[str, str, Callable[[], None]] | None:
+        """Retiming falls back to ffsubsync alone without alass; offer alass then (E13)."""
+        if self._alass_available():
+            return None
+        return (
+            "tools.retime.alass",
+            self.tr("Download alass"),
+            lambda: self._reveal_setting("subtitles.alass_download"),
+        )
 
     # ------------------------------------------------------------------
     # Config refresh
