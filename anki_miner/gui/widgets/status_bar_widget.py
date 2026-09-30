@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QMenu, QStatusBar, QToo
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils.progress_telemetry import format_clock
 from anki_miner.gui.utils.task_lines import format_task_summary
-from anki_miner.gui.widgets.base import StatusBadge
+from anki_miner.gui.widgets.base import ElidingLabel, StatusBadge
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
@@ -110,8 +110,10 @@ class StatusBarWidget(QStatusBar):
         self.task_button.hide()
         self.addWidget(self.task_button)
 
-        # Left section: Current operation
-        self.operation_label = QLabel(self.tr("Ready"))
+        # Left section: Current operation. It elides rather than demanding its
+        # full width: at the 1024px window minimum a running task plus a long
+        # message pushed the health badges off the right edge (Z.5).
+        self.operation_label = ElidingLabel(self.tr("Ready"))
         self.operation_label.setObjectName("status-operation")
         operation_font = QFont()
         operation_font.setWeight(QFont.Weight.Medium)

@@ -295,6 +295,23 @@ class TestExistingBehaviourSurvives:
         assert bar.operation_label.text() == "Restyle complete"
         assert "Downloading JMdict" in bar.task_button.text()
 
+    def test_the_health_badges_stay_in_view_at_the_minimum_window_width(self, bar, registry):
+        """Z.5: at 1024px, a running single episode plus the comprehension
+        message pushed the AnkiConnect badge half off the right edge and the
+        ffmpeg badge off entirely: no left-hand label could shrink. The
+        operation message now elides instead, and keeps its full text."""
+        handle = registry.start(_spec("single", "Single episode"), now=0.0)
+        handle.stage(index=2, total=5, name="Waiting for your word review", now=1.0)
+        bar.set_system_status(True, True)
+        message = "Comprehension: 25.0% of words already known"
+        bar.set_operation(message, "info")
+
+        # The message may not demand its own width: in a window at its minimum,
+        # every pixel it demanded came out of the badges.
+        width_of_one_ellipsis = bar.operation_label.fontMetrics().horizontalAdvance("…")
+        assert bar.operation_label.minimumSizeHint().width() <= width_of_one_ellipsis
+        assert bar.operation_label.full_text == message
+
     def test_an_unbound_strip_is_inert(self, qtbot):
         """MainWindow constructs the bar before it binds a registry."""
         widget = StatusBarWidget()
