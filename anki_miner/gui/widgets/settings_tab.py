@@ -814,9 +814,8 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.pitch_panel.restore_requested.connect(self._restore_pitch_from_disk)
         self.pitch_panel.chain_changed.connect(lambda: self._persist_pitch_chain_change(self.pitch_panel.get_chain()))
 
-        # Filtering panel: excluded-decks picker + known-words cache rebuild (Issue #38).
+        # Filtering panel: excluded-decks picker + Manage Known Words, which carries the cache rebuild (C13).
         self.filtering_panel.fetch_decks_requested.connect(self._anki_probe.fetch_decks)
-        self.filtering_panel.rebuild_known_words_requested.connect(self._on_rebuild_known_words)
         self.filtering_panel.manage_known_words_requested.connect(self._on_manage_known_words)
 
         # Mining Language panel: the guarded switch proposal + the language packs.
@@ -2414,12 +2413,16 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
 
     # === Known words handlers (Issues #38 / #42) ===
 
-    def _on_rebuild_known_words(self) -> None:
+    def _on_rebuild_known_words(self, on_finished: Callable[[], None] | None = None) -> None:
         """Clear the local known-words cache after user confirmation.
 
         The cache is additive (see :class:`KnownWordDB`), so removing a deck's
         words after it was already synced requires a full rebuild. The next
         mining run re-syncs from Anki with the current exclusions applied.
+
+        ``on_finished`` runs exactly once when this attempt is over (declined,
+        failed to start, or the off-thread clear ended); the Known Words dialog
+        uses it to re-enable its button and refresh its counts (C13).
         """
         from anki_miner.gui.utils.service_factory import resolve_known_words_db_path
         from anki_miner.languages.registry import config_language
@@ -2443,12 +2446,16 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             scope=resolve_known_words_db_path(self.config),
         )
         if confirm != QMessageBox.StandardButton.Yes:
+            if on_finished is not None:
+                on_finished()
             return
 
         try:
             db = KnownWordDB(resolve_known_words_db_path(self.config), language=config_language(self.config))
         except Exception as error:  # noqa: BLE001 - preserve the existing constructor boundary
             self._on_rebuild_known_words_error(str(error))
+            if on_finished is not None:
+                on_finished()
             return
 
         def work() -> int:
@@ -2457,7 +2464,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             # Anki-synced rows are rebuilt from Anki on the next run.
             return db.clear(preserve_user=True)
 
-        self.filtering_panel.set_rebuild_known_words_in_flight(True)
         run_off_thread(
             self,
             work,
@@ -2472,7 +2478,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                 )
             ),
             self._on_rebuild_known_words_error,
-            on_finished=self._on_rebuild_known_words_finished,
+            on_finished=lambda: self._on_rebuild_known_words_finished(on_finished),
         )
 
     def _on_rebuild_known_words_succeeded(self, notify: Callable[[], object]) -> None:
@@ -2487,11 +2493,10 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             )
         )
 
-    def _on_rebuild_known_words_finished(self) -> None:
-        # Not an unconditional re-enable: the checkbox may have been toggled off
-        # while the rebuild ran off-thread, and the button must land back in
-        # step with it rather than staying enabled regardless (Task 7).
-        self.filtering_panel.set_rebuild_known_words_in_flight(False)
+    def _on_rebuild_known_words_finished(self, on_finished: Callable[[], None] | None = None) -> None:
+        """Tell whoever asked (the Known Words dialog) that the rebuild is over."""
+        if on_finished is not None:
+            on_finished()
 
     def _on_manage_known_words(self) -> None:
         """Open the Manage Known Words dialog (Issue #42)."""
@@ -2508,6 +2513,8 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                 language=language,
                 content_style=get_profile(language).content_style,
                 excluded_decks=tuple(self.config.excluded_decks),
+                on_rebuild=lambda done: self._on_rebuild_known_words(on_finished=done),
+                rebuild_enabled=self.filtering_panel.get_use_known_words_db(),
             ).exec()
         except Exception as e:  # noqa: BLE001 — surface any DB failure to the user
             self.show_screen_issue(

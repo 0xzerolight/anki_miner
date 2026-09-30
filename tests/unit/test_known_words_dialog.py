@@ -535,3 +535,34 @@ class TestImeSafety:
         assert dlg.isVisible()
         QTest.keyClick(dlg.search_input, Qt.Key.Key_Enter)  # keypad
         assert dlg.isVisible()
+
+
+class TestRebuild:
+    """C13: Rebuild sits beside the cached-from-Anki count it clears."""
+
+    def test_rebuild_sits_in_the_dialog_and_calls_back(self, qtbot, tmp_path):
+        db = _db_with_user_words(tmp_path)
+        calls: list[object] = []
+        dlg = KnownWordsManagerDialog(db, on_rebuild=calls.append, rebuild_enabled=True)
+        qtbot.addWidget(dlg)
+        assert dlg.rebuild_button.text() == "Rebuild Known Words DB"
+        assert dlg.rebuild_button.isEnabled()
+
+        dlg.rebuild_button.click()
+
+        assert len(calls) == 1
+        assert not dlg.rebuild_button.isEnabled()  # in flight
+        db.clear(preserve_user=True)
+        calls[0]()  # the tab reports the rebuild finished
+        assert dlg.rebuild_button.isEnabled()
+        assert "cached from Anki: 0" in dlg.count_label.text()
+
+    def test_rebuild_is_disabled_while_the_cache_is_off(self, qtbot, tmp_path):
+        dlg = KnownWordsManagerDialog(_db_with_user_words(tmp_path), on_rebuild=lambda _done: None)
+        qtbot.addWidget(dlg)
+        assert not dlg.rebuild_button.isEnabled()
+
+    def test_no_callback_no_button(self, qtbot, tmp_path):
+        dlg = KnownWordsManagerDialog(_db_with_user_words(tmp_path))
+        qtbot.addWidget(dlg)
+        assert dlg.rebuild_button.isHidden()

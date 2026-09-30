@@ -110,13 +110,12 @@ class FilteringSettingsPanel(FormPanel):
 
     Provides:
     - Word frequency filtering options
-    - Known-words database toggle, deck exclusions, and cache rebuild (Issue #38)
+    - Known-words database toggle and deck exclusions (Issue #38); the cache
+      rebuild lives in the Manage Known Words dialog (C13)
 
     Signals:
         fetch_decks_requested: Emitted when the deck list must be fetched from
             AnkiConnect to populate the "Add Deck…" picker.
-        rebuild_known_words_requested: Emitted when the user asks to clear the
-            local known-words cache.
         manage_known_words_requested: Emitted when the user opens the Manage
             Known Words dialog (Issue #42).
     """
@@ -124,7 +123,6 @@ class FilteringSettingsPanel(FormPanel):
     ANCHOR_NAMESPACE = "filtering"
 
     fetch_decks_requested = pyqtSignal()
-    rebuild_known_words_requested = pyqtSignal()
     manage_known_words_requested = pyqtSignal()
 
     def __init__(self, parent=None):
@@ -132,9 +130,6 @@ class FilteringSettingsPanel(FormPanel):
         # Most recently fetched deck names. Every picker open refreshes them
         # first because the connected endpoint or Anki collection may change.
         self._available_decks: list[str] = []
-        # Whether SettingsTab currently has a rebuild running off-thread; see
-        # sync_rebuild_known_words_button_state.
-        self._rebuild_in_flight = False
         super().__init__(self.tr("Word Filters"), parent=parent)
         self._setup_fields()
 
@@ -237,31 +232,15 @@ class FilteringSettingsPanel(FormPanel):
         self.use_known_words_db_checkbox.setToolTip(
             self.tr(
                 "Words stay known after their Anki cards are deleted or moved to an "
-                "excluded deck. Rebuild forgets them."
+                "excluded deck. Rebuild (in Manage Known Words) forgets them."
             )
         )
-        self.use_known_words_db_checkbox.toggled.connect(self.sync_rebuild_known_words_button_state)
         self.add_field("", self.use_known_words_db_checkbox)
 
-        # Rebuild button: clears the local cache so deck exclusions take effect.
-        # The cache is additive (never removes), so a deck synced before being
-        # excluded would otherwise stay cached forever (Issue #38).
-        rebuild_row = QHBoxLayout()
-        self.rebuild_known_words_button = QPushButton(self.tr("Rebuild Known Words DB"))
-        self.rebuild_known_words_button.setToolTip(
-            self.tr(
-                "Clear the local known-words cache so it re-syncs from Anki on the "
-                "next run. Needed for deck exclusions below to take effect when the "
-                "local cache is enabled."
-            )
-        )
-        self.rebuild_known_words_button.clicked.connect(self.rebuild_known_words_requested.emit)
-        # Rebuild has nothing to clear while the cache itself is off (Task 7);
-        # sync the initial state now that the button exists — construction
-        # leaves the checkbox unchecked, and setChecked(False) below fires no
-        # signal for a value that was already False.
-        self.sync_rebuild_known_words_button_state()
-        rebuild_row.addWidget(self.rebuild_known_words_button)
+        # Rebuild (clearing the additive local cache so deck exclusions take
+        # effect, Issue #38) sits in the Manage Known Words dialog beside the
+        # "cached from Anki" count it clears (C13).
+        known_words_row = QHBoxLayout()
 
         # Manage the user-curated known/ignore list (Issue #42): view, remove,
         # export, reset words added from the Word Curator.
@@ -273,9 +252,9 @@ class FilteringSettingsPanel(FormPanel):
             )
         )
         self.manage_known_words_button.clicked.connect(self.manage_known_words_requested.emit)
-        rebuild_row.addWidget(self.manage_known_words_button)
-        rebuild_row.addStretch()
-        self.add_layout(rebuild_row)
+        known_words_row.addWidget(self.manage_known_words_button)
+        known_words_row.addStretch()
+        self.add_layout(known_words_row)
 
         # Kana-variant fold: a kana-spelled word (うなずく) counts as known when
         # the kanji dictionary form (頷く) is already carded. Script-gated in
@@ -714,32 +693,6 @@ class FilteringSettingsPanel(FormPanel):
         """Set the kana-variant fold checkbox."""
         self.match_kana_variants_checkbox.setChecked(value)
 
-    def sync_rebuild_known_words_button_state(self) -> None:
-        """Rebuild only means anything while the cache the checkbox names is on,
-        and only while no rebuild is already running.
-
-        Public: also called by ``SettingsTab`` when a background rebuild finishes,
-        so the button lands back in step with the checkbox instead of being
-        force-enabled regardless of it (the checkbox can be toggled off while a
-        rebuild is still running off-thread). The checkbox-toggled sync and
-        ``load_from_config`` both reach this too, so it must never re-enable the
-        button mid-rebuild -- hence the in-flight flag gates it alongside the
-        checkbox.
-        """
-        self.rebuild_known_words_button.setEnabled(
-            self.use_known_words_db_checkbox.isChecked() and not self._rebuild_in_flight
-        )
-
-    def set_rebuild_known_words_in_flight(self, in_flight: bool) -> None:
-        """Record whether ``SettingsTab`` has a rebuild running off-thread.
-
-        The only public path that flips :attr:`_rebuild_in_flight`; it
-        re-syncs the button immediately so the caller never has to remember to
-        call :meth:`sync_rebuild_known_words_button_state` itself.
-        """
-        self._rebuild_in_flight = in_flight
-        self.sync_rebuild_known_words_button_state()
-
     # --- Word lists ---
 
     def get_blacklist_path(self) -> Path | None:
@@ -840,7 +793,6 @@ class FilteringSettingsPanel(FormPanel):
                 max_frequency_rank=config.max_frequency_rank,
             )
         self.set_use_known_words_db(config.use_known_words_db)
-        self.sync_rebuild_known_words_button_state()
         self.set_match_kana_variants(config.known_words_match_kana_variants)
         self.set_excluded_decks(config.excluded_decks)
         self.set_excluded_wordsets(config.excluded_wordsets)

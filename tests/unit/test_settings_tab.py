@@ -1259,7 +1259,7 @@ def test_name_lists_are_refetched_on_show_until_they_arrive(tab):
     assert refresh.call_count == 2
 
 
-def test_rebuild_known_words_does_not_block_gui_and_reenables_action(tab, tmp_path, monkeypatch, qtbot):
+def test_rebuild_reports_back_when_the_work_ends(tab, tmp_path, monkeypatch, qtbot):
     import sqlite3
     import time
 
@@ -1273,12 +1273,12 @@ def test_rebuild_known_words_does_not_block_gui_and_reenables_action(tab, tmp_pa
     db.initialize()
     db.add_words({"食べる"}, source="anki")
     tab.config = replace(tab.config, known_words_db_path=db_path)
-    # Rebuild only means anything (and is only reachable in the real UI) while
-    # the checkbox is on; the finish handler now re-syncs from it (Task 7).
-    tab.filtering_panel.use_known_words_db_checkbox.setChecked(True)
-    monkeypatch.setattr(QMessageBox, "question", lambda *args, **kwargs: QMessageBox.StandardButton.Yes)
-    monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: QMessageBox.StandardButton.Ok)
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
+    monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
+    finished: list[bool] = []
 
+    # The clear still runs off the GUI thread: a held write lock must not
+    # freeze the window, and the caller hears back only when the work ends.
     holder = sqlite3.connect(db_path)
     holder.execute("BEGIN IMMEDIATE")
     event_loop_tick: list[bool] = []
@@ -1286,12 +1286,12 @@ def test_rebuild_known_words_does_not_block_gui_and_reenables_action(tab, tmp_pa
     workers = []
     try:
         started = time.monotonic()
-        tab._on_rebuild_known_words()
+        tab._on_rebuild_known_words(on_finished=lambda: finished.append(True))
         elapsed = time.monotonic() - started
         workers = list(getattr(tab, "_off_thread_workers", ()))
 
         assert elapsed < 0.5
-        assert tab.filtering_panel.rebuild_known_words_button.isEnabled() is False
+        assert finished == []
         qtbot.waitUntil(lambda: bool(event_loop_tick), timeout=500)
         assert len(workers) == 1
     finally:
@@ -1300,30 +1300,39 @@ def test_rebuild_known_words_does_not_block_gui_and_reenables_action(tab, tmp_pa
         for worker in workers:
             worker.wait(6000)
 
-    qtbot.waitUntil(lambda: tab.filtering_panel.rebuild_known_words_button.isEnabled(), timeout=1000)
+    qtbot.waitUntil(lambda: finished == [True], timeout=3000)
 
 
-def test_rebuild_finish_handler_leaves_the_button_disabled_when_unchecked_mid_run(tab):
-    """The checkbox can be toggled off while a rebuild runs off-thread; the
-    finish handler must not force the button back on regardless of it."""
-    panel = tab.filtering_panel
-    panel.use_known_words_db_checkbox.setChecked(True)
-    panel.rebuild_known_words_button.setEnabled(False)  # simulates the in-flight disable
+def test_a_declined_rebuild_reports_back_at_once(tab, monkeypatch):
+    from PyQt6.QtWidgets import QMessageBox
 
-    panel.use_known_words_db_checkbox.setChecked(False)
-    tab._on_rebuild_known_words_finished()
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.No)
+    finished: list[bool] = []
 
-    assert panel.rebuild_known_words_button.isEnabled() is False
+    tab._on_rebuild_known_words(on_finished=lambda: finished.append(True))
+
+    assert finished == [True]
 
 
-def test_rebuild_finish_handler_reenables_the_button_when_still_checked(tab):
-    panel = tab.filtering_panel
-    panel.use_known_words_db_checkbox.setChecked(True)
-    panel.rebuild_known_words_button.setEnabled(False)  # simulates the in-flight disable
+def test_manage_known_words_hands_the_dialog_the_rebuild(tab, monkeypatch):
+    from anki_miner.gui.widgets.dialogs import known_words_dialog
 
-    tab._on_rebuild_known_words_finished()
+    seen: dict[str, object] = {}
 
-    assert panel.rebuild_known_words_button.isEnabled() is True
+    class _Recorder:
+        def __init__(self, *_a, **kwargs):
+            seen.update(kwargs)
+
+        def exec(self):
+            return 0
+
+    monkeypatch.setattr(known_words_dialog, "KnownWordsManagerDialog", _Recorder)
+    tab.filtering_panel.use_known_words_db_checkbox.setChecked(True)
+
+    tab._on_manage_known_words()
+
+    assert seen["rebuild_enabled"] is True
+    assert callable(seen["on_rebuild"])
 
 
 def test_pending_field_names_reports_a_dirty_save_panel_field(tab):

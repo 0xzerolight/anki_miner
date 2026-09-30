@@ -214,61 +214,19 @@ def test_known_words_db_checkbox_names_the_effect(qtbot):
     assert panel.use_known_words_db_checkbox.text() == "Keep words known after their cards are deleted"
     tip = panel.use_known_words_db_checkbox.toolTip()
     expected_tip = (
-        "Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild forgets them."
+        "Words stay known after their Anki cards are deleted or moved to an excluded deck. "
+        "Rebuild (in Manage Known Words) forgets them."
     )
     assert tip == expected_tip
 
 
-def test_rebuild_known_words_button_follows_the_checkbox(qtbot):
-    from anki_miner.config import AnkiMinerConfig
-
+def test_rebuild_moved_to_the_known_words_dialog(qtbot):
+    """C13: the Word Filters page keeps the setting and Manage Known Words only."""
     panel = FilteringSettingsPanel()
     qtbot.addWidget(panel)
-
-    # Construction leaves the checkbox unchecked; the button must start in step.
-    assert not panel.rebuild_known_words_button.isEnabled()
-
-    panel.load_from_config(replace(AnkiMinerConfig(), use_known_words_db=True))
-    assert panel.rebuild_known_words_button.isEnabled()
-
-    panel.load_from_config(AnkiMinerConfig())
-    assert not panel.rebuild_known_words_button.isEnabled()
-
-    # And toggling without a reload keeps the button in step.
-    panel.use_known_words_db_checkbox.setChecked(True)
-    assert panel.rebuild_known_words_button.isEnabled()
-    panel.use_known_words_db_checkbox.setChecked(False)
-    assert not panel.rebuild_known_words_button.isEnabled()
-
-    # "Manage Known Words..." is unaffected: the user list works either way.
-    assert panel.manage_known_words_button.isEnabled()
-
-
-def test_rebuild_button_stays_disabled_mid_rebuild_despite_checkbox_toggling(qtbot):
-    """A rebuild in flight must survive both the checkbox-toggled sync and a
-    load_from_config reload -- neither may re-enable the button mid-rebuild."""
-    from anki_miner.config import AnkiMinerConfig
-
-    panel = FilteringSettingsPanel()
-    qtbot.addWidget(panel)
-    panel.use_known_words_db_checkbox.setChecked(True)
-    assert panel.rebuild_known_words_button.isEnabled()
-
-    panel.set_rebuild_known_words_in_flight(True)
-    assert not panel.rebuild_known_words_button.isEnabled()
-
-    # Toggling the checkbox off and back on must not re-enable the button.
-    panel.use_known_words_db_checkbox.setChecked(False)
-    assert not panel.rebuild_known_words_button.isEnabled()
-    panel.use_known_words_db_checkbox.setChecked(True)
-    assert not panel.rebuild_known_words_button.isEnabled()
-
-    # A config reload while the rebuild is in flight must not re-enable it either.
-    panel.load_from_config(replace(AnkiMinerConfig(), use_known_words_db=True))
-    assert not panel.rebuild_known_words_button.isEnabled()
-
-    panel.set_rebuild_known_words_in_flight(False)
-    assert panel.rebuild_known_words_button.isEnabled()
+    assert not hasattr(panel, "rebuild_known_words_button")
+    assert not hasattr(panel, "rebuild_known_words_requested")
+    assert panel.manage_known_words_button.text() == "Manage Known Words…"
 
 
 def test_kana_variant_row_lives_in_the_known_words_section(qtbot):
