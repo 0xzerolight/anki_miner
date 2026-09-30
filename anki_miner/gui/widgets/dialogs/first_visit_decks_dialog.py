@@ -10,6 +10,7 @@ replaces used, so its existing translations still apply.
 
 from __future__ import annotations
 
+import html
 from collections.abc import Collection, Sequence
 
 from PyQt6.QtCore import QCoreApplication, Qt
@@ -54,20 +55,21 @@ class FirstVisitDecksDialog(QDialog):
                 tr_format(QCoreApplication.translate("LanguageSwitch", "You have not mined %1 before."), display_name)
             )
         )
-        explanation = QLabel(
+        # B07: say what the ticks are for in the user's terms, not the scan's.
+        self.explanation_label = QLabel(
             tr_format(
                 QCoreApplication.translate(
                     "LanguageSwitch",
-                    "The known-words scan reads every deck that is not excluded, and it cannot tell apart "
-                    "languages that share a script: words in a ticked deck would not count as known in %1. "
-                    "Untick the decks that hold %1 cards.",
+                    "Anki Miner skips words you already have in Anki. Tick the decks that are <i>not</i> %1, "
+                    "so their words don't stop %1 cards from being made.",
                 ),
-                display_name,
+                html.escape(display_name, quote=False),
             )
         )
-        explanation.setWordWrap(True)
-        explanation.setObjectName("helper-text")
-        layout.addWidget(explanation)
+        self.explanation_label.setTextFormat(Qt.TextFormat.RichText)
+        self.explanation_label.setWordWrap(True)
+        self.explanation_label.setObjectName("helper-text")
+        layout.addWidget(self.explanation_label)
 
         self.deck_list = QListWidget()
         for name in decks:

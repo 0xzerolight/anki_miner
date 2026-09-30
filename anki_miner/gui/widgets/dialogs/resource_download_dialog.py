@@ -15,7 +15,7 @@ What replaces it:
   every other run reports through.
 * The primary label is built from :mod:`~anki_miner.gui.utils.progress_telemetry`
   — ``155.4 MB / 600.0 MB · 4.2 MB/s · Elapsed 00:37 · 01:45 left`` — and never
-  contains a URL. Hosts and licences live in the sources area below it.
+  contains a URL. Hosts and licences live in the licence sentence's tooltip.
 * Phases come from the worker as data (:class:`ResourcePhase`), so the readout
   says what is actually happening: download, then verify/install, then index,
   then activate.
@@ -229,13 +229,41 @@ def result_lines(summary: ResourceDownloadSummary) -> list[str]:
 
 
 def sources_text(specs: Sequence[ResourceSpec]) -> str:
-    """Host and licence per resource — the details area, never the label.
+    """Host and licence per resource — the licence tooltip, never the label.
 
     Hosts rather than full URLs: the label above has to stay readable, and a
     user checking *where this came from* is asking about the host and the
     licence, not about a 120-character release asset path.
     """
     return "\n".join(f"{spec.display_name} — {urlparse(spec.url).netloc} — {spec.license_note}" for spec in specs)
+
+
+def activity_headline(event: ResourceProgress, specs: Sequence[ResourceSpec]) -> str:
+    """Where the run is and what this item is: "Downloading 1 of 4 · JMdict (dictionary)" (B10).
+
+    The window used to headline the bare resource name, so a four-item run gave
+    no sense of how far along it was. The position comes from the run's own
+    spec list; an id outside that list (never expected) counts as the first
+    and is named without a kind.
+    """
+    index = next((i for i, spec in enumerate(specs, 1) if spec.id == event.spec_id), 1)
+    kind = next((spec.kind for spec in specs if spec.id == event.spec_id), "")
+    if kind == "dict":
+        name = tr_format(QCoreApplication.translate("ResourceDownloadDialog", "%1 (dictionary)"), event.display_name)
+    elif kind == "freq":
+        name = tr_format(
+            QCoreApplication.translate("ResourceDownloadDialog", "%1 (word frequency)"), event.display_name
+        )
+    elif kind == "pitch":
+        name = tr_format(QCoreApplication.translate("ResourceDownloadDialog", "%1 (pitch accent)"), event.display_name)
+    else:
+        name = event.display_name
+    return tr_format(
+        QCoreApplication.translate("ResourceDownloadDialog", "Downloading %1 of %2 · %3"),
+        index,
+        len(specs),
+        name,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -287,20 +315,19 @@ class ResourceDownloadWindow(EnhancedDialog):
         self.results_label.hide()
         self.add_content(self.results_label)
 
-        self.sources_label = QLabel(sources_text(specs))
-        self.sources_label.setObjectName("caption")
-        self.sources_label.setWordWrap(True)
-        self.add_content(self.sources_label)
-
-        licence_note = QLabel(
+        # B10: the per-source host and licence lines live in this sentence's
+        # tooltip. They are reference, not progress, and on a small screen they
+        # pushed the buttons out of sight.
+        self.licence_label = QLabel(
             QCoreApplication.translate(
                 "ResourceDownloadDialog",
                 "Resources are downloaded from their original sources; their licenses apply.",
             )
         )
-        licence_note.setObjectName("caption")
-        licence_note.setWordWrap(True)
-        self.add_content(licence_note)
+        self.licence_label.setObjectName("caption")
+        self.licence_label.setWordWrap(True)
+        self.licence_label.setToolTip(sources_text(specs))
+        self.add_content(self.licence_label)
 
         self.hide_button = self.add_button(
             QCoreApplication.translate("ResourceDownloadDialog", "Hide"), "ghost", self._on_hide
@@ -413,6 +440,7 @@ class ResourceDownloadSession(QObject):
         task_registry: TaskRegistry | None = None,
         adopt_worker: Callable[[ResourceDownloadWorker], None] | None = None,
         specs: Sequence[ResourceSpec],
+        show_window: bool = True,
         clock: Callable[[], float] = monotonic,
     ) -> None:
         super().__init__()
@@ -425,6 +453,9 @@ class ResourceDownloadSession(QObject):
         self._registry = task_registry
         self._adopt_worker = adopt_worker
         self._specs = list(specs)
+        # False for a caller that renders progress itself (the setup wizard's
+        # dictionary step, D9): the run then reports only to the TaskRegistry.
+        self._show_window = show_window
         # Injected so stall and rate behaviour is testable without sleeping;
         # the estimator itself already refuses to read a clock of its own.
         self._clock = clock
@@ -494,17 +525,18 @@ class ResourceDownloadSession(QObject):
 
             self._download_dir = Path(tempfile.mkdtemp(prefix="anki_miner_dl_"))
 
-            window = ResourceDownloadWindow(self._parent, self._specs)
-            window.cancel_requested.connect(self.cancel)
-            window.retry_requested.connect(self._retry_activation)
-            window.destroyed.connect(self._on_window_destroyed)
-            window.show_activity(
-                QCoreApplication.translate("ResourceDownloadDialog", "Recommended resources"),
-                QCoreApplication.translate("ResourceDownloadDialog", "Starting download…"),
-                None,
-            )
-            window.show()
-            self._window = window
+            if self._show_window:
+                window = ResourceDownloadWindow(self._parent, self._specs)
+                window.cancel_requested.connect(self.cancel)
+                window.retry_requested.connect(self._retry_activation)
+                window.destroyed.connect(self._on_window_destroyed)
+                window.show_activity(
+                    QCoreApplication.translate("ResourceDownloadDialog", "Recommended resources"),
+                    QCoreApplication.translate("ResourceDownloadDialog", "Starting download…"),
+                    None,
+                )
+                window.show()
+                self._window = window
 
             worker = ResourceDownloadWorker(
                 self._specs,
@@ -735,7 +767,8 @@ class ResourceDownloadSession(QObject):
             fraction = event.step / event.steps
         else:
             fraction = None
-        self._with_window(lambda window: window.show_activity(event.display_name, detail, fraction))
+        headline = activity_headline(event, self._specs)
+        self._with_window(lambda window: window.show_activity(headline, detail, fraction))
 
         if self._handle is None:
             return
@@ -767,7 +800,8 @@ class ResourceDownloadSession(QObject):
         )
         self._last_stats = stats
         detail = resource_detail(event, locale=self._locale, stats=stats)
-        self._with_window(lambda window: window.show_activity(event.display_name, detail, stats.fraction))
+        headline = activity_headline(event, self._specs)
+        self._with_window(lambda window: window.show_activity(headline, detail, stats.fraction))
 
     def _render_result(self, summary: ResourceDownloadSummary) -> None:
         headline = result_headline(summary, activated=self._activated)
@@ -830,6 +864,7 @@ def start_resource_download(
     task_registry: TaskRegistry | None = None,
     adopt_worker: Callable[[ResourceDownloadWorker], None] | None = None,
     specs: Sequence[ResourceSpec],
+    show_window: bool = True,
 ) -> ResourceDownloadSession | None:
     """Start a background recommended-resource run; None means it never started.
 
@@ -848,6 +883,9 @@ def start_resource_download(
     ``specs`` is exactly what this run downloads: the mining language's own
     catalog for a caller that offers no choice (the Tools menu), or the subset
     a page's picker returned. An empty set is never a run.
+
+    ``show_window=False`` starts the run with no window: the caller shows
+    progress itself from the task registry (the setup wizard, D9).
     """
     session = ResourceDownloadSession(
         parent,
@@ -859,5 +897,6 @@ def start_resource_download(
         task_registry=task_registry,
         adopt_worker=adopt_worker,
         specs=specs,
+        show_window=show_window,
     )
     return session if session.start() else None

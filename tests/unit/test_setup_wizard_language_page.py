@@ -62,25 +62,23 @@ def _pick(page, code):
 # ---------------------------------------------------------------------------
 
 
-def test_the_language_page_is_the_second_step(wizard_factory, test_config):
+def test_the_language_page_is_the_first_step(wizard_factory, test_config):
     wiz = wizard_factory(test_config)
 
     ids = wiz.pageIds()
-    assert len(ids) == 7
-    assert wiz.page(ids[0]) is wiz.theme_page
-    assert wiz.page(ids[1]) is wiz.language_page
-    assert wiz.page(ids[2]) is wiz.ankiconnect_page
+    assert len(ids) == 4
+    assert wiz.page(ids[0]) is wiz.language_page
+    assert wiz.page(ids[1]) is wiz.resources_page
+    assert wiz.page(ids[2]) is wiz.anki_page
 
 
 def test_a_wizard_that_was_not_asked_has_no_language_step(wizard_factory, test_config):
-    """The default shape is the six pages the wizard had before this step existed."""
     wiz = wizard_factory(test_config, offer_mining_language=False)
 
     ids = wiz.pageIds()
-    assert len(ids) == 6
+    assert len(ids) == 3
     assert wiz.language_page is None
-    assert wiz.page(ids[0]) is wiz.theme_page
-    assert wiz.page(ids[1]) is wiz.ankiconnect_page
+    assert wiz.page(ids[0]) is wiz.resources_page
 
 
 def test_a_wizard_without_the_page_has_nothing_to_revert_on_a_walk_away(wizard_factory, test_config):
@@ -139,23 +137,20 @@ def test_next_is_what_commits_the_pick(qtbot, wizard_factory, test_config):
     """Driven through QWizard itself, not through the page's methods."""
     wiz = wizard_factory(test_config)
     wiz.restart()
-    assert wiz.currentPage() is wiz.theme_page
-
-    wiz.next()
     assert wiz.currentPage() is wiz.language_page
     _pick(wiz.language_page, "zh")
     assert wiz.working_config() == test_config  # still on the page: nothing committed
 
     wiz.next()
-    assert wiz.currentPage() is wiz.ankiconnect_page
+    assert wiz.currentPage() is wiz.resources_page
     assert config_language(wiz.working_config()) == "zh"
     # The page entered by that Next owns a worker thread; let it land.
-    qtbot.waitUntil(lambda: wiz.ankiconnect_page.result_label.text() == "AnkiConnect is not reachable", timeout=5000)
+    qtbot.waitUntil(lambda: not wiz.resources_page.dictionary_label.text().startswith("Checking"), timeout=5000)
 
 
 def test_the_resources_page_offers_the_chosen_language_catalogue(qtbot, wizard_factory, test_config):
     wiz = wizard_factory(test_config)
-    assert "jmdict-english" in wiz.resources_page.resource_checks
+    assert "jmdict-english" in {spec.id for spec in wiz.resources_page.selected_specs()}
 
     page = wiz.language_page
     page.initializePage()
@@ -163,8 +158,8 @@ def test_the_resources_page_offers_the_chosen_language_catalogue(qtbot, wizard_f
     page.validatePage()
 
     wiz.resources_page.initializePage()
-    assert set(wiz.resources_page.resource_checks) == {spec.id for spec in get_profile("zh").catalog}
-    assert "cc-cedict" in wiz.resources_page.resource_checks
+    assert {spec.id for spec in wiz.resources_page.selected_specs()} == {spec.id for spec in get_profile("zh").catalog}
+    assert "cc-cedict" in {spec.id for spec in wiz.resources_page.selected_specs()}
     # The page's own live probe owns a worker thread; let it land before teardown.
     qtbot.waitUntil(lambda: not wiz.resources_page.dictionary_label.text().startswith("Checking"), timeout=5000)
 
@@ -181,7 +176,7 @@ def test_the_deck_page_opens_on_the_chosen_language_deck(qtbot, monkeypatch, wiz
     wiz.deck_page.initializePage()
     qtbot.waitUntil(lambda: bool(wiz.deck_page._fetched_decks), timeout=5000)
 
-    assert wiz.deck_page.deck_combo.currentText() == zh_deck
+    assert wiz.deck_page.current_deck() == zh_deck
 
 
 # ---------------------------------------------------------------------------
@@ -295,7 +290,7 @@ def test_a_walk_away_reverts_the_languages_own_fields_and_nothing_else(wizard_fa
     _pick(page, "zh")
     page.validatePage()
     wiz.ankiconnect_page.url_input.setText("http://127.0.0.1:9999")
-    wiz.deck_page.deck_combo.setCurrentText("Chinese::Mining")
+    wiz.deck_page.select_deck("Chinese::Mining")
 
     wiz.reject()
 

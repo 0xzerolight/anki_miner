@@ -1,8 +1,13 @@
 """Wizard pages for the guided first-run Setup Wizard (Task 3).
 
-Seven ``QWizardPage`` subclasses. Each takes the parent :class:`SetupWizard` so
-it can read/write the working config and use the wizard's shared
-:class:`AnkiService` / :class:`ValidationService` and worker registry.
+Four ``QWizardPage`` subclasses (D8): the mining language (first run only), the
+dictionary download, the Anki page, and the Ready check. The Anki page hosts
+three sections that used to be pages of their own -- the AnkiConnect check,
+the deck and the note type -- and keeps their class names, because pylupdate6
+files every ``self.tr`` string under its class name. Each page or section takes
+the parent :class:`SetupWizard` so it can read/write the working config and use
+the wizard's shared :class:`AnkiService` / :class:`ValidationService` and
+worker registry.
 
 Detect & guide ONLY — no ``createDeck`` / ``createModel`` / ``ensure_deck``
 calls anywhere. Deck/note type creation is the user's job; the wizard inspects,
@@ -11,16 +16,16 @@ explains, links, and re-checks.
 
 from __future__ import annotations
 
+import contextlib
+import html
 from collections.abc import Callable
 from dataclasses import replace
 from functools import partial
 from typing import TYPE_CHECKING, Any
 
-from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, Qt, QUrl
-from PyQt6.QtGui import QDesktopServices
+from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, QEvent, Qt, QTimer, QUrl, pyqtSignal
+from PyQt6.QtGui import QDesktopServices, QGuiApplication
 from PyQt6.QtWidgets import (
-    QApplication,
-    QCheckBox,
     QComboBox,
     QHBoxLayout,
     QLabel,
@@ -30,11 +35,16 @@ from PyQt6.QtWidgets import (
     QWizardPage,
 )
 
-from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.gui.utils.ankiconnect_help import (
+    ANKICONNECT_ADDON_CODE,
+    anki_launch_command,
+    ankiconnect_install_steps,
+    launch_anki,
+)
 from anki_miner.gui.utils.language_choices import available_mining_languages
 from anki_miner.gui.utils.run_off_thread import still_running
-from anki_miner.gui.widgets.base import StatusBadge
-from anki_miner.gui.widgets.enhanced import ModernButton, ThemeGalleryWidget
+from anki_miner.gui.utils.task_lines import format_task_line
+from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.panels.anki_settings_panel import (
     _FIELD_KEYWORDS,
     auto_map_fields,
@@ -54,18 +64,21 @@ from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
     from anki_miner.config import AnkiMinerConfig
+    from anki_miner.gui.controllers.task_registry import TaskRegistry
     from anki_miner.gui.widgets.dialogs.resource_download_dialog import ResourceDownloadSession
     from anki_miner.services.resource_catalog import ResourceSpec
     from anki_miner.services.validation_service import ValidationService
 
     from .setup_wizard import SetupWizard
 
-# AnkiConnect is an Anki add-on; this is its add-on code on AnkiWeb.
-ANKICONNECT_ADDON_CODE = "2055492159"
 ANKICONNECT_URL = "https://ankiweb.net/shared/info/2055492159"
 RESOURCES_HELP_URL = "https://github.com/0xzerolight/anki_miner/blob/main/RESOURCES.md"
 # Note types that map cleanly (the Lapis/Kiku/Senren presets, or any word + sentence field list).
 NOTE_TYPE_HELP_URL = f"{RESOURCES_HELP_URL}#note-types"
+#: The note type this app fills out of the box for Japanese (config default).
+LAPIS_NOTE_TYPE = "Lapis"
+#: Lapis' release page; it carries ``Lapis.apkg`` for Anki's File → Import (B01).
+LAPIS_RELEASES_URL = "https://github.com/donkuri/lapis/releases/latest"
 
 
 def resources_help_url(language: str) -> str:
@@ -75,32 +88,54 @@ def resources_help_url(language: str) -> str:
     return f"{RESOURCES_HELP_URL}#{get_profile(language).english_name.lower()}"
 
 
-#: Family noun per catalog ``kind``, so a checkbox says what a resource *is*
-#: rather than only what it is called. Keyed by ``ResourceSpec.kind``; a kind
-#: with no entry here falls back to the display name alone.
+#: Family noun per catalog ``kind`` for the readiness lines ("Frequency ready: …").
+#: A kind with no entry here has no readiness line.
 _RESOURCE_KIND_NOUNS = {
     "dict": QT_TRANSLATE_NOOP("SetupWizard", "Dictionary"),
     "freq": QT_TRANSLATE_NOOP("SetupWizard", "Frequency"),
     "pitch": QT_TRANSLATE_NOOP("SetupWizard", "Pitch accent"),
 }
 
-#: Eight themes spanning light/dark and warm/cool, shown before the full set.
-#: A shortlist keeps the first page of onboarding a glance rather than a wall;
-#: "See all" is one click away and states the real count.
-WIZARD_SHORTLIST_THEMES = (
-    "dark",
-    "light",
-    "catppuccin-mocha",
-    "nord",
-    "tokyo-night",
-    "everforest-light",
-    "rose-pine-dawn",
-    "gruvbox-dark-medium",
-)
+#: Lower-case family nouns for the "Downloads …" sentence (D9), by ``ResourceSpec.kind``.
+_KIND_PHRASE_NOUNS = {
+    "dict": QT_TRANSLATE_NOOP("SetupWizard", "dictionary"),
+    "freq": QT_TRANSLATE_NOOP("SetupWizard", "word frequency"),
+    "pitch": QT_TRANSLATE_NOOP("SetupWizard", "pitch accent"),
+}
 
 
 def _open_url(url: str) -> None:
     QDesktopServices.openUrl(QUrl(url))
+
+
+def _html_text(text: str) -> str:
+    """Escape ``text`` for a rich-text label's text node, keeping apostrophes readable.
+
+    ``html.escape`` also escapes ``'`` by default, and a rich-text QLabel's
+    ``text()`` then hands back "You&#x27;re" to anyone reading it. Only
+    ``&``, ``<`` and ``>`` matter outside an attribute.
+    """
+    return html.escape(text, quote=False)
+
+
+def _add_page_header(layout: QVBoxLayout, title: str, subtitle: str) -> tuple[QLabel, QLabel]:
+    """Put a page's title and subtitle at the top of ``layout``, dialog style (B08).
+
+    QWizard's own header band draws the title in its own fonts, which ignore
+    the stylesheet. The pages leave ``setTitle`` empty, which removes the band,
+    and use the ``heading2`` / ``dialog-subtitle`` pair EnhancedDialog uses.
+    An empty subtitle starts hidden.
+    """
+    title_label = QLabel(title)
+    title_label.setObjectName("heading2")
+    title_label.setWordWrap(True)
+    subtitle_label = QLabel(subtitle)
+    subtitle_label.setObjectName("dialog-subtitle")
+    subtitle_label.setWordWrap(True)
+    subtitle_label.setVisible(bool(subtitle))
+    layout.addWidget(title_label)
+    layout.addWidget(subtitle_label)
+    return title_label, subtitle_label
 
 
 class _LiveCheckPage(QWizardPage):
@@ -148,92 +183,38 @@ class _LiveCheckPage(QWizardPage):
         return self.sender() is self._live_check
 
 
-class ThemePage(QWizardPage):
-    """Step 1: pick a look.
+class _WizardSection(QWidget):
+    """A part of a wizard page that used to be a page of its own (D8).
 
-    Deliberately first and deliberately non-blocking. It is the one step with no
-    external dependency -- nothing to detect, nothing that can fail -- so it
-    costs the user nothing, and every page after it wears their own pick.
-
-    Stars are off here: favorites are a curation tool for someone who already
-    has opinions, and asking a new user to manage a top-right selector they have
-    not seen yet is noise. They are one click away in Settings afterwards.
+    AnkiConnectPage, DeckPage and NoteTypePage are sections of AnkiPage. They
+    keep QWizardPage's method names (``initializePage``, ``isComplete``,
+    ``validatePage``, ``completeChanged``) so AnkiPage can forward each call and
+    tests can treat a section like the page it was.
     """
 
+    completeChanged = pyqtSignal()  # noqa: N815 - mirrors QWizardPage.completeChanged
+
     def __init__(self, wizard: SetupWizard) -> None:
-        super().__init__(wizard)
+        super().__init__()
         self._wizard = wizard
-        # ThemeGalleryWidget.refresh() seeds selected_key() from the app-wide
-        # Theme.get_current_mode() so the matching card reads "Active" on
-        # first paint -- that is a display default, not a user decision, and
-        # it need not agree with the working config's own theme (e.g. before
-        # anything has synced the two). Only an actual click may write the
-        # config, so a page nobody touched stays inert.
-        self._touched = False
 
-        self.setTitle(self.tr("Pick a Look"))
-        self.setSubTitle(self.tr("Click a theme to try it. You can change it any time in Settings."))
-
-        layout = QVBoxLayout(self)
-
-        self.gallery = ThemeGalleryWidget(self, show_stars=False)
-        self.gallery.set_shortlist(WIZARD_SHORTLIST_THEMES)
-        self.gallery.theme_activated.connect(self._on_theme_activated)
-        layout.addWidget(self.gallery, 1)
-
-        row = QHBoxLayout()
-        self.see_all_btn = ModernButton(
-            tr_format(self.tr("See all %1 themes…"), len(Theme.get_available_themes())),
-            variant="secondary",
-        )
-        self.see_all_btn.clicked.connect(self._on_see_all_clicked)
-        row.addWidget(self.see_all_btn)
-        row.addStretch(1)
-        layout.addLayout(row)
+    def initializePage(self) -> None:
+        """Called by the hosting page; the default has nothing to prepare."""
 
     def isComplete(self) -> bool:
-        # Always true. There is no wrong answer and no state to gather, so this
-        # step must never be able to hold the wizard up.
         return True
-
-    def _on_see_all_clicked(self) -> None:
-        """Expand to the full grouped set, in place.
-
-        In place, not a dialog: a modal opened on top of a wizard page is a
-        second navigation stack over the first, and Escape then means two
-        different things depending on what has focus.
-        """
-        self.gallery.show_all_themes()
-        self.see_all_btn.setVisible(False)
-
-    def _on_theme_activated(self, key: str) -> None:
-        """Apply live so the wizard itself reskins -- that IS the preview."""
-        self._touched = True
-        Theme.set_mode(key)
-        app = QApplication.instance()
-        if isinstance(app, QApplication):
-            Theme.apply_to_app(app, key)
-
-    def _write_theme_to_config(self) -> None:
-        if not self._touched:
-            return
-        key = self.gallery.selected_key()
-        if key and key != self._wizard.working_config().theme:
-            self._wizard.update_working_config(replace(self._wizard.working_config(), theme=key))
-
-    def stage_current_edits(self) -> None:
-        """Stage the current pick without navigating."""
-        self._write_theme_to_config()
 
     def validatePage(self) -> bool:
-        self._write_theme_to_config()
         return True
+
+    def stage_current_edits(self) -> None:
+        """Stage editor state into the working config, with no I/O."""
 
 
 class MiningLanguagePage(QWizardPage):
     """Name the language being mined; registered on the first run only.
 
-    Second when it is registered at all, and not a selector found in Settings
+    First when it is registered at all, and not a selector found in Settings
     afterwards: every step from here on -- deck, note type, recommended
     resources -- is derived from the mining language, so a Mandarin learner who
     answers here is set up for Mandarin instead of being walked through a
@@ -253,7 +234,7 @@ class MiningLanguagePage(QWizardPage):
     def __init__(self, wizard: SetupWizard) -> None:
         super().__init__(wizard)
         self._wizard = wizard
-        # Like ThemePage: where the combo opens is a display default, not a
+        # Where the combo opens is a display default, not a
         # user decision. Only an actual pick may rewrite the config, so a
         # config naming a language this build cannot offer -- its engine pack
         # is gone -- is left alone rather than quietly switched to whatever
@@ -273,10 +254,12 @@ class MiningLanguagePage(QWizardPage):
             **{name: getattr(config, name) for name in LANGUAGE_SCOPED_FIELDS},
         }
 
-        self.setTitle(self.tr("Choose a Mining Language"))
-        self.setSubTitle(self.tr("The language you are learning. The interface language is separate."))
-
         layout = QVBoxLayout(self)
+        self.title_label, self.subtitle_label = _add_page_header(
+            layout,
+            self.tr("Choose a Mining Language"),
+            self.tr("The language you are learning. The interface language is separate."),
+        )
 
         self.language_combo = QComboBox()
         for code, display_name in available_mining_languages():
@@ -373,68 +356,115 @@ class MiningLanguagePage(QWizardPage):
         self._wizard.update_working_config(replace(config, **self._opening_language_state))
 
 
-class AnkiConnectPage(QWizardPage):
-    """Step 1: verify AnkiConnect is reachable; guide install if not."""
+class AnkiConnectPage(_WizardSection):
+    """The Anki page's connection section (B03, D11).
+
+    Connected, it is one line. Not connected, it is three numbered steps: open
+    Anki (a button when Anki sits in its standard install place), install
+    AnkiConnect with a one-click copy of its code, restart Anki; the page then
+    connects by itself (B02). The AnkiConnect address is behind a small link,
+    because Settings cannot be reached while this modal wizard is open.
+
+    The section renders its own translated sentence from the check's ``ok``
+    flag; the service's English message goes in the tooltip.
+    """
+
+    #: The latest answer: True when AnkiConnect replied, False otherwise.
+    reachability_changed = pyqtSignal(bool)
 
     def __init__(self, wizard: SetupWizard) -> None:
         super().__init__(wizard)
-        self._wizard = wizard
         self._reachable = False
+        #: False until the first answer lands; later checks keep the last answer
+        #: on screen instead of flickering through "Checking".
+        self._has_result = False
         self._worker: SingleCallWorker | None = None
         self._active_recheck_url: str | None = None
-
-        self.setTitle(self.tr("Connect to Anki"))
-        self.setSubTitle(self.tr("Anki Miner talks to Anki through the AnkiConnect add-on."))
+        self._copied = False
+        self._launch_command = anki_launch_command()
 
         layout = QVBoxLayout(self)
-
-        self.badge = StatusBadge("AnkiConnect", status="checking", clickable=False)
-        layout.addWidget(self.badge)
-
-        guidance = QLabel(
-            tr_format(
-                self.tr("In Anki: Tools → Add-ons → Get Add-ons…, paste the code <b>%1</b>, then restart Anki."),
-                ANKICONNECT_ADDON_CODE,
-            )
-        )
-        guidance.setWordWrap(True)
-        layout.addWidget(guidance)
-
-        link = QLabel(f'<a href="{ANKICONNECT_URL}">{self.tr("Open the AnkiConnect add-on page")}</a>')
-        link.setOpenExternalLinks(False)
-        link.linkActivated.connect(lambda: _open_url(ANKICONNECT_URL))
-        layout.addWidget(link)
-
-        url_row = QHBoxLayout()
-        url_row.addWidget(QLabel(self.tr("AnkiConnect URL:")))
-        self.url_input = QLineEdit(wizard.working_config().ankiconnect_url)
-        self.url_input.setPlaceholderText("http://127.0.0.1:8765")
-        url_row.addWidget(self.url_input, 1)
-        layout.addLayout(url_row)
-
-        self.recheck_button = ModernButton(self.tr("Recheck"), variant="secondary")
-        self.recheck_button.clicked.connect(self._on_recheck_clicked)
-        layout.addWidget(self.recheck_button)
+        layout.setContentsMargins(0, 0, 0, 0)
 
         self.result_label = QLabel("")
         self.result_label.setWordWrap(True)
         layout.addWidget(self.result_label)
+
+        open_step, _install_step, restart_step = ankiconnect_install_steps()
+        self.steps = QWidget()
+        steps_layout = QVBoxLayout(self.steps)
+        steps_layout.setContentsMargins(0, 0, 0, 0)
+
+        first_row = QHBoxLayout()
+        self.step1_label = QLabel(f"1. {open_step}")
+        first_row.addWidget(self.step1_label)
+        self.open_anki_button = ModernButton(self.tr("Open Anki"), variant="secondary")
+        self.open_anki_button.clicked.connect(self._on_open_anki_clicked)
+        first_row.addWidget(self.open_anki_button)
+        first_row.addStretch(1)
+        steps_layout.addLayout(first_row)
+        if self._launch_command is not None:
+            # D11: with Anki in its standard install place, step 1 is a button.
+            self.step1_label.setText("1.")
+        else:
+            self.open_anki_button.setVisible(False)
+
+        self.step2_label = QLabel("")
+        self.step2_label.setWordWrap(True)
+        self.step2_label.setTextFormat(Qt.TextFormat.RichText)
+        self.step2_label.linkActivated.connect(self._on_step_link)
+        steps_layout.addWidget(self.step2_label)
+
+        connects = self.tr("This page connects by itself.")
+        self.step3_label = QLabel(f"3. {restart_step} {connects}")
+        self.step3_label.setWordWrap(True)
+        steps_layout.addWidget(self.step3_label)
+
+        addon_page = self.tr("Open the AnkiConnect add-on page")
+        self.addon_link = QLabel(f'<a href="{ANKICONNECT_URL}">{_html_text(addon_page)}</a>')
+        self.addon_link.setOpenExternalLinks(False)
+        self.addon_link.linkActivated.connect(self._on_addon_link)
+        steps_layout.addWidget(self.addon_link)
+        layout.addWidget(self.steps)
+        self.steps.setVisible(False)
+
+        other_address = self.tr("Use a different address…")
+        self.address_link = QLabel(f'<a href="address">{_html_text(other_address)}</a>')
+        self.address_link.setOpenExternalLinks(False)
+        self.address_link.linkActivated.connect(self._on_address_link)
+        layout.addWidget(self.address_link)
+        self.address_link.setVisible(False)
+
+        self.url_row = QWidget()
+        url_layout = QHBoxLayout(self.url_row)
+        url_layout.setContentsMargins(0, 0, 0, 0)
+        url_layout.addWidget(QLabel(self.tr("AnkiConnect URL:")))
+        self.url_input = QLineEdit(wizard.working_config().ankiconnect_url)
+        self.url_input.setPlaceholderText("http://127.0.0.1:8765")
+        url_layout.addWidget(self.url_input, 1)
+        layout.addWidget(self.url_row)
+        self.url_row.setVisible(False)
+
+        self._render_step2()
         self.url_input.textChanged.connect(self._on_url_changed)
+        # Leaving the field (or Return) re-checks the new address at once.
+        self.url_input.editingFinished.connect(self.recheck)
 
     def initializePage(self) -> None:
-        """Fire one auto recheck so the happy path is zero clicks."""
+        """Fire one check so the happy path is zero clicks."""
         self.url_input.setText(self._wizard.working_config().ankiconnect_url)
-        self._on_recheck_clicked()
+        self.recheck()
 
     def isComplete(self) -> bool:
         return self._reachable
 
     def _on_url_changed(self, _text: str) -> None:
         self._reachable = False
-        self.badge.set_status("pending")
-        self.badge.setToolTip("")
+        self._has_result = False
         self.result_label.clear()
+        self.result_label.setToolTip("")
         self.completeChanged.emit()
+        self.reachability_changed.emit(False)
 
     def _normalized_url(self) -> str:
         return self.url_input.text().strip()
@@ -457,22 +487,25 @@ class AnkiConnectPage(QWizardPage):
         # QLineEdit off-thread.
         return self._wizard.validation_service().check_ankiconnect()
 
-    def _on_recheck_clicked(self) -> None:
+    def recheck(self) -> None:
+        """Ask AnkiConnect again, off the GUI thread. The section's refresh path (B02)."""
         if still_running(self._worker):
             return
         self._write_url_to_config()
         url = self._normalized_url()
         if not url:
             self._reachable = False
-            self.badge.set_status("error", self.tr("Enter an AnkiConnect URL."))
+            self._has_result = True
             self.result_label.setText(self.tr("Enter an AnkiConnect URL."))
+            self.result_label.setToolTip("")
+            self.steps.setVisible(False)
+            self.address_link.setVisible(False)
             self.completeChanged.emit()
+            self.reachability_changed.emit(False)
             return
         self._active_recheck_url = url
-        self.badge.set_status("checking", self.tr("Checking connection..."))
-        self.result_label.setText(self.tr("Checking connection..."))
-        self.recheck_button.setEnabled(False)
-
+        if not self._has_result:
+            self.result_label.setText(self.tr("Checking the connection to Anki…"))
         worker = SingleCallWorker(self._recheck_work, error_prefix="", parent=self)
         self._worker = worker
         self._wizard.register_worker(worker)
@@ -481,72 +514,142 @@ class AnkiConnectPage(QWizardPage):
         worker.start()
 
     def _on_recheck_result(self, result: object) -> None:
-        """Main-thread slot: update the badge + reachability from the check result."""
+        """Main-thread slot: render the check's answer."""
         ok, message = result if isinstance(result, tuple) else (False, str(result))
-        self.recheck_button.setEnabled(True)
         if self._active_recheck_url is not None and self._active_recheck_url != self._normalized_url():
             return
-        self._reachable = bool(ok)
-        self.badge.set_status("success" if ok else "error", message)
-        self.result_label.setText(message)
-        self.completeChanged.emit()
+        self._settle(bool(ok), str(message))
 
     def _on_recheck_error(self, message: str) -> None:
-        self.recheck_button.setEnabled(True)
         if self._active_recheck_url is not None and self._active_recheck_url != self._normalized_url():
             return
-        self._reachable = False
-        self.badge.set_status("error", message)
-        self.result_label.setText(message)
+        self._settle(False, message)
+
+    def _settle(self, reachable: bool, message: str) -> None:
+        self._reachable = reachable
+        self._has_result = True
+        if reachable:
+            self.result_label.setText(self.tr("Connected to Anki."))
+            self.open_anki_button.setEnabled(True)
+            self.open_anki_button.setText(self.tr("Open Anki"))
+        else:
+            self.result_label.setText(self.tr("Anki Miner can't reach Anki yet. Do this once:"))
+        # The service's own sentence, for whoever wants the detail (B03).
+        self.result_label.setToolTip(message)
+        self.steps.setVisible(not reachable)
+        self.address_link.setVisible(not reachable and not self.url_row.isVisibleTo(self))
         self.completeChanged.emit()
+        self.reachability_changed.emit(reachable)
+
+    def _render_step2(self) -> None:
+        _open_step, install_step, _restart_step = ankiconnect_install_steps()
+        link_text = self.tr("Copied") if self._copied else self.tr("Copy code")
+        self.step2_label.setText(f'2. {_html_text(install_step)} <a href="copy">{_html_text(link_text)}</a>')
+
+    def _on_step_link(self, href: str) -> None:
+        if href != "copy":
+            return
+        clipboard = QGuiApplication.clipboard()
+        if clipboard is not None:
+            clipboard.setText(ANKICONNECT_ADDON_CODE)
+        self._copied = True
+        self._render_step2()
+
+    def _on_addon_link(self, _href: str) -> None:
+        _open_url(ANKICONNECT_URL)
+
+    def _on_address_link(self, _href: str) -> None:
+        self.url_row.setVisible(True)
+        self.address_link.setVisible(False)
+        self.url_input.setFocus()
+
+    def _on_open_anki_clicked(self) -> None:
+        command = self._launch_command
+        if command is None:
+            return
+        if launch_anki(command):
+            # The automatic re-check (B02) connects once Anki is up.
+            self.open_anki_button.setEnabled(False)
+            self.open_anki_button.setText(self.tr("Starting Anki…"))
+            return
+        self.open_anki_button.setVisible(False)
+        failed = self.tr("Anki did not start. Open it yourself.")
+        self.step1_label.setText(f"1. {failed}")
 
 
-class DeckPage(QWizardPage):
-    """Step 2: choose the target deck (must already exist in Anki)."""
+class DeckPage(_WizardSection):
+    """The Anki page's deck section: the deck must already exist in Anki."""
 
     def __init__(self, wizard: SetupWizard) -> None:
         super().__init__(wizard)
-        self._wizard = wizard
         self._worker: SingleCallWorker | None = None
         self._fetched_decks: list[str] = []
 
-        self.setTitle(self.tr("Choose a Deck"))
-        self.setSubTitle(self.tr("Mined cards go into this deck."))
-
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.heading_label = QLabel(self.tr("Deck"))
+        self.heading_label.setObjectName("heading3")
+        layout.addWidget(self.heading_label)
 
-        row = QHBoxLayout()
         self.deck_combo = QComboBox()
-        self.deck_combo.setEditable(True)
-        self.deck_combo.currentTextChanged.connect(self._on_text_changed)
-        row.addWidget(self.deck_combo, 1)
-        self.refresh_button = ModernButton(self.tr("Refresh"), variant="secondary")
-        self.refresh_button.clicked.connect(self._on_refresh_clicked)
-        row.addWidget(self.refresh_button)
-        layout.addLayout(row)
+        # B06: a real list. A name Anki does not have is listed as "(not in
+        # Anki yet)" instead of typed into an editable box Next then refuses.
+        self.deck_combo.setPlaceholderText(self.tr("Pick a deck"))
+        self.deck_combo.currentIndexChanged.connect(self._on_index_changed)
+        layout.addWidget(self.deck_combo)
 
+        # Normal text size (B06): this line is the instruction, not a footnote.
+        # Hidden while empty, so it leaves no gap above the note type.
         self.deck_hint = QLabel("")
-        self.deck_hint.setObjectName("helper-text")
         self.deck_hint.setWordWrap(True)
+        self.deck_hint.setVisible(False)
         layout.addWidget(self.deck_hint)
+        #: False until the first deck answer (or error) lands.
+        self._loaded = False
 
     def initializePage(self) -> None:
-        self.deck_combo.setCurrentText(self._wizard.working_config().anki_deck_name)
-        self._on_refresh_clicked()
+        self.load_from_config()
+        self.refresh()
+
+    def current_deck(self) -> str:
+        """The selected deck's Anki name ("" when nothing is selected)."""
+        data = self.deck_combo.currentData()
+        return data if isinstance(data, str) else ""
+
+    def select_deck(self, name: str) -> None:
+        """Select ``name``; a name Anki does not list gets its own "(not in Anki yet)" item."""
+        name = name.strip()
+        self.deck_combo.blockSignals(True)
+        try:
+            index = self.deck_combo.findData(name) if name else -1
+            if name and index < 0:
+                self.deck_combo.addItem(tr_format(self.tr("%1 (not in Anki yet)"), name), name)
+                index = self.deck_combo.count() - 1
+            self.deck_combo.setCurrentIndex(index)
+        finally:
+            self.deck_combo.blockSignals(False)
+        self._on_selection_changed()
+
+    def load_from_config(self) -> None:
+        """Show the working config's deck without fetching anything."""
+        self.select_deck(self._wizard.working_config().anki_deck_name)
 
     def isComplete(self) -> bool:
         # Decks are no longer auto-created at mine time, so only a deck Anki
         # actually reports can be accepted here. Every path that mutates
         # _fetched_decks must emit completeChanged or Next stays disabled.
-        name = self.deck_combo.currentText().strip()
+        name = self.current_deck()
         return bool(name) and name in self._fetched_decks
 
-    def _on_text_changed(self, _text: str) -> None:
+    def _on_index_changed(self, _index: int) -> None:
+        self._on_selection_changed()
+
+    def _on_selection_changed(self) -> None:
         self._update_deck_hint()
         self.completeChanged.emit()
 
     def _write_deck_to_config(self) -> None:
-        name = self.deck_combo.currentText().strip()
+        name = self.current_deck()
         if name and name != self._wizard.working_config().anki_deck_name:
             self._wizard.update_working_config(replace(self._wizard.working_config(), anki_deck_name=name))
 
@@ -558,10 +661,10 @@ class DeckPage(QWizardPage):
         self._write_deck_to_config()
         return True
 
-    def _on_refresh_clicked(self) -> None:
+    def refresh(self) -> None:
+        """Fetch Anki's deck names off the GUI thread (on page entry and every re-check, B02)."""
         if still_running(self._worker):
             return
-        self.refresh_button.setEnabled(False)
         worker = FetchDecksWorker(self._wizard.anki_service(), self)
         self._worker = worker
         self._wizard.register_worker(worker)
@@ -574,46 +677,55 @@ class DeckPage(QWizardPage):
         worker.start()
 
     def _on_decks_error(self, _message: str) -> None:
-        self.refresh_button.setEnabled(True)
+        self._loaded = True
+        self._update_deck_hint()
         self.completeChanged.emit()
 
     def _on_decks_fetched(self, deck_names: object) -> None:
-        self.refresh_button.setEnabled(True)
-        names = list(deck_names) if isinstance(deck_names, list) else []
+        names = [str(name) for name in deck_names] if isinstance(deck_names, list) else []
         self._fetched_decks = names
-        current = self.deck_combo.currentText()
+        self._loaded = True
+        wanted = self.current_deck() or self._wizard.working_config().anki_deck_name
         self.deck_combo.blockSignals(True)
-        self.deck_combo.clear()
-        self.deck_combo.addItems(names)
-        self.deck_combo.setCurrentText(current or self._wizard.working_config().anki_deck_name)
-        self.deck_combo.blockSignals(False)
-        self._update_deck_hint()
-        # The repopulate above runs with signals blocked, so _on_text_changed —
-        # the only other emitter — never fires. Without this the Next button is
-        # never re-evaluated after the list lands and stays disabled forever.
-        self.completeChanged.emit()
+        try:
+            self.deck_combo.clear()
+            for name in names:
+                self.deck_combo.addItem(name, name)
+        finally:
+            self.deck_combo.blockSignals(False)
+        # select_deck emits completeChanged, so Next is re-evaluated once the list lands.
+        self.select_deck(wanted)
 
     def _update_deck_hint(self) -> None:
-        name = self.deck_combo.currentText().strip()
-        if not self._fetched_decks:
-            self.deck_hint.setText(self.tr("Could not load decks. Is Anki running with AnkiConnect?"))
+        name = self.current_deck()
+        if not self._loaded:
+            text = ""
+        elif not self._fetched_decks:
+            text = self.tr("Could not load decks. Is Anki running with AnkiConnect?")
         elif not name:
-            self.deck_hint.setText(self.tr("Pick a deck."))
+            text = self.tr("Pick a deck.")
         elif name not in self._fetched_decks:
-            self.deck_hint.setText(self.tr("No such deck. Create it in Anki, then press Refresh."))
+            text = tr_format(
+                self.tr(
+                    "Anki doesn't have a deck called “%1” yet. In Anki, click Create Deck at the bottom of the "
+                    "main window and name it %1, or pick one of your decks above. This page updates when you "
+                    "come back."
+                ),
+                name,
+            )
         else:
-            self.deck_hint.setText("")
+            text = ""
+        self.deck_hint.setText(text)
+        self.deck_hint.setVisible(bool(text))
 
 
-class NoteTypePage(_LiveCheckPage):
-    """Step 3 (richest): choose a note type, auto-map its fields, warn on gaps."""
+class NoteTypePage(_WizardSection):
+    """The Anki page's note-type section; its fields map themselves when they arrive (D8)."""
 
     def __init__(self, wizard: SetupWizard) -> None:
         super().__init__(wizard)
         self._notetypes_worker: SingleCallWorker | None = None
         self._fields_worker: SingleCallWorker | None = None
-        # The field-name warning check; ``_LiveCheckPage`` owns its staleness.
-        self._warn_worker: SingleCallWorker | None = None
         self._fields_generation = 0
         self._desired_note_type = ""
         self._active_fields_request: tuple[int, str] | None = None
@@ -621,21 +733,19 @@ class NoteTypePage(_LiveCheckPage):
         self._fetched_note_types: list[str] = []
         self._field_names: list[str] = []
         self._field_names_note_type: str | None = None
-
-        self.setTitle(self.tr("Choose a Note Type"))
-        self.setSubTitle(self.tr("Pick the Anki note type whose fields will hold mined data."))
+        self._notetypes_loaded = False
 
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.heading_label = QLabel(self.tr("Note type"))
+        self.heading_label.setObjectName("heading3")
+        layout.addWidget(self.heading_label)
 
-        row = QHBoxLayout()
         self.notetype_combo = QComboBox()
-        self.notetype_combo.setEditable(True)
-        self.notetype_combo.currentTextChanged.connect(self._on_notetype_changed)
-        row.addWidget(self.notetype_combo, 1)
-        self.refresh_button = ModernButton(self.tr("Refresh"), variant="secondary")
-        self.refresh_button.clicked.connect(self._on_refresh_clicked)
-        row.addWidget(self.refresh_button)
-        layout.addLayout(row)
+        # B06: a real list, like the deck combo.
+        self.notetype_combo.setPlaceholderText(self.tr("Pick a note type"))
+        self.notetype_combo.currentIndexChanged.connect(self._on_index_changed)
+        layout.addWidget(self.notetype_combo)
 
         self.guidance_label = QLabel("")
         self.guidance_label.setWordWrap(True)
@@ -643,11 +753,6 @@ class NoteTypePage(_LiveCheckPage):
         self.guidance_label.linkActivated.connect(self._on_guidance_link_activated)
         self.guidance_label.setVisible(False)
         layout.addWidget(self.guidance_label)
-
-        self.auto_map_button = ModernButton(self.tr("Auto-Map Fields from Note Type"), variant="primary")
-        self.auto_map_button.clicked.connect(self._on_auto_map_clicked)
-        self.auto_map_button.setEnabled(False)
-        layout.addWidget(self.auto_map_button)
 
         self.mapping_summary = QLabel("")
         self.mapping_summary.setObjectName("helper-text")
@@ -662,11 +767,15 @@ class NoteTypePage(_LiveCheckPage):
         wizard.finished.connect(self._on_wizard_finished)
 
     def initializePage(self) -> None:
-        self.notetype_combo.setCurrentText(self._wizard.working_config().anki_note_type)
-        self._on_refresh_clicked()
+        self.load_from_config()
+        self.refresh()
+
+    def load_from_config(self) -> None:
+        """Show the working config's note type without fetching the list."""
+        self.select_note_type(self._wizard.working_config().anki_note_type)
 
     def isComplete(self) -> bool:
-        note_type = self.notetype_combo.currentText().strip()
+        note_type = self.current_note_type()
         config = self._wizard.working_config()
         if (
             not note_type
@@ -680,19 +789,50 @@ class NoteTypePage(_LiveCheckPage):
         return (
             bool(word_field)
             and word_field in actual_fields
+            # Anki keys duplicates on a note type's first field, so the card
+            # builder refuses a word mapped anywhere else (anki_note_builder).
+            and self._field_names[0] == word_field
             and not (configured_target_field_names(config) - actual_fields)
         )
 
-    def _on_notetype_changed(self, text: str) -> None:
-        self._record_desired_note_type(text.strip())
+    def current_note_type(self) -> str:
+        """The selected note type's Anki name ("" when nothing is selected)."""
+        data = self.notetype_combo.currentData()
+        return data if isinstance(data, str) else ""
+
+    def select_note_type(self, name: str, *, notify: bool = True) -> None:
+        """Select ``name``; a name Anki does not list gets its own "(not in Anki yet)" item.
+
+        ``notify=False`` changes only what is shown, as a signal-blocked edit
+        used to: no field fetch, no config write.
+        """
+        previous = self.current_note_type()
+        name = name.strip()
+        self.notetype_combo.blockSignals(True)
+        try:
+            index = self.notetype_combo.findData(name) if name else -1
+            if name and index < 0:
+                self.notetype_combo.addItem(tr_format(self.tr("%1 (not in Anki yet)"), name), name)
+                index = self.notetype_combo.count() - 1
+            self.notetype_combo.setCurrentIndex(index)
+        finally:
+            self.notetype_combo.blockSignals(False)
+        if notify and self.current_note_type() != previous:
+            self._on_notetype_changed()
+
+    def _on_index_changed(self, _index: int) -> None:
+        self._on_notetype_changed()
+
+    def _on_notetype_changed(self) -> None:
+        self._record_desired_note_type(self.current_note_type())
         self._fetch_fields()
+        self._update_guidance()
 
     def _record_desired_note_type(self, note_type: str) -> None:
         self._fields_generation += 1
         self._desired_note_type = note_type
         self._field_names = []
         self._field_names_note_type = None
-        self.auto_map_button.setEnabled(False)
         self._write_notetype_to_config()
         self.completeChanged.emit()
 
@@ -701,7 +841,7 @@ class NoteTypePage(_LiveCheckPage):
         return True
 
     def _write_notetype_to_config(self) -> None:
-        name = self.notetype_combo.currentText().strip()
+        name = self.current_note_type()
         if name and name != self._wizard.working_config().anki_note_type:
             self._wizard.update_working_config(replace(self._wizard.working_config(), anki_note_type=name))
 
@@ -711,10 +851,10 @@ class NoteTypePage(_LiveCheckPage):
 
     # --- note-type list fetch ---
 
-    def _on_refresh_clicked(self) -> None:
+    def refresh(self) -> None:
+        """Fetch Anki's note type names off the GUI thread (on page entry and every re-check, B02)."""
         if still_running(self._notetypes_worker):
             return
-        self.refresh_button.setEnabled(False)
         worker = FetchNotetypesWorker(self._wizard.anki_service(), self)
         self._notetypes_worker = worker
         self._wizard.register_worker(worker)
@@ -724,21 +864,32 @@ class NoteTypePage(_LiveCheckPage):
         worker.start()
 
     def _on_notetypes_fetched(self, model_names: object) -> None:
-        self.refresh_button.setEnabled(True)
-        names = list(model_names) if isinstance(model_names, list) else []
+        names = [str(name) for name in model_names] if isinstance(model_names, list) else []
         self._fetched_note_types = names
-        current = self.notetype_combo.currentText()
+        self._notetypes_loaded = True
+        # Read the selection before clear(): the automatic re-check (B02) refreshes
+        # this list on every window focus, and comparing against the cleared combo
+        # would call every refresh a change, drop the known fields and flicker Next.
+        previous = self.current_note_type()
+        wanted = previous or self._wizard.working_config().anki_note_type
         self.notetype_combo.blockSignals(True)
-        self.notetype_combo.clear()
-        self.notetype_combo.addItems(names)
-        self.notetype_combo.setCurrentText(current or self._wizard.working_config().anki_note_type)
-        self.notetype_combo.blockSignals(False)
+        try:
+            self.notetype_combo.clear()
+            for name in names:
+                self.notetype_combo.addItem(name, name)
+        finally:
+            self.notetype_combo.blockSignals(False)
+        self.select_note_type(wanted, notify=False)
+        if self.current_note_type() != previous:
+            self._on_notetype_changed()
         self.completeChanged.emit()
-        # Auto-fetch the fields for the selected note type so Auto-Map lights up.
+        # Fetch the fields of the selected note type so they fill themselves.
         self._fetch_fields()
+        self._update_guidance()
 
     def _on_notetypes_error(self, _message: str) -> None:
-        self.refresh_button.setEnabled(True)
+        self._notetypes_loaded = True
+        self._update_guidance()
         self.completeChanged.emit()
 
     # --- field list fetch ---
@@ -746,7 +897,7 @@ class NoteTypePage(_LiveCheckPage):
     def _fetch_fields(self) -> None:
         if not self._accept_field_fetches:
             return
-        note_type = self.notetype_combo.currentText().strip()
+        note_type = self.current_note_type()
         if note_type != self._desired_note_type:
             self._record_desired_note_type(note_type)
         if not note_type or note_type not in self._fetched_note_types:
@@ -779,7 +930,6 @@ class NoteTypePage(_LiveCheckPage):
         if generation == self._fields_generation and note_type == self._desired_note_type:
             self._field_names = []
             self._field_names_note_type = None
-            self.auto_map_button.setEnabled(False)
         self.completeChanged.emit()
 
     def _on_fields_fetch_finished(
@@ -807,7 +957,7 @@ class NoteTypePage(_LiveCheckPage):
 
     def _on_fields_fetched(self, note_type: str, field_names: object) -> None:
         try:
-            current_note_type = self.notetype_combo.currentText().strip()
+            current_note_type = self.current_note_type()
         except RuntimeError:
             return
         if note_type != current_note_type:
@@ -816,7 +966,8 @@ class NoteTypePage(_LiveCheckPage):
         self._field_names = names
         self._field_names_note_type = note_type
         if not names:
-            self.auto_map_button.setEnabled(False)
+            self.mapping_summary.setText("")
+            self.warning_label.setText("")
             self._show_guidance(
                 self.tr(
                     "No fields found. Make sure Anki is running and the note type name is spelled exactly as in Anki."
@@ -825,36 +976,7 @@ class NoteTypePage(_LiveCheckPage):
             self.completeChanged.emit()
             return
         self._sanitize_field_mappings(note_type, names)
-        self.auto_map_button.setEnabled(True)
-        # A note type we can name maps itself: the preset carries the exact
-        # field names plus the pitch/marker settings the keyword pass below
-        # cannot know about, so there is nothing left for the user to press.
-        preset = self._matching_preset(names)
-        if preset is not None:
-            self.guidance_label.setVisible(False)
-            self.guidance_label.setText("")
-            self._apply_preset(preset)
-            return
-        if not self._has_mining_shape(names):
-            guidance = tr_format(
-                self.tr(
-                    "This note type has no obvious word or sentence fields. "
-                    '<a href="%1">Recheck</a> after importing a '
-                    '<a href="%1">recommended note type</a> in Anki.'
-                ),
-                NOTE_TYPE_HELP_URL,
-            )
-            self._show_guidance(
-                guidance.replace(
-                    f'href="{NOTE_TYPE_HELP_URL}"',
-                    'href="recheck"',
-                    1,
-                )
-            )
-        else:
-            self.guidance_label.setVisible(False)
-            self.guidance_label.setText("")
-        self.completeChanged.emit()
+        self._auto_fill(note_type)
 
     def _matching_preset(self, field_names: list[str]) -> NotePreset | None:
         """The preset for these field names, but only where presets apply.
@@ -865,10 +987,7 @@ class NoteTypePage(_LiveCheckPage):
         mappings the language cannot fill and every run's field check then
         rejects. Without it the caller falls through to the keyword pass.
         """
-        from anki_miner.languages.registry import get_profile  # noqa: PLC0415
-
-        capabilities = get_profile(config_language(self._wizard.working_config())).capabilities
-        return preset_for_field_names(field_names) if "note_presets" in capabilities else None
+        return preset_for_field_names(field_names) if self._presets_apply() else None
 
     @staticmethod
     def _has_mining_shape(field_names: list[str]) -> bool:
@@ -886,11 +1005,77 @@ class NoteTypePage(_LiveCheckPage):
         self.guidance_label.setText(html)
         self.guidance_label.setVisible(True)
 
+    def _hide_guidance(self) -> None:
+        self.guidance_label.setVisible(False)
+        self.guidance_label.setText("")
+
+    def _presets_apply(self) -> bool:
+        """Lapis, Kiku and Senren are Japanese note types; presets ride the ``note_presets`` capability."""
+        from anki_miner.languages.registry import get_profile  # noqa: PLC0415
+
+        return "note_presets" in get_profile(config_language(self._wizard.working_config())).capabilities
+
+    def _show_note_type_help(self) -> None:
+        """What any note type needs (D10 = B): the app ships none, any one works once mapped.
+
+        The wizard has no field-mapping table: it maps only by name, through
+        the keyword pass (`_FIELD_KEYWORDS`, whole normalised name). So the text
+        says the word goes in the first field, names field names that pass
+        recognises ("Word", "Sentence", ...) and gives the manual route for any
+        other naming. It never tells the user to build or rename a note type
+        (the owner's D10 note: the user picks a note type they like). A fresh
+        Anki holds only Basic (Front/Back), which is the common case for the 31
+        languages without note presets.
+        """
+        self._show_guidance(
+            tr_format(
+                self.tr(
+                    "Any note type works once its fields are mapped. Pick one of your note types: Anki Miner "
+                    "puts the word in its first field and fills the fields it recognises by name, such as Word, "
+                    "Sentence, Reading, Definition, Picture and audio. If it can't tell which field is which, "
+                    "press Skip Setup and choose the fields yourself in Settings → Cards & Anki. "
+                    '<a href="%1">Which fields can Anki Miner fill?</a>'
+                ),
+                NOTE_TYPE_HELP_URL,
+            )
+        )
+
+    def _update_guidance(self) -> None:
+        """Say what to pick when the note type cannot hold mined cards (B01, D10).
+
+        Nothing until the list has loaded. A present note type with no word or
+        sentence field, or a missing one other than Lapis, gets what any note
+        type needs. A missing Lapis under a language with presets gets where to
+        download it: the config default is Lapis, and a brand-new Anki lacks it.
+        """
+        if not self._notetypes_loaded:
+            self._hide_guidance()
+            return
+        name = self.current_note_type()
+        if name and name in self._fetched_note_types:
+            fields_known = self._field_names_note_type == name and bool(self._field_names)
+            if fields_known and not self._has_mining_shape(self._field_names):
+                self._show_note_type_help()
+            else:
+                self._hide_guidance()
+            return
+        if name == LAPIS_NOTE_TYPE and self._presets_apply():
+            self._show_guidance(
+                tr_format(
+                    self.tr(
+                        "Anki Miner fills a note type called Lapis. Your Anki doesn't have it yet. "
+                        '<a href="%1">Get Lapis</a> (free), then in Anki choose File → Import and pick the file. '
+                        "This page updates when you come back."
+                    ),
+                    LAPIS_RELEASES_URL,
+                )
+            )
+            return
+        self._show_note_type_help()
+
     def _on_guidance_link_activated(self, url: str) -> None:
-        if url == "recheck":
-            self._on_refresh_clicked()
-        elif url == NOTE_TYPE_HELP_URL:
-            _open_url(NOTE_TYPE_HELP_URL)
+        if url in (NOTE_TYPE_HELP_URL, LAPIS_RELEASES_URL):
+            _open_url(url)
 
     def _sanitize_field_mappings(self, note_type: str, field_names: list[str]) -> None:
         config = self._wizard.working_config()
@@ -917,13 +1102,7 @@ class NoteTypePage(_LiveCheckPage):
     # --- auto-map ---
 
     def _apply_preset(self, preset: NotePreset) -> None:
-        """Stage ``preset``'s whole answer onto the wizard's working config.
-
-        Deliberately does NOT call ``_warn_missing_fields``: the preset matched
-        because every field it ships is on this note type, and every name it
-        maps is inside that set, so the check has nothing to find and would
-        spend an AnkiConnect round trip saying so.
-        """
+        """Stage ``preset``'s whole answer (fields, pitch format, card markers) onto the working config."""
         config = self._wizard.working_config()
         merged = dict(config.anki_fields)
         merged.update(preset.fields)
@@ -937,25 +1116,31 @@ class NoteTypePage(_LiveCheckPage):
         if updated != config:
             self._wizard.update_working_config(updated)
         mapped = sum(1 for value in preset.fields.values() if value)
-        self.mapping_summary.setText(
-            tr_format(
-                self.tr("Recognized %1 — mapped %2 fields. Fine-tune them in Settings → Cards & Anki."),
-                preset.name,
-                str(mapped),
-            )
-        )
-        self.warning_label.setText("")
-        self.completeChanged.emit()
+        self.mapping_summary.setText(tr_format(self.tr("%1 recognised: %2 fields filled."), preset.name, mapped))
 
-    def _on_auto_map_clicked(self) -> None:
-        note_type = self.notetype_combo.currentText().strip()
-        if not self._field_names or self._field_names_note_type != note_type:
+    def _auto_fill(self, note_type: str) -> None:
+        """Fill the field mappings the moment a note type's fields arrive (D8).
+
+        A note type Anki Miner can name (Lapis, Kiku, Senren) takes its preset,
+        which also carries the pitch format and card markers; anything else gets
+        the keyword pass, which fills only keys that are still empty. There is
+        no button: picking the note type is the whole action. Cross-workstream
+        task TX.2.02 swaps the mapping part for the helper Settings uses (D13).
+        """
+        names = self._field_names
+        if not names or self._field_names_note_type != note_type:
             return
-        self._sanitize_field_mappings(note_type, self._field_names)
-        preset = self._matching_preset(self._field_names)
+        preset = self._matching_preset(names)
         if preset is not None:
             self._apply_preset(preset)
-            return
+        else:
+            self._apply_keyword_map()
+        self._update_guidance()
+        self._show_field_problem()
+        self.completeChanged.emit()
+
+    def _apply_keyword_map(self) -> None:
+        """Fill every still-empty key whose Anki field name the keyword table knows."""
         from anki_miner.languages.registry import get_profile  # noqa: PLC0415
 
         mapped = auto_map_fields(self._field_names)
@@ -978,110 +1163,218 @@ class NoteTypePage(_LiveCheckPage):
         # Stage anki_fields as a PLAIN dict; config re-wraps it in MappingProxyType.
         if merged != dict(config.anki_fields):
             self._wizard.update_working_config(replace(config, anki_fields=merged))
-            self.completeChanged.emit()
-        effective_mappings = {key: merged.get(key, "") for key in mapped}
-        self._show_mapping_summary(effective_mappings)
-        self._warn_missing_fields()
-
-    def _show_mapping_summary(self, mapped: dict[str, str]) -> None:
-        filled = [key for key, value in mapped.items() if value]
-        if filled:
-            # The count, not the key → field dump: those keys are config names
-            # (``expression_furigana``, ``frequency_sort``) nobody can act on.
-            self.mapping_summary.setText(
-                tr_format(
-                    self.tr("Mapped %1 fields. Fine-tune them in Settings → Cards & Anki."),
-                    len(filled),
-                )
-            )
-        else:
-            self.mapping_summary.setText(self.tr("No fields could be auto-mapped."))
-
-    def _warn_missing_fields(self) -> None:
-        """Warn about required fields missing on the note type — checked off-thread.
-
-        ``check_field_names()`` makes a synchronous AnkiConnect HTTP call (10s
-        timeout), so it runs on a worker thread; the result updates
-        ``warning_label`` on the GUI thread. A failure (Anki down) never raises
-        into the GUI.
-        """
-        self.warning_label.setText(self.tr("Checking note type fields..."))
-        self._warn_worker = self._start_live_check(
-            self._wizard.validation_service().check_field_names,
-            error_prefix=self.tr("Could not check note type fields: "),
-            on_result=self._on_field_warning_result,
-            on_error=self._on_field_warning_error,
+        # The count, not the key → field dump: those keys are config names
+        # (``expression_furigana``, ``frequency_sort``) nobody can act on.
+        filled = sum(1 for key in mapped if merged.get(key))
+        self.mapping_summary.setText(
+            tr_format(self.tr("Fields filled automatically: %1."), filled)
+            if filled
+            else self.tr("No fields could be filled automatically.")
         )
 
-    def _on_field_warning_result(self, result: object) -> None:
-        if not self._is_live_check():
-            return  # Superseded by a newer check.
-        ok, message = result if isinstance(result, tuple) else (False, str(result))
-        self.warning_label.setText("" if ok else message)
+    def _show_field_problem(self) -> None:
+        """Say why Next is off when the word is not in the note type's first field.
 
-    def _on_field_warning_error(self, message: str) -> None:
-        if not self._is_live_check():
+        Checked from the field list already fetched, with no AnkiConnect round
+        trip. An empty word mapping says nothing here (B01): the page's guidance
+        already explains what to pick, and the Ready page re-checks everything.
+        """
+        word = self._wizard.working_config().anki_fields.get("word", "")
+        names = self._field_names
+        if not word or not names or names[0] == word:
+            self.warning_label.setText("")
             return
-        # Anki unreachable/slow: surface the failure but never raise.
-        self.warning_label.setText(message)
+        self.warning_label.setText(
+            tr_format(
+                self.tr(
+                    "The word goes in the note type's first field, “%1”, but it is mapped to “%2”. "
+                    "Change the order of the fields in Anki, or pick another note type."
+                ),
+                names[0],
+                word,
+            )
+        )
 
 
-class ResourcesPage(_LiveCheckPage):
-    """Step 4: install the recommended resources. A dictionary is required.
+class AnkiPage(QWizardPage):
+    """Connection, deck and note type on one page (D8).
 
-    The dictionary used to be labelled optional, so setup could be completed in
-    a state guaranteed to fail the first mine: without one, every mined card
-    comes out with no definition (D26). The page therefore gates Next on a live
-    probe of whether an enabled offline dictionary can actually answer a lookup
-    — not on whether the download button was pressed, and not on a result
-    cached from when the page was built. **Skip Setup** remains available on
-    every page for anyone who genuinely cannot download right now.
+    While AnkiConnect is unreachable only the connection section shows; once it
+    answers, the deck and note-type pickers appear and both lists are fetched,
+    because a list asked of a closed Anki is a timeout, not a list. Each
+    section keeps its own workers and staleness rules; this page forwards the
+    page calls to them and is complete when all three are.
     """
 
     def __init__(self, wizard: SetupWizard) -> None:
         super().__init__(wizard)
-        self._dictionary_ready = False
+        self._wizard = wizard
+        layout = QVBoxLayout(self)
+        self.title_label, self.subtitle_label = _add_page_header(
+            layout,
+            self.tr("Connect to Anki"),
+            self.tr("Anki Miner talks to Anki through the AnkiConnect add-on."),
+        )
+        self.connect_section = AnkiConnectPage(wizard)
+        layout.addWidget(self.connect_section)
 
-        self.setTitle(self.tr("Recommended Resources"))
-        # The subtitle is set by _rebuild_catalog_rows, from the kinds the
-        # active language's catalog actually offers.
+        self.pickers = QWidget()
+        pickers_layout = QVBoxLayout(self.pickers)
+        pickers_layout.setContentsMargins(0, 0, 0, 0)
+        self.deck_section = DeckPage(wizard)
+        self.notetype_section = NoteTypePage(wizard)
+        pickers_layout.addWidget(self.deck_section)
+        pickers_layout.addWidget(self.notetype_section)
+        layout.addWidget(self.pickers)
+        layout.addStretch(1)
+        self.pickers.setVisible(False)
+
+        for section in self.sections():
+            section.completeChanged.connect(self.completeChanged)
+        self.connect_section.reachability_changed.connect(self._on_reachability_changed)
+        # B02: while AnkiConnect is unreachable, ask again every 3 s; stop once
+        # it answers or the user leaves the page.
+        self._poll = QTimer(self)
+        self._poll.setInterval(3000)
+        self._poll.timeout.connect(self._on_poll)
+
+    def sections(self) -> tuple[_WizardSection, ...]:
+        return (self.connect_section, self.deck_section, self.notetype_section)
+
+    def initializePage(self) -> None:
+        """Show the config's deck and note type, then ask AnkiConnect; an answer fetches both lists."""
+        self.deck_section.load_from_config()
+        self.notetype_section.load_from_config()
+        self.connect_section.initializePage()
+
+    def isComplete(self) -> bool:
+        return all(section.isComplete() for section in self.sections())
+
+    def validatePage(self) -> bool:
+        return all(section.validatePage() for section in self.sections())
+
+    def stage_current_edits(self) -> None:
+        for section in self.sections():
+            section.stage_current_edits()
+
+    def _on_reachability_changed(self, reachable: bool) -> None:
+        self.pickers.setVisible(reachable)
+        if reachable:
+            self.deck_section.refresh()
+            self.notetype_section.refresh()
+        self._sync_poll()
+
+    def recheck(self) -> None:
+        """B02: ask AnkiConnect again; an answer re-fetches the deck and note-type lists."""
+        self.connect_section.recheck()
+
+    def on_shown(self) -> None:
+        self._sync_poll()
+
+    def _sync_poll(self) -> None:
+        wanted = (
+            not self._wizard.is_closing()
+            and self._wizard.currentPage() is self
+            and not self.connect_section.isComplete()
+        )
+        if not wanted:
+            self._poll.stop()
+        elif not self._poll.isActive():
+            self._poll.start()
+
+    def _on_poll(self) -> None:
+        self._sync_poll()
+        if self._poll.isActive():
+            self.connect_section.recheck()
+
+    def event(self, event: QEvent | None) -> bool:
+        handled = super().event(event)
+        if event is not None and event.type() == QEvent.Type.LayoutRequest:
+            self._grow_wizard_to_fit()
+        return handled
+
+    def _grow_wizard_to_fit(self) -> None:
+        """Make the wizard tall enough for what this page shows now.
+
+        QWizard fits itself to a page only when the page is entered, and this
+        page grows afterwards: the pickers appear once Anki answers, and the
+        guidance and mapping lines fill in later still. Without this they are
+        squeezed into the window the connection section alone asked for.
+        """
+        layout = self.layout()
+        if layout is None or not self.isVisible():
+            return
+        width = self.width()
+        needed = layout.totalHeightForWidth(width) if layout.hasHeightForWidth() else layout.totalMinimumSize().height()
+        shortfall = needed - self.height()
+        if shortfall > 0:
+            self._wizard.resize(self._wizard.width(), self._wizard.height() + shortfall)
+
+
+class ResourcesPage(_LiveCheckPage):
+    """The dictionary step: one sentence, one Download button, no checklist (D9).
+
+    A dictionary is required: without one every mined card comes out with no
+    definition (D26). Next opens once a download has started or a dictionary
+    can already answer, so the transfer runs while the user deals with Anki;
+    Finish on the Ready page still waits for the dictionary. Progress is drawn
+    here and on the Ready page from the TaskRegistry, not in a second window.
+    **Skip Setup** remains for anyone who cannot download right now.
+
+    Everything the language's catalogue offers is fetched, minus the other
+    regional variety (pt's two frequency lists): the checklist a newcomer could
+    not judge is gone, and anything unwanted can be removed in Settings.
+    """
+
+    #: The download started, moved or ended; the Ready page redraws its line.
+    download_state_changed = pyqtSignal()
+    #: The download ended, however it ended; the Ready page re-checks (B02).
+    download_finished = pyqtSignal()
+
+    def __init__(self, wizard: SetupWizard) -> None:
+        super().__init__(wizard)
+        self._dictionary_ready = False
+        # _sync_download_button reads these, so they exist before any widget.
+        self._download_running = False
+        #: How the last run ended, for the Ready page: "", "failed" or "cancelled".
+        self._download_ending = ""
+        #: The registry's latest detailed line for the running download.
+        self._progress_text = ""
+        self._registry: TaskRegistry | None = None
+        # Retained past the run's end: a started run is what opens Next
+        # (isComplete).
+        self._session: ResourceDownloadSession | None = None
+        self._specs_language: str | None = None
+        self._specs: list[ResourceSpec] = []
 
         layout = QVBoxLayout(self)
-
-        self.help_link = QLabel(f'<a href="{RESOURCES_HELP_URL}">{self.tr("What are these resources?")}</a>')
-        self.help_link.setOpenExternalLinks(False)
-        # Resolved on click: the wizard's language step can change the language after this page is built.
-        self.help_link.linkActivated.connect(
-            lambda: _open_url(resources_help_url(config_language(self._wizard.working_config())))
+        self.title_label, self.subtitle_label = _add_page_header(
+            layout,
+            self.tr("Get a Dictionary"),
+            self.tr("Mined cards take their definitions from an offline dictionary. This step is required."),
         )
-        layout.addWidget(self.help_link)
 
-        # _sync_download_button reads _download_running, so it is set before any
-        # checkbox exists to toggle.
-        self._download_running = False
+        #: "Downloads JMdict (dictionary), …", built from the catalogue; licences in its tooltip.
+        self.contents_label = QLabel("")
+        self.contents_label.setWordWrap(True)
+        layout.addWidget(self.contents_label)
 
-        # The catalog rows live in a container of their own so a language
-        # change can replace them without disturbing what surrounds them.
-        self._catalog_rows = QWidget()
-        self._catalog_rows_layout = QVBoxLayout(self._catalog_rows)
-        self._catalog_rows_layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(self._catalog_rows)
-
-        self.download_button = ModernButton(self.tr("Download recommended resources"), variant="primary")
+        button_row = QHBoxLayout()
+        self.download_button = ModernButton(self.tr("Download"), variant="primary")
         self.download_button.clicked.connect(self._on_download_clicked)
-        layout.addWidget(self.download_button)
+        button_row.addWidget(self.download_button)
+        button_row.addStretch(1)
+        layout.addLayout(button_row)
 
         self.status_label = QLabel("")
         self.status_label.setObjectName("helper-text")
         self.status_label.setWordWrap(True)
+        self.status_label.setTextFormat(Qt.TextFormat.RichText)
+        self.status_label.setOpenExternalLinks(False)
+        self.status_label.linkActivated.connect(self.activate_link)
         layout.addWidget(self.status_label)
 
-        self._specs_language: str | None = None
-        self._specs: list[ResourceSpec] = []
-        self.resource_checks: dict[str, QCheckBox] = {}
-        self._rebuild_catalog_rows()
-
-        # Kept apart from status_label: one reports how the *download* ended,
+        # Kept apart from status_label: one reports how the *download* went,
         # the other what the app can *do now*. A single label would let a
         # finished download overwrite the readiness verdict that gates Next.
         self.dictionary_label = QLabel("")
@@ -1105,107 +1398,89 @@ class ResourcesPage(_LiveCheckPage):
 
         # Pitch accent is a Japanese resource family; a language without the
         # capability has no pitch row in its catalog and no verdict to report.
-        self._language_gate_pairs: list[tuple[QWidget, str]] = []
-        self._language_gate_pairs.append((self.pitch_label, "pitch"))
+        self._language_gate_pairs: list[tuple[QWidget, str]] = [(self.pitch_label, "pitch")]
         self._apply_language_gate()
 
-        # Retained past the run's end: the terminal window offers Retry setup,
-        # which calls back into the session. Dropping the reference on finish
-        # would collect the session and leave that button inert.
-        self._session: ResourceDownloadSession | None = None
+        self.help_link = QLabel(f'<a href="{RESOURCES_HELP_URL}">{self.tr("What are these resources?")}</a>')
+        self.help_link.setOpenExternalLinks(False)
+        # Resolved on click: the wizard's language step can change the language after this page is built.
+        self.help_link.linkActivated.connect(
+            lambda: _open_url(resources_help_url(config_language(self._wizard.working_config())))
+        )
+        layout.addWidget(self.help_link)
+        layout.addStretch(1)
+
+        self._rebuild_catalog_rows()
 
     def selected_specs(self) -> list[ResourceSpec]:
-        """Catalog order, filtered to what is ticked."""
-        return [spec for spec in self._specs if self.resource_checks[spec.id].isChecked()]
+        """What Download fetches: the catalogue, minus the other regional variety (D9).
+
+        A regional-variety resource (pt's two frequency lists) is fetched only
+        for the variety the config holds. That used to be a pre-ticked checkbox;
+        with no checklist it is a silent default, and the other list stays one
+        Add away in Settings → Frequency.
+        """
+        variant = self._wizard.working_config().script_variant
+        return [spec for spec in self._specs if not spec.variant or spec.variant == variant]
 
     def _rebuild_catalog_rows(self) -> None:
-        """Offer the active language's catalog, never a hand-listed one.
+        """Describe the active language's catalogue, never a hand-listed one.
 
-        Re-derived on every page entry rather than read once when the page was
-        built: the wizard's own language step comes before this one, so the
-        catalog it has to offer is not known at construction time. A spec added
-        to a profile's catalog appears here without touching this page, and ja's
-        catalog IS RECOMMENDED_DEFAULT_SET, so the ja wizard is byte-identical
-        to the pre-multilanguage one.
+        Re-derived on every page entry rather than once at construction: the
+        wizard's language step comes before this page, so the catalogue is not
+        known when the page is built. A spec added to a profile's catalogue
+        appears here with no page edit.
         """
         from anki_miner.languages.registry import get_profile  # noqa: PLC0415
 
         config = self._wizard.working_config()
         # config_language, never the raw field: a stored code whose profile this
-        # build cannot supply — a language whitelisted in config but with its
-        # engine extra absent — is legal on disk, and raising here would make the
+        # build cannot supply is legal on disk, and raising here would make the
         # whole wizard unconstructible on first run.
         language = config_language(config)
         if language == self._specs_language:
             return
         self._specs_language = language
         self._specs = list(get_profile(language).catalog)
-        self.setSubTitle(self._subtitle_for_kinds({spec.kind for spec in self._specs}))
-
-        while (item := self._catalog_rows_layout.takeAt(0)) is not None:
-            widget = item.widget()
-            if widget is not None:
-                widget.setParent(None)
-                widget.deleteLater()
-
-        # A regional-variety resource (pt's two frequency lists) starts ticked
-        # only for the variety the config holds; the other row stays offered.
-        variant = config.script_variant
-        self.resource_checks = {}
-        for spec in self._specs:
-            noun = _RESOURCE_KIND_NOUNS.get(spec.kind)
-            label = (
-                tr_format(self.tr("%1 — %2"), QCoreApplication.translate("SetupWizard", noun), spec.display_name)
-                if noun
-                else spec.display_name
+        if not self._download_running:
+            # A finished run for the outgoing language describes nothing on screen now.
+            self._session = None
+            self._download_ending = ""
+            self.status_label.clear()
+            self.status_label.setToolTip("")
+        specs = self.selected_specs()
+        if specs:
+            self.contents_label.setText(self._contents_sentence(specs))
+            self.contents_label.setToolTip("\n".join(spec.license_note for spec in specs))
+        else:
+            # No shipped language has an empty catalogue; this is the fallback
+            # for one that would, and isComplete() then does not block Next.
+            self.contents_label.setText(
+                self.tr("No recommended resources for this language. Import a dictionary in Settings → Dictionaries.")
             )
-            box = QCheckBox(label)
-            box.setToolTip(spec.license_note)
-            # The toggled connection comes AFTER setChecked: a fresh unchecked
-            # box emits toggled the first time it is checked.
-            box.setChecked(not spec.variant or spec.variant == variant)
-            box.toggled.connect(self._sync_download_button)
-            self._catalog_rows_layout.addWidget(box)
-            self.resource_checks[spec.id] = box
-
-        # Derived, never assumed: the button was born enabled, and the only
-        # thing that ever re-derived it was a checkbox toggling. A language
-        # whose catalog is empty has no checkbox to toggle, so it kept an
-        # enabled button over a handler that returns silently.
+            self.contents_label.setToolTip("")
+        self.download_button.setVisible(bool(specs))
         self._sync_download_button()
-        # ko's catalog is empty on purpose (languages/ko/catalog.py): no Korean
-        # resource is both redistributable by link and shaped like an importer
-        # here. Saying so beats a dead button, and the sentence has to name
-        # where the resources DO come from. Cleared again for a language that
-        # has a catalog — a status line from the outgoing language's download
-        # describes a run that is no longer on screen.
-        self.status_label.setText(
-            ""
-            if self._specs
-            else self.tr("No recommended resources for this language. Import a dictionary in Settings → Dictionaries.")
-        )
 
-    def _subtitle_for_kinds(self, kinds: set[str]) -> str:
-        """Name the optional families this catalog has, and nothing else.
+    def _contents_sentence(self, specs: list[ResourceSpec]) -> str:
+        """Build the one sentence, e.g. "Downloads JMdict (dictionary) and Kanjium (pitch accent)"."""
+        groups: list[str] = []
+        for kind in ("dict", "freq", "pitch"):
+            names = [spec.display_name for spec in specs if spec.kind == kind]
+            if not names:
+                continue
+            noun = QCoreApplication.translate("SetupWizard", _KIND_PHRASE_NOUNS[kind])
+            groups.append(tr_format(self.tr("%1 (%2)"), self._and_list(names), noun))
+        return tr_format(self.tr("Downloads %1."), self._and_list(groups))
 
-        A whole sentence per combination rather than a stitched-together one:
-        the optional clause and the required one share a subject in several
-        languages, and a translator handed two fragments cannot make them
-        agree. ja carries all three kinds, so its sentence is unchanged and
-        keeps its existing translations.
-        """
-        has_freq = "freq" in kinds
-        has_pitch = "pitch" in kinds
-        if has_freq and has_pitch:
-            return self.tr("Frequency and pitch accent are optional. A dictionary is required.")
-        if has_freq:
-            return self.tr("Frequency is optional. A dictionary is required.")
-        if has_pitch:
-            return self.tr("Pitch accent is optional. A dictionary is required.")
-        return self.tr("A dictionary is required.")
+    def _and_list(self, items: list[str]) -> str:
+        """Join as "A", "A and B" or "A, B and C"; the joining word is translated."""
+        if len(items) == 1:
+            return items[0]
+        return tr_format(self.tr("%1 and %2"), ", ".join(items[:-1]), items[-1])
 
     def _sync_download_button(self) -> None:
-        """Nothing ticked is not a run: an empty spec list reports success for no work."""
+        """Nothing to fetch, or a run already going, is not a run."""
         self.download_button.setEnabled(bool(self.selected_specs()) and not self._download_running)
 
     def _apply_language_gate(self) -> None:
@@ -1216,7 +1491,7 @@ class ResourcesPage(_LiveCheckPage):
         visibility of a paired widget, so a switch back re-shows the row.
         """
         from anki_miner.gui.utils.language_gate import apply_language_gate  # noqa: PLC0415
-        from anki_miner.languages.registry import config_language, get_profile  # noqa: PLC0415
+        from anki_miner.languages.registry import get_profile  # noqa: PLC0415
 
         capabilities = get_profile(config_language(self._wizard.working_config())).capabilities
         apply_language_gate(self._language_gate_pairs, capabilities)
@@ -1227,14 +1502,21 @@ class ResourcesPage(_LiveCheckPage):
         self._apply_language_gate()
         self._recheck_resources()
 
+    def recheck(self) -> None:
+        """B02: coming back to the wizard asks the disk again (not while downloading)."""
+        if not self._download_running:
+            self._recheck_resources()
+
+    def download_running(self) -> bool:
+        """True while the wizard's own download is going (T2.14 holds Finish for it)."""
+        return self._download_running
+
     def isComplete(self) -> bool:
-        # Nothing to download is nothing to block on. The dictionary gate exists
-        # so nobody finishes setup into a guaranteed-empty first mine (D26), and
-        # it holds wherever a dictionary is one button away. Where the catalog is
-        # empty that button does not exist, so the same gate is a wizard with no
-        # exit but Skip Setup — the page still reports what the disk has through
-        # dictionary_label, it just stops standing in the way.
-        return self._dictionary_ready or not self._specs
+        # D9: a started download is enough to move on; the Ready page waits for
+        # it. Nothing to download is nothing to block on: a language with an
+        # empty catalogue has no button, so the gate would leave Skip Setup as
+        # the only exit.
+        return self._dictionary_ready or self._session is not None or not self._specs
 
     # --- live dictionary readiness ---
 
@@ -1243,8 +1525,7 @@ class ResourcesPage(_LiveCheckPage):
 
         Off-thread because the probe scans three resource folders, any of which
         can be a slow network path. One worker, not three: the base class keeps
-        a single ``_live_check`` as its generation counter, so a second
-        concurrent probe would have no way to be recognised as stale.
+        a single ``_live_check`` as its generation counter.
         """
         self._dictionary_ready = False
         self.dictionary_label.setText(self.tr("Checking for an offline dictionary..."))
@@ -1269,13 +1550,10 @@ class ResourcesPage(_LiveCheckPage):
 
         ok, message = result.dictionary
         self._dictionary_ready = bool(ok)
-        self.dictionary_label.setText(tr_format(self.tr("Dictionary ready: %1"), message) if ok else message)
+        self.dictionary_label.setText(self._dictionary_line(bool(ok), message))
 
-        # Nouns come from the same "SetupWizard"-context table the checkbox
-        # labels use (:892) -- a second, ResourcesPage-context "Frequency" /
-        # "Pitch accent" copy here let the two drift and doubled translator
-        # work. One shared "X ready: Y" template stands in for the two
-        # per-noun copies this used to carry.
+        # Nouns come from the shared "SetupWizard"-context table, so the two
+        # readiness lines cannot drift from each other in translation.
         freq_noun = QCoreApplication.translate("SetupWizard", _RESOURCE_KIND_NOUNS["freq"])
         pitch_noun = QCoreApplication.translate("SetupWizard", _RESOURCE_KIND_NOUNS["pitch"])
         ready_template = self.tr("%1 ready: %2")
@@ -1286,6 +1564,26 @@ class ResourcesPage(_LiveCheckPage):
             self._optional_line(result.pitch, pitch_noun, tr_format(ready_template, pitch_noun, "%1"))
         )
         self.completeChanged.emit()
+
+    def _dictionary_line(self, ok: bool, message: str) -> str:
+        """The dictionary verdict in the wizard's own words where it can say more (B11)."""
+        if ok:
+            return tr_format(self.tr("Dictionary ready: %1"), message)
+        if self._dictionary_not_downloaded():
+            return self.tr("Dictionary: not downloaded yet (required)")
+        return message
+
+    def _dictionary_not_downloaded(self) -> bool:
+        """True when no dictionary is enabled, or every enabled one is one this page downloads.
+
+        A fresh config already names the recommended dictionary before anything
+        is on disk; the service's sentence for that ("Download it with Tools →
+        …") is right for the main window but not for a page with its own button.
+        """
+        config = self._wizard.working_config()
+        enabled = {e.dict_id for e in config.dictionary_chain if e.kind == "indexed" and e.enabled and e.dict_id}
+        offered = {spec.id for spec in self._specs if spec.kind == "dict"}
+        return enabled <= offered
 
     def _optional_line(self, answer: tuple[bool | None, str], noun: str, ready_template: str) -> str:
         """Render one optional family. ``None`` is a resting state, not a fault."""
@@ -1306,52 +1604,100 @@ class ResourcesPage(_LiveCheckPage):
         self.pitch_label.clear()
         self.completeChanged.emit()
 
-    def _on_download_clicked(self) -> None:
-        """Start the download and hand the page back immediately.
+    # --- the download ---
 
-        The flow is asynchronous now, so the page reports through the session's
-        completion signal instead of a return value. Worker ownership goes to
-        the wizard, whose close path already cancels every registered worker and
-        defers ``done()`` until each one's native thread has exited — which is
-        what keeps a run started here from outliving the wizard.
+    def _on_download_clicked(self) -> None:
+        """Start the download in the background and hand the page back at once.
+
+        No window (D9): progress is read from the TaskRegistry and drawn here
+        and on the Ready page. Worker ownership goes to the wizard, whose close
+        path cancels every registered worker and waits for its native thread.
         """
-        from anki_miner.gui.widgets.dialogs.resource_download_dialog import start_resource_download
+        from anki_miner.gui.controllers.task_registry import TaskRegistry  # noqa: PLC0415
+        from anki_miner.gui.widgets.dialogs.resource_download_dialog import start_resource_download  # noqa: PLC0415
 
         if self._download_running:
             return
         self.status_label.clear()
+        self.status_label.setToolTip("")
         specs = self.selected_specs()
         if not specs:
             return
+        registry = getattr(self._wizard.parent(), "task_registry", None)
         session = start_resource_download(
             self,
             self._wizard.working_config(),
             activate=self._activate_resources,
             release_resources=self._wizard._release_resources,
-            task_registry=getattr(self._wizard.parent(), "task_registry", None),
+            task_registry=registry,
             adopt_worker=self._wizard.register_worker,
             specs=specs,
+            show_window=False,
         )
         if session is None:
             return
         self._session = session
         self._download_running = True
-        self.download_button.setEnabled(False)
+        self._download_ending = ""
+        self._progress_text = ""
+        self._sync_download_button()
         session.finished.connect(self._on_download_finished)
+        if isinstance(registry, TaskRegistry):
+            self._registry = registry
+            registry.snapshot_changed.connect(self._on_registry_snapshot)
+        self._render_progress()
+        self.completeChanged.emit()
+        self.download_state_changed.emit()
+
+    def _on_registry_snapshot(self, task_id: str) -> None:
+        registry = self._registry
+        session = self._session
+        if registry is None or session is None or not self._download_running or task_id != session.task_id:
+            return
+        snapshot = registry.snapshot(task_id)
+        if snapshot is None:
+            return
+        self._progress_text = format_task_line(snapshot)
+        self._render_progress()
+        self.download_state_changed.emit()
+
+    def _render_progress(self) -> None:
+        if not self._download_running:
+            return
+        progress = self._progress_text or self.tr("Starting…")
+        cancel = self.tr("Cancel")
+        self.status_label.setText(
+            _html_text(tr_format(self.tr("Downloading: %1"), progress)) + f' <a href="cancel">{_html_text(cancel)}</a>'
+        )
+
+    def _disconnect_registry(self) -> None:
+        registry = self._registry
+        self._registry = None
+        if registry is not None:
+            with contextlib.suppress(TypeError, RuntimeError):
+                registry.snapshot_changed.disconnect(self._on_registry_snapshot)
+
+    def activate_link(self, href: str) -> None:
+        """This page's and the Ready page's inline links: cancel, or (re)start the download."""
+        if href == "cancel":
+            if self._session is not None and self._download_running:
+                self._session.cancel()
+        elif href == "download":
+            self._on_download_clicked()
 
     def _activate_resources(self, summary: object) -> AnkiMinerConfig | None:
         """Fold a completed summary into the wizard's working config.
 
         Read from ``working_config()`` at activation time, never from a config
-        captured when the download started: the user can have changed the deck
-        or note type on an earlier page while the transfer ran.
+        captured when the download started: the user picks the deck and note
+        type on the Anki page while the transfer runs.
 
         A walk-away is the one case where that config is the wrong one: the
         slots were picked for a language the close path has already reverted,
         and the chains would silently drop them for not matching.
         """
-        from anki_miner.gui.utils.resource_setup import apply_download_summary
-        from anki_miner.gui.workers.resource_download_worker import ResourceDownloadSummary
+        from anki_miner.gui.utils.resource_setup import apply_download_summary  # noqa: PLC0415
+        from anki_miner.gui.workers.resource_download_worker import ResourceDownloadSummary  # noqa: PLC0415
 
         if self._wizard.is_walking_away():
             return None
@@ -1362,42 +1708,82 @@ class ResourcesPage(_LiveCheckPage):
         return new_config
 
     def _on_download_finished(self, outcome: object) -> None:
-        """Report the run's real ending, including imported-but-not-active.
+        """Report the run's real ending, then ask the disk again.
 
-        Fires again after a successful **Retry setup**, which is the point: the
-        status line has to stop saying the resources are inactive once they are
-        not.
+        The session runs with no window, so the window's **Retry setup** button
+        never exists and this fires once per run. The per-item detail the
+        download window used to show goes in the status line's tooltip.
         """
-        from anki_miner.gui.widgets.dialogs.resource_download_dialog import ResourceDownloadOutcome
+        from anki_miner.gui.widgets.dialogs.resource_download_dialog import (  # noqa: PLC0415
+            ResourceDownloadOutcome,
+            result_lines,
+        )
 
         self._download_running = False
-        # Not setEnabled(True): a finished run must not resurrect the button
-        # for a selection the user has since emptied.
+        self._progress_text = ""
+        self._disconnect_registry()
+        # Not setEnabled(True): the button follows what there is to fetch.
         self._sync_download_button()
         if not isinstance(outcome, ResourceDownloadOutcome):
-            return
-
-        summary = outcome.summary
-        if summary.cancelled:
-            status = (
-                self.tr("Download cancelled. Some resources were installed.")
-                if summary.succeeded
-                else self.tr("Download cancelled. No resources were installed.")
-            )
-        elif summary.succeeded and not outcome.activated:
-            status = self.tr("Imported, but not active — Retry setup")
-        elif summary.failed:
-            status = (
-                tr_format(self.tr("%1 installed, %2 failed."), len(summary.succeeded), len(summary.failed))
-                if summary.succeeded
-                else self.tr("No resources were installed.")
-            )
+            self._download_ending = "failed"
+            self.status_label.setText(self.tr("The download stopped before it finished."))
+            self.status_label.setToolTip("")
         else:
-            status = self.tr("Resources installed.")
-        self.status_label.setText(status)
+            summary = outcome.summary
+            if summary.cancelled:
+                self._download_ending = "cancelled"
+                status = (
+                    self.tr("Download cancelled. Some resources were installed.")
+                    if summary.succeeded
+                    else self.tr("Download cancelled. No resources were installed.")
+                )
+            elif summary.succeeded and not outcome.activated:
+                # No window here (show_window=False), so there is no "Retry
+                # setup" button to point at: Download runs the whole thing again.
+                self._download_ending = "failed"
+                status = self.tr("Imported, but not switched on. Press Download to try again.")
+            elif summary.failed:
+                self._download_ending = "failed"
+                status = (
+                    tr_format(self.tr("%1 installed, %2 failed."), len(summary.succeeded), len(summary.failed))
+                    if summary.succeeded
+                    else self.tr("No resources were installed.")
+                )
+            else:
+                self._download_ending = ""
+                status = self.tr("Resources installed.")
+            self.status_label.setText(status)
+            self.status_label.setToolTip("\n".join(result_lines(summary)))
         # Re-ask rather than infer: a summary saying the dictionary imported is
         # not the same claim as the chain being able to answer with it.
         self._recheck_resources()
+        self.completeChanged.emit()
+        self.download_state_changed.emit()
+        self.download_finished.emit()
+
+    def ready_page_dictionary_line(self) -> str:
+        """The Ready page's rich-text line while the dictionary is missing or the download runs (D9).
+
+        While the run is going the line names the downloads, not the
+        dictionary: JMdict is item 1 of 4, so the dictionary can already be
+        ready while JPDB, Jiten and Kanjium are still coming, and T2.14 holds
+        Finish until they are (Finish closes the wizard, and closing cancels
+        every worker it owns). Links ("download") come back through
+        :meth:`activate_link`.
+        """
+        if not self._specs:
+            return _html_text(self.tr("Dictionary: none installed. Add one in Settings → Dictionaries after setup."))
+        if self._download_running:
+            if self._progress_text:
+                return _html_text(tr_format(self.tr("Downloads: still running — %1"), self._progress_text))
+            return _html_text(self.tr("Downloads: still running…"))
+        if self._download_ending == "failed":
+            failed = self.tr("Dictionary: download failed.")
+            retry = self.tr("Retry")
+            return f'{_html_text(failed)} <a href="download">{_html_text(retry)}</a>'
+        missing = self.tr("Dictionary: not downloaded yet (required)")
+        download = self.tr("Download")
+        return f'{_html_text(missing)} <a href="download">{_html_text(download)}</a>'
 
 
 #: The final page's required checks, in the order they are reported. Optional
@@ -1429,34 +1815,40 @@ def _final_sweep(validation: ValidationService) -> dict[str, bool]:
 
 
 class DonePage(_LiveCheckPage):
-    """Step 5: re-verify the whole setup, then offer the first real action.
+    """Ready: re-check everything mining needs; list only what is missing (B04).
 
-    The old summary read the AnkiConnect page's cached ``_reachable`` flag and
-    counted the mapped fields in config — both of which were true several
-    minutes and one Anki restart ago. It could therefore say "AnkiConnect
-    reachable: Yes" over a closed Anki. This page now runs its own sweep on
-    entry and Finish stays disabled until every required check passes.
+    Finish ("Open Video Mining", D26) stays disabled until every required check
+    passes and the wizard's download has ended. With everything in place the page says what to do next; otherwise
+    it lists only the missing items, in plain words, each with its way forward.
+    It re-checks on entry, when the wizard window becomes active again, and
+    when the dictionary download ends (B02).
     """
 
     def __init__(self, wizard: SetupWizard) -> None:
         super().__init__(wizard)
         self._results: dict[str, bool] = {}
-        self.setTitle(self.tr("Ready to Mine"))
-        self.setSubTitle(self.tr("A last check of everything mining needs. You can change it later in Settings."))
         self.setFinalPage(True)
 
         layout = QVBoxLayout(self)
+        self.title_label, self.subtitle_label = _add_page_header(layout, self.tr("Ready to Mine"), "")
         self.summary_label = QLabel("")
         self.summary_label.setWordWrap(True)
         self.summary_label.setTextFormat(Qt.TextFormat.RichText)
+        self.summary_label.setOpenExternalLinks(False)
+        self.summary_label.linkActivated.connect(self._on_link)
         layout.addWidget(self.summary_label)
+        layout.addStretch(1)
 
-        self.recheck_button = ModernButton(self.tr("Recheck"), variant="secondary")
-        self.recheck_button.clicked.connect(self._start_sweep)
-        layout.addWidget(self.recheck_button)
+        # The dictionary line follows the download live, and its end re-checks.
+        wizard.resources_page.download_state_changed.connect(self._redraw)
+        wizard.resources_page.download_finished.connect(self._on_download_finished)
 
     def isComplete(self) -> bool:
-        return all(self._results.get(name, False) for name in _FINAL_CHECKS)
+        # Finish closes the wizard, and closing cancels every worker it owns
+        # (SetupWizard.done), so it waits for the whole download, not just the
+        # dictionary that lands first.
+        checks_pass = all(self._results.get(name, False) for name in _FINAL_CHECKS)
+        return checks_pass and not self._wizard.resources_page.download_running()
 
     def initializePage(self) -> None:
         """Run one fresh readiness sweep; render it when it lands."""
@@ -1467,12 +1859,15 @@ class DonePage(_LiveCheckPage):
         self._live_check = None
         self._start_sweep()
 
+    def recheck(self) -> None:
+        """B02: re-run the sweep when the wizard window becomes active again."""
+        self._start_sweep()
+
     def _start_sweep(self) -> None:
         if still_running(self._live_check):
             return
         self._results = {}
         self.summary_label.setText(self.tr("Checking your setup..."))
-        self.recheck_button.setEnabled(False)
         self.completeChanged.emit()
 
         self._start_live_check(
@@ -1487,31 +1882,80 @@ class DonePage(_LiveCheckPage):
             return
         self._results = dict(result) if isinstance(result, dict) else {}
         self.summary_label.setText(self._summary_html())
-        self.recheck_button.setEnabled(True)
         self.completeChanged.emit()
 
     def _on_sweep_error(self, message: str) -> None:
         if not self._is_live_check():
             return
         self._results = {}
-        self.summary_label.setText(message)
-        self.recheck_button.setEnabled(True)
+        self.summary_label.setText(_html_text(message))
         self.completeChanged.emit()
 
+    def _redraw(self) -> None:
+        if self._results:
+            self.summary_label.setText(self._summary_html())
+        # A download starting or ending moves the Finish gate (isComplete).
+        self.completeChanged.emit()
+
+    def _on_download_finished(self) -> None:
+        if self._wizard.currentPage() is self:
+            # Cancel-and-restart, not _start_sweep: a sweep already in flight
+            # bound the validation service before the new dictionary chain was
+            # staged, and _start_sweep would skip while it runs, leaving a stale
+            # "dictionary missing" and Finish disabled.
+            self.initializePage()
+        else:
+            self._redraw()
+
+    def _on_link(self, href: str) -> None:
+        self._wizard.resources_page.activate_link(href)
+
     def _summary_html(self) -> str:
+        results = self._results
+        downloading = self._wizard.resources_page.download_running()
+        checks_pass = all(results.get(name, False) for name in _FINAL_CHECKS)
+        if checks_pass and not downloading:
+            return _html_text(
+                self.tr(
+                    "You're ready. Pick a video and its subtitle file, then press Mine Episode. Books, manga "
+                    "and subtitles are under Reading, audiobooks under Audiobooks, tools under Utilities. "
+                    "Press F1 any time for the Usage Guide."
+                )
+            )
         cfg = self._wizard.working_config()
-        yes = self.tr("Yes")
-        no = self.tr("No")
-
-        def mark(name: str) -> str:
-            return yes if self._results.get(name, False) else no
-
-        return "<br>".join(
-            [
-                tr_format(self.tr("AnkiConnect reachable: <b>%1</b>"), mark("ankiconnect")),
-                tr_format(self.tr("Deck '%1' exists: <b>%2</b>"), cfg.anki_deck_name, mark("deck")),
-                tr_format(self.tr("Note type '%1' exists: <b>%2</b>"), cfg.anki_note_type, mark("note_type")),
-                tr_format(self.tr("Every mapped field exists: <b>%1</b>"), mark("fields")),
-                tr_format(self.tr("Offline dictionary ready: <b>%1</b>"), mark("dictionary")),
-            ]
-        )
+        lines: list[str] = []
+        if not results.get("ankiconnect", False):
+            # The deck, note-type and field checks were never asked (_final_sweep).
+            lines.append(_html_text(self.tr("Anki isn't reachable. Open Anki.")))
+        else:
+            if not results.get("deck", False):
+                lines.append(
+                    _html_text(
+                        tr_format(
+                            self.tr("Anki has no deck called “%1”. Go back to the Anki step and pick one."),
+                            cfg.anki_deck_name,
+                        )
+                    )
+                )
+            if not results.get("note_type", False):
+                lines.append(
+                    _html_text(
+                        tr_format(
+                            self.tr("Anki has no note type called “%1”. Go back to the Anki step and pick one."),
+                            cfg.anki_note_type,
+                        )
+                    )
+                )
+            elif not results.get("fields", False):
+                lines.append(
+                    _html_text(
+                        self.tr(
+                            "The card fields don't match the note type. Go back to the Anki step and pick it again."
+                        )
+                    )
+                )
+        if not results.get("dictionary", False) or downloading:
+            # While the run goes this reads "Downloads: still running — …".
+            lines.append(self._wizard.resources_page.ready_page_dictionary_line())
+        intro = _html_text(self.tr("Before you can mine:"))
+        return intro + "<br>" + "<br>".join(f"• {line}" for line in lines)

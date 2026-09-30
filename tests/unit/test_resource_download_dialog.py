@@ -121,6 +121,7 @@ def _start(
     release=None,
     acquire=None,
     clock=None,
+    show_window: bool = True,
 ) -> tuple[ResourceDownloadSession, Path]:
     download_dir = tmp_path / "download"
     download_dir.mkdir(exist_ok=True)
@@ -138,6 +139,7 @@ def _start(
         task_registry=registry,
         adopt_worker=adopt,
         specs=RECOMMENDED_DEFAULT_SET,
+        show_window=show_window,
         **extra,
     )
     assert session.start()
@@ -710,7 +712,7 @@ def test_primary_label_shows_transfer_telemetry_and_never_a_url(parent, monkeypa
     qtbot.waitUntil(lambda: "/" in session.window.detail_label.text(), timeout=3000)
     text = session.window.detail_label.text()
 
-    assert session.window.resource_label.text() == "Jitendex"
+    assert session.window.resource_label.text() == "Downloading 1 of 4 · Jitendex"
     assert "MB /" in text
     assert "Elapsed" in text
     assert "http" not in text
@@ -764,16 +766,34 @@ def test_install_step_count_drives_the_bar_under_the_same_install_line(parent, m
     _drain(qtbot, worker)
 
 
-def test_sources_area_carries_the_host_and_licence_not_the_label(parent, monkeypatch, tmp_path, qtbot):
+def test_host_and_licence_lines_live_in_the_licence_tooltip(parent, monkeypatch, tmp_path, qtbot):
+    """B10: reference text moved off the window, into the one licence sentence's tooltip."""
     worker = _FakeWorker(_successful_summary())
     session, _dir = _start(monkeypatch, tmp_path, parent, worker)
 
-    sources = session.window.sources_label.text()
+    tooltip = session.window.licence_label.toolTip()
 
-    assert "github.com" in sources
-    assert "CC BY-SA 4.0" in sources
-    assert "https://" not in sources  # host, not the full asset path
+    assert "github.com" in tooltip
+    assert "CC BY-SA 4.0" in tooltip
+    assert "https://" not in tooltip  # host, not the full asset path
+    assert not hasattr(session.window, "sources_label")
     _drain(qtbot, worker)
+
+
+def test_headline_names_the_position_and_the_kind():
+    specs = list(RECOMMENDED_DEFAULT_SET)
+    first = ResourceProgress(spec_id="jmdict-english", display_name="JMdict", phase=_DL)
+    third = ResourceProgress(spec_id="jiten", display_name="Jiten Frequency", phase=_DL)
+    last = ResourceProgress(spec_id="kanjium-pitch", display_name="Kanjium Pitch Accent", phase=_INSTALL)
+
+    assert mod.activity_headline(first, specs) == "Downloading 1 of 4 · JMdict (dictionary)"
+    assert mod.activity_headline(third, specs) == "Downloading 3 of 4 · Jiten Frequency (word frequency)"
+    assert mod.activity_headline(last, specs) == "Downloading 4 of 4 · Kanjium Pitch Accent (pitch accent)"
+
+
+def test_headline_for_an_id_outside_the_run_names_the_item_alone():
+    event = ResourceProgress(spec_id="jitendex", display_name="Jitendex", phase=_DL)
+    assert mod.activity_headline(event, list(RECOMMENDED_DEFAULT_SET)) == "Downloading 1 of 4 · Jitendex"
 
 
 # ---------------------------------------------------------------------------
@@ -801,6 +821,47 @@ def test_registry_carries_the_run_and_its_transfer_line(parent, monkeypatch, tmp
 
     _drain(qtbot, worker)
     registry.shutdown()
+
+
+def test_a_run_without_its_window_reports_through_the_registry_only(parent, monkeypatch, tmp_path, qtbot):
+    """D9: the setup wizard shows progress inline, so it starts runs with no window at all."""
+    registry = TaskRegistry()
+    events = [_progress(_DL, downloaded=1024 * 1024, total_bytes=4 * 1024 * 1024)]
+    worker = _FakeWorker(_successful_summary(), events=events)
+    outcomes: list[object] = []
+    session, _dir = _start(monkeypatch, tmp_path, parent, worker, registry=registry, show_window=False)
+    session.finished.connect(outcomes.append)
+
+    assert session.window is None
+    assert worker.progress_done.wait(2.0)
+    qtbot.waitUntil(lambda: bool(getattr(registry.snapshot(mod.TASK_ID), "detail", "")), timeout=3000)
+    session.reveal()  # nothing to reveal: a no-op, never a crash
+
+    _drain(qtbot, worker)
+    qtbot.waitUntil(lambda: len(outcomes) == 1, timeout=3000)
+    assert session.window is None
+    registry.shutdown()
+
+
+def test_start_resource_download_passes_show_window_through(parent, monkeypatch, tmp_path, qtbot):
+    download_dir = tmp_path / "download"
+    download_dir.mkdir()
+    worker = _FakeWorker(_successful_summary())
+    monkeypatch.setattr(mod.tempfile, "mkdtemp", lambda **_kwargs: str(download_dir))
+    monkeypatch.setattr(mod, "ResourceDownloadWorker", lambda *a, **kw: worker)
+
+    session = start_resource_download(
+        parent,
+        create_default_config(),
+        activate=lambda _summary: None,
+        specs=RECOMMENDED_DEFAULT_SET,
+        show_window=False,
+    )
+
+    assert session is not None
+    assert session.window is None
+    _drain(qtbot, worker)
+    qtbot.waitUntil(lambda: session.worker is None, timeout=3000)
 
 
 def test_running_registry_rejects_second_start_and_reveals_retained_session(parent, monkeypatch, qtbot):

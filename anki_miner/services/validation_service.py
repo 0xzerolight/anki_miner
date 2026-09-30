@@ -754,11 +754,25 @@ class ValidationService:
                 sources=capped(empty),
             )
         missing = [e.dict_id for e in enabled if e.dict_id]
+        # B11: a fresh install's default chain already names the recommended
+        # dictionary before anything is downloaded, so "import them again" was
+        # wrong for the commonest case of all. A dictionary the language's own
+        # catalogue offers is downloaded; anything else was added by hand.
+        from anki_miner.languages.registry import config_language, get_profile
+
+        try:
+            catalog_ids = {spec.id for spec in get_profile(config_language(self.config)).catalog if spec.kind == "dict"}
+        except (LookupError, ValueError, ImportError):
+            catalog_ids = set()
+        repair = (
+            "Download it with Tools → Download Recommended Resources."
+            if missing and set(missing) <= catalog_ids
+            else "Import it again in Settings → Dictionaries."
+        )
         return _record(
             "offline-dictionary",
             False,
-            f"Dictionary index(es) not found on disk: {', '.join(missing)}. "
-            "Import them again in Settings → Dictionaries.",
+            f"Dictionary not installed: {', '.join(missing)}. {repair}",
             root=self.config.dicts_root,
             reason="missing",
             sources=capped(missing),

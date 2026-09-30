@@ -725,6 +725,26 @@ def _log_effective_config(config: Any) -> None:
         )
 
 
+def _is_fresh_install(config_file: Path) -> bool:
+    """True when this is the first launch: no saved config and no backup of one.
+
+    Checked before the config loads, because the load hands back defaults that
+    cannot be told apart from a saved "light".
+    """
+    backup = config_file.with_name(config_file.name + ".bak")
+    return not config_file.exists() and not backup.exists()
+
+
+def _theme_for_color_scheme(scheme: Qt.ColorScheme) -> str:
+    """The first theme for a fresh install: the system's dark or light look (D8).
+
+    The setup wizard no longer asks for a theme, so a new user on a dark desktop
+    would otherwise open a white window. This is a first value, not a setting:
+    after it the saved theme wins, and Settings → General picks another.
+    """
+    return "dark" if scheme == Qt.ColorScheme.Dark else "light"
+
+
 def _log_home_fallback() -> None:
     """Warn when config, logs and caches were relocated out of the real home.
 
@@ -2225,6 +2245,7 @@ def main():
         logger.exception("Failed to configure startup log; continuing with stderr logging")
     _enable_faulthandler(ANKI_MINER_HOME / CRASH_LOG_NAME)
     try:
+        _fresh_install = _is_fresh_install(GUIConfigManager.CONFIG_FILE)
         _early_config, _allow_store_collection = GUIConfigManager.load_config_with_provenance()
         _log_path = _early_config.log_path
     except Exception:  # noqa: BLE001 — bucket A: config falls back to defaults outside installer smoke.
@@ -2235,6 +2256,7 @@ def main():
         logger.exception("Failed to load config at startup; using default config")
         _early_config = create_default_config()
         _allow_store_collection = False
+        _fresh_install = False
         _log_path = _default_log_path
     # Honour a user-customised log_path by re-pointing the handler (idempotent,
     # so no duplicate sink). No-op in the common case where it equals the default.
@@ -2302,6 +2324,14 @@ def main():
     # tr() strings at construction time, and language is restart-to-apply (no
     # live retranslateUi). Stash on `app` so the translators outlive this call.
     app._translators = install_translators(app, _early_config.ui_language)  # type: ignore[attr-defined]
+
+    # D8: a brand-new install starts on the system's light or dark look, because
+    # the setup wizard no longer has a Theme page. Needs the QApplication, so it
+    # runs here rather than at load time; a saved config is never touched.
+    if _fresh_install:
+        hints = QApplication.styleHints()
+        scheme = hints.colorScheme() if hints is not None else Qt.ColorScheme.Unknown
+        _early_config = replace(_early_config, theme=_theme_for_color_scheme(scheme))
 
     # Seed the theme singleton from the single decoded startup config. Optional
     # local theme data must never block construction of the unstyled GUI.

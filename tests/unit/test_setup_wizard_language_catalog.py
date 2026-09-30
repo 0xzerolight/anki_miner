@@ -37,67 +37,50 @@ def wizard_factory(qtbot, monkeypatch):
     return build
 
 
-class TestTheSubtitleNamesOnlyTheKindsOnOffer:
-    """The optional half of the subtitle is read off the catalogue on the page.
-
-    A language whose catalogue has no pitch row used to be told pitch accent was
-    optional — a Japanese feature its learners do not have, on a page offering
-    one tickbox. ja's sentence is unchanged word for word, so its translations
-    survive.
-    """
+class TestTheSentenceNamesWhatIsDownloaded:
+    """D9: one sentence, built from the catalogue on the page, names every download."""
 
     def _catalog(self, *kinds: str) -> tuple:
         return tuple(spec for kind in kinds for spec in RECOMMENDED_DEFAULT_SET if spec.kind == kind)
 
-    def test_a_catalogue_with_both_optional_kinds_names_both(self, wizard_factory, test_config):
-        assert {spec.kind for spec in get_profile("ja").catalog} == {"dict", "freq", "pitch"}
+    def test_japanese_names_all_three_families(self, wizard_factory, test_config):
         page = wizard_factory(replace(test_config, language="ja")).resources_page
-        assert page.subTitle() == "Frequency and pitch accent are optional. A dictionary is required."
+        assert page.contents_label.text() == (
+            "Downloads JMdict (dictionary), JPDB v2.2 Kana Frequency and Jiten Frequency (word frequency) "
+            "and Kanjium Pitch Accent (pitch accent)."
+        )
 
-    def test_a_dictionary_only_catalogue_promises_neither(self, wizard_factory, test_config):
-        # ko is the shipped dictionary-only catalogue, so the sentence stays
-        # pinned against a real language rather than a stub.
+    def test_korean_names_its_one_dictionary(self, wizard_factory, test_config):
         assert {spec.kind for spec in get_profile("ko").catalog} == {"dict"}
         page = wizard_factory(switch_language(test_config, "ko")).resources_page
-        assert page.subTitle() == "A dictionary is required."
+        assert page.contents_label.text() == "Downloads KRDICT (Korean-English) (dictionary)."
 
-    def test_zh_names_the_frequency_list_it_ships_and_no_pitch(self, wizard_factory, test_config):
-        assert {spec.kind for spec in get_profile("zh").catalog} == {"dict", "freq"}
+    def test_chinese_names_its_dictionary_and_frequency_list(self, wizard_factory, test_config):
         page = wizard_factory(switch_language(test_config, "zh")).resources_page
-        assert page.subTitle() == "Frequency is optional. A dictionary is required."
+        assert page.contents_label.text() == (
+            "Downloads CC-CEDICT (dictionary) and OpenSubtitles 2024 word frequency (Chinese) (word frequency)."
+        )
 
-    def test_a_catalogue_with_frequency_names_frequency_alone(self, wizard_factory, test_config, monkeypatch):
-        register_stub_profile(monkeypatch, "ko", catalog=self._catalog("dict", "freq"))
-        page = wizard_factory(replace(test_config, language="ko")).resources_page
-        assert page.subTitle() == "Frequency is optional. A dictionary is required."
-
-    def test_a_catalogue_with_pitch_names_pitch_alone(self, wizard_factory, test_config, monkeypatch):
+    def test_a_dictionary_and_pitch_catalogue(self, wizard_factory, test_config, monkeypatch):
         register_stub_profile(monkeypatch, "ko", catalog=self._catalog("dict", "pitch"))
         page = wizard_factory(replace(test_config, language="ko")).resources_page
-        assert page.subTitle() == "Pitch accent is optional. A dictionary is required."
-
-    def test_an_empty_catalogue_still_states_the_requirement(self, wizard_factory, test_config, monkeypatch):
-        register_stub_profile(monkeypatch, "ko", catalog=())
-        page = wizard_factory(replace(test_config, language="ko")).resources_page
-        assert page.subTitle() == "A dictionary is required."
+        assert page.contents_label.text() == "Downloads JMdict (dictionary) and Kanjium Pitch Accent (pitch accent)."
 
     def test_the_sentence_follows_a_re_entry_after_a_switch(self, wizard_factory, test_config, monkeypatch):
         wizard = wizard_factory(switch_language(test_config, "zh"))
         page = wizard.resources_page
-        assert page.subTitle() == "Frequency is optional. A dictionary is required."
+        assert page.contents_label.text().startswith("Downloads CC-CEDICT (dictionary)")
 
         # The readiness probe is initializePage's other half and wants a disk.
         monkeypatch.setattr(page, "_recheck_resources", lambda: None)
         wizard.update_working_config(replace(test_config, language="ja"))
         page.initializePage()
 
-        assert page.subTitle() == "Frequency and pitch accent are optional. A dictionary is required."
+        assert page.contents_label.text().startswith("Downloads JMdict (dictionary)")
 
 
 def test_ja_catalogue_is_the_recommended_default_set(wizard_factory, test_config):
-    """The ja profile must keep offering exactly the shipped catalogue —
-    test_setup_wizard.py's test_resources_page_offers_one_checkbox_per_catalog_entry_all_on
-    asserts the page against RECOMMENDED_DEFAULT_SET and may not be edited."""
+    """The ja profile must keep offering exactly the shipped catalogue."""
     assert get_profile("ja").catalog == RECOMMENDED_DEFAULT_SET
     page = wizard_factory(replace(test_config, language="ja")).resources_page
     assert page.selected_specs() == list(RECOMMENDED_DEFAULT_SET)
@@ -125,9 +108,8 @@ def test_zh_offers_its_own_catalogue_and_no_pitch_line(wizard_factory, test_conf
     zh_catalog = get_profile("zh").catalog
     page = wizard_factory(switch_language(test_config, "zh")).resources_page
 
-    assert set(page.resource_checks) == {spec.id for spec in zh_catalog}
-    assert all(box.isChecked() for box in page.resource_checks.values())
-    assert "jmdict-english" not in page.resource_checks
+    assert {spec.id for spec in page.selected_specs()} == {spec.id for spec in zh_catalog}
+    assert "jmdict-english" not in {spec.id for spec in page.selected_specs()}
     assert page.pitch_label.isHidden()
 
 
@@ -135,9 +117,8 @@ def test_ko_offers_its_own_catalogue_and_no_pitch_line(wizard_factory, test_conf
     ko_catalog = get_profile("ko").catalog
     page = wizard_factory(switch_language(test_config, "ko")).resources_page
 
-    assert set(page.resource_checks) == {spec.id for spec in ko_catalog}
-    assert all(box.isChecked() for box in page.resource_checks.values())
-    assert "jmdict-english" not in page.resource_checks
+    assert {spec.id for spec in page.selected_specs()} == {spec.id for spec in ko_catalog}
+    assert "jmdict-english" not in {spec.id for spec in page.selected_specs()}
     assert page.pitch_label.isHidden()
 
 
@@ -161,14 +142,13 @@ class TestAnEmptyCatalogue:
         return wizard_factory(replace(test_config, language="ko")).resources_page
 
     def test_nothing_is_offered_for_download(self, empty_page):
-        assert empty_page.resource_checks == {}
         assert empty_page.selected_specs() == []
 
     def test_the_download_button_is_disabled(self, empty_page):
         assert not empty_page.download_button.isEnabled()
 
     def test_the_page_says_where_the_resources_come_from(self, empty_page):
-        text = empty_page.status_label.text()
+        text = empty_page.contents_label.text()
 
         assert text
         assert "Settings" in text
