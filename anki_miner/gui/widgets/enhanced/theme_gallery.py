@@ -1,12 +1,13 @@
-"""A scrollable grid of rendered theme cards, shared by two hosts.
+"""A grid of rendered theme cards, scrolling or not, shared by two hosts.
 
 Used by the UI settings panel (full set, grouped by family) and by the setup
 wizard's theme step (a shortlist that expands in place). One widget, two hosts:
 the wizard must not grow a second implementation that drifts from the panel.
 
-Thumbnails load lazily. Qt only paints the cards the scroll viewport actually
-shows, so the first ``paintEvent`` IS the "this card became visible" signal --
-there is no viewport-intersection bookkeeping. The render is deferred out of the
+Thumbnails load lazily. Qt only paints the cards the viewport (its own, or the
+host page's when built with ``scrolling=False``) actually shows, so the first
+``paintEvent`` IS the "this card became visible" signal -- there is no
+viewport-intersection bookkeeping. The render is deferred out of the
 paint through a zero-interval child timer, because setting a pixmap on a child
 label from inside ``paintEvent`` re-enters layout and repaint.
 
@@ -267,7 +268,7 @@ class ThemeGalleryWidget(QWidget):
     favorite_toggled = pyqtSignal(str)
     family_favorites_toggled = pyqtSignal(tuple)
 
-    def __init__(self, parent: QWidget | None = None, *, show_stars: bool = True) -> None:
+    def __init__(self, parent: QWidget | None = None, *, show_stars: bool = True, scrolling: bool = True) -> None:
         super().__init__(parent)
         self._show_stars = show_stars
         #: ``None`` means "every theme, grouped"; a tuple means shortlist mode.
@@ -281,16 +282,23 @@ class ThemeGalleryWidget(QWidget):
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
 
-        self._scroll = QScrollArea(self)
-        self._scroll.setWidgetResizable(True)
-        self._scroll.setFrameShape(QFrame.Shape.NoFrame)
-        outer.addWidget(self._scroll)
-
         self._content = QWidget()
         self._content_layout = QVBoxLayout(self._content)
         self._content_layout.setContentsMargins(0, 0, 0, 0)
         self._content_layout.setSpacing(SPACING.sm)
-        self._scroll.setWidget(self._content)
+
+        # scrolling=False (C08): the host page already scrolls, and a second
+        # scroll bar inside it is the "two scroll bars" the audit found. Lazy
+        # thumbnails still work -- the page's viewport decides what paints.
+        self._scroll: QScrollArea | None = None
+        if scrolling:
+            self._scroll = QScrollArea(self)
+            self._scroll.setWidgetResizable(True)
+            self._scroll.setFrameShape(QFrame.Shape.NoFrame)
+            self._scroll.setWidget(self._content)
+            outer.addWidget(self._scroll)
+        else:
+            outer.addWidget(self._content)
 
         self.refresh()
 
