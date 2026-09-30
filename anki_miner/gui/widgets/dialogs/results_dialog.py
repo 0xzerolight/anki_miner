@@ -4,7 +4,7 @@ import logging
 from typing import Callable, cast
 
 from PyQt6.QtGui import QCloseEvent, QFont
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QMessageBox, QTextEdit, QVBoxLayout
+from PyQt6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QMessageBox, QPushButton, QTextEdit, QVBoxLayout
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils import result_copy
@@ -27,8 +27,10 @@ class ResultsDialog(EnhancedDialog):
     - Stat cards for key metrics (words, cards, time)
     - Error display if any
     - Undo button to delete the created notes (if note ids are available).
-      ``ProcessingResult.card_ids`` holds *note* ids -- the field name predates
-      the distinction and is load-bearing, so only the wording says "notes".
+      ``ProcessingResult.card_ids`` holds *note* ids; the words say "cards",
+      the unit the rest of the app counts in (D20 item 5, an owner decision
+      that reopened D46-B).
+    - Copy summary, when opened from a run's receipt (D4).
     - Modern styling with card layout
     """
 
@@ -119,12 +121,6 @@ class ResultsDialog(EnhancedDialog):
         time_card = StatCard(value=time_str, label=self.tr("Processing Time"))
         row2_layout.addWidget(time_card)
 
-        # Processing speed card
-        if self.processing_result.elapsed_time > 0:
-            speed = self.processing_result.cards_created / self.processing_result.elapsed_time
-            speed_card = StatCard(value=f"{speed:.1f}/sec", label=self.tr("Processing Rate"))
-            row2_layout.addWidget(speed_card)
-
         # Comprehension percentage card with color indicator
         comp_pct = self.processing_result.comprehension_percentage
         comp_card = StatCard(value=f"{comp_pct:.1f}%", label=self.tr("Comprehension"))
@@ -152,6 +148,17 @@ class ResultsDialog(EnhancedDialog):
             error_text.setMaximumHeight(150)
             self.add_content(error_text)
 
+        # D4: Copy summary moved here from the receipt. The text is the exact
+        # line on the receipt whose View details opened this window, read while
+        # that request is being handled (after that the origin is gone).
+        from anki_miner.gui.widgets.inline_receipt import InlineReceipt
+
+        origin = InlineReceipt.current_details_origin()
+        self._summary_text = origin.summary_text if origin is not None else ""
+        self._copy_button: QPushButton | None = None
+        if self._summary_text:
+            self._copy_button = self.add_button(self.tr("Copy summary"), "secondary", self._on_copy_summary)
+
         # Add undo button if callback and card IDs are available
         if self._undo_callback and self.processing_result.card_ids:
             self._undo_button = self.add_button(
@@ -164,8 +171,15 @@ class ResultsDialog(EnhancedDialog):
         self._close_button = self.add_close_button(self.tr("Close"))
 
     def _undo_button_text(self, count: int) -> str:
-        """Label the Undo button, in the singular when it deletes one note."""
-        return tr_format(self.tr("Undo (%1 note)") if count == 1 else self.tr("Undo (%1 notes)"), count)
+        """Label the Undo button, in the singular when it deletes one card."""
+        return tr_format(self.tr("Undo (%1 card)") if count == 1 else self.tr("Undo (%1 cards)"), count)
+
+    def _on_copy_summary(self) -> None:
+        """Put the receipt's summary line on the clipboard, verbatim (D4)."""
+        clipboard = QApplication.clipboard()
+        if clipboard is None:
+            return
+        clipboard.setText(self._summary_text)
 
     def _on_undo_clicked(self) -> None:
         """Confirm, then run the card delete OFF the GUI thread.
@@ -183,7 +197,12 @@ class ResultsDialog(EnhancedDialog):
             self,
             self.tr("Confirm Undo"),
             tr_format(
-                self.tr("Delete %1 notes from Anki? This cannot be undone; those words become mineable again."), count
+                (
+                    self.tr("Delete %1 card from Anki? This cannot be undone; the word becomes mineable again.")
+                    if count == 1
+                    else self.tr("Delete %1 cards from Anki? This cannot be undone; those words become mineable again.")
+                ),
+                count,
             ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
@@ -212,7 +231,7 @@ class ResultsDialog(EnhancedDialog):
         self._close_button.setEnabled(True)
         self._undo_button.setText(
             tr_format(
-                self.tr("Undone (%1 note deleted)") if deleted == 1 else self.tr("Undone (%1 notes deleted)"),
+                self.tr("Undone (%1 card deleted)") if deleted == 1 else self.tr("Undone (%1 cards deleted)"),
                 deleted,
             )
         )
@@ -233,7 +252,7 @@ class ResultsDialog(EnhancedDialog):
         box = QMessageBox(self)
         box.setIcon(QMessageBox.Icon.Critical)
         box.setWindowTitle(self.tr("Undo Failed"))
-        box.setText(self.tr("Failed to delete notes. Check that Anki is running."))
+        box.setText(self.tr("Failed to delete cards. Check that Anki is running."))
         box.setDetailedText(message)
         box.exec()
 
