@@ -75,6 +75,7 @@ class Screen:
     settings_changed: str
     worker_failed_log: str
     fetch_failed_log: str
+    worker_failed: str
     #: Whether Apply stays live when the scan's warnings are not on screen.
     #: Card Backfill refuses to apply past a warning the user cannot see.
     applies_past_unseen_warnings: bool
@@ -93,6 +94,7 @@ SCREENS = {
         settings_changed="Settings changed since this scan; re-scan before applying.",
         worker_failed_log="Card Backfill worker failed:",
         fetch_failed_log="Card Backfill deck fetch degraded:",
+        worker_failed="Card Backfill could not finish.",
         applies_past_unseen_warnings=False,
     ),
     "deckfilter": Screen(
@@ -107,6 +109,7 @@ SCREENS = {
         settings_changed="Settings changed since this scan; re-scan before copying.",
         worker_failed_log="Deck Filter worker failed:",
         fetch_failed_log="Deck Filter deck fetch failed:",
+        worker_failed="Deck Filter could not finish.",
         applies_past_unseen_warnings=True,
     ),
 }
@@ -126,6 +129,11 @@ def tab(qtbot, test_config, screen):
 
 def _combo(tab, screen: Screen) -> QComboBox:
     return getattr(tab, screen.deck_combo)
+
+
+def _issue(tab):
+    banner = tab.issue_banner()
+    return banner.current_issue() if banner is not None else None
 
 
 def _running() -> MagicMock:
@@ -269,6 +277,16 @@ class TestCancel:
 
         assert tab.status_label.text() == "Cancelled. 1 done."
 
+    def test_cancel_shows_only_while_a_run_is_going(self, tab):
+        """E07: a disabled Cancel at idle is still a button to read."""
+        assert tab.cancel_button.isHidden()
+
+        tab._set_running(True)
+        assert not tab.cancel_button.isHidden()
+
+        tab._set_running(False)
+        assert tab.cancel_button.isHidden()
+
 
 class TestStalePlan:
     def test_a_plan_from_older_settings_is_dropped_without_a_modal(self, tab, test_config, screen):
@@ -312,18 +330,18 @@ class TestDeckList:
             assert load.call_count == 1
 
             tab._on_decks_fetched([])
-            assert tab.status_label.text()
+            assert _issue(tab) is not None
 
             tab.ensure_decks()
             assert load.call_count == 2
 
     def test_a_real_deck_list_stops_the_asking_and_clears_the_line(self, tab, screen):
         tab._on_decks_fetched([])
-        assert tab.status_label.text()
+        assert _issue(tab) is not None
 
         tab._on_decks_fetched(["Default", "Premade"])
 
-        assert tab.status_label.text() == ""
+        assert _issue(tab) is None
         assert _combo(tab, screen).count() == 3  # the fixed first item + two decks
         with patch.object(tab, "_load_decks") as load:
             tab.ensure_decks()
@@ -340,7 +358,7 @@ class TestDeckList:
     def test_a_failed_fetch_says_what_the_screen_falls_back_to(self, tab, screen):
         tab._on_decks_fetched([])
 
-        assert tab.status_label.text() == screen.fetch_failed
+        assert _issue(tab).summary == screen.fetch_failed
         assert _combo(tab, screen).count() == 1
 
     def test_the_fetch_error_is_logged_under_the_screens_own_module(self, tab, screen, caplog):
@@ -349,11 +367,22 @@ class TestDeckList:
 
         record = next(r for r in caplog.records if r.getMessage().startswith(screen.fetch_failed_log))
         assert record.name == screen.module
-        assert tab.status_label.text() == screen.fetch_failed
+        assert _issue(tab).summary == screen.fetch_failed
+
+    def test_a_later_success_clears_only_the_fetch_banner(self, tab):
+        """A validation banner shown after the failed fetch is not the fetch's to clear."""
+        from anki_miner.gui.widgets.base import ScreenIssue
+
+        tab._on_decks_fetched([])
+        tab.show_screen_issue(ScreenIssue(summary="Something else."))
+
+        tab._on_decks_fetched(["Default"])
+
+        assert _issue(tab).summary == "Something else."
 
 
 class TestWorkerError:
-    def test_the_message_lands_on_the_status_line_and_logs_under_the_screen(self, tab, screen, caplog):
+    def test_the_failure_is_a_banner_and_logs_under_the_screen(self, tab, screen, caplog):
         tab._set_running(True)
 
         with caplog.at_level(logging.WARNING, logger=screen.module):
@@ -361,7 +390,9 @@ class TestWorkerError:
 
         record = next(r for r in caplog.records if r.getMessage().startswith(screen.worker_failed_log))
         assert record.name == screen.module
-        assert tab.status_label.text() == "Scan failed: boom"
+        issue = _issue(tab)
+        assert issue.summary == screen.worker_failed
+        assert issue.details == "Scan failed: boom"
         assert tab._run_failed is True
         assert tab.scan_button.isEnabled()
 

@@ -2034,8 +2034,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Phụ đề ngôn ngữ thứ hai</translation>
     </message>
     <message>
-        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Sentences.</source>
-        <translation>Tải thêm một tệp phụ đề bằng ngôn ngữ của bạn bên cạnh tệp phụ đề ngôn ngữ khai thác: phụ đề này hiển thị dưới dòng trong bản xem trước Word Curator và có thể được lưu vào trường Bản dịch. Ở Video -&gt; Hàng loạt, thay vào đó hãy trỏ nó tới một thư mục phụ đề bản dịch; chúng sẽ được ghép với video theo số tập. Bật tính năng này trong Cài đặt -&gt; Câu.</translation>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
+        <translation>Tải thêm một tệp phụ đề bằng ngôn ngữ của bạn bên cạnh tệp phụ đề ngôn ngữ khai thác: phụ đề này hiển thị dưới dòng trong bản xem trước Word Curator và có thể được lưu vào trường Bản dịch. Ở Video → Hàng loạt, thay vào đó hãy trỏ nó tới một thư mục phụ đề bản dịch; chúng sẽ được ghép với video theo số tập. Bật tính năng này trong Cài đặt → Câu.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2338,8 +2338,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Chữ giản thể hoặc phồn thể</translation>
     </message>
     <message>
-        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
-        <translation>Bộ ký tự chọn cách viết mà mặt trước thẻ và việc tra cứu từ điển dùng: Giản thể, Phồn thể, hoặc Như nguyên văn để giữ cách viết gốc của từng từ. Trường Phồn thể, trong Cài đặt -&gt; Thẻ &amp; Anki, chứa cách viết còn lại khi nó khác với mặt trước.</translation>
+        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings → Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
+        <translation>Bộ ký tự chọn cách viết mà mặt trước thẻ và việc tra cứu từ điển dùng: Giản thể, Phồn thể, hoặc Như nguyên văn để giữ cách viết gốc của từng từ. Trường Phồn thể, trong Cài đặt → Thẻ &amp; Anki, chứa cách viết còn lại khi nó khác với mặt trước.</translation>
     </message>
     <message>
         <source>Use &amp; order multiple dictionaries</source>
@@ -2538,16 +2538,16 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Cách đọc pinyin và màu thanh điệu</translation>
     </message>
     <message>
-        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Cards &amp; Anki.</source>
-        <translation>Đưa pinyin của từ lên thẻ, mỗi âm tiết mang màu của thanh điệu — tùy chọn tô màu là Tô màu cách đọc theo thanh điệu, trong Cài đặt -&gt; Thẻ &amp; Anki.</translation>
+        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings → Cards &amp; Anki.</source>
+        <translation>Đưa pinyin của từ lên thẻ, mỗi âm tiết mang màu của thanh điệu — tùy chọn tô màu là Tô màu cách đọc theo thanh điệu, trong Cài đặt → Thẻ &amp; Anki.</translation>
     </message>
     <message>
         <source>Colour the reading by tone</source>
         <translation>Tô màu cách đọc theo thanh điệu</translation>
     </message>
     <message>
-        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Cards &amp; Anki.</source>
-        <translation>Tô màu từng âm tiết của cách đọc pinyin hoặc jyutping theo thanh điệu, trong Cài đặt -&gt; Thẻ &amp; Anki.</translation>
+        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings → Cards &amp; Anki.</source>
+        <translation>Tô màu từng âm tiết của cách đọc pinyin hoặc jyutping theo thanh điệu, trong Cài đặt → Thẻ &amp; Anki.</translation>
     </message>
     <message>
         <source>Measure word field</source>
@@ -2626,8 +2626,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Chọn công cụ trên tab Tiện ích</translation>
     </message>
     <message>
-        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
-        <translation>Ẩn các công cụ Tiện ích không dùng đến, hoặc hiện lại chúng, trong Cài đặt -&gt; Chung. Công cụ bị ẩn vẫn giữ mục của nó ở đây; nút Mở của nó dẫn tới ô đánh dấu đó.</translation>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings → General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation>Ẩn các công cụ Tiện ích không dùng đến, hoặc hiện lại chúng, trong Cài đặt → Chung. Công cụ bị ẩn vẫn giữ mục của nó ở đây; nút Mở của nó dẫn tới ô đánh dấu đó.</translation>
     </message>
     <message>
         <source>Search the settings</source>
@@ -2650,8 +2650,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Kiểm tra cập nhật ứng dụng</translation>
     </message>
     <message>
-        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings -&gt; General.</source>
-        <translation>Kiểm tra phiên bản Anki Miner mới từ menu Trợ giúp, hoặc bật/tắt việc tự động kiểm tra khi khởi động trong Cài đặt -&gt; Chung.</translation>
+        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings → General.</source>
+        <translation>Kiểm tra phiên bản Anki Miner mới từ menu Trợ giúp, hoặc bật/tắt việc tự động kiểm tra khi khởi động trong Cài đặt → Chung.</translation>
     </message>
     <message>
         <source>Download videos or audio</source>
@@ -2666,24 +2666,24 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Tạo tệp .mokuro từ ảnh manga</translation>
     </message>
     <message>
-        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from its setup card on Utilities -&gt; Manga OCR.</source>
-        <translation>Chạy OCR tiếng Nhật của mokuro trên thư mục của một tập hoặc cả một bộ truyện để Đọc -&gt; Manga có thể khai thác. Cài đặt mokuro từ mục thiết lập của nó trong Tiện ích -&gt; Manga OCR.</translation>
+        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
+        <translation>Chạy OCR tiếng Nhật của mokuro trên thư mục của một tập hoặc cả một bộ truyện để Đọc → Manga có thể khai thác. Cài đặt mokuro từ mục thiết lập của nó trong Tiện ích → Manga OCR.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
         <translation>Đồng bộ sách nói với EPUB của nó</translation>
     </message>
     <message>
-        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitle Files or a reader can use.</source>
-        <translation>Phiên âm sách nói rồi khớp thời gian các câu của sách với bản ghi, tạo tệp .srt mà tab Sách nói, Đọc -&gt; Tệp phụ đề, hoặc một trình đọc khác có thể dùng.</translation>
+        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use.</source>
+        <translation>Phiên âm sách nói rồi khớp thời gian các câu của sách với bản ghi, tạo tệp .srt mà tab Sách nói, Đọc → Tệp phụ đề, hoặc một trình đọc khác có thể dùng.</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
         <translation>Định dạng lại thẻ đã khai thác</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities -&gt; Card Backfill.</source>
-        <translation>Áp dụng lại kiểu định dạng Anki Miner mới nhất cho các thẻ đã khai thác trước đây — Tiện ích -&gt; Điền dữ liệu còn thiếu cho thẻ.</translation>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
+        <translation>Áp dụng lại kiểu định dạng Anki Miner mới nhất cho các thẻ đã khai thác trước đây — Tiện ích → Điền dữ liệu còn thiếu cho thẻ.</translation>
     </message>
     <message>
         <source>System health check</source>

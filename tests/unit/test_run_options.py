@@ -18,7 +18,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.run_options import RunOptionsMixin
 from anki_miner.gui.widgets.condense_tab import CondenseTab
-from anki_miner.gui.widgets.download_tab import DownloadTab
+from anki_miner.gui.widgets.download_tab import CUSTOM_FORMAT_ITEM, DownloadTab
 from anki_miner.gui.widgets.mokuro_tab import MokuroTab
 
 
@@ -100,7 +100,7 @@ def test_a_screen_whose_config_moved_underneath_still_compares_against_it(screen
 
 def _edit_condense(tab, tmp_path: Path) -> None:
     tab.padding_spinbox.setValue(750)
-    tab.offset_spinbox.setValue(-200)
+    tab.offset_spinbox.setValue(-0.2)
     tab.format_combo.setCurrentIndex(tab.format_combo.findData("flac"))
     tab.write_subs_checkbox.setChecked(True)
     tab.tag_outputs_checkbox.setChecked(True)
@@ -120,6 +120,7 @@ def _read_condense(tab) -> tuple:
 
 def _edit_download(tab, tmp_path: Path) -> None:
     tab.preset_combo.setCurrentIndex(tab.preset_combo.findData("720p"))
+    tab.preset_combo.setCurrentIndex(tab.preset_combo.findData(CUSTOM_FORMAT_ITEM))
     tab.custom_format_edit.setText("bv*+ba")
     tab.custom_format_edit.editingFinished.emit()
     tab.write_subs_checkbox.setChecked(True)
@@ -143,12 +144,10 @@ def _read_download(tab) -> tuple:
 
 def _edit_mokuro(tab, tmp_path: Path) -> None:
     tab.gpu_checkbox.setChecked(False)
-    tab.mokuro_selector.set_path(str(tmp_path / "bin" / "mokuro"))
-    tab.flush_pending_edits()  # commit the debounced path edit now
 
 
 def _read_mokuro(tab) -> tuple:
-    return (tab.gpu_checkbox.isChecked(), tab.mokuro_selector.path_or_none())
+    return (tab.gpu_checkbox.isChecked(),)
 
 
 #: name -> (tab class, edit, read, the exact JSON keys/values a saved file carries)
@@ -184,7 +183,7 @@ _TOOL_TAB_CASES = {
         MokuroTab,
         _edit_mokuro,
         _read_mokuro,
-        lambda tmp: {"mokuro_use_gpu": False, "mokuro_location": str(tmp / "bin" / "mokuro")},
+        lambda tmp: {"mokuro_use_gpu": False},
     ),
 }
 

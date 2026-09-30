@@ -2038,8 +2038,8 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Subtítulos secundarios</translation>
     </message>
     <message>
-        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Sentences.</source>
-        <translation>Cargue un segundo archivo de subtítulos en su propio idioma junto al del idioma de minería: se muestra bajo la línea en la vista previa del Curador de palabras y puede guardarse en un campo de traducción. En Video -&gt; Lote, indique en su lugar una carpeta de subtítulos de traducción, que se emparejan con los videos por número de episodio. Actívelo en Ajustes -&gt; Frases.</translation>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
+        <translation>Cargue un segundo archivo de subtítulos en su propio idioma junto al del idioma de minería: se muestra bajo la línea en la vista previa del Curador de palabras y puede guardarse en un campo de traducción. En Video → Lote, indique en su lugar una carpeta de subtítulos de traducción, que se emparejan con los videos por número de episodio. Actívelo en Ajustes → Frases.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2342,8 +2342,8 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Caracteres simplificados o tradicionales</translation>
     </message>
     <message>
-        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
-        <translation>El Conjunto de caracteres elige la grafía que usan el anverso de la tarjeta y la búsqueda en el diccionario: Simplificado, Tradicional o Tal como aparece para conservar la grafía de origen de cada palabra. El Campo de caracteres tradicionales, en Ajustes -&gt; Tarjetas y Anki, contiene la otra grafía cuando difiere de la del anverso.</translation>
+        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings → Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
+        <translation>El Conjunto de caracteres elige la grafía que usan el anverso de la tarjeta y la búsqueda en el diccionario: Simplificado, Tradicional o Tal como aparece para conservar la grafía de origen de cada palabra. El Campo de caracteres tradicionales, en Ajustes → Tarjetas y Anki, contiene la otra grafía cuando difiere de la del anverso.</translation>
     </message>
     <message>
         <source>Use &amp; order multiple dictionaries</source>
@@ -2542,16 +2542,16 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Lecturas en pinyin y colores de tono</translation>
     </message>
     <message>
-        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Cards &amp; Anki.</source>
-        <translation>Ponga el pinyin de la palabra en sus tarjetas, con cada sílaba del color de su tono — la coloración es la opción Colorear la lectura por tono, en Ajustes -&gt; Tarjetas y Anki.</translation>
+        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings → Cards &amp; Anki.</source>
+        <translation>Ponga el pinyin de la palabra en sus tarjetas, con cada sílaba del color de su tono — la coloración es la opción Colorear la lectura por tono, en Ajustes → Tarjetas y Anki.</translation>
     </message>
     <message>
         <source>Colour the reading by tone</source>
         <translation>Colorear la lectura por tono</translation>
     </message>
     <message>
-        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Cards &amp; Anki.</source>
-        <translation>Coloree cada sílaba de la lectura en pinyin o jyutping según su tono, en Ajustes -&gt; Tarjetas y Anki.</translation>
+        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings → Cards &amp; Anki.</source>
+        <translation>Coloree cada sílaba de la lectura en pinyin o jyutping según su tono, en Ajustes → Tarjetas y Anki.</translation>
     </message>
     <message>
         <source>Measure word field</source>
@@ -2630,8 +2630,8 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Elegir las herramientas de la pestaña Utilidades</translation>
     </message>
     <message>
-        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
-        <translation>Oculte las herramientas de Utilidades que no use, o vuelva a mostrarlas, en Ajustes -&gt; General. Una herramienta oculta conserva aquí su entrada; su botón Abrir lleva a esa casilla.</translation>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings → General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation>Oculte las herramientas de Utilidades que no use, o vuelva a mostrarlas, en Ajustes → General. Una herramienta oculta conserva aquí su entrada; su botón Abrir lleva a esa casilla.</translation>
     </message>
     <message>
         <source>Search the settings</source>
@@ -2654,8 +2654,8 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Buscar actualizaciones de la aplicación</translation>
     </message>
     <message>
-        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings -&gt; General.</source>
-        <translation>Busque una nueva versión de Anki Miner desde el menú Ayuda, o active o desactive la comprobación automática al iniciar en Ajustes -&gt; General.</translation>
+        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings → General.</source>
+        <translation>Busque una nueva versión de Anki Miner desde el menú Ayuda, o active o desactive la comprobación automática al iniciar en Ajustes → General.</translation>
     </message>
     <message>
         <source>Download videos or audio</source>
@@ -2670,24 +2670,24 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Crear archivos .mokuro a partir de imágenes de manga</translation>
     </message>
     <message>
-        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from its setup card on Utilities -&gt; Manga OCR.</source>
-        <translation>Ejecute el OCR japonés de mokuro sobre la carpeta de un volumen o una serie entera para poder minarla en Lectura -&gt; Manga. Instale mokuro desde su panel de configuración en Utilidades -&gt; OCR de manga.</translation>
+        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
+        <translation>Ejecute el OCR japonés de mokuro sobre la carpeta de un volumen o una serie entera para poder minarla en Lectura → Manga. Instale mokuro desde su panel de configuración en Utilidades → OCR de manga.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
         <translation>Sincronizar un audiolibro con su EPUB</translation>
     </message>
     <message>
-        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitle Files or a reader can use.</source>
-        <translation>Transcribe un audiolibro y sincroniza las oraciones del propio libro con él, escribiendo un .srt que la pestaña Audiolibros, Lectura -&gt; Archivos de subtítulos o un lector de libros electrónicos puedan usar.</translation>
+        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use.</source>
+        <translation>Transcribe un audiolibro y sincroniza las oraciones del propio libro con él, escribiendo un .srt que la pestaña Audiolibros, Lectura → Archivos de subtítulos o un lector de libros electrónicos puedan usar.</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
         <translation>Reestilizar tarjetas minadas</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities -&gt; Card Backfill.</source>
-        <translation>Vuelva a aplicar el estilo más reciente de Anki Miner a las tarjetas que minó antes — Utilidades -&gt; Completar tarjetas.</translation>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
+        <translation>Vuelva a aplicar el estilo más reciente de Anki Miner a las tarjetas que minó antes — Utilidades → Completar tarjetas.</translation>
     </message>
     <message>
         <source>System health check</source>

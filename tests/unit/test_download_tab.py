@@ -26,7 +26,7 @@ from PyQt6.QtWidgets import QDialog
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.base.ytdlp_availability import YTDLP_DOWNLOAD_ACTION
-from anki_miner.gui.widgets.download_tab import DownloadTab
+from anki_miner.gui.widgets.download_tab import CUSTOM_FORMAT_ITEM, DownloadTab
 from anki_miner.services.media_downloader import (
     PLAYLIST_PROBE_MAX,
     DownloadOptions,
@@ -188,7 +188,7 @@ class TestWorkerConstruction:
     def test_custom_format_overrides_preset_and_audio(self, qtbot, tmp_path: Path) -> None:
         tab = _make_tab(_make_config(tmp_path), qtbot)
         tab.url_input.setPlainText("https://example.com/v")
-        tab.preset_combo.setCurrentIndex(tab.preset_combo.findData("audio_mp3"))
+        tab.preset_combo.setCurrentIndex(tab.preset_combo.findData(CUSTOM_FORMAT_ITEM))
         tab.custom_format_edit.setText("bestvideo[height<=480]+bestaudio")
         worker_cls = _start_download(tab, _FakeWorker())
         options = worker_cls.call_args.kwargs["options"]
@@ -198,7 +198,7 @@ class TestWorkerConstruction:
     def test_quality_presets_offered_in_descending_order(self, qtbot, tmp_path: Path) -> None:
         tab = _make_tab(_make_config(tmp_path), qtbot)
         keys = [tab.preset_combo.itemData(i) for i in range(tab.preset_combo.count())]
-        assert keys == ["best", "1440p", "1080p", "720p", "audio_mp3", "audio_m4a", "subtitles"]
+        assert keys == ["best", "1440p", "1080p", "720p", "audio_mp3", "audio_m4a", "subtitles", CUSTOM_FORMAT_ITEM]
 
     def test_1440p_preset_maps_to_height_capped_selector(self, qtbot, tmp_path: Path) -> None:
         tab = _make_tab(_make_config(tmp_path), qtbot)
@@ -748,7 +748,7 @@ class TestSubtitlesOnlyPreset:
         tab.preset_combo.setCurrentIndex(tab.preset_combo.findData("subtitles"))
         assert tab.write_subs_checkbox.isChecked() is True
         assert not tab.write_subs_checkbox.isEnabled()
-        assert not tab.custom_format_edit.isEnabled()
+        assert tab.custom_format_row.isHidden()
         assert not tab.audio_lang_combo.isEnabled()
         assert not tab.embed_thumbnail_checkbox.isEnabled()
         assert not tab.embed_metadata_checkbox.isEnabled()
@@ -756,32 +756,28 @@ class TestSubtitlesOnlyPreset:
         # subtitles to fetch.
         assert tab.sub_langs_button.isEnabled()
 
-    def test_switching_to_subtitles_only_and_back_leaves_custom_format_intact(self, qtbot, tmp_path: Path) -> None:
-        """The field is disabled, never cleared — clearing it would silently
-        discard a saved yt-dlp format string the moment the user glances at
-        this preset (a data-loss regression an earlier draft of this feature
-        had)."""
+    def test_a_glance_at_another_preset_keeps_the_custom_string_for_the_session(self, qtbot, tmp_path: Path) -> None:
+        """Choosing a preset stops raw mode, but a glance must not lose the typed
+        string: choosing Custom format… again brings it back."""
         tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab.preset_combo.setCurrentIndex(tab.preset_combo.findData(CUSTOM_FORMAT_ITEM))
         tab.custom_format_edit.setText("bestvideo[height<=480]+bestaudio")
         tab.custom_format_edit.editingFinished.emit()
         assert tab.config.downloader_custom_format == "bestvideo[height<=480]+bestaudio"
 
         tab.preset_combo.setCurrentIndex(tab.preset_combo.findData("subtitles"))
-        assert tab.custom_format_edit.text() == "bestvideo[height<=480]+bestaudio"
-        assert not tab.custom_format_edit.isEnabled()
-        assert tab.config.downloader_custom_format == "bestvideo[height<=480]+bestaudio"
+        assert tab.custom_format_row.isHidden()
+        assert tab.config.downloader_custom_format == ""
 
-        tab.preset_combo.setCurrentIndex(tab.preset_combo.findData("best"))
+        tab.preset_combo.setCurrentIndex(tab.preset_combo.findData(CUSTOM_FORMAT_ITEM))
+        assert not tab.custom_format_row.isHidden()
         assert tab.custom_format_edit.text() == "bestvideo[height<=480]+bestaudio"
-        assert tab.custom_format_edit.isEnabled()
         assert tab.config.downloader_custom_format == "bestvideo[height<=480]+bestaudio"
 
     def test_subtitles_only_run_ignores_leftover_custom_format_text(self, qtbot, tmp_path: Path) -> None:
-        """'Subtitles only' wins over a leftover custom string outright — the
-        run never sends the custom selector, even though the field still
-        displays it (disabled)."""
         tab = _make_tab(_make_config(tmp_path), qtbot)
         tab.url_input.setPlainText("https://example.com/v")
+        tab.preset_combo.setCurrentIndex(tab.preset_combo.findData(CUSTOM_FORMAT_ITEM))
         tab.custom_format_edit.setText("bestvideo[height<=480]+bestaudio")
         tab.preset_combo.setCurrentIndex(tab.preset_combo.findData("subtitles"))
         worker_cls = _start_download(tab, _FakeWorker())
@@ -798,7 +794,7 @@ class TestSubtitlesOnlyPreset:
         tab.preset_combo.setCurrentIndex(tab.preset_combo.findData("best"))
         assert tab.write_subs_checkbox.isChecked() is False
         assert tab.write_subs_checkbox.isEnabled()
-        assert tab.custom_format_edit.isEnabled()
+        assert tab.custom_format_row.isHidden()
         assert tab.audio_lang_combo.isEnabled()
         assert tab.embed_thumbnail_checkbox.isEnabled()
         assert tab.embed_metadata_checkbox.isEnabled()
@@ -827,5 +823,73 @@ class TestSubtitlesOnlyPreset:
         assert tab.preset_combo.currentData() == "subtitles"
         assert tab.write_subs_checkbox.isChecked() is True
         assert not tab.write_subs_checkbox.isEnabled()
-        assert not tab.custom_format_edit.isEnabled()
+        assert tab.custom_format_row.isHidden()
         assert not tab.embed_thumbnail_checkbox.isEnabled()
+
+
+class TestCustomFormatItem:
+    """E08: the raw format is the last Quality item, shown only when chosen."""
+
+    def test_the_custom_row_is_hidden_until_chosen(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        assert tab.custom_format_row.isHidden()
+
+        tab.preset_combo.setCurrentIndex(tab.preset_combo.findData(CUSTOM_FORMAT_ITEM))
+
+        assert not tab.custom_format_row.isHidden()
+
+    def test_a_stored_custom_format_selects_the_item_on_load(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(
+            _make_config(tmp_path, downloader_format_preset="720p", downloader_custom_format="bv+ba"), qtbot
+        )
+
+        assert tab.preset_combo.currentData() == CUSTOM_FORMAT_ITEM
+        assert tab.custom_format_edit.text() == "bv+ba"
+
+    def test_choosing_custom_keeps_the_stored_preset(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path, downloader_format_preset="720p"), qtbot)
+        received: list[AnkiMinerConfig] = []
+        tab.run_options_changed.connect(received.append)
+
+        tab.preset_combo.setCurrentIndex(tab.preset_combo.findData(CUSTOM_FORMAT_ITEM))
+        tab.custom_format_edit.setText("bv+ba")
+        tab.custom_format_edit.editingFinished.emit()
+
+        assert received[-1].downloader_format_preset == "720p"
+        assert received[-1].downloader_custom_format == "bv+ba"
+
+    def test_custom_with_nothing_typed_falls_back_to_the_stored_preset(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path, downloader_format_preset="720p"), qtbot)
+        tab.preset_combo.setCurrentIndex(tab.preset_combo.findData(CUSTOM_FORMAT_ITEM))
+
+        assert tab._build_options().format_selector == "bestvideo[height<=720]+bestaudio/best[height<=720]"
+
+    def test_a_stored_subtitles_only_preset_wins_over_a_leftover_custom_format(self, qtbot, tmp_path: Path) -> None:
+        # Older builds persisted the custom string under every preset.
+        tab = _make_tab(
+            _make_config(tmp_path, downloader_format_preset="subtitles", downloader_custom_format="bv+ba"), qtbot
+        )
+
+        assert tab.preset_combo.currentData() == "subtitles"
+        options = tab._build_options()
+        assert options.subtitles_only is True
+        assert options.format_selector == ""
+
+    def test_custom_with_nothing_typed_falls_back_to_a_stored_subtitles_only(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path, downloader_format_preset="subtitles"), qtbot)
+        tab.preset_combo.setCurrentIndex(tab.preset_combo.findData(CUSTOM_FORMAT_ITEM))
+
+        options = tab._build_options()
+        assert options.subtitles_only is True
+        assert options.extract_audio_format is None
+
+    def test_the_old_override_hint_is_gone(self, qtbot, tmp_path: Path) -> None:
+        from PyQt6.QtWidgets import QLabel
+
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+
+        assert not [
+            label
+            for label in tab.findChildren(QLabel)
+            if label.text() == "When set, the quality preset above is ignored."
+        ]

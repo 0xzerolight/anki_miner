@@ -137,8 +137,8 @@ class TestSettingsTab:
         assert tab.current_subtab_key() == "ui"
 
 
-def test_reset_to_defaults_shows_every_tool_again(test_config, qtbot, monkeypatch):
-    """Not in _RESET_PRESERVE_UI: Reset keeps resources and the theme, as its prompt says."""
+def test_reset_to_defaults_restores_the_new_install_tool_set(test_config, qtbot, monkeypatch):
+    """Not in _RESET_PRESERVE_UI: Reset returns the Utilities tab to the new-install set (D18)."""
     tab = SettingsTab(replace(test_config, hidden_utilities=("retime",)))
     qtbot.addWidget(tab)
     monkeypatch.setattr(
@@ -150,5 +150,5 @@ def test_reset_to_defaults_shows_every_tool_again(test_config, qtbot, monkeypatc
 
     tab._on_reset_to_defaults_clicked()
 
-    assert received[-1].hidden_utilities == ()
+    assert received[-1].hidden_utilities == ("deckfilter", "download")
     assert tab.ui_panel.utility_checkboxes["retime"].isChecked()

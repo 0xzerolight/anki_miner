@@ -12,25 +12,17 @@ Three tiers, in the order a user reaches for them:
   detected tracks.
 * **Common languages** — the curated fallback, so the picker is useful before
   any URL is pasted.
-* **Advanced** — a raw ``--sub-langs`` expression. yt-dlp accepts regexes
-  (``en.*``), exclusions (``-live_chat``) and ``all``; none of those can be a
-  checkbox, so a non-empty Advanced field wins outright and visibly disables the
-  list rather than pretending the two can be merged.
+* **An expression, typed in the search box** — yt-dlp accepts regexes
+  (``en.*``), exclusions (``-live_chat``), comma lists and ``all``; none of those
+  can be a checkbox. Search text shaped like one (see :func:`is_expression`) is
+  taken as the raw ``--sub-langs`` value: the list is disabled and a one-line
+  hint says so. The separate Advanced field is gone (D19).
 """
 
 from __future__ import annotations
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (
-    QDialog,
-    QDialogButtonBox,
-    QLabel,
-    QLineEdit,
-    QListWidget,
-    QListWidgetItem,
-    QVBoxLayout,
-    QWidget,
-)
+from PyQt6.QtWidgets import QLabel, QLineEdit, QListWidget, QListWidgetItem, QWidget
 
 from anki_miner.gui.utils.language_names import (
     COMMON_SUBTITLE_LANGS,
@@ -38,16 +30,26 @@ from anki_miner.gui.utils.language_names import (
     language_display_name,
     parse_lang_list,
 )
-from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
+from anki_miner.gui.widgets.base import EnhancedDialog
 from anki_miner.services.media_downloader import UrlTracks
 
 
-class LanguagePickerDialog(QDialog):
+def is_expression(text: str) -> bool:
+    """Whether search text is a raw yt-dlp ``--sub-langs`` expression (D19).
+
+    ``all``, a pattern (``*``), an exclusion (leading ``-``) or a comma list is
+    something the checkboxes cannot hold; a plain word is a search.
+    """
+    value = text.strip()
+    return bool(value) and (value.lower() == "all" or "*" in value or "," in value or value.startswith("-"))
+
+
+class LanguagePickerDialog(EnhancedDialog):
     """Pick subtitle languages by name, returning a ``--sub-langs`` string.
 
     Args:
         selection: The current ``--sub-langs`` value. A plain comma list ticks
-            its codes; anything yt-dlp-shaped seeds the Advanced field instead.
+            its codes; anything yt-dlp-shaped seeds the search box instead.
         detected: Tracks from a probe of the user's URL, or None.
         parent: Optional parent widget.
     """
@@ -61,6 +63,7 @@ class LanguagePickerDialog(QDialog):
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle(self.tr("Subtitle Languages"))
+        self.set_header("", self.tr("Subtitle Languages"), self.tr("Tick the languages to download subtitles in."))
         self.setMinimumSize(460, 480)
 
         seeded = parse_lang_list(selection)
@@ -68,17 +71,20 @@ class LanguagePickerDialog(QDialog):
         expression = "" if seeded is not None else selection.strip()
         checked = set(seeded or ())
 
-        layout = QVBoxLayout(self)
-
         self.search_edit = QLineEdit()
         self.search_edit.setPlaceholderText(self.tr("Search languages…"))
         self.search_edit.setClearButtonEnabled(True)
-        self.search_edit.textChanged.connect(self._apply_search)
-        layout.addWidget(self.search_edit)
+        self.add_content(self.search_edit)
+
+        self.expression_hint = QLabel(self.tr("Using this as a yt-dlp language expression; the list is ignored."))
+        self.expression_hint.setObjectName("helper-text")
+        self.expression_hint.setWordWrap(True)
+        self.expression_hint.hide()
+        self.add_content(self.expression_hint)
 
         self.lang_list = QListWidget()
         self.lang_list.itemChanged.connect(self._refresh_ok_state)
-        layout.addWidget(self.lang_list, 1)
+        self.add_content(self.lang_list, 1)
         self._populate(detected, checked)
 
         self.translations_note = QLabel(
@@ -87,28 +93,15 @@ class LanguagePickerDialog(QDialog):
         self.translations_note.setObjectName("helper-text")
         self.translations_note.setWordWrap(True)
         self.translations_note.setHidden(not (detected is not None and detected.has_auto_translations))
-        layout.addWidget(self.translations_note)
+        self.add_content(self.translations_note)
 
-        advanced_label = QLabel(self.tr("Advanced (raw yt-dlp language expression):"))
-        advanced_label.setObjectName("helper-text")
-        layout.addWidget(advanced_label)
+        # E12: the standard footer, OK last.
+        self.cancel_button = self.add_button(self.tr("Cancel"), "secondary", self.reject)
+        self.ok_button = self.add_button(self.tr("OK"), "primary", self.accept)
 
-        self.advanced_edit = QLineEdit(expression)
-        self.advanced_edit.setPlaceholderText(self.tr("e.g. en.*,-live_chat"))
-        self.advanced_edit.textChanged.connect(self._on_advanced_changed)
-        layout.addWidget(self.advanced_edit)
-
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-        layout.addWidget(buttons)
-        ok_button = buttons.button(QDialogButtonBox.StandardButton.Ok)
-        assert ok_button is not None
-        self.ok_button = ok_button
-
-        self._on_advanced_changed(self.advanced_edit.text())
-
-        add_min_max_buttons(self)
+        self.search_edit.textChanged.connect(self._apply_search)
+        self.search_edit.setText(expression)
+        self._apply_search(self.search_edit.text())
 
     # ------------------------------------------------------------------
     # Construction helpers
@@ -167,8 +160,11 @@ class LanguagePickerDialog(QDialog):
     # ------------------------------------------------------------------
 
     def _apply_search(self, text: str) -> None:
-        """Hide rows not matching *text*, and any header left with no rows."""
-        needle = text.strip().lower()
+        """Filter by *text*, or take it as a raw expression when it is one (D19)."""
+        expression = is_expression(text)
+        self.lang_list.setEnabled(not expression)
+        self.expression_hint.setVisible(expression)
+        needle = "" if expression else text.strip().lower()
         header: QListWidgetItem | None = None
         header_has_match = False
         for row in range(self.lang_list.count()):
@@ -185,14 +181,13 @@ class LanguagePickerDialog(QDialog):
             header_has_match = header_has_match or match
         if header is not None:
             header.setHidden(not header_has_match)
-
-    def _on_advanced_changed(self, text: str) -> None:
-        """A raw expression takes over: the checkboxes cannot express it."""
-        self.lang_list.setEnabled(not text.strip())
         self._refresh_ok_state()
 
     def _refresh_ok_state(self, *_: object) -> None:
         """OK needs something to send — ``--sub-langs ''`` is not valid."""
+        # itemChanged fires during _populate, before the footer exists.
+        if not hasattr(self, "ok_button"):
+            return
         self.ok_button.setEnabled(bool(self.selected_langs()))
 
     # ------------------------------------------------------------------
@@ -201,9 +196,9 @@ class LanguagePickerDialog(QDialog):
 
     def selected_langs(self) -> str:
         """Return the ``--sub-langs`` value this dialog represents."""
-        advanced = self.advanced_edit.text().strip()
-        if advanced:
-            return advanced
+        text = self.search_edit.text()
+        if is_expression(text):
+            return text.strip()
         return format_lang_list(self._checked_codes())
 
     def _checked_codes(self) -> list[str]:

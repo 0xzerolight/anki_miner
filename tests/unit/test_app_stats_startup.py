@@ -127,7 +127,7 @@ def test_startup_load_failure_shows_unavailable_issue_and_retry_recovers(failure
     assert issue.summary == "Analytics could not be refreshed."
     assert analytics.issue_banner().isVisible()
 
-    analytics.refresh_button.click()
+    analytics.refresh_data(force=True)
     assert analytics.issue_banner().current_issue() is issue
     assert attempts == 1
 

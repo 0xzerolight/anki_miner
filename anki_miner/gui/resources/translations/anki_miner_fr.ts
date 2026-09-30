@@ -1514,7 +1514,7 @@ Aucun fichier d'index n'est supprimé.</translation>
     </message>
     <message>
         <source>Review words before mining</source>
-        <translation>Vérifier les mots avant l'extraction</translation>
+        <translation>Réviser les mots avant l'extraction</translation>
     </message>
     <message>
         <source>Show the word-selection popup for each audio file before creating cards.</source>
@@ -1572,7 +1572,7 @@ Aucun fichier d'index n'est supprimé.</translation>
     </message>
     <message>
         <source>Review words before mining</source>
-        <translation>Vérifier les mots avant l'extraction</translation>
+        <translation>Réviser les mots avant l'extraction</translation>
     </message>
     <message>
         <source>Pick which words get cards, once per series.</source>
@@ -2038,8 +2038,8 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Sous-titres en langue secondaire</translation>
     </message>
     <message>
-        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Sentences.</source>
-        <translation>Chargez un second fichier de sous-titres dans votre propre langue à côté de celui en langue d'extraction : il s'affiche sous la ligne dans l'aperçu du Curateur de mots et peut être enregistré dans un champ Traduction. Sur Vidéo -&gt; Par lot, pointez-le plutôt vers un dossier de sous-titres de traduction, qui seront associés aux vidéos par numéro d'épisode. Activez-le dans Paramètres -&gt; Phrases.</translation>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
+        <translation>Chargez un second fichier de sous-titres dans votre propre langue à côté de celui en langue d'extraction : il s'affiche sous la ligne dans l'aperçu du Curateur de mots et peut être enregistré dans un champ Traduction. Sur Vidéo → Par lot, pointez-le plutôt vers un dossier de sous-titres de traduction, qui seront associés aux vidéos par numéro d'épisode. Activez-le dans Paramètres → Phrases.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2342,8 +2342,8 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Caractères simplifiés ou traditionnels</translation>
     </message>
     <message>
-        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
-        <translation>L'option Jeu de caractères choisit l'orthographe utilisée par le recto de la carte et la recherche dans le dictionnaire : Simplifié, Traditionnel, ou Tel quel pour conserver l'orthographe d'origine de chaque mot. Le champ Caractères traditionnels, dans Paramètres -&gt; Cartes et Anki, porte l'autre orthographe lorsqu'elle diffère de celle du recto.</translation>
+        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings → Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
+        <translation>L'option Jeu de caractères choisit l'orthographe utilisée par le recto de la carte et la recherche dans le dictionnaire : Simplifié, Traditionnel, ou Tel quel pour conserver l'orthographe d'origine de chaque mot. Le champ Caractères traditionnels, dans Paramètres → Cartes et Anki, porte l'autre orthographe lorsqu'elle diffère de celle du recto.</translation>
     </message>
     <message>
         <source>Use &amp; order multiple dictionaries</source>
@@ -2542,16 +2542,16 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Lectures en pinyin et couleurs des tons</translation>
     </message>
     <message>
-        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Cards &amp; Anki.</source>
-        <translation>Placez le pinyin du mot sur vos cartes, chaque syllabe dans la couleur de son ton — la coloration s'active avec Colorer la lecture selon le ton, dans Paramètres -&gt; Cartes et Anki.</translation>
+        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings → Cards &amp; Anki.</source>
+        <translation>Placez le pinyin du mot sur vos cartes, chaque syllabe dans la couleur de son ton — la coloration s'active avec Colorer la lecture selon le ton, dans Paramètres → Cartes et Anki.</translation>
     </message>
     <message>
         <source>Colour the reading by tone</source>
         <translation>Colorer la lecture selon le ton</translation>
     </message>
     <message>
-        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Cards &amp; Anki.</source>
-        <translation>Colorez chaque syllabe de la lecture pinyin ou jyutping selon son ton, dans Paramètres -&gt; Cartes et Anki.</translation>
+        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings → Cards &amp; Anki.</source>
+        <translation>Colorez chaque syllabe de la lecture pinyin ou jyutping selon son ton, dans Paramètres → Cartes et Anki.</translation>
     </message>
     <message>
         <source>Measure word field</source>
@@ -2630,8 +2630,8 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Choisir les outils de l'onglet Utilitaires</translation>
     </message>
     <message>
-        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
-        <translation>Masquez les outils de l'onglet Utilitaires que vous n'utilisez pas, ou faites-les réapparaître, dans Paramètres -&gt; Général. Un outil masqué conserve son entrée ici ; son bouton Ouvrir mène à cette case à cocher.</translation>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings → General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation>Masquez les outils de l'onglet Utilitaires que vous n'utilisez pas, ou faites-les réapparaître, dans Paramètres → Général. Un outil masqué conserve son entrée ici ; son bouton Ouvrir mène à cette case à cocher.</translation>
     </message>
     <message>
         <source>Search the settings</source>
@@ -2654,8 +2654,8 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Vérifier les mises à jour de l'application</translation>
     </message>
     <message>
-        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings -&gt; General.</source>
-        <translation>Vérifiez la présence d'une nouvelle version d'Anki Miner depuis le menu Aide, ou activez ou désactivez la vérification automatique au démarrage dans Paramètres -&gt; Général.</translation>
+        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings → General.</source>
+        <translation>Vérifiez la présence d'une nouvelle version d'Anki Miner depuis le menu Aide, ou activez ou désactivez la vérification automatique au démarrage dans Paramètres → Général.</translation>
     </message>
     <message>
         <source>Download videos or audio</source>
@@ -2670,24 +2670,24 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Créer des fichiers .mokuro à partir d'images de manga</translation>
     </message>
     <message>
-        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from its setup card on Utilities -&gt; Manga OCR.</source>
-        <translation>Exécutez l'OCR japonais de mokuro sur un dossier de volume ou une série entière pour que Lecture -&gt; Manga puisse l'extraire. Installez mokuro depuis sa section de configuration dans Utilitaires -&gt; OCR manga.</translation>
+        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
+        <translation>Exécutez l'OCR japonais de mokuro sur un dossier de volume ou une série entière pour que Lecture → Manga puisse l'extraire. Installez mokuro depuis sa section de configuration dans Utilitaires → OCR manga.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
         <translation>Synchroniser un livre audio avec son EPUB</translation>
     </message>
     <message>
-        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitle Files or a reader can use.</source>
-        <translation>Transcrivez un livre audio et synchronisez les phrases du livre avec lui, en écrivant un fichier .srt que l'onglet Livres audio, Lecture -&gt; Fichiers de sous-titres ou une application de lecture peuvent utiliser.</translation>
+        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use.</source>
+        <translation>Transcrivez un livre audio et synchronisez les phrases du livre avec lui, en écrivant un fichier .srt que l'onglet Livres audio, Lecture → Fichiers de sous-titres ou une application de lecture peuvent utiliser.</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
         <translation>Réappliquer le style aux cartes extraites</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities -&gt; Card Backfill.</source>
-        <translation>Réappliquez le dernier style d'Anki Miner aux cartes que vous avez extraites précédemment — Utilitaires -&gt; Complétion des cartes.</translation>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
+        <translation>Réappliquez le dernier style d'Anki Miner aux cartes que vous avez extraites précédemment — Utilitaires → Complétion des cartes.</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -3617,7 +3617,7 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
     </message>
     <message>
         <source>Review words before mining</source>
-        <translation>Vérifier les mots avant l'extraction</translation>
+        <translation>Réviser les mots avant l'extraction</translation>
     </message>
     <message>
         <source>Pick which words get cards, once per series.</source>
@@ -6324,7 +6324,7 @@ Mots à ajouter : %3. Continuer ?</translation>
     </message>
     <message>
         <source>Retime</source>
-        <translation>Re-synchroniser</translation>
+        <translation>Resynchro</translation>
     </message>
     <message>
         <source>Condense</source>
@@ -6332,7 +6332,7 @@ Mots à ajouter : %3. Continuer ?</translation>
     </message>
     <message>
         <source>Card Backfill</source>
-        <translation>Complétion des cartes</translation>
+        <translation>Complétion</translation>
     </message>
     <message>
         <source>Deck Filter</source>
@@ -6348,7 +6348,7 @@ Mots à ajouter : %3. Continuer ?</translation>
     </message>
     <message>
         <source>Audiobook Sync</source>
-        <translation>Synchronisation de livre audio</translation>
+        <translation>Synchro livre audio</translation>
     </message>
     <message>
         <source>Anki Miner updated</source>
@@ -8740,7 +8740,7 @@ Aucun fichier d'index n'est supprimé.</translation>
     <name>ReadingTextTab</name>
     <message>
         <source>Review words before mining</source>
-        <translation>Vérifier les mots avant l'extraction</translation>
+        <translation>Réviser les mots avant l'extraction</translation>
     </message>
     <message>
         <source>Show the word-selection popup before creating cards.</source>

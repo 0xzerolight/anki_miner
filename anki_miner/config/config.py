@@ -707,7 +707,11 @@ class AnkiMinerConfig:
     # Read through capabilities.effective_hidden_utilities: unknown keys are
     # ignored and a list naming every tool hides none. Global and portable:
     # not language-scoped, not machine-specific.
-    hidden_utilities: tuple[str, ...] = ()
+    # D18: a NEW install starts with Deck Filter and Download hidden (the tab
+    # overflowed at 1024 px in five languages). An existing config file that
+    # predates this field keeps every tool: GUIConfigManager's load path seeds
+    # an absent key as empty (keep_legacy_utilities).
+    hidden_utilities: tuple[str, ...] = ("deckfilter", "download")
 
     # Keyboard shortcut overrides (Settings -> Keyboard): action id ->
     # QKeySequence PortableText, "" = unbound. Overrides only: an action the

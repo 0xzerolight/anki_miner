@@ -1,4 +1,4 @@
-"""Translator install logic: en no-ops, unknown is graceful, dir resolves."""
+"""Translator install logic: unknown is graceful, dir resolves."""
 
 from PyQt6.QtWidgets import QApplication
 
@@ -12,10 +12,6 @@ def test_translations_dir_contains_en_catalog():
 
 def test_available_languages_has_english():
     assert i18n.available_languages()["en"] == "English"
-
-
-def test_install_translators_en_is_noop(qapp: QApplication):
-    assert i18n.install_translators(qapp, "en") == []
 
 
 def test_install_translators_unknown_is_graceful(qapp: QApplication):

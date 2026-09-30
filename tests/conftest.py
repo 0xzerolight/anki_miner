@@ -669,6 +669,8 @@ def test_config(temp_dir):
         # under ANKI_MINER_HOME, so point dicts/known-words at tmp too.
         dicts_root=temp_dir / "dicts",
         known_words_db_path=temp_dir / "known_words.db",
+        # Every tool on the Utilities tab, as the suite was written against (D18 hides two for new installs).
+        hidden_utilities=(),
     )
 
 

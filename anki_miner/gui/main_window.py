@@ -16,6 +16,7 @@ from PyQt6.QtCore import QEvent, QRect, QSize, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import (
     QAction,
     QGuiApplication,
+    QResizeEvent,
     QShortcut,
     QShowEvent,
     QWindowStateChangeEvent,
@@ -53,6 +54,7 @@ from anki_miner.gui.controllers.task_registry import TaskRegistry
 from anki_miner.gui.launch import get_effective_log_path
 from anki_miner.gui.presenters import GUIPresenter
 from anki_miner.gui.resources import get_resource_dir
+from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils import file_dialogs, queue_state_store, session_state
 from anki_miner.gui.utils.config_commit import ConfigCommitError, ConfigCommitResult
@@ -369,7 +371,20 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         self.central_layout.setContentsMargins(0, 0, 0, 0)
         self.central_layout.setSpacing(0)
 
-        # Add header
+        # Whole-window issues (system checks, dictionary mutation refusals) sit
+        # above every tab -- the same slot the update banner uses, because they
+        # are statements about the app rather than the page (D24).
+        self.install_issue_banner(self.central_layout, 0)
+
+        # Create tab widget
+        self.tabs = QTabWidget()
+        install_animated_tab_bar(self.tabs, primary=True)
+        self.central_layout.addWidget(self.tabs)
+
+        # D16: no title row. The window title already names the app, so the
+        # settings-profile and theme selectors sit at the right end of the main
+        # tab row and every screen gets that row's height back. Star and Discord
+        # stay in the menu bar's corner.
         self.header = HeaderWidget()
         self.header.theme_changed.connect(self._on_theme_changed)
         self.header.open_theme_settings.connect(self._open_theme_settings)
@@ -377,18 +392,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # any refusal itself and snaps the combo back on every terminal path.
         self.header.profile_changed.connect(self.profile_controller.switch_to)
         self.header.open_profile_manager.connect(self._open_profile_manager)
-        self.central_layout.addWidget(self.header)
-
-        # Whole-window issues (system checks, dictionary mutation refusals) sit
-        # under the header, above every tab — the same slot the update banner
-        # uses, because they are statements about the app rather than the page
-        # (D24).
-        self.install_issue_banner(self.central_layout, 1)
-
-        # Create tab widget
-        self.tabs = QTabWidget()
-        install_animated_tab_bar(self.tabs)
-        self.central_layout.addWidget(self.tabs)
+        self.tabs.setCornerWidget(self.header, Qt.Corner.TopRightCorner)
 
         central_widget.setLayout(self.central_layout)
         self.setCentralWidget(central_widget)
@@ -429,7 +433,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         )
 
         self.header.setAccessibleName(self.tr("Application Header"))
-        self.header.setAccessibleDescription(self.tr("Application title and theme selector"))
+        self.header.setAccessibleDescription(self.tr("Settings profile and theme selectors"))
 
         self.status_bar.setAccessibleName(self.tr("Status Bar"))
         self.status_bar.setAccessibleDescription(self.tr("Shows current operation, statistics, and system status"))
@@ -446,6 +450,13 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # Tools menu
         tools_menu = menu_bar.addMenu(self.tr("&Tools"))
         assert tools_menu is not None
+        # E06: System Health was reachable only by clicking the status-bar
+        # badges, which nothing said were clickable.
+        health_action = tools_menu.addAction(self.tr("System Health…"))
+        assert health_action is not None
+        health_action.triggered.connect(self.open_system_health)
+        tools_menu.addSeparator()
+
         shortcut_action = tools_menu.addAction(self.tr("Create Desktop Shortcut..."))
         assert shortcut_action is not None
         shortcut_action.triggered.connect(self._create_desktop_shortcut)
@@ -816,6 +827,25 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         if widget_alive(self):
             self._apply_screen_fit()
 
+    def resizeEvent(self, a0: QResizeEvent | None) -> None:  # noqa: N802 - Qt override
+        """Refit the header's captions to the room the main tab row leaves (D16)."""
+        super().resizeEvent(a0)
+        self._fit_header()
+
+    def _fit_header(self) -> None:
+        """Give the corner header the width the tabs do not need.
+
+        Guarded: Qt can deliver a resize before ``_setup_ui`` has built either.
+        """
+        tabs = getattr(self, "tabs", None)
+        header = getattr(self, "header", None)
+        if tabs is None or header is None:
+            return
+        bar = tabs.tabBar()
+        if bar is None:
+            return
+        header.fit_captions(tabs.width() - bar.sizeHint().width() - SPACING.sm)
+
     def showEvent(self, a0: QShowEvent | None) -> None:  # noqa: N802 - Qt override
         """Track screen changes once the native window exists.
 
@@ -832,6 +862,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             self._screen_change_tracked = True
             handle.screenChanged.connect(lambda _screen: self._apply_screen_fit())
         self._apply_screen_fit()
+        self._fit_header()
 
     def _apply_default_geometry(self) -> None:
         """1280x800 centred on the primary screen — the no-saved-state default.
@@ -1907,6 +1938,12 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             result: One item's processing result.
         """
         self.status_bar.increment_cards_created(result.cards_created)
+        # E09: Analytics has no Refresh button; every finished item makes it stale.
+        analytics_index = self._main_tab_index("analytics")
+        if analytics_index >= 0:
+            mark_stale = getattr(self.tabs.widget(analytics_index), "mark_stale", None)
+            if callable(mark_stale):
+                mark_stale()
 
     def _on_run_details(self, result: ProcessingResult) -> None:
         """Open the full details of a finished run, because the user asked.
@@ -2173,16 +2210,6 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             flush = getattr(self.tabs.widget(settings_idx), "flush_pending_settings", None)
             if callable(flush):
                 flush()
-
-        # Same reason, same ordering constraint: a mokuro-executable path
-        # typed into the Manga OCR tab's setup card just before quitting is
-        # still debouncing (1000 ms) and must not be dropped by teardown.
-        subtitles_idx = self._main_tab_index("subtitles")
-        if subtitles_idx >= 0:
-            mokuro_tab = getattr(self.tabs.widget(subtitles_idx), "mokuro_tab", None)
-            flush_mokuro = getattr(mokuro_tab, "flush_pending_edits", None)
-            if callable(flush_mokuro):
-                flush_mokuro()
 
         # Stop the main-thread stall watchdog so its monitor thread and
         # heartbeat timer don't outlive shutdown. The monitor is daemon=True as
@@ -2535,9 +2562,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         if self._update_banner is None:
             banner = UpdateBanner(info, self)
             banner.skip_requested.connect(self._on_skip_update_requested)
-            # After the header and the issue banner: a release announcement
-            # never outranks a system problem.
-            self.central_layout.insertWidget(2, banner)
+            # After the issue banner: a release announcement never outranks a
+            # system problem.
+            self.central_layout.insertWidget(1, banner)
             self._update_banner = banner
         else:
             self._update_banner.update_info(info)

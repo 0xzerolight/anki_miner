@@ -8,7 +8,6 @@ from dataclasses import dataclass
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
-    QCheckBox,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -193,19 +192,33 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         layout.setSpacing(SPACING.sm)
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
+        # E09: with nothing recorded the page is this one line, not four cards
+        # of zeros and empty tables.
+        self.empty_state_label = QLabel(self.tr("No mining yet — your statistics appear here after your first run."))
+        self.empty_state_label.setObjectName("section-header")
+        self.empty_state_label.setWordWrap(True)
+        self.empty_state_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.empty_state_label.hide()
+        layout.addWidget(self.empty_state_label)
+
         # Section 1: Overview Dashboard
-        layout.addWidget(self._create_dashboard_section())
+        self._dashboard_card = self._create_dashboard_section()
+        layout.addWidget(self._dashboard_card)
 
         # Section 2: Recent Sessions
-        layout.addWidget(self._create_recent_sessions_section())
+        self._sessions_card = self._create_recent_sessions_section()
+        layout.addWidget(self._sessions_card)
 
         # Section 3: Series Difficulty
-        layout.addWidget(self._create_difficulty_section())
+        self._difficulty_card = self._create_difficulty_section()
+        layout.addWidget(self._difficulty_card)
 
         # Section 4: Milestones
-        layout.addWidget(self._create_milestones_section())
+        self._milestones_card = self._create_milestones_section()
+        layout.addWidget(self._milestones_card)
 
-        # Reset (far left, away from Refresh) and Refresh buttons
+        # Reset stays, far left. There is no Refresh: a finished run marks this
+        # page stale (mark_stale) and showing it re-reads it (E09).
         button_layout = QHBoxLayout()
         self.reset_button = ModernButton(self.tr("Reset Statistics…"), variant="critical")
         self.reset_button.setToolTip(
@@ -217,9 +230,6 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         self.reset_button.clicked.connect(self._on_reset_clicked)
         button_layout.addWidget(self.reset_button)
         button_layout.addStretch()
-        self.refresh_button = ModernButton(self.tr("Refresh"), variant="secondary")
-        self.refresh_button.clicked.connect(lambda: self.refresh_data(force=True))
-        button_layout.addWidget(self.refresh_button)
         layout.addLayout(button_layout)
 
         layout.addStretch()
@@ -272,12 +282,10 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         self.card_total_cards = StatCard(value="0", label=self.tr("Total Cards"))
         self.card_total_sessions = StatCard(value="0", label=self.tr("Sessions"))
         self.card_total_series = StatCard(value="0", label=self.tr("Series Mined"))
-        self.card_avg_cards = StatCard(value="0", label=self.tr("Avg Cards/Session"))
 
         grid.addWidget(self.card_total_cards, 0, 0)
         grid.addWidget(self.card_total_sessions, 0, 1)
         grid.addWidget(self.card_total_series, 0, 2)
-        grid.addWidget(self.card_avg_cards, 0, 3)
 
         layout.addLayout(grid)
         group.setLayout(layout)
@@ -386,8 +394,8 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         happen back on the GUI thread once they complete.
 
         Args:
-            force: Skip the staleness check. The Refresh button passes
-                ``force=True``; ``showEvent`` does not.
+            force: Skip the staleness check. ``mark_stale``, a reset and the
+                banner's Retry pass ``force=True``; ``showEvent`` does not.
         """
         if not self.stats_service.is_available():
             return
@@ -405,7 +413,7 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
             return
 
         # In-flight guard: overlapping refreshes (rapid tab switching, or a
-        # Refresh click while a showEvent refresh is still running) would stack
+        # mark_stale while a showEvent refresh is still running) would stack
         # redundant SQLite work and racing renders.
         if self._refresh_in_flight:
             return
@@ -431,6 +439,16 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
             self._on_refresh_done,
             self._on_refresh_error,
         )
+
+    def mark_stale(self) -> None:
+        """A run just finished, so these numbers are out of date (E09).
+
+        Re-read at once when the page is on screen; otherwise the freshness
+        clock is cleared, so the next visit's ``showEvent`` re-reads it.
+        """
+        self._last_refresh = None
+        if self.isVisible():
+            self.refresh_data(force=True)
 
     def _on_refresh_done(self, bundle: object) -> None:
         """GUI thread: render the pre-fetched bundle and tick the TTL clock."""
@@ -499,7 +517,6 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
 
         self._reset_in_flight = True
         self.reset_button.setEnabled(False)
-        self.refresh_button.setEnabled(False)
         service = self.stats_service
         run_off_thread(self, service.reset, self._on_reset_done, self._on_reset_error)
 
@@ -509,7 +526,6 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         if self._teardown_generation:
             return
         with contextlib.suppress(RuntimeError):
-            self.refresh_button.setEnabled(True)
             self.clear_screen_issue()
             # force=True: the TTL would otherwise swallow the one refresh that matters.
             self.refresh_data(force=True)
@@ -521,7 +537,6 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         if self._teardown_generation:
             return
         with contextlib.suppress(RuntimeError):
-            self.refresh_button.setEnabled(True)
             self.reset_button.setEnabled(True)
             self.show_screen_issue(
                 ScreenIssue(
@@ -532,9 +547,16 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
 
     def _apply_bundle(self, bundle: _AnalyticsBundle) -> None:
         """Render every section from a pre-fetched bundle (GUI thread)."""
+        empty = bundle.stats.total_sessions == 0 and not bundle.difficulties
+        # Nothing recorded: one line instead of the sections, and nothing to
+        # reset (E09).
+        self.empty_state_label.setVisible(empty)
+        for card in (self._dashboard_card, self._sessions_card, self._difficulty_card, self._milestones_card):
+            card.setVisible(not empty)
+        self.reset_button.setVisible(not empty)
         # Nothing recorded means nothing to reset: leave the button disabled
         # rather than raise a confirmation over an empty database.
-        self.reset_button.setEnabled(bundle.stats.total_sessions > 0 or bool(bundle.difficulties))
+        self.reset_button.setEnabled(not empty)
         self._update_dashboard(bundle.stats)
         self._update_recent_sessions(bundle.sessions)
         self._update_difficulty_ranking(bundle.difficulties)
@@ -544,7 +566,6 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         self.card_total_cards.set_value(f"{stats.total_cards_created:,}")
         self.card_total_sessions.set_value(str(stats.total_sessions))
         self.card_total_series.set_value(str(stats.series_count))
-        self.card_avg_cards.set_value(f"{stats.avg_cards_per_session:.1f}")
 
     def _update_recent_sessions(self, sessions: list[MiningSession]) -> None:
         has_sessions = len(sessions) > 0
@@ -637,12 +658,6 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         layout.setContentsMargins(SPACING.xs, SPACING.xxs, SPACING.xs, SPACING.xxs)
         layout.setSpacing(SPACING.sm)
 
-        # Status indicator using a disabled checkbox for visual consistency
-        status_checkbox = QCheckBox()
-        status_checkbox.setChecked(milestone.achieved)
-        status_checkbox.setEnabled(False)
-        layout.addWidget(status_checkbox)
-
         fact_label = QLabel(self._milestone_text(milestone))
         fact_font = QFont()
         fact_font.setPixelSize(FONT_SIZES.body)
@@ -650,16 +665,22 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         fact_label.setFont(fact_font)
         layout.addWidget(fact_label, 1)
 
-        # Progress bar
-        progress_bar = QProgressBar()
-        progress_bar.setMinimum(0)
-        progress_bar.setMaximum(milestone.threshold)
-        progress_bar.setValue(min(milestone.current_value, milestone.threshold))
-        progress_bar.setFormat(f"{milestone.current_value}/{milestone.threshold}")
-        progress_bar.setTextVisible(True)
-        progress_bar.setMaximumWidth(150)
-        progress_bar.setMinimumWidth(100)
-        layout.addWidget(progress_bar)
+        # A reached milestone says so; an open one shows how far along it is. The
+        # disabled checkbox that used to lead the row looked like a control (E09).
+        if milestone.achieved:
+            reached = QLabel(self.tr("Reached"))
+            reached.setObjectName("row-meta")
+            layout.addWidget(reached)
+        else:
+            progress_bar = QProgressBar()
+            progress_bar.setMinimum(0)
+            progress_bar.setMaximum(milestone.threshold)
+            progress_bar.setValue(min(milestone.current_value, milestone.threshold))
+            progress_bar.setFormat(f"{milestone.current_value}/{milestone.threshold}")
+            progress_bar.setTextVisible(True)
+            progress_bar.setMaximumWidth(150)
+            progress_bar.setMinimumWidth(100)
+            layout.addWidget(progress_bar)
 
         widget.setLayout(layout)
         return widget

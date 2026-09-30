@@ -2,7 +2,8 @@
 
 Installs a QTranslator for the app's own strings plus Qt's bundled
 ``qtbase_<lang>.qm`` (standard dialog buttons, file picker) at startup, before
-any widget is constructed. "en" is the source language and installs nothing.
+any widget is constructed. "en" is the source language: it installs only the
+app catalogue, which carries nothing but the English plural forms (E14).
 """
 
 from __future__ import annotations
@@ -54,7 +55,7 @@ def install_translators(app: QApplication, language: str) -> list[QTranslator]:
     list must outlive the app or translations silently revert.
     """
     installed: list[QTranslator] = []
-    if not language or language == "en":
+    if not language:
         return installed
 
     app_translator = QTranslator()
@@ -63,6 +64,11 @@ def install_translators(app: QApplication, language: str) -> list[QTranslator]:
         installed.append(app_translator)
     else:
         logger.warning("No UI translation catalog for language %r; using English", language)
+
+    if language == "en":
+        # English is the source language: its catalogue exists only for the two
+        # plural forms ("1 card", "3 cards"), and Qt's own strings are English.
+        return installed
 
     # Qt's own widget strings (OK/Cancel, file dialog). Best-effort: may be
     # absent under PyInstaller. Failure leaves Qt's built-ins in English.

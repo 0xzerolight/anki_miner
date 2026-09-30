@@ -1511,7 +1511,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Review words before mining</source>
-        <translation>採集前先檢視單字</translation>
+        <translation>採集前先審閱單字</translation>
     </message>
     <message>
         <source>Show the word-selection popup for each audio file before creating cards.</source>
@@ -1569,7 +1569,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Review words before mining</source>
-        <translation>採集前先檢視單字</translation>
+        <translation>採集前先審閱單字</translation>
     </message>
     <message>
         <source>Pick which words get cards, once per series.</source>
@@ -2034,8 +2034,8 @@ No index files are deleted.</source>
         <translation>次要語言字幕</translation>
     </message>
     <message>
-        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Sentences.</source>
-        <translation>在採集語言的字幕旁載入第二個以您自己語言撰寫的字幕檔案：它會顯示在單字整理工具預覽中該行的下方，並可儲存至翻譯欄位。在「影片 -&gt; 批次」中，則改為指向翻譯字幕的資料夾，字幕會依集數與影片配對。請在「設定 -&gt; 句子」中開啟此功能。</translation>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
+        <translation>在採集語言的字幕旁載入第二個以您自己語言撰寫的字幕檔案：它會顯示在單字整理工具預覽中該行的下方，並可儲存至翻譯欄位。在「影片 → 批次」中，則改為指向翻譯字幕的資料夾，字幕會依集數與影片配對。請在「設定 → 句子」中開啟此功能。</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2338,8 +2338,8 @@ No index files are deleted.</source>
         <translation>簡體或繁體字</translation>
     </message>
     <message>
-        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
-        <translation>「字元集」決定卡片正面與字典查詢所使用的寫法：簡體、繁體，或「依原文」以保留每個單字來源本身的寫法。當另一種寫法與正面不同時，設定 -&gt; 卡片與 Anki 下的「繁體字欄位」會存放該寫法。</translation>
+        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings → Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
+        <translation>「字元集」決定卡片正面與字典查詢所使用的寫法：簡體、繁體，或「依原文」以保留每個單字來源本身的寫法。當另一種寫法與正面不同時，設定 → 卡片與 Anki 下的「繁體字欄位」會存放該寫法。</translation>
     </message>
     <message>
         <source>Use &amp; order multiple dictionaries</source>
@@ -2538,16 +2538,16 @@ No index files are deleted.</source>
         <translation>拼音讀音與聲調顏色</translation>
     </message>
     <message>
-        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Cards &amp; Anki.</source>
-        <translation>在卡片上加入單字的拼音，每個音節以其聲調的顏色顯示——上色功能為「設定 -&gt; 卡片與 Anki」中的「依聲調為讀音上色」。</translation>
+        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings → Cards &amp; Anki.</source>
+        <translation>在卡片上加入單字的拼音，每個音節以其聲調的顏色顯示——上色功能為「設定 → 卡片與 Anki」中的「依聲調為讀音上色」。</translation>
     </message>
     <message>
         <source>Colour the reading by tone</source>
         <translation>依聲調為讀音上色</translation>
     </message>
     <message>
-        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Cards &amp; Anki.</source>
-        <translation>依聲調為拼音或 Jyutping 讀音的每個音節上色，位於「設定 -&gt; 卡片與 Anki」。</translation>
+        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings → Cards &amp; Anki.</source>
+        <translation>依聲調為拼音或 Jyutping 讀音的每個音節上色，位於「設定 → 卡片與 Anki」。</translation>
     </message>
     <message>
         <source>Measure word field</source>
@@ -2623,11 +2623,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Choose the tools on the Utilities tab</source>
-        <translation>選擇「工具」分頁顯示的工具</translation>
+        <translation>選擇「實用工具」分頁顯示的工具</translation>
     </message>
     <message>
-        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
-        <translation>在「設定 -&gt; 一般」中隱藏您不使用的「工具」分頁工具，或將其恢復顯示。隱藏的工具在此仍保留其項目；其「開啟」按鈕會帶您前往該核取方塊。</translation>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings → General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation>在「設定 → 一般」中隱藏您不使用的「實用工具」分頁工具，或將其恢復顯示。隱藏的工具在此仍保留其項目；其「開啟」按鈕會帶您前往該核取方塊。</translation>
     </message>
     <message>
         <source>Search the settings</source>
@@ -2650,8 +2650,8 @@ No index files are deleted.</source>
         <translation>檢查應用程式更新</translation>
     </message>
     <message>
-        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings -&gt; General.</source>
-        <translation>從「說明」選單檢查是否有新版 Anki Miner，或在「設定 -&gt; 一般」中切換啟動時的自動檢查。</translation>
+        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings → General.</source>
+        <translation>從「說明」選單檢查是否有新版 Anki Miner，或在「設定 → 一般」中切換啟動時的自動檢查。</translation>
     </message>
     <message>
         <source>Download videos or audio</source>
@@ -2666,24 +2666,24 @@ No index files are deleted.</source>
         <translation>從漫畫圖片建立 .mokuro 檔案</translation>
     </message>
     <message>
-        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from its setup card on Utilities -&gt; Manga OCR.</source>
-        <translation>對單卷資料夾或整個系列執行 mokuro 的日文 OCR，讓「閱讀 -&gt; 漫畫」可以採集。請從「工具 -&gt; 漫畫 OCR」上的設定卡片安裝 mokuro。</translation>
+        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
+        <translation>對單卷資料夾或整個系列執行 mokuro 的日文 OCR，讓「閱讀 → 漫畫」可以採集。請從「實用工具 → 漫畫 OCR」上的設定卡片安裝 mokuro。</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
         <translation>將有聲書與其 EPUB 同步</translation>
     </message>
     <message>
-        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitle Files or a reader can use.</source>
-        <translation>轉錄有聲書，並將書籍本身的句子計時對應到其中，寫出「有聲書」分頁、閱讀 -&gt; 字幕檔案或其他閱讀器可使用的 .srt 檔案。</translation>
+        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use.</source>
+        <translation>轉錄有聲書，並將書籍本身的句子計時對應到其中，寫出「有聲書」分頁、閱讀 → 字幕檔案或其他閱讀器可使用的 .srt 檔案。</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
         <translation>重新套用已採集卡片樣式</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities -&gt; Card Backfill.</source>
-        <translation>將最新的 Anki Miner 樣式重新套用至您先前採集的卡片——「工具 -&gt; 卡片欄位回填」。</translation>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
+        <translation>將最新的 Anki Miner 樣式重新套用至您先前採集的卡片——「實用工具 → 卡片欄位回填」。</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -3613,7 +3613,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>Review words before mining</source>
-        <translation>採集前先檢視單字</translation>
+        <translation>採集前先審閱單字</translation>
     </message>
     <message>
         <source>Pick which words get cards, once per series.</source>
@@ -5847,7 +5847,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Go to Utilities</source>
-        <translation>前往工具</translation>
+        <translation>前往實用工具</translation>
     </message>
     <message>
         <source>Go to Settings</source>
@@ -6295,7 +6295,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Utilities</source>
-        <translation>工具</translation>
+        <translation>實用工具</translation>
     </message>
     <message>
         <source>Settings</source>
@@ -6355,7 +6355,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Navigate between Video, Audiobooks, Reading, Analytics, Utilities, and Settings</source>
-        <translation>在影片、有聲書、閱讀、分析、工具與設定之間切換</translation>
+        <translation>在影片、有聲書、閱讀、分析、實用工具與設定之間切換</translation>
     </message>
     <message>
         <source>Application Header</source>
@@ -8722,7 +8722,7 @@ No index files are deleted.</source>
     <name>ReadingTextTab</name>
     <message>
         <source>Review words before mining</source>
-        <translation>採集前確認單字</translation>
+        <translation>採集前先審閱單字</translation>
     </message>
     <message>
         <source>Show the word-selection popup before creating cards.</source>
@@ -11386,11 +11386,11 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Utilities tab</source>
-        <translation>工具分頁</translation>
+        <translation>實用工具分頁</translation>
     </message>
     <message>
         <source>Choose which tools the Utilities tab shows. At least one stays.</source>
-        <translation>選擇「工具」分頁要顯示哪些工具。至少會保留一項。</translation>
+        <translation>選擇「實用工具」分頁要顯示哪些工具。至少會保留一項。</translation>
     </message>
     <message>
         <source>App</source>

@@ -21,6 +21,7 @@ import logging
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QComboBox,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -33,6 +34,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
+from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.content_text import content_cell_font
 from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
 from anki_miner.gui.utils.qt_helpers import (
@@ -46,8 +48,11 @@ from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets._anki_plan_tab_base import _AnkiPlanTabBase, _PlanTabStrings
 from anki_miner.gui.widgets.base import (
     PageWidth,
+    ScreenIssue,
     capped_page_column,
+    configure_card_layout,
     install_workflow_shell,
+    page_filler,
 )
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.workers.base_worker import SingleCallWorker
@@ -63,6 +68,7 @@ from anki_miner.services.deck_filter import (
     DeckInspection,
     inspect_deck,
 )
+from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +97,7 @@ class DeckFilterTab(_AnkiPlanTabBase):
             cancelled=self.tr("Cancelled."),
             settings_changed=self.tr("Settings changed since this scan; re-scan before copying."),
             couldnt_fetch_decks=self.tr("Couldn't fetch deck names from Anki — is Anki running?"),
+            worker_failed=self.tr("Deck Filter could not finish."),
         )
         # The Expression column is mined content, so its face follows the mining
         # language; re-derived in update_config when the language changes.
@@ -100,8 +107,8 @@ class DeckFilterTab(_AnkiPlanTabBase):
         self._scan_warnings: tuple[str, ...] = ()
         # "Did a deck list arrive?", NOT "did we ask?" — see ensure_decks.
         self._decks_loaded = False
-        #: True while ``status_label`` carries the deck-fetch failure line, so a
-        #: later success clears that line and nothing else the label may hold.
+        #: True while the banner may carry the deck-fetch failure, so a later
+        #: success clears that banner and nothing else shown since.
         self._deck_fetch_failed = False
         self._deck_worker: SingleCallWorker | None = None
         self._inspect_worker: SingleCallWorker | None = None
@@ -121,16 +128,24 @@ class DeckFilterTab(_AnkiPlanTabBase):
     def _build_ui(self) -> None:
         container = QWidget()
         layout = QVBoxLayout(container)
+        layout.setSpacing(SPACING.sm)
 
-        layout.addWidget(SectionHeader(self.tr("Deck Filter")))
+        # E07: cards like every other tool, and no page heading repeating the
+        # tab label.
+        self.deck_card = QFrame()
+        self.deck_card.setObjectName("card")
+        deck_layout = QVBoxLayout(self.deck_card)
+        configure_card_layout(deck_layout)
+        deck_layout.addWidget(SectionHeader(self.tr("Deck")))
         hint = QLabel(
             self.tr(
                 "Copy the worth-learning part of a premade deck into a new deck. "
                 "Filters come from Settings → Word Filters; the source deck is not modified."
             )
         )
+        hint.setObjectName("helper-text")
         hint.setWordWrap(True)
-        layout.addWidget(hint)
+        deck_layout.addWidget(hint)
 
         source_row = QHBoxLayout()
         source_row.addWidget(QLabel(self.tr("Source deck:")))
@@ -138,9 +153,18 @@ class DeckFilterTab(_AnkiPlanTabBase):
         self.source_combo.addItem(self.tr("Select a deck…"))
         self.source_combo.currentIndexChanged.connect(self._on_source_changed)
         source_row.addWidget(self.source_combo, stretch=1)
-        layout.addLayout(source_row)
+        deck_layout.addLayout(source_row)
 
-        fields_row = QHBoxLayout()
+        # What the chosen deck holds, right under it (was on the run line).
+        self.deck_info_label = QLabel("")
+        self.deck_info_label.setObjectName("row-meta")
+        self.deck_info_label.hide()
+        deck_layout.addWidget(self.deck_info_label)
+
+        # E07: the field pickers mean nothing until the deck is read.
+        self.field_row = QWidget()
+        fields_row = QHBoxLayout(self.field_row)
+        fields_row.setContentsMargins(0, 0, 0, 0)
         fields_row.addWidget(QLabel(self.tr("Word field:")))
         self.expression_combo = QComboBox()
         self.expression_combo.addItem(self.tr("(first field)"))
@@ -149,7 +173,8 @@ class DeckFilterTab(_AnkiPlanTabBase):
         self.reading_combo = QComboBox()
         self.reading_combo.addItem(self.tr("(none — generate)"))
         fields_row.addWidget(self.reading_combo, stretch=1)
-        layout.addLayout(fields_row)
+        self.field_row.hide()
+        deck_layout.addWidget(self.field_row)
         self._set_field_combos_enabled(False)
 
         target_row = QHBoxLayout()
@@ -157,22 +182,35 @@ class DeckFilterTab(_AnkiPlanTabBase):
         self.target_edit = QLineEdit()
         self.target_edit.setPlaceholderText(self.tr("Name for the filtered deck"))
         target_row.addWidget(self.target_edit, stretch=1)
-        layout.addLayout(target_row)
+        deck_layout.addLayout(target_row)
+        layout.addWidget(self.deck_card)
 
+        self.filters_card = QFrame()
+        self.filters_card.setObjectName("card")
+        filters_layout = QVBoxLayout(self.filters_card)
+        configure_card_layout(filters_layout)
+        filters_layout.addWidget(SectionHeader(self.tr("Filters")))
         self.filters_label = QLabel("")
         self.filters_label.setWordWrap(True)
-        layout.addWidget(self.filters_label)
+        filters_layout.addWidget(self.filters_label)
+        layout.addWidget(self.filters_card)
         self._refresh_filters_summary()
 
         self.scan_button = ModernButton(self.tr("Scan deck (read-only)"), variant="primary")
         self.scan_button.clicked.connect(self._start_scan)
         self.cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")
-        self.cancel_button.setEnabled(False)
+        self.cancel_button.hide()  # shown only while a scan or copy runs (E07)
         self.cancel_button.clicked.connect(self._cancel)
+
+        self.preview_card = QFrame()
+        self.preview_card.setObjectName("card")
+        preview_layout = QVBoxLayout(self.preview_card)
+        configure_card_layout(preview_layout)
+        preview_layout.addWidget(SectionHeader(self.tr("Preview")))
 
         self.summary_label = QLabel("")
         self.summary_label.setWordWrap(True)
-        layout.addWidget(self.summary_label)
+        preview_layout.addWidget(self.summary_label)
 
         self.preview_table = QTableWidget(0, 3)
         self.preview_table.setHorizontalHeaderLabels([self.tr("Expression"), self.tr("Reading"), self.tr("Freq. rank")])
@@ -187,7 +225,15 @@ class DeckFilterTab(_AnkiPlanTabBase):
             # Preview opens in plan order (the copy order); sort only on ask.
             header.setSortIndicator(-1, Qt.SortOrder.AscendingOrder)
         self._apply_preview_height_floor()
-        layout.addWidget(self.preview_table, stretch=1)
+        self.preview_table.hide()
+        preview_layout.addWidget(self.preview_table, stretch=1)
+        self.preview_card.hide()
+        # No static stretch: the card grows through its table while the table
+        # shows, and the filler takes the surplus while it does not, so a tall
+        # window never pads the card headings.
+        layout.addWidget(self.preview_card)
+        self.page_filler = page_filler()
+        layout.addWidget(self.page_filler)
 
         self.apply_button = ModernButton(self.tr("Copy Notes to New Deck"), variant="secondary")
         self.apply_button.setEnabled(False)
@@ -201,6 +247,7 @@ class DeckFilterTab(_AnkiPlanTabBase):
         # No activity log; Activity stays hidden rather than opening empty.
         self.action_bar = install_workflow_shell(outer, scroll_area, container, self.PAGE_WIDTH, log=None)
         outer.insertWidget(outer.count() - 1, capped_page_column(self._create_run_status(), self.PAGE_WIDTH))
+        self.install_issue_banner(outer)
         self._sync_action_prominence()
         # Ctrl+Enter runs whichever verb the stage is showing (D48-B).
         primary_action_shortcut(self, self.action_bar.trigger_primary)
@@ -278,6 +325,10 @@ class DeckFilterTab(_AnkiPlanTabBase):
         return self.source_combo.currentText() if self.source_combo.currentIndex() > 0 else None
 
     def _on_source_changed(self, _index: int) -> None:
+        # A new source choice supersedes any complaint about the old one (or
+        # about there being none). The deck-fetch banner cannot be up here: it
+        # clears on the fetch that fills this combo.
+        self.clear_screen_issue()
         deck = self._selected_source_deck()
         self._reset_field_combos()
         if deck is None:
@@ -295,6 +346,8 @@ class DeckFilterTab(_AnkiPlanTabBase):
                 combo.removeItem(combo.count() - 1)
             combo.setCurrentIndex(0)
         self._set_field_combos_enabled(False)
+        self.field_row.hide()
+        self.deck_info_label.hide()
 
     def _set_field_combos_enabled(self, enabled: bool) -> None:
         self.expression_combo.setEnabled(enabled)
@@ -323,16 +376,18 @@ class DeckFilterTab(_AnkiPlanTabBase):
             self.expression_combo.addItem(name)
             self.reading_combo.addItem(name)
         self._set_field_combos_enabled(bool(inspection.field_names))
+        self.field_row.setVisible(bool(inspection.field_names))
         if inspection.note_count == 0:
-            self.status_label.setText(self.tr("The selected deck has no notes."))
+            self.deck_info_label.setText(self.tr("The selected deck has no notes."))
         else:
-            self.status_label.setText(self.tr("{count} note(s) in the deck.").format(count=inspection.note_count))
+            self.deck_info_label.setText(self.tr("%n note(s) in the deck.", "", inspection.note_count))
+        self.deck_info_label.show()
 
     def _on_inspect_error(self, generation: int, message: str) -> None:
         if generation != self._inspect_generation:
             return
         logger.warning("Deck Filter inspect failed: error=%s", message)
-        self.status_label.setText(message)
+        self.show_screen_issue(ScreenIssue(summary=self.tr("The deck could not be read."), details=message))
 
     # ------------------------------------------------------------------
     # Scan
@@ -344,14 +399,16 @@ class DeckFilterTab(_AnkiPlanTabBase):
     def _build_options(self) -> DeckFilterOptions | None:
         source = self._selected_source_deck()
         if source is None:
-            self.status_label.setText(self.tr("Pick the source deck first."))
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Pick the source deck first.")))
             return None
         target = self.target_edit.text().strip()
         if not target:
-            self.status_label.setText(self.tr("Name the new deck first."))
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Name the new deck first.")))
             return None
         if target == source:
-            self.status_label.setText(self.tr("The new deck needs a different name than the source deck."))
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("The new deck needs a different name than the source deck."))
+            )
             return None
         return DeckFilterOptions(
             source_deck=source,
@@ -361,6 +418,8 @@ class DeckFilterTab(_AnkiPlanTabBase):
         )
 
     def _start_scan(self) -> None:
+        # A fresh attempt supersedes the complaint about the last one (D24).
+        self.clear_screen_issue()
         options = self._build_options()
         if options is None:
             return
@@ -384,6 +443,10 @@ class DeckFilterTab(_AnkiPlanTabBase):
         self._scan_warnings = tuple(warnings)
         self._plan = plan if plan.kept else None
         self._populate_preview(plan)
+        self.preview_card.show()
+        has_rows = self.preview_table.rowCount() > 0
+        self.preview_table.setVisible(has_rows)
+        self.page_filler.setVisible(not has_rows)
         self.apply_button.setEnabled(self._plan is not None)
         self._sync_action_prominence()
         self.status_label.setText("")
@@ -406,17 +469,15 @@ class DeckFilterTab(_AnkiPlanTabBase):
         if plan.scanned == 0:
             parts.append(self.tr('No notes found in deck "{deck}".').format(deck=plan.options.source_deck))
         else:
-            parts.append(
-                self.tr("{kept} of {scanned} note(s) will be copied.").format(kept=len(plan.kept), scanned=plan.scanned)
-            )
+            parts.append(tr_format(self.tr("%1 of %n note(s) will be copied.", "", plan.scanned), len(plan.kept)))
             labels = self._drop_reason_labels()
             dropped = ", ".join(f"{labels.get(reason, reason)}: {count}" for reason, count in plan.drops)
             if dropped:
                 parts.append(self.tr("Dropped — {reasons}.").format(reasons=dropped))
             if plan.forced_count:
-                parts.append(self.tr("{count} kept by whitelist.").format(count=plan.forced_count))
+                parts.append(self.tr("%n kept by whitelist.", "", plan.forced_count))
             if len(plan.kept) > shown_rows:
-                parts.append(self.tr("Showing first {rows} rows.").format(rows=shown_rows))
+                parts.append(self.tr("Showing first %n row(s).", "", shown_rows))
         return " ".join(parts)
 
     def _populate_preview(self, plan: DeckFilterPlan) -> None:
@@ -463,10 +524,16 @@ class DeckFilterTab(_AnkiPlanTabBase):
         answer = QMessageBox.question(
             self,
             self.tr("Copy notes to a new deck?"),
-            self.tr(
-                'This will create deck "{deck}" and copy {notes} note(s) into it, '
-                "tagged {tag}. The source deck is not modified. Continue?"
-            ).format(deck=plan.options.target_deck, notes=len(plan.kept), tag=DECKFILTER_TAG),
+            tr_format(
+                self.tr(
+                    'This will create deck "%1" and copy %n note(s) into it, '
+                    "tagged %2. The source deck is not modified. Continue?",
+                    "",
+                    len(plan.kept),
+                ),
+                plan.options.target_deck,
+                DECKFILTER_TAG,
+            ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -492,11 +559,9 @@ class DeckFilterTab(_AnkiPlanTabBase):
     def _on_apply_finished(self, result: DeckFilterResult) -> None:
         target = self._plan.options.target_deck if self._plan is not None else ""
         self._drop_plan()
-        parts = [self.tr('Copied {count} note(s) into "{deck}".').format(count=result.created, deck=target)]
+        parts = [tr_format(self.tr('Copied %n note(s) into "%1".', "", result.created), target)]
         if result.not_created:
-            parts.append(
-                self.tr("{count} note(s) were not accepted by Anki (see log).").format(count=result.not_created)
-            )
+            parts.append(self.tr("%n note(s) were not accepted by Anki (see log).", "", result.not_created))
             self._run_failed = True
         self.status_label.setText(" ".join(parts))
 
@@ -507,6 +572,7 @@ class DeckFilterTab(_AnkiPlanTabBase):
     def _set_running(self, running: bool) -> None:
         self.scan_button.setEnabled(not running)
         self.apply_button.setEnabled(not running and self._plan is not None)
+        self.cancel_button.setVisible(running)
         self.cancel_button.setEnabled(running)
         self.source_combo.setEnabled(not running)
         self.target_edit.setEnabled(not running)
@@ -523,4 +589,5 @@ class DeckFilterTab(_AnkiPlanTabBase):
         logger.warning("Deck Filter worker failed: error=%s", message)
         self._run_failed = True
         self._set_running(False)
-        self.status_label.setText(message)
+        self.status_label.setText("")
+        self.show_screen_issue(ScreenIssue(summary=self._strings.worker_failed, details=message))

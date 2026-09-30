@@ -81,6 +81,9 @@ CAPABILITY_VOCABULARY = frozenset(
         "deinflection",
         # The Lapis / Kiku / Senren note-type presets, which are all Japanese.
         "note_presets",
+        # Manga OCR (mokuro's manga-ocr model reads Japanese only): gates the
+        # Utilities tool, its System Health row and its Usage Guide entry (E17).
+        "manga_ocr",
         "hangul_filters",
         "hanja",
         "pinyin",

@@ -120,8 +120,7 @@ _CONDENSE = _Spec(
     single_widgets=(
         "media_file_selector",
         "subtitle_file_selector",
-        "audio_track_row_widget",
-        "subtitle_track_row_widget",
+        "media_row",
     ),
     folder_widgets=("media_folder_selector", "subtitle_folder_selector", "subtitle_folder_hint", "merge_row_widget"),
 )
@@ -276,7 +275,7 @@ def test_folder_mode_failed_collection_leaves_primary_enabled(spec, qtbot, tmp_p
 @pytest.mark.parametrize("spec", _ALL_TABS, ids=_spec_id)
 def test_output_row_starts_on_the_tools_default(spec, qtbot, tmp_path):
     tab = _make_tab(spec, qtbot, tmp_path)
-    # A value, not helper copy: helper-text is italic.
+    # A value, not helper copy: it has its own body-size style.
     assert tab.output_location_label.objectName() == "output-location-value"
     assert tab.output_location_label.text() == tab._strings.output_default
     assert tab.clear_output_button.isHidden()
@@ -358,3 +357,28 @@ def test_file_skipped_logs_skipped_not_done(spec, qtbot, tmp_path):
     assert "episode.out" in log_text
     assert "Skipped, exists" in log_text
     assert "Done" not in log_text
+
+
+def test_retime_says_where_and_how_it_writes_in_the_output_value(qtbot, tmp_path):
+    """E08: the bottom helper is folded into the Output value; no top alass notice."""
+    tab = _make_tab(_RETIME, qtbot, tmp_path)
+
+    assert tab.output_location_label.text() == "Next to source video, as name_retimed.srt"
+    assert not hasattr(tab, "engine_notice_label")
+
+
+@pytest.mark.parametrize(
+    ("spec", "sentence"),
+    [
+        (_CREATION, "Generated .srt files are saved next to each source file unless you choose a folder."),
+        (_BOOKSYNC, "Each .srt is saved next to its audio file unless you choose a folder."),
+    ],
+    ids=["Generate", "AudiobookSync"],
+)
+def test_the_output_hint_moves_into_the_choose_folder_tooltip(spec, sentence, qtbot, tmp_path):
+    from PyQt6.QtWidgets import QLabel
+
+    tab = _make_tab(spec, qtbot, tmp_path)
+
+    assert tab.choose_output_button.toolTip() == sentence
+    assert [label for label in tab.findChildren(QLabel) if label.text() == sentence] == []

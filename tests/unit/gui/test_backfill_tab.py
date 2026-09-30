@@ -109,7 +109,7 @@ class TestDeckDropdown:
     def test_empty_fetch_leaves_all_decks_with_status(self, tab):
         tab._on_decks_fetched([])
         assert tab.deck_combo.count() == 1
-        assert tab.status_label.text() != ""
+        assert tab.issue_banner().current_issue() is not None
 
     def test_show_event_starts_fetch_once(self, tab, qtbot):
         from PyQt6.QtGui import QShowEvent
@@ -145,7 +145,7 @@ class TestDeckDropdown:
         assert record.levelno == logging.WARNING
         assert message in record.getMessage()
         assert tab.deck_combo.count() == 1
-        assert "all decks" in tab.status_label.text().lower()
+        assert "all decks" in tab.issue_banner().current_issue().summary.lower()
 
     def test_incomplete_field_mapping_is_logged(self, tab, caplog):
         fields = dict(tab.config.anki_fields)
@@ -190,7 +190,7 @@ class TestScanFlow:
         with patch(f"{_TAB_MOD}.BackfillScanWorker") as factory:
             tab._start_scan()
         factory.assert_not_called()
-        assert tab.status_label.text() != ""
+        assert tab.issue_banner().current_issue().summary == "Select at least one field group to fill."
 
     def test_deck_selection_passed(self, tab):
         tab._on_decks_fetched(["Mining"])
@@ -660,3 +660,59 @@ class TestMediaFailureReporting:
     def test_a_clean_run_reports_no_media_failure(self, tab):
         tab._on_apply_finished(BackfillResult(notes_updated=1, fields_filled=1, tagged=1, skipped_stale=0))
         assert tab._run_failed is False
+
+
+class TestCardLayout:
+    """E07: Deck, Fields to fill and Preview cards; no heading repeating the tab label."""
+
+    def test_the_page_is_three_titled_cards(self, tab):
+        from PyQt6.QtWidgets import QFrame
+
+        from anki_miner.gui.widgets.enhanced import SectionHeader
+
+        titles = [header.title_label.text() for header in tab.findChildren(SectionHeader)]
+        assert titles == ["Deck", "Fields to fill", "Preview"]
+        for card in (tab.deck_card, tab.fields_card, tab.preview_card):
+            assert isinstance(card, QFrame)
+            assert card.objectName() == "card"
+
+    def test_the_preview_waits_for_a_scan(self, tab):
+        assert tab.preview_card.isHidden()
+
+        tab._on_scan_finished(_plan([_note_plan(1)]))
+
+        assert not tab.preview_card.isHidden()
+        assert not tab.preview_table.isHidden()
+        # The table takes the page's surplus height back from the filler.
+        assert tab.page_filler.isHidden()
+
+    def test_a_scan_with_no_rows_shows_the_summary_but_no_table(self, tab):
+        tab._on_scan_finished(_plan([]))
+
+        assert not tab.preview_card.isHidden()
+        assert tab.preview_table.isHidden()
+        assert tab.summary_label.text() != ""
+        assert not tab.page_filler.isHidden()
+
+    def test_apply_stays_visible_and_disabled_until_a_plan_exists(self, tab):
+        assert not tab.apply_button.isHidden()
+        assert not tab.apply_button.isEnabled()
+
+
+class TestPluralCounts:
+    """E14: counts go through %n, so a translation can decline them."""
+
+    def test_the_summary_counts_through_tr_plurals(self, tab, monkeypatch):
+        seen: list[tuple[str, int]] = []
+        original = tab.tr
+
+        def spy(source, disambiguation=None, n=-1):
+            if n != -1:
+                seen.append((source, n))
+            return original(source, disambiguation, n)
+
+        monkeypatch.setattr(tab, "tr", spy)
+        tab._on_scan_finished(_plan([_note_plan(1), _note_plan(2)]))
+
+        assert ("%n field(s) across %1 will be filled.", 2) in seen
+        assert ("%n note(s)", 2) in seen

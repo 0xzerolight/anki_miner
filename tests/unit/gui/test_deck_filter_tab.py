@@ -67,7 +67,7 @@ class TestScanGating:
             tab._start_scan()
 
         worker_cls.assert_not_called()
-        assert tab.status_label.text() == "Pick the source deck first."
+        assert tab.issue_banner().current_issue().summary == "Pick the source deck first."
 
     def test_empty_target_name_shows_message(self, tab):
         _select_source(tab)
@@ -76,7 +76,7 @@ class TestScanGating:
             tab._start_scan()
 
         worker_cls.assert_not_called()
-        assert tab.status_label.text() == "Name the new deck first."
+        assert tab.issue_banner().current_issue().summary == "Name the new deck first."
 
     def test_target_equal_to_source_is_refused(self, tab):
         _select_source(tab, "Premade")
@@ -85,7 +85,7 @@ class TestScanGating:
             tab._start_scan()
 
         worker_cls.assert_not_called()
-        assert "different name" in tab.status_label.text()
+        assert "different name" in tab.issue_banner().current_issue().summary
 
     def test_valid_inputs_start_the_scan_worker(self, tab):
         _select_source(tab)
@@ -134,7 +134,8 @@ class TestInspection:
             "Meaning",
         ]
         assert tab.expression_combo.isEnabled()
-        assert "3 note(s)" in tab.status_label.text()
+        assert tab.deck_info_label.text() == "3 note(s) in the deck."
+        assert not tab.field_row.isHidden()
 
     def test_stale_generation_is_ignored(self, tab):
         tab._inspect_generation = 8
@@ -144,6 +145,70 @@ class TestInspection:
 
         assert tab.expression_combo.count() == 1
         assert not tab.expression_combo.isEnabled()
+        assert tab.field_row.isHidden()
+
+    def test_the_field_pickers_wait_for_the_deck(self, tab):
+        """E07: Word and Reading field appear once a deck is read."""
+        assert tab.field_row.isHidden()
+
+    def test_a_failed_read_is_a_banner(self, tab):
+        tab._inspect_generation = 3
+
+        tab._on_inspect_error(3, "Couldn't read the deck: boom")
+
+        issue = tab.issue_banner().current_issue()
+        assert issue.summary == "The deck could not be read."
+        assert issue.details == "Couldn't read the deck: boom"
+
+    def test_picking_another_deck_clears_the_read_banner(self, tab):
+        _select_source(tab, "Broken")
+        tab._on_inspect_error(tab._inspect_generation, "Couldn't read the deck: boom")
+        assert tab.issue_banner().current_issue() is not None
+
+        _select_source(tab, "Core 2k")
+        tab._on_inspected(
+            tab._inspect_generation,
+            DeckInspection(3, ("Core",), ("Expression",), {"Core": "Expression"}),
+        )
+
+        assert tab.issue_banner().current_issue() is None
+        assert tab.deck_info_label.text() == "3 note(s) in the deck."
+
+    def test_picking_a_deck_clears_the_pick_a_deck_refusal(self, tab):
+        tab._start_scan()
+        assert tab.issue_banner().current_issue().summary == "Pick the source deck first."
+
+        _select_source(tab)
+
+        assert tab.issue_banner().current_issue() is None
+
+
+class TestCardLayout:
+    def test_the_page_is_three_titled_cards(self, tab):
+        from anki_miner.gui.widgets.enhanced import SectionHeader
+
+        titles = [header.title_label.text() for header in tab.findChildren(SectionHeader)]
+        assert titles == ["Deck", "Filters", "Preview"]
+        for card in (tab.deck_card, tab.filters_card, tab.preview_card):
+            assert card.objectName() == "card"
+
+    def test_the_preview_waits_for_a_scan(self, tab):
+        assert tab.preview_card.isHidden()
+
+        tab._on_scan_finished(_plan())
+
+        assert not tab.preview_card.isHidden()
+        assert not tab.preview_table.isHidden()
+        assert tab.page_filler.isHidden()
+
+    def test_a_dropped_plan_takes_the_preview_down(self, tab):
+        tab._on_scan_finished(_plan())
+
+        tab._drop_plan()
+
+        assert tab.preview_card.isHidden()
+        assert tab.preview_table.isHidden()
+        assert not tab.page_filler.isHidden()
 
 
 class TestPlanLifecycle:

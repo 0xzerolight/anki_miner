@@ -263,8 +263,37 @@ class TestRedMeansDestruction:
 
         assert Rendered(critical).fill == _opaque(colors["error"])
 
-    def test_disabled_still_reads_as_unavailable(self, host, colors):
+    def test_a_disabled_quiet_button_is_an_outline_only(self, host, colors):
+        """D17: a disabled control weighs less than the enabled ones around it."""
         button = ModernButton("Cancel", variant="secondary")
+        button.setEnabled(False)
+        host(button)
+        rendered = Rendered(button)
+
+        assert rendered.fill != _opaque(colors["disabled"])
+        assert rendered.border == _opaque(colors["disabled"])
+
+    def test_a_disabled_danger_button_is_an_outline_in_grey(self, host, colors):
+        button = ModernButton("Remove selected", variant="danger")
+        button.setEnabled(False)
+        host(button)
+        rendered = Rendered(button)
+
+        assert rendered.fill != _opaque(colors["disabled"])
+        assert rendered.border == _opaque(colors["disabled"])
+
+    def test_a_disabled_ghost_button_is_text_only(self, host, colors):
+        button = ModernButton("Clear", variant="ghost")
+        button.setEnabled(False)
+        host(button)
+        rendered = Rendered(button)
+
+        assert rendered.border == TRANSPARENT
+        assert rendered.fill != _opaque(colors["disabled"])
+
+    def test_a_disabled_primary_keeps_a_grey_fill(self, host, colors):
+        """An outline-only primary would read as an enabled secondary button."""
+        button = ModernButton("Mine", variant="primary")
         button.setEnabled(False)
         host(button)
 

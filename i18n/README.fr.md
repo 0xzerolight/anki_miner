@@ -119,7 +119,7 @@ Pour une configuration de développement complète, consultez [CONTRIBUTING.md](
 - **Livres audio** - extraire des livres audio, podcasts, radio, chansons (paires audio + sous-titres/transcription).
 - **Lecture** - extraire des mangas (mokuro), des romans (`.epub`, `.txt` ; un seul livre ou un dossier entier), des fichiers de sous-titres autonomes, ou du texte collé.
 - **Statistiques** - historique d'extraction, classements de difficulté, jalons.
-- **Utilitaires** - générer des sous-titres (Whisper local), re-synchroniser les sous-titres (ffsubsync/alass), condenser les médias en audio dialogue uniquement, télécharger vidéo/audio/sous-titres depuis tout site pris en charge par yt-dlp, copier la partie utile d'un paquet préfait dans un nouveau, compléter les champs des cartes existantes, appliquer l'OCR aux images de pages de manga pour créer des fichiers .mokuro (mokuro), et caler un livre audio sur le texte de son livre (Synchronisation de livre audio).
+- **Utilitaires** - générer des sous-titres (Whisper local), re-synchroniser les sous-titres (ffsubsync/alass), condenser les médias en audio dialogue uniquement, télécharger vidéo/audio/sous-titres depuis tout site pris en charge par yt-dlp, copier la partie utile d'un paquet préfait dans un nouveau, compléter les champs des cartes existantes, appliquer l'OCR aux images de pages de manga pour créer des fichiers .mokuro (mokuro), et caler un livre audio sur le texte de son livre (Synchro livre audio).
 - **Paramètres** - tout ce qui est configurable.
 
 ## Autres fonctionnalités
@@ -136,7 +136,7 @@ Pour une configuration de développement complète, consultez [CONTRIBUTING.md](
 - Aperçu vidéo libmpv intégré - lisez la scène d'un mot pendant la curation, ou ajustez le minutage des sous-titres avec une lecture en direct.
 - Captures d'écran animées (voir les exemples de cartes ci-dessus).
 - Profils de paramètres - enregistrez des configurations nommées et basculez entre elles depuis l'en-tête.
-- Redéfinir le style des cartes extraites - réappliquez le style actuel de vos cartes aux cartes déjà créées (Utilitaires → Complétion des cartes).
+- Redéfinir le style des cartes extraites - réappliquez le style actuel de vos cartes aux cartes déjà créées (Utilitaires → Complétion).
 
 <details>
 <summary><strong>Thèmes intégrés (29)</strong></summary>

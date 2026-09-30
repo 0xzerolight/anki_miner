@@ -216,12 +216,23 @@ QTabWidget::pane {
     top: -1px;
 }
 
+/* E01: a tab is its text plus 6 px above and below, over a 24 px floor, not the
+   32 px floor plus 8 px it used to be. The main row keeps body text. */
 QTabBar::tab {
-    min-height: ${spacing-xl}px;
-    padding: ${spacing-xs}px ${spacing-md}px;
+    min-height: 24px;
+    padding: 6px ${spacing-md}px;
     font-size: ${font-size-body}px;
     font-weight: 500;
     border: none;
+}
+
+/* The second level (the Video, Reading and Utilities sub-tabs, named by
+   install_animated_tab_bar): smaller text and a narrower inset, so the row
+   reads as a level under the main one instead of a copy of it (E01). */
+AnimatedTabBar#subtab-bar::tab {
+    min-height: 20px;
+    padding: 6px ${spacing-sm}px;
+    font-size: ${font-size-body-sm}px;
 }
 
 QTabBar::tab:selected {
@@ -431,9 +442,16 @@ QComboBox::drop-down {
     width: ${spacing-md}px;
 }
 
+/* D17: a chevron, so a combo no longer reads as a text box. The file is drawn
+   in the theme's own text colour (resources/styles/glyphs.py). */
 QComboBox::down-arrow {
     width: ${spacing-sm}px;
     height: ${spacing-sm}px;
+    image: url("${glyph-chevron}");
+}
+
+QComboBox::down-arrow:disabled {
+    image: url("${glyph-chevron-disabled}");
 }
 
 QComboBox QAbstractItemView {
@@ -563,11 +581,6 @@ QLabel#validation-badge {
     font-weight: 500;
 }
 
-/* Header widget */
-QWidget#header-widget {
-    border-bottom: 1px solid;
-}
-
 /* Screen issue banner (D24): one persistent surface for recoverable problems.
    Reuses the warning badge endpoints so no theme gains a key: an issue here is
    by definition survivable, and the error red stays reserved for destruction. */
@@ -587,33 +600,17 @@ QFrame#screen-issue-banner QLabel#screen-issue-details {
     font-size: ${font-size-caption}px;
 }
 
-/* Update banner */
+/* Update banner (E05): the screen issue banner's calm shape. The buttons are
+   ModernButtons and take their look from their roles, so nothing here styles
+   them. */
 QFrame#update-banner {
+    border: 1px solid;
     border-radius: ${border-radius-default}px;
     margin: ${spacing-xxs}px ${spacing-xs}px;
-    padding: ${spacing-xxs}px ${spacing-xs}px;
 }
 
 QFrame#update-banner QLabel {
-    font-size: ${font-size-body-sm}px;
-}
-
-QFrame#update-banner QPushButton {
-    border: 1px solid;
-    border-radius: ${border-radius-small}px;
-    padding: 2px 10px;
-    font-size: ${font-size-caption}px;
-}
-
-QFrame#update-banner QPushButton:hover {
-    border: 1px solid;
-}
-
-QFrame#update-banner QPushButton#dismissBtn {
-    border: none;
     font-size: ${font-size-body}px;
-    font-weight: bold;
-    padding: 2px 6px;
 }
 
 /* Status bar styles */
@@ -715,8 +712,10 @@ QListWidget#settings-nav {
 /* The left border is the selected-destination marker, reserved transparent on
    every row for the same reason. Both headings and destinations reserve it, so
    the deliberate heading outdent below is unchanged. */
+/* E02: the smallest vertical step, so all 13 pages and the group headings fit
+   the rail at 1280x800 (25 px rows). */
 QListWidget#settings-nav::item {
-    padding: ${spacing-xs}px ${spacing-sm}px ${spacing-xs}px ${spacing-md}px;
+    padding: ${spacing-xxs}px ${spacing-sm}px ${spacing-xxs}px ${spacing-md}px;
     border: none;
     border-left: 2px solid transparent;
 }
@@ -733,12 +732,12 @@ QLabel#validation-status {
     padding: ${spacing-xxs}px 0;
 }
 
-/* Helper/hint text. Dimming comes from the themed `color: ${color-text-muted}`
-   rule further down; `opacity` was inert. */
+/* Helper/hint text: caption size, upright, and no inset of its own, so it starts
+   at the same x as the control it explains (E04). Dimming comes from the themed
+   `color: ${color-text-muted}` rule further down; `opacity` was inert. */
 QLabel#helper-text {
-    font-size: ${font-size-small}px;
-    font-style: italic;
-    padding: 2px ${spacing-xs}px;
+    font-size: ${font-size-caption}px;
+    padding: 2px 0;
     border-radius: ${border-radius-small}px;
     margin-top: ${spacing-xxs}px;
 }
@@ -753,9 +752,9 @@ QLabel#row-detail {
     margin-top: ${spacing-xxs}px;
 }
 
-/* Output-location value: small muted helper styling but NOT italic */
+/* Output-location value: a value, so body text in the normal colour (E04). */
 QLabel#output-location-value {
-    font-size: ${font-size-small}px;
+    font-size: ${font-size-body}px;
     padding: 2px ${spacing-xs}px;
     border-radius: ${border-radius-small}px;
     margin-top: ${spacing-xxs}px;
@@ -933,13 +932,30 @@ QPushButton#ghost:checked:hover {
     background-color: ${color-primary-hover};
 }
 
-/* Unavailable reads the same in every role. */
+/* Unavailable (D17). A disabled control must weigh less than the enabled ones
+   around it, so the quiet roles give up their fill: every unmarked button,
+   secondary and danger keep an outline and grey text, and ghost keeps only the
+   text. The two filled roles (and Qt's dialog default, which renders as one)
+   keep a grey fill: an outline-only primary would read as an enabled
+   secondary button. Order matters: these tie with the role rules above on
+   specificity and win by coming later. */
 QPushButton:disabled,
-QPushButton#primary:disabled,
 QPushButton#secondary:disabled,
-QPushButton#ghost:disabled,
-QPushButton#danger:disabled,
-QPushButton#critical:disabled {
+QPushButton#danger:disabled {
+    background-color: transparent;
+    color: ${color-text-disabled};
+    border-color: ${color-disabled};
+}
+
+QPushButton#ghost:disabled {
+    background-color: transparent;
+    color: ${color-text-disabled};
+    border-color: transparent;
+}
+
+QPushButton#primary:disabled,
+QPushButton#critical:disabled,
+QPushButton:default:disabled {
     background-color: ${color-disabled};
     color: ${color-text-on-primary};
     border-color: ${color-disabled};
@@ -1067,6 +1083,12 @@ AnimatedTabBar {
 
 AnimatedTabBar::tab:selected {
     border-bottom-color: transparent;
+}
+
+/* The sub-tab row's reserved indicator is 2 px, matching the thinner line
+   AnimatedTabBar paints for it (E01). Transparent: the painter draws it. */
+AnimatedTabBar#subtab-bar::tab:selected {
+    border-bottom: 2px solid transparent;
 }
 
 /* --- Text Edit / Log --- */
@@ -1294,6 +1316,33 @@ QCheckBox::indicator:checked, QRadioButton::indicator:checked {
     border-color: ${color-primary};
 }
 
+/* D17: a ticked box carries a tick, drawn in the colour that sits on the accent,
+   so a grid of boxes no longer reads as colour swatches. Radio buttons keep the
+   filled dot. */
+QCheckBox::indicator:checked {
+    image: url("${glyph-check}");
+}
+
+QCheckBox::indicator:checked:disabled {
+    image: url("${glyph-check-disabled}");
+}
+
+/* E03: a disabled box looks disabled. Its text and its indicator take the
+   theme's own "unavailable" tokens, the same ones the input :disabled rule uses. */
+QCheckBox:disabled, QRadioButton:disabled {
+    color: ${color-text-disabled};
+}
+
+QCheckBox::indicator:disabled, QRadioButton::indicator:disabled {
+    background-color: ${color-input-disabled-bg};
+    border-color: ${color-disabled};
+}
+
+QCheckBox::indicator:checked:disabled, QRadioButton::indicator:checked:disabled {
+    background-color: ${color-disabled};
+    border-color: ${color-disabled};
+}
+
 /* --- Dialogs --- */
 
 QDialog {
@@ -1481,34 +1530,15 @@ QLabel#validation-badge[status="warning"] {
     border-color: ${color-warning};
 }
 
-/* --- Header Widget --- */
+/* --- Update Banner --- */
 
-QWidget#header-widget {
+QFrame#update-banner {
     background-color: ${color-surface};
     border-color: ${color-border};
 }
 
-/* --- Update Banner --- */
-
-QFrame#update-banner {
-    background-color: ${color-update-banner-bg};
-}
-
 QFrame#update-banner QLabel {
-    color: ${color-update-banner-text};
-}
-
-/* The banner paints its own two colours, so its buttons invert between them
-   rather than reaching for a translucent white that only worked on one theme. */
-QFrame#update-banner QPushButton {
-    background-color: transparent;
-    color: ${color-update-banner-text};
-    border-color: ${color-update-banner-text};
-}
-
-QFrame#update-banner QPushButton:hover {
-    background-color: ${color-update-banner-text};
-    color: ${color-update-banner-bg};
+    color: ${color-text};
 }
 
 /* --- Status Bar Widget --- */
@@ -1638,13 +1668,19 @@ QLabel#validation-status[status="checking"] {
     color: ${color-info};
 }
 
+/* "Not installed" and other plain install facts: ONE neutral grey, the token
+   System Health's pending badge uses (FINDINGS overlap 19: C04, E08, E10). */
+QLabel#validation-status[status="info"] {
+    color: ${color-badge-pending-text};
+}
+
 QLabel#helper-text,
 QLabel#row-detail {
     color: ${color-text-muted};
 }
 
 QLabel#output-location-value {
-    color: ${color-text-muted};
+    color: ${color-text};
 }
 
 /* Chain priority rows (D13). Each row states its own facts on its own second

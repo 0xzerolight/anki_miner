@@ -90,7 +90,7 @@ def test_update_milestones_renders_one_row_per_milestone(tab: AnalyticsTab) -> N
         widget = item.widget() if item is not None else None
         assert widget is not None
         rendered.extend(label.text() for label in widget.findChildren(QLabel))
-    assert rendered == ["50 cards created", "3 series mined"]
+    assert rendered == ["50 cards created", "Reached", "3 series mined"]
 
 
 def test_every_milestone_source_is_extracted_for_translation() -> None:

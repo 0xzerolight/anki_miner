@@ -172,7 +172,8 @@ class MiniJobMonitor(QWidget):
             self.title_label.show()
             self.line_label.setText("")
             self.progress_bar.hide()
-            self.cancel_button.setEnabled(False)
+            # Nothing to cancel, so no Cancel (E07): a disabled button is still a button to read.
+            self.cancel_button.hide()
             return
 
         # With several jobs going the picker already names this one, and a
@@ -195,6 +196,7 @@ class MiniJobMonitor(QWidget):
         # A cancel already asked for is not asked for twice: the wait is the
         # answer, and a live button beside "Cancelling…" invites the user to
         # conclude the first press did not land.
+        self.cancel_button.show()
         self.cancel_button.setEnabled(snapshot.cancellable and not snapshot.cancelling)
 
     def _sync_picker(self, running: tuple[TaskSnapshot, ...]) -> None:

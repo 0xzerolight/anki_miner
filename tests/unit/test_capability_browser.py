@@ -1,18 +1,20 @@
-"""The Usage Guide browser dialog: filtering + selection + navigation."""
+"""The Usage Guide browser: one list, one Open button, filtering and navigation (E11).
+
+It used to be 95 boxed rows with 82 "Open ▸" buttons and could be shrunk to
+94x129. Enter in the search box only searches (D49-B); Enter or a double-click
+on a row opens it.
+"""
 
 from __future__ import annotations
 
 from unittest.mock import Mock
 
 import pytest
-from PyQt6.QtCore import QCoreApplication, QTranslator
-from PyQt6.QtWidgets import QPushButton
+from PyQt6.QtCore import QCoreApplication, QEvent, Qt, QTranslator
+from PyQt6.QtGui import QKeyEvent
 
-from anki_miner.gui.capabilities import CAPABILITIES, Capability, CapabilityTarget
-from anki_miner.gui.widgets.dialogs.capability_browser import (
-    CapabilityBrowser,
-    run_capability_browser,
-)
+from anki_miner.gui.capabilities import CAPABILITIES, CapabilityTarget
+from anki_miner.gui.widgets.dialogs.capability_browser import CapabilityBrowser, run_capability_browser
 from anki_miner.languages.registry import get_profile
 
 
@@ -24,13 +26,48 @@ def dialog(qtbot):
     dlg.deleteLater()
 
 
+def _item_for(dialog, cap_id):
+    for row in range(dialog.list.count()):
+        item = dialog.list.item(row)
+        if item.data(Qt.ItemDataRole.UserRole) == cap_id:
+            return item
+    raise AssertionError(cap_id)
+
+
 def test_starts_showing_everything(dialog):
     assert dialog._current == list(CAPABILITIES)
+
+
+def test_every_capability_is_one_list_item(dialog):
+    ids = [dialog.list.item(r).data(Qt.ItemDataRole.UserRole) for r in range(dialog.list.count())]
+
+    assert [i for i in ids if i is not None] == [cap.id for cap in CAPABILITIES]
+
+
+def test_there_is_one_open_button(dialog):
+    from PyQt6.QtWidgets import QPushButton
+
+    opens = [b for b in dialog.findChildren(QPushButton) if b.text() == "Open"]
+
+    assert opens == [dialog.open_button]
+
+
+def test_open_is_not_the_enter_target(dialog):
+    """D49-B: Enter in the search box only searches."""
+    assert dialog.open_button.autoDefault() is False
+    assert dialog.open_button.isDefault() is False
+    assert dialog.close_button.autoDefault() is False
+
+
+def test_the_dialog_cannot_collapse(dialog):
+    assert dialog.minimumWidth() >= 480
+    assert dialog.minimumHeight() >= 420
 
 
 def test_typing_filters_to_matches(dialog):
     dialog.search_box.setText("i+1")
     shown = {c.id for c in dialog._current}
+
     assert "i-plus-one" in shown
     assert "youtube-mining" not in shown
 
@@ -62,18 +99,12 @@ def test_window_title_is_usage_guide(dialog):
 
 
 def test_chrome_texts_translate_under_capabilities_context(qapp, qtbot):
-    """Window title, search placeholder, empty state and Open button all read
-    through ``QCoreApplication.translate("Capabilities", ...)`` -- not a
-    ``_tr()`` wrapper pylupdate6 can't see through, which used to leave these
-    four strings in English in every UI language.
-    """
-
     class _StubTranslator(QTranslator):
         _MAP = {
             "Anki Miner Usage Guide": "TR_TITLE",
             'Search features, e.g. "i+1", "pitch", "youtube"': "TR_PLACEHOLDER",
             "No matching features.": "TR_EMPTY",
-            "Open ▸": "TR_OPEN",
+            "Open": "TR_OPEN",
         }
 
         def translate(self, context, source, disambiguation=None, n=-1):  # noqa: N802
@@ -89,66 +120,80 @@ def test_chrome_texts_translate_under_capabilities_context(qapp, qtbot):
 
         assert dlg.windowTitle() == "TR_TITLE"
         assert dlg.search_box.placeholderText() == "TR_PLACEHOLDER"
-
+        assert dlg.open_button.text() == "TR_OPEN"
         dlg.search_box.setText("zzzz-nothing-here")
         assert dlg._empty_label.text() == "TR_EMPTY"
-
-        dlg.search_box.setText("")
-        button = next(b for b in dlg.findChildren(QPushButton) if b.objectName() == "capability-open")
-        assert button.text() == "TR_OPEN"
     finally:
         qapp.removeTranslator(translator)
 
 
-def test_open_buttons_match_visible_rows(dialog):
-    dialog.search_box.setText("youtube")
-    buttons = [b for b in dialog.findChildren(QPushButton) if b.objectName() == "capability-open"]
-    expected = sum(1 for c in dialog._current if c.target is not None)
-    assert len(buttons) == expected
+def test_open_is_disabled_until_a_row_with_a_place_is_selected(dialog):
+    assert dialog.open_button.isEnabled() is False
+
+    dialog.list.setCurrentItem(_item_for(dialog, "system-health"))  # menu-only: nowhere to open
+    assert dialog.open_button.isEnabled() is False
+
+    dialog.list.setCurrentItem(_item_for(dialog, "youtube-mining"))
+    assert dialog.open_button.isEnabled() is True
 
 
-def test_target_less_row_has_no_open_button(dialog, qtbot):
-    cap = Capability(
-        id="x-dialog-only",
-        title="Dialog-only thing",
-        description="Lives in a menu.",
-        category="c",
-        keywords=("x",),
-    )
-    row = dialog._make_row(cap)
-    qtbot.addWidget(row)
-    assert row.findChildren(QPushButton) == []
+def test_category_rows_cannot_be_selected(dialog):
+    header = dialog.list.item(0)
+
+    assert header.data(Qt.ItemDataRole.UserRole) is None
+    assert not header.flags() & Qt.ItemFlag.ItemIsSelectable
+
+
+def test_the_open_button_opens_the_selected_row(dialog, qtbot):
+    dialog.list.setCurrentItem(_item_for(dialog, "audiobook-mining"))
+
+    with qtbot.waitSignal(dialog.accepted, timeout=1000):
+        dialog.open_button.click()
+
+    assert dialog.selected_target == CapabilityTarget("audiobook")
+
+
+def test_double_click_opens_a_row(dialog, qtbot):
+    item = _item_for(dialog, "youtube-mining")
+
+    with qtbot.waitSignal(dialog.accepted, timeout=1000):
+        dialog.list.itemDoubleClicked.emit(item)
+
+    assert dialog.selected_target == CapabilityTarget("video", "youtube")
+
+
+def test_enter_in_the_list_opens_the_current_row(dialog, qtbot):
+    dialog.list.setCurrentItem(_item_for(dialog, "youtube-mining"))
+    event = QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_Return, Qt.KeyboardModifier.NoModifier)
+
+    with qtbot.waitSignal(dialog.accepted, timeout=1000):
+        QCoreApplication.sendEvent(dialog.list, event)
 
 
 def test_no_match_shows_empty_state(dialog):
     dialog.search_box.setText("zzzz-nothing-here")
+
     assert dialog._current == []
-    assert dialog._empty_label.isVisible() or dialog._empty_label.isVisibleTo(dialog)
+    assert dialog._empty_label.isVisibleTo(dialog)
 
 
 def test_clearing_search_restores_full_list(dialog):
     dialog.search_box.setText("pitch")
     assert len(dialog._current) < len(CAPABILITIES)
+
     dialog.search_box.setText("")
+
     assert dialog._current == list(CAPABILITIES)
 
 
 def test_choosing_records_target_and_accepts(dialog, qtbot):
     target = CapabilityTarget("settings", "filtering")
     cap = next(c for c in CAPABILITIES if c.target == target)
+
     with qtbot.waitSignal(dialog.accepted, timeout=1000):
         dialog._choose(cap)
+
     assert dialog.selected_target == target
-
-
-def test_clicking_open_button_selects_that_row(dialog, qtbot):
-    dialog.search_box.setText("mine from an audiobook")  # one row: bare "audiobook" also hits Audiobook Sync
-    visible = dialog._current
-    assert len(visible) == 1
-    button = next(b for b in dialog.findChildren(QPushButton) if b.objectName() == "capability-open")
-    with qtbot.waitSignal(dialog.accepted, timeout=1000):
-        button.click()
-    assert dialog.selected_target == visible[0].target
 
 
 def test_capability_set_gates_the_listed_rows(qtbot):
@@ -168,6 +213,13 @@ def test_capability_set_survives_a_search(qtbot):
 
     assert dlg._current
     assert all(cap.id != "furigana" for cap in dlg._current)
+
+
+def test_no_description_keeps_the_ascii_arrow():
+    """E11: the user-facing arrows are real arrows now."""
+    offenders = [cap.id for cap in CAPABILITIES if " -> " in cap.description]
+
+    assert offenders == []
 
 
 def test_runner_passes_the_capability_set_to_the_dialog(qtbot, monkeypatch):

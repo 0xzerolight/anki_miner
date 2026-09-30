@@ -376,11 +376,7 @@ class TestHeaderProfileBlockFitsTheWindowMinimum:
         # Vacuity guards: the block really is on screen, and the header really is
         # the constraint the window minimum is being read off.
         assert not window.header.profile_combo.isHidden()
-        assert not window.header.profile_label.isHidden()
-        assert header_min >= window.tabs.minimumSizeHint().width(), (
-            f"the tab stack ({window.tabs.minimumSizeHint().width()}px) now out-demands the header "
-            f"({header_min}px), so this no longer measures the profile block"
-        )
+        assert window.tabs.cornerWidget(Qt.Corner.TopRightCorner) is window.header
 
         assert window.minimumSizeHint().width() <= WINDOW_MIN_WIDTH, (
             f"window minimum {window.minimumSizeHint().width()}px exceeds the {WINDOW_MIN_WIDTH}px "

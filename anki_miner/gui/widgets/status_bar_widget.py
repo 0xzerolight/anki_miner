@@ -208,7 +208,7 @@ class StatusBarWidget(QStatusBar):
         self.task_button.setText(
             " · ".join(
                 (
-                    self.tr("%n task(s)", "", len(running)),
+                    self.tr("%n running", "", len(running)),
                     self._task_line(displayed),
                     tr_format(self.tr("Elapsed %1"), format_clock(displayed.elapsed_s)),
                 )
@@ -259,7 +259,7 @@ class StatusBarWidget(QStatusBar):
             action.triggered.connect(self._on_task_action_triggered)
             self.task_menu.addAction(action)
         self.task_menu.addSeparator()
-        monitor_action = QAction(self.tr("Open mini monitor"), self.task_menu)
+        monitor_action = QAction(self.tr("Open job monitor"), self.task_menu)
         monitor_action.triggered.connect(self.mini_monitor_requested)
         self.task_menu.addAction(monitor_action)
 

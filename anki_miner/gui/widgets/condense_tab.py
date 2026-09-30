@@ -2,9 +2,9 @@
 
 Composes a single-file / folder mode toggle (a media
 :class:`~anki_miner.gui.widgets.enhanced.FileSelector` plus an optional subtitle
-selector per mode), single-mode audio- and subtitle-track override rows, inline
-run options (padding, offset, output format, condensed-subs toggle), an
-output-location row with an Overwrite checkbox, a Condense button, a
+selector per mode), a single-mode "Tracks…" menu (audio and embedded subtitle
+track overrides), inline run options (padding, offset, output format,
+condensed-subs toggle), an output-location row with an Overwrite checkbox, a Condense button, a
 :class:`~anki_miner.gui.widgets.progress_widget.ProgressWidget` for overall queue
 progress, and a :class:`~anki_miner.gui.widgets.log_widget.LogWidget` for per-file
 pass/fail lines.
@@ -31,11 +31,13 @@ from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDialog,
+    QDoubleSpinBox,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -53,9 +55,15 @@ from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.utils.run_options import RunOptionsMixin
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
-from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout
+from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout, field_label_width
 from anki_miner.gui.widgets.dialogs import AudioTracksDialog, CondenseMetadataDialog, SubtitleTracksDialog
-from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
+from anki_miner.gui.widgets.enhanced import (
+    FileSelector,
+    ModernButton,
+    SectionHeader,
+    accepts_suffixes,
+    make_menu_button,
+)
 from anki_miner.gui.workers.condense_worker import (
     CondenseItem,
     CondenseOutputCollisionError,
@@ -63,6 +71,7 @@ from anki_miner.gui.workers.condense_worker import (
     plan_condense_outputs,
 )
 from anki_miner.languages.registry import config_language, get_profile
+from anki_miner.services.audio_condenser import EncoderUnavailableError, FilterUnavailableError
 from anki_miner.services.audio_tagger import TrackMetadata, prefill_track_metadata
 from anki_miner.utils import list_audio_streams
 from anki_miner.utils.audio_track_detector import list_subtitle_streams, matches_language_tag
@@ -101,9 +110,11 @@ CONDENSE_SUBTITLE_FILE_FILTER = _build_filter("Subtitle Files", CONDENSE_SUBTITL
 _PADDING_MIN = 0
 _PADDING_MAX = 10_000
 _PADDING_STEP = 50
-_OFFSET_MIN = -600_000
-_OFFSET_MAX = 600_000
-_OFFSET_STEP = 100
+# Offset in seconds, like the mining screens' Subtitle Offset (E15); stored in
+# config as milliseconds (condenser_offset_ms), converted at the widget.
+_OFFSET_MIN_S = -600.0
+_OFFSET_MAX_S = 600.0
+_OFFSET_STEP_S = 0.1
 
 
 class CondenseTab(RunOptionsMixin, _ToolTabBase):
@@ -175,6 +186,7 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
             failed=self.tr("Failed — see log"),
             partial=self.tr("Finished with errors — see log"),
             run_problem=self.tr("Some files could not be condensed."),
+            run_problem_single=self.tr("This file could not be condensed."),
             complete_template=self.tr("Complete — %1 files processed"),
             complete_skipped_template=self.tr("Complete — %1 processed, %2 skipped"),
             all_skipped_template=self.tr(
@@ -192,6 +204,20 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
 
     def _item_total(self) -> int:
         return self._total_files
+
+    def _typed_problem_summary(self, exc: BaseException) -> str | None:
+        """ffmpeg-build faults stop the whole queue; say what they mean (E13). No repair."""
+        if isinstance(exc, FilterUnavailableError):
+            return self.tr("This ffmpeg build cannot condense audio. Install a different ffmpeg build.")
+        if isinstance(exc, EncoderUnavailableError):
+            return self.tr(
+                "This ffmpeg build cannot write the chosen format. Pick another format, or install a different ffmpeg build."
+            )
+        return None
+
+    def _offset_ms(self) -> int:
+        """The offset as config and the worker store it: whole milliseconds."""
+        return round(self.offset_spinbox.value() * 1000)
 
     # ------------------------------------------------------------------
     # Config refresh
@@ -221,7 +247,7 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
         """
         with self.seeding():
             self.padding_spinbox.setValue(self.config.condenser_padding_ms)
-            self.offset_spinbox.setValue(self.config.condenser_offset_ms)
+            self.offset_spinbox.setValue(self.config.condenser_offset_ms / 1000)
             idx = self.format_combo.findData(self.config.condenser_output_format)
             if idx >= 0:
                 self.format_combo.setCurrentIndex(idx)
@@ -233,7 +259,7 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
         """Whether the config's condenser_* values differ from the live widgets."""
         return (
             self.config.condenser_padding_ms != self.padding_spinbox.value()
-            or self.config.condenser_offset_ms != self.offset_spinbox.value()
+            or self.config.condenser_offset_ms != self._offset_ms()
             or self.config.condenser_output_format != self.format_combo.currentData()
             or self.config.condenser_write_subtitles != self.write_subs_checkbox.isChecked()
             or self.config.condenser_tag_outputs != self.tag_outputs_checkbox.isChecked()
@@ -248,7 +274,7 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
         """
         self.persist_run_options(
             condenser_padding_ms=self.padding_spinbox.value(),
-            condenser_offset_ms=self.offset_spinbox.value(),
+            condenser_offset_ms=self._offset_ms(),
             condenser_output_format=self.format_combo.currentData(),
             condenser_write_subtitles=self.write_subs_checkbox.isChecked(),
             condenser_tag_outputs=self.tag_outputs_checkbox.isChecked(),
@@ -304,6 +330,15 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
         input_desc.setWordWrap(True)
         layout.addWidget(input_desc)
 
+        # One label column for all four path rows, so every field starts at the
+        # same x (E04). Both modes share it: switching mode must not shift them.
+        path_label_width = field_label_width(
+            self.tr("Media File:"),
+            self.tr("Subtitle File:"),
+            self.tr("Media Folder:"),
+            self.tr("Subtitle Folder:"),
+        )
+
         self._build_mode_row(
             layout,
             mode_label=self.tr("Mode:"),
@@ -316,6 +351,7 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
         # Single-mode selectors
         self.media_file_selector = FileSelector(
             label=self.tr("Media File:"),
+            label_width=path_label_width,
             file_mode=True,
             file_filter=CONDENSE_MEDIA_FILE_FILTER,
             history_key="tools.condense.inputs",
@@ -323,10 +359,29 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
                 CONDENSE_MEDIA_EXTENSIONS, self.tr("This field takes a video or audio file.")
             ),
         )
-        layout.addWidget(self.media_file_selector)
+        # E08: the two track overrides are one "Tracks…" menu on this row; a
+        # summary line appears only when a track is not automatic.
+        self.audio_track_action = QAction(self.tr("Audio track…"), self)
+        self.audio_track_action.triggered.connect(self._on_audio_tracks_clicked)
+        self.subtitle_track_action = QAction(self.tr("Subtitle track…"), self)
+        self.subtitle_track_action.triggered.connect(self._on_subtitle_tracks_clicked)
+        self.tracks_button = make_menu_button(
+            self.tr("Tracks…"),
+            self.tr("Choose which audio or embedded subtitle track to condense."),
+            [self.audio_track_action, self.subtitle_track_action],
+        )
+        self.media_row = QWidget()
+        media_row_layout = QHBoxLayout(self.media_row)
+        media_row_layout.setContentsMargins(0, 0, 0, 0)
+        media_row_layout.setSpacing(SPACING.xs)
+        media_row_layout.addWidget(self.media_file_selector, 1)
+        media_row_layout.addWidget(self.tracks_button, 0, Qt.AlignmentFlag.AlignTop)
+        layout.addWidget(self.media_row)
 
         self.subtitle_file_selector = FileSelector(
             label=self.tr("Subtitle File:"),
+            label_width=path_label_width,
+            placeholder=self.tr("Optional — found automatically"),
             file_mode=True,
             file_filter=CONDENSE_SUBTITLE_FILE_FILTER,
             history_key="tools.condense.inputs",
@@ -334,50 +389,21 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
         )
         layout.addWidget(self.subtitle_file_selector)
 
-        subtitle_hint = QLabel(self.tr("Leave empty to auto-detect (sibling file or embedded track)."))
-        subtitle_hint.setObjectName("helper-text")
-        subtitle_hint.setWordWrap(True)
-        layout.addWidget(subtitle_hint)
-
         # Reset the track overrides whenever the media file changes.
         self.media_file_selector.path_changed.connect(self._on_media_path_changed)
         # Picking an explicit subtitle file makes the embedded-track override
         # meaningless, so its row is disabled while a file is selected.
         self.subtitle_file_selector.path_changed.connect(self._on_subtitle_path_changed)
 
-        # Single-mode audio-track override row.
-        self.audio_track_row_widget = QWidget()
-        audio_row = QHBoxLayout(self.audio_track_row_widget)
-        audio_row.setContentsMargins(0, 0, 0, 0)
-        audio_row.setSpacing(SPACING.xs)
-        audio_row.addWidget(QLabel(self.tr("Audio track:")))
-        self.audio_track_label = QLabel(self.tr("Auto-detect"))
-        self.audio_track_label.setObjectName("output-location-value")
-        audio_row.addWidget(self.audio_track_label, 1)
-        self.audio_tracks_button = ModernButton(self.tr("Choose…"), variant="secondary")
-        self.audio_tracks_button.setToolTip(self.tr("Choose which audio track to condense."))
-        self.audio_tracks_button.clicked.connect(self._on_audio_tracks_clicked)
-        audio_row.addWidget(self.audio_tracks_button)
-        layout.addWidget(self.audio_track_row_widget)
-
-        # Single-mode subtitle-track override row.
-        self.subtitle_track_row_widget = QWidget()
-        sub_row = QHBoxLayout(self.subtitle_track_row_widget)
-        sub_row.setContentsMargins(0, 0, 0, 0)
-        sub_row.setSpacing(SPACING.xs)
-        sub_row.addWidget(QLabel(self.tr("Subtitle track:")))
-        self.subtitle_track_label = QLabel(self.tr("Auto (external file, else embedded)"))
-        self.subtitle_track_label.setObjectName("output-location-value")
-        sub_row.addWidget(self.subtitle_track_label, 1)
-        self.subtitle_tracks_button = ModernButton(self.tr("Choose…"), variant="secondary")
-        self.subtitle_tracks_button.setToolTip(self.tr("Choose which embedded subtitle track to condense against."))
-        self.subtitle_tracks_button.clicked.connect(self._on_subtitle_tracks_clicked)
-        sub_row.addWidget(self.subtitle_tracks_button)
-        layout.addWidget(self.subtitle_track_row_widget)
+        self.track_summary_label = QLabel("")
+        self.track_summary_label.setObjectName("row-meta")
+        self.track_summary_label.hide()
+        layout.addWidget(self.track_summary_label)
 
         # Folder-mode selectors (hidden by default)
         self.media_folder_selector = FileSelector(
             label=self.tr("Media Folder:"),
+            label_width=path_label_width,
             file_mode=False,
             history_key="tools.condense.inputs",
         )
@@ -386,6 +412,7 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
 
         self.subtitle_folder_selector = FileSelector(
             label=self.tr("Subtitle Folder:"),
+            label_width=path_label_width,
             file_mode=False,
             history_key="tools.condense.inputs",
         )
@@ -427,15 +454,16 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
         padding_row.addStretch()
         layout.addLayout(padding_row)
 
-        # Offset
+        # Offset: seconds, worded and signed like the mining screens (E15).
         offset_row = QHBoxLayout()
         offset_row.setSpacing(SPACING.xs)
-        offset_row.addWidget(QLabel(self.tr("Offset:")))
-        self.offset_spinbox = QSpinBox()
-        self.offset_spinbox.setRange(_OFFSET_MIN, _OFFSET_MAX)
-        self.offset_spinbox.setSingleStep(_OFFSET_STEP)
-        self.offset_spinbox.setSuffix(self.tr(" ms"))
-        self.offset_spinbox.setToolTip(self.tr("Shift every subtitle cue by this amount before condensing."))
+        offset_row.addWidget(QLabel(self.tr("Subtitle offset:")))
+        self.offset_spinbox = QDoubleSpinBox()
+        self.offset_spinbox.setRange(_OFFSET_MIN_S, _OFFSET_MAX_S)
+        self.offset_spinbox.setDecimals(2)
+        self.offset_spinbox.setSingleStep(_OFFSET_STEP_S)
+        self.offset_spinbox.setSuffix(self.tr(" seconds"))
+        self.offset_spinbox.setToolTip(self.tr("Adjust subtitle timing (positive = later, negative = earlier)"))
         offset_row.addWidget(self.offset_spinbox)
         offset_row.addStretch()
         layout.addLayout(offset_row)
@@ -577,15 +605,15 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
     # ------------------------------------------------------------------
 
     def _apply_mode(self, single: bool) -> None:
+        # Folder mode auto-detects the track per file; no per-file pick.
+        self.media_row.setVisible(single)
         self.media_file_selector.setVisible(single)
         self.subtitle_file_selector.setVisible(single)
-        # Folder mode auto-detects the track per file; no per-file pick.
-        self.audio_track_row_widget.setVisible(single)
-        self.subtitle_track_row_widget.setVisible(single)
         self.media_folder_selector.setVisible(not single)
         self.subtitle_folder_selector.setVisible(not single)
         self.subtitle_folder_hint.setVisible(not single)
         self.merge_row_widget.setVisible(not single)
+        self._refresh_track_summary()
 
     # ------------------------------------------------------------------
     # Track selection (single-file mode)
@@ -595,12 +623,21 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
         """Reset both track overrides when the media file changes."""
         self._audio_track_override = None
         self._subtitle_track_override = None
-        self.audio_track_label.setText(self.tr("Auto-detect"))
-        self.subtitle_track_label.setText(self.tr("Auto (external file, else embedded)"))
+        self._refresh_track_summary()
 
     def _on_subtitle_path_changed(self, new_path: str) -> None:
-        """Disable the embedded-subtitle-track row when an explicit sub is picked."""
-        self.subtitle_track_row_widget.setEnabled(not new_path.strip())
+        """Disable "Subtitle track…" when an explicit subtitle file is picked."""
+        self.subtitle_track_action.setEnabled(not new_path.strip())
+
+    def _refresh_track_summary(self) -> None:
+        """Say which track is forced, only when one is (E08)."""
+        parts: list[str] = []
+        if self._audio_track_override is not None:
+            parts.append(tr_format(self.tr("Audio: track %1"), str(self._audio_track_override + 1)))
+        if self._subtitle_track_override is not None:
+            parts.append(tr_format(self.tr("Subtitles: embedded track %1"), str(self._subtitle_track_override + 1)))
+        self.track_summary_label.setText(" · ".join(parts))
+        self.track_summary_label.setVisible(bool(parts) and self.file_mode_button.isChecked())
 
     def _report_probe_failure(self, summary: str, details: str) -> None:
         """One shape for both ffprobe failures: sentence here, ffprobe output in Details.
@@ -631,14 +668,14 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
         # Probe off the GUI thread — ffprobe on a large file can block long
         # enough to freeze the UI. Disable the button so a second click can't
         # spawn a parallel probe; re-enabled in both callbacks.
-        self.audio_tracks_button.setEnabled(False)
+        self.audio_track_action.setEnabled(False)
 
         def _probe() -> object:
             return list_audio_streams(media_file, ffprobe_cmd=ffprobe_cmd)
 
         def _on_streams(result: object) -> None:
             try:
-                self.audio_tracks_button.setEnabled(True)
+                self.audio_track_action.setEnabled(True)
             except RuntimeError:
                 # Tab torn down while the probe was in flight (its C++ button is
                 # gone); the queued callback has nothing live to update.
@@ -666,15 +703,12 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
                 if self.media_file_selector.path_or_none() != media_path:
                     return
                 self._audio_track_override = dialog.selected_override()
-                if self._audio_track_override is None:
-                    self.audio_track_label.setText(self.tr("Auto-detect"))
-                else:
-                    self.audio_track_label.setText(tr_format(self.tr("Track %1"), str(self._audio_track_override + 1)))
+                self._refresh_track_summary()
 
         def _on_probe_error(msg: str) -> None:
             logger.error("Failed to probe audio tracks: %s", msg)
             try:
-                self.audio_tracks_button.setEnabled(True)
+                self.audio_track_action.setEnabled(True)
             except RuntimeError:
                 return
             self._report_probe_failure(self.tr("Audio tracks could not be read."), msg)
@@ -697,14 +731,16 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
             return
 
         ffprobe_cmd = resolve_ffprobe(self.config)
-        self.subtitle_tracks_button.setEnabled(False)
+        self.subtitle_track_action.setEnabled(False)
 
         def _probe() -> object:
             return list_subtitle_streams(media_file, ffprobe_cmd)
 
         def _on_streams(result: object) -> None:
             try:
-                self.subtitle_tracks_button.setEnabled(True)
+                # One action now carries both "probe in flight" and "an explicit
+                # subtitle file makes this moot"; re-enable only for the first.
+                self.subtitle_track_action.setEnabled(not self.subtitle_file_selector.path_or_none())
             except RuntimeError:
                 return
             streams = cast("list[SubtitleStream]", result)
@@ -731,17 +767,12 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
             )
             if dialog.exec() == SubtitleTracksDialog.DialogCode.Accepted:
                 self._subtitle_track_override = dialog.selected_override()
-                if self._subtitle_track_override is None:
-                    self.subtitle_track_label.setText(self.tr("Auto (external file, else embedded)"))
-                else:
-                    self.subtitle_track_label.setText(
-                        tr_format(self.tr("Track %1"), str(self._subtitle_track_override + 1))
-                    )
+                self._refresh_track_summary()
 
         def _on_probe_error(msg: str) -> None:
             logger.error("Failed to probe subtitle tracks: %s", msg)
             try:
-                self.subtitle_tracks_button.setEnabled(True)
+                self.subtitle_track_action.setEnabled(not self.subtitle_file_selector.path_or_none())
             except RuntimeError:
                 return
             self._report_probe_failure(self.tr("Subtitle tracks could not be read."), msg)
@@ -906,7 +937,7 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
             output_paths=output_paths or None,
             overwrite=self.overwrite_checkbox.isChecked(),
             padding_ms=self.padding_spinbox.value(),
-            offset_ms=self.offset_spinbox.value(),
+            offset_ms=self._offset_ms(),
             output_format=output_format,
             bitrate_kbps=self.config.condenser_bitrate_kbps,
             filtered_chars=self.config.condenser_filtered_chars,

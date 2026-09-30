@@ -13,6 +13,12 @@ def _info(version: str = "2.4.0", asset_url: str | None = None) -> UpdateInfo:
     )
 
 
+def _banner(qtbot, asset_url: str | None) -> UpdateBanner:
+    banner = UpdateBanner(_info(asset_url=asset_url))
+    qtbot.addWidget(banner)
+    return banner
+
+
 # ---------------------------------------------------------------------------
 # Label-by-target
 # ---------------------------------------------------------------------------
@@ -128,23 +134,49 @@ class TestDismissButton:
     """X button hides without destroying the widget (singleton-safe)."""
 
     def test_dismiss_hides_without_deleting(self, qtbot):
-        banner = UpdateBanner(_info())
-        qtbot.addWidget(banner)
+        banner = _banner(qtbot, None)
         banner.setVisible(True)
 
-        # Find the dismiss button by object name.
-        from PyQt6.QtWidgets import QPushButton
-
-        dismiss_btn = None
-        for child in banner.findChildren(QPushButton):
-            if child.objectName() == "dismissBtn":
-                dismiss_btn = child
-                break
-        assert dismiss_btn is not None
-
-        dismiss_btn.click()
+        banner._dismiss_btn.click()
 
         assert banner.isVisible() is False
         # Banner instance is still usable (not deleted) — accessing attributes
         # would raise RuntimeError if the C++ object had been freed.
         assert banner._info is not None
+
+
+class TestCalmStyle:
+    """E05: rendered like the screen issue banner, the Download action the only accent."""
+
+    def test_the_action_is_the_only_primary(self, qtbot):
+        banner = _banner(qtbot, "https://example.com/x.AppImage")
+
+        assert banner._download_btn.objectName() == "primary"
+        assert banner._skip_btn.objectName() == "ghost"
+        assert banner._dismiss_btn.objectName() == "ghost"
+
+    def test_dismiss_is_the_same_glyph_as_the_issue_banner(self, qtbot):
+        banner = _banner(qtbot, None)
+
+        assert banner._dismiss_btn.text() == "✕"
+        assert banner._dismiss_btn.accessibleName() == "Close"
+
+    def test_the_banner_paints_the_surface_colour(self, qtbot, qapp):
+        from PyQt6.QtGui import QColor
+
+        from anki_miner.gui.resources.styles.theme import Theme
+
+        previous = qapp.styleSheet()
+        qapp.setStyleSheet(Theme.get_stylesheet("dark"))
+        try:
+            banner = _banner(qtbot, None)
+            banner.resize(600, 40)
+            banner.show()
+            qtbot.waitExposed(banner)
+            # Sample the stretch between the label and the first button: a fixed x
+            # lands on a button once the row's own width moves.
+            gap_x = (banner._label.geometry().right() + banner._download_btn.geometry().left()) // 2
+            painted = QColor.fromRgba(banner.grab().toImage().pixel(gap_x, banner.height() // 2))
+            assert painted == QColor(Theme.get_colors("dark")["surface"])
+        finally:
+            qapp.setStyleSheet(previous)

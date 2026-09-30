@@ -351,6 +351,7 @@ class GUIConfigManager:
             seed_wordsets=True,
             disable_legacy_ytdlp_update=True,
             seed_first_run_flags=True,
+            keep_legacy_utilities=True,
         )
         return AnkiMinerConfig(**cls._decode_field_types(migrated))
 
@@ -412,6 +413,7 @@ class GUIConfigManager:
         seed_wordsets: bool = False,
         disable_legacy_ytdlp_update: bool = False,
         seed_first_run_flags: bool = False,
+        keep_legacy_utilities: bool = False,
     ) -> dict[str, Any]:
         """Run the full pre-construction migration pipeline on a raw JSON dict.
 
@@ -436,6 +438,9 @@ class GUIConfigManager:
             seed_first_run_flags: When True (LOAD path only), mark first-run
                 flows done when their keys are absent from an existing config.
                 Explicit stored values are preserved.
+            keep_legacy_utilities: When True (LOAD path only), an existing
+                config with no ``hidden_utilities`` key keeps every Utilities
+                tool, whatever the new-install default hides (D18).
         """
         # Which shims actually rewrote a value, for the `Config migrated`
         # receipt below: a file that loads "wrong" is usually a file a version
@@ -508,6 +513,13 @@ class GUIConfigManager:
             for key in seeded_first_run:
                 config_dict[key] = True
             shims.extend(f"seed_{key}" for key in seeded_first_run)
+
+        # D18: new installs hide Deck Filter and Download. A file with no key
+        # predates the field, i.e. an existing install: it keeps every tool. A
+        # file with the key keeps whatever it says.
+        if keep_legacy_utilities and "hidden_utilities" not in config_dict:
+            config_dict["hidden_utilities"] = []
+            shims.append("keep_every_utility")
 
         # Drop the three JSON-only marker keys — none is a dataclass field:
         #   config_schema_version (see CONFIG_SCHEMA_VERSION; a missing marker

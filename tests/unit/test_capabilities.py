@@ -285,7 +285,7 @@ def _entry(cap_id: str) -> Capability:
 
 @pytest.mark.parametrize(
     "cap_id",
-    ["jisho-fallback", "manga-mining", "manga-ocr", "download-resources", "card-backfill", "deck-filter"],
+    ["jisho-fallback", "manga-mining", "download-resources", "card-backfill", "deck-filter"],
 )
 def test_ungated_entries_name_their_japanese_only_part(cap_id: str) -> None:
     # No profile capability gates these, so every language lists them; the
@@ -296,7 +296,7 @@ def test_ungated_entries_name_their_japanese_only_part(cap_id: str) -> None:
 
 
 def test_audiobook_sync_names_the_reading_subtab_by_its_label() -> None:
-    assert "Reading -> Subtitle Files" in _entry("audiobook-sync").description
+    assert "Reading → Subtitle Files" in _entry("audiobook-sync").description
 
 
 def test_word_audio_entry_scopes_edge_tts_to_the_languages_that_offer_it() -> None:
@@ -349,12 +349,12 @@ def test_tone_colour_targets_cards_and_anki() -> None:
     # Moved off Filtering onto Cards & Anki, beside the Pinyin/Jyutping rows it
     # colours (T10).
     assert _entry("tone-colour").target == CapabilityTarget("settings", "anki")
-    assert "Settings -> Cards & Anki" in _entry("tone-colour").description
+    assert "Settings → Cards & Anki" in _entry("tone-colour").description
     assert "Filtering" not in _entry("tone-colour").description
 
 
 def test_pinyin_description_points_at_cards_and_anki() -> None:
-    assert "Settings -> Cards & Anki" in _entry("pinyin").description
+    assert "Settings → Cards & Anki" in _entry("pinyin").description
     assert "Filtering" not in _entry("pinyin").description
 
 
@@ -373,7 +373,7 @@ def test_update_check_targets_the_general_page() -> None:
     # Moved off the tab itself onto the UI panel's App section (T11).
     entry = _entry("update-check")
     assert entry.target == CapabilityTarget("settings", "ui")
-    assert "Settings -> General" in entry.description
+    assert "Settings → General" in entry.description
 
 
 @pytest.mark.parametrize(
@@ -482,3 +482,7 @@ def test_mining_language_extra_synonyms_are_searchable() -> None:
     for keyword in extras:
         assert capability in search(keyword), keyword
     assert extras <= set(capability.keywords)
+
+
+def test_system_health_names_its_tools_menu_item() -> None:
+    assert "Tools → System Health…" in _entry("system-health").description

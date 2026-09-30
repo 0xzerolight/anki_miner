@@ -798,3 +798,53 @@ def test_removed_font_scale_key_is_dropped(tmp_config: Path):
     GUIConfigManager.save_config(config)
     resaved = json.loads(tmp_config.read_text(encoding="utf-8"))
     assert "ui_font_scale" not in resaved
+
+
+class TestNewInstallUtilities:
+    """D18: new installs hide Deck Filter and Download; existing installs keep every tool."""
+
+    def test_a_fresh_install_hides_the_two_tools(self, tmp_config: Path):
+        assert not tmp_config.exists()
+
+        assert GUIConfigManager.load_config().hidden_utilities == ("deckfilter", "download")
+
+    def test_an_existing_config_without_the_key_keeps_every_tool(self, tmp_config: Path):
+        tmp_config.write_text(json.dumps({"anki_deck_name": "Existing"}), encoding="utf-8")
+
+        assert GUIConfigManager.load_config().hidden_utilities == ()
+
+    def test_an_existing_config_with_the_key_keeps_its_choice(self, tmp_config: Path):
+        tmp_config.write_text(json.dumps({"hidden_utilities": []}), encoding="utf-8")
+        assert GUIConfigManager.load_config().hidden_utilities == ()
+
+        tmp_config.write_text(json.dumps({"hidden_utilities": ["retime"]}), encoding="utf-8")
+        assert GUIConfigManager.load_config().hidden_utilities == ("retime",)
+
+    def test_a_saved_new_install_round_trips(self, tmp_config: Path):
+        GUIConfigManager.save_config(AnkiMinerConfig())
+
+        assert GUIConfigManager.load_config().hidden_utilities == ("deckfilter", "download")
+
+    def test_a_settings_profile_saved_before_the_field_keeps_every_tool(self, tmp_config: Path):
+        """Review focus: an existing user switches to a settings profile written before v3.5.0.
+
+        Profiles load through the same _parse_and_migrate as gui_config.json
+        (profile_store.read_profile), so the keep-every-tool shim must reach
+        them too, or Deck Filter and Download vanish on a profile switch.
+        """
+        from anki_miner.gui.utils.profile_store import ProfileStore
+
+        directory = ProfileStore.profiles_dir()
+        directory.mkdir(parents=True, exist_ok=True)
+        (directory / "anime.json").write_text(json.dumps({"anki_deck_name": "Old profile"}), encoding="utf-8")
+
+        assert ProfileStore.read_profile("anime").hidden_utilities == ()
+
+    def test_an_import_without_the_key_keeps_the_current_value(self, tmp_path: Path):
+        path = tmp_path / "import.json"
+        path.write_text(json.dumps({"anki_deck_name": "Imported"}), encoding="utf-8")
+        current = replace(create_default_config(), hidden_utilities=("mokuro",))
+
+        imported = GUIConfigManager.import_config(path, current).config
+
+        assert imported.hidden_utilities == ("mokuro",)

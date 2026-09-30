@@ -130,8 +130,22 @@ class TestTheFade:
 class TestItStaysAStylesheetWidget:
     """29 themes author these colours; the badge must not paint its own."""
 
+    def test_at_rest_the_pill_carries_no_effect(self, badge):
+        """E18: a resident opacity effect left both status-bar badges blank after
+        any main-window resize (the offscreen backing store showed nothing)."""
+        assert badge.graphicsEffect() is None
+
+    @pytest.mark.motion
     def test_the_fade_is_an_effect_not_hand_painted(self, badge):
+        badge.set_status("error")
+
         assert isinstance(badge.graphicsEffect(), QGraphicsOpacityEffect)
+
+    @pytest.mark.motion
+    def test_the_effect_is_removed_once_the_fade_settles(self, badge, qtbot):
+        badge.set_status("error")
+
+        qtbot.waitUntil(lambda: badge.graphicsEffect() is None, timeout=2000)
 
     def test_the_dynamic_property_still_drives_qss(self, badge):
         badge.setStyleSheet('QLabel[status="error"] { background: #ff0000; }')

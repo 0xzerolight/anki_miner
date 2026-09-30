@@ -106,6 +106,7 @@ class SubtitleCreationTab(_ToolTabBase):
             failed=self.tr("Failed — see log"),
             partial=self.tr("Finished with errors — see log"),
             run_problem=self.tr("Some files could not be transcribed."),
+            run_problem_single=self.tr("This file could not be transcribed."),
             complete_template=self.tr("Complete — %1 files processed"),
             complete_skipped_template=self.tr("Complete — %1 processed, %2 skipped"),
             # Cause-neutral: a skip here is either "output exists" or "no speech
@@ -248,19 +249,15 @@ class SubtitleCreationTab(_ToolTabBase):
 
         layout.addWidget(SectionHeader(self.tr("Output")))
 
-        # Output description
-        out_desc = QLabel(
-            self.tr("Generated .srt files are saved next to each source file unless you choose a folder.")
-        )
-        out_desc.setObjectName("helper-text")
-        out_desc.setWordWrap(True)
-        layout.addWidget(out_desc)
-
         self._build_output_row(
             layout,
             output_label=self.tr("Output:"),
             choose_label=self.tr("Choose Folder…"),
             reset_label=self.tr("Reset"),
+        )
+        # E08: the helper line became the Choose Folder… tooltip.
+        self.choose_output_button.setToolTip(
+            self.tr("Generated .srt files are saved next to each source file unless you choose a folder.")
         )
 
         # Overwrite checkbox

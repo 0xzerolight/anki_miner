@@ -111,6 +111,10 @@ class _ToolTabStrings:
     #: What this tool's run is called on a surface that is not this screen
     #: (the status bar, the pinned action bar). Empty publishes nothing.
     task_title: str = ""
+    #: Banner summary when a ONE-item run failed ("This file could not be
+    #: condensed."): "Some files…" about a single file reads as a miscount (E13).
+    #: Empty falls back to ``run_problem``.
+    run_problem_single: str = ""
 
 
 class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
@@ -272,7 +276,7 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         return bar
 
     def _on_log_problem(self, level: str, message: str) -> None:
-        """Raise a logged ERROR to the screen banner.
+        """Raise a logged ERROR to the screen banner, in the tool's own words (E13).
 
         WARNING stays in the log on purpose: a long run produces many, and a
         banner that rewrites itself once per warning is noise rather than a
@@ -280,7 +284,43 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         """
         if level != "ERROR":
             return
-        self.show_screen_issue(ScreenIssue(summary=self._strings.run_problem, details=message))
+        issue, action = self._run_problem_issue(message)
+        self.show_screen_issue(issue, action=action)
+
+    def _run_problem_issue(self, message: str) -> tuple[ScreenIssue, Callable[[], None] | None]:
+        """The banner for a failed item: a known fault's sentence, else one-file or some-files.
+
+        The raw text is always the Details (D24): it is what a bug report needs
+        and what a reader does not.
+        """
+        fatal = getattr(self.worker_thread, "fatal_exception", None)
+        summary = self._typed_problem_summary(fatal) if isinstance(fatal, BaseException) else None
+        if summary is None:
+            single = self._item_total() == 1 and bool(self._strings.run_problem_single)
+            summary = self._strings.run_problem_single if single else self._strings.run_problem
+        repair = self._problem_repair()
+        if repair is None:
+            return ScreenIssue(summary=summary, details=message), None
+        action_id, action_text, action = repair
+        return ScreenIssue(summary=summary, details=message, action_id=action_id, action_text=action_text), action
+
+    def _typed_problem_summary(self, exc: BaseException) -> str | None:
+        """A translated sentence for a typed fault this tool knows, else ``None``."""
+        return None
+
+    def _problem_repair(self) -> tuple[str, str, Callable[[], None]] | None:
+        """``(action_id, label, action)`` for a repair this tool can offer, else ``None``.
+
+        Only where a repair really exists (E13): a button that lands somewhere
+        unrelated is worse than none.
+        """
+        return None
+
+    def _reveal_setting(self, stable_id: str) -> None:
+        """Open Settings on ``stable_id`` (D11), duck-typed through the main window."""
+        reveal = getattr(self.window(), "reveal_setting", None)
+        if callable(reveal):
+            reveal(stable_id)
 
     # ------------------------------------------------------------------
     # Output location slots

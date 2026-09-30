@@ -46,6 +46,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.exceptions import YtdlpNotFoundError
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.language_names import (
@@ -80,6 +81,12 @@ from anki_miner.services.media_downloader import (
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
+
+#: The Quality combo's last item (E08): the raw yt-dlp format string. Only the
+#: combo carries it; config keeps ``downloader_format_preset`` (the last real
+#: preset) and ``downloader_custom_format`` (non-empty means raw mode), exactly
+#: as before, so a stored custom format selects this item on load.
+CUSTOM_FORMAT_ITEM = "__custom__"
 
 
 class DownloadTab(RunOptionsMixin, YtdlpAvailabilityMixin, _ToolTabBase):
@@ -173,6 +180,7 @@ class DownloadTab(RunOptionsMixin, YtdlpAvailabilityMixin, _ToolTabBase):
             failed=self.tr("Failed — see log"),
             partial=self.tr("Finished with errors — see log"),
             run_problem=self.tr("Some URLs could not be downloaded."),
+            run_problem_single=self.tr("This URL could not be downloaded."),
             complete_template=self.tr("Complete — %1 downloaded"),
             complete_skipped_template=self.tr("Complete — %1 downloaded, %2 already present"),
             all_skipped_template=self.tr("Nothing downloaded — all %1 already present in the download folder."),
@@ -187,6 +195,19 @@ class DownloadTab(RunOptionsMixin, YtdlpAvailabilityMixin, _ToolTabBase):
 
     def _item_total(self) -> int:
         return self._total_urls
+
+    def _typed_problem_summary(self, exc: BaseException) -> str | None:
+        if isinstance(exc, YtdlpNotFoundError):
+            return self.tr("yt-dlp is not installed, so downloads cannot run.")
+        return None
+
+    def _problem_repair(self) -> tuple[str, str, Callable[[], None]] | None:
+        """Most download failures are an out-of-date yt-dlp (E13)."""
+        return (
+            "tools.download.ytdlp",
+            self.tr("Update yt-dlp"),
+            lambda: self._reveal_setting("youtube.ytdlp_update"),
+        )
 
     # ------------------------------------------------------------------
     # Config refresh
@@ -225,8 +246,14 @@ class DownloadTab(RunOptionsMixin, YtdlpAvailabilityMixin, _ToolTabBase):
     def _apply_config_defaults(self) -> None:
         """Seed the option widgets from the current config's persisted defaults."""
         with self.seeding():
-            idx = self.preset_combo.findData(self.config.downloader_format_preset)
-            self.preset_combo.setCurrentIndex(idx if idx >= 0 else 0)
+            # A stored "Subtitles only" keeps precedence over a leftover custom
+            # string: older builds persisted the string under every preset, and
+            # loading such a config as Custom would download media.
+            if self.config.downloader_custom_format and self.config.downloader_format_preset != SUBTITLES_ONLY_PRESET:
+                self.preset_combo.setCurrentIndex(self.preset_combo.findData(CUSTOM_FORMAT_ITEM))
+            else:
+                idx = self.preset_combo.findData(self.config.downloader_format_preset)
+                self.preset_combo.setCurrentIndex(idx if idx >= 0 else 0)
             self.custom_format_edit.setText(self.config.downloader_custom_format)
             self._sub_langs = self.config.downloader_subtitle_langs
             self._refresh_sub_langs_button()
@@ -252,8 +279,8 @@ class DownloadTab(RunOptionsMixin, YtdlpAvailabilityMixin, _ToolTabBase):
         """
         is_subs_only = self.preset_combo.currentData() == SUBTITLES_ONLY_PRESET
         return (
-            self.config.downloader_format_preset != self.preset_combo.currentData()
-            or self.config.downloader_custom_format != self.custom_format_edit.text().strip()
+            self.config.downloader_format_preset != self._effective_preset()
+            or self.config.downloader_custom_format != self._effective_custom_format()
             or (not is_subs_only and self.config.downloader_write_subtitles != self.write_subs_checkbox.isChecked())
             or self.config.downloader_subtitle_langs != self._normalized_sub_langs()
             or self.config.downloader_audio_lang != self._selected_audio_lang()
@@ -274,6 +301,18 @@ class DownloadTab(RunOptionsMixin, YtdlpAvailabilityMixin, _ToolTabBase):
     def _selected_audio_lang(self) -> str:
         return str(self.audio_lang_combo.currentData() or "")
 
+    def _custom_selected(self) -> bool:
+        return bool(self.preset_combo.currentData() == CUSTOM_FORMAT_ITEM)
+
+    def _effective_custom_format(self) -> str:
+        """The raw format a run uses and config stores: only while Custom is chosen."""
+        return self.custom_format_edit.text().strip() if self._custom_selected() else ""
+
+    def _effective_preset(self) -> str:
+        """The preset key config stores: the chosen one, or the stored one under Custom."""
+        data = str(self.preset_combo.currentData())
+        return self.config.downloader_format_preset if data == CUSTOM_FORMAT_ITEM else data
+
     def _on_option_changed(self, *_: object) -> None:
         """Persist an edited run option to config so it survives restart.
 
@@ -289,8 +328,8 @@ class DownloadTab(RunOptionsMixin, YtdlpAvailabilityMixin, _ToolTabBase):
             self.config.downloader_write_subtitles if is_subs_only else self.write_subs_checkbox.isChecked()
         )
         self.persist_run_options(
-            downloader_format_preset=str(self.preset_combo.currentData()),
-            downloader_custom_format=self.custom_format_edit.text().strip(),
+            downloader_format_preset=self._effective_preset(),
+            downloader_custom_format=self._effective_custom_format(),
             downloader_write_subtitles=write_subtitles,
             downloader_subtitle_langs=self._normalized_sub_langs(),
             downloader_audio_lang=self._selected_audio_lang(),
@@ -388,27 +427,28 @@ class DownloadTab(RunOptionsMixin, YtdlpAvailabilityMixin, _ToolTabBase):
         self.preset_combo.addItem(self.tr("Audio only (MP3)"), "audio_mp3")
         self.preset_combo.addItem(self.tr("Audio only (M4A)"), "audio_m4a")
         self.preset_combo.addItem(self.tr("Subtitles only"), SUBTITLES_ONLY_PRESET)
+        self.preset_combo.addItem(self.tr("Custom format…"), CUSTOM_FORMAT_ITEM)
         self.preset_combo.currentIndexChanged.connect(self._on_preset_changed)
         self.preset_combo.currentIndexChanged.connect(self._on_option_changed)
         quality_row.addWidget(self.preset_combo)
         quality_row.addStretch()
         layout.addLayout(quality_row)
 
-        custom_row = QHBoxLayout()
+        # E08: the raw format lives inside the Quality choice it replaces, not in
+        # a second row that silently overrode the one above it.
+        self.custom_format_row = QWidget()
+        custom_row = QHBoxLayout(self.custom_format_row)
+        custom_row.setContentsMargins(0, 0, 0, 0)
         custom_row.setSpacing(SPACING.xs)
         custom_row.addWidget(QLabel(self.tr("Custom format:")))
         self.custom_format_edit = QLineEdit()
-        self.custom_format_edit.setPlaceholderText(self.tr("Optional yt-dlp format string"))
+        self.custom_format_edit.setPlaceholderText(self.tr("yt-dlp format string, e.g. bv*[height<=480]+ba"))
         # editingFinished (not textChanged): persisting every keystroke would
         # write gui_config.json once per character.
         self.custom_format_edit.editingFinished.connect(self._on_option_changed)
         custom_row.addWidget(self.custom_format_edit, 1)
-        layout.addLayout(custom_row)
-
-        custom_hint = QLabel(self.tr("When set, the quality preset above is ignored."))
-        custom_hint.setObjectName("helper-text")
-        custom_hint.setWordWrap(True)
-        layout.addWidget(custom_hint)
+        self.custom_format_row.hide()
+        layout.addWidget(self.custom_format_row)
 
         subs_row = QHBoxLayout()
         subs_row.setSpacing(SPACING.xs)
@@ -468,6 +508,8 @@ class DownloadTab(RunOptionsMixin, YtdlpAvailabilityMixin, _ToolTabBase):
         """
         with self.seeding():
             self._apply_preset_controls(str(self.preset_combo.currentData()))
+        if self._custom_selected() and not self._seeding:
+            self.custom_format_edit.setFocus()
 
     def _apply_preset_controls(self, preset_key: str) -> None:
         """Enable/disable the controls 'Subtitles only' makes moot.
@@ -477,14 +519,11 @@ class DownloadTab(RunOptionsMixin, YtdlpAvailabilityMixin, _ToolTabBase):
         skips ``downloader_write_subtitles`` while this preset is active, so
         switching to another preset restores exactly what the user had.
 
-        The custom-format text is left untouched (merely disabled), not
-        cleared: clearing it would silently discard a saved yt-dlp format
-        string. ``_build_options`` checks ``subtitles_only`` before the
-        custom-format override, so a leftover string is never silently
-        applied either — the disabled, greyed field is display only.
+        The custom-format row shows only while "Custom format…" is chosen; its
+        text is kept for the session so choosing it again restores it (E08).
         """
+        self.custom_format_row.setVisible(preset_key == CUSTOM_FORMAT_ITEM)
         is_subs_only = preset_key == SUBTITLES_ONLY_PRESET
-        self.custom_format_edit.setEnabled(not is_subs_only)
         self.audio_lang_combo.setEnabled(not is_subs_only)
         self.embed_thumbnail_checkbox.setEnabled(not is_subs_only)
         self.embed_metadata_checkbox.setEnabled(not is_subs_only)
@@ -629,17 +668,17 @@ class DownloadTab(RunOptionsMixin, YtdlpAvailabilityMixin, _ToolTabBase):
     def _build_options(self) -> DownloadOptions:
         """Map the option widgets to DownloadOptions.
 
-        'Subtitles only' wins over everything else, including a saved custom
-        format string — checked first, before the custom-format override, so
-        a leftover string from a previous run is never silently applied (the
-        field stays disabled-but-populated; see ``_apply_preset_controls``).
-        Outside this preset, a non-empty custom format string replaces the
-        preset entirely, including audio extraction — raw mode, the user
-        controls everything.
+        The custom format string applies only while "Custom format…" is the
+        chosen Quality item (E08), so text left in the hidden field is never
+        silently applied. There, a non-empty string replaces the preset
+        entirely, including audio extraction — raw mode, the user controls
+        everything; an empty one falls back to the stored preset.
         """
-        key = str(self.preset_combo.currentData())
-        subtitles_only = key == SUBTITLES_ONLY_PRESET
-        custom = "" if subtitles_only else self.custom_format_edit.text().strip()
+        key = self._effective_preset()
+        custom = self._effective_custom_format()
+        # Custom with nothing typed falls back to the stored preset, and that
+        # includes a stored "Subtitles only".
+        subtitles_only = not custom and key == SUBTITLES_ONLY_PRESET
         if custom:
             selector, audio_format = custom, None
         elif subtitles_only:

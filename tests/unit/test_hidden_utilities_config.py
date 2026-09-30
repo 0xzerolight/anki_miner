@@ -12,8 +12,9 @@ from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.languages.switching import LANGUAGE_SCOPED_FIELDS
 
 
-def test_the_default_hides_nothing():
-    assert AnkiMinerConfig().hidden_utilities == ()
+def test_a_new_install_hides_deck_filter_and_download():
+    """D18: fewer tabs for new users; the Usage Guide still finds both."""
+    assert AnkiMinerConfig().hidden_utilities == ("deckfilter", "download")
 
 
 def test_a_json_list_becomes_a_tuple():
@@ -27,14 +28,14 @@ def test_it_survives_a_save_load_round_trip():
 
 
 @pytest.mark.parametrize("garbage", ["retime", [1, "retime"], {"retime": True}])
-def test_a_hand_edited_garbage_value_loads_as_nothing_hidden(garbage):
+def test_a_hand_edited_garbage_value_falls_back_to_the_default(garbage):
     GUIConfigManager.save_config(AnkiMinerConfig())
     path = GUIConfigManager.CONFIG_FILE
     data = json.loads(path.read_text(encoding="utf-8"))
     data["hidden_utilities"] = garbage
     path.write_text(json.dumps(data), encoding="utf-8")
 
-    assert GUIConfigManager.load_config().hidden_utilities == ()
+    assert GUIConfigManager.load_config().hidden_utilities == ("deckfilter", "download")
 
 
 def test_it_is_global_and_portable():

@@ -155,10 +155,10 @@ class TestPlaceholderIntentIsExpressedProperly:
 class TestDisabledStylingSurvives:
     """The real disabled backgrounds are not collateral of the opacity removal."""
 
-    def test_disabled_button_keeps_its_background(self, qapp, qtbot):
-        """Asserted by rendering, not by matching the rule's text: the disabled
-        declaration is shared by one selector per button role now, so a string
-        oracle would only be pinning today's selector list."""
+    def test_disabled_button_keeps_its_outline(self, qapp, qtbot):
+        """Asserted by rendering, not by matching the rule's text: a disabled quiet
+        button is an outline in the theme's disabled colour (D17), and that border
+        is what still makes it read as unavailable now that ``opacity`` is gone."""
         button = QPushButton("Cancel")
         button.setEnabled(False)
         qtbot.addWidget(button)
@@ -167,7 +167,7 @@ class TestDisabledStylingSurvives:
             button.resize(120, 32)
             button.show()
 
-            painted = QColor.fromRgba(button.grab().toImage().pixel(60, 4))
+            painted = QColor.fromRgba(button.grab().toImage().pixel(0, 16))
 
             assert painted == QColor(Theme.get_colors("dark")["disabled"])
         finally:
