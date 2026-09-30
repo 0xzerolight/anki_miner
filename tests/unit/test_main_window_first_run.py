@@ -841,3 +841,50 @@ def test_shutdown_starts_no_late_optional_boot_work(main_window, monkeypatch, qt
     main_window._start_post_setup_boot_once()
 
     assert started == []
+
+
+def test_system_health_ankiconnect_fix_opens_the_wizard_on_its_anki_page(main_window, monkeypatch):
+    """B09: the Fix on the AnkiConnect row lands on the install steps."""
+    from anki_miner.gui import main_window as mw_module
+
+    captured: dict[str, object] = {}
+
+    def fake_run(parent, config, **kwargs):
+        captured.update(kwargs)
+        return _wizard_outcome(config, consumes=False)
+
+    monkeypatch.setattr("anki_miner.gui.widgets.dialogs.setup_wizard.run_setup_wizard", fake_run)
+    monkeypatch.setattr(mw_module.MainWindow, "update_config", lambda self, cfg, **kw: None)
+    main_window.open_system_health()
+    health = main_window._system_health_window
+    assert health is not None
+
+    health.wizard_requested.emit("anki")
+
+    assert captured == {"start_page": "anki"}
+    health.close()
+
+
+def test_the_tools_menu_still_opens_the_wizard_on_its_first_page(main_window, monkeypatch):
+    from anki_miner.gui import main_window as mw_module
+
+    captured: list[dict] = []
+
+    def fake_run(parent, config, **kwargs):
+        captured.append(kwargs)
+        return _wizard_outcome(config, consumes=False)
+
+    monkeypatch.setattr("anki_miner.gui.widgets.dialogs.setup_wizard.run_setup_wizard", fake_run)
+    monkeypatch.setattr(mw_module.MainWindow, "update_config", lambda self, cfg, **kw: None)
+
+    _find_action(_tools_menu(main_window), "Setup Wizard...").trigger()
+
+    assert captured == [{}]
+
+
+def test_the_usage_guide_describes_the_four_step_wizard():
+    from anki_miner.gui.capabilities import CAPABILITIES
+
+    entry = next(cap for cap in CAPABILITIES if cap.id == "setup-wizard")
+    assert "theme" not in entry.description
+    assert "dictionary" in entry.description

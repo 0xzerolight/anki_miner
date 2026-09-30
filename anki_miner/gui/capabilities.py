@@ -1307,7 +1307,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Setup wizard"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Re-run the guided first-time setup -- theme, Anki connection, deck, note type and resources -- from the Tools menu.",
+            "Re-run the guided first-time setup -- dictionary, Anki connection, deck and note type -- from the Tools menu.",
         ),
         category=_CAT_TOOLS,
         keywords=("wizard", "first run", "onboarding", "guided setup", "start over"),

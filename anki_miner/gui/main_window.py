@@ -1478,12 +1478,14 @@ class MainWindow(ScreenIssueHost, QMainWindow):
 
         run_capability_browser(self, self, get_profile(config_language(self.config)).capabilities)
 
-    def _run_setup_wizard_tool(self) -> None:
+    def _run_setup_wizard_tool(self, *, start_page: str | None = None) -> None:
         """Tools-menu handler: re-run the guided setup wizard (re-runnable).
 
         Unlike the first-run offer, this NEVER touches ``first_run_setup_done`` —
         it just applies the wizard's returned config via ``update_config`` so
         deck/note-type/fields/resources propagate and services rebuild.
+        ``start_page`` opens the wizard on one page (System Health's AnkiConnect
+        Fix passes "anki", B09).
         """
         from anki_miner.gui.widgets.dialogs.setup_wizard import run_setup_wizard
 
@@ -1492,8 +1494,16 @@ class MainWindow(ScreenIssueHost, QMainWindow):
                 return
             # Wizard's Resources page can download into the JMdict migration slot.
             self.background_tasks.cancel_jmdict_migration()
-            outcome = run_setup_wizard(self, self.config)
+            outcome = (
+                run_setup_wizard(self, self.config)
+                if start_page is None
+                else run_setup_wizard(self, self.config, start_page=start_page)
+            )
             self._commit_setup_wizard_outcome(outcome, first_run_offer=False)
+
+    def _open_setup_wizard_at(self, page: str) -> None:
+        """System Health's AnkiConnect Fix: the setup wizard, on its Anki page (B09)."""
+        self._run_setup_wizard_tool(start_page=page)
 
     def _commit_setup_wizard_outcome(
         self,
@@ -2346,6 +2356,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             # A HEALTH_FIX_ROUTES row's fix is a whole tab, not a Settings
             # anchor (mokuro's setup card lives on Utilities -> Manga OCR now).
             window.route_requested.connect(lambda m, s: self.reveal_capability(CapabilityTarget(m, s)))
+            # The AnkiConnect row's Fix is the wizard's Anki page (B09): the
+            # install steps, the Open Anki button and the automatic re-check.
+            window.wizard_requested.connect(self._open_setup_wizard_at)
             window.set_export_enabled(not self._diagnostics_export_running)
             self._system_health_window = window
             window.show_health(self._health_report)
