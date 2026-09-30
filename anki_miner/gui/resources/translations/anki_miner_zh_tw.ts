@@ -10747,6 +10747,10 @@ Your installed resources and your theme are kept.</source>
 </context><context>
     <name>SubtitlePlayerWidget</name>
     <message>
+        <source>Pause</source>
+        <translation>暫停</translation>
+    </message>
+    <message>
         <source>Play</source>
         <translation>播放</translation>
     </message>
@@ -10773,10 +10777,6 @@ Your installed resources and your theme are kept.</source>
     <message>
         <source>playback failed</source>
         <translation>播放失敗</translation>
-    </message>
-    <message>
-        <source>Pause</source>
-        <translation>暫停</translation>
     </message>
     <message>
         <source>Video error: %1</source>

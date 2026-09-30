@@ -10788,6 +10788,10 @@ Le tue risorse installate e il tuo tema vengono mantenuti.</translation>
 </context><context>
     <name>SubtitlePlayerWidget</name>
     <message>
+        <source>Pause</source>
+        <translation>Pausa</translation>
+    </message>
+    <message>
         <source>Play</source>
         <translation>Riproduci</translation>
     </message>
@@ -10814,10 +10818,6 @@ Le tue risorse installate e il tuo tema vengono mantenuti.</translation>
     <message>
         <source>playback failed</source>
         <translation>riproduzione non riuscita</translation>
-    </message>
-    <message>
-        <source>Pause</source>
-        <translation>Pausa</translation>
     </message>
     <message>
         <source>Video error: %1</source>

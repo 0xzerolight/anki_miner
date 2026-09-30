@@ -10788,6 +10788,10 @@ Seus recursos instalados e seu tema são mantidos.</translation>
 </context><context>
     <name>SubtitlePlayerWidget</name>
     <message>
+        <source>Pause</source>
+        <translation>Pausar</translation>
+    </message>
+    <message>
         <source>Play</source>
         <translation>Reproduzir</translation>
     </message>
@@ -10814,10 +10818,6 @@ Seus recursos instalados e seu tema são mantidos.</translation>
     <message>
         <source>playback failed</source>
         <translation>falha na reprodução</translation>
-    </message>
-    <message>
-        <source>Pause</source>
-        <translation>Pausar</translation>
     </message>
     <message>
         <source>Video error: %1</source>

@@ -10741,6 +10741,10 @@ Your installed resources and your theme are kept.</source>
 </context><context>
     <name>SubtitlePlayerWidget</name>
     <message>
+        <source>Pause</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Play</source>
         <translation type="unfinished" />
     </message>
@@ -10766,10 +10770,6 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>playback failed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Pause</source>
         <translation type="unfinished" />
     </message>
     <message>

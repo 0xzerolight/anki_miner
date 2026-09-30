@@ -10747,6 +10747,10 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
 </context><context>
     <name>SubtitlePlayerWidget</name>
     <message>
+        <source>Pause</source>
+        <translation>Tạm dừng</translation>
+    </message>
+    <message>
         <source>Play</source>
         <translation>Phát</translation>
     </message>
@@ -10773,10 +10777,6 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     <message>
         <source>playback failed</source>
         <translation>phát lại thất bại</translation>
-    </message>
-    <message>
-        <source>Pause</source>
-        <translation>Tạm dừng</translation>
     </message>
     <message>
         <source>Video error: %1</source>

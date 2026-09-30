@@ -10747,6 +10747,10 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
 </context><context>
     <name>SubtitlePlayerWidget</name>
     <message>
+        <source>Pause</source>
+        <translation>Jeda</translation>
+    </message>
+    <message>
         <source>Play</source>
         <translation>Putar</translation>
     </message>
@@ -10773,10 +10777,6 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
     <message>
         <source>playback failed</source>
         <translation>pemutaran gagal</translation>
-    </message>
-    <message>
-        <source>Pause</source>
-        <translation>Jeda</translation>
     </message>
     <message>
         <source>Video error: %1</source>
