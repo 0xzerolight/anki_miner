@@ -177,6 +177,15 @@ class TaskHandle:
         """
         self._registry._begin_cancelling(self, now)
 
+    def set_awaiting_user(self, waiting: bool, now: float | None = None) -> None:
+        """Say the run is parked on a person (the Word Curator), not on the machine.
+
+        While set, the silence clock is held at zero, so the stall WARNING never
+        fires for a review the user is simply taking their time over. Rejected,
+        like every other write, once this run is superseded or finished.
+        """
+        self._registry._set_awaiting_user(self, waiting, now)
+
     def finish(self, outcome: TaskOutcome, now: float | None = None) -> None:
         """Mark the run terminal, keeping its counts for the receipt."""
         self._registry._finish(self, outcome, now)
@@ -211,6 +220,9 @@ class TaskRegistry(QObject):
         #: Task ids currently past STALL_WARN_S. Membership is what makes the
         #: stall WARNING fire once per crossing rather than once per tick.
         self._stalled: set[str] = set()
+        #: Task ids parked on the user (a Word Curator review). Their silence
+        #: is a person reading, so it never counts towards STALL_WARN_S.
+        self._awaiting_user: set[str] = set()
         #: Run tokens whose rejected write has already been reported. Tokens are
         #: unique across the registry, so one set covers every task id and a
         #: worker emitting a hundred trailing signals still costs one line.
@@ -252,6 +264,7 @@ class TaskRegistry(QObject):
         self._started_at[spec.task_id] = moment
         self._last_move_at[spec.task_id] = moment
         self._cancelling_at.pop(spec.task_id, None)
+        self._awaiting_user.discard(spec.task_id)
         if spec.task_id not in self._order:
             self._order.append(spec.task_id)
 
@@ -354,6 +367,9 @@ class TaskRegistry(QObject):
             if not snap.is_running:
                 continue
             cancelling_at = self._cancelling_at.get(task_id)
+            if task_id in self._awaiting_user:
+                # A review is the user's time, not the worker's silence.
+                self._last_move_at[task_id] = moment
             updated = replace(
                 snap,
                 elapsed_s=moment - self._started_at[task_id],
@@ -427,6 +443,20 @@ class TaskRegistry(QObject):
         )
         self.snapshot_changed.emit(handle.task_id)
 
+    def _set_awaiting_user(self, handle: TaskHandle, waiting: bool, now: float | None) -> None:
+        snap = self._snapshots.get(handle.task_id)
+        if snap is None or snap.run_token != handle.run_token or not snap.is_running:
+            return
+        moment = self._now(now)
+        # Either edge restarts the silence clock: entering a review is the run
+        # doing something, and leaving it is the worker's turn again.
+        self._clear_stall(handle.task_id, moment)
+        self._last_move_at[handle.task_id] = moment
+        if waiting:
+            self._awaiting_user.add(handle.task_id)
+        else:
+            self._awaiting_user.discard(handle.task_id)
+
     def _write(self, handle: TaskHandle, now: float | None, *, moved: bool, **fields) -> None:
         snap = self._snapshots.get(handle.task_id)
         if snap is None or snap.run_token != handle.run_token or not snap.is_running:
@@ -462,6 +492,7 @@ class TaskRegistry(QObject):
 
         moment = self._now(now)
         self._clear_stall(handle.task_id, moment)
+        self._awaiting_user.discard(handle.task_id)
         # Counts are deliberately retained: a cancelled run still needs to be able
         # to say what it managed to do before it stopped.
         updated = replace(
