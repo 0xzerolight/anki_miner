@@ -14,16 +14,20 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from PyQt6.QtGui import QPainter
+
     from anki_miner.gui.widgets.subtitle_player_widget import SubtitlePlayerWidget
     from anki_miner.models.reading import ImageRef, ReadingUnit
 
-from PyQt6.QtCore import QByteArray, QItemSelectionModel, QPoint, Qt, QTimer
+from PyQt6.QtCore import QByteArray, QItemSelectionModel, QModelIndex, QPoint, QSize, Qt, QTimer
 from PyQt6.QtGui import (
     QAction,
     QCloseEvent,
     QColor,
     QFont,
+    QFontMetrics,
     QImage,
+    QPalette,
     QPixmap,
     QShowEvent,
 )
@@ -39,6 +43,9 @@ from PyQt6.QtWidgets import (
     QListWidgetItem,
     QMenu,
     QSplitter,
+    QStyle,
+    QStyledItemDelegate,
+    QStyleOptionViewItem,
     QTableWidget,
     QTableWidgetItem,
     QTextBrowser,
@@ -115,9 +122,84 @@ POSITION_COLUMN = 11
 #: the header menu, so an empty column can neither show nor be "lost".
 _EMPTY_GATED_COLUMNS = (3, 5, 7)
 
+#: "Form in text": the raw surface as it appeared.
+_FORM_COLUMN = 2
+
+#: Columns a first-time user starts without (D5). Form in text is folded into
+#: the Word column (grey, only when it differs); the two sentence signals are a
+#: header-menu click away, and whatever the user chooses is saved.
+_DEFAULT_HIDDEN_COLUMNS = (_FORM_COLUMN, 7, 8)
+
+#: Item role on a Word cell holding the text form to show after the word, or ""
+#: when it matches. Above SORT_ROLE/COPY_ROLE (UserRole + 1/+2).
+_FORM_ROLE = Qt.ItemDataRole.UserRole + 4
+
 #: Table column : side column, as stretch factors. Also the ratio the split
 #: opens at, so the first frame and every resize after it agree.
 _MAIN_SPLIT_STRETCH = (3, 2)
+
+
+class _WordFormDelegate(QStyledItemDelegate):
+    """Paint the text form in grey after the mined word, when they differ (D5).
+
+    Only while the Form in text column is hidden: with it shown, the same
+    words would be on screen twice. The cell's text, sort key and copy value
+    stay the mined form; this is paint only.
+    """
+
+    def __init__(self, table: QTableWidget) -> None:
+        super().__init__(table)
+        self._table = table
+
+    def _form(self, index: QModelIndex) -> str:
+        if not self._table.isColumnHidden(_FORM_COLUMN):
+            return ""
+        form = index.data(_FORM_ROLE)
+        return form if isinstance(form, str) else ""
+
+    def paint(self, painter: QPainter | None, option: QStyleOptionViewItem, index: QModelIndex) -> None:
+        form = self._form(index)
+        if not form or painter is None:
+            super().paint(painter, option, index)
+            return
+        opt = QStyleOptionViewItem(option)
+        self.initStyleOption(opt, index)
+        word = opt.text or ""
+        opt.text = ""
+        widget = opt.widget
+        style = widget.style() if widget is not None else QApplication.style()
+        if style is None:
+            super().paint(painter, option, index)
+            return
+        # Background, selection and focus exactly as every other cell.
+        style.drawControl(QStyle.ControlElement.CE_ItemViewItem, opt, painter, widget)
+        # The same inset Qt gives item text, so this word lines up with the
+        # plain rows above and below it.
+        margin = style.pixelMetric(QStyle.PixelMetric.PM_FocusFrameHMargin, None, widget) + 1
+        text_rect = style.subElementRect(QStyle.SubElement.SE_ItemViewItemText, opt, widget).adjusted(
+            margin, 0, -margin, 0
+        )
+        selected = bool(opt.state & QStyle.StateFlag.State_Selected)
+        metrics = QFontMetrics(opt.font)
+        flags = int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+        painter.save()
+        painter.setFont(opt.font)
+        painter.setPen(opt.palette.color(QPalette.ColorRole.HighlightedText if selected else QPalette.ColorRole.Text))
+        painter.drawText(text_rect, flags, word)
+        rest = text_rect.adjusted(metrics.horizontalAdvance(word + " "), 0, 0, 0)
+        grey = QPalette.ColorRole.HighlightedText if selected else QPalette.ColorRole.PlaceholderText
+        painter.setPen(opt.palette.color(grey))
+        painter.drawText(rest, flags, metrics.elidedText(form, Qt.TextElideMode.ElideRight, max(0, rest.width())))
+        painter.restore()
+
+    def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:  # noqa: N802 - Qt override
+        hint = super().sizeHint(option, index)
+        form = self._form(index)
+        if form:
+            opt = QStyleOptionViewItem(option)
+            self.initStyleOption(opt, index)
+            hint.setWidth(hint.width() + QFontMetrics(opt.font).horizontalAdvance(" " + form))
+        return hint
 
 
 @dataclass(frozen=True)
@@ -699,6 +781,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self.table.setSortingEnabled(True)
 
         self._apply_header_resize_modes()
+        # D5: the Word column shows the text form in grey when it differs.
+        self.table.setItemDelegateForColumn(1, _WordFormDelegate(self.table))
         # The Translation column is meaningful only for a run with a second
         # track: forced hidden otherwise, and kept out of the header menu, so
         # an empty column never shows and cannot be "lost" by hiding it. Its
@@ -855,6 +939,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         header_view = self.table.horizontalHeader()
         if columns is not None and header_view and header_view.restoreState(columns):
             self._apply_header_resize_modes()
+        else:
+            # D5: no saved arrangement yet, so start from the calmer default;
+            # the header menu brings any column back and the choice is saved.
+            for column in _DEFAULT_HIDDEN_COLUMNS:
+                self.table.setColumnHidden(column, True)
         self._apply_translation_column_gate()
         self._apply_audio_column_gate()
         self._apply_empty_column_gate()
@@ -1855,6 +1944,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                     column,
                     self._make_readonly_item(text, tooltip=tooltip, copy_text=copy_text, japanese=True),
                 )
+            self._stamp_word_form(row, shown)
 
             for column, text, sort_value in self._rank_cell_values(word):
                 self.table.setItem(
@@ -2092,6 +2182,12 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 chosen.sentence,
             ),
         )
+
+    def _stamp_word_form(self, row: int, chosen: TokenizedWord) -> None:
+        """Give the Word cell the text form the delegate shows when it differs (D5)."""
+        cell = self.table.item(row, 1)
+        if cell is not None:
+            cell.setData(_FORM_ROLE, chosen.surface if chosen.surface != chosen.mined_form else "")
 
     @staticmethod
     def _sentence_display(sentence: str, n_candidates: int) -> str:
@@ -2693,6 +2789,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 item = self.table.item(row, column)
                 if item is not None:
                     update_table_item(item, text, tooltip=tooltip, copy_text=copy_text)
+            self._stamp_word_form(row, chosen)
             # Inside the same suspension: the sort indicator may sit on a signal
             # column too, and these describe the sentence the pick just changed.
             for column, text, sort_value in self._signal_cell_values(chosen):

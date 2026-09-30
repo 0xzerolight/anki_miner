@@ -86,5 +86,5 @@ def test_a_state_from_a_different_column_count_is_ignored(qtbot, tmp_path, monke
     dlg = WordCurationDialog([_word()])
     qtbot.addWidget(dlg)
 
-    gated = (TRANSLATION_COLUMN, AUDIO_COLUMN, *dlg._empty_columns)
+    gated = (TRANSLATION_COLUMN, AUDIO_COLUMN, *dlg._empty_columns, 2, 7, 8)
     assert not any(dlg.table.isColumnHidden(c) for c in range(dlg.table.columnCount()) if c not in gated)
