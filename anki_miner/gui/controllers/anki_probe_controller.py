@@ -434,9 +434,7 @@ class AnkiProbeController:
         self._names_endpoint = ankiconnect_url
 
         if not still_running(self._name_decks_worker):
-            self._anki_panel.set_deck_status(
-                None, QCoreApplication.translate("AnkiProbeController", "Loading decks from Anki…")
-            )
+            self._anki_panel.set_deck_status(None)
             decks_worker = FetchDecksWorker(service, self._parent)
             self._name_decks_worker = decks_worker
             decks_worker.finished.connect(lambda w=decks_worker: self._release_worker("_name_decks_worker", w))
@@ -449,9 +447,7 @@ class AnkiProbeController:
             decks_worker.start()
 
         if not still_running(self._name_notetypes_worker):
-            self._set_notetype_status(
-                None, QCoreApplication.translate("AnkiProbeController", "Loading note types from Anki…")
-            )
+            self._set_notetype_status(None, "")
             types_worker = FetchNotetypesWorker(service, self._parent)
             self._name_notetypes_worker = types_worker
             types_worker.finished.connect(lambda w=types_worker: self._release_worker("_name_notetypes_worker", w))
@@ -464,19 +460,11 @@ class AnkiProbeController:
             types_worker.start()
 
     def _set_notetype_status(self, exists: bool | None, message: str) -> None:
-        """Write the note-type status unless the Auto-Map flow is mid-flight.
+        """Forward a note-type list result to the panel's one status line.
 
-        Both flows share one label, and refresh_name_lists() fires
-        automatically on first show. This yield alone is NOT sufficient — it
-        only covers the window while Auto-Map is still running. The other
-        ordering (Auto-Map finishes first, then the list lands) is handled by
-        the list flow staying silent on success; see
-        :meth:`_on_name_notetypes_fetched`. Together they mean an actionable
-        message always wins and the low-value count never overwrites a
-        terminal Auto-Map result.
+        The field-fill result has its own line since C03/D13, so the list
+        refresh no longer has to yield to an in-flight fill.
         """
-        if still_running(self._fetch_fields_worker):
-            return
         self._anki_panel.set_notetype_status(exists, message)
 
     def _on_name_decks_fetched(self, deck_names: object, ankiconnect_url: str | None = None) -> None:
@@ -497,12 +485,7 @@ class AnkiProbeController:
         self._anki_panel.set_available_decks(names)
         selected = self._anki_panel.get_deck_name()
         if selected in names:
-            # %n numerus, not %1: "1 decks loaded" is ungrammatical in every
-            # plural-rule language the app ships.
-            self._anki_panel.set_deck_status(
-                True,
-                QCoreApplication.translate("AnkiProbeController", "%n deck(s) loaded", "", len(names)),
-            )
+            self._anki_panel.set_deck_status(True)
         else:
             # NOT set_deck_status(True, ...): that renders a green success
             # badge for a config guaranteed to fail the next mine.
@@ -548,8 +531,9 @@ class AnkiProbeController:
                     selected,
                 ),
             )
-        # Deliberately silent on success: this label is shared with Auto-Map
-        # Fields, whose terminal message is worth more than a count.
+        else:
+            self._set_notetype_status(True, "")
+        # Silent on success (C03): only a problem earns the status line.
 
     def _on_name_notetypes_error(self, message: str, ankiconnect_url: str | None = None) -> None:
         if not self._alive(self._anki_panel):

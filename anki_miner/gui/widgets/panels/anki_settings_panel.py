@@ -295,35 +295,28 @@ def hook_field_row_text(key: str) -> tuple[str, str]:
 
 
 class AnkiSettingsPanel(FormPanel):
-    """Panel for Anki connection and configuration settings.
+    """Panel for the Anki target, the connection and the card field mappings.
 
-    Provides:
-    - Deck name dropdown with refresh button
-    - Note type dropdown with refresh button
-    - AnkiConnect URL configuration
-    - Connection status indicator
-    - Test connection button
-    - Card field mappings
+    Provides (C03, UI/UX audit 2026-09-29): Deck, Note Type and Card tags
+    first; then one connection row, "Anki: ● Connected [Refresh]", whose
+    Refresh re-tests the connection and reloads both lists; at most one status
+    line, shown only when something is wrong; the AnkiConnect URL last; then
+    the card field mappings.
 
     Signals:
-        deck_sync_requested: Emitted when deck sync is requested
-        notetype_sync_requested: Emitted when note type sync is requested
-        test_connection_requested: Emitted when connection test is requested
+        test_connection_requested: Refresh asks for a validation sweep.
+        name_lists_requested: Refresh asks for the deck and note type lists.
+        fetch_fields_requested: The field-mapping fill button was clicked.
     """
 
     ANCHOR_NAMESPACE = "anki"
 
-    deck_sync_requested = pyqtSignal()
-    notetype_sync_requested = pyqtSignal()
     test_connection_requested = pyqtSignal()
+    name_lists_requested = pyqtSignal()
     fetch_fields_requested = pyqtSignal()
 
     # Dynamically created by _add_labeled_field_with_button via setattr
-    deck_combo: QComboBox
-    notetype_combo: QComboBox
     preset_combo: QComboBox
-    deck_sync_button: ModernButton
-    notetype_sync_button: ModernButton
     preset_apply_button: ModernButton
 
     def __init__(self, parent=None):
@@ -343,20 +336,28 @@ class AnkiSettingsPanel(FormPanel):
         # pairs, so this is the only place it is bound.
         self._language_gate_pairs: list[tuple[QWidget, str]] = []
 
-        # Connection status badge
-        self.connection_status = StatusBadge("AnkiConnect", status="checking", clickable=False)
-        self.add_widget(self.connection_status)
-
-        # AnkiConnect URL
-        self.ankiconnect_url_input = QLineEdit()
-        self.ankiconnect_url_input.setPlaceholderText("http://127.0.0.1:8765")
+        # Deck and note type first: they are what a user comes here to set
+        # (C03). Strict combos: these two names must match Anki exactly, and the
+        # list is authoritative -- see select_or_insert.
+        self.deck_combo = self._make_name_combo(self.tr("Select a deck…"))
         self.add_field(
-            self.tr("AnkiConnect URL"),
-            self.ankiconnect_url_input,
-            helper=self.tr("Default http://127.0.0.1:8765. Change if AnkiConnect uses a different port."),
+            self.tr("Deck Name"),
+            self.deck_combo,
+            helper=self.tr("Target deck for new cards."),
+            anchor="deck_name",
         )
+        self.notetype_combo = self._make_name_combo(self.tr("Select a note type…"))
+        self.add_field(
+            self.tr("Note Type"),
+            self.notetype_combo,
+            helper=self.tr("Anki note type whose fields you'll map below."),
+            anchor="note_type",
+        )
+        # Clear a stale not-in-Anki warning as soon as the user acts on it.
+        # _repopulate blocks signals, so only a real user selection fires these.
+        self.deck_combo.currentIndexChanged.connect(self._on_deck_selection_changed)
+        self.notetype_combo.currentIndexChanged.connect(self._on_notetype_selection_changed)
 
-        # Card tags
         self.anki_tags_input = QLineEdit()
         self.add_field(
             self.tr("Card tags"),
@@ -364,58 +365,56 @@ class AnkiSettingsPanel(FormPanel):
             helper=self.tr("Space-separated tags applied to every mined card. Leave blank for no tags."),
         )
 
-        # Test connection button
-        button_layout = QHBoxLayout()
-        button_layout.addStretch()
-
-        self.test_connection_button = ModernButton(self.tr("Test Connection"), variant="secondary")
-        self.test_connection_button.setToolTip(self.tr("Anki must be running with AnkiConnect installed."))
-        self.test_connection_button.clicked.connect(self._on_test_connection)
-        button_layout.addWidget(self.test_connection_button)
-
-        self.add_layout(button_layout)
-
-        # Deck name with refresh button
-        self._add_labeled_field_with_button(
-            anchor="deck_name",
-            label_text=self.tr("Deck Name"),
-            input_widget_name="deck_combo",
-            placeholder=self.tr("Select a deck…"),
-            tooltip="",
-            button_name="deck_sync_button",
-            button_tooltip=self.tr("Reload the deck list from Anki"),
-            button_callback=self._on_deck_sync,
-            helper_text=self.tr("Target deck for new cards."),
+        # One connection row (C03). Refresh replaces Test Connection and the two
+        # list Refresh buttons: it re-tests AnkiConnect and reloads both lists,
+        # which is what a user who has just started Anki wants either way.
+        self.connection_status = StatusBadge("AnkiConnect", status="checking", clickable=False)
+        self.refresh_button = ModernButton(self.tr("Refresh"), variant="secondary")
+        self.refresh_button.setToolTip(
+            self.tr(
+                "Check the connection to Anki again and reload the deck and note type lists. "
+                "Anki must be running with AnkiConnect installed."
+            )
+        )
+        self.refresh_button.clicked.connect(self._on_refresh)
+        connection_row = QWidget()
+        connection_layout = QHBoxLayout(connection_row)
+        connection_layout.setContentsMargins(0, 0, 0, 0)
+        connection_layout.setSpacing(SPACING.xs)
+        connection_layout.addWidget(self.connection_status)
+        connection_layout.addWidget(self.refresh_button)
+        connection_layout.addStretch()
+        self.add_field(
+            self.tr("Anki"),
+            connection_row,
+            anchor="anki_connection",
+            anchor_focus=self.refresh_button,
+            # Untranslated vocabulary users type (like LEGACY_DESTINATION_TERMS):
+            # the button this row replaced was called "Test Connection".
+            anchor_text=lambda: (self.refresh_button.text(), self.refresh_button.toolTip(), "Test Connection"),
         )
 
-        # Deck status
-        self.deck_status = QLabel()
-        self.deck_status.setObjectName("validation-status")
-        self.add_widget(self.deck_status)
+        # The one status line (C03): the most important problem, or nothing.
+        # "3 deck(s) loaded" and "Loading…" are gone -- a line that only ever
+        # confirms things trains the eye to skip the line that matters.
+        self._status_parts: dict[str, str] = {"connection": "", "deck": "", "notetype": ""}
+        self.anki_status = QLabel()
+        self.anki_status.setObjectName("validation-status")
+        self.anki_status.setProperty("status", "error")
+        self.anki_status.setWordWrap(True)
+        self.anki_status.setVisible(False)
+        self.add_widget(self.anki_status)
 
-        # Note type with refresh button
-        self._add_labeled_field_with_button(
-            anchor="note_type",
-            label_text=self.tr("Note Type"),
-            input_widget_name="notetype_combo",
-            placeholder=self.tr("Select a note type…"),
-            tooltip="",
-            button_name="notetype_sync_button",
-            button_tooltip=self.tr("Reload the note type list from Anki"),
-            button_callback=self._on_notetype_sync,
-            helper_text=self.tr("Anki note type whose fields you'll map below."),
+        # AnkiConnect URL last: almost nobody changes it.
+        self.ankiconnect_url_input = QLineEdit()
+        self.ankiconnect_url_input.setPlaceholderText("http://127.0.0.1:8765")
+        self.add_field(
+            self.tr("AnkiConnect URL"),
+            self.ankiconnect_url_input,
+            helper=self.tr("Default http://127.0.0.1:8765. Change if AnkiConnect uses a different port."),
         )
-
-        # Clear a stale not-in-Anki warning as soon as the user acts on it.
-        # _repopulate blocks signals, so only a real user selection fires these.
-        self.deck_combo.currentIndexChanged.connect(self._on_deck_selection_changed)
-        self.notetype_combo.currentIndexChanged.connect(self._on_notetype_selection_changed)
-
-        # Note type status
-        self.notetype_status = QLabel()
-        self.notetype_status.setObjectName("validation-status")
-        self.add_widget(self.notetype_status)
-        self.ankiconnect_url_input.textChanged.connect(lambda _text: self._clear_status(self.notetype_status))
+        # Every problem on the line described the previous address.
+        self.ankiconnect_url_input.textChanged.connect(lambda _text: self._clear_status_parts())
 
         # Note-type preset. Lapis / Kiku / Senren publish fixed field names, so
         # their mapping is knowable without asking Anki — and it carries three
@@ -461,12 +460,6 @@ class AnkiSettingsPanel(FormPanel):
         )
         self.fetch_fields_button.clicked.connect(self._on_fetch_fields)
         self.add_widget(self.fetch_fields_button)
-
-        # The three combo+button rows are read as one column. Their labels are
-        # different words ("Refresh", "Refresh", "Apply") and so are their
-        # natural widths, which would stagger both the button edges and the
-        # combos beside them. Widen them all to the widest.
-        self._align_row_buttons(self.deck_sync_button, self.notetype_sync_button, self.preset_apply_button)
 
         # Card Field Mappings section
         self.add_section(self.tr("Card Field Mappings"))
@@ -882,35 +875,32 @@ class AnkiSettingsPanel(FormPanel):
         return container
 
     @staticmethod
-    def _align_row_buttons(*buttons: ModernButton) -> None:
-        """Give every combo-row button the width of the widest one."""
-        widest = max(button.sizeHint().width() for button in buttons)
-        for button in buttons:
-            button.setMinimumWidth(widest)
+    def _make_name_combo(placeholder: str) -> QComboBox:
+        """A strict deck / note-type combo, sized so an empty list keeps its width."""
+        combo = QComboBox()
+        combo.setEditable(False)
+        combo.setPlaceholderText(placeholder)
+        combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        # Pair the policy with a minimum length (as header_widget and
+        # single_episode_tab do) or the row collapses when the list is empty.
+        combo.setMinimumContentsLength(20)
+        # Large collections: sorted() in _repopulate plus Qt's prefix keyboard
+        # search stand in for typing a fragment. setMaxVisibleItems is ignored
+        # where SH_ComboBox_Popup is true (macOS).
+        combo.setMaxVisibleItems(20)
+        return combo
 
-    def _on_deck_sync(self) -> None:
-        """Handle deck refresh button click.
-
-        Writes no status: ``AnkiProbeController.refresh_name_lists`` is the
-        single owner of both status lines and sets them on entry. Writing here
-        too would set the same message twice per click.
-        """
-        self.deck_sync_requested.emit()
-
-    def _on_notetype_sync(self) -> None:
-        """Handle note type refresh button click (status owned by the refresh)."""
-        self.notetype_sync_requested.emit()
-
-    def _on_test_connection(self) -> None:
-        """Handle test connection button click."""
+    def _on_refresh(self) -> None:
+        """Re-test the connection and reload both lists (C03)."""
         self.set_connection_status("checking")
         self.test_connection_requested.emit()
+        self.name_lists_requested.emit()
 
     def set_connection_status(self, status: str) -> None:
-        """Update the connection status.
+        """Update the connection badge, and the status line when Anki is unreachable.
 
         Args:
-            status: Status string (connected, disconnected, checking, unknown)
+            status: connected, disconnected, checking or unknown.
         """
         status_map = {
             "connected": ("success", self.tr("Connected"), self.tr("Connected to AnkiConnect")),
@@ -923,48 +913,35 @@ class AnkiSettingsPanel(FormPanel):
         )
         self.connection_status.set_name(name)
         self.connection_status.set_status(badge_status, text)
+        unreachable = self.tr("Anki isn't reachable. Start Anki (with AnkiConnect) and press Refresh.")
+        self._set_status_part("connection", unreachable if status == "disconnected" else "")
 
     def set_deck_status(self, exists: bool | None, message: str = "") -> None:
-        """Update the deck validation status.
-
-        Args:
-            exists: Whether the deck exists (None for checking)
-            message: Status message
-        """
-        if exists is None:
-            self.deck_status.setText(message or self.tr("Checking..."))
-            self.deck_status.setProperty("status", "checking")
-        elif exists:
-            self.deck_status.setText(message or self.tr("Deck exists"))
-            self.deck_status.setProperty("status", "success")
-        else:
-            self.deck_status.setText(message or self.tr("Deck not found"))
-            self.deck_status.setProperty("status", "error")
-
-        if style := self.deck_status.style():
-            style.unpolish(self.deck_status)
-            style.polish(self.deck_status)
+        """Report the deck check. Only a failure (``False``) is ever shown (C03)."""
+        self._set_status_part("deck", (message or self.tr("Deck not found")) if exists is False else "")
 
     def set_notetype_status(self, exists: bool | None, message: str = "") -> None:
-        """Update the note type validation status.
+        """Report the note type check. Only a failure (``False``) is ever shown (C03)."""
+        self._set_status_part("notetype", (message or self.tr("Note type not found")) if exists is False else "")
 
-        Args:
-            exists: Whether the note type exists (None for checking)
-            message: Status message
-        """
-        if exists is None:
-            self.notetype_status.setText(message or self.tr("Checking..."))
-            self.notetype_status.setProperty("status", "checking")
-        elif exists:
-            self.notetype_status.setText(message or self.tr("Note type exists"))
-            self.notetype_status.setProperty("status", "success")
-        else:
-            self.notetype_status.setText(message or self.tr("Note type not found"))
-            self.notetype_status.setProperty("status", "error")
+    def _set_status_part(self, key: str, text: str) -> None:
+        self._status_parts[key] = text
+        self._render_status()
 
-        if style := self.notetype_status.style():
-            style.unpolish(self.notetype_status)
-            style.polish(self.notetype_status)
+    def _clear_status_parts(self, *keys: str) -> None:
+        """Blank the named problems (all three when none are named) and re-render."""
+        for key in keys or tuple(self._status_parts):
+            self._status_parts[key] = ""
+        self._render_status()
+
+    def _render_status(self) -> None:
+        """Show the most important problem -- connection, then deck, then note type -- or nothing."""
+        text = next(
+            (self._status_parts[key] for key in ("connection", "deck", "notetype") if self._status_parts[key]),
+            "",
+        )
+        self.anki_status.setText(text)
+        self.anki_status.setVisible(bool(text))
 
     def _on_fetch_fields(self) -> None:
         """Handle fetch fields button click."""
@@ -1277,13 +1254,13 @@ class AnkiSettingsPanel(FormPanel):
         """
         index = self.deck_combo.currentIndex()
         if index >= 0 and not self.deck_combo.itemData(index, Qt.ItemDataRole.ToolTipRole):
-            self._clear_status(self.deck_status)
+            self._clear_status_parts("deck")
 
     def _on_notetype_selection_changed(self) -> None:
         """Clear the not-in-Anki warning once the user picks a real note type."""
         index = self.notetype_combo.currentIndex()
         if index >= 0 and not self.notetype_combo.itemData(index, Qt.ItemDataRole.ToolTipRole):
-            self._clear_status(self.notetype_status)
+            self._clear_status_parts("notetype")
         self._sync_preset_to_note_type()
 
     @staticmethod
@@ -1337,7 +1314,7 @@ class AnkiSettingsPanel(FormPanel):
 
         Called by :meth:`SettingsTab._load_config` as part of the panel loop.
 
-        Both status lines are cleared first, because the message they carry
+        The deck and note-type problems are cleared first, because the message they carry
         belongs to the selection that was on screen before this load, not to
         the one being loaded. A settings import or profile switch can name a
         deck this collection does not have — ``set_deck_name`` inserts it as a
@@ -1347,8 +1324,7 @@ class AnkiSettingsPanel(FormPanel):
         combo showing a deck that will fail the run. The refresh owns writing
         a message; nothing here invents one.
         """
-        self._clear_status(self.deck_status)
-        self._clear_status(self.notetype_status)
+        self._clear_status_parts("deck", "notetype")
         self._clear_status(self.preset_status)
         self.set_deck_name(config.anki_deck_name)
         self.set_note_type(config.anki_note_type)

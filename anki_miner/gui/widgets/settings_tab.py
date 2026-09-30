@@ -758,8 +758,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         # intercept it — the signal still calls the real method, which starts two
         # AnkiConnect QThreads and fails the test on the socket tripwire. Late
         # attribute lookup through a lambda is patchable.
-        self.anki_panel.deck_sync_requested.connect(lambda: self._anki_probe.refresh_name_lists())
-        self.anki_panel.notetype_sync_requested.connect(lambda: self._anki_probe.refresh_name_lists())
+        self.anki_panel.name_lists_requested.connect(lambda: self._anki_probe.refresh_name_lists())
         self.anki_panel.test_connection_requested.connect(self.validation_requested.emit)
         self.anki_panel.fetch_fields_requested.connect(self._anki_probe.fetch_fields)
 

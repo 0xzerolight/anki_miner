@@ -35,7 +35,7 @@ def test_fetched_decks_populate_the_real_combo(wired):
     ctrl._on_name_decks_fetched(["Default", "JP::Mining"])
     assert panel.get_deck_name() == "JP::Mining"
     assert panel.deck_combo.count() == 2
-    assert "2" in panel.deck_status.text()
+    assert panel.anki_status.text() == ""
 
 
 def test_deck_absent_from_anki_reports_failure(wired):
@@ -43,15 +43,15 @@ def test_deck_absent_from_anki_reports_failure(wired):
     ctrl, panel = wired
     ctrl._on_name_decks_fetched(["Default"])
     assert panel.get_deck_name() == "JP::Mining"
-    assert panel.deck_status.property("status") == "error"
-    assert "JP::Mining" in panel.deck_status.text()
+    assert "JP::Mining" in panel.anki_status.text()
+    assert not panel.anki_status.isHidden()
 
 
 def test_empty_deck_fetch_does_not_clear_the_selection(wired):
     ctrl, panel = wired
     ctrl._on_name_decks_fetched([])
     assert panel.get_deck_name() == "JP::Mining"
-    assert panel.deck_status.property("status") == "error"
+    assert "Could not load decks" in panel.anki_status.text()
 
 
 def test_fetched_note_types_populate_the_real_combo(wired):
@@ -61,31 +61,12 @@ def test_fetched_note_types_populate_the_real_combo(wired):
     assert panel.notetype_combo.count() == 2
 
 
-def test_list_refresh_yields_to_an_in_flight_fields_fetch(wired):
-    """Auto-Map's status message must not be clobbered by the list refresh.
-
-    The fetched list deliberately EXCLUDES the current note type so the branch
-    that actually calls _set_notetype_status fires. Passing a list containing
-    it would hit the silent-on-success path, the guard would never be
-    consulted, and the test would pass with the guard deleted.
-    """
-    ctrl, panel = wired
-    busy = MagicMock()
-    busy.isRunning.return_value = True
-    ctrl._fetch_fields_worker = busy
-    panel.set_notetype_status(True, "Fetched 18 fields and auto-mapped them")
-    ctrl._on_name_notetypes_fetched(["Basic", "Other"])
-    assert panel.notetype_combo.count() == 3  # list updated (+ the phantom)
-    assert "18 fields" in panel.notetype_status.text()  # message preserved
-
-
 def test_list_refresh_reports_a_missing_note_type_when_nothing_is_in_flight(wired):
     """The negative half — without the guard the message must be replaced."""
     ctrl, panel = wired
     ctrl._fetch_fields_worker = None
-    panel.set_notetype_status(True, "Fetched 18 fields and auto-mapped them")
     ctrl._on_name_notetypes_fetched(["Basic", "Other"])
-    assert "Lapis" in panel.notetype_status.text()
+    assert "Lapis" in panel.anki_status.text()
 
 
 def test_probing_twice_releases_the_first_deck_worker(wired, monkeypatch):
@@ -155,7 +136,7 @@ def test_field_probe_drops_result_and_error_after_endpoint_changes(wired, monkey
     on_error("Error from old endpoint")
 
     populate.assert_not_called()
-    assert panel.notetype_status.text() == ""
+    assert panel.anki_status.text() == ""
 
 
 def test_excluded_deck_probe_drops_late_callbacks_after_endpoint_clears(wired, monkeypatch):
@@ -206,8 +187,8 @@ def test_name_list_probes_drop_late_callbacks_after_endpoint_changes(wired, monk
     panel.set_deck_name("Current")
     panel.set_available_note_types(["CurrentType"])
     panel.set_note_type("CurrentType")
-    panel.set_deck_status(None, "Current endpoint deck list pending")
-    panel.set_notetype_status(None, "Current endpoint note-type list pending")
+    panel.set_deck_status(False, "Current endpoint deck problem")
+    panel.set_notetype_status(False, "Current endpoint note-type problem")
 
     on_decks_result(["Deck from A"])
     on_decks_error("Deck error from A")
@@ -216,8 +197,8 @@ def test_name_list_probes_drop_late_callbacks_after_endpoint_changes(wired, monk
 
     assert panel.deck_combo.findText("Deck from A") == -1
     assert panel.notetype_combo.findText("Type from A") == -1
-    assert panel.deck_status.text() == "Current endpoint deck list pending"
-    assert panel.notetype_status.text() == "Current endpoint note-type list pending"
+    assert panel.anki_status.text() == "Current endpoint deck problem"
+    assert panel._status_parts["notetype"] == "Current endpoint note-type problem"
 
 
 def test_blank_endpoint_does_not_start_field_probe(wired, monkeypatch):

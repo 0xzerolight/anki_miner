@@ -1179,13 +1179,12 @@ def test_offline_load_and_save_preserves_deck_and_note_type(tab, test_config):
     assert saved.anki_note_type == "Lapis"
 
 
-def test_sync_buttons_refresh_the_name_lists(tab):
+def test_the_refresh_button_reloads_the_name_lists(tab):
     from unittest.mock import patch  # noqa: PLC0415 — module convention
 
     with patch.object(tab._anki_probe, "refresh_name_lists") as refresh:
-        tab.anki_panel.deck_sync_requested.emit()
-        tab.anki_panel.notetype_sync_requested.emit()
-    assert refresh.call_count == 2
+        tab.anki_panel.name_lists_requested.emit()
+    assert refresh.call_count == 1
 
 
 def test_name_lists_are_refetched_on_show_until_they_arrive(tab):

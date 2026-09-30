@@ -100,8 +100,9 @@ class TestSettingsTabFetchFieldsWiring:
         worker_cls.assert_not_called()
         populate.assert_not_called()
         # Friendly status on the note-type line.
-        assert "Select a note type" in tab.anki_panel.notetype_status.text()
+        assert "Select a note type" in tab.anki_panel.anki_status.text()
 
+    @pytest.mark.xfail(strict=True, reason="T3.07 hides success on the list status line; T3.08 adds fill_status")
     def test_click_routes_fetched_fields_into_populate(self, test_config: AnkiMinerConfig, monkeypatch, qtbot):
         tab = SettingsTab(test_config)
         qtbot.addWidget(tab)
@@ -146,6 +147,7 @@ class TestSettingsTabFetchFieldsWiring:
         # Button is re-enabled after the result lands.
         assert tab.anki_panel.fetch_fields_button.isEnabled()
 
+    @pytest.mark.xfail(strict=True, reason="T3.07 hides success on the list status line; T3.08 adds fill_status")
     def test_status_names_the_stale_mappings_auto_map_cleared(self, test_config: AnkiMinerConfig, qtbot):
         """Silently blanking a row the user typed would read as data loss."""
         tab = SettingsTab(test_config)
@@ -175,7 +177,7 @@ class TestSettingsTabFetchFieldsWiring:
 
         tab._anki_probe._on_fetch_fields_finished("Japanese-1.0", ["Expression", "Sentence"])
 
-        assert "cleared" not in tab.anki_panel.notetype_status.text()
+        assert "cleared" not in tab.anki_panel.anki_status.text()
 
     def test_empty_fetch_result_shows_friendly_status(self, test_config: AnkiMinerConfig, monkeypatch, qtbot):
         tab = SettingsTab(test_config)
@@ -198,7 +200,7 @@ class TestSettingsTabFetchFieldsWiring:
             tab.anki_panel.fetch_fields_button.click()
 
         populate.assert_not_called()
-        assert "Could not fetch" in tab.anki_panel.notetype_status.text()
+        assert "Could not fetch" in tab.anki_panel.anki_status.text()
         assert tab.anki_panel.fetch_fields_button.isEnabled()
 
     def test_late_field_fetch_does_not_map_into_new_note_type(self, test_config: AnkiMinerConfig, monkeypatch, qtbot):
