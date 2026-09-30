@@ -385,6 +385,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             # Last, because both calls above go through setWindowFlag, which resets
             # a window's geometry on some platforms.
             self._restore_layout_state()
+            # A06: open on the first word, so the frame, clip and definition
+            # are there when the window appears rather than after a click.
+            # After the restore, which may re-sort the rows.
+            self._focus_first_row()
         except BaseException:
             # getattr twice: the player may not exist yet (the raise came before
             # the pane was built, or there is no player pane at all), and a test
@@ -1742,6 +1746,23 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             QItemSelectionModel.SelectionFlag.ClearAndSelect | QItemSelectionModel.SelectionFlag.Rows,
         )
         self.table.scrollTo(index)
+
+    def _focus_first_row(self) -> None:
+        """Put the cursor and the highlight on the first visible word (A06).
+
+        The same explicit selection flags :meth:`_move_focus` uses, never
+        ``setCurrentCell``, whose flags follow whatever modifier keys happen to
+        be held. Column 1 (the word), not the checkbox column.
+        """
+        rows = self._visible_rows()
+        model = self.table.model()
+        selection = self.table.selectionModel()
+        if not rows or model is None or selection is None:
+            return
+        selection.setCurrentIndex(
+            model.index(rows[0], 1),
+            QItemSelectionModel.SelectionFlag.ClearAndSelect | QItemSelectionModel.SelectionFlag.Rows,
+        )
 
     def _toggle_play_pause(self) -> None:
         """The play/pause key: toggle player play/pause (no-op when the player pane is hidden,
