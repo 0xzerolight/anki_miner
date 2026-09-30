@@ -140,6 +140,15 @@ class DeckBuilderTab(FolderSeriesScreenBase):
 
         layout.addWidget(self._create_input_section())
         layout.addWidget(self._create_settings_section())
+
+        # A09: the shared review checkbox sits in one place on every mining
+        # screen: a plain row under the last input card, outside it.
+        # Issue #60: opt-in word curation popup (default off), shared across
+        # all seven mining screens.
+        self.review_words_checkbox = QCheckBox(self.tr("Review words before mining"))
+        self._bind_review_words_checkbox()
+        self.review_words_checkbox.setToolTip(self.tr("Pick which words get cards, once per series."))
+        layout.addWidget(self.review_words_checkbox)
         layout.addWidget(self._create_results_section())
 
         # D1: progress lives in the pinned bar; this widget is the run's hidden
@@ -199,7 +208,7 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         self._apply_run_state("idle")
 
     def _create_input_section(self) -> QFrame:
-        """Build the Input card: the season's folder pair, plus their offsets.
+        """Build the Season folders card: the season's folder pair, plus their offsets.
 
         Mirrors Batch's Add Series card (video, subtitle, optional
         translation folder, offsets) -- this screen mines the whole pair as
@@ -210,7 +219,7 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         layout = QVBoxLayout()
         configure_card_layout(layout)
 
-        layout.addWidget(SectionHeader(self.tr("Input")))
+        layout.addWidget(SectionHeader(self.tr("Season folders")))
 
         # Measure the TRANSLATED strings (see single_episode_tab): sizing on
         # the English literals clips every non-English locale.
@@ -348,13 +357,6 @@ class DeckBuilderTab(FolderSeriesScreenBase):
             lambda checked: self.persist_run_options(deck_builder_skip_known=checked)
         )
         self.skip_known_checkbox.toggled.connect(self._reset_preview_if_idle)
-
-        # Issue #60: opt-in word curation popup (default off), shared across
-        # all seven mining screens.
-        self.review_words_checkbox = QCheckBox(self.tr("Review words before mining"))
-        self._bind_review_words_checkbox()
-        self.review_words_checkbox.setToolTip(self.tr("Pick which words get cards, once per series."))
-        layout.addWidget(self.review_words_checkbox)
 
         self.top_n_spinbox.valueChanged.connect(lambda value: self.persist_run_options(deck_builder_top_n=value))
         self.coverage_spinbox.valueChanged.connect(
@@ -553,10 +555,10 @@ class DeckBuilderTab(FolderSeriesScreenBase):
     def _apply_run_state(self, state: str) -> None:
         """Set every run-dependent enable from one table.
 
-        ``idle``: Preview, Build and every input on; Cancel off.
-        ``scanning`` / ``preview_ready``: Build (which pre-confirms or
-        confirms), Cancel and the selection on; Preview and the scan inputs
-        off. ``building``: only Cancel on.
+        ``idle``: Preview and Build shown, every input on; Cancel hidden.
+        ``scanning`` / ``preview_ready``: Cancel and Build shown (Build
+        confirms), the selection on, Preview and the scan inputs off.
+        ``building``: Cancel only.
 
         The scan inputs shaped the corpus a preview describes, so they lock
         for the whole run. The selection stays live until Build, because
@@ -565,8 +567,14 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         self._run_state = state
         idle = state == "idle"
         building = state == "building"
+        # A09: Cancel is hidden at idle; while a run goes it takes the place of
+        # the action it can stop. Build stays through the scan and the preview
+        # gate, because Build is how a preview is confirmed.
+        self.preview_button.setVisible(idle)
         self.preview_button.setEnabled(idle)
+        self.build_button.setVisible(not building)
         self.build_button.setEnabled(not building)
+        self.cancel_button.setVisible(not idle)
         self.cancel_button.setEnabled(not idle)
         self.cancel_button.setText(self.tr("Cancel"))
         for control in (

@@ -1392,6 +1392,8 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         if self.add_button is not None:
             self.add_button.setEnabled(not run_active)
         self.mine_button.setEnabled(has_ready and not run_active)
+        # A09: while a run owns the queue, Cancel takes Mine's place in the bar.
+        self.mine_button.setVisible(not run_active)
         self.clear_button.setEnabled(has_items and not run_active)
         self.queue_controls.set_running(run_active)
 

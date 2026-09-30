@@ -273,13 +273,14 @@ class AudiobookTab(_ListQueueMiningTabBase):
         self.review_words_checkbox.setToolTip(
             self.tr("Show the word-selection popup for each audio file before creating cards.")
         )
-        queue_layout.addWidget(self.review_words_checkbox)
 
         # Mine / Clear / Cancel; Clear sits in the queue's tools row (A01).
         self._build_queue_actions()
 
         queue_card.setLayout(queue_layout)
         layout.addWidget(queue_card)
+        # A09: under the last input card, outside it.
+        layout.addWidget(self.review_words_checkbox)
 
         # --- Progress card, the Activity log and the page filler.
         self._build_progress_card(layout)

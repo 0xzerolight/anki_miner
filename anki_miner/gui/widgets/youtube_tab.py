@@ -307,7 +307,6 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
         self.review_words_checkbox = QCheckBox(self.tr("Review words before mining"))
         self._bind_review_words_checkbox()
         self.review_words_checkbox.setToolTip(self.tr("Pick which words get cards, once per video."))
-        queue_layout.addWidget(self.review_words_checkbox)
 
         # Subtitle source, persisted like any other setting (persist_run_options
         # below). Changing it re-decides every already-probed row
@@ -351,6 +350,8 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
 
         queue_card.setLayout(queue_layout)
         layout.addWidget(queue_card)
+        # A09: under the last input card, outside it.
+        layout.addWidget(self.review_words_checkbox)
 
         # --- Progress card, the Activity log and the page filler.
         self._build_progress_card(layout)

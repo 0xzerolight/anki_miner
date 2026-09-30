@@ -610,6 +610,7 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         self.cancel_button.setText(self.tr("Cancel"))
         self.cancel_button.setEnabled(True)
         self.cancel_button.show()
+        self.queue_panel.process_queue_button.hide()  # A09: Cancel takes the primary's place
         self.queue_panel.set_buttons_enabled(False)
         # D29-A: the list is frozen for the duration, so the progress numbers,
         # the lock state and the receipt all describe the same set of series.
@@ -619,6 +620,7 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         """Restore normal button state after processing ends."""
         self._is_processing = False
         self.cancel_button.hide()
+        self.queue_panel.process_queue_button.show()
         self.add_series_button.show()
         self._set_buttons_enabled(True)
         self.queue_panel.set_locked(False)
