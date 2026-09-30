@@ -12,15 +12,14 @@ import logging
 from collections.abc import Callable
 from pathlib import Path
 
-from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
-    QDialog,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QListWidget,
     QMessageBox,
     QVBoxLayout,
+    QWidget,
 )
 
 from anki_miner.gui.resources.styles import SPACING
@@ -29,12 +28,12 @@ from anki_miner.gui.utils.content_text import content_cell_font
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.keyboard_shortcuts import disown_default_buttons
 from anki_miner.gui.utils.qt_helpers import (
-    add_min_max_buttons,
     configure_data_view,
     install_copy_rows,
 )
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost
+from anki_miner.gui.widgets.base.enhanced_dialog import EnhancedDialog
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.languages.profile import ContentTextStyle
 from anki_miner.languages.registry import get_profile
@@ -51,7 +50,7 @@ from anki_miner.utils.subtitle_encoding import script_check_kwarg
 logger = logging.getLogger(__name__)
 
 
-class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
+class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
     """View / remove / export / reset the user-curated known words list."""
 
     # Keyword-only additions accumulate here — do not drop existing keywords.
@@ -66,7 +65,7 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
         on_rebuild: Callable[[Callable[[], None]], None] | None = None,
         rebuild_enabled: bool = False,
     ):
-        super().__init__(parent)
+        super().__init__(parent, title=self.tr("Manage Known Words"))
         self._db = known_word_db
         self._language = language
         self._excluded_decks = excluded_decks
@@ -82,33 +81,22 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
         # The list may never have been written if the user only just enabled the
         # feature — initialize so reads/writes don't hit a missing file.
         self._db.initialize()
-        self._setup_ui()
-        add_min_max_buttons(self)
+        # Not _setup_ui: EnhancedDialog.__init__ already ran its own frame builder.
+        self._build_content()
         self._refresh()
 
-    def _setup_ui(self) -> None:
-        self.setWindowTitle(self.tr("Manage Known Words"))
+    def _build_content(self) -> None:
         self.setMinimumWidth(480)
         self.setMinimumHeight(520)
-
-        layout = QVBoxLayout()
-        layout.setSpacing(SPACING.sm)
-        layout.setContentsMargins(SPACING.lg, SPACING.lg, SPACING.lg, SPACING.lg)
-
-        header = QLabel(self.tr("Local Known Words"))
-        font = QFont()
-        font.setPixelSize(16)
-        font.setWeight(QFont.Weight.Bold)
-        header.setFont(font)
-        layout.addWidget(header)
-
-        helper_text = self.tr(
-            "Words you added from the Word Curator. Ignored on every run and kept across cache rebuilds."
+        self.set_header(
+            "",
+            self.tr("Local Known Words"),
+            self.tr("Words you added from the Word Curator. Ignored on every run and kept across cache rebuilds."),
         )
-        helper = QLabel(helper_text)
-        helper.setObjectName("helper-text")
-        helper.setWordWrap(True)
-        layout.addWidget(helper)
+        content = QWidget()
+        layout = QVBoxLayout(content)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(SPACING.sm)
         # S15: the scan's exclusions are this language's own, and they are the
         # only thing that keeps another language's deck out of its known words.
         if self._excluded_decks:
@@ -171,17 +159,15 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
         buttons.addWidget(self.export_button)
         buttons.addWidget(self.reset_button)
         buttons.addStretch()
-        close_button = ModernButton(self.tr("Close"), variant="primary")
-        close_button.clicked.connect(self.accept)
-        buttons.addWidget(close_button)
         layout.addLayout(buttons)
-
-        self.setLayout(layout)
+        self.add_content(content, 1)
+        # C19: Close is the only way out, so it is the footer's one primary.
+        self.add_close_button()
         # The filter field holds Japanese, and Return is how an input method
         # commits a composition. With Close left as the default button, typing
         # kana into the filter closed the manager (D49). Esc still closes it.
         disown_default_buttons(self)
-        self.install_issue_banner(layout)
+        self.install_issue_banner(self._main_layout, 1)
 
     # ------------------------------------------------------------------
     # Data

@@ -566,3 +566,25 @@ class TestRebuild:
         dlg = KnownWordsManagerDialog(_db_with_user_words(tmp_path))
         qtbot.addWidget(dlg)
         assert dlg.rebuild_button.isHidden()
+
+
+class TestFrame:
+    """C19: the standard dialog frame -- title, subtitle, one primary Close last."""
+
+    def test_uses_the_enhanced_dialog_frame(self, qtbot, tmp_path):
+        from anki_miner.gui.widgets.base.enhanced_dialog import EnhancedDialog
+
+        dlg = KnownWordsManagerDialog(_db_with_user_words(tmp_path))
+        qtbot.addWidget(dlg)
+        assert isinstance(dlg, EnhancedDialog)
+        assert dlg._title_label.text() == "Local Known Words"
+        assert "Word Curator" in dlg._subtitle_label.text()
+
+    def test_close_is_the_one_footer_button_and_primary(self, qtbot, tmp_path):
+        from PyQt6.QtWidgets import QPushButton
+
+        dlg = KnownWordsManagerDialog(_db_with_user_words(tmp_path))
+        qtbot.addWidget(dlg)
+        footer = dlg._footer_widget.findChildren(QPushButton)
+        assert [b.text() for b in footer] == ["Close"]
+        assert footer[0].objectName() == "primary"
