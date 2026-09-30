@@ -726,8 +726,10 @@ QListWidget#settings-nav {
 /* The left border is the selected-destination marker, reserved transparent on
    every row for the same reason. Both headings and destinations reserve it, so
    the deliberate heading outdent below is unchanged. */
+/* E02: the smallest vertical step, so all 13 pages and the group headings fit
+   the rail at 1280x800 (25 px rows). */
 QListWidget#settings-nav::item {
-    padding: ${spacing-xs}px ${spacing-sm}px ${spacing-xs}px ${spacing-md}px;
+    padding: ${spacing-xxs}px ${spacing-sm}px ${spacing-xxs}px ${spacing-md}px;
     border: none;
     border-left: 2px solid transparent;
 }
@@ -744,12 +746,12 @@ QLabel#validation-status {
     padding: ${spacing-xxs}px 0;
 }
 
-/* Helper/hint text. Dimming comes from the themed `color: ${color-text-muted}`
-   rule further down; `opacity` was inert. */
+/* Helper/hint text: caption size, upright, and no inset of its own, so it starts
+   at the same x as the control it explains (E04). Dimming comes from the themed
+   `color: ${color-text-muted}` rule further down; `opacity` was inert. */
 QLabel#helper-text {
-    font-size: ${font-size-small}px;
-    font-style: italic;
-    padding: 2px ${spacing-xs}px;
+    font-size: ${font-size-caption}px;
+    padding: 2px 0;
     border-radius: ${border-radius-small}px;
     margin-top: ${spacing-xxs}px;
 }
@@ -764,9 +766,9 @@ QLabel#row-detail {
     margin-top: ${spacing-xxs}px;
 }
 
-/* Output-location value: small muted helper styling but NOT italic */
+/* Output-location value: a value, so body text in the normal colour (E04). */
 QLabel#output-location-value {
-    font-size: ${font-size-small}px;
+    font-size: ${font-size-body}px;
     padding: 2px ${spacing-xs}px;
     border-radius: ${border-radius-small}px;
     margin-top: ${spacing-xxs}px;
@@ -1661,7 +1663,7 @@ QLabel#row-detail {
 }
 
 QLabel#output-location-value {
-    color: ${color-text-muted};
+    color: ${color-text};
 }
 
 /* Chain priority rows (D13). Each row states its own facts on its own second

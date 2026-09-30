@@ -53,7 +53,7 @@ from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.utils.run_options import RunOptionsMixin
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
-from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout
+from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout, field_label_width
 from anki_miner.gui.widgets.dialogs import AudioTracksDialog, CondenseMetadataDialog, SubtitleTracksDialog
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
 from anki_miner.gui.workers.condense_worker import (
@@ -304,6 +304,15 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
         input_desc.setWordWrap(True)
         layout.addWidget(input_desc)
 
+        # One label column for all four path rows, so every field starts at the
+        # same x (E04). Both modes share it: switching mode must not shift them.
+        path_label_width = field_label_width(
+            self.tr("Media File:"),
+            self.tr("Subtitle File:"),
+            self.tr("Media Folder:"),
+            self.tr("Subtitle Folder:"),
+        )
+
         self._build_mode_row(
             layout,
             mode_label=self.tr("Mode:"),
@@ -316,6 +325,7 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
         # Single-mode selectors
         self.media_file_selector = FileSelector(
             label=self.tr("Media File:"),
+            label_width=path_label_width,
             file_mode=True,
             file_filter=CONDENSE_MEDIA_FILE_FILTER,
             history_key="tools.condense.inputs",
@@ -327,6 +337,7 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
 
         self.subtitle_file_selector = FileSelector(
             label=self.tr("Subtitle File:"),
+            label_width=path_label_width,
             file_mode=True,
             file_filter=CONDENSE_SUBTITLE_FILE_FILTER,
             history_key="tools.condense.inputs",
@@ -378,6 +389,7 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
         # Folder-mode selectors (hidden by default)
         self.media_folder_selector = FileSelector(
             label=self.tr("Media Folder:"),
+            label_width=path_label_width,
             file_mode=False,
             history_key="tools.condense.inputs",
         )
@@ -386,6 +398,7 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
 
         self.subtitle_folder_selector = FileSelector(
             label=self.tr("Subtitle Folder:"),
+            label_width=path_label_width,
             file_mode=False,
             history_key="tools.condense.inputs",
         )

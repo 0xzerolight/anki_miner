@@ -1372,3 +1372,30 @@ def test_set_single_inputs_resets_the_reference_override(qtbot, tmp_path):
     tab.set_single_inputs(tmp_path / "other.mkv", tmp_path / "other.ass")
 
     assert tab._reference_override is None
+
+
+def test_the_four_input_labels_share_one_column(qtbot, qapp, tmp_path):
+    """E04: Video File, Subtitle File and both folder rows start their fields at one x."""
+    from anki_miner.gui.resources.styles.theme import Theme
+
+    # Under the theme the labels are 93-124 px wide, so a shared 100 px
+    # default would still leave the fields at four different x positions.
+    previous = qapp.styleSheet()
+    qapp.setStyleSheet(Theme.get_stylesheet("light"))
+    try:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        labels = [
+            tab.video_file_selector.label,
+            tab.subtitle_file_selector.label,
+            tab.video_folder_selector.label,
+            tab.subtitle_folder_selector.label,
+        ]
+        for label in labels:
+            label.ensurePolished()
+        widths = {label.minimumWidth() for label in labels}
+
+        assert len(widths) == 1
+        # The shared column holds the widest label, so every field starts after it.
+        assert widths.pop() >= max(label.sizeHint().width() for label in labels)
+    finally:
+        qapp.setStyleSheet(previous)

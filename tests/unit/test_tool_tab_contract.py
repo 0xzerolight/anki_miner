@@ -276,7 +276,7 @@ def test_folder_mode_failed_collection_leaves_primary_enabled(spec, qtbot, tmp_p
 @pytest.mark.parametrize("spec", _ALL_TABS, ids=_spec_id)
 def test_output_row_starts_on_the_tools_default(spec, qtbot, tmp_path):
     tab = _make_tab(spec, qtbot, tmp_path)
-    # A value, not helper copy: helper-text is italic.
+    # A value, not helper copy: it has its own body-size style.
     assert tab.output_location_label.objectName() == "output-location-value"
     assert tab.output_location_label.text() == tab._strings.output_default
     assert tab.clear_output_button.isHidden()
