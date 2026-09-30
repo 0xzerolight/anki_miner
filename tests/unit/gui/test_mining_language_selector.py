@@ -161,63 +161,24 @@ def test_the_panel_title_matches_its_navigator_label(qtbot):
     assert panel._title_label.text() == "Mining Language"
 
 
-def test_the_panel_anchors_the_selector_and_every_pack_row(qtbot):
-    """One anchor per row, named for the language: search reaches each download."""
+def test_the_panel_anchors_only_its_three_combos(qtbot):
+    """D12: the 22 pack rows are gone; the list itself offers the downloads."""
     panel = MiningLanguageSettingsPanel()
     qtbot.addWidget(panel)
-
     ids = {anchor.stable_id for anchor in panel.setting_anchors()}
-
     assert ids == {
         "mining_language.mining_language_combo",
         "mining_language.script_variant_combo",
         "mining_language.regional_variant_combo",
-        "mining_language.language_pack_ko",
-        "mining_language.language_pack_zh",
-        "mining_language.language_pack_en",
-        "mining_language.language_pack_ca",
-        "mining_language.language_pack_de",
-        "mining_language.language_pack_pt",
-        "mining_language.language_pack_fr",
-        "mining_language.language_pack_es",
-        "mining_language.language_pack_it",
-        "mining_language.language_pack_nl",
-        "mining_language.language_pack_nb",
-        "mining_language.language_pack_ro",
-        "mining_language.language_pack_el",
-        "mining_language.language_pack_fi",
-        "mining_language.language_pack_hu",
-        "mining_language.language_pack_hr",
-        "mining_language.language_pack_sv",
-        "mining_language.language_pack_pl",
-        "mining_language.language_pack_lt",
-        "mining_language.language_pack_da",
-        "mining_language.language_pack_tr",
-        "mining_language.language_pack_ru",
-        "mining_language.language_pack_ar",
-        "mining_language.language_pack_sl",
-        "mining_language.language_pack_th",
-        "mining_language.language_pack_uk",
-        "mining_language.language_pack_yue",
-        "mining_language.language_pack_fa",
-        "mining_language.language_pack_vi",
     }
 
 
-def test_a_pack_row_is_searchable_by_its_english_name(qtbot):
-    """The row names its language natively; "Korean" has to reach it too.
-
-    Everything on the row - label, button caption, tooltip - renders 한국어 /
-    中文, so a user searching Settings for the English name found nothing.
-    """
+def test_the_selector_is_searchable_by_english_names(qtbot, german_downloadable):
     panel = MiningLanguageSettingsPanel()
     qtbot.addWidget(panel)
-
     text = {anchor.stable_id: anchor.search_text() for anchor in panel.setting_anchors()}
-
-    assert "Korean" in text["mining_language.language_pack_ko"]
-    assert "Chinese" in text["mining_language.language_pack_zh"]
-    assert "German" in text["mining_language.language_pack_de"]
+    assert "German" in text["mining_language.mining_language_combo"]
+    assert "Chinese" in text["mining_language.mining_language_combo"]
 
 
 def test_repopulating_keeps_the_selection_and_proposes_nothing(qtbot, test_config):
@@ -231,3 +192,108 @@ def test_repopulating_keeps_the_selection_and_proposes_nothing(qtbot, test_confi
 
     assert panel.mining_language_combo.currentData() == "zh"
     assert requested == []
+
+
+@pytest.fixture
+def german_downloadable(monkeypatch):
+    """de needs its pack here (spaCy is pinned missing above) and 70 MB would fetch it."""
+    monkeypatch.setattr(language_choices, "_pack_download_mb", lambda code: 70 if code == "de" else None)
+
+
+def test_a_language_needing_a_download_is_listed_with_a_suffix(qtbot, test_config, german_downloadable):
+    combo = _panel(qtbot, test_config).mining_language_combo
+    index = combo.findData("de")
+    assert index >= 0
+    assert combo.itemText(index) == "Deutsch — German (download)"
+
+
+def test_picking_it_offers_the_download_instead_of_switching(qtbot, test_config, german_downloadable):
+    panel = _panel(qtbot, test_config)
+    requested: list[str] = []
+    panel.mining_language_requested.connect(requested.append)
+
+    panel.mining_language_combo.setCurrentIndex(panel.mining_language_combo.findData("de"))
+
+    assert requested == []
+    assert not panel.pending_download_row.isHidden()
+    assert panel.pending_download_label.text() == "Deutsch needs a one-time download of about 70 MB."
+
+
+def test_download_and_switch_downloads_then_switches(qtbot, test_config, german_downloadable, monkeypatch):
+    panel = _panel(qtbot, test_config)
+    requested: list[str] = []
+    downloads: list[str] = []
+    panel.mining_language_requested.connect(requested.append)
+    panel.language_pack_download_requested.connect(downloads.append)
+    panel.mining_language_combo.setCurrentIndex(panel.mining_language_combo.findData("de"))
+
+    panel.download_and_switch_button.click()
+    assert downloads == ["de"]
+    assert not panel.download_and_switch_button.isEnabled()
+
+    # The pack landed: de is minable now.
+    monkeypatch.setattr(language_choices, "_pack_download_mb", lambda _code: None)
+    original = language_choices.get_profile
+    monkeypatch.setattr(
+        language_choices,
+        "get_profile",
+        lambda code: dataclasses.replace(original(code), unavailable_reason=None) if code == "de" else original(code),
+    )
+    panel.notify_language_pack_download_finished("de")
+
+    assert requested == ["de"]
+    assert panel.pending_download_row.isHidden()
+
+
+def test_leaving_the_page_cancels_the_switch_not_the_download(qtbot, test_config, german_downloadable, monkeypatch):
+    panel = _panel(qtbot, test_config)
+    requested: list[str] = []
+    panel.mining_language_requested.connect(requested.append)
+    panel.mining_language_combo.setCurrentIndex(panel.mining_language_combo.findData("de"))
+    panel.download_and_switch_button.click()
+
+    panel.show()
+    qtbot.waitExposed(panel)
+    panel.hide()
+
+    assert panel.mining_language_combo.currentData() == "ja"
+    assert panel.pending_download_row.isHidden()
+    panel.notify_language_pack_download_finished("de")
+    assert requested == []
+
+
+def test_picking_another_language_cancels_the_pending_switch(qtbot, test_config, german_downloadable):
+    panel = _panel(qtbot, test_config)
+    requested: list[str] = []
+    panel.mining_language_requested.connect(requested.append)
+    combo = panel.mining_language_combo
+    combo.setCurrentIndex(combo.findData("de"))
+
+    combo.setCurrentIndex(combo.findData("zh"))
+
+    assert requested == ["zh"]
+    assert panel.pending_download_row.isHidden()
+
+
+def test_a_failed_download_keeps_the_offer_and_its_message(qtbot, test_config, german_downloadable):
+    panel = _panel(qtbot, test_config)
+    panel.mining_language_combo.setCurrentIndex(panel.mining_language_combo.findData("de"))
+    panel.download_and_switch_button.click()
+
+    panel.set_language_pack_status("de", "Download failed: checksum mismatch")
+    panel.notify_language_pack_download_finished("de")
+
+    assert not panel.pending_download_row.isHidden()
+    assert panel.download_and_switch_button.isEnabled()
+    assert panel.pending_download_status.text() == "Download failed: checksum mismatch"
+    assert panel.pending_download_status.objectName() == "validation-status"
+
+
+def test_a_right_to_left_name_does_not_turn_the_offer_around(qtbot, test_config, monkeypatch):
+    """An Arabic name leading the line made Qt lay the whole English sentence out right to left."""
+    monkeypatch.setattr(language_choices, "_pack_download_mb", lambda code: 41 if code == "ar" else None)
+    panel = _panel(qtbot, test_config)
+    panel.mining_language_combo.setCurrentIndex(panel.mining_language_combo.findData("ar"))
+
+    text = panel.pending_download_label.text()
+    assert text == "\u2068العربية\u2069 needs a one-time download of about 41 MB."

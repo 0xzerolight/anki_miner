@@ -3,7 +3,6 @@ its frozen-layout proofs, the release smoke leg and the licence notices (plan D4
 
 from __future__ import annotations
 
-import dataclasses
 import importlib.util
 import json
 import shutil
@@ -14,7 +13,6 @@ from pathlib import Path
 import pytest
 
 from anki_miner.gui import app as app_module
-from anki_miner.gui.widgets.panels.mining_language_settings_panel import pack_already_importable
 from anki_miner.services.language_pack_installer import load_pack
 from anki_miner.services.pack_installer import component_complete
 
@@ -138,10 +136,10 @@ def test_a_dist_info_less_model_package_loads_through_the_adapter(tmp_path):
     ]
 
 
-def test_an_importable_pack_hides_the_download_row():
+def test_the_pack_import_names_resolve_here():
     pack = load_pack("ru")
     assert pack is not None
-    assert pack_already_importable(dataclasses.replace(pack, requires=()))
+    assert all(importlib.util.find_spec(comp.import_name) is not None for comp in pack.components if comp.required)
 
 
 def test_the_release_workflow_seeds_and_smokes_russian():

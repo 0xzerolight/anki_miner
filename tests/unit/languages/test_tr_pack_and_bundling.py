@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import dataclasses
+import importlib.util
 import json
 import subprocess
 import sys
@@ -10,7 +10,6 @@ import tomllib
 from pathlib import Path
 
 from anki_miner.gui import app as app_module
-from anki_miner.gui.widgets.panels.mining_language_settings_panel import pack_already_importable
 from anki_miner.services.language_pack_installer import load_pack
 from tests.unit.languages.test_zh_bundling import _list_body
 
@@ -78,11 +77,11 @@ def test_every_third_party_module_the_engine_imports_is_pack_or_bundle_content()
     assert all(any(line.startswith(f"{name}==") for line in lock) for name in BUNDLE_RESIDENT)
 
 
-def test_an_importable_engine_hides_the_download_row():
+def test_the_engine_import_names_resolve_here():
     """The engine components only: colorama is Windows-only and absent from a Linux/macOS dev venv (decision 8)."""
     pack = _pack()
     engine = tuple(comp for comp in pack.components if comp.import_name != WINDOWS_BUNDLED)
-    assert pack_already_importable(dataclasses.replace(pack, components=engine))
+    assert all(importlib.util.find_spec(comp.import_name) is not None for comp in engine if comp.required)
 
 
 def test_the_extra_and_the_aggregate():

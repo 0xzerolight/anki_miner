@@ -10,8 +10,8 @@ pin on every run, so moved bytes fail CI before pytest.
 
 from __future__ import annotations
 
-import dataclasses
 import hashlib
+import importlib.util
 import json
 import shutil
 import subprocess
@@ -19,7 +19,6 @@ import sys
 from pathlib import Path
 
 from anki_miner.gui import app as app_module
-from anki_miner.gui.widgets.panels.mining_language_settings_panel import pack_already_importable
 from anki_miner.services.language_pack_installer import load_pack
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -50,12 +49,12 @@ def test_the_resolved_fixture_carries_the_measured_size_and_the_generator_roundi
     assert resolved["approx_download_mb"] == -(-HU_WHEEL_BYTES // 1_000_000)
 
 
-def test_an_importable_model_hides_the_download_row():
+def test_the_model_import_name_resolves_here():
     """The model component alone: ``requires=("_spacy",)`` drags in the engine pack's 30 packages, and a dev venv
     that installed spaCy from PyPI may lack an optional one of them (colorama), which says nothing about hu."""
     pack = load_pack("hu")
     assert pack is not None
-    assert pack_already_importable(dataclasses.replace(pack, requires=()))
+    assert all(importlib.util.find_spec(comp.import_name) is not None for comp in pack.components if comp.required)
 
 
 def test_the_release_workflow_seeds_and_smokes_hungarian():

@@ -174,8 +174,8 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         mining_language_requested: Re-emitted from the Mining Language panel's
             language selector. The window runs the guard and commits, because a
             switch clears queues and reloads every panel in this tab.
-        language_pack_download_requested: Emitted with a language code when one
-            of the Mining Language panel's "Download … pack" buttons is clicked.
+        language_pack_download_requested: Emitted with a language code when the
+            Mining Language page's "Download and switch" is clicked.
         resource_family_download_requested: An empty Dictionaries, Frequency or
             Pitch Accent page asked for its own family's recommended download;
             carries the catalogue kind. The window runs it (TX.3.02).
@@ -1102,7 +1102,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
 
         Mirrors :meth:`_on_cuda_pack_download_clicked`: the download itself is
         owned by the caller (MainWindow / background_tasks). Carries the language
-        code through, since one panel hosts a row per language.
+        code through: any listed language may be the one that needs its pack.
         """
         self.mining_language_panel.set_language_pack_status(code, self.tr("Downloading…"))
         self.language_pack_download_requested.emit(code)
@@ -1110,9 +1110,9 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     def notify_language_pack_download_finished(self, code: str) -> None:
         """Re-probe the panel after a pack lands, then re-index the search box.
 
-        Search visibility is resolved once, when the index is built, and the row
-        this download reveals was hidden then. Without the rebuild the setting
-        the user just unlocked cannot be found by typing its name.
+        The index is built once, and the language list the download changed
+        feeds the selector's search text. Without the rebuild the index keeps
+        the list as it was before the pack landed.
         """
         self.mining_language_panel.notify_language_pack_download_finished(code)
         self.refresh_setting_search_index()
@@ -1168,7 +1168,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.subtitles_panel.set_cuda_pack_status(text)
 
     def set_language_pack_status(self, code: str, text: str) -> None:
-        """Forward a language-pack download status line to that language's row."""
+        """Forward a language-pack status line to the Mining Language page's pending download row."""
         self.mining_language_panel.set_language_pack_status(code, text)
 
     def set_vad_pack_status(self, text: str) -> None:

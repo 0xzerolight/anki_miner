@@ -1,9 +1,10 @@
 """Mining-language selection and the packs a language needs.
 
 Its own destination rather than a section of Filtering: the switcher is not a
-filter, and every language added after ja brings plumbing of its own -- an
-engine probe, a model pack, a status line -- that would otherwise pile onto a
-page users open to set frequency bands. The per-language *filtering* options
+filter, and every language added after ja brings plumbing of its own. Since
+D12 (UI/UX audit 2026-09-29) a language that needs its pack is picked straight
+from the list, which then offers "Download and switch"; the per-language pack
+rows are gone. The per-language *filtering* options
 (kana, hangul, wordsets) stay in Filtering, where they read as filters; the
 character-set/regional-variety choice lives here instead, beside the selector
 whose language it varies with (T10).
@@ -17,99 +18,33 @@ pre-switch panel state on top of it.
 """
 
 import logging
-from dataclasses import dataclass, replace
+import unicodedata
+from dataclasses import replace
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QWidget
 
 from anki_miner.gui.resources.styles import SPACING
-from anki_miner.gui.utils.language_choices import (
-    available_mining_languages,
-    mining_language_display_name,
-    mining_language_english_name,
-)
+from anki_miner.gui.utils.language_choices import MiningLanguageChoice, mining_language_choices
 from anki_miner.gui.utils.language_gate import apply_language_gate, field_row_widgets
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import ModernButton
-from anki_miner.languages import AVAILABLE_LANGUAGES
-from anki_miner.languages.pack_spec import LanguagePack
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.utils.i18n import tr_format
-from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
 
-def pack_already_importable(pack: LanguagePack) -> bool:
-    """Return True when every required package of *pack* already imports here.
+def _bidi_isolated(name: str) -> str:
+    """Wrap a right-to-left ``name`` in Unicode isolates (FSI … PDI).
 
-    The site-packages tier alone: a pip install with the language's extra needs
-    no pack at all, and offering it a download would be noise. Module-level so
-    the rows can be probed (and stubbed) without importing an engine —
-    ``find_spec`` answers without executing one.
-
-    A clean ``None`` is the ordinary "not installed here" answer and stays
-    silent; a *raising* probe is not. It means a half-installed or shadowed
-    package on this machine, and it is the shape behind "the language vanished
-    from the picker" — the row looks identical either way, so the log is the
-    only place the difference survives.
+    Qt picks a plain label's direction from its first strong character, so an
+    Arabic or Persian name leading an English sentence laid the whole line out
+    right to left. A left-to-right name is returned unchanged.
     """
-    from importlib.util import find_spec
-
-    for comp in pack.components:
-        if not comp.required:
-            continue
-        try:
-            if find_spec(comp.import_name) is None:
-                return False
-        except (ImportError, ValueError) as error:
-            log_summary(
-                logger,
-                "Language unavailable in picker",
-                level=logging.WARNING,
-                code=pack.code,
-                component=comp.import_name,
-                error=f"{type(error).__name__}: {error}",
-            )
-            return False
-    # A pack whose engine arrives as another pack is importable only when that
-    # engine imports as well: a pip user with the model but not the engine
-    # still needs the row.
-    from anki_miner.services.language_pack_installer import load_pack
-
-    for requirement in pack.requires:
-        required = load_pack(requirement)
-        if required is None or not pack_already_importable(required):
-            return False
-    return True
-
-
-def pack_on_disk(code: str, pack: LanguagePack) -> bool:
-    """Return True when any of *pack*'s components is extracted under the app home.
-
-    The DISK tier alone, so a row that has just finished downloading stays on
-    screen to report itself installed instead of vanishing the moment its
-    packages become importable. Covers the legacy ``ko_model/`` directory too,
-    which ``component_path`` reads as a fallback.
-    """
-    from anki_miner.services.language_pack_installer import component_path
-
-    return any(component_path(code, comp.import_name) is not None for comp in pack.components)
-
-
-@dataclass(frozen=True)
-class LanguagePackRow:
-    """The widgets of one language's pack row, and the size it advertises.
-
-    Keyed by code in ``language_pack_rows``, so the row carries no code of its
-    own.
-    """
-
-    approx_download_mb: int
-    button: ModernButton
-    status_label: QLabel
-    #: The whole form row, label included, hidden and shown as one.
-    widgets: tuple[QWidget, ...]
+    if any(unicodedata.bidirectional(char) in ("R", "AL") for char in name):
+        return f"⁨{name}⁩"
+    return name
 
 
 class MiningLanguageSettingsPanel(FormPanel):
@@ -131,6 +66,13 @@ class MiningLanguageSettingsPanel(FormPanel):
     def __init__(self, parent=None):
         """Initialize the mining language settings panel."""
         super().__init__(self.tr("Mining Language"), parent=parent)
+        # D12: the language offered for download and awaiting its switch, and
+        # the language actually in force (what a cancel re-points the combo to).
+        self._choices_by_code: dict[str, MiningLanguageChoice] = {}
+        self._pending_code: str | None = None
+        self._live_code = "ja"
+        #: Codes with a pack download in flight (two can run at once).
+        self._language_pack_active: set[str] = set()
         self._setup_fields()
 
     def _setup_fields(self) -> None:
@@ -143,8 +85,7 @@ class MiningLanguageSettingsPanel(FormPanel):
         self.add_section(self.tr("Language"))
 
         self.mining_language_combo = QComboBox()
-        for code, display_name in available_mining_languages():
-            self.mining_language_combo.addItem(display_name, code)
+        self._populate_mining_languages()
         self.mining_language_combo.currentIndexChanged.connect(self._on_mining_language_changed)
         self.add_field(
             self.tr("Mining Language"),
@@ -154,9 +95,31 @@ class MiningLanguageSettingsPanel(FormPanel):
                 "language's own settings. The interface language is separate "
                 "(Settings → General)."
             ),
+            # Every listed English name, so "Korean" finds this row (the pack
+            # rows that used to carry them are gone, D12).
+            anchor_text=lambda: tuple(choice.english_name for choice in self._choices_by_code.values()),
         )
 
-        self._setup_language_pack_rows()
+        # D12: shown when a language that needs its pack is picked.
+        self.pending_download_row = QWidget()
+        pending = QHBoxLayout(self.pending_download_row)
+        pending.setContentsMargins(0, 0, 0, 0)
+        pending.setSpacing(SPACING.xs)
+        self.pending_download_label = QLabel()
+        self.pending_download_label.setWordWrap(True)
+        pending.addWidget(self.pending_download_label, 1)
+        self.download_and_switch_button = ModernButton(self.tr("Download and switch"), variant="primary")
+        self.download_and_switch_button.clicked.connect(self._on_download_and_switch_clicked)
+        pending.addWidget(self.download_and_switch_button)
+        self.pending_download_status = QLabel()
+        self.pending_download_status.setObjectName("validation-status")
+        pending.addWidget(self.pending_download_status)
+        self.pending_download_row.setVisible(False)
+        # The combo above is the setting (and its search anchor); this row is
+        # only the offer that follows one pick.
+        self.add_widget(
+            self.pending_download_row, anchor_ignore="download offer for the picked language, not a setting"
+        )
 
         # Chinese script preference (T10, moved from Word Filters). Generic,
         # language-scoped field - ja and ko carry "" here and never see this
@@ -213,12 +176,15 @@ class MiningLanguageSettingsPanel(FormPanel):
         self.add_stretch()
 
     def set_mining_language(self, code: str) -> None:
-        """Point the combo at ``code`` without proposing a switch.
+        """Point the combo at the language in force, without proposing a switch.
 
         Signals blocked: this runs from ``load_from_config`` and from the
-        window's re-point after a REFUSED switch, and an emit there would ask
-        for the switch that was just refused.
+        window's re-point after a refused switch, and an emit there would ask
+        for the switch that was just refused. Any pending download offer is
+        dropped: the language in force changed under it.
         """
+        self._live_code = code
+        self._hide_pending()
         index = self.mining_language_combo.findData(code)
         if index < 0:
             return
@@ -229,176 +195,105 @@ class MiningLanguageSettingsPanel(FormPanel):
             self.mining_language_combo.blockSignals(False)
 
     def _on_mining_language_changed(self, index: int) -> None:
-        """Propose a switch. The window decides, and re-points this combo."""
+        """Propose a switch, or offer the download a language still needs (D12)."""
         code = self.mining_language_combo.itemData(index)
-        if isinstance(code, str) and code:
-            self.mining_language_requested.emit(code)
+        if not isinstance(code, str) or not code:
+            return
+        if self.propose_download(code):
+            return
+        self._hide_pending()
+        self.mining_language_requested.emit(code)
 
     # ------------------------------------------------------------------
-    # Language pack downloads (services/language_pack_installer.py)
+    # D12: languages that need a pack download, straight from the list
     # ------------------------------------------------------------------
 
-    def _setup_language_pack_rows(self) -> None:
-        """Build one download row per language that ships a pack manifest.
+    def _populate_mining_languages(self) -> None:
+        """Fill the combo from ``mining_language_choices`` (signals blocked)."""
+        combo = self.mining_language_combo
+        current = combo.currentData()
+        self._choices_by_code = {choice.code: choice for choice in mining_language_choices()}
+        combo.blockSignals(True)
+        try:
+            combo.clear()
+            for choice in self._choices_by_code.values():
+                label = tr_format(self.tr("%1 (download)"), choice.label) if choice.needs_download else choice.label
+                combo.addItem(label, choice.code)
+            index = combo.findData(current)
+            if index >= 0:
+                combo.setCurrentIndex(index)
+        finally:
+            combo.blockSignals(False)
 
-        Under the selector the packs unlock, not beside the transcription packs:
-        the frozen bundle ships Korean and Chinese without the engines and models
-        they mine with, and the availability probe gates on exactly those — so
-        until a pack lands, its language is not even in the combo above. These
-        rows are the only thing on screen that explains where it went.
+    def _repopulate_mining_languages(self) -> None:
+        """Rebuild the list after a pack lands, keeping the selection (never proposes a switch)."""
+        self._populate_mining_languages()
 
-        Manifest-driven rather than one hand-written row per language: the
-        bespoke Korean row this replaced would have been copied for Chinese and
-        again for every language after it.
-        """
-        from anki_miner.services.language_pack_installer import load_pack
-
-        self.language_pack_rows: dict[str, LanguagePackRow] = {}
-        #: Codes with a download in flight. Per code, not per panel: two packs
-        #: can be fetched at once and each row owns its own button.
-        self._language_pack_active: set[str] = set()
-
-        for code in AVAILABLE_LANGUAGES:
-            pack = load_pack(code)
-            if pack is None:
-                continue  # ja: its engine is bundled, so there is nothing to offer
-            self.language_pack_rows[code] = self._build_language_pack_row(code, pack)
-            self._refresh_language_pack_row(code)
-
-    def _build_language_pack_row(self, code: str, pack: LanguagePack) -> LanguagePackRow:
-        """Build (and register) one language's download row."""
-        display_name = mining_language_display_name(code)
-        # Every string on the row is the native name, so "Korean" reached
-        # nothing. English is not translated and never changes, so it is read
-        # here rather than re-resolved on every search.
-        english_name = mining_language_english_name(code)
-
-        button = ModernButton(tr_format(self.tr("Download %1 pack"), display_name), variant="secondary")
-        button.setToolTip(
+    def propose_download(self, code: str) -> bool:
+        """Show the "needs a one-time download" row for ``code``; False if it needs none."""
+        choice = self._choices_by_code.get(code)
+        if choice is None or not choice.needs_download:
+            return False
+        self._pending_code = code
+        self.pending_download_label.setText(
             tr_format(
-                self.tr("Download the engine and data Anki Miner needs to mine %1, into its own folder."),
-                display_name,
+                self.tr("%1 needs a one-time download of about %2 MB."),
+                _bidi_isolated(choice.native_name),
+                str(choice.download_mb),
             )
         )
-        # ``code`` is this call's own parameter, so the closures below capture one
-        # row's code each -- no late-binding default argument needed.
-        button.clicked.connect(lambda: self._on_language_pack_download_clicked(code))
+        self.set_status_text(self.pending_download_status, "", status="info")
+        self.download_and_switch_button.setEnabled(code not in self._language_pack_active)
+        self.pending_download_row.setVisible(True)
+        return True
 
-        status_label = QLabel("")
-        status_label.setObjectName("settings-save-status")
-
-        container = QWidget()
-        row = QHBoxLayout(container)
-        row.setContentsMargins(0, 0, 0, 0)
-        row.setSpacing(SPACING.xs)
-        row.addWidget(button)
-        row.addWidget(status_label)
-        row.addStretch()
-        self.add_field(
-            display_name,
-            container,
-            anchor=f"language_pack_{code}",
-            anchor_focus=button,
-            anchor_text=lambda: (button.text(), button.toolTip(), english_name),
-        )
-        # The whole row (label included) disappears where the pack buys nothing.
-        # NOT language-gated: a row is about a language the user is not on yet,
-        # so a capability gate would hide the one control that gets them there.
-        return LanguagePackRow(
-            approx_download_mb=pack.approx_download_mb,
-            button=button,
-            status_label=status_label,
-            widgets=field_row_widgets(self, container),
-        )
-
-    def _refresh_language_pack_row(self, code: str) -> None:
-        """Show, hide and label one row from what this install actually has."""
-        from anki_miner.services.language_pack_installer import (
-            combined_download_mb,
-            is_installed,
-            load_pack,
-            pack_supported,
-        )
-
-        row = self.language_pack_rows[code]
-        pack = load_pack(code)
-        # Visible when the pack has something to offer: either the packages are
-        # not importable yet, or one is already extracted under the app home —
-        # the second clause is what keeps a finished download on screen to report
-        # itself installed. A pip install with the language's extra satisfies the
-        # first and owns no pack directory, so it sees no row at all.
-        visible = (
-            pack is not None
-            and pack_supported(code)
-            and (not pack_already_importable(pack) or pack_on_disk(code, pack))
-        )
-        for widget in row.widgets:
-            widget.setVisible(visible)
-        if not visible:
+    def cancel_pending_switch(self) -> None:
+        """Drop the pending switch (the download, if running, carries on) and re-point the combo."""
+        if self._pending_code is None:
             return
-        if code in self._language_pack_active:
-            row.button.setEnabled(False)
-            return
-        installed = is_installed(code)
-        row.button.setEnabled(not installed)
-        row.status_label.setText(
-            self.tr("Installed")
-            if installed
-            # The live combined size, not the row's own manifest figure: one
-            # button also fetches every pack this one requires and still lacks.
-            else tr_format(self.tr("Not installed - about %1 MB download"), str(combined_download_mb(code)))
-        )
+        self.set_mining_language(self._live_code)
 
-    def _on_language_pack_download_clicked(self, code: str) -> None:
-        """Guard against a second press and ask the caller to run the download."""
-        if code in self._language_pack_active:
+    def _hide_pending(self) -> None:
+        self._pending_code = None
+        self.pending_download_row.setVisible(False)
+
+    def hideEvent(self, event) -> None:  # noqa: N802 - Qt override
+        """Leaving the page cancels a pending switch (D12). A minimise is spontaneous and does not."""
+        super().hideEvent(event)
+        if event is not None and not event.spontaneous():
+            self.cancel_pending_switch()
+
+    def _on_download_and_switch_clicked(self) -> None:
+        code = self._pending_code
+        if code is None or code in self._language_pack_active:
             return
         self._language_pack_active.add(code)
-        self.language_pack_rows[code].button.setEnabled(False)
+        self.download_and_switch_button.setEnabled(False)
         self.language_pack_download_requested.emit(code)
 
     def set_language_pack_status(self, code: str, text: str) -> None:
-        """Show a status line on *code*'s row, if it has one.
-
-        Silent for a language with no row: the status arrives from a background
-        worker, and a language with no pack manifest is not a failure to report.
-        """
-        row = self.language_pack_rows.get(code)
-        if row is not None:
-            self.set_status_text(row.status_label, text)
+        """Show a download status line on the pending row, if ``code`` is the pending pick."""
+        if code == self._pending_code:
+            self.set_status_text(self.pending_download_status, text, status="info")
 
     def notify_language_pack_download_finished(self, code: str) -> None:
-        """Clear *code*'s in-flight guard and re-read what the download left behind.
+        """Clear the in-flight guard, rebuild the list, and switch if still wanted.
 
-        The mining-language combo is repopulated too: ``available_mining_languages``
-        drops a language whose pack is missing, so a combo built at startup has no
-        entry to select even once the pack is on disk. The caller must have put
-        the pack on ``sys.path`` first — both the repopulation and the row refresh
-        answer from ``find_spec``.
+        The caller must have put the pack on ``sys.path`` first: the rebuild
+        answers from each profile's availability probe. A failed download
+        leaves the language needing its pack, so the offer (and the worker's
+        message) stays and Download and switch works again.
         """
         self._language_pack_active.discard(code)
         self._repopulate_mining_languages()
-        if code in self.language_pack_rows:
-            self._refresh_language_pack_row(code)
-
-    def _repopulate_mining_languages(self) -> None:
-        """Rebuild the combo from the current availability, keeping the selection.
-
-        Signals blocked throughout: a rebuild reshuffles indices, and the
-        resulting ``currentIndexChanged`` would propose a language switch the
-        user never asked for.
-        """
-        current = self.mining_language_combo.currentData()
-        self.mining_language_combo.blockSignals(True)
-        try:
-            self.mining_language_combo.clear()
-            for code, display_name in available_mining_languages():
-                self.mining_language_combo.addItem(display_name, code)
-            index = self.mining_language_combo.findData(current)
-            if index >= 0:
-                self.mining_language_combo.setCurrentIndex(index)
-        finally:
-            self.mining_language_combo.blockSignals(False)
+        if code != self._pending_code:
+            return
+        choice = self._choices_by_code.get(code)
+        if choice is not None and not choice.needs_download:
+            self._hide_pending()
+            self.mining_language_requested.emit(code)
+            return
+        self.download_and_switch_button.setEnabled(True)
 
     # ------------------------------------------------------------------
     # Config marshalling
