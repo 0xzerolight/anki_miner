@@ -372,7 +372,13 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         return section
 
     def _create_results_section(self) -> QFrame:
-        """Build the Results card: the corpus-preview numbers ``_refresh_preview`` fills in."""
+        """Build the Results card; hidden until the first preview arrives (A12).
+
+        The two numbers the user decides on (cards to create, projected
+        coverage) come first, and each value sits right after its label. No
+        number was added or removed (the locked Preview-then-Build flow is
+        unchanged); D20 item 4 renamed two labels to words a non-linguist reads.
+        """
         section = QFrame()
         section.setObjectName("card")
         layout = QVBoxLayout()
@@ -388,30 +394,35 @@ class DeckBuilderTab(FolderSeriesScreenBase):
             "Selected words that won't get a card this run: already in your collection, " "or with no sentence to mine."
         )
 
-        self._result_labels: dict[str, QLabel] = {}
-        for field_key, field_label, tooltip in (
-            ("total_tokens", self.tr("Total tokens:"), ""),
-            ("unique_lemmas", self.tr("Unique lemmas:"), ""),
-            ("candidate_count", self.tr("Candidate words:"), ""),
-            ("projected_coverage_pct", self.tr("Projected coverage:"), ""),
-            ("known_skipped", self.tr("Already known (skipped):"), known_skipped_tooltip),
+        rows = (
             ("card_count", self.tr("Cards to create:"), ""),
-        ):
+            ("projected_coverage_pct", self.tr("Projected coverage:"), ""),
+            ("candidate_count", self.tr("Candidate words:"), ""),
+            ("known_skipped", self.tr("Already known (skipped):"), known_skipped_tooltip),
+            ("total_tokens", self.tr("Words in the season:"), ""),
+            ("unique_lemmas", self.tr("Different words:"), ""),
+        )
+        label_w = field_label_width(*(text for _key, text, _tip in rows))
+        self._result_labels: dict[str, QLabel] = {}
+        for field_key, field_label, tooltip in rows:
             row = QHBoxLayout()
             lbl = QLabel(field_label)
             lbl.setObjectName("field-label")
-            lbl.setMinimumWidth(160)
+            lbl.setMinimumWidth(label_w)
             val = QLabel("—")
-            val.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            val.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
             if tooltip:
                 lbl.setToolTip(tooltip)
                 val.setToolTip(tooltip)
             self._result_labels[field_key] = val
             row.addWidget(lbl)
-            row.addWidget(val, 1)
+            row.addWidget(val)
+            row.addStretch(1)
             layout.addLayout(row)
 
         section.setLayout(layout)
+        section.hide()
+        self._results_section = section
         return section
 
     # ------------------------------------------------------------------
@@ -475,6 +486,7 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         self._corpus = None
         for label in self._result_labels.values():
             label.setText("—")
+        self._results_section.hide()
 
     # ------------------------------------------------------------------
     # Drag-and-drop (locked outside idle)
@@ -650,6 +662,7 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         self._corpus = self._confirmed_selection = None
         for label in self._result_labels.values():
             label.setText("—")
+        self._results_section.hide()
         self.progress_widget.reset()
         self.log_widget.clear_log()
 
@@ -786,6 +799,7 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         labels["projected_coverage_pct"].setText(f"{preview.projected_coverage_pct:.1f}%")
         labels["known_skipped"].setText(f"{preview.known_skipped:,}")
         labels["card_count"].setText(f"{preview.card_count:,}")
+        self._results_section.show()
 
     def _on_item_pairs_progress(self, _item_id: str, done: int, total: int) -> None:
         """Fill the bar by episodes mined, the one count the build can prove."""
@@ -963,6 +977,7 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         self._confirmed_selection = None
         for label in self._result_labels.values():
             label.setText("—")
+        self._results_section.hide()
 
     # ------------------------------------------------------------------
     # Config update
