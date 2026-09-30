@@ -15,6 +15,9 @@ Division of labour, mirroring :mod:`anki_miner.gui.controllers.profile_controlle
 
 Policy that ``ProfileStore`` deliberately does not enforce ("not the active
 one", "not the last one", confirmation) lives here, as the caller.
+
+It also carries the live settings' Export / Import / Reset (D14, UI/UX audit
+2026-09-29), handed in by the window as ``settings_actions``.
 """
 
 from __future__ import annotations
@@ -26,6 +29,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QInputDialog,
+    QLabel,
     QListWidget,
     QListWidgetItem,
     QMessageBox,
@@ -58,6 +62,20 @@ class _ProfileSwitcher(Protocol):
     def create_from_current(self, name: str) -> SwitchResult: ...
 
 
+class SettingsFileActions(Protocol):
+    """The whole-profile actions the "This profile" row runs (D14).
+
+    ``SettingsTab`` implements all three; ``surface`` is this dialog, so their
+    file pickers, confirmations and failures show over it rather than behind.
+    """
+
+    def export_settings(self, surface: QWidget) -> None: ...
+
+    def import_settings(self, surface: QWidget) -> None: ...
+
+    def reset_settings(self, surface: QWidget) -> None: ...
+
+
 class ProfileManagerDialog(ScreenIssueHost, EnhancedDialog):
     """Create, rename, delete and switch between named settings profiles.
 
@@ -68,6 +86,8 @@ class ProfileManagerDialog(ScreenIssueHost, EnhancedDialog):
             combo picks the change up. The controller already does this for
             switch and create, so those paths do NOT call it again.
         parent: Optional parent widget.
+        settings_actions: Export, Import and Reset of the live settings (D14).
+            ``None`` hides that row.
     """
 
     def __init__(
@@ -75,11 +95,14 @@ class ProfileManagerDialog(ScreenIssueHost, EnhancedDialog):
         controller: _ProfileSwitcher,
         on_profiles_changed: Callable[[], None],
         parent: QWidget | None = None,
+        *,
+        settings_actions: SettingsFileActions | None = None,
     ) -> None:
         super().__init__(parent, title=self.tr("Settings Profiles"))
         self._controller = controller
         self._on_profiles_changed = on_profiles_changed
         self._profiles: tuple[Profile, ...] = ()
+        self._settings_actions = settings_actions
         # Not _setup_ui: EnhancedDialog.__init__ already ran its own frame builder.
         self._build_content()
         self._refresh()
@@ -134,9 +157,49 @@ class ProfileManagerDialog(ScreenIssueHost, EnhancedDialog):
         buttons.addWidget(self.switch_button)
         self.add_content(self._actions_row)
 
+        # D14: Export, Import and Reset of the live settings, moved here from
+        # the footer every Settings page used to carry. They act on the active
+        # profile's settings, exactly as the footer did.
+        self._settings_row = QWidget()
+        self._settings_row.setObjectName("profile-manager-row")
+        settings_layout = QHBoxLayout(self._settings_row)
+        settings_layout.setContentsMargins(0, 0, 0, 0)
+        settings_layout.setSpacing(SPACING.sm)
+        settings_layout.addWidget(QLabel(self.tr("This profile:")))
+        self.export_settings_button = ModernButton(self.tr("Export to file…"), variant="secondary")
+        self.export_settings_button.setToolTip(
+            self.tr("Save a portable settings file (machine-specific paths and resources excluded).")
+        )
+        self.export_settings_button.clicked.connect(lambda: self._run_settings_action("export"))
+        settings_layout.addWidget(self.export_settings_button)
+        self.import_settings_button = ModernButton(self.tr("Import from file…"), variant="secondary")
+        self.import_settings_button.setToolTip(
+            self.tr("Apply settings from an exported file; anything not in the file is kept.")
+        )
+        self.import_settings_button.clicked.connect(lambda: self._run_settings_action("import"))
+        settings_layout.addWidget(self.import_settings_button)
+        self.reset_settings_button = ModernButton(self.tr("Reset to defaults…"), variant="secondary")
+        self.reset_settings_button.setToolTip(self.tr("Your installed resources and your theme are kept."))
+        self.reset_settings_button.clicked.connect(lambda: self._run_settings_action("reset"))
+        settings_layout.addWidget(self.reset_settings_button)
+        settings_layout.addStretch()
+        self._settings_row.setVisible(self._settings_actions is not None)
+        self.add_content(self._settings_row)
+
         self.add_close_button()
         self.install_issue_banner(self._main_layout, 1)
         self._fit_minimum_width()
+
+    def _run_settings_action(self, which: str) -> None:
+        actions = self._settings_actions
+        if actions is None:
+            return
+        if which == "export":
+            actions.export_settings(self)
+        elif which == "import":
+            actions.import_settings(self)
+        else:
+            actions.reset_settings(self)
 
     def _fit_minimum_width(self) -> None:
         """Never narrower than the widest button row (C19): "New from Current…",

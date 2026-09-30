@@ -5,11 +5,10 @@ import zipfile
 from pathlib import Path
 
 import pytest
-from PyQt6.QtWidgets import QApplication, QDialog, QMessageBox
+from PyQt6.QtWidgets import QDialog, QMessageBox
 
 from anki_miner.config import ChainEntry, FreqEntry
 from anki_miner.gui.controllers import resource_bundle_flow as flow_module
-from anki_miner.gui.controllers.anki_probe_controller import AnkiProbeController
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.widgets import settings_tab as settings_tab_module
 from anki_miner.gui.widgets.dialogs.resource_bundle_dialog import ResourceBundleDialog
@@ -58,23 +57,6 @@ def infos(monkeypatch):
 @pytest.fixture(autouse=True)
 def accept_every_checklist(monkeypatch):
     monkeypatch.setattr(ResourceBundleDialog, "exec", lambda self: QDialog.DialogCode.Accepted)
-
-
-def test_the_import_menu_follows_the_export_menu_in_the_footer(qtbot, test_config, monkeypatch):
-    # Shown, so the probe that would open an AnkiConnect socket is stubbed
-    # (as test_settings_tab_profiles does); geometry, because the footer is a
-    # nested QHBoxLayout with no handle of its own.
-    monkeypatch.setattr(AnkiProbeController, "refresh_name_lists", lambda _self: None)
-    tab = _make_tab(qtbot, test_config)
-    tab.resize(1024, 768)
-    tab.show()
-    qtbot.waitExposed(tab)
-    QApplication.processEvents()
-    export, import_ = tab.export_button, tab.import_button
-    assert import_.isVisible() and import_.width() > 0  # vacuity guard
-    assert import_.y() == export.y(), "not on the same footer row"
-    assert import_.x() > export.x(), "Import must follow Export"
-    _close(qtbot, tab)
 
 
 def test_export_writes_a_bundle_of_the_chosen_resources(qtbot, tmp_path, test_config, monkeypatch, infos):

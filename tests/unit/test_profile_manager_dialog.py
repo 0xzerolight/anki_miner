@@ -418,3 +418,37 @@ class TestFrame:
         widget = dialog()
         margins = widget._main_layout.contentsMargins()
         assert widget.minimumWidth() >= widget._actions_row.sizeHint().width() + margins.left() + margins.right()
+
+
+class _FakeSettingsActions:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, object]] = []
+
+    def export_settings(self, surface) -> None:
+        self.calls.append(("export", surface))
+
+    def import_settings(self, surface) -> None:
+        self.calls.append(("import", surface))
+
+    def reset_settings(self, surface) -> None:
+        self.calls.append(("reset", surface))
+
+
+class TestThisProfileRow:
+    """D14: Export, Import and Reset of settings moved here from every Settings page."""
+
+    def test_the_row_calls_the_settings_actions_with_the_dialog(self, qtbot, controller):
+        actions = _FakeSettingsActions()
+        widget = ProfileManagerDialog(controller, lambda: None, settings_actions=actions)
+        qtbot.addWidget(widget)
+
+        widget.export_settings_button.click()
+        widget.import_settings_button.click()
+        widget.reset_settings_button.click()
+
+        assert actions.calls == [("export", widget), ("import", widget), ("reset", widget)]
+
+    def test_without_actions_the_row_is_hidden(self, dialog):
+        widget = dialog()
+        # The row is hidden, not each button: isHidden() only reports an explicit hide.
+        assert not widget.export_settings_button.isVisibleTo(widget)

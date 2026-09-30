@@ -28,7 +28,6 @@ from anki_miner.gui.controllers.profile_controller import ProfileController, Swi
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.profile_store import Profile, ProfileStore
 from anki_miner.gui.widgets.dialogs import profile_manager_dialog as dialog_module
-from anki_miner.gui.widgets.settings_tab import SettingsTab
 
 # ---------------------------------------------------------------------------
 # Helpers / fixtures
@@ -211,18 +210,6 @@ def test_manager_callback_repoints_the_header(qtbot, monkeypatch, patch_heavy_in
     opened_dialogs[0].on_profiles_changed()
 
     assert calls == [((Profile("anime", "Anime"), Profile("novels", "Novels")), "novels")]
-
-
-def test_settings_manage_button_opens_the_manager(wired_window, opened_dialogs):
-    """Settings footer → "Settings Profiles…" lands on the same window handler."""
-    window, _titles, tabs = wired_window
-    settings_tab = next(tab for tab in tabs.values() if isinstance(tab, SettingsTab))
-
-    settings_tab.manage_profiles_button.click()
-
-    assert len(opened_dialogs) == 1
-    assert opened_dialogs[0].controller is window.profile_controller
-    assert opened_dialogs[0].opened_with == ["exec"]
 
 
 # ---------------------------------------------------------------------------

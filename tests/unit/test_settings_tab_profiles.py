@@ -1,16 +1,14 @@
-"""The Settings footer's "Settings Profiles…" request reaches the window unchanged.
+"""The Settings footer is gone (D14).
 
-The button moved here from the foot of General: the footer sits
-outside the panels' scroll area, so one entry point serves all ten pages, and it
-belongs with Reset / Export / Import rather than under the theme gallery.
-
-The tab only forwards: the dialog is opened by ``MainWindow``, because a profile
-switch reloads every panel in this tab from the incoming config.
+Whole-profile actions (Export, Import and Reset of settings) moved to the
+Profile Manager, the resource Export/Import actions to the window's Tools menu,
+and the "✓ Saved" flash to the right end of the search row.
 """
 
 import contextlib
 
 import pytest
+from PyQt6.QtCore import QPoint
 from PyQt6.QtWidgets import QApplication
 
 from anki_miner.config import create_default_config
@@ -35,29 +33,33 @@ def tab(qtbot, monkeypatch):
         widget.deleteLater()
 
 
-def test_manage_profiles_request_is_re_emitted(tab, qtbot):
-    with qtbot.waitSignal(tab.manage_profiles_requested, timeout=1000):
-        tab.manage_profiles_button.click()
+def test_the_footer_is_gone(tab):
+    """D14: whole-profile actions live in the Profile Manager and the Tools menu."""
+    for gone in (
+        "manage_profiles_button",
+        "export_button",
+        "import_button",
+        "reset_settings_button",
+        "export_settings_action",
+        "import_settings_action",
+    ):
+        assert not hasattr(tab, gone), gone
+    assert tab.export_resources_action.text() == "Export Resources…"
+    assert tab.import_resources_action.text() == "Import Resources…"
 
 
-def test_the_button_sits_left_of_export_in_the_same_footer_row(tab, qtbot):
+def test_the_saved_flash_sits_at_the_end_of_the_search_row(tab, qtbot):
     tab.resize(1024, 768)
     tab.show()
     qtbot.waitExposed(tab)
     QApplication.processEvents()
-
-    profiles = tab.manage_profiles_button
-    export = tab.export_button
-
-    # Vacuity guard: an unlaid-out button reports x() == y() == 0, which would
-    # satisfy the row assertion trivially.
-    assert profiles.isVisible() and export.isVisible()
-    assert profiles.width() > 0 and export.width() > 0
-    assert profiles.y() == export.y(), "not on the same footer row"
-    assert profiles.x() < export.x(), "profiles must come first"
+    tab._flash_save_status("✓ Saved")
+    label, search = tab.save_status_label, tab.search_box
+    assert label.isVisible() and search.isVisible()
+    assert abs(label.mapTo(tab, QPoint(0, 0)).y() - search.mapTo(tab, QPoint(0, 0)).y()) < search.height()
+    assert label.mapTo(tab, QPoint(0, 0)).x() > search.mapTo(tab, QPoint(0, 0)).x()
 
 
 def test_the_appearance_panel_no_longer_owns_an_entry_point(tab):
-    """One entry point per surface — a second button would drift out of sync."""
     assert not hasattr(tab.ui_panel, "manage_profiles_btn")
     assert not hasattr(tab.ui_panel, "manage_profiles_requested")

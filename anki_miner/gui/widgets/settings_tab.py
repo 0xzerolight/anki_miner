@@ -61,7 +61,6 @@ from anki_miner.gui.widgets.base import (
     capped_page_column,
     configure_scrolled_page,
 )
-from anki_miner.gui.widgets.enhanced import ModernButton, make_menu_button
 from anki_miner.gui.widgets.panels import (
     AnkiSettingsPanel,
     AudioPackSettingsPanel,
@@ -150,6 +149,11 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     :meth:`_build_navigator`). Every setting stays visible; nothing is hidden
     behind a Basic/Advanced disclosure.
 
+    Whole-profile actions (D14): ``export_settings``, ``import_settings`` and
+    ``reset_settings`` are public so the Profile Manager can run them and report
+    on its own banner; ``export_resources_action`` / ``import_resources_action``
+    are the Tools menu's resource items.
+
     Signals:
         validation_requested: Emitted when validation should be triggered
         config_changed: Emitted when configuration is saved (passes new config)
@@ -168,9 +172,9 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         vulkan_model_download_requested: Emitted when the Subtitles panel's
             "Download Vulkan model" button is clicked. Carries the selected
             acoustic model name.
-        manage_profiles_requested: Emitted by the footer's "Settings Profiles…"
-            button. The window opens the dialog, not this tab: a profile switch
-            reloads every panel here from the incoming config.
+        manage_profiles_requested: no longer emitted (D14 removed the footer
+            button); ``app.py`` still connects it on this branch, and TX.3.01
+            deletes the connect and this signal after the merge.
         mining_language_requested: Re-emitted from the Mining Language panel's
             language selector. The window runs the guard and commits, because a
             switch clears queues and reloads every panel in this tab.
@@ -425,7 +429,20 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.search_box = SettingsSearchBox()
         self.search_box.setting_activated.connect(self.jump_to_setting)
         self.ignore_setting_widget(self.search_box, "finds settings; is not one itself")
-        layout.addWidget(self.search_box)
+        # The auto-save confirmation lives at the right end of the search row
+        # (D14): the footer it shared with the whole-profile actions is gone.
+        # Flashed by _flash_save_status() and auto-cleared by a timer;
+        # validation warnings park here sticky.
+        self.save_status_label = QLabel("")
+        self.save_status_label.setObjectName("settings-save-status")
+        self._save_status_timer = QTimer(self)
+        self._save_status_timer.setSingleShot(True)
+        self._save_status_timer.timeout.connect(lambda: self.save_status_label.setText(""))
+        search_row = QHBoxLayout()
+        search_row.setSpacing(SPACING.sm)
+        search_row.addWidget(self.search_box, 1)
+        search_row.addWidget(self.save_status_label, 0, Qt.AlignmentFlag.AlignTop)
+        layout.addLayout(search_row)
 
         # Retained: _on_settings_subtab_changed and open_ui_subtab key off the
         # UI page; reading it from the map keeps a single source of truth.
@@ -442,92 +459,22 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         body.addWidget(self.pages, 1)
         layout.addLayout(body)
 
-        # Status row at bottom. The Save Settings button is gone — settings
-        # auto-save (debounced) — but its inline "✓ Saved" confirmation stays
-        # so each auto-commit is still visible.
-        #
-        # Reset to Defaults (Issue #99) is back but deliberately hard to
-        # mis-fire: it sits far-left, separated from Export/Import by a wide
-        # stretch; its confirm defaults to No; it has no keyboard shortcut; and
-        # it preserves installed resources + theme (see
-        # _on_reset_to_defaults_clicked). The earlier version was removed
-        # because a stray Ctrl+R wiped the whole config in one keystroke.
-        button_layout = QHBoxLayout()
-        button_layout.setSpacing(SPACING.sm)
-
-        self.reset_settings_button = ModernButton(self.tr("Reset to Defaults…"), variant="secondary")
-        self.reset_settings_button.setToolTip(self.tr("Your installed resources and your theme are kept."))
-        self.reset_settings_button.clicked.connect(self._on_reset_to_defaults_clicked)
-        button_layout.addWidget(self.reset_settings_button)
-
-        button_layout.addStretch()
-
-        # Settings Profiles sits with the other whole-config actions rather than
-        # at the foot of General, where the theme gallery pushed it below the
-        # fold and it read as a third theme button. This footer is
-        # outside the panels' scroll area, so one button serves all 13 pages.
-        # Left of Export/Import because it is the same kind of action: a named
-        # snapshot of every setting, kept in the app instead of in a file.
-        self.manage_profiles_button = ModernButton(self.tr("Settings Profiles…"), variant="secondary")
-        self.manage_profiles_button.setToolTip(
-            self.tr("Keep several complete settings snapshots and switch between them.")
-        )
-        self.manage_profiles_button.clicked.connect(self._on_manage_profiles_clicked)
-        button_layout.addWidget(self.manage_profiles_button)
-
-        # Export ▾ / Import ▾ each offer the settings file and the resource
-        # bundle (the active mining language's dictionaries, frequency and
-        # pitch lists, ignore list and word lists in one file -- to move a setup
-        # to another install or hand it to someone). Two menus rather than four
-        # plain buttons: this footer cannot scroll, and four captions overflow
-        # the 1024px minimum window at 1.5x text scale.
-        self.export_settings_action = QAction(self.tr("Settings…"), self)
-        self.export_settings_action.setToolTip(
-            self.tr("Save a portable settings file (machine-specific paths and resources excluded).")
-        )
-        self.export_settings_action.triggered.connect(self._on_export_settings)
-        self.export_resources_action = QAction(self.tr("Resources…"), self)
+        # Resource bundles (the active language's dictionaries, frequency and
+        # pitch lists, ignore list and word lists in one file). The window puts
+        # these two in its Tools menu (D14); they stay here because the bundle
+        # flow holds this tab's chain panels' mutation lock while it runs.
+        self.export_resources_action = QAction(self.tr("Export Resources…"), self)
         self.export_resources_action.setToolTip(
             self.tr(
                 "Save this language's dictionaries, frequency and pitch lists, ignore list and word lists to one file."
             )
         )
         self.export_resources_action.triggered.connect(self._on_export_resources)
-        self.export_button = make_menu_button(
-            self.tr("Export"),
-            self.tr("Export your settings, or this language's resources, to a file."),
-            (self.export_settings_action, self.export_resources_action),
-        )
-        button_layout.addWidget(self.export_button)
-
-        self.import_settings_action = QAction(self.tr("Settings…"), self)
-        self.import_settings_action.setToolTip(
-            self.tr("Apply settings from an exported file; anything not in the file is kept.")
-        )
-        self.import_settings_action.triggered.connect(self._on_import_settings)
-        self.import_resources_action = QAction(self.tr("Resources…"), self)
+        self.import_resources_action = QAction(self.tr("Import Resources…"), self)
         self.import_resources_action.setToolTip(
             self.tr("Install resources from a bundle file. Nothing you already have is replaced.")
         )
         self.import_resources_action.triggered.connect(self._on_import_resources)
-        self.import_button = make_menu_button(
-            self.tr("Import"),
-            self.tr("Import settings, or resources, from a file."),
-            (self.import_settings_action, self.import_resources_action),
-        )
-        button_layout.addWidget(self.import_button)
-
-        # Inline, non-modal save confirmation. Flashed by _flash_save_status()
-        # and auto-cleared by a timer; validation warnings park here sticky.
-        self.save_status_label = QLabel("")
-        self.save_status_label.setObjectName("settings-save-status")
-        button_layout.addWidget(self.save_status_label)
-
-        self._save_status_timer = QTimer(self)
-        self._save_status_timer.setSingleShot(True)
-        self._save_status_timer.timeout.connect(lambda: self.save_status_label.setText(""))
-
-        layout.addLayout(button_layout)
 
         # Cap the whole screen, not the panels inside it. Settings is the one
         # page with a side rail, so capping each panel at the page measure would
@@ -1901,15 +1848,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         else:
             self._flash_save_status(self.tr("✓ Saved"))
 
-    def _on_manage_profiles_clicked(self) -> None:
-        """Ask the window for the profile manager; never own the dialog here.
-
-        A profile switch fans ``config_refreshed`` into every panel in this tab,
-        so a dialog parented here would be repainted mid-CRUD. MainWindow owns it
-        (see ``_open_profile_manager``).
-        """
-        self.manage_profiles_requested.emit()
-
     def _on_export_resources(self) -> None:
         self._resource_bundle_flow.export_resources()
 
@@ -1948,8 +1886,9 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         for panel in (self.dictionary_panel, self.frequency_panel, self.pitch_panel):
             panel.refresh_registry()
 
-    def _on_export_settings(self) -> None:
+    def _on_export_settings(self, surface: QWidget | None = None) -> None:
         """Export a portable settings file (machine-specific fields stripped)."""
+        parent, issues = self._surface(surface)
 
         def _on_picked(target: str) -> None:
             if not target:
@@ -1959,32 +1898,32 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             except OSError as e:
                 # The path and the errno are what a bug report needs and what a
                 # reader does not: Details, not the sentence (D24).
-                self.show_screen_issue(
+                issues.show_screen_issue(
                     ScreenIssue(
                         summary=self.tr("Settings could not be exported."),
                         details=f"{target}: {e}",
                         action_id="settings.export-retry",
                         action_text=self.tr("Retry"),
                     ),
-                    action=self._on_export_settings,
+                    action=lambda: self._on_export_settings(surface),
                 )
                 return
-            self.clear_screen_issue()
+            issues.clear_screen_issue()
             QMessageBox.information(
-                self,
+                parent,
                 self.tr("Settings Exported"),
                 tr_format(self.tr("Portable settings written to %1."), target),
             )
 
         file_dialogs.pick_save_file(
-            self,
+            parent,
             self.tr("Export Settings"),
             str(Path(resolve_start_dir(None, file_mode=True)) / "anki_miner_settings.json"),
             self.tr("JSON Files (*.json);;All Files (*)"),
             on_done=_on_picked,
         )
 
-    def _on_import_settings(self) -> None:
+    def _on_import_settings(self, surface: QWidget | None = None) -> None:
         """Overlay a settings file onto the current config (confirm first).
 
         Values in the file override the current settings; anything missing
@@ -1992,15 +1931,16 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         strips — keeps its current value. Applies via the same
         ``config_changed`` path as a commit, then reloads every panel.
         """
+        parent, _issues = self._surface(surface)
         file_dialogs.pick_open_file(
-            self,
+            parent,
             self.tr("Import Settings"),
             resolve_start_dir(None, file_mode=True),
             self.tr("JSON Files (*.json);;All Files (*)"),
-            on_done=self._apply_settings_import,
+            on_done=lambda source: self._apply_settings_import(source, surface),
         )
 
-    def _apply_settings_import(self, source: str) -> None:
+    def _apply_settings_import(self, source: str, surface: QWidget | None = None) -> None:
         """Confirm and apply a settings file chosen by ``_on_import_settings``.
 
         Split out of the picker slot because the picker is non-blocking now: the
@@ -2009,8 +1949,9 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         """
         if not source:
             return
+        parent, issues = self._surface(surface)
         reply = QMessageBox.question(
-            self,
+            parent,
             self.tr("Import Settings?"),
             tr_format(
                 self.tr(
@@ -2035,17 +1976,17 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         try:
             import_result = GUIConfigManager.import_config(Path(source), self.config)
         except (json.JSONDecodeError, TypeError, ValueError, OSError) as e:
-            self.show_screen_issue(
+            issues.show_screen_issue(
                 ScreenIssue(
                     summary=self.tr("Settings could not be imported."),
                     details=f"{source}: {e}",
                     action_id="settings.import-retry",
                     action_text=self.tr("Retry"),
                 ),
-                action=self._on_import_settings,
+                action=lambda: self._on_import_settings(surface),
             )
             return
-        self.clear_screen_issue()
+        issues.clear_screen_issue()
         new_config = import_result.config
         # Validate imported subtitle-regex semantics the same way the commit path does.
         # import_config validates the field types but does not compile the pattern, so
@@ -2070,7 +2011,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                     subtitle_regex_replacement=self.config.subtitle_regex_replacement,
                     use_subtitle_regex_filter=self.config.use_subtitle_regex_filter,
                 )
-                self.show_screen_issue(
+                issues.show_screen_issue(
                     ScreenIssue(
                         summary=self.tr(
                             "The imported subtitle regex filter was rejected; your previous filter was kept."
@@ -2099,7 +2040,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             # JSON, so they belong behind Details, not in the sentence the user
             # reads first (A8-34). QMessageBox.information has no detailed-text
             # argument, hence the constructed box.
-            box = QMessageBox(self)
+            box = QMessageBox(parent)
             box.setIcon(QMessageBox.Icon.Information)
             box.setWindowTitle(self.tr("Settings Imported"))
             box.setText("\n\n".join(summary))
@@ -2109,7 +2050,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         else:
             self._flash_save_status(self.tr("✓ Imported"))
 
-    def _on_reset_to_defaults_clicked(self) -> None:
+    def _on_reset_to_defaults_clicked(self, surface: QWidget | None = None) -> None:
         """Reset settings to defaults after an explicit confirm (Issue #99).
 
         Deliberately safe: cancels any pending debounced edit first, confirms
@@ -2120,11 +2061,12 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         on the next launch. Only the behavioural settings that Issue #99's
         scroll-through can corrupt are returned to defaults.
         """
+        parent, _issues = self._surface(surface)
         if self._debounce_timer.isActive():
             # A pending edit would re-commit ~1s later and clobber the reset.
             self._debounce_timer.stop()
         reply = QMessageBox.question(
-            self,
+            parent,
             self.tr("Reset Settings"),
             self.tr("Reset all settings to their defaults?\n\nYour installed resources and your theme are kept."),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
@@ -2150,7 +2092,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self._flash_save_status(self.tr("✓ Reset to defaults"))
 
     def _flash_save_status(self, text: str) -> None:
-        """Show a transient, non-modal confirmation beside the Save button.
+        """Show a transient, non-modal confirmation at the end of the search row.
 
         Restarts the auto-clear timer on each call so repeated saves keep the
         message visible for the full duration.
@@ -2158,6 +2100,32 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.save_status_label.setText(text)
         self._save_status_timer.stop()
         self._save_status_timer.start(2500)
+
+    # ------------------------------------------------------------------
+    # Whole-profile actions (D14): run from the Profile Manager
+    # ------------------------------------------------------------------
+
+    def export_settings(self, surface: QWidget | None = None) -> None:
+        """Export a portable settings file; report on ``surface`` when it has a banner."""
+        self._on_export_settings(surface)
+
+    def import_settings(self, surface: QWidget | None = None) -> None:
+        """Import a settings file (confirm first); report on ``surface`` when it has a banner."""
+        self._on_import_settings(surface)
+
+    def reset_settings(self, surface: QWidget | None = None) -> None:
+        """Reset behavioural settings to defaults (confirm first), dialogs parented to ``surface``."""
+        self._on_reset_to_defaults_clicked(surface)
+
+    def _surface(self, surface: QWidget | None) -> tuple[QWidget, ScreenIssueHost]:
+        """Where a whole-profile action shows dialogs and problems.
+
+        The Profile Manager passes itself: the tab's own banner is behind that
+        modal dialog, so a failure reported there would go unseen (D14).
+        """
+        if surface is not None and isinstance(surface, ScreenIssueHost):
+            return surface, surface
+        return self, self
 
     def update_config(self, config: AnkiMinerConfig) -> None:
         """Update configuration from external source.

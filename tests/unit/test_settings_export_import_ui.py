@@ -1,4 +1,4 @@
-"""Tests for the Settings tab's Export/Import Settings buttons."""
+"""Tests for the Settings tab's Export/Import Settings actions (run from the Profile Manager, D14)."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import json
 from dataclasses import replace
 
 import pytest
-from PyQt6.QtWidgets import QMessageBox
+from PyQt6.QtWidgets import QMessageBox, QWidget
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils import file_dialogs
@@ -44,15 +44,11 @@ def messageboxes(monkeypatch):
 
 
 class TestExportButton:
-    def test_the_footer_menus_offer_settings_and_resources(self, tab):
-        assert tab.export_button.menu().actions() == [tab.export_settings_action, tab.export_resources_action]
-        assert tab.import_button.menu().actions() == [tab.import_settings_action, tab.import_resources_action]
-
     def test_export_writes_portable_file(self, tab, tmp_path, monkeypatch, messageboxes):
         target = tmp_path / "my_settings.json"
         monkeypatch.setattr(file_dialogs, "pick_save_file", lambda *a, on_done, **k: on_done(str(target)))
 
-        tab.export_settings_action.trigger()
+        tab.export_settings()
 
         payload = json.loads(target.read_text(encoding="utf-8"))
         assert payload["anki_miner_settings"] == 1
@@ -64,10 +60,34 @@ class TestExportButton:
     def test_export_cancelled_is_noop(self, tab, monkeypatch, messageboxes):
         monkeypatch.setattr(file_dialogs, "pick_save_file", lambda *a, on_done, **k: on_done(""))
 
-        tab.export_settings_action.trigger()
+        tab.export_settings()
 
         assert not messageboxes["information"]
         assert not messageboxes["critical"]
+
+    def test_a_failure_reported_from_the_profile_manager_lands_on_its_banner(self, tab, tmp_path, monkeypatch, qtbot):
+        from anki_miner.gui.widgets.base import ScreenIssueHost
+
+        class _Surface(ScreenIssueHost, QWidget):
+            def __init__(self) -> None:
+                super().__init__()
+                self.issues: list[object] = []
+
+            def show_screen_issue(self, issue, *, action=None) -> None:
+                self.issues.append(issue)
+
+        surface = _Surface()
+        qtbot.addWidget(surface)
+        target = tmp_path / "missing-dir" / "x.json"
+        monkeypatch.setattr(file_dialogs, "pick_save_file", lambda *a, on_done, **k: on_done(str(target)))
+        monkeypatch.setattr(
+            "anki_miner.gui.utils.config_manager.GUIConfigManager.export_config",
+            lambda *a, **k: (_ for _ in ()).throw(OSError("read-only")),
+        )
+
+        tab.export_settings(surface)
+
+        assert len(surface.issues) == 1
 
 
 class TestImportButton:
@@ -82,7 +102,7 @@ class TestImportButton:
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
-        tab.import_settings_action.trigger()
+        tab.import_settings()
 
         assert messageboxes["question"], "confirmation prompt expected"
         assert len(received) == 1
@@ -103,7 +123,7 @@ class TestImportButton:
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
-        tab.import_settings_action.trigger()
+        tab.import_settings()
 
         assert received == []
         assert tab.anki_panel.get_deck_name() == test_config.anki_deck_name
@@ -113,7 +133,7 @@ class TestImportButton:
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
-        tab.import_settings_action.trigger()
+        tab.import_settings()
 
         assert received == []
         assert not messageboxes["question"]
@@ -125,7 +145,7 @@ class TestImportButton:
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
-        tab.import_settings_action.trigger()
+        tab.import_settings()
 
         issue = tab.issue_banner().current_issue()
         assert issue is not None and issue.summary == "Settings could not be imported."
@@ -139,7 +159,7 @@ class TestImportButton:
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
-        tab.import_settings_action.trigger()
+        tab.import_settings()
 
         issue = tab.issue_banner().current_issue()
         assert issue is not None and issue.summary == "Settings could not be imported."
