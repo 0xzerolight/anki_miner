@@ -69,11 +69,11 @@ SCRIPT_FILTER_HELPERS: dict[str, str] = {
 }
 
 #: Capabilities whose profile supplies the option-driven script-filter rows.
-#: Japanese keeps its own hand-built rows under ``kana_filters``: they carry
-#: helper prose, search anchors derived from their panel attributes, and a third
-#: option (``mixed_kana_only``) that deliberately has no checkbox because it has
-#: no config field. Rebuilding those from options would move ja's extracted
-#: strings and anchors, and a ja user must see zero change.
+#: Japanese keeps its own hand-built Script Type combo under ``kana_filters``
+#: (C12): its four items are the four states of the two booleans, and the
+#: field-less third option (``mixed_kana_only``) is the "both on" item. A combo
+#: built from Korean's options could not show a saved "both on" state, which is
+#: why Korean keeps its option-driven checkboxes.
 _OPTION_DRIVEN_FILTER_CAPABILITIES = ("hangul_filters",)
 
 
@@ -430,29 +430,36 @@ class FilteringSettingsPanel(FormPanel):
         self.add_section(self.tr("Script Type"))
         self._script_type_section_label = self._active_section_label
 
-        self.exclude_hiragana_only_checkbox = QCheckBox(self.tr("Exclude Hiragana-Only Words"))
-        self.add_field(
-            "",
-            self.exclude_hiragana_only_checkbox,
-            helper=self.tr(
+        # One choice over the two kana booleans (C12). Both on also skips words
+        # that mix the two kana scripts (サボる, ヤバい): ja's third filter
+        # option, mixed_kana_only, has no field of its own, which is why it was
+        # invisible as two checkboxes.
+        self.script_type_combo = QComboBox()
+        self.script_type_combo.addItem(self.tr("Keep all words"), "keep")
+        self.script_type_combo.addItem(self.tr("Skip hiragana-only words"), "hiragana")
+        self.script_type_combo.setItemData(
+            1,
+            self.tr(
                 "Skip words written entirely in hiragana (e.g. する, これ), including "
                 "long-vowel spellings like すごーい. Focuses the deck on kanji vocabulary."
             ),
+            Qt.ItemDataRole.ToolTipRole,
         )
-
-        self.exclude_katakana_only_checkbox = QCheckBox(self.tr("Exclude Katakana-Only Words"))
-        self.add_field(
-            "",
-            self.exclude_katakana_only_checkbox,
-            helper=self.tr(
-                "Skip words written entirely in katakana (e.g. コーヒー). Tick both boxes "
-                "to also skip words mixing the two kana scripts (サボる, ヤバい)."
-            ),
+        self.script_type_combo.addItem(self.tr("Skip katakana-only words"), "katakana")
+        self.script_type_combo.setItemData(
+            2, self.tr("Skip words written entirely in katakana (e.g. コーヒー)."), Qt.ItemDataRole.ToolTipRole
         )
+        self.script_type_combo.addItem(self.tr("Skip all kana-only words (including mixed)"), "all_kana")
+        self.script_type_combo.setItemData(
+            3,
+            self.tr("Skip every word written without kanji, including words that mix hiragana and katakana."),
+            Qt.ItemDataRole.ToolTipRole,
+        )
+        self.add_field("", self.script_type_combo, anchor_text=self._script_type_search_text)
 
         # Option-driven script filters. The Korean pair binds to the SAME two
-        # language-scoped booleans the kana rows above use, and the mapping is
-        # counter-intuitive (hangul-only -> exclude_hiragana_only_words), so the
+        # language-scoped booleans the Script Type combo above uses, and the
+        # mapping is counter-intuitive (hangul-only -> exclude_hiragana_only_words), so the
         # binding is taken from the profile's own options instead of restated
         # here: the panel and WordFilterService then read one source of truth.
         # It gets a heading of its own because "Script Type" above is gated on
@@ -528,11 +535,7 @@ class FilteringSettingsPanel(FormPanel):
         # field never leaves a dangling caption behind.
         self._language_gate_pairs.extend(
             (w, "kana_filters")
-            for cb in (
-                self.exclude_hiragana_only_checkbox,
-                self.exclude_katakana_only_checkbox,
-                self.match_kana_variants_checkbox,
-            )
+            for cb in (self.script_type_combo, self.match_kana_variants_checkbox)
             for w in field_row_widgets(self, cb)
         )
         if self._script_type_section_label is not None:
@@ -578,6 +581,25 @@ class FilteringSettingsPanel(FormPanel):
         """
         parts: list[str] = ["dedup", "deduplicate"]
         combo = self.sentence_rule_combo
+        for index in range(combo.count()):
+            parts.append(combo.itemText(index))
+            tooltip = combo.itemData(index, Qt.ItemDataRole.ToolTipRole)
+            if tooltip:
+                parts.append(str(tooltip))
+        return tuple(parts)
+
+    #: combo item data -> (exclude_hiragana_only_words, exclude_katakana_only_words).
+    _SCRIPT_TYPE_VALUES: dict[str, tuple[bool, bool]] = {
+        "keep": (False, False),
+        "hiragana": (True, False),
+        "katakana": (False, True),
+        "all_kana": (True, True),
+    }
+
+    def _script_type_search_text(self) -> tuple[str, ...]:
+        """Searchable text for the label-less Script Type combo: items, tips, script names."""
+        parts: list[str] = ["hiragana", "katakana", "kana"]
+        combo = self.script_type_combo
         for index in range(combo.count()):
             parts.append(combo.itemText(index))
             tooltip = combo.itemData(index, Qt.ItemDataRole.ToolTipRole)
@@ -831,20 +853,17 @@ class FilteringSettingsPanel(FormPanel):
     # --- Script type ---
 
     def get_exclude_hiragana_only_words(self) -> bool:
-        """Return whether hiragana-only words are excluded."""
-        return self.exclude_hiragana_only_checkbox.isChecked()
-
-    def set_exclude_hiragana_only_words(self, value: bool) -> None:
-        """Set the exclude-hiragana-only checkbox."""
-        self.exclude_hiragana_only_checkbox.setChecked(value)
+        """Whether hiragana-only words are skipped (Script Type combo)."""
+        return self._SCRIPT_TYPE_VALUES[self.script_type_combo.currentData()][0]
 
     def get_exclude_katakana_only_words(self) -> bool:
-        """Return whether katakana-only words are excluded."""
-        return self.exclude_katakana_only_checkbox.isChecked()
+        """Whether katakana-only words are skipped (Script Type combo)."""
+        return self._SCRIPT_TYPE_VALUES[self.script_type_combo.currentData()][1]
 
-    def set_exclude_katakana_only_words(self, value: bool) -> None:
-        """Set the exclude-katakana-only checkbox."""
-        self.exclude_katakana_only_checkbox.setChecked(value)
+    def set_script_type(self, hiragana_only: bool, katakana_only: bool) -> None:
+        """Select the combo item for the two stored booleans."""
+        value = next(key for key, pair in self._SCRIPT_TYPE_VALUES.items() if pair == (hiragana_only, katakana_only))
+        self.script_type_combo.setCurrentIndex(self.script_type_combo.findData(value))
 
     # --- Sentence length ---
 
@@ -933,8 +952,7 @@ class FilteringSettingsPanel(FormPanel):
         self.set_blacklist_path(config.blacklist_path if config.use_blacklist else None)
         self.set_whitelist_path(config.whitelist_path if config.use_whitelist else None)
         self.set_sentence_rule(config.deduplicate_sentences, config.use_i_plus_one_filter)
-        self.set_exclude_hiragana_only_words(config.exclude_hiragana_only_words)
-        self.set_exclude_katakana_only_words(config.exclude_katakana_only_words)
+        self.set_script_type(bool(config.exclude_hiragana_only_words), bool(config.exclude_katakana_only_words))
         # Same two booleans, read through whichever language's option named them.
         for option_id, checkbox in self.script_filter_checkboxes.items():
             checkbox.setChecked(bool(getattr(config, self._script_filter_fields[option_id])))
@@ -980,7 +998,7 @@ class FilteringSettingsPanel(FormPanel):
         # language that has neither setting. Visibility is the gate's own
         # output, so there is one source of truth for "does this language have
         # this setting".
-        # The kana boxes above already wrote these two fields unconditionally --
+        # The Script Type combo above already wrote these two fields unconditionally --
         # under another language they are hidden and still hold the loaded
         # value, so that write is a no-op. The visible option-driven row is the
         # one the user can actually reach, so it wins.

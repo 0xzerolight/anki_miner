@@ -398,3 +398,35 @@ def test_a_stored_path_that_was_switched_off_loads_empty(qtbot, tmp_path):
     out = panel.contribute(create_default_config())
     assert out.blacklist_path is None and out.use_blacklist is False
     assert out.whitelist_path == white and out.use_whitelist is True
+
+
+@pytest.mark.parametrize(
+    "hiragana, katakana, data",
+    [(False, False, "keep"), (True, False, "hiragana"), (False, True, "katakana"), (True, True, "all_kana")],
+)
+def test_script_type_is_one_choice_over_the_same_two_fields(qtbot, hiragana, katakana, data):
+    """C12: four states of two booleans, the fourth (mixed kana) now visible."""
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+    config = replace(
+        create_default_config(), exclude_hiragana_only_words=hiragana, exclude_katakana_only_words=katakana
+    )
+
+    panel.load_from_config(config)
+
+    assert panel.script_type_combo.currentData() == data
+    out = panel.contribute(create_default_config())
+    assert (out.exclude_hiragana_only_words, out.exclude_katakana_only_words) == (hiragana, katakana)
+
+
+def test_script_type_names_the_mixed_kana_option(qtbot):
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+    texts = [panel.script_type_combo.itemText(i) for i in range(panel.script_type_combo.count())]
+    assert texts == [
+        "Keep all words",
+        "Skip hiragana-only words",
+        "Skip katakana-only words",
+        "Skip all kana-only words (including mixed)",
+    ]
+    assert not hasattr(panel, "exclude_hiragana_only_checkbox")

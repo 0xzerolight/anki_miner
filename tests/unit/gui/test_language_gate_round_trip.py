@@ -25,12 +25,11 @@ def test_the_filtering_rows_come_back_after_a_zh_round_trip(qtbot, test_config):
     panel.load_from_config(test_config)
 
     panel.load_from_config(replace(test_config, language="zh"))
-    assert not panel.exclude_hiragana_only_checkbox.isVisibleTo(panel)
+    assert not panel.script_type_combo.isVisibleTo(panel)
     assert not panel.names_checkbox.isVisibleTo(panel)
 
     panel.load_from_config(test_config)
-    assert panel.exclude_hiragana_only_checkbox.isVisibleTo(panel)
-    assert panel.exclude_katakana_only_checkbox.isVisibleTo(panel)
+    assert panel.script_type_combo.isVisibleTo(panel)
     assert panel.match_kana_variants_checkbox.isVisibleTo(panel)
     assert panel.names_checkbox.isVisibleTo(panel)
     assert panel._script_type_section_label.isVisibleTo(panel)
