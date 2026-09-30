@@ -372,3 +372,34 @@ def test_a_hidden_row_does_not_widen_the_label_column(qapp, qtbot):
 
     visible_label = form.labelForField(visible_input)
     assert visible_label.minimumWidth() < hidden_label.sizeHint().width()
+
+
+def test_a_section_can_carry_a_button_in_its_heading(qapp, qtbot):
+    from PyQt6.QtCore import QPoint
+    from PyQt6.QtWidgets import QPushButton
+
+    panel = FormPanel("Test")
+    qtbot.addWidget(panel)
+    button = QPushButton("Fill")
+    panel.add_section("Mappings", trailing=button)
+    field = QLineEdit()
+    panel.add_field("Word", field)
+    panel.resize(700, 300)
+    panel.show()
+    qtbot.waitExposed(panel)
+
+    heading = panel._active_section_label
+    assert heading is not None and heading.text() == "Mappings"
+    assert abs(button.mapTo(panel, QPoint(0, 0)).y() - heading.mapTo(panel, QPoint(0, 0)).y()) < button.height()
+    assert button.mapTo(panel, QPoint(0, 0)).y() < field.mapTo(panel, QPoint(0, 0)).y()
+
+
+def test_section_synonyms_are_searchable_on_its_rows(qapp, qtbot):
+    panel = _AnchoredPanel("Panel")
+    qtbot.addWidget(panel)
+    panel.add_section("Extra Fields", synonyms=("Auxiliary Data Fields",))
+    panel.pitch_input = QLineEdit()
+    panel.add_field("Pitch", panel.pitch_input)
+
+    (anchor,) = panel.setting_anchors()
+    assert "Auxiliary Data Fields" in anchor.search_text()

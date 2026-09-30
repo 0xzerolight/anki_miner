@@ -119,7 +119,7 @@ def test_field_probe_drops_result_and_error_after_endpoint_changes(wired, monkey
     ctrl, panel = wired
     panel.set_ankiconnect_url("http://127.0.0.1:8765")
     populate = MagicMock()
-    monkeypatch.setattr(panel, "populate_from_field_list", populate)
+    monkeypatch.setattr(panel, "fill_from_field_list", populate)
     worker = MagicMock()
     worker.isRunning.return_value = False
     monkeypatch.setattr(
@@ -137,6 +137,7 @@ def test_field_probe_drops_result_and_error_after_endpoint_changes(wired, monkey
 
     populate.assert_not_called()
     assert panel.anki_status.text() == ""
+    assert panel.fill_status.text() == ""
 
 
 def test_excluded_deck_probe_drops_late_callbacks_after_endpoint_clears(wired, monkeypatch):

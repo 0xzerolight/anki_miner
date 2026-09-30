@@ -88,6 +88,7 @@ class FormPanel(SettingAnchorHost, QFrame):
         # Heading of the section fields are currently landing in, read lazily by
         # the anchor text providers so search matches the section name too.
         self._active_section_label: QLabel | None = None
+        self._active_section_synonyms: tuple[str, ...] = ()
         # Every labelled row this panel owns, across all its form layouts, so
         # the field cap can be recomputed as one column when the text scale
         # changes. Sections open new form layouts but share the label column.
@@ -299,11 +300,23 @@ class FormPanel(SettingAnchorHost, QFrame):
         self._main_layout.addLayout(layout)
         self._open_form_after_block()
 
-    def add_section(self, title: str) -> None:
-        """Add a section divider with title.
+    def add_section(
+        self,
+        title: str,
+        *,
+        trailing: QWidget | None = None,
+        synonyms: tuple[str, ...] = (),
+    ) -> None:
+        """Add a section heading and open a fresh form under it.
 
         Args:
-            title: Section title
+            title: Section title.
+            trailing: Optional control shown at the right end of the heading
+                row, for an action that belongs to the whole section (D13's
+                "Fill in automatically").
+            synonyms: Untranslated old names of this section. Every row added
+                under it answers to them in settings search, so a renamed
+                heading keeps the vocabulary users learned (C16).
         """
         # Add spacing before section
         self._main_layout.addSpacing(SPACING.xxs)
@@ -314,8 +327,17 @@ class FormPanel(SettingAnchorHost, QFrame):
         section_font.setWeight(QFont.Weight.DemiBold)
         section_label.setFont(section_font)
 
-        self._main_layout.addWidget(section_label)
+        if trailing is None:
+            self._main_layout.addWidget(section_label)
+        else:
+            heading_row = QHBoxLayout()
+            heading_row.setContentsMargins(0, 0, 0, 0)
+            heading_row.addWidget(section_label)
+            heading_row.addStretch()
+            heading_row.addWidget(trailing)
+            self._main_layout.addLayout(heading_row)
         self._active_section_label = section_label
+        self._active_section_synonyms = tuple(synonyms)
 
         # Open a fresh form layout so fields added next render under this
         # section heading. Without this, every field would land in the
@@ -440,6 +462,7 @@ class FormPanel(SettingAnchorHost, QFrame):
         — see ``setting_anchor``'s module docstring.
         """
         section_label = self._active_section_label
+        section_synonyms = self._active_section_synonyms
         title_label = self._title_label
 
         def provider() -> tuple[str, ...]:
@@ -455,6 +478,7 @@ class FormPanel(SettingAnchorHost, QFrame):
                 parts.extend(extra())
             if section_label is not None:
                 parts.append(section_label.text())
+                parts.extend(section_synonyms)
             parts.append(title_label.text())
             return tuple(parts)
 
