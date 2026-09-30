@@ -238,6 +238,10 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         # "something failed" signal would be two answers to one question (D24).
         self.log_widget.problem_logged.connect(self._on_log_problem)
 
+        # D1: the pinned bar is the one live readout. The card and its
+        # ProgressWidget stay built (every call site still writes to it) but are
+        # never shown; the bar keeps the result line instead.
+        group.hide()
         group.setLayout(layout)
         return group
 
@@ -271,6 +275,8 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         bar = install_workflow_shell(layout, scroll, content, kind, log=self.log_widget)
         bar.set_actions(self._primary_button, (self.cancel_button,))
         self.action_bar = bar
+        # D1: a tool has no receipt, so its bar keeps the last result line.
+        bar.set_keeps_last_result(True)
         # Ctrl+Enter runs the tool, scoped to this page (D48-B).
         primary_action_shortcut(self, bar.trigger_primary)
         return bar
@@ -619,26 +625,30 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         if self._cancelled or outcome is TerminalOutcome.CANCELLED:
             # No reset(): the frozen bar still says how many files got done
             # before the user stopped it.
-            self.progress_widget.set_status(self._strings.cancelled)
+            line = self._strings.cancelled
+            self.progress_widget.set_status(line)
         elif outcome is TerminalOutcome.PARTIAL:
-            # No reset(): some items got through, and the bar is the only place
-            # that says how many. Merging them into "Failed — see log" behind a
-            # wiped bar is the anti-pattern A8-27 names.
-            self.progress_widget.set_status(self._strings.partial)
+            # No reset(): some items got through (A8-27).
+            line = self._strings.partial
+            self.progress_widget.set_status(line)
         elif outcome is TerminalOutcome.FAILED:
+            line = self._strings.failed
             self.progress_widget.reset()
-            self.progress_widget.set_status(self._strings.failed)
+            self.progress_widget.set_status(line)
         else:
             # An honest completion line: a skipped file was not "processed".
             # All-skipped runs (the same-folder Retime case) name the remedy
             # instead of claiming success.
             if all_skipped:
-                message = tr_format(self._strings.all_skipped_template, skipped)
+                line = tr_format(self._strings.all_skipped_template, skipped)
             elif skipped:
-                message = tr_format(self._strings.complete_skipped_template, total - skipped, skipped)
+                line = tr_format(self._strings.complete_skipped_template, total - skipped, skipped)
             else:
-                message = tr_format(self._strings.complete_template, total)
-            self.progress_widget.show_completion(message)
+                line = tr_format(self._strings.complete_template, total)
+            self.progress_widget.show_completion(line)
+        # D1: the result line the user reads, above the fold, until the next run.
+        if self.action_bar is not None:
+            self.action_bar.set_last_result(line)
 
     def _on_run_error(self, message: str) -> None:
         self.log_widget.append_error(message)

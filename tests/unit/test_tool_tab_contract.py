@@ -382,3 +382,42 @@ def test_the_output_hint_moves_into_the_choose_folder_tooltip(spec, sentence, qt
 
     assert tab.choose_output_button.toolTip() == sentence
     assert [label for label in tab.findChildren(QLabel) if label.text() == sentence] == []
+
+
+@pytest.mark.parametrize("spec", _ALL_TABS, ids=_spec_id)
+def test_the_in_page_progress_card_is_hidden(spec, qtbot, tmp_path):
+    """D1: the pinned bar is the one live readout; the in-page card went."""
+    tab = _make_tab(spec, qtbot, tmp_path)
+
+    assert not tab.progress_widget.isVisibleTo(tab)
+
+
+@pytest.mark.parametrize("spec", _ALL_TABS, ids=_spec_id)
+def test_a_failed_run_keeps_its_result_in_the_pinned_bar(spec, qtbot, tmp_path):
+    """D1: a tool has no receipt, so the bar keeps its last line until the next run."""
+    from anki_miner.models import TerminalOutcome
+
+    tab = _make_tab(spec, qtbot, tmp_path)
+    worker = FakeToolWorker()
+    finished = capture_slots(worker.queue_finished)
+    _start_single_run(spec, tab, tmp_path, worker)
+
+    for slot in finished:
+        slot(TerminalOutcome.FAILED)
+
+    assert tab.action_bar.stage_label.full_text == tab._strings.failed
+
+
+@pytest.mark.parametrize("spec", _ALL_TABS, ids=_spec_id)
+def test_a_finished_run_states_its_completion_in_the_pinned_bar(spec, qtbot, tmp_path):
+    from anki_miner.models import TerminalOutcome
+
+    tab = _make_tab(spec, qtbot, tmp_path)
+    worker = FakeToolWorker()
+    finished = capture_slots(worker.queue_finished)
+    _start_single_run(spec, tab, tmp_path, worker)
+
+    for slot in finished:
+        slot(TerminalOutcome.SUCCESS)
+
+    assert tab.action_bar.stage_label.full_text != ""
