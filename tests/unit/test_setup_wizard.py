@@ -736,7 +736,7 @@ def test_ankiconnect_page_drops_recheck_callbacks_for_changed_url(qtbot, wiz_con
     monkeypatch.setattr(pages_mod, "SingleCallWorker", MagicMock(return_value=worker))
     monkeypatch.setattr(wiz, "register_worker", MagicMock())
 
-    page._on_recheck_clicked()
+    page.recheck()
     on_result = worker.result_ready.connect.call_args.args[0]
     on_error = worker.error.connect.call_args.args[0]
     page.url_input.setText("http://127.0.0.1:9999")
@@ -762,7 +762,7 @@ def test_ankiconnect_page_exact_new_endpoint_can_restore_completion(qtbot, wiz_c
     monkeypatch.setattr(pages_mod, "SingleCallWorker", MagicMock(side_effect=[worker_a, worker_b]))
     monkeypatch.setattr(wiz, "register_worker", MagicMock())
 
-    page._on_recheck_clicked()
+    page.recheck()
     on_a_result = worker_a.result_ready.connect.call_args.args[0]
     on_a_result((True, "A ok"))
     assert page.isComplete() is True
@@ -770,14 +770,15 @@ def test_ankiconnect_page_exact_new_endpoint_can_restore_completion(qtbot, wiz_c
     endpoint_b = "http://127.0.0.1:9999"
     page.url_input.setText(endpoint_b)
     assert page.isComplete() is False
-    page._on_recheck_clicked()
+    page.recheck()
     on_b_result = worker_b.result_ready.connect.call_args.args[0]
     on_b_result((True, "B ok"))
 
     assert page._active_recheck_url == endpoint_b
     assert wiz.working_config().ankiconnect_url == endpoint_b
     assert page.isComplete() is True
-    assert page.result_label.text() == "B ok"
+    assert page.result_label.text() == "Connected to Anki."
+    assert page.result_label.toolTip() == "B ok"
     _join_workers(qtbot, wiz)
 
 
@@ -793,7 +794,7 @@ def test_ankiconnect_page_blank_url_does_not_probe_previous_endpoint(qtbot, wiz_
     monkeypatch.setattr(wiz, "register_worker", MagicMock())
 
     page.url_input.clear()
-    page._on_recheck_clicked()
+    page.recheck()
 
     worker_factory.assert_not_called()
     assert wiz.working_config().ankiconnect_url == ""
@@ -835,6 +836,118 @@ def test_ankiconnect_page_recheck_uses_check_ankiconnect(qtbot, wiz_config, monk
     result = page._recheck_work()
     assert result == (True, "ok")
     assert calls["checked"] is True
+
+
+def test_connected_is_one_line(qtbot, wiz_config):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    page = wiz.ankiconnect_page
+
+    page._on_recheck_result((True, "AnkiConnect v6 is running"))
+
+    assert page.result_label.text() == "Connected to Anki."
+    assert page.result_label.toolTip() == "AnkiConnect v6 is running"
+    assert not page.steps.isVisibleTo(page)
+    assert not page.address_link.isVisibleTo(page)
+    assert not hasattr(page, "badge")
+    assert not hasattr(page, "recheck_button")
+    _join_workers(qtbot, wiz)
+
+
+def test_not_connected_shows_three_numbered_steps(qtbot, wiz_config, monkeypatch):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import pages as pages_mod  # noqa: PLC0415
+
+    monkeypatch.setattr(pages_mod, "anki_launch_command", lambda: None)
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    page = wiz.ankiconnect_page
+
+    page._on_recheck_result((False, "Cannot connect to AnkiConnect at http://127.0.0.1:8765"))
+
+    assert page.result_label.text() == "Anki Miner can't reach Anki yet. Do this once:"
+    assert page.result_label.toolTip().startswith("Cannot connect")
+    assert page.steps.isVisibleTo(page)
+    assert page.step1_label.text() == "1. Open Anki."
+    assert not page.open_anki_button.isVisibleTo(page)
+    assert page.step2_label.text().startswith(
+        "2. In Anki choose Tools → Add-ons → Get Add-ons…, paste the code 2055492159, and click OK."
+    )
+    assert 'href="copy"' in page.step2_label.text()
+    assert page.step3_label.text() == "3. Restart Anki. This page connects by itself."
+    assert page.address_link.isVisibleTo(page)
+    assert not page.url_row.isVisibleTo(page)
+
+
+def test_copy_puts_the_addon_code_on_the_clipboard(qtbot, wiz_config):
+    from PyQt6.QtGui import QGuiApplication  # noqa: PLC0415
+
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    page = wiz.ankiconnect_page
+
+    page.step2_label.linkActivated.emit("copy")
+
+    clipboard = QGuiApplication.clipboard()
+    assert clipboard is not None and clipboard.text() == "2055492159"
+    assert "Copied" in page.step2_label.text()
+
+
+def test_the_address_field_hides_behind_a_link(qtbot, wiz_config):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    page = wiz.ankiconnect_page
+    page._on_recheck_result((False, "down"))
+
+    page.address_link.linkActivated.emit("address")
+
+    assert page.url_row.isVisibleTo(page)
+    assert not page.address_link.isVisibleTo(page)
+
+
+def test_an_installed_anki_makes_step_one_a_button(qtbot, wiz_config, monkeypatch):
+    """D11: Anki in its standard place can be started from the wizard."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import pages as pages_mod  # noqa: PLC0415
+
+    launched: list[list[str]] = []
+    monkeypatch.setattr(pages_mod, "anki_launch_command", lambda: ["/usr/bin/anki"])
+    monkeypatch.setattr(pages_mod, "launch_anki", lambda command: launched.append(command) or True)
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    page = wiz.ankiconnect_page
+    page._on_recheck_result((False, "down"))
+
+    assert page.step1_label.text() == "1."
+    assert page.open_anki_button.isVisibleTo(page)
+    page.open_anki_button.click()
+
+    assert launched == [["/usr/bin/anki"]]
+    assert not page.open_anki_button.isEnabled()
+    assert page.open_anki_button.text() == "Starting Anki…"
+
+
+def test_an_anki_that_does_not_start_falls_back_to_text(qtbot, wiz_config, monkeypatch):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import pages as pages_mod  # noqa: PLC0415
+
+    monkeypatch.setattr(pages_mod, "anki_launch_command", lambda: ["/usr/bin/anki"])
+    monkeypatch.setattr(pages_mod, "launch_anki", lambda command: False)
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    page = wiz.ankiconnect_page
+    page._on_recheck_result((False, "down"))
+
+    page.open_anki_button.click()
+
+    assert not page.open_anki_button.isVisibleTo(page)
+    assert page.step1_label.text() == "1. Anki did not start. Open it yourself."
 
 
 # ---------------------------------------------------------------------------
@@ -2131,6 +2244,7 @@ def test_return_in_a_text_field_does_not_advance_the_wizard(qtbot, wiz_config, m
         wiz.next()
         assert wiz.currentId() != before, "the wizard stopped short of the Anki page"
     page_id = wiz.currentId()
+    wiz.ankiconnect_page.address_link.linkActivated.emit("address")
     field = wiz.ankiconnect_page.url_input
     assert field.isVisible() is True
     field.setFocus()

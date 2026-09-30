@@ -16,13 +16,14 @@ explains, links, and re-checks.
 
 from __future__ import annotations
 
+import html
 from collections.abc import Callable
 from dataclasses import replace
 from functools import partial
 from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, QEvent, Qt, QUrl, pyqtSignal
-from PyQt6.QtGui import QDesktopServices
+from PyQt6.QtGui import QDesktopServices, QGuiApplication
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -34,9 +35,14 @@ from PyQt6.QtWidgets import (
     QWizardPage,
 )
 
+from anki_miner.gui.utils.ankiconnect_help import (
+    ANKICONNECT_ADDON_CODE,
+    anki_launch_command,
+    ankiconnect_install_steps,
+    launch_anki,
+)
 from anki_miner.gui.utils.language_choices import available_mining_languages
 from anki_miner.gui.utils.run_off_thread import still_running
-from anki_miner.gui.widgets.base import StatusBadge
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.panels.anki_settings_panel import (
     _FIELD_KEYWORDS,
@@ -63,8 +69,6 @@ if TYPE_CHECKING:
 
     from .setup_wizard import SetupWizard
 
-# AnkiConnect is an Anki add-on; this is its add-on code on AnkiWeb.
-ANKICONNECT_ADDON_CODE = "2055492159"
 ANKICONNECT_URL = "https://ankiweb.net/shared/info/2055492159"
 RESOURCES_HELP_URL = "https://github.com/0xzerolight/anki_miner/blob/main/RESOURCES.md"
 # Note types that map cleanly (the Lapis/Kiku/Senren presets, or any word + sentence field list).
@@ -90,6 +94,16 @@ _RESOURCE_KIND_NOUNS = {
 
 def _open_url(url: str) -> None:
     QDesktopServices.openUrl(QUrl(url))
+
+
+def _html_text(text: str) -> str:
+    """Escape ``text`` for a rich-text label's text node, keeping apostrophes readable.
+
+    ``html.escape`` also escapes ``'`` by default, and a rich-text QLabel's
+    ``text()`` then hands back "You&#x27;re" to anyone reading it. Only
+    ``&``, ``<`` and ``>`` matter outside an attribute.
+    """
+    return html.escape(text, quote=False)
 
 
 def _add_page_header(layout: QVBoxLayout, title: str, subtitle: str) -> tuple[QLabel, QLabel]:
@@ -331,7 +345,17 @@ class MiningLanguagePage(QWizardPage):
 
 
 class AnkiConnectPage(_WizardSection):
-    """The Anki page's connection section: is AnkiConnect reachable, and how to get it."""
+    """The Anki page's connection section (B03, D11).
+
+    Connected, it is one line. Not connected, it is three numbered steps: open
+    Anki (a button when Anki sits in its standard install place), install
+    AnkiConnect with a one-click copy of its code, restart Anki; the page then
+    connects by itself (B02). The AnkiConnect address is behind a small link,
+    because Settings cannot be reached while this modal wizard is open.
+
+    The section renders its own translated sentence from the check's ``ok``
+    flag; the service's English message goes in the tooltip.
+    """
 
     #: The latest answer: True when AnkiConnect replied, False otherwise.
     reachability_changed = pyqtSignal(bool)
@@ -339,60 +363,96 @@ class AnkiConnectPage(_WizardSection):
     def __init__(self, wizard: SetupWizard) -> None:
         super().__init__(wizard)
         self._reachable = False
+        #: False until the first answer lands; later checks keep the last answer
+        #: on screen instead of flickering through "Checking".
+        self._has_result = False
         self._worker: SingleCallWorker | None = None
         self._active_recheck_url: str | None = None
+        self._copied = False
+        self._launch_command = anki_launch_command()
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self.badge = StatusBadge("AnkiConnect", status="checking", clickable=False)
-        layout.addWidget(self.badge)
-
-        guidance = QLabel(
-            tr_format(
-                self.tr("In Anki: Tools → Add-ons → Get Add-ons…, paste the code <b>%1</b>, then restart Anki."),
-                ANKICONNECT_ADDON_CODE,
-            )
-        )
-        guidance.setWordWrap(True)
-        layout.addWidget(guidance)
-
-        link = QLabel(f'<a href="{ANKICONNECT_URL}">{self.tr("Open the AnkiConnect add-on page")}</a>')
-        link.setOpenExternalLinks(False)
-        link.linkActivated.connect(lambda: _open_url(ANKICONNECT_URL))
-        layout.addWidget(link)
-
-        url_row = QHBoxLayout()
-        url_row.addWidget(QLabel(self.tr("AnkiConnect URL:")))
-        self.url_input = QLineEdit(wizard.working_config().ankiconnect_url)
-        self.url_input.setPlaceholderText("http://127.0.0.1:8765")
-        url_row.addWidget(self.url_input, 1)
-        layout.addLayout(url_row)
-
-        self.recheck_button = ModernButton(self.tr("Recheck"), variant="secondary")
-        self.recheck_button.clicked.connect(self._on_recheck_clicked)
-        layout.addWidget(self.recheck_button)
-
         self.result_label = QLabel("")
         self.result_label.setWordWrap(True)
         layout.addWidget(self.result_label)
+
+        open_step, _install_step, restart_step = ankiconnect_install_steps()
+        self.steps = QWidget()
+        steps_layout = QVBoxLayout(self.steps)
+        steps_layout.setContentsMargins(0, 0, 0, 0)
+
+        first_row = QHBoxLayout()
+        self.step1_label = QLabel(f"1. {open_step}")
+        first_row.addWidget(self.step1_label)
+        self.open_anki_button = ModernButton(self.tr("Open Anki"), variant="secondary")
+        self.open_anki_button.clicked.connect(self._on_open_anki_clicked)
+        first_row.addWidget(self.open_anki_button)
+        first_row.addStretch(1)
+        steps_layout.addLayout(first_row)
+        if self._launch_command is not None:
+            # D11: with Anki in its standard install place, step 1 is a button.
+            self.step1_label.setText("1.")
+        else:
+            self.open_anki_button.setVisible(False)
+
+        self.step2_label = QLabel("")
+        self.step2_label.setWordWrap(True)
+        self.step2_label.setTextFormat(Qt.TextFormat.RichText)
+        self.step2_label.linkActivated.connect(self._on_step_link)
+        steps_layout.addWidget(self.step2_label)
+
+        connects = self.tr("This page connects by itself.")
+        self.step3_label = QLabel(f"3. {restart_step} {connects}")
+        self.step3_label.setWordWrap(True)
+        steps_layout.addWidget(self.step3_label)
+
+        addon_page = self.tr("Open the AnkiConnect add-on page")
+        self.addon_link = QLabel(f'<a href="{ANKICONNECT_URL}">{_html_text(addon_page)}</a>')
+        self.addon_link.setOpenExternalLinks(False)
+        self.addon_link.linkActivated.connect(self._on_addon_link)
+        steps_layout.addWidget(self.addon_link)
+        layout.addWidget(self.steps)
+        self.steps.setVisible(False)
+
+        other_address = self.tr("Use a different address…")
+        self.address_link = QLabel(f'<a href="address">{_html_text(other_address)}</a>')
+        self.address_link.setOpenExternalLinks(False)
+        self.address_link.linkActivated.connect(self._on_address_link)
+        layout.addWidget(self.address_link)
+        self.address_link.setVisible(False)
+
+        self.url_row = QWidget()
+        url_layout = QHBoxLayout(self.url_row)
+        url_layout.setContentsMargins(0, 0, 0, 0)
+        url_layout.addWidget(QLabel(self.tr("AnkiConnect URL:")))
+        self.url_input = QLineEdit(wizard.working_config().ankiconnect_url)
+        self.url_input.setPlaceholderText("http://127.0.0.1:8765")
+        url_layout.addWidget(self.url_input, 1)
+        layout.addWidget(self.url_row)
+        self.url_row.setVisible(False)
+
+        self._render_step2()
         self.url_input.textChanged.connect(self._on_url_changed)
+        # Leaving the field (or Return) re-checks the new address at once.
+        self.url_input.editingFinished.connect(self.recheck)
 
     def initializePage(self) -> None:
-        """Fire one auto recheck so the happy path is zero clicks."""
+        """Fire one check so the happy path is zero clicks."""
         self.url_input.setText(self._wizard.working_config().ankiconnect_url)
-        self._on_recheck_clicked()
+        self.recheck()
 
     def isComplete(self) -> bool:
         return self._reachable
 
     def _on_url_changed(self, _text: str) -> None:
         self._reachable = False
-        self.badge.set_status("pending")
-        self.badge.setToolTip("")
+        self._has_result = False
         self.result_label.clear()
+        self.result_label.setToolTip("")
         self.completeChanged.emit()
-        self.reachability_changed.emit(self._reachable)
+        self.reachability_changed.emit(False)
 
     def _normalized_url(self) -> str:
         return self.url_input.text().strip()
@@ -415,23 +475,25 @@ class AnkiConnectPage(_WizardSection):
         # QLineEdit off-thread.
         return self._wizard.validation_service().check_ankiconnect()
 
-    def _on_recheck_clicked(self) -> None:
+    def recheck(self) -> None:
+        """Ask AnkiConnect again, off the GUI thread. The section's refresh path (B02)."""
         if still_running(self._worker):
             return
         self._write_url_to_config()
         url = self._normalized_url()
         if not url:
             self._reachable = False
-            self.badge.set_status("error", self.tr("Enter an AnkiConnect URL."))
+            self._has_result = True
             self.result_label.setText(self.tr("Enter an AnkiConnect URL."))
+            self.result_label.setToolTip("")
+            self.steps.setVisible(False)
+            self.address_link.setVisible(False)
             self.completeChanged.emit()
-            self.reachability_changed.emit(self._reachable)
+            self.reachability_changed.emit(False)
             return
         self._active_recheck_url = url
-        self.badge.set_status("checking", self.tr("Checking connection..."))
-        self.result_label.setText(self.tr("Checking connection..."))
-        self.recheck_button.setEnabled(False)
-
+        if not self._has_result:
+            self.result_label.setText(self.tr("Checking the connection to Anki…"))
         worker = SingleCallWorker(self._recheck_work, error_prefix="", parent=self)
         self._worker = worker
         self._wizard.register_worker(worker)
@@ -440,26 +502,67 @@ class AnkiConnectPage(_WizardSection):
         worker.start()
 
     def _on_recheck_result(self, result: object) -> None:
-        """Main-thread slot: update the badge + reachability from the check result."""
+        """Main-thread slot: render the check's answer."""
         ok, message = result if isinstance(result, tuple) else (False, str(result))
-        self.recheck_button.setEnabled(True)
         if self._active_recheck_url is not None and self._active_recheck_url != self._normalized_url():
             return
-        self._reachable = bool(ok)
-        self.badge.set_status("success" if ok else "error", message)
-        self.result_label.setText(message)
-        self.completeChanged.emit()
-        self.reachability_changed.emit(self._reachable)
+        self._settle(bool(ok), str(message))
 
     def _on_recheck_error(self, message: str) -> None:
-        self.recheck_button.setEnabled(True)
         if self._active_recheck_url is not None and self._active_recheck_url != self._normalized_url():
             return
-        self._reachable = False
-        self.badge.set_status("error", message)
-        self.result_label.setText(message)
+        self._settle(False, message)
+
+    def _settle(self, reachable: bool, message: str) -> None:
+        self._reachable = reachable
+        self._has_result = True
+        if reachable:
+            self.result_label.setText(self.tr("Connected to Anki."))
+            self.open_anki_button.setEnabled(True)
+            self.open_anki_button.setText(self.tr("Open Anki"))
+        else:
+            self.result_label.setText(self.tr("Anki Miner can't reach Anki yet. Do this once:"))
+        # The service's own sentence, for whoever wants the detail (B03).
+        self.result_label.setToolTip(message)
+        self.steps.setVisible(not reachable)
+        self.address_link.setVisible(not reachable and not self.url_row.isVisibleTo(self))
         self.completeChanged.emit()
-        self.reachability_changed.emit(self._reachable)
+        self.reachability_changed.emit(reachable)
+
+    def _render_step2(self) -> None:
+        _open_step, install_step, _restart_step = ankiconnect_install_steps()
+        link_text = self.tr("Copied") if self._copied else self.tr("Copy code")
+        self.step2_label.setText(f'2. {_html_text(install_step)} <a href="copy">{_html_text(link_text)}</a>')
+
+    def _on_step_link(self, href: str) -> None:
+        if href != "copy":
+            return
+        clipboard = QGuiApplication.clipboard()
+        if clipboard is not None:
+            clipboard.setText(ANKICONNECT_ADDON_CODE)
+        self._copied = True
+        self._render_step2()
+
+    def _on_addon_link(self, _href: str) -> None:
+        _open_url(ANKICONNECT_URL)
+
+    def _on_address_link(self, _href: str) -> None:
+        self.url_row.setVisible(True)
+        self.address_link.setVisible(False)
+        self.url_input.setFocus()
+
+    def _on_open_anki_clicked(self) -> None:
+        command = self._launch_command
+        if command is None:
+            return
+        if launch_anki(command):
+            # The automatic re-check (B02) connects once Anki is up.
+            self.open_anki_button.setEnabled(False)
+            self.open_anki_button.setText(self.tr("Starting Anki…"))
+            return
+        self.open_anki_button.setVisible(False)
+        failed = self.tr("Anki did not start. Open it yourself.")
+        self.step1_label.setText(f"1. {failed}")
 
 
 class DeckPage(_WizardSection):
