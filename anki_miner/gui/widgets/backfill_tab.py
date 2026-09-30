@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
     QAbstractButton,
     QCheckBox,
     QComboBox,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QMessageBox,
@@ -35,6 +36,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
+from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.content_text import content_cell_font
 from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
 from anki_miner.gui.utils.language_gate import apply_language_gate
@@ -51,7 +53,9 @@ from anki_miner.gui.widgets.base import (
     PageWidth,
     ScreenIssue,
     capped_page_column,
+    configure_card_layout,
     install_workflow_shell,
+    page_filler,
 )
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.panels.anki_settings_panel import (
@@ -71,6 +75,7 @@ from anki_miner.services.card_backfiller import (
     BackfillResult,
     hook_field_groups,
 )
+from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
@@ -162,26 +167,38 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         # table keeps a hard floor and the tab scrolls instead of crushing it.
         container = QWidget()
         layout = QVBoxLayout(container)
+        layout.setSpacing(SPACING.sm)
         self._language_gate_pairs: list[tuple[QWidget, str]] = []
 
-        layout.addWidget(SectionHeader(self.tr("Card Backfill")))
+        # E07: cards like every other tool, and no page heading repeating the
+        # tab label.
+        self.deck_card = QFrame()
+        self.deck_card.setObjectName("card")
+        deck_layout = QVBoxLayout(self.deck_card)
+        configure_card_layout(deck_layout)
+        deck_layout.addWidget(SectionHeader(self.tr("Deck")))
         hint = QLabel(
             self.tr(
                 "Fill missing fields on notes you mined earlier, using the currently "
                 "installed dictionaries, frequency sources and pitch data."
             )
         )
+        hint.setObjectName("helper-text")
         hint.setWordWrap(True)
-        layout.addWidget(hint)
-
+        deck_layout.addWidget(hint)
         deck_row = QHBoxLayout()
         deck_row.addWidget(QLabel(self.tr("Deck:")))
         self.deck_combo = QComboBox()
         self.deck_combo.addItem(self.tr("All decks"))
         deck_row.addWidget(self.deck_combo, stretch=1)
-        layout.addLayout(deck_row)
+        deck_layout.addLayout(deck_row)
+        layout.addWidget(self.deck_card)
 
-        layout.addWidget(SectionHeader(self.tr("Fields to fill")))
+        self.fields_card = QFrame()
+        self.fields_card.setObjectName("card")
+        fields_layout = QVBoxLayout(self.fields_card)
+        configure_card_layout(fields_layout)
+        fields_layout.addWidget(SectionHeader(self.tr("Fields to fill")))
         self.field_checkboxes: dict[str, QCheckBox] = {}
         labels = {
             "pitch": self.tr("Pitch accent (graph + text)"),
@@ -212,7 +229,7 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
             checkbox = QCheckBox(labels[group])
             checkbox.setToolTip(self._group_tooltips.get(group, ""))
             self.field_checkboxes[group] = checkbox
-            layout.addWidget(checkbox)
+            fields_layout.addWidget(checkbox)
         self._seed_field_groups()
         for checkbox in self.field_checkboxes.values():
             checkbox.toggled.connect(self._on_field_groups_changed)
@@ -229,7 +246,8 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         self.overwrite_checkbox.setToolTip(
             self.tr("Overwritten cards may need to use Restyle cards… to refresh their styling.")
         )
-        layout.addWidget(self.overwrite_checkbox)
+        fields_layout.addWidget(self.overwrite_checkbox)
+        layout.addWidget(self.fields_card)
 
         # Scan, Apply and Cancel all live in the pinned bar (D6). Scan is the
         # primary until a preview exists; after that Apply takes over and Scan
@@ -246,9 +264,17 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         self.cancel_button.hide()  # shown only while a scan or apply runs (E07)
         self.cancel_button.clicked.connect(self._cancel)
 
+        # E07: the preview is a card of its own, shown once a scan has returned,
+        # and its table only when the scan found rows.
+        self.preview_card = QFrame()
+        self.preview_card.setObjectName("card")
+        preview_layout = QVBoxLayout(self.preview_card)
+        configure_card_layout(preview_layout)
+        preview_layout.addWidget(SectionHeader(self.tr("Preview")))
+
         self.summary_label = QLabel("")
         self.summary_label.setWordWrap(True)
-        layout.addWidget(self.summary_label)
+        preview_layout.addWidget(self.summary_label)
 
         self.preview_table = QTableWidget(0, 4)
         self.preview_table.setHorizontalHeaderLabels(
@@ -271,7 +297,15 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
             # reorders the plan behind their back.
             header.setSortIndicator(-1, Qt.SortOrder.AscendingOrder)
         self._apply_preview_height_floor()
-        layout.addWidget(self.preview_table, stretch=1)
+        self.preview_table.hide()
+        preview_layout.addWidget(self.preview_table, stretch=1)
+        self.preview_card.hide()
+        # No static stretch: the card grows through its table while the table
+        # shows, and the filler takes the surplus while it does not, so a tall
+        # window never pads the card headings.
+        layout.addWidget(self.preview_card)
+        self.page_filler = page_filler()
+        layout.addWidget(self.page_filler)
 
         self.apply_button = ModernButton(self.tr("Update Notes in Anki"), variant="secondary")
         self.apply_button.setEnabled(False)
@@ -492,6 +526,10 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         self._scan_warnings = tuple(warnings)
         self._plan = plan if plan.notes else None
         self._populate_preview(plan)
+        self.preview_card.show()
+        has_rows = self.preview_table.rowCount() > 0
+        self.preview_table.setVisible(has_rows)
+        self.page_filler.setVisible(not has_rows)
         self.apply_button.setEnabled(self._can_apply_plan())
         self._sync_action_prominence()
         self.status_label.setText("")
@@ -580,12 +618,13 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
                 )
         elif plan.notes:
             parts.append(
-                self.tr("{fields} field(s) across {notes} note(s) will be filled.").format(
-                    fields=plan.total_field_changes, notes=len(plan.notes)
+                tr_format(
+                    self.tr("%n field(s) across %1 will be filled.", "", plan.total_field_changes),
+                    self.tr("%n note(s)", "", len(plan.notes)),
                 )
             )
             if plan.total_field_changes > shown_rows:
-                parts.append(self.tr("Showing first {rows} rows.").format(rows=shown_rows))
+                parts.append(self.tr("Showing first %n row(s).", "", shown_rows))
         elif not plan.options.overwrite:
             parts.append(self.tr("No new values were found for the selected fields."))
         elif plan.identical_skips > 0:
@@ -599,13 +638,15 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
             # values are "identical" or "already present" would be false.
             parts.append(self.tr("No new values were found for the selected fields."))
         if plan.identical_skips > 0:
-            parts.append(self.tr("{count} field value(s) already up to date.").format(count=plan.identical_skips))
+            parts.append(self.tr("%n field value(s) already up to date.", "", plan.identical_skips))
         if plan.guessed_reading_skips > 0:
             parts.append(
                 self.tr(
-                    "{count} pitch field(s) kept — the reading was guessed, so the accent could be "
-                    "the wrong homograph's. Map an Expression Reading or Furigana field to overwrite them."
-                ).format(count=plan.guessed_reading_skips)
+                    "%n pitch field(s) kept — the reading was guessed, so the accent could be "
+                    "the wrong homograph's. Map an Expression Reading or Furigana field to overwrite them.",
+                    "",
+                    plan.guessed_reading_skips,
+                )
             )
         if plan.absent_fields:
             # Distinct from unavailable_fields (resource not loaded): the field
@@ -621,9 +662,7 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
                 self.tr("Skipped (resource not loaded): {fields}.").format(fields=", ".join(plan.unavailable_fields))
             )
         if plan.skipped_no_identity:
-            parts.append(
-                self.tr("{count} note(s) skipped — empty Expression field.").format(count=plan.skipped_no_identity)
-            )
+            parts.append(self.tr("%n note(s) skipped — empty Expression field.", "", plan.skipped_no_identity))
         return " ".join(parts)
 
     # ------------------------------------------------------------------
@@ -639,11 +678,16 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         answer = QMessageBox.question(
             self,
             self.tr("Update notes in Anki?"),
-            self.tr(
-                "Close Anki's card browser and note editors first.\n\n"
-                "This will modify {notes} note(s) ({fields} field(s)) and tag them "
-                "{tag}. Continue?"
-            ).format(notes=len(plan.notes), fields=plan.total_field_changes, tag=BACKFILL_TAG),
+            tr_format(
+                self.tr(
+                    "Close Anki's card browser and note editors first.\n\n"
+                    "This will modify %n note(s) (%1) and tag them %2. Continue?",
+                    "",
+                    len(plan.notes),
+                ),
+                self.tr("%n field(s)", "", plan.total_field_changes),
+                BACKFILL_TAG,
+            ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -681,31 +725,25 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
     def _on_apply_finished(self, result: BackfillResult) -> None:
         self._drop_plan()
         parts = [
-            self.tr("Filled {fields} field(s) on {notes} note(s).").format(
-                fields=result.fields_filled,
-                notes=result.notes_updated,
+            tr_format(
+                self.tr("Filled %n field(s) on %1.", "", result.fields_filled),
+                self.tr("%n note(s)", "", result.notes_updated),
             )
         ]
         if result.tagged:
             parts.append(self.tr("Tagged {tag}.").format(tag=BACKFILL_TAG))
         if result.skipped_stale:
-            parts.append(
-                self.tr("{count} skipped — changed or deleted since the scan.").format(count=result.skipped_stale)
-            )
+            parts.append(self.tr("%n skipped — changed or deleted since the scan.", "", result.skipped_stale))
         if result.tagged < result.notes_updated:
             parts.append(self.tr("Tagging failed for some notes (see log)."))
         if result.failed:
             parts.append(
-                self.tr("{count} note update(s) were not confirmed by Anki; scan again to retry.").format(
-                    count=result.failed
-                )
+                self.tr("%n note update(s) were not confirmed by Anki; scan again to retry.", "", result.failed)
             )
             self._run_failed = True
         if result.media_failed:
             parts.append(
-                self.tr("{count} audio file(s) could not be added to Anki; scan again to retry.").format(
-                    count=result.media_failed
-                )
+                self.tr("%n audio file(s) could not be added to Anki; scan again to retry.", "", result.media_failed)
             )
             self._run_failed = True
         self.status_label.setText(" ".join(parts))
