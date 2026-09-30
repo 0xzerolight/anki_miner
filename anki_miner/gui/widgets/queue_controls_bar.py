@@ -42,7 +42,7 @@ class QueueControlsBar(QWidget):
     """Filter chips, a search box, a live counter, and the selection actions.
 
     While a run is active it also carries the D29-A run row: the *Queue locked
-    while processing.* badge and the two boundary controls. They live here
+    while processing.* badge and the Pause control. They live here
     rather than beside Mine because they are statements about the list directly
     below them — what can still be done to it, and where it will stop.
 
@@ -54,7 +54,6 @@ class QueueControlsBar(QWidget):
         remove_selected: Drop the selected rows from the queue.
         pause_requested: Stop cleanly after the item currently being mined.
         resume_requested: Continue a paused run.
-        finish_current_requested: Let the current item finish, then end the run.
     """
 
     filter_changed = pyqtSignal(str)
@@ -64,7 +63,6 @@ class QueueControlsBar(QWidget):
     remove_selected = pyqtSignal()
     pause_requested = pyqtSignal()
     resume_requested = pyqtSignal()
-    finish_current_requested = pyqtSignal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Build the bar with All active, an empty search and zeroed counts.
@@ -143,10 +141,8 @@ class QueueControlsBar(QWidget):
             self._paused = False
         self.lock_label.setVisible(running)
         self.pause_button.setVisible(running)
-        self.finish_button.setVisible(running)
         if running:
             self.pause_button.setEnabled(True)
-            self.finish_button.setEnabled(True)
             self.pause_button.setText(self.tr("Pause after current item"))
             self.lock_label.setText(self.tr("Queue locked while processing."))
 
@@ -260,11 +256,11 @@ class QueueControlsBar(QWidget):
         return row
 
     def _build_run_row(self) -> QHBoxLayout:
-        """The lock badge and the two places a run can be told to stop (D29-A).
+        """The lock badge and Pause (D29-A, D3).
 
         Cancel is deliberately absent: it is one verb, it lives with the run's
-        primary action, and it takes no prompt (D22). These two are the calmer
-        answers — stop between items, or stop after this one.
+        primary action, and it takes no prompt (D22). Pause is the calmer
+        answer -- stop between items; once paused, Cancel ends the run there.
         """
         row = QHBoxLayout()
         row.setSpacing(SPACING.xs)
@@ -277,11 +273,7 @@ class QueueControlsBar(QWidget):
         self.pause_button.setToolTip(self.tr("The run is not cancelled — Resume continues with the next item."))
         self.pause_button.clicked.connect(self._on_pause_clicked)
 
-        self.finish_button = ModernButton(self.tr("Finish current, then stop"), variant="ghost")
-        self.finish_button.setToolTip(self.tr("Let the current item finish, then end the run."))
-        self.finish_button.clicked.connect(self.finish_current_requested.emit)
-
-        for button in (self.pause_button, self.finish_button):
+        for button in (self.pause_button,):
             apply_button_size(button)
             row.addWidget(button)
         row.addStretch()

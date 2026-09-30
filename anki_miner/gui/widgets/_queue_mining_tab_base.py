@@ -753,7 +753,6 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         self.queue_controls.remove_selected.connect(self._on_remove_selected)
         self.queue_controls.pause_requested.connect(self._on_pause_requested)
         self.queue_controls.resume_requested.connect(self._on_resume_requested)
-        self.queue_controls.finish_current_requested.connect(self._on_finish_current_requested)
 
         # Scoped to the list itself: Delete and the Alt arrows must not fire
         # from the URL box or the file pickers on the same screen.
@@ -911,21 +910,6 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         if worker is None:
             return
         worker.resume()
-
-    def _on_finish_current_requested(self) -> None:
-        """Let the item being mined finish, then end the run.
-
-        Distinct from Cancel, which abandons the item in flight. Neither asks
-        for confirmation: D22 keeps one prompt-free verb for stopping, and this
-        is the quieter option beside it rather than a dialog on top of it.
-        """
-        self._log_run_control("finish_current")
-        worker = self.worker_thread
-        if worker is None:
-            return
-        worker.request_stop_after_current()
-        self.queue_controls.finish_button.setEnabled(False)
-        self.queue_controls.pause_button.setEnabled(False)
 
     def _on_run_paused(self) -> None:
         """Report where the run stopped, and offer to continue from there."""

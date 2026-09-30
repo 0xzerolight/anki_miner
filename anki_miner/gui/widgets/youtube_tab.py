@@ -744,7 +744,6 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
         if self._mine_pending and self.worker_thread is None:
             # Checking links is not a run yet: there is no item boundary to stop at.
             self.queue_controls.pause_button.hide()
-            self.queue_controls.finish_button.hide()
 
     def _create_processor(self, presenter: PresenterProtocol) -> EpisodeProcessor:
         """Build a fresh processor (``create_episode_processor`` resolves here for tests)."""

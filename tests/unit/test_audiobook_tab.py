@@ -343,7 +343,6 @@ class TestRunStartup:
         assert not tab.clear_button.isEnabled()
         assert not tab.queue_controls.lock_label.isHidden()
         assert not tab.queue_controls.pause_button.isHidden()
-        assert not tab.queue_controls.finish_button.isHidden()
 
     def test_run_callback_follows_checkbox(self, tab, tmp_path):
         queue_cls = tab._queue_worker_cls

@@ -2154,7 +2154,6 @@ class TestLinkBoxMine:
         assert not tab.mine_button.isEnabled()
         assert not tab.stop_button.isHidden()
         assert tab.queue_controls.pause_button.isHidden()
-        assert tab.queue_controls.finish_button.isHidden()
 
     def test_run_starts_when_the_last_probe_lands(self, tab):
         tab.url_edit.setPlainText("https://youtu.be/aaaaaaaaaaa\nhttps://youtu.be/bbbbbbbbbbb")

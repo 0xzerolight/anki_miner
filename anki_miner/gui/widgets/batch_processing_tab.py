@@ -143,7 +143,6 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         self.queue_panel.process_requested.connect(self._process_queue)
         self.queue_panel.queue_controls.pause_requested.connect(self._on_pause_requested)
         self.queue_panel.queue_controls.resume_requested.connect(self._on_resume_requested)
-        self.queue_panel.queue_controls.finish_current_requested.connect(self._on_finish_current_requested)
         self.queue_panel.empty_changed.connect(self._on_queue_empty_changed)
         # No stretch factor: the panel's own list makes it expand while there is
         # something to show. A stretch would keep the panel expanding even after
@@ -664,8 +663,7 @@ class BatchProcessingTab(FolderSeriesScreenBase):
     def _boundary_worker(self) -> BatchQueueWorkerThread | None:
         """The active queue worker, or None when nothing is running.
 
-        Boundaries (pause, finish-current) land only between whole series,
-        never mid-run inside one.
+        Pause lands only between whole series, never mid-run inside one.
         """
         worker = self.worker_thread
         from anki_miner.gui.workers.batch_queue_worker import BatchQueueWorkerThread as _QueueWorker
@@ -694,19 +692,6 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         worker = self._boundary_worker()
         if worker is not None:
             worker.resume()
-
-    def _on_finish_current_requested(self) -> None:
-        """Let the series being mined finish, then end the run.
-
-        Distinct from Cancel, which abandons the series in flight. Neither asks
-        for confirmation (D22, D24).
-        """
-        worker = self._boundary_worker()
-        if worker is None:
-            return
-        worker.request_stop_after_current()
-        self.queue_panel.queue_controls.finish_button.setEnabled(False)
-        self.queue_panel.queue_controls.pause_button.setEnabled(False)
 
     def _on_run_paused(self) -> None:
         """Report where the run stopped, and offer to continue from there."""

@@ -162,7 +162,6 @@ class TestRunControls:
             ("_on_stop_all_clicked", "stop"),
             ("_on_pause_requested", "pause"),
             ("_on_resume_requested", "resume"),
-            ("_on_finish_current_requested", "finish_current"),
         ],
     )
     def test_every_queue_control_records_the_verb(self, youtube_tab, lifecycle_log, method, action):
