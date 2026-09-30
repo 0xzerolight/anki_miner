@@ -82,6 +82,7 @@ class FileSelector(QWidget):
         optional: bool = False,
         history_key: str | None = None,
         drop_validator: DropValidator | None = None,
+        allow_folder: bool = False,
         parent=None,
     ):
         """Initialize the file selector.
@@ -113,6 +114,10 @@ class FileSelector(QWidget):
                 "this field takes a video file". Without one, any local path of
                 the right kind is accepted, which is what every selector did
                 before drops were validated at all.
+            allow_folder: A file picker that also takes a folder (Reading →
+                Manga and Novels, D7-B). The Browse button reads "File…", a
+                "Folder…" button sits beside it, and any existing file or folder
+                is valid. Use with ``file_mode=True``.
             parent: Optional parent widget
         """
         super().__init__(parent)
@@ -125,6 +130,7 @@ class FileSelector(QWidget):
         self._optional = optional
         self._history_key = history_key
         self._drop_validator = drop_validator
+        self._allow_folder = allow_folder
         self._is_valid = False
         # True while this selector's browse picker is on screen; see
         # _on_browse_clicked. A flag rather than the dialog itself, so this
@@ -169,6 +175,8 @@ class FileSelector(QWidget):
         # Set placeholder text
         if self._placeholder:
             placeholder = self._placeholder
+        elif self._allow_folder:
+            placeholder = self.tr("Select a file or folder...")
         elif self._file_mode:
             placeholder = self.tr("Select file...")
         else:
@@ -178,10 +186,16 @@ class FileSelector(QWidget):
         self.input.textChanged.connect(self._on_text_changed)
         main_layout.addWidget(self.input)
 
-        # Browse button
-        self.browse_button = QPushButton(self.tr("Browse..."))
+        # Browse button. A file-or-folder field names both halves (D7-B).
+        self.browse_button = QPushButton(self.tr("File…") if self._allow_folder else self.tr("Browse..."))
         self.browse_button.clicked.connect(self._on_browse_clicked)
         main_layout.addWidget(self.browse_button)
+
+        self.folder_button: QPushButton | None = None
+        if self._allow_folder:
+            self.folder_button = QPushButton(self.tr("Folder…"))
+            self.folder_button.clicked.connect(self._on_folder_clicked)
+            main_layout.addWidget(self.folder_button)
 
         layout.addLayout(main_layout)
 
@@ -203,7 +217,10 @@ class FileSelector(QWidget):
         self.setAcceptDrops(True)
 
         # Set accessibility properties
-        file_or_folder = self.tr("file") if self._file_mode else self.tr("folder")
+        if self._allow_folder:
+            file_or_folder = self.tr("file or folder")
+        else:
+            file_or_folder = self.tr("file") if self._file_mode else self.tr("folder")
         self.setAccessibleName(self._label_text)
         self.setAccessibleDescription(
             tr_format(self.tr("Select a %1 by typing path, browsing, or dragging"), file_or_folder)
@@ -221,6 +238,8 @@ class FileSelector(QWidget):
 
         # Set proper tab order
         self.setTabOrder(self.input, self.browse_button)
+        if self.folder_button is not None:
+            self.setTabOrder(self.browse_button, self.folder_button)
 
         # Initial status
         self._update_status()
@@ -318,6 +337,35 @@ class FileSelector(QWidget):
                 on_done=_on_picked,
             )
 
+    def _on_folder_clicked(self) -> None:
+        """Pick a folder instead of a file (``allow_folder`` selectors only).
+
+        Same rules as :meth:`_on_browse_clicked`: only a non-empty return moves
+        the remembered folder, and a second picker never opens over the first.
+        """
+        if self._picker_open:
+            return
+        start_dir = resolve_start_dir(
+            self.path_or_none(),
+            file_mode=False,
+            remembered_dir=session_state.remembered_directory(self._history_key),
+            default_dir=self._default_dir,
+        )
+
+        def _on_picked(path: str) -> None:
+            self._picker_open = False
+            if path:
+                session_state.remember_accepted_path(self._history_key, path, file_mode=False)
+                self.set_path(path)
+
+        self._picker_open = True
+        file_dialogs.pick_directory(
+            self,
+            tr_format(self.tr("Select %1"), self._label_text),
+            start_dir,
+            on_done=_on_picked,
+        )
+
     def _validate_path(self, path_str: str) -> None:
         """Validate the provided path.
 
@@ -328,13 +376,21 @@ class FileSelector(QWidget):
             self._is_valid = False
             self.input.setProperty("error", False)
             self.input.setProperty("success", False)
+            # A13: without a re-polish the stylesheet keeps painting the last
+            # state, so a field cleared after a valid pick stayed green.
+            if style := self.input.style():
+                style.unpolish(self.input)
+                style.polish(self.input)
             self._update_status()
             self.path_validated.emit(False, "")
             return
 
         path = Path(path_str)
 
-        is_valid = path.is_file() if self._file_mode else path.is_dir()
+        if self._allow_folder:
+            is_valid = path.is_file() or path.is_dir()
+        else:
+            is_valid = path.is_file() if self._file_mode else path.is_dir()
 
         self._is_valid = is_valid
 
@@ -377,11 +433,13 @@ class FileSelector(QWidget):
             self.status_label.setText(self.tr("Not installed"))
             actionable = True
         else:
-            self.status_label.setText(
-                self.tr("File not found. Choose an existing file.")
-                if self._file_mode
-                else self.tr("Folder not found. Choose an existing folder.")
-            )
+            if self._allow_folder:
+                not_found = self.tr("Not found. Choose an existing file or folder.")
+            elif self._file_mode:
+                not_found = self.tr("File not found. Choose an existing file.")
+            else:
+                not_found = self.tr("Folder not found. Choose an existing folder.")
+            self.status_label.setText(not_found)
             actionable = True
 
         self.status_label.setVisible(actionable)
@@ -467,10 +525,11 @@ class FileSelector(QWidget):
             return None, self.tr("Only local files can be dropped here.")
 
         path = Path(local)
-        if self._file_mode and path.is_dir():
-            return None, self.tr("That is a folder; this field takes a file.")
-        if not self._file_mode and path.is_file():
-            return None, self.tr("That is a file; this field takes a folder.")
+        if not self._allow_folder:
+            if self._file_mode and path.is_dir():
+                return None, self.tr("That is a folder; this field takes a file.")
+            if not self._file_mode and path.is_file():
+                return None, self.tr("That is a file; this field takes a folder.")
 
         if self._drop_validator is not None:
             accepted, reason = self._drop_validator(path)
