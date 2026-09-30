@@ -440,6 +440,7 @@ class ResourceDownloadSession(QObject):
         task_registry: TaskRegistry | None = None,
         adopt_worker: Callable[[ResourceDownloadWorker], None] | None = None,
         specs: Sequence[ResourceSpec],
+        show_window: bool = True,
         clock: Callable[[], float] = monotonic,
     ) -> None:
         super().__init__()
@@ -452,6 +453,9 @@ class ResourceDownloadSession(QObject):
         self._registry = task_registry
         self._adopt_worker = adopt_worker
         self._specs = list(specs)
+        # False for a caller that renders progress itself (the setup wizard's
+        # dictionary step, D9): the run then reports only to the TaskRegistry.
+        self._show_window = show_window
         # Injected so stall and rate behaviour is testable without sleeping;
         # the estimator itself already refuses to read a clock of its own.
         self._clock = clock
@@ -521,17 +525,18 @@ class ResourceDownloadSession(QObject):
 
             self._download_dir = Path(tempfile.mkdtemp(prefix="anki_miner_dl_"))
 
-            window = ResourceDownloadWindow(self._parent, self._specs)
-            window.cancel_requested.connect(self.cancel)
-            window.retry_requested.connect(self._retry_activation)
-            window.destroyed.connect(self._on_window_destroyed)
-            window.show_activity(
-                QCoreApplication.translate("ResourceDownloadDialog", "Recommended resources"),
-                QCoreApplication.translate("ResourceDownloadDialog", "Starting download…"),
-                None,
-            )
-            window.show()
-            self._window = window
+            if self._show_window:
+                window = ResourceDownloadWindow(self._parent, self._specs)
+                window.cancel_requested.connect(self.cancel)
+                window.retry_requested.connect(self._retry_activation)
+                window.destroyed.connect(self._on_window_destroyed)
+                window.show_activity(
+                    QCoreApplication.translate("ResourceDownloadDialog", "Recommended resources"),
+                    QCoreApplication.translate("ResourceDownloadDialog", "Starting download…"),
+                    None,
+                )
+                window.show()
+                self._window = window
 
             worker = ResourceDownloadWorker(
                 self._specs,
@@ -859,6 +864,7 @@ def start_resource_download(
     task_registry: TaskRegistry | None = None,
     adopt_worker: Callable[[ResourceDownloadWorker], None] | None = None,
     specs: Sequence[ResourceSpec],
+    show_window: bool = True,
 ) -> ResourceDownloadSession | None:
     """Start a background recommended-resource run; None means it never started.
 
@@ -877,6 +883,9 @@ def start_resource_download(
     ``specs`` is exactly what this run downloads: the mining language's own
     catalog for a caller that offers no choice (the Tools menu), or the subset
     a page's picker returned. An empty set is never a run.
+
+    ``show_window=False`` starts the run with no window: the caller shows
+    progress itself from the task registry (the setup wizard, D9).
     """
     session = ResourceDownloadSession(
         parent,
@@ -888,5 +897,6 @@ def start_resource_download(
         task_registry=task_registry,
         adopt_worker=adopt_worker,
         specs=specs,
+        show_window=show_window,
     )
     return session if session.start() else None

@@ -121,6 +121,7 @@ def _start(
     release=None,
     acquire=None,
     clock=None,
+    show_window: bool = True,
 ) -> tuple[ResourceDownloadSession, Path]:
     download_dir = tmp_path / "download"
     download_dir.mkdir(exist_ok=True)
@@ -138,6 +139,7 @@ def _start(
         task_registry=registry,
         adopt_worker=adopt,
         specs=RECOMMENDED_DEFAULT_SET,
+        show_window=show_window,
         **extra,
     )
     assert session.start()
@@ -819,6 +821,47 @@ def test_registry_carries_the_run_and_its_transfer_line(parent, monkeypatch, tmp
 
     _drain(qtbot, worker)
     registry.shutdown()
+
+
+def test_a_run_without_its_window_reports_through_the_registry_only(parent, monkeypatch, tmp_path, qtbot):
+    """D9: the setup wizard shows progress inline, so it starts runs with no window at all."""
+    registry = TaskRegistry()
+    events = [_progress(_DL, downloaded=1024 * 1024, total_bytes=4 * 1024 * 1024)]
+    worker = _FakeWorker(_successful_summary(), events=events)
+    outcomes: list[object] = []
+    session, _dir = _start(monkeypatch, tmp_path, parent, worker, registry=registry, show_window=False)
+    session.finished.connect(outcomes.append)
+
+    assert session.window is None
+    assert worker.progress_done.wait(2.0)
+    qtbot.waitUntil(lambda: bool(getattr(registry.snapshot(mod.TASK_ID), "detail", "")), timeout=3000)
+    session.reveal()  # nothing to reveal: a no-op, never a crash
+
+    _drain(qtbot, worker)
+    qtbot.waitUntil(lambda: len(outcomes) == 1, timeout=3000)
+    assert session.window is None
+    registry.shutdown()
+
+
+def test_start_resource_download_passes_show_window_through(parent, monkeypatch, tmp_path, qtbot):
+    download_dir = tmp_path / "download"
+    download_dir.mkdir()
+    worker = _FakeWorker(_successful_summary())
+    monkeypatch.setattr(mod.tempfile, "mkdtemp", lambda **_kwargs: str(download_dir))
+    monkeypatch.setattr(mod, "ResourceDownloadWorker", lambda *a, **kw: worker)
+
+    session = start_resource_download(
+        parent,
+        create_default_config(),
+        activate=lambda _summary: None,
+        specs=RECOMMENDED_DEFAULT_SET,
+        show_window=False,
+    )
+
+    assert session is not None
+    assert session.window is None
+    _drain(qtbot, worker)
+    qtbot.waitUntil(lambda: session.worker is None, timeout=3000)
 
 
 def test_running_registry_rejects_second_start_and_reveals_retained_session(parent, monkeypatch, qtbot):
