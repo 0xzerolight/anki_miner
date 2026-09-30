@@ -175,7 +175,7 @@ def test_batch_keeps_add_series_in_its_card(qtbot, test_config: AnkiMinerConfig)
     assert _bar(widget) not in _ancestors(widget.add_series_button)
 
 
-@pytest.mark.parametrize("name", ["manga", "novels"])
+@pytest.mark.parametrize("name", ["novels"])
 def test_reading_folder_runs_keep_mine_folder_in_their_card(qtbot, test_config: AnkiMinerConfig, name):
     widget = _build(name, test_config)
     qtbot.addWidget(widget)

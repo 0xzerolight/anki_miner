@@ -1,22 +1,19 @@
 """Tests for the manga sub-tab of the Reading tab.
 
-``ReadingMangaTab`` mirrors the Novels tab (Issue #103): a Volume card mines a
-single ``.mokuro``/``.cbz``/``.zip`` file, a Manga Folder card mines whatever
-the folder resolves to. Both are classified by ``detect`` on click (no queue).
-Behaviour under test:
+``ReadingMangaTab`` has one path field (D7-B): it takes a single
+``.mokuro``/``.cbz``/``.zip`` volume or a folder, and Mine classifies it with
+``detect`` (no queue). Behaviour under test:
 
-* Mine (file) / Mine Folder: classify the pick into one ephemeral
-  ``ReadingQueueItem`` per volume and launch them through the base.
-* Empty/invalid picks warn; a ``detect`` ``SetupError`` is surfaced verbatim;
-  neither starts a run or opens the dialog.
-* Buttons: pure derived state — both Mine buttons give way to Cancel during a
-  run.
+* Mine: classify the pick into one ephemeral ``ReadingQueueItem`` per volume
+  and launch them through the base.
+* Empty/invalid picks are refused; a ``detect`` ``SetupError`` is surfaced
+  verbatim; neither starts a run or opens the dialog.
+* Buttons: pure derived state — Mine gives way to Cancel during a run.
 * Per-item signals are READ-ONLY on item state (the worker owns the lifecycle):
   they drive the two progress bars + log the outcome, never write status/cards.
 * Drag-drop routes through the tab: the FileSelectors and their inner
-  QLineEdits have drops disabled, so a drop lands on the tab (a manga file
-  fills the Volume selector, a folder the Folder selector; a dropped novel
-  earns a cross-tab hint).
+  QLineEdits have drops disabled, so a drop lands on the tab (the first manga
+  file or folder fills the one field; a dropped novel earns a cross-tab hint).
 * D8 (amended): ``_build_curation_context`` builds a page-image context from
   the worker's published manga ``curation_document`` and wires the definition-
   pane ``lookup_fn`` from ``curation_processor``; the media context falls back
@@ -57,7 +54,7 @@ _URLS = "anki_miner.gui.widgets.reading_manga_tab.urls_from_event"
 
 
 @pytest.fixture
-def tab(qtbot, test_config: AnkiMinerConfig):
+def tab(qtbot, tmp_path, test_config: AnkiMinerConfig):
     """Instantiate a ReadingMangaTab with the queue worker class patched.
 
     ``ReadingQueueWorker`` is patched at the base module where ``_launch_run``
@@ -74,6 +71,7 @@ def tab(qtbot, test_config: AnkiMinerConfig):
         )
         qtbot.addWidget(widget)
         widget._qtbot = qtbot  # type: ignore[attr-defined]
+        widget._tmp_path = tmp_path  # type: ignore[attr-defined]
         widget._queue_worker_cls = queue_cls  # type: ignore[attr-defined]
         try:
             yield widget
@@ -105,11 +103,17 @@ def _url(local_path: str):
     return u
 
 
-def _mine(tab, refs, folder: str = "/src/series"):
-    """Select *folder*, patch ``detect`` to return *refs*, click Mine Folder."""
-    tab.volume_folder_selector.set_path(folder)
+def _mine(tab, refs, folder: str = "series"):
+    """Put a real *folder* in the one field, patch ``detect`` to return *refs*, click Mine.
+
+    The folder must exist: Mine refuses a path that is neither a folder nor a
+    manga file before detection runs (D7-B).
+    """
+    path = tab._tmp_path / folder
+    path.mkdir(parents=True, exist_ok=True)
+    tab.volume_file_selector.set_path(str(path))
     with patch(_DETECT, return_value=list(refs)):
-        tab._on_folder_mine_clicked()
+        tab._on_mine_clicked()
         tab._qtbot.waitUntil(lambda: not tab._detection_pending)
 
 
@@ -121,7 +125,7 @@ def _volume_file(tmp_path: Path, name: str = "Vol1.cbz") -> Path:
 
 
 def _mine_file(tab, file: Path, refs):
-    """Select *file* in the Volume card, patch ``detect``, click Mine."""
+    """Select *file* in the one field, patch ``detect``, click Mine."""
     tab.volume_file_selector.set_path(str(file))
     with patch(_DETECT, return_value=list(refs)):
         tab._on_mine_clicked()
@@ -129,11 +133,11 @@ def _mine_file(tab, file: Path, refs):
 
 
 class TestInitialState:
-    """Idle tab: both Mine buttons visible, Cancel hidden, no queue widgets."""
+    """Idle tab: Mine visible, Cancel hidden, no queue widgets."""
 
     def test_buttons_idle(self, tab):
         assert not tab.mine_button.isHidden()
-        assert not tab.folder_mine_button.isHidden()
+        assert tab.mine_button.isEnabled()
         assert tab.cancel_button.isHidden()
         assert tab.worker_thread is None
 
@@ -157,16 +161,15 @@ class TestInitialState:
         assert not hasattr(tab, "current_progress_widget")
         assert not hasattr(tab, "overall_header")
 
-    def test_section_headers_volume_and_manga_folder(self, tab):
+    def test_no_section_header_repeats_the_tab(self, tab):
+        """A20: one card, and the sub-tab already names it."""
         from anki_miner.gui.widgets.enhanced import SectionHeader
 
-        titles = {h.title_label.text() for h in tab.findChildren(SectionHeader)}
-        assert "Volume" in titles
-        assert "Manga Folder" in titles
+        assert tab.findChildren(SectionHeader) == []
 
 
 class TestMineVolumeFile:
-    """The Volume card mines a single .mokuro/.cbz/.zip file (Issue #103)."""
+    """The one field mines a single .mokuro/.cbz/.zip file (Issue #103, D7-B)."""
 
     def test_mine_file_routes_through_detect(self, tmp_path, tab):
         queue_cls = tab._queue_worker_cls
@@ -188,10 +191,9 @@ class TestMineVolumeFile:
         _mine_file(tab, _volume_file(tmp_path, name), [_make_ref()])
         assert queue_cls.call_count == 1
 
-    def test_start_swaps_both_mine_buttons(self, tmp_path, tab):
+    def test_start_swaps_mine_for_cancel(self, tmp_path, tab):
         _mine_file(tab, _volume_file(tmp_path), [_make_ref()])
         assert tab.mine_button.isHidden()
-        assert tab.folder_mine_button.isHidden()
         assert not tab.cancel_button.isHidden()
 
     def test_empty_file_path_warns_no_run(self, tab):
@@ -199,7 +201,8 @@ class TestMineVolumeFile:
         tab._on_mine_clicked()
         assert queue_cls.call_count == 0
         assert tab.worker_thread is None
-        assert "volume" in tab.log_widget.text_edit.toPlainText().lower()
+        assert "Choose a manga volume or folder first." in tab.log_widget.text_edit.toPlainText()
+        assert tab.issue_banner().current_issue().summary == "Choose a manga volume or folder first."
 
     def test_wrong_extension_warns_no_run(self, tmp_path, tab):
         queue_cls = tab._queue_worker_cls
@@ -208,7 +211,9 @@ class TestMineVolumeFile:
         tab.volume_file_selector.set_path(str(stray))
         tab._on_mine_clicked()
         assert queue_cls.call_count == 0
-        assert "volume" in tab.log_widget.text_edit.toPlainText().lower()
+        wrong_kind = "Choose a .mokuro, .cbz or .zip volume, or a manga folder."
+        assert wrong_kind in tab.log_widget.text_edit.toPlainText()
+        assert tab.issue_banner().current_issue().summary == wrong_kind
 
     def test_nonexistent_file_warns_no_run(self, tab):
         queue_cls = tab._queue_worker_cls
@@ -239,7 +244,7 @@ class TestMineSingleVolume:
 
     def test_mine_constructs_worker_one_item(self, tab):
         queue_cls = tab._queue_worker_cls
-        _mine(tab, [_make_ref("mokuro", "Solo Vol")], folder="/src/vol")
+        _mine(tab, [_make_ref("mokuro", "Solo Vol")], folder="vol")
         assert queue_cls.call_count == 1
         items = queue_cls.call_args.kwargs["items"]
         # mokuro item title carries the volume (Y6): "<series> — <volume>".
@@ -259,7 +264,7 @@ class TestMineSingleVolume:
             title="MySeries",
             volume="Vol.3",
         )
-        _mine(tab, [ref], folder="/src/MySeries")
+        _mine(tab, [ref], folder="MySeries")
         items = queue_cls.call_args.kwargs["items"]
         assert items[0].title == "MySeries — Vol.3"
 
@@ -273,7 +278,7 @@ class TestMineSingleVolume:
             title="OneShot",
             volume=None,
         )
-        _mine(tab, [ref], folder="/src/one")
+        _mine(tab, [ref], folder="one")
         items = queue_cls.call_args.kwargs["items"]
         assert items[0].title == "OneShot"
 
@@ -374,7 +379,7 @@ class TestMineSeries:
         assert "Stopped: 1 succeeded, 0 failed." in text
         assert "Done:" not in text
 
-    def test_lazy_factory_when_no_processor(self, qtbot, test_config):
+    def test_lazy_factory_when_no_processor(self, qtbot, tmp_path, test_config):
         """No cached processor → the base hands the worker a factory (off-thread)."""
         with (
             patch(_WORKER_TARGET, autospec=False) as q_cls,
@@ -387,6 +392,7 @@ class TestMineSeries:
             widget = ReadingMangaTab(config=test_config, processor=None, presenter=MagicMock(name="Presenter"))
             qtbot.addWidget(widget)
             widget._qtbot = qtbot  # type: ignore[attr-defined]
+            widget._tmp_path = tmp_path  # type: ignore[attr-defined]
             try:
                 _mine(widget, [_make_ref()])
                 assert q_cls.call_args.kwargs["processor"] is None
@@ -399,10 +405,10 @@ class TestMineSeries:
 
 
 class TestDetectionThreading:
-    def test_folder_detection_keeps_event_loop_live_and_disables_both_actions(self, qtbot, tmp_path, tab):
+    def test_folder_detection_keeps_event_loop_live_and_disables_mine(self, qtbot, tmp_path, tab):
         folder = tmp_path / "series"
         folder.mkdir()
-        tab.volume_folder_selector.set_path(str(folder))
+        tab.volume_file_selector.set_path(str(folder))
         queue_cls = tab._queue_worker_cls
         started = threading.Event()
         release = threading.Event()
@@ -418,10 +424,9 @@ class TestDetectionThreading:
         fallback_release.start()
         try:
             with patch(_DETECT, side_effect=_detect):
-                tab._on_folder_mine_clicked()
+                tab._on_mine_clicked()
                 qtbot.waitUntil(started.is_set)
                 assert not tab.mine_button.isEnabled()
-                assert not tab.folder_mine_button.isEnabled()
                 qtbot.waitUntil(lambda: bool(heartbeat_while_blocked))
                 assert heartbeat_while_blocked == [True]
                 assert queue_cls.call_count == 0
@@ -438,11 +443,11 @@ class TestDetectionThreading:
     def test_shutdown_discards_queued_detection_result(self, qtbot, tmp_path, tab):
         folder = tmp_path / "series"
         folder.mkdir()
-        tab.volume_folder_selector.set_path(str(folder))
+        tab.volume_file_selector.set_path(str(folder))
         queue_cls = tab._queue_worker_cls
 
         with patch(_DETECT, return_value=[_make_ref()]):
-            tab._on_folder_mine_clicked()
+            tab._on_mine_clicked()
             detection_worker = tab._detection_worker
             assert detection_worker is not None
             assert detection_worker.wait(2000)
@@ -460,25 +465,41 @@ class TestInvalidPath:
 
     def test_empty_path_warns_no_run(self, tab):
         queue_cls = tab._queue_worker_cls
-        tab._on_folder_mine_clicked()
+        tab._on_mine_clicked()
         assert queue_cls.call_count == 0
         assert tab.worker_thread is None
         assert "folder" in tab.log_widget.text_edit.toPlainText().lower()
 
-    def test_detect_error_surfaced_no_run(self, tab):
+    def test_missing_folder_is_refused_before_detection(self, tab):
         queue_cls = tab._queue_worker_cls
-        tab.volume_folder_selector.set_path("/src/bad")
+        tab.volume_file_selector.set_path("/src/gone")
+        with patch(_DETECT) as detect:
+            tab._on_mine_clicked()
+        detect.assert_not_called()
+        assert queue_cls.call_count == 0
+        assert not tab._detection_pending
+
+    def test_detect_error_surfaced_no_run(self, tmp_path, tab):
+        queue_cls = tab._queue_worker_cls
+        bad = tmp_path / "bad"
+        bad.mkdir()
+        tab.volume_file_selector.set_path(str(bad))
         with patch(_DETECT, side_effect=SetupError("no .mokuro volumes inside it")):
-            tab._on_folder_mine_clicked()
+            tab._on_mine_clicked()
             tab._qtbot.waitUntil(lambda: not tab._detection_pending)
         assert queue_cls.call_count == 0
         assert "no .mokuro volumes" in tab.log_widget.text_edit.toPlainText()
+        issue = tab.issue_banner().current_issue()
+        assert issue.summary == "Anki Miner can't mine this file."
+        assert issue.details == "no .mokuro volumes inside it"
 
-    def test_unexpected_detect_error_surfaced_no_run(self, tab):
+    def test_unexpected_detect_error_surfaced_no_run(self, tmp_path, tab):
         queue_cls = tab._queue_worker_cls
-        tab.volume_folder_selector.set_path("/src/bad")
+        bad = tmp_path / "bad"
+        bad.mkdir()
+        tab.volume_file_selector.set_path(str(bad))
         with patch(_DETECT, side_effect=RuntimeError("boom")):
-            tab._on_folder_mine_clicked()
+            tab._on_mine_clicked()
             tab._qtbot.waitUntil(lambda: not tab._detection_pending)
         assert queue_cls.call_count == 0
         assert "Could not process bad: boom" in tab.log_widget.text_edit.toPlainText()
@@ -487,10 +508,10 @@ class TestInvalidPath:
         _mine(tab, [_make_ref()])
         queue_cls = tab._queue_worker_cls
         calls_before = queue_cls.call_count
-        _mine(tab, [_make_ref("mokuro", "Second")], folder="/src/second")
+        _mine(tab, [_make_ref("mokuro", "Second")], folder="second")
         assert queue_cls.call_count == calls_before  # no second worker
 
-    def test_skipped_archive_warning_precedes_survivor_run(self, qtbot, tab):
+    def test_skipped_archive_warning_precedes_survivor_run(self, qtbot, tmp_path, tab):
         queue_cls = tab._queue_worker_cls
         ref = _make_ref("mokuro", "Survivor")
         bad = Path("/src/series/Broken.cbz")
@@ -500,9 +521,11 @@ class TestInvalidPath:
                 diagnostics.append((bad, "Invalid .mokuro JSON"))
             return [ref]
 
-        tab.volume_folder_selector.set_path("/src/series")
+        series = tmp_path / "series"
+        series.mkdir()
+        tab.volume_file_selector.set_path(str(series))
         with patch(_DETECT, side_effect=_detect):
-            tab._on_folder_mine_clicked()
+            tab._on_mine_clicked()
             qtbot.waitUntil(lambda: queue_cls.call_count == 1)
 
         log = tab.log_widget.text_edit.toPlainText()
@@ -683,9 +706,7 @@ def _resolve_drop_target(widget):
 class TestDragDrop:
     """Drops route through the tab; the selector + its input never consume them."""
 
-    def test_selectors_and_inputs_reject_drops(self, tab):
-        assert tab.volume_folder_selector.acceptDrops() is False
-        assert tab.volume_folder_selector.input.acceptDrops() is False
+    def test_selector_and_input_reject_drops(self, tab):
         assert tab.volume_file_selector.acceptDrops() is False
         assert tab.volume_file_selector.input.acceptDrops() is False
         assert tab.acceptDrops() is True
@@ -694,7 +715,7 @@ class TestDragDrop:
         """A drop landing on the INPUT FIELD is delivered to the tab handler."""
         folder = tmp_path / "series"
         folder.mkdir()
-        target = _resolve_drop_target(tab.volume_folder_selector.input)
+        target = _resolve_drop_target(tab.volume_file_selector.input)
         assert target is tab  # skipped the input AND the FileSelector
 
         mime = QMimeData()
@@ -708,7 +729,7 @@ class TestDragDrop:
         )
         target.dropEvent(event)
 
-        assert tab.volume_folder_selector.get_path() == str(folder)
+        assert tab.volume_file_selector.get_path() == str(folder)
         assert event.isAccepted()
 
     def test_drop_folder_fills_selector(self, tmp_path, tab):
@@ -717,27 +738,28 @@ class TestDragDrop:
         event = MagicMock()
         with patch(_URLS, return_value=[_url(str(folder))]):
             tab.dropEvent(event)
-        assert tab.volume_folder_selector.get_path() == str(folder)
+        assert tab.volume_file_selector.get_path() == str(folder)
         event.acceptProposedAction.assert_called_once()
 
-    def test_drop_manga_file_fills_file_selector(self, tab):
+    def test_drop_manga_file_fills_the_field(self, tab):
         event = MagicMock()
         with patch(_URLS, return_value=[_url("/src/vol.cbz")]):
             tab.dropEvent(event)
         assert tab.volume_file_selector.get_path() == "/src/vol.cbz"
-        assert tab.volume_folder_selector.get_path() == ""
 
-    def test_drop_routes_file_and_folder_independently(self, tmp_path, tab):
-        # Two-selector routing (novels-tab shape): one drop can fill both.
+    def test_the_first_manga_file_or_folder_fills_the_one_field(self, tmp_path, tab):
         folder = tmp_path / "series"
         folder.mkdir()
         event = MagicMock()
         with patch(_URLS, return_value=[_url(str(folder)), _url("/src/other.cbz")]):
             tab.dropEvent(event)
-        assert tab.volume_folder_selector.get_path() == str(folder)
+        assert tab.volume_file_selector.get_path() == str(folder)
+
+        with patch(_URLS, return_value=[_url("/src/other.cbz"), _url(str(folder))]):
+            tab.dropEvent(MagicMock())
         assert tab.volume_file_selector.get_path() == "/src/other.cbz"
 
-    def test_drop_first_of_each_kind_wins(self, tmp_path, tab):
+    def test_drop_first_wins(self, tmp_path, tab):
         d1 = tmp_path / "a"
         d1.mkdir()
         d2 = tmp_path / "b"
@@ -745,14 +767,13 @@ class TestDragDrop:
         event = MagicMock()
         with patch(_URLS, return_value=[_url(str(d1)), _url(str(d2)), _url("/src/x.cbz"), _url("/src/y.zip")]):
             tab.dropEvent(event)
-        assert tab.volume_folder_selector.get_path() == str(d1)
-        assert tab.volume_file_selector.get_path() == "/src/x.cbz"
+        assert tab.volume_file_selector.get_path() == str(d1)
 
     def test_drop_novel_hints_no_path(self, tab):
         event = MagicMock()
         with patch(_URLS, return_value=[_url("/src/book.epub")]):
             tab.dropEvent(event)
-        assert tab.volume_folder_selector.get_path() == ""
+        assert tab.volume_file_selector.get_path() == ""
         assert "novels" in tab.log_widget.text_edit.toPlainText().lower()
         event.acceptProposedAction.assert_called_once()
 
@@ -761,13 +782,13 @@ class TestDragDrop:
         event = MagicMock()
         with patch(_URLS, return_value=[_url(name)]):
             tab.dropEvent(event)
-        assert tab.volume_folder_selector.get_path() == ""
-        assert "Subtitles tab" in tab.log_widget.text_edit.toPlainText()
+        assert tab.volume_file_selector.get_path() == ""
+        assert "Reading → Subtitle Files" in tab.log_widget.text_edit.toPlainText()
         event.acceptProposedAction.assert_called_once()
 
     def test_drop_none_event_is_noop(self, tab):
         tab.dropEvent(None)  # must not raise
-        assert tab.volume_folder_selector.get_path() == ""
+        assert tab.volume_file_selector.get_path() == ""
 
     def test_drag_enter_accepts_folder_manga_novel_and_subtitle(self, tmp_path, tab):
         folder = tmp_path / "d"
