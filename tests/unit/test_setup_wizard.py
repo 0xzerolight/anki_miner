@@ -2299,9 +2299,8 @@ def test_done_page_rechecks_everything_instead_of_trusting_the_earlier_pages(qtb
     _run_page_check(qtbot, page, page.summary_label)
 
     text = page.summary_label.text()
-    assert "Mining" in text
-    assert "Lapis" in text
-    assert "<b>No</b>" not in text
+    assert text.startswith("You're ready. Pick a video and its subtitle file, then press Mine Episode.")
+    assert "Press F1 any time for the Usage Guide." in text
     assert page.isComplete() is True
 
 
@@ -2315,6 +2314,7 @@ def test_done_page_keeps_finish_disabled_when_anki_went_away(qtbot, wiz_config, 
     _run_page_check(qtbot, page, page.summary_label)
 
     assert page.isComplete() is False
+    assert "Anki isn't reachable. Open Anki." in page.summary_label.text()
     # Nothing downstream was even asked: a deck query against a closed Anki
     # spends its ten-second timeout to learn nothing.
     assert fake.calls == ["dictionary", "ankiconnect"]
@@ -2354,7 +2354,7 @@ def test_done_page_recheck_reruns_failed_sweep_and_updates_in_place(qtbot, wiz_c
             assert page._live_check.wait(3000)
 
     assert fake.calls == ["dictionary", "ankiconnect", "deck", "note_type", "fields"]
-    assert "<b>No</b>" not in page.summary_label.text()
+    assert page.summary_label.text().startswith("You're ready.")
     opened.assert_not_called()
 
 
@@ -2397,13 +2397,13 @@ def test_done_page_back_next_reentry_supersedes_blocked_old_config_sweep(qtbot, 
 
         assert page._live_check is not old_worker
         assert old_worker.is_cancelled is True
-        qtbot.waitUntil(lambda: "New Deck" in page.summary_label.text(), timeout=3000)
+        qtbot.waitUntil(lambda: "Anki isn't reachable" in page.summary_label.text(), timeout=3000)
         assert page.isComplete() is False
 
         old_release.set()
         assert old_worker.wait(3000)
         qtbot.wait(50)
-        assert "New Deck" in page.summary_label.text()
+        assert "Anki isn't reachable" in page.summary_label.text()
         assert page.isComplete() is False
         assert snapshots == ["Old Deck", "New Deck"]
     finally:
@@ -2442,6 +2442,92 @@ def test_done_page_reports_a_failed_sweep_rather_than_claiming_readiness(qtbot, 
 
     assert "Anki exploded" in page.summary_label.text()
     assert page.isComplete() is False
+
+
+def test_the_ready_page_lists_only_what_is_missing(qtbot, wiz_config, monkeypatch):
+    cfg = replace(wiz_config, anki_deck_name="Mining")
+    wiz = _wizard_with_validation(qtbot, monkeypatch, cfg, _FakeValidation(deck=False, dictionary=False))
+    page = wiz.done_page
+
+    _run_page_check(qtbot, page, page.summary_label)
+
+    text = page.summary_label.text()
+    assert text.startswith("Before you can mine:")
+    assert "Anki has no deck called “Mining”. Go back to the Anki step and pick one." in text
+    assert "note type" not in text
+    assert "Dictionary: not downloaded yet (required)" in text
+    assert 'href="download"' in text
+    assert "You're ready" not in text
+    assert page.isComplete() is False
+
+
+def test_the_ready_page_shows_a_running_download(qtbot, wiz_config, monkeypatch):
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation(dictionary=False))
+    wiz.resources_page._download_running = True
+    wiz.resources_page._progress_text = "JMdict (1 of 4) · Elapsed 00:03"
+    page = wiz.done_page
+
+    _run_page_check(qtbot, page, page.summary_label)
+
+    assert "Downloads: still running — JMdict (1 of 4) · Elapsed 00:03" in page.summary_label.text()
+    wiz.resources_page._download_running = False
+
+
+def test_finish_waits_for_the_rest_of_a_running_download(qtbot, wiz_config, monkeypatch):
+    """JMdict lands first; Finish would close the wizard and cancel JPDB, Jiten and Kanjium."""
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
+    page = wiz.done_page
+    _run_page_check(qtbot, page, page.summary_label)
+    assert page.isComplete() is True
+
+    wiz.resources_page._download_running = True
+    wiz.resources_page._progress_text = "Jiten Frequency (3 of 4) · Elapsed 00:09"
+    wiz.resources_page.download_state_changed.emit()
+
+    assert page.isComplete() is False
+    text = page.summary_label.text()
+    assert text.startswith("Before you can mine:")
+    assert "Downloads: still running — Jiten Frequency (3 of 4) · Elapsed 00:09" in text
+    assert "You're ready" not in text
+
+    wiz.resources_page._download_running = False
+    wiz.resources_page.download_finished.emit()
+
+    assert page.isComplete() is True
+    assert page.summary_label.text().startswith("You're ready.")
+
+
+def test_the_ready_page_download_link_starts_the_download(qtbot, wiz_config, monkeypatch):
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod  # noqa: PLC0415
+
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation(dictionary=False))
+    session = MagicMock()
+    monkeypatch.setattr(dialog_mod, "start_resource_download", lambda *a, **kw: session)
+
+    wiz.done_page.summary_label.linkActivated.emit("download")
+
+    assert wiz.resources_page._session is session
+
+
+def test_the_ready_page_rechecks_when_the_download_ends(qtbot, wiz_config, monkeypatch):
+    fake = _FakeValidation(dictionary=False)
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, fake)
+    page = wiz.done_page
+    _run_page_check(qtbot, page, page.summary_label)
+    # The label lands before the entry sweep's thread has fully ended; while it
+    # still runs, _start_sweep is a no-op, so wait it out first.
+    assert page._live_check is not None and page._live_check.wait(3000)
+    assert page.isComplete() is False
+    # Walking there with wiz.next() would stop at the Dictionary page (nothing
+    # downloaded) and loop forever; stand in for "the Ready page is showing".
+    monkeypatch.setattr(wiz, "currentPage", lambda: page)
+
+    fake.answers["dictionary"] = True
+    wiz.resources_page.download_finished.emit()
+
+    qtbot.waitUntil(page.isComplete, timeout=5000)
+    assert page.summary_label.text().startswith("You're ready.")
+    _join_workers(qtbot, wiz)
 
 
 def test_done_page_is_final(qtbot, wiz_config):

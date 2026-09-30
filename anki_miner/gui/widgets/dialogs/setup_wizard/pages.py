@@ -1815,13 +1815,13 @@ def _final_sweep(validation: ValidationService) -> dict[str, bool]:
 
 
 class DonePage(_LiveCheckPage):
-    """Step 5: re-verify the whole setup, then offer the first real action.
+    """Ready: re-check everything mining needs; list only what is missing (B04).
 
-    The old summary read the AnkiConnect page's cached ``_reachable`` flag and
-    counted the mapped fields in config — both of which were true several
-    minutes and one Anki restart ago. It could therefore say "AnkiConnect
-    reachable: Yes" over a closed Anki. This page now runs its own sweep on
-    entry and Finish stays disabled until every required check passes.
+    Finish ("Open Video Mining", D26) stays disabled until every required check
+    passes and the wizard's download has ended. With everything in place the page says what to do next; otherwise
+    it lists only the missing items, in plain words, each with its way forward.
+    It re-checks on entry, when the wizard window becomes active again, and
+    when the dictionary download ends (B02).
     """
 
     def __init__(self, wizard: SetupWizard) -> None:
@@ -1830,18 +1830,25 @@ class DonePage(_LiveCheckPage):
         self.setFinalPage(True)
 
         layout = QVBoxLayout(self)
-        self.title_label, self.subtitle_label = _add_page_header(
-            layout,
-            self.tr("Ready to Mine"),
-            self.tr("A last check of everything mining needs. You can change it later in Settings."),
-        )
+        self.title_label, self.subtitle_label = _add_page_header(layout, self.tr("Ready to Mine"), "")
         self.summary_label = QLabel("")
         self.summary_label.setWordWrap(True)
         self.summary_label.setTextFormat(Qt.TextFormat.RichText)
+        self.summary_label.setOpenExternalLinks(False)
+        self.summary_label.linkActivated.connect(self._on_link)
         layout.addWidget(self.summary_label)
+        layout.addStretch(1)
+
+        # The dictionary line follows the download live, and its end re-checks.
+        wizard.resources_page.download_state_changed.connect(self._redraw)
+        wizard.resources_page.download_finished.connect(self._on_download_finished)
 
     def isComplete(self) -> bool:
-        return all(self._results.get(name, False) for name in _FINAL_CHECKS)
+        # Finish closes the wizard, and closing cancels every worker it owns
+        # (SetupWizard.done), so it waits for the whole download, not just the
+        # dictionary that lands first.
+        checks_pass = all(self._results.get(name, False) for name in _FINAL_CHECKS)
+        return checks_pass and not self._wizard.resources_page.download_running()
 
     def initializePage(self) -> None:
         """Run one fresh readiness sweep; render it when it lands."""
@@ -1881,23 +1888,74 @@ class DonePage(_LiveCheckPage):
         if not self._is_live_check():
             return
         self._results = {}
-        self.summary_label.setText(message)
+        self.summary_label.setText(_html_text(message))
         self.completeChanged.emit()
 
+    def _redraw(self) -> None:
+        if self._results:
+            self.summary_label.setText(self._summary_html())
+        # A download starting or ending moves the Finish gate (isComplete).
+        self.completeChanged.emit()
+
+    def _on_download_finished(self) -> None:
+        if self._wizard.currentPage() is self:
+            # Cancel-and-restart, not _start_sweep: a sweep already in flight
+            # bound the validation service before the new dictionary chain was
+            # staged, and _start_sweep would skip while it runs, leaving a stale
+            # "dictionary missing" and Finish disabled.
+            self.initializePage()
+        else:
+            self._redraw()
+
+    def _on_link(self, href: str) -> None:
+        self._wizard.resources_page.activate_link(href)
+
     def _summary_html(self) -> str:
+        results = self._results
+        downloading = self._wizard.resources_page.download_running()
+        checks_pass = all(results.get(name, False) for name in _FINAL_CHECKS)
+        if checks_pass and not downloading:
+            return _html_text(
+                self.tr(
+                    "You're ready. Pick a video and its subtitle file, then press Mine Episode. Books, manga "
+                    "and subtitles are under Reading, audiobooks under Audiobooks, tools under Utilities. "
+                    "Press F1 any time for the Usage Guide."
+                )
+            )
         cfg = self._wizard.working_config()
-        yes = self.tr("Yes")
-        no = self.tr("No")
-
-        def mark(name: str) -> str:
-            return yes if self._results.get(name, False) else no
-
-        return "<br>".join(
-            [
-                tr_format(self.tr("AnkiConnect reachable: <b>%1</b>"), mark("ankiconnect")),
-                tr_format(self.tr("Deck '%1' exists: <b>%2</b>"), cfg.anki_deck_name, mark("deck")),
-                tr_format(self.tr("Note type '%1' exists: <b>%2</b>"), cfg.anki_note_type, mark("note_type")),
-                tr_format(self.tr("Every mapped field exists: <b>%1</b>"), mark("fields")),
-                tr_format(self.tr("Offline dictionary ready: <b>%1</b>"), mark("dictionary")),
-            ]
-        )
+        lines: list[str] = []
+        if not results.get("ankiconnect", False):
+            # The deck, note-type and field checks were never asked (_final_sweep).
+            lines.append(_html_text(self.tr("Anki isn't reachable. Open Anki.")))
+        else:
+            if not results.get("deck", False):
+                lines.append(
+                    _html_text(
+                        tr_format(
+                            self.tr("Anki has no deck called “%1”. Go back to the Anki step and pick one."),
+                            cfg.anki_deck_name,
+                        )
+                    )
+                )
+            if not results.get("note_type", False):
+                lines.append(
+                    _html_text(
+                        tr_format(
+                            self.tr("Anki has no note type called “%1”. Go back to the Anki step and pick one."),
+                            cfg.anki_note_type,
+                        )
+                    )
+                )
+            elif not results.get("fields", False):
+                lines.append(
+                    _html_text(
+                        self.tr(
+                            "The card fields don't match the note type. Go back to the Anki step and pick it again."
+                        )
+                    )
+                )
+        if not results.get("dictionary", False) or downloading:
+            # While the run goes this reads "Downloads: still running — …".
+            lines.append(self._wizard.resources_page.ready_page_dictionary_line())
+        intro = _html_text(self.tr("Before you can mine:"))
+        return intro + "<br>" + "<br>".join(f"• {line}" for line in lines)
