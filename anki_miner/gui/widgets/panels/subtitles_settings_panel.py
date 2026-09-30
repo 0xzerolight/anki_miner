@@ -37,6 +37,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from anki_miner.gui.utils.language_gate import field_row_widgets
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton
@@ -60,6 +61,12 @@ _MODEL_OPTIONS: list[tuple[str, str]] = [
     ("large-v3", "large-v3"),
     ("small", "small"),
 ]
+
+#: Approximate download size per Whisper model, in MB, for the one-button setup
+#: label (C11). faster-whisper's CTranslate2 weights on Hugging Face
+#: (Systran/faster-whisper-<name>): large-v3's model.bin is about 3.09 GB,
+#: small's about 484 MB.
+_MODEL_APPROX_MB: dict[str, int] = {"large-v3": 3090, "small": 480}
 
 # Ordered (display_label, config_value) pairs for the ASR device dropdown that
 # are offered on every platform (CT2 backend: auto/cuda/cpu).
@@ -144,7 +151,7 @@ class SubtitlesSettingsPanel(FormPanel):
     #: Emitted when the user clicks "Download silence removal"; the managed
     #: install target (``config.onnx_pack_root``) is resolved by the wiring.
     vad_pack_download_requested = pyqtSignal()
-    #: Emitted when the user clicks "Download transcription engine"; the managed
+    #: Emitted when the user clicks "Set up speech-to-text"; the managed
     #: install target (``asr_pack_installer.asr_pack_root()``) is resolved by
     #: the wiring.
     asr_pack_download_requested = pyqtSignal()
@@ -202,6 +209,10 @@ class SubtitlesSettingsPanel(FormPanel):
         self._cuda_pack_active = False
         self._vad_pack_active = False
         self._asr_pack_active = False
+        # Set by the one "Set up speech-to-text" click when the selected model is
+        # not downloaded yet: the model download then follows the engine by
+        # itself (C11). Cleared when it starts or when the engine download fails.
+        self._model_after_engine = False
         self._vulkan_active = False
         # Off-thread state probe coordination. The heavy probes (ctranslate2
         # import + CUDA init, find_spec, model.bin disk walk) run on a worker;
@@ -272,11 +283,13 @@ class SubtitlesSettingsPanel(FormPanel):
         # on-demand pack (services/asr/asr_pack_installer.py), not bundle content;
         # a pip install with the [asr] extra has it importable and never sees
         # this row. Gated in _apply_engine_state on importability + support.
-        self.download_engine_button = ModernButton(self.tr("Download transcription engine"), variant="secondary")
+        # The caption names the selected model's size too, so it is set once the
+        # model combo exists (_refresh_setup_button_text).
+        self.download_engine_button = ModernButton("", variant="secondary")
         self.download_engine_button.setToolTip(
             self.tr(
-                "Download the faster-whisper speech-to-text engine into Anki Miner's folder. "
-                "Required before subtitle generation can run on a packaged install."
+                "Download the speech-to-text engine and the selected Whisper model into Anki Miner's folder. "
+                "Generate Subtitles and Audiobook Sync need both."
             )
         )
         self.download_engine_button.clicked.connect(self._on_asr_pack_download_clicked)
@@ -303,21 +316,18 @@ class SubtitlesSettingsPanel(FormPanel):
             engine_container,
             anchor="transcription_engine",
             anchor_focus=self.download_engine_button,
-            anchor_text=lambda: (self.download_engine_button.text(), self.download_engine_button.toolTip()),
-        )
-        # Shown in lockstep with the button; see _apply_engine_state. The row's
-        # label itself never hides: the settings-search index is built once at
-        # construction and must keep pointing at a visible row (the VAD precedent).
-        self._engine_help_label = self._add_help(
-            tr_format(
-                self.tr("Speech-to-text engine (faster-whisper), about %1 MB, downloaded once."),
-                str(asr_pack_installer.PACK.approx_download_mb),
-            )
+            anchor_text=lambda: (
+                self.download_engine_button.text(),
+                self.download_engine_button.toolTip(),
+                "Download transcription engine",
+            ),
         )
 
         self.model_combo = QComboBox()
         for label, _value in _MODEL_OPTIONS:
             self.model_combo.addItem(label)
+        self._refresh_setup_button_text()
+        self.model_combo.currentIndexChanged.connect(lambda _index: self._refresh_setup_button_text())
         self.add_field(
             self.tr("Transcription model"),
             self.model_combo,
@@ -440,6 +450,9 @@ class SubtitlesSettingsPanel(FormPanel):
             anchor_focus=self.download_model_button,
             anchor_text=lambda: (self.download_model_button.text(), self.download_model_button.toolTip()),
         )
+        # Hidden until the engine imports: before that the one setup button
+        # above covers the model too (C11).
+        self._model_row_widgets = field_row_widgets(self, download_container)
 
         # Guidance shown only when faster-whisper is not installed AND the engine
         # pack cannot be offered here (a source install on a Python the pack does
@@ -1172,7 +1185,6 @@ class SubtitlesSettingsPanel(FormPanel):
         if engine_available:
             self.download_engine_button.setVisible(False)
             self.download_engine_button.setEnabled(False)
-            self._engine_help_label.setVisible(False)
             self._engine_guidance_label.setVisible(False)
             self.set_asr_pack_status(self.tr("Installed"))
             self._asr_engine_guidance.setVisible(False)
@@ -1190,14 +1202,13 @@ class SubtitlesSettingsPanel(FormPanel):
         if not supported:
             self.download_engine_button.setEnabled(False)
             self.download_engine_button.setVisible(False)
-            self._engine_help_label.setVisible(False)
             self.set_asr_pack_status("")
             self._engine_guidance_label.setText(self.tr("Local transcription is not available for this build."))
             self._engine_guidance_label.setVisible(frozen)
             return
 
         self._engine_guidance_label.setVisible(False)
-        self._engine_help_label.setVisible(True)
+        self._refresh_setup_button_text()
         self.download_engine_button.setVisible(True)
         self.download_engine_button.setEnabled(True)
         if pack_installed:
@@ -1211,11 +1222,20 @@ class SubtitlesSettingsPanel(FormPanel):
         Applies pre-probed values. The button is enabled only when the engine is
         importable — without it a model download cannot run. Preserves the
         in-flight guard: a download in flight keeps the button disabled and the
-        "Downloading…" status untouched.
+        "Downloading…" status untouched. Hidden until the engine imports; after
+        the one setup click it starts the model download itself (C11).
         """
+        for widget in self._model_row_widgets:
+            widget.setVisible(engine_available or self._asr_download_active)
         if self._asr_download_active:
             self.download_model_button.setEnabled(False)
             return
+        if self._model_after_engine and engine_available:
+            # The one setup click asked for both downloads (C11).
+            self._model_after_engine = False
+            if not model_downloaded:
+                self._on_download_clicked()
+                return
         self.download_model_button.setEnabled(engine_available)
         if not engine_available:
             self.set_model_status("")
@@ -1229,6 +1249,15 @@ class SubtitlesSettingsPanel(FormPanel):
     # Transcription engine (ASR pack) download flow
     # ------------------------------------------------------------------
 
+    def _setup_button_text(self) -> str:
+        """ "Set up speech-to-text (about N MB)": engine plus the model still missing."""
+        model_mb = 0 if self._model_downloaded_cache else _MODEL_APPROX_MB.get(self.get_model(), 0)
+        total = asr_pack_installer.PACK.approx_download_mb + model_mb
+        return tr_format(self.tr("Set up speech-to-text (about %1 MB)"), str(total))
+
+    def _refresh_setup_button_text(self) -> None:
+        self.download_engine_button.setText(self._setup_button_text())
+
     def _on_asr_pack_download_clicked(self) -> None:
         """Disable the button in flight and request the engine pack download.
 
@@ -1238,6 +1267,7 @@ class SubtitlesSettingsPanel(FormPanel):
         if not self._asr_pack_offerable():
             self._refresh_state_async(self.get_model(), self._models_root, self._cuda_libs_root)
             return
+        self._model_after_engine = not self._model_downloaded_cache
         self._asr_pack_active = True
         self.download_engine_button.setEnabled(False)
         self.asr_pack_download_requested.emit()
@@ -1263,6 +1293,7 @@ class SubtitlesSettingsPanel(FormPanel):
         """
         self._asr_pack_active = False
         if not ok:
+            self._model_after_engine = False
             self.download_engine_button.setEnabled(self._asr_pack_offerable())
             return
         self._engine_available_cache = None

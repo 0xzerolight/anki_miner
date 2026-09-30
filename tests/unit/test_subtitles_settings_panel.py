@@ -1432,7 +1432,6 @@ def test_engine_button_hidden_and_status_installed_when_the_engine_is_importable
     _wait_state_settled(qtbot, panel)
 
     assert not panel.download_engine_button.isVisibleTo(panel)
-    assert not panel._engine_help_label.isVisibleTo(panel)
     assert not panel._engine_guidance_label.isVisibleTo(panel)
     assert panel.engine_status_label.text() == "Installed"
     assert not panel._asr_engine_guidance.isVisibleTo(panel)
@@ -1447,10 +1446,9 @@ def test_engine_row_offers_the_download_when_supported_and_not_installed(qtbot, 
 
     assert panel.download_engine_button.isEnabled()
     assert panel.download_engine_button.isVisibleTo(panel)
-    assert panel._engine_help_label.isVisibleTo(panel)
+    assert panel.download_engine_button.text().startswith("Set up speech-to-text")
     assert "not installed" in panel.engine_status_label.text().lower()
     assert not panel._asr_engine_guidance.isVisibleTo(panel)
-    assert "90" in panel._engine_help_label.text()
 
 
 def test_engine_row_says_installed_when_the_pack_is_on_disk_but_not_yet_importable(qtbot, tmp_path, monkeypatch):
@@ -1516,7 +1514,7 @@ def test_engine_notify_success_clears_the_guard_and_forgets_the_cached_probes(qt
     assert panel._engine_available_cache is True
     assert not panel.download_engine_button.isVisibleTo(panel)
     assert panel.engine_status_label.text() == "Installed"
-    assert panel.download_model_button.isEnabled()
+    assert not panel.download_model_button.isEnabled()  # C11: the model download started by itself
 
 
 def test_engine_notify_failure_keeps_the_error_text_and_does_not_reprobe(qtbot, tmp_path, monkeypatch):
@@ -1625,7 +1623,6 @@ def test_frozen_build_without_pack_support_says_so_in_the_row(qtbot, tmp_path, m
     _wait_state_settled(qtbot, panel)
 
     assert not panel.download_engine_button.isVisibleTo(panel)
-    assert not panel._engine_help_label.isVisibleTo(panel)
     assert panel._engine_guidance_label.isVisibleTo(panel)
     assert "not available" in panel._engine_guidance_label.text().lower()
     assert not panel._asr_engine_guidance.isVisibleTo(panel)
@@ -1639,7 +1636,6 @@ def test_source_install_without_pack_support_keeps_the_pip_guidance(qtbot, tmp_p
     _wait_state_settled(qtbot, panel)
 
     assert not panel.download_engine_button.isVisibleTo(panel)
-    assert not panel._engine_help_label.isVisibleTo(panel)
     assert not panel._engine_guidance_label.isVisibleTo(panel)
     assert panel.engine_status_label.text() == ""
     assert panel._asr_engine_guidance.isVisibleTo(panel)
@@ -1654,7 +1650,6 @@ def test_source_install_with_pack_support_still_gets_the_pip_guidance(qtbot, tmp
     _wait_state_settled(qtbot, panel)
 
     assert not panel.download_engine_button.isVisibleTo(panel)
-    assert not panel._engine_help_label.isVisibleTo(panel)
     assert panel._asr_engine_guidance.isVisibleTo(panel)
 
     received: list[None] = []
@@ -1723,3 +1718,51 @@ def test_macos_keeps_the_alass_path_row(qtbot, monkeypatch):
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     assert panel.alass_selector is not None
+
+
+def test_setup_is_one_button_that_names_the_whole_size(qtbot, tmp_path, monkeypatch):
+    """C11: engine and model are two downloads that are useless apart."""
+    _patch_engine_pack(monkeypatch, available=False, supported=True, frozen=True)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    assert panel.download_engine_button.text() == "Set up speech-to-text (about 3180 MB)"
+    assert not panel.download_model_button.isVisibleTo(panel)
+
+
+def test_the_model_download_follows_the_engine_by_itself(qtbot, tmp_path, monkeypatch):
+    _patch_engine_pack(monkeypatch, available=False, supported=True, frozen=True)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+    models: list[str] = []
+    panel.asr_download_requested.connect(models.append)
+
+    panel.download_engine_button.click()
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.available", lambda: True)
+    panel.notify_asr_pack_download_finished(True)
+    _wait_state_settled(qtbot, panel)
+
+    assert models == ["large-v3"]
+    assert panel.download_model_button.isVisibleTo(panel)
+    assert not panel.download_model_button.isEnabled()  # in flight
+
+
+def test_a_failed_engine_download_does_not_chain_the_model(qtbot, tmp_path, monkeypatch):
+    _patch_engine_pack(monkeypatch, available=False, supported=True, frozen=True)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+    models: list[str] = []
+    panel.asr_download_requested.connect(models.append)
+
+    panel.download_engine_button.click()
+    panel.notify_asr_pack_download_finished(False)
+    _wait_state_settled(qtbot, panel)
+
+    assert models == []
+    assert not panel._model_after_engine
