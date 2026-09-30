@@ -194,7 +194,6 @@ def test_ui_panel_controls_are_anchored(tab):
 
     assert by_id["ui.language"].focus_widget is tab.ui_panel.language_combo
     assert by_id["ui.theme"].focus_widget is tab.ui_panel.gallery
-    assert by_id["ui.max_parallel_workers"].focus_widget is tab.ui_panel.max_workers_spinbox
 
 
 def test_anchor_search_text_follows_a_relabelled_control(tab):
@@ -219,7 +218,6 @@ def test_moved_capability_targets_track_the_anchor_that_owns_the_control(tab):
 
     for cap_id, anchor_id in (
         ("sentence-tts", "media.reading_tts"),
-        ("parallel-workers", "ui.max_parallel_workers"),
         ("update-check", "ui.check_for_updates"),
     ):
         assert anchor_id in by_id, f"{cap_id}: anchor {anchor_id!r} no longer exists"

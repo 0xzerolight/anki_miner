@@ -1038,12 +1038,11 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.filtering_panel.names_checkbox.checkStateChanged.connect(self._on_settings_edited)
 
         # Fields outside the save panels that commit through the same path.
-        # check_for_updates_checkbox and max_workers_spinbox live on the UI
-        # panel (T11) but the panel itself stays out of _save_panels — it
-        # persists everything else via its own signals — so both are wired
-        # individually here, like the mining_language variant combos below.
+        # check_for_updates_checkbox lives on the UI panel (T11) but the panel
+        # itself stays out of _save_panels — it persists everything else via
+        # its own signals — so it is wired individually here, like the
+        # mining_language variant combos below.
         self.ui_panel.check_for_updates_checkbox.toggled.connect(self._on_settings_edited)
-        self.ui_panel.max_workers_spinbox.valueChanged.connect(self._on_settings_edited)
         self.dictionary_panel.dicts_root_selector.path_changed.connect(self._on_settings_edited)
 
         # mining_language_panel's two variant combos, individually (see the
@@ -1267,8 +1266,8 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         YouTube, Subtitles) are loaded via the symmetric ``load_from_config``
         contract so each panel owns its fields in one place (OVH-019).
         Dictionary/audio chain panels and the UI panel (which owns Check for
-        updates and Max parallel workers, T11) persist via their own paths
-        and are handled directly here.
+        updates, T11) persist via their own paths and are handled directly
+        here.
 
         Runs under the ``_loading`` guard: the setText/setChecked/setValue
         calls below fire the same change signals user edits do, and must not
@@ -1316,9 +1315,8 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
 
             # UI panel is outside _save_panels (it persists via its own signals),
             # so it owns its whole repaint here — signal-safe by construction.
-            # It also owns Check for updates and Max parallel workers (T11,
-            # moved here from the tab and Media respectively); their values are
-            # part of this same repaint, not a separate step.
+            # It also owns Check for updates (T11, moved here from the tab);
+            # its value is part of this same repaint, not a separate step.
             self.ui_panel.load_from_config(self.config)
 
             # The Keyboard page is outside _save_panels too (it commits each
@@ -1660,13 +1658,11 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                 for spec in fields(self.config)
                 if getattr(proposed, spec.name) != getattr(self.config, spec.name)
             ]
-            # UI panel fields outside _save_panels (T11): Check for updates and
-            # Max parallel workers persist straight from their widgets in
-            # _commit_settings, not through a panel's contribute().
+            # UI panel field outside _save_panels (T11): Check for updates
+            # persists straight from its widget in _commit_settings, not
+            # through a panel's contribute().
             if self.ui_panel.check_for_updates_checkbox.isChecked() != self.config.check_for_updates:
                 names.append("check_for_updates")
-            if self.ui_panel.max_workers_spinbox.value() != self.config.max_parallel_workers:
-                names.append("max_parallel_workers")
         return capped(sorted(names))
 
     def commit_pending_settings_for_mutation(self) -> bool:
@@ -1853,11 +1849,11 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             # Dictionary storage folder (Issue #45). Validated above; reuse of
             # current value passes through unchanged.
             dicts_root=new_dicts_root,
-            # UI panel fields outside _save_panels (T11): Check for updates and
-            # Max parallel workers.
+            # UI panel field outside _save_panels (T11): Check for updates.
+            # max_parallel_workers is config-only (D15 item 5) and is carried
+            # through untouched.
             check_for_updates=now_enabled,
             skipped_update_version=skipped_update_version,
-            max_parallel_workers=self.ui_panel.max_workers_spinbox.value(),
         )
 
         # Async import flows can complete between the start-of-Save snapshot

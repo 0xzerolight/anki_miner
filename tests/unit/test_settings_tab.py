@@ -1340,13 +1340,6 @@ def test_pending_field_names_reports_check_for_updates(tab):
     assert "check_for_updates" in tab._pending_field_names()
 
 
-def test_pending_field_names_reports_max_parallel_workers(tab):
-    """max_parallel_workers lives on the UI panel too, outside _save_panels."""
-    tab.ui_panel.max_workers_spinbox.setValue(tab.config.max_parallel_workers + 1)
-
-    assert "max_parallel_workers" in tab._pending_field_names()
-
-
 def test_a_completed_install_turns_the_button_back_into_an_update(tab):
     """A finished yt-dlp download relabels the button without a validation sweep."""
     from types import SimpleNamespace

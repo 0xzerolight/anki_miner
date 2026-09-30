@@ -317,43 +317,61 @@ class TestThemesFolderFailureIsVisible:
 
 
 class TestAppSectionLoadFromConfig:
-    """T11 fix round 1: load_from_config must fill the App section's two
-    moved controls — regression net for the "deleting the load block leaves
-    the suite green" gap the review caught."""
+    """T11 fix round 1: load_from_config must fill the App section's moved
+    control — regression net for the "deleting the load block leaves the
+    suite green" gap the review caught."""
 
-    def test_loads_updates_off_and_a_non_default_worker_count(self, panel: UISettingsPanel) -> None:
+    def test_loads_updates_off(self, panel: UISettingsPanel) -> None:
         panel.load_from_config(
             replace(
                 create_default_config(),
                 themes_root=panel._themes_root,
                 check_for_updates=False,
-                max_parallel_workers=7,
             )
         )
         assert panel.check_for_updates_checkbox.isChecked() is False
-        assert panel.max_workers_spinbox.value() == 7
 
-    def test_loads_updates_on_and_a_different_non_default_worker_count(self, panel: UISettingsPanel) -> None:
+    def test_loads_updates_on(self, panel: UISettingsPanel) -> None:
         panel.load_from_config(
             replace(
                 create_default_config(),
                 themes_root=panel._themes_root,
                 check_for_updates=True,
-                max_parallel_workers=15,
             )
         )
         assert panel.check_for_updates_checkbox.isChecked() is True
-        assert panel.max_workers_spinbox.value() == 15
 
 
-def test_the_workers_helper_is_a_visible_label_not_only_a_tooltip(panel: UISettingsPanel) -> None:
-    """T11 fix round 1: this line was a visible helper on Card Media; the App
-    section must show it too, not just carry it as a hover tooltip."""
+def test_general_is_a_form_panel_with_themes_last(panel: UISettingsPanel, qtbot) -> None:
+    """C08: same frame as every other page; the gallery closes the page."""
+    from PyQt6.QtCore import QPoint
+    from PyQt6.QtWidgets import QScrollArea
+
+    from anki_miner.gui.widgets.base import FormPanel
+
+    assert isinstance(panel, FormPanel)
+    assert panel._title_label.text() == "General"
+    panel.resize(1000, 2400)
+    panel.show()
+    qtbot.waitExposed(panel)
+
+    def top(widget) -> int:
+        return widget.mapTo(panel, QPoint(0, 0)).y()
+
+    first_utility = next(iter(panel.utility_checkboxes.values()))
+    assert (
+        top(panel.language_combo)
+        < top(panel.zoom_combo)
+        < top(first_utility)
+        < top(panel.check_for_updates_checkbox)
+        < top(panel.gallery)
+    )
+    assert panel.gallery.findChildren(QScrollArea) == []
+
+
+def test_max_parallel_workers_is_not_on_the_page(panel: UISettingsPanel) -> None:
+    """D15 item 5: config-only now; the "Higher = faster" hint went with it."""
     from PyQt6.QtWidgets import QLabel
 
-    text = "Higher = faster, but uses more CPU and memory."
-    assert panel.max_workers_spinbox.toolTip() == text  # the tooltip stays
-
-    matches = [label for label in panel.findChildren(QLabel) if label.text() == text]
-    assert matches, "no visible helper label carries the workers helper text"
-    assert matches[0].objectName() == "helper-text"
+    assert not hasattr(panel, "max_workers_spinbox")
+    assert not any("Higher = faster" in label.text() for label in panel.findChildren(QLabel))

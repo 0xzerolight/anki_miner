@@ -1,36 +1,13 @@
 """UI settings panel — language, zoom, theme, and app-level selection.
 
-This is the "General" Settings page (stable key ``"ui"``). Hand-built, not a
-``FormPanel``, so its sections are plain DemiBold headings rather than
-``FormPanel.add_section``. Top to bottom:
-
-* **Language** — UI language picker (restart-to-apply; merged in from the
-  former ``LanguagePanel``). Emits ``language_changed``.
-* **Appearance** — Zoom (whole-UI scale), the only interface-size control
-  (Text size was folded into it, ``GUIConfigManager._fold_removed_fields``).
-  Restart-to-apply (D39b-A): picking a preset offers *Restart now* / *Later*;
-  changing it relayouts the whole window, so unlike theme there is no instant
-  path to have. Followed by the theme gallery (shipped + user-installed),
-  rendered as preview cards by ``ThemeGalleryWidget``, with:
-  - Live preview when a card is clicked — the active theme actually changes so
-    the user sees buttons, tables, scrollbars, banners react in real time.
-  - A star toggle to add/remove the theme from the favorites list that drives
-    the top-right header combo and the Ctrl+T cycle rotation.
-  - An "Open themes folder" button that surfaces ``~/.anki_miner/themes/`` so
-    community-contributed JSON files can be installed by drop-in (see
-    discussion #27).
-  - A "Revert" button that snaps back to whatever was active when the user
-    opened the panel — preview safety without a separate Apply/Cancel button.
-  - A contrast note under the gallery, stating the measured ratio when the
-    live theme is hard to read. Advisory only: the theme still renders
-    exactly as its author wrote it (D43-A).
-* **Utilities tab** — which tools the Utilities tab shows: one checkbox per
-  tool, committed at once. Emits ``hidden_utilities_changed``.
-* **App** — Check for updates on startup and Max parallel workers (T11: moved
-  here from the tab and from Card Media respectively). Neither persists
-  through this panel's own signals; the settings tab reads them directly as
-  part of the ordinary debounced save path (``SettingsTab._wire_edit_signals``
-  wires them individually, since this panel stays out of ``_save_panels``).
+The "General" Settings page (stable key ``"ui"``), a ``FormPanel`` like every
+other page since C08 (UI/UX audit 2026-09-29). Top to bottom: **Language** (UI
+language, restart-to-apply), **Appearance** (Zoom, restart-to-apply),
+**Utilities tab** (which tools it shows), **App** (Check for updates), then
+**Themes** (the gallery, with live preview, favourites, Open themes folder,
+Revert and the contrast note). The gallery has no scroll of its own; the page
+scrolls. "Max Parallel Workers" left the GUI (D15 item 5):
+``max_parallel_workers`` is config-only.
 
 Persistence for this panel's own fields is handled by emitting
 ``state_changed`` / ``zoom_changed`` / ``language_changed`` /
@@ -45,7 +22,7 @@ import logging
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, QUrl, pyqtSignal
-from PyQt6.QtGui import QDesktopServices, QFont
+from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -53,8 +30,6 @@ from PyQt6.QtWidgets import (
     QGridLayout,
     QHBoxLayout,
     QLabel,
-    QSpinBox,
-    QVBoxLayout,
     QWidget,
 )
 
@@ -62,7 +37,7 @@ from anki_miner.config import ZOOM_PRESETS, AnkiMinerConfig
 from anki_miner.gui import restart
 from anki_miner.gui.capabilities import effective_hidden_utilities, utility_labels
 from anki_miner.gui.i18n import available_languages
-from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.resources.styles.theme import (
     CONTRAST_ROLE_MUTED_TEXT,
     CONTRAST_ROLE_PRIMARY_LABEL,
@@ -71,8 +46,7 @@ from anki_miner.gui.resources.styles.theme import (
     Theme,
     assess_theme_contrast,
 )
-from anki_miner.gui.utils.fonts import make_scaled_font
-from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost, SettingAnchorHost
+from anki_miner.gui.widgets.base import FormPanel, ScreenIssue, ScreenIssueHost
 from anki_miner.gui.widgets.enhanced import ModernButton, ThemeGalleryWidget
 from anki_miner.gui.widgets.enhanced.theme_preview import clear_thumbnail_cache
 from anki_miner.utils.i18n import tr_format
@@ -93,7 +67,7 @@ def _window_is_shutting_down(window: QWidget) -> bool:
     return callable(probe) and bool(probe())
 
 
-class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
+class UISettingsPanel(ScreenIssueHost, FormPanel):
     """Settings panel for UI language, zoom, and theme selection.
 
     Signals:
@@ -136,7 +110,7 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
                 Language dropdown. Restart-to-apply, so it is passed in.
             parent: Optional parent widget.
         """
-        super().__init__(parent)
+        super().__init__(self.tr("General"), parent=parent)
         self._themes_root = themes_root
         self._ui_zoom = ui_zoom
         # Construction-time values = what Qt is actually running with: the panel
@@ -163,7 +137,7 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         # gallery for nothing — see _populate.
         self._populated_state: tuple[str, tuple[str, ...], Path] | None = None
 
-        self._setup_ui()
+        self._setup_fields()
         # Seed the language combo after the widgets exist (set_language reads
         # self.language_combo); does not emit.
         self.set_language(ui_language)
@@ -172,92 +146,45 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
 
     # ---- UI construction -------------------------------------------------
 
-    @staticmethod
-    def _section_heading(text: str) -> QLabel:
-        """A DemiBold section heading, matching the style the Utilities tab
-        heading originated (this panel is hand-built, not a ``FormPanel``, so
-        it has no ``add_section``)."""
-        heading = QLabel(text)
-        heading.setFont(make_scaled_font(FONT_SIZES.body_sm, QFont.Weight.DemiBold))
-        return heading
+    def _setup_fields(self) -> None:
+        """Language, Appearance, Utilities tab, App, then Themes last (C08)."""
+        # One banner for this page, under the card title like the chain pages'.
+        self.install_issue_banner(self._main_layout, 1)
 
-    def _setup_ui(self) -> None:
-        layout = QVBoxLayout()
-        layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
-        layout.setSpacing(SPACING.sm)
-
-        self.install_issue_banner(layout)
-
-        layout.addWidget(self._section_heading(self.tr("Language")))
-
-        # Language row (restart-to-apply). Merged in from the former
-        # LanguagePanel; Qt captures tr() strings at construction, so a language
-        # change persists immediately but applies on next launch.
-        lang_row = QHBoxLayout()
-        lang_row.setSpacing(SPACING.sm)
-        language_label = QLabel(self.tr("Interface language"))
-        lang_row.addWidget(language_label)
-
+        self.add_section(self.tr("Language"))
+        # Restart-to-apply: Qt captures tr() strings at construction.
         self.language_combo = QComboBox()
         self.language_combo.setObjectName("languageCombo")
         for code, name in available_languages().items():
             self.language_combo.addItem(name, code)
-        # `activated` fires only on user interaction (not on the programmatic
-        # setCurrentIndex in set_language).
+        # `activated` fires only on user interaction, not on set_language.
         self.language_combo.activated.connect(self._on_language_selected)
-        lang_row.addWidget(self.language_combo)
-        # This panel builds its own rows instead of using FormPanel, so every
-        # anchor is registered by hand. Providers read the labels live, so the
-        # index follows the installed translator (see setting_anchor.py).
-        self.register_setting("language", self.language_combo, lambda: (language_label.text(),))
-        lang_row.addStretch(1)
-        layout.addLayout(lang_row)
-
-        # Hidden until the user changes language; restart-to-apply hint.
+        self.add_field(self.tr("Interface language"), self.language_combo, anchor="language")
         self.language_restart_note = QLabel(self.tr("Restart to apply."))
         self.language_restart_note.setWordWrap(True)
         self.language_restart_note.setVisible(False)
-        layout.addWidget(self.language_restart_note)
+        self.add_widget(self.language_restart_note)
 
-        layout.addWidget(self._section_heading(self.tr("Appearance")))
-
-        # Zoom (whole-UI scale) row — the only interface-size control (Text
-        # size was folded into it, T4). Restart-to-apply (injected as
-        # QT_SCALE_FACTOR at startup), so picking a value only persists +
-        # reveals the restart note below — no live restyle.
-        zoom_row = QHBoxLayout()
-        zoom_row.setSpacing(SPACING.sm)
-
-        # Names "text size" and "font" too (words the removed Text size control
-        # used to answer to) so settings search still finds this row under them.
+        self.add_section(self.tr("Appearance"))
+        # Names "text size" and "font" too, so search still finds this row
+        # under the words the removed Text size control answered to.
         zoom_tip = self.tr(
             "Scale the entire interface, including text size and font, plus spacing and controls. "
             "Applies after restart."
         )
-        zoom_label = QLabel(self.tr("Zoom"))
-        zoom_label.setToolTip(zoom_tip)
-        zoom_row.addWidget(zoom_label)
-
         self.zoom_combo = QComboBox()
         self.zoom_combo.setObjectName("zoomCombo")
-        self.zoom_combo.setToolTip(zoom_tip)
         for p in ZOOM_PRESETS:
             self.zoom_combo.addItem(tr_format(self.tr("%1%"), p), p)
-        # `activated` (user-only) so the programmatic setCurrentIndex in
-        # _sync_zoom_combo doesn't emit and falsely reveal the restart note.
+        # `activated` (user-only) so _sync_zoom_combo never reveals the note.
         self.zoom_combo.activated.connect(self._on_zoom_selected)
-        zoom_row.addWidget(self.zoom_combo)
-        self.register_setting("zoom", self.zoom_combo, lambda: (zoom_label.text(), self.zoom_combo.toolTip()))
+        self.add_field(self.tr("Zoom"), self.zoom_combo, helper=zoom_tip, anchor="zoom")
 
-        zoom_row.addStretch(1)
-
-        layout.addLayout(zoom_row)
-
-        # Hidden until the user changes zoom. Carries actions (formerly the Text
-        # size row's) because the reward is worth offering rather than leaving
-        # the user to find the window button themselves — a quiet variant, so a
-        # settings note must not become the primary action on the screen (D41).
-        zoom_note_row = QHBoxLayout()
+        # Hidden until the user changes zoom; a quiet variant, so a settings
+        # note never becomes the primary action on the screen (D41).
+        zoom_note = QWidget()
+        zoom_note_row = QHBoxLayout(zoom_note)
+        zoom_note_row.setContentsMargins(0, 0, 0, 0)
         zoom_note_row.setSpacing(SPACING.sm)
         self.zoom_restart_note = QLabel(self.tr("Restart to apply."))
         self.zoom_restart_note.setWordWrap(True)
@@ -272,67 +199,18 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.restart_later_btn.setVisible(False)
         zoom_note_row.addWidget(self.restart_later_btn)
         zoom_note_row.addStretch(1)
-        layout.addLayout(zoom_note_row)
+        self.add_widget(zoom_note)
 
-        # Theme selection. Same position in the panel as the list it replaces;
-        # the intro explains the card behaviour, so it sits directly above.
-        intro = QLabel(
-            self.tr(
-                "Click a theme preview to apply it live; <b>Revert</b> undoes it. "
-                "Star themes to add them to the top-right selector."
-            )
-        )
-        intro.setObjectName("helper-text")
-        intro.setWordWrap(True)
-        intro.setTextFormat(Qt.TextFormat.RichText)
-        layout.addWidget(intro)
-
-        self.gallery = ThemeGalleryWidget(self)
-        self.gallery.theme_activated.connect(self._on_theme_activated)
-        self.gallery.favorite_toggled.connect(self._toggle_favorite)
-        self.gallery.family_favorites_toggled.connect(self._toggle_family_favorites)
-        layout.addWidget(self.gallery, 1)
-        # The theme list is one logical setting. Its cards are rebuilt on every
-        # profile switch, so search anchors the gallery itself.
-        self.register_setting("theme", self.gallery, lambda: (intro.text(), self.open_folder_btn.text()))
-
-        # Themes render exactly as their author wrote them (D43-A). This line is
-        # the entire intervention: it states the measured ratio and nothing is
-        # corrected, substituted or rejected. Empty (and hidden) when the live
-        # theme measures fine.
-        self.contrast_warning = QLabel()
-        self.contrast_warning.setObjectName("helper-text")
-        self.contrast_warning.setWordWrap(True)
-        self.contrast_warning.setVisible(False)
-        layout.addWidget(self.contrast_warning)
-
-        buttons = QHBoxLayout()
-        buttons.setSpacing(SPACING.sm)
-
-        self.open_folder_btn = ModernButton(self.tr("Open themes folder"), variant="secondary")
-        self.open_folder_btn.setToolTip(self._themes_folder_tooltip())
-        self.open_folder_btn.clicked.connect(self._open_themes_folder)
-        buttons.addWidget(self.open_folder_btn)
-
-        self.revert_btn = ModernButton(self.tr("Revert"), variant="secondary")
-        self.revert_btn.setToolTip(self.tr("Restore the theme that was active when this tab was opened."))
-        self.revert_btn.clicked.connect(self._revert_preview)
-        buttons.addWidget(self.revert_btn)
-
-        buttons.addStretch()
-
-        layout.addLayout(buttons)
-
-        layout.addWidget(self._section_heading(self.tr("Utilities tab")))
-
-        # Which tools the Utilities tab shows: one box per tool, in tab order,
-        # labelled with the tab's own label, checked = shown. Commits at once.
+        self.add_section(self.tr("Utilities tab"))
+        # One box per tool, in tab order, checked = shown; commits at once.
         # The last checked box is disabled so the tab always keeps a tool.
         utilities_hint = QLabel(self.tr("Choose which tools the Utilities tab shows. At least one stays."))
         utilities_hint.setObjectName("helper-text")
         utilities_hint.setWordWrap(True)
-        layout.addWidget(utilities_hint)
-        utilities_grid = QGridLayout()
+        self.add_widget(utilities_hint)
+        utilities = QWidget()
+        utilities_grid = QGridLayout(utilities)
+        utilities_grid.setContentsMargins(0, 0, 0, 0)
         utilities_grid.setHorizontalSpacing(SPACING.md)
         utilities_grid.setVerticalSpacing(SPACING.xs)
         self.utility_checkboxes: dict[str, QCheckBox] = {}
@@ -349,53 +227,62 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
             self.register_setting(f"utility_{key}", box, _search_text)
         # Keeps the two columns left-aligned instead of spreading them apart.
         utilities_grid.setColumnStretch(2, 1)
-        layout.addLayout(utilities_grid)
+        self.add_widget(utilities)
 
-        layout.addWidget(self._section_heading(self.tr("App")))
-
-        # Check for updates on startup (T11: moved here from the tab itself).
+        self.add_section(self.tr("App"))
         self.check_for_updates_checkbox = QCheckBox(self.tr("Check for updates on startup"))
-        self.check_for_updates_checkbox.setToolTip(
-            self.tr("When enabled, Anki Miner queries GitHub for new releases on launch.")
-        )
-        layout.addWidget(self.check_for_updates_checkbox)
-        self.register_setting(
-            "check_for_updates",
+        self.add_field(
+            "",
             self.check_for_updates_checkbox,
-            lambda: (
-                self.check_for_updates_checkbox.text(),
-                self.check_for_updates_checkbox.toolTip(),
-            ),
+            helper=self.tr("When enabled, Anki Miner queries GitHub for new releases on launch."),
+            anchor="check_for_updates",
         )
+        # "Max Parallel Workers" left the GUI (D15 item 5): max_parallel_workers
+        # is config-only, and SettingsTab no longer writes it.
 
-        # Max parallel workers (T11: moved here from Card Media).
-        workers_row = QHBoxLayout()
-        workers_row.setSpacing(SPACING.sm)
-        workers_tip = self.tr("Higher = faster, but uses more CPU and memory.")
-        workers_label = QLabel(self.tr("Max Parallel Workers"))
-        workers_label.setToolTip(workers_tip)
-        workers_row.addWidget(workers_label)
-        self.max_workers_spinbox = QSpinBox()
-        self.max_workers_spinbox.setRange(1, 20)
-        self.max_workers_spinbox.setToolTip(workers_tip)
-        workers_row.addWidget(self.max_workers_spinbox)
-        self.register_setting(
-            "max_parallel_workers",
-            self.max_workers_spinbox,
-            lambda: (workers_label.text(), workers_tip),
+        # Themes last (C08): the gallery is the longest block on the page.
+        self.add_section(self.tr("Themes"))
+        intro = QLabel(
+            self.tr(
+                "Click a theme preview to apply it live; <b>Revert</b> undoes it. "
+                "Star themes to add them to the top-right selector."
+            )
         )
-        workers_row.addStretch(1)
-        layout.addLayout(workers_row)
+        intro.setObjectName("helper-text")
+        intro.setWordWrap(True)
+        intro.setTextFormat(Qt.TextFormat.RichText)
+        self.add_widget(intro)
 
-        # Visible, not just a hover tooltip — matches the panel's other helper
-        # labels (utilities_hint, intro) and the line this text showed as on
-        # Card Media before the field moved here (T11 fix round 1).
-        workers_hint = QLabel(workers_tip)
-        workers_hint.setObjectName("helper-text")
-        workers_hint.setWordWrap(True)
-        layout.addWidget(workers_hint)
+        # No scroll of its own (C08): the Settings page already scrolls.
+        self.gallery = ThemeGalleryWidget(self, scrolling=False)
+        self.gallery.theme_activated.connect(self._on_theme_activated)
+        self.gallery.favorite_toggled.connect(self._toggle_favorite)
+        self.gallery.family_favorites_toggled.connect(self._toggle_family_favorites)
+        self.add_widget(self.gallery)
+        # One logical setting; its cards are rebuilt on every profile switch.
+        self.register_setting("theme", self.gallery, lambda: (intro.text(), self.open_folder_btn.text()))
 
-        self.setLayout(layout)
+        # Themes render exactly as their author wrote them (D43-A); this line
+        # states the measured ratio when the live theme is hard to read.
+        self.contrast_warning = QLabel()
+        self.contrast_warning.setObjectName("helper-text")
+        self.contrast_warning.setWordWrap(True)
+        self.contrast_warning.setVisible(False)
+        self.add_widget(self.contrast_warning)
+
+        buttons = QHBoxLayout()
+        buttons.setSpacing(SPACING.sm)
+        self.open_folder_btn = ModernButton(self.tr("Open themes folder"), variant="secondary")
+        self.open_folder_btn.setToolTip(self._themes_folder_tooltip())
+        self.open_folder_btn.clicked.connect(self._open_themes_folder)
+        buttons.addWidget(self.open_folder_btn)
+        self.revert_btn = ModernButton(self.tr("Revert"), variant="secondary")
+        self.revert_btn.setToolTip(self.tr("Restore the theme that was active when this tab was opened."))
+        self.revert_btn.clicked.connect(self._revert_preview)
+        buttons.addWidget(self.revert_btn)
+        buttons.addStretch()
+        self.add_layout(buttons)
+        self.add_stretch()
 
     # ---- Population ------------------------------------------------------
 
@@ -816,20 +703,11 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.language_restart_note.setVisible(config.ui_language != self._boot_language)
         self._show_zoom_restart_note(config.ui_zoom != self._boot_zoom)
 
-        # App section (T11): Check for updates and Max parallel workers moved
-        # here from the tab and from Card Media respectively. Neither has a
-        # panel-level handler of its own — the settings tab reads them
-        # directly as part of the ordinary debounced save path — but signals
-        # are still blocked here to keep this method's "never emits" contract
-        # true for every control it repaints.
+        # Check for updates (T11) has no panel-level handler of its own; the
+        # settings tab reads it on the debounced save path. Signals stay
+        # blocked so this method never emits.
         self.check_for_updates_checkbox.blockSignals(True)
         try:
             self.check_for_updates_checkbox.setChecked(config.check_for_updates)
         finally:
             self.check_for_updates_checkbox.blockSignals(False)
-
-        self.max_workers_spinbox.blockSignals(True)
-        try:
-            self.max_workers_spinbox.setValue(config.max_parallel_workers)
-        finally:
-            self.max_workers_spinbox.blockSignals(False)
