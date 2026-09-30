@@ -100,7 +100,7 @@ def test_a_screen_whose_config_moved_underneath_still_compares_against_it(screen
 
 def _edit_condense(tab, tmp_path: Path) -> None:
     tab.padding_spinbox.setValue(750)
-    tab.offset_spinbox.setValue(-200)
+    tab.offset_spinbox.setValue(-0.2)
     tab.format_combo.setCurrentIndex(tab.format_combo.findData("flac"))
     tab.write_subs_checkbox.setChecked(True)
     tab.tag_outputs_checkbox.setChecked(True)

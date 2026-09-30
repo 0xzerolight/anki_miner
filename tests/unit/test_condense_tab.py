@@ -176,16 +176,42 @@ def test_ffmpeg_unavailable_via_path_check(qtbot, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_subtitle_track_row_disabled_when_explicit_sub_picked(qtbot, tmp_path):
-    """Picking an explicit subtitle file disables the embedded-track row."""
+def test_subtitle_track_choice_disabled_when_explicit_sub_picked(qtbot, tmp_path):
+    """Picking an explicit subtitle file disables "Subtitle track…"."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
-    assert tab.subtitle_track_row_widget.isEnabled()
+    assert tab.subtitle_track_action.isEnabled()
 
     tab.subtitle_file_selector.set_path(str(tmp_path / "episode.srt"))
-    assert not tab.subtitle_track_row_widget.isEnabled()
+    assert not tab.subtitle_track_action.isEnabled()
 
     tab.subtitle_file_selector.set_path("")
-    assert tab.subtitle_track_row_widget.isEnabled()
+    assert tab.subtitle_track_action.isEnabled()
+
+
+def test_one_tracks_button_replaces_the_two_track_rows(qtbot, tmp_path):
+    """E08: the track overrides are one menu on the Media File row."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+
+    assert [a.text() for a in tab.tracks_button.menu().actions()] == ["Audio track…", "Subtitle track…"]
+    assert not hasattr(tab, "audio_track_row_widget")
+    assert tab.track_summary_label.isHidden()
+
+
+def test_the_subtitle_hint_is_now_a_placeholder(qtbot, tmp_path):
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+
+    assert tab.subtitle_file_selector.input.placeholderText() == "Optional — found automatically"
+
+
+def test_the_offset_is_seconds_like_the_mining_screens(qtbot, tmp_path):
+    """E15: "Subtitle offset", two decimals, the mining screens' sign tooltip; stored in ms."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+
+    assert tab.offset_spinbox.decimals() == 2
+    assert tab.offset_spinbox.suffix() == " seconds"
+    assert tab.offset_spinbox.toolTip() == "Adjust subtitle timing (positive = later, negative = earlier)"
+    tab.offset_spinbox.setValue(-1.25)
+    assert tab.config.condenser_offset_ms == -1250
 
 
 # ---------------------------------------------------------------------------
@@ -543,7 +569,7 @@ def test_worker_kwargs_from_widget_state_single(qtbot, tmp_path):
     tab.media_file_selector.set_path(str(media))
     tab.subtitle_file_selector.set_path(str(sub))
     tab.padding_spinbox.setValue(700)
-    tab.offset_spinbox.setValue(-250)
+    tab.offset_spinbox.setValue(-0.25)
     tab.format_combo.setCurrentIndex(tab.format_combo.findData("opus"))
     tab.write_subs_checkbox.setChecked(True)
     tab.overwrite_checkbox.setChecked(True)
@@ -785,7 +811,7 @@ def test_update_config_refreshes_defaults_when_idle(qtbot, tmp_path):
         tab.update_config(_config_with_defaults(tmp_path))
 
     assert tab.padding_spinbox.value() == 1234
-    assert tab.offset_spinbox.value() == -321
+    assert tab.offset_spinbox.value() == pytest.approx(-0.32)
     assert tab.format_combo.currentData() == "flac"
     assert tab.write_subs_checkbox.isChecked() is True
     assert tab.tag_outputs_checkbox.isChecked() is True
@@ -823,7 +849,7 @@ def test_editing_option_persists_to_config(qtbot, tmp_path):
     tab.run_options_changed.connect(emitted.append)
 
     tab.padding_spinbox.setValue(777)
-    tab.offset_spinbox.setValue(-250)
+    tab.offset_spinbox.setValue(-0.25)
     tab.format_combo.setCurrentIndex(tab.format_combo.findData("flac"))
     tab.write_subs_checkbox.setChecked(True)
     tab.tag_outputs_checkbox.setChecked(True)
@@ -931,8 +957,9 @@ def test_audio_tracks_probe_applies_override(qtbot, tmp_path):
         qtbot.waitUntil(lambda: mock_class.called, timeout=3000)
 
     assert tab._audio_track_override == 2
-    assert "3" in tab.audio_track_label.text()
-    assert tab.audio_tracks_button.isEnabled()
+    assert "3" in tab.track_summary_label.text()
+    assert not tab.track_summary_label.isHidden()
+    assert tab.audio_track_action.isEnabled()
 
 
 def test_late_track_probe_does_not_override_after_source_change(qtbot, tmp_path):
@@ -970,7 +997,7 @@ def test_late_track_probe_does_not_override_after_source_change(qtbot, tmp_path)
         tab.media_file_selector.set_path(str(source_b))
         release.set()
         assert worker.wait(3000)
-        qtbot.waitUntil(tab.audio_tracks_button.isEnabled, timeout=3000)
+        qtbot.waitUntil(tab.audio_track_action.isEnabled, timeout=3000)
 
     dialog_cls.assert_not_called()
     assert tab._audio_track_override is None
@@ -996,8 +1023,8 @@ def test_subtitle_tracks_probe_applies_override(qtbot, tmp_path):
         qtbot.waitUntil(lambda: mock_class.called, timeout=3000)
 
     assert tab._subtitle_track_override == 0
-    assert "1" in tab.subtitle_track_label.text()
-    assert tab.subtitle_tracks_button.isEnabled()
+    assert "1" in tab.track_summary_label.text()
+    assert tab.subtitle_track_action.isEnabled()
 
 
 # ---------------------------------------------------------------------------

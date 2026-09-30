@@ -120,8 +120,7 @@ _CONDENSE = _Spec(
     single_widgets=(
         "media_file_selector",
         "subtitle_file_selector",
-        "audio_track_row_widget",
-        "subtitle_track_row_widget",
+        "media_row",
     ),
     folder_widgets=("media_folder_selector", "subtitle_folder_selector", "subtitle_folder_hint", "merge_row_widget"),
 )
