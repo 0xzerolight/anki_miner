@@ -1,8 +1,10 @@
 """Dismissible banner widget for update notifications."""
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
+from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.widgets.enhanced.modern_button import ModernButton
 from anki_miner.services.update_checker import UpdateInfo
 from anki_miner.utils.i18n import tr_format
 
@@ -38,29 +40,31 @@ class UpdateBanner(QFrame):
         self.setObjectName("update-banner")
 
         layout = QHBoxLayout()
-        layout.setContentsMargins(8, 4, 8, 4)
+        layout.setContentsMargins(SPACING.xs, SPACING.xxs, SPACING.xs, SPACING.xxs)
+        layout.setSpacing(SPACING.xs)
 
         self._label = QLabel(self._format_label(info))
         layout.addWidget(self._label)
         layout.addStretch()
 
-        self._download_btn = QPushButton(self._download_label(info))
+        # E05: the calm banner shape. The download (or View release) is the one
+        # accent; Skip and the dismiss glyph are quiet, as on the screen banner.
+        self._download_btn = ModernButton(self._download_label(info), variant="primary")
         self._download_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._download_btn.clicked.connect(self._on_download)
         layout.addWidget(self._download_btn)
 
-        self._skip_btn = QPushButton(self.tr("Skip this version"))
-        self._skip_btn.setObjectName("skipBtn")
+        self._skip_btn = ModernButton(self.tr("Skip this version"), variant="ghost")
         self._skip_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._skip_btn.clicked.connect(self._on_skip)
         layout.addWidget(self._skip_btn)
 
-        dismiss_btn = QPushButton("✕")
-        dismiss_btn.setObjectName("dismissBtn")
-        dismiss_btn.setAccessibleName(self.tr("Close"))
-        dismiss_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        dismiss_btn.clicked.connect(self._on_dismiss)
-        layout.addWidget(dismiss_btn)
+        self._dismiss_btn = ModernButton("✕", variant="ghost", square=True)
+        self._dismiss_btn.setAccessibleName(self.tr("Close"))
+        self._dismiss_btn.setToolTip(self.tr("Close"))
+        self._dismiss_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._dismiss_btn.clicked.connect(self._on_dismiss)
+        layout.addWidget(self._dismiss_btn)
 
         self.setLayout(layout)
 

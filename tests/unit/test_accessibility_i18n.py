@@ -8,7 +8,6 @@ from unittest.mock import MagicMock
 
 import pytest
 from PyQt6.QtCore import QTranslator
-from PyQt6.QtWidgets import QPushButton
 
 from anki_miner.config import AudioSourceEntry, ChainEntry, FreqEntry, PitchSourceEntry
 from anki_miner.gui.main_window import MainWindow
@@ -114,7 +113,7 @@ def test_glyph_buttons_have_nonempty_accessible_names(translated_qapp, qtbot, tm
     for widget in (banner, issue_banner, dictionary, frequency, audio, pitch, ui):
         qtbot.addWidget(widget)
 
-    dismiss = banner.findChild(QPushButton, "dismissBtn")
+    dismiss = banner._dismiss_btn
     # "light" is always among the shipped themes, so the gallery always has a
     # card (and a star) for it regardless of the (empty) tmp_path themes root.
     star = ui.gallery.star("light")
