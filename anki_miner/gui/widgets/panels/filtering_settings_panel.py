@@ -326,7 +326,9 @@ class FilteringSettingsPanel(FormPanel):
         excluded_buttons.addStretch()
         self.add_layout(excluded_buttons)
 
-        # Word Lists section
+        # Word Lists section. The chosen file IS the switch (D15 item 1):
+        # choosing a file turns the list on, clearing it turns it off. The two
+        # use_* config fields stay, derived from the field on every save.
         self.add_section(self.tr("Word Lists"))
 
         self.blacklist_selector = FileSelector(
@@ -335,11 +337,9 @@ class FilteringSettingsPanel(FormPanel):
         self.add_field(
             self.tr("Blacklist File"),
             self.blacklist_selector,
-            helper=self.tr("Text file with one word per line to always skip"),
+            helper=self.tr("Text file with one word per line to always skip. Leave empty to skip nothing."),
+            anchor_text=lambda: ("Enable Blacklist",),
         )
-
-        self.use_blacklist_checkbox = QCheckBox(self.tr("Enable Blacklist"))
-        self.add_field("", self.use_blacklist_checkbox)
 
         self.whitelist_selector = FileSelector(
             label="", file_mode=True, placeholder=self.tr("Select whitelist file...")
@@ -350,12 +350,10 @@ class FilteringSettingsPanel(FormPanel):
             helper=self.tr(
                 "Text file with one word per line to force-include, bypassing frequency, "
                 "script, length and other filters. A word must still have a dictionary entry "
-                "and not already be in Anki or your known-words list."
+                "and not already be in Anki or your known-words list. Leave empty to force nothing."
             ),
+            anchor_text=lambda: ("Enable Whitelist",),
         )
-
-        self.use_whitelist_checkbox = QCheckBox(self.tr("Enable Whitelist"))
-        self.add_field("", self.use_whitelist_checkbox)
 
         # Name Wordsets section (Issue #59). Bundled proper-noun lists derived
         # from JMnedict; checking one excludes those names from mining. Catches
@@ -760,12 +758,8 @@ class FilteringSettingsPanel(FormPanel):
         self.blacklist_selector.set_path(str(value) if value else "")
 
     def get_use_blacklist(self) -> bool:
-        """Return whether the blacklist is enabled."""
-        return self.use_blacklist_checkbox.isChecked()
-
-    def set_use_blacklist(self, value: bool) -> None:
-        """Set the blacklist-enabled checkbox."""
-        self.use_blacklist_checkbox.setChecked(value)
+        """The blacklist is on exactly when a file is chosen (D15 item 1)."""
+        return self.get_blacklist_path() is not None
 
     def get_whitelist_path(self) -> Path | None:
         """Return the whitelist path (None when the field is empty)."""
@@ -777,12 +771,8 @@ class FilteringSettingsPanel(FormPanel):
         self.whitelist_selector.set_path(str(value) if value else "")
 
     def get_use_whitelist(self) -> bool:
-        """Return whether the whitelist is enabled."""
-        return self.use_whitelist_checkbox.isChecked()
-
-    def set_use_whitelist(self, value: bool) -> None:
-        """Set the whitelist-enabled checkbox."""
-        self.use_whitelist_checkbox.setChecked(value)
+        """The whitelist is on exactly when a file is chosen (D15 item 1)."""
+        return self.get_whitelist_path() is not None
 
     # --- Sentence rule (dedup / i+1) ---
 
@@ -911,10 +901,10 @@ class FilteringSettingsPanel(FormPanel):
         # T-11: always set (including '' for None) so Reset-to-Defaults clears
         # the selector; without this the stale path stays visible and the next
         # Save re-reads it back via get_path().
-        self.set_blacklist_path(config.blacklist_path)
-        self.set_use_blacklist(config.use_blacklist)
-        self.set_whitelist_path(config.whitelist_path)
-        self.set_use_whitelist(config.use_whitelist)
+        # D15 item 1: a stored path whose switch was off is shown empty, so it
+        # stays off -- and the next save drops the path with it.
+        self.set_blacklist_path(config.blacklist_path if config.use_blacklist else None)
+        self.set_whitelist_path(config.whitelist_path if config.use_whitelist else None)
         self.set_sentence_rule(config.deduplicate_sentences, config.use_i_plus_one_filter)
         self.set_exclude_hiragana_only_words(config.exclude_hiragana_only_words)
         self.set_exclude_katakana_only_words(config.exclude_katakana_only_words)

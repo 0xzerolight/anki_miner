@@ -358,3 +358,43 @@ def test_kana_variant_row_lives_in_the_known_words_section(qtbot):
     assert headings[section_of_checkbox] == "Known Words Database"
     assert checkbox_at <= kana_at
     assert not [i for i in headings if section_of_checkbox < i < kana_at]
+
+
+def test_choosing_a_word_list_file_turns_it_on(qtbot, tmp_path):
+    """D15 item 1: the file is the switch; there are no Enable boxes."""
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+    assert not hasattr(panel, "use_blacklist_checkbox")
+    assert not hasattr(panel, "use_whitelist_checkbox")
+    black = tmp_path / "black.txt"
+    black.write_text("a\n", encoding="utf-8")
+
+    panel.load_from_config(create_default_config())
+    panel.set_blacklist_path(black)
+    out = panel.contribute(create_default_config())
+
+    assert out.blacklist_path == black and out.use_blacklist is True
+    assert out.whitelist_path is None and out.use_whitelist is False
+
+
+def test_a_stored_path_that_was_switched_off_loads_empty(qtbot, tmp_path):
+    black = tmp_path / "black.txt"
+    white = tmp_path / "white.txt"
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+
+    panel.load_from_config(
+        replace(
+            create_default_config(),
+            blacklist_path=black,
+            use_blacklist=False,
+            whitelist_path=white,
+            use_whitelist=True,
+        )
+    )
+
+    assert panel.blacklist_selector.get_path() == ""
+    assert panel.whitelist_selector.get_path() == str(white)
+    out = panel.contribute(create_default_config())
+    assert out.blacklist_path is None and out.use_blacklist is False
+    assert out.whitelist_path == white and out.use_whitelist is True

@@ -1037,7 +1037,7 @@ class TestBlacklistWhitelistSelectorClearedOnNone:
         bl.write_text("a\n", encoding="utf-8")
         wl = tmp_path / "whitelist.txt"
         wl.write_text("b\n", encoding="utf-8")
-        cfg = replace(test_config, blacklist_path=bl, whitelist_path=wl)
+        cfg = replace(test_config, blacklist_path=bl, use_blacklist=True, whitelist_path=wl, use_whitelist=True)
         widget = SettingsTab(cfg)
         qtbot.addWidget(widget)
         try:
@@ -1079,7 +1079,7 @@ class TestBlacklistWhitelistSelectorClearedOnNone:
         selector (the same _load_config branch Reset relies on)."""
         bl = tmp_path / "blacklist.txt"
         bl.write_text("a\n", encoding="utf-8")
-        widget = SettingsTab(replace(test_config, blacklist_path=bl))
+        widget = SettingsTab(replace(test_config, blacklist_path=bl, use_blacklist=True))
         qtbot.addWidget(widget)
         try:
             assert widget.filtering_panel.blacklist_selector.get_path() == str(bl)

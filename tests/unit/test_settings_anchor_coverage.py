@@ -177,9 +177,9 @@ def test_every_panel_contributes_anchors(tab):
 
 def test_label_less_checkboxes_index_their_own_caption(tab):
     by_id = {anchor.stable_id: anchor for anchor in tab.setting_anchors()}
-    checkbox = tab.filtering_panel.use_blacklist_checkbox
+    checkbox = tab.filtering_panel.keep_unranked_checkbox
 
-    assert checkbox.text() in by_id["filtering.use_blacklist_checkbox"].search_text()
+    assert checkbox.text() in by_id["filtering.keep_unranked_checkbox"].search_text()
 
 
 def test_the_update_checkbox_is_anchored_on_the_ui_panel(tab):
@@ -200,8 +200,8 @@ def test_ui_panel_controls_are_anchored(tab):
 def test_anchor_search_text_follows_a_relabelled_control(tab):
     """Proves the index is resolved lazily, not snapshotted at construction."""
     by_id = {anchor.stable_id: anchor for anchor in tab.setting_anchors()}
-    anchor = by_id["filtering.use_blacklist_checkbox"]
-    tab.filtering_panel.use_blacklist_checkbox.setText("ブラックリストを有効にする")
+    anchor = by_id["filtering.keep_unranked_checkbox"]
+    tab.filtering_panel.keep_unranked_checkbox.setText("ブラックリストを有効にする")
 
     assert "ブラックリストを有効にする" in anchor.search_text()
 
