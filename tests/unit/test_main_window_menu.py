@@ -378,3 +378,17 @@ def test_the_tools_item_opens_system_health(main_window):
         assert main_window._system_health_window.isVisible()
     finally:
         main_window._system_health_window.close()
+
+
+def test_tools_offers_resource_export_and_import_after_the_download(qtbot, patch_heavy_init, test_config):
+    """D14: the resource bundle's two actions sit beside Download Recommended Resources."""
+    patch_heavy_init(test_config)
+    from anki_miner.gui.app import compose_main_window
+
+    window = compose_main_window(test_config).window
+    qtbot.addWidget(window)
+    actions = window._tools_menu.actions()
+    index = actions.index(window._download_resources_action)
+    texts = [action.text() for action in actions[index + 1 : index + 3]]
+    assert texts == ["Export Resources…", "Import Resources…"]
+    window.deleteLater()

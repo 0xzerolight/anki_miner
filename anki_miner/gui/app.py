@@ -1851,10 +1851,8 @@ def compose_main_window(
     # applied — re-emitting would loop back through `_on_theme_changed`).
     settings_tab.ui_panel.favorites_changed.connect(window.header.refresh_favorites)
     settings_tab.ui_panel.state_changed.connect(lambda *_: window.header.update_theme_selector())
-    # "Manage Profiles…" is re-emitted by the tab rather than handled there: the
-    # window owns the dialog, because a switch reloads every panel in this tab
-    # from the incoming config. Same handler as the header's combo sentinel.
-    settings_tab.manage_profiles_requested.connect(window._open_profile_manager)
+    # D14: the resource bundle's Export / Import live in the Tools menu now.
+    window.install_resource_bundle_actions(settings_tab.export_resources_action, settings_tab.import_resources_action)
     # The selector only ever PROPOSES a switch: the window runs the guard, shows
     # any refusal itself and re-points the combo on every terminal path.
     settings_tab.mining_language_requested.connect(window.request_mining_language)

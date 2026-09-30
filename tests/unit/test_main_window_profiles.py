@@ -28,6 +28,7 @@ from anki_miner.gui.controllers.profile_controller import ProfileController, Swi
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.profile_store import Profile, ProfileStore
 from anki_miner.gui.widgets.dialogs import profile_manager_dialog as dialog_module
+from anki_miner.gui.widgets.settings_tab import SettingsTab
 
 # ---------------------------------------------------------------------------
 # Helpers / fixtures
@@ -87,10 +88,11 @@ def opened_dialogs(monkeypatch) -> list:
     created: list = []
 
     class _FakeDialog:
-        def __init__(self, controller, on_profiles_changed, parent=None) -> None:
+        def __init__(self, controller, on_profiles_changed, parent=None, *, settings_actions=None) -> None:
             self.controller = controller
             self.on_profiles_changed = on_profiles_changed
             self.parent = parent
+            self.settings_actions = settings_actions
             self.opened_with: list[str] = []
             created.append(self)
 
@@ -264,3 +266,13 @@ def test_no_ui_session_state_reaches_a_profile_sidecar(
     # The state really was written — just somewhere else.
     assert session_state.state_file().parent == ProfileStore.profiles_dir().parent
     assert session_state.remembered_directory("reading.manga.inputs") == str(tmp_path)
+
+
+def test_the_manager_runs_the_live_settings_file_actions(wired_window, opened_dialogs):
+    """D14: Export / Import / Reset of settings moved into the Profile Manager."""
+    window, _titles, tabs = wired_window
+    settings_tab = next(tab for tab in tabs.values() if isinstance(tab, SettingsTab))
+
+    window.header.open_profile_manager.emit()
+
+    assert opened_dialogs[0].settings_actions is settings_tab

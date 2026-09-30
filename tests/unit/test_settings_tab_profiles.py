@@ -37,6 +37,7 @@ def test_the_footer_is_gone(tab):
     """D14: whole-profile actions live in the Profile Manager and the Tools menu."""
     for gone in (
         "manage_profiles_button",
+        "manage_profiles_requested",
         "export_button",
         "import_button",
         "reset_settings_button",

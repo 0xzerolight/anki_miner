@@ -464,6 +464,11 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         resources_action = tools_menu.addAction(self.tr("Download Recommended Resources..."))
         assert resources_action is not None
         resources_action.triggered.connect(self._download_recommended_resources)
+        # D14: resource Export / Import join this item. SettingsTab owns the two
+        # actions (its chain panels hold the bundle lock) and hands them over
+        # through install_resource_bundle_actions once it exists.
+        self._tools_menu = tools_menu
+        self._download_resources_action = resources_action
 
         setup_wizard_action = tools_menu.addAction(self.tr("Setup Wizard..."))
         assert setup_wizard_action is not None
@@ -1085,7 +1090,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         worker.start()
 
     def _open_profile_manager(self) -> None:
-        """Open the settings-profile manager (header sentinel / Settings → UI).
+        """Open the settings-profile manager (header "Manage profiles…").
 
         ``exec``, never ``show``: the dialog sets no modality of its own, and a
         modeless one would be repainted mid-CRUD by the settings reload a switch
@@ -1095,10 +1100,39 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         rename/delete paths go straight to ``ProfileStore`` and never pass
         through a switch, so they need the same re-point every terminal path of
         a switch already runs.
-        """
-        from anki_miner.gui.widgets.dialogs.profile_manager_dialog import ProfileManagerDialog
 
-        ProfileManagerDialog(self.profile_controller, self.profile_controller.sync_header, self).exec()
+        It also hands the dialog the Settings tab's whole-profile actions (D14).
+        """
+        from typing import cast
+
+        from anki_miner.gui.widgets.dialogs.profile_manager_dialog import ProfileManagerDialog, SettingsFileActions
+
+        # D14: the live settings' Export / Import / Reset run from the manager.
+        # Found by capability like _settings_tab_index; absent in bare-window tests.
+        idx = self._settings_tab_index()
+        settings = self.tabs.widget(idx) if idx >= 0 else None
+        names = ("export_settings", "import_settings", "reset_settings")
+        actions = (
+            cast(SettingsFileActions, settings)
+            if settings is not None and all(callable(getattr(settings, name, None)) for name in names)
+            else None
+        )
+        ProfileManagerDialog(
+            self.profile_controller, self.profile_controller.sync_header, self, settings_actions=actions
+        ).exec()
+
+    def install_resource_bundle_actions(self, export_action: QAction, import_action: QAction) -> None:
+        """Put resource Export / Import right after Download Recommended Resources (D14)."""
+        menu = self._tools_menu
+        actions = menu.actions()
+        index = actions.index(self._download_resources_action)
+        before = actions[index + 1] if index + 1 < len(actions) else None
+        if before is None:
+            menu.addActions([export_action, import_action])
+        else:
+            menu.insertActions(before, [export_action, import_action])
+        # Their tooltips say what a bundle holds; QMenu hides tooltips by default.
+        menu.setToolTipsVisible(True)
 
     def _report_issue(self) -> None:
         """Open the GitHub issues page in the default browser."""

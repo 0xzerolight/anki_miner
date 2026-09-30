@@ -172,9 +172,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         vulkan_model_download_requested: Emitted when the Subtitles panel's
             "Download Vulkan model" button is clicked. Carries the selected
             acoustic model name.
-        manage_profiles_requested: no longer emitted (D14 removed the footer
-            button); ``app.py`` still connects it on this branch, and TX.3.01
-            deletes the connect and this signal after the merge.
         mining_language_requested: Re-emitted from the Mining Language panel's
             language selector. The window runs the guard and commits, because a
             switch clears queues and reloads every panel in this tab.
@@ -199,7 +196,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     vad_pack_download_requested = pyqtSignal()
     asr_pack_download_requested = pyqtSignal()
     vulkan_model_download_requested = pyqtSignal(str)  # Emits model name
-    manage_profiles_requested = pyqtSignal()
     mining_language_requested = pyqtSignal(str)  # Emits the requested language code
     language_pack_download_requested = pyqtSignal(str)  # Emits the language code
     resource_family_download_requested = pyqtSignal(str)  # "dict" | "freq" | "pitch" (C09)
