@@ -76,12 +76,11 @@ class StatusBadge(QLabel):
         # Auto-size to content
         self.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Minimum)
 
-        # The fade compositor. An effect rather than custom painting, so the
-        # pill keeps being drawn by the stylesheet: 29 bundled themes author
-        # these colours, and a hand-painted badge would answer to none of them.
-        self._opacity_effect = QGraphicsOpacityEffect(self)
-        self._opacity_effect.setOpacity(1.0)
-        self.setGraphicsEffect(self._opacity_effect)
+        # The fade compositor, attached only while a fade runs (E18). An effect
+        # rather than custom painting, so the pill keeps being drawn by the
+        # stylesheet: 29 bundled themes author these colours, and a
+        # hand-painted badge would answer to none of them.
+        self._opacity_effect: QGraphicsOpacityEffect | None = None
 
         # Clickable cursor
         if self._clickable:
@@ -97,6 +96,19 @@ class StatusBadge(QLabel):
 
     def _set_fade_progress(self, value: float) -> None:
         self._fade = value
+        if value >= 1.0:
+            # At rest the pill is drawn straight by the stylesheet. A resident
+            # opacity effect renders it through an offscreen pixmap, and after a
+            # main-window resize that pixmap stayed blank until the next state
+            # change -- both status-bar badges vanished (E18). setGraphicsEffect
+            # deletes the effect it replaces.
+            if self._opacity_effect is not None:
+                self.setGraphicsEffect(None)
+                self._opacity_effect = None
+            return
+        if self._opacity_effect is None:
+            self._opacity_effect = QGraphicsOpacityEffect(self)
+            self.setGraphicsEffect(self._opacity_effect)
         self._opacity_effect.setOpacity(value)
 
     fadeProgress = pyqtProperty(float, fget=_get_fade_progress, fset=_set_fade_progress)  # noqa: N815 - Qt property

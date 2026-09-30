@@ -63,7 +63,7 @@ class TestTheStripNamesRunningWork:
         registry.start(_spec("b", "Downloading JMdict"), now=0.0)
         registry.start(_spec("c", "Indexing Jitendex"), now=0.0)
 
-        assert "3 task" in bar.task_button.text()
+        assert "3 running" in bar.task_button.text()
 
     def test_it_shows_the_elapsed_clock(self, bar, registry):
         registry.start(_spec(), now=0.0)
@@ -131,7 +131,7 @@ class TestTheNamedJobIsStableNotLastWriterWins:
         registry.start(_spec("b", "Downloading JMdict"), now=1.0)
 
         assert "Mining Samurai Champloo" in bar.task_button.text()
-        assert "2 task" in bar.task_button.text()
+        assert "2 running" in bar.task_button.text()
 
     def test_an_update_to_another_job_does_not_steal_the_line(self, bar, registry):
         registry.start(_spec("a", "Mining Samurai Champloo"), now=0.0)
@@ -221,7 +221,7 @@ class TestTheMenuOffersTheMiniMonitor:
         bar.task_menu.aboutToShow.emit()
 
         labels = [a.text() for a in bar.task_menu.actions()]
-        assert labels[-1] == "Open mini monitor"
+        assert labels[-1] == "Open job monitor"
 
     def test_choosing_it_asks_for_the_monitor(self, bar, registry, qtbot):
         registry.start(_spec("a", "Mining Samurai Champloo"), now=0.0)

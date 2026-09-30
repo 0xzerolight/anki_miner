@@ -154,7 +154,12 @@ class TestItShowsOnlyWhatTheSnapshotCanBack:
     def test_with_nothing_running_it_says_so_rather_than_showing_a_bar(self, monitor):
         assert monitor.progress_bar.isHidden()
         assert monitor.title_label.full_text == "Nothing is running"
-        assert monitor.cancel_button.isEnabled() is False
+        assert monitor.cancel_button.isHidden()
+
+    def test_cancel_comes_back_with_a_run(self, monitor, registry):
+        _start(registry)
+
+        assert not monitor.cancel_button.isHidden()
 
 
 # ---------------------------------------------------------------------------
