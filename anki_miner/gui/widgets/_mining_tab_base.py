@@ -630,6 +630,7 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         seconds_suffix: str,
         offset_tip: str,
         translation_tip: str,
+        trailing: tuple[QWidget, ...] = (),
     ) -> None:
         """Add the Subtitle Offset row and the hideable Translation Offset row to ``layout``.
 
@@ -638,6 +639,10 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         from ``config.subtitle_offset`` (see :meth:`_adopt_offset_config`); the
         translation offset starts at zero. The caller applies its own secondary
         gate afterwards.
+
+        Args:
+            trailing: Widgets placed after the offset spinbox on the same row
+                (Single's Test Timing and Audio track…, A05).
         """
         offset_layout = QHBoxLayout()
         offset_layout.setSpacing(SPACING.xs)
@@ -656,6 +661,8 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
 
         offset_layout.addWidget(label)
         offset_layout.addWidget(self.offset_spinbox)
+        for widget in trailing:
+            offset_layout.addWidget(widget)
         offset_layout.addStretch()
         layout.addLayout(offset_layout)
 

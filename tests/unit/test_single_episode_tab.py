@@ -93,7 +93,7 @@ def test_card_source_updates_when_video_path_changes(tab, tmp_path):
 
 def test_tracks_button_exists(tab):
     assert hasattr(tab, "tracks_button")
-    assert tab.tracks_button.text() == "Tracks"
+    assert tab.tracks_button.text() == "Audio track…"
 
 
 # ---------------------------------------------------------------------------

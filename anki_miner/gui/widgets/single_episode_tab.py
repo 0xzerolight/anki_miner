@@ -152,41 +152,24 @@ class SingleEpisodeTab(MiningTabBase):
 
     def _setup_ui(self) -> None:
         """Set up the user interface."""
-        # Create scroll area for tab content
-        scroll_area = QScrollArea()
+        from anki_miner.gui.widgets.enhanced import ModernButton
 
-        # Create container widget for scroll area
+        scroll_area = QScrollArea()
         container = QWidget()
         layout = QVBoxLayout()
         layout.setSpacing(SPACING.sm)
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
-        # File selection section with card styling
-        file_group = self._create_file_selection_group()
-        layout.addWidget(file_group)
-
-        # Reset audio-track override when the video file changes
-        self.video_selector.path_changed.connect(self._on_video_path_changed)
-
-        # Actions section
-        from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
-
-        # Timing and Tracks stay here beside the fields they act on. Mine
-        # Episode and Cancel are moved into the pinned bar below (D6), so the
-        # one action this screen exists for cannot scroll off it.
-        actions_header = SectionHeader(self.tr("Actions"))
-        layout.addWidget(actions_header)
-
-        button_layout = QHBoxLayout()
-        button_layout.setSpacing(SPACING.xs)
-
+        # Built before the file card: Test Timing and Audio track… sit at the
+        # end of the Subtitle Offset row, beside the value Test Timing sets
+        # (A05). Mine Episode and Cancel move to the pinned bar below (D6).
         self.process_button = ModernButton(self.tr("Mine Episode"), variant="primary")
         self.process_button.setToolTip(self.tr("Create Anki cards from the episode"))
         self.timing_button = ModernButton(self.tr("Test Timing"), variant="secondary")
         self.timing_button.setToolTip(self.tr("Preview video with subtitles to adjust timing offset"))
-        self.tracks_button = ModernButton(self.tr("Tracks"), variant="secondary")
+        # "Audio track…", not "Tracks": the bare word reads as subtitle tracks.
+        self.tracks_button = ModernButton(self.tr("Audio track…"), variant="secondary")
         self.tracks_button.setToolTip(self.tr("Manually choose which audio track to use for this episode"))
-
         self.cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")
         self.cancel_button.setToolTip(self.tr("Cancel processing"))
         self.cancel_button.hide()
@@ -196,10 +179,15 @@ class SingleEpisodeTab(MiningTabBase):
         self.timing_button.clicked.connect(self._on_timing_clicked)
         self.tracks_button.clicked.connect(self._on_tracks_clicked)
 
-        button_layout.addWidget(self.timing_button)
-        button_layout.addWidget(self.tracks_button)
-        button_layout.addStretch()
-        layout.addLayout(button_layout)
+        # File selection section with card styling
+        file_group = self._create_file_selection_group()
+        layout.addWidget(file_group)
+
+        # Reset audio-track override when the video file changes
+        self.video_selector.path_changed.connect(self._on_video_path_changed)
+        # A05: rows that only mean something once a file is chosen follow the pickers.
+        self.video_selector.path_changed.connect(self._refresh_input_rows)
+        self.subtitle_selector.path_changed.connect(self._refresh_input_rows)
 
         # D1: the pinned bar is this screen's one progress surface. The widget
         # stays (hidden) because the run still writes its state into it, and
@@ -241,6 +229,7 @@ class SingleEpisodeTab(MiningTabBase):
 
         # Set up keyboard shortcuts
         self._setup_shortcuts()
+        self._refresh_input_rows()
 
     def _setup_shortcuts(self) -> None:
         """Set up tab-specific keyboard shortcuts.
@@ -281,16 +270,19 @@ class SingleEpisodeTab(MiningTabBase):
         Returns:
             Frame with file selection controls
         """
-        from anki_miner.gui.widgets.enhanced import FileSelector, SectionHeader
+        from anki_miner.gui.widgets.enhanced import FileSelector
 
         group = QFrame()
         group.setObjectName("card")
         layout = QVBoxLayout()
         configure_card_layout(layout)
-
-        # Section header
-        header = SectionHeader(self.tr("File Selection"))
-        layout.addWidget(header)
+        # A05: the one thing a new user needs to know, shown until a file is chosen.
+        self.empty_hint = QLabel(
+            self.tr("Choose a video. A subtitle file with the same name is picked up automatically.")
+        )
+        self.empty_hint.setObjectName("helper-text")
+        self.empty_hint.setWordWrap(True)
+        layout.addWidget(self.empty_hint)
 
         # Shared label-column width so every labeled row in this card lines its
         # input field up at the same x.
@@ -307,8 +299,11 @@ class SingleEpisodeTab(MiningTabBase):
             self.tr("Translation Offset:"),
         )
 
-        # Recent files dropdown
-        recent_layout = QHBoxLayout()
+        # Recent files dropdown. Wrapped so it can hide while there is no
+        # history (D25-A, A05).
+        self.recent_row = QWidget()
+        recent_layout = QHBoxLayout(self.recent_row)
+        recent_layout.setContentsMargins(0, 0, 0, 0)
         recent_layout.setSpacing(SPACING.xs)
         recent_label = QLabel(self.tr("Recent Files:"))
         recent_label.setObjectName("field-label")
@@ -331,7 +326,7 @@ class SingleEpisodeTab(MiningTabBase):
         # to the full page column while the file rows under it stopped short.
         cap_row_field(self.recent_combo, label_w, recent_layout.spacing())
         recent_layout.addStretch()
-        layout.addLayout(recent_layout)
+        layout.addWidget(self.recent_row)
 
         self._refresh_recent_combo()
 
@@ -369,7 +364,10 @@ class SingleEpisodeTab(MiningTabBase):
         )
         layout.addWidget(self.secondary_selector)
 
-        source_layout = QHBoxLayout()
+        # Shown once a video is chosen: it is filled from the file name (A05).
+        self.card_source_row = QWidget()
+        source_layout = QHBoxLayout(self.card_source_row)
+        source_layout.setContentsMargins(0, 0, 0, 0)
         source_layout.setSpacing(SPACING.xs)
         source_label = QLabel(self.tr("Card Source:"))
         source_label.setObjectName("field-label")
@@ -388,7 +386,7 @@ class SingleEpisodeTab(MiningTabBase):
         source_layout.addWidget(self.card_source_edit)
         cap_row_field(self.card_source_edit, label_w, source_layout.spacing())
         source_layout.addStretch()
-        layout.addLayout(source_layout)
+        layout.addWidget(self.card_source_row)
 
         # Subtitle offset with helper text
         self._build_offset_rows(
@@ -399,6 +397,7 @@ class SingleEpisodeTab(MiningTabBase):
             seconds_suffix=self.tr(" seconds"),
             offset_tip=self.tr("Adjust subtitle timing (positive = later, negative = earlier)"),
             translation_tip=self.tr("Shift the translation subtitles only (positive = later, negative = earlier)"),
+            trailing=(self.timing_button, self.tracks_button),
         )
         self._apply_secondary_gate()
 
@@ -431,6 +430,21 @@ class SingleEpisodeTab(MiningTabBase):
         sibling = find_sibling_subtitle(Path(new_path))
         if sibling is not None:
             self.subtitle_selector.set_path(str(sibling))
+
+    def _refresh_input_rows(self, *_args: object) -> None:
+        """Show only what the chosen files make useful (A05).
+
+        The helper line stands in while both pickers are empty; Card Source and
+        Audio track… wait for a video; during a run Test Timing and Audio track…
+        step aside, as before.
+        """
+        has_video = self.video_selector.path_or_none() is not None
+        has_subtitle = self.subtitle_selector.path_or_none() is not None
+        idle = not self._is_processing
+        self.empty_hint.setVisible(not has_video and not has_subtitle)
+        self.card_source_row.setVisible(has_video)
+        self.timing_button.setVisible(idle)
+        self.tracks_button.setVisible(idle and has_video)
 
     def _on_tracks_clicked(self) -> None:
         """Open the AudioTracksDialog for manual audio track override selection."""
@@ -850,8 +864,7 @@ class SingleEpisodeTab(MiningTabBase):
         self._is_processing = False
         self.cancel_button.hide()
         self.process_button.show()
-        self.timing_button.show()
-        self.tracks_button.show()
+        self._refresh_input_rows()
         # Cancel recovery lives HERE (QThread.finished always fires), not in
         # the result slot: the worker suppresses result_ready on a cancelled
         # run (and on curation reject), so "Cancelling…" would otherwise be
@@ -962,6 +975,7 @@ class SingleEpisodeTab(MiningTabBase):
             )
 
         self.recent_combo.blockSignals(False)
+        self.recent_row.setVisible(self.recent_combo.count() > 1)
 
     def _on_recent_selected(self, index: int) -> None:
         """Handle recent file selection from combo box.
