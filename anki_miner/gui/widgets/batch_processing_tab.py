@@ -166,12 +166,6 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         # is set per run at _begin_receipt.
         self._install_receipt(layout, self.overall_progress_widget)
 
-        # Retry Failed button (hidden by default)
-        self.retry_button = ModernButton(self.tr("Retry Failed"), variant="secondary")
-        self.retry_button.setVisible(False)
-        self.retry_button.clicked.connect(self._retry_failed_items)
-        layout.addWidget(self.retry_button)
-
         # Log widget; install_workflow_shell moves it into the Activity drawer (D6).
         self.log_widget = LogWidget(source=self.TASK_ID or type(self).__name__)
 
@@ -491,9 +485,7 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         # back-to-back-mining freeze: leaked sqlite/Session handles).
         self._teardown_previous_run("batch")
 
-        # The panel's snapshot when Mine Queue supplied one; otherwise every
-        # pending row, which is what Retry Failed hands over after resetting
-        # them. Either way the worker is told exactly what it will mine.
+        # The panel's snapshot from Mine Queue; the pending rows are a fallback for a caller that set none.
         items = self._run_selection or [
             item for item in self.batch_queue.get_all_items() if item.status == QueueItemStatus.PENDING
         ]
@@ -869,13 +861,6 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         for item in self.batch_queue.get_all_items():
             self.queue_panel.set_item_status(item.id, _status_text[item.status])
 
-        # Show retry button if there are failed items that can be retried
-        has_retryable = any(
-            item.status == QueueItemStatus.ERROR and item.retry_count < item.max_retries
-            for item in self.batch_queue.get_all_items()
-        )
-        self.retry_button.setVisible(has_retryable)
-
     # ------------------------------------------------------------------
     # Durable queue contents (D16-C)
     # ------------------------------------------------------------------
@@ -963,30 +948,6 @@ class BatchProcessingTab(FolderSeriesScreenBase):
             restored += 1
         self.queue_panel.update_stats()
         return restored
-
-    def _retry_failed_items(self) -> None:
-        """Retry failed items in the batch queue."""
-        if self._is_processing:
-            return
-
-        reset_count = self.batch_queue.reset_failed_for_retry()
-        if reset_count == 0:
-            # Nothing to retry is not a failure and not a change: the button
-            # hides itself on the next line, which is the whole answer (D24).
-            self.retry_button.setVisible(False)
-            return
-
-        # Hide retry button and start processing. Use _show_cancel_state()
-        # (not just _set_buttons_enabled(False)) so the Cancel button is
-        # surfaced for the retry run, matching _process_queue — otherwise the
-        # retry run is uncancellable (T-22).
-        self.retry_button.setVisible(False)
-        self._is_processing = True
-        self._begin_run()
-        self._show_cancel_state()
-
-        self.presenter.show_info(tr_format(self.tr("Retrying %1 failed items..."), reset_count))
-        self._start_queue_worker()
 
     def _compose_status(self, item_description: str) -> str | None:
         """Glue the persistent item prefix onto the stage detail.
