@@ -57,6 +57,7 @@ class QueueControlsBar(QWidget):
         run_selected: Mine the selected rows.
         retry_selected: Return the selected failed rows to Ready and mine them.
         remove_selected: Drop the selected rows from the queue.
+        edit_selected: Edit the one selected row (Batch only, see enable_edit_action).
         pause_requested: Stop cleanly after the item currently being mined.
         resume_requested: Continue a paused run.
     """
@@ -66,6 +67,7 @@ class QueueControlsBar(QWidget):
     run_selected = pyqtSignal()
     retry_selected = pyqtSignal()
     remove_selected = pyqtSignal()
+    edit_selected = pyqtSignal()
     pause_requested = pyqtSignal()
     resume_requested = pyqtSignal()
 
@@ -85,6 +87,7 @@ class QueueControlsBar(QWidget):
         self._row_count = 0
         self._selection_count = 0
         self._clear_button: QAbstractButton | None = None
+        self.edit_button: ModernButton | None = None
         self._setup_ui()
         self.set_counts(total=0, ready=0, failed=0, complete=0)
         self.set_actions_enabled(run=False, retry=False, remove=False)
@@ -127,17 +130,20 @@ class QueueControlsBar(QWidget):
         self._row_count = total
         self._apply_row_visibility()
 
-    def set_actions_enabled(self, *, run: bool, retry: bool, remove: bool) -> None:
+    def set_actions_enabled(self, *, run: bool, retry: bool, remove: bool, edit: bool = False) -> None:
         """Enable each selection action independently.
 
         Args:
             run: Whether the selection contains something minable.
             retry: Whether the selection contains a failed row.
             remove: Whether the selection contains a removable row.
+            edit: Whether the one selected row can be edited (Batch only).
         """
         self.run_button.setEnabled(run)
         self.retry_button.setEnabled(retry)
         self.remove_button.setEnabled(remove)
+        if self.edit_button is not None:
+            self.edit_button.setEnabled(edit)
 
     def set_selection_count(self, count: int) -> None:
         """Show the selection actions only while at least one row is selected (A01).
@@ -150,6 +156,9 @@ class QueueControlsBar(QWidget):
         self._selection_count = count
         for button in (self.run_button, self.retry_button, self.remove_button):
             button.setVisible(count > 0)
+        if self.edit_button is not None:
+            # Edit acts on one row, so it appears for exactly one (D2).
+            self.edit_button.setVisible(count == 1)
 
     def set_clear_button(self, button: QAbstractButton) -> None:
         """Host the queue's own Clear button beside the counter (A01).
@@ -163,6 +172,28 @@ class QueueControlsBar(QWidget):
         self._clear_button = button
         self._clear_slot.addWidget(button)
         self._apply_row_visibility()
+
+    def enable_edit_action(self) -> None:
+        """Add "Edit…" to the selection actions (the Batch queue, D2).
+
+        Built on request because only Batch rows have anything to edit.
+        """
+        if self.edit_button is not None:
+            return
+        self.edit_button = ModernButton(self.tr("Edit…"), variant="secondary")
+        self.edit_button.setToolTip(self.tr("Change the selected series' folders and offset."))
+        apply_button_size(self.edit_button)
+        self.edit_button.clicked.connect(self.edit_selected.emit)
+        self._action_row.insertWidget(0, self.edit_button)
+        self.edit_button.setVisible(self._selection_count == 1)
+        self.edit_button.setEnabled(False)
+
+    def set_counter_text(self, text: str) -> None:
+        """Replace the counter's words; a queue that counts more than rows (Batch) says so.
+
+        Call after :meth:`set_counts`, which still drives visibility.
+        """
+        self.counter_label.setText(text)
 
     def _apply_row_visibility(self) -> None:
         """Counter and Clear from the first row; chips and search from six (A01, D6)."""
@@ -319,6 +350,7 @@ class QueueControlsBar(QWidget):
     def _build_action_row(self) -> QHBoxLayout:
         """The three verbs that operate on the selection."""
         row = QHBoxLayout()
+        self._action_row = row
         row.setSpacing(SPACING.xs)
 
         # Quiet roles throughout: the screen's one accent belongs to Mine, and a

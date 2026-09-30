@@ -1380,7 +1380,7 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
 
         Run active → the whole queue is frozen (D29-A): Add, Mine, Clear and
         every selection verb grey out, reorder is refused, the lock badge and
-        the two boundary controls appear, and Stop is shown. Otherwise Add (when
+        Pause (while an item follows) appear, and Stop is shown. Otherwise Add (when
         the tab has one) is enabled; Mine iff a READY item exists; Clear iff the
         queue is non-empty; Stop hidden.
         """

@@ -105,7 +105,7 @@ def test_counter_reports_the_queue_not_the_view(panel, tmp_path):
     panel._on_filter_changed("failed")
 
     assert panel.list_widget.item(0).isHidden()
-    assert "2 in queue" in panel.queue_controls.counter_label.text()
+    assert "2 series" in panel.queue_controls.counter_label.text()
     assert "1 failed" in panel.queue_controls.counter_label.text()
 
 
@@ -218,16 +218,15 @@ def test_a_click_selects_the_row_instead_of_being_swallowed(panel, tmp_path, qtb
     assert panel.selected_widgets() == [widget]
 
 
-def test_double_click_still_expands_and_re_hints_the_row(panel, tmp_path):
-    """Expanding must not be clipped by a size hint taken before it happened."""
+def test_double_click_edits_the_row(panel, tmp_path, monkeypatch):
+    """D2: a one-line row has nothing to expand; double-click opens Edit."""
     widget = _add(panel, "a", tmp_path)
-    list_item = panel._list_items[id(widget)]
+    edited: list = []
+    monkeypatch.setattr(panel, "_edit_item", edited.append)
 
-    widget.toggle_expanded()  # collapse
-    collapsed = list_item.sizeHint().height()
-    widget.toggle_expanded()  # expand again
+    panel.list_widget.itemDoubleClicked.emit(panel._list_items[id(widget)])
 
-    assert list_item.sizeHint().height() > collapsed
+    assert edited == [widget]
 
 
 def test_a_worker_that_never_starts_does_not_strand_the_lock(qtbot, test_config):
