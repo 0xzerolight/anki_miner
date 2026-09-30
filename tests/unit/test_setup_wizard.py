@@ -1346,11 +1346,41 @@ def test_notetype_page_emits_complete_changed_for_model_fetch_transitions(qtbot,
 
     changed.reset_mock()
     worker.result_ready.connect.call_args.args[0]([])
-    assert changed.call_count == 2  # result + blocked programmatic selection
+    # The page was never shown, so the combo was empty: the configured note type
+    # becomes a new selection (one emit) on top of the result's own emit.
+    assert changed.call_count == 2
 
     changed.reset_mock()
     worker.error.connect.call_args.args[0]("fetch failed")
     assert changed.call_count == 1
+
+
+def test_list_refresh_with_the_same_selection_keeps_the_known_fields(qtbot, wiz_config, monkeypatch):
+    """B02 re-checks refresh the list on every focus; Next must not flicker off."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import pages as pages_mod  # noqa: PLC0415
+
+    wiz = SetupWizard(replace(wiz_config, anki_note_type="Mining"))
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    monkeypatch.setattr(pages_mod, "FetchFieldsWorker", MagicMock())
+    # As initializePage does: a user-visible selection records the desired note type.
+    page.select_note_type("Mining")
+    page._fetched_note_types = ["Mining"]
+    page._notetypes_loaded = True
+    page._on_fields_fetched("Mining", ["Word", "Sentence", "Back"])
+    assert page.isComplete()
+    generation = page._fields_generation
+    states: list[bool] = []
+    page.completeChanged.connect(lambda: states.append(page.isComplete()))
+
+    page._on_notetypes_fetched(["Mining", "Basic"])
+
+    assert page.current_note_type() == "Mining"
+    assert page._field_names == ["Word", "Sentence", "Back"]
+    assert page._fields_generation == generation
+    assert page.isComplete()
+    assert states and all(states)
 
 
 def test_model_fetch_result_records_programmatic_selection(qtbot, wiz_config, monkeypatch):

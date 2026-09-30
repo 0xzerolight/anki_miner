@@ -859,7 +859,11 @@ class NoteTypePage(_WizardSection):
         names = [str(name) for name in model_names] if isinstance(model_names, list) else []
         self._fetched_note_types = names
         self._notetypes_loaded = True
-        wanted = self.current_note_type() or self._wizard.working_config().anki_note_type
+        # Read the selection before clear(): the automatic re-check (B02) refreshes
+        # this list on every window focus, and comparing against the cleared combo
+        # would call every refresh a change, drop the known fields and flicker Next.
+        previous = self.current_note_type()
+        wanted = previous or self._wizard.working_config().anki_note_type
         self.notetype_combo.blockSignals(True)
         try:
             self.notetype_combo.clear()
@@ -867,7 +871,9 @@ class NoteTypePage(_WizardSection):
                 self.notetype_combo.addItem(name, name)
         finally:
             self.notetype_combo.blockSignals(False)
-        self.select_note_type(wanted)
+        self.select_note_type(wanted, notify=False)
+        if self.current_note_type() != previous:
+            self._on_notetype_changed()
         self.completeChanged.emit()
         # Fetch the fields of the selected note type so they fill themselves.
         self._fetch_fields()
