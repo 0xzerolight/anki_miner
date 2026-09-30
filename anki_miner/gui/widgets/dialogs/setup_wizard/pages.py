@@ -507,15 +507,14 @@ class DeckPage(QWizardPage):
             self.deck_hint.setText("")
 
 
-class NoteTypePage(_LiveCheckPage):
-    """Step 3 (richest): choose a note type, auto-map its fields, warn on gaps."""
+class NoteTypePage(QWizardPage):
+    """Choose a note type; its fields map themselves the moment they arrive (D8)."""
 
     def __init__(self, wizard: SetupWizard) -> None:
         super().__init__(wizard)
+        self._wizard = wizard
         self._notetypes_worker: SingleCallWorker | None = None
         self._fields_worker: SingleCallWorker | None = None
-        # The field-name warning check; ``_LiveCheckPage`` owns its staleness.
-        self._warn_worker: SingleCallWorker | None = None
         self._fields_generation = 0
         self._desired_note_type = ""
         self._active_fields_request: tuple[int, str] | None = None
@@ -545,11 +544,6 @@ class NoteTypePage(_LiveCheckPage):
         self.guidance_label.linkActivated.connect(self._on_guidance_link_activated)
         self.guidance_label.setVisible(False)
         layout.addWidget(self.guidance_label)
-
-        self.auto_map_button = ModernButton(self.tr("Auto-Map Fields from Note Type"), variant="primary")
-        self.auto_map_button.clicked.connect(self._on_auto_map_clicked)
-        self.auto_map_button.setEnabled(False)
-        layout.addWidget(self.auto_map_button)
 
         self.mapping_summary = QLabel("")
         self.mapping_summary.setObjectName("helper-text")
@@ -582,6 +576,9 @@ class NoteTypePage(_LiveCheckPage):
         return (
             bool(word_field)
             and word_field in actual_fields
+            # Anki keys duplicates on a note type's first field, so the card
+            # builder refuses a word mapped anywhere else (anki_note_builder).
+            and self._field_names[0] == word_field
             and not (configured_target_field_names(config) - actual_fields)
         )
 
@@ -594,7 +591,6 @@ class NoteTypePage(_LiveCheckPage):
         self._desired_note_type = note_type
         self._field_names = []
         self._field_names_note_type = None
-        self.auto_map_button.setEnabled(False)
         self._write_notetype_to_config()
         self.completeChanged.emit()
 
@@ -681,7 +677,6 @@ class NoteTypePage(_LiveCheckPage):
         if generation == self._fields_generation and note_type == self._desired_note_type:
             self._field_names = []
             self._field_names_note_type = None
-            self.auto_map_button.setEnabled(False)
         self.completeChanged.emit()
 
     def _on_fields_fetch_finished(
@@ -718,7 +713,8 @@ class NoteTypePage(_LiveCheckPage):
         self._field_names = names
         self._field_names_note_type = note_type
         if not names:
-            self.auto_map_button.setEnabled(False)
+            self.mapping_summary.setText("")
+            self.warning_label.setText("")
             self._show_guidance(
                 self.tr(
                     "No fields found. Make sure Anki is running and the note type name is spelled exactly as in Anki."
@@ -727,36 +723,7 @@ class NoteTypePage(_LiveCheckPage):
             self.completeChanged.emit()
             return
         self._sanitize_field_mappings(note_type, names)
-        self.auto_map_button.setEnabled(True)
-        # A note type we can name maps itself: the preset carries the exact
-        # field names plus the pitch/marker settings the keyword pass below
-        # cannot know about, so there is nothing left for the user to press.
-        preset = self._matching_preset(names)
-        if preset is not None:
-            self.guidance_label.setVisible(False)
-            self.guidance_label.setText("")
-            self._apply_preset(preset)
-            return
-        if not self._has_mining_shape(names):
-            guidance = tr_format(
-                self.tr(
-                    "This note type has no obvious word or sentence fields. "
-                    '<a href="%1">Recheck</a> after importing a '
-                    '<a href="%1">recommended note type</a> in Anki.'
-                ),
-                NOTE_TYPE_HELP_URL,
-            )
-            self._show_guidance(
-                guidance.replace(
-                    f'href="{NOTE_TYPE_HELP_URL}"',
-                    'href="recheck"',
-                    1,
-                )
-            )
-        else:
-            self.guidance_label.setVisible(False)
-            self.guidance_label.setText("")
-        self.completeChanged.emit()
+        self._auto_fill(note_type)
 
     def _matching_preset(self, field_names: list[str]) -> NotePreset | None:
         """The preset for these field names, but only where presets apply.
@@ -819,13 +786,7 @@ class NoteTypePage(_LiveCheckPage):
     # --- auto-map ---
 
     def _apply_preset(self, preset: NotePreset) -> None:
-        """Stage ``preset``'s whole answer onto the wizard's working config.
-
-        Deliberately does NOT call ``_warn_missing_fields``: the preset matched
-        because every field it ships is on this note type, and every name it
-        maps is inside that set, so the check has nothing to find and would
-        spend an AnkiConnect round trip saying so.
-        """
+        """Stage ``preset``'s whole answer (fields, pitch format, card markers) onto the working config."""
         config = self._wizard.working_config()
         merged = dict(config.anki_fields)
         merged.update(preset.fields)
@@ -839,25 +800,45 @@ class NoteTypePage(_LiveCheckPage):
         if updated != config:
             self._wizard.update_working_config(updated)
         mapped = sum(1 for value in preset.fields.values() if value)
-        self.mapping_summary.setText(
-            tr_format(
-                self.tr("Recognized %1 — mapped %2 fields. Fine-tune them in Settings → Cards & Anki."),
-                preset.name,
-                str(mapped),
-            )
-        )
-        self.warning_label.setText("")
+        self.mapping_summary.setText(tr_format(self.tr("%1 recognised: %2 fields filled."), preset.name, mapped))
+
+    def _auto_fill(self, note_type: str) -> None:
+        """Fill the field mappings the moment a note type's fields arrive (D8).
+
+        A note type Anki Miner can name (Lapis, Kiku, Senren) takes its preset,
+        which also carries the pitch format and card markers; anything else gets
+        the keyword pass, which fills only keys that are still empty. There is
+        no button: picking the note type is the whole action. Cross-workstream
+        task TX.2.02 swaps the mapping part for the helper Settings uses (D13).
+        """
+        names = self._field_names
+        if not names or self._field_names_note_type != note_type:
+            return
+        preset = self._matching_preset(names)
+        if preset is not None:
+            self.guidance_label.setVisible(False)
+            self.guidance_label.setText("")
+            self._apply_preset(preset)
+        else:
+            if self._has_mining_shape(names):
+                self.guidance_label.setVisible(False)
+                self.guidance_label.setText("")
+            else:
+                guidance = tr_format(
+                    self.tr(
+                        "This note type has no obvious word or sentence fields. "
+                        '<a href="%1">Recheck</a> after importing a '
+                        '<a href="%1">recommended note type</a> in Anki.'
+                    ),
+                    NOTE_TYPE_HELP_URL,
+                )
+                self._show_guidance(guidance.replace(f'href="{NOTE_TYPE_HELP_URL}"', 'href="recheck"', 1))
+            self._apply_keyword_map()
+        self._show_field_problem()
         self.completeChanged.emit()
 
-    def _on_auto_map_clicked(self) -> None:
-        note_type = self.notetype_combo.currentText().strip()
-        if not self._field_names or self._field_names_note_type != note_type:
-            return
-        self._sanitize_field_mappings(note_type, self._field_names)
-        preset = self._matching_preset(self._field_names)
-        if preset is not None:
-            self._apply_preset(preset)
-            return
+    def _apply_keyword_map(self) -> None:
+        """Fill every still-empty key whose Anki field name the keyword table knows."""
         from anki_miner.languages.registry import get_profile  # noqa: PLC0415
 
         mapped = auto_map_fields(self._field_names)
@@ -880,52 +861,37 @@ class NoteTypePage(_LiveCheckPage):
         # Stage anki_fields as a PLAIN dict; config re-wraps it in MappingProxyType.
         if merged != dict(config.anki_fields):
             self._wizard.update_working_config(replace(config, anki_fields=merged))
-            self.completeChanged.emit()
-        effective_mappings = {key: merged.get(key, "") for key in mapped}
-        self._show_mapping_summary(effective_mappings)
-        self._warn_missing_fields()
-
-    def _show_mapping_summary(self, mapped: dict[str, str]) -> None:
-        filled = [key for key, value in mapped.items() if value]
-        if filled:
-            # The count, not the key → field dump: those keys are config names
-            # (``expression_furigana``, ``frequency_sort``) nobody can act on.
-            self.mapping_summary.setText(
-                tr_format(
-                    self.tr("Mapped %1 fields. Fine-tune them in Settings → Cards & Anki."),
-                    len(filled),
-                )
-            )
-        else:
-            self.mapping_summary.setText(self.tr("No fields could be auto-mapped."))
-
-    def _warn_missing_fields(self) -> None:
-        """Warn about required fields missing on the note type — checked off-thread.
-
-        ``check_field_names()`` makes a synchronous AnkiConnect HTTP call (10s
-        timeout), so it runs on a worker thread; the result updates
-        ``warning_label`` on the GUI thread. A failure (Anki down) never raises
-        into the GUI.
-        """
-        self.warning_label.setText(self.tr("Checking note type fields..."))
-        self._warn_worker = self._start_live_check(
-            self._wizard.validation_service().check_field_names,
-            error_prefix=self.tr("Could not check note type fields: "),
-            on_result=self._on_field_warning_result,
-            on_error=self._on_field_warning_error,
+        # The count, not the key → field dump: those keys are config names
+        # (``expression_furigana``, ``frequency_sort``) nobody can act on.
+        filled = sum(1 for key in mapped if merged.get(key))
+        self.mapping_summary.setText(
+            tr_format(self.tr("Fields filled automatically: %1."), filled)
+            if filled
+            else self.tr("No fields could be filled automatically.")
         )
 
-    def _on_field_warning_result(self, result: object) -> None:
-        if not self._is_live_check():
-            return  # Superseded by a newer check.
-        ok, message = result if isinstance(result, tuple) else (False, str(result))
-        self.warning_label.setText("" if ok else message)
+    def _show_field_problem(self) -> None:
+        """Say why Next is off when the word is not in the note type's first field.
 
-    def _on_field_warning_error(self, message: str) -> None:
-        if not self._is_live_check():
+        Checked from the field list already fetched, with no AnkiConnect round
+        trip. An empty word mapping says nothing here (B01): the page's guidance
+        already explains what to pick, and the Ready page re-checks everything.
+        """
+        word = self._wizard.working_config().anki_fields.get("word", "")
+        names = self._field_names
+        if not word or not names or names[0] == word:
+            self.warning_label.setText("")
             return
-        # Anki unreachable/slow: surface the failure but never raise.
-        self.warning_label.setText(message)
+        self.warning_label.setText(
+            tr_format(
+                self.tr(
+                    "The word goes in the note type's first field, “%1”, but it is mapped to “%2”. "
+                    "Change the order of the fields in Anki, or pick another note type."
+                ),
+                names[0],
+                word,
+            )
+        )
 
 
 class ResourcesPage(_LiveCheckPage):

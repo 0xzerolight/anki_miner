@@ -826,22 +826,71 @@ def test_notetype_page_preselects_config_note_type(qtbot, wiz_config, monkeypatc
     assert page.notetype_combo.currentText() == "Lapis"
 
 
-def test_notetype_page_auto_map_stages_fields(qtbot, wiz_config):
+def test_picking_a_note_type_fills_its_fields_without_a_button(qtbot, wiz_config):
+    """D8: the fields fill themselves the moment they arrive; there is no Auto-Map button."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(replace(wiz_config, anki_note_type="Mining"))
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    assert not hasattr(page, "auto_map_button")
+
+    page.notetype_combo.setCurrentText("Mining")
+    page._on_fields_fetched("Mining", ["Word", "Sentence", "Picture"])
+
+    fields = wiz.working_config().anki_fields
+    assert fields["word"] == "Word"
+    assert fields["sentence"] == "Sentence"
+    assert fields["picture"] == "Picture"
+    assert page.mapping_summary.text() == "Fields filled automatically: 3."
+    assert page.warning_label.text() == ""
+
+
+def test_a_word_field_that_is_not_first_blocks_next_and_says_why(qtbot, wiz_config):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(replace(wiz_config, anki_note_type="Mining"))
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    # Selected before the list is "known", so no field fetch reaches AnkiConnect.
+    page.notetype_combo.setCurrentText("Mining")
+    page._fetched_note_types = ["Mining"]
+
+    page._on_fields_fetched("Mining", ["Notes", "Word", "Sentence"])
+
+    assert wiz.working_config().anki_fields["word"] == "Word"
+    assert page.isComplete() is False
+    assert page.warning_label.text() == (
+        "The word goes in the note type's first field, “Notes”, but it is mapped to “Word”. "
+        "Change the order of the fields in Anki, or pick another note type."
+    )
+
+
+def test_an_empty_word_mapping_shows_no_field_warning(qtbot, wiz_config):
+    """B01: picking Basic used to say "Word field '' must map to the first field 'Front'"."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(replace(wiz_config, anki_note_type="Basic"))
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    page.notetype_combo.setCurrentText("Basic")
+
+    page._on_fields_fetched("Basic", ["Front", "Back"])
+
+    assert wiz.working_config().anki_fields["word"] == ""
+    assert page.warning_label.text() == ""
+    assert page.mapping_summary.text() == "No fields could be filled automatically."
+
+
+def test_notetype_page_fetch_stages_fields(qtbot, wiz_config):
     """Auto-Map must stage the mapped anki_fields (plain dict) into the working config."""
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 
     wiz = SetupWizard(wiz_config)
     qtbot.addWidget(wiz)
     page = wiz.notetype_page
-    # Auto-Map fires _warn_missing_fields -> an off-thread check_field_names
-    # against real AnkiConnect (tests/_network_tripwire.py); stub it like the
-    # warn-label tests below do.
-    wiz.validation_service = MagicMock(  # type: ignore[method-assign]
-        return_value=MagicMock(check_field_names=lambda: (True, ""))
-    )
     page.notetype_combo.setCurrentText("Lapis")
     page._on_fields_fetched("Lapis", ["Expression", "Sentence", "MainDefinition", "Picture", "SentenceAudio"])
-    page._on_auto_map_clicked()
 
     cfg = wiz.working_config()
     assert cfg.anki_note_type == "Lapis"
@@ -852,12 +901,6 @@ def test_notetype_page_auto_map_stages_fields(qtbot, wiz_config):
     import types as _types  # noqa: PLC0415
 
     assert isinstance(cfg.anki_fields, _types.MappingProxyType)
-
-    # Join the field-check worker Auto-Map started. Without this the queued
-    # result_ready lands in the teardown drain, after the page is being
-    # destroyed — a segfault under load, not a failure.
-    qtbot.waitUntil(lambda: page.warning_label.text() == "", timeout=3000)
-    assert page._warn_worker.wait(3000)
 
 
 def test_field_fetch_latest_selection_runs_after_stale_fetch(qtbot, wiz_config, monkeypatch):
@@ -991,7 +1034,7 @@ def test_notetype_page_field_result_emits_for_sanitize_and_result(qtbot, wiz_con
 
     page._on_fields_fetched("Lapis", ["Expression"])
 
-    assert wiz.working_config().anki_fields["word"] == ""
+    assert wiz.working_config().anki_fields["word"] == "Expression"
     assert changed.call_count == 2  # sanitize + fetch result
 
 
@@ -1081,15 +1124,11 @@ def test_auto_map_uses_sanitized_base_and_preserves_valid_manual_fields(qtbot, w
     wiz = SetupWizard(cfg)
     qtbot.addWidget(wiz)
     page = wiz.notetype_page
-    wiz.validation_service = MagicMock(  # type: ignore[method-assign]
-        return_value=MagicMock(check_field_names=lambda: (True, ""))
-    )
     page.notetype_combo.setCurrentText("Lapis")
     page._on_fields_fetched(
         "Lapis",
         ["Expression", "ManualWord", "Sentence", "ManualDefinition", "PitchGraph", "PitchText"],
     )
-    page._on_auto_map_clicked()
 
     result = wiz.working_config()
     fields = result.anki_fields
@@ -1111,14 +1150,8 @@ def _auto_map(qtbot, config, field_names):
     wiz = SetupWizard(replace(config, anki_note_type="Mining"))
     qtbot.addWidget(wiz)
     page = wiz.notetype_page
-    wiz.validation_service = MagicMock(  # type: ignore[method-assign]
-        return_value=MagicMock(check_field_names=lambda: (True, ""))
-    )
     page.notetype_combo.setCurrentText("Mining")
     page._on_fields_fetched("Mining", field_names)
-    page._on_auto_map_clicked()
-    qtbot.waitUntil(lambda: page.warning_label.text() == "", timeout=3000)
-    assert page._warn_worker.wait(3000)
     return wiz.working_config(), page
 
 
@@ -1136,7 +1169,7 @@ def test_auto_map_fills_the_chosen_languages_own_card_fields(qtbot, wiz_config):
     assert fields["expression_pinyin"] == "Pinyin"
     assert fields["measure_word"] == "MeasureWord"
     assert fields["expression_traditional"] == "Traditional"
-    assert "Mapped 6 fields" in page.mapping_summary.text()
+    assert page.mapping_summary.text() == "Fields filled automatically: 6."
 
 
 def test_auto_map_never_seeds_another_languages_keys(qtbot, wiz_config):
@@ -1147,7 +1180,7 @@ def test_auto_map_never_seeds_another_languages_keys(qtbot, wiz_config):
     assert fields["word"] == "Hanzi"
     for key in ("expression_pinyin", "measure_word", "expression_traditional"):
         assert not fields.get(key, "")
-    assert "Mapped 3 fields" in page.mapping_summary.text()
+    assert page.mapping_summary.text() == "Fields filled automatically: 3."
 
 
 def test_notetype_page_unsuitable_fieldlist_shows_guidance(qtbot, wiz_config):
@@ -2073,137 +2106,6 @@ def test_run_setup_wizard_propagates_exception(qtbot, wiz_config, monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# NoteTypePage: Auto-Map field-name check runs off the GUI thread
-# ---------------------------------------------------------------------------
-
-
-def test_warn_missing_fields_runs_off_gui_thread(qtbot, wiz_config):
-    """check_field_names() must execute on a worker thread, not the GUI thread."""
-    import threading
-
-    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
-
-    wiz = SetupWizard(wiz_config)
-    qtbot.addWidget(wiz)
-    page = wiz.notetype_page
-
-    gui_ident = threading.get_ident()
-    seen = {}
-
-    def fake_check():
-        seen["ident"] = threading.get_ident()
-        return (True, "")
-
-    wiz.validation_service = MagicMock(  # type: ignore[method-assign]
-        return_value=MagicMock(check_field_names=fake_check)
-    )
-
-    page._warn_missing_fields()
-    qtbot.waitUntil(lambda: "ident" in seen, timeout=3000)
-    assert seen["ident"] != gui_ident
-
-
-def test_warn_missing_fields_updates_label_in_callback(qtbot, wiz_config):
-    """On a not-ok result, warning_label shows the message (set from the GUI-thread slot)."""
-    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
-
-    wiz = SetupWizard(wiz_config)
-    qtbot.addWidget(wiz)
-    page = wiz.notetype_page
-
-    wiz.validation_service = MagicMock(  # type: ignore[method-assign]
-        return_value=MagicMock(check_field_names=lambda: (False, "Missing: word"))
-    )
-
-    page._warn_missing_fields()
-    qtbot.waitUntil(lambda: page.warning_label.text() == "Missing: word", timeout=3000)
-
-
-def test_warn_missing_fields_clears_label_when_ok(qtbot, wiz_config):
-    """An ok result clears the warning_label."""
-    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
-
-    wiz = SetupWizard(wiz_config)
-    qtbot.addWidget(wiz)
-    page = wiz.notetype_page
-    page.warning_label.setText("stale warning")
-
-    wiz.validation_service = MagicMock(  # type: ignore[method-assign]
-        return_value=MagicMock(check_field_names=lambda: (True, ""))
-    )
-
-    page._warn_missing_fields()
-    qtbot.waitUntil(lambda: page.warning_label.text() == "", timeout=3000)
-
-
-def test_warn_missing_fields_raising_check_does_not_crash(qtbot, wiz_config):
-    """A raising/slow check must never raise into the GUI; the page stays alive."""
-    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
-
-    wiz = SetupWizard(wiz_config)
-    qtbot.addWidget(wiz)
-    page = wiz.notetype_page
-
-    def boom():
-        raise RuntimeError("anki down")
-
-    wiz.validation_service = MagicMock(return_value=MagicMock(check_field_names=boom))  # type: ignore[method-assign]
-
-    page._warn_missing_fields()
-    # The error path sets warning_label with the error_prefix message (pages.py:1011); waiting on
-    # that instead of a fixed sleep proves the worker delivered its error signal without raising.
-    qtbot.waitUntil(
-        lambda: page.warning_label.text().startswith("Could not check note type fields"),
-        timeout=3000,
-    )
-    assert page._warn_worker.wait(3000)
-
-
-def test_warn_missing_fields_latest_check_wins(qtbot, wiz_config):
-    """Overlapping checks: the stale result is ignored, the latest wins."""
-    import threading
-
-    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
-
-    wiz = SetupWizard(wiz_config)
-    qtbot.addWidget(wiz)
-    page = wiz.notetype_page
-
-    release_first = threading.Event()
-
-    def slow_first():
-        release_first.wait(3.0)
-        return (False, "STALE")
-
-    def fast_second():
-        return (False, "LATEST")
-
-    # First (slow) dispatch.
-    wiz.validation_service = MagicMock(  # type: ignore[method-assign]
-        return_value=MagicMock(check_field_names=slow_first)
-    )
-    page._warn_missing_fields()
-    stale = page._warn_worker  # captured before the second dispatch overwrites it
-
-    # Second (fast) dispatch supersedes it.
-    wiz.validation_service = MagicMock(  # type: ignore[method-assign]
-        return_value=MagicMock(check_field_names=fast_second)
-    )
-    page._warn_missing_fields()
-    latest = page._warn_worker
-
-    qtbot.waitUntil(lambda: page.warning_label.text() == "LATEST", timeout=3000)
-    # Now let the stale worker finish; its result must NOT overwrite the latest. Join the real
-    # QThread (bounded, not a fixed sleep), then pump the event loop briefly so its queued
-    # result_ready/error delivery — which _is_live_check() then rejects as stale — actually runs.
-    release_first.set()
-    assert stale.wait(3000)
-    assert latest.wait(3000)
-    qtbot.wait(20)
-    assert page.warning_label.text() == "LATEST"
-
-
-# ---------------------------------------------------------------------------
 # NoteTypePage — note-type presets
 # ---------------------------------------------------------------------------
 
@@ -2275,6 +2177,7 @@ def test_notetype_page_applies_a_recognized_preset_on_fetch(qtbot, wiz_config):
     assert config.pitch_category_format == "romaji"
     assert "Lapis" in page.mapping_summary.text()
     assert page.isComplete()
+    assert page.mapping_summary.text() == "Lapis recognised: 15 fields filled."
 
 
 def test_notetype_page_preset_clears_an_unsupported_card_type(qtbot, wiz_config):
