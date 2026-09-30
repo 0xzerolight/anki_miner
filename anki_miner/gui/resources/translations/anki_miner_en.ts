@@ -2941,20 +2941,23 @@ No index files are deleted.</source>
     </message>
     <message numerus="yes">
         <source>%n field(s) across %1 will be filled.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n field across %1 will be filled.</numerusform>
+            <numerusform>%n fields across %1 will be filled.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%n note(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n note</numerusform>
+            <numerusform>%n notes</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>Showing first %n row(s).</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Showing the first %n row.</numerusform>
+            <numerusform>Showing the first %n rows.</numerusform>
         </translation>
     </message>
     <message>
@@ -2971,14 +2974,16 @@ No index files are deleted.</source>
     </message>
     <message numerus="yes">
         <source>%n field value(s) already up to date.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n field value already up to date.</numerusform>
+            <numerusform>%n field values already up to date.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%n pitch field(s) kept — the reading was guessed, so the accent could be the wrong homograph's. Map an Expression Reading or Furigana field to overwrite them.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n pitch field kept — the reading was guessed, so the accent could be the wrong homograph's. Map an Expression Reading or Furigana field to overwrite it.</numerusform>
+            <numerusform>%n pitch fields kept — the reading was guessed, so the accent could be the wrong homograph's. Map an Expression Reading or Furigana field to overwrite them.</numerusform>
         </translation>
     </message>
     <message>
@@ -2991,8 +2996,9 @@ No index files are deleted.</source>
     </message>
     <message numerus="yes">
         <source>%n note(s) skipped — empty Expression field.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n note skipped — empty Expression field.</numerusform>
+            <numerusform>%n notes skipped — empty Expression field.</numerusform>
         </translation>
     </message>
     <message>
@@ -3003,14 +3009,20 @@ No index files are deleted.</source>
         <source>Close Anki's card browser and note editors first.
 
 This will modify %n note(s) (%1) and tag them %2. Continue?</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Close Anki's card browser and note editors first.
+
+This will modify %n note (%1) and tag it %2. Continue?</numerusform>
+            <numerusform>Close Anki's card browser and note editors first.
+
+This will modify %n notes (%1) and tag them %2. Continue?</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%n field(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n field</numerusform>
+            <numerusform>%n fields</numerusform>
         </translation>
     </message>
     <message>
@@ -3019,8 +3031,9 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message numerus="yes">
         <source>Filled %n field(s) on %1.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Filled %n field on %1.</numerusform>
+            <numerusform>Filled %n fields on %1.</numerusform>
         </translation>
     </message>
     <message>
@@ -3029,8 +3042,9 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message numerus="yes">
         <source>%n skipped — changed or deleted since the scan.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n skipped — changed or deleted since the scan.</numerusform>
+            <numerusform>%n skipped — changed or deleted since the scan.</numerusform>
         </translation>
     </message>
     <message>
@@ -3039,14 +3053,16 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message numerus="yes">
         <source>%n note update(s) were not confirmed by Anki; scan again to retry.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n note update was not confirmed by Anki; scan again to retry.</numerusform>
+            <numerusform>%n note updates were not confirmed by Anki; scan again to retry.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%n audio file(s) could not be added to Anki; scan again to retry.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n audio file could not be added to Anki; scan again to retry.</numerusform>
+            <numerusform>%n audio files could not be added to Anki; scan again to retry.</numerusform>
         </translation>
     </message>
 </context><context>
@@ -3906,8 +3922,9 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message numerus="yes">
         <source>%n note(s) in the deck.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n note in the deck.</numerusform>
+            <numerusform>%n notes in the deck.</numerusform>
         </translation>
     </message>
     <message>
@@ -3972,8 +3989,9 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message numerus="yes">
         <source>%1 of %n note(s) will be copied.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%1 of %n note will be copied.</numerusform>
+            <numerusform>%1 of %n notes will be copied.</numerusform>
         </translation>
     </message>
     <message>
@@ -3982,14 +4000,16 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message numerus="yes">
         <source>%n kept by whitelist.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n kept by whitelist.</numerusform>
+            <numerusform>%n kept by whitelist.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>Showing first %n row(s).</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Showing the first %n row.</numerusform>
+            <numerusform>Showing the first %n rows.</numerusform>
         </translation>
     </message>
     <message>
@@ -3998,8 +4018,9 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message numerus="yes">
         <source>This will create deck "%1" and copy %n note(s) into it, tagged %2. The source deck is not modified. Continue?</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>This will create deck "%1" and copy %n note into it, tagged %2. The source deck is not modified. Continue?</numerusform>
+            <numerusform>This will create deck "%1" and copy %n notes into it, tagged %2. The source deck is not modified. Continue?</numerusform>
         </translation>
     </message>
     <message>
@@ -4008,14 +4029,16 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message numerus="yes">
         <source>Copied %n note(s) into "%1".</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Copied %n note into "%1".</numerusform>
+            <numerusform>Copied %n notes into "%1".</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%n note(s) were not accepted by Anki (see log).</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n note was not accepted by Anki (see log).</numerusform>
+            <numerusform>%n notes were not accepted by Anki (see log).</numerusform>
         </translation>
     </message>
 </context><context>
@@ -10450,8 +10473,9 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message numerus="yes">
         <source>%n running</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n running</numerusform>
+            <numerusform>%n running</numerusform>
         </translation>
     </message>
     <message>

@@ -57,7 +57,7 @@
     <name>AnalyticsTab</name>
     <message>
         <source>No mining yet — your statistics appear here after your first run.</source>
-        <translation type="unfinished" />
+        <translation>Chưa khai thác lần nào — thống kê sẽ hiện ở đây sau lần chạy đầu tiên.</translation>
     </message>
     <message>
         <source>Reset Statistics…</source>
@@ -189,31 +189,31 @@
     </message>
     <message>
         <source>Reached</source>
-        <translation type="unfinished" />
+        <translation>Đã đạt</translation>
     </message>
 </context><context>
     <name>AnkiConnectHelp</name>
     <message>
         <source>Open Anki.</source>
-        <translation type="unfinished" />
+        <translation>Mở Anki.</translation>
     </message>
     <message>
         <source>In Anki choose Tools → Add-ons → Get Add-ons…, paste the code %1, and click OK.</source>
-        <translation type="unfinished" />
+        <translation>Trong Anki, chọn Công cụ → Tiện ích bổ sung → Tải tiện ích bổ sung… (Tools → Add-ons → Get Add-ons…), dán mã %1 rồi nhấn OK.</translation>
     </message>
     <message>
         <source>Restart Anki.</source>
-        <translation type="unfinished" />
+        <translation>Khởi động lại Anki.</translation>
     </message>
 </context><context>
     <name>AnkiConnectPage</name>
     <message>
         <source>Open Anki</source>
-        <translation type="unfinished" />
+        <translation>Mở Anki</translation>
     </message>
     <message>
         <source>This page connects by itself.</source>
-        <translation type="unfinished" />
+        <translation>Trang này tự kết nối.</translation>
     </message>
     <message>
         <source>Open the AnkiConnect add-on page</source>
@@ -221,7 +221,7 @@
     </message>
     <message>
         <source>Use a different address…</source>
-        <translation type="unfinished" />
+        <translation>Dùng địa chỉ khác…</translation>
     </message>
     <message>
         <source>AnkiConnect URL:</source>
@@ -233,15 +233,15 @@
     </message>
     <message>
         <source>Checking the connection to Anki…</source>
-        <translation type="unfinished" />
+        <translation>Đang kiểm tra kết nối tới Anki…</translation>
     </message>
     <message>
         <source>Connected to Anki.</source>
-        <translation type="unfinished" />
+        <translation>Đã kết nối tới Anki.</translation>
     </message>
     <message>
         <source>Anki Miner can't reach Anki yet. Do this once:</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner chưa kết nối được tới Anki. Làm việc này một lần:</translation>
     </message>
     <message>
         <source>Copied</source>
@@ -249,15 +249,15 @@
     </message>
     <message>
         <source>Copy code</source>
-        <translation type="unfinished" />
+        <translation>Sao chép mã</translation>
     </message>
     <message>
         <source>Starting Anki…</source>
-        <translation type="unfinished" />
+        <translation>Đang khởi động Anki…</translation>
     </message>
     <message>
         <source>Anki did not start. Open it yourself.</source>
-        <translation type="unfinished" />
+        <translation>Anki không khởi động. Hãy tự mở Anki.</translation>
     </message>
 </context><context>
     <name>AnkiPage</name>
@@ -273,7 +273,7 @@
     <name>AnkiProbeController</name>
     <message>
         <source>Select a note type first.</source>
-        <translation type="unfinished" />
+        <translation>Hãy chọn loại ghi chú trước.</translation>
     </message>
     <message>
         <source>The Anki field mapping is not usable: %1</source>
@@ -281,15 +281,15 @@
     </message>
     <message>
         <source>Reading the note type's fields…</source>
-        <translation type="unfinished" />
+        <translation>Đang đọc các trường của loại ghi chú…</translation>
     </message>
     <message>
         <source>Could not fetch fields. Is Anki running and the note type spelled right?</source>
-        <translation type="unfinished" />
+        <translation>Không lấy được các trường. Anki có đang chạy và tên loại ghi chú có đúng không?</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>
-        <translation type="unfinished" />
+        <translation>Đã nhận ra %1: điền %2 trường.</translation>
     </message>
     <message numerus="yes">
         <source>Fetched %n field(s) and auto-mapped them</source>
@@ -585,11 +585,11 @@
     </message>
     <message>
         <source>Check the connection to Anki again and reload the deck and note type lists. Anki must be running with AnkiConnect installed.</source>
-        <translation type="unfinished" />
+        <translation>Kiểm tra lại kết nối tới Anki và tải lại danh sách bộ thẻ và loại ghi chú. Anki phải đang chạy và đã cài AnkiConnect.</translation>
     </message>
     <message>
         <source>Anki</source>
-        <translation type="unfinished" />
+        <translation>Anki</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
@@ -601,11 +601,11 @@
     </message>
     <message>
         <source>Fill in automatically</source>
-        <translation type="unfinished" />
+        <translation>Tự động điền</translation>
     </message>
     <message>
         <source>Read this note type's fields from Anki and fill every mapping below. Lapis, Kiku and Senren are recognised and filled completely.</source>
-        <translation type="unfinished" />
+        <translation>Đọc các trường của loại ghi chú này từ Anki và điền mọi ánh xạ bên dưới. Lapis, Kiku và Senren được nhận ra và điền đầy đủ.</translation>
     </message>
     <message>
         <source>Card Field Mappings</source>
@@ -697,7 +697,7 @@
     </message>
     <message>
         <source>Extra Fields</source>
-        <translation type="unfinished" />
+        <translation>Trường bổ sung</translation>
     </message>
     <message>
         <source>Pitch fields need a source in Settings → Pitch Accent. Blank = skip.</source>
@@ -877,7 +877,7 @@
     </message>
     <message>
         <source>Anki isn't reachable. Start Anki (with AnkiConnect) and press Refresh.</source>
-        <translation type="unfinished" />
+        <translation>Không kết nối được tới Anki. Hãy khởi động Anki (có AnkiConnect) rồi nhấn Làm mới.</translation>
     </message>
     <message>
         <source>Deck not found</source>
@@ -1259,7 +1259,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>No word audio sources yet.</source>
-        <translation type="unfinished" />
+        <translation>Chưa có nguồn âm thanh từ nào.</translation>
     </message>
     <message>
         <source>Audio Pack…</source>
@@ -1413,7 +1413,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Audiobook mining</source>
-        <translation type="unfinished" />
+        <translation>Khai thác sách nói</translation>
     </message>
     <message>
         <source>Attempt %1 of %2 · retrying in %3s</source>
@@ -1465,7 +1465,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Mine the picked pair and every Ready item in the queue.</source>
-        <translation type="unfinished" />
+        <translation>Khai thác cặp đã chọn và mọi mục Sẵn sàng trong hàng đợi.</translation>
     </message>
     <message>
         <source>Clear</source>
@@ -1509,7 +1509,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Pick an audio file and its subtitle, then Mine. Use Add to queue several.</source>
-        <translation type="unfinished" />
+        <translation>Chọn một tệp âm thanh và phụ đề của nó, rồi Khai thác. Dùng Thêm để xếp nhiều cặp vào hàng đợi.</translation>
     </message>
     <message>
         <source>Review words before mining</source>
@@ -1537,7 +1537,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Pick an audio file and its subtitle, then Mine.</source>
-        <translation type="unfinished" />
+        <translation>Chọn một tệp âm thanh và phụ đề của nó, rồi Khai thác.</translation>
     </message>
     <message>
         <source>File not found: %1</source>
@@ -1757,7 +1757,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>This audio file could not be synced.</source>
-        <translation type="unfinished" />
+        <translation>Không thể đồng bộ tệp âm thanh này.</translation>
     </message>
     <message>
         <source>Complete — %1 file(s) synced</source>
@@ -2197,11 +2197,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Align YouTube captions to the audio</source>
-        <translation type="unfinished" />
+        <translation>Căn phụ đề YouTube theo âm thanh</translation>
     </message>
     <message>
         <source>Retime YouTube's own captions against the video's audio before mining.</source>
-        <translation type="unfinished" />
+        <translation>Căn lại thời gian phụ đề gốc của YouTube theo âm thanh của video trước khi khai thác.</translation>
     </message>
     <message>
         <source>Keep yt-dlp up to date</source>
@@ -2209,7 +2209,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Keep the yt-dlp downloader up to date, or update it on demand.</source>
-        <translation type="unfinished" />
+        <translation>Giữ trình tải yt-dlp luôn cập nhật, hoặc cập nhật khi cần.</translation>
     </message>
     <message>
         <source>Mine another language</source>
@@ -2265,7 +2265,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Drop words written without kanji; “Skip all kana-only words” leaves a kanji-only deck.</source>
-        <translation type="unfinished" />
+        <translation>Loại bỏ các từ viết không có kanji; “Bỏ qua mọi từ chỉ có kana” để lại bộ thẻ chỉ gồm từ có kanji.</translation>
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -2421,11 +2421,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Set up alass (subtitle alignment)</source>
-        <translation type="unfinished" />
+        <translation>Thiết lập alass (căn chỉnh phụ đề)</translation>
     </message>
     <message>
         <source>Download alass, the subtitle re-timing tool, in-app on Linux and Windows; on macOS install it with Homebrew and point Anki Miner at it.</source>
-        <translation type="unfinished" />
+        <translation>Tải alass, công cụ căn lại thời gian phụ đề, ngay trong ứng dụng trên Linux và Windows; trên macOS, cài bằng Homebrew rồi chỉ cho Anki Miner vị trí của nó.</translation>
     </message>
     <message>
         <source>Word pronunciation audio</source>
@@ -2561,15 +2561,15 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Set the AnkiConnect address; Refresh re-checks the connection to your running Anki.</source>
-        <translation type="unfinished" />
+        <translation>Đặt địa chỉ AnkiConnect; Làm mới sẽ kiểm tra lại kết nối tới Anki đang chạy.</translation>
     </message>
     <message>
         <source>Fill in field mappings automatically</source>
-        <translation type="unfinished" />
+        <translation>Tự động điền ánh xạ trường</translation>
     </message>
     <message>
         <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku and Senren are recognised and filled completely.</source>
-        <translation type="unfinished" />
+        <translation>Tự động điền đọc các trường của loại ghi chú và điền mọi ánh xạ. Lapis, Kiku và Senren được nhận ra và điền đầy đủ.</translation>
     </message>
     <message>
         <source>Bold the mined word in the sentence</source>
@@ -2665,7 +2665,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>See whether Anki, ffmpeg and your resources are ready, with one-click fixes -- open it from Tools → System Health… or the status-bar badges.</source>
-        <translation type="unfinished" />
+        <translation>Xem Anki, ffmpeg và tài nguyên đã sẵn sàng chưa, kèm cách sửa bằng một cú nhấp -- mở từ Công cụ → Tình trạng hệ thống… hoặc các huy hiệu trên thanh trạng thái.</translation>
     </message>
     <message>
         <source>Setup wizard</source>
@@ -2673,7 +2673,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Re-run the guided first-time setup -- dictionary, Anki connection, deck and note type -- from the Tools menu.</source>
-        <translation type="unfinished" />
+        <translation>Chạy lại phần thiết lập ban đầu có hướng dẫn -- từ điển, kết nối Anki, bộ thẻ và loại ghi chú -- từ menu Công cụ.</translation>
     </message>
     <message>
         <source>Download recommended resources</source>
@@ -2721,7 +2721,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Delete the cards a run just created: press View details on the run's result line, then Undo.</source>
-        <translation type="unfinished" />
+        <translation>Xóa các thẻ mà một lần chạy vừa tạo: nhấn Xem chi tiết trên dòng kết quả của lần chạy đó, rồi Hoàn tác.</translation>
     </message>
     <message>
         <source>Keyboard shortcuts</source>
@@ -2737,7 +2737,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Pack this language's dictionaries, frequency and pitch lists, ignore list and word lists into one file, and install them on another machine: Tools → Export Resources… and Import Resources….</source>
-        <translation type="unfinished" />
+        <translation>Đóng gói từ điển, danh sách tần suất và trọng âm cao độ, danh sách bỏ qua và danh sách từ của ngôn ngữ này vào một tệp, rồi cài lên máy khác: Công cụ → Xuất tài nguyên… và Nhập tài nguyên….</translation>
     </message>
     <message>
         <source>Settings profiles</source>
@@ -2745,7 +2745,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Keep several named snapshots of every setting and switch between them from the profile menu at the top of the window (Manage profiles…).</source>
-        <translation type="unfinished" />
+        <translation>Lưu nhiều bản chụp có tên của mọi cài đặt và chuyển đổi giữa chúng từ menu hồ sơ ở đầu cửa sổ (Quản lý hồ sơ…).</translation>
     </message>
     <message>
         <source>Export / import settings</source>
@@ -2753,7 +2753,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Save every setting to a portable file, load it on another machine, or reset everything to defaults: Manage profiles…, under This profile.</source>
-        <translation type="unfinished" />
+        <translation>Lưu mọi cài đặt vào một tệp di động, nạp trên máy khác, hoặc đặt lại tất cả về mặc định: Quản lý hồ sơ…, trong mục Hồ sơ này.</translation>
     </message>
     <message>
         <source>Anki Miner Usage Guide</source>
@@ -2765,7 +2765,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Everything Anki Miner can do, and where to find it.</source>
-        <translation type="unfinished" />
+        <translation>Mọi thứ Anki Miner làm được, và nơi tìm thấy chúng.</translation>
     </message>
     <message>
         <source>Search features, e.g. "i+1", "pitch", "youtube"</source>
@@ -2777,7 +2777,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Open</source>
-        <translation type="unfinished" />
+        <translation>Mở</translation>
     </message>
     <message>
         <source>Close</source>
@@ -2807,7 +2807,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Card Backfill could not finish.</source>
-        <translation type="unfinished" />
+        <translation>Không thể hoàn tất điền dữ liệu còn thiếu cho thẻ.</translation>
     </message>
     <message>
         <source>Deck</source>
@@ -2947,20 +2947,20 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message numerus="yes">
         <source>%n field(s) across %1 will be filled.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Sẽ điền %n trường trong %1.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%n note(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n ghi chú</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>Showing first %n row(s).</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Đang hiển thị %n dòng đầu tiên.</numerusform>
         </translation>
     </message>
     <message>
@@ -2977,14 +2977,14 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message numerus="yes">
         <source>%n field value(s) already up to date.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n giá trị trường đã cập nhật sẵn.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%n pitch field(s) kept — the reading was guessed, so the accent could be the wrong homograph's. Map an Expression Reading or Furigana field to overwrite them.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Giữ nguyên %n trường trọng âm cao độ — cách đọc được đoán, nên trọng âm có thể là của từ đồng tự khác. Ánh xạ trường Cách đọc Biểu thức hoặc Furigana để ghi đè chúng.</numerusform>
         </translation>
     </message>
     <message>
@@ -2997,8 +2997,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message numerus="yes">
         <source>%n note(s) skipped — empty Expression field.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Đã bỏ qua %n ghi chú — trường Biểu thức trống.</numerusform>
         </translation>
     </message>
     <message>
@@ -3009,14 +3009,16 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <source>Close Anki's card browser and note editors first.
 
 This will modify %n note(s) (%1) and tag them %2. Continue?</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Hãy đóng trình duyệt thẻ và trình sửa ghi chú của Anki trước.
+
+Thao tác này sẽ sửa %n ghi chú (%1) và gắn thẻ %2 cho chúng. Tiếp tục?</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%n field(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n trường</numerusform>
         </translation>
     </message>
     <message>
@@ -3025,8 +3027,8 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message numerus="yes">
         <source>Filled %n field(s) on %1.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Đã điền %n trường trên %1.</numerusform>
         </translation>
     </message>
     <message>
@@ -3035,8 +3037,8 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message numerus="yes">
         <source>%n skipped — changed or deleted since the scan.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Đã bỏ qua %n — đã thay đổi hoặc bị xóa kể từ lần quét.</numerusform>
         </translation>
     </message>
     <message>
@@ -3045,14 +3047,14 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message numerus="yes">
         <source>%n note update(s) were not confirmed by Anki; scan again to retry.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Anki chưa xác nhận %n lần cập nhật ghi chú; hãy quét lại để thử lại.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%n audio file(s) could not be added to Anki; scan again to retry.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Không thể thêm %n tệp âm thanh vào Anki; hãy quét lại để thử lại.</numerusform>
         </translation>
     </message>
 </context><context>
@@ -3149,7 +3151,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>This file could not be condensed.</source>
-        <translation type="unfinished" />
+        <translation>Không thể cô đọng tệp này.</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
@@ -3177,11 +3179,11 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>This ffmpeg build cannot condense audio. Install a different ffmpeg build.</source>
-        <translation type="unfinished" />
+        <translation>Bản ffmpeg này không cô đọng được âm thanh. Hãy cài một bản ffmpeg khác.</translation>
     </message>
     <message>
         <source>This ffmpeg build cannot write the chosen format. Pick another format, or install a different ffmpeg build.</source>
-        <translation type="unfinished" />
+        <translation>Bản ffmpeg này không ghi được định dạng đã chọn. Hãy chọn định dạng khác, hoặc cài một bản ffmpeg khác.</translation>
     </message>
     <message>
         <source>Input</source>
@@ -3237,23 +3239,23 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Audio track…</source>
-        <translation type="unfinished" />
+        <translation>Bản âm thanh…</translation>
     </message>
     <message>
         <source>Subtitle track…</source>
-        <translation type="unfinished" />
+        <translation>Rãnh phụ đề…</translation>
     </message>
     <message>
         <source>Tracks…</source>
-        <translation type="unfinished" />
+        <translation>Rãnh…</translation>
     </message>
     <message>
         <source>Choose which audio or embedded subtitle track to condense.</source>
-        <translation type="unfinished" />
+        <translation>Chọn rãnh âm thanh hoặc rãnh phụ đề nhúng cần cô đọng.</translation>
     </message>
     <message>
         <source>Optional — found automatically</source>
-        <translation type="unfinished" />
+        <translation>Tùy chọn — tự động tìm</translation>
     </message>
     <message>
         <source>This field takes a subtitle file.</source>
@@ -3281,7 +3283,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Subtitle offset:</source>
-        <translation type="unfinished" />
+        <translation>Độ lệch phụ đề:</translation>
     </message>
     <message>
         <source> seconds</source>
@@ -3353,11 +3355,11 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Audio: track %1</source>
-        <translation type="unfinished" />
+        <translation>Âm thanh: rãnh %1</translation>
     </message>
     <message>
         <source>Subtitles: embedded track %1</source>
-        <translation type="unfinished" />
+        <translation>Phụ đề: rãnh nhúng %1</translation>
     </message>
     <message>
         <source>Choose a media file first.</source>
@@ -3555,7 +3557,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>%1 of %2 · %3 done</source>
-        <translation type="unfinished" />
+        <translation>%1/%2 · đã xong %3</translation>
     </message>
 </context><context>
     <name>DeckBuilderTab</name>
@@ -3593,7 +3595,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Season folders</source>
-        <translation type="unfinished" />
+        <translation>Thư mục mùa</translation>
     </message>
     <message>
         <source>Video Folder:</source>
@@ -3701,11 +3703,11 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Words in the season:</source>
-        <translation type="unfinished" />
+        <translation>Số từ trong mùa:</translation>
     </message>
     <message>
         <source>Different words:</source>
-        <translation type="unfinished" />
+        <translation>Số từ khác nhau:</translation>
     </message>
     <message>
         <source>Choose existing video and subtitle folders.</source>
@@ -3791,7 +3793,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Deck Filter could not finish.</source>
-        <translation type="unfinished" />
+        <translation>Không thể hoàn tất lọc bộ thẻ.</translation>
     </message>
     <message>
         <source>Deck</source>
@@ -3835,7 +3837,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Filters</source>
-        <translation type="unfinished" />
+        <translation>Bộ lọc</translation>
     </message>
     <message>
         <source>Scan deck (read-only)</source>
@@ -3911,13 +3913,13 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message numerus="yes">
         <source>%n note(s) in the deck.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Bộ thẻ có %n ghi chú.</numerusform>
         </translation>
     </message>
     <message>
         <source>The deck could not be read.</source>
-        <translation type="unfinished" />
+        <translation>Không thể đọc bộ thẻ.</translation>
     </message>
     <message>
         <source>Pick the source deck first.</source>
@@ -3977,8 +3979,8 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message numerus="yes">
         <source>%1 of %n note(s) will be copied.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Sẽ sao chép %1 trong %n ghi chú.</numerusform>
         </translation>
     </message>
     <message>
@@ -3987,14 +3989,14 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message numerus="yes">
         <source>%n kept by whitelist.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n được giữ lại nhờ danh sách trắng.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>Showing first %n row(s).</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Đang hiển thị %n dòng đầu tiên.</numerusform>
         </translation>
     </message>
     <message>
@@ -4003,8 +4005,8 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message numerus="yes">
         <source>This will create deck "%1" and copy %n note(s) into it, tagged %2. The source deck is not modified. Continue?</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Thao tác này sẽ tạo bộ thẻ "%1" và sao chép %n ghi chú vào đó, gắn thẻ %2. Bộ thẻ nguồn không bị thay đổi. Tiếp tục?</numerusform>
         </translation>
     </message>
     <message>
@@ -4013,14 +4015,14 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message numerus="yes">
         <source>Copied %n note(s) into "%1".</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Đã sao chép %n ghi chú vào "%1".</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%n note(s) were not accepted by Anki (see log).</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Anki không chấp nhận %n ghi chú (xem nhật ký).</numerusform>
         </translation>
     </message>
 </context><context>
@@ -4031,11 +4033,11 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Pick a deck</source>
-        <translation type="unfinished" />
+        <translation>Chọn bộ thẻ</translation>
     </message>
     <message>
         <source>%1 (not in Anki yet)</source>
-        <translation type="unfinished" />
+        <translation>%1 (chưa có trong Anki)</translation>
     </message>
     <message>
         <source>Could not load decks. Is Anki running with AnkiConnect?</source>
@@ -4047,7 +4049,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Anki doesn't have a deck called “%1” yet. In Anki, click Create Deck at the bottom of the main window and name it %1, or pick one of your decks above. This page updates when you come back.</source>
-        <translation type="unfinished" />
+        <translation>Anki chưa có bộ thẻ tên “%1”. Trong Anki, nhấn Tạo bộ thẻ (Create Deck) ở cuối cửa sổ chính và đặt tên là %1, hoặc chọn một bộ thẻ của bạn ở trên. Trang này sẽ cập nhật khi bạn quay lại.</translation>
     </message>
 </context><context>
     <name>DefinitionService</name>
@@ -4343,15 +4345,15 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>No dictionaries yet.</source>
-        <translation type="unfinished" />
+        <translation>Chưa có từ điển nào.</translation>
     </message>
     <message>
         <source>Download recommended</source>
-        <translation type="unfinished" />
+        <translation>Tải bộ đề xuất</translation>
     </message>
     <message>
         <source>Storage</source>
-        <translation type="unfinished" />
+        <translation>Lưu trữ</translation>
     </message>
     <message>
         <source>Select dictionary storage folder...</source>
@@ -4457,27 +4459,27 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>You're ready. Pick a video and its subtitle file, then press Mine Episode. Books, manga and subtitles are under Reading, audiobooks under Audiobooks, tools under Utilities. Press F1 any time for the Usage Guide.</source>
-        <translation type="unfinished" />
+        <translation>Đã sẵn sàng. Chọn một video và tệp phụ đề của nó, rồi nhấn Khai thác tập. Sách, manga và phụ đề nằm trong Đọc, sách nói trong Sách nói, công cụ trong Tiện ích. Nhấn F1 bất cứ lúc nào để mở Hướng dẫn sử dụng.</translation>
     </message>
     <message>
         <source>Anki isn't reachable. Open Anki.</source>
-        <translation type="unfinished" />
+        <translation>Không kết nối được tới Anki. Hãy mở Anki.</translation>
     </message>
     <message>
         <source>Anki has no deck called “%1”. Go back to the Anki step and pick one.</source>
-        <translation type="unfinished" />
+        <translation>Anki không có bộ thẻ tên “%1”. Hãy quay lại bước Anki và chọn một bộ thẻ.</translation>
     </message>
     <message>
         <source>Anki has no note type called “%1”. Go back to the Anki step and pick one.</source>
-        <translation type="unfinished" />
+        <translation>Anki không có loại ghi chú tên “%1”. Hãy quay lại bước Anki và chọn một loại.</translation>
     </message>
     <message>
         <source>The card fields don't match the note type. Go back to the Anki step and pick it again.</source>
-        <translation type="unfinished" />
+        <translation>Các trường của thẻ không khớp với loại ghi chú. Hãy quay lại bước Anki và chọn lại.</translation>
     </message>
     <message>
         <source>Before you can mine:</source>
-        <translation type="unfinished" />
+        <translation>Trước khi khai thác:</translation>
     </message>
 </context><context>
     <name>DownloadTab</name>
@@ -4539,7 +4541,7 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>This URL could not be downloaded.</source>
-        <translation type="unfinished" />
+        <translation>Không thể tải URL này.</translation>
     </message>
     <message>
         <source>Complete — %1 downloaded</source>
@@ -4563,7 +4565,7 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>Update yt-dlp</source>
-        <translation type="unfinished" />
+        <translation>Cập nhật yt-dlp</translation>
     </message>
     <message>
         <source>URLs</source>
@@ -4631,7 +4633,7 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>Custom format…</source>
-        <translation type="unfinished" />
+        <translation>Định dạng tùy chỉnh…</translation>
     </message>
     <message>
         <source>Custom format:</source>
@@ -4639,7 +4641,7 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>yt-dlp format string, e.g. bv*[height&lt;=480]+ba</source>
-        <translation type="unfinished" />
+        <translation>Chuỗi định dạng yt-dlp, ví dụ bv*[height&lt;=480]+ba</translation>
     </message>
     <message>
         <source>Download subtitles</source>
@@ -5137,7 +5139,7 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     <name>FileSelector</name>
     <message>
         <source>Select a file or folder...</source>
-        <translation type="unfinished" />
+        <translation>Chọn tệp hoặc thư mục...</translation>
     </message>
     <message>
         <source>Select file...</source>
@@ -5149,7 +5151,7 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>File…</source>
-        <translation type="unfinished" />
+        <translation>Tệp…</translation>
     </message>
     <message>
         <source>Browse...</source>
@@ -5157,11 +5159,11 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>Folder…</source>
-        <translation type="unfinished" />
+        <translation>Thư mục…</translation>
     </message>
     <message>
         <source>file or folder</source>
-        <translation type="unfinished" />
+        <translation>tệp hoặc thư mục</translation>
     </message>
     <message>
         <source>file</source>
@@ -5209,7 +5211,7 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>Not found. Choose an existing file or folder.</source>
-        <translation type="unfinished" />
+        <translation>Không tìm thấy. Hãy chọn một tệp hoặc thư mục có sẵn.</translation>
     </message>
     <message>
         <source>File not found. Choose an existing file.</source>
@@ -5331,7 +5333,7 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation type="unfinished" />
+        <translation>Từ vẫn được coi là đã biết sau khi thẻ Anki của chúng bị xóa hoặc chuyển sang bộ thẻ bị loại trừ. Dựng lại (trong Quản lý từ đã biết) sẽ quên chúng.</translation>
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5359,7 +5361,7 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>No decks excluded.</source>
-        <translation type="unfinished" />
+        <translation>Không loại trừ bộ thẻ nào.</translation>
     </message>
     <message>
         <source>Add Deck…</source>
@@ -5383,7 +5385,7 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>Text file with one word per line to always skip. Leave empty to skip nothing.</source>
-        <translation type="unfinished" />
+        <translation>Tệp văn bản, mỗi dòng một từ, luôn bị bỏ qua. Để trống để không bỏ qua gì.</translation>
     </message>
     <message>
         <source>Select whitelist file...</source>
@@ -5395,7 +5397,7 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>Text file with one word per line to force-include, bypassing frequency, script, length and other filters. A word must still have a dictionary entry and not already be in Anki or your known-words list. Leave empty to force nothing.</source>
-        <translation type="unfinished" />
+        <translation>Tệp văn bản, mỗi dòng một từ, buộc được đưa vào, bỏ qua các bộ lọc tần suất, chữ viết, độ dài và các bộ lọc khác. Từ vẫn phải có mục trong từ điển và chưa có trong Anki hay danh sách từ đã biết của bạn. Để trống để không buộc đưa vào gì.</translation>
     </message>
     <message>
         <source>Name Wordsets</source>
@@ -5407,11 +5409,11 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>Skip names of people, places and companies</source>
-        <translation type="unfinished" />
+        <translation>Bỏ qua tên người, địa danh và công ty</translation>
     </message>
     <message>
         <source>Excludes the bundled name lists from mining: %1.</source>
-        <translation type="unfinished" />
+        <translation>Loại các danh sách tên đi kèm khỏi khai thác: %1.</translation>
     </message>
     <message>
         <source>Script Type</source>
@@ -5419,11 +5421,11 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>Keep all words</source>
-        <translation type="unfinished" />
+        <translation>Giữ mọi từ</translation>
     </message>
     <message>
         <source>Skip hiragana-only words</source>
-        <translation type="unfinished" />
+        <translation>Bỏ qua từ chỉ có hiragana</translation>
     </message>
     <message>
         <source>Skip words written entirely in hiragana (e.g. する, これ), including long-vowel spellings like すごーい. Focuses the deck on kanji vocabulary.</source>
@@ -5431,19 +5433,19 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>Skip katakana-only words</source>
-        <translation type="unfinished" />
+        <translation>Bỏ qua từ chỉ có katakana</translation>
     </message>
     <message>
         <source>Skip words written entirely in katakana (e.g. コーヒー).</source>
-        <translation type="unfinished" />
+        <translation>Bỏ qua các từ viết hoàn toàn bằng katakana (ví dụ コーヒー).</translation>
     </message>
     <message>
         <source>Skip all kana-only words (including mixed)</source>
-        <translation type="unfinished" />
+        <translation>Bỏ qua mọi từ chỉ có kana (kể cả từ trộn)</translation>
     </message>
     <message>
         <source>Skip every word written without kanji, including words that mix hiragana and katakana.</source>
-        <translation type="unfinished" />
+        <translation>Bỏ qua mọi từ viết không có kanji, kể cả từ trộn hiragana và katakana.</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -5681,7 +5683,7 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>All enabled lists are used. The order only changes how they are listed on the card.</source>
-        <translation type="unfinished" />
+        <translation>Mọi danh sách đang bật đều được dùng. Thứ tự chỉ thay đổi cách chúng được liệt kê trên thẻ.</translation>
     </message>
     <message>
         <source>Every enabled source counts: filtering uses the lowest rank, Frequency Sort the harmonic mean. Order only sets the card's source list.</source>
@@ -5725,11 +5727,11 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>No frequency lists yet.</source>
-        <translation type="unfinished" />
+        <translation>Chưa có danh sách tần suất nào.</translation>
     </message>
     <message>
         <source>Download recommended</source>
-        <translation type="unfinished" />
+        <translation>Tải bộ đề xuất</translation>
     </message>
     <message>
         <source>%1 entries</source>
@@ -5847,11 +5849,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Show in Anki</source>
-        <translation type="unfinished" />
+        <translation>Hiện trong Anki</translation>
     </message>
     <message>
         <source>Open Anki's card browser on the cards this run added.</source>
-        <translation type="unfinished" />
+        <translation>Mở trình duyệt thẻ của Anki với các thẻ mà lần chạy này đã thêm.</translation>
     </message>
     <message>
         <source>Copy summary</source>
@@ -6013,7 +6015,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Clear the local known-words cache so it re-syncs from Anki on the next run. Needed for deck exclusions to take effect when the local cache is enabled.</source>
-        <translation type="unfinished" />
+        <translation>Xóa bộ nhớ đệm từ đã biết cục bộ để lần chạy sau đồng bộ lại từ Anki. Cần thiết để việc loại trừ bộ thẻ có hiệu lực khi bộ nhớ đệm cục bộ đang bật.</translation>
     </message>
     <message>
         <source>Remove Selected</source>
@@ -6165,7 +6167,7 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
     </message>
     <message>
         <source>Tick the languages to download subtitles in.</source>
-        <translation type="unfinished" />
+        <translation>Đánh dấu các ngôn ngữ phụ đề cần tải.</translation>
     </message>
     <message>
         <source>Search languages…</source>
@@ -6173,7 +6175,7 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
     </message>
     <message>
         <source>Using this as a yt-dlp language expression; the list is ignored.</source>
-        <translation type="unfinished" />
+        <translation>Đang dùng nội dung này làm biểu thức ngôn ngữ yt-dlp; danh sách bị bỏ qua.</translation>
     </message>
     <message>
         <source>A ticked language not listed for this URL is fetched as a machine translation.</source>
@@ -6185,7 +6187,7 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
     </message>
     <message>
         <source>OK</source>
-        <translation type="unfinished" />
+        <translation>OK</translation>
     </message>
     <message>
         <source>Available for this URL</source>
@@ -6237,7 +6239,7 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
     </message>
     <message>
         <source>Anki Miner skips words you already have in Anki. Tick the decks that are &lt;i&gt;not&lt;/i&gt; %1, so their words don't stop %1 cards from being made.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner bỏ qua các từ đã có trong Anki của bạn. Đánh dấu các bộ thẻ &lt;i&gt;không&lt;/i&gt; phải %1, để từ trong đó không cản việc tạo thẻ %1.</translation>
     </message>
     <message>
         <source>Exclude ticked decks</source>
@@ -6453,7 +6455,7 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
     </message>
     <message>
         <source>Settings profile and theme selectors</source>
-        <translation type="unfinished" />
+        <translation>Bộ chọn hồ sơ cài đặt và chủ đề</translation>
     </message>
     <message>
         <source>Status Bar</source>
@@ -6469,7 +6471,7 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
     </message>
     <message>
         <source>System Health…</source>
-        <translation type="unfinished" />
+        <translation>Tình trạng hệ thống…</translation>
     </message>
     <message>
         <source>Create Desktop Shortcut...</source>
@@ -6859,7 +6861,7 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>Read aloud (manga, books)</source>
-        <translation type="unfinished" />
+        <translation>Đọc to (manga, sách)</translation>
     </message>
     <message>
         <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>
@@ -6895,15 +6897,15 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>Same as sentence audio</source>
-        <translation type="unfinished" />
+        <translation>Giống âm thanh câu</translation>
     </message>
     <message>
         <source>Clip length</source>
-        <translation type="unfinished" />
+        <translation>Độ dài clip</translation>
     </message>
     <message>
         <source>Length of the animated clip, capped by the subtitle's duration. “Same as sentence audio” spans the sentence audio clip instead.</source>
-        <translation type="unfinished" />
+        <translation>Độ dài của clip động, tối đa bằng thời lượng phụ đề. “Giống âm thanh câu” sẽ trải theo đoạn âm thanh câu.</translation>
     </message>
     <message>
         <source>Small</source>
@@ -6967,23 +6969,23 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>%1 (download)</source>
-        <translation type="unfinished" />
+        <translation>%1 (cần tải)</translation>
     </message>
     <message>
         <source>The deck, note type and dictionary in the next steps follow this choice.</source>
-        <translation type="unfinished" />
+        <translation>Bộ thẻ, loại ghi chú và từ điển ở các bước sau sẽ theo lựa chọn này.</translation>
     </message>
     <message>
         <source>%1 needs a one-time download of about %2 MB. It starts when you press Next and runs while you finish setup.</source>
-        <translation type="unfinished" />
+        <translation>%1 cần tải một lần khoảng %2 MB. Việc tải bắt đầu khi bạn nhấn Tiếp và chạy trong lúc bạn hoàn tất thiết lập.</translation>
     </message>
     <message>
         <source>This language's download cannot start from setup. Pick it in Settings → Mining Language after setup.</source>
-        <translation type="unfinished" />
+        <translation>Không thể bắt đầu tải ngôn ngữ này từ phần thiết lập. Hãy chọn nó trong Cài đặt → Ngôn ngữ khai thác sau khi thiết lập xong.</translation>
     </message>
     <message>
         <source>%1 language pack: download failed.</source>
-        <translation type="unfinished" />
+        <translation>Gói ngôn ngữ %1: tải thất bại.</translation>
     </message>
     <message>
         <source>Retry</source>
@@ -6991,11 +6993,11 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>%1 language pack: %2</source>
-        <translation type="unfinished" />
+        <translation>Gói ngôn ngữ %1: %2</translation>
     </message>
     <message>
         <source>%1 language pack: downloading…</source>
-        <translation type="unfinished" />
+        <translation>Gói ngôn ngữ %1: đang tải…</translation>
     </message>
 </context><context>
     <name>MiningLanguageSettingsPanel</name>
@@ -7013,7 +7015,7 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>Download and switch</source>
-        <translation type="unfinished" />
+        <translation>Tải và chuyển</translation>
     </message>
     <message>
         <source>Script Variants</source>
@@ -7061,37 +7063,37 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>%1 (download)</source>
-        <translation type="unfinished" />
+        <translation>%1 (cần tải)</translation>
     </message>
     <message>
         <source>%1 needs a one-time download of about %2 MB.</source>
-        <translation type="unfinished" />
+        <translation>%1 cần tải một lần khoảng %2 MB.</translation>
     </message>
 </context><context>
     <name>MiningTabBase</name>
     <message>
         <source>Cannot connect to AnkiConnect. Is Anki running?</source>
-        <translation type="unfinished" />
+        <translation>Không thể kết nối tới AnkiConnect. Anki có đang chạy không?</translation>
     </message>
     <message>
         <source>Mining failed.</source>
-        <translation type="unfinished" />
+        <translation>Khai thác thất bại.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open these cards in Anki.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner không mở được các thẻ này trong Anki.</translation>
     </message>
     <message>
         <source>Show review</source>
-        <translation type="unfinished" />
+        <translation>Hiện phần duyệt</translation>
     </message>
     <message>
         <source>Bring the Word Curator window to the front.</source>
-        <translation type="unfinished" />
+        <translation>Đưa cửa sổ Word Curator lên trước.</translation>
     </message>
     <message>
         <source>Waiting for your word review</source>
-        <translation type="unfinished" />
+        <translation>Đang chờ bạn duyệt từ</translation>
     </message>
     <message>
         <source>Failed: %1 — %2</source>
@@ -7195,7 +7197,7 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>This volume could not be processed.</source>
-        <translation type="unfinished" />
+        <translation>Không thể xử lý tập này.</translation>
     </message>
     <message>
         <source>Complete — %1 volume(s) processed</source>
@@ -7215,7 +7217,7 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>mokuro is not installed. Install it in the Manga OCR setup section.</source>
-        <translation type="unfinished" />
+        <translation>Chưa cài mokuro. Hãy cài trong phần thiết lập Manga OCR.</translation>
     </message>
     <message>
         <source>Manga</source>
@@ -7223,7 +7225,7 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>mokuro is not installed. Install it in the Manga OCR setup section below.</source>
-        <translation type="unfinished" />
+        <translation>Chưa cài mokuro. Hãy cài trong phần thiết lập Manga OCR bên dưới.</translation>
     </message>
     <message>
         <source>Run mokuro's OCR on a folder of page images, or a series folder of volumes. Each volume gets a .mokuro file beside it for Reading → Manga.</source>
@@ -7243,7 +7245,7 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>mokuro is installed</source>
-        <translation type="unfinished" />
+        <translation>Đã cài mokuro</translation>
     </message>
     <message>
         <source>Change…</source>
@@ -7251,7 +7253,7 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>Reinstall mokuro and its OCR engine.</source>
-        <translation type="unfinished" />
+        <translation>Cài lại mokuro và công cụ OCR của nó.</translation>
     </message>
     <message>
         <source>Install mokuro</source>
@@ -7379,11 +7381,11 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>Pick a note type</source>
-        <translation type="unfinished" />
+        <translation>Chọn loại ghi chú</translation>
     </message>
     <message>
         <source>%1 (not in Anki yet)</source>
-        <translation type="unfinished" />
+        <translation>%1 (chưa có trong Anki)</translation>
     </message>
     <message>
         <source>No fields found. Make sure Anki is running and the note type name is spelled exactly as in Anki.</source>
@@ -7391,27 +7393,27 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. If it can't tell which field is which, press Skip Setup and choose the fields yourself in Settings → Cards &amp; Anki. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation type="unfinished" />
+        <translation>Loại ghi chú nào cũng dùng được khi đã ánh xạ các trường. Hãy chọn một loại ghi chú của bạn: Anki Miner đặt từ vào trường đầu tiên và điền các trường nó nhận ra theo tên, như Word, Sentence, Reading, Definition, Picture và âm thanh. Nếu không phân biệt được trường nào là trường nào, hãy nhấn Bỏ qua cài đặt và tự chọn các trường trong Cài đặt → Thẻ &amp; Anki. &lt;a href="%1"&gt;Anki Miner điền được những trường nào?&lt;/a&gt;</translation>
     </message>
     <message>
         <source>Anki Miner fills a note type called Lapis. Your Anki doesn't have it yet. &lt;a href="%1"&gt;Get Lapis&lt;/a&gt; (free), then in Anki choose File → Import and pick the file. This page updates when you come back.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner điền một loại ghi chú tên Lapis. Anki của bạn chưa có loại này. &lt;a href="%1"&gt;Tải Lapis&lt;/a&gt; (miễn phí), rồi trong Anki chọn Tệp → Nhập (File → Import) và chọn tệp đó. Trang này sẽ cập nhật khi bạn quay lại.</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>
-        <translation type="unfinished" />
+        <translation>Đã nhận ra %1: điền %2 trường.</translation>
     </message>
     <message>
         <source>Fields filled automatically: %1.</source>
-        <translation type="unfinished" />
+        <translation>Các trường được tự động điền: %1.</translation>
     </message>
     <message>
         <source>No fields could be filled automatically.</source>
-        <translation type="unfinished" />
+        <translation>Không trường nào được tự động điền.</translation>
     </message>
     <message>
         <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
-        <translation type="unfinished" />
+        <translation>Từ được đặt vào trường đầu tiên của loại ghi chú, “%1”, nhưng từ đang được ánh xạ tới “%2”. Hãy đổi thứ tự các trường trong Anki, hoặc chọn loại ghi chú khác.</translation>
     </message>
 </context><context>
     <name>OnnxPackDownloadWorker</name>
@@ -7671,11 +7673,11 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>No pitch accent lists yet.</source>
-        <translation type="unfinished" />
+        <translation>Chưa có danh sách trọng âm cao độ nào.</translation>
     </message>
     <message>
         <source>Download recommended</source>
-        <translation type="unfinished" />
+        <translation>Tải bộ đề xuất</translation>
     </message>
     <message>
         <source>%1 entries</source>
@@ -7959,11 +7961,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>This profile:</source>
-        <translation type="unfinished" />
+        <translation>Hồ sơ này:</translation>
     </message>
     <message>
         <source>Export to file…</source>
-        <translation type="unfinished" />
+        <translation>Xuất ra tệp…</translation>
     </message>
     <message>
         <source>Save a portable settings file (machine-specific paths and resources excluded).</source>
@@ -7971,7 +7973,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Import from file…</source>
-        <translation type="unfinished" />
+        <translation>Nhập từ tệp…</translation>
     </message>
     <message>
         <source>Apply settings from an exported file; anything not in the file is kept.</source>
@@ -7979,7 +7981,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Reset to defaults…</source>
-        <translation type="unfinished" />
+        <translation>Đặt lại về mặc định…</translation>
     </message>
     <message>
         <source>Your installed resources and your theme are kept.</source>
@@ -8061,11 +8063,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Edit…</source>
-        <translation type="unfinished" />
+        <translation>Sửa…</translation>
     </message>
     <message>
         <source>Change the selected series' folders and offset.</source>
-        <translation type="unfinished" />
+        <translation>Đổi thư mục và độ lệch của các loạt phim đã chọn.</translation>
     </message>
     <message>
         <source>Pause after current item</source>
@@ -8143,31 +8145,31 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>1 episode</source>
-        <translation type="unfinished" />
+        <translation>1 tập</translation>
     </message>
     <message>
         <source>%1 episodes</source>
-        <translation type="unfinished" />
+        <translation>%1 tập</translation>
     </message>
     <message>
         <source>Video folder: %1</source>
-        <translation type="unfinished" />
+        <translation>Thư mục video: %1</translation>
     </message>
     <message>
         <source>Subtitle folder: %1</source>
-        <translation type="unfinished" />
+        <translation>Thư mục phụ đề: %1</translation>
     </message>
     <message>
         <source>Translation folder: %1</source>
-        <translation type="unfinished" />
+        <translation>Thư mục bản dịch: %1</translation>
     </message>
     <message>
         <source>Offset: %1</source>
-        <translation type="unfinished" />
+        <translation>Độ lệch: %1</translation>
     </message>
     <message>
         <source>Double-click to edit</source>
-        <translation type="unfinished" />
+        <translation>Nhấp đúp để sửa</translation>
     </message>
 </context><context>
     <name>QueueMiningProgressAdapter</name>
@@ -8203,11 +8205,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Mine Queue</source>
-        <translation type="unfinished" />
+        <translation>Khai thác hàng đợi</translation>
     </message>
     <message>
         <source>Mine every series in the queue</source>
-        <translation type="unfinished" />
+        <translation>Khai thác mọi loạt phim trong hàng đợi</translation>
     </message>
     <message>
         <source>Edit: %1</source>
@@ -8263,31 +8265,31 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>1 series</source>
-        <translation type="unfinished" />
+        <translation>1 loạt phim</translation>
     </message>
     <message>
         <source>%1 series</source>
-        <translation type="unfinished" />
+        <translation>%1 loạt phim</translation>
     </message>
     <message>
         <source>1 episode</source>
-        <translation type="unfinished" />
+        <translation>1 tập</translation>
     </message>
     <message>
         <source>%1 episodes</source>
-        <translation type="unfinished" />
+        <translation>%1 tập</translation>
     </message>
     <message>
         <source>%1 ready</source>
-        <translation type="unfinished" />
+        <translation>%1 sẵn sàng</translation>
     </message>
     <message>
         <source>%1 failed</source>
-        <translation type="unfinished" />
+        <translation>%1 thất bại</translation>
     </message>
     <message>
         <source>%1 complete</source>
-        <translation type="unfinished" />
+        <translation>%1 hoàn tất</translation>
     </message>
 </context><context>
     <name>QueueRow</name>
@@ -8327,19 +8329,19 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Sentence from:</source>
-        <translation type="unfinished" />
+        <translation>Câu lấy từ:</translation>
     </message>
     <message>
         <source>Audio from:</source>
-        <translation type="unfinished" />
+        <translation>Âm thanh lấy từ:</translation>
     </message>
     <message>
         <source>Picture from:</source>
-        <translation type="unfinished" />
+        <translation>Hình ảnh lấy từ:</translation>
     </message>
     <message>
         <source>Translation from:</source>
-        <translation type="unfinished" />
+        <translation>Bản dịch lấy từ:</translation>
     </message>
     <message>
         <source>Select a deck…</source>
@@ -8467,7 +8469,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Volume or folder:</source>
-        <translation type="unfinished" />
+        <translation>Tập hoặc thư mục:</translation>
     </message>
     <message>
         <source>Manga</source>
@@ -8475,7 +8477,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>A .mokuro volume, a .cbz/.zip archive with its .mokuro beside or inside it, or a folder of volumes. No extraction needed.</source>
-        <translation type="unfinished" />
+        <translation>Một tập .mokuro, một tệp nén .cbz/.zip có .mokuro bên cạnh hoặc bên trong, hoặc một thư mục chứa các tập. Không cần giải nén.</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -8483,7 +8485,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Mine the chosen volume, or every volume in the chosen folder.</source>
-        <translation type="unfinished" />
+        <translation>Khai thác tập đã chọn, hoặc mọi tập trong thư mục đã chọn.</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -8499,15 +8501,15 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Subtitle files are mined in Reading → Subtitle Files.</source>
-        <translation type="unfinished" />
+        <translation>Tệp phụ đề được khai thác trong Đọc → Tệp phụ đề.</translation>
     </message>
     <message>
         <source>Choose a manga volume or folder first.</source>
-        <translation type="unfinished" />
+        <translation>Hãy chọn một tập manga hoặc thư mục trước.</translation>
     </message>
     <message>
         <source>Choose a .mokuro, .cbz or .zip volume, or a manga folder.</source>
-        <translation type="unfinished" />
+        <translation>Hãy chọn một tập .mokuro, .cbz hoặc .zip, hoặc một thư mục manga.</translation>
     </message>
     <message>
         <source>Could not process %1: %2</source>
@@ -8519,19 +8521,19 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>This manga has no text layer yet, so it can't be mined.</source>
-        <translation type="unfinished" />
+        <translation>Manga này chưa có lớp văn bản nên chưa thể khai thác.</translation>
     </message>
     <message>
         <source>This manga has no text layer yet. Manga OCR can make one for this folder.</source>
-        <translation type="unfinished" />
+        <translation>Manga này chưa có lớp văn bản. Manga OCR có thể tạo lớp đó cho thư mục này.</translation>
     </message>
     <message>
         <source>This manga has no text layer yet. Manga OCR can make one for the folder this file is in.</source>
-        <translation type="unfinished" />
+        <translation>Manga này chưa có lớp văn bản. Manga OCR có thể tạo lớp đó cho thư mục chứa tệp này.</translation>
     </message>
     <message>
         <source>Open Manga OCR</source>
-        <translation type="unfinished" />
+        <translation>Mở Manga OCR</translation>
     </message>
     <message>
         <source>Starting…</source>
@@ -8577,7 +8579,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Book or folder:</source>
-        <translation type="unfinished" />
+        <translation>Sách hoặc thư mục:</translation>
     </message>
     <message>
         <source>Books</source>
@@ -8585,7 +8587,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>An .epub or .txt book, or a folder of books; each book is mined separately.</source>
-        <translation type="unfinished" />
+        <translation>Một cuốn sách .epub hoặc .txt, hoặc một thư mục sách; mỗi cuốn được khai thác riêng.</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -8593,7 +8595,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Mine the chosen book, or every book in the chosen folder.</source>
-        <translation type="unfinished" />
+        <translation>Khai thác cuốn sách đã chọn, hoặc mọi cuốn trong thư mục đã chọn.</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -8609,15 +8611,15 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Subtitle files are mined in Reading → Subtitle Files.</source>
-        <translation type="unfinished" />
+        <translation>Tệp phụ đề được khai thác trong Đọc → Tệp phụ đề.</translation>
     </message>
     <message>
         <source>Choose a book or a folder of books first.</source>
-        <translation type="unfinished" />
+        <translation>Hãy chọn một cuốn sách hoặc thư mục sách trước.</translation>
     </message>
     <message>
         <source>Choose an .epub or .txt book, or a folder of books.</source>
-        <translation type="unfinished" />
+        <translation>Hãy chọn một cuốn sách .epub hoặc .txt, hoặc một thư mục sách.</translation>
     </message>
     <message>
         <source>Starting…</source>
@@ -8671,7 +8673,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Add subtitle files, or drop them here.</source>
-        <translation type="unfinished" />
+        <translation>Thêm tệp phụ đề, hoặc thả chúng vào đây.</translation>
     </message>
     <message>
         <source>Subtitle files to mine, one card run per file, in list order.</source>
@@ -8739,11 +8741,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>A listed file no longer exists.</source>
-        <translation type="unfinished" />
+        <translation>Một tệp trong danh sách không còn tồn tại.</translation>
     </message>
     <message>
         <source>Every listed file has been mined. Add more files, or Clear the list.</source>
-        <translation type="unfinished" />
+        <translation>Mọi tệp trong danh sách đã được khai thác. Hãy thêm tệp khác, hoặc Xóa danh sách.</translation>
     </message>
     <message>
         <source>Starting…</source>
@@ -8805,7 +8807,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Anki Miner can't mine this file.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner không thể khai thác tệp này.</translation>
     </message>
     <message>
         <source>Cancelled</source>
@@ -8860,23 +8862,23 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Paste the text you want to mine. Cards from pasted text have no sentence audio from a recording.</source>
-        <translation type="unfinished" />
+        <translation>Dán văn bản bạn muốn khai thác. Thẻ tạo từ văn bản dán vào không có âm thanh câu từ bản ghi.</translation>
     </message>
     <message>
         <source>Drop or paste text here, or drop a picture for the cards; other files are not supported.</source>
-        <translation type="unfinished" />
+        <translation>Thả hoặc dán văn bản vào đây, hoặc thả một hình ảnh cho các thẻ; các tệp khác không được hỗ trợ.</translation>
     </message>
     <message>
         <source>Add card picture…</source>
-        <translation type="unfinished" />
+        <translation>Thêm hình ảnh cho thẻ…</translation>
     </message>
     <message>
         <source>Optional. This picture goes in the Picture field of every card from this text.</source>
-        <translation type="unfinished" />
+        <translation>Tùy chọn. Hình ảnh này được đưa vào trường Hình ảnh của mọi thẻ từ văn bản này.</translation>
     </message>
     <message>
         <source>Remove the card picture</source>
-        <translation type="unfinished" />
+        <translation>Gỡ hình ảnh của thẻ</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -8896,7 +8898,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Choose a card picture</source>
-        <translation type="unfinished" />
+        <translation>Chọn hình ảnh cho thẻ</translation>
     </message>
     <message>
         <source>Images</source>
@@ -8908,11 +8910,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>This card picture has no Picture field to land in. Map one in Settings → Cards &amp; Anki, or remove the picture.</source>
-        <translation type="unfinished" />
+        <translation>Hình ảnh của thẻ này không có trường Hình ảnh để đặt vào. Hãy ánh xạ một trường trong Cài đặt → Thẻ &amp; Anki, hoặc gỡ hình ảnh.</translation>
     </message>
     <message>
         <source>That picture cannot be read. Pick another, or remove it to mine without one.</source>
-        <translation type="unfinished" />
+        <translation>Không đọc được hình ảnh đó. Hãy chọn hình khác, hoặc gỡ nó để khai thác mà không có hình.</translation>
     </message>
     <message>
         <source>Starting…</source>
@@ -9268,19 +9270,19 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>%1 (dictionary)</source>
-        <translation type="unfinished" />
+        <translation>%1 (từ điển)</translation>
     </message>
     <message>
         <source>%1 (word frequency)</source>
-        <translation type="unfinished" />
+        <translation>%1 (tần suất từ)</translation>
     </message>
     <message>
         <source>%1 (pitch accent)</source>
-        <translation type="unfinished" />
+        <translation>%1 (trọng âm cao độ)</translation>
     </message>
     <message>
         <source>Downloading %1 of %2 · %3</source>
-        <translation type="unfinished" />
+        <translation>Đang tải %1/%2 · %3</translation>
     </message>
     <message>
         <source>Recommended Resources</source>
@@ -9338,11 +9340,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <name>ResourcesPage</name>
     <message>
         <source>Get a Dictionary</source>
-        <translation type="unfinished" />
+        <translation>Tải từ điển</translation>
     </message>
     <message>
         <source>Mined cards take their definitions from an offline dictionary. This step is required.</source>
-        <translation type="unfinished" />
+        <translation>Thẻ khai thác được lấy định nghĩa từ một từ điển ngoại tuyến. Bước này là bắt buộc.</translation>
     </message>
     <message>
         <source>Download</source>
@@ -9362,11 +9364,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Downloads %1.</source>
-        <translation type="unfinished" />
+        <translation>Sẽ tải %1.</translation>
     </message>
     <message>
         <source>%1 and %2</source>
-        <translation type="unfinished" />
+        <translation>%1 và %2</translation>
     </message>
     <message>
         <source>Checking for an offline dictionary...</source>
@@ -9386,7 +9388,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Dictionary: not downloaded yet (required)</source>
-        <translation type="unfinished" />
+        <translation>Từ điển: chưa tải (bắt buộc)</translation>
     </message>
     <message>
         <source>%1: not set up (optional)</source>
@@ -9402,11 +9404,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Downloading: %1</source>
-        <translation type="unfinished" />
+        <translation>Đang tải: %1</translation>
     </message>
     <message>
         <source>The download stopped before it finished.</source>
-        <translation type="unfinished" />
+        <translation>Quá trình tải đã dừng trước khi xong.</translation>
     </message>
     <message>
         <source>Download cancelled. Some resources were installed.</source>
@@ -9418,7 +9420,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Imported, but not switched on. Press Download to try again.</source>
-        <translation type="unfinished" />
+        <translation>Đã nhập nhưng chưa bật. Nhấn Tải về để thử lại.</translation>
     </message>
     <message>
         <source>%1 installed, %2 failed.</source>
@@ -9434,19 +9436,19 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Dictionary: none installed. Add one in Settings → Dictionaries after setup.</source>
-        <translation type="unfinished" />
+        <translation>Từ điển: chưa cài từ điển nào. Hãy thêm trong Cài đặt → Từ điển sau khi thiết lập.</translation>
     </message>
     <message>
         <source>Downloads: still running — %1</source>
-        <translation type="unfinished" />
+        <translation>Tải xuống: vẫn đang chạy — %1</translation>
     </message>
     <message>
         <source>Downloads: still running…</source>
-        <translation type="unfinished" />
+        <translation>Tải xuống: vẫn đang chạy…</translation>
     </message>
     <message>
         <source>Dictionary: download failed.</source>
-        <translation type="unfinished" />
+        <translation>Từ điển: tải thất bại.</translation>
     </message>
     <message>
         <source>Retry</source>
@@ -9484,19 +9486,19 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Mining complete — %1 %2, %3 card added in %4</source>
-        <translation type="unfinished" />
+        <translation>Khai thác xong — %1 %2, đã thêm %3 thẻ trong %4</translation>
     </message>
     <message>
         <source>Mining complete — %1 %2, %3 cards added in %4</source>
-        <translation type="unfinished" />
+        <translation>Khai thác xong — %1 %2, đã thêm %3 thẻ trong %4</translation>
     </message>
     <message>
         <source>Mining complete — %1 card added in %2</source>
-        <translation type="unfinished" />
+        <translation>Khai thác xong — đã thêm %1 thẻ trong %2</translation>
     </message>
     <message>
         <source>Mining complete — %1 cards added in %2</source>
-        <translation type="unfinished" />
+        <translation>Khai thác xong — đã thêm %1 thẻ trong %2</translation>
     </message>
     <message>
         <source>Cancelled</source>
@@ -9512,19 +9514,19 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>%1 — %2 of %3 %4 completed; %5 card added in %6</source>
-        <translation type="unfinished" />
+        <translation>%1 — đã xong %2/%3 %4; đã thêm %5 thẻ trong %6</translation>
     </message>
     <message>
         <source>%1 — %2 of %3 %4 completed; %5 cards added in %6</source>
-        <translation type="unfinished" />
+        <translation>%1 — đã xong %2/%3 %4; đã thêm %5 thẻ trong %6</translation>
     </message>
     <message>
         <source>%1 — %2 card added in %3</source>
-        <translation type="unfinished" />
+        <translation>%1 — đã thêm %2 thẻ trong %3</translation>
     </message>
     <message>
         <source>%1 — %2 cards added in %3</source>
-        <translation type="unfinished" />
+        <translation>%1 — đã thêm %2 thẻ trong %3</translation>
     </message>
     <message>
         <source>(asleep time excluded)</source>
@@ -9598,11 +9600,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Undo (%1 card)</source>
-        <translation type="unfinished" />
+        <translation>Hoàn tác (%1 thẻ)</translation>
     </message>
     <message>
         <source>Undo (%1 cards)</source>
-        <translation type="unfinished" />
+        <translation>Hoàn tác (%1 thẻ)</translation>
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -9610,11 +9612,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Delete %1 card from Anki? This cannot be undone; the word becomes mineable again.</source>
-        <translation type="unfinished" />
+        <translation>Xóa %1 thẻ khỏi Anki? Không thể hoàn tác thao tác này; từ đó sẽ có thể khai thác lại.</translation>
     </message>
     <message>
         <source>Delete %1 cards from Anki? This cannot be undone; those words become mineable again.</source>
-        <translation type="unfinished" />
+        <translation>Xóa %1 thẻ khỏi Anki? Không thể hoàn tác thao tác này; các từ đó sẽ có thể khai thác lại.</translation>
     </message>
     <message>
         <source>Undoing…</source>
@@ -9622,11 +9624,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Undone (%1 card deleted)</source>
-        <translation type="unfinished" />
+        <translation>Đã hoàn tác (đã xóa %1 thẻ)</translation>
     </message>
     <message>
         <source>Undone (%1 cards deleted)</source>
-        <translation type="unfinished" />
+        <translation>Đã hoàn tác (đã xóa %1 thẻ)</translation>
     </message>
     <message>
         <source>Undo Failed</source>
@@ -9634,7 +9636,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Failed to delete cards. Check that Anki is running.</source>
-        <translation type="unfinished" />
+        <translation>Xóa thẻ thất bại. Hãy kiểm tra Anki có đang chạy không.</translation>
     </message>
 </context><context>
     <name>RetimeReference</name>
@@ -9764,15 +9766,15 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Clean up subtitle text</source>
-        <translation type="unfinished" />
+        <translation>Làm sạch văn bản phụ đề</translation>
     </message>
     <message>
         <source>Remove speaker names, sound effects and music notes</source>
-        <translation type="unfinished" />
+        <translation>Gỡ tên người nói, hiệu ứng âm thanh và ký hiệu nhạc</translation>
     </message>
     <message>
         <source>Removes (notes), [sound effects], ♪ music, speaker labels and dialogue dashes from each subtitle line before mining. Half-checked means your own pattern is in use: click to add every built-in cleanup to it.</source>
-        <translation type="unfinished" />
+        <translation>Gỡ (ghi chú), [hiệu ứng âm thanh], ♪ nhạc, nhãn người nói và gạch đầu dòng hội thoại khỏi mỗi dòng phụ đề trước khi khai thác. Đánh dấu một nửa nghĩa là mẫu của riêng bạn đang được dùng: nhấp để thêm mọi quy tắc làm sạch có sẵn vào mẫu đó.</translation>
     </message>
     <message>
         <source>Python regex matched in subtitle text and removed (or replaced) before mining. Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. Combine alternatives with |. Test patterns at https://regex101.com.</source>
@@ -9788,15 +9790,15 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Edit the pattern (advanced)</source>
-        <translation type="unfinished" />
+        <translation>Sửa mẫu (nâng cao)</translation>
     </message>
     <message>
         <source>Regex Filter:</source>
-        <translation type="unfinished" />
+        <translation>Bộ lọc Regex:</translation>
     </message>
     <message>
         <source>Replacement:</source>
-        <translation type="unfinished" />
+        <translation>Thay thế:</translation>
     </message>
     <message>
         <source>Regex Filter</source>
@@ -9808,7 +9810,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Sentence options</source>
-        <translation type="unfinished" />
+        <translation>Tùy chọn câu</translation>
     </message>
     <message>
         <source>Mine every unknown word</source>
@@ -9864,7 +9866,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Adds a translation subtitle picker and its own offset to the Video screens (Single, Batch, Deck Builder). Its line shows under the mining-language line in the Word Curator preview and, when the Translation field is mapped (Cards &amp; Anki), on the card.</source>
-        <translation type="unfinished" />
+        <translation>Thêm bộ chọn phụ đề bản dịch và độ lệch riêng của nó vào các màn hình Video (Đơn lẻ, Hàng loạt, Trình dựng bộ thẻ). Dòng bản dịch hiện bên dưới dòng ngôn ngữ khai thác trong bản xem trước của Word Curator và, khi trường Bản dịch đã được ánh xạ (Thẻ &amp; Anki), trên thẻ.</translation>
     </message>
     <message>
         <source>Mine full sentences across subtitle lines</source>
@@ -9970,7 +9972,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <name>SettingsTab</name>
     <message>
         <source>Export Resources…</source>
-        <translation type="unfinished" />
+        <translation>Xuất tài nguyên…</translation>
     </message>
     <message>
         <source>Save this language's dictionaries, frequency and pitch lists, ignore list and word lists to one file.</source>
@@ -9978,7 +9980,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Import Resources…</source>
-        <translation type="unfinished" />
+        <translation>Nhập tài nguyên…</translation>
     </message>
     <message>
         <source>Install resources from a bundle file. Nothing you already have is replaced.</source>
@@ -10272,15 +10274,15 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     </message>
     <message>
         <source>dictionary</source>
-        <translation type="unfinished" />
+        <translation>từ điển</translation>
     </message>
     <message>
         <source>word frequency</source>
-        <translation type="unfinished" />
+        <translation>tần suất từ</translation>
     </message>
     <message>
         <source>pitch accent</source>
-        <translation type="unfinished" />
+        <translation>trọng âm cao độ</translation>
     </message>
     <message>
         <source>Anki Miner Setup</source>
@@ -10298,7 +10300,7 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     <name>SingleEpisodeTab</name>
     <message>
         <source>Mine Episode</source>
-        <translation type="unfinished" />
+        <translation>Khai thác tập</translation>
     </message>
     <message>
         <source>Create Anki cards from the episode</source>
@@ -10314,7 +10316,7 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     </message>
     <message>
         <source>Audio track…</source>
-        <translation type="unfinished" />
+        <translation>Bản âm thanh…</translation>
     </message>
     <message>
         <source>Manually choose which audio track to use for this episode</source>
@@ -10338,7 +10340,7 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     </message>
     <message>
         <source>Choose a video. A subtitle file with the same name is picked up automatically.</source>
-        <translation type="unfinished" />
+        <translation>Chọn một video. Tệp phụ đề cùng tên sẽ được tự động chọn.</translation>
     </message>
     <message>
         <source>Recent Files:</source>
@@ -10478,8 +10480,8 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     </message>
     <message numerus="yes">
         <source>%n running</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n đang chạy</numerusform>
         </translation>
     </message>
     <message>
@@ -10488,7 +10490,7 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     </message>
     <message>
         <source>Open job monitor</source>
-        <translation type="unfinished" />
+        <translation>Mở trình theo dõi tác vụ</translation>
     </message>
     <message>
         <source>Checking AnkiConnect…</source>
@@ -10562,7 +10564,7 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     </message>
     <message>
         <source>This file could not be transcribed.</source>
-        <translation type="unfinished" />
+        <translation>Không thể phiên âm tệp này.</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
@@ -10832,7 +10834,7 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     </message>
     <message>
         <source>This file could not be retimed.</source>
-        <translation type="unfinished" />
+        <translation>Không thể căn lại thời gian cho tệp này.</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
@@ -10852,7 +10854,7 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     </message>
     <message>
         <source>Next to source video, as name_retimed.srt</source>
-        <translation type="unfinished" />
+        <translation>Cạnh video nguồn, với tên name_retimed.srt</translation>
     </message>
     <message>
         <source>Subtitle retiming</source>
@@ -11198,7 +11200,7 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     </message>
     <message>
         <source>Download the speech-to-text engine and the selected Whisper model into Anki Miner's folder. Generate Subtitles and Audiobook Sync need both.</source>
-        <translation type="unfinished" />
+        <translation>Tải công cụ chuyển giọng nói thành văn bản và mô hình Whisper đã chọn vào thư mục của Anki Miner. Tạo phụ đề và Đồng bộ sách nói cần cả hai.</translation>
     </message>
     <message>
         <source>Transcription engine</source>
@@ -11206,7 +11208,7 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     </message>
     <message>
         <source>Transcription model</source>
-        <translation type="unfinished" />
+        <translation>Mô hình phiên âm</translation>
     </message>
     <message>
         <source>large-v3 is the most accurate; small is much faster.</source>
@@ -11214,7 +11216,7 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     </message>
     <message>
         <source>Run transcription on</source>
-        <translation type="unfinished" />
+        <translation>Chạy phiên âm trên</translation>
     </message>
     <message>
         <source>Auto uses the GPU when available, else CPU. Each GPU option needs its own download below.</source>
@@ -11306,7 +11308,7 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     </message>
     <message>
         <source>Subtitle aligner</source>
-        <translation type="unfinished" />
+        <translation>Công cụ căn phụ đề</translation>
     </message>
     <message>
         <source>No alass binary is published for macOS. Install it with Homebrew:</source>
@@ -11342,7 +11344,7 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     </message>
     <message>
         <source>Set up speech-to-text (about %1 MB)</source>
-        <translation type="unfinished" />
+        <translation>Thiết lập chuyển giọng nói thành văn bản (khoảng %1 MB)</translation>
     </message>
     <message>
         <source>Silence removal is available.</source>
@@ -11376,7 +11378,7 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     </message>
     <message>
         <source>Last checked %1</source>
-        <translation type="unfinished" />
+        <translation>Kiểm tra lần cuối %1</translation>
     </message>
     <message>
         <source>Ready</source>
@@ -11392,7 +11394,7 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     </message>
     <message>
         <source>Not set up</source>
-        <translation type="unfinished" />
+        <translation>Chưa thiết lập</translation>
     </message>
     <message>
         <source>Not installed</source>
@@ -11444,7 +11446,7 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     </message>
     <message>
         <source>ffmpeg (video tools)</source>
-        <translation type="unfinished" />
+        <translation>ffmpeg (công cụ video)</translation>
     </message>
     <message>
         <source>Offline dictionary</source>
@@ -11574,7 +11576,7 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     </message>
     <message>
         <source>Themes</source>
-        <translation type="unfinished" />
+        <translation>Chủ đề</translation>
     </message>
     <message>
         <source>Click a theme preview to apply it live; &lt;b&gt;Revert&lt;/b&gt; undoes it. Star themes to add them to the top-right selector.</source>
@@ -12066,7 +12068,7 @@ Sắp xếp theo cột này để duyệt hết một bản thu dài theo thứ 
     </message>
     <message>
         <source>From a cookies.txt file…</source>
-        <translation type="unfinished" />
+        <translation>Từ tệp cookies.txt…</translation>
     </message>
     <message>
         <source>Cookies from browser</source>
@@ -12074,7 +12076,7 @@ Sắp xếp theo cột này để duyệt hết một bản thu dài theo thứ 
     </message>
     <message>
         <source>Reuse a browser's YouTube login, or an exported cookies.txt file, when YouTube blocks anonymous fetches. Keep a cookies file private — it holds your login.</source>
-        <translation type="unfinished" />
+        <translation>Dùng lại phiên đăng nhập YouTube của trình duyệt, hoặc tệp cookies.txt đã xuất, khi YouTube chặn truy cập ẩn danh. Hãy giữ kín tệp cookie — nó chứa phiên đăng nhập của bạn.</translation>
     </message>
     <message>
         <source> minutes</source>
@@ -12134,23 +12136,23 @@ Sắp xếp theo cột này để duyệt hết một bản thu dài theo thứ 
     </message>
     <message>
         <source>Downloaded by Anki Miner</source>
-        <translation type="unfinished" />
+        <translation>Do Anki Miner tải về</translation>
     </message>
     <message>
         <source>Included with Anki Miner</source>
-        <translation type="unfinished" />
+        <translation>Đi kèm Anki Miner</translation>
     </message>
     <message>
         <source>Found on your system PATH</source>
-        <translation type="unfinished" />
+        <translation>Tìm thấy trong PATH của hệ thống</translation>
     </message>
     <message>
         <source>Installed alongside Anki Miner</source>
-        <translation type="unfinished" />
+        <translation>Được cài cùng Anki Miner</translation>
     </message>
     <message>
         <source>Your own copy, set in gui_config.json</source>
-        <translation type="unfinished" />
+        <translation>Bản của riêng bạn, đặt trong gui_config.json</translation>
     </message>
     <message>
         <source>Version %1</source>
@@ -12162,15 +12164,15 @@ Sắp xếp theo cột này để duyệt hết một bản thu dài theo thứ 
     </message>
     <message>
         <source>%1 (file)</source>
-        <translation type="unfinished" />
+        <translation>%1 (tệp)</translation>
     </message>
     <message>
         <source>Choose a cookies.txt file</source>
-        <translation type="unfinished" />
+        <translation>Chọn tệp cookies.txt</translation>
     </message>
     <message>
         <source>Cookies file (*.txt);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Tệp cookie (*.txt);;Tất cả tệp (*)</translation>
     </message>
 </context><context>
     <name>YouTubeTab</name>
@@ -12276,7 +12278,7 @@ Sắp xếp theo cột này để duyệt hết một bản thu dài theo thứ 
     </message>
     <message>
         <source>Paste YouTube links or playlists, one per line, then click Mine</source>
-        <translation type="unfinished" />
+        <translation>Dán liên kết hoặc danh sách phát YouTube, mỗi dòng một mục, rồi nhấn Khai thác</translation>
     </message>
     <message>
         <source>Review words before mining</source>
@@ -12356,7 +12358,7 @@ Sắp xếp theo cột này để duyệt hết một bản thu dài theo thứ 
     <name>_HealthRow</name>
     <message>
         <source>Install…</source>
-        <translation type="unfinished" />
+        <translation>Cài đặt…</translation>
     </message>
     <message>
         <source>Fix</source>
