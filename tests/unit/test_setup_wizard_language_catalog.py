@@ -52,46 +52,46 @@ class TestTheSubtitleNamesOnlyTheKindsOnOffer:
     def test_a_catalogue_with_both_optional_kinds_names_both(self, wizard_factory, test_config):
         assert {spec.kind for spec in get_profile("ja").catalog} == {"dict", "freq", "pitch"}
         page = wizard_factory(replace(test_config, language="ja")).resources_page
-        assert page.subTitle() == "Frequency and pitch accent are optional. A dictionary is required."
+        assert page.subtitle_label.text() == "Frequency and pitch accent are optional. A dictionary is required."
 
     def test_a_dictionary_only_catalogue_promises_neither(self, wizard_factory, test_config):
         # ko is the shipped dictionary-only catalogue, so the sentence stays
         # pinned against a real language rather than a stub.
         assert {spec.kind for spec in get_profile("ko").catalog} == {"dict"}
         page = wizard_factory(switch_language(test_config, "ko")).resources_page
-        assert page.subTitle() == "A dictionary is required."
+        assert page.subtitle_label.text() == "A dictionary is required."
 
     def test_zh_names_the_frequency_list_it_ships_and_no_pitch(self, wizard_factory, test_config):
         assert {spec.kind for spec in get_profile("zh").catalog} == {"dict", "freq"}
         page = wizard_factory(switch_language(test_config, "zh")).resources_page
-        assert page.subTitle() == "Frequency is optional. A dictionary is required."
+        assert page.subtitle_label.text() == "Frequency is optional. A dictionary is required."
 
     def test_a_catalogue_with_frequency_names_frequency_alone(self, wizard_factory, test_config, monkeypatch):
         register_stub_profile(monkeypatch, "ko", catalog=self._catalog("dict", "freq"))
         page = wizard_factory(replace(test_config, language="ko")).resources_page
-        assert page.subTitle() == "Frequency is optional. A dictionary is required."
+        assert page.subtitle_label.text() == "Frequency is optional. A dictionary is required."
 
     def test_a_catalogue_with_pitch_names_pitch_alone(self, wizard_factory, test_config, monkeypatch):
         register_stub_profile(monkeypatch, "ko", catalog=self._catalog("dict", "pitch"))
         page = wizard_factory(replace(test_config, language="ko")).resources_page
-        assert page.subTitle() == "Pitch accent is optional. A dictionary is required."
+        assert page.subtitle_label.text() == "Pitch accent is optional. A dictionary is required."
 
     def test_an_empty_catalogue_still_states_the_requirement(self, wizard_factory, test_config, monkeypatch):
         register_stub_profile(monkeypatch, "ko", catalog=())
         page = wizard_factory(replace(test_config, language="ko")).resources_page
-        assert page.subTitle() == "A dictionary is required."
+        assert page.subtitle_label.text() == "A dictionary is required."
 
     def test_the_sentence_follows_a_re_entry_after_a_switch(self, wizard_factory, test_config, monkeypatch):
         wizard = wizard_factory(switch_language(test_config, "zh"))
         page = wizard.resources_page
-        assert page.subTitle() == "Frequency is optional. A dictionary is required."
+        assert page.subtitle_label.text() == "Frequency is optional. A dictionary is required."
 
         # The readiness probe is initializePage's other half and wants a disk.
         monkeypatch.setattr(page, "_recheck_resources", lambda: None)
         wizard.update_working_config(replace(test_config, language="ja"))
         page.initializePage()
 
-        assert page.subTitle() == "Frequency and pitch accent are optional. A dictionary is required."
+        assert page.subtitle_label.text() == "Frequency and pitch accent are optional. A dictionary is required."
 
 
 def test_ja_catalogue_is_the_recommended_default_set(wizard_factory, test_config):

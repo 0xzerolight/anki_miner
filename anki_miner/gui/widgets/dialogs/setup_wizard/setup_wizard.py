@@ -27,6 +27,7 @@ from PyQt6.QtWidgets import QAbstractButton, QDialog, QPushButton, QWidget, QWiz
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
+from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.validation_service import ValidationService
@@ -115,6 +116,11 @@ class SetupWizard(QWizard):
         self.setWindowTitle(self.tr("Anki Miner Setup"))
         self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
         self.setOption(QWizard.WizardOption.NoBackButtonOnStartPage, True)
+        # B05: one visible way out. Skip Setup is it; Escape and the title-bar
+        # close still mean "ask again next launch" (see run_setup_wizard).
+        self.setOption(QWizard.WizardOption.NoCancelButton, True)
+        # Resizable like the app's other dialogs; Windows then shows min/max too.
+        add_min_max_buttons(self)
 
         # Global "Skip Setup" escape hatch on every page.
         self.setOption(QWizard.WizardOption.HaveCustomButton1, True)

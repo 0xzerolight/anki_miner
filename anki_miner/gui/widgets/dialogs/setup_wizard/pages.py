@@ -92,6 +92,26 @@ def _open_url(url: str) -> None:
     QDesktopServices.openUrl(QUrl(url))
 
 
+def _add_page_header(layout: QVBoxLayout, title: str, subtitle: str) -> tuple[QLabel, QLabel]:
+    """Put a page's title and subtitle at the top of ``layout``, dialog style (B08).
+
+    QWizard's own header band draws the title in its own fonts, which ignore
+    the stylesheet. The pages leave ``setTitle`` empty, which removes the band,
+    and use the ``heading2`` / ``dialog-subtitle`` pair EnhancedDialog uses.
+    An empty subtitle starts hidden.
+    """
+    title_label = QLabel(title)
+    title_label.setObjectName("heading2")
+    title_label.setWordWrap(True)
+    subtitle_label = QLabel(subtitle)
+    subtitle_label.setObjectName("dialog-subtitle")
+    subtitle_label.setWordWrap(True)
+    subtitle_label.setVisible(bool(subtitle))
+    layout.addWidget(title_label)
+    layout.addWidget(subtitle_label)
+    return title_label, subtitle_label
+
+
 class _LiveCheckPage(QWizardPage):
     """A page that re-checks one fact about the world, off the GUI thread.
 
@@ -208,10 +228,12 @@ class MiningLanguagePage(QWizardPage):
             **{name: getattr(config, name) for name in LANGUAGE_SCOPED_FIELDS},
         }
 
-        self.setTitle(self.tr("Choose a Mining Language"))
-        self.setSubTitle(self.tr("The language you are learning. The interface language is separate."))
-
         layout = QVBoxLayout(self)
+        self.title_label, self.subtitle_label = _add_page_header(
+            layout,
+            self.tr("Choose a Mining Language"),
+            self.tr("The language you are learning. The interface language is separate."),
+        )
 
         self.language_combo = QComboBox()
         for code, display_name in available_mining_languages():
@@ -952,10 +974,12 @@ class AnkiPage(QWizardPage):
     def __init__(self, wizard: SetupWizard) -> None:
         super().__init__(wizard)
         self._wizard = wizard
-        self.setTitle(self.tr("Connect to Anki"))
-        self.setSubTitle(self.tr("Anki Miner talks to Anki through the AnkiConnect add-on."))
-
         layout = QVBoxLayout(self)
+        self.title_label, self.subtitle_label = _add_page_header(
+            layout,
+            self.tr("Connect to Anki"),
+            self.tr("Anki Miner talks to Anki through the AnkiConnect add-on."),
+        )
         self.connect_section = AnkiConnectPage(wizard)
         layout.addWidget(self.connect_section)
 
@@ -1039,11 +1063,10 @@ class ResourcesPage(_LiveCheckPage):
         super().__init__(wizard)
         self._dictionary_ready = False
 
-        self.setTitle(self.tr("Recommended Resources"))
+        layout = QVBoxLayout(self)
         # The subtitle is set by _rebuild_catalog_rows, from the kinds the
         # active language's catalog actually offers.
-
-        layout = QVBoxLayout(self)
+        self.title_label, self.subtitle_label = _add_page_header(layout, self.tr("Recommended Resources"), "")
 
         self.help_link = QLabel(f'<a href="{RESOURCES_HELP_URL}">{self.tr("What are these resources?")}</a>')
         self.help_link.setOpenExternalLinks(False)
@@ -1137,7 +1160,8 @@ class ResourcesPage(_LiveCheckPage):
             return
         self._specs_language = language
         self._specs = list(get_profile(language).catalog)
-        self.setSubTitle(self._subtitle_for_kinds({spec.kind for spec in self._specs}))
+        self.subtitle_label.setText(self._subtitle_for_kinds({spec.kind for spec in self._specs}))
+        self.subtitle_label.setVisible(True)
 
         while (item := self._catalog_rows_layout.takeAt(0)) is not None:
             widget = item.widget()
@@ -1438,11 +1462,14 @@ class DonePage(_LiveCheckPage):
     def __init__(self, wizard: SetupWizard) -> None:
         super().__init__(wizard)
         self._results: dict[str, bool] = {}
-        self.setTitle(self.tr("Ready to Mine"))
-        self.setSubTitle(self.tr("A last check of everything mining needs. You can change it later in Settings."))
         self.setFinalPage(True)
 
         layout = QVBoxLayout(self)
+        self.title_label, self.subtitle_label = _add_page_header(
+            layout,
+            self.tr("Ready to Mine"),
+            self.tr("A last check of everything mining needs. You can change it later in Settings."),
+        )
         self.summary_label = QLabel("")
         self.summary_label.setWordWrap(True)
         self.summary_label.setTextFormat(Qt.TextFormat.RichText)

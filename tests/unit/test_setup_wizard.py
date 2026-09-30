@@ -335,6 +335,50 @@ def test_wizard_adds_the_pages_its_caller_asked_for(qtbot, wiz_config, offer_lan
     assert len(wiz.pageIds()) == expected
 
 
+def test_the_wizard_shows_one_way_out(qtbot, wiz_config, monkeypatch):
+    """B05: Skip Setup is the one visible exit; Esc and the title-bar close still work."""
+    from PyQt6.QtWidgets import QWizard  # noqa: PLC0415
+
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
+    wiz.show()
+    qtbot.waitExposed(wiz)
+
+    assert wiz.testOption(QWizard.WizardOption.NoCancelButton)
+    cancel = wiz.button(QWizard.WizardButton.CancelButton)
+    assert cancel is None or not cancel.isVisible()
+    skip = wiz.button(QWizard.WizardButton.CustomButton1)
+    assert skip is not None and skip.isVisible()
+    qtbot.waitUntil(lambda: not wiz.resources_page.dictionary_label.text().startswith("Checking"), timeout=5000)
+
+
+def test_the_wizard_has_min_and_max_buttons(qtbot, wiz_config):
+    from PyQt6.QtCore import Qt  # noqa: PLC0415
+
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+
+    assert wiz.windowFlags() & Qt.WindowType.WindowMaximizeButtonHint
+    assert wiz.windowFlags() & Qt.WindowType.WindowMinimizeButtonHint
+
+
+def test_every_page_draws_the_dialog_header(qtbot, wiz_config):
+    """B08: the same heading2 / dialog-subtitle pair as the app's other dialogs."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config, offer_mining_language=True)
+    qtbot.addWidget(wiz)
+
+    for page_id in wiz.pageIds():
+        page = wiz.page(page_id)
+        assert page.title() == ""
+        assert page.subTitle() == ""
+        assert page.title_label.objectName() == "heading2"
+        assert page.title_label.text()
+        assert page.subtitle_label.objectName() == "dialog-subtitle"
+
+
 def test_wizard_done_defers_close_without_blocking_for_stubborn_worker(qtbot, wiz_config):
     from PyQt6.QtCore import QTimer  # noqa: PLC0415
     from PyQt6.QtWidgets import QDialog, QWizard  # noqa: PLC0415
