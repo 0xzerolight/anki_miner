@@ -31,12 +31,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import QT_TRANSLATE_NOOP
-from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QFont
+from PyQt6.QtGui import QDragEnterEvent, QDropEvent
 from PyQt6.QtWidgets import (
     QCheckBox,
     QFrame,
     QHBoxLayout,
-    QLabel,
     QScrollArea,
     QSizePolicy,
     QVBoxLayout,
@@ -45,7 +44,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.exceptions import SetupError
 from anki_miner.gui.capabilities import CapabilityTarget
-from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
@@ -187,11 +186,10 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         )
         layout.addWidget(self.review_words_checkbox)
 
-        # Single whole-run bar: per-volume sweeps are composed into it
-        # ((volumes done + volume pct) / total), so a series run reads as one
-        # continuous fill; the status label carries the active volume + stage.
-        layout.addWidget(self._progress_header(self.tr("Progress")))
+        # D1: the pinned bar is the one progress surface; this widget is the
+        # run's hidden state holder and the receipt's anchor.
         self.overall_progress_widget = ProgressWidget()
+        self.overall_progress_widget.hide()
         layout.addWidget(self.overall_progress_widget)
         # The durable end state of this same card (D20).
         self._install_receipt(layout, self.overall_progress_widget, item_noun=self.tr("volumes"))
@@ -213,16 +211,6 @@ class ReadingMangaTab(_ReadingMiningTabBase):
             log=self.log_widget,
         )
         self.setLayout(main_layout)
-
-    def _progress_header(self, text: str) -> QLabel:
-        """Build a bold section-heading label for a progress bar."""
-        header = QLabel(text)
-        header.setObjectName("heading3")
-        font = QFont()
-        font.setPixelSize(FONT_SIZES.body)
-        font.setWeight(QFont.Weight.Bold)
-        header.setFont(font)
-        return header
 
     def _create_volume_card(self) -> QFrame:
         """Volume card: manga-file selector + Mine (Issue #103)."""
@@ -537,6 +525,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
             self._current_item_title = item.title
         # Status only — the composed whole-run bar never resets between volumes.
         self.overall_progress_widget.set_status(self._current_item_title)
+        self._publish_reading_status(self._current_item_title)
 
     def _on_item_progress(self, idx: int, label: str) -> None:
         """Say what the volume is doing. The bar counts finished volumes only."""
@@ -550,6 +539,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
             status = title or None
         if status:
             self.overall_progress_widget.set_status(status)
+            self._publish_reading_status(status)
 
     def _on_item_finished(self, idx: int, result: object, error: object, attempts: int) -> None:
         """Log the outcome and advance the overall bar (series runs only).
@@ -587,6 +577,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         # writes (set_progress) are banned on the composition-driven widget.
         done = sum(1 for i in self._run_items if i.status in (ReadyItemStatus.COMPLETED, ReadyItemStatus.ERROR))
         self.overall_progress_widget.set_composed(done, len(self._run_items))
+        self._publish_reading_done(done)
 
     def _on_queue_finished(self) -> None:
         """Run summary log over the run snapshot. Cleanup is elsewhere.

@@ -31,7 +31,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import QT_TRANSLATE_NOOP, QEvent, QObject
-from PyQt6.QtGui import QFont, QTextBlockFormat, QTextCursor, QTextDocument
+from PyQt6.QtGui import QTextBlockFormat, QTextCursor, QTextDocument
 from PyQt6.QtWidgets import (
     QCheckBox,
     QFrame,
@@ -44,7 +44,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.capabilities import CapabilityTarget
-from anki_miner.gui.resources.styles import FONT_SIZES, SPACING, TYPOGRAPHY
+from anki_miner.gui.resources.styles import SPACING, TYPOGRAPHY
 from anki_miner.gui.utils.content_text import apply_content_font
 from anki_miner.gui.utils.fonts import JAPANESE_BODY, apply_japanese_block_format
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
@@ -206,8 +206,10 @@ class ReadingTextTab(_ReadingMiningTabBase):
         self.review_words_checkbox.setToolTip(self.tr("Show the word-selection popup before creating cards."))
         layout.addWidget(self.review_words_checkbox)
 
-        layout.addWidget(self._progress_header(self.tr("Progress")))
+        # D1: the pinned bar is the one progress surface; this widget is the
+        # run's hidden state holder and the receipt's anchor.
         self.overall_progress_widget = ProgressWidget()
+        self.overall_progress_widget.hide()
         layout.addWidget(self.overall_progress_widget)
         # The durable end state of this same card (D20). Pasted text is always
         # one item, so the receipt never needs a noun to count.
@@ -227,16 +229,6 @@ class ReadingTextTab(_ReadingMiningTabBase):
             log=self.log_widget,
         )
         self.setLayout(main_layout)
-
-    def _progress_header(self, text: str) -> QLabel:
-        """Build a bold section-heading label for the progress bar."""
-        header = QLabel(text)
-        header.setObjectName("heading3")
-        font = QFont()
-        font.setPixelSize(FONT_SIZES.body)
-        font.setWeight(QFont.Weight.Bold)
-        header.setFont(font)
-        return header
 
     def _create_text_card(self) -> QFrame:
         """Text card: paste area + Mine/Cancel."""
@@ -402,12 +394,15 @@ class ReadingTextTab(_ReadingMiningTabBase):
         """Seed the status label for the (single) started item."""
         if self._item_at(idx) is None:
             return
-        self.overall_progress_widget.set_status(self.tr("Mining pasted text…"))
+        status = self.tr("Mining pasted text…")
+        self.overall_progress_widget.set_status(status)
+        self._publish_reading_status(status)
 
     def _on_item_progress(self, idx: int, label: str) -> None:
         """Say what the run is doing. The bar counts finished items only."""
         if label:
             self.overall_progress_widget.set_status(label)
+            self._publish_reading_status(label)
 
     def _on_item_finished(self, idx: int, result: object, error: object, attempts: int) -> None:
         """Log the outcome and forward a success result to the presenter.
@@ -441,6 +436,7 @@ class ReadingTextTab(_ReadingMiningTabBase):
         # out of items in the run.
         done = sum(1 for i in self._run_items if i.status in (ReadyItemStatus.COMPLETED, ReadyItemStatus.ERROR))
         self.overall_progress_widget.set_composed(done, len(self._run_items))
+        self._publish_reading_done(done)
 
     def _on_queue_finished(self) -> None:
         """Single-item runs are already logged by ``_on_item_finished``."""

@@ -26,7 +26,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QT_TRANSLATE_NOOP, Qt
-from PyQt6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDropEvent, QFont
+from PyQt6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDropEvent
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -40,7 +40,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.capabilities import CapabilityTarget
-from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.qt_helpers import install_no_scroll_on_inputs, urls_from_event
 from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
@@ -142,8 +142,10 @@ class ReadingDeckTab(_ReadingMiningTabBase):
         self.review_words_checkbox.setToolTip(self.tr("Show the word-selection popup before creating cards."))
         layout.addWidget(self.review_words_checkbox)
 
-        layout.addWidget(self._progress_header(self.tr("Progress")))
+        # D1: the pinned bar is the one progress surface; this widget is the
+        # run's hidden state holder and the receipt's anchor.
         self.overall_progress_widget = ProgressWidget()
+        self.overall_progress_widget.hide()
         layout.addWidget(self.overall_progress_widget)
         # The durable end state of this same card (D20). A run is one deck.
         self._install_receipt(layout, self.overall_progress_widget)
@@ -163,16 +165,6 @@ class ReadingDeckTab(_ReadingMiningTabBase):
             log=self.log_widget,
         )
         self.setLayout(main_layout)
-
-    def _progress_header(self, text: str) -> QLabel:
-        """Build a bold section-heading label for the progress bar."""
-        header = QLabel(text)
-        header.setObjectName("heading3")
-        font = QFont()
-        font.setPixelSize(FONT_SIZES.body)
-        font.setWeight(QFont.Weight.Bold)
-        header.setFont(font)
-        return header
 
     def _create_deck_card(self) -> QFrame:
         """Deck card: deck picker, four field pickers, status line."""
@@ -476,12 +468,15 @@ class ReadingDeckTab(_ReadingMiningTabBase):
         item = self._item_at(idx)
         if item is None:
             return
-        self.overall_progress_widget.set_status(tr_format(self.tr("Mining %1…"), item.title))
+        status = tr_format(self.tr("Mining %1…"), item.title)
+        self.overall_progress_widget.set_status(status)
+        self._publish_reading_status(status)
 
     def _on_item_progress(self, idx: int, label: str) -> None:
         """Say what the run is doing. The bar counts finished items only."""
         if label:
             self.overall_progress_widget.set_status(label)
+            self._publish_reading_status(label)
 
     def _on_item_finished(self, idx: int, result: object, error: object, attempts: int) -> None:
         """Log the outcome and forward a success result to the presenter.
@@ -511,6 +506,7 @@ class ReadingDeckTab(_ReadingMiningTabBase):
 
         done = sum(1 for i in self._run_items if i.status in (ReadyItemStatus.COMPLETED, ReadyItemStatus.ERROR))
         self.overall_progress_widget.set_composed(done, len(self._run_items))
+        self._publish_reading_done(done)
 
     def _on_queue_finished(self) -> None:
         """Single-item runs are already logged by ``_on_item_finished``."""

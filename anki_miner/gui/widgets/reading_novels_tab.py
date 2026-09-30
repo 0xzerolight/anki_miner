@@ -30,12 +30,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QT_TRANSLATE_NOOP
-from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QFont
+from PyQt6.QtGui import QDragEnterEvent, QDropEvent
 from PyQt6.QtWidgets import (
     QCheckBox,
     QFrame,
     QHBoxLayout,
-    QLabel,
     QScrollArea,
     QSizePolicy,
     QVBoxLayout,
@@ -43,7 +42,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.capabilities import CapabilityTarget
-from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
 from anki_miner.gui.widgets.base import (
@@ -160,8 +159,10 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
         self.review_words_checkbox.setToolTip(self.tr("Show the word-selection popup before creating cards."))
         layout.addWidget(self.review_words_checkbox)
 
-        layout.addWidget(self._progress_header(self.tr("Progress")))
+        # D1: the pinned bar is the one progress surface; this widget is the
+        # run's hidden state holder and the receipt's anchor.
         self.progress_widget = ProgressWidget()
+        self.progress_widget.hide()
         layout.addWidget(self.progress_widget)
         # The durable end state of this same card (D20).
         self._install_receipt(layout, self.progress_widget, item_noun=self.tr("books"))
@@ -183,16 +184,6 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
             log=self.log_widget,
         )
         self.setLayout(main_layout)
-
-    def _progress_header(self, text: str) -> QLabel:
-        """Build a bold section-heading label for the progress bar."""
-        header = QLabel(text)
-        header.setObjectName("heading3")
-        font = QFont()
-        font.setPixelSize(FONT_SIZES.body)
-        font.setWeight(QFont.Weight.Bold)
-        header.setFont(font)
-        return header
 
     def _create_novel_card(self) -> QFrame:
         """Novel card: book-file selector + Mine / Cancel."""
@@ -447,10 +438,13 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
                 self.tr("Book %1/%2: %3"), books.index(item.source.path) + 1, len(books), item.title
             )
             self.progress_widget.set_status(self._current_item_title)
+            self._publish_reading_status(self._current_item_title)
         else:
             self._current_item_title = item.title
             # Status only — the composed bar never resets between items.
-            self.progress_widget.set_status(tr_format(self.tr("Mining: %1"), item.title))
+            status = tr_format(self.tr("Mining: %1"), item.title)
+            self.progress_widget.set_status(status)
+            self._publish_reading_status(status)
 
     def _on_item_progress(self, idx: int, label: str) -> None:
         """Say what the book is doing. The bar counts finished books only."""
@@ -464,6 +458,7 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
             status = title or None
         if status:
             self.progress_widget.set_status(status)
+            self._publish_reading_status(status)
 
     def _on_item_finished(self, idx: int, result: object, error: object, attempts: int) -> None:
         """Log the outcome and forward a success result to the presenter.
@@ -497,6 +492,7 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
         # (set_progress) are banned on the composition-driven widget.
         done = sum(1 for i in self._run_items if i.status in (ReadyItemStatus.COMPLETED, ReadyItemStatus.ERROR))
         self.progress_widget.set_composed(done, len(self._run_items))
+        self._publish_reading_done(done)
 
     def _on_queue_finished(self) -> None:
         """Run summary for folder runs. Cleanup is elsewhere.
