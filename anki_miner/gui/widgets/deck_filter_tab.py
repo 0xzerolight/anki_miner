@@ -325,6 +325,10 @@ class DeckFilterTab(_AnkiPlanTabBase):
         return self.source_combo.currentText() if self.source_combo.currentIndex() > 0 else None
 
     def _on_source_changed(self, _index: int) -> None:
+        # A new source choice supersedes any complaint about the old one (or
+        # about there being none). The deck-fetch banner cannot be up here: it
+        # clears on the fetch that fills this combo.
+        self.clear_screen_issue()
         deck = self._selected_source_deck()
         self._reset_field_combos()
         if deck is None:

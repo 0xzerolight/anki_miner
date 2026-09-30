@@ -160,6 +160,28 @@ class TestInspection:
         assert issue.summary == "The deck could not be read."
         assert issue.details == "Couldn't read the deck: boom"
 
+    def test_picking_another_deck_clears_the_read_banner(self, tab):
+        _select_source(tab, "Broken")
+        tab._on_inspect_error(tab._inspect_generation, "Couldn't read the deck: boom")
+        assert tab.issue_banner().current_issue() is not None
+
+        _select_source(tab, "Core 2k")
+        tab._on_inspected(
+            tab._inspect_generation,
+            DeckInspection(3, ("Core",), ("Expression",), {"Core": "Expression"}),
+        )
+
+        assert tab.issue_banner().current_issue() is None
+        assert tab.deck_info_label.text() == "3 note(s) in the deck."
+
+    def test_picking_a_deck_clears_the_pick_a_deck_refusal(self, tab):
+        tab._start_scan()
+        assert tab.issue_banner().current_issue().summary == "Pick the source deck first."
+
+        _select_source(tab)
+
+        assert tab.issue_banner().current_issue() is None
+
 
 class TestCardLayout:
     def test_the_page_is_three_titled_cards(self, tab):
