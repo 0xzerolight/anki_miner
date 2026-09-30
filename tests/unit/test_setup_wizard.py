@@ -1345,7 +1345,7 @@ def test_notetype_page_emits_complete_changed_for_model_fetch_transitions(qtbot,
     changed = MagicMock()
     page.completeChanged.connect(changed)
 
-    page._on_refresh_clicked()
+    page.refresh()
     assert changed.call_count == 1
 
     changed.reset_mock()
@@ -2100,9 +2100,8 @@ def test_done_page_recheck_reruns_failed_sweep_and_updates_in_place(qtbot, wiz_c
 
     fake.check_offline_dictionary = blocked_dictionary_check  # type: ignore[method-assign]
     try:
-        page.recheck_button.click()
+        page.recheck()
         qtbot.waitUntil(lambda: page._live_check is not None and page._live_check.isRunning(), timeout=3000)
-        assert page.recheck_button.isEnabled() is False
         release_recheck.set()
         qtbot.waitUntil(page.isComplete, timeout=3000)
     finally:
@@ -2207,6 +2206,95 @@ def test_done_page_is_final(qtbot, wiz_config):
     wiz = SetupWizard(wiz_config)
     qtbot.addWidget(wiz)
     assert wiz.done_page.isFinalPage() is True
+
+
+# ---------------------------------------------------------------------------
+# Automatic re-checks (B02)
+# ---------------------------------------------------------------------------
+
+
+def test_the_refresh_and_recheck_buttons_are_gone(qtbot, wiz_config):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+
+    assert not hasattr(wiz.deck_page, "refresh_button")
+    assert not hasattr(wiz.notetype_page, "refresh_button")
+    assert not hasattr(wiz.done_page, "recheck_button")
+    assert not hasattr(wiz.ankiconnect_page, "recheck_button")
+
+
+def test_coming_back_to_the_wizard_rechecks_the_current_page(qtbot, wiz_config, monkeypatch):
+    from PyQt6.QtCore import QEvent  # noqa: PLC0415
+
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
+    calls: list[str] = []
+    monkeypatch.setattr(type(wiz.resources_page), "recheck", lambda self: calls.append("recheck"))
+    staged: list[bool] = []
+    monkeypatch.setattr(wiz, "_stage_current_edits", lambda: staged.append(True))
+    wiz.show()
+    qtbot.waitExposed(wiz)
+    qtbot.waitUntil(lambda: not wiz.resources_page.dictionary_label.text().startswith("Checking"), timeout=5000)
+    qtbot.wait(400)  # let any activation from show() run its own re-check first
+    calls.clear()
+    staged.clear()
+    monkeypatch.setattr(wiz, "isActiveWindow", lambda: True)
+
+    wiz.changeEvent(QEvent(QEvent.Type.ActivationChange))
+
+    qtbot.waitUntil(lambda: calls == ["recheck"], timeout=2000)
+    assert staged == [True]
+
+
+def test_a_closing_wizard_rechecks_nothing(qtbot, wiz_config, monkeypatch):
+    from PyQt6.QtWidgets import QDialog  # noqa: PLC0415
+
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    calls: list[int] = []
+    monkeypatch.setattr(type(wiz.resources_page), "recheck", lambda self: calls.append(1))
+    wiz.done(QDialog.DialogCode.Rejected.value)
+
+    wiz._recheck_current_page()
+
+    assert wiz.is_closing() is True
+    assert calls == []
+
+
+def test_the_anki_page_polls_while_anki_is_unreachable(qtbot, wiz_config, monkeypatch):
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation(ankiconnect=False))
+    wiz.show()
+    qtbot.waitExposed(wiz)
+    while wiz.currentPage() is not wiz.anki_page:
+        wiz.next()
+    qtbot.waitUntil(lambda: wiz.ankiconnect_page._has_result, timeout=5000)
+
+    assert wiz.anki_page._poll.isActive()
+    assert wiz.anki_page._poll.interval() == 3000
+
+    wiz.ankiconnect_page._on_recheck_result((True, "ok"))
+    assert not wiz.anki_page._poll.isActive()
+    _join_workers(qtbot, wiz)
+
+
+def test_leaving_the_anki_page_stops_the_poll(qtbot, wiz_config, monkeypatch):
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation(ankiconnect=False))
+    wiz.show()
+    qtbot.waitExposed(wiz)
+    while wiz.currentPage() is not wiz.anki_page:
+        wiz.next()
+    qtbot.waitUntil(lambda: wiz.ankiconnect_page._has_result, timeout=5000)
+    wiz.next()
+    assert wiz.currentPage() is wiz.done_page
+
+    wiz.anki_page._on_poll()
+
+    assert not wiz.anki_page._poll.isActive()
+    qtbot.waitUntil(lambda: not wiz.done_page.summary_label.text().startswith("Checking"), timeout=5000)
+    _join_workers(qtbot, wiz)
 
 
 # ---------------------------------------------------------------------------

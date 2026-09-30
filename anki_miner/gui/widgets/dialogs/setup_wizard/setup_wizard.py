@@ -22,7 +22,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import cast
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import QEvent, Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QAbstractButton, QDialog, QPushButton, QWidget, QWizard
 
 from anki_miner.config import AnkiMinerConfig
@@ -158,6 +158,14 @@ class SetupWizard(QWizard):
         # the Enter target. Re-applied on each page change because QWizard
         # re-asserts its own default button when the page turns.
         self.currentIdChanged.connect(self._drop_default_buttons)
+        # B02: the wizard re-checks by itself. Coming back to its window (from
+        # Anki, after creating a deck or installing the add-on) re-asks the
+        # current page once focus has settled.
+        self._activation_recheck = QTimer(self)
+        self._activation_recheck.setSingleShot(True)
+        self._activation_recheck.setInterval(300)
+        self._activation_recheck.timeout.connect(self._recheck_current_page)
+        self.currentIdChanged.connect(self._on_current_page_changed)
         self._drop_default_buttons()
         primary_action_shortcut(self, self._activate_primary_action)
 
@@ -208,6 +216,40 @@ class SetupWizard(QWizard):
         button = self._primary_action_button()
         if button is not None:
             button.click()
+
+    # --- automatic re-checks (B02) ----------------------------------------
+
+    def changeEvent(self, a0: QEvent | None) -> None:  # noqa: N802 - Qt override
+        super().changeEvent(a0)
+        if a0 is not None and a0.type() == QEvent.Type.ActivationChange and self.isActiveWindow():
+            # getattr: Qt can deliver change events while __init__ is still running.
+            timer = getattr(self, "_activation_recheck", None)
+            if timer is not None:
+                timer.start()
+
+    def _recheck_current_page(self) -> None:
+        """Ask the current page again what it asked on entry (B02).
+
+        Edits are staged first, so the check reads what is on screen. The page's
+        own refresh path runs (``recheck``), never ``initializePage()``, which
+        would put the config's values back over the user's picks.
+        """
+        if self._closing:
+            return
+        self._stage_current_edits()
+        recheck = getattr(self.currentPage(), "recheck", None)
+        if callable(recheck):
+            recheck()
+
+    def _on_current_page_changed(self, _page_id: int) -> None:
+        """Tell the page it is on screen: Back re-shows a page without initializePage()."""
+        shown = getattr(self.currentPage(), "on_shown", None)
+        if callable(shown):
+            shown()
+
+    def is_closing(self) -> bool:
+        """True once ``done()`` has started closing the wizard."""
+        return self._closing
 
     # --- working config -------------------------------------------------
 

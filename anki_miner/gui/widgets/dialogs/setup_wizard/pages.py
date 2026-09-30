@@ -22,7 +22,7 @@ from dataclasses import replace
 from functools import partial
 from typing import TYPE_CHECKING, Any
 
-from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, QEvent, Qt, QUrl, pyqtSignal
+from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, QEvent, Qt, QTimer, QUrl, pyqtSignal
 from PyQt6.QtGui import QDesktopServices, QGuiApplication
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -579,15 +579,10 @@ class DeckPage(_WizardSection):
         self.heading_label.setObjectName("heading3")
         layout.addWidget(self.heading_label)
 
-        row = QHBoxLayout()
         self.deck_combo = QComboBox()
         self.deck_combo.setEditable(True)
         self.deck_combo.currentTextChanged.connect(self._on_text_changed)
-        row.addWidget(self.deck_combo, 1)
-        self.refresh_button = ModernButton(self.tr("Refresh"), variant="secondary")
-        self.refresh_button.clicked.connect(self._on_refresh_clicked)
-        row.addWidget(self.refresh_button)
-        layout.addLayout(row)
+        layout.addWidget(self.deck_combo)
 
         self.deck_hint = QLabel("")
         self.deck_hint.setObjectName("helper-text")
@@ -596,7 +591,7 @@ class DeckPage(_WizardSection):
 
     def initializePage(self) -> None:
         self.load_from_config()
-        self._on_refresh_clicked()
+        self.refresh()
 
     def load_from_config(self) -> None:
         """Show the working config's deck without fetching anything."""
@@ -626,10 +621,10 @@ class DeckPage(_WizardSection):
         self._write_deck_to_config()
         return True
 
-    def _on_refresh_clicked(self) -> None:
+    def refresh(self) -> None:
+        """Fetch Anki's deck names off the GUI thread (on page entry and every re-check, B02)."""
         if still_running(self._worker):
             return
-        self.refresh_button.setEnabled(False)
         worker = FetchDecksWorker(self._wizard.anki_service(), self)
         self._worker = worker
         self._wizard.register_worker(worker)
@@ -642,11 +637,9 @@ class DeckPage(_WizardSection):
         worker.start()
 
     def _on_decks_error(self, _message: str) -> None:
-        self.refresh_button.setEnabled(True)
         self.completeChanged.emit()
 
     def _on_decks_fetched(self, deck_names: object) -> None:
-        self.refresh_button.setEnabled(True)
         names = list(deck_names) if isinstance(deck_names, list) else []
         self._fetched_decks = names
         current = self.deck_combo.currentText()
@@ -668,7 +661,7 @@ class DeckPage(_WizardSection):
         elif not name:
             self.deck_hint.setText(self.tr("Pick a deck."))
         elif name not in self._fetched_decks:
-            self.deck_hint.setText(self.tr("No such deck. Create it in Anki, then press Refresh."))
+            self.deck_hint.setText(self.tr("No such deck. Create it in Anki; this page updates when you come back."))
         else:
             self.deck_hint.setText("")
 
@@ -694,15 +687,10 @@ class NoteTypePage(_WizardSection):
         self.heading_label.setObjectName("heading3")
         layout.addWidget(self.heading_label)
 
-        row = QHBoxLayout()
         self.notetype_combo = QComboBox()
         self.notetype_combo.setEditable(True)
         self.notetype_combo.currentTextChanged.connect(self._on_notetype_changed)
-        row.addWidget(self.notetype_combo, 1)
-        self.refresh_button = ModernButton(self.tr("Refresh"), variant="secondary")
-        self.refresh_button.clicked.connect(self._on_refresh_clicked)
-        row.addWidget(self.refresh_button)
-        layout.addLayout(row)
+        layout.addWidget(self.notetype_combo)
 
         self.guidance_label = QLabel("")
         self.guidance_label.setWordWrap(True)
@@ -725,7 +713,7 @@ class NoteTypePage(_WizardSection):
 
     def initializePage(self) -> None:
         self.load_from_config()
-        self._on_refresh_clicked()
+        self.refresh()
 
     def load_from_config(self) -> None:
         """Show the working config's note type without fetching the list."""
@@ -779,10 +767,10 @@ class NoteTypePage(_WizardSection):
 
     # --- note-type list fetch ---
 
-    def _on_refresh_clicked(self) -> None:
+    def refresh(self) -> None:
+        """Fetch Anki's note type names off the GUI thread (on page entry and every re-check, B02)."""
         if still_running(self._notetypes_worker):
             return
-        self.refresh_button.setEnabled(False)
         worker = FetchNotetypesWorker(self._wizard.anki_service(), self)
         self._notetypes_worker = worker
         self._wizard.register_worker(worker)
@@ -792,7 +780,6 @@ class NoteTypePage(_WizardSection):
         worker.start()
 
     def _on_notetypes_fetched(self, model_names: object) -> None:
-        self.refresh_button.setEnabled(True)
         names = list(model_names) if isinstance(model_names, list) else []
         self._fetched_note_types = names
         current = self.notetype_combo.currentText()
@@ -806,7 +793,6 @@ class NoteTypePage(_WizardSection):
         self._fetch_fields()
 
     def _on_notetypes_error(self, _message: str) -> None:
-        self.refresh_button.setEnabled(True)
         self.completeChanged.emit()
 
     # --- field list fetch ---
@@ -927,7 +913,7 @@ class NoteTypePage(_WizardSection):
 
     def _on_guidance_link_activated(self, url: str) -> None:
         if url == "recheck":
-            self._on_refresh_clicked()
+            self.refresh()
         elif url == NOTE_TYPE_HELP_URL:
             _open_url(NOTE_TYPE_HELP_URL)
 
@@ -1100,6 +1086,11 @@ class AnkiPage(QWizardPage):
         for section in self.sections():
             section.completeChanged.connect(self.completeChanged)
         self.connect_section.reachability_changed.connect(self._on_reachability_changed)
+        # B02: while AnkiConnect is unreachable, ask again every 3 s; stop once
+        # it answers or the user leaves the page.
+        self._poll = QTimer(self)
+        self._poll.setInterval(3000)
+        self._poll.timeout.connect(self._on_poll)
 
     def sections(self) -> tuple[_WizardSection, ...]:
         return (self.connect_section, self.deck_section, self.notetype_section)
@@ -1123,8 +1114,32 @@ class AnkiPage(QWizardPage):
     def _on_reachability_changed(self, reachable: bool) -> None:
         self.pickers.setVisible(reachable)
         if reachable:
-            self.deck_section._on_refresh_clicked()
-            self.notetype_section._on_refresh_clicked()
+            self.deck_section.refresh()
+            self.notetype_section.refresh()
+        self._sync_poll()
+
+    def recheck(self) -> None:
+        """B02: ask AnkiConnect again; an answer re-fetches the deck and note-type lists."""
+        self.connect_section.recheck()
+
+    def on_shown(self) -> None:
+        self._sync_poll()
+
+    def _sync_poll(self) -> None:
+        wanted = (
+            not self._wizard.is_closing()
+            and self._wizard.currentPage() is self
+            and not self.connect_section.isComplete()
+        )
+        if not wanted:
+            self._poll.stop()
+        elif not self._poll.isActive():
+            self._poll.start()
+
+    def _on_poll(self) -> None:
+        self._sync_poll()
+        if self._poll.isActive():
+            self.connect_section.recheck()
 
     def event(self, event: QEvent | None) -> bool:
         handled = super().event(event)
@@ -1350,6 +1365,11 @@ class ResourcesPage(_LiveCheckPage):
         self._rebuild_catalog_rows()
         self._apply_language_gate()
         self._recheck_resources()
+
+    def recheck(self) -> None:
+        """B02: coming back to the wizard asks the disk again (not while downloading)."""
+        if not self._download_running:
+            self._recheck_resources()
 
     def isComplete(self) -> bool:
         # Nothing to download is nothing to block on. The dictionary gate exists
@@ -1578,10 +1598,6 @@ class DonePage(_LiveCheckPage):
         self.summary_label.setTextFormat(Qt.TextFormat.RichText)
         layout.addWidget(self.summary_label)
 
-        self.recheck_button = ModernButton(self.tr("Recheck"), variant="secondary")
-        self.recheck_button.clicked.connect(self._start_sweep)
-        layout.addWidget(self.recheck_button)
-
     def isComplete(self) -> bool:
         return all(self._results.get(name, False) for name in _FINAL_CHECKS)
 
@@ -1594,12 +1610,15 @@ class DonePage(_LiveCheckPage):
         self._live_check = None
         self._start_sweep()
 
+    def recheck(self) -> None:
+        """B02: re-run the sweep when the wizard window becomes active again."""
+        self._start_sweep()
+
     def _start_sweep(self) -> None:
         if still_running(self._live_check):
             return
         self._results = {}
         self.summary_label.setText(self.tr("Checking your setup..."))
-        self.recheck_button.setEnabled(False)
         self.completeChanged.emit()
 
         self._start_live_check(
@@ -1614,7 +1633,6 @@ class DonePage(_LiveCheckPage):
             return
         self._results = dict(result) if isinstance(result, dict) else {}
         self.summary_label.setText(self._summary_html())
-        self.recheck_button.setEnabled(True)
         self.completeChanged.emit()
 
     def _on_sweep_error(self, message: str) -> None:
@@ -1622,7 +1640,6 @@ class DonePage(_LiveCheckPage):
             return
         self._results = {}
         self.summary_label.setText(message)
-        self.recheck_button.setEnabled(True)
         self.completeChanged.emit()
 
     def _summary_html(self) -> str:
