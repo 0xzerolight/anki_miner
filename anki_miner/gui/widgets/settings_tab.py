@@ -1022,6 +1022,10 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                     model.rowsInserted.connect(self._on_settings_edited)
                     model.rowsRemoved.connect(self._on_settings_edited)
 
+        # Partly checked -> checked emits no toggled() (Qt keeps isChecked()
+        # True for a partial box), so the names box is watched on its state.
+        self.filtering_panel.names_checkbox.checkStateChanged.connect(self._on_settings_edited)
+
         # Fields outside the save panels that commit through the same path.
         # check_for_updates_checkbox and max_workers_spinbox live on the UI
         # panel (T11) but the panel itself stays out of _save_panels — it

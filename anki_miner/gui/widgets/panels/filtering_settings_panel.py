@@ -375,18 +375,25 @@ class FilteringSettingsPanel(FormPanel):
         self._wordsets_helper.setWordWrap(True)
         self.add_widget(self._wordsets_helper)
 
-        self.wordset_checkboxes: dict[str, QCheckBox] = {}
-        for info in load_wordset_catalog():
-            cb = QCheckBox(tr_format(self.tr("%1 (%2)"), info.label, f"{info.count:,}"))
-            cb.setToolTip(
-                tr_format(
-                    self.tr("Exclude the bundled '%1' wordset (%2 entries) from mining."), info.label, f"{info.count:,}"
-                )
+        # One box for all four bundled lists (D15 item 2). Checked = every
+        # list is excluded, unchecked = none; a subset saved before this change
+        # shows partly checked until the user clicks, and then means "all".
+        catalog = load_wordset_catalog()
+        self._wordset_ids: tuple[str, ...] = tuple(info.id for info in catalog)
+        self._partial_wordsets: tuple[str, ...] = ()
+        self.names_checkbox = QCheckBox(self.tr("Skip names of people, places and companies"))
+        self.names_checkbox.setToolTip(
+            tr_format(
+                self.tr("Excludes the bundled name lists from mining: %1."),
+                ", ".join(f"{info.label} ({info.count:,})" for info in catalog),
             )
-            self.wordset_checkboxes[info.id] = cb
-            # Built in a loop, so there is no panel attribute to derive an id
-            # from; the catalog id is the stable name.
-            self.add_field("", cb, anchor=f"wordset_{info.id}")
+        )
+        self.names_checkbox.clicked.connect(self._on_names_clicked)
+        self.add_field(
+            "",
+            self.names_checkbox,
+            anchor_text=lambda: tuple(info.label for info in catalog),
+        )
 
         # Sentence Rule section. Folds the old separate "Deduplicate by
         # Sentence" and "Only Mine i+1 Sentences" checkboxes into one choice --
@@ -552,9 +559,7 @@ class FilteringSettingsPanel(FormPanel):
             self._language_gate_pairs.extend(
                 (self._script_filter_section_label, capability) for capability in _OPTION_DRIVEN_FILTER_CAPABILITIES
             )
-        self._language_gate_pairs.extend(
-            (w, "name_wordsets") for cb in self.wordset_checkboxes.values() for w in field_row_widgets(self, cb)
-        )
+        self._language_gate_pairs.extend((w, "name_wordsets") for w in field_row_widgets(self, self.names_checkbox))
         self._language_gate_pairs.extend(
             (w, "name_wordsets") for w in (self._wordset_section_label, self._wordsets_helper) if w is not None
         )
@@ -640,14 +645,36 @@ class FilteringSettingsPanel(FormPanel):
     # --- Name Wordsets (Issue #59) ---
 
     def get_excluded_wordsets(self) -> tuple[str, ...]:
-        """Return the IDs of the checked name wordsets, in catalog order."""
-        return tuple(set_id for set_id, cb in self.wordset_checkboxes.items() if cb.isChecked())
+        """The excluded name-list ids, in catalog order (D15 item 2)."""
+        state = self.names_checkbox.checkState()
+        if state == Qt.CheckState.Checked:
+            return self._wordset_ids
+        if state == Qt.CheckState.PartiallyChecked:
+            return tuple(set_id for set_id in self._wordset_ids if set_id in self._partial_wordsets)
+        return ()
 
     def set_excluded_wordsets(self, ids: tuple[str, ...]) -> None:
-        """Check the wordset boxes whose IDs are in ``ids``."""
-        wanted = set(ids)
-        for set_id, cb in self.wordset_checkboxes.items():
-            cb.setChecked(set_id in wanted)
+        """Show ``ids``: all -> checked, none -> unchecked, a subset -> partly checked."""
+        wanted = tuple(set_id for set_id in self._wordset_ids if set_id in set(ids))
+        if wanted and len(wanted) == len(self._wordset_ids):
+            self.names_checkbox.setTristate(False)
+            self.names_checkbox.setCheckState(Qt.CheckState.Checked)
+        elif not wanted:
+            self.names_checkbox.setTristate(False)
+            self.names_checkbox.setCheckState(Qt.CheckState.Unchecked)
+        else:
+            self._partial_wordsets = wanted
+            self.names_checkbox.setTristate(True)
+            self.names_checkbox.setCheckState(Qt.CheckState.PartiallyChecked)
+
+    def _on_names_clicked(self, _checked: bool) -> None:
+        """A click is a real choice: leave the partial state for good.
+
+        Qt has already moved a partial box to checked (its tristate cycle is
+        unchecked -> partial -> checked); dropping tristate keeps a later click
+        from ever landing on "partial" again.
+        """
+        self.names_checkbox.setTristate(False)
 
     # --- Frequency rank band ---
 

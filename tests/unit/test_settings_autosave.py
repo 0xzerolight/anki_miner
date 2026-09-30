@@ -473,3 +473,11 @@ class TestManualControlsRemoved:
         sequences = {s.key().toString() for s in tab.findChildren(QShortcut)}
         assert "Ctrl+S" not in sequences
         assert "Ctrl+R" not in sequences
+
+
+def test_clicking_a_partial_names_box_arms_the_autosave(tab, test_config):
+    """Partly checked -> checked emits no toggled(), so checkStateChanged must arm it (D15 item 2)."""
+    tab.update_config(replace(test_config, excluded_wordsets=("surnames",)))
+    tab._settings_dirty = False
+    tab.filtering_panel.names_checkbox.click()
+    assert tab._settings_dirty
