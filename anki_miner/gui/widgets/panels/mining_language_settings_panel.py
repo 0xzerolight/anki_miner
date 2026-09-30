@@ -17,7 +17,6 @@ config, so arming the autosave debounce on that combo would save the
 pre-switch panel state on top of it.
 """
 
-import logging
 import unicodedata
 from dataclasses import replace
 
@@ -31,8 +30,6 @@ from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.utils.i18n import tr_format
-
-logger = logging.getLogger(__name__)
 
 
 def _bidi_isolated(name: str) -> str:
