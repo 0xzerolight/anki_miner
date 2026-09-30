@@ -35,6 +35,7 @@ from PyQt6.QtGui import QFont, QGuiApplication
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.ankiconnect_help import ankiconnect_install_help
 from anki_miner.gui.utils.language_gate import apply_language_gate
 from anki_miner.gui.widgets.base import EnhancedDialog, StatusBadge
 from anki_miner.models import ValidationResult
@@ -44,6 +45,7 @@ __all__ = [
     "HEALTH_FAIL",
     "HEALTH_FIX_ANCHORS",
     "HEALTH_FIX_ROUTES",
+    "HEALTH_FIX_WIZARD",
     "HEALTH_GROUPS",
     "HEALTH_KEYS",
     "HEALTH_NOT_INSTALLED",
@@ -119,7 +121,6 @@ _ROW_CAPABILITIES: dict[str, str] = {"resources.pitch": "pitch", "tools.mokuro":
 #: update is taken through the update banner — so they show no Fix button
 #: rather than a button that lands somewhere unrelated.
 HEALTH_FIX_ANCHORS: dict[str, str] = {
-    "anki.connect": "anki.ankiconnect_url_input",
     "anki.deck": "anki.deck_name",
     "anki.note_type": "anki.note_type",
     "anki.fields": "anki.expression_field_input",
@@ -138,6 +139,15 @@ HEALTH_FIX_ANCHORS: dict[str, str] = {
 #: routes there instead of into ``HEALTH_FIX_ANCHORS``.
 HEALTH_FIX_ROUTES: dict[str, tuple[str, str]] = {
     "tools.mokuro": ("subtitles", "mokuro"),
+}
+
+#: Where a broken row is repaired when the fix is a step of the setup wizard:
+#: the wizard's start-page key, emitted by ``SystemHealthWindow.wizard_requested``
+#: (B09). Installing an add-on is not a Settings control, and the wizard's Anki
+#: page is where the install steps, the Open Anki button and the automatic
+#: re-check live.
+HEALTH_FIX_WIZARD: dict[str, str] = {
+    "anki.connect": "anki",
 }
 
 #: ``ValidationIssue.component`` → row key. Components with no row here (the
@@ -221,6 +231,11 @@ def checks_from_validation(result: ValidationResult, checked_at: datetime) -> di
     checks: dict[str, HealthCheck] = {}
 
     connect_state, connect_detail = _issue_state("anki.connect")
+    if connect_state == HEALTH_FAIL:
+        # Keep the service's reason (refused, timed out, "AnkiConnect error: …"):
+        # it is the cause the diagnostics export reports. Under it, how to get
+        # AnkiConnect running, which used to live only in the wizard.
+        connect_detail = f"{connect_detail}\n{ankiconnect_install_help()}"
     checks["anki.connect"] = _record("anki.connect", connect_state, connect_detail)
 
     for key, passed in (("anki.deck", result.deck_exists), ("anki.note_type", result.note_type_exists)):
@@ -459,7 +474,7 @@ class _HealthRow(QFrame):
         # Nothing to repair while a row is healthy or unreported, and no route
         # to offer for a row with no in-app control behind it — a Settings
         # anchor or a whole-tab route (mokuro's Manga OCR tab) both count.
-        repairable = self._key in HEALTH_FIX_ANCHORS or self._key in HEALTH_FIX_ROUTES
+        repairable = self._key in HEALTH_FIX_ANCHORS or self._key in HEALTH_FIX_ROUTES or self._key in HEALTH_FIX_WIZARD
         self.fix_button.setText(self.tr("Install…") if check.state == HEALTH_NOT_INSTALLED else self.tr("Fix"))
         self.fix_button.setVisible(repairable and check.state in (HEALTH_WARN, HEALTH_FAIL, HEALTH_NOT_INSTALLED))
 
@@ -478,12 +493,16 @@ class SystemHealthWindow(EnhancedDialog):
         route_requested: Emitted with ``(main_tab, subtab)`` for a row whose
             fix is a whole tab (``HEALTH_FIX_ROUTES``) rather than a Settings
             anchor.
+        wizard_requested: Emitted with a setup-wizard start-page key for a
+            ``HEALTH_FIX_WIZARD`` row (the AnkiConnect row opens the wizard on
+            its Anki page).
     """
 
     recheck_requested = pyqtSignal()
     export_requested = pyqtSignal()
     fix_requested = pyqtSignal(str)
     route_requested = pyqtSignal(str, str)
+    wizard_requested = pyqtSignal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -671,6 +690,10 @@ class SystemHealthWindow(EnhancedDialog):
         ``window()`` is itself, not the main window — so the route out is a
         signal either way.
         """
+        page = HEALTH_FIX_WIZARD.get(key)
+        if page:
+            self.wizard_requested.emit(page)
+            return
         anchor = HEALTH_FIX_ANCHORS.get(key)
         if anchor:
             self.fix_requested.emit(anchor)

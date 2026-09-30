@@ -22,10 +22,12 @@ import pytest
 from PyQt6.QtWidgets import QLabel
 
 from anki_miner.gui.resources.styles import Theme
+from anki_miner.gui.utils.ankiconnect_help import ankiconnect_install_help
 from anki_miner.gui.widgets.dialogs.system_health_window import (
     HEALTH_FAIL,
     HEALTH_FIX_ANCHORS,
     HEALTH_FIX_ROUTES,
+    HEALTH_FIX_WIZARD,
     HEALTH_KEYS,
     HEALTH_NOT_INSTALLED,
     HEALTH_NOT_SET_UP,
@@ -302,17 +304,53 @@ def test_fix_button_appears_only_for_rows_with_a_repair_route(health_window):
 
 def test_fix_emits_the_stable_setting_anchor_id(health_window, qtbot):
     result = _result(
-        ankiconnect_ok=False,
         deck=False,
-        note_type=False,
-        issues=[ValidationIssue(component="AnkiConnect", severity="ERROR", message="down")],
+        issues=[ValidationIssue(component="Anki Deck", severity="ERROR", message="Deck 'X' not found.")],
     )
     health_window.show_health(HealthReport.unknown().with_validation(result, CHECKED_AT))
 
     with qtbot.waitSignal(health_window.fix_requested) as blocker:
+        health_window._rows["anki.deck"].fix_button.click()
+
+    assert blocker.args == [HEALTH_FIX_ANCHORS["anki.deck"]]
+
+
+def _anki_down() -> ValidationResult:
+    return _result(
+        ankiconnect_ok=False,
+        deck=False,
+        note_type=False,
+        issues=[ValidationIssue(component="AnkiConnect", severity="ERROR", message="Cannot connect to Anki.")],
+    )
+
+
+def test_unreachable_anki_explains_how_to_install_ankiconnect():
+    """B09: the install steps used to exist only inside the wizard."""
+    checks = checks_from_validation(_anki_down(), CHECKED_AT)
+
+    # The service's reason stays first (refused, timed out and "AnkiConnect
+    # error: …" differ, and the diagnostics export needs the cause); the
+    # install steps follow it.
+    assert checks["anki.connect"].detail == f"Cannot connect to Anki.\n{ankiconnect_install_help()}"
+    assert checks["anki.connect"].detail.startswith("Cannot connect to Anki.")
+    assert "2055492159" in checks["anki.connect"].detail
+
+
+def test_ankiconnect_fix_opens_the_wizard_on_its_anki_page(health_window, qtbot):
+    assert "anki.connect" not in HEALTH_FIX_ANCHORS
+    assert HEALTH_FIX_WIZARD == {"anki.connect": "anki"}
+    health_window.show()
+    health_window.show_health(HealthReport.unknown().with_validation(_anki_down(), CHECKED_AT))
+    assert health_window._rows["anki.connect"].fix_button.isVisible()
+
+    with qtbot.waitSignal(health_window.wizard_requested) as blocker:
         health_window._rows["anki.connect"].fix_button.click()
 
-    assert blocker.args == [HEALTH_FIX_ANCHORS["anki.connect"]]
+    assert blocker.args == ["anki"]
+
+
+def test_every_wizard_route_names_a_row_that_exists():
+    assert set(HEALTH_FIX_WIZARD) <= set(HEALTH_KEYS)
 
 
 def test_mokuro_fix_button_shows_for_a_routed_row(health_window):
