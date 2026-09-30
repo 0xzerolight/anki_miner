@@ -1140,44 +1140,75 @@ class TestSubtitlesPanelRegistration:
         tab.open_subtab("subtitles")
         assert tab.subtitles_panel in tab.pages.currentWidget().findChildren(type(tab.subtitles_panel))
 
-    def test_subtitles_panel_loads_alass_location(self, test_config: AnkiMinerConfig, qtbot, tmp_path):
+    def test_subtitles_panel_loads_alass_location(self, test_config: AnkiMinerConfig, qtbot, tmp_path, monkeypatch):
+        monkeypatch.setattr(
+            "anki_miner.gui.widgets.panels.subtitles_settings_panel.alass_installer.alass_install_supported",
+            lambda: False,
+        )
         alass_path = tmp_path / "alass"
-        cfg = replace(test_config, alass_location=alass_path)
-        widget = SettingsTab(cfg)
+        widget = SettingsTab(replace(test_config, alass_location=alass_path))
         qtbot.addWidget(widget)
         try:
             assert widget.subtitles_panel.alass_selector.get_path() == str(alass_path)
         finally:
             widget.deleteLater()
 
-    def test_save_persists_alass_location(self, tab, monkeypatch, tmp_path):
+    def test_save_persists_alass_location(self, test_config: AnkiMinerConfig, qtbot, monkeypatch, tmp_path):
         from PyQt6.QtWidgets import QMessageBox
 
+        monkeypatch.setattr(
+            "anki_miner.gui.widgets.panels.subtitles_settings_panel.alass_installer.alass_install_supported",
+            lambda: False,
+        )
         monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
+        widget = SettingsTab(test_config)
+        qtbot.addWidget(widget)
+        try:
+            alass_path = tmp_path / "alass"
+            received: list[AnkiMinerConfig] = []
+            widget.config_changed.connect(received.append)
 
-        alass_path = tmp_path / "alass"
-        received: list[AnkiMinerConfig] = []
-        tab.config_changed.connect(received.append)
+            widget.subtitles_panel.alass_selector.set_path(str(alass_path))
+            widget.commit_settings()
 
-        tab.subtitles_panel.alass_selector.set_path(str(alass_path))
-        tab.commit_settings()
+            assert len(received) == 1
+            assert received[0].alass_location == alass_path
+        finally:
+            # Save starts a styling probe worker; join it as the tab fixture does.
+            widget.shutdown()
+            for worker in widget.iter_close_workers():
+                if worker is not None:
+                    worker.wait(3000)
+            qtbot.wait(10)
+            widget.deleteLater()
 
-        assert len(received) == 1
-        assert received[0].alass_location == alass_path
-
-    def test_save_empty_alass_location_is_none(self, tab, monkeypatch):
+    def test_save_empty_alass_location_is_none(self, test_config: AnkiMinerConfig, qtbot, monkeypatch):
         from PyQt6.QtWidgets import QMessageBox
 
+        monkeypatch.setattr(
+            "anki_miner.gui.widgets.panels.subtitles_settings_panel.alass_installer.alass_install_supported",
+            lambda: False,
+        )
         monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
+        widget = SettingsTab(test_config)
+        qtbot.addWidget(widget)
+        try:
+            received: list[AnkiMinerConfig] = []
+            widget.config_changed.connect(received.append)
 
-        received: list[AnkiMinerConfig] = []
-        tab.config_changed.connect(received.append)
+            widget.subtitles_panel.alass_selector.set_path("")
+            widget.commit_settings()
 
-        tab.subtitles_panel.alass_selector.set_path("")
-        tab.commit_settings()
-
-        assert len(received) == 1
-        assert received[0].alass_location is None
+            assert len(received) == 1
+            assert received[0].alass_location is None
+        finally:
+            # Save starts a styling probe worker; join it as the tab fixture does.
+            widget.shutdown()
+            for worker in widget.iter_close_workers():
+                if worker is not None:
+                    worker.wait(3000)
+            qtbot.wait(10)
+            widget.deleteLater()
 
 
 def test_offline_load_and_save_preserves_deck_and_note_type(tab, test_config):

@@ -64,7 +64,8 @@ def test_panel_constructs(qtbot):
     assert panel is not None
 
 
-def test_panel_has_alass_selector(qtbot):
+def test_panel_has_alass_selector(qtbot, monkeypatch):
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: False)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     assert panel.alass_selector is not None
@@ -75,7 +76,8 @@ def test_panel_has_alass_selector(qtbot):
 # ---------------------------------------------------------------------------
 
 
-def test_load_from_config_populates_selector_from_path(qtbot, tmp_path):
+def test_load_from_config_populates_selector_from_path(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: False)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     alass_path = tmp_path / "alass"
@@ -85,7 +87,8 @@ def test_load_from_config_populates_selector_from_path(qtbot, tmp_path):
     assert panel.alass_selector.get_path() == str(alass_path)
 
 
-def test_load_from_config_with_none_clears_selector(qtbot):
+def test_load_from_config_with_none_clears_selector(qtbot, monkeypatch):
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: False)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     config = AnkiMinerConfig(alass_location=None)
@@ -94,7 +97,8 @@ def test_load_from_config_with_none_clears_selector(qtbot):
     assert panel.alass_selector.get_path() == ""
 
 
-def test_load_from_config_replaces_previous_value(qtbot, tmp_path):
+def test_load_from_config_replaces_previous_value(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: False)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     first_path = tmp_path / "alass_v1"
@@ -114,7 +118,8 @@ def test_load_from_config_replaces_previous_value(qtbot, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_contribute_with_path_set_returns_config_with_alass_location(qtbot, tmp_path):
+def test_contribute_with_path_set_returns_config_with_alass_location(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: False)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     alass_path = tmp_path / "alass"
@@ -134,7 +139,8 @@ def test_alignment_knob_widgets_are_gone(qtbot):
     assert not hasattr(panel, "retime_single_offset_checkbox")
 
 
-def test_contribute_with_empty_selector_returns_none(qtbot):
+def test_contribute_with_empty_selector_returns_none(qtbot, monkeypatch):
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: False)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     panel.alass_selector.set_path("")
@@ -143,7 +149,8 @@ def test_contribute_with_empty_selector_returns_none(qtbot):
     assert new_config.alass_location is None
 
 
-def test_contribute_does_not_mutate_original_config(qtbot, tmp_path):
+def test_contribute_does_not_mutate_original_config(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: False)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     alass_path = tmp_path / "alass"
@@ -154,7 +161,8 @@ def test_contribute_does_not_mutate_original_config(qtbot, tmp_path):
     assert config.alass_location is None
 
 
-def test_contribute_whitespace_only_is_treated_as_none(qtbot):
+def test_contribute_whitespace_only_is_treated_as_none(qtbot, monkeypatch):
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: False)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     panel.alass_selector.set_path("   ")
@@ -168,7 +176,8 @@ def test_contribute_whitespace_only_is_treated_as_none(qtbot):
 # ---------------------------------------------------------------------------
 
 
-def test_round_trip_with_path(qtbot, tmp_path):
+def test_round_trip_with_path(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: False)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     alass_path = tmp_path / "alass"
@@ -179,7 +188,8 @@ def test_round_trip_with_path(qtbot, tmp_path):
     assert result.alass_location == alass_path
 
 
-def test_round_trip_with_none(qtbot):
+def test_round_trip_with_none(qtbot, monkeypatch):
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: False)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     config = AnkiMinerConfig(alass_location=None)
@@ -202,8 +212,9 @@ def test_panel_has_model_combo(qtbot):
     assert "small" in items
 
 
-def test_contribute_preserves_asr_model_and_alass(qtbot, tmp_path):
+def test_contribute_preserves_asr_model_and_alass(qtbot, tmp_path, monkeypatch):
     """contribute folds BOTH asr_model and alass_location into the new config."""
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: False)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     alass_path = tmp_path / "alass"
@@ -1679,3 +1690,36 @@ def test_install_status_labels_are_neutral_unless_installed(qtbot, monkeypatch):
 
     assert panel.model_status_label.property("status") == "info"
     assert panel.alass_status_label.property("status") == "success"
+
+
+def test_technical_rows_have_plain_labels(qtbot):
+    """C16: ASR model / ASR device / alass download read as what they are."""
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    texts = {label.text() for label in panel.findChildren(QLabel)}
+    assert {"Transcription model:", "Run transcription on:"} <= texts
+    assert not {"ASR model:", "ASR device:", "alass download:"} & texts
+
+
+def test_alass_path_row_is_gone_where_the_download_exists(qtbot, monkeypatch, tmp_path):
+    """D15 item 4: Windows and Linux download alass in-app; a path is config-only there."""
+    from dataclasses import replace
+
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: True)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    assert not hasattr(panel, "alass_selector")
+    labels = {label.text() for label in panel.findChildren(QLabel)}
+    assert "Subtitle aligner:" in labels
+    config = replace(AnkiMinerConfig(), alass_location=tmp_path / "alass")
+    panel.load_from_config(config)
+    _wait_state_settled(qtbot, panel)
+    assert panel.contribute(config).alass_location == tmp_path / "alass"
+
+
+def test_macos_keeps_the_alass_path_row(qtbot, monkeypatch):
+    """A Finder-launched app does not see /opt/homebrew/bin, so the path stays."""
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: False)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    assert panel.alass_selector is not None

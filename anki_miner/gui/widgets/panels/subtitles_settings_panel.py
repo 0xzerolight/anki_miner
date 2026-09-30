@@ -169,6 +169,12 @@ class SubtitlesSettingsPanel(FormPanel):
         self._cuda_libs_root: Path | None = None
         self._onnx_pack_root: Path | None = None
         self._alass_supported = False if suppress_optional_startup else alass_installer.alass_install_supported()
+        # D15 item 4: where "Download alass" exists (Windows, Linux) the path
+        # override leaves the GUI; macOS keeps it, because Homebrew installs to
+        # /opt/homebrew/bin, which a Finder-launched app does not search. Read
+        # from the platform check, not _alass_supported, which startup
+        # suppression also turns off.
+        self._alass_path_offered = not alass_installer.alass_install_supported()
         # Vulkan ASR is "offerable" only where it can actually run: non-macOS AND
         # the whisper.cpp Vulkan backend lib (libggml-vulkan) is installed. That
         # lib ships only in the bundled release (built from source with the Vulkan
@@ -313,18 +319,20 @@ class SubtitlesSettingsPanel(FormPanel):
         for label, _value in _MODEL_OPTIONS:
             self.model_combo.addItem(label)
         self.add_field(
-            self.tr("ASR model"),
+            self.tr("Transcription model"),
             self.model_combo,
             helper=self.tr("large-v3 is the most accurate; small is much faster."),
+            anchor_text=lambda: ("ASR model",),
         )
 
         self.device_combo = QComboBox()
         for label, _value in self._device_options:
             self.device_combo.addItem(label)
         self.add_field(
-            self.tr("ASR device"),
+            self.tr("Run transcription on"),
             self.device_combo,
             helper=self.tr("Auto uses the GPU when available, else CPU. Each GPU option needs its own download below."),
+            anchor_text=lambda: ("ASR device",),
         )
 
         # GPU acceleration pack download. Mirrors the model-download row; gated by
@@ -499,20 +507,21 @@ class SubtitlesSettingsPanel(FormPanel):
         )
 
     def _setup_alass_section(self) -> None:
-        """alass path override plus in-app download (or Homebrew guidance)."""
+        """alass download (Windows, Linux) or Homebrew guidance plus the path override (macOS)."""
         self.add_section(self.tr("Alignment"))
 
-        self.alass_selector = FileSelector(
-            label="",
-            file_mode=True,
-            file_filter="All Files (*)",
-            placeholder=self.tr("Optional: path to the alass executable"),
-        )
-        self.add_field(
-            self.tr("alass binary"),
-            self.alass_selector,
-            helper=self.tr("Leave blank to use the downloaded, bundled, or PATH alass."),
-        )
+        if self._alass_path_offered:
+            self.alass_selector = FileSelector(
+                label="",
+                file_mode=True,
+                file_filter="All Files (*)",
+                placeholder=self.tr("Optional: path to the alass executable"),
+            )
+            self.add_field(
+                self.tr("alass binary"),
+                self.alass_selector,
+                helper=self.tr("Leave blank to use the downloaded, bundled, or PATH alass."),
+            )
 
         if self._alass_supported:
             self.download_alass_button = ModernButton(self.tr("Download alass"), variant="secondary")
@@ -535,11 +544,11 @@ class SubtitlesSettingsPanel(FormPanel):
             alass_row.addStretch()
             alass_button = self.download_alass_button
             self.add_field(
-                self.tr("alass download"),
+                self.tr("Subtitle aligner"),
                 alass_container,
                 anchor="alass_download",
                 anchor_focus=alass_button,
-                anchor_text=lambda: (alass_button.text(), alass_button.toolTip()),
+                anchor_text=lambda: (alass_button.text(), alass_button.toolTip(), "alass"),
             )
         else:
             # macOS: no upstream v2.0.0 binary — point users at Homebrew.
@@ -1363,7 +1372,8 @@ class SubtitlesSettingsPanel(FormPanel):
         available_devices = {value for _label, value in self._device_options}
         self.set_device(config.asr_device if config.asr_device in available_devices else "auto")
         # alass
-        self.alass_selector.set_path(str(config.alass_location) if config.alass_location else "")
+        if self._alass_path_offered:
+            self.alass_selector.set_path(str(config.alass_location) if config.alass_location else "")
         self._bin_root = config.bin_root
         self._alass_location = config.alass_location
         self._onnx_pack_root = config.onnx_pack_root
@@ -1380,10 +1390,9 @@ class SubtitlesSettingsPanel(FormPanel):
         preserved. Called by :meth:`SettingsTab.commit_settings` as part of
         the contribute fold.
         """
+        updated = replace(config, asr_model=self.get_model(), asr_device=self.get_device())
+        if not self._alass_path_offered:
+            # The row is not on this platform; a hand-set path is kept (D15 item 4).
+            return updated
         path = self.alass_selector.path_or_none()
-        return replace(
-            config,
-            asr_model=self.get_model(),
-            asr_device=self.get_device(),
-            alass_location=Path(path) if path is not None else None,
-        )
+        return replace(updated, alass_location=Path(path) if path is not None else None)

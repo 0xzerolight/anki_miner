@@ -204,7 +204,7 @@ class TestRenamedDestinations:
         """D10 renamed the destination; nobody renamed the users' vocabulary."""
         results = _ids(search(entries, "ASR"))
 
-        assert "subtitles.alass_selector" in results
+        assert "subtitles.model_combo" in results
 
     def test_the_filtering_destination_name_finds_its_settings(self, entries):
         """The old "Filtering" name still finds it (T9 renamed the label to
