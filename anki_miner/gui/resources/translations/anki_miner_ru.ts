@@ -6341,7 +6341,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Retime</source>
-        <translation>Пересинхронизация</translation>
+        <translation>Тайминги</translation>
     </message>
     <message>
         <source>Condense</source>
@@ -6349,7 +6349,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Card Backfill</source>
-        <translation>Дозаполнение карточек</translation>
+        <translation>Дозаполнение</translation>
     </message>
     <message>
         <source>Deck Filter</source>
@@ -6365,7 +6365,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Audiobook Sync</source>
-        <translation>Синхронизация аудиокниги</translation>
+        <translation>Синхр. аудиокниги</translation>
     </message>
     <message>
         <source>Anki Miner updated</source>
@@ -8758,7 +8758,7 @@ No index files are deleted.</source>
     <name>ReadingTextTab</name>
     <message>
         <source>Review words before mining</source>
-        <translation>Проверять слова перед майнингом</translation>
+        <translation>Просмотреть слова перед майнингом</translation>
     </message>
     <message>
         <source>Show the word-selection popup before creating cards.</source>

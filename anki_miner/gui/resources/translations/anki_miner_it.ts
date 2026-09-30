@@ -6332,7 +6332,7 @@ Parole da aggiungere: %3. Continuare?</translation>
     </message>
     <message>
         <source>Card Backfill</source>
-        <translation>Completamento delle carte</translation>
+        <translation>Completamento</translation>
     </message>
     <message>
         <source>Deck Filter</source>
@@ -6348,7 +6348,7 @@ Parole da aggiungere: %3. Continuare?</translation>
     </message>
     <message>
         <source>Audiobook Sync</source>
-        <translation>Sincronizzazione dell'audiolibro</translation>
+        <translation>Sincro audiolibro</translation>
     </message>
     <message>
         <source>Anki Miner updated</source>

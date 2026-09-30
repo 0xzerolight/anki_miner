@@ -119,7 +119,7 @@ Die vollständige Entwicklungseinrichtung findest du in [CONTRIBUTING.md](../CON
 - **Audiobooks** - mine Hörbücher, Podcasts, Radio, Songs (Audio- + Untertitel-/Transkript-Paare).
 - **Reading** - mine Manga (mokuro), Romane (`.epub`, `.txt`; einzelnes Buch oder ein ganzer Ordner), eigenständige Untertiteldateien oder eingefügten Text.
 - **Analytics** - Mining-Verlauf, Schwierigkeitsrangliste, Meilensteine.
-- **Utilities** - Untertitel erzeugen (lokales Whisper), Untertitel neu timen (ffsubsync/alass), Medien auf reines Dialog-Audio kondensieren, Video/Audio/Untertitel von jeder Seite herunterladen, die yt-dlp unterstützt, den lernenswerten Teil eines fertigen Stapels in einen neuen kopieren, Felder bestehender Karten nachträglich befüllen, Manga-Seitenbilder per OCR in .mokuro-Dateien umwandeln (mokuro) und ein Hörbuch auf den Text seines Buchs timen (Hörbuch-Synchronisierung).
+- **Utilities** - Untertitel erzeugen (lokales Whisper), Untertitel neu timen (ffsubsync/alass), Medien auf reines Dialog-Audio kondensieren, Video/Audio/Untertitel von jeder Seite herunterladen, die yt-dlp unterstützt, den lernenswerten Teil eines fertigen Stapels in einen neuen kopieren, Felder bestehender Karten nachträglich befüllen, Manga-Seitenbilder per OCR in .mokuro-Dateien umwandeln (mokuro) und ein Hörbuch auf den Text seines Buchs timen (Hörbuch-Sync).
 - **Settings** - alles konfigurierbar.
 
 ## Weitere Funktionen
@@ -136,7 +136,7 @@ Die vollständige Entwicklungseinrichtung findest du in [CONTRIBUTING.md](../CON
 - Eingebettete libmpv-Videovorschau - die Szene eines Worts während der Prüfung abspielen oder das Untertitel-Timing per Live-Wiedergabe nachjustieren.
 - Animierte Screenshots (siehe Beispielkarten oben).
 - Einstellungsprofile - benannte Konfigurationen speichern und über den Header wechseln.
-- Gesammelte Karten neu gestalten - dein aktuelles Karten-Styling auf bereits erstellte Karten anwenden (Utilities → Karten-Nachbefüllung).
+- Gesammelte Karten neu gestalten - dein aktuelles Karten-Styling auf bereits erstellte Karten anwenden (Utilities → Nachbefüllung).
 
 <details>
 <summary><strong>Integrierte Themes (29)</strong></summary>
@@ -189,7 +189,7 @@ Verwendet mitgelieferte Namens-Wortgruppen, abgeleitet von [JMnedict](https://ww
 | „ffmpeg nicht gefunden“       | ffmpeg installieren und zum PATH hinzufügen.                                     |
 | Keine Definitionen gefunden     | Ein Yomitan-Wörterbuch unter Einstellungen -> Wörterbücher -> Wörterbuch hinzufügen… ergänzen (empfohlen) oder, für Japanisch, den Jisho-Rückgriff aktivieren (langsamer, ratenbegrenzt). |
 | Windows-Installer öffnet nicht / SmartScreen-Warnung | Siehe [Hinweise zum ersten Start](#hinweise-zum-ersten-start-unsignierte-builds): **Weitere Informationen** -> **Trotzdem ausführen** wählen; Defender-Fehlalarme aus dem **Schutzverlauf** wiederherstellen. |
-| Frische Installation hat keine Definitionen | Tools -> Einrichtungsassistent oder Tools -> Empfohlene Ressourcen herunterladen ausführen. Für den manuellen Import die Yomitan-ZIP unverändert lassen (nicht entpacken). |
+| Frische Installation hat keine Definitionen | Extras -> Einrichtungsassistent oder Extras -> Empfohlene Ressourcen herunterladen ausführen. Für den manuellen Import die Yomitan-ZIP unverändert lassen (nicht entpacken). |
 | Wörterbuch hinzufügen bleibt hängen oder schlägt fehl | Die zuletzt sichtbare Phase notieren und Logs anhängen (siehe „Wo sind die Logs?“ unten). Name, Quelle und Größe der Wörterbuch-ZIP in der Meldung angeben. |
 | Wo sind die Logs?      | Hilfe -> Protokollordner öffnen verwenden, oder unter Windows `%USERPROFILE%\.anki_miner\anki_miner.log` bzw. unter macOS/Linux `~/.anki_miner/anki_miner.log` öffnen. Rotierte Logs verwenden die Endungen `.1` bis `.5`. Sende auch `anki_miner.crash`, falls vorhanden - ein Absturz, der die App beendet hat, schreibt seinen Stack in diese Datei und nicht ins Log - sowie `anki_miner.child.log` mit der Ausgabe eines Hilfsprozesses. |
 | Einen Fehler melden          | Hilfe -> Diagnose exportieren… schreibt eine ZIP an einen Ort deiner Wahl: die Logs (`anki_miner.log` samt Rotationen, `anki_miner.crash`, `anki_miner.child.log`), deine `settings.json`, die Konfigurations- und UI-Zustandsdateien, Warteschlangen-Snapshots und Download-Manifeste sowie erzeugte Berichte zu Rechner und App-Zustand (`environment.txt`, `health.txt`, `resources.txt`, `stores.txt`, `disk.txt`, `screens.txt`). Vor dem Hochladen prüfen, da sie Dateipfade und Dateinamen von deinem Computer enthält. Es wird nichts automatisch hochgeladen. |

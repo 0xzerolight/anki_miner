@@ -1511,7 +1511,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Review words before mining</source>
-        <translation>挖词前审阅单词</translation>
+        <translation>挖词前先审阅单词</translation>
     </message>
     <message>
         <source>Show the word-selection popup for each audio file before creating cards.</source>
@@ -1569,7 +1569,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Review words before mining</source>
-        <translation>挖词前审阅单词</translation>
+        <translation>挖词前先审阅单词</translation>
     </message>
     <message>
         <source>Pick which words get cards, once per series.</source>
@@ -2623,11 +2623,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Choose the tools on the Utilities tab</source>
-        <translation>选择“工具”标签页中的工具</translation>
+        <translation>选择“实用工具”标签页中的工具</translation>
     </message>
     <message>
         <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
-        <translation>在“设置 -&gt; 常规”中隐藏你不用的“工具”标签页工具，或将其恢复。隐藏的工具在此处仍保留条目；其“打开”按钮会跳转到对应的复选框。</translation>
+        <translation>在“设置 -&gt; 常规”中隐藏你不用的“实用工具”标签页工具，或将其恢复。隐藏的工具在此处仍保留条目；其“打开”按钮会跳转到对应的复选框。</translation>
     </message>
     <message>
         <source>Search the settings</source>
@@ -2667,7 +2667,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from its setup card on Utilities -&gt; Manga OCR.</source>
-        <translation>对单卷文件夹或整个系列运行 mokuro 的日语 OCR，以便在“阅读 -&gt; 漫画”中挖词。请在“工具 -&gt; 漫画 OCR”的设置卡片中安装 mokuro。</translation>
+        <translation>对单卷文件夹或整个系列运行 mokuro 的日语 OCR，以便在“阅读 -&gt; 漫画”中挖词。请在“实用工具 -&gt; 漫画 OCR”的设置卡片中安装 mokuro。</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -2683,7 +2683,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities -&gt; Card Backfill.</source>
-        <translation>将最新的 Anki Miner 样式重新应用到你之前挖取的卡片——“工具 -&gt; 卡片字段补全”。</translation>
+        <translation>将最新的 Anki Miner 样式重新应用到你之前挖取的卡片——“实用工具 -&gt; 卡片字段补全”。</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -3613,7 +3613,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>Review words before mining</source>
-        <translation>挖词前审阅单词</translation>
+        <translation>挖词前先审阅单词</translation>
     </message>
     <message>
         <source>Pick which words get cards, once per series.</source>
@@ -5847,7 +5847,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Go to Utilities</source>
-        <translation>切换到工具</translation>
+        <translation>切换到实用工具</translation>
     </message>
     <message>
         <source>Go to Settings</source>
@@ -6295,7 +6295,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Utilities</source>
-        <translation>工具</translation>
+        <translation>实用工具</translation>
     </message>
     <message>
         <source>Settings</source>
@@ -6355,7 +6355,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Navigate between Video, Audiobooks, Reading, Analytics, Utilities, and Settings</source>
-        <translation>在视频、有声书、阅读、分析、工具和设置之间切换</translation>
+        <translation>在视频、有声书、阅读、分析、实用工具和设置之间切换</translation>
     </message>
     <message>
         <source>Application Header</source>
@@ -11386,11 +11386,11 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Utilities tab</source>
-        <translation>工具标签页</translation>
+        <translation>实用工具标签页</translation>
     </message>
     <message>
         <source>Choose which tools the Utilities tab shows. At least one stays.</source>
-        <translation>选择“工具”标签页显示哪些工具。至少保留一个。</translation>
+        <translation>选择“实用工具”标签页显示哪些工具。至少保留一个。</translation>
     </message>
     <message>
         <source>App</source>

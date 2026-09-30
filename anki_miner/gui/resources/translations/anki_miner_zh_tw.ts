@@ -1511,7 +1511,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Review words before mining</source>
-        <translation>採集前先檢視單字</translation>
+        <translation>採集前先審閱單字</translation>
     </message>
     <message>
         <source>Show the word-selection popup for each audio file before creating cards.</source>
@@ -1569,7 +1569,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Review words before mining</source>
-        <translation>採集前先檢視單字</translation>
+        <translation>採集前先審閱單字</translation>
     </message>
     <message>
         <source>Pick which words get cards, once per series.</source>
@@ -2623,11 +2623,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Choose the tools on the Utilities tab</source>
-        <translation>選擇「工具」分頁顯示的工具</translation>
+        <translation>選擇「實用工具」分頁顯示的工具</translation>
     </message>
     <message>
         <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
-        <translation>在「設定 -&gt; 一般」中隱藏您不使用的「工具」分頁工具，或將其恢復顯示。隱藏的工具在此仍保留其項目；其「開啟」按鈕會帶您前往該核取方塊。</translation>
+        <translation>在「設定 -&gt; 一般」中隱藏您不使用的「實用工具」分頁工具，或將其恢復顯示。隱藏的工具在此仍保留其項目；其「開啟」按鈕會帶您前往該核取方塊。</translation>
     </message>
     <message>
         <source>Search the settings</source>
@@ -2667,7 +2667,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from its setup card on Utilities -&gt; Manga OCR.</source>
-        <translation>對單卷資料夾或整個系列執行 mokuro 的日文 OCR，讓「閱讀 -&gt; 漫畫」可以採集。請從「工具 -&gt; 漫畫 OCR」上的設定卡片安裝 mokuro。</translation>
+        <translation>對單卷資料夾或整個系列執行 mokuro 的日文 OCR，讓「閱讀 -&gt; 漫畫」可以採集。請從「實用工具 -&gt; 漫畫 OCR」上的設定卡片安裝 mokuro。</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -2683,7 +2683,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities -&gt; Card Backfill.</source>
-        <translation>將最新的 Anki Miner 樣式重新套用至您先前採集的卡片——「工具 -&gt; 卡片欄位回填」。</translation>
+        <translation>將最新的 Anki Miner 樣式重新套用至您先前採集的卡片——「實用工具 -&gt; 卡片欄位回填」。</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -3613,7 +3613,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>Review words before mining</source>
-        <translation>採集前先檢視單字</translation>
+        <translation>採集前先審閱單字</translation>
     </message>
     <message>
         <source>Pick which words get cards, once per series.</source>
@@ -5847,7 +5847,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Go to Utilities</source>
-        <translation>前往工具</translation>
+        <translation>前往實用工具</translation>
     </message>
     <message>
         <source>Go to Settings</source>
@@ -6295,7 +6295,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Utilities</source>
-        <translation>工具</translation>
+        <translation>實用工具</translation>
     </message>
     <message>
         <source>Settings</source>
@@ -6355,7 +6355,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Navigate between Video, Audiobooks, Reading, Analytics, Utilities, and Settings</source>
-        <translation>在影片、有聲書、閱讀、分析、工具與設定之間切換</translation>
+        <translation>在影片、有聲書、閱讀、分析、實用工具與設定之間切換</translation>
     </message>
     <message>
         <source>Application Header</source>
@@ -8722,7 +8722,7 @@ No index files are deleted.</source>
     <name>ReadingTextTab</name>
     <message>
         <source>Review words before mining</source>
-        <translation>採集前確認單字</translation>
+        <translation>採集前先審閱單字</translation>
     </message>
     <message>
         <source>Show the word-selection popup before creating cards.</source>
@@ -11386,11 +11386,11 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Utilities tab</source>
-        <translation>工具分頁</translation>
+        <translation>實用工具分頁</translation>
     </message>
     <message>
         <source>Choose which tools the Utilities tab shows. At least one stays.</source>
-        <translation>選擇「工具」分頁要顯示哪些工具。至少會保留一項。</translation>
+        <translation>選擇「實用工具」分頁要顯示哪些工具。至少會保留一項。</translation>
     </message>
     <message>
         <source>App</source>

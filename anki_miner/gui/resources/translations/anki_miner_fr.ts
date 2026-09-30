@@ -1514,7 +1514,7 @@ Aucun fichier d'index n'est supprimé.</translation>
     </message>
     <message>
         <source>Review words before mining</source>
-        <translation>Vérifier les mots avant l'extraction</translation>
+        <translation>Réviser les mots avant l'extraction</translation>
     </message>
     <message>
         <source>Show the word-selection popup for each audio file before creating cards.</source>
@@ -1572,7 +1572,7 @@ Aucun fichier d'index n'est supprimé.</translation>
     </message>
     <message>
         <source>Review words before mining</source>
-        <translation>Vérifier les mots avant l'extraction</translation>
+        <translation>Réviser les mots avant l'extraction</translation>
     </message>
     <message>
         <source>Pick which words get cards, once per series.</source>
@@ -3617,7 +3617,7 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
     </message>
     <message>
         <source>Review words before mining</source>
-        <translation>Vérifier les mots avant l'extraction</translation>
+        <translation>Réviser les mots avant l'extraction</translation>
     </message>
     <message>
         <source>Pick which words get cards, once per series.</source>
@@ -6324,7 +6324,7 @@ Mots à ajouter : %3. Continuer ?</translation>
     </message>
     <message>
         <source>Retime</source>
-        <translation>Re-synchroniser</translation>
+        <translation>Resynchro</translation>
     </message>
     <message>
         <source>Condense</source>
@@ -6332,7 +6332,7 @@ Mots à ajouter : %3. Continuer ?</translation>
     </message>
     <message>
         <source>Card Backfill</source>
-        <translation>Complétion des cartes</translation>
+        <translation>Complétion</translation>
     </message>
     <message>
         <source>Deck Filter</source>
@@ -6348,7 +6348,7 @@ Mots à ajouter : %3. Continuer ?</translation>
     </message>
     <message>
         <source>Audiobook Sync</source>
-        <translation>Synchronisation de livre audio</translation>
+        <translation>Synchro livre audio</translation>
     </message>
     <message>
         <source>Anki Miner updated</source>
@@ -8740,7 +8740,7 @@ Aucun fichier d'index n'est supprimé.</translation>
     <name>ReadingTextTab</name>
     <message>
         <source>Review words before mining</source>
-        <translation>Vérifier les mots avant l'extraction</translation>
+        <translation>Réviser les mots avant l'extraction</translation>
     </message>
     <message>
         <source>Show the word-selection popup before creating cards.</source>

@@ -1514,7 +1514,7 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Review words before mining</source>
-        <translation>Wörter vor dem Sammeln überprüfen</translation>
+        <translation>Wörter vor dem Sammeln prüfen</translation>
     </message>
     <message>
         <source>Show the word-selection popup for each audio file before creating cards.</source>
@@ -1572,7 +1572,7 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Review words before mining</source>
-        <translation>Wörter vor dem Sammeln überprüfen</translation>
+        <translation>Wörter vor dem Sammeln prüfen</translation>
     </message>
     <message>
         <source>Pick which words get cards, once per series.</source>
@@ -2703,7 +2703,7 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Re-run the guided first-time setup -- theme, Anki connection, deck, note type and resources -- from the Tools menu.</source>
-        <translation>Die geführte Ersteinrichtung erneut durchlaufen -- Design, Anki-Verbindung, Stapel, Notiztyp und Ressourcen -- über das Werkzeuge-Menü.</translation>
+        <translation>Die geführte Ersteinrichtung erneut durchlaufen -- Design, Anki-Verbindung, Stapel, Notiztyp und Ressourcen -- über das Extras-Menü.</translation>
     </message>
     <message>
         <source>Download recommended resources</source>
@@ -2711,7 +2711,7 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Get the resources recommended for your mining language (dictionaries, frequency lists, and pitch-accent data for Japanese) in one click from the Tools menu.</source>
-        <translation>Die für Ihre Mining-Sprache empfohlenen Ressourcen (Wörterbücher, Häufigkeitslisten und für Japanisch Tonhöhenakzent-Daten) mit einem Klick über das Werkzeuge-Menü erhalten.</translation>
+        <translation>Die für Ihre Mining-Sprache empfohlenen Ressourcen (Wörterbücher, Häufigkeitslisten und für Japanisch Tonhöhenakzent-Daten) mit einem Klick über das Extras-Menü erhalten.</translation>
     </message>
     <message>
         <source>Create a desktop shortcut</source>
@@ -2719,7 +2719,7 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Add an Anki Miner launcher to your desktop from the Tools menu.</source>
-        <translation>Einen Anki-Miner-Starter über das Werkzeuge-Menü zu Ihrem Desktop hinzufügen.</translation>
+        <translation>Einen Anki-Miner-Starter über das Extras-Menü zu Ihrem Desktop hinzufügen.</translation>
     </message>
     <message>
         <source>Export diagnostics for a bug report</source>
@@ -3617,7 +3617,7 @@ Zu ändernde Notizen: {notes}; zu ändernde Felder: {fields}. Die betroffenen No
     </message>
     <message>
         <source>Review words before mining</source>
-        <translation>Wörter vor dem Sammeln überprüfen</translation>
+        <translation>Wörter vor dem Sammeln prüfen</translation>
     </message>
     <message>
         <source>Pick which words get cards, once per series.</source>
@@ -6332,11 +6332,11 @@ Hinzuzufügende Wörter: %3. Fortfahren?</translation>
     </message>
     <message>
         <source>Card Backfill</source>
-        <translation>Karten-Nachbefüllung</translation>
+        <translation>Nachbefüllung</translation>
     </message>
     <message>
         <source>Deck Filter</source>
-        <translation>Deck Filter</translation>
+        <translation>Deckfilter</translation>
     </message>
     <message>
         <source>Download</source>
@@ -6348,7 +6348,7 @@ Hinzuzufügende Wörter: %3. Fortfahren?</translation>
     </message>
     <message>
         <source>Audiobook Sync</source>
-        <translation>Hörbuch-Synchronisierung</translation>
+        <translation>Hörbuch-Sync</translation>
     </message>
     <message>
         <source>Anki Miner updated</source>
@@ -6392,7 +6392,7 @@ Hinzuzufügende Wörter: %3. Fortfahren?</translation>
     </message>
     <message>
         <source>&amp;Tools</source>
-        <translation>&amp;Werkzeuge</translation>
+        <translation>E&amp;xtras</translation>
     </message>
     <message>
         <source>Create Desktop Shortcut...</source>

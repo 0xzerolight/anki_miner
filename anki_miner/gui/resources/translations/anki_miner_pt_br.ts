@@ -6324,7 +6324,7 @@ Palavras a adicionar: %3. Continuar?</translation>
     </message>
     <message>
         <source>Retime</source>
-        <translation>Reajustar Tempo</translation>
+        <translation>Retemporizar</translation>
     </message>
     <message>
         <source>Condense</source>
@@ -6332,7 +6332,7 @@ Palavras a adicionar: %3. Continuar?</translation>
     </message>
     <message>
         <source>Card Backfill</source>
-        <translation>Preenchimento retroativo de cartões</translation>
+        <translation>Completar cartões</translation>
     </message>
     <message>
         <source>Deck Filter</source>
@@ -6348,7 +6348,7 @@ Palavras a adicionar: %3. Continuar?</translation>
     </message>
     <message>
         <source>Audiobook Sync</source>
-        <translation>Sincronização de Audiolivro</translation>
+        <translation>Sinc. audiolivro</translation>
     </message>
     <message>
         <source>Anki Miner updated</source>
