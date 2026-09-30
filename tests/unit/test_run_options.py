@@ -18,7 +18,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.run_options import RunOptionsMixin
 from anki_miner.gui.widgets.condense_tab import CondenseTab
-from anki_miner.gui.widgets.download_tab import DownloadTab
+from anki_miner.gui.widgets.download_tab import CUSTOM_FORMAT_ITEM, DownloadTab
 from anki_miner.gui.widgets.mokuro_tab import MokuroTab
 
 
@@ -120,6 +120,7 @@ def _read_condense(tab) -> tuple:
 
 def _edit_download(tab, tmp_path: Path) -> None:
     tab.preset_combo.setCurrentIndex(tab.preset_combo.findData("720p"))
+    tab.preset_combo.setCurrentIndex(tab.preset_combo.findData(CUSTOM_FORMAT_ITEM))
     tab.custom_format_edit.setText("bv*+ba")
     tab.custom_format_edit.editingFinished.emit()
     tab.write_subs_checkbox.setChecked(True)
