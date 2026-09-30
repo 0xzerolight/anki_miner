@@ -393,3 +393,28 @@ class TestNewFromCurrent:
         widget.new_button.click()
 
         assert any("Podcasts" in label for label in _labels(widget))
+
+
+class TestFrame:
+    """C19: standard frame, one primary Close, and a minimum that fits the buttons."""
+
+    def test_uses_the_enhanced_dialog_frame(self, dialog):
+        from anki_miner.gui.widgets.base.enhanced_dialog import EnhancedDialog
+
+        widget = dialog()
+        assert isinstance(widget, EnhancedDialog)
+        assert widget._title_label.text() == "Settings Profiles"
+        assert widget.switch_button.objectName() == "secondary"
+
+    def test_close_is_the_one_footer_button_and_primary(self, dialog):
+        from PyQt6.QtWidgets import QPushButton
+
+        widget = dialog()
+        footer = widget._footer_widget.findChildren(QPushButton)
+        assert [button.text() for button in footer] == ["Close"]
+        assert footer[0].objectName() == "primary"
+
+    def test_the_minimum_width_fits_every_action_button(self, dialog):
+        widget = dialog()
+        margins = widget._main_layout.contentsMargins()
+        assert widget.minimumWidth() >= widget._actions_row.sizeHint().width() + margins.left() + margins.right()

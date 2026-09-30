@@ -23,24 +23,21 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, Protocol
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
-    QDialog,
     QHBoxLayout,
     QInputDialog,
-    QLabel,
     QListWidget,
     QListWidgetItem,
     QMessageBox,
-    QVBoxLayout,
     QWidget,
 )
 
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.profile_store import Profile, ProfileStore
-from anki_miner.gui.utils.qt_helpers import add_min_max_buttons, configure_data_view, install_copy_rows
+from anki_miner.gui.utils.qt_helpers import configure_data_view, install_copy_rows
 from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost
+from anki_miner.gui.widgets.base.enhanced_dialog import EnhancedDialog
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.utils.i18n import tr_format
 
@@ -61,7 +58,7 @@ class _ProfileSwitcher(Protocol):
     def create_from_current(self, name: str) -> SwitchResult: ...
 
 
-class ProfileManagerDialog(ScreenIssueHost, QDialog):
+class ProfileManagerDialog(ScreenIssueHost, EnhancedDialog):
     """Create, rename, delete and switch between named settings profiles.
 
     Args:
@@ -79,46 +76,31 @@ class ProfileManagerDialog(ScreenIssueHost, QDialog):
         on_profiles_changed: Callable[[], None],
         parent: QWidget | None = None,
     ) -> None:
-        super().__init__(parent)
+        super().__init__(parent, title=self.tr("Settings Profiles"))
         self._controller = controller
         self._on_profiles_changed = on_profiles_changed
         self._profiles: tuple[Profile, ...] = ()
-        self._setup_ui()
-        add_min_max_buttons(self)
+        # Not _setup_ui: EnhancedDialog.__init__ already ran its own frame builder.
+        self._build_content()
         self._refresh()
 
     # ------------------------------------------------------------------
     # UI construction
     # ------------------------------------------------------------------
 
-    def _setup_ui(self) -> None:
+    def _build_content(self) -> None:
         # "Settings Profiles", never bare "Profiles": Anki has its own user
         # profiles, and this app's whole job is talking to Anki.
-        self.setWindowTitle(self.tr("Settings Profiles"))
-        self.setMinimumWidth(480)
         self.setMinimumHeight(420)
-
-        layout = QVBoxLayout()
-        layout.setSpacing(SPACING.sm)
-        layout.setContentsMargins(SPACING.lg, SPACING.lg, SPACING.lg, SPACING.lg)
-
-        header = QLabel(self.tr("Settings Profiles"))
-        font = QFont()
-        font.setPixelSize(16)
-        font.setWeight(QFont.Weight.Bold)
-        header.setFont(font)
-        layout.addWidget(header)
-
-        helper = QLabel(
+        self.set_header(
+            "",
+            self.tr("Settings Profiles"),
             self.tr(
                 "A profile is a complete snapshot of every setting — dictionaries, filters, "
                 "media, Anki fields, appearance. Switching swaps all of them at once, after "
                 "saving your current settings back into the active profile."
-            )
+            ),
         )
-        helper.setObjectName("helper-text")
-        helper.setWordWrap(True)
-        layout.addWidget(helper)
 
         self.profile_list = QListWidget()
         self.profile_list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
@@ -127,35 +109,45 @@ class ProfileManagerDialog(ScreenIssueHost, QDialog):
         # them in; sorting is deliberately never enabled here.
         configure_data_view(self.profile_list)
         install_copy_rows(self.profile_list)
-        layout.addWidget(self.profile_list)
+        self.add_content(self.profile_list, 1)
 
-        buttons = QHBoxLayout()
+        # Row actions act on the selected profile. Switch To is secondary: the
+        # dialog's one primary is Close, its only way out (C19, D41).
+        self._actions_row = QWidget()
+        self._actions_row.setObjectName("profile-manager-row")
+        buttons = QHBoxLayout(self._actions_row)
+        buttons.setContentsMargins(0, 0, 0, 0)
+        buttons.setSpacing(SPACING.sm)
         self.new_button = ModernButton(self.tr("New from Current…"), variant="secondary")
         self.new_button.setToolTip(self.tr("Save the settings you are using now as a new profile and switch to it."))
         self.new_button.clicked.connect(self._on_new)
         buttons.addWidget(self.new_button)
-
         self.rename_button = ModernButton(self.tr("Rename…"), variant="secondary")
         self.rename_button.clicked.connect(self._on_rename)
         buttons.addWidget(self.rename_button)
-
         self.delete_button = ModernButton(self.tr("Delete"), variant="critical")
         self.delete_button.clicked.connect(self._on_delete)
         buttons.addWidget(self.delete_button)
-
         buttons.addStretch()
-
-        self.switch_button = ModernButton(self.tr("Switch To"), variant="primary")
+        self.switch_button = ModernButton(self.tr("Switch To"), variant="secondary")
         self.switch_button.clicked.connect(self._on_switch)
         buttons.addWidget(self.switch_button)
+        self.add_content(self._actions_row)
 
-        close_button = ModernButton(self.tr("Close"), variant="secondary")
-        close_button.clicked.connect(self.accept)
-        buttons.addWidget(close_button)
+        self.add_close_button()
+        self.install_issue_banner(self._main_layout, 1)
+        self._fit_minimum_width()
 
-        layout.addLayout(buttons)
-        self.setLayout(layout)
-        self.install_issue_banner(layout)
+    def _fit_minimum_width(self) -> None:
+        """Never narrower than the widest button row (C19): "New from Current…",
+        "Rename…" and "Switch To" clipped at the old fixed 480px in long locales."""
+        margins = self._main_layout.contentsMargins()
+        widest = max(
+            (row.sizeHint().width() for row in self.findChildren(QWidget, "profile-manager-row")),
+            default=0,
+        )
+        widest = max(widest, self._actions_row.sizeHint().width())
+        self.setMinimumWidth(max(480, widest + margins.left() + margins.right()))
 
     # ------------------------------------------------------------------
     # Data
