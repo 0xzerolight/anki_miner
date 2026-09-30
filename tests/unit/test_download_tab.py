@@ -864,6 +864,25 @@ class TestCustomFormatItem:
 
         assert tab._build_options().format_selector == "bestvideo[height<=720]+bestaudio/best[height<=720]"
 
+    def test_a_stored_subtitles_only_preset_wins_over_a_leftover_custom_format(self, qtbot, tmp_path: Path) -> None:
+        # Older builds persisted the custom string under every preset.
+        tab = _make_tab(
+            _make_config(tmp_path, downloader_format_preset="subtitles", downloader_custom_format="bv+ba"), qtbot
+        )
+
+        assert tab.preset_combo.currentData() == "subtitles"
+        options = tab._build_options()
+        assert options.subtitles_only is True
+        assert options.format_selector == ""
+
+    def test_custom_with_nothing_typed_falls_back_to_a_stored_subtitles_only(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path, downloader_format_preset="subtitles"), qtbot)
+        tab.preset_combo.setCurrentIndex(tab.preset_combo.findData(CUSTOM_FORMAT_ITEM))
+
+        options = tab._build_options()
+        assert options.subtitles_only is True
+        assert options.extract_audio_format is None
+
     def test_the_old_override_hint_is_gone(self, qtbot, tmp_path: Path) -> None:
         from PyQt6.QtWidgets import QLabel
 

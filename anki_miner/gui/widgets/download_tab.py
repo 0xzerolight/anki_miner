@@ -246,7 +246,10 @@ class DownloadTab(RunOptionsMixin, YtdlpAvailabilityMixin, _ToolTabBase):
     def _apply_config_defaults(self) -> None:
         """Seed the option widgets from the current config's persisted defaults."""
         with self.seeding():
-            if self.config.downloader_custom_format:
+            # A stored "Subtitles only" keeps precedence over a leftover custom
+            # string: older builds persisted the string under every preset, and
+            # loading such a config as Custom would download media.
+            if self.config.downloader_custom_format and self.config.downloader_format_preset != SUBTITLES_ONLY_PRESET:
                 self.preset_combo.setCurrentIndex(self.preset_combo.findData(CUSTOM_FORMAT_ITEM))
             else:
                 idx = self.preset_combo.findData(self.config.downloader_format_preset)
@@ -672,8 +675,10 @@ class DownloadTab(RunOptionsMixin, YtdlpAvailabilityMixin, _ToolTabBase):
         everything; an empty one falls back to the stored preset.
         """
         key = self._effective_preset()
-        subtitles_only = str(self.preset_combo.currentData()) == SUBTITLES_ONLY_PRESET
         custom = self._effective_custom_format()
+        # Custom with nothing typed falls back to the stored preset, and that
+        # includes a stored "Subtitles only".
+        subtitles_only = not custom and key == SUBTITLES_ONLY_PRESET
         if custom:
             selector, audio_format = custom, None
         elif subtitles_only:
