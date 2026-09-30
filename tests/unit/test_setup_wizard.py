@@ -978,7 +978,7 @@ def test_deck_page_preselects_config_deck(qtbot, wiz_config, monkeypatch):
     _stub_anki_service(monkeypatch, wiz, decks=["Default", "My Mining Deck"])
     page = wiz.deck_page
     page.initializePage()
-    assert page.deck_combo.currentText() == "My Mining Deck"
+    assert page.current_deck() == "My Mining Deck"
 
 
 def test_deck_page_writes_deck_to_config(qtbot, wiz_config):
@@ -987,7 +987,7 @@ def test_deck_page_writes_deck_to_config(qtbot, wiz_config):
     wiz = SetupWizard(wiz_config)
     qtbot.addWidget(wiz)
     page = wiz.deck_page
-    page.deck_combo.setCurrentText("Fresh Deck")
+    page.select_deck("Fresh Deck")
     page._write_deck_to_config()
     assert wiz.working_config().anki_deck_name == "Fresh Deck"
 
@@ -1011,9 +1011,9 @@ def test_deck_page_blocks_a_deck_anki_does_not_have(qtbot, wiz_config):
     qtbot.addWidget(wiz)
     page = wiz.deck_page
     page._on_decks_fetched(["Default", "Existing"])
-    page.deck_combo.setCurrentText("Brand New Deck")
+    page.select_deck("Brand New Deck")
     assert page.isComplete() is False
-    page.deck_combo.setCurrentText("Existing")
+    page.select_deck("Existing")
     assert page.isComplete() is True
 
 
@@ -1024,7 +1024,7 @@ def test_deck_page_unknown_deck_tells_user_to_create_it_in_anki(qtbot, wiz_confi
     qtbot.addWidget(wiz)
     page = wiz.deck_page
     page._on_decks_fetched(["Default", "Existing"])
-    page.deck_combo.setCurrentText("Brand New Deck")
+    page.select_deck("Brand New Deck")
     page._update_deck_hint()
     hint = page.deck_hint.text().lower()
     assert "created automatically" not in hint
@@ -1037,9 +1037,7 @@ def test_deck_page_unknown_deck_tells_user_to_create_it_in_anki(qtbot, wiz_confi
 
 
 def _set_notetype_page_state(page, *, selected, models, field_names):
-    page.notetype_combo.blockSignals(True)
-    page.notetype_combo.setCurrentText(selected)
-    page.notetype_combo.blockSignals(False)
+    page.select_note_type(selected, notify=False)
     page._fetched_note_types = list(models)
     page._field_names = [] if field_names is None else list(field_names)
     page._field_names_note_type = None if field_names is None else selected
@@ -1118,7 +1116,7 @@ def test_notetype_page_preselects_config_note_type(qtbot, wiz_config, monkeypatc
     page = wiz.notetype_page
     page.initializePage()
     qtbot.waitUntil(lambda: page._field_names_note_type == "Lapis", timeout=3000)
-    assert page.notetype_combo.currentText() == "Lapis"
+    assert page.current_note_type() == "Lapis"
 
 
 def test_picking_a_note_type_fills_its_fields_without_a_button(qtbot, wiz_config):
@@ -1130,7 +1128,7 @@ def test_picking_a_note_type_fills_its_fields_without_a_button(qtbot, wiz_config
     page = wiz.notetype_page
     assert not hasattr(page, "auto_map_button")
 
-    page.notetype_combo.setCurrentText("Mining")
+    page.select_note_type("Mining")
     page._on_fields_fetched("Mining", ["Word", "Sentence", "Picture"])
 
     fields = wiz.working_config().anki_fields
@@ -1148,7 +1146,7 @@ def test_a_word_field_that_is_not_first_blocks_next_and_says_why(qtbot, wiz_conf
     qtbot.addWidget(wiz)
     page = wiz.notetype_page
     # Selected before the list is "known", so no field fetch reaches AnkiConnect.
-    page.notetype_combo.setCurrentText("Mining")
+    page.select_note_type("Mining")
     page._fetched_note_types = ["Mining"]
 
     page._on_fields_fetched("Mining", ["Notes", "Word", "Sentence"])
@@ -1168,7 +1166,7 @@ def test_an_empty_word_mapping_shows_no_field_warning(qtbot, wiz_config):
     wiz = SetupWizard(replace(wiz_config, anki_note_type="Basic"))
     qtbot.addWidget(wiz)
     page = wiz.notetype_page
-    page.notetype_combo.setCurrentText("Basic")
+    page.select_note_type("Basic")
 
     page._on_fields_fetched("Basic", ["Front", "Back"])
 
@@ -1184,7 +1182,7 @@ def test_notetype_page_fetch_stages_fields(qtbot, wiz_config):
     wiz = SetupWizard(wiz_config)
     qtbot.addWidget(wiz)
     page = wiz.notetype_page
-    page.notetype_combo.setCurrentText("Lapis")
+    page.select_note_type("Lapis")
     page._on_fields_fetched("Lapis", ["Expression", "Sentence", "MainDefinition", "Picture", "SentenceAudio"])
 
     cfg = wiz.working_config()
@@ -1224,11 +1222,11 @@ def test_field_fetch_latest_selection_runs_after_stale_fetch(qtbot, wiz_config, 
     monkeypatch.setattr(wiz, "anki_service", lambda: service)
 
     try:
-        page.notetype_combo.setCurrentText("Type A")
+        page.select_note_type("Type A")
         page._on_notetypes_fetched(["Type A", "Type B"])
         qtbot.waitUntil(entered_a.is_set, timeout=3000)
 
-        page.notetype_combo.setCurrentText("Type B")
+        page.select_note_type("Type B")
         release_a.set()
 
         qtbot.waitUntil(lambda: page._field_names_note_type == "Type B", timeout=3000)
@@ -1257,9 +1255,9 @@ def test_field_fetch_generation_rejects_stale_same_model_result(qtbot, wiz_confi
     factory = MagicMock(side_effect=lambda *_args: next(workers))
     monkeypatch.setattr(pages_mod, "FetchFieldsWorker", factory)
 
-    page.notetype_combo.setCurrentText("Type A")
-    page.notetype_combo.setCurrentText("Type B")
-    page.notetype_combo.setCurrentText("Type A")
+    page.select_note_type("Type A")
+    page.select_note_type("Type B")
+    page.select_note_type("Type A")
 
     first_worker.result_ready.connect.call_args.args[0](["StaleAField"])
     assert page._field_names_note_type is None
@@ -1292,7 +1290,7 @@ def test_notetype_page_emits_complete_changed_for_field_fetch_transitions(qtbot,
     changed = MagicMock()
     page.completeChanged.connect(changed)
 
-    page.notetype_combo.setCurrentText("Lapis")
+    page.select_note_type("Lapis")
     assert changed.call_count == 2  # selection + fetch start
 
     changed.reset_mock()
@@ -1303,7 +1301,7 @@ def test_notetype_page_emits_complete_changed_for_field_fetch_transitions(qtbot,
     on_finished()
 
     changed.reset_mock()
-    page.notetype_combo.setCurrentText("Basic")
+    page.select_note_type("Basic")
     assert changed.call_count == 2  # selection + fetch start
     changed.reset_mock()
     on_error = error_worker.error.connect.call_args.args[0]
@@ -1321,9 +1319,7 @@ def test_notetype_page_field_result_emits_for_sanitize_and_result(qtbot, wiz_con
     wiz = SetupWizard(cfg)
     qtbot.addWidget(wiz)
     page = wiz.notetype_page
-    page.notetype_combo.blockSignals(True)
-    page.notetype_combo.setCurrentText("Lapis")
-    page.notetype_combo.blockSignals(False)
+    page.select_note_type("Lapis", notify=False)
     changed = MagicMock()
     page.completeChanged.connect(changed)
 
@@ -1387,8 +1383,8 @@ def test_wizard_close_does_not_launch_pending_field_fetch(qtbot, wiz_config, mon
     factory = MagicMock(return_value=worker)
     monkeypatch.setattr(pages_mod, "FetchFieldsWorker", factory)
 
-    page.notetype_combo.setCurrentText("Type A")
-    page.notetype_combo.setCurrentText("Type B")
+    page.select_note_type("Type A")
+    page.select_note_type("Type B")
     on_finished = worker.finished.connect.call_args.args[0]
     wiz.done(0)
     on_finished()
@@ -1419,7 +1415,7 @@ def test_auto_map_uses_sanitized_base_and_preserves_valid_manual_fields(qtbot, w
     wiz = SetupWizard(cfg)
     qtbot.addWidget(wiz)
     page = wiz.notetype_page
-    page.notetype_combo.setCurrentText("Lapis")
+    page.select_note_type("Lapis")
     page._on_fields_fetched(
         "Lapis",
         ["Expression", "ManualWord", "Sentence", "ManualDefinition", "PitchGraph", "PitchText"],
@@ -1445,7 +1441,7 @@ def _auto_map(qtbot, config, field_names):
     wiz = SetupWizard(replace(config, anki_note_type="Mining"))
     qtbot.addWidget(wiz)
     page = wiz.notetype_page
-    page.notetype_combo.setCurrentText("Mining")
+    page.select_note_type("Mining")
     page._on_fields_fetched("Mining", field_names)
     return wiz.working_config(), page
 
@@ -1479,45 +1475,143 @@ def test_auto_map_never_seeds_another_languages_keys(qtbot, wiz_config):
 
 
 def test_notetype_page_unsuitable_fieldlist_shows_guidance(qtbot, wiz_config):
-    """A field list missing a word+sentence shape triggers the import-note-type guidance."""
+    """A note type without a word and a sentence field gets the D10 guidance."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(replace(wiz_config, anki_note_type="Basic"))
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    page.select_note_type("Basic", notify=False)
+    page._fetched_note_types = ["Basic"]
+    page._notetypes_loaded = True
+
+    page._on_fields_fetched("Basic", ["Front", "Back"])
+
+    assert page.guidance_label.isVisibleTo(page)
+    assert "Any note type works once its fields are mapped" in page.guidance_label.text()
+
+
+def test_the_combos_are_real_lists(qtbot, wiz_config):
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 
     wiz = SetupWizard(wiz_config)
     qtbot.addWidget(wiz)
-    page = wiz.notetype_page
-    page.notetype_combo.setCurrentText("Basic")
-    page._on_fields_fetched("Basic", ["Front", "Back"])
-    # isVisibleTo(page) reflects the explicit setVisible(True) without needing the
-    # top-level wizard to be shown (offscreen Qt).
-    assert page.guidance_label.isVisibleTo(page)
-    assert page.guidance_label.text() != ""
+
+    assert not wiz.deck_page.deck_combo.isEditable()
+    assert not wiz.notetype_page.notetype_combo.isEditable()
 
 
-def test_notetype_guidance_recheck_refreshes_in_place_without_opening_docs(qtbot, wiz_config, monkeypatch):
+def test_a_deck_anki_lacks_is_listed_and_explained(qtbot, wiz_config):
+    """B06: the missing name is said plainly, at normal text size."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(replace(wiz_config, anki_deck_name="Anki Miner"))
+    qtbot.addWidget(wiz)
+    page = wiz.deck_page
+
+    page._on_decks_fetched(["Default"])
+
+    assert page.deck_combo.currentText() == "Anki Miner (not in Anki yet)"
+    assert page.current_deck() == "Anki Miner"
+    assert page.isComplete() is False
+    assert page.deck_hint.objectName() == ""
+    assert page.deck_hint.text() == (
+        "Anki doesn't have a deck called “Anki Miner” yet. In Anki, click Create Deck at the bottom of the "
+        "main window and name it Anki Miner, or pick one of your decks above. This page updates when you come back."
+    )
+
+    page.select_deck("Default")
+
+    assert page.isComplete() is True
+    assert page.deck_hint.text() == ""
+
+
+def test_a_missing_lapis_says_where_to_get_it(qtbot, wiz_config):
+    """B01: a brand-new Anki has no Lapis; say so and link its release page."""
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
     from anki_miner.gui.widgets.dialogs.setup_wizard import pages as pages_mod  # noqa: PLC0415
 
-    wiz = SetupWizard(replace(wiz_config, anki_note_type="Basic"))
+    wiz = SetupWizard(replace(wiz_config, anki_note_type="Lapis"))
     qtbot.addWidget(wiz)
-    service = _stub_anki_service(monkeypatch, wiz, notetypes=["Basic"])
-    service.get_note_type_fields.return_value = ["Expression", "Sentence"]
+    page = wiz.notetype_page
+    page.select_note_type("Lapis", notify=False)
+
+    page._on_notetypes_fetched(["Basic"])
+
+    assert page.notetype_combo.currentText() == "Lapis (not in Anki yet)"
+    assert page.isComplete() is False
+    text = page.guidance_label.text()
+    assert page.guidance_label.isVisibleTo(page)
+    assert f'href="{pages_mod.LAPIS_RELEASES_URL}"' in text
+    assert "File → Import" in text
+
+
+def test_other_languages_get_the_any_note_type_guidance(qtbot, wiz_config):
+    """D10 = B: no shipped note type; any note type works once its fields are mapped."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import pages as pages_mod  # noqa: PLC0415
+    from anki_miner.languages.switching import switch_language  # noqa: PLC0415
+
+    wiz = SetupWizard(switch_language(wiz_config, "zh"))
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+
+    page._on_notetypes_fetched(["Basic"])
+
+    assert page.current_note_type() == ""
+    text = page.guidance_label.text()
+    assert page.guidance_label.isVisibleTo(page)
+    assert "Any note type works once its fields are mapped" in text
+    # The keyword pass is the wizard's only mapper: say what it recognises and
+    # the manual route for any other naming, without telling the user to build
+    # or rename a note type (owner's D10 note).
+    assert "puts the word in its first field" in text
+    assert "Word, Sentence" in text
+    assert "name its" not in text
+    assert "add a field" not in text
+    assert "Skip Setup" in text
+    assert "Settings → Cards & Anki" in text
+    assert f'href="{pages_mod.NOTE_TYPE_HELP_URL}"' in text
+    assert ".apkg" not in text
+
+
+def test_the_field_names_the_guidance_gives_open_next(qtbot, wiz_config):
+    """Following the guidance on a fresh Anki (Word first, plus Sentence) must complete the page."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.languages.switching import switch_language  # noqa: PLC0415
+
+    wiz = SetupWizard(replace(switch_language(wiz_config, "zh"), anki_note_type="Mining"))
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    page.select_note_type("Mining", notify=False)
+    page._fetched_note_types = ["Basic", "Mining"]
+    page._notetypes_loaded = True
+
+    page._on_fields_fetched("Mining", ["Word", "Sentence", "Back"])
+
+    assert wiz.working_config().anki_fields["word"] == "Word"
+    assert wiz.working_config().anki_fields["sentence"] == "Sentence"
+    assert page.isComplete() is True
+    assert not page.guidance_label.isVisibleTo(page)
+
+
+def test_the_guidance_links_open_in_the_browser(qtbot, wiz_config, monkeypatch):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import pages as pages_mod  # noqa: PLC0415
+
     opened = MagicMock()
     monkeypatch.setattr(pages_mod, "_open_url", opened)
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
     page = wiz.notetype_page
-    page.notetype_combo.setCurrentText("Basic")
-    page._on_fields_fetched("Basic", ["Front", "Back"])
-    assert page.guidance_label.isVisibleTo(page)
-    assert 'href="recheck"' in page.guidance_label.text()
-    assert f'href="{pages_mod.NOTE_TYPE_HELP_URL}"' in page.guidance_label.text()
 
-    page.guidance_label.linkActivated.emit("recheck")
+    page.guidance_label.linkActivated.emit(pages_mod.LAPIS_RELEASES_URL)
+    page.guidance_label.linkActivated.emit(pages_mod.NOTE_TYPE_HELP_URL)
 
-    qtbot.waitUntil(lambda: service.get_model_names.call_count == 1, timeout=3000)
-    qtbot.waitUntil(lambda: page._field_names == ["Expression", "Sentence"], timeout=3000)
-    assert not page.guidance_label.isVisibleTo(page)
-    opened.assert_not_called()
-    for worker in list(wiz._workers):
-        assert worker.wait(3000)
+    assert [call.args[0] for call in opened.call_args_list] == [
+        pages_mod.LAPIS_RELEASES_URL,
+        pages_mod.NOTE_TYPE_HELP_URL,
+    ]
 
 
 def test_notetype_page_suitable_fieldlist_hides_guidance(qtbot, wiz_config):
@@ -1526,7 +1620,7 @@ def test_notetype_page_suitable_fieldlist_hides_guidance(qtbot, wiz_config):
     wiz = SetupWizard(wiz_config)
     qtbot.addWidget(wiz)
     page = wiz.notetype_page
-    page.notetype_combo.setCurrentText("Lapis")
+    page.select_note_type("Lapis")
     page._on_fields_fetched("Lapis", ["Expression", "Sentence", "MainDefinition"])
     assert not page.guidance_label.isVisibleTo(page)
 
@@ -1537,7 +1631,7 @@ def test_notetype_page_empty_fieldlist_shows_unreachable_guidance(qtbot, wiz_con
     wiz = SetupWizard(wiz_config)
     qtbot.addWidget(wiz)
     page = wiz.notetype_page
-    page.notetype_combo.setCurrentText("Ghost")
+    page.select_note_type("Ghost")
     mappings_before = dict(wiz.working_config().anki_fields)
     markers_before = dict(wiz.working_config().card_type_marker_fields)
     page._on_fields_fetched("Ghost", [])
@@ -2452,10 +2546,8 @@ def test_close_stages_typed_editor_values(qtbot, wiz_config, action, monkeypatch
     wiz.anki_service = anki_service  # type: ignore[method-assign]
     wiz.validation_service = validation_service  # type: ignore[method-assign]
     wiz.ankiconnect_page.url_input.setText(" http://localhost:9999 ")
-    wiz.deck_page.deck_combo.setCurrentText(" Typed Deck ")
-    wiz.notetype_page.notetype_combo.blockSignals(True)
-    wiz.notetype_page.notetype_combo.setCurrentText(" Typed Note Type ")
-    wiz.notetype_page.notetype_combo.blockSignals(False)
+    wiz.deck_page.select_deck(" Typed Deck ")
+    wiz.notetype_page.select_note_type(" Typed Note Type ", notify=False)
 
     if action == "skip":
         wiz.customButtonClicked.emit(QWizard.WizardButton.CustomButton1.value)

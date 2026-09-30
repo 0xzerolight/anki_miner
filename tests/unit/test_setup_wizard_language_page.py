@@ -176,7 +176,7 @@ def test_the_deck_page_opens_on_the_chosen_language_deck(qtbot, monkeypatch, wiz
     wiz.deck_page.initializePage()
     qtbot.waitUntil(lambda: bool(wiz.deck_page._fetched_decks), timeout=5000)
 
-    assert wiz.deck_page.deck_combo.currentText() == zh_deck
+    assert wiz.deck_page.current_deck() == zh_deck
 
 
 # ---------------------------------------------------------------------------
@@ -290,7 +290,7 @@ def test_a_walk_away_reverts_the_languages_own_fields_and_nothing_else(wizard_fa
     _pick(page, "zh")
     page.validatePage()
     wiz.ankiconnect_page.url_input.setText("http://127.0.0.1:9999")
-    wiz.deck_page.deck_combo.setCurrentText("Chinese::Mining")
+    wiz.deck_page.select_deck("Chinese::Mining")
 
     wiz.reject()
 

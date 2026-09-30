@@ -73,6 +73,10 @@ ANKICONNECT_URL = "https://ankiweb.net/shared/info/2055492159"
 RESOURCES_HELP_URL = "https://github.com/0xzerolight/anki_miner/blob/main/RESOURCES.md"
 # Note types that map cleanly (the Lapis/Kiku/Senren presets, or any word + sentence field list).
 NOTE_TYPE_HELP_URL = f"{RESOURCES_HELP_URL}#note-types"
+#: The note type this app fills out of the box for Japanese (config default).
+LAPIS_NOTE_TYPE = "Lapis"
+#: Lapis' release page; it carries ``Lapis.apkg`` for Anki's File → Import (B01).
+LAPIS_RELEASES_URL = "https://github.com/donkuri/lapis/releases/latest"
 
 
 def resources_help_url(language: str) -> str:
@@ -580,36 +584,64 @@ class DeckPage(_WizardSection):
         layout.addWidget(self.heading_label)
 
         self.deck_combo = QComboBox()
-        self.deck_combo.setEditable(True)
-        self.deck_combo.currentTextChanged.connect(self._on_text_changed)
+        # B06: a real list. A name Anki does not have is listed as "(not in
+        # Anki yet)" instead of typed into an editable box Next then refuses.
+        self.deck_combo.setPlaceholderText(self.tr("Pick a deck"))
+        self.deck_combo.currentIndexChanged.connect(self._on_index_changed)
         layout.addWidget(self.deck_combo)
 
+        # Normal text size (B06): this line is the instruction, not a footnote.
+        # Hidden while empty, so it leaves no gap above the note type.
         self.deck_hint = QLabel("")
-        self.deck_hint.setObjectName("helper-text")
         self.deck_hint.setWordWrap(True)
+        self.deck_hint.setVisible(False)
         layout.addWidget(self.deck_hint)
+        #: False until the first deck answer (or error) lands.
+        self._loaded = False
 
     def initializePage(self) -> None:
         self.load_from_config()
         self.refresh()
 
+    def current_deck(self) -> str:
+        """The selected deck's Anki name ("" when nothing is selected)."""
+        data = self.deck_combo.currentData()
+        return data if isinstance(data, str) else ""
+
+    def select_deck(self, name: str) -> None:
+        """Select ``name``; a name Anki does not list gets its own "(not in Anki yet)" item."""
+        name = name.strip()
+        self.deck_combo.blockSignals(True)
+        try:
+            index = self.deck_combo.findData(name) if name else -1
+            if name and index < 0:
+                self.deck_combo.addItem(tr_format(self.tr("%1 (not in Anki yet)"), name), name)
+                index = self.deck_combo.count() - 1
+            self.deck_combo.setCurrentIndex(index)
+        finally:
+            self.deck_combo.blockSignals(False)
+        self._on_selection_changed()
+
     def load_from_config(self) -> None:
         """Show the working config's deck without fetching anything."""
-        self.deck_combo.setCurrentText(self._wizard.working_config().anki_deck_name)
+        self.select_deck(self._wizard.working_config().anki_deck_name)
 
     def isComplete(self) -> bool:
         # Decks are no longer auto-created at mine time, so only a deck Anki
         # actually reports can be accepted here. Every path that mutates
         # _fetched_decks must emit completeChanged or Next stays disabled.
-        name = self.deck_combo.currentText().strip()
+        name = self.current_deck()
         return bool(name) and name in self._fetched_decks
 
-    def _on_text_changed(self, _text: str) -> None:
+    def _on_index_changed(self, _index: int) -> None:
+        self._on_selection_changed()
+
+    def _on_selection_changed(self) -> None:
         self._update_deck_hint()
         self.completeChanged.emit()
 
     def _write_deck_to_config(self) -> None:
-        name = self.deck_combo.currentText().strip()
+        name = self.current_deck()
         if name and name != self._wizard.working_config().anki_deck_name:
             self._wizard.update_working_config(replace(self._wizard.working_config(), anki_deck_name=name))
 
@@ -637,33 +669,46 @@ class DeckPage(_WizardSection):
         worker.start()
 
     def _on_decks_error(self, _message: str) -> None:
+        self._loaded = True
+        self._update_deck_hint()
         self.completeChanged.emit()
 
     def _on_decks_fetched(self, deck_names: object) -> None:
-        names = list(deck_names) if isinstance(deck_names, list) else []
+        names = [str(name) for name in deck_names] if isinstance(deck_names, list) else []
         self._fetched_decks = names
-        current = self.deck_combo.currentText()
+        self._loaded = True
+        wanted = self.current_deck() or self._wizard.working_config().anki_deck_name
         self.deck_combo.blockSignals(True)
-        self.deck_combo.clear()
-        self.deck_combo.addItems(names)
-        self.deck_combo.setCurrentText(current or self._wizard.working_config().anki_deck_name)
-        self.deck_combo.blockSignals(False)
-        self._update_deck_hint()
-        # The repopulate above runs with signals blocked, so _on_text_changed —
-        # the only other emitter — never fires. Without this the Next button is
-        # never re-evaluated after the list lands and stays disabled forever.
-        self.completeChanged.emit()
+        try:
+            self.deck_combo.clear()
+            for name in names:
+                self.deck_combo.addItem(name, name)
+        finally:
+            self.deck_combo.blockSignals(False)
+        # select_deck emits completeChanged, so Next is re-evaluated once the list lands.
+        self.select_deck(wanted)
 
     def _update_deck_hint(self) -> None:
-        name = self.deck_combo.currentText().strip()
-        if not self._fetched_decks:
-            self.deck_hint.setText(self.tr("Could not load decks. Is Anki running with AnkiConnect?"))
+        name = self.current_deck()
+        if not self._loaded:
+            text = ""
+        elif not self._fetched_decks:
+            text = self.tr("Could not load decks. Is Anki running with AnkiConnect?")
         elif not name:
-            self.deck_hint.setText(self.tr("Pick a deck."))
+            text = self.tr("Pick a deck.")
         elif name not in self._fetched_decks:
-            self.deck_hint.setText(self.tr("No such deck. Create it in Anki; this page updates when you come back."))
+            text = tr_format(
+                self.tr(
+                    "Anki doesn't have a deck called “%1” yet. In Anki, click Create Deck at the bottom of the "
+                    "main window and name it %1, or pick one of your decks above. This page updates when you "
+                    "come back."
+                ),
+                name,
+            )
         else:
-            self.deck_hint.setText("")
+            text = ""
+        self.deck_hint.setText(text)
+        self.deck_hint.setVisible(bool(text))
 
 
 class NoteTypePage(_WizardSection):
@@ -680,6 +725,7 @@ class NoteTypePage(_WizardSection):
         self._fetched_note_types: list[str] = []
         self._field_names: list[str] = []
         self._field_names_note_type: str | None = None
+        self._notetypes_loaded = False
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -688,8 +734,9 @@ class NoteTypePage(_WizardSection):
         layout.addWidget(self.heading_label)
 
         self.notetype_combo = QComboBox()
-        self.notetype_combo.setEditable(True)
-        self.notetype_combo.currentTextChanged.connect(self._on_notetype_changed)
+        # B06: a real list, like the deck combo.
+        self.notetype_combo.setPlaceholderText(self.tr("Pick a note type"))
+        self.notetype_combo.currentIndexChanged.connect(self._on_index_changed)
         layout.addWidget(self.notetype_combo)
 
         self.guidance_label = QLabel("")
@@ -717,10 +764,10 @@ class NoteTypePage(_WizardSection):
 
     def load_from_config(self) -> None:
         """Show the working config's note type without fetching the list."""
-        self.notetype_combo.setCurrentText(self._wizard.working_config().anki_note_type)
+        self.select_note_type(self._wizard.working_config().anki_note_type)
 
     def isComplete(self) -> bool:
-        note_type = self.notetype_combo.currentText().strip()
+        note_type = self.current_note_type()
         config = self._wizard.working_config()
         if (
             not note_type
@@ -740,9 +787,38 @@ class NoteTypePage(_WizardSection):
             and not (configured_target_field_names(config) - actual_fields)
         )
 
-    def _on_notetype_changed(self, text: str) -> None:
-        self._record_desired_note_type(text.strip())
+    def current_note_type(self) -> str:
+        """The selected note type's Anki name ("" when nothing is selected)."""
+        data = self.notetype_combo.currentData()
+        return data if isinstance(data, str) else ""
+
+    def select_note_type(self, name: str, *, notify: bool = True) -> None:
+        """Select ``name``; a name Anki does not list gets its own "(not in Anki yet)" item.
+
+        ``notify=False`` changes only what is shown, as a signal-blocked edit
+        used to: no field fetch, no config write.
+        """
+        previous = self.current_note_type()
+        name = name.strip()
+        self.notetype_combo.blockSignals(True)
+        try:
+            index = self.notetype_combo.findData(name) if name else -1
+            if name and index < 0:
+                self.notetype_combo.addItem(tr_format(self.tr("%1 (not in Anki yet)"), name), name)
+                index = self.notetype_combo.count() - 1
+            self.notetype_combo.setCurrentIndex(index)
+        finally:
+            self.notetype_combo.blockSignals(False)
+        if notify and self.current_note_type() != previous:
+            self._on_notetype_changed()
+
+    def _on_index_changed(self, _index: int) -> None:
+        self._on_notetype_changed()
+
+    def _on_notetype_changed(self) -> None:
+        self._record_desired_note_type(self.current_note_type())
         self._fetch_fields()
+        self._update_guidance()
 
     def _record_desired_note_type(self, note_type: str) -> None:
         self._fields_generation += 1
@@ -757,7 +833,7 @@ class NoteTypePage(_WizardSection):
         return True
 
     def _write_notetype_to_config(self) -> None:
-        name = self.notetype_combo.currentText().strip()
+        name = self.current_note_type()
         if name and name != self._wizard.working_config().anki_note_type:
             self._wizard.update_working_config(replace(self._wizard.working_config(), anki_note_type=name))
 
@@ -780,19 +856,26 @@ class NoteTypePage(_WizardSection):
         worker.start()
 
     def _on_notetypes_fetched(self, model_names: object) -> None:
-        names = list(model_names) if isinstance(model_names, list) else []
+        names = [str(name) for name in model_names] if isinstance(model_names, list) else []
         self._fetched_note_types = names
-        current = self.notetype_combo.currentText()
+        self._notetypes_loaded = True
+        wanted = self.current_note_type() or self._wizard.working_config().anki_note_type
         self.notetype_combo.blockSignals(True)
-        self.notetype_combo.clear()
-        self.notetype_combo.addItems(names)
-        self.notetype_combo.setCurrentText(current or self._wizard.working_config().anki_note_type)
-        self.notetype_combo.blockSignals(False)
+        try:
+            self.notetype_combo.clear()
+            for name in names:
+                self.notetype_combo.addItem(name, name)
+        finally:
+            self.notetype_combo.blockSignals(False)
+        self.select_note_type(wanted)
         self.completeChanged.emit()
-        # Auto-fetch the fields for the selected note type so Auto-Map lights up.
+        # Fetch the fields of the selected note type so they fill themselves.
         self._fetch_fields()
+        self._update_guidance()
 
     def _on_notetypes_error(self, _message: str) -> None:
+        self._notetypes_loaded = True
+        self._update_guidance()
         self.completeChanged.emit()
 
     # --- field list fetch ---
@@ -800,7 +883,7 @@ class NoteTypePage(_WizardSection):
     def _fetch_fields(self) -> None:
         if not self._accept_field_fetches:
             return
-        note_type = self.notetype_combo.currentText().strip()
+        note_type = self.current_note_type()
         if note_type != self._desired_note_type:
             self._record_desired_note_type(note_type)
         if not note_type or note_type not in self._fetched_note_types:
@@ -860,7 +943,7 @@ class NoteTypePage(_WizardSection):
 
     def _on_fields_fetched(self, note_type: str, field_names: object) -> None:
         try:
-            current_note_type = self.notetype_combo.currentText().strip()
+            current_note_type = self.current_note_type()
         except RuntimeError:
             return
         if note_type != current_note_type:
@@ -890,10 +973,7 @@ class NoteTypePage(_WizardSection):
         mappings the language cannot fill and every run's field check then
         rejects. Without it the caller falls through to the keyword pass.
         """
-        from anki_miner.languages.registry import get_profile  # noqa: PLC0415
-
-        capabilities = get_profile(config_language(self._wizard.working_config())).capabilities
-        return preset_for_field_names(field_names) if "note_presets" in capabilities else None
+        return preset_for_field_names(field_names) if self._presets_apply() else None
 
     @staticmethod
     def _has_mining_shape(field_names: list[str]) -> bool:
@@ -911,11 +991,77 @@ class NoteTypePage(_WizardSection):
         self.guidance_label.setText(html)
         self.guidance_label.setVisible(True)
 
+    def _hide_guidance(self) -> None:
+        self.guidance_label.setVisible(False)
+        self.guidance_label.setText("")
+
+    def _presets_apply(self) -> bool:
+        """Lapis, Kiku and Senren are Japanese note types; presets ride the ``note_presets`` capability."""
+        from anki_miner.languages.registry import get_profile  # noqa: PLC0415
+
+        return "note_presets" in get_profile(config_language(self._wizard.working_config())).capabilities
+
+    def _show_note_type_help(self) -> None:
+        """What any note type needs (D10 = B): the app ships none, any one works once mapped.
+
+        The wizard has no field-mapping table: it maps only by name, through
+        the keyword pass (`_FIELD_KEYWORDS`, whole normalised name). So the text
+        says the word goes in the first field, names field names that pass
+        recognises ("Word", "Sentence", ...) and gives the manual route for any
+        other naming. It never tells the user to build or rename a note type
+        (the owner's D10 note: the user picks a note type they like). A fresh
+        Anki holds only Basic (Front/Back), which is the common case for the 31
+        languages without note presets.
+        """
+        self._show_guidance(
+            tr_format(
+                self.tr(
+                    "Any note type works once its fields are mapped. Pick one of your note types: Anki Miner "
+                    "puts the word in its first field and fills the fields it recognises by name, such as Word, "
+                    "Sentence, Reading, Definition, Picture and audio. If it can't tell which field is which, "
+                    "press Skip Setup and choose the fields yourself in Settings → Cards & Anki. "
+                    '<a href="%1">Which fields can Anki Miner fill?</a>'
+                ),
+                NOTE_TYPE_HELP_URL,
+            )
+        )
+
+    def _update_guidance(self) -> None:
+        """Say what to pick when the note type cannot hold mined cards (B01, D10).
+
+        Nothing until the list has loaded. A present note type with no word or
+        sentence field, or a missing one other than Lapis, gets what any note
+        type needs. A missing Lapis under a language with presets gets where to
+        download it: the config default is Lapis, and a brand-new Anki lacks it.
+        """
+        if not self._notetypes_loaded:
+            self._hide_guidance()
+            return
+        name = self.current_note_type()
+        if name and name in self._fetched_note_types:
+            fields_known = self._field_names_note_type == name and bool(self._field_names)
+            if fields_known and not self._has_mining_shape(self._field_names):
+                self._show_note_type_help()
+            else:
+                self._hide_guidance()
+            return
+        if name == LAPIS_NOTE_TYPE and self._presets_apply():
+            self._show_guidance(
+                tr_format(
+                    self.tr(
+                        "Anki Miner fills a note type called Lapis. Your Anki doesn't have it yet. "
+                        '<a href="%1">Get Lapis</a> (free), then in Anki choose File → Import and pick the file. '
+                        "This page updates when you come back."
+                    ),
+                    LAPIS_RELEASES_URL,
+                )
+            )
+            return
+        self._show_note_type_help()
+
     def _on_guidance_link_activated(self, url: str) -> None:
-        if url == "recheck":
-            self.refresh()
-        elif url == NOTE_TYPE_HELP_URL:
-            _open_url(NOTE_TYPE_HELP_URL)
+        if url in (NOTE_TYPE_HELP_URL, LAPIS_RELEASES_URL):
+            _open_url(url)
 
     def _sanitize_field_mappings(self, note_type: str, field_names: list[str]) -> None:
         config = self._wizard.working_config()
@@ -972,24 +1118,10 @@ class NoteTypePage(_WizardSection):
             return
         preset = self._matching_preset(names)
         if preset is not None:
-            self.guidance_label.setVisible(False)
-            self.guidance_label.setText("")
             self._apply_preset(preset)
         else:
-            if self._has_mining_shape(names):
-                self.guidance_label.setVisible(False)
-                self.guidance_label.setText("")
-            else:
-                guidance = tr_format(
-                    self.tr(
-                        "This note type has no obvious word or sentence fields. "
-                        '<a href="%1">Recheck</a> after importing a '
-                        '<a href="%1">recommended note type</a> in Anki.'
-                    ),
-                    NOTE_TYPE_HELP_URL,
-                )
-                self._show_guidance(guidance.replace(f'href="{NOTE_TYPE_HELP_URL}"', 'href="recheck"', 1))
             self._apply_keyword_map()
+        self._update_guidance()
         self._show_field_problem()
         self.completeChanged.emit()
 

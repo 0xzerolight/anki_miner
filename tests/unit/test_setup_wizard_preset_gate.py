@@ -56,9 +56,7 @@ def notetype_page(qtbot, test_config):
         wizard = SetupWizard(config if code == "ja" else switch_language(config, code))
         qtbot.addWidget(wizard)
         page = wizard.notetype_page
-        page.notetype_combo.blockSignals(True)
-        page.notetype_combo.setCurrentText("Lapis")
-        page.notetype_combo.blockSignals(False)
+        page.select_note_type("Lapis", notify=False)
         page._fetched_note_types = ["Lapis"]
         page._field_names = list(_LAPIS_FIELDS)
         page._field_names_note_type = "Lapis"
