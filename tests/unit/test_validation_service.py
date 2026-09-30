@@ -1105,7 +1105,7 @@ class TestOptionalResourceWarnings:
 
         ok, message = _check("absent-dict")
         assert ok is False
-        assert "not found on disk" in message
+        assert message == "Dictionary not installed: absent-dict. Import it again in Settings → Dictionaries."
 
         ok, message = _check("stale-dict")
         assert ok is False
@@ -1115,6 +1115,39 @@ class TestOptionalResourceWarnings:
         ok, message = _check("empty-dict")
         assert ok is False
         assert "no entries" in message
+
+    def test_a_missing_recommended_dictionary_says_download_not_import(self, test_config, tmp_path):
+        """B11: a fresh install is told to download, not to "import again"."""
+        from dataclasses import replace
+
+        from anki_miner.config import ChainEntry
+
+        dicts_root = tmp_path / "dicts"
+        dicts_root.mkdir()
+        chain = (ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),)
+        config = replace(test_config, dictionary_chain=chain, dicts_root=dicts_root)
+
+        ok, message = ValidationService(config).check_offline_dictionary()
+
+        assert ok is False
+        assert message == (
+            "Dictionary not installed: jmdict-english. Download it with Tools → Download Recommended Resources."
+        )
+
+    def test_a_missing_hand_imported_dictionary_says_import_again(self, test_config, tmp_path):
+        from dataclasses import replace
+
+        from anki_miner.config import ChainEntry
+
+        dicts_root = tmp_path / "dicts"
+        dicts_root.mkdir()
+        chain = (ChainEntry(kind="indexed", dict_id="my-own-dict", enabled=True),)
+        config = replace(test_config, dictionary_chain=chain, dicts_root=dicts_root)
+
+        ok, message = ValidationService(config).check_offline_dictionary()
+
+        assert ok is False
+        assert message == "Dictionary not installed: my-own-dict. Import it again in Settings → Dictionaries."
 
     def test_check_offline_dictionary_rejects_a_slot_stamped_for_another_language(self, test_config, tmp_path):
         """A ja-stamped dictionary is not readiness for a zh run.
