@@ -208,10 +208,10 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 
 `profiles` puts `{"profiles": [{"id": "anime", "name": "Anime", "active": true}, …]}` in `result`. Before the user has created any profile, the list holds one, `default`.
 
-`settings-export --language CODE --out FILE [--profile ID]` writes what Settings → Export writes, with that language's deck, note type and fields.
+`settings-export --language CODE --out FILE [--profile ID]` writes what the app's Export to file… writes (Manage profiles…, under This profile), with that language's deck, note type and fields.
 - A language the profile has never used exports its defaults and `"configured": false`.
 - As in the app's export, file paths and resource lists are left out.
-- The file can be imported in Settings → Import.
+- The file can be imported with Import from file… in the same place.
 
 `schema` goes up only for breaking changes. New keys can appear; ignore keys you do not know.
 

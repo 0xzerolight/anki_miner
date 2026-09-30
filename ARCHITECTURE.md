@@ -289,7 +289,7 @@ There is no separate folder-orchestrator class; batch mining is driven directly 
 - **Appearance:** `theme`, `theme_favorites`, `themes_root`, `ui_language`, and `ui_zoom` (the whole UI via `QT_SCALE_FACTOR`, clamped to [0.5, 2.0]; needs a restart to take effect)
 - **Optional data:** pitch accent, frequency, known words DB, blacklist/whitelist paths and toggles
 - **Analytics:** stats DB path
-- **Performance:** max parallel workers (default 6)
+- **Performance:** max parallel workers (default 6; set in `gui_config.json` or an imported settings file, not in the GUI)
 - **Language:** `language` (the active mining language) and `language_stash` (parked `LANGUAGE_SCOPED_FIELDS` snapshots for every inactive language — see [Mining Languages](#mining-languages)), plus the scoped `script_variant` and `reading_tone_color`
 - **Card shape:** `card_type` (`Literal["", "word_and_sentence", "click", "sentence", "audio"]`), `card_type_marker_fields`, `strict_card_order` (create cards in order of appearance; off by default), `bold_target_in_sentence`
 - **Downloader (Utilities → Download):** `downloader_format_preset`, `downloader_custom_format`, `downloader_write_subtitles`, `downloader_subtitle_langs`, `downloader_embed_thumbnail`, `downloader_embed_metadata`
