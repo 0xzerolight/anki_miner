@@ -80,7 +80,7 @@ class QueuePanel(QFrame):
     """Multi-series queue management panel.
 
     Signals:
-        process_requested: Emitted when user wants to process queue
+        process_requested: Emitted when user wants to mine the queue
         empty_changed: Emitted with whether the queue is now empty. The panel
             hides its own list when it is; the page hosting the panel uses this
             to swap in whatever else takes that height.
@@ -152,9 +152,9 @@ class QueuePanel(QFrame):
         button_layout = QHBoxLayout()
         button_layout.setSpacing(SPACING.sm)
 
-        self.process_queue_button = ModernButton(self.tr("Process Queue"), variant="primary")
+        self.process_queue_button = ModernButton(self.tr("Mine Queue"), variant="primary")
         self.process_queue_button.clicked.connect(self.process_requested.emit)
-        self.process_queue_button.setToolTip(self.tr("Process all series in queue"))
+        self.process_queue_button.setToolTip(self.tr("Mine every series in the queue"))
         button_layout.addWidget(self.process_queue_button)
 
         self.clear_button = ModernButton(self.tr("Clear All"), variant="ghost")
@@ -884,7 +884,7 @@ class QueuePanel(QFrame):
         return bool(bound) and all(w.get_status() == "complete" for w in bound)
 
     def runnable_items(self) -> list[QueueItem]:
-        """The bound, runnable rows a Process Queue click should mine.
+        """The bound, runnable rows a Mine Queue click should mine.
 
         The selection when there is one, in the order the list shows it;
         otherwise every runnable row. A run therefore mines exactly what the user
@@ -899,7 +899,7 @@ class QueuePanel(QFrame):
         known-words filter and ``allow_duplicate_cards`` (False by default) are
         what actually stop a second card for a word already in Anki. Without a
         selection the sweep is unchanged: a finished row is left finished, so
-        Process Queue never silently re-mines the whole cohort.
+        Mine Queue never silently re-mines the whole cohort.
         """
         selection = self.selected_widgets()
         chosen = selection or self.view_order()

@@ -100,7 +100,7 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         self._run_terminal_ids: set[str] = set()
         self._current_item_label = ""
         # The exact series the next queue run will mine, snapshotted from the
-        # panel when Process Queue is pressed.
+        # panel when Mine Queue is pressed.
         self._run_selection: list = []
 
         # Initialize batch queue
@@ -190,7 +190,7 @@ class BatchProcessingTab(FolderSeriesScreenBase):
 
         container.setLayout(layout)
 
-        # Scroll, Activity drawer, pinned bar (D6). Process Queue is the run
+        # Scroll, Activity drawer, pinned bar (D6). Mine Queue is the run
         # this screen is for, so it is the pinned action; Add to Queue stays
         # in its own card with the folders it reads.
         main_layout = QVBoxLayout()
@@ -214,7 +214,7 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         """Set up tab-specific keyboard shortcuts.
 
         Ctrl+Enter is installed by ``_install_action_bar``, which routes it
-        through the queue's own Process Queue button; the copy that used to live
+        through the queue's own Mine Queue button; the copy that used to live
         here called ``_process_queue`` directly, so it ignored whether the button
         was enabled and could start a second run over a first.
         """
@@ -492,7 +492,7 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         # back-to-back-mining freeze: leaked sqlite/Session handles).
         self._teardown_previous_run("batch")
 
-        # The panel's snapshot when Process Queue supplied one; otherwise every
+        # The panel's snapshot when Mine Queue supplied one; otherwise every
         # pending row, which is what Retry Failed hands over after resetting
         # them. Either way the worker is told exactly what it will mine.
         items = self._run_selection or [
@@ -557,7 +557,7 @@ class BatchProcessingTab(FolderSeriesScreenBase):
             self._on_run_thread_finished()
 
     def _empty_run_summary(self) -> str:
-        """Why a Process Queue click found nothing to mine."""
+        """Why a Mine Queue click found nothing to mine."""
         if self.queue_panel.has_only_completed_rows():
             return self.tr("Every series is already complete. Select rows, then Run selected.")
         return self.tr("No valid series in the queue to process.")
@@ -930,7 +930,7 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         """Rebuild the series queue from ``snapshot``; return the row count.
 
         A row that was mid-run comes back as an error saying so, which is what
-        keeps it out of the next Process Queue: only the user pressing Retry
+        keeps it out of the next Mine Queue: only the user pressing Retry
         turns it back into a pending row.
         """
         if self._is_processing or self.batch_queue.get_all_items():

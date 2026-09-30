@@ -171,7 +171,7 @@ class SingleEpisodeTab(MiningTabBase):
         # Actions section
         from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 
-        # Timing and Tracks stay here beside the fields they act on. Process
+        # Timing and Tracks stay here beside the fields they act on. Mine
         # Episode and Cancel are moved into the pinned bar below (D6), so the
         # one action this screen exists for cannot scroll off it.
         actions_header = SectionHeader(self.tr("Actions"))
@@ -180,7 +180,7 @@ class SingleEpisodeTab(MiningTabBase):
         button_layout = QHBoxLayout()
         button_layout.setSpacing(SPACING.xs)
 
-        self.process_button = ModernButton(self.tr("Process Episode"), variant="primary")
+        self.process_button = ModernButton(self.tr("Mine Episode"), variant="primary")
         self.process_button.setToolTip(self.tr("Create Anki cards from the episode"))
         self.timing_button = ModernButton(self.tr("Test Timing"), variant="secondary")
         self.timing_button.setToolTip(self.tr("Preview video with subtitles to adjust timing offset"))
@@ -264,7 +264,7 @@ class SingleEpisodeTab(MiningTabBase):
 
         # Tab order through the page's own inputs: video -> subtitle -> source -> offset.
         #
-        # It deliberately stops there. Process Episode used to be chained on the
+        # It deliberately stops there. Mine Episode used to be chained on the
         # end, and that was right while the button sat in the form; D6 moved it
         # into the pinned action bar at the foot of the screen, so the old line
         # pulled focus from the offset field straight down to the bar and back
