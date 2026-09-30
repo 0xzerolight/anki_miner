@@ -139,6 +139,10 @@ def test_every_shell_page_has_exactly_one_vertical_absorber(page):
     )
 
 
+#: Pages whose one input card lost its heading (A20), so nothing is left to inflate.
+_HEADINGLESS_PAGES = frozenset({"single"})
+
+
 def test_a_tall_window_never_inflates_a_heading(page, qtbot):
     """Headings are chrome. Extra window height is for content, not for gaps.
 
@@ -165,6 +169,9 @@ def test_a_tall_window_never_inflates_a_heading(page, qtbot):
         )
         if h.isVisible()
     ]
+    if name in _HEADINGLESS_PAGES:
+        assert not headings, f"{name}: a card heading came back"
+        return
     assert headings, f"{name}: no visible headings to check"
 
     inflated = [
