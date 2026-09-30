@@ -115,3 +115,12 @@ def test_a_real_plain_cbz_reaches_the_pointer(tab, tmp_path, monkeypatch, qtbot)
     issue = _issue(tab)
     assert issue is not None
     assert issue.action_text == "Open Manga OCR"
+
+
+def test_the_real_japanese_profile_offers_manga_ocr():
+    """After E17 merged, Japanese mining offers the Manga OCR hand-off without any patching."""
+    from anki_miner.gui.widgets.reading_manga_tab import _MANGA_OCR_CAPABILITY
+    from anki_miner.languages.registry import get_profile
+
+    assert _MANGA_OCR_CAPABILITY in get_profile("ja").capabilities
+    assert _MANGA_OCR_CAPABILITY not in get_profile("ko").capabilities
