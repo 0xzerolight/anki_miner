@@ -106,6 +106,32 @@ def test_add_files_reopens_in_the_remembered_folder(reading_subtitles_tab, monke
     assert captured["dir"] == str(remembered)
 
 
+def test_the_card_picture_reopens_where_the_last_one_came_from(qtbot, test_config, monkeypatch, tmp_path):
+    """Reading → Text's picture button keeps the key its old picker used (A19)."""
+    from anki_miner.gui.widgets.reading_text_tab import ReadingTextTab
+
+    with patch(_WORKER_TARGET):
+        tab = ReadingTextTab(config=test_config, processor=MagicMock(), presenter=MagicMock())
+        qtbot.addWidget(tab)
+    folder = tmp_path / "covers"
+    folder.mkdir()
+    picture = folder / "cover.png"
+    picture.touch()
+    captured: dict[str, str] = {}
+
+    def fake_pick(*a, on_done, **kw):
+        captured["dir"] = a[2]
+        on_done(str(picture))
+
+    monkeypatch.setattr(file_dialogs, "pick_open_file", fake_pick)
+    tab._on_add_picture_clicked()
+    assert session_state.remembered_directory("reading.text.inputs") == str(folder)
+    assert tab._picture_path == picture
+
+    tab._on_add_picture_clicked()
+    assert captured["dir"] == str(folder)
+
+
 def test_add_files_cancel_records_nothing(reading_subtitles_tab, monkeypatch):
     monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([]))
 
@@ -226,9 +252,10 @@ class TestOptIn:
 
     def test_every_mining_workflow_opted_in(self, wired_window):
         window, _titles, _tabs = wired_window
-        # reading.subtitles.inputs has no FileSelector (it is a direct
-        # multi-select dialog), so it is covered by its own tests above.
-        assert _selector_keys(window) == _INPUT_KEYS - {"reading.subtitles.inputs"}
+        # reading.subtitles.inputs and reading.text.inputs have no FileSelector
+        # (a direct multi-select dialog and the "Add card picture…" button), so
+        # they are covered by their own tests above.
+        assert _selector_keys(window) == _INPUT_KEYS - {"reading.subtitles.inputs", "reading.text.inputs"}
 
     @pytest.mark.parametrize("class_name", ["SettingsTab"])
     def test_excluded_screens_have_no_history(self, wired_window, class_name):

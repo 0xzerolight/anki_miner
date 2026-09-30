@@ -208,6 +208,30 @@ class TestTextRefusesFiles:
 
         assert eaten is False
 
+    def test_a_dragged_picture_is_accepted(self, text_tab, tmp_path):
+        """A19 kept the old picture field's drop target: a picture is the card picture."""
+        picture = tmp_path / "cover.png"
+        picture.touch()
+        data = _mime(urls=(_local(picture),))
+        event = _enter_event(data)
+
+        eaten = text_tab._file_drop_filter.eventFilter(text_tab.text_edit, event)
+
+        assert eaten is True
+        assert event.isAccepted() is True
+
+    def test_dropping_a_picture_sets_the_card_picture(self, text_tab, tmp_path):
+        picture = tmp_path / "cover.png"
+        picture.touch()
+        data = _mime(urls=(_local(picture),))
+        event = _drop_event(data)
+
+        text_tab._file_drop_filter.eventFilter(text_tab.text_edit, event)
+
+        assert text_tab._picture_path == picture
+        assert text_tab.text_edit.toPlainText() == ""
+        assert "files are not supported" not in text_tab.log_widget.text_edit.toPlainText()
+
 
 # ---------------------------------------------------------------------------
 # Card Backfill: nothing to drop, and it says so
