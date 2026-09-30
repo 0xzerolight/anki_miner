@@ -63,11 +63,12 @@ from anki_miner.gui.widgets.audiobook_queue_item_widget import (
 )
 from anki_miner.gui.widgets.base import (
     PageWidth,
+    ScreenIssue,
     configure_card_layout,
     field_label_width,
 )
 from anki_miner.gui.widgets.current_job_strip import CurrentJobStrip
-from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
+from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, accepts_suffixes
 from anki_miner.gui.widgets.queue_controls_bar import QueueControlsBar
 from anki_miner.gui.workers.audiobook_queue_worker import AudiobookQueueWorker
 from anki_miner.interfaces.presenter import PresenterProtocol
@@ -158,7 +159,7 @@ class AudiobookTab(_ListQueueMiningTabBase):
             run_starting=self.tr("%1 run starting — %2 queued."),
             mine_label=self.tr("Mine"),
             stopped=self.tr("Stopped: %1 succeeded, %2 failed."),
-            task_title=self.tr("Audio queue"),
+            task_title=self.tr("Audiobook mining"),
             retrying=self.tr("Attempt %1 of %2 · retrying in %3s"),
         )
         self._queue_list_strings = _QueueListStrings(
@@ -173,7 +174,7 @@ class AudiobookTab(_ListQueueMiningTabBase):
             failed_see_log=self.tr("Failed — see log"),
             complete_succeeded=self.tr("Complete — %1 succeeded"),
             complete_with_failures=self.tr("Complete — %1 succeeded, %2 failed"),
-            mine_tip=self.tr("Mine every queued item into Anki cards."),
+            mine_tip=self.tr("Mine the picked pair and every Ready item in the queue."),
             clear=self.tr("Clear"),
             clear_tip=self.tr("Remove every item from the queue."),
             cancel_tip=self.tr("Cancel the active run."),
@@ -205,8 +206,6 @@ class AudiobookTab(_ListQueueMiningTabBase):
         queue_card.setObjectName("card")
         queue_layout = QVBoxLayout()
         configure_card_layout(queue_layout)
-
-        queue_layout.addWidget(SectionHeader(self.tr("Audio queue")))
 
         # Derive the shared column from the TRANSLATED labels rather than a
         # hardcoded 100: German "Untertiteldatei:" needed 149px in that 84px box.
@@ -262,7 +261,7 @@ class AudiobookTab(_ListQueueMiningTabBase):
         self._wire_queue_interaction()
 
         # Empty-state hint (shown when the list is empty).
-        self.empty_label = QLabel(self.tr("Pick an audio file and its subtitle above, then click Add."))
+        self.empty_label = QLabel(self.tr("Pick an audio file and its subtitle, then Mine. Use Add to queue several."))
         self.empty_label.setObjectName("helper-text")
         self.empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         queue_layout.addWidget(self.empty_label)
@@ -299,6 +298,7 @@ class AudiobookTab(_ListQueueMiningTabBase):
             log=self.log_widget,
         )
         self.setLayout(main_layout)
+        self.install_issue_banner(main_layout)  # A04: refusals and failures land here
 
     # ------------------------------------------------------------------
     # Add flow
@@ -335,25 +335,26 @@ class AudiobookTab(_ListQueueMiningTabBase):
             self.subtitle_selector.clear()
 
     def _on_add_clicked(self) -> None:
-        """Validate the picked pair and append it to the queue as a READY item."""
+        """Add: validate the picked pair and append it to the queue as a READY item."""
         if not self.add_button.isEnabled():
             return  # Defensive: out-of-band trigger while a run is active.
+        self.clear_screen_issue()
+        self._add_picked_pair()
+
+    def _add_picked_pair(self) -> bool:
+        """Queue the picked audio + subtitle pair, or say in the banner why not (A04).
+
+        Returns:
+            ``True`` when a row was added.
+        """
         audio_text = self.audio_selector.path_or_none()
         sub_text = self.subtitle_selector.path_or_none()
-        if audio_text is None and sub_text is None:
-            return
         # Nothing picked and a picked file that no longer resolves are different
         # states: only the second one is a lookup that happened and failed.
         if audio_text is None:
-            log_summary(
-                logger,
-                "Audiobook add rejected",
-                level=logging.WARNING,
-                reason="audio_file_missing",
-                file=None,
-            )
-            self.log_widget.append_error(self.tr("Choose an audio file first."))
-            return
+            log_summary(logger, "Audiobook add rejected", level=logging.WARNING, reason="audio_file_missing", file=None)
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Choose an audio file first.")))
+            return False
         if not Path(audio_text).is_file():
             log_summary(
                 logger,
@@ -362,18 +363,16 @@ class AudiobookTab(_ListQueueMiningTabBase):
                 reason="audio_file_missing",
                 file=Path(audio_text),
             )
-            self.log_widget.append_error(tr_format(self.tr("Audio file not found: %1"), audio_text))
-            return
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("That audio file no longer exists."), details=audio_text)
+            )
+            return False
         if sub_text is None:
             log_summary(
-                logger,
-                "Audiobook add rejected",
-                level=logging.WARNING,
-                reason="subtitle_file_missing",
-                file=None,
+                logger, "Audiobook add rejected", level=logging.WARNING, reason="subtitle_file_missing", file=None
             )
-            self.log_widget.append_error(self.tr("Choose a subtitle file first."))
-            return
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a subtitle file first.")))
+            return False
         if not Path(sub_text).is_file():
             log_summary(
                 logger,
@@ -382,8 +381,10 @@ class AudiobookTab(_ListQueueMiningTabBase):
                 reason="subtitle_file_missing",
                 file=Path(sub_text),
             )
-            self.log_widget.append_error(tr_format(self.tr("Subtitle file not found: %1"), sub_text))
-            return
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("That subtitle file no longer exists."), details=sub_text)
+            )
+            return False
 
         item = self._queue.add(Path(audio_text), Path(sub_text))
         self._render_new_item(item)
@@ -392,6 +393,25 @@ class AudiobookTab(_ListQueueMiningTabBase):
         self.audio_selector.clear()
         self.subtitle_selector.clear()
         self._recompute_buttons()
+        return True
+
+    def _on_mine_clicked(self) -> None:
+        """Mine: a picked pair is intent, so add it first, then run every Ready row (A15)."""
+        if self._queue_locked():
+            return
+        self.clear_screen_issue()
+        picked = self.audio_selector.path_or_none() is not None or self.subtitle_selector.path_or_none() is not None
+        if picked and not self._add_picked_pair():
+            return
+        if not any(item.status == self._status_ready for item in self._queue.all_items()):
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Pick an audio file and its subtitle, then Mine.")))
+            return
+        self._start_run()
+
+    def _recompute_buttons(self) -> None:
+        """Mine is always offered while idle; a refusal explains itself (A04)."""
+        super()._recompute_buttons()
+        self.mine_button.setEnabled(not self._queue_locked())
 
     # ------------------------------------------------------------------
     # Durable queue contents (D16-C)

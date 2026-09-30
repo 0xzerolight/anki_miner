@@ -83,7 +83,7 @@ def _youtube(config):
 @pytest.mark.parametrize(
     ("build", "mine_tip", "noun"),
     [
-        (_audiobook, "Mine every queued item into Anki cards.", "audiobooks"),
+        (_audiobook, "Mine the picked pair and every Ready item in the queue.", "audiobooks"),
         (_youtube, "Check every link in the box, then mine every Ready video.", "videos"),
     ],
     ids=["AudiobookTab", "YouTubeTab"],
