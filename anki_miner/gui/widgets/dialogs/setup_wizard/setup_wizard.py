@@ -72,6 +72,7 @@ class SetupWizard(QWizard):
         parent: QWidget | None = None,
         *,
         offer_mining_language: bool = False,
+        start_page: str | None = None,
     ) -> None:
         """Build the wizard around a copy of ``config``.
 
@@ -84,6 +85,10 @@ class SetupWizard(QWizard):
                 the user has found Settings → Mining Language. A re-run from
                 Tools leaves the language to that selector, whose guarded
                 switch can do what a wizard mid-flow cannot.
+            start_page: Open on this page instead of the first: a key of
+                ``_page_ids`` ("dictionary", "anki", "ready", or "language"
+                on the first run). An unknown key keeps the first page.
+                System Health's AnkiConnect Fix passes "anki" (B09).
         """
         super().__init__(parent)
         self._close_check_requested.connect(  # type: ignore[call-arg]
@@ -153,6 +158,8 @@ class SetupWizard(QWizard):
         self._page_ids["dictionary"] = self.addPage(self.resources_page)
         self._page_ids["anki"] = self.addPage(self.anki_page)
         self._page_ids["ready"] = self.addPage(self.done_page)
+        if start_page is not None and start_page in self._page_ids:
+            self.setStartId(self._page_ids[start_page])
 
         # Every page here can hold Japanese text in a field, so no button may be
         # the Enter target. Re-applied on each page change because QWizard
@@ -432,6 +439,7 @@ def run_setup_wizard(
     config: AnkiMinerConfig,
     *,
     offer_mining_language: bool = False,
+    start_page: str | None = None,
 ) -> SetupWizardOutcome:
     """Run the wizard and return partial config, offer consumption, first action.
 
@@ -444,11 +452,12 @@ def run_setup_wizard(
         config: The current configuration.
         offer_mining_language: Ask which language is being mined. See
             :class:`SetupWizard`.
+        start_page: Open on this page; see :class:`SetupWizard`.
 
     Returns:
         The wizard's typed outcome.
     """
-    wizard = SetupWizard(config, parent, offer_mining_language=offer_mining_language)
+    wizard = SetupWizard(config, parent, offer_mining_language=offer_mining_language, start_page=start_page)
     result = wizard.exec()
     accepted = result == QDialog.DialogCode.Accepted.value
     return SetupWizardOutcome(

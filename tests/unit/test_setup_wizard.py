@@ -678,6 +678,52 @@ def test_repeated_escape_while_closing_keeps_first_result_and_cancels_once(qtbot
         assert worker.wait(3000)
 
 
+def test_the_wizard_can_open_on_its_anki_page(qtbot, wiz_config, monkeypatch):
+    """B09: System Health's AnkiConnect Fix lands on the install steps, not on page one."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    monkeypatch.setattr(SetupWizard, "validation_service", lambda self: _FakeValidation(ankiconnect=False))
+    wiz = SetupWizard(wiz_config, start_page="anki")
+    qtbot.addWidget(wiz)
+
+    assert wiz.startId() == wiz._page_ids["anki"]
+    wiz.show()
+    qtbot.waitExposed(wiz)
+    assert wiz.currentPage() is wiz.anki_page
+    qtbot.waitUntil(lambda: wiz.ankiconnect_page._has_result, timeout=5000)
+    _join_workers(qtbot, wiz)
+
+
+def test_an_unknown_start_page_keeps_the_first_page(qtbot, wiz_config):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config, start_page="nowhere")
+    qtbot.addWidget(wiz)
+
+    assert wiz.startId() == wiz.pageIds()[0]
+
+
+def test_run_setup_wizard_passes_the_start_page(qtbot, wiz_config, monkeypatch):
+    from PyQt6.QtWidgets import QDialog  # noqa: PLC0415
+
+    from anki_miner.gui.widgets.dialogs.setup_wizard import run_setup_wizard  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import setup_wizard as sw_mod  # noqa: PLC0415
+
+    seen: dict[str, int] = {}
+
+    def fake_exec(self):
+        qtbot.addWidget(self)
+        seen["start"] = self.startId()
+        seen["anki"] = self._page_ids["anki"]
+        return QDialog.DialogCode.Rejected.value
+
+    monkeypatch.setattr(sw_mod.SetupWizard, "exec", fake_exec)
+
+    run_setup_wizard(None, wiz_config, start_page="anki")
+
+    assert seen["start"] == seen["anki"]
+
+
 # ---------------------------------------------------------------------------
 # AnkiConnectPage
 # ---------------------------------------------------------------------------
