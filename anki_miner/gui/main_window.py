@@ -1938,6 +1938,12 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             result: One item's processing result.
         """
         self.status_bar.increment_cards_created(result.cards_created)
+        # E09: Analytics has no Refresh button; every finished item makes it stale.
+        analytics_index = self._main_tab_index("analytics")
+        if analytics_index >= 0:
+            mark_stale = getattr(self.tabs.widget(analytics_index), "mark_stale", None)
+            if callable(mark_stale):
+                mark_stale()
 
     def _on_run_details(self, result: ProcessingResult) -> None:
         """Open the full details of a finished run, because the user asked.

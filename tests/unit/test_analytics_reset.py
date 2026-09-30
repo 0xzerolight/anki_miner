@@ -170,7 +170,6 @@ class TestReset:
         tab._on_reset_clicked()
 
         assert tab.reset_button.isEnabled() is False
-        assert tab.refresh_button.isEnabled() is True
         assert tab._reset_in_flight is False
 
     def test_the_delete_runs_off_the_gui_thread(self, qtbot, message_boxes):
@@ -202,13 +201,12 @@ class TestFailure:
         assert "could not be reset" in shown[0].summary
         assert "database is locked" in shown[0].details
 
-    def test_failure_re_arms_both_buttons(self, tab, message_boxes):
+    def test_failure_re_arms_the_reset_button(self, tab, message_boxes):
         tab.stats_service.reset.side_effect = RuntimeError("database is locked")
 
         tab._on_reset_clicked()
 
         assert tab.reset_button.isEnabled() is True
-        assert tab.refresh_button.isEnabled() is True
         assert tab._reset_in_flight is False
 
 

@@ -88,8 +88,8 @@ def test_analytics_showevent_refreshes_after_ttl(qtbot):
         tab.deleteLater()
 
 
-def test_analytics_refresh_button_forces_refresh(qtbot):
-    """The Refresh button bypasses the staleness cache."""
+def test_analytics_forced_refresh_bypasses_the_cache(qtbot):
+    """A forced refresh (mark_stale, Retry, reset) bypasses the staleness cache."""
     service = _make_stats_service()
     tab = AnalyticsTab(service)
     qtbot.addWidget(tab)
