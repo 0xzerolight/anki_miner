@@ -292,8 +292,16 @@ class SubtitlePlayerWidget(QWidget):
 
         # Play/pause button row
         controls_layout = QHBoxLayout()
-        self.play_button = QPushButton(self.tr("Play"))
-        self.play_button.setFixedWidth(80)
+        # Sized for the wider of its two faces, measured through the rendered
+        # button: a flat 80px cut German "Wiedergabe" off (Z.5), and a width
+        # that followed the face would move the steppers on every toggle.
+        self.play_button = QPushButton()
+        self.play_button.ensurePolished()
+        widest = 80
+        for face in (self.tr("Pause"), self.tr("Play")):
+            self.play_button.setText(face)
+            widest = max(widest, self.play_button.sizeHint().width())
+        self.play_button.setMinimumWidth(widest)
         self.play_button.clicked.connect(self.toggle_play_pause)
         controls_layout.addWidget(self.play_button)
         # Frame steppers. They live HERE, in the player's own transport row,

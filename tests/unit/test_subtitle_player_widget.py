@@ -116,6 +116,35 @@ class TestInit:
         assert widget.subtitle_strip.toPlainText() == ""
         assert not widget._backend_notice_label.isVisibleTo(widget)
 
+    def test_play_button_fits_its_longer_translated_label(self, qtbot, fake_mpv):
+        """Z.5 (UI audit 2026-09-29): the German curator's button read
+        "iedergal": a flat 80px cut "Wiedergabe" off on both sides. It fits the
+        wider of its two faces, so toggling does not move the steppers either.
+        """
+        from PyQt6.QtCore import QTranslator
+        from PyQt6.QtWidgets import QApplication, QPushButton
+
+        faces = {"Play": "Wiedergabe", "Pause": "Pausieren"}
+
+        class _German(QTranslator):
+            def translate(self, context, source, disambiguation=None, n=-1):  # noqa: N802
+                return faces.get(source) if context == "SubtitlePlayerWidget" else None
+
+        app = QApplication.instance()
+        assert app is not None
+        translator = _German()
+        app.installTranslator(translator)
+        try:
+            widget = _widget(qtbot)
+            probe = QPushButton()
+            widest = 0
+            for face in faces.values():
+                probe.setText(face)
+                widest = max(widest, probe.sizeHint().width())
+            assert widget.play_button.minimumWidth() >= widest
+        finally:
+            app.removeTranslator(translator)
+
 
 class TestSetSource:
     def test_creates_player_and_loads_file(self, qtbot, fake_mpv):
