@@ -98,54 +98,53 @@ def run_summary(
         items_total: Items the run set out to do, frozen at launch.
         item_noun: Already-plural noun for the screen's unit ("episodes"). An
             empty string suppresses the count, same as a single-item run.
-        notes_added: Confirmed Anki notes created.
+        notes_added: Confirmed Anki notes created; shown to the user as cards (D20 item 5).
         duration: Pre-formatted elapsed time (see
             :func:`~anki_miner.gui.utils.progress_telemetry.format_duration_words`).
         suspended: Whether the machine slept mid-run, in which case the clock
             is active time and the line says so.
     """
     multi = items_total > 1 and bool(item_noun)
+    # D20 item 5: the receipt counts cards, the unit the status bar and the
+    # results window already use. Two literals per shape, chosen by count,
+    # never %n (see the module docstring).
+    one = notes_added == 1
 
     if outcome is TerminalOutcome.SUCCESS:
-        line = (
-            tr_format(
-                QCoreApplication.translate("ResultCopy", "Mining complete — %1 %2, %3 notes added in %4"),
-                items_completed,
-                item_noun,
-                notes_added,
-                duration,
+        if multi:
+            template = (
+                QCoreApplication.translate("ResultCopy", "Mining complete — %1 %2, %3 card added in %4")
+                if one
+                else QCoreApplication.translate("ResultCopy", "Mining complete — %1 %2, %3 cards added in %4")
             )
-            if multi
-            else tr_format(
-                QCoreApplication.translate("ResultCopy", "Mining complete — %1 notes added in %2"),
-                notes_added,
-                duration,
+            line = tr_format(template, items_completed, item_noun, notes_added, duration)
+        else:
+            template = (
+                QCoreApplication.translate("ResultCopy", "Mining complete — %1 card added in %2")
+                if one
+                else QCoreApplication.translate("ResultCopy", "Mining complete — %1 cards added in %2")
             )
-        )
+            line = tr_format(template, notes_added, duration)
     else:
         lead = {
             TerminalOutcome.CANCELLED: QCoreApplication.translate("ResultCopy", "Cancelled"),
             TerminalOutcome.PARTIAL: QCoreApplication.translate("ResultCopy", "Finished with errors"),
             TerminalOutcome.FAILED: QCoreApplication.translate("ResultCopy", "Mining failed"),
         }[outcome]
-        line = (
-            tr_format(
-                QCoreApplication.translate("ResultCopy", "%1 — %2 of %3 %4 completed; %5 notes added in %6"),
-                lead,
-                items_completed,
-                items_total,
-                item_noun,
-                notes_added,
-                duration,
+        if multi:
+            template = (
+                QCoreApplication.translate("ResultCopy", "%1 — %2 of %3 %4 completed; %5 card added in %6")
+                if one
+                else QCoreApplication.translate("ResultCopy", "%1 — %2 of %3 %4 completed; %5 cards added in %6")
             )
-            if multi
-            else tr_format(
-                QCoreApplication.translate("ResultCopy", "%1 — %2 notes added in %3"),
-                lead,
-                notes_added,
-                duration,
+            line = tr_format(template, lead, items_completed, items_total, item_noun, notes_added, duration)
+        else:
+            template = (
+                QCoreApplication.translate("ResultCopy", "%1 — %2 card added in %3")
+                if one
+                else QCoreApplication.translate("ResultCopy", "%1 — %2 cards added in %3")
             )
-        )
+            line = tr_format(template, lead, notes_added, duration)
 
     if suspended:
         # The clock is active time (D23). Saying so is the difference between

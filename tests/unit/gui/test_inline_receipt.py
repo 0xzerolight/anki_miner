@@ -56,7 +56,7 @@ class TestSummaryText:
 
         widget.show_receipt(_receipt(), item_noun="episodes")
 
-        assert widget.summary_text == "Mining complete — 12 episodes, 486 notes added in 40m 12s"
+        assert widget.summary_text == "Mining complete — 12 episodes, 486 cards added in 40m 12s"
 
     def test_a_cancelled_run_still_reports_what_it_did(self, qtbot):
         widget = _widget(qtbot)
@@ -71,7 +71,7 @@ class TestSummaryText:
             item_noun="episodes",
         )
 
-        assert widget.summary_text == "Cancelled — 3 of 12 episodes completed; 84 notes added in 08m 17s"
+        assert widget.summary_text == "Cancelled — 3 of 12 episodes completed; 84 cards added in 08m 17s"
 
     def test_a_partly_failed_run_says_so(self, qtbot):
         widget = _widget(qtbot)
@@ -81,7 +81,7 @@ class TestSummaryText:
             item_noun="videos",
         )
 
-        assert widget.summary_text == "Finished with errors — 10 of 12 videos completed; 400 notes added in 01m 30s"
+        assert widget.summary_text == "Finished with errors — 10 of 12 videos completed; 400 cards added in 01m 30s"
 
     def test_a_failed_run_says_so(self, qtbot):
         widget = _widget(qtbot)
@@ -91,7 +91,7 @@ class TestSummaryText:
             item_noun="books",
         )
 
-        assert widget.summary_text == "Mining failed — 0 of 12 books completed; 0 notes added in 00m 05s"
+        assert widget.summary_text == "Mining failed — 0 of 12 books completed; 0 cards added in 00m 05s"
 
     def test_a_single_item_run_never_says_one_episodes(self, qtbot):
         """One-item screens have no count worth printing, so the noun is dropped."""
@@ -99,7 +99,7 @@ class TestSummaryText:
 
         widget.show_receipt(_receipt(total=1, completed=1, notes=7, seconds=63), item_noun="episodes")
 
-        assert widget.summary_text == "Mining complete — 7 notes added in 01m 03s"
+        assert widget.summary_text == "Mining complete — 7 cards added in 01m 03s"
 
     def test_a_cancelled_single_item_run_reports_its_notes(self, qtbot):
         widget = _widget(qtbot)
@@ -109,7 +109,7 @@ class TestSummaryText:
             item_noun="episodes",
         )
 
-        assert widget.summary_text == "Cancelled — 0 notes added in 00m 12s"
+        assert widget.summary_text == "Cancelled — 0 cards added in 00m 12s"
 
     def test_a_slept_run_says_the_time_is_active_time(self, qtbot):
         widget = _widget(qtbot)
@@ -177,7 +177,7 @@ class TestLifetime:
         page.show()
 
         assert widget.isVisibleTo(page) is True
-        assert widget.summary_text == "Mining complete — 12 episodes, 486 notes added in 40m 12s"
+        assert widget.summary_text == "Mining complete — 12 episodes, 486 cards added in 40m 12s"
 
     def test_it_never_takes_focus(self, qtbot):
         """A receipt appearing mid-typing must not swallow the next keystroke."""
@@ -233,7 +233,7 @@ class TestActions:
 
         clipboard = QApplication.clipboard()
         assert clipboard is not None
-        assert clipboard.text() == "Mining complete — 12 episodes, 486 notes added in 40m 12s"
+        assert clipboard.text() == "Mining complete — 12 episodes, 486 cards added in 40m 12s"
 
 
 def _coverage(*, mined=("食べる",), missing=("走る",)) -> WhitelistCoverage:
@@ -249,7 +249,7 @@ class TestWhitelist:
         widget.show_receipt(_receipt(whitelist=_coverage()), item_noun="episodes")
 
         assert widget.summary_text == (
-            "Mining complete — 12 episodes, 486 notes added in 40m 12s · Whitelist: 1 of 2 mined"
+            "Mining complete — 12 episodes, 486 cards added in 40m 12s · Whitelist: 1 of 2 mined"
         )
 
     def test_copy_summary_copies_the_line_with_its_clause(self, qtbot):

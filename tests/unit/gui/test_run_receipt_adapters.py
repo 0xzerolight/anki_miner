@@ -87,7 +87,7 @@ class TestListQueueReceipt:
         clock["t"] += 95
         youtube_tab._after_run_cleanup()
 
-        assert youtube_tab._receipt_widget.summary_text == ("Mining complete — 2 videos, 42 notes added in 01m 35s")
+        assert youtube_tab._receipt_widget.summary_text == ("Mining complete — 2 videos, 42 cards added in 01m 35s")
         assert youtube_tab._receipt_widget.isVisibleTo(youtube_tab) is True
 
     def test_a_cancelled_queue_run_keeps_the_work_it_did(self, youtube_tab, clock):
@@ -102,7 +102,7 @@ class TestListQueueReceipt:
         youtube_tab._after_run_cleanup()
 
         assert youtube_tab._receipt_widget.summary_text == (
-            "Cancelled — 1 of 2 videos completed; 9 notes added in 00m 20s"
+            "Cancelled — 1 of 2 videos completed; 9 cards added in 00m 20s"
         )
 
     def test_the_next_run_clears_the_previous_receipt(self, youtube_tab, clock):
@@ -142,7 +142,7 @@ class TestListQueueReceipt:
         youtube_tab._after_run_cleanup()
 
         assert youtube_tab._receipt_widget.summary_text == (
-            "Mining complete — 1 notes added in 00m 05s · Whitelist: 1 of 2 mined"
+            "Mining complete — 1 card added in 00m 05s · Whitelist: 1 of 2 mined"
         )
         assert "Whitelist: 1 of 2 mined. Not mined: 走る." in youtube_tab.log_widget.full_text()
 
@@ -217,7 +217,7 @@ class TestReadingReceipt:
         clock["t"] += 63
         novels_tab._after_run_cleanup()
 
-        assert novels_tab._receipt_widget.summary_text == "Mining complete — 11 notes added in 01m 03s"
+        assert novels_tab._receipt_widget.summary_text == "Mining complete — 11 cards added in 01m 03s"
 
     def test_a_cancelled_book_reports_zero_without_pretending_it_finished(self, novels_tab, clock, tmp_path):
         _start_novel_run(novels_tab, tmp_path)
@@ -227,7 +227,7 @@ class TestReadingReceipt:
         clock["t"] += 8
         novels_tab._after_run_cleanup()
 
-        assert novels_tab._receipt_widget.summary_text == "Cancelled — 0 notes added in 00m 08s"
+        assert novels_tab._receipt_widget.summary_text == "Cancelled — 0 cards added in 00m 08s"
 
     def test_a_failed_book_says_so(self, novels_tab, clock, tmp_path):
         _start_novel_run(novels_tab, tmp_path)
@@ -236,7 +236,7 @@ class TestReadingReceipt:
         clock["t"] += 3
         novels_tab._after_run_cleanup()
 
-        assert novels_tab._receipt_widget.summary_text == "Mining failed — 0 notes added in 00m 03s"
+        assert novels_tab._receipt_widget.summary_text == "Mining failed — 0 cards added in 00m 03s"
 
     def test_a_multi_file_reading_run_counts_in_that_screens_own_noun(self, qtbot, test_config, clock, tmp_path):
         from anki_miner.gui.widgets.reading_subtitles_tab import ReadingSubtitlesTab
@@ -260,7 +260,7 @@ class TestReadingReceipt:
         clock["t"] += 74
         tab._after_run_cleanup()
 
-        assert tab._receipt_widget.summary_text == "Mining complete — 2 subtitle files, 9 notes added in 01m 14s"
+        assert tab._receipt_widget.summary_text == "Mining complete — 2 subtitle files, 9 cards added in 01m 14s"
         tab.deleteLater()
 
 
@@ -277,7 +277,7 @@ class TestSingleEpisodeReceipt:
         clock["t"] += 137
         single_tab._on_run_thread_finished()
 
-        assert single_tab._receipt_widget.summary_text == "Mining complete — 24 notes added in 02m 17s"
+        assert single_tab._receipt_widget.summary_text == "Mining complete — 24 cards added in 02m 17s"
 
     def test_a_cancelled_episode_that_already_wrote_notes_keeps_them(self, single_tab, clock, tmp_path):
         """The worker still emits a result when notes reached Anki before the stop."""
@@ -288,7 +288,7 @@ class TestSingleEpisodeReceipt:
         clock["t"] += 41
         single_tab._on_run_thread_finished()
 
-        assert single_tab._receipt_widget.summary_text == "Cancelled — 6 notes added in 00m 41s"
+        assert single_tab._receipt_widget.summary_text == "Cancelled — 6 cards added in 00m 41s"
 
     def test_a_worker_error_leaves_a_failure_receipt(self, single_tab, clock, tmp_path):
         start_single_run(single_tab, tmp_path)
@@ -297,7 +297,7 @@ class TestSingleEpisodeReceipt:
         clock["t"] += 2
         single_tab._on_run_thread_finished()
 
-        assert single_tab._receipt_widget.summary_text == "Mining failed — 0 notes added in 00m 02s"
+        assert single_tab._receipt_widget.summary_text == "Mining failed — 0 cards added in 00m 02s"
 
     def test_a_leaked_previous_worker_cannot_seal_the_live_run(self, single_tab, clock, tmp_path):
         """A timed-out teardown leaves an old thread that finishes mid-new-run."""
@@ -340,7 +340,7 @@ class TestBatchReceipt:
         batch_tab._on_queue_finished(33)
         batch_tab._on_run_thread_finished()
 
-        assert batch_tab._receipt_widget.summary_text == ("Mining complete — 2 series, 33 notes added in 1h 00m 12s")
+        assert batch_tab._receipt_widget.summary_text == ("Mining complete — 2 series, 33 cards added in 1h 00m 12s")
 
     def test_a_cancelled_queue_run_that_completed_one_series_congratulates_nobody(self, batch_tab, clock, tmp_path):
         """The old box fired after a cancellation too. This is the exact case."""
@@ -355,7 +355,7 @@ class TestBatchReceipt:
         batch_tab._on_run_thread_finished()
 
         assert batch_tab._receipt_widget.summary_text == (
-            "Cancelled — 1 of 3 series completed; 7 notes added in 08m 17s"
+            "Cancelled — 1 of 3 series completed; 7 cards added in 08m 17s"
         )
 
     def test_the_queue_path_reports_item_failure_consistently(self, batch_tab, clock, task_registry, tmp_path):
@@ -371,7 +371,7 @@ class TestBatchReceipt:
         batch_tab._on_run_thread_finished()
 
         assert batch_tab._receipt_widget.summary_text == (
-            "Finished with errors — 1 of 2 series completed; 45 notes added in 01m 05s"
+            "Finished with errors — 1 of 2 series completed; 45 cards added in 01m 05s"
         )
         assert batch_tab.overall_progress_widget.status_label.text() == "Finished with errors — see log"
         assert batch_tab._receipt_widget.receipt.outcome is TerminalOutcome.PARTIAL
@@ -388,7 +388,7 @@ class TestBatchReceipt:
         batch_tab._on_run_thread_finished()
 
         receipt = batch_tab._receipt_widget
-        assert receipt.summary_text == "Mining complete — 40 notes added in 01m 05s · Whitelist: 1 of 2 mined"
+        assert receipt.summary_text == "Mining complete — 40 cards added in 01m 05s · Whitelist: 1 of 2 mined"
         assert receipt.copy_words_button.isVisibleTo(receipt) is True
         line = "Whitelist: 1 of 2 mined. Not mined: 走る."
         assert line in batch_tab.log_widget.full_text()
@@ -405,7 +405,7 @@ class TestBatchReceipt:
         batch_tab._on_queue_finished(0)
         batch_tab._on_run_thread_finished()
 
-        assert batch_tab._receipt_widget.summary_text == "Cancelled — 0 notes added in 00m 11s"
+        assert batch_tab._receipt_widget.summary_text == "Cancelled — 0 cards added in 00m 11s"
 
 
 def _assert_receipt_follows(tab, anchor_name: str) -> None:
