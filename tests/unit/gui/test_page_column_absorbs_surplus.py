@@ -140,7 +140,7 @@ def test_every_shell_page_has_exactly_one_vertical_absorber(page):
 
 
 #: Pages whose one input card lost its heading (A20), so nothing is left to inflate.
-_HEADINGLESS_PAGES = frozenset({"single"})
+_HEADINGLESS_PAGES = frozenset({"single", "youtube"})
 
 
 def test_a_tall_window_never_inflates_a_heading(page, qtbot):

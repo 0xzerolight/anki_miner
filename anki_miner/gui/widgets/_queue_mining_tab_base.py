@@ -692,7 +692,8 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
     _row_widgets: dict[Any, Any]
     _list_items: dict[Any, QListWidgetItem]
     list_widget: QListWidget
-    empty_label: QLabel
+    # None on a screen whose input states the instruction itself (YouTube, A11).
+    empty_label: QLabel | None = None
     page_filler: QWidget
     #: AudiobookTab's Add button. YouTube has none: its Mine reads the link box.
     add_button: Any = None
@@ -1419,7 +1420,8 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         # also hands the page's surplus height back, and with nowhere to pool
         # that height would inflate the headings instead. All three move
         # together or none of them do.
-        self.empty_label.setVisible(not has_items)
+        if self.empty_label is not None:
+            self.empty_label.setVisible(not has_items)
         self.list_widget.setVisible(has_items)
         self.page_filler.setVisible(not has_items)
 

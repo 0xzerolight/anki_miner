@@ -35,7 +35,7 @@ import logging
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDropEvent
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -72,7 +72,6 @@ from anki_miner.gui.widgets.base import (
 )
 from anki_miner.gui.widgets.base.ytdlp_availability import YtdlpAvailabilityMixin, YtdlpStrings
 from anki_miner.gui.widgets.current_job_strip import CurrentJobStrip
-from anki_miner.gui.widgets.enhanced import SectionHeader
 from anki_miner.gui.widgets.queue_controls_bar import QueueControlsBar
 from anki_miner.gui.widgets.youtube_playlist_flow import (
     PlaylistAddCallbacks,
@@ -257,14 +256,12 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
         queue_layout = QVBoxLayout()
         configure_card_layout(queue_layout)
 
-        queue_layout.addWidget(SectionHeader(self.tr("YouTube queue")))
-
         # One link per line, like Utilities -> Download. Mine reads it; there is
         # no Add step. Fixed vertically, policy included: the queue list below is
         # this page's one vertical absorber, and a text edit's default Expanding
         # policy keeps the card expansive even at a fixed height.
         self.url_edit = QPlainTextEdit()
-        self.url_edit.setPlaceholderText(self.tr("One YouTube link or playlist per line"))
+        self.url_edit.setPlaceholderText(self.tr("Paste YouTube links or playlists, one per line, then click Mine"))
         # Tab must move focus, not insert a literal tab (keyboard-only flow).
         self.url_edit.setTabChangesFocus(True)
         self.url_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -297,12 +294,6 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
         queue_layout.addWidget(self.list_widget)
         self._wire_queue_interaction()
 
-        # Empty-state hint (shown when the list is empty).
-        self.empty_label = QLabel(self.tr("Paste YouTube links above, one per line, then click Mine."))
-        self.empty_label.setObjectName("helper-text")
-        self.empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        queue_layout.addWidget(self.empty_label)
-
         # Issue #65: opt-in per-video word curation popup (default off).
         self.review_words_checkbox = QCheckBox(self.tr("Review words before mining"))
         self._bind_review_words_checkbox()
@@ -330,20 +321,6 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
         source_row.addWidget(self.subtitle_source_combo)
         source_row.addStretch(1)
         queue_layout.addLayout(source_row)
-
-        # Seeded from config in _seed_caption_controls, called from __init__
-        # once the add flow exists.
-        self.align_captions_checkbox = QCheckBox(self.tr("Align captions to audio"))
-        self.align_captions_checkbox.toggled.connect(
-            lambda checked: self.persist_run_options(youtube_align_captions=checked)
-        )
-        self.align_captions_checkbox.setToolTip(
-            self.tr(
-                "Retime YouTube's captions against the video's audio before mining. "
-                "Ignored when the subtitle was transcribed locally."
-            )
-        )
-        queue_layout.addWidget(self.align_captions_checkbox)
 
         # Mine / Clear / Cancel; Clear sits in the queue's tools row (A01).
         self._build_queue_actions()
@@ -667,8 +644,8 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
     ) -> SequentialQueueWorker[Any]:
         """Construct the YouTube queue worker (name resolves here for tests).
 
-        The align choice is read here, on the GUI thread, and handed over as a
-        plain bool — a worker thread must never touch a QWidget.
+        Whether to align captions is a Settings → YouTube choice now (D6 item 2),
+        read from the config the tab holds.
         """
         return YouTubeQueueWorker(
             processor=self._processor,
@@ -676,7 +653,7 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
             items=items,
             curation_callback=curation_callback,
             processor_factory=processor_factory,
-            align_captions=self.align_captions_checkbox.isChecked(),
+            align_captions=self.config.youtube_align_captions,
         )
 
     def _start_run(self, items: list[Any] | None = None) -> None:
@@ -709,7 +686,7 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
         super()._start_run(items)
 
     def _seed_caption_controls(self) -> None:
-        """Seed the caption source and alignment from the remembered config.
+        """Seed the caption source from the remembered config.
 
         The push into the add flow is deliberately outside the guard: the flow's
         own default is ``"auto"`` and ``set_subtitle_source`` early-returns on an
@@ -720,7 +697,6 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
             index = self.subtitle_source_combo.findData(self.config.youtube_subtitle_source)
             if index >= 0:
                 self.subtitle_source_combo.setCurrentIndex(index)
-            self.align_captions_checkbox.setChecked(self.config.youtube_align_captions)
         self._on_subtitle_source_changed()
 
     def _on_subtitle_source_changed(self) -> None:
@@ -739,7 +715,6 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
         idle = not self._queue_locked()
         self.subtitle_source_combo.setEnabled(idle)
         self.subtitle_source_label.setEnabled(idle)
-        self.align_captions_checkbox.setEnabled(idle)
         # Mine also answers to the box text and to rows still being checked.
         self._refresh_mine_button()
         if self._mine_pending and self.worker_thread is None:
