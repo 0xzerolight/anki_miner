@@ -490,7 +490,8 @@ class TestInvalidPath:
         assert queue_cls.call_count == 0
         assert "no .mokuro volumes" in tab.log_widget.text_edit.toPlainText()
         issue = tab.issue_banner().current_issue()
-        assert issue.summary == "Anki Miner can't mine this file."
+        # A16: a "no .mokuro" refusal is the no-text-layer case (T1.27).
+        assert issue.summary.startswith("This manga has no text layer yet")
         assert issue.details == "no .mokuro volumes inside it"
 
     def test_unexpected_detect_error_surfaced_no_run(self, tmp_path, tab):

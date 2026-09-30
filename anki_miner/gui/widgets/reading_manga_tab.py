@@ -26,6 +26,7 @@ the right sub-tab.
 from __future__ import annotations
 
 import contextlib
+from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -48,6 +49,7 @@ from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
 from anki_miner.gui.widgets.base import (
     PageWidth,
+    ScreenIssue,
     configure_card_layout,
     field_label_width,
 )
@@ -56,6 +58,7 @@ from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.widgets.reading_subtitles_tab import _SUBTITLE_EXTS
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.models import MiningOutcome, result_error_text
 from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.models.reading_queue import ReadingQueueItem
@@ -79,6 +82,16 @@ _NOVEL_EXTS = (".epub", ".txt")
 # File-selector filter glob for the volume-or-folder field. The human label
 # ("Manga") is tr()'d at call time; only the literal extension glob lives here.
 _MANGA_FILTER_GLOB = "*.mokuro *.cbz *.zip"
+
+#: The mining-language capability that offers Utilities → Manga OCR. WS4's E17
+#: adds it to the Japanese profile (mokuro's OCR model is Japanese-only), so
+#: the hand-off is offered exactly where the tool is.
+_MANGA_OCR_CAPABILITY = "manga_ocr"
+
+#: Lower-cased text both "no OCR data" refusals of ``detector`` contain: the
+#: archive one ("No .mokuro data found for …") and the folder one ("… no
+#: .mokuro volumes …").
+_NO_OCR_MARKER = "no .mokuro"
 
 
 def _queue_item_title(ref: ReadingSourceRef) -> str:
@@ -361,9 +374,59 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         self._launch_detected(refs)
 
     def _on_detection_error(self, generation: int, message: str) -> None:
-        """Report a detection failure on the screen, only while its generation is current (A04)."""
+        """Report a detection failure on the screen, only while its generation is current (A04, A16)."""
         if self._is_current_detection(generation):
+            self._report_detection_failure(self._detecting_path, message)
+
+    def _report_detection_failure(self, path: Path | None, message: str) -> None:
+        """Say why the pick can't be mined; point a text-less manga at Manga OCR (A16).
+
+        A plain ``.cbz`` or a folder of page images has no OCR text layer, which
+        is a dead end on this screen but not in the app: Manga OCR makes one.
+        The hand-off is offered only where the tool is (``manga_ocr``), and the
+        sentence names the folder it will fill in: the picked folder, or the
+        folder a picked archive sits in.
+        """
+        if path is None or _NO_OCR_MARKER not in message.lower():
             self._report_unmineable(message)
+            return
+        self.log_widget.append_error(message)
+        folder = path if path.is_dir() else path.parent
+        if not self._manga_ocr_offered():
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("This manga has no text layer yet, so it can't be mined."), details=message)
+            )
+            return
+        summary = (
+            self.tr("This manga has no text layer yet. Manga OCR can make one for this folder.")
+            if path.is_dir()
+            else self.tr("This manga has no text layer yet. Manga OCR can make one for the folder this file is in.")
+        )
+        self.show_screen_issue(
+            ScreenIssue(
+                summary=summary,
+                details=message,
+                action_id="tools.mokuro",
+                action_text=self.tr("Open Manga OCR"),
+            ),
+            action=partial(self._open_manga_ocr, folder),
+        )
+
+    def _manga_ocr_offered(self) -> bool:
+        """Whether this mining language has Utilities → Manga OCR (E17's gate)."""
+        return _MANGA_OCR_CAPABILITY in get_profile(config_language(self.config)).capabilities
+
+    def _open_manga_ocr(self, folder: Path) -> None:
+        """Show Utilities → Manga OCR with ``folder`` already in its field (A16)."""
+        from anki_miner.gui.widgets.mokuro_tab import MokuroTab
+
+        window = self.window()
+        reveal = getattr(window, "reveal_capability", None)
+        if callable(reveal):
+            reveal(CapabilityTarget("subtitles", "mokuro"))
+        tool = window.findChild(MokuroTab) if window is not None else None
+        if tool is not None:
+            tool.folder_selector.set_path(str(folder))
 
     def _on_detection_finished(self, generation: int) -> None:
         """Restore start actions after detection succeeds or fails."""
