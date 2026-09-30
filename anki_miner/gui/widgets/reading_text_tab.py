@@ -3,7 +3,7 @@
 Mines one pasted snippet per run — no file, no extracted audio (synthetic
 sentence TTS, if enabled in Audio settings, still applies like any
 reading-sourced card) — through the shared reading pipeline. Pasted text has no
-page of its own, so the one optional Card Image the user picks here rides on
+page of its own, so the one optional card picture the user picks here rides on
 the ref as ``image_root`` and lands in the Picture field of every card from the
 run (``services/reading/text_source.py``). Paste text,
 **Mine** launches a single ephemeral :class:`ReadingQueueItem` carrying a
@@ -19,8 +19,9 @@ signals), so this tab's signal slots are READ-ONLY on item state.
 
 No tab-level drag-drop overrides: QPlainTextEdit accepts text drops natively.
 A dragged FILE is refused by :class:`_RefuseFileDrops` rather than inserted as
-its own path (D50); a dragged picture becomes the card picture (A19). Text curation is table-only (the base ``(None, lookup_fn)``
-context — only manga overrides ``_build_curation_context``).
+its own path (D50); a dragged picture becomes the card picture (A19). Text
+curation is table-only (the base ``(None, lookup_fn)`` context — only manga
+overrides ``_build_curation_context``).
 """
 
 from __future__ import annotations
