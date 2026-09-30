@@ -517,3 +517,18 @@ class TestAutoMergeCandidatePick:
         _check_all(dlg)
         assert dlg._line_expansions == {}
         assert dlg.get_selected_words()[0].line_expansion == (0, 0)
+
+
+class TestResetOnlyWhenUseful:
+    """A08: Reset lines shows only while the focused word has an expansion."""
+
+    def test_hidden_without_an_expansion(self, qtbot, words, existing_video):
+        dlg, _ = _dialog(qtbot, words, existing_video)
+        _focus(dlg, 0)
+        assert dlg.expand_reset_button.isHidden()
+
+    def test_shown_once_a_line_is_merged(self, qtbot, words, existing_video):
+        dlg, _ = _dialog(qtbot, words, existing_video)
+        _focus(dlg, 0)
+        dlg.expand_prev_button.click()
+        assert not dlg.expand_reset_button.isHidden()

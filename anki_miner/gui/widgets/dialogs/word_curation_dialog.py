@@ -1300,6 +1300,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             for button in (self.expand_prev_button, self.expand_next_button, self.expand_reset_button):
                 button.setEnabled(False)
                 expand_row.addWidget(button)
+            self.expand_reset_button.hide()  # A08: shown only while there is an expansion to undo
             expand_row.addStretch(1)
             vbox.addLayout(expand_row)
         # Screenshot frame pick. Its own row rather than sharing the expansion
@@ -1327,6 +1328,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             for button in (self.use_frame_button, self.frame_reset_button):
                 button.setEnabled(False)
                 frame_row.addWidget(button)
+            self.frame_reset_button.hide()  # A08: shown only while a frame is picked
             frame_row.addStretch(1)
             vbox.addLayout(frame_row)
         return container
@@ -1501,7 +1503,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         MAX_CLIP_SECONDS — the single guardrail against merging across a long
         cue gap. Enforced only here, at stamp time: the processor materializes
         the stamped counts verbatim, so what the preview promised is what the
-        card gets.
+        card gets. Reset shows only while this word has an expansion: a visible
+        reset means an edit is in effect (A08).
         """
         if not hasattr(self, "expand_prev_button"):
             return
@@ -1531,6 +1534,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self.expand_prev_button.setEnabled(prev_ok)
         self.expand_next_button.setEnabled(next_ok)
         self.expand_reset_button.setEnabled(reset_ok)
+        self.expand_reset_button.setVisible(reset_ok)
 
     # ------------------------------------------------------------------
     # Screenshot frame pick
@@ -1576,8 +1580,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         """Recompute the frame buttons' enabled states and the reset tooltip.
 
         Picking needs a focused word whose own episode is the one on screen;
-        resetting needs a live override — the same "an enabled reset means an
-        edit is in effect" convention the expansion row uses. The tooltip names
+        resetting needs a live override — the same "a visible reset means an
+        edit is in effect (A08)" convention the expansion row uses. The tooltip names
         the stamped second, the only visible confirmation the click landed.
         """
         if not hasattr(self, "use_frame_button"):
@@ -1586,6 +1590,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         picked = None if idx is None else self._screenshot_overrides.get(idx)
         self.use_frame_button.setEnabled(word is not None and idx is not None and self._chosen_episode_displayed())
         self.frame_reset_button.setEnabled(picked is not None)
+        self.frame_reset_button.setVisible(picked is not None)
         self.frame_reset_button.setToolTip(
             self.tr("Restore this word's default screenshot frame.")
             if picked is None

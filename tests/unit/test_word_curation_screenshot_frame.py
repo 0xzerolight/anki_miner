@@ -304,3 +304,18 @@ class TestInvalidation:
         dlg._on_expand_line(1)
 
         assert dlg._screenshot_overrides == {0: 12.5}
+
+
+class TestFrameResetOnlyWhenUseful:
+    """A08: Reset frame shows only while the focused word has a picked frame."""
+
+    def test_follows_the_focused_word(self, qtbot, words, existing_video):
+        dlg, _ = _dialog(qtbot, words, existing_video)
+        _focus(dlg, 0)
+        assert dlg.frame_reset_button.isHidden()
+
+        dlg.use_frame_button.click()
+        assert not dlg.frame_reset_button.isHidden()
+
+        _focus(dlg, 1)
+        assert dlg.frame_reset_button.isHidden()
