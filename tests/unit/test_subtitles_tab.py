@@ -49,6 +49,7 @@ def _make_config(tmp_path: Path) -> AnkiMinerConfig:
     return AnkiMinerConfig(
         asr_models_root=tmp_path / "asr_models",
         media_temp_folder=tmp_path / "tmp",
+        hidden_utilities=(),
     )
 
 
