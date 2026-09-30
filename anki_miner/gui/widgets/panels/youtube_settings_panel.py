@@ -1,5 +1,6 @@
 """YouTube mining settings panel."""
 
+import re
 from dataclasses import replace
 from pathlib import Path
 
@@ -9,7 +10,7 @@ from PyQt6.QtWidgets import QCheckBox, QComboBox, QHBoxLayout, QLabel, QSpinBox,
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.widgets.base import FormPanel
-from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton
+from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.utils.i18n import tr_format
 
 # Ordered pairs of (display label, config value) for the browser dropdown.
@@ -31,6 +32,10 @@ _COOKIE_BROWSER_OPTIONS: list[tuple[str, str | None]] = [
 _FILE_ITEM = "__cookies_file__"
 #: Item data of the last entry, the action that opens the file picker.
 _PICK_ITEM = "__pick_cookies_file__"
+
+#: The validation verdict validation_service writes for a working yt-dlp:
+#: "<version> [<origin>]" (see _classify_resolved there).
+_YTDLP_VERDICT = re.compile(r"^(?P<version>\d[\w.+-]*) \[(?P<origin>[^\]]+)\]$")
 
 
 class YouTubeSettingsPanel(FormPanel):
@@ -122,19 +127,6 @@ class YouTubeSettingsPanel(FormPanel):
             ),
         )
 
-        # Explicit yt-dlp override, also previously UI-less. The escape hatch when the
-        # app-managed copy takes precedence and the user wants their own binary instead.
-        self.ytdlp_location_selector = FileSelector(
-            label="",
-            file_mode=True,
-            placeholder=self.tr("Optional: path to your own yt-dlp executable..."),
-        )
-        self.add_field(
-            self.tr("yt-dlp location"),
-            self.ytdlp_location_selector,
-            helper=self.tr("Overrides automatic detection. Leave empty unless you need a specific build."),
-        )
-
         # yt-dlp updater: manual trigger + status. yt-dlp also self-updates in
         # the background on startup; this is the explicit "do it now" button.
         self.update_ytdlp_button = ModernButton(self.tr("Update yt-dlp now"), variant="secondary")
@@ -161,8 +153,24 @@ class YouTubeSettingsPanel(FormPanel):
         self.add_stretch()
 
     def set_ytdlp_status(self, text: str) -> None:
-        """Set the yt-dlp status line (shown next to the Update button)."""
-        self.set_status_text(self.ytdlp_status_label, text, status="info")
+        """Set the yt-dlp status line (shown next to the Update button).
+
+        A validation verdict reads "Version 2026.08.19" with where the binary
+        came from in the tooltip (C16); update messages and errors show as is.
+        """
+        match = _YTDLP_VERDICT.match(text.strip())
+        if match is None:
+            self.set_status_text(self.ytdlp_status_label, text, status="info")
+            return
+        origins = {
+            "app-managed": self.tr("Downloaded by Anki Miner"),
+            "bundled": self.tr("Included with Anki Miner"),
+            "system PATH": self.tr("Found on your system PATH"),
+            "venv": self.tr("Installed alongside Anki Miner"),
+            "custom path": self.tr("Your own copy, set in gui_config.json"),
+        }
+        self.set_status_text(self.ytdlp_status_label, tr_format(self.tr("Version %1"), match["version"]), status="info")
+        self.ytdlp_status_label.setToolTip(origins.get(match["origin"], match["origin"]))
 
     def set_ytdlp_present(self, present: bool) -> None:
         """Say what the button will do, from the validation verdict.
@@ -296,18 +304,6 @@ class YouTubeSettingsPanel(FormPanel):
         """Return the pre-release checkbox state."""
         return self.prerelease_checkbox.isChecked()
 
-    def set_ytdlp_location(self, value: object) -> None:
-        """Populate the yt-dlp override field from a config value (Path/str/None)."""
-        self.ytdlp_location_selector.set_path(str(value) if value else "")
-
-    def get_ytdlp_location(self) -> str:
-        """Return the yt-dlp override path text (empty string when unset).
-
-        Uses ``path_or_none()`` — never ``strip()`` — so a path inside a folder whose
-        name ends in a space survives verbatim.
-        """
-        return self.ytdlp_location_selector.path_or_none() or ""
-
     # ------------------------------------------------------------------
     # Config marshalling contract (OVH-019)
     # ------------------------------------------------------------------
@@ -323,7 +319,6 @@ class YouTubeSettingsPanel(FormPanel):
         self.set_playlist_max(config.youtube_playlist_max)
         self.set_auto_update_ytdlp(config.auto_update_ytdlp)
         self.set_ytdlp_prerelease(config.ytdlp_prerelease)
-        self.set_ytdlp_location(config.ytdlp_location)
 
     def contribute(self, config):
         """Return a new config with this panel's fields applied.
@@ -334,9 +329,11 @@ class YouTubeSettingsPanel(FormPanel):
         Note: validation of ``cookies_file`` (file must exist when non-empty)
         stays in :meth:`SettingsTab.commit_settings` — it runs before the fold
         so an invalid path aborts Save before ``contribute`` is ever called.
+
+        ``ytdlp_location`` is not written: the path override left the GUI
+        (D15 item 3) and a hand-set value is kept.
         """
         cookies_file_str = self.get_cookies_file()
-        ytdlp_location_str = self.get_ytdlp_location()
         return replace(
             config,
             youtube_cookies_from_browser=self.get_cookies_from_browser(),
@@ -345,5 +342,4 @@ class YouTubeSettingsPanel(FormPanel):
             youtube_playlist_max=self.get_playlist_max(),
             auto_update_ytdlp=self.get_auto_update_ytdlp(),
             ytdlp_prerelease=self.get_ytdlp_prerelease(),
-            ytdlp_location=Path(ytdlp_location_str) if ytdlp_location_str else None,
         )

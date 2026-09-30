@@ -298,48 +298,12 @@ class TestSettingsTabRoundTrip:
         assert len(received) == 1
         assert received[0].ytdlp_prerelease is True
 
-    def test_save_emits_ytdlp_location(self, tab, monkeypatch, tmp_path):
-        from PyQt6.QtWidgets import QMessageBox
-
-        monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: None)
-
-        binary = tmp_path / "my yt-dlp dir " / "yt-dlp"
-        binary.parent.mkdir(parents=True)
-        binary.write_text("#!/bin/sh\n")
-
-        received: list[AnkiMinerConfig] = []
-        tab.config_changed.connect(received.append)
-
-        tab.youtube_panel.set_ytdlp_location(binary)
-        tab.commit_settings()
-
-        assert len(received) == 1
-        # A trailing space in a directory name must survive: the getter uses
-        # path_or_none(), never strip().
-        assert received[0].ytdlp_location == binary
-
-    def test_ytdlp_fields_round_trip_through_load_from_config(self, tab, tmp_path):
-        binary = tmp_path / "yt-dlp"
-        binary.write_text("#!/bin/sh\n")
-        config = replace(tab.config, auto_update_ytdlp=False, ytdlp_location=binary)
+    def test_ytdlp_fields_round_trip_through_load_from_config(self, tab):
+        config = replace(tab.config, auto_update_ytdlp=False)
 
         tab.youtube_panel.load_from_config(config)
 
         assert tab.youtube_panel.get_auto_update_ytdlp() is False
-        assert tab.youtube_panel.get_ytdlp_location() == str(binary)
-
-    def test_empty_ytdlp_location_clears_the_override(self, tab, monkeypatch):
-        from PyQt6.QtWidgets import QMessageBox
-
-        monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: None)
-
-        received: list[AnkiMinerConfig] = []
-        tab.config_changed.connect(received.append)
-
-        tab.youtube_panel.set_ytdlp_location("")
-        tab.commit_settings()
-
-        assert received[0].ytdlp_location is None
 
     def test_save_flashes_inline_status_not_popup(self, tab, monkeypatch):
         """A successful save shows the inline label, not a modal popup."""
