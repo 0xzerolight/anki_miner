@@ -644,52 +644,6 @@ QFrame#status-separator {
     max-width: 1px;
 }
 
-/* Queue item card */
-QFrame#queue-item-card {
-    border: 1px solid;
-    border-radius: ${border-radius-large}px;
-    padding: 0;
-    margin: ${spacing-xxs}px 0;
-}
-
-QFrame#queue-item-card:hover {
-    border-width: 2px;
-}
-
-QLabel#queue-item-title {
-    font-size: ${font-size-h3}px;
-    font-weight: 700;
-}
-
-QLabel#queue-item-path {
-    font-size: ${font-size-caption}px;
-    padding: 2px ${spacing-xxs}px;
-    border-radius: ${border-radius-small}px;
-}
-
-QLabel#queue-item-stats {
-    font-size: ${font-size-caption}px;
-    font-weight: 500;
-    padding: 2px ${spacing-xxs}px;
-    border-radius: ${border-radius-small}px;
-}
-
-/* Queue stats label - summary statistics */
-QLabel#queue-stats {
-    font-size: ${font-size-body-sm}px;
-    font-weight: 500;
-    padding: ${spacing-xxs}px 10px;
-    border-radius: ${border-radius-default}px;
-}
-
-QLabel#queue-status-badge {
-    padding: ${spacing-xxs}px 10px;
-    border-radius: 10px;
-    font-size: ${font-size-small}px;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
 QProgressBar#queue-progress {
     border: none;
     border-radius: 2px;
@@ -1580,57 +1534,6 @@ QLabel#status-indicator[status="error"] {
 
 QFrame#status-separator {
     background-color: ${color-border};
-}
-
-/* --- Queue Item Card --- */
-
-QFrame#queue-item-card {
-    background-color: ${color-surface};
-    border-color: ${color-border};
-}
-
-/* Pointing at a row is not selecting it: the hover surface says enough. */
-QFrame#queue-item-card:hover {
-    border-color: ${color-border};
-    background-color: ${color-surface-hover};
-}
-
-QLabel#queue-item-title {
-    color: ${color-text};
-}
-
-QLabel#queue-item-path {
-    color: ${color-text-muted};
-}
-
-/* Entry counts are metadata about a row, not a call to act on it. */
-QLabel#queue-item-stats {
-    color: ${color-text-muted};
-}
-
-QLabel#queue-stats {
-    background-color: ${color-surface-alt};
-    color: ${color-text};
-}
-
-QLabel#queue-status-badge[status="pending"] {
-    background-color: ${color-badge-pending-bg};
-    color: ${color-badge-pending-text};
-}
-
-QLabel#queue-status-badge[status="processing"] {
-    background-color: ${color-badge-info-bg};
-    color: ${color-badge-info-text};
-}
-
-QLabel#queue-status-badge[status="complete"] {
-    background-color: ${color-badge-success-bg};
-    color: ${color-badge-success-text};
-}
-
-QLabel#queue-status-badge[status="error"] {
-    background-color: ${color-badge-error-bg};
-    color: ${color-badge-error-text};
 }
 
 /* --- Settings Tab --- */

@@ -477,8 +477,6 @@ class TestAccentMap:
         ("selector", "declaration"),
         [
             ("QLabel#stat-value", "color: ${color-text};"),
-            ("QLabel#queue-item-stats", "color: ${color-text-muted};"),
-            ("QFrame#queue-item-card:hover", "border-color: ${color-border};"),
             ("QCheckBox::indicator:hover, QRadioButton::indicator:hover", "border-color: ${color-border};"),
         ],
     )

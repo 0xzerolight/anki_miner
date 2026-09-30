@@ -60,6 +60,21 @@ class TestDeadDeclarationsAreGone:
         scoped a padding override to matches nothing now."""
         assert "themesPanelTree" not in qss
 
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "queue-item-card",
+            "queue-item-title",
+            "queue-item-path",
+            "queue-item-stats",
+            "queue-stats",
+            "queue-status-badge",
+        ],
+    )
+    def test_no_rules_for_the_retired_queue_card(self, qss: str, name: str):
+        """Batch rows became one line (D2, WS1 T1.16); nothing is named this any more."""
+        assert re.search(rf"#{re.escape(name)}\b(?!-)", qss) is None
+
 
 class TestDeadDeclarationsReallyWereDead:
     """Proof, not folklore: these produce identical pixels with and without."""
@@ -118,7 +133,8 @@ class TestSupportedPropertiesStay:
         assert label.font().letterSpacing() == 5.0
 
     def test_text_transform_is_still_declared(self, qss: str):
-        assert len(_declarations(qss, "text-transform")) == 2
+        # One left: the retired queue status badge took the other (TX.4.05).
+        assert len(_declarations(qss, "text-transform")) == 1
 
     def test_text_transform_actually_uppercases(self, qtbot):
         transformed, literal = QLabel("stat label"), QLabel("STAT LABEL")
@@ -178,3 +194,16 @@ class TestDisabledStylingSurvives:
         colors = Theme.get_colors("dark")
 
         assert f"background-color: {colors['input-disabled-bg']};" in qss
+
+
+def test_nothing_sets_the_retired_queue_card_names():
+    """Guard for the deletion above: a rule may only go once no widget carries the name."""
+    from pathlib import Path
+
+    import anki_miner
+
+    pattern = re.compile(r'"queue-(item-card|item-title|item-path|item-stats|stats|status-badge)"')
+    source_root = Path(anki_miner.__file__).parent
+    hits = [str(path) for path in source_root.rglob("*.py") if pattern.search(path.read_text(encoding="utf-8"))]
+
+    assert hits == []
