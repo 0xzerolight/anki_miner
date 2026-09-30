@@ -50,3 +50,12 @@ def test_unchecking_everything_disables_the_accept_button(qtbot):
     dialog.tree.topLevelItem(0).child(0).setCheckState(0, Qt.CheckState.Unchecked)
     assert not dialog.accept_button.isEnabled()
     assert dialog.selected_items() == []
+
+
+def test_the_dialog_offers_minimize_and_maximize(qtbot):
+    """C06: a resizable QDialog shows only Close on Windows without these hints."""
+    dialog = _dialog(qtbot, [BundleChoice(_DICT, "37 MB")])
+    flags = dialog.windowFlags()
+
+    assert flags & Qt.WindowType.WindowMinimizeButtonHint
+    assert flags & Qt.WindowType.WindowMaximizeButtonHint
