@@ -14,6 +14,7 @@ from PyQt6.QtWidgets import (
     QListWidget,
     QPushButton,
     QSpinBox,
+    QVBoxLayout,
     QWidget,
 )
 
@@ -309,9 +310,20 @@ class FilteringSettingsPanel(FormPanel):
         configure_data_view(self.excluded_decks_list)
         install_copy_rows(self.excluded_decks_list)
         self.excluded_decks_list.setMaximumHeight(_EXCLUDED_DECK_ROWS * data_row_height(self.excluded_decks_list))
+        # C09: an empty list is one line, not an empty bordered box.
+        self.excluded_decks_empty_label = QLabel(self.tr("No decks excluded."))
+        self.excluded_decks_empty_label.setObjectName("helper-text")
+        excluded_container = QWidget()
+        excluded_layout = QVBoxLayout(excluded_container)
+        excluded_layout.setContentsMargins(0, 0, 0, 0)
+        excluded_layout.addWidget(self.excluded_decks_list)
+        excluded_layout.addWidget(self.excluded_decks_empty_label)
+        # The anchor is the container, so search still finds the row while the
+        # list itself is hidden (empty).
         self.add_widget(
-            self.excluded_decks_list,
+            excluded_container,
             anchor="excluded_decks",
+            anchor_focus=self.excluded_decks_list,
             anchor_text=lambda: (excluded_helper.text(),),
         )
 
@@ -324,6 +336,14 @@ class FilteringSettingsPanel(FormPanel):
         excluded_buttons.addWidget(self.remove_deck_button)
         excluded_buttons.addStretch()
         self.add_layout(excluded_buttons)
+        self.excluded_decks_list.itemSelectionChanged.connect(self._sync_excluded_decks)
+        list_model = self.excluded_decks_list.model()
+        if list_model is not None:
+            list_model.rowsInserted.connect(self._sync_excluded_decks)
+            list_model.rowsRemoved.connect(self._sync_excluded_decks)
+            # clear() resets the model without a rowsRemoved.
+            list_model.modelReset.connect(self._sync_excluded_decks)
+        self._sync_excluded_decks()
 
         # Word Lists section. The chosen file IS the switch (D15 item 1):
         # choosing a file turns the list on, clearing it turns it off. The two
@@ -559,6 +579,14 @@ class FilteringSettingsPanel(FormPanel):
         )
         if ok and deck:
             self.excluded_decks_list.addItem(deck)
+
+    def _sync_excluded_decks(self, *_args) -> None:
+        """Empty: one line and Add only. Otherwise the list, and Remove for a selection (C09)."""
+        empty = self.excluded_decks_list.count() == 0
+        self.excluded_decks_list.setVisible(not empty)
+        self.excluded_decks_empty_label.setVisible(empty)
+        self.remove_deck_button.setVisible(not empty)
+        self.remove_deck_button.setEnabled(bool(self.excluded_decks_list.selectedItems()))
 
     def _on_remove_deck_clicked(self) -> None:
         """Remove the currently selected excluded deck."""

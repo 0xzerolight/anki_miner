@@ -176,6 +176,9 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             switch clears queues and reloads every panel in this tab.
         language_pack_download_requested: Emitted with a language code when one
             of the Mining Language panel's "Download … pack" buttons is clicked.
+        resource_family_download_requested: An empty Dictionaries, Frequency or
+            Pitch Accent page asked for its own family's recommended download;
+            carries the catalogue kind. The window runs it (TX.3.02).
     """
 
     #: A label beside its control; a wider window buys gutters, not longer inputs.
@@ -195,6 +198,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     manage_profiles_requested = pyqtSignal()
     mining_language_requested = pyqtSignal(str)  # Emits the requested language code
     language_pack_download_requested = pyqtSignal(str)  # Emits the language code
+    resource_family_download_requested = pyqtSignal(str)  # "dict" | "freq" | "pitch" (C09)
 
     # Fields written OUTSIDE the Settings Save path (theme selector, update
     # banner, first-run flags).  An update_config call that touches ONLY these
@@ -779,6 +783,9 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.dictionary_panel.chain_changed.connect(
             lambda: self._persist_chain_change(self.dictionary_panel.get_chain())
         )
+        # C09: an empty chain page downloads its own family only.
+        for chain_panel in (self.dictionary_panel, self.frequency_panel, self.pitch_panel):
+            chain_panel.download_recommended_requested.connect(self.resource_family_download_requested)
 
         # Audio panel signals — wire Add/Reimport to the import flow controller.
         self.audio_panel.add_pack_requested.connect(self._audio_pack_import_flow.add_pack)
@@ -1300,6 +1307,12 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             # Activation is derived from an enabled source (config.pitch_active).
             self.pitch_panel.set_pitch_root(self.config.pitch_root)
             self.pitch_panel.set_chain(self.config.pitch_chain)
+            # C09: the empty state offers a download only for a family the
+            # active language's catalogue actually has.
+            catalog_kinds = {spec.kind for spec in get_profile(config_language(self.config)).catalog}
+            self.dictionary_panel.set_recommended_available("dict" in catalog_kinds)
+            self.frequency_panel.set_recommended_available("freq" in catalog_kinds)
+            self.pitch_panel.set_recommended_available("pitch" in catalog_kinds)
 
             # UI panel is outside _save_panels (it persists via its own signals),
             # so it owns its whole repaint here — signal-safe by construction.

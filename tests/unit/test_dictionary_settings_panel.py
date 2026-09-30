@@ -89,7 +89,7 @@ def test_reorder_controls_disabled_during_scan_placeholder(qapp, qtbot, tmp_path
     assert not panel._list.dragEnabled()
 
     panel._rebuild_list()
-    assert panel._remove_btn.isEnabled()
+    assert panel._reorder_enabled
     assert panel._list.dragEnabled()
 
 
@@ -1238,7 +1238,7 @@ class TestOffThreadDiskWork:
         # Disabled immediately on dispatch (still in flight).
         assert panel._remove_btn.isEnabled() is False
         # Re-enabled once the off-thread delete completes.
-        qtbot.waitUntil(lambda: panel._remove_btn.isEnabled(), timeout=3000)
+        qtbot.waitUntil(lambda: panel._reorder_enabled, timeout=3000)
         assert not dict_dir.exists()
 
 

@@ -51,6 +51,7 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
     rescan_requested = pyqtSignal()
 
     ANCHOR_NAMESPACE = "dictionaries"
+    _RECOMMENDED_KIND = "dict"
 
     _SCAN_ERROR_LABEL = "Dictionary registry scan failed"
     _REMOVE_ERROR_NOUN = "dictionary folder"
@@ -218,6 +219,8 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
                 move_down_tooltip=self.tr("Move down in priority"),
                 more=self.tr("More"),
                 more_tooltip=self.tr("More actions"),
+                empty=self.tr("No dictionaries yet."),
+                download=self.tr("Download recommended"),
             ),
             extra_actions=(self._reimport_btn, self._restore_btn),
         )
