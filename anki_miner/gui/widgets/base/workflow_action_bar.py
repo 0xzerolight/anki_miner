@@ -101,6 +101,13 @@ class WorkflowActionBar(QWidget):
         self._drawer_sized = False
         self._secondary: list[QAbstractButton] = []
         self._primary: QAbstractButton | None = None
+        # D1: a screen with no receipt (the tools) may keep its last result on
+        # the bar until its next run. Off by default: a mining screen's receipt
+        # is its result, and repeating it here would state it twice.
+        self._keeps_last_result = False
+        self._last_result = ""
+        # The run the kept line describes. A newer run of the same task hides it.
+        self._last_result_token: int | None = None
         self._setup_ui()
         self._render(None)
 
@@ -164,6 +171,53 @@ class WorkflowActionBar(QWidget):
         stage is answered from whatever it swapped to.
         """
         return self._primary
+
+    def current_secondary(self) -> tuple[QAbstractButton, ...]:
+        """The quieter buttons shown before the primary, in reading order.
+
+        Read rather than remembered by callers, so a screen that swaps a button
+        in for a while (the Word Curator's Show review) can put back exactly
+        what was there.
+        """
+        return tuple(self._secondary)
+
+    def set_keeps_last_result(self, keep: bool) -> None:
+        """Keep the last result line on an idle bar (screens without a receipt).
+
+        Args:
+            keep: ``True`` on a tool screen that states its result nowhere
+                else above the fold; ``False`` restores the emptying bar.
+        """
+        self._keeps_last_result = keep
+        if not keep:
+            self._last_result = ""
+            self._last_result_token = None
+        self._refresh()
+
+    def set_last_result(self, text: str) -> None:
+        """Say how the run that just ended went, until the next run starts.
+
+        Call it after the run's ``_publish_task_finish``. The line belongs to
+        the run the bar is showing at that moment, so a later run never
+        inherits it. An empty string clears it. Ignored while
+        :meth:`set_keeps_last_result` is off.
+
+        Args:
+            text: The finished run's one-line result, already translated.
+        """
+        # Sync the run token first: the line is stamped with the run it is about.
+        self._bound_snapshot()
+        self._last_result = text
+        self._last_result_token = self._run_token
+        self._refresh()
+
+    def _idle_text(self) -> str:
+        """What an idle bar says: nothing, or the kept result of the current run."""
+        if not self._keeps_last_result or not self._last_result:
+            return ""
+        if self._last_result_token != self._run_token:
+            return ""
+        return self._last_result
 
     def trigger_primary(self) -> None:
         """Press the current primary action, if it is there to be pressed.
@@ -319,8 +373,9 @@ class WorkflowActionBar(QWidget):
         if snapshot is None or not snapshot.is_running:
             # Emptied, not hidden: the stage label is the row's only elastic
             # item, and removing it from the layout lets the buttons stretch to
-            # fill the page instead of sitting at their own width.
-            self.stage_label.setText("")
+            # fill the page instead of sitting at their own width. A screen that
+            # keeps its last result (D1) shows that instead of nothing.
+            self.stage_label.setText(self._idle_text())
             self.progress_bar.hide()
             self.elapsed_label.hide()
             return
