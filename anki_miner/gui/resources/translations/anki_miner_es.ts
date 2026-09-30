@@ -56,16 +56,16 @@
 </context><context>
     <name>AnalyticsTab</name>
     <message>
+        <source>No mining yet — your statistics appear here after your first run.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Reset Statistics…</source>
         <translation>Restablecer estadísticas…</translation>
     </message>
     <message>
         <source>Delete every recorded mining session and difficulty score. This cannot be undone.</source>
         <translation>Eliminar todas las sesiones de minería y puntuaciones de dificultad registradas. Esta acción no se puede deshacer.</translation>
-    </message>
-    <message>
-        <source>Refresh</source>
-        <translation>Actualizar</translation>
     </message>
     <message>
         <source>Analytics Tab</source>
@@ -90,10 +90,6 @@
     <message>
         <source>Series Mined</source>
         <translation>Series minadas</translation>
-    </message>
-    <message>
-        <source>Avg Cards/Session</source>
-        <translation>Prom. tarjetas/sesión</translation>
     </message>
     <message>
         <source>Recent Sessions</source>
@@ -191,8 +187,80 @@
         <source>%1 cards created</source>
         <translation>%1 tarjetas creadas</translation>
     </message>
+    <message>
+        <source>Reached</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>AnkiConnectHelp</name>
+    <message>
+        <source>Open Anki.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>In Anki choose Tools → Add-ons → Get Add-ons…, paste the code %1, and click OK.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restart Anki.</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>AnkiConnectPage</name>
+    <message>
+        <source>Open Anki</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This page connects by itself.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Open the AnkiConnect add-on page</source>
+        <translation>Abrir la página del complemento AnkiConnect</translation>
+    </message>
+    <message>
+        <source>Use a different address…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>AnkiConnect URL:</source>
+        <translation>URL de AnkiConnect:</translation>
+    </message>
+    <message>
+        <source>Enter an AnkiConnect URL.</source>
+        <translation>Introduzca una URL de AnkiConnect.</translation>
+    </message>
+    <message>
+        <source>Checking the connection to Anki…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Connected to Anki.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki Miner can't reach Anki yet. Do this once:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Copied</source>
+        <translation>Copiado</translation>
+    </message>
+    <message>
+        <source>Copy code</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Starting Anki…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki did not start. Open it yourself.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>AnkiPage</name>
     <message>
         <source>Connect to Anki</source>
         <translation>Conectar con Anki</translation>
@@ -201,39 +269,27 @@
         <source>Anki Miner talks to Anki through the AnkiConnect add-on.</source>
         <translation>Anki Miner se comunica con Anki a través del complemento AnkiConnect.</translation>
     </message>
-    <message>
-        <source>In Anki: Tools → Add-ons → Get Add-ons…, paste the code &lt;b&gt;%1&lt;/b&gt;, then restart Anki.</source>
-        <translation>En Anki: Herramientas → Complementos → Obtener complementos…, pegue el código &lt;b&gt;%1&lt;/b&gt; y luego reinicie Anki.</translation>
-    </message>
-    <message>
-        <source>Open the AnkiConnect add-on page</source>
-        <translation>Abrir la página del complemento AnkiConnect</translation>
-    </message>
-    <message>
-        <source>AnkiConnect URL:</source>
-        <translation>URL de AnkiConnect:</translation>
-    </message>
-    <message>
-        <source>Recheck</source>
-        <translation>Volver a comprobar</translation>
-    </message>
-    <message>
-        <source>Enter an AnkiConnect URL.</source>
-        <translation>Introduzca una URL de AnkiConnect.</translation>
-    </message>
-    <message>
-        <source>Checking connection...</source>
-        <translation>Comprobando conexión...</translation>
-    </message>
 </context><context>
     <name>AnkiProbeController</name>
     <message>
-        <source>Select a note type before fetching fields</source>
-        <translation>Seleccione un tipo de nota antes de obtener los campos</translation>
+        <source>Select a note type first.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>The Anki field mapping is not usable: %1</source>
         <translation>La asignación de campos de Anki no es utilizable: %1</translation>
+    </message>
+    <message>
+        <source>Reading the note type's fields…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not fetch fields. Is Anki running and the note type spelled right?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 recognised: %2 fields filled.</source>
+        <translation type="unfinished" />
     </message>
     <message numerus="yes">
         <source>Fetched %n field(s) and auto-mapped them</source>
@@ -266,23 +322,8 @@
         <translation>No se pudo leer la lista de mazos de Anki.</translation>
     </message>
     <message>
-        <source>Loading decks from Anki…</source>
-        <translation>Cargando mazos de Anki…</translation>
-    </message>
-    <message>
-        <source>Loading note types from Anki…</source>
-        <translation>Cargando tipos de nota de Anki…</translation>
-    </message>
-    <message>
         <source>Could not load decks. Is Anki running with AnkiConnect?</source>
         <translation>No se pudieron cargar los mazos. ¿Se está ejecutando Anki con AnkiConnect?</translation>
-    </message>
-    <message numerus="yes">
-        <source>%n deck(s) loaded</source>
-        <translation>
-            <numerusform>%n mazo cargado</numerusform>
-            <numerusform>%n mazos cargados</numerusform>
-        </translation>
     </message>
     <message>
         <source>Deck '%1' is not in Anki — pick one below.</source>
@@ -509,12 +550,28 @@
         <translation>Tarjetas y Anki</translation>
     </message>
     <message>
-        <source>AnkiConnect URL</source>
-        <translation>URL de AnkiConnect</translation>
+        <source>Select a deck…</source>
+        <translation>Seleccionar un mazo…</translation>
     </message>
     <message>
-        <source>Default http://127.0.0.1:8765. Change if AnkiConnect uses a different port.</source>
-        <translation>Predeterminado: http://127.0.0.1:8765. Cámbielo si AnkiConnect usa otro puerto.</translation>
+        <source>Deck Name</source>
+        <translation>Nombre del mazo</translation>
+    </message>
+    <message>
+        <source>Target deck for new cards.</source>
+        <translation>Mazo de destino para las tarjetas nuevas.</translation>
+    </message>
+    <message>
+        <source>Select a note type…</source>
+        <translation>Seleccionar un tipo de nota…</translation>
+    </message>
+    <message>
+        <source>Note Type</source>
+        <translation>Tipo de nota</translation>
+    </message>
+    <message>
+        <source>Anki note type whose fields you'll map below.</source>
+        <translation>Tipo de nota de Anki cuyos campos asignará a continuación.</translation>
     </message>
     <message>
         <source>Card tags</source>
@@ -525,72 +582,32 @@
         <translation>Etiquetas separadas por espacios aplicadas a cada tarjeta minada. Deje en blanco para no usar etiquetas.</translation>
     </message>
     <message>
-        <source>Test Connection</source>
-        <translation>Probar conexión</translation>
+        <source>Refresh</source>
+        <translation>Actualizar</translation>
     </message>
     <message>
-        <source>Anki must be running with AnkiConnect installed.</source>
-        <translation>Anki debe estar en ejecución con AnkiConnect instalado.</translation>
+        <source>Check the connection to Anki again and reload the deck and note type lists. Anki must be running with AnkiConnect installed.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Deck Name</source>
-        <translation>Nombre del mazo</translation>
+        <source>Anki</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Select a deck…</source>
-        <translation>Seleccionar un mazo…</translation>
+        <source>AnkiConnect URL</source>
+        <translation>URL de AnkiConnect</translation>
     </message>
     <message>
-        <source>Reload the deck list from Anki</source>
-        <translation>Recargar la lista de mazos desde Anki</translation>
+        <source>Default http://127.0.0.1:8765. Change if AnkiConnect uses a different port.</source>
+        <translation>Predeterminado: http://127.0.0.1:8765. Cámbielo si AnkiConnect usa otro puerto.</translation>
     </message>
     <message>
-        <source>Target deck for new cards.</source>
-        <translation>Mazo de destino para las tarjetas nuevas.</translation>
+        <source>Fill in automatically</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Note Type</source>
-        <translation>Tipo de nota</translation>
-    </message>
-    <message>
-        <source>Select a note type…</source>
-        <translation>Seleccionar un tipo de nota…</translation>
-    </message>
-    <message>
-        <source>Reload the note type list from Anki</source>
-        <translation>Recargar la lista de tipos de nota desde Anki</translation>
-    </message>
-    <message>
-        <source>Anki note type whose fields you'll map below.</source>
-        <translation>Tipo de nota de Anki cuyos campos asignará a continuación.</translation>
-    </message>
-    <message>
-        <source>Preset</source>
-        <translation>Preajuste</translation>
-    </message>
-    <message>
-        <source>Select a preset…</source>
-        <translation>Seleccionar un preajuste…</translation>
-    </message>
-    <message>
-        <source>Apply</source>
-        <translation>Aplicar</translation>
-    </message>
-    <message>
-        <source>Fill every mapping below from this note type's published field names</source>
-        <translation>Complete todos los campos de abajo a partir de los nombres de campo publicados de este tipo de nota</translation>
-    </message>
-    <message>
-        <source>Lapis, Kiku and Senren ship fixed field names. Applying overwrites the mappings below.</source>
-        <translation>Lapis, Kiku y Senren usan nombres de campo fijos. Aplicar sobrescribe las asignaciones de abajo.</translation>
-    </message>
-    <message>
-        <source>Auto-Map Fields from Note Type</source>
-        <translation>Asignar campos automáticamente desde el tipo de nota</translation>
-    </message>
-    <message>
-        <source>Query AnkiConnect for this note type's fields and fill the mappings below automatically.</source>
-        <translation>Consultar a AnkiConnect los campos de este tipo de nota y rellenar las asignaciones siguientes automáticamente.</translation>
+        <source>Read this note type's fields from Anki and fill every mapping below. Lapis, Kiku and Senren are recognised and filled completely.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Card Field Mappings</source>
@@ -681,8 +698,8 @@
         <translation>Colorea cada sílaba de la lectura según su tono.</translation>
     </message>
     <message>
-        <source>Auxiliary Data Fields</source>
-        <translation>Campos de datos auxiliares</translation>
+        <source>Extra Fields</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Pitch fields need a source in Settings → Pitch Accent. Blank = skip.</source>
@@ -829,10 +846,6 @@
         <translation>Añade tarjetas a Anki en el orden en que las palabras aparecen en el medio, en lugar del orden en que su medio terminó de extraerse. Anula el orden de inclusión forzada de la lista blanca y cualquier orden de columna en el Curador de palabras.</translation>
     </message>
     <message>
-        <source>Refresh</source>
-        <translation>Actualizar</translation>
-    </message>
-    <message>
         <source>Connected</source>
         <translation>Conectado</translation>
     </message>
@@ -865,28 +878,16 @@
         <translation>Estado de conexión desconocido</translation>
     </message>
     <message>
-        <source>Deck exists</source>
-        <translation>El mazo existe</translation>
+        <source>Anki isn't reachable. Start Anki (with AnkiConnect) and press Refresh.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Deck not found</source>
         <translation>Mazo no encontrado</translation>
     </message>
     <message>
-        <source>Note type exists</source>
-        <translation>El tipo de nota existe</translation>
-    </message>
-    <message>
         <source>Note type not found</source>
         <translation>Tipo de nota no encontrado</translation>
-    </message>
-    <message>
-        <source>Pick a preset first.</source>
-        <translation>Elija primero un preajuste.</translation>
-    </message>
-    <message>
-        <source>Applied %1 — %2 field mappings, romaji pitch categories.</source>
-        <translation>Se aplicó %1 — %2 asignaciones de campo, categorías de acento tonal en rōmaji.</translation>
     </message>
 </context><context>
     <name>App</name>
@@ -1259,6 +1260,10 @@ Formatos admitidos: AJT (index.json + media/), NHK16 (entries.json + audio/), Fo
         <translation>Más acciones</translation>
     </message>
     <message>
+        <source>No word audio sources yet.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Audio Pack…</source>
         <translation>Paquete de audio…</translation>
     </message>
@@ -1409,8 +1414,8 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Detenido: %1 con éxito, %2 fallidos.</translation>
     </message>
     <message>
-        <source>Audio queue</source>
-        <translation>Cola de audio</translation>
+        <source>Audiobook mining</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Attempt %1 of %2 · retrying in %3s</source>
@@ -1461,8 +1466,8 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Completado — %1 con éxito, %2 con error</translation>
     </message>
     <message>
-        <source>Mine every queued item into Anki cards.</source>
-        <translation>Minar cada elemento en cola en tarjetas de Anki.</translation>
+        <source>Mine the picked pair and every Ready item in the queue.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Clear</source>
@@ -1475,10 +1480,6 @@ No se elimina ningún archivo de índice.</translation>
     <message>
         <source>Cancel the active run.</source>
         <translation>Cancelar la ejecución activa.</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>Progreso</translation>
     </message>
     <message>
         <source>audiobooks</source>
@@ -1509,8 +1510,8 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Agregar el par de audio + subtítulos a la cola.</translation>
     </message>
     <message>
-        <source>Pick an audio file and its subtitle above, then click Add.</source>
-        <translation>Selecciona arriba un archivo de audio y sus subtítulos, luego haz clic en Agregar.</translation>
+        <source>Pick an audio file and its subtitle, then Mine. Use Add to queue several.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Review words before mining</source>
@@ -1525,16 +1526,20 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Elija primero un archivo de audio.</translation>
     </message>
     <message>
-        <source>Audio file not found: %1</source>
-        <translation>Archivo de audio no encontrado: %1</translation>
+        <source>That audio file no longer exists.</source>
+        <translation>Ese archivo de audio ya no existe.</translation>
     </message>
     <message>
         <source>Choose a subtitle file first.</source>
         <translation>Elija primero un archivo de subtítulos.</translation>
     </message>
     <message>
-        <source>Subtitle file not found: %1</source>
-        <translation>Archivo de subtítulos no encontrado: %1</translation>
+        <source>That subtitle file no longer exists.</source>
+        <translation>Ese archivo de subtítulos ya no existe.</translation>
+    </message>
+    <message>
+        <source>Pick an audio file and its subtitle, then Mine.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>File not found: %1</source>
@@ -1577,14 +1582,6 @@ No se elimina ningún archivo de índice.</translation>
     <message>
         <source>Pick which words get cards, once per series.</source>
         <translation>Elija qué palabras obtienen tarjetas, una vez por serie.</translation>
-    </message>
-    <message>
-        <source>Overall Progress</source>
-        <translation>Progreso general</translation>
-    </message>
-    <message>
-        <source>Retry Failed</source>
-        <translation>Reintentar fallidos</translation>
     </message>
     <message>
         <source>Add Series</source>
@@ -1698,10 +1695,6 @@ No se elimina ningún archivo de índice.</translation>
         <source>Interrupted when Anki Miner closed</source>
         <translation>Interrumpido al cerrar Anki Miner</translation>
     </message>
-    <message>
-        <source>Retrying %1 failed items...</source>
-        <translation>Reintentando %1 elementos fallidos...</translation>
-    </message>
 </context><context>
     <name>BatchQueueWorkerThread</name>
     <message>
@@ -1764,6 +1757,10 @@ No se elimina ningún archivo de índice.</translation>
     <message>
         <source>Some audio files could not be synced.</source>
         <translation>Algunos archivos de audio no se pudieron sincronizar.</translation>
+    </message>
+    <message>
+        <source>This audio file could not be synced.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Complete — %1 file(s) synced</source>
@@ -1850,10 +1847,6 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Salida</translation>
     </message>
     <message>
-        <source>Each .srt is saved next to its audio file unless you choose a folder.</source>
-        <translation>Cada .srt se guarda junto a su archivo de audio, a menos que elija una carpeta.</translation>
-    </message>
-    <message>
         <source>Output:</source>
         <translation>Salida:</translation>
     </message>
@@ -1864,6 +1857,10 @@ No se elimina ningún archivo de índice.</translation>
     <message>
         <source>Reset</source>
         <translation>Restablecer</translation>
+    </message>
+    <message>
+        <source>Each .srt is saved next to its audio file unless you choose a folder.</source>
+        <translation>Cada .srt se guarda junto a su archivo de audio, a menos que elija una carpeta.</translation>
     </message>
     <message>
         <source>Overwrite existing SRT files</source>
@@ -2202,12 +2199,20 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Limite la duración máxima del vídeo y cuántos vídeos de una lista de reproducción se obtienen.</translation>
     </message>
     <message>
+        <source>Align YouTube captions to the audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Retime YouTube's own captions against the video's audio before mining.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Keep yt-dlp up to date</source>
         <translation>Mantener yt-dlp actualizado</translation>
     </message>
     <message>
-        <source>Keep the yt-dlp downloader up to date, update it on demand, or point at your own binary.</source>
-        <translation>Mantenga actualizado el descargador yt-dlp, actualícelo cuando quiera o apunte a su propio ejecutable.</translation>
+        <source>Keep the yt-dlp downloader up to date, or update it on demand.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Mine another language</source>
@@ -2262,8 +2267,8 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Excluir palabras solo en kana</translation>
     </message>
     <message>
-        <source>Drop words written without kanji; ticking both boxes leaves a kanji-only deck.</source>
-        <translation>Descarte palabras escritas sin kanji; marcar ambas casillas deja un mazo solo con kanji.</translation>
+        <source>Drop words written without kanji; “Skip all kana-only words” leaves a kanji-only deck.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -2418,20 +2423,12 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Instale aceleración CUDA o Vulkan y el paquete de omisión de silencios para el modelo Whisper local.</translation>
     </message>
     <message>
-        <source>Set the alass binary (subtitle alignment)</source>
-        <translation>Establecer el binario de alass (alineación de subtítulos)</translation>
+        <source>Set up alass (subtitle alignment)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Point alass, the subtitle re-timing tool, at a specific executable, or download it in-app (Linux/Windows; macOS installs it with Homebrew).</source>
-        <translation>Configure la ruta de un ejecutable concreto de alass, la herramienta de reajuste de tiempo de subtítulos, o descárguelo desde la aplicación (Linux/Windows; en macOS se instala con Homebrew).</translation>
-    </message>
-    <message>
-        <source>Export / import resources</source>
-        <translation>Exportar / importar recursos</translation>
-    </message>
-    <message>
-        <source>Pack this language's dictionaries, frequency and pitch lists, ignore list and word lists into one file, and install them on another machine -- Export or Import, then Resources, in the Settings footer.</source>
-        <translation>Empaquete los diccionarios, las listas de frecuencia y de acento tonal, la lista de ignorados y las listas de palabras de este idioma en un solo archivo, e instálelos en otro equipo — Exportar o Importar y luego Recursos, en la parte inferior de Ajustes.</translation>
+        <source>Download alass, the subtitle re-timing tool, in-app on Linux and Windows; on macOS install it with Homebrew and point Anki Miner at it.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word pronunciation audio</source>
@@ -2496,14 +2493,6 @@ No se elimina ningún archivo de índice.</translation>
     <message>
         <source>Add padding or an offset so audio and screenshots line up with the dialogue.</source>
         <translation>Agrega relleno o un desfase para que el audio y las capturas de pantalla coincidan con el diálogo.</translation>
-    </message>
-    <message>
-        <source>Tune parallel media workers</source>
-        <translation>Ajustar los procesos paralelos de medios</translation>
-    </message>
-    <message>
-        <source>Choose how many media-extraction jobs run at once to trade speed against CPU and memory use.</source>
-        <translation>Elija cuántos trabajos de extracción de medios se ejecutan a la vez para equilibrar velocidad con uso de CPU y memoria.</translation>
     </message>
     <message>
         <source>Map data to your note fields</source>
@@ -2574,16 +2563,16 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Conectar con Anki (AnkiConnect)</translation>
     </message>
     <message>
-        <source>Set the AnkiConnect address and test the connection to your running Anki.</source>
-        <translation>Configure la dirección de AnkiConnect y pruebe la conexión con su Anki en ejecución.</translation>
+        <source>Set the AnkiConnect address; Refresh re-checks the connection to your running Anki.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>One-click note-type presets</source>
-        <translation>Preajustes de tipo de nota con un clic</translation>
+        <source>Fill in field mappings automatically</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Apply a preset for a popular note type (Lapis, Kiku, Senren) that fills every field mapping for you.</source>
-        <translation>Aplique un preajuste para un tipo de nota popular (Lapis, Kiku, Senren) que completa todas las asignaciones de campo por usted.</translation>
+        <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku and Senren are recognised and filled completely.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Bold the mined word in the sentence</source>
@@ -2610,14 +2599,6 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Cambia la interfaz a otro idioma.</translation>
     </message>
     <message>
-        <source>Settings profiles</source>
-        <translation>Perfiles de ajustes</translation>
-    </message>
-    <message>
-        <source>Keep several named snapshots of every setting and switch between them from the Settings footer.</source>
-        <translation>Mantenga varias instantáneas con nombre de toda la configuración y cambie entre ellas desde el pie de página de Ajustes.</translation>
-    </message>
-    <message>
         <source>Install custom themes</source>
         <translation>Instalar temas personalizados</translation>
     </message>
@@ -2640,14 +2621,6 @@ No se elimina ningún archivo de índice.</translation>
     <message>
         <source>Type in the search box at the top of Settings to jump straight to any control.</source>
         <translation>Escriba en el cuadro de búsqueda en la parte superior de Ajustes para ir directamente a cualquier control.</translation>
-    </message>
-    <message>
-        <source>Export / import settings</source>
-        <translation>Exportar / importar ajustes</translation>
-    </message>
-    <message>
-        <source>Save every setting to a portable file, load it on another machine, or reset everything to defaults -- from the Settings footer.</source>
-        <translation>Guarde toda la configuración en un archivo portátil, cárguelo en otra máquina o restablezca todo a los valores por defecto — desde el pie de página de Ajustes.</translation>
     </message>
     <message>
         <source>Check for app updates</source>
@@ -2694,16 +2667,16 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Comprobación del estado del sistema</translation>
     </message>
     <message>
-        <source>See whether Anki, ffmpeg and your resources are ready, with one-click fixes -- open it from the status-bar badge.</source>
-        <translation>Vea si Anki, ffmpeg y sus recursos están listos, con soluciones de un clic — ábralo desde la insignia de la barra de estado.</translation>
+        <source>See whether Anki, ffmpeg and your resources are ready, with one-click fixes -- open it from Tools → System Health… or the status-bar badges.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Setup wizard</source>
         <translation>Asistente de configuración</translation>
     </message>
     <message>
-        <source>Re-run the guided first-time setup -- theme, Anki connection, deck, note type and resources -- from the Tools menu.</source>
-        <translation>Vuelva a ejecutar la configuración guiada inicial — tema, conexión con Anki, mazo, tipo de nota y recursos — desde el menú Herramientas.</translation>
+        <source>Re-run the guided first-time setup -- dictionary, Anki connection, deck and note type -- from the Tools menu.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Download recommended resources</source>
@@ -2750,8 +2723,8 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Deshacer una ejecución de minería</translation>
     </message>
     <message>
-        <source>Delete the notes a run just created, straight from the results dialog.</source>
-        <translation>Elimine las notas que acaba de crear una ejecución, directamente desde el diálogo de resultados.</translation>
+        <source>Delete the cards a run just created: press View details on the run's result line, then Undo.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Keyboard shortcuts</source>
@@ -2762,8 +2735,40 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Vea y cambie todos los atajos de teclado: las teclas del Curador de palabras y las de toda la aplicación para Ajustes, esta guía y cada pestaña.</translation>
     </message>
     <message>
+        <source>Export / import resources</source>
+        <translation>Exportar / importar recursos</translation>
+    </message>
+    <message>
+        <source>Pack this language's dictionaries, frequency and pitch lists, ignore list and word lists into one file, and install them on another machine: Tools → Export Resources… and Import Resources….</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Settings profiles</source>
+        <translation>Perfiles de ajustes</translation>
+    </message>
+    <message>
+        <source>Keep several named snapshots of every setting and switch between them from the profile menu at the top of the window (Manage profiles…).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export / import settings</source>
+        <translation>Exportar / importar ajustes</translation>
+    </message>
+    <message>
+        <source>Save every setting to a portable file, load it on another machine, or reset everything to defaults: Manage profiles…, under This profile.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Anki Miner Usage Guide</source>
         <translation>Guía de uso de Anki Miner</translation>
+    </message>
+    <message>
+        <source>Usage Guide</source>
+        <translation>Guía de uso</translation>
+    </message>
+    <message>
+        <source>Everything Anki Miner can do, and where to find it.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Search features, e.g. "i+1", "pitch", "youtube"</source>
@@ -2774,8 +2779,12 @@ No se elimina ningún archivo de índice.</translation>
         <translation>No hay funciones coincidentes.</translation>
     </message>
     <message>
-        <source>Open ▸</source>
-        <translation>Abrir ▸</translation>
+        <source>Open</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Cerrar</translation>
     </message>
 </context><context>
     <name>CardBackfillTab</name>
@@ -2800,8 +2809,12 @@ No se elimina ningún archivo de índice.</translation>
         <translation>No se pudieron obtener los nombres de los mazos de Anki — se analizarán todos los mazos.</translation>
     </message>
     <message>
-        <source>Card Backfill</source>
-        <translation>Completar tarjetas</translation>
+        <source>Card Backfill could not finish.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Deck</source>
+        <translation>Mazo</translation>
     </message>
     <message>
         <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries, frequency sources and pitch data.</source>
@@ -2876,6 +2889,10 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Cancelar</translation>
     </message>
     <message>
+        <source>Preview</source>
+        <translation>Vista previa</translation>
+    </message>
+    <message>
         <source>Expression</source>
         <translation>Expresión</translation>
     </message>
@@ -2931,13 +2948,23 @@ No se elimina ningún archivo de índice.</translation>
         <source>No notes matched — note type "{note_type}". Check Settings → Cards &amp; Anki.</source>
         <translation>No coincidió ninguna nota — tipo de nota "{note_type}". Compruebe Ajustes → Tarjetas y Anki.</translation>
     </message>
-    <message>
-        <source>{fields} field(s) across {notes} note(s) will be filled.</source>
-        <translation>Número de campos que se rellenarán: {fields}. Número de notas afectadas: {notes}.</translation>
+    <message numerus="yes">
+        <source>%n field(s) across %1 will be filled.</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
-    <message>
-        <source>Showing first {rows} rows.</source>
-        <translation>Se muestran las primeras {rows} filas.</translation>
+    <message numerus="yes">
+        <source>%n note(s)</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Showing first %n row(s).</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
     <message>
         <source>No new values were found for the selected fields.</source>
@@ -2951,13 +2978,17 @@ No se elimina ningún archivo de índice.</translation>
         <source>Nothing to overwrite — the existing pitch was kept.</source>
         <translation>Nada que sobrescribir — se conservó el acento tonal existente.</translation>
     </message>
-    <message>
-        <source>{count} field value(s) already up to date.</source>
-        <translation>{count} valor(es) de campo ya actualizado(s).</translation>
+    <message numerus="yes">
+        <source>%n field value(s) already up to date.</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
-    <message>
-        <source>{count} pitch field(s) kept — the reading was guessed, so the accent could be the wrong homograph's. Map an Expression Reading or Furigana field to overwrite them.</source>
-        <translation>Se conservaron {count} campo(s) de acento tonal — la lectura fue adivinada, por lo que el acento podría ser del homógrafo equivocado. Asigne un campo de lectura de expresión o furigana para sobrescribirlos.</translation>
+    <message numerus="yes">
+        <source>%n pitch field(s) kept — the reading was guessed, so the accent could be the wrong homograph's. Map an Expression Reading or Furigana field to overwrite them.</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
     <message>
         <source>These fields are not on the note type: {fields}. Fix them in Settings → Cards &amp; Anki.</source>
@@ -2967,49 +2998,65 @@ No se elimina ningún archivo de índice.</translation>
         <source>Skipped (resource not loaded): {fields}.</source>
         <translation>Omitidos (recurso no cargado): {fields}.</translation>
     </message>
-    <message>
-        <source>{count} note(s) skipped — empty Expression field.</source>
-        <translation>Número de notas omitidas por tener vacío el campo Expresión: {count}.</translation>
+    <message numerus="yes">
+        <source>%n note(s) skipped — empty Expression field.</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
     <message>
         <source>Update notes in Anki?</source>
         <translation>¿Actualizar notas en Anki?</translation>
     </message>
-    <message>
+    <message numerus="yes">
         <source>Close Anki's card browser and note editors first.
 
-This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continue?</source>
-        <translation>Cierre primero el explorador de tarjetas y los editores de notas de Anki.
-
-Número de notas que se modificarán: {notes}. Número de campos que se modificarán: {fields}. Etiqueta que se asignará: {tag}. ¿Desea continuar?</translation>
+This will modify %n note(s) (%1) and tag them %2. Continue?</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n field(s)</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
     <message>
         <source>Card backfill</source>
         <translation>Relleno de tarjetas</translation>
     </message>
-    <message>
-        <source>Filled {fields} field(s) on {notes} note(s).</source>
-        <translation>Se completaron {fields} campo(s) en {notes} nota(s).</translation>
+    <message numerus="yes">
+        <source>Filled %n field(s) on %1.</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
     <message>
         <source>Tagged {tag}.</source>
         <translation>Se etiquetó {tag}.</translation>
     </message>
-    <message>
-        <source>{count} skipped — changed or deleted since the scan.</source>
-        <translation>Número de notas omitidas por haberse modificado o eliminado desde el análisis: {count}.</translation>
+    <message numerus="yes">
+        <source>%n skipped — changed or deleted since the scan.</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
     <message>
         <source>Tagging failed for some notes (see log).</source>
         <translation>No se pudieron etiquetar algunas notas (consulte el registro).</translation>
     </message>
-    <message>
-        <source>{count} note update(s) were not confirmed by Anki; scan again to retry.</source>
-        <translation>{count} actualización(es) de nota no fueron confirmadas por Anki; vuelva a analizar para reintentar.</translation>
+    <message numerus="yes">
+        <source>%n note update(s) were not confirmed by Anki; scan again to retry.</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
-    <message>
-        <source>{count} audio file(s) could not be added to Anki; scan again to retry.</source>
-        <translation>No se pudieron añadir {count} archivo(s) de audio a Anki; vuelve a analizar para reintentarlo.</translation>
+    <message numerus="yes">
+        <source>%n audio file(s) could not be added to Anki; scan again to retry.</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
 </context><context>
     <name>CondenseMetadataDialog</name>
@@ -3104,6 +3151,10 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
         <translation>No se pudieron condensar algunos archivos.</translation>
     </message>
     <message>
+        <source>This file could not be condensed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Complete — %1 files processed</source>
         <translation>Completado — %1 archivos procesados</translation>
     </message>
@@ -3128,6 +3179,14 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
         <translation>Condensación de audio</translation>
     </message>
     <message>
+        <source>This ffmpeg build cannot condense audio. Install a different ffmpeg build.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This ffmpeg build cannot write the chosen format. Pick another format, or install a different ffmpeg build.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Input</source>
         <translation>Entrada</translation>
     </message>
@@ -3138,6 +3197,22 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
     <message>
         <source>Condense a video or audio file down to just its spoken dialogue.</source>
         <translation>Condensar un archivo de video o audio para dejar solo su diálogo hablado.</translation>
+    </message>
+    <message>
+        <source>Media File:</source>
+        <translation>Archivo multimedia:</translation>
+    </message>
+    <message>
+        <source>Subtitle File:</source>
+        <translation>Archivo de subtítulos:</translation>
+    </message>
+    <message>
+        <source>Media Folder:</source>
+        <translation>Carpeta multimedia:</translation>
+    </message>
+    <message>
+        <source>Subtitle Folder:</source>
+        <translation>Carpeta de subtítulos:</translation>
     </message>
     <message>
         <source>Mode:</source>
@@ -3160,60 +3235,32 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
         <translation>Condensar todos los archivos multimedia de una carpeta seleccionada.</translation>
     </message>
     <message>
-        <source>Media File:</source>
-        <translation>Archivo multimedia:</translation>
-    </message>
-    <message>
         <source>This field takes a video or audio file.</source>
         <translation>Este campo admite un archivo de vídeo o audio.</translation>
     </message>
     <message>
-        <source>Subtitle File:</source>
-        <translation>Archivo de subtítulos:</translation>
+        <source>Audio track…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle track…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Tracks…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose which audio or embedded subtitle track to condense.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Optional — found automatically</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>This field takes a subtitle file.</source>
         <translation>Este campo admite un archivo de subtítulos.</translation>
-    </message>
-    <message>
-        <source>Leave empty to auto-detect (sibling file or embedded track).</source>
-        <translation>Déjelo vacío para la detección automática (archivo adyacente o pista integrada).</translation>
-    </message>
-    <message>
-        <source>Audio track:</source>
-        <translation>Pista de audio:</translation>
-    </message>
-    <message>
-        <source>Auto-detect</source>
-        <translation>Detección automática</translation>
-    </message>
-    <message>
-        <source>Choose…</source>
-        <translation>Elegir…</translation>
-    </message>
-    <message>
-        <source>Choose which audio track to condense.</source>
-        <translation>Elija qué pista de audio condensar.</translation>
-    </message>
-    <message>
-        <source>Subtitle track:</source>
-        <translation>Pista de subtítulos:</translation>
-    </message>
-    <message>
-        <source>Auto (external file, else embedded)</source>
-        <translation>Automático (archivo externo; si no, integrado)</translation>
-    </message>
-    <message>
-        <source>Choose which embedded subtitle track to condense against.</source>
-        <translation>Elija con qué pista de subtítulos integrada condensar.</translation>
-    </message>
-    <message>
-        <source>Media Folder:</source>
-        <translation>Carpeta multimedia:</translation>
-    </message>
-    <message>
-        <source>Subtitle Folder:</source>
-        <translation>Carpeta de subtítulos:</translation>
     </message>
     <message>
         <source>Optional. When set, media is paired to subtitles by episode number; otherwise each file auto-detects.</source>
@@ -3236,12 +3283,16 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
         <translation>Silencio conservado a cada lado de cada línea de diálogo antes de fusionar.</translation>
     </message>
     <message>
-        <source>Offset:</source>
-        <translation>Desfase:</translation>
+        <source>Subtitle offset:</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Shift every subtitle cue by this amount before condensing.</source>
-        <translation>Desplazar cada señal de subtítulo esta cantidad antes de condensar.</translation>
+        <source> seconds</source>
+        <translation> segundos</translation>
+    </message>
+    <message>
+        <source>Adjust subtitle timing (positive = later, negative = earlier)</source>
+        <translation>Ajustar la sincronización de los subtítulos (positivo = más tarde, negativo = más temprano)</translation>
     </message>
     <message>
         <source>Format:</source>
@@ -3304,6 +3355,14 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
         <translation>Condensar audio</translation>
     </message>
     <message>
+        <source>Audio: track %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitles: embedded track %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Choose a media file first.</source>
         <translation>Elija primero un archivo multimedia.</translation>
     </message>
@@ -3318,10 +3377,6 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
     <message>
         <source>This file has no audio tracks.</source>
         <translation>Este archivo no tiene pistas de audio.</translation>
-    </message>
-    <message>
-        <source>Track %1</source>
-        <translation>Pista %1</translation>
     </message>
     <message>
         <source>Audio tracks could not be read.</source>
@@ -3501,11 +3556,19 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
         <source>%1 (%2 of %3)</source>
         <translation>%1 (%2 de %3)</translation>
     </message>
+    <message>
+        <source>%1 of %2 · %3 done</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>DeckBuilderTab</name>
     <message>
-        <source>Progress</source>
-        <translation>Progreso</translation>
+        <source>Review words before mining</source>
+        <translation>Revisar palabras antes de minar</translation>
+    </message>
+    <message>
+        <source>Pick which words get cards, once per series.</source>
+        <translation>Elija qué palabras obtienen tarjetas, una vez por serie.</translation>
     </message>
     <message>
         <source>deck</source>
@@ -3532,8 +3595,8 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
         <translation>Cancelar</translation>
     </message>
     <message>
-        <source>Input</source>
-        <translation>Entrada</translation>
+        <source>Season folders</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Video Folder:</source>
@@ -3616,14 +3679,6 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
         <translation>Marcado: omite sus palabras conocidas; desmarcado: mina todas las palabras.</translation>
     </message>
     <message>
-        <source>Review words before mining</source>
-        <translation>Revisar palabras antes de minar</translation>
-    </message>
-    <message>
-        <source>Pick which words get cards, once per series.</source>
-        <translation>Elija qué palabras obtienen tarjetas, una vez por serie.</translation>
-    </message>
-    <message>
         <source>Results</source>
         <translation>Resultados</translation>
     </message>
@@ -3632,28 +3687,28 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
         <translation>Palabras seleccionadas que no recibirán tarjeta en esta ejecución: ya están en su colección o no tienen ninguna oración para minar.</translation>
     </message>
     <message>
-        <source>Total tokens:</source>
-        <translation>Total de tokens:</translation>
-    </message>
-    <message>
-        <source>Unique lemmas:</source>
-        <translation>Lemas únicos:</translation>
-    </message>
-    <message>
-        <source>Candidate words:</source>
-        <translation>Palabras candidatas:</translation>
+        <source>Cards to create:</source>
+        <translation>Tarjetas a crear:</translation>
     </message>
     <message>
         <source>Projected coverage:</source>
         <translation>Cobertura proyectada:</translation>
     </message>
     <message>
+        <source>Candidate words:</source>
+        <translation>Palabras candidatas:</translation>
+    </message>
+    <message>
         <source>Already known (skipped):</source>
         <translation>Ya conocidas (omitidas):</translation>
     </message>
     <message>
-        <source>Cards to create:</source>
-        <translation>Tarjetas a crear:</translation>
+        <source>Words in the season:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Different words:</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Choose existing video and subtitle folders.</source>
@@ -3739,8 +3794,12 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
         <translation>No se pudieron obtener los nombres de mazos de Anki — ¿está Anki en ejecución?</translation>
     </message>
     <message>
-        <source>Deck Filter</source>
-        <translation>Filtro de mazos</translation>
+        <source>Deck Filter could not finish.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Deck</source>
+        <translation>Mazo</translation>
     </message>
     <message>
         <source>Copy the worth-learning part of a premade deck into a new deck. Filters come from Settings → Word Filters; the source deck is not modified.</source>
@@ -3779,12 +3838,20 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
         <translation>Nombre del mazo filtrado</translation>
     </message>
     <message>
+        <source>Filters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Scan deck (read-only)</source>
         <translation>Analizar mazo (solo lectura)</translation>
     </message>
     <message>
         <source>Cancel</source>
         <translation>Cancelar</translation>
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation>Vista previa</translation>
     </message>
     <message>
         <source>Expression</source>
@@ -3846,9 +3913,15 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
         <source>The selected deck has no notes.</source>
         <translation>El mazo seleccionado no tiene notas.</translation>
     </message>
+    <message numerus="yes">
+        <source>%n note(s) in the deck.</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
+    </message>
     <message>
-        <source>{count} note(s) in the deck.</source>
-        <translation>{count} nota(s) en el mazo.</translation>
+        <source>The deck could not be read.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Pick the source deck first.</source>
@@ -3906,55 +3979,67 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
         <source>No notes found in deck "{deck}".</source>
         <translation>No se encontraron notas en el mazo "{deck}".</translation>
     </message>
-    <message>
-        <source>{kept} of {scanned} note(s) will be copied.</source>
-        <translation>Se copiarán {kept} de {scanned} nota(s).</translation>
+    <message numerus="yes">
+        <source>%1 of %n note(s) will be copied.</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
     <message>
         <source>Dropped — {reasons}.</source>
         <translation>Descartada — {reasons}.</translation>
     </message>
-    <message>
-        <source>{count} kept by whitelist.</source>
-        <translation>{count} conservada(s) por la lista blanca.</translation>
+    <message numerus="yes">
+        <source>%n kept by whitelist.</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
-    <message>
-        <source>Showing first {rows} rows.</source>
-        <translation>Se muestran las primeras {rows} filas.</translation>
+    <message numerus="yes">
+        <source>Showing first %n row(s).</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
     <message>
         <source>Copy notes to a new deck?</source>
         <translation>¿Copiar notas a un mazo nuevo?</translation>
     </message>
-    <message>
-        <source>This will create deck "{deck}" and copy {notes} note(s) into it, tagged {tag}. The source deck is not modified. Continue?</source>
-        <translation>Esto creará el mazo "{deck}" y copiará en él {notes} nota(s), etiquetadas {tag}. El mazo de origen no se modifica. ¿Continuar?</translation>
+    <message numerus="yes">
+        <source>This will create deck "%1" and copy %n note(s) into it, tagged %2. The source deck is not modified. Continue?</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
     <message>
         <source>Deck filter copy</source>
         <translation>Copia del filtro de mazos</translation>
     </message>
-    <message>
-        <source>Copied {count} note(s) into "{deck}".</source>
-        <translation>Se copiaron {count} nota(s) en "{deck}".</translation>
+    <message numerus="yes">
+        <source>Copied %n note(s) into "%1".</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
-    <message>
-        <source>{count} note(s) were not accepted by Anki (see log).</source>
-        <translation>Anki no aceptó {count} nota(s) (vea el registro).</translation>
+    <message numerus="yes">
+        <source>%n note(s) were not accepted by Anki (see log).</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
 </context><context>
     <name>DeckPage</name>
     <message>
-        <source>Choose a Deck</source>
-        <translation>Elija un mazo</translation>
+        <source>Deck</source>
+        <translation>Mazo</translation>
     </message>
     <message>
-        <source>Mined cards go into this deck.</source>
-        <translation>Las tarjetas minadas van a este mazo.</translation>
+        <source>Pick a deck</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Refresh</source>
-        <translation>Actualizar</translation>
+        <source>%1 (not in Anki yet)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Could not load decks. Is Anki running with AnkiConnect?</source>
@@ -3965,8 +4050,8 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
         <translation>Elija un mazo.</translation>
     </message>
     <message>
-        <source>No such deck. Create it in Anki, then press Refresh.</source>
-        <translation>No existe ese mazo. Créelo en Anki y luego pulse Actualizar.</translation>
+        <source>Anki doesn't have a deck called “%1” yet. In Anki, click Create Deck at the bottom of the main window and name it %1, or pick one of your decks above. This page updates when you come back.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>DefinitionService</name>
@@ -4201,22 +4286,6 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
         <translation>%1 se eliminó, pero no se pudo eliminar la carpeta restante. Se volverá a intentar la limpieza al iniciar.</translation>
     </message>
     <message>
-        <source>Select dictionary storage folder...</source>
-        <translation>Seleccionar carpeta de almacenamiento de diccionarios...</translation>
-    </message>
-    <message>
-        <source>Reset to default</source>
-        <translation>Restablecer al valor predeterminado</translation>
-    </message>
-    <message>
-        <source>Storage Folder</source>
-        <translation>Carpeta de almacenamiento</translation>
-    </message>
-    <message>
-        <source>Where indexed dictionaries are stored. Existing dictionaries at the old location are not moved automatically.</source>
-        <translation>Dónde se almacenan los diccionarios indexados. Los diccionarios existentes en la ubicación anterior no se mueven automáticamente.</translation>
-    </message>
-    <message>
         <source>Active Dictionaries</source>
         <translation>Diccionarios activos</translation>
     </message>
@@ -4275,6 +4344,34 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
     <message>
         <source>More actions</source>
         <translation>Más acciones</translation>
+    </message>
+    <message>
+        <source>No dictionaries yet.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download recommended</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Storage</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select dictionary storage folder...</source>
+        <translation>Seleccionar carpeta de almacenamiento de diccionarios...</translation>
+    </message>
+    <message>
+        <source>Reset to default</source>
+        <translation>Restablecer al valor predeterminado</translation>
+    </message>
+    <message>
+        <source>Storage Folder</source>
+        <translation>Carpeta de almacenamiento</translation>
+    </message>
+    <message>
+        <source>Where indexed dictionaries are stored. Existing dictionaries at the old location are not moved automatically.</source>
+        <translation>Dónde se almacenan los diccionarios indexados. Los diccionarios existentes en la ubicación anterior no se mueven automáticamente.</translation>
     </message>
     <message>
         <source>%1 entries</source>
@@ -4355,14 +4452,6 @@ No se elimina ningún archivo del disco.</translation>
         <translation>Listo para minar</translation>
     </message>
     <message>
-        <source>A last check of everything mining needs. You can change it later in Settings.</source>
-        <translation>Una última comprobación de todo lo que necesita la minería. Puede cambiarlo más tarde en Ajustes.</translation>
-    </message>
-    <message>
-        <source>Recheck</source>
-        <translation>Volver a comprobar</translation>
-    </message>
-    <message>
         <source>Checking your setup...</source>
         <translation>Comprobando su configuración...</translation>
     </message>
@@ -4371,32 +4460,28 @@ No se elimina ningún archivo del disco.</translation>
         <translation>No se pudo comprobar su configuración: </translation>
     </message>
     <message>
-        <source>Yes</source>
-        <translation>Sí</translation>
+        <source>You're ready. Pick a video and its subtitle file, then press Mine Episode. Books, manga and subtitles are under Reading, audiobooks under Audiobooks, tools under Utilities. Press F1 any time for the Usage Guide.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>No</source>
-        <translation>No</translation>
+        <source>Anki isn't reachable. Open Anki.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>AnkiConnect reachable: &lt;b&gt;%1&lt;/b&gt;</source>
-        <translation>AnkiConnect accesible: &lt;b&gt;%1&lt;/b&gt;</translation>
+        <source>Anki has no deck called “%1”. Go back to the Anki step and pick one.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Deck '%1' exists: &lt;b&gt;%2&lt;/b&gt;</source>
-        <translation>El mazo '%1' existe: &lt;b&gt;%2&lt;/b&gt;</translation>
+        <source>Anki has no note type called “%1”. Go back to the Anki step and pick one.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Note type '%1' exists: &lt;b&gt;%2&lt;/b&gt;</source>
-        <translation>El tipo de nota '%1' existe: &lt;b&gt;%2&lt;/b&gt;</translation>
+        <source>The card fields don't match the note type. Go back to the Anki step and pick it again.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Every mapped field exists: &lt;b&gt;%1&lt;/b&gt;</source>
-        <translation>Existe cada campo asignado: &lt;b&gt;%1&lt;/b&gt;</translation>
-    </message>
-    <message>
-        <source>Offline dictionary ready: &lt;b&gt;%1&lt;/b&gt;</source>
-        <translation>Diccionario sin conexión listo: &lt;b&gt;%1&lt;/b&gt;</translation>
+        <source>Before you can mine:</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>DownloadTab</name>
@@ -4457,6 +4542,10 @@ No se elimina ningún archivo del disco.</translation>
         <translation>No se pudieron descargar algunas URL.</translation>
     </message>
     <message>
+        <source>This URL could not be downloaded.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Complete — %1 downloaded</source>
         <translation>Completado — %1 descargados</translation>
     </message>
@@ -4475,6 +4564,10 @@ No se elimina ningún archivo del disco.</translation>
     <message>
         <source>Media download</source>
         <translation>Descarga de medios</translation>
+    </message>
+    <message>
+        <source>Update yt-dlp</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>URLs</source>
@@ -4541,16 +4634,16 @@ No se elimina ningún archivo del disco.</translation>
         <translation>Solo subtítulos</translation>
     </message>
     <message>
+        <source>Custom format…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Custom format:</source>
         <translation>Formato personalizado:</translation>
     </message>
     <message>
-        <source>Optional yt-dlp format string</source>
-        <translation>Cadena de formato de yt-dlp (opcional)</translation>
-    </message>
-    <message>
-        <source>When set, the quality preset above is ignored.</source>
-        <translation>Si se establece, se ignora el ajuste de calidad de arriba.</translation>
+        <source>yt-dlp format string, e.g. bv*[height&lt;=480]+ba</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Download subtitles</source>
@@ -5058,6 +5151,10 @@ No se elimina ningún archivo del disco.</translation>
 </context><context>
     <name>FileSelector</name>
     <message>
+        <source>Select a file or folder...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Select file...</source>
         <translation>Seleccionar archivo...</translation>
     </message>
@@ -5066,8 +5163,20 @@ No se elimina ningún archivo del disco.</translation>
         <translation>Seleccionar carpeta...</translation>
     </message>
     <message>
+        <source>File…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Browse...</source>
         <translation>Examinar...</translation>
+    </message>
+    <message>
+        <source>Folder…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>file or folder</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>file</source>
@@ -5112,6 +5221,10 @@ No se elimina ningún archivo del disco.</translation>
     <message>
         <source>Not installed</source>
         <translation>No instalado</translation>
+    </message>
+    <message>
+        <source>Not found. Choose an existing file or folder.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>File not found. Choose an existing file.</source>
@@ -5232,16 +5345,8 @@ No se elimina ningún archivo del disco.</translation>
         <translation>Mantener como conocidas las palabras tras eliminar sus tarjetas</translation>
     </message>
     <message>
-        <source>Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild forgets them.</source>
-        <translation>Las palabras siguen siendo conocidas después de que sus tarjetas de Anki se eliminen o se muevan a un mazo excluido. Al reconstruir la BD, se olvidan.</translation>
-    </message>
-    <message>
-        <source>Rebuild Known Words DB</source>
-        <translation>Reconstruir BD de palabras conocidas</translation>
-    </message>
-    <message>
-        <source>Clear the local known-words cache so it re-syncs from Anki on the next run. Needed for deck exclusions below to take effect when the local cache is enabled.</source>
-        <translation>Borra la caché local de palabras conocidas para que se vuelva a sincronizar desde Anki en la próxima ejecución. Necesario para que las exclusiones de mazos de abajo surtan efecto cuando la caché local está habilitada.</translation>
+        <source>Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5268,6 +5373,10 @@ No se elimina ningún archivo del disco.</translation>
         <translation>Las palabras de estos mazos (y sus submazos) siguen siendo minables — no se consideran ya conocidas.</translation>
     </message>
     <message>
+        <source>No decks excluded.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Add Deck…</source>
         <translation>Añadir mazo…</translation>
     </message>
@@ -5288,12 +5397,8 @@ No se elimina ningún archivo del disco.</translation>
         <translation>Archivo de lista negra</translation>
     </message>
     <message>
-        <source>Text file with one word per line to always skip</source>
-        <translation>Archivo de texto con una palabra por línea para omitir siempre</translation>
-    </message>
-    <message>
-        <source>Enable Blacklist</source>
-        <translation>Habilitar lista negra</translation>
+        <source>Text file with one word per line to always skip. Leave empty to skip nothing.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Select whitelist file...</source>
@@ -5304,12 +5409,8 @@ No se elimina ningún archivo del disco.</translation>
         <translation>Archivo de lista blanca</translation>
     </message>
     <message>
-        <source>Text file with one word per line to force-include, bypassing frequency, script, length and other filters. A word must still have a dictionary entry and not already be in Anki or your known-words list.</source>
-        <translation>Archivo de texto con una palabra por línea para forzar su inclusión, omitiendo los filtros de frecuencia, escritura, longitud y otros. Una palabra debe tener aún una entrada de diccionario y no estar ya en Anki ni en su lista de palabras conocidas.</translation>
-    </message>
-    <message>
-        <source>Enable Whitelist</source>
-        <translation>Habilitar lista blanca</translation>
+        <source>Text file with one word per line to force-include, bypassing frequency, script, length and other filters. A word must still have a dictionary entry and not already be in Anki or your known-words list. Leave empty to force nothing.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Name Wordsets</source>
@@ -5320,84 +5421,44 @@ No se elimina ningún archivo del disco.</translation>
         <translation>Excluye de la minería las listas incluidas de nombres de personas y lugares japoneses. Los nombres en la lista blanca se siguen minando.</translation>
     </message>
     <message>
-        <source>%1 (%2)</source>
-        <translation>%1 (%2)</translation>
+        <source>Skip names of people, places and companies</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Exclude the bundled '%1' wordset (%2 entries) from mining.</source>
-        <translation>Excluir de la minería el conjunto de palabras incluido '%1' (%2 entradas).</translation>
-    </message>
-    <message>
-        <source>Sentence Rule</source>
-        <translation>Regla de oraciones</translation>
-    </message>
-    <message>
-        <source>Mine every unknown word</source>
-        <translation>Minar todas las palabras desconocidas</translation>
-    </message>
-    <message>
-        <source>One card per sentence</source>
-        <translation>Una tarjeta por oración</translation>
-    </message>
-    <message>
-        <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped.</source>
-        <translation>Mina como máximo una palabra por oración de ejemplo — la primera que se encuentra en esa oración. Se omiten las demás palabras que comparten esa oración.</translation>
-    </message>
-    <message>
-        <source>Only i+1 sentences (exactly one unknown word)</source>
-        <translation>Solo oraciones i+1 (exactamente una palabra desconocida)</translation>
-    </message>
-    <message>
-        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication.</source>
-        <translation>Solo mina las palabras de una oración con exactamente una palabra desconocida (i+1); esto anula la deduplicación de oraciones.</translation>
+        <source>Excludes the bundled name lists from mining: %1.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Script Type</source>
         <translation>Tipo de escritura</translation>
     </message>
     <message>
-        <source>Exclude Hiragana-Only Words</source>
-        <translation>Excluir palabras solo en hiragana</translation>
+        <source>Keep all words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skip hiragana-only words</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Skip words written entirely in hiragana (e.g. する, これ), including long-vowel spellings like すごーい. Focuses the deck on kanji vocabulary.</source>
         <translation>Omitir palabras escritas enteramente en hiragana (p. ej. する, これ), incluidas las grafías con vocal larga como すごーい. Centra el mazo en vocabulario con kanji.</translation>
     </message>
     <message>
-        <source>Exclude Katakana-Only Words</source>
-        <translation>Excluir palabras solo en katakana</translation>
+        <source>Skip katakana-only words</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Skip words written entirely in katakana (e.g. コーヒー). Tick both boxes to also skip words mixing the two kana scripts (サボる, ヤバい).</source>
-        <translation>Omitir palabras escritas enteramente en katakana (p. ej. コーヒー). Marca ambas casillas para omitir también las palabras que mezclan los dos silabarios kana (サボる, ヤバい).</translation>
+        <source>Skip words written entirely in katakana (e.g. コーヒー).</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Sentence Length</source>
-        <translation>Longitud de oración</translation>
+        <source>Skip all kana-only words (including mixed)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Set either limit above 0 to turn the filter on.</source>
-        <translation>Establezca cualquiera de los dos límites por encima de 0 para activar el filtro.</translation>
-    </message>
-    <message>
-        <source> s</source>
-        <translation> s</translation>
-    </message>
-    <message>
-        <source>Max Sentence Duration</source>
-        <translation>Duración máxima de oración</translation>
-    </message>
-    <message>
-        <source>Drops cards whose example sentence audio is longer than this many seconds. Set to 0 for no limit.</source>
-        <translation>Descarta las tarjetas cuyo audio de la oración de ejemplo dura más que esta cantidad de segundos. Establezca 0 para no aplicar límite.</translation>
-    </message>
-    <message>
-        <source>Max Sentence Characters</source>
-        <translation>Caracteres máximos de oración</translation>
-    </message>
-    <message>
-        <source>Drops cards whose sentence text exceeds this many characters. Set to 0 for no limit.</source>
-        <translation>Descarta las tarjetas cuyo texto de la oración supera esta cantidad de caracteres. Establezca 0 para no aplicar límite.</translation>
+        <source>Skip every word written without kanji, including words that mix hiragana and katakana.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reading</source>
@@ -5634,6 +5695,10 @@ No se elimina ningún archivo del disco.</translation>
         <translation>Reconstruye todas las fuentes de frecuencia de la lista a partir de la copia guardada al importarlas. Necesario después de que una actualización de la aplicación cambie el formato del índice.</translation>
     </message>
     <message>
+        <source>All enabled lists are used. The order only changes how they are listed on the card.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Every enabled source counts: filtering uses the lowest rank, Frequency Sort the harmonic mean. Order only sets the card's source list.</source>
         <translation>Cada fuente habilitada cuenta: el filtrado usa el rango más bajo, Frequency Sort la media armónica. El orden solo define la lista de fuentes de la tarjeta.</translation>
     </message>
@@ -5672,6 +5737,14 @@ No se elimina ningún archivo del disco.</translation>
     <message>
         <source>More actions</source>
         <translation>Más acciones</translation>
+    </message>
+    <message>
+        <source>No frequency lists yet.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download recommended</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>%1 entries</source>
@@ -5788,6 +5861,14 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Ver detalles</translation>
     </message>
     <message>
+        <source>Show in Anki</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Open Anki's card browser on the cards this run added.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Copy summary</source>
         <translation>Copiar resumen</translation>
     </message>
@@ -5836,10 +5917,6 @@ No se elimina ningún archivo de índice.</translation>
     <message>
         <source>Previous word</source>
         <translation>Palabra anterior</translation>
-    </message>
-    <message>
-        <source>Open Settings</source>
-        <translation>Abrir Ajustes</translation>
     </message>
     <message>
         <source>Usage Guide</source>
@@ -5946,6 +6023,14 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Filtrar…</translation>
     </message>
     <message>
+        <source>Rebuild Known Words DB</source>
+        <translation>Reconstruir BD de palabras conocidas</translation>
+    </message>
+    <message>
+        <source>Clear the local known-words cache so it re-syncs from Anki on the next run. Needed for deck exclusions to take effect when the local cache is enabled.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Remove Selected</source>
         <translation>Eliminar seleccionadas</translation>
     </message>
@@ -5960,10 +6045,6 @@ No se elimina ningún archivo de índice.</translation>
     <message>
         <source>Reset User List</source>
         <translation>Restablecer lista del usuario</translation>
-    </message>
-    <message>
-        <source>Close</source>
-        <translation>Cerrar</translation>
     </message>
     <message>
         <source>User words: %1 · cached from Anki: %2</source>
@@ -6098,20 +6179,28 @@ Palabras a añadir: %3. ¿Continuar?</translation>
         <translation>Idiomas de subtítulos</translation>
     </message>
     <message>
+        <source>Tick the languages to download subtitles in.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Search languages…</source>
         <translation>Buscar idiomas…</translation>
+    </message>
+    <message>
+        <source>Using this as a yt-dlp language expression; the list is ignored.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>A ticked language not listed for this URL is fetched as a machine translation.</source>
         <translation>Un idioma marcado que no aparece listado para esta URL se obtiene como traducción automática.</translation>
     </message>
     <message>
-        <source>Advanced (raw yt-dlp language expression):</source>
-        <translation>Avanzado (expresión de idioma de yt-dlp en bruto):</translation>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
     </message>
     <message>
-        <source>e.g. en.*,-live_chat</source>
-        <translation>p. ej. en.*,-live_chat</translation>
+        <source>OK</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Available for this URL</source>
@@ -6163,8 +6252,8 @@ Palabras a añadir: %3. ¿Continuar?</translation>
         <translation>No ha minado %1 antes.</translation>
     </message>
     <message>
-        <source>The known-words scan reads every deck that is not excluded, and it cannot tell apart languages that share a script: words in a ticked deck would not count as known in %1. Untick the decks that hold %1 cards.</source>
-        <translation>El escaneo de palabras conocidas lee todos los mazos que no están excluidos, y no puede distinguir idiomas que comparten una escritura: las palabras de un mazo marcado no contarían como conocidas en %1. Desmarque los mazos que contengan tarjetas de %1.</translation>
+        <source>Anki Miner skips words you already have in Anki. Tick the decks that are &lt;i&gt;not&lt;/i&gt; %1, so their words don't stop %1 cards from being made.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Exclude ticked decks</source>
@@ -6379,8 +6468,8 @@ Palabras a añadir: %3. ¿Continuar?</translation>
         <translation>Encabezado de la aplicación</translation>
     </message>
     <message>
-        <source>Application title and theme selector</source>
-        <translation>Título de la aplicación y selector de tema</translation>
+        <source>Settings profile and theme selectors</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Status Bar</source>
@@ -6393,6 +6482,10 @@ Palabras a añadir: %3. ¿Continuar?</translation>
     <message>
         <source>&amp;Tools</source>
         <translation>&amp;Herramientas</translation>
+    </message>
+    <message>
+        <source>System Health…</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Create Desktop Shortcut...</source>
@@ -6781,8 +6874,8 @@ Cierre primero el navegador de tarjetas y el editor de notas de Anki — una not
         <translation>Solo Papago</translation>
     </message>
     <message>
-        <source>Spoken sentences for manga and books</source>
-        <translation>Oraciones habladas para manga y libros</translation>
+        <source>Read aloud (manga, books)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>
@@ -6817,20 +6910,16 @@ Cierre primero el navegador de tarjetas y el editor de notas de Anki — una not
         <translation>AVIF: archivos más pequeños; WebP: mayor compatibilidad con clientes de Anki</translation>
     </message>
     <message>
-        <source>Match audio duration</source>
-        <translation>Igualar duración del audio</translation>
+        <source>Same as sentence audio</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Animated clip spans the audio clip's time range. Overrides Clip Duration.</source>
-        <translation>El clip animado abarca el rango de tiempo del clip de audio. Anula la duración del clip.</translation>
+        <source>Clip length</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Clip length, capped by subtitle duration. Ignored if Match audio duration is on.</source>
-        <translation>Duración del clip, limitada por la duración del subtítulo. Se ignora si Igualar duración del audio está activado.</translation>
-    </message>
-    <message>
-        <source>Clip Duration</source>
-        <translation>Duración del clip</translation>
+        <source>Length of the animated clip, capped by the subtitle's duration. “Same as sentence audio” spans the sentence audio clip instead.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Small</source>
@@ -6893,8 +6982,36 @@ Cierre primero el navegador de tarjetas y el editor de notas de Anki — una not
         <translation>El idioma que está aprendiendo. El idioma de la interfaz es independiente.</translation>
     </message>
     <message>
-        <source>The deck, note type and resources in the next steps follow this choice. A language missing from the list needs its engine pack: Settings → Mining Language.</source>
-        <translation>El mazo, el tipo de nota y los recursos de los siguientes pasos dependen de esta elección. Un idioma que no aparezca en la lista necesita su paquete de motor: Ajustes → Idioma de minería.</translation>
+        <source>%1 (download)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The deck, note type and dictionary in the next steps follow this choice.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 needs a one-time download of about %2 MB. It starts when you press Next and runs while you finish setup.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This language's download cannot start from setup. Pick it in Settings → Mining Language after setup.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 language pack: download failed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Retry</source>
+        <translation>Reintentar</translation>
+    </message>
+    <message>
+        <source>%1 language pack: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 language pack: downloading…</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>MiningLanguageSettingsPanel</name>
@@ -6909,6 +7026,10 @@ Cierre primero el navegador de tarjetas y el editor de notas de Anki — una not
     <message>
         <source>Switching swaps dictionaries, filters, deck and card fields to that language's own settings. The interface language is separate (Settings → General).</source>
         <translation>Al cambiar, los diccionarios, los filtros, el mazo y los campos de tarjeta pasan a los ajustes propios de ese idioma. El idioma de la interfaz es independiente (Ajustes → General).</translation>
+    </message>
+    <message>
+        <source>Download and switch</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Script Variants</source>
@@ -6955,23 +7076,39 @@ Cierre primero el navegador de tarjetas y el editor de notas de Anki — una not
         <translation>Determina qué voz de Google lee el audio de palabras y oraciones, y qué lista de frecuencia sugiere el asistente de configuración.</translation>
     </message>
     <message>
-        <source>Download %1 pack</source>
-        <translation>Descargar el paquete de %1</translation>
+        <source>%1 (download)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Download the engine and data Anki Miner needs to mine %1, into its own folder.</source>
-        <translation>Descargue el motor y los datos que Anki Miner necesita para minar %1, en su propia carpeta.</translation>
-    </message>
-    <message>
-        <source>Installed</source>
-        <translation>Instalado</translation>
-    </message>
-    <message>
-        <source>Not installed - about %1 MB download</source>
-        <translation>No instalado - descarga de unos %1 MB</translation>
+        <source>%1 needs a one-time download of about %2 MB.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>MiningTabBase</name>
+    <message>
+        <source>Cannot connect to AnkiConnect. Is Anki running?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining failed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki Miner couldn't open these cards in Anki.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Show review</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Bring the Word Curator window to the front.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Waiting for your word review</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Failed: %1 — %2</source>
         <translation>Falló: %1 — %2</translation>
@@ -7073,6 +7210,10 @@ Cierre primero el navegador de tarjetas y el editor de notas de Anki — una not
         <translation>No se pudieron procesar algunos volúmenes.</translation>
     </message>
     <message>
+        <source>This volume could not be processed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Complete — %1 volume(s) processed</source>
         <translation>Completado — %1 volumen(es) procesado(s)</translation>
     </message>
@@ -7089,12 +7230,16 @@ Cierre primero el navegador de tarjetas y el editor de notas de Anki — una not
         <translation>OCR de manga</translation>
     </message>
     <message>
+        <source>mokuro is not installed. Install it in the Manga OCR setup section.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Manga</source>
         <translation>Manga</translation>
     </message>
     <message>
-        <source>mokuro not found. Install it in the Manga OCR setup section below, or set its path there.</source>
-        <translation>No se encontró mokuro. Instálelo en la sección de configuración de OCR de manga de abajo, o establezca allí su ruta.</translation>
+        <source>mokuro is not installed. Install it in the Manga OCR setup section below.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Run mokuro's OCR on a folder of page images, or a series folder of volumes. Each volume gets a .mokuro file beside it for Reading → Manga.</source>
@@ -7113,16 +7258,16 @@ Cierre primero el navegador de tarjetas y el editor de notas de Anki — una not
         <translation>Configuración de OCR de manga</translation>
     </message>
     <message>
-        <source>mokuro executable:</source>
-        <translation>Ejecutable de mokuro:</translation>
+        <source>mokuro is installed</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Optional: path to the mokuro executable</source>
-        <translation>Opcional: ruta al ejecutable de mokuro</translation>
+        <source>Change…</source>
+        <translation>Cambiar…</translation>
     </message>
     <message>
-        <source>Optional: your own mokuro (pip/pipx). Leave blank to use the in-app install below or mokuro on your PATH.</source>
-        <translation>Opcional: su propio mokuro (pip/pipx). Déjelo en blanco para usar la instalación integrada de abajo o el mokuro de su PATH.</translation>
+        <source>Reinstall mokuro and its OCR engine.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Install mokuro</source>
@@ -7245,48 +7390,44 @@ Cierre primero el navegador de tarjetas y el editor de notas de Anki — una not
 </context><context>
     <name>NoteTypePage</name>
     <message>
-        <source>Choose a Note Type</source>
-        <translation>Elija un tipo de nota</translation>
+        <source>Note type</source>
+        <translation>Tipo de nota</translation>
     </message>
     <message>
-        <source>Pick the Anki note type whose fields will hold mined data.</source>
-        <translation>Elija el tipo de nota de Anki cuyos campos contendrán los datos minados.</translation>
+        <source>Pick a note type</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Refresh</source>
-        <translation>Actualizar</translation>
-    </message>
-    <message>
-        <source>Auto-Map Fields from Note Type</source>
-        <translation>Mapear campos automáticamente desde el tipo de nota</translation>
+        <source>%1 (not in Anki yet)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>No fields found. Make sure Anki is running and the note type name is spelled exactly as in Anki.</source>
         <translation>No se encontraron campos. Asegúrese de que Anki esté en ejecución y de que el nombre del tipo de nota esté escrito exactamente como en Anki.</translation>
     </message>
     <message>
-        <source>This note type has no obvious word or sentence fields. &lt;a href="%1"&gt;Recheck&lt;/a&gt; after importing a &lt;a href="%1"&gt;recommended note type&lt;/a&gt; in Anki.</source>
-        <translation>Este tipo de nota no tiene campos evidentes de palabra u oración. &lt;a href="%1"&gt;Volver a comprobar&lt;/a&gt; después de importar un &lt;a href="%1"&gt;tipo de nota recomendado&lt;/a&gt; en Anki.</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. If it can't tell which field is which, press Skip Setup and choose the fields yourself in Settings → Cards &amp; Anki. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Recognized %1 — mapped %2 fields. Fine-tune them in Settings → Cards &amp; Anki.</source>
-        <translation>Se reconoció %1 — se asignaron %2 campos. Ajústelos en Ajustes → Tarjetas y Anki.</translation>
+        <source>Anki Miner fills a note type called Lapis. Your Anki doesn't have it yet. &lt;a href="%1"&gt;Get Lapis&lt;/a&gt; (free), then in Anki choose File → Import and pick the file. This page updates when you come back.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Mapped %1 fields. Fine-tune them in Settings → Cards &amp; Anki.</source>
-        <translation>Se asignaron %1 campos. Ajústelos en Ajustes → Tarjetas y Anki.</translation>
+        <source>%1 recognised: %2 fields filled.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>No fields could be auto-mapped.</source>
-        <translation>No se pudo mapear ningún campo automáticamente.</translation>
+        <source>Fields filled automatically: %1.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Checking note type fields...</source>
-        <translation>Comprobando los campos del tipo de nota...</translation>
+        <source>No fields could be filled automatically.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Could not check note type fields: </source>
-        <translation>No se pudieron comprobar los campos del tipo de nota: </translation>
+        <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>OnnxPackDownloadWorker</name>
@@ -7543,6 +7684,14 @@ Cierre primero el navegador de tarjetas y el editor de notas de Anki — una not
     <message>
         <source>More actions</source>
         <translation>Más acciones</translation>
+    </message>
+    <message>
+        <source>No pitch accent lists yet.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download recommended</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>%1 entries</source>
@@ -7825,8 +7974,32 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Cambiar a</translation>
     </message>
     <message>
-        <source>Close</source>
-        <translation>Cerrar</translation>
+        <source>This profile:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export to file…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Save a portable settings file (machine-specific paths and resources excluded).</source>
+        <translation>Guardar un archivo de ajustes portátil (se excluyen rutas y recursos específicos del equipo).</translation>
+    </message>
+    <message>
+        <source>Import from file…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Apply settings from an exported file; anything not in the file is kept.</source>
+        <translation>Aplicar ajustes de un archivo exportado; se conserva todo lo que no esté en el archivo.</translation>
+    </message>
+    <message>
+        <source>Reset to defaults…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Your installed resources and your theme are kept.</source>
+        <translation>Sus recursos instalados y su tema se conservan.</translation>
     </message>
     <message>
         <source>%1 (active)</source>
@@ -7903,6 +8076,14 @@ No se elimina ningún archivo de índice.</translation>
         <translation>%1 en cola · %2 listos · %3 fallidos · %4 completos</translation>
     </message>
     <message>
+        <source>Edit…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Change the selected series' folders and offset.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Pause after current item</source>
         <translation>Pausar después del elemento actual</translation>
     </message>
@@ -7970,75 +8151,39 @@ No se elimina ningún archivo de índice.</translation>
         <source>The run is not cancelled — Resume continues with the next item.</source>
         <translation>La ejecución no está cancelada — Reanudar continúa con el siguiente elemento.</translation>
     </message>
-    <message>
-        <source>Finish current, then stop</source>
-        <translation>Finalizar el actual y luego detener</translation>
-    </message>
-    <message>
-        <source>Let the current item finish, then end the run.</source>
-        <translation>Permita que termine el elemento actual y luego finalice la ejecución.</translation>
-    </message>
 </context><context>
     <name>QueueItemWidget</name>
     <message>
-        <source>Edit</source>
-        <translation>Editar</translation>
+        <source>Cards: %1</source>
+        <translation>Tarjetas: %1</translation>
     </message>
     <message>
-        <source>Edit video and subtitle folders</source>
-        <translation>Editar carpetas de video y subtítulos</translation>
+        <source>1 episode</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Remove</source>
-        <translation>Quitar</translation>
+        <source>%1 episodes</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Remove from queue</source>
-        <translation>Quitar de la cola</translation>
+        <source>Video folder: %1</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Pending</source>
-        <translation>Pendiente</translation>
+        <source>Subtitle folder: %1</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Processing</source>
-        <translation>Procesando</translation>
+        <source>Translation folder: %1</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Complete</source>
-        <translation>Completado</translation>
+        <source>Offset: %1</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Error</source>
-        <translation>Error</translation>
-    </message>
-    <message>
-        <source>No video folder selected</source>
-        <translation>No se seleccionó carpeta de video</translation>
-    </message>
-    <message>
-        <source>No subtitle folder selected</source>
-        <translation>No se seleccionó carpeta de subtítulos</translation>
-    </message>
-    <message>
-        <source> • Offset: %1</source>
-        <translation> • Desfase: %1</translation>
-    </message>
-    <message>
-        <source> • Translations</source>
-        <translation> • Traducciones</translation>
-    </message>
-    <message>
-        <source>%1 episodes • %2 cards created</source>
-        <translation>%1 episodios • %2 tarjetas creadas</translation>
-    </message>
-    <message>
-        <source>%1 episodes • Ready to process</source>
-        <translation>%1 episodios • Listo para procesar</translation>
-    </message>
-    <message>
-        <source>Not configured</source>
-        <translation>Sin configurar</translation>
+        <source>Double-click to edit</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>QueueMiningProgressAdapter</name>
@@ -8061,20 +8206,24 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Mine las filas seleccionadas en orden de lista. Una fila completada se vuelve a minar desde cero.</translation>
     </message>
     <message>
-        <source>Process Queue</source>
-        <translation>Procesar cola</translation>
-    </message>
-    <message>
-        <source>Process all series in queue</source>
-        <translation>Procesar todas las series de la cola</translation>
-    </message>
-    <message>
-        <source>Clear All</source>
-        <translation>Borrar todo</translation>
+        <source>Clear</source>
+        <translation>Limpiar</translation>
     </message>
     <message>
         <source>Remove all items from queue</source>
         <translation>Quitar todos los elementos de la cola</translation>
+    </message>
+    <message>
+        <source>Queue is empty</source>
+        <translation>La cola está vacía</translation>
+    </message>
+    <message>
+        <source>Mine Queue</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine every series in the queue</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Edit: %1</source>
@@ -8129,16 +8278,32 @@ No se elimina ningún archivo de índice.</translation>
         <translation>¿Quitar las %1 series de la cola?</translation>
     </message>
     <message>
-        <source>Queue is empty</source>
-        <translation>La cola está vacía</translation>
+        <source>1 series</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>%1 series - %2 episodes - %3 cards created</source>
-        <translation>%1 series - %2 episodios - %3 tarjetas creadas</translation>
+        <source>%1 series</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>%1 series - %2 episodes - Ready to process</source>
-        <translation>%1 series - %2 episodios - Listo para procesar</translation>
+        <source>1 episode</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 episodes</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 ready</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 complete</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>QueueRow</name>
@@ -8169,14 +8334,6 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Mostrar la ventana emergente de selección de palabras antes de crear las tarjetas.</translation>
     </message>
     <message>
-        <source>Progress</source>
-        <translation>Progreso</translation>
-    </message>
-    <message>
-        <source>Anki Deck</source>
-        <translation>Mazo de Anki</translation>
-    </message>
-    <message>
         <source>Mine the sentences of a deck already in Anki, such as a subs2srs deck. Each new card reuses that card's audio and picture. The deck itself is not changed.</source>
         <translation>Mine las oraciones de un mazo que ya está en Anki, como un mazo de subs2srs. Cada tarjeta nueva reutiliza el audio y la imagen de esa tarjeta. El mazo en sí no se modifica.</translation>
     </message>
@@ -8185,20 +8342,20 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Mazo:</translation>
     </message>
     <message>
-        <source>Sentence field:</source>
-        <translation>Campo de oración:</translation>
+        <source>Sentence from:</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Audio field:</source>
-        <translation>Campo de audio:</translation>
+        <source>Audio from:</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Picture field:</source>
-        <translation>Campo de imagen:</translation>
+        <source>Picture from:</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Translation field:</source>
-        <translation>Campo de traducción:</translation>
+        <source>Translation from:</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Select a deck…</source>
@@ -8322,56 +8479,28 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Mostrar la ventana emergente de selección de palabras para cada volumen antes de crear las tarjetas.</translation>
     </message>
     <message>
-        <source>Progress</source>
-        <translation>Progreso</translation>
-    </message>
-    <message>
         <source>volumes</source>
         <translation>volúmenes</translation>
     </message>
     <message>
-        <source>Volume</source>
-        <translation>Volumen</translation>
-    </message>
-    <message>
-        <source>Volume File:</source>
-        <translation>Archivo de volumen:</translation>
+        <source>Volume or folder:</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Manga</source>
         <translation>Manga</translation>
     </message>
     <message>
-        <source>A .mokuro volume, or a .cbz/.zip archive with its .mokuro beside or inside it. No extraction needed.</source>
-        <translation>Un volumen .mokuro o un archivo .cbz/.zip con su .mokuro junto a él o dentro. No se necesita extracción.</translation>
+        <source>A .mokuro volume, a .cbz/.zip archive with its .mokuro beside or inside it, or a folder of volumes. No extraction needed.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Mine</source>
         <translation>Minar</translation>
     </message>
     <message>
-        <source>Mine the selected volume into Anki cards.</source>
-        <translation>Mine el volumen seleccionado en tarjetas de Anki.</translation>
-    </message>
-    <message>
-        <source>Manga Folder</source>
-        <translation>Carpeta de manga</translation>
-    </message>
-    <message>
-        <source>Folder:</source>
-        <translation>Carpeta:</translation>
-    </message>
-    <message>
-        <source>A folder with one manga volume, or a series folder of many volumes.</source>
-        <translation>Una carpeta con un volumen de manga, o una carpeta de serie con muchos volúmenes.</translation>
-    </message>
-    <message>
-        <source>Mine Folder</source>
-        <translation>Minar carpeta</translation>
-    </message>
-    <message>
-        <source>Mine every volume in the selected folder into Anki cards.</source>
-        <translation>Minar todos los volúmenes de la carpeta seleccionada en tarjetas de Anki.</translation>
+        <source>Mine the chosen volume, or every volume in the chosen folder.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cancel</source>
@@ -8386,16 +8515,16 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Las novelas se minan en la pestaña Novelas.</translation>
     </message>
     <message>
-        <source>Subtitle files are mined in the Subtitles tab.</source>
-        <translation>Los archivos de subtítulos se minan en la pestaña Subtítulos.</translation>
+        <source>Subtitle files are mined in Reading → Subtitle Files.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Choose a .mokuro, .cbz, or .zip volume first.</source>
-        <translation>Elija primero un volumen .mokuro, .cbz o .zip.</translation>
+        <source>Choose a manga volume or folder first.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Choose a manga folder first.</source>
-        <translation>Elija primero una carpeta de manga.</translation>
+        <source>Choose a .mokuro, .cbz or .zip volume, or a manga folder.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Could not process %1: %2</source>
@@ -8404,6 +8533,22 @@ No se elimina ningún archivo de índice.</translation>
     <message>
         <source>Skipped volumes: %1</source>
         <translation>Volúmenes omitidos: %1</translation>
+    </message>
+    <message>
+        <source>This manga has no text layer yet, so it can't be mined.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This manga has no text layer yet. Manga OCR can make one for this folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This manga has no text layer yet. Manga OCR can make one for the folder this file is in.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Open Manga OCR</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Starting…</source>
@@ -8444,52 +8589,28 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Mostrar la ventana emergente de selección de palabras antes de crear las tarjetas.</translation>
     </message>
     <message>
-        <source>Progress</source>
-        <translation>Progreso</translation>
-    </message>
-    <message>
         <source>books</source>
         <translation>libros</translation>
     </message>
     <message>
-        <source>Novel</source>
-        <translation>Novela</translation>
-    </message>
-    <message>
-        <source>Book File:</source>
-        <translation>Archivo de libro:</translation>
+        <source>Book or folder:</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Books</source>
         <translation>Libros</translation>
     </message>
     <message>
+        <source>An .epub or .txt book, or a folder of books; each book is mined separately.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Mine</source>
         <translation>Minar</translation>
     </message>
     <message>
-        <source>Mine the selected book into Anki cards.</source>
-        <translation>Minar el libro seleccionado en tarjetas de Anki.</translation>
-    </message>
-    <message>
-        <source>Book Folder</source>
-        <translation>Carpeta de libros</translation>
-    </message>
-    <message>
-        <source>Folder:</source>
-        <translation>Carpeta:</translation>
-    </message>
-    <message>
-        <source>A folder of .epub or .txt books; each book is mined separately.</source>
-        <translation>Una carpeta de libros .epub o .txt; cada libro se mina por separado.</translation>
-    </message>
-    <message>
-        <source>Mine Folder</source>
-        <translation>Minar carpeta</translation>
-    </message>
-    <message>
-        <source>Mine every book in the selected folder, one after another.</source>
-        <translation>Minar cada libro de la carpeta seleccionada, uno tras otro.</translation>
+        <source>Mine the chosen book, or every book in the chosen folder.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cancel</source>
@@ -8504,16 +8625,16 @@ No se elimina ningún archivo de índice.</translation>
         <translation>El manga se mina en la pestaña Manga.</translation>
     </message>
     <message>
-        <source>Subtitle files are mined in the Subtitles tab.</source>
-        <translation>Los archivos de subtítulos se minan en la pestaña Subtítulos.</translation>
+        <source>Subtitle files are mined in Reading → Subtitle Files.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Choose an .epub or .txt book first.</source>
-        <translation>Elija primero un libro .epub o .txt.</translation>
+        <source>Choose a book or a folder of books first.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Choose a folder of .epub or .txt books first.</source>
-        <translation>Elija primero una carpeta de libros .epub o .txt.</translation>
+        <source>Choose an .epub or .txt book, or a folder of books.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Starting…</source>
@@ -8558,20 +8679,16 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Mostrar la ventana emergente de selección de palabras para cada archivo antes de crear las tarjetas.</translation>
     </message>
     <message>
-        <source>Progress</source>
-        <translation>Progreso</translation>
-    </message>
-    <message>
         <source>subtitle files</source>
         <translation>archivos de subtítulos</translation>
     </message>
     <message>
-        <source>Subtitle Files</source>
-        <translation>Archivos de subtítulos</translation>
-    </message>
-    <message>
         <source>Mines subtitle files as text — no screenshots or audio extracted from video.</source>
         <translation>Mina archivos de subtítulos como texto — no se extraen capturas de pantalla ni audio del video.</translation>
+    </message>
+    <message>
+        <source>Add subtitle files, or drop them here.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Subtitle files to mine, one card run per file, in list order.</source>
@@ -8638,6 +8755,14 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Agregue primero al menos un archivo de subtítulos.</translation>
     </message>
     <message>
+        <source>A listed file no longer exists.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Every listed file has been mined. Add more files, or Clear the list.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Starting…</source>
         <translation>Iniciando…</translation>
     </message>
@@ -8696,6 +8821,10 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Cancelando…</translation>
     </message>
     <message>
+        <source>Anki Miner can't mine this file.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Cancelled</source>
         <translation>Cancelado</translation>
     </message>
@@ -8747,40 +8876,24 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Mostrar la ventana emergente de selección de palabras antes de crear las tarjetas.</translation>
     </message>
     <message>
-        <source>Progress</source>
-        <translation>Progreso</translation>
+        <source>Paste the text you want to mine. Cards from pasted text have no sentence audio from a recording.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Pasted Text</source>
-        <translation>Texto pegado</translation>
+        <source>Drop or paste text here, or drop a picture for the cards; other files are not supported.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Paste text and mine it into Anki cards — no audio is extracted.</source>
-        <translation>Pegue texto y mínelo en tarjetas de Anki — no se extrae audio.</translation>
+        <source>Add card picture…</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Paste text here…</source>
-        <translation>Pegue el texto aquí…</translation>
+        <source>Optional. This picture goes in the Picture field of every card from this text.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Drop or paste text here; files are not supported.</source>
-        <translation>Suelte o pegue texto aquí; los archivos no son compatibles.</translation>
-    </message>
-    <message>
-        <source>Card Image:</source>
-        <translation>Imagen de tarjeta:</translation>
-    </message>
-    <message>
-        <source>Images</source>
-        <translation>Imágenes</translation>
-    </message>
-    <message>
-        <source>This field takes an image file.</source>
-        <translation>Este campo acepta un archivo de imagen.</translation>
-    </message>
-    <message>
-        <source>Optional. This image goes in the Picture field of every card from this text.</source>
-        <translation>Opcional. Esta imagen se coloca en el campo Picture de cada tarjeta generada a partir de este texto.</translation>
+        <source>Remove the card picture</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Mine</source>
@@ -8799,16 +8912,24 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Cancelar la ejecución activa.</translation>
     </message>
     <message>
+        <source>Choose a card picture</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Images</source>
+        <translation>Imágenes</translation>
+    </message>
+    <message>
         <source>Paste some text first.</source>
         <translation>Primero pegue algún texto.</translation>
     </message>
     <message>
-        <source>This card image has no Picture field to land in. Map one in Settings → Cards &amp; Anki, or clear the image.</source>
-        <translation>Esta imagen de tarjeta no tiene ningún campo de imagen donde colocarse. Asigne uno en Ajustes → Tarjetas y Anki, o borre la imagen.</translation>
+        <source>This card picture has no Picture field to land in. Map one in Settings → Cards &amp; Anki, or remove the picture.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>That image cannot be read. Pick another, or clear the field to mine without one.</source>
-        <translation>No se puede leer esa imagen. Elija otra, o borre el campo para minar sin ella.</translation>
+        <source>That picture cannot be read. Pick another, or remove it to mine without one.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Starting…</source>
@@ -9164,6 +9285,22 @@ No se elimina ningún archivo de índice.</translation>
         <translation>No se procesó ningún recurso.</translation>
     </message>
     <message>
+        <source>%1 (dictionary)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 (word frequency)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 (pitch accent)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloading %1 of %2 · %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Recommended Resources</source>
         <translation>Recursos recomendados</translation>
     </message>
@@ -9218,40 +9355,36 @@ No se elimina ningún archivo de índice.</translation>
 </context><context>
     <name>ResourcesPage</name>
     <message>
-        <source>Recommended Resources</source>
-        <translation>Recursos recomendados</translation>
+        <source>Get a Dictionary</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mined cards take their definitions from an offline dictionary. This step is required.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download</source>
+        <translation>Descargas</translation>
     </message>
     <message>
         <source>What are these resources?</source>
         <translation>¿Qué son estos recursos?</translation>
     </message>
     <message>
-        <source>Download recommended resources</source>
-        <translation>Descargar recursos recomendados</translation>
-    </message>
-    <message>
-        <source>%1 — %2</source>
-        <translation>%1 — %2</translation>
-    </message>
-    <message>
         <source>No recommended resources for this language. Import a dictionary in Settings → Dictionaries.</source>
         <translation>No hay recursos recomendados para este idioma. Importe un diccionario en Ajustes → Diccionarios.</translation>
     </message>
     <message>
-        <source>Frequency and pitch accent are optional. A dictionary is required.</source>
-        <translation>La frecuencia y el acento tonal son opcionales. Se requiere un diccionario.</translation>
+        <source>%1 (%2)</source>
+        <translation>%1 (%2)</translation>
     </message>
     <message>
-        <source>Frequency is optional. A dictionary is required.</source>
-        <translation>La frecuencia es opcional. Se requiere un diccionario.</translation>
+        <source>Downloads %1.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Pitch accent is optional. A dictionary is required.</source>
-        <translation>El acento tonal es opcional. Se requiere un diccionario.</translation>
-    </message>
-    <message>
-        <source>A dictionary is required.</source>
-        <translation>Se requiere un diccionario.</translation>
+        <source>%1 and %2</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Checking for an offline dictionary...</source>
@@ -9262,16 +9395,36 @@ No se elimina ningún archivo de índice.</translation>
         <translation>No se pudieron comprobar los recursos instalados: </translation>
     </message>
     <message>
-        <source>Dictionary ready: %1</source>
-        <translation>Diccionario listo: %1</translation>
-    </message>
-    <message>
         <source>%1 ready: %2</source>
         <translation>%1 listo: %2</translation>
     </message>
     <message>
+        <source>Dictionary ready: %1</source>
+        <translation>Diccionario listo: %1</translation>
+    </message>
+    <message>
+        <source>Dictionary: not downloaded yet (required)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1: not set up (optional)</source>
         <translation>%1: sin configurar (opcional)</translation>
+    </message>
+    <message>
+        <source>Starting…</source>
+        <translation>Iniciando…</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
+        <source>Downloading: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The download stopped before it finished.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Download cancelled. Some resources were installed.</source>
@@ -9282,8 +9435,8 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Descarga cancelada. No se instaló ningún recurso.</translation>
     </message>
     <message>
-        <source>Imported, but not active — Retry setup</source>
-        <translation>Importado, pero no activo — Reintentar configuración</translation>
+        <source>Imported, but not switched on. Press Download to try again.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>%1 installed, %2 failed.</source>
@@ -9296,6 +9449,26 @@ No se elimina ningún archivo de índice.</translation>
     <message>
         <source>Resources installed.</source>
         <translation>Recursos instalados.</translation>
+    </message>
+    <message>
+        <source>Dictionary: none installed. Add one in Settings → Dictionaries after setup.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloads: still running — %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloads: still running…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionary: download failed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Retry</source>
+        <translation>Reintentar</translation>
     </message>
 </context><context>
     <name>ResultCopy</name>
@@ -9328,12 +9501,20 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Copiado</translation>
     </message>
     <message>
-        <source>Mining complete — %1 %2, %3 notes added in %4</source>
-        <translation>Minería completada — %1 %2, %3 notas añadidas en %4</translation>
+        <source>Mining complete — %1 %2, %3 card added in %4</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Mining complete — %1 notes added in %2</source>
-        <translation>Minería completada — %1 notas añadidas en %2</translation>
+        <source>Mining complete — %1 %2, %3 cards added in %4</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining complete — %1 card added in %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining complete — %1 cards added in %2</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cancelled</source>
@@ -9348,12 +9529,20 @@ No se elimina ningún archivo de índice.</translation>
         <translation>La minería falló</translation>
     </message>
     <message>
-        <source>%1 — %2 of %3 %4 completed; %5 notes added in %6</source>
-        <translation>%1 — %2 de %3 %4 completados; %5 notas añadidas en %6</translation>
+        <source>%1 — %2 of %3 %4 completed; %5 card added in %6</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>%1 — %2 notes added in %3</source>
-        <translation>%1 — %2 notas añadidas en %3</translation>
+        <source>%1 — %2 of %3 %4 completed; %5 cards added in %6</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 — %2 card added in %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 — %2 cards added in %3</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>(asleep time excluded)</source>
@@ -9410,10 +9599,6 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Tiempo de procesamiento</translation>
     </message>
     <message>
-        <source>Processing Rate</source>
-        <translation>Velocidad de procesamiento</translation>
-    </message>
-    <message>
         <source>Comprehension</source>
         <translation>Comprensión</translation>
     </message>
@@ -9422,44 +9607,52 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Ocurrieron errores</translation>
     </message>
     <message>
+        <source>Copy summary</source>
+        <translation>Copiar resumen</translation>
+    </message>
+    <message>
         <source>Close</source>
         <translation>Cerrar</translation>
     </message>
     <message>
-        <source>Undo (%1 note)</source>
-        <translation>Deshacer (%1 nota)</translation>
+        <source>Undo (%1 card)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Undo (%1 notes)</source>
-        <translation>Deshacer (%1 notas)</translation>
+        <source>Undo (%1 cards)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Confirm Undo</source>
         <translation>Confirmar deshacer</translation>
     </message>
     <message>
-        <source>Delete %1 notes from Anki? This cannot be undone; those words become mineable again.</source>
-        <translation>¿Eliminar %1 notas de Anki? Esto no se puede deshacer; esas palabras vuelven a ser minables.</translation>
+        <source>Delete %1 card from Anki? This cannot be undone; the word becomes mineable again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Delete %1 cards from Anki? This cannot be undone; those words become mineable again.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Undoing…</source>
         <translation>Deshaciendo…</translation>
     </message>
     <message>
-        <source>Undone (%1 note deleted)</source>
-        <translation>Deshecho (%1 nota eliminada)</translation>
+        <source>Undone (%1 card deleted)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Undone (%1 notes deleted)</source>
-        <translation>Deshecho (%1 notas eliminadas)</translation>
+        <source>Undone (%1 cards deleted)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Undo Failed</source>
         <translation>Error al deshacer</translation>
     </message>
     <message>
-        <source>Failed to delete notes. Check that Anki is running.</source>
-        <translation>No se pudieron eliminar las notas. Compruebe que Anki se esté ejecutando.</translation>
+        <source>Failed to delete cards. Check that Anki is running.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>RetimeReference</name>
@@ -9588,12 +9781,16 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Frases</translation>
     </message>
     <message>
-        <source>Subtitle Text Filtering</source>
-        <translation>Filtrado de texto de subtítulos</translation>
+        <source>Clean up subtitle text</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Regex Filter</source>
-        <translation>Filtro de regex</translation>
+        <source>Remove speaker names, sound effects and music notes</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Removes (notes), [sound effects], ♪ music, speaker labels and dialogue dashes from each subtitle line before mining. Half-checked means your own pattern is in use: click to add every built-in cleanup to it.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Python regex matched in subtitle text and removed (or replaced) before mining. Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. Combine alternatives with |. Test patterns at https://regex101.com.</source>
@@ -9604,60 +9801,88 @@ No se elimina ningún archivo de índice.</translation>
         <translation>(vacío = eliminar coincidencia)</translation>
     </message>
     <message>
-        <source>Replacement</source>
-        <translation>Reemplazo</translation>
-    </message>
-    <message>
         <source>Inserted in place of each match (empty deletes it). Use Python backreferences \1 \2, not asbplayer's $1 $2.</source>
         <translation>Se inserta en lugar de cada coincidencia (vacío la elimina). Use retrorreferencias de Python \1 \2, no las de asbplayer $1 $2.</translation>
     </message>
     <message>
-        <source>Enable Subtitle Regex Filter</source>
-        <translation>Habilitar filtro de regex de subtítulos</translation>
+        <source>Edit the pattern (advanced)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Parens (Tanaka)</source>
-        <translation>Paréntesis (Tanaka)</translation>
+        <source>Regex Filter:</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Brackets [SFX]</source>
-        <translation>Corchetes [SFX]</translation>
+        <source>Replacement:</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Music ♪♬</source>
-        <translation>Música ♪♬</translation>
+        <source>Regex Filter</source>
+        <translation>Filtro de regex</translation>
     </message>
     <message>
-        <source>Speaker: prefix</source>
-        <translation>Prefijo de hablante:</translation>
+        <source>Replacement</source>
+        <translation>Reemplazo</translation>
     </message>
     <message>
-        <source>Dialogue dash</source>
-        <translation>Raya de diálogo</translation>
+        <source>Sentence options</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Presets</source>
-        <translation>Preajustes</translation>
+        <source>Mine every unknown word</source>
+        <translation>Minar todas las palabras desconocidas</translation>
     </message>
     <message>
-        <source>Click to append a built-in pattern to the regex field above.</source>
-        <translation>Haga clic para añadir un patrón integrado al campo de regex de arriba.</translation>
+        <source>One card per sentence</source>
+        <translation>Una tarjeta por oración</translation>
     </message>
     <message>
-        <source>Secondary Subtitles</source>
-        <translation>Subtítulos secundarios</translation>
+        <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped.</source>
+        <translation>Mina como máximo una palabra por oración de ejemplo — la primera que se encuentra en esa oración. Se omiten las demás palabras que comparten esa oración.</translation>
+    </message>
+    <message>
+        <source>Only i+1 sentences (exactly one unknown word)</source>
+        <translation>Solo oraciones i+1 (exactamente una palabra desconocida)</translation>
+    </message>
+    <message>
+        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication.</source>
+        <translation>Solo mina las palabras de una oración con exactamente una palabra desconocida (i+1); esto anula la deduplicación de oraciones.</translation>
+    </message>
+    <message>
+        <source>Sentence Rule</source>
+        <translation>Regla de oraciones</translation>
+    </message>
+    <message>
+        <source> s</source>
+        <translation> s</translation>
+    </message>
+    <message>
+        <source>No limit</source>
+        <translation>Sin límite</translation>
+    </message>
+    <message>
+        <source>Max Sentence Duration</source>
+        <translation>Duración máxima de oración</translation>
+    </message>
+    <message>
+        <source>Drops cards whose example sentence audio is longer than this many seconds. Set to 0 for no limit.</source>
+        <translation>Descarta las tarjetas cuyo audio de la oración de ejemplo dura más que esta cantidad de segundos. Establezca 0 para no aplicar límite.</translation>
+    </message>
+    <message>
+        <source>Max Sentence Characters</source>
+        <translation>Caracteres máximos de oración</translation>
+    </message>
+    <message>
+        <source>Drops cards whose sentence text exceeds this many characters. Set to 0 for no limit.</source>
+        <translation>Descarta las tarjetas cuyo texto de la oración supera esta cantidad de caracteres. Establezca 0 para no aplicar límite.</translation>
     </message>
     <message>
         <source>Enable secondary-language subtitles</source>
         <translation>Habilitar subtítulos secundarios</translation>
     </message>
     <message>
-        <source>Adds a second subtitle picker and its own offset to Video -&gt; Single. Its line shows under the mining-language line in the Word Curator preview and, when the Translation field is mapped (Cards &amp; Anki), on the card.</source>
-        <translation>Añade un segundo selector de subtítulos y su propio desfase a Video -&gt; Único. Su línea se muestra bajo la línea del idioma de minería en la vista previa del Curador de palabras y, cuando el campo de traducción está asignado (Tarjetas y Anki), en la tarjeta.</translation>
-    </message>
-    <message>
-        <source>Full Sentences</source>
-        <translation>Oraciones completas</translation>
+        <source>Adds a translation subtitle picker and its own offset to the Video screens (Single, Batch, Deck Builder). Its line shows under the mining-language line in the Word Curator preview and, when the Translation field is mapped (Cards &amp; Anki), on the card.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Mine full sentences across subtitle lines</source>
@@ -9666,10 +9891,6 @@ No se elimina ningún archivo de índice.</translation>
     <message>
         <source>Joins neighbouring subtitle lines when a line does not end a sentence, so the card carries the whole sentence instead of a fragment. Reading sources have no subtitle timings and ignore it.</source>
         <translation>Une líneas de subtítulos vecinas cuando una línea no termina una oración, para que la tarjeta lleve la oración completa en vez de un fragmento. Las fuentes de lectura no tienen tiempos de subtítulos y lo ignoran.</translation>
-    </message>
-    <message>
-        <source>Card Formatting</source>
-        <translation>Formato de tarjeta</translation>
     </message>
     <message>
         <source>Bold target word in sentence</source>
@@ -9766,60 +9987,20 @@ No se elimina ningún archivo de índice.</translation>
 </context><context>
     <name>SettingsTab</name>
     <message>
-        <source>Reset to Defaults…</source>
-        <translation>Restablecer valores predeterminados…</translation>
-    </message>
-    <message>
-        <source>Your installed resources and your theme are kept.</source>
-        <translation>Sus recursos instalados y su tema se conservan.</translation>
-    </message>
-    <message>
-        <source>Settings Profiles…</source>
-        <translation>Perfiles de ajustes…</translation>
-    </message>
-    <message>
-        <source>Keep several complete settings snapshots and switch between them.</source>
-        <translation>Conserve varias instantáneas completas de ajustes y cambie entre ellas.</translation>
-    </message>
-    <message>
-        <source>Settings…</source>
-        <translation>Ajustes…</translation>
-    </message>
-    <message>
-        <source>Save a portable settings file (machine-specific paths and resources excluded).</source>
-        <translation>Guardar un archivo de ajustes portátil (se excluyen rutas y recursos específicos del equipo).</translation>
-    </message>
-    <message>
-        <source>Resources…</source>
-        <translation>Recursos…</translation>
+        <source>Export Resources…</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Save this language's dictionaries, frequency and pitch lists, ignore list and word lists to one file.</source>
         <translation>Guardar en un solo archivo los diccionarios, las listas de frecuencia y de acento tonal, la lista de ignorados y las listas de palabras de este idioma.</translation>
     </message>
     <message>
-        <source>Export</source>
-        <translation>Exportar</translation>
-    </message>
-    <message>
-        <source>Export your settings, or this language's resources, to a file.</source>
-        <translation>Exportar sus ajustes, o los recursos de este idioma, a un archivo.</translation>
-    </message>
-    <message>
-        <source>Apply settings from an exported file; anything not in the file is kept.</source>
-        <translation>Aplicar ajustes de un archivo exportado; se conserva todo lo que no esté en el archivo.</translation>
+        <source>Import Resources…</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Install resources from a bundle file. Nothing you already have is replaced.</source>
         <translation>Instalar recursos desde un archivo de paquete. No se reemplaza nada de lo que ya tiene.</translation>
-    </message>
-    <message>
-        <source>Import</source>
-        <translation>Importar</translation>
-    </message>
-    <message>
-        <source>Import settings, or resources, from a file.</source>
-        <translation>Importar ajustes, o recursos, desde un archivo.</translation>
     </message>
     <message>
         <source>Cards</source>
@@ -10108,6 +10289,18 @@ Sus recursos instalados y su tema se conservan.</translation>
         <translation>Acento tonal</translation>
     </message>
     <message>
+        <source>dictionary</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>word frequency</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>pitch accent</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Anki Miner Setup</source>
         <translation>Configuración de Anki Miner</translation>
     </message>
@@ -10122,12 +10315,8 @@ Sus recursos instalados y su tema se conservan.</translation>
 </context><context>
     <name>SingleEpisodeTab</name>
     <message>
-        <source>Actions</source>
-        <translation>Acciones</translation>
-    </message>
-    <message>
-        <source>Process Episode</source>
-        <translation>Procesar episodio</translation>
+        <source>Mine Episode</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Create Anki cards from the episode</source>
@@ -10142,8 +10331,8 @@ Sus recursos instalados y su tema se conservan.</translation>
         <translation>Previsualizar el video con subtítulos para ajustar el desfase de sincronización</translation>
     </message>
     <message>
-        <source>Tracks</source>
-        <translation>Pistas</translation>
+        <source>Audio track…</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Manually choose which audio track to use for this episode</source>
@@ -10158,10 +10347,6 @@ Sus recursos instalados y su tema se conservan.</translation>
         <translation>Cancelar el procesamiento</translation>
     </message>
     <message>
-        <source>Progress</source>
-        <translation>Progreso</translation>
-    </message>
-    <message>
         <source>Episode Mining Tab</source>
         <translation>Pestaña de minería de episodios</translation>
     </message>
@@ -10170,8 +10355,8 @@ Sus recursos instalados y su tema se conservan.</translation>
         <translation>Procesar un solo episodio de video para crear tarjetas de vocabulario</translation>
     </message>
     <message>
-        <source>File Selection</source>
-        <translation>Selección de archivos</translation>
+        <source>Choose a video. A subtitle file with the same name is picked up automatically.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Recent Files:</source>
@@ -10311,10 +10496,9 @@ Sus recursos instalados y su tema se conservan.</translation>
         <translation>Abrir Estado del sistema</translation>
     </message>
     <message numerus="yes">
-        <source>%n task(s)</source>
-        <translation>
-            <numerusform>%n tarea</numerusform>
-            <numerusform>%n tareas</numerusform>
+        <source>%n running</source>
+        <translation type="unfinished">
+            <numerusform />
         </translation>
     </message>
     <message>
@@ -10322,8 +10506,8 @@ Sus recursos instalados y su tema se conservan.</translation>
         <translation>Transcurrido %1</translation>
     </message>
     <message>
-        <source>Open mini monitor</source>
-        <translation>Abrir minimonitor</translation>
+        <source>Open job monitor</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Checking AnkiConnect…</source>
@@ -10394,6 +10578,10 @@ Sus recursos instalados y su tema se conservan.</translation>
     <message>
         <source>Some files could not be transcribed.</source>
         <translation>No se pudieron transcribir algunos archivos.</translation>
+    </message>
+    <message>
+        <source>This file could not be transcribed.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Complete — %1 files processed</source>
@@ -10480,10 +10668,6 @@ Sus recursos instalados y su tema se conservan.</translation>
         <translation>Salida</translation>
     </message>
     <message>
-        <source>Generated .srt files are saved next to each source file unless you choose a folder.</source>
-        <translation>Los archivos .srt generados se guardan junto a cada archivo de origen a menos que elija una carpeta.</translation>
-    </message>
-    <message>
         <source>Output:</source>
         <translation>Salida:</translation>
     </message>
@@ -10494,6 +10678,10 @@ Sus recursos instalados y su tema se conservan.</translation>
     <message>
         <source>Reset</source>
         <translation>Restablecer</translation>
+    </message>
+    <message>
+        <source>Generated .srt files are saved next to each source file unless you choose a folder.</source>
+        <translation>Los archivos .srt generados se guardan junto a cada archivo de origen a menos que elija una carpeta.</translation>
     </message>
     <message>
         <source>Overwrite existing SRT files</source>
@@ -10662,6 +10850,10 @@ Sus recursos instalados y su tema se conservan.</translation>
         <translation>No se pudieron resincronizar algunos archivos.</translation>
     </message>
     <message>
+        <source>This file could not be retimed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Complete — %1 files processed</source>
         <translation>Completado — %1 archivos procesados</translation>
     </message>
@@ -10678,24 +10870,40 @@ Sus recursos instalados y su tema se conservan.</translation>
         <translation>Seleccionar carpeta de salida</translation>
     </message>
     <message>
-        <source>Next to source video</source>
-        <translation>Junto al video de origen</translation>
+        <source>Next to source video, as name_retimed.srt</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Subtitle retiming</source>
         <translation>Resincronización de subtítulos</translation>
     </message>
     <message>
+        <source>Download alass</source>
+        <translation>Descargar alass</translation>
+    </message>
+    <message>
         <source>Input</source>
         <translation>Entrada</translation>
     </message>
     <message>
-        <source>alass not found; retiming uses ffsubsync only. Install it in Settings → Transcription &amp; Alignment.</source>
-        <translation>alass no encontrado; el reajuste de tiempo usa solo ffsubsync. Instálelo en Ajustes → Transcripción y alineación.</translation>
-    </message>
-    <message>
         <source>Resync a subtitle file to its video by matching audio.</source>
         <translation>Resincroniza un archivo de subtítulos con su vídeo comparando el audio.</translation>
+    </message>
+    <message>
+        <source>Video File:</source>
+        <translation>Archivo de video:</translation>
+    </message>
+    <message>
+        <source>Subtitle File:</source>
+        <translation>Archivo de subtítulos:</translation>
+    </message>
+    <message>
+        <source>Video Folder:</source>
+        <translation>Carpeta de video:</translation>
+    </message>
+    <message>
+        <source>Subtitle Folder:</source>
+        <translation>Carpeta de subtítulos:</translation>
     </message>
     <message>
         <source>Mode:</source>
@@ -10718,16 +10926,8 @@ Sus recursos instalados y su tema se conservan.</translation>
         <translation>Reajustar el tiempo de una carpeta de subtítulos, emparejados con los vídeos por número de episodio.</translation>
     </message>
     <message>
-        <source>Video File:</source>
-        <translation>Archivo de video:</translation>
-    </message>
-    <message>
         <source>This field takes a video file.</source>
         <translation>Este campo admite un archivo de vídeo.</translation>
-    </message>
-    <message>
-        <source>Subtitle File:</source>
-        <translation>Archivo de subtítulos:</translation>
     </message>
     <message>
         <source>This field takes a subtitle file.</source>
@@ -10744,14 +10944,6 @@ Sus recursos instalados y su tema se conservan.</translation>
     <message>
         <source>Choose which embedded track to align the subtitle against.</source>
         <translation>Elija con qué pista incrustada alinear el subtítulo.</translation>
-    </message>
-    <message>
-        <source>Video Folder:</source>
-        <translation>Carpeta de video:</translation>
-    </message>
-    <message>
-        <source>Subtitle Folder:</source>
-        <translation>Carpeta de subtítulos:</translation>
     </message>
     <message>
         <source>Matched pairs:</source>
@@ -10788,10 +10980,6 @@ Sus recursos instalados y su tema se conservan.</translation>
     <message>
         <source>When unchecked, pairs whose output subtitle already exists are skipped, not overwritten.</source>
         <translation>Si no está marcado, los pares cuyo subtítulo de salida ya existe se omiten, no se sobrescriben.</translation>
-    </message>
-    <message>
-        <source>Alignment is automatic; the result is written to a separate _retimed file.</source>
-        <translation>La alineación es automática; el resultado se escribe en un archivo _retimed independiente.</translation>
     </message>
     <message>
         <source>Retime Subtitles</source>
@@ -11028,32 +11216,24 @@ Sus recursos instalados y su tema se conservan.</translation>
         <translation>Voz a texto</translation>
     </message>
     <message>
-        <source>Download transcription engine</source>
-        <translation>Descargar motor de transcripción</translation>
-    </message>
-    <message>
-        <source>Download the faster-whisper speech-to-text engine into Anki Miner's folder. Required before subtitle generation can run on a packaged install.</source>
-        <translation>Descargue el motor de conversión de voz a texto faster-whisper en la carpeta de Anki Miner. Es necesario antes de poder generar subtítulos en una instalación empaquetada.</translation>
+        <source>Download the speech-to-text engine and the selected Whisper model into Anki Miner's folder. Generate Subtitles and Audiobook Sync need both.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Transcription engine</source>
         <translation>Motor de transcripción</translation>
     </message>
     <message>
-        <source>Speech-to-text engine (faster-whisper), about %1 MB, downloaded once.</source>
-        <translation>Motor de conversión de voz a texto (faster-whisper), unos %1 MB, se descarga una sola vez.</translation>
-    </message>
-    <message>
-        <source>ASR model</source>
-        <translation>Modelo de ASR</translation>
+        <source>Transcription model</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>large-v3 is the most accurate; small is much faster.</source>
         <translation>large-v3 es el más preciso; small es mucho más rápido.</translation>
     </message>
     <message>
-        <source>ASR device</source>
-        <translation>Dispositivo de ASR</translation>
+        <source>Run transcription on</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Auto uses the GPU when available, else CPU. Each GPU option needs its own download below.</source>
@@ -11144,8 +11324,8 @@ Sus recursos instalados y su tema se conservan.</translation>
         <translation>Descargue el binario de alineación de subtítulos alass en la carpeta bin de Anki Miner. Necesario para reajustar el tiempo de los subtítulos a menos que alass ya esté en su PATH.</translation>
     </message>
     <message>
-        <source>alass download</source>
-        <translation>Descarga de alass</translation>
+        <source>Subtitle aligner</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>No alass binary is published for macOS. Install it with Homebrew:</source>
@@ -11180,6 +11360,10 @@ Sus recursos instalados y su tema se conservan.</translation>
         <translation>La transcripción local no está disponible en esta compilación.</translation>
     </message>
     <message>
+        <source>Set up speech-to-text (about %1 MB)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Silence removal is available.</source>
         <translation>La eliminación de silencios está disponible.</translation>
     </message>
@@ -11198,12 +11382,20 @@ Sus recursos instalados y su tema se conservan.</translation>
         <translation>Lo que Anki Miner necesita para minar y si lo tiene.</translation>
     </message>
     <message>
+        <source>Not checked yet</source>
+        <translation>Aún no comprobado</translation>
+    </message>
+    <message>
         <source>Re-check now</source>
         <translation>Volver a comprobar ahora</translation>
     </message>
     <message>
         <source>Export diagnostics…</source>
         <translation>Exportar diagnósticos…</translation>
+    </message>
+    <message>
+        <source>Last checked %1</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Ready</source>
@@ -11218,12 +11410,16 @@ Sus recursos instalados y su tema se conservan.</translation>
         <translation>No funciona</translation>
     </message>
     <message>
-        <source>Unknown</source>
-        <translation>Desconocido</translation>
+        <source>Not set up</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Not checked yet</source>
-        <translation>Aún no comprobado</translation>
+        <source>Not installed</source>
+        <translation>No instalado</translation>
+    </message>
+    <message>
+        <source>Unknown</source>
+        <translation>Desconocido</translation>
     </message>
     <message>
         <source>Checked %1</source>
@@ -11266,12 +11462,8 @@ Sus recursos instalados y su tema se conservan.</translation>
         <translation>Asignación de campos</translation>
     </message>
     <message>
-        <source>ffmpeg</source>
-        <translation>ffmpeg</translation>
-    </message>
-    <message>
-        <source>ffprobe</source>
-        <translation>ffprobe</translation>
+        <source>ffmpeg (video tools)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Offline dictionary</source>
@@ -11338,21 +11530,11 @@ Sus recursos instalados y su tema se conservan.</translation>
         <translation>Marcar como favoritas todas las variantes %2 %3 (%1 marcadas como favoritas).</translation>
     </message>
 </context><context>
-    <name>ThemePage</name>
-    <message>
-        <source>Pick a Look</source>
-        <translation>Elegir apariencia</translation>
-    </message>
-    <message>
-        <source>Click a theme to try it. You can change it any time in Settings.</source>
-        <translation>Haga clic en un tema para probarlo. Puede cambiarlo en cualquier momento en Ajustes.</translation>
-    </message>
-    <message>
-        <source>See all %1 themes…</source>
-        <translation>Ver los %1 temas…</translation>
-    </message>
-</context><context>
     <name>UISettingsPanel</name>
+    <message>
+        <source>General</source>
+        <translation>General</translation>
+    </message>
     <message>
         <source>Language</source>
         <translation>Idioma</translation>
@@ -11374,12 +11556,12 @@ Sus recursos instalados y su tema se conservan.</translation>
         <translation>Escala toda la interfaz, incluidos el tamaño y la fuente del texto, además del espaciado y los controles. Se aplica tras reiniciar.</translation>
     </message>
     <message>
-        <source>Zoom</source>
-        <translation>Zoom</translation>
-    </message>
-    <message>
         <source>%1%</source>
         <translation>%1 %</translation>
+    </message>
+    <message>
+        <source>Zoom</source>
+        <translation>Zoom</translation>
     </message>
     <message>
         <source>Restart now</source>
@@ -11388,22 +11570,6 @@ Sus recursos instalados y su tema se conservan.</translation>
     <message>
         <source>Later</source>
         <translation>Más tarde</translation>
-    </message>
-    <message>
-        <source>Click a theme preview to apply it live; &lt;b&gt;Revert&lt;/b&gt; undoes it. Star themes to add them to the top-right selector.</source>
-        <translation>Haga clic en una vista previa de tema para aplicarlo en vivo; &lt;b&gt;Revertir&lt;/b&gt; lo deshace. Marque temas con estrella para añadirlos al selector superior derecho.</translation>
-    </message>
-    <message>
-        <source>Open themes folder</source>
-        <translation>Abrir carpeta de temas</translation>
-    </message>
-    <message>
-        <source>Revert</source>
-        <translation>Revertir</translation>
-    </message>
-    <message>
-        <source>Restore the theme that was active when this tab was opened.</source>
-        <translation>Restaura el tema que estaba activo cuando se abrió esta pestaña.</translation>
     </message>
     <message>
         <source>Utilities tab</source>
@@ -11426,12 +11592,24 @@ Sus recursos instalados y su tema se conservan.</translation>
         <translation>Cuando está activado, Anki Miner consulta GitHub en busca de nuevas versiones al iniciar.</translation>
     </message>
     <message>
-        <source>Higher = faster, but uses more CPU and memory.</source>
-        <translation>Mayor = más rápido, pero usa más CPU y memoria.</translation>
+        <source>Themes</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Max Parallel Workers</source>
-        <translation>Procesos paralelos máximos</translation>
+        <source>Click a theme preview to apply it live; &lt;b&gt;Revert&lt;/b&gt; undoes it. Star themes to add them to the top-right selector.</source>
+        <translation>Haga clic en una vista previa de tema para aplicarlo en vivo; &lt;b&gt;Revertir&lt;/b&gt; lo deshace. Marque temas con estrella para añadirlos al selector superior derecho.</translation>
+    </message>
+    <message>
+        <source>Open themes folder</source>
+        <translation>Abrir carpeta de temas</translation>
+    </message>
+    <message>
+        <source>Revert</source>
+        <translation>Revertir</translation>
+    </message>
+    <message>
+        <source>Restore the theme that was active when this tab was opened.</source>
+        <translation>Restaura el tema que estaba activo cuando se abrió esta pestaña.</translation>
     </message>
     <message>
         <source>button labels %1:1</source>
@@ -11906,24 +12084,16 @@ Ordene por esta columna para recorrer en orden una grabación larga — luego re
         <translation>YouTube</translation>
     </message>
     <message>
+        <source>From a cookies.txt file…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Cookies from browser</source>
         <translation>Cookies del navegador</translation>
     </message>
     <message>
-        <source>Pick a browser whose cookies yt-dlp should reuse. Leave as 'None' unless YouTube is blocking anonymous fetches.</source>
-        <translation>Elija un navegador cuyas cookies debería reutilizar yt-dlp. Déjelo en «Ninguno» a menos que YouTube esté bloqueando las descargas anónimas.</translation>
-    </message>
-    <message>
-        <source>Optional: path to an exported cookies.txt...</source>
-        <translation>Opcional: ruta a un cookies.txt exportado...</translation>
-    </message>
-    <message>
-        <source>Cookies file</source>
-        <translation>Archivo de cookies</translation>
-    </message>
-    <message>
-        <source>Overrides the browser dropdown. Keep the file private — it holds your YouTube login.</source>
-        <translation>Anula el menú desplegable del navegador. Mantenga el archivo privado — contiene su inicio de sesión de YouTube.</translation>
+        <source>Reuse a browser's YouTube login, or an exported cookies.txt file, when YouTube blocks anonymous fetches. Keep a cookies file private — it holds your login.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source> minutes</source>
@@ -11946,6 +12116,14 @@ Ordene por esta columna para recorrer en orden una grabación larga — luego re
         <translation>Al añadir una lista de reproducción, se ponen en cola como máximo esta cantidad de videos.</translation>
     </message>
     <message>
+        <source>Align captions to audio</source>
+        <translation>Alinear subtítulos con el audio</translation>
+    </message>
+    <message>
+        <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
+        <translation>Reajusta el tiempo de los subtítulos de YouTube según el audio del video antes de minar. Se ignora cuando el subtítulo se transcribió localmente.</translation>
+    </message>
+    <message>
         <source>Keep yt-dlp up to date automatically</source>
         <translation>Mantener yt-dlp actualizado automáticamente</translation>
     </message>
@@ -11962,18 +12140,6 @@ Ordene por esta columna para recorrer en orden una grabación larga — luego re
         <translation>Las actualizaciones instalan el canal nightly de yt-dlp, que corrige los fallos de YouTube días antes de una versión estable. Si se desactiva, la versión instalada se conserva hasta que la reemplace una versión estable más reciente.</translation>
     </message>
     <message>
-        <source>Optional: path to your own yt-dlp executable...</source>
-        <translation>Opcional: ruta a su propio ejecutable de yt-dlp...</translation>
-    </message>
-    <message>
-        <source>yt-dlp location</source>
-        <translation>Ubicación de yt-dlp</translation>
-    </message>
-    <message>
-        <source>Overrides automatic detection. Leave empty unless you need a specific build.</source>
-        <translation>Anula la detección automática. Déjelo vacío salvo que necesite una compilación específica.</translation>
-    </message>
-    <message>
         <source>Update yt-dlp now</source>
         <translation>Actualizar yt-dlp ahora</translation>
     </message>
@@ -11986,8 +12152,44 @@ Ordene por esta columna para recorrer en orden una grabación larga — luego re
         <translation>yt-dlp</translation>
     </message>
     <message>
+        <source>Downloaded by Anki Miner</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Included with Anki Miner</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Found on your system PATH</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Installed alongside Anki Miner</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Your own copy, set in gui_config.json</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Version %1</source>
+        <translation>Versión %1</translation>
+    </message>
+    <message>
         <source>Download yt-dlp (~40 MB)</source>
         <translation>Descargar yt-dlp (~40 MB)</translation>
+    </message>
+    <message>
+        <source>%1 (file)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose a cookies.txt file</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cookies file (*.txt);;All Files (*)</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>YouTubeTab</name>
@@ -12076,10 +12278,6 @@ Ordene por esta columna para recorrer en orden una grabación larga — luego re
         <translation>Cancelar la ejecución activa.</translation>
     </message>
     <message>
-        <source>Progress</source>
-        <translation>Progreso</translation>
-    </message>
-    <message>
         <source>videos</source>
         <translation>vídeos</translation>
     </message>
@@ -12096,12 +12294,8 @@ Ordene por esta columna para recorrer en orden una grabación larga — luego re
         <translation>Descargando yt-dlp…</translation>
     </message>
     <message>
-        <source>One YouTube link or playlist per line</source>
-        <translation>Un enlace o lista de reproducción de YouTube por línea</translation>
-    </message>
-    <message>
-        <source>Paste YouTube links above, one per line, then click Mine.</source>
-        <translation>Pegue arriba enlaces de YouTube, uno por línea, y haga clic en Minar.</translation>
+        <source>Paste YouTube links or playlists, one per line, then click Mine</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Review words before mining</source>
@@ -12130,14 +12324,6 @@ Ordene por esta columna para recorrer en orden una grabación larga — luego re
     <message>
         <source>Auto uses YouTube's captions when they exist and transcribes the video when they do not. Always transcribe ignores YouTube's captions. Captions only skips a video that has none.</source>
         <translation>Automático usa los subtítulos de YouTube cuando existen y transcribe el video cuando no existen. Transcribir siempre ignora los subtítulos de YouTube. Solo subtítulos omite un video que no tenga ninguno.</translation>
-    </message>
-    <message>
-        <source>Align captions to audio</source>
-        <translation>Alinear subtítulos con el audio</translation>
-    </message>
-    <message>
-        <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
-        <translation>Reajusta el tiempo de los subtítulos de YouTube según el audio del video antes de minar. Se ignora cuando el subtítulo se transcribió localmente.</translation>
     </message>
     <message>
         <source>Some lines are not valid URLs.</source>
@@ -12187,6 +12373,10 @@ Ordene por esta columna para recorrer en orden una grabación larga — luego re
     </message>
 </context><context>
     <name>_HealthRow</name>
+    <message>
+        <source>Install…</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Fix</source>
         <translation>Corregir</translation>
