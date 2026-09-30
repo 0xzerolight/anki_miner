@@ -89,6 +89,8 @@ class _AnkiPlanTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
     summary_label: QLabel
     preview_table: QTableWidget
     preview_card: QWidget
+    #: Takes the page's surplus height while the preview table is hidden.
+    page_filler: QWidget
     action_bar: WorkflowActionBar
     progress_bar: QProgressBar
     status_label: QLabel
@@ -196,6 +198,11 @@ class _AnkiPlanTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         self.preview_table.setRowCount(0)
         self.apply_button.setEnabled(False)
         self.summary_label.setText("")
+        # Nothing to preview: the table, and the card holding it, go (E07);
+        # the filler takes back the height the table held.
+        self.preview_table.hide()
+        self.preview_card.hide()
+        self.page_filler.show()
 
     def _drop_stale_plan(self, plan_version: int) -> bool:
         """Drop a plan scanned under older settings and say why; report whether it did.

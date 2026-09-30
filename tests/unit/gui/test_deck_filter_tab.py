@@ -134,7 +134,8 @@ class TestInspection:
             "Meaning",
         ]
         assert tab.expression_combo.isEnabled()
-        assert "3 note(s)" in tab.status_label.text()
+        assert tab.deck_info_label.text() == "3 note(s) in the deck."
+        assert not tab.field_row.isHidden()
 
     def test_stale_generation_is_ignored(self, tab):
         tab._inspect_generation = 8
@@ -144,6 +145,48 @@ class TestInspection:
 
         assert tab.expression_combo.count() == 1
         assert not tab.expression_combo.isEnabled()
+        assert tab.field_row.isHidden()
+
+    def test_the_field_pickers_wait_for_the_deck(self, tab):
+        """E07: Word and Reading field appear once a deck is read."""
+        assert tab.field_row.isHidden()
+
+    def test_a_failed_read_is_a_banner(self, tab):
+        tab._inspect_generation = 3
+
+        tab._on_inspect_error(3, "Couldn't read the deck: boom")
+
+        issue = tab.issue_banner().current_issue()
+        assert issue.summary == "The deck could not be read."
+        assert issue.details == "Couldn't read the deck: boom"
+
+
+class TestCardLayout:
+    def test_the_page_is_three_titled_cards(self, tab):
+        from anki_miner.gui.widgets.enhanced import SectionHeader
+
+        titles = [header.title_label.text() for header in tab.findChildren(SectionHeader)]
+        assert titles == ["Deck", "Filters", "Preview"]
+        for card in (tab.deck_card, tab.filters_card, tab.preview_card):
+            assert card.objectName() == "card"
+
+    def test_the_preview_waits_for_a_scan(self, tab):
+        assert tab.preview_card.isHidden()
+
+        tab._on_scan_finished(_plan())
+
+        assert not tab.preview_card.isHidden()
+        assert not tab.preview_table.isHidden()
+        assert tab.page_filler.isHidden()
+
+    def test_a_dropped_plan_takes_the_preview_down(self, tab):
+        tab._on_scan_finished(_plan())
+
+        tab._drop_plan()
+
+        assert tab.preview_card.isHidden()
+        assert tab.preview_table.isHidden()
+        assert not tab.page_filler.isHidden()
 
 
 class TestPlanLifecycle:
