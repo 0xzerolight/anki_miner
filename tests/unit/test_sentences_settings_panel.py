@@ -13,8 +13,11 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
+from PyQt6.QtCore import Qt
+
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.panels.sentences_settings_panel import SentencesSettingsPanel
+from anki_miner.languages._spaced import script as spaced_script
 
 
 def test_bold_target_tooltip_escapes_markup(qtbot):
@@ -89,20 +92,135 @@ def test_subtitle_regex_fields_round_trip(qtbot):
     assert result.use_subtitle_regex_filter is True
 
 
-def test_preset_button_appends_pattern(qtbot):
-    from anki_miner.gui.widgets.panels.sentences_settings_panel import SUBTITLE_REGEX_PRESETS
+from anki_miner.gui.widgets.panels.sentences_settings_panel import (  # noqa: E402
+    SUBTITLE_REGEX_PRESETS,
+    add_missing_pieces,
+    builtin_cleanup_pieces,
+    cleanup_state,
+)
 
+JA_PIECES = tuple(pattern for _label, pattern in SUBTITLE_REGEX_PRESETS)
+
+
+def test_a_language_without_its_own_pattern_uses_the_five_presets():
+    assert builtin_cleanup_pieces("") == JA_PIECES
+
+
+def test_a_language_with_its_own_pattern_uses_it_as_one_piece():
+    assert builtin_cleanup_pieces(spaced_script.LATIN_SUBTITLE_REGEX) == (spaced_script.LATIN_SUBTITLE_REGEX,)
+
+
+def test_add_missing_pieces_keeps_the_users_pattern_and_never_duplicates():
+    first, second = JA_PIECES[0], JA_PIECES[1]
+    assert add_missing_pieces("", (first, second)) == f"{first}|{second}"
+    assert add_missing_pieces(first, (first, second)) == f"{first}|{second}"
+    assert add_missing_pieces(f"mine|{first}", (first,)) == f"mine|{first}"
+
+
+def test_cleanup_state_is_derived_from_the_two_stored_fields():
+    full = "|".join(JA_PIECES)
+    assert cleanup_state(False, full, JA_PIECES) == Qt.CheckState.Unchecked
+    assert cleanup_state(True, full, JA_PIECES) == Qt.CheckState.Checked
+    assert cleanup_state(True, f"{full}|mine", JA_PIECES) == Qt.CheckState.Checked
+    assert cleanup_state(True, JA_PIECES[0], JA_PIECES) == Qt.CheckState.PartiallyChecked
+
+
+def test_one_click_turns_on_every_built_in_cleanup(qtbot):
+    """D15 extension: the common case is one plain-language action."""
     panel = SentencesSettingsPanel()
     qtbot.addWidget(panel)
-    _, pattern = SUBTITLE_REGEX_PRESETS[0]
-    panel._append_preset(pattern)
-    assert panel.subtitle_regex_edit.text() == pattern
+    panel.load_from_config(AnkiMinerConfig())
+    assert panel.use_subtitle_regex_checkbox.checkState() == Qt.CheckState.Unchecked
 
-    # A second, different preset joins with `|`.
-    _, second_pattern = SUBTITLE_REGEX_PRESETS[1]
-    panel._append_preset(second_pattern)
-    assert panel.subtitle_regex_edit.text() == f"{pattern}|{second_pattern}"
+    panel.use_subtitle_regex_checkbox.click()
 
-    # Re-appending an already-present preset is a no-op (no duplicate alternation).
-    panel._append_preset(pattern)
-    assert panel.subtitle_regex_edit.text() == f"{pattern}|{second_pattern}"
+    out = panel.contribute(AnkiMinerConfig())
+    assert out.use_subtitle_regex_filter is True
+    assert out.subtitle_regex_filter == "|".join(JA_PIECES)
+    assert panel.use_subtitle_regex_checkbox.checkState() == Qt.CheckState.Checked
+
+
+def test_a_pattern_with_some_presets_is_partly_checked_and_completed_by_a_click(qtbot):
+    panel = SentencesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(
+        replace(AnkiMinerConfig(), use_subtitle_regex_filter=True, subtitle_regex_filter=JA_PIECES[0])
+    )
+    assert panel.use_subtitle_regex_checkbox.checkState() == Qt.CheckState.PartiallyChecked
+    assert panel.subtitle_regex_group.isChecked()  # a custom pattern opens the disclosure
+
+    panel.use_subtitle_regex_checkbox.click()
+
+    assert panel.subtitle_regex_edit.text() == "|".join(JA_PIECES)
+    assert panel.use_subtitle_regex_checkbox.checkState() == Qt.CheckState.Checked
+
+
+def test_unchecking_switches_off_and_keeps_the_pattern(qtbot):
+    panel = SentencesSettingsPanel()
+    qtbot.addWidget(panel)
+    full = "|".join(JA_PIECES)
+    panel.load_from_config(replace(AnkiMinerConfig(), use_subtitle_regex_filter=True, subtitle_regex_filter=full))
+
+    panel.use_subtitle_regex_checkbox.click()
+
+    out = panel.contribute(AnkiMinerConfig())
+    assert out.use_subtitle_regex_filter is False
+    assert out.subtitle_regex_filter == full
+
+
+@pytest.mark.parametrize("code", ["ko", "th", "fr"])
+def test_a_spaced_language_default_loads_checked_and_unchanged(qtbot, code):
+    """ko, th and the spaced languages ship a pattern switched on; it must look done."""
+    from anki_miner.languages.registry import get_profile
+
+    default = str(get_profile(code).scoped_defaults["subtitle_regex_filter"])
+    config = replace(AnkiMinerConfig(), language=code, use_subtitle_regex_filter=True, subtitle_regex_filter=default)
+    panel = SentencesSettingsPanel()
+    qtbot.addWidget(panel)
+
+    panel.load_from_config(config)
+
+    assert panel.use_subtitle_regex_checkbox.checkState() == Qt.CheckState.Checked
+    assert not panel.subtitle_regex_group.isChecked()
+    assert panel.contribute(config).subtitle_regex_filter == default
+
+
+def test_the_built_in_cleanups_follow_a_mining_language_switch(qtbot):
+    """Review focus (a language with a pre-filled pattern): the panel is reused across switches.
+
+    Settings reloads the same panel through load_from_config when the mining
+    language changes. Korean ships its own pattern, switched on; Japanese ships
+    none. Coming back to Japanese, one click must add the five Japanese
+    cleanups, never the Korean pattern the panel saw last.
+    """
+    from anki_miner.languages.registry import get_profile
+
+    ko_default = str(get_profile("ko").scoped_defaults["subtitle_regex_filter"])
+    panel = SentencesSettingsPanel()
+    qtbot.addWidget(panel)
+
+    panel.load_from_config(
+        replace(AnkiMinerConfig(), language="ko", use_subtitle_regex_filter=True, subtitle_regex_filter=ko_default)
+    )
+    assert panel.use_subtitle_regex_checkbox.checkState() == Qt.CheckState.Checked
+
+    japanese = replace(AnkiMinerConfig(), language="ja", use_subtitle_regex_filter=False, subtitle_regex_filter="")
+    panel.load_from_config(japanese)
+    assert panel.use_subtitle_regex_checkbox.checkState() == Qt.CheckState.Unchecked
+
+    panel.use_subtitle_regex_checkbox.click()
+
+    out = panel.contribute(japanese)
+    assert out.subtitle_regex_filter == "|".join(JA_PIECES)
+    assert ko_default not in out.subtitle_regex_filter
+
+
+def test_the_raw_fields_sit_behind_a_collapsed_disclosure(qtbot):
+    panel = SentencesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig())
+    assert panel.subtitle_regex_group.isCheckable()
+    assert not panel.subtitle_regex_group.isChecked()
+    assert not panel.subtitle_regex_edit.isVisibleTo(panel)
+    panel.subtitle_regex_group.setChecked(True)
+    assert panel.subtitle_regex_edit.isVisibleTo(panel)

@@ -9,15 +9,19 @@ which words get mined. "Colour the reading by tone" moved off Filtering too
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import replace
 
-from PyQt6.QtWidgets import QCheckBox, QHBoxLayout, QLineEdit, QPushButton, QWidget
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QCheckBox, QFormLayout, QGroupBox, QLineEdit, QVBoxLayout, QWidget
 
 from anki_miner.gui.widgets.base import FormPanel
+from anki_miner.languages.registry import config_language, get_profile
 
-#: Built-in regex presets for common subtitle noise. Buttons append these to the
-#: user's pattern with `|` so multiple presets can be stacked. Patterns target
-#: both half-width and full-width punctuation common in JP subtitle files.
+#: Built-in cleanups for a language whose profile ships no pattern of its own
+#: (ja, zh, yue). "Remove speaker names, sound effects and music notes" makes
+#: sure each one is in the pattern. The labels are no longer shown. Patterns
+#: target both half-width and full-width punctuation common in JP subtitle files.
 SUBTITLE_REGEX_PRESETS: tuple[tuple[str, str], ...] = (
     ("Parens (Tanaka)", r"\([^)]*\)|（[^）]*）"),
     ("Brackets [SFX]", r"\[[^\]]*\]|［[^］]*］"),
@@ -29,11 +33,51 @@ SUBTITLE_REGEX_PRESETS: tuple[tuple[str, str], ...] = (
 )
 
 
+def builtin_cleanup_pieces(language_default: str) -> tuple[str, ...]:
+    """The pieces the one cleanup box makes sure are in the pattern (D15 extension).
+
+    A language that ships its own pattern (ko, th and the spaced languages set
+    ``subtitle_regex_filter`` in their scoped defaults) keeps exactly that
+    pattern as one piece; the rest get the five presets above.
+    """
+    if language_default:
+        return (language_default,)
+    return tuple(pattern for _label, pattern in SUBTITLE_REGEX_PRESETS)
+
+
+def add_missing_pieces(pattern: str, pieces: Sequence[str]) -> str:
+    """Append every piece not already inside ``pattern``, joined with ``|``.
+
+    A user pattern that already holds some presets (from the old per-preset
+    buttons, or typed) keeps its text and order; only what is missing is added.
+    """
+    current = pattern.strip()
+    for piece in pieces:
+        if piece in current:
+            continue
+        current = f"{current}|{piece}" if current else piece
+    return current
+
+
+def cleanup_state(use: bool, pattern: str, pieces: Sequence[str]) -> Qt.CheckState:
+    """The box's state, derived from the two stored fields -- nothing new is stored.
+
+    Off -> unchecked. On with every built-in piece present -> checked (extra
+    text of the user's own is fine). On with a pattern missing some -> partly
+    checked: the user's own pattern is in use.
+    """
+    if not use:
+        return Qt.CheckState.Unchecked
+    if all(piece in pattern for piece in pieces):
+        return Qt.CheckState.Checked
+    return Qt.CheckState.PartiallyChecked
+
+
 class SentencesSettingsPanel(FormPanel):
     """Panel for example-sentence content settings.
 
     Provides:
-    - Subtitle text cleanup (regex filter + replacement, with presets)
+    - Subtitle text cleanup: one plain-language box, the raw regex behind a disclosure (D15 extension)
     - Secondary-language subtitles (F7)
     - Whole-sentence merging across subtitle lines
     - Bolding the mined word in the sentence
@@ -44,65 +88,82 @@ class SentencesSettingsPanel(FormPanel):
     def __init__(self, parent=None):
         """Initialize the sentences settings panel."""
         super().__init__(self.tr("Sentences"), parent=parent)
+        self._cleanup_pieces: tuple[str, ...] = builtin_cleanup_pieces("")
         self._setup_fields()
 
     def _setup_fields(self) -> None:
         """Set up the panel fields."""
-        # Subtitle Text Filtering section (Issue #8)
-        self.add_section(self.tr("Subtitle Text Filtering"))
+        # Clean up subtitle text (Issue #8; D15 extension). One plain-language
+        # box does the common case; the raw regex is for experts, behind a
+        # disclosure. The box's state is derived from the stored toggle and
+        # pattern (cleanup_state), so no new setting exists.
+        self.add_section(self.tr("Clean up subtitle text"))
+
+        self.use_subtitle_regex_checkbox = QCheckBox(self.tr("Remove speaker names, sound effects and music notes"))
+        self.use_subtitle_regex_checkbox.clicked.connect(self._on_cleanup_clicked)
+        self.add_field(
+            "",
+            self.use_subtitle_regex_checkbox,
+            helper=self.tr(
+                "Removes (notes), [sound effects], ♪ music, speaker labels and dialogue dashes from each "
+                "subtitle line before mining. Half-checked means your own pattern is in use: click to add "
+                "every built-in cleanup to it."
+            ),
+            anchor_text=lambda: ("Enable Subtitle Regex Filter", "clean subtitles", "speaker labels"),
+        )
 
         self.subtitle_regex_edit = QLineEdit()
         self.subtitle_regex_edit.setPlaceholderText(r"e.g. \([^)]*\)|\[[^\]]*\]")
-        self.add_field(
-            self.tr("Regex Filter"),
-            self.subtitle_regex_edit,
-            helper=self.tr(
+        self.subtitle_regex_edit.setToolTip(
+            self.tr(
                 "Python regex matched in subtitle text and removed (or replaced) before mining. "
                 "Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. "
                 "Combine alternatives with |. Test patterns at https://regex101.com."
-            ),
+            )
         )
+        self.subtitle_regex_edit.textEdited.connect(lambda _text: self._sync_cleanup_box())
 
         self.subtitle_replacement_edit = QLineEdit()
         self.subtitle_replacement_edit.setPlaceholderText(self.tr("(empty = delete match)"))
-        self.add_field(
-            self.tr("Replacement"),
-            self.subtitle_replacement_edit,
-            helper=self.tr(
+        self.subtitle_replacement_edit.setToolTip(
+            self.tr(
                 "Inserted in place of each match (empty deletes it). Use Python "
                 "backreferences \\1 \\2, not asbplayer's $1 $2."
-            ),
+            )
         )
 
-        self.use_subtitle_regex_checkbox = QCheckBox(self.tr("Enable Subtitle Regex Filter"))
-        self.add_field("", self.use_subtitle_regex_checkbox)
-
-        # Preset buttons row: each click appends its pattern to the regex field
-        # joined with `|`. Lets a GUI-only user discover useful patterns without
-        # learning regex syntax up front.
-        preset_container = QWidget()
-        preset_layout = QHBoxLayout()
-        preset_layout.setContentsMargins(0, 0, 0, 0)
-        _preset_labels = [
-            self.tr("Parens (Tanaka)"),
-            self.tr("Brackets [SFX]"),
-            self.tr("Music ♪♬"),
-            self.tr("Speaker: prefix"),
-            self.tr("Dialogue dash"),
-        ]
-        for (_, pattern), translated_label in zip(SUBTITLE_REGEX_PRESETS, _preset_labels, strict=True):
-            btn = QPushButton(translated_label)
-            btn.setToolTip(pattern)
-            btn.clicked.connect(lambda _checked=False, p=pattern: self._append_preset(p))
-            preset_layout.addWidget(btn)
-        preset_layout.addStretch()
-        preset_container.setLayout(preset_layout)
-        self.add_field(
-            self.tr("Presets"),
-            preset_container,
-            helper=self.tr("Click to append a built-in pattern to the regex field above."),
-            anchor="subtitle_regex_presets",
-            anchor_text=lambda: tuple(_preset_labels),
+        # Checkable group used as a disclosure, like Cards & Anki's marker
+        # names: Qt's checkable group only disables its children, so the body
+        # is hidden and shown instead. Opens by itself on load when a custom
+        # pattern is stored (see _open_disclosure_for_custom_pattern).
+        self.subtitle_regex_group = QGroupBox(self.tr("Edit the pattern (advanced)"))
+        self.subtitle_regex_group.setCheckable(True)
+        self.subtitle_regex_group.setChecked(False)
+        group_layout = QVBoxLayout(self.subtitle_regex_group)
+        self._subtitle_regex_body = QWidget()
+        body_form = QFormLayout(self._subtitle_regex_body)
+        body_form.setContentsMargins(0, 0, 0, 0)
+        body_form.addRow(self.tr("Regex Filter:"), self.subtitle_regex_edit)
+        body_form.addRow(self.tr("Replacement:"), self.subtitle_replacement_edit)
+        group_layout.addWidget(self._subtitle_regex_body)
+        self._subtitle_regex_body.setVisible(False)
+        self.subtitle_regex_group.toggled.connect(self._subtitle_regex_body.setVisible)
+        self.add_widget(self.subtitle_regex_group)
+        # Registered by hand so the result is titled "Regex Filter" and keeps
+        # its old id; a jump lands on the disclosure, which Space opens.
+        self.register_setting(
+            "subtitle_regex_edit",
+            self.subtitle_regex_group,
+            lambda: (
+                self.tr("Regex Filter"),
+                self.subtitle_regex_group.title(),
+                self.tr("Replacement"),
+                self.subtitle_regex_edit.toolTip(),
+                self.subtitle_replacement_edit.toolTip(),
+                self.tr("Clean up subtitle text"),
+                self.tr("Sentences"),
+            ),
+            focus=self.subtitle_regex_group,
         )
 
         # Secondary Subtitles (F7). One toggle gates every new surface.
@@ -152,16 +213,32 @@ class SentencesSettingsPanel(FormPanel):
 
         self.add_stretch()
 
-    def _append_preset(self, pattern: str) -> None:
-        """Append a preset regex pattern to the filter field with `|` join."""
-        current = self.subtitle_regex_edit.text().strip()
-        if not current:
-            self.subtitle_regex_edit.setText(pattern)
-        elif pattern in current:
-            # Avoid duplicate alternations from double-clicking a preset.
-            return
-        else:
-            self.subtitle_regex_edit.setText(f"{current}|{pattern}")
+    def _on_cleanup_clicked(self, _checked: bool) -> None:
+        """A click is a choice: checked adds every missing built-in piece (D15 extension).
+
+        Qt has already moved the box: a partly checked box goes to checked, a
+        checked one to unchecked. Tristate is dropped so a later click never
+        lands on "partly" again; _sync_cleanup_box re-derives it from the text.
+        """
+        box = self.use_subtitle_regex_checkbox
+        box.setTristate(False)
+        if box.checkState() == Qt.CheckState.Checked:
+            self.subtitle_regex_edit.setText(add_missing_pieces(self.subtitle_regex_edit.text(), self._cleanup_pieces))
+        self._sync_cleanup_box()
+
+    def _sync_cleanup_box(self) -> None:
+        """Re-derive the box from the toggle and the pattern text (never stores anything)."""
+        box = self.use_subtitle_regex_checkbox
+        use = box.checkState() != Qt.CheckState.Unchecked
+        state = cleanup_state(use, self.subtitle_regex_edit.text(), self._cleanup_pieces)
+        box.setTristate(state == Qt.CheckState.PartiallyChecked)
+        box.setCheckState(state)
+
+    def _open_disclosure_for_custom_pattern(self) -> None:
+        """Show the raw fields when the stored pattern is not exactly the built-ins."""
+        pattern = self.subtitle_regex_edit.text().strip()
+        custom = bool(pattern) and pattern != "|".join(self._cleanup_pieces)
+        self.subtitle_regex_group.setChecked(custom)
 
     # --- Subtitle regex ---
 
@@ -182,12 +259,14 @@ class SentencesSettingsPanel(FormPanel):
         self.subtitle_replacement_edit.setText(value)
 
     def get_use_subtitle_regex_filter(self) -> bool:
-        """Return whether the subtitle regex filter is enabled."""
-        return self.use_subtitle_regex_checkbox.isChecked()
+        """Whether subtitle cleanup is on (checked or partly checked)."""
+        return self.use_subtitle_regex_checkbox.checkState() != Qt.CheckState.Unchecked
 
     def set_use_subtitle_regex_filter(self, value: bool) -> None:
-        """Set the subtitle regex filter checkbox."""
+        """Set the toggle, then re-derive checked / partly checked from the pattern."""
+        self.use_subtitle_regex_checkbox.setTristate(False)
         self.use_subtitle_regex_checkbox.setChecked(value)
+        self._sync_cleanup_box()
 
     def get_secondary_subtitle_enabled(self) -> bool:
         return self.secondary_subtitle_checkbox.isChecked()
@@ -224,9 +303,12 @@ class SentencesSettingsPanel(FormPanel):
 
         Called by :meth:`SettingsTab._load_config` as part of the panel loop.
         """
+        default = get_profile(config_language(config)).scoped_defaults.get("subtitle_regex_filter", "")
+        self._cleanup_pieces = builtin_cleanup_pieces(str(default or ""))
         self.set_subtitle_regex_filter(config.subtitle_regex_filter)
         self.set_subtitle_regex_replacement(config.subtitle_regex_replacement)
         self.set_use_subtitle_regex_filter(config.use_subtitle_regex_filter)
+        self._open_disclosure_for_custom_pattern()
         self.set_secondary_subtitle_enabled(config.secondary_subtitle_enabled)
         self.set_merge_incomplete_cues(config.merge_incomplete_cues)
         self.set_bold_target_in_sentence(config.bold_target_in_sentence)
