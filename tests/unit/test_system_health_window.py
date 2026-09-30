@@ -565,6 +565,43 @@ def test_the_rows_never_scroll_sideways_at_the_minimum_width(laid_out_window, qt
     assert laid_out_window._health_list.minimumSizeHint().width() <= viewport.width()
 
 
+def test_a_longer_locale_widens_the_window_instead_of_scrolling_sideways(qtbot):
+    """Z.5 (UI audit 2026-09-29): in German the reserved columns ("Erfordert
+    Aufmerksamkeit", "Nicht geprüft", "Installieren…") made the list wider than
+    the 600px window, so every row scrolled sideways and the Install button and
+    the diagnostics were cut off at the right edge. The window's width comes
+    from the list, at opening and as its minimum.
+    """
+    from PyQt6.QtCore import QTranslator
+    from PyQt6.QtWidgets import QApplication
+
+    class _LongStates(QTranslator):
+        def translate(self, context, source, disambiguation=None, n=-1):  # noqa: N802
+            if source in ("Needs attention", "Not checked yet"):
+                return f"{source} (a much longer translated state)"
+            return None
+
+    app = QApplication.instance()
+    assert app is not None
+    translator = _LongStates()
+    app.installTranslator(translator)
+    try:
+        window = SystemHealthWindow()
+        qtbot.addWidget(window)
+        window.show()
+        qtbot.waitExposed(window)
+        viewport = window._health_scroll.viewport()
+        assert viewport is not None
+        needed = window._health_list.minimumSizeHint().width()
+        assert viewport.width() >= needed
+
+        window.resize(1, 1)
+        qtbot.wait(20)
+        assert viewport.width() >= needed
+    finally:
+        app.removeTranslator(translator)
+
+
 def test_the_window_opens_tall_enough_to_show_every_row(health_window):
     """It opened at 560x533 and showed four of ten rows, with a group heading
     sliced in half at the bottom edge.

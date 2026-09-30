@@ -30,7 +30,7 @@ from collections import Counter
 from dataclasses import dataclass, field, replace
 from datetime import datetime
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QGuiApplication
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
@@ -367,6 +367,27 @@ class HealthReport:
         return replace(self, checks=checks)
 
 
+class _RowsScrollArea(QScrollArea):
+    """A vertical scroller that asks for its rows' full width.
+
+    A plain ``QScrollArea`` asks for almost nothing, so the window never learnt
+    how wide the rows are: in German the reserved state, time and Fix columns
+    outgrew the 600px window and every row scrolled sideways, cutting off the
+    Install button and the diagnostics (Z.5). Asking for the rows' minimum
+    width plus the vertical bar lets the window's layout size the window.
+    """
+
+    def minimumSizeHint(self) -> QSize:  # noqa: N802
+        hint = super().minimumSizeHint()
+        rows = self.widget()
+        if rows is None:
+            return hint
+        bar = self.verticalScrollBar()
+        bar_width = bar.sizeHint().width() if bar is not None else 0
+        width = rows.minimumSizeHint().width() + bar_width + 2 * self.frameWidth()
+        return QSize(max(hint.width(), width), hint.height())
+
+
 class _HealthRow(QFrame):
     """One rendered row. Built once; repainted in place on every report."""
 
@@ -511,7 +532,10 @@ class SystemHealthWindow(EnhancedDialog):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setWindowTitle(self.tr("System Health"))
-        self.setMinimumWidth(560)
+        # A floor the rows can raise (_RowsScrollArea). setMinimumWidth would
+        # replace the layout's minimum instead of flooring it (Z.5).
+        margins = self._main_layout.contentsMargins()
+        self._main_layout.addStrut(560 - margins.left() - margins.right())
         self.set_header(
             "",
             self.tr("System Health"),
@@ -599,7 +623,7 @@ class SystemHealthWindow(EnhancedDialog):
         column.addStretch()
         self._align_columns()
 
-        scroll = QScrollArea()
+        scroll = _RowsScrollArea()
         scroll.setObjectName("health-scroll")
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
