@@ -710,7 +710,7 @@ def test_primary_label_shows_transfer_telemetry_and_never_a_url(parent, monkeypa
     qtbot.waitUntil(lambda: "/" in session.window.detail_label.text(), timeout=3000)
     text = session.window.detail_label.text()
 
-    assert session.window.resource_label.text() == "Jitendex"
+    assert session.window.resource_label.text() == "Downloading 1 of 4 · Jitendex"
     assert "MB /" in text
     assert "Elapsed" in text
     assert "http" not in text
@@ -764,16 +764,34 @@ def test_install_step_count_drives_the_bar_under_the_same_install_line(parent, m
     _drain(qtbot, worker)
 
 
-def test_sources_area_carries_the_host_and_licence_not_the_label(parent, monkeypatch, tmp_path, qtbot):
+def test_host_and_licence_lines_live_in_the_licence_tooltip(parent, monkeypatch, tmp_path, qtbot):
+    """B10: reference text moved off the window, into the one licence sentence's tooltip."""
     worker = _FakeWorker(_successful_summary())
     session, _dir = _start(monkeypatch, tmp_path, parent, worker)
 
-    sources = session.window.sources_label.text()
+    tooltip = session.window.licence_label.toolTip()
 
-    assert "github.com" in sources
-    assert "CC BY-SA 4.0" in sources
-    assert "https://" not in sources  # host, not the full asset path
+    assert "github.com" in tooltip
+    assert "CC BY-SA 4.0" in tooltip
+    assert "https://" not in tooltip  # host, not the full asset path
+    assert not hasattr(session.window, "sources_label")
     _drain(qtbot, worker)
+
+
+def test_headline_names_the_position_and_the_kind():
+    specs = list(RECOMMENDED_DEFAULT_SET)
+    first = ResourceProgress(spec_id="jmdict-english", display_name="JMdict", phase=_DL)
+    third = ResourceProgress(spec_id="jiten", display_name="Jiten Frequency", phase=_DL)
+    last = ResourceProgress(spec_id="kanjium-pitch", display_name="Kanjium Pitch Accent", phase=_INSTALL)
+
+    assert mod.activity_headline(first, specs) == "Downloading 1 of 4 · JMdict (dictionary)"
+    assert mod.activity_headline(third, specs) == "Downloading 3 of 4 · Jiten Frequency (word frequency)"
+    assert mod.activity_headline(last, specs) == "Downloading 4 of 4 · Kanjium Pitch Accent (pitch accent)"
+
+
+def test_headline_for_an_id_outside_the_run_names_the_item_alone():
+    event = ResourceProgress(spec_id="jitendex", display_name="Jitendex", phase=_DL)
+    assert mod.activity_headline(event, list(RECOMMENDED_DEFAULT_SET)) == "Downloading 1 of 4 · Jitendex"
 
 
 # ---------------------------------------------------------------------------
