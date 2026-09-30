@@ -1,8 +1,13 @@
 """Wizard pages for the guided first-run Setup Wizard (Task 3).
 
-Six ``QWizardPage`` subclasses. Each takes the parent :class:`SetupWizard` so
-it can read/write the working config and use the wizard's shared
-:class:`AnkiService` / :class:`ValidationService` and worker registry.
+Four ``QWizardPage`` subclasses (D8): the mining language (first run only), the
+dictionary download, the Anki page, and the Ready check. The Anki page hosts
+three sections that used to be pages of their own -- the AnkiConnect check,
+the deck and the note type -- and keeps their class names, because pylupdate6
+files every ``self.tr`` string under its class name. Each page or section takes
+the parent :class:`SetupWizard` so it can read/write the working config and use
+the wizard's shared :class:`AnkiService` / :class:`ValidationService` and
+worker registry.
 
 Detect & guide ONLY — no ``createDeck`` / ``createModel`` / ``ensure_deck``
 calls anywhere. Deck/note type creation is the user's job; the wizard inspects,
@@ -16,7 +21,7 @@ from dataclasses import replace
 from functools import partial
 from typing import TYPE_CHECKING, Any
 
-from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, Qt, QUrl
+from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, QEvent, Qt, QUrl, pyqtSignal
 from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -130,6 +135,34 @@ class _LiveCheckPage(QWizardPage):
     def _is_live_check(self) -> bool:
         """True when the emitting worker is still the check being waited on."""
         return self.sender() is self._live_check
+
+
+class _WizardSection(QWidget):
+    """A part of a wizard page that used to be a page of its own (D8).
+
+    AnkiConnectPage, DeckPage and NoteTypePage are sections of AnkiPage. They
+    keep QWizardPage's method names (``initializePage``, ``isComplete``,
+    ``validatePage``, ``completeChanged``) so AnkiPage can forward each call and
+    tests can treat a section like the page it was.
+    """
+
+    completeChanged = pyqtSignal()  # noqa: N815 - mirrors QWizardPage.completeChanged
+
+    def __init__(self, wizard: SetupWizard) -> None:
+        super().__init__()
+        self._wizard = wizard
+
+    def initializePage(self) -> None:
+        """Called by the hosting page; the default has nothing to prepare."""
+
+    def isComplete(self) -> bool:
+        return True
+
+    def validatePage(self) -> bool:
+        return True
+
+    def stage_current_edits(self) -> None:
+        """Stage editor state into the working config, with no I/O."""
 
 
 class MiningLanguagePage(QWizardPage):
@@ -275,20 +308,20 @@ class MiningLanguagePage(QWizardPage):
         self._wizard.update_working_config(replace(config, **self._opening_language_state))
 
 
-class AnkiConnectPage(QWizardPage):
-    """Step 1: verify AnkiConnect is reachable; guide install if not."""
+class AnkiConnectPage(_WizardSection):
+    """The Anki page's connection section: is AnkiConnect reachable, and how to get it."""
+
+    #: The latest answer: True when AnkiConnect replied, False otherwise.
+    reachability_changed = pyqtSignal(bool)
 
     def __init__(self, wizard: SetupWizard) -> None:
         super().__init__(wizard)
-        self._wizard = wizard
         self._reachable = False
         self._worker: SingleCallWorker | None = None
         self._active_recheck_url: str | None = None
 
-        self.setTitle(self.tr("Connect to Anki"))
-        self.setSubTitle(self.tr("Anki Miner talks to Anki through the AnkiConnect add-on."))
-
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
 
         self.badge = StatusBadge("AnkiConnect", status="checking", clickable=False)
         layout.addWidget(self.badge)
@@ -337,6 +370,7 @@ class AnkiConnectPage(QWizardPage):
         self.badge.setToolTip("")
         self.result_label.clear()
         self.completeChanged.emit()
+        self.reachability_changed.emit(self._reachable)
 
     def _normalized_url(self) -> str:
         return self.url_input.text().strip()
@@ -369,6 +403,7 @@ class AnkiConnectPage(QWizardPage):
             self.badge.set_status("error", self.tr("Enter an AnkiConnect URL."))
             self.result_label.setText(self.tr("Enter an AnkiConnect URL."))
             self.completeChanged.emit()
+            self.reachability_changed.emit(self._reachable)
             return
         self._active_recheck_url = url
         self.badge.set_status("checking", self.tr("Checking connection..."))
@@ -392,6 +427,7 @@ class AnkiConnectPage(QWizardPage):
         self.badge.set_status("success" if ok else "error", message)
         self.result_label.setText(message)
         self.completeChanged.emit()
+        self.reachability_changed.emit(self._reachable)
 
     def _on_recheck_error(self, message: str) -> None:
         self.recheck_button.setEnabled(True)
@@ -401,21 +437,22 @@ class AnkiConnectPage(QWizardPage):
         self.badge.set_status("error", message)
         self.result_label.setText(message)
         self.completeChanged.emit()
+        self.reachability_changed.emit(self._reachable)
 
 
-class DeckPage(QWizardPage):
-    """Step 2: choose the target deck (must already exist in Anki)."""
+class DeckPage(_WizardSection):
+    """The Anki page's deck section: the deck must already exist in Anki."""
 
     def __init__(self, wizard: SetupWizard) -> None:
         super().__init__(wizard)
-        self._wizard = wizard
         self._worker: SingleCallWorker | None = None
         self._fetched_decks: list[str] = []
 
-        self.setTitle(self.tr("Choose a Deck"))
-        self.setSubTitle(self.tr("Mined cards go into this deck."))
-
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.heading_label = QLabel(self.tr("Deck"))
+        self.heading_label.setObjectName("heading3")
+        layout.addWidget(self.heading_label)
 
         row = QHBoxLayout()
         self.deck_combo = QComboBox()
@@ -433,8 +470,12 @@ class DeckPage(QWizardPage):
         layout.addWidget(self.deck_hint)
 
     def initializePage(self) -> None:
-        self.deck_combo.setCurrentText(self._wizard.working_config().anki_deck_name)
+        self.load_from_config()
         self._on_refresh_clicked()
+
+    def load_from_config(self) -> None:
+        """Show the working config's deck without fetching anything."""
+        self.deck_combo.setCurrentText(self._wizard.working_config().anki_deck_name)
 
     def isComplete(self) -> bool:
         # Decks are no longer auto-created at mine time, so only a deck Anki
@@ -507,12 +548,11 @@ class DeckPage(QWizardPage):
             self.deck_hint.setText("")
 
 
-class NoteTypePage(QWizardPage):
-    """Choose a note type; its fields map themselves the moment they arrive (D8)."""
+class NoteTypePage(_WizardSection):
+    """The Anki page's note-type section; its fields map themselves when they arrive (D8)."""
 
     def __init__(self, wizard: SetupWizard) -> None:
         super().__init__(wizard)
-        self._wizard = wizard
         self._notetypes_worker: SingleCallWorker | None = None
         self._fields_worker: SingleCallWorker | None = None
         self._fields_generation = 0
@@ -523,10 +563,11 @@ class NoteTypePage(QWizardPage):
         self._field_names: list[str] = []
         self._field_names_note_type: str | None = None
 
-        self.setTitle(self.tr("Choose a Note Type"))
-        self.setSubTitle(self.tr("Pick the Anki note type whose fields will hold mined data."))
-
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.heading_label = QLabel(self.tr("Note type"))
+        self.heading_label.setObjectName("heading3")
+        layout.addWidget(self.heading_label)
 
         row = QHBoxLayout()
         self.notetype_combo = QComboBox()
@@ -558,8 +599,12 @@ class NoteTypePage(QWizardPage):
         wizard.finished.connect(self._on_wizard_finished)
 
     def initializePage(self) -> None:
-        self.notetype_combo.setCurrentText(self._wizard.working_config().anki_note_type)
+        self.load_from_config()
         self._on_refresh_clicked()
+
+    def load_from_config(self) -> None:
+        """Show the working config's note type without fetching the list."""
+        self.notetype_combo.setCurrentText(self._wizard.working_config().anki_note_type)
 
     def isComplete(self) -> bool:
         note_type = self.notetype_combo.currentText().strip()
@@ -892,6 +937,90 @@ class NoteTypePage(QWizardPage):
                 word,
             )
         )
+
+
+class AnkiPage(QWizardPage):
+    """Connection, deck and note type on one page (D8).
+
+    While AnkiConnect is unreachable only the connection section shows; once it
+    answers, the deck and note-type pickers appear and both lists are fetched,
+    because a list asked of a closed Anki is a timeout, not a list. Each
+    section keeps its own workers and staleness rules; this page forwards the
+    page calls to them and is complete when all three are.
+    """
+
+    def __init__(self, wizard: SetupWizard) -> None:
+        super().__init__(wizard)
+        self._wizard = wizard
+        self.setTitle(self.tr("Connect to Anki"))
+        self.setSubTitle(self.tr("Anki Miner talks to Anki through the AnkiConnect add-on."))
+
+        layout = QVBoxLayout(self)
+        self.connect_section = AnkiConnectPage(wizard)
+        layout.addWidget(self.connect_section)
+
+        self.pickers = QWidget()
+        pickers_layout = QVBoxLayout(self.pickers)
+        pickers_layout.setContentsMargins(0, 0, 0, 0)
+        self.deck_section = DeckPage(wizard)
+        self.notetype_section = NoteTypePage(wizard)
+        pickers_layout.addWidget(self.deck_section)
+        pickers_layout.addWidget(self.notetype_section)
+        layout.addWidget(self.pickers)
+        layout.addStretch(1)
+        self.pickers.setVisible(False)
+
+        for section in self.sections():
+            section.completeChanged.connect(self.completeChanged)
+        self.connect_section.reachability_changed.connect(self._on_reachability_changed)
+
+    def sections(self) -> tuple[_WizardSection, ...]:
+        return (self.connect_section, self.deck_section, self.notetype_section)
+
+    def initializePage(self) -> None:
+        """Show the config's deck and note type, then ask AnkiConnect; an answer fetches both lists."""
+        self.deck_section.load_from_config()
+        self.notetype_section.load_from_config()
+        self.connect_section.initializePage()
+
+    def isComplete(self) -> bool:
+        return all(section.isComplete() for section in self.sections())
+
+    def validatePage(self) -> bool:
+        return all(section.validatePage() for section in self.sections())
+
+    def stage_current_edits(self) -> None:
+        for section in self.sections():
+            section.stage_current_edits()
+
+    def _on_reachability_changed(self, reachable: bool) -> None:
+        self.pickers.setVisible(reachable)
+        if reachable:
+            self.deck_section._on_refresh_clicked()
+            self.notetype_section._on_refresh_clicked()
+
+    def event(self, event: QEvent | None) -> bool:
+        handled = super().event(event)
+        if event is not None and event.type() == QEvent.Type.LayoutRequest:
+            self._grow_wizard_to_fit()
+        return handled
+
+    def _grow_wizard_to_fit(self) -> None:
+        """Make the wizard tall enough for what this page shows now.
+
+        QWizard fits itself to a page only when the page is entered, and this
+        page grows afterwards: the pickers appear once Anki answers, and the
+        guidance and mapping lines fill in later still. Without this they are
+        squeezed into the window the connection section alone asked for.
+        """
+        layout = self.layout()
+        if layout is None or not self.isVisible():
+            return
+        width = self.width()
+        needed = layout.totalHeightForWidth(width) if layout.hasHeightForWidth() else layout.totalMinimumSize().height()
+        shortfall = needed - self.height()
+        if shortfall > 0:
+            self._wizard.resize(self._wizard.width(), self._wizard.height() + shortfall)
 
 
 class ResourcesPage(_LiveCheckPage):

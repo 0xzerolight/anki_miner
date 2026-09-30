@@ -1,8 +1,9 @@
 """Guided first-run Setup Wizard container (Task 3).
 
 A multi-step ``QWizard`` that DETECTS Anki state and GUIDES the user through
-getting set up: AnkiConnect reachability, target deck, note type + field
-mapping, and recommended resources. It is **detect-&-guide-only** — it never
+getting set up: the mining language (first run only), the dictionary download,
+the Anki page (AnkiConnect reachability, target deck, note type and its field
+mapping) and a Ready check. It is **detect-&-guide-only** — it never
 creates decks or note types via AnkiConnect; the user performs every Anki-side
 action while the wizard inspects, explains, links, and re-checks.
 
@@ -22,7 +23,7 @@ from dataclasses import dataclass
 from typing import cast
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtWidgets import QAbstractButton, QDialog, QPushButton, QWidget, QWizard, QWizardPage
+from PyQt6.QtWidgets import QAbstractButton, QDialog, QPushButton, QWidget, QWizard
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
@@ -31,11 +32,9 @@ from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.validation_service import ValidationService
 
 from .pages import (
-    AnkiConnectPage,
-    DeckPage,
+    AnkiPage,
     DonePage,
     MiningLanguagePage,
-    NoteTypePage,
     ResourcesPage,
 )
 
@@ -127,29 +126,27 @@ class SetupWizard(QWizard):
         # whole change — no extra control, no checkbox to read back.
         self.setButtonText(QWizard.WizardButton.FinishButton, self.tr("Open Video Mining"))
 
-        # Pages in order. When the mining language is asked at all it comes
-        # first, ahead of everything it decides: deck, note type and the
-        # recommended catalog are all that language's own. The theme is not a
-        # setup question (D8): a fresh install starts on the system's light or
-        # dark look (gui/app.py), and the gallery lives in Settings → General.
+        # Pages in order (D8). The mining language, when asked at all, comes
+        # first: everything after it is that language's own. The dictionary
+        # comes next so its download runs while the user deals with Anki. The
+        # Anki page holds what used to be three pages: connection, deck, note
+        # type. The theme is not asked (a fresh install follows the system look).
         self.language_page = MiningLanguagePage(self) if offer_mining_language else None
-        self.ankiconnect_page = AnkiConnectPage(self)
-        self.deck_page = DeckPage(self)
-        self.notetype_page = NoteTypePage(self)
         self.resources_page = ResourcesPage(self)
+        self.anki_page = AnkiPage(self)
+        # The former Connect, Deck and Note type pages, now sections of the Anki
+        # page. The names stay so every caller that reached one keeps working.
+        self.ankiconnect_page = self.anki_page.connect_section
+        self.deck_page = self.anki_page.deck_section
+        self.notetype_page = self.anki_page.notetype_section
         self.done_page = DonePage(self)
-        ordered: list[QWizardPage] = []
+        #: Stable page key -> QWizard page id. "language" exists on the first run only.
+        self._page_ids: dict[str, int] = {}
         if self.language_page is not None:
-            ordered.append(self.language_page)
-        ordered += [
-            self.ankiconnect_page,
-            self.deck_page,
-            self.notetype_page,
-            self.resources_page,
-            self.done_page,
-        ]
-        for page in ordered:
-            self.addPage(page)
+            self._page_ids["language"] = self.addPage(self.language_page)
+        self._page_ids["dictionary"] = self.addPage(self.resources_page)
+        self._page_ids["anki"] = self.addPage(self.anki_page)
+        self._page_ids["ready"] = self.addPage(self.done_page)
 
         # Every page here can hold Japanese text in a field, so no button may be
         # the Enter target. Re-applied on each page change because QWizard
@@ -344,9 +341,7 @@ class SetupWizard(QWizard):
         back again by ``done()`` on every path but an accepted Finish. A wizard
         that never registered that page has no such switch to keep or drop.
         """
-        self.ankiconnect_page.stage_current_edits()
-        self.deck_page.stage_current_edits()
-        self.notetype_page.stage_current_edits()
+        self.anki_page.stage_current_edits()
 
     def _on_custom_button(self, which: int) -> None:
         """Skip Setup → reject (return the partial working config).

@@ -130,6 +130,48 @@ def wiz_config(test_config):
     return replace(test_config, ankiconnect_url="http://127.0.0.1:8765")
 
 
+@pytest.fixture(autouse=True)
+def _offline_anki_service(monkeypatch):
+    """Reaching AnkiConnect now fetches the deck and note-type lists (D8).
+
+    Every test that lands a successful connection result would otherwise send
+    those fetches to a real AnkiConnect. A test that cares stubs its own
+    service on the instance, which wins over this class-level default.
+    """
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    fake = MagicMock()
+    fake.get_deck_names.return_value = []
+    fake.get_model_names.return_value = []
+    fake.get_note_type_fields.return_value = []
+    monkeypatch.setattr(SetupWizard, "anki_service", lambda self: fake)
+
+
+def _join_workers(qtbot, wiz):
+    """Wait for every worker the wizard started, so no queued result outlives the test.
+
+    The pages' list-fetch workers are joined too: a test that replaces
+    ``wiz.register_worker`` with a MagicMock keeps them out of ``wiz._workers``,
+    yet a True connection result still starts real FetchDecksWorker /
+    FetchNotetypesWorker threads (AnkiPage._on_reachability_changed).
+    """
+    from PyQt6.QtCore import QThread  # noqa: PLC0415
+
+    workers = list(wiz._workers)
+    for extra in (
+        getattr(wiz.deck_page, "_worker", None),
+        getattr(wiz.notetype_page, "_notetypes_worker", None),
+        getattr(wiz.notetype_page, "_fields_worker", None),
+    ):
+        if extra is not None and extra not in workers:
+            workers.append(extra)
+    for worker in workers:
+        # A test may have swapped a worker class for a MagicMock; only real threads are joined.
+        if isinstance(worker, QThread):
+            assert worker.wait(3000)
+    qtbot.wait(20)
+
+
 # ---------------------------------------------------------------------------
 # Package surface
 # ---------------------------------------------------------------------------
@@ -193,7 +235,98 @@ def test_the_wizard_has_no_theme_step(qtbot, wiz_config):
     assert wiz.page(wiz.pageIds()[0]) is wiz.language_page
 
 
-@pytest.mark.parametrize(("offer_language", "expected"), [(False, 5), (True, 6)])
+def test_the_wizard_has_four_pages_in_d8_order(qtbot, wiz_config):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config, offer_mining_language=True)
+    qtbot.addWidget(wiz)
+
+    pages = [wiz.page(page_id) for page_id in wiz.pageIds()]
+    assert pages == [wiz.language_page, wiz.resources_page, wiz.anki_page, wiz.done_page]
+    assert wiz._page_ids == {"language": 0, "dictionary": 1, "anki": 2, "ready": 3}
+
+
+def test_the_anki_page_hosts_the_three_former_pages(qtbot, wiz_config):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+
+    assert wiz.ankiconnect_page is wiz.anki_page.connect_section
+    assert wiz.deck_page is wiz.anki_page.deck_section
+    assert wiz.notetype_page is wiz.anki_page.notetype_section
+    for section in wiz.anki_page.sections():
+        assert wiz.anki_page.isAncestorOf(section)
+
+
+def test_the_anki_page_is_complete_only_when_every_section_is(qtbot, wiz_config, monkeypatch):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    monkeypatch.setattr(type(wiz.ankiconnect_page), "isComplete", lambda self: True)
+    monkeypatch.setattr(type(wiz.deck_page), "isComplete", lambda self: True)
+    monkeypatch.setattr(type(wiz.notetype_page), "isComplete", lambda self: False)
+    assert wiz.anki_page.isComplete() is False
+
+    monkeypatch.setattr(type(wiz.notetype_page), "isComplete", lambda self: True)
+    assert wiz.anki_page.isComplete() is True
+
+
+def test_a_section_change_reaches_the_wizard_page(qtbot, wiz_config):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+
+    with qtbot.waitSignal(wiz.anki_page.completeChanged, timeout=1000):
+        wiz.deck_page.completeChanged.emit()
+
+
+def test_the_pickers_show_once_anki_answers_and_fetch_both_lists(qtbot, wiz_config, monkeypatch):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    _stub_anki_service(monkeypatch, wiz, decks=["Default"], notetypes=["Basic"])
+    page = wiz.anki_page
+    assert not page.pickers.isVisibleTo(page)
+
+    wiz.ankiconnect_page._on_recheck_result((True, "ok"))
+
+    assert page.pickers.isVisibleTo(page)
+    qtbot.waitUntil(lambda: wiz.deck_page._fetched_decks == ["Default"], timeout=3000)
+    qtbot.waitUntil(lambda: wiz.notetype_page._fetched_note_types == ["Basic"], timeout=3000)
+    _join_workers(qtbot, wiz)
+
+    wiz.ankiconnect_page._on_recheck_result((False, "down"))
+    assert not page.pickers.isVisibleTo(page)
+
+
+def test_the_wizard_grows_to_fit_the_pickers_when_they_appear(qtbot, wiz_config, monkeypatch):
+    """QWizard fits itself to a page only on entry; the Anki page grows after that."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import pages as pages_mod  # noqa: PLC0415
+
+    monkeypatch.setattr(pages_mod.ResourcesPage, "initializePage", lambda _self: None)
+    monkeypatch.setattr(pages_mod.AnkiConnectPage, "initializePage", lambda _self: None)
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    _stub_anki_service(monkeypatch, wiz, decks=["Default"], notetypes=["Basic"])
+    wiz.show()
+    qtbot.waitExposed(wiz)
+    wiz.next()
+    page = wiz.anki_page
+    assert wiz.currentPage() is page
+    layout = page.layout()
+
+    wiz.ankiconnect_page._on_recheck_result((True, "ok"))
+
+    qtbot.waitUntil(lambda: page.height() >= layout.totalHeightForWidth(page.width()), timeout=3000)
+    _join_workers(qtbot, wiz)
+
+
+@pytest.mark.parametrize(("offer_language", "expected"), [(False, 3), (True, 4)])
 def test_wizard_adds_the_pages_its_caller_asked_for(qtbot, wiz_config, offer_language, expected):
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 
@@ -405,18 +538,20 @@ def test_complete_changed_cannot_reenable_navigation_while_closing(qtbot, wiz_co
     from anki_miner.gui.widgets.dialogs.setup_wizard import pages as pages_mod  # noqa: PLC0415
 
     release = threading.Event()
-    monkeypatch.setattr(pages_mod.AnkiConnectPage, "initializePage", lambda _self: None)
+    # The dictionary page opens the wizard (D8); stand its probe down and let
+    # it report complete, so only the close can hold Next off.
+    monkeypatch.setattr(pages_mod.ResourcesPage, "initializePage", lambda _self: None)
+    monkeypatch.setattr(pages_mod.ResourcesPage, "isComplete", lambda _self: True)
     wiz = SetupWizard(wiz_config)
     qtbot.addWidget(wiz)
     wiz.show()
     worker = _StubbornWorker(release, wiz)
     wiz.register_worker(worker)
     worker.start()
-    page = wiz.ankiconnect_page
+    page = wiz.resources_page
 
     try:
         qtbot.waitUntil(worker.entered.is_set, timeout=3000)
-        page._reachable = True
         page.completeChanged.emit()
         qtbot.wait(0)
         assert wiz.button(QWizard.WizardButton.NextButton).isEnabled()
@@ -525,6 +660,7 @@ def test_ankiconnect_page_complete_only_after_successful_recheck(qtbot, wiz_conf
     page._on_recheck_result((False, "Cannot connect to Anki"))
     assert page.isComplete() is False
     assert pages_mod is not None
+    _join_workers(qtbot, wiz)
 
 
 def test_ankiconnect_page_url_edit_invalidates_success(qtbot, wiz_config):
@@ -541,6 +677,7 @@ def test_ankiconnect_page_url_edit_invalidates_success(qtbot, wiz_config):
 
     assert page.isComplete() is False
     assert page.result_label.text() == ""
+    _join_workers(qtbot, wiz)
 
 
 def test_ankiconnect_page_drops_recheck_callbacks_for_changed_url(qtbot, wiz_config, monkeypatch):
@@ -597,6 +734,7 @@ def test_ankiconnect_page_exact_new_endpoint_can_restore_completion(qtbot, wiz_c
     assert wiz.working_config().ankiconnect_url == endpoint_b
     assert page.isComplete() is True
     assert page.result_label.text() == "B ok"
+    _join_workers(qtbot, wiz)
 
 
 def test_ankiconnect_page_blank_url_does_not_probe_previous_endpoint(qtbot, wiz_config, monkeypatch):
@@ -1944,10 +2082,10 @@ def test_return_in_a_text_field_does_not_advance_the_wizard(qtbot, wiz_config, m
     # Advance to the page whose field is under test, however many steps come
     # before it, so the field is actually the visible/focusable one: a Return
     # landing on an off-page field proves nothing.
-    while wiz.currentPage() is not wiz.ankiconnect_page:
+    while wiz.currentPage() is not wiz.anki_page:
         before = wiz.currentId()
         wiz.next()
-        assert wiz.currentId() != before, "the wizard stopped short of the AnkiConnect page"
+        assert wiz.currentId() != before, "the wizard stopped short of the Anki page"
     page_id = wiz.currentId()
     field = wiz.ankiconnect_page.url_input
     assert field.isVisible() is True
@@ -1958,6 +2096,7 @@ def test_return_in_a_text_field_does_not_advance_the_wizard(qtbot, wiz_config, m
     assert wiz.currentId() == page_id
     # That page owns an off-thread probe; let it land before teardown.
     qtbot.waitUntil(lambda: not wiz.ankiconnect_page.result_label.text().startswith("Checking"), timeout=5000)
+    _join_workers(qtbot, wiz)
 
 
 def test_ctrl_return_resolves_to_the_live_navigation_button(qtbot, wiz_config, monkeypatch):
@@ -2076,6 +2215,7 @@ def test_close_stages_typed_editor_values(qtbot, wiz_config, action, monkeypatch
         wiz.customButtonClicked.emit(QWizard.WizardButton.CustomButton1.value)
     elif action == "x":
         monkeypatch.setattr(type(wiz.ankiconnect_page), "initializePage", lambda _self: None)
+        monkeypatch.setattr(type(wiz.resources_page), "initializePage", lambda _self: None)
         wiz.show()
         qtbot.wait(0)
         wiz.close()
