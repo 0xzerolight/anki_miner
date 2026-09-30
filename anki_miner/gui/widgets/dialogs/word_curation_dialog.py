@@ -601,6 +601,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
 
         layout.addLayout(footer_layout)
         self.setLayout(layout)
+        self._keep_the_floor_on_screen()
         # A failed Known Words write is recoverable — the user retries Confirm or
         # cancels — so it belongs in a banner, never a modal.
         self.install_issue_banner(layout)
@@ -962,6 +963,22 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
     def _is_on_a_live_screen(self) -> bool:
         """True when the window's centre sits on a screen that exists."""
         return QApplication.screenAt(self.frameGeometry().center()) is not None
+
+    def _keep_the_floor_on_screen(self) -> None:
+        """Let the toolbar row set the width floor, but never past the screen.
+
+        A locale whose row is wider than a small screen (French on 1024px)
+        would otherwise get a window wider than the desktop, Confirm button
+        included. There, and only there, the floor is the screen's width and
+        the row's right end is cut, as the flat 900px floor did everywhere (Z.5).
+        """
+        screen = self.screen() or QApplication.primaryScreen()
+        layout = self.layout()
+        if screen is None or layout is None:
+            return
+        available = screen.availableGeometry().width()
+        if layout.totalMinimumSize().width() > available:
+            self.setMinimumWidth(available)
 
     def _apply_default_geometry(self) -> None:
         """Shrink to fit the current screen. Position is left to Qt."""

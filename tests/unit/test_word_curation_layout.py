@@ -15,7 +15,8 @@ proportions*, not against pixel counts, so a font change moves them together.
 from __future__ import annotations
 
 import pytest
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QRect, Qt
+from PyQt6.QtGui import QScreen
 from PyQt6.QtWidgets import QSplitter, QWidget
 
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
@@ -137,14 +138,17 @@ class TestTheDialogFitsOnARealScreen:
         """
         assert dialog.search_input.minimumWidth() < dialog.minimumSizeHint().width() / 6
 
-    def test_the_toolbar_row_sets_the_window_minimum_width(self, dialog, qtbot):
+    def test_the_toolbar_row_sets_the_window_minimum_width(self, qtbot, make_tokenized_words, monkeypatch):
         """Z.5 (UI audit 2026-09-29): shrunk to its minimum at 1024x768, the
         curator was 900px wide and cut "Add to Known Words" off at its right
         edge. An explicit ``setMinimumWidth`` on a window replaces its layout's
         minimum instead of flooring it, so a toolbar wider than the flat number
         was clipped. A wider row (a longer label, a wider face) must widen the
-        window's minimum with it.
+        window's minimum with it, on a screen that has the room.
         """
+        monkeypatch.setattr(QScreen, "availableGeometry", lambda self: QRect(0, 0, 1920, 1080))
+        dialog = WordCurationDialog(make_tokenized_words(5), lookup_fn=_lookup)
+        qtbot.addWidget(dialog)
         dialog.add_known_button.setMinimumWidth(1400)
         dialog.show()
         qtbot.waitExposed(dialog)
@@ -154,3 +158,16 @@ class TestTheDialogFitsOnARealScreen:
         right_edge = button.mapTo(dialog, button.rect().topRight()).x()
         assert dialog.minimumWidth() >= 1400
         assert right_edge < dialog.width()
+
+    def test_a_row_wider_than_the_screen_never_makes_the_window_wider(self, qtbot, make_tokenized_words, monkeypatch):
+        """French on a 1024px screen: the row wants more than the desktop has.
+        The window keeps to the screen (Confirm stays reachable) and only then
+        cuts the row's right end.
+        """
+        monkeypatch.setattr(QScreen, "availableGeometry", lambda self: QRect(0, 0, 400, 800))
+        dialog = WordCurationDialog(make_tokenized_words(5), lookup_fn=_lookup)
+        qtbot.addWidget(dialog)
+        layout = dialog.layout()
+        assert layout is not None
+        assert layout.totalMinimumSize().width() > 400
+        assert dialog.minimumWidth() == 400
