@@ -150,7 +150,7 @@ def test_next_is_what_commits_the_pick(qtbot, wizard_factory, test_config):
 
 def test_the_resources_page_offers_the_chosen_language_catalogue(qtbot, wizard_factory, test_config):
     wiz = wizard_factory(test_config)
-    assert "jmdict-english" in wiz.resources_page.resource_checks
+    assert "jmdict-english" in {spec.id for spec in wiz.resources_page.selected_specs()}
 
     page = wiz.language_page
     page.initializePage()
@@ -158,8 +158,8 @@ def test_the_resources_page_offers_the_chosen_language_catalogue(qtbot, wizard_f
     page.validatePage()
 
     wiz.resources_page.initializePage()
-    assert set(wiz.resources_page.resource_checks) == {spec.id for spec in get_profile("zh").catalog}
-    assert "cc-cedict" in wiz.resources_page.resource_checks
+    assert {spec.id for spec in wiz.resources_page.selected_specs()} == {spec.id for spec in get_profile("zh").catalog}
+    assert "cc-cedict" in {spec.id for spec in wiz.resources_page.selected_specs()}
     # The page's own live probe owns a worker thread; let it land before teardown.
     qtbot.waitUntil(lambda: not wiz.resources_page.dictionary_label.text().startswith("Checking"), timeout=5000)
 

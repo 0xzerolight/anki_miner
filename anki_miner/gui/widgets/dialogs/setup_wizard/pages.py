@@ -16,6 +16,7 @@ explains, links, and re-checks.
 
 from __future__ import annotations
 
+import contextlib
 import html
 from collections.abc import Callable
 from dataclasses import replace
@@ -25,7 +26,6 @@ from typing import TYPE_CHECKING, Any
 from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, QEvent, Qt, QTimer, QUrl, pyqtSignal
 from PyQt6.QtGui import QDesktopServices, QGuiApplication
 from PyQt6.QtWidgets import (
-    QCheckBox,
     QComboBox,
     QHBoxLayout,
     QLabel,
@@ -43,6 +43,7 @@ from anki_miner.gui.utils.ankiconnect_help import (
 )
 from anki_miner.gui.utils.language_choices import available_mining_languages
 from anki_miner.gui.utils.run_off_thread import still_running
+from anki_miner.gui.utils.task_lines import format_task_line
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.panels.anki_settings_panel import (
     _FIELD_KEYWORDS,
@@ -63,6 +64,7 @@ from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
     from anki_miner.config import AnkiMinerConfig
+    from anki_miner.gui.controllers.task_registry import TaskRegistry
     from anki_miner.gui.widgets.dialogs.resource_download_dialog import ResourceDownloadSession
     from anki_miner.services.resource_catalog import ResourceSpec
     from anki_miner.services.validation_service import ValidationService
@@ -86,13 +88,19 @@ def resources_help_url(language: str) -> str:
     return f"{RESOURCES_HELP_URL}#{get_profile(language).english_name.lower()}"
 
 
-#: Family noun per catalog ``kind``, so a checkbox says what a resource *is*
-#: rather than only what it is called. Keyed by ``ResourceSpec.kind``; a kind
-#: with no entry here falls back to the display name alone.
+#: Family noun per catalog ``kind`` for the readiness lines ("Frequency ready: …").
+#: A kind with no entry here has no readiness line.
 _RESOURCE_KIND_NOUNS = {
     "dict": QT_TRANSLATE_NOOP("SetupWizard", "Dictionary"),
     "freq": QT_TRANSLATE_NOOP("SetupWizard", "Frequency"),
     "pitch": QT_TRANSLATE_NOOP("SetupWizard", "Pitch accent"),
+}
+
+#: Lower-case family nouns for the "Downloads …" sentence (D9), by ``ResourceSpec.kind``.
+_KIND_PHRASE_NOUNS = {
+    "dict": QT_TRANSLATE_NOOP("SetupWizard", "dictionary"),
+    "freq": QT_TRANSLATE_NOOP("SetupWizard", "word frequency"),
+    "pitch": QT_TRANSLATE_NOOP("SetupWizard", "pitch accent"),
 }
 
 
@@ -1304,60 +1312,69 @@ class AnkiPage(QWizardPage):
 
 
 class ResourcesPage(_LiveCheckPage):
-    """Step 4: install the recommended resources. A dictionary is required.
+    """The dictionary step: one sentence, one Download button, no checklist (D9).
 
-    The dictionary used to be labelled optional, so setup could be completed in
-    a state guaranteed to fail the first mine: without one, every mined card
-    comes out with no definition (D26). The page therefore gates Next on a live
-    probe of whether an enabled offline dictionary can actually answer a lookup
-    — not on whether the download button was pressed, and not on a result
-    cached from when the page was built. **Skip Setup** remains available on
-    every page for anyone who genuinely cannot download right now.
+    A dictionary is required: without one every mined card comes out with no
+    definition (D26). Next opens once a download has started or a dictionary
+    can already answer, so the transfer runs while the user deals with Anki;
+    Finish on the Ready page still waits for the dictionary. Progress is drawn
+    here and on the Ready page from the TaskRegistry, not in a second window.
+    **Skip Setup** remains for anyone who cannot download right now.
+
+    Everything the language's catalogue offers is fetched, minus the other
+    regional variety (pt's two frequency lists): the checklist a newcomer could
+    not judge is gone, and anything unwanted can be removed in Settings.
     """
+
+    #: The download started, moved or ended; the Ready page redraws its line.
+    download_state_changed = pyqtSignal()
+    #: The download ended, however it ended; the Ready page re-checks (B02).
+    download_finished = pyqtSignal()
 
     def __init__(self, wizard: SetupWizard) -> None:
         super().__init__(wizard)
         self._dictionary_ready = False
+        # _sync_download_button reads these, so they exist before any widget.
+        self._download_running = False
+        #: How the last run ended, for the Ready page: "", "failed" or "cancelled".
+        self._download_ending = ""
+        #: The registry's latest detailed line for the running download.
+        self._progress_text = ""
+        self._registry: TaskRegistry | None = None
+        # Retained past the run's end: a started run is what opens Next
+        # (isComplete).
+        self._session: ResourceDownloadSession | None = None
+        self._specs_language: str | None = None
+        self._specs: list[ResourceSpec] = []
 
         layout = QVBoxLayout(self)
-        # The subtitle is set by _rebuild_catalog_rows, from the kinds the
-        # active language's catalog actually offers.
-        self.title_label, self.subtitle_label = _add_page_header(layout, self.tr("Recommended Resources"), "")
-
-        self.help_link = QLabel(f'<a href="{RESOURCES_HELP_URL}">{self.tr("What are these resources?")}</a>')
-        self.help_link.setOpenExternalLinks(False)
-        # Resolved on click: the wizard's language step can change the language after this page is built.
-        self.help_link.linkActivated.connect(
-            lambda: _open_url(resources_help_url(config_language(self._wizard.working_config())))
+        self.title_label, self.subtitle_label = _add_page_header(
+            layout,
+            self.tr("Get a Dictionary"),
+            self.tr("Mined cards take their definitions from an offline dictionary. This step is required."),
         )
-        layout.addWidget(self.help_link)
 
-        # _sync_download_button reads _download_running, so it is set before any
-        # checkbox exists to toggle.
-        self._download_running = False
+        #: "Downloads JMdict (dictionary), …", built from the catalogue; licences in its tooltip.
+        self.contents_label = QLabel("")
+        self.contents_label.setWordWrap(True)
+        layout.addWidget(self.contents_label)
 
-        # The catalog rows live in a container of their own so a language
-        # change can replace them without disturbing what surrounds them.
-        self._catalog_rows = QWidget()
-        self._catalog_rows_layout = QVBoxLayout(self._catalog_rows)
-        self._catalog_rows_layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(self._catalog_rows)
-
-        self.download_button = ModernButton(self.tr("Download recommended resources"), variant="primary")
+        button_row = QHBoxLayout()
+        self.download_button = ModernButton(self.tr("Download"), variant="primary")
         self.download_button.clicked.connect(self._on_download_clicked)
-        layout.addWidget(self.download_button)
+        button_row.addWidget(self.download_button)
+        button_row.addStretch(1)
+        layout.addLayout(button_row)
 
         self.status_label = QLabel("")
         self.status_label.setObjectName("helper-text")
         self.status_label.setWordWrap(True)
+        self.status_label.setTextFormat(Qt.TextFormat.RichText)
+        self.status_label.setOpenExternalLinks(False)
+        self.status_label.linkActivated.connect(self.activate_link)
         layout.addWidget(self.status_label)
 
-        self._specs_language: str | None = None
-        self._specs: list[ResourceSpec] = []
-        self.resource_checks: dict[str, QCheckBox] = {}
-        self._rebuild_catalog_rows()
-
-        # Kept apart from status_label: one reports how the *download* ended,
+        # Kept apart from status_label: one reports how the *download* went,
         # the other what the app can *do now*. A single label would let a
         # finished download overwrite the readiness verdict that gates Next.
         self.dictionary_label = QLabel("")
@@ -1381,108 +1398,89 @@ class ResourcesPage(_LiveCheckPage):
 
         # Pitch accent is a Japanese resource family; a language without the
         # capability has no pitch row in its catalog and no verdict to report.
-        self._language_gate_pairs: list[tuple[QWidget, str]] = []
-        self._language_gate_pairs.append((self.pitch_label, "pitch"))
+        self._language_gate_pairs: list[tuple[QWidget, str]] = [(self.pitch_label, "pitch")]
         self._apply_language_gate()
 
-        # Retained past the run's end: the terminal window offers Retry setup,
-        # which calls back into the session. Dropping the reference on finish
-        # would collect the session and leave that button inert.
-        self._session: ResourceDownloadSession | None = None
+        self.help_link = QLabel(f'<a href="{RESOURCES_HELP_URL}">{self.tr("What are these resources?")}</a>')
+        self.help_link.setOpenExternalLinks(False)
+        # Resolved on click: the wizard's language step can change the language after this page is built.
+        self.help_link.linkActivated.connect(
+            lambda: _open_url(resources_help_url(config_language(self._wizard.working_config())))
+        )
+        layout.addWidget(self.help_link)
+        layout.addStretch(1)
+
+        self._rebuild_catalog_rows()
 
     def selected_specs(self) -> list[ResourceSpec]:
-        """Catalog order, filtered to what is ticked."""
-        return [spec for spec in self._specs if self.resource_checks[spec.id].isChecked()]
+        """What Download fetches: the catalogue, minus the other regional variety (D9).
+
+        A regional-variety resource (pt's two frequency lists) is fetched only
+        for the variety the config holds. That used to be a pre-ticked checkbox;
+        with no checklist it is a silent default, and the other list stays one
+        Add away in Settings → Frequency.
+        """
+        variant = self._wizard.working_config().script_variant
+        return [spec for spec in self._specs if not spec.variant or spec.variant == variant]
 
     def _rebuild_catalog_rows(self) -> None:
-        """Offer the active language's catalog, never a hand-listed one.
+        """Describe the active language's catalogue, never a hand-listed one.
 
-        Re-derived on every page entry rather than read once when the page was
-        built: the wizard's own language step comes before this one, so the
-        catalog it has to offer is not known at construction time. A spec added
-        to a profile's catalog appears here without touching this page, and ja's
-        catalog IS RECOMMENDED_DEFAULT_SET, so the ja wizard is byte-identical
-        to the pre-multilanguage one.
+        Re-derived on every page entry rather than once at construction: the
+        wizard's language step comes before this page, so the catalogue is not
+        known when the page is built. A spec added to a profile's catalogue
+        appears here with no page edit.
         """
         from anki_miner.languages.registry import get_profile  # noqa: PLC0415
 
         config = self._wizard.working_config()
         # config_language, never the raw field: a stored code whose profile this
-        # build cannot supply — a language whitelisted in config but with its
-        # engine extra absent — is legal on disk, and raising here would make the
+        # build cannot supply is legal on disk, and raising here would make the
         # whole wizard unconstructible on first run.
         language = config_language(config)
         if language == self._specs_language:
             return
         self._specs_language = language
         self._specs = list(get_profile(language).catalog)
-        self.subtitle_label.setText(self._subtitle_for_kinds({spec.kind for spec in self._specs}))
-        self.subtitle_label.setVisible(True)
-
-        while (item := self._catalog_rows_layout.takeAt(0)) is not None:
-            widget = item.widget()
-            if widget is not None:
-                widget.setParent(None)
-                widget.deleteLater()
-
-        # A regional-variety resource (pt's two frequency lists) starts ticked
-        # only for the variety the config holds; the other row stays offered.
-        variant = config.script_variant
-        self.resource_checks = {}
-        for spec in self._specs:
-            noun = _RESOURCE_KIND_NOUNS.get(spec.kind)
-            label = (
-                tr_format(self.tr("%1 — %2"), QCoreApplication.translate("SetupWizard", noun), spec.display_name)
-                if noun
-                else spec.display_name
+        if not self._download_running:
+            # A finished run for the outgoing language describes nothing on screen now.
+            self._session = None
+            self._download_ending = ""
+            self.status_label.clear()
+            self.status_label.setToolTip("")
+        specs = self.selected_specs()
+        if specs:
+            self.contents_label.setText(self._contents_sentence(specs))
+            self.contents_label.setToolTip("\n".join(spec.license_note for spec in specs))
+        else:
+            # No shipped language has an empty catalogue; this is the fallback
+            # for one that would, and isComplete() then does not block Next.
+            self.contents_label.setText(
+                self.tr("No recommended resources for this language. Import a dictionary in Settings → Dictionaries.")
             )
-            box = QCheckBox(label)
-            box.setToolTip(spec.license_note)
-            # The toggled connection comes AFTER setChecked: a fresh unchecked
-            # box emits toggled the first time it is checked.
-            box.setChecked(not spec.variant or spec.variant == variant)
-            box.toggled.connect(self._sync_download_button)
-            self._catalog_rows_layout.addWidget(box)
-            self.resource_checks[spec.id] = box
-
-        # Derived, never assumed: the button was born enabled, and the only
-        # thing that ever re-derived it was a checkbox toggling. A language
-        # whose catalog is empty has no checkbox to toggle, so it kept an
-        # enabled button over a handler that returns silently.
+            self.contents_label.setToolTip("")
+        self.download_button.setVisible(bool(specs))
         self._sync_download_button()
-        # ko's catalog is empty on purpose (languages/ko/catalog.py): no Korean
-        # resource is both redistributable by link and shaped like an importer
-        # here. Saying so beats a dead button, and the sentence has to name
-        # where the resources DO come from. Cleared again for a language that
-        # has a catalog — a status line from the outgoing language's download
-        # describes a run that is no longer on screen.
-        self.status_label.setText(
-            ""
-            if self._specs
-            else self.tr("No recommended resources for this language. Import a dictionary in Settings → Dictionaries.")
-        )
 
-    def _subtitle_for_kinds(self, kinds: set[str]) -> str:
-        """Name the optional families this catalog has, and nothing else.
+    def _contents_sentence(self, specs: list[ResourceSpec]) -> str:
+        """Build the one sentence, e.g. "Downloads JMdict (dictionary) and Kanjium (pitch accent)"."""
+        groups: list[str] = []
+        for kind in ("dict", "freq", "pitch"):
+            names = [spec.display_name for spec in specs if spec.kind == kind]
+            if not names:
+                continue
+            noun = QCoreApplication.translate("SetupWizard", _KIND_PHRASE_NOUNS[kind])
+            groups.append(tr_format(self.tr("%1 (%2)"), self._and_list(names), noun))
+        return tr_format(self.tr("Downloads %1."), self._and_list(groups))
 
-        A whole sentence per combination rather than a stitched-together one:
-        the optional clause and the required one share a subject in several
-        languages, and a translator handed two fragments cannot make them
-        agree. ja carries all three kinds, so its sentence is unchanged and
-        keeps its existing translations.
-        """
-        has_freq = "freq" in kinds
-        has_pitch = "pitch" in kinds
-        if has_freq and has_pitch:
-            return self.tr("Frequency and pitch accent are optional. A dictionary is required.")
-        if has_freq:
-            return self.tr("Frequency is optional. A dictionary is required.")
-        if has_pitch:
-            return self.tr("Pitch accent is optional. A dictionary is required.")
-        return self.tr("A dictionary is required.")
+    def _and_list(self, items: list[str]) -> str:
+        """Join as "A", "A and B" or "A, B and C"; the joining word is translated."""
+        if len(items) == 1:
+            return items[0]
+        return tr_format(self.tr("%1 and %2"), ", ".join(items[:-1]), items[-1])
 
     def _sync_download_button(self) -> None:
-        """Nothing ticked is not a run: an empty spec list reports success for no work."""
+        """Nothing to fetch, or a run already going, is not a run."""
         self.download_button.setEnabled(bool(self.selected_specs()) and not self._download_running)
 
     def _apply_language_gate(self) -> None:
@@ -1493,7 +1491,7 @@ class ResourcesPage(_LiveCheckPage):
         visibility of a paired widget, so a switch back re-shows the row.
         """
         from anki_miner.gui.utils.language_gate import apply_language_gate  # noqa: PLC0415
-        from anki_miner.languages.registry import config_language, get_profile  # noqa: PLC0415
+        from anki_miner.languages.registry import get_profile  # noqa: PLC0415
 
         capabilities = get_profile(config_language(self._wizard.working_config())).capabilities
         apply_language_gate(self._language_gate_pairs, capabilities)
@@ -1509,14 +1507,16 @@ class ResourcesPage(_LiveCheckPage):
         if not self._download_running:
             self._recheck_resources()
 
+    def download_running(self) -> bool:
+        """True while the wizard's own download is going (T2.14 holds Finish for it)."""
+        return self._download_running
+
     def isComplete(self) -> bool:
-        # Nothing to download is nothing to block on. The dictionary gate exists
-        # so nobody finishes setup into a guaranteed-empty first mine (D26), and
-        # it holds wherever a dictionary is one button away. Where the catalog is
-        # empty that button does not exist, so the same gate is a wizard with no
-        # exit but Skip Setup — the page still reports what the disk has through
-        # dictionary_label, it just stops standing in the way.
-        return self._dictionary_ready or not self._specs
+        # D9: a started download is enough to move on; the Ready page waits for
+        # it. Nothing to download is nothing to block on: a language with an
+        # empty catalogue has no button, so the gate would leave Skip Setup as
+        # the only exit.
+        return self._dictionary_ready or self._session is not None or not self._specs
 
     # --- live dictionary readiness ---
 
@@ -1525,8 +1525,7 @@ class ResourcesPage(_LiveCheckPage):
 
         Off-thread because the probe scans three resource folders, any of which
         can be a slow network path. One worker, not three: the base class keeps
-        a single ``_live_check`` as its generation counter, so a second
-        concurrent probe would have no way to be recognised as stale.
+        a single ``_live_check`` as its generation counter.
         """
         self._dictionary_ready = False
         self.dictionary_label.setText(self.tr("Checking for an offline dictionary..."))
@@ -1551,13 +1550,10 @@ class ResourcesPage(_LiveCheckPage):
 
         ok, message = result.dictionary
         self._dictionary_ready = bool(ok)
-        self.dictionary_label.setText(tr_format(self.tr("Dictionary ready: %1"), message) if ok else message)
+        self.dictionary_label.setText(self._dictionary_line(bool(ok), message))
 
-        # Nouns come from the same "SetupWizard"-context table the checkbox
-        # labels use (:892) -- a second, ResourcesPage-context "Frequency" /
-        # "Pitch accent" copy here let the two drift and doubled translator
-        # work. One shared "X ready: Y" template stands in for the two
-        # per-noun copies this used to carry.
+        # Nouns come from the shared "SetupWizard"-context table, so the two
+        # readiness lines cannot drift from each other in translation.
         freq_noun = QCoreApplication.translate("SetupWizard", _RESOURCE_KIND_NOUNS["freq"])
         pitch_noun = QCoreApplication.translate("SetupWizard", _RESOURCE_KIND_NOUNS["pitch"])
         ready_template = self.tr("%1 ready: %2")
@@ -1568,6 +1564,26 @@ class ResourcesPage(_LiveCheckPage):
             self._optional_line(result.pitch, pitch_noun, tr_format(ready_template, pitch_noun, "%1"))
         )
         self.completeChanged.emit()
+
+    def _dictionary_line(self, ok: bool, message: str) -> str:
+        """The dictionary verdict in the wizard's own words where it can say more (B11)."""
+        if ok:
+            return tr_format(self.tr("Dictionary ready: %1"), message)
+        if self._dictionary_not_downloaded():
+            return self.tr("Dictionary: not downloaded yet (required)")
+        return message
+
+    def _dictionary_not_downloaded(self) -> bool:
+        """True when no dictionary is enabled, or every enabled one is one this page downloads.
+
+        A fresh config already names the recommended dictionary before anything
+        is on disk; the service's sentence for that ("Download it with Tools →
+        …") is right for the main window but not for a page with its own button.
+        """
+        config = self._wizard.working_config()
+        enabled = {e.dict_id for e in config.dictionary_chain if e.kind == "indexed" and e.enabled and e.dict_id}
+        offered = {spec.id for spec in self._specs if spec.kind == "dict"}
+        return enabled <= offered
 
     def _optional_line(self, answer: tuple[bool | None, str], noun: str, ready_template: str) -> str:
         """Render one optional family. ``None`` is a resting state, not a fault."""
@@ -1588,52 +1604,100 @@ class ResourcesPage(_LiveCheckPage):
         self.pitch_label.clear()
         self.completeChanged.emit()
 
-    def _on_download_clicked(self) -> None:
-        """Start the download and hand the page back immediately.
+    # --- the download ---
 
-        The flow is asynchronous now, so the page reports through the session's
-        completion signal instead of a return value. Worker ownership goes to
-        the wizard, whose close path already cancels every registered worker and
-        defers ``done()`` until each one's native thread has exited — which is
-        what keeps a run started here from outliving the wizard.
+    def _on_download_clicked(self) -> None:
+        """Start the download in the background and hand the page back at once.
+
+        No window (D9): progress is read from the TaskRegistry and drawn here
+        and on the Ready page. Worker ownership goes to the wizard, whose close
+        path cancels every registered worker and waits for its native thread.
         """
-        from anki_miner.gui.widgets.dialogs.resource_download_dialog import start_resource_download
+        from anki_miner.gui.controllers.task_registry import TaskRegistry  # noqa: PLC0415
+        from anki_miner.gui.widgets.dialogs.resource_download_dialog import start_resource_download  # noqa: PLC0415
 
         if self._download_running:
             return
         self.status_label.clear()
+        self.status_label.setToolTip("")
         specs = self.selected_specs()
         if not specs:
             return
+        registry = getattr(self._wizard.parent(), "task_registry", None)
         session = start_resource_download(
             self,
             self._wizard.working_config(),
             activate=self._activate_resources,
             release_resources=self._wizard._release_resources,
-            task_registry=getattr(self._wizard.parent(), "task_registry", None),
+            task_registry=registry,
             adopt_worker=self._wizard.register_worker,
             specs=specs,
+            show_window=False,
         )
         if session is None:
             return
         self._session = session
         self._download_running = True
-        self.download_button.setEnabled(False)
+        self._download_ending = ""
+        self._progress_text = ""
+        self._sync_download_button()
         session.finished.connect(self._on_download_finished)
+        if isinstance(registry, TaskRegistry):
+            self._registry = registry
+            registry.snapshot_changed.connect(self._on_registry_snapshot)
+        self._render_progress()
+        self.completeChanged.emit()
+        self.download_state_changed.emit()
+
+    def _on_registry_snapshot(self, task_id: str) -> None:
+        registry = self._registry
+        session = self._session
+        if registry is None or session is None or not self._download_running or task_id != session.task_id:
+            return
+        snapshot = registry.snapshot(task_id)
+        if snapshot is None:
+            return
+        self._progress_text = format_task_line(snapshot)
+        self._render_progress()
+        self.download_state_changed.emit()
+
+    def _render_progress(self) -> None:
+        if not self._download_running:
+            return
+        progress = self._progress_text or self.tr("Starting…")
+        cancel = self.tr("Cancel")
+        self.status_label.setText(
+            _html_text(tr_format(self.tr("Downloading: %1"), progress)) + f' <a href="cancel">{_html_text(cancel)}</a>'
+        )
+
+    def _disconnect_registry(self) -> None:
+        registry = self._registry
+        self._registry = None
+        if registry is not None:
+            with contextlib.suppress(TypeError, RuntimeError):
+                registry.snapshot_changed.disconnect(self._on_registry_snapshot)
+
+    def activate_link(self, href: str) -> None:
+        """This page's and the Ready page's inline links: cancel, or (re)start the download."""
+        if href == "cancel":
+            if self._session is not None and self._download_running:
+                self._session.cancel()
+        elif href == "download":
+            self._on_download_clicked()
 
     def _activate_resources(self, summary: object) -> AnkiMinerConfig | None:
         """Fold a completed summary into the wizard's working config.
 
         Read from ``working_config()`` at activation time, never from a config
-        captured when the download started: the user can have changed the deck
-        or note type on an earlier page while the transfer ran.
+        captured when the download started: the user picks the deck and note
+        type on the Anki page while the transfer runs.
 
         A walk-away is the one case where that config is the wrong one: the
         slots were picked for a language the close path has already reverted,
         and the chains would silently drop them for not matching.
         """
-        from anki_miner.gui.utils.resource_setup import apply_download_summary
-        from anki_miner.gui.workers.resource_download_worker import ResourceDownloadSummary
+        from anki_miner.gui.utils.resource_setup import apply_download_summary  # noqa: PLC0415
+        from anki_miner.gui.workers.resource_download_worker import ResourceDownloadSummary  # noqa: PLC0415
 
         if self._wizard.is_walking_away():
             return None
@@ -1644,42 +1708,82 @@ class ResourcesPage(_LiveCheckPage):
         return new_config
 
     def _on_download_finished(self, outcome: object) -> None:
-        """Report the run's real ending, including imported-but-not-active.
+        """Report the run's real ending, then ask the disk again.
 
-        Fires again after a successful **Retry setup**, which is the point: the
-        status line has to stop saying the resources are inactive once they are
-        not.
+        The session runs with no window, so the window's **Retry setup** button
+        never exists and this fires once per run. The per-item detail the
+        download window used to show goes in the status line's tooltip.
         """
-        from anki_miner.gui.widgets.dialogs.resource_download_dialog import ResourceDownloadOutcome
+        from anki_miner.gui.widgets.dialogs.resource_download_dialog import (  # noqa: PLC0415
+            ResourceDownloadOutcome,
+            result_lines,
+        )
 
         self._download_running = False
-        # Not setEnabled(True): a finished run must not resurrect the button
-        # for a selection the user has since emptied.
+        self._progress_text = ""
+        self._disconnect_registry()
+        # Not setEnabled(True): the button follows what there is to fetch.
         self._sync_download_button()
         if not isinstance(outcome, ResourceDownloadOutcome):
-            return
-
-        summary = outcome.summary
-        if summary.cancelled:
-            status = (
-                self.tr("Download cancelled. Some resources were installed.")
-                if summary.succeeded
-                else self.tr("Download cancelled. No resources were installed.")
-            )
-        elif summary.succeeded and not outcome.activated:
-            status = self.tr("Imported, but not active — Retry setup")
-        elif summary.failed:
-            status = (
-                tr_format(self.tr("%1 installed, %2 failed."), len(summary.succeeded), len(summary.failed))
-                if summary.succeeded
-                else self.tr("No resources were installed.")
-            )
+            self._download_ending = "failed"
+            self.status_label.setText(self.tr("The download stopped before it finished."))
+            self.status_label.setToolTip("")
         else:
-            status = self.tr("Resources installed.")
-        self.status_label.setText(status)
+            summary = outcome.summary
+            if summary.cancelled:
+                self._download_ending = "cancelled"
+                status = (
+                    self.tr("Download cancelled. Some resources were installed.")
+                    if summary.succeeded
+                    else self.tr("Download cancelled. No resources were installed.")
+                )
+            elif summary.succeeded and not outcome.activated:
+                # No window here (show_window=False), so there is no "Retry
+                # setup" button to point at: Download runs the whole thing again.
+                self._download_ending = "failed"
+                status = self.tr("Imported, but not switched on. Press Download to try again.")
+            elif summary.failed:
+                self._download_ending = "failed"
+                status = (
+                    tr_format(self.tr("%1 installed, %2 failed."), len(summary.succeeded), len(summary.failed))
+                    if summary.succeeded
+                    else self.tr("No resources were installed.")
+                )
+            else:
+                self._download_ending = ""
+                status = self.tr("Resources installed.")
+            self.status_label.setText(status)
+            self.status_label.setToolTip("\n".join(result_lines(summary)))
         # Re-ask rather than infer: a summary saying the dictionary imported is
         # not the same claim as the chain being able to answer with it.
         self._recheck_resources()
+        self.completeChanged.emit()
+        self.download_state_changed.emit()
+        self.download_finished.emit()
+
+    def ready_page_dictionary_line(self) -> str:
+        """The Ready page's rich-text line while the dictionary is missing or the download runs (D9).
+
+        While the run is going the line names the downloads, not the
+        dictionary: JMdict is item 1 of 4, so the dictionary can already be
+        ready while JPDB, Jiten and Kanjium are still coming, and T2.14 holds
+        Finish until they are (Finish closes the wizard, and closing cancels
+        every worker it owns). Links ("download") come back through
+        :meth:`activate_link`.
+        """
+        if not self._specs:
+            return _html_text(self.tr("Dictionary: none installed. Add one in Settings → Dictionaries after setup."))
+        if self._download_running:
+            if self._progress_text:
+                return _html_text(tr_format(self.tr("Downloads: still running — %1"), self._progress_text))
+            return _html_text(self.tr("Downloads: still running…"))
+        if self._download_ending == "failed":
+            failed = self.tr("Dictionary: download failed.")
+            retry = self.tr("Retry")
+            return f'{_html_text(failed)} <a href="download">{_html_text(retry)}</a>'
+        missing = self.tr("Dictionary: not downloaded yet (required)")
+        download = self.tr("Download")
+        return f'{_html_text(missing)} <a href="download">{_html_text(download)}</a>'
 
 
 #: The final page's required checks, in the order they are reported. Optional

@@ -1848,7 +1848,7 @@ def test_resources_page_reports_imported_but_not_active(qtbot, wiz_config):
         ResourceDownloadOutcome(config=wiz_config, summary=summary, activated=False)
     )
 
-    assert wiz.resources_page.status_label.text() == "Imported, but not active \u2014 Retry setup"
+    assert wiz.resources_page.status_label.text() == "Imported, but not switched on. Press Download to try again."
 
 
 def test_resources_page_hands_worker_ownership_to_the_wizard(qtbot, wiz_config, monkeypatch):
@@ -1870,6 +1870,7 @@ def test_resources_page_hands_worker_ownership_to_the_wizard(qtbot, wiz_config, 
 
     assert captured["adopt_worker"] == wiz.register_worker
     assert captured["activate"] == wiz.resources_page._activate_resources
+    assert captured["show_window"] is False
     assert not wiz.resources_page.download_button.isEnabled()
 
 
@@ -1889,7 +1890,7 @@ def test_resources_page_refuses_a_second_concurrent_run(qtbot, wiz_config, monke
 
 
 def test_resources_page_keeps_the_session_alive_for_retry_setup(qtbot, wiz_config, monkeypatch):
-    """Dropping the session on finish would leave the window's Retry button inert."""
+    """A started run is what opens Next (isComplete), so the session outlives the run's end."""
     from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod  # noqa: PLC0415
     from anki_miner.gui.widgets.dialogs.resource_download_dialog import ResourceDownloadOutcome  # noqa: PLC0415
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
@@ -1914,7 +1915,7 @@ def test_resources_page_keeps_the_session_alive_for_retry_setup(qtbot, wiz_confi
     assert wiz.resources_page._session is session
     assert wiz.resources_page.download_button.isEnabled()
 
-    # A later Retry setup emits again; the page must follow it.
+    # A later ending emits again; the page must follow it.
     wiz.resources_page._on_download_finished(
         ResourceDownloadOutcome(config=wiz_config, summary=summary, activated=True)
     )
@@ -1949,7 +1950,7 @@ def test_resources_page_blocks_next_without_a_usable_dictionary(qtbot, wiz_confi
     _run_page_check(qtbot, page, page.dictionary_label)
 
     assert page.isComplete() is False
-    assert "not ready" in page.dictionary_label.text()
+    assert page.dictionary_label.text() == "Dictionary: not downloaded yet (required)"
 
 
 def test_resources_page_completes_once_a_dictionary_can_answer(qtbot, wiz_config, monkeypatch):
@@ -2118,48 +2119,167 @@ def test_a_probe_error_clears_every_family_line(qtbot, wiz_config, monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# ResourcesPage: choosing which recommended resources to download
+# ResourcesPage: one Download button, and keep going while it runs (D9)
 # ---------------------------------------------------------------------------
 
 
-def test_resources_page_offers_one_checkbox_per_catalog_entry_all_on(qtbot, wiz_config, monkeypatch):
-    """Adding a spec to the catalog must add its checkbox with no page edit."""
+def test_the_dictionary_page_names_what_it_downloads_without_a_checklist(qtbot, wiz_config, monkeypatch):
     from anki_miner.services.resource_catalog import RECOMMENDED_DEFAULT_SET  # noqa: PLC0415
 
     wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
     page = wiz.resources_page
 
-    assert set(page.resource_checks) == {s.id for s in RECOMMENDED_DEFAULT_SET}
-    assert all(box.isChecked() for box in page.resource_checks.values())
+    assert not hasattr(page, "resource_checks")
+    assert page.title_label.text() == "Get a Dictionary"
+    assert page.contents_label.text() == (
+        "Downloads JMdict (dictionary), JPDB v2.2 Kana Frequency and Jiten Frequency (word frequency) "
+        "and Kanjium Pitch Accent (pitch accent)."
+    )
+    assert "CC BY-SA 4.0" in page.contents_label.toolTip()
+    assert page.download_button.text() == "Download"
     assert page.selected_specs() == list(RECOMMENDED_DEFAULT_SET)
 
 
-def test_unchecked_resources_are_not_downloaded(qtbot, wiz_config, monkeypatch):
+def test_download_fetches_the_whole_catalogue_without_a_window(qtbot, wiz_config, monkeypatch):
     wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
-    page = wiz.resources_page
-    seen: list[object] = []
+    seen: dict[str, object] = {}
     monkeypatch.setattr(
         "anki_miner.gui.widgets.dialogs.resource_download_dialog.start_resource_download",
-        lambda *a, **kw: seen.append(kw.get("specs")) or None,
+        lambda *a, **kw: seen.update(kw) or None,
     )
 
-    page.resource_checks["jpdb-freq"].setChecked(False)
+    wiz.resources_page._on_download_clicked()
+
+    assert [spec.id for spec in seen["specs"]] == ["jmdict-english", "jpdb-freq", "jiten", "kanjium-pitch"]
+    assert seen["show_window"] is False
+
+
+def test_a_started_download_opens_next_and_can_be_cancelled(qtbot, wiz_config, monkeypatch):
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod  # noqa: PLC0415
+
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation(dictionary=False))
+    page = wiz.resources_page
+    _run_page_check(qtbot, page, page.dictionary_label)
+    assert page.isComplete() is False
+    session = MagicMock()
+    monkeypatch.setattr(dialog_mod, "start_resource_download", lambda *a, **kw: session)
+
     page._on_download_clicked()
 
-    assert [s.id for s in seen[0]] == ["jmdict-english", "jiten", "kanjium-pitch"]
+    assert page.isComplete() is True
+    assert 'href="cancel"' in page.status_label.text()
+    page.activate_link("cancel")
+    session.cancel.assert_called_once_with()
 
 
-def test_download_button_is_dead_with_nothing_selected(qtbot, wiz_config, monkeypatch):
-    """A run with an empty spec list would report success having done nothing."""
-    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
+def test_download_progress_comes_from_the_task_registry(qtbot, wiz_config, monkeypatch):
+    from PyQt6.QtWidgets import QWidget  # noqa: PLC0415
+
+    from anki_miner.gui.capabilities import CapabilityTarget  # noqa: PLC0415
+    from anki_miner.gui.controllers.task_registry import TaskOutcome, TaskRegistry, TaskSpec  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    registry = TaskRegistry()
+    parent = QWidget()
+    qtbot.addWidget(parent)
+    parent.task_registry = registry  # type: ignore[attr-defined]
+    monkeypatch.setattr(SetupWizard, "validation_service", lambda self: _FakeValidation(dictionary=False))
+    wiz = SetupWizard(wiz_config, parent)
+    session = MagicMock()
+    session.task_id = "resource-download"
+    monkeypatch.setattr(dialog_mod, "start_resource_download", lambda *a, **kw: session)
     page = wiz.resources_page
 
-    for box in page.resource_checks.values():
-        box.setChecked(False)
-    assert page.download_button.isEnabled() is False
+    page._on_download_clicked()
+    handle = registry.start(
+        TaskSpec(
+            task_id="resource-download",
+            title="Recommended resources",
+            owner=CapabilityTarget("settings", "dictionaries"),
+        )
+    )
+    handle.stage(index=1, total=4, name="JMdict")
 
-    page.resource_checks["kanjium-pitch"].setChecked(True)
-    assert page.download_button.isEnabled() is True
+    qtbot.waitUntil(lambda: "JMdict (1 of 4)" in page.status_label.text(), timeout=3000)
+    assert "JMdict (1 of 4)" in page.ready_page_dictionary_line()
+    handle.finish(TaskOutcome.SUCCEEDED)
+    registry.shutdown()
+
+
+def test_a_fresh_install_reads_not_downloaded_yet(qtbot, wiz_config, monkeypatch):
+    """B11: the wizard's own line, not the service's repair sentence."""
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation(dictionary=False))
+    page = wiz.resources_page
+
+    _run_page_check(qtbot, page, page.dictionary_label)
+
+    assert page.dictionary_label.text() == "Dictionary: not downloaded yet (required)"
+
+
+def test_a_hand_added_dictionary_keeps_the_service_message(qtbot, wiz_config, monkeypatch):
+    from anki_miner.config import ChainEntry  # noqa: PLC0415
+
+    cfg = replace(wiz_config, dictionary_chain=(ChainEntry(kind="indexed", dict_id="mine", enabled=True),))
+    wiz = _wizard_with_validation(qtbot, monkeypatch, cfg, _FakeValidation(dictionary=False))
+    page = wiz.resources_page
+
+    _run_page_check(qtbot, page, page.dictionary_label)
+
+    assert page.dictionary_label.text() == "dictionary is not ready"
+
+
+def test_a_failed_download_offers_retry_on_the_ready_line(qtbot, wiz_config, monkeypatch):
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.resource_download_dialog import ResourceDownloadOutcome  # noqa: PLC0415
+    from anki_miner.gui.workers.resource_download_worker import (  # noqa: PLC0415
+        ResourceDownloadResult,
+        ResourceDownloadSummary,
+    )
+
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation(dictionary=False))
+    page = wiz.resources_page
+    monkeypatch.setattr(dialog_mod, "start_resource_download", lambda *a, **kw: MagicMock())
+    page._on_download_clicked()
+    failure = ResourceDownloadResult("dict", "dict", "Dictionary", "u", False, "network failed")
+    finished: list[bool] = []
+    page.download_finished.connect(lambda: finished.append(True))
+
+    page._on_download_finished(
+        ResourceDownloadOutcome(config=wiz_config, summary=ResourceDownloadSummary(results=[failure]))
+    )
+
+    assert finished == [True]
+    line = page.ready_page_dictionary_line()
+    assert line.startswith("Dictionary: download failed.")
+    assert 'href="download"' in line
+    assert "network failed" in page.status_label.toolTip()
+    qtbot.waitUntil(lambda: not page.dictionary_label.text().startswith("Checking"), timeout=5000)
+
+
+def test_an_import_that_was_not_switched_on_points_at_download(qtbot, wiz_config, monkeypatch):
+    """No window, so no "Retry setup" button: the status line names the one that exists."""
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.resource_download_dialog import ResourceDownloadOutcome  # noqa: PLC0415
+    from anki_miner.gui.workers.resource_download_worker import (  # noqa: PLC0415
+        ResourceDownloadResult,
+        ResourceDownloadSummary,
+    )
+
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation(dictionary=False))
+    page = wiz.resources_page
+    monkeypatch.setattr(dialog_mod, "start_resource_download", lambda *a, **kw: MagicMock())
+    page._on_download_clicked()
+    imported = ResourceDownloadResult("jmdict-english", "dict", "JMdict", "u", True, "imported")
+
+    page._on_download_finished(
+        ResourceDownloadOutcome(config=wiz_config, summary=ResourceDownloadSummary(results=[imported]), activated=False)
+    )
+
+    assert page.status_label.text() == "Imported, but not switched on. Press Download to try again."
+    assert "Retry setup" not in page.status_label.text()
+    assert page.download_running() is False
+    qtbot.waitUntil(lambda: not page.dictionary_label.text().startswith("Checking"), timeout=5000)
 
 
 # ---------------------------------------------------------------------------
