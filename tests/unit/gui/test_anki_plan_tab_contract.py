@@ -179,6 +179,35 @@ class TestApplyStart:
         worker_cls.return_value.start.assert_called_once_with()
         assert tab.status_label.text() == screen.applying
 
+    def test_a_retried_apply_clears_the_failed_applys_banner(self, tab, test_config, screen):
+        tab._on_scan_finished(screen.plan(test_config.config_version))
+
+        with (
+            patch(f"{screen.module}.QMessageBox.question", return_value=QMessageBox.StandardButton.Yes),
+            patch(f"{screen.module}.{screen.apply_worker}"),
+        ):
+            tab._start_apply()
+            tab._on_worker_error("Apply failed: boom")
+            assert _issue(tab).summary == screen.worker_failed
+            assert tab._plan is not None  # the plan survives, so Apply is live again
+
+            tab._start_apply()
+
+        assert _issue(tab) is None
+
+    def test_a_declined_apply_keeps_the_banner(self, tab, test_config, screen):
+        tab._on_scan_finished(screen.plan(test_config.config_version))
+        tab._on_worker_error("Apply failed: boom")
+
+        with (
+            patch(f"{screen.module}.QMessageBox.question", return_value=QMessageBox.StandardButton.No),
+            patch(f"{screen.module}.{screen.apply_worker}") as worker_cls,
+        ):
+            tab._start_apply()
+
+        worker_cls.assert_not_called()
+        assert _issue(tab).summary == screen.worker_failed
+
 
 class TestProgress:
     def test_counts_reach_the_bar_and_the_task_registry(self, tab):

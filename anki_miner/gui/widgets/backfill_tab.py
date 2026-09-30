@@ -701,6 +701,8 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         )
         if answer != QMessageBox.StandardButton.Yes:
             return
+        # Apply is a run entry: a failed Apply's banner must not outlive the retry.
+        self.clear_screen_issue()
         worker = BackfillApplyWorker(self.config, plan, parent=self)
         worker.progress.connect(self._on_progress)
         worker.result_ready.connect(self._on_apply_finished)
