@@ -809,7 +809,7 @@ class DeckBuilderTab(FolderSeriesScreenBase):
             return
         self._run_failed = True
         self.presenter.show_error(message)
-        self.show_screen_issue(ScreenIssue(summary=self.tr("The deck could not be built."), details=message))
+        self._show_run_failure(message, self.tr("The deck could not be built."))
 
     def _on_queue_finished(self, total_cards: int, whitelist: object = None) -> None:
         """Fold the run's whitelist into the receipt and draw the terminal progress line."""

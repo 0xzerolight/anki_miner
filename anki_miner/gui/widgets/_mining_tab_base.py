@@ -104,6 +104,11 @@ _LEAKED_RUN_CLOSE_JOIN_MS = 2000
 # fetcher alongside it (the log line says exactly that).
 _CURATION_PREFETCH_JOIN_MS = 3000
 
+#: The start of the English sentence ``services/_ankiconnect.py`` raises when
+#: AnkiConnect cannot be reached. Matched so the banner can say it in the
+#: user's language instead of "Mining failed." (A04).
+ANKI_UNREACHABLE_MARKER = "Cannot connect to AnkiConnect"
+
 
 class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidget):
     """Common scaffolding for the three mining tabs (``SingleEpisodeTab``, ``BatchProcessingTab``, ``YouTubeTab``).
@@ -330,6 +335,25 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
             action=action,
             worker=type(worker).__name__ if worker is not None else None,
         )
+
+    def _show_run_failure(self, details: str, summary: str = "") -> None:
+        """Explain a failed run in this screen's banner (A04).
+
+        The summary is a plain translated sentence; the raw error goes under
+        Details, as the ``ScreenIssue`` contract requires. A closed Anki gets its
+        own sentence because it is the most common first-run failure and the fix
+        is in the sentence.
+
+        Args:
+            details: The raw error text the run produced.
+            summary: The screen's own summary for other failures; empty means
+                the shared "Mining failed.".
+        """
+        if ANKI_UNREACHABLE_MARKER in details:
+            summary = QCoreApplication.translate("MiningTabBase", "Cannot connect to AnkiConnect. Is Anki running?")
+        elif not summary:
+            summary = QCoreApplication.translate("MiningTabBase", "Mining failed.")
+        self.show_screen_issue(ScreenIssue(summary=summary, details=details))
 
     def _begin_receipt(
         self,

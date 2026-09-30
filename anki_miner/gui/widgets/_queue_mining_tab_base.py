@@ -379,6 +379,7 @@ class _QueueMiningTabBase(MiningTabBase):
         """Run-level fatal: flag for the terminal bar state and log it."""
         self._run_failed = True
         self.log_widget.append_error(message)
+        self._show_run_failure(message)
         # Also to the application log: Activity is per-session and unexported,
         # so a run killed before its first item left no trace a report could
         # carry.

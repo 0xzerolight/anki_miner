@@ -738,6 +738,7 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         """Run-level fatal from the queue worker: flag it and surface it."""
         self._run_failed = True
         self.presenter.show_error(message)
+        self._show_run_failure(message)
 
     def _on_queue_started(self, total_items: int) -> None:
         """Called when queue processing starts.

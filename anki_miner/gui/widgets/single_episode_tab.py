@@ -881,6 +881,7 @@ class SingleEpisodeTab(MiningTabBase):
             else:
                 self.progress_widget.reset()
                 self.progress_widget.set_status(self.tr("Failed — see log"))
+                self._show_run_failure("\n".join(result.errors))
 
         if result.success:
             # The curation snapshots are also the completed run's immutable
@@ -936,6 +937,7 @@ class SingleEpisodeTab(MiningTabBase):
 
         # Show error
         self.presenter.show_error(error_message)
+        self._show_run_failure(error_message)
 
         # Reset progress
         self.progress_widget.reset()
