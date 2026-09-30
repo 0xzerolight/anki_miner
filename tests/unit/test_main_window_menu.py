@@ -360,3 +360,21 @@ def test_about_dialog_builds_and_shows_version(qtbot):
         assert any("9.9.9" in t for t in texts)
     finally:
         dialog.deleteLater()
+
+
+def test_system_health_is_the_first_tools_item(main_window):
+    """E06: System Health was reachable only through the status-bar badges."""
+    labels = [a.text() for a in _tools_menu(main_window).actions() if not a.isSeparator()]
+
+    assert labels[0] == "System Health…"
+
+
+def test_the_tools_item_opens_system_health(main_window):
+    action = _find_action(_tools_menu(main_window), "System Health…")
+
+    action.trigger()
+    try:
+        assert main_window._system_health_window is not None
+        assert main_window._system_health_window.isVisible()
+    finally:
+        main_window._system_health_window.close()

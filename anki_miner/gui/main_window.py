@@ -450,6 +450,13 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # Tools menu
         tools_menu = menu_bar.addMenu(self.tr("&Tools"))
         assert tools_menu is not None
+        # E06: System Health was reachable only by clicking the status-bar
+        # badges, which nothing said were clickable.
+        health_action = tools_menu.addAction(self.tr("System Health…"))
+        assert health_action is not None
+        health_action.triggered.connect(self.open_system_health)
+        tools_menu.addSeparator()
+
         shortcut_action = tools_menu.addAction(self.tr("Create Desktop Shortcut..."))
         assert shortcut_action is not None
         shortcut_action.triggered.connect(self._create_desktop_shortcut)

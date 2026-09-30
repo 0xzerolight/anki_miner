@@ -1330,7 +1330,8 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "System health check"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "See whether Anki, ffmpeg and your resources are ready, with one-click fixes -- open it from the status-bar badge.",
+            "See whether Anki, ffmpeg and your resources are ready, with one-click fixes -- open it from "
+            "Tools → System Health… or the status-bar badges.",
         ),
         category=_CAT_TOOLS,
         keywords=("health", "status", "ready", "doctor", "diagnose", "checklist", "fix"),

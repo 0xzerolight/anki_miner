@@ -482,3 +482,7 @@ def test_mining_language_extra_synonyms_are_searchable() -> None:
     for keyword in extras:
         assert capability in search(keyword), keyword
     assert extras <= set(capability.keywords)
+
+
+def test_system_health_names_its_tools_menu_item() -> None:
+    assert "Tools → System Health…" in _entry("system-health").description
