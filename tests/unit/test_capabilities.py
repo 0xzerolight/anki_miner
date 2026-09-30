@@ -231,10 +231,10 @@ def test_chinese_hides_the_japanese_only_entries() -> None:
         "name-wordsets",
         "furigana",
         "pitch-accent",
-        # Settings gates the whole Preset row on note_presets, so the guide's
-        # Open button would land a zh session on a page without it.
-        "note-type-preset",
     }
+    # D13: "Fill in automatically" works for every language (only the Japanese
+    # community presets are gated), so the guide lists it for Chinese too.
+    assert "note-type-preset" in shown
 
 
 def test_chinese_lists_its_own_entries() -> None:
@@ -364,11 +364,6 @@ def test_sentence_tts_targets_the_card_media_page() -> None:
     assert _entry("sentence-tts").target == CapabilityTarget("settings", "media")
 
 
-def test_parallel_workers_targets_the_general_page() -> None:
-    # Moved off Card Media onto the UI panel's App section (T11).
-    assert _entry("parallel-workers").target == CapabilityTarget("settings", "ui")
-
-
 def test_update_check_targets_the_general_page() -> None:
     # Moved off the tab itself onto the UI panel's App section (T11).
     entry = _entry("update-check")
@@ -486,3 +481,33 @@ def test_mining_language_extra_synonyms_are_searchable() -> None:
 
 def test_system_health_names_its_tools_menu_item() -> None:
     assert "Tools → System Health…" in _entry("system-health").description
+
+
+def _cap(cap_id: str) -> Capability:
+    return next(cap for cap in CAPABILITIES if cap.id == cap_id)
+
+
+def test_sentence_rules_open_the_sentences_page() -> None:
+    """C13 moved Sentence Rule and Sentence Length to Settings -> Sentences."""
+    for cap_id in ("i-plus-one", "sentence-length", "dedup"):
+        target = _cap(cap_id).target
+        assert target is not None and (target.main_tab, target.subtab) == ("settings", "sentences"), cap_id
+
+
+def test_removed_controls_are_not_advertised() -> None:
+    """D15 item 5: Max Parallel Workers left the GUI; D15 item 3: the yt-dlp path too."""
+    assert all(cap.id != "parallel-workers" for cap in CAPABILITIES)
+    assert "custom binary" not in _cap("ytdlp-maintenance").keywords
+
+
+def test_whole_profile_actions_point_at_where_they_live_now() -> None:
+    """D14: the Settings footer is gone."""
+    for cap_id in ("settings-resource-bundle", "settings-profiles", "settings-export-import"):
+        cap = _cap(cap_id)
+        assert cap.target is None, cap_id
+        assert cap.category == "Tools & maintenance", cap_id
+        assert "footer" not in cap.description, cap_id
+
+
+def test_fill_in_automatically_is_findable() -> None:
+    assert any(cap.id == "note-type-preset" for cap in search("fill in automatically"))

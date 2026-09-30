@@ -506,11 +506,11 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Keep yt-dlp up to date"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Keep the yt-dlp downloader up to date, update it on demand, or point at your own binary.",
+            "Keep the yt-dlp downloader up to date, or update it on demand.",
         ),
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("settings", "youtube"),
-        keywords=("yt-dlp", "ytdlp", "update downloader", "youtube broken", "custom binary"),
+        keywords=("yt-dlp", "ytdlp", "update downloader", "youtube broken"),
     ),
     Capability(
         id="mining-language",
@@ -637,7 +637,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "i+1 sentence mining"),
         description=QT_TRANSLATE_NOOP("Capabilities", "Mine only sentences that contain exactly one unknown word."),
         category=_CAT_FILTERING,
-        target=CapabilityTarget("settings", "filtering"),
+        target=CapabilityTarget("settings", "sentences"),
         keywords=("i+1", "n+1", "1t", "one unknown", "single unknown", "comprehensible input"),
     ),
     Capability(
@@ -697,7 +697,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         id="kana-only-exclude",
         title=QT_TRANSLATE_NOOP("Capabilities", "Exclude kana-only words"),
         description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Drop words written without kanji; ticking both boxes leaves a kanji-only deck."
+            "Capabilities", "Drop words written without kanji; “Skip all kana-only words” leaves a kanji-only deck."
         ),
         category=_CAT_FILTERING,
         target=CapabilityTarget("settings", "filtering"),
@@ -721,7 +721,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "Capabilities", "Skip sentences longer than a chosen duration or character count."
         ),
         category=_CAT_FILTERING,
-        target=CapabilityTarget("settings", "filtering"),
+        target=CapabilityTarget("settings", "sentences"),
         keywords=("sentence length", "too long", "duration", "char limit", "max length"),
     ),
     Capability(
@@ -731,7 +731,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "Capabilities", "Mine at most one word from each example sentence, skipping the rest."
         ),
         category=_CAT_FILTERING,
-        target=CapabilityTarget("settings", "filtering"),
+        target=CapabilityTarget("settings", "sentences"),
         keywords=("duplicate", "dedupe", "deduplicate", "repeat", "unique"),
     ),
     Capability(
@@ -942,27 +942,15 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         id="alass-tuning",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Set the alass binary (subtitle alignment)"),
+        title=QT_TRANSLATE_NOOP("Capabilities", "Set up alass (subtitle alignment)"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Point alass, the subtitle re-timing tool, at a specific executable, or download it "
-            "in-app (Linux/Windows; macOS installs it with Homebrew).",
+            "Download alass, the subtitle re-timing tool, in-app on Linux and Windows; "
+            "on macOS install it with Homebrew and point Anki Miner at it.",
         ),
         category=_CAT_SOURCES,
         target=CapabilityTarget("settings", "subtitles"),
         keywords=("alass", "alignment", "binary", "download", "homebrew", "sync settings"),
-    ),
-    Capability(
-        id="settings-resource-bundle",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Export / import resources"),
-        description=QT_TRANSLATE_NOOP(
-            "Capabilities",
-            "Pack this language's dictionaries, frequency and pitch lists, ignore list and word lists into one "
-            "file, and install them on another machine -- Export or Import, then Resources, in the Settings footer.",
-        ),
-        category=_CAT_SOURCES,
-        target=CapabilityTarget("settings"),
-        keywords=("export resources", "import resources", "bundle", "share", "transfer", "dictionaries", "frequency"),
     ),
     # --- Audio -------------------------------------------------------------
     Capability(
@@ -1058,17 +1046,6 @@ CAPABILITIES: tuple[Capability, ...] = (
         target=CapabilityTarget("settings", "media"),
         keywords=("padding", "offset", "timing", "lead in", "trail", "sync", "delay"),
     ),
-    Capability(
-        id="parallel-workers",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Tune parallel media workers"),
-        description=QT_TRANSLATE_NOOP(
-            "Capabilities",
-            "Choose how many media-extraction jobs run at once to trade speed against CPU and memory use.",
-        ),
-        category=_CAT_MEDIA,
-        target=CapabilityTarget("settings", "ui"),
-        keywords=("parallel", "workers", "cpu", "ram", "performance", "speed", "slow extraction"),
-    ),
     # --- Anki cards --------------------------------------------------------
     Capability(
         id="field-mapping",
@@ -1155,7 +1132,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Connect to Anki (AnkiConnect)"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Set the AnkiConnect address and test the connection to your running Anki.",
+            "Set the AnkiConnect address; Refresh re-checks the connection to your running Anki.",
         ),
         category=_CAT_CARDS,
         target=CapabilityTarget("settings", "anki"),
@@ -1163,15 +1140,24 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         id="note-type-preset",
-        title=QT_TRANSLATE_NOOP("Capabilities", "One-click note-type presets"),
+        title=QT_TRANSLATE_NOOP("Capabilities", "Fill in field mappings automatically"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Apply a preset for a popular note type (Lapis, Kiku, Senren) that fills every field mapping for you.",
+            "Fill in automatically reads your note type's fields and fills every mapping. "
+            "Lapis, Kiku and Senren are recognised and filled completely.",
         ),
         category=_CAT_CARDS,
         target=CapabilityTarget("settings", "anki"),
-        keywords=("preset", "lapis", "kiku", "senren", "note type setup", "auto map fields"),
-        requires="note_presets",
+        keywords=(
+            "fill in automatically",
+            "auto map",
+            "auto map fields",
+            "preset",
+            "lapis",
+            "kiku",
+            "senren",
+            "note type setup",
+        ),
     ),
     Capability(
         id="bold-target-word",
@@ -1200,26 +1186,6 @@ CAPABILITIES: tuple[Capability, ...] = (
         category=_CAT_APPEARANCE,
         target=CapabilityTarget("settings", "ui"),
         keywords=("language", "ui language", "localization", "locale", "translate interface"),
-    ),
-    Capability(
-        id="settings-profiles",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Settings profiles"),
-        description=QT_TRANSLATE_NOOP(
-            "Capabilities",
-            "Keep several named snapshots of every setting and switch between them from the Settings footer.",
-        ),
-        category=_CAT_APPEARANCE,
-        target=CapabilityTarget("settings"),
-        keywords=(
-            "profile",
-            "profiles",
-            "settings profile",
-            "preset",
-            "switch settings",
-            "multiple setups",
-            "different decks",
-            "anime vs novels",
-        ),
     ),
     Capability(
         id="custom-themes",
@@ -1254,17 +1220,6 @@ CAPABILITIES: tuple[Capability, ...] = (
         category=_CAT_APPEARANCE,
         target=CapabilityTarget("settings"),
         keywords=("settings search", "find setting", "where is", "jump to setting"),
-    ),
-    Capability(
-        id="settings-export-import",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Export / import settings"),
-        description=QT_TRANSLATE_NOOP(
-            "Capabilities",
-            "Save every setting to a portable file, load it on another machine, or reset everything to defaults -- from the Settings footer.",
-        ),
-        category=_CAT_APPEARANCE,
-        target=CapabilityTarget("settings"),
-        keywords=("export settings", "import settings", "backup", "transfer", "reset to defaults", "portable"),
     ),
     Capability(
         id="update-check",
@@ -1428,6 +1383,48 @@ CAPABILITIES: tuple[Capability, ...] = (
         category=_CAT_TOOLS,
         target=CapabilityTarget("settings", "keyboard"),
         keywords=("shortcuts", "hotkeys", "keybindings", "key bindings", "keyboard", "remap", "rebind", "f1"),
+    ),
+    Capability(
+        id="settings-resource-bundle",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Export / import resources"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Pack this language's dictionaries, frequency and pitch lists, ignore list and word lists into one "
+            "file, and install them on another machine: Tools → Export Resources… and Import Resources….",
+        ),
+        category=_CAT_TOOLS,
+        keywords=("export resources", "import resources", "bundle", "share", "transfer", "dictionaries", "frequency"),
+    ),
+    Capability(
+        id="settings-profiles",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Settings profiles"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Keep several named snapshots of every setting and switch between them from the profile menu "
+            "at the top of the window (Manage profiles…).",
+        ),
+        category=_CAT_TOOLS,
+        keywords=(
+            "profile",
+            "profiles",
+            "settings profile",
+            "preset",
+            "switch settings",
+            "multiple setups",
+            "different decks",
+            "anime vs novels",
+        ),
+    ),
+    Capability(
+        id="settings-export-import",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Export / import settings"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Save every setting to a portable file, load it on another machine, or reset everything to defaults: "
+            "Manage profiles…, under This profile.",
+        ),
+        category=_CAT_TOOLS,
+        keywords=("export settings", "import settings", "backup", "transfer", "reset to defaults", "portable"),
     ),
 )
 

@@ -219,6 +219,9 @@ def test_moved_capability_targets_track_the_anchor_that_owns_the_control(tab):
     for cap_id, anchor_id in (
         ("sentence-tts", "media.reading_tts"),
         ("update-check", "ui.check_for_updates"),
+        ("i-plus-one", "sentences.sentence_rule_combo"),
+        ("dedup", "sentences.sentence_rule_combo"),
+        ("sentence-length", "sentences.max_sentence_chars_spinbox"),
     ):
         assert anchor_id in by_id, f"{cap_id}: anchor {anchor_id!r} no longer exists"
         namespace = by_id[anchor_id].stable_id.split(".", 1)[0]
