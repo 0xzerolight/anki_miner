@@ -46,6 +46,8 @@ def ko_stack_absent(monkeypatch):
     # zh's probe is the shared one too, so the spaCy pin above would drop it; every
     # exact list below offers zh, so pin its stack present.
     monkeypatch.setattr(availability, "module_importable", lambda _name: True)
+    # D12: no pack downloads here, so the combo lists what can be mined now.
+    monkeypatch.setattr(language_choices, "_pack_download_mb", lambda _code: None)
 
 
 def _panel(qtbot, config: AnkiMinerConfig) -> MiningLanguageSettingsPanel:
@@ -77,7 +79,7 @@ def test_a_language_whose_stack_is_missing_is_not_offered(monkeypatch):
 
     monkeypatch.setattr(language_choices, "get_profile", fake_get_profile)
 
-    assert [code for code, _name in language_choices.available_mining_languages()] == ["ja", "id", "he"]
+    assert [code for code, _name in language_choices.available_mining_languages()] == ["ja", "he", "id"]
 
 
 def test_a_missing_optional_package_keeps_the_language_offered(monkeypatch):
@@ -88,24 +90,24 @@ def test_a_missing_optional_package_keeps_the_language_offered(monkeypatch):
     """
     monkeypatch.setattr(availability, "module_importable", lambda name: name != "opencc")
 
-    assert [code for code, _name in language_choices.available_mining_languages()] == ["ja", "zh", "id", "he"]
+    assert [code for code, _name in language_choices.available_mining_languages()] == ["ja", "zh", "he", "id"]
 
 
 def test_a_missing_required_package_drops_the_language(monkeypatch):
     monkeypatch.setattr(availability, "module_importable", lambda name: name != "jieba")
 
-    assert [code for code, _name in language_choices.available_mining_languages()] == ["ja", "id", "he"]
+    assert [code for code, _name in language_choices.available_mining_languages()] == ["ja", "he", "id"]
 
 
-def test_offered_languages_carry_their_native_names():
+def test_offered_languages_carry_native_and_english_names():
     names = dict(language_choices.available_mining_languages())
-    assert names["ja"] == "日本語"
-    assert names["zh"] == "中文"
+    assert names["ja"] == "日本語 — Japanese"
+    assert names["zh"] == "中文 — Chinese"
 
 
 def test_the_panel_builds_and_lists_only_buildable_languages(qtbot, test_config):
     combo = _panel(qtbot, test_config).mining_language_combo
-    assert [combo.itemData(i) for i in range(combo.count())] == ["ja", "zh", "id", "he"]
+    assert [combo.itemData(i) for i in range(combo.count())] == ["ja", "zh", "he", "id"]
     assert combo.currentData() == "ja"
 
 
