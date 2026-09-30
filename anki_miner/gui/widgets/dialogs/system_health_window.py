@@ -111,7 +111,7 @@ HEALTH_KEYS: tuple[str, ...] = tuple(key for _group, keys in HEALTH_GROUPS for k
 #: Health rows that only exist for a language with the matching capability.
 #: The keys stay in HEALTH_GROUPS: the report still carries every row, and
 #: the window is the only thing that hides one.
-_ROW_CAPABILITIES: dict[str, str] = {"resources.pitch": "pitch"}
+_ROW_CAPABILITIES: dict[str, str] = {"resources.pitch": "pitch", "tools.mokuro": "manga_ocr"}
 
 #: Where a broken row is repaired, as a stable setting-anchor id (D11). Rows
 #: absent from this map have no in-app control to jump to — ffmpeg and ffprobe

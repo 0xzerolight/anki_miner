@@ -285,7 +285,7 @@ def _entry(cap_id: str) -> Capability:
 
 @pytest.mark.parametrize(
     "cap_id",
-    ["jisho-fallback", "manga-mining", "manga-ocr", "download-resources", "card-backfill", "deck-filter"],
+    ["jisho-fallback", "manga-mining", "download-resources", "card-backfill", "deck-filter"],
 )
 def test_ungated_entries_name_their_japanese_only_part(cap_id: str) -> None:
     # No profile capability gates these, so every language lists them; the

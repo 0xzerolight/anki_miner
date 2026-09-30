@@ -1301,6 +1301,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         category=_CAT_TOOLS,
         target=CapabilityTarget("subtitles", "mokuro"),
         keywords=("mokuro", "manga", "ocr", "cbz", "page images", "text detection", "manga-ocr"),
+        requires="manga_ocr",
     ),
     Capability(
         id="audiobook-sync",
