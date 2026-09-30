@@ -164,7 +164,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         vad_pack_download_requested: Emitted when the Subtitles panel's
             "Download silence removal" button is clicked.
         asr_pack_download_requested: Emitted when the Subtitles panel's
-            "Download transcription engine" button is clicked.
+            "Set up speech-to-text" button is clicked.
         vulkan_model_download_requested: Emitted when the Subtitles panel's
             "Download Vulkan model" button is clicked. Carries the selected
             acoustic model name.
