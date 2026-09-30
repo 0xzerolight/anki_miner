@@ -408,7 +408,13 @@ class TestContrastWarningLabel:
         assert panel.contrast_warning.wordWrap() is True
         layout = panel.layout()
         gallery_index = layout.indexOf(panel.gallery)
-        assert layout.indexOf(panel.contrast_warning) == gallery_index + 1
+        warning_index = layout.indexOf(panel.contrast_warning)
+        assert warning_index > gallery_index
+        # FormPanel.add_widget opens a fresh (empty) form after each block
+        # (C01); nothing visible may sit between the gallery and the warning.
+        between = [layout.itemAt(i) for i in range(gallery_index + 1, warning_index)]
+        assert all(item.widget() is None and item.layout() is not None for item in between)
+        assert all(item.layout().count() == 0 for item in between)
 
 
 class TestPreviewDoesNotRepaintColours:

@@ -535,3 +535,56 @@ class TestImeSafety:
         assert dlg.isVisible()
         QTest.keyClick(dlg.search_input, Qt.Key.Key_Enter)  # keypad
         assert dlg.isVisible()
+
+
+class TestRebuild:
+    """C13: Rebuild sits beside the cached-from-Anki count it clears."""
+
+    def test_rebuild_sits_in_the_dialog_and_calls_back(self, qtbot, tmp_path):
+        db = _db_with_user_words(tmp_path)
+        calls: list[object] = []
+        dlg = KnownWordsManagerDialog(db, on_rebuild=calls.append, rebuild_enabled=True)
+        qtbot.addWidget(dlg)
+        assert dlg.rebuild_button.text() == "Rebuild Known Words DB"
+        assert dlg.rebuild_button.isEnabled()
+
+        dlg.rebuild_button.click()
+
+        assert len(calls) == 1
+        assert not dlg.rebuild_button.isEnabled()  # in flight
+        db.clear(preserve_user=True)
+        calls[0]()  # the tab reports the rebuild finished
+        assert dlg.rebuild_button.isEnabled()
+        assert "cached from Anki: 0" in dlg.count_label.text()
+
+    def test_rebuild_is_disabled_while_the_cache_is_off(self, qtbot, tmp_path):
+        dlg = KnownWordsManagerDialog(_db_with_user_words(tmp_path), on_rebuild=lambda _done: None)
+        qtbot.addWidget(dlg)
+        assert not dlg.rebuild_button.isEnabled()
+
+    def test_no_callback_no_button(self, qtbot, tmp_path):
+        dlg = KnownWordsManagerDialog(_db_with_user_words(tmp_path))
+        qtbot.addWidget(dlg)
+        assert dlg.rebuild_button.isHidden()
+
+
+class TestFrame:
+    """C19: the standard dialog frame -- title, subtitle, one primary Close last."""
+
+    def test_uses_the_enhanced_dialog_frame(self, qtbot, tmp_path):
+        from anki_miner.gui.widgets.base.enhanced_dialog import EnhancedDialog
+
+        dlg = KnownWordsManagerDialog(_db_with_user_words(tmp_path))
+        qtbot.addWidget(dlg)
+        assert isinstance(dlg, EnhancedDialog)
+        assert dlg._title_label.text() == "Local Known Words"
+        assert "Word Curator" in dlg._subtitle_label.text()
+
+    def test_close_is_the_one_footer_button_and_primary(self, qtbot, tmp_path):
+        from PyQt6.QtWidgets import QPushButton
+
+        dlg = KnownWordsManagerDialog(_db_with_user_words(tmp_path))
+        qtbot.addWidget(dlg)
+        footer = dlg._footer_widget.findChildren(QPushButton)
+        assert [b.text() for b in footer] == ["Close"]
+        assert footer[0].objectName() == "primary"

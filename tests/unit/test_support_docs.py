@@ -24,7 +24,7 @@ def test_frozen_builds_offer_the_engine_download_instead_of_a_pip_command(qtbot,
     qtbot.addWidget(panel)
     panel._apply_engine_state(False, False)
 
-    assert panel.download_engine_button.text() == "Download transcription engine"
+    assert panel.download_engine_button.text().startswith("Set up speech-to-text (about ")
     # The source-install block still exists, hidden. Scoped to that block: with
     # suppress_optional_startup the alass section builds its own Homebrew
     # command row (alass download unsupported -> macOS guidance).

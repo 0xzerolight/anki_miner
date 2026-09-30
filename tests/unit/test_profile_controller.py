@@ -725,7 +725,7 @@ class TestComposedWindowSwitch:
         GUIConfigManager.ACTIVE_PROFILE_ID = "a"
         edited = window.config.max_sentence_chars + 7
 
-        settings_tab.filtering_panel.max_sentence_chars_spinbox.setValue(edited)
+        settings_tab.sentences_panel.max_sentence_chars_spinbox.setValue(edited)
         # Vacuity guard: the edit really is still pending, i.e. the switch runs
         # INSIDE the debounce window rather than after it has fired.
         assert settings_tab._settings_dirty and settings_tab._debounce_timer.isActive()

@@ -64,8 +64,8 @@ def test_a_reserved_curator_key_is_refused(panel, qtbot):
 
 def test_a_bare_app_key_is_refused(panel, qtbot):
     with qtbot.assertNotEmitted(panel.key_bindings_changed):
-        assert not panel.set_binding("app.open_settings", QKeySequence("D"))
-    assert "Ctrl" in panel._errors["app.open_settings"].text()
+        assert not panel.set_binding("app.usage_guide", QKeySequence("D"))
+    assert "Ctrl" in panel._errors["app.usage_guide"].text()
 
 
 def test_a_later_accepted_key_clears_the_error(panel):
@@ -92,12 +92,12 @@ def test_reset_returns_one_row_to_its_default(panel, qtbot):
 
 def test_restore_defaults_resets_every_row_in_one_commit(panel, qtbot):
     panel.set_binding("curator.mark_known", QKeySequence("J"))
-    panel.set_binding("app.open_settings", QKeySequence("Ctrl+Shift+S"))
+    panel.set_binding("app.usage_guide", QKeySequence("Ctrl+Shift+U"))
     with qtbot.waitSignal(panel.key_bindings_changed, timeout=1000) as blocker:
         panel.restore_defaults_button.click()
     assert blocker.args == [{}]
     assert _shown(panel, "curator.mark_known") == "D"
-    assert _shown(panel, "app.open_settings") == "Ctrl+,"
+    assert _shown(panel, "app.usage_guide") == "F1"
 
 
 def test_load_from_config_repaints_without_emitting(panel, qtbot, test_config):
@@ -208,3 +208,17 @@ def test_every_empty_editor_fits_its_own_placeholder(panel, qtbot):
         assert _usable_text_width(line_edit) >= needed, action_id
     assert checked_an_empty_editor, "no unbound row to exercise the placeholder on"
     panel.hide()
+
+
+def test_there_is_no_open_settings_row(panel):
+    assert "app.open_settings" not in panel._editors
+
+
+def test_reset_shows_only_on_a_changed_row(panel):
+    reset = panel._reset_buttons["curator.mark_known"]
+    assert reset.isHidden()
+    panel.set_binding("curator.mark_known", QKeySequence("J"))
+    assert not reset.isHidden()
+    reset.click()
+    assert reset.isHidden()
+    assert panel._reset_buttons["curator.play_pause"].isHidden()

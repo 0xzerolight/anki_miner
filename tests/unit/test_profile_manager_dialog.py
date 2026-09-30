@@ -393,3 +393,62 @@ class TestNewFromCurrent:
         widget.new_button.click()
 
         assert any("Podcasts" in label for label in _labels(widget))
+
+
+class TestFrame:
+    """C19: standard frame, one primary Close, and a minimum that fits the buttons."""
+
+    def test_uses_the_enhanced_dialog_frame(self, dialog):
+        from anki_miner.gui.widgets.base.enhanced_dialog import EnhancedDialog
+
+        widget = dialog()
+        assert isinstance(widget, EnhancedDialog)
+        assert widget._title_label.text() == "Settings Profiles"
+        assert widget.switch_button.objectName() == "secondary"
+
+    def test_close_is_the_one_footer_button_and_primary(self, dialog):
+        from PyQt6.QtWidgets import QPushButton
+
+        widget = dialog()
+        footer = widget._footer_widget.findChildren(QPushButton)
+        assert [button.text() for button in footer] == ["Close"]
+        assert footer[0].objectName() == "primary"
+
+    def test_the_minimum_width_fits_every_action_button(self, dialog):
+        widget = dialog()
+        margins = widget._main_layout.contentsMargins()
+        assert widget.minimumWidth() >= widget._actions_row.sizeHint().width() + margins.left() + margins.right()
+
+
+class _FakeSettingsActions:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, object]] = []
+
+    def export_settings(self, surface) -> None:
+        self.calls.append(("export", surface))
+
+    def import_settings(self, surface) -> None:
+        self.calls.append(("import", surface))
+
+    def reset_settings(self, surface) -> None:
+        self.calls.append(("reset", surface))
+
+
+class TestThisProfileRow:
+    """D14: Export, Import and Reset of settings moved here from every Settings page."""
+
+    def test_the_row_calls_the_settings_actions_with_the_dialog(self, qtbot, controller):
+        actions = _FakeSettingsActions()
+        widget = ProfileManagerDialog(controller, lambda: None, settings_actions=actions)
+        qtbot.addWidget(widget)
+
+        widget.export_settings_button.click()
+        widget.import_settings_button.click()
+        widget.reset_settings_button.click()
+
+        assert actions.calls == [("export", widget), ("import", widget), ("reset", widget)]
+
+    def test_without_actions_the_row_is_hidden(self, dialog):
+        widget = dialog()
+        # The row is hidden, not each button: isHidden() only reports an explicit hide.
+        assert not widget.export_settings_button.isVisibleTo(widget)

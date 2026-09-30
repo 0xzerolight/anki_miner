@@ -274,6 +274,7 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
                 move_down_tooltip=self.tr("Move down in priority"),
                 more=self.tr("More"),
                 more_tooltip=self.tr("More actions"),
+                empty=self.tr("No word audio sources yet."),
             ),
             extra_actions=(self._reimport_btn, self._restore_btn, self._retry_missing_btn),
         )

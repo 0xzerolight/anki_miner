@@ -601,9 +601,10 @@ class TestTheExplanationIsTrue:
         widget = _make_panel("frequency", qtbot, tmp_path, ("a", True))
         text = widget._explanation_label.text()
 
-        assert "Every enabled source counts" in text
-        assert "lowest rank" in text
-        assert "source list" in text
+        assert "All enabled lists are used" in text
+        tip = widget._explanation_label.toolTip()
+        assert "lowest rank" in tip
+        assert "source list" in tip
 
 
 class TestSettingAnchorsAreUnchanged:

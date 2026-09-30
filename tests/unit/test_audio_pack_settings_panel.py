@@ -1168,7 +1168,7 @@ class TestOffThreadDiskWork:
 
         panel.remove(0)
         assert panel._remove_btn.isEnabled() is False
-        qtbot.waitUntil(lambda: panel._remove_btn.isEnabled(), timeout=3000)
+        qtbot.waitUntil(lambda: panel._reorder_enabled, timeout=3000)
         assert not pack_dir.exists()
 
 

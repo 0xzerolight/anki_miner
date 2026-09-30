@@ -12,15 +12,14 @@ import logging
 from collections.abc import Callable
 from pathlib import Path
 
-from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
-    QDialog,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QListWidget,
     QMessageBox,
     QVBoxLayout,
+    QWidget,
 )
 
 from anki_miner.gui.resources.styles import SPACING
@@ -29,12 +28,12 @@ from anki_miner.gui.utils.content_text import content_cell_font
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.keyboard_shortcuts import disown_default_buttons
 from anki_miner.gui.utils.qt_helpers import (
-    add_min_max_buttons,
     configure_data_view,
     install_copy_rows,
 )
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost
+from anki_miner.gui.widgets.base.enhanced_dialog import EnhancedDialog
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.languages.profile import ContentTextStyle
 from anki_miner.languages.registry import get_profile
@@ -51,7 +50,7 @@ from anki_miner.utils.subtitle_encoding import script_check_kwarg
 logger = logging.getLogger(__name__)
 
 
-class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
+class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
     """View / remove / export / reset the user-curated known words list."""
 
     # Keyword-only additions accumulate here — do not drop existing keywords.
@@ -63,8 +62,10 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
         language: str = "ja",
         content_style: ContentTextStyle | None = None,
         excluded_decks: tuple[str, ...] = (),
+        on_rebuild: Callable[[Callable[[], None]], None] | None = None,
+        rebuild_enabled: bool = False,
     ):
-        super().__init__(parent)
+        super().__init__(parent, title=self.tr("Manage Known Words"))
         self._db = known_word_db
         self._language = language
         self._excluded_decks = excluded_decks
@@ -72,36 +73,30 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
         # language. None keeps today's Japanese face for the ja default.
         self._content_style = content_style or get_profile(self._language).content_style
         self._dialog_generation = 0
+        # Rebuild runs in SettingsTab (confirm, per-language path, off-thread
+        # clear); this dialog only offers the button and hears when it ends.
+        self._on_rebuild = on_rebuild
+        self._rebuild_enabled = rebuild_enabled
+        self._rebuild_in_flight = False
         # The list may never have been written if the user only just enabled the
         # feature — initialize so reads/writes don't hit a missing file.
         self._db.initialize()
-        self._setup_ui()
-        add_min_max_buttons(self)
+        # Not _setup_ui: EnhancedDialog.__init__ already ran its own frame builder.
+        self._build_content()
         self._refresh()
 
-    def _setup_ui(self) -> None:
-        self.setWindowTitle(self.tr("Manage Known Words"))
+    def _build_content(self) -> None:
         self.setMinimumWidth(480)
         self.setMinimumHeight(520)
-
-        layout = QVBoxLayout()
-        layout.setSpacing(SPACING.sm)
-        layout.setContentsMargins(SPACING.lg, SPACING.lg, SPACING.lg, SPACING.lg)
-
-        header = QLabel(self.tr("Local Known Words"))
-        font = QFont()
-        font.setPixelSize(16)
-        font.setWeight(QFont.Weight.Bold)
-        header.setFont(font)
-        layout.addWidget(header)
-
-        helper_text = self.tr(
-            "Words you added from the Word Curator. Ignored on every run and kept across cache rebuilds."
+        self.set_header(
+            "",
+            self.tr("Local Known Words"),
+            self.tr("Words you added from the Word Curator. Ignored on every run and kept across cache rebuilds."),
         )
-        helper = QLabel(helper_text)
-        helper.setObjectName("helper-text")
-        helper.setWordWrap(True)
-        layout.addWidget(helper)
+        content = QWidget()
+        layout = QVBoxLayout(content)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(SPACING.sm)
         # S15: the scan's exclusions are this language's own, and they are the
         # only thing that keeps another language's deck out of its known words.
         if self._excluded_decks:
@@ -130,9 +125,25 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
         install_copy_rows(self.word_list)
         layout.addWidget(self.word_list)
 
+        # The count, and Rebuild beside the "cached from Anki" number it clears
+        # (C13; moved here from Word Filters). The label stays: D20 item 3 kept it.
+        count_row = QHBoxLayout()
         self.count_label = QLabel()
         self.count_label.setObjectName("helper-text")
-        layout.addWidget(self.count_label)
+        count_row.addWidget(self.count_label, 1)
+        self.rebuild_button = ModernButton(self.tr("Rebuild Known Words DB"), variant="secondary")
+        self.rebuild_button.setToolTip(
+            self.tr(
+                "Clear the local known-words cache so it re-syncs from Anki on the "
+                "next run. Needed for deck exclusions to take effect when the "
+                "local cache is enabled."
+            )
+        )
+        self.rebuild_button.clicked.connect(self._on_rebuild_clicked)
+        self.rebuild_button.setVisible(self._on_rebuild is not None)
+        count_row.addWidget(self.rebuild_button)
+        layout.addLayout(count_row)
+        self._sync_rebuild_button()
 
         buttons = QHBoxLayout()
         self.remove_button = ModernButton(self.tr("Remove Selected"), variant="secondary")
@@ -148,17 +159,15 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
         buttons.addWidget(self.export_button)
         buttons.addWidget(self.reset_button)
         buttons.addStretch()
-        close_button = ModernButton(self.tr("Close"), variant="primary")
-        close_button.clicked.connect(self.accept)
-        buttons.addWidget(close_button)
         layout.addLayout(buttons)
-
-        self.setLayout(layout)
+        self.add_content(content, 1)
+        # C19: Close is the only way out, so it is the footer's one primary.
+        self.add_close_button()
         # The filter field holds Japanese, and Return is how an input method
         # commits a composition. With Close left as the default button, typing
         # kana into the filter closed the manager (D49). Esc still closes it.
         disown_default_buttons(self)
-        self.install_issue_banner(layout)
+        self.install_issue_banner(self._main_layout, 1)
 
     # ------------------------------------------------------------------
     # Data
@@ -181,6 +190,27 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
 
         cached = max(0, self._db.word_count() - len(user_words))
         self.count_label.setText(tr_format(self.tr("User words: %1 · cached from Anki: %2"), len(user_words), cached))
+
+    def _sync_rebuild_button(self) -> None:
+        """Enabled only while the cache is on and no rebuild runs (the old guard, C13)."""
+        self.rebuild_button.setEnabled(self._rebuild_enabled and not self._rebuild_in_flight)
+
+    def _on_rebuild_clicked(self) -> None:
+        if self._on_rebuild is None or self._rebuild_in_flight:
+            return
+        self._rebuild_in_flight = True
+        self._sync_rebuild_button()
+        generation = self._dialog_generation
+
+        def done() -> None:
+            # A rebuild can outlive the dialog; a closed dialog ignores it.
+            if generation != self._dialog_generation:
+                return
+            self._rebuild_in_flight = False
+            self._sync_rebuild_button()
+            self._refresh()
+
+        self._on_rebuild(done)
 
     def _on_search_changed(self, text: str) -> None:
         needle = text.lower()

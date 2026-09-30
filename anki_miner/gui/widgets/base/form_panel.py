@@ -19,7 +19,7 @@ from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.widgets.base.setting_anchor import SettingAnchorHost, SettingTextProvider
 from anki_miner.gui.widgets.base.sizing import configure_card_layout, form_row_cap, make_label_fit_text
 
-#: Longest status line a ``settings-save-status`` label renders before the rest
+#: Longest status line a status label renders before the rest
 #: moves to its tooltip. The label shares a row with its action button inside a
 #: settings card, so a longer line is cut by the card edge anyway.
 STATUS_LINE_MAX_CHARS = 140
@@ -88,6 +88,7 @@ class FormPanel(SettingAnchorHost, QFrame):
         # Heading of the section fields are currently landing in, read lazily by
         # the anchor text providers so search matches the section name too.
         self._active_section_label: QLabel | None = None
+        self._active_section_synonyms: tuple[str, ...] = ()
         # Every labelled row this panel owns, across all its form layouts, so
         # the field cap can be recomputed as one column when the text scale
         # changes. Sections open new form layouts but share the label column.
@@ -114,6 +115,20 @@ class FormPanel(SettingAnchorHost, QFrame):
         layout.setFormAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
         return layout
 
+    def _open_form_after_block(self) -> None:
+        """Start a fresh form below whatever was just appended to the card (C01).
+
+        ``add_widget`` and ``add_layout`` append to the card's main column, but
+        the fields around them live in form layouts that were added earlier. So
+        without a new form, every field added after a status line or a button
+        row still rendered ABOVE it, and statuses floated under the whole
+        section. Opening a form here makes render order equal call order. An
+        unused (empty) form layout takes no space: ``QBoxLayout`` skips empty
+        items.
+        """
+        self._active_form_layout = self._new_form_layout()
+        self._main_layout.addLayout(self._active_form_layout)
+
     def _apply_field_cap(self) -> None:
         """Stop the fields growing with the card (D5).
 
@@ -127,11 +142,21 @@ class FormPanel(SettingAnchorHost, QFrame):
         Runs on show and again on a font change, not once at construction: the
         UI text scale is applied live from Settings, and a width frozen at build
         time is stale the moment the user moves that slider.
+
+        It also gives every row label the width of the widest visible label, so
+        the forms that sections and T3.01's blocks open all share one input
+        column (C02). Labels hidden by a language gate do not count; the next
+        show re-measures.
         """
         if not self._form_rows:
             return
-        widest = max((label.sizeHint().width() for label, _ in self._form_rows if label is not None), default=0)
+        widest = max(
+            (label.sizeHint().width() for label, _ in self._form_rows if label is not None and label.isVisibleTo(self)),
+            default=0,
+        )
         for label, field in self._form_rows:
+            if label is not None:
+                label.setMinimumWidth(widest)
             spacing = self._form_layout.horizontalSpacing() if label is not None else 0
             cap = form_row_cap(field) - (widest + max(spacing, 0) if label is not None else 0)
             # Never below what the field itself needs: Qt applies a maximum
@@ -141,6 +166,11 @@ class FormPanel(SettingAnchorHost, QFrame):
     def showEvent(self, event) -> None:  # noqa: N802 - Qt override
         super().showEvent(event)
         self._apply_field_cap()
+        # Qt activated this layout before the show event, so the label widths
+        # set just now would only land on a later, posted relayout; the first
+        # frame (and a search jump measuring positions) would see each form's
+        # own label column. Lay out again now.
+        self._main_layout.activate()
 
     def changeEvent(self, event) -> None:  # noqa: N802 - Qt override
         super().changeEvent(event)
@@ -161,6 +191,10 @@ class FormPanel(SettingAnchorHost, QFrame):
         label = QLabel(f"{text}:")
         label.setObjectName("field-label")
         make_label_fit_text(label)
+        # Right-aligned inside the shared column width _apply_field_cap gives
+        # every label (C02); QFormLayout's own label alignment only positions
+        # the label box, not the text inside a box wider than the text.
+        label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         return label
 
     def add_field(
@@ -245,6 +279,7 @@ class FormPanel(SettingAnchorHost, QFrame):
             The widget that was added
         """
         self._main_layout.addWidget(widget, stretch)
+        self._open_form_after_block()
         self._register_setting_anchor(
             widget,
             field_label=None,
@@ -263,12 +298,25 @@ class FormPanel(SettingAnchorHost, QFrame):
             layout: Layout to add
         """
         self._main_layout.addLayout(layout)
+        self._open_form_after_block()
 
-    def add_section(self, title: str) -> None:
-        """Add a section divider with title.
+    def add_section(
+        self,
+        title: str,
+        *,
+        trailing: QWidget | None = None,
+        synonyms: tuple[str, ...] = (),
+    ) -> None:
+        """Add a section heading and open a fresh form under it.
 
         Args:
-            title: Section title
+            title: Section title.
+            trailing: Optional control shown at the right end of the heading
+                row, for an action that belongs to the whole section (D13's
+                "Fill in automatically").
+            synonyms: Untranslated old names of this section. Every row added
+                under it answers to them in settings search, so a renamed
+                heading keeps the vocabulary users learned (C16).
         """
         # Add spacing before section
         self._main_layout.addSpacing(SPACING.xxs)
@@ -279,8 +327,17 @@ class FormPanel(SettingAnchorHost, QFrame):
         section_font.setWeight(QFont.Weight.DemiBold)
         section_label.setFont(section_font)
 
-        self._main_layout.addWidget(section_label)
+        if trailing is None:
+            self._main_layout.addWidget(section_label)
+        else:
+            heading_row = QHBoxLayout()
+            heading_row.setContentsMargins(0, 0, 0, 0)
+            heading_row.addWidget(section_label)
+            heading_row.addStretch()
+            heading_row.addWidget(trailing)
+            self._main_layout.addLayout(heading_row)
         self._active_section_label = section_label
+        self._active_section_synonyms = tuple(synonyms)
 
         # Open a fresh form layout so fields added next render under this
         # section heading. Without this, every field would land in the
@@ -297,7 +354,7 @@ class FormPanel(SettingAnchorHost, QFrame):
         self._main_layout.addStretch(factor)
 
     @staticmethod
-    def set_status_text(label: QLabel, text: str) -> None:
+    def set_status_text(label: QLabel, text: str, *, status: str | None = None) -> None:
         """Put *text* on the one-line status label beside an action, hover-readable.
 
         Every in-app installer routes its outcome here as ``str(exc)`` on failure
@@ -314,16 +371,26 @@ class FormPanel(SettingAnchorHost, QFrame):
         widget's pixel width, and roughly sixty tests assert these labels'
         ``text()`` verbatim. Capping by characters keeps the rendered string a
         function of the message alone.
+
+        ``status``, when given, becomes the label's ``status`` property
+        (``success``, ``error``, ``checking`` or ``info``) and the label is
+        repolished so the stylesheet colour follows (C04). ``info`` has no colour
+        rule, so it reads in the neutral text colour.
         """
         one_line = " ".join(text.split())
         if len(one_line) > STATUS_LINE_MAX_CHARS:
             label.setText(one_line[: STATUS_LINE_MAX_CHARS - 1].rstrip() + "…")
             label.setToolTip(text)
-            return
-        label.setText(one_line)
-        # A tooltip only where the label is not already showing everything; an
-        # unconditional one would repeat the visible line on every hover.
-        label.setToolTip(text if one_line != text else "")
+        else:
+            label.setText(one_line)
+            # A tooltip only where the label is not already showing everything; an
+            # unconditional one would repeat the visible line on every hover.
+            label.setToolTip(text if one_line != text else "")
+        if status is not None:
+            label.setProperty("status", status)
+            if style := label.style():
+                style.unpolish(label)
+                style.polish(label)
 
     @property
     def main_layout(self) -> QVBoxLayout:
@@ -395,6 +462,7 @@ class FormPanel(SettingAnchorHost, QFrame):
         — see ``setting_anchor``'s module docstring.
         """
         section_label = self._active_section_label
+        section_synonyms = self._active_section_synonyms
         title_label = self._title_label
 
         def provider() -> tuple[str, ...]:
@@ -410,6 +478,7 @@ class FormPanel(SettingAnchorHost, QFrame):
                 parts.extend(extra())
             if section_label is not None:
                 parts.append(section_label.text())
+                parts.extend(section_synonyms)
             parts.append(title_label.text())
             return tuple(parts)
 

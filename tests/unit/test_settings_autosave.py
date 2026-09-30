@@ -73,13 +73,6 @@ class TestDebounceWiring:
         box.setChecked(not box.isChecked())
         assert tab._debounce_timer.isActive()
 
-    def test_max_workers_spinbox_arms_debounce(self, tab):
-        # T11: moved from Card Media to the UI panel's App section, wired
-        # individually since the UI panel stays out of _save_panels.
-        spinbox = tab.ui_panel.max_workers_spinbox
-        spinbox.setValue(spinbox.value() + 1)
-        assert tab._debounce_timer.isActive()
-
     def test_sentences_panel_checkbox_arms_debounce(self, tab):
         # Sentences panel joined _wire_edit_signals' explicit tuple in T9;
         # this pins that it wasn't left out.
@@ -431,31 +424,20 @@ class TestCommitRetainsSaveSemantics:
         assert received[-1].check_for_updates is True
         assert received[-1].skipped_update_version == ""
 
-    def test_max_workers_spinbox_commits(self, tab, test_config, no_modals):
-        # T11: moved from Card Media to the UI panel's App section; still
-        # contributed by commit_settings, just read straight off the panel.
-        received: list[AnkiMinerConfig] = []
-        tab.config_changed.connect(received.append)
-        tab.ui_panel.max_workers_spinbox.setValue(9)
-        tab.commit_settings()
-        assert received[-1].max_parallel_workers == 9
-
     def test_loaded_app_section_values_survive_an_unrelated_commit(self, tab, test_config, no_modals):
         """Regression net for a silently-deleted UISettingsPanel.load_from_config.
 
-        Without that load, the panel's freshly-constructed widgets (unchecked,
-        spinbox at its floor) would win an unrelated commit and clobber a real
-        user's saved values with check_for_updates=False,
-        max_parallel_workers=1 — with the suite otherwise green, since nothing
-        else exercises this load path end to end.
+        Without that load, the checkbox would keep the value it showed before
+        the reload and win an unrelated commit, clobbering the user's saved
+        check_for_updates=False — with the suite otherwise green, since
+        nothing else exercises this load path end to end.
         """
-        tab.update_config(replace(test_config, max_parallel_workers=7, check_for_updates=False))
+        tab.update_config(replace(test_config, check_for_updates=False))
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
         tab.commit_settings()
 
-        assert received[-1].max_parallel_workers == 7
         assert received[-1].check_for_updates is False
 
 
@@ -473,3 +455,23 @@ class TestManualControlsRemoved:
         sequences = {s.key().toString() for s in tab.findChildren(QShortcut)}
         assert "Ctrl+S" not in sequences
         assert "Ctrl+R" not in sequences
+
+
+def test_clicking_a_partial_names_box_arms_the_autosave(tab, test_config):
+    """Partly checked -> checked emits no toggled(), so checkStateChanged must arm it (D15 item 2)."""
+    tab.update_config(replace(test_config, excluded_wordsets=("surnames",)))
+    tab._settings_dirty = False
+    tab.filtering_panel.names_checkbox.click()
+    assert tab._settings_dirty
+
+
+def test_a_hand_set_worker_count_survives_a_commit(tab, test_config, no_modals):
+    """D15 item 5: nothing on screen writes max_parallel_workers any more."""
+    from dataclasses import replace
+
+    tab.update_config(replace(test_config, max_parallel_workers=11))
+    received: list[AnkiMinerConfig] = []
+    tab.config_changed.connect(received.append)
+    tab.anki_panel.anki_tags_input.setText("t")
+    tab.commit_settings()
+    assert received[-1].max_parallel_workers == 11

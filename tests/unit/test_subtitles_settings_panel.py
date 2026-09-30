@@ -64,7 +64,8 @@ def test_panel_constructs(qtbot):
     assert panel is not None
 
 
-def test_panel_has_alass_selector(qtbot):
+def test_panel_has_alass_selector(qtbot, monkeypatch):
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: False)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     assert panel.alass_selector is not None
@@ -75,7 +76,8 @@ def test_panel_has_alass_selector(qtbot):
 # ---------------------------------------------------------------------------
 
 
-def test_load_from_config_populates_selector_from_path(qtbot, tmp_path):
+def test_load_from_config_populates_selector_from_path(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: False)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     alass_path = tmp_path / "alass"
@@ -85,7 +87,8 @@ def test_load_from_config_populates_selector_from_path(qtbot, tmp_path):
     assert panel.alass_selector.get_path() == str(alass_path)
 
 
-def test_load_from_config_with_none_clears_selector(qtbot):
+def test_load_from_config_with_none_clears_selector(qtbot, monkeypatch):
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: False)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     config = AnkiMinerConfig(alass_location=None)
@@ -94,7 +97,8 @@ def test_load_from_config_with_none_clears_selector(qtbot):
     assert panel.alass_selector.get_path() == ""
 
 
-def test_load_from_config_replaces_previous_value(qtbot, tmp_path):
+def test_load_from_config_replaces_previous_value(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: False)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     first_path = tmp_path / "alass_v1"
@@ -114,7 +118,8 @@ def test_load_from_config_replaces_previous_value(qtbot, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_contribute_with_path_set_returns_config_with_alass_location(qtbot, tmp_path):
+def test_contribute_with_path_set_returns_config_with_alass_location(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: False)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     alass_path = tmp_path / "alass"
@@ -134,7 +139,8 @@ def test_alignment_knob_widgets_are_gone(qtbot):
     assert not hasattr(panel, "retime_single_offset_checkbox")
 
 
-def test_contribute_with_empty_selector_returns_none(qtbot):
+def test_contribute_with_empty_selector_returns_none(qtbot, monkeypatch):
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: False)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     panel.alass_selector.set_path("")
@@ -143,7 +149,8 @@ def test_contribute_with_empty_selector_returns_none(qtbot):
     assert new_config.alass_location is None
 
 
-def test_contribute_does_not_mutate_original_config(qtbot, tmp_path):
+def test_contribute_does_not_mutate_original_config(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: False)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     alass_path = tmp_path / "alass"
@@ -154,7 +161,8 @@ def test_contribute_does_not_mutate_original_config(qtbot, tmp_path):
     assert config.alass_location is None
 
 
-def test_contribute_whitespace_only_is_treated_as_none(qtbot):
+def test_contribute_whitespace_only_is_treated_as_none(qtbot, monkeypatch):
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: False)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     panel.alass_selector.set_path("   ")
@@ -168,7 +176,8 @@ def test_contribute_whitespace_only_is_treated_as_none(qtbot):
 # ---------------------------------------------------------------------------
 
 
-def test_round_trip_with_path(qtbot, tmp_path):
+def test_round_trip_with_path(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: False)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     alass_path = tmp_path / "alass"
@@ -179,7 +188,8 @@ def test_round_trip_with_path(qtbot, tmp_path):
     assert result.alass_location == alass_path
 
 
-def test_round_trip_with_none(qtbot):
+def test_round_trip_with_none(qtbot, monkeypatch):
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: False)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     config = AnkiMinerConfig(alass_location=None)
@@ -202,8 +212,9 @@ def test_panel_has_model_combo(qtbot):
     assert "small" in items
 
 
-def test_contribute_preserves_asr_model_and_alass(qtbot, tmp_path):
+def test_contribute_preserves_asr_model_and_alass(qtbot, tmp_path, monkeypatch):
     """contribute folds BOTH asr_model and alass_location into the new config."""
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: False)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     alass_path = tmp_path / "alass"
@@ -1421,7 +1432,6 @@ def test_engine_button_hidden_and_status_installed_when_the_engine_is_importable
     _wait_state_settled(qtbot, panel)
 
     assert not panel.download_engine_button.isVisibleTo(panel)
-    assert not panel._engine_help_label.isVisibleTo(panel)
     assert not panel._engine_guidance_label.isVisibleTo(panel)
     assert panel.engine_status_label.text() == "Installed"
     assert not panel._asr_engine_guidance.isVisibleTo(panel)
@@ -1436,10 +1446,9 @@ def test_engine_row_offers_the_download_when_supported_and_not_installed(qtbot, 
 
     assert panel.download_engine_button.isEnabled()
     assert panel.download_engine_button.isVisibleTo(panel)
-    assert panel._engine_help_label.isVisibleTo(panel)
+    assert panel.download_engine_button.text().startswith("Set up speech-to-text")
     assert "not installed" in panel.engine_status_label.text().lower()
     assert not panel._asr_engine_guidance.isVisibleTo(panel)
-    assert "90" in panel._engine_help_label.text()
 
 
 def test_engine_row_says_installed_when_the_pack_is_on_disk_but_not_yet_importable(qtbot, tmp_path, monkeypatch):
@@ -1505,7 +1514,7 @@ def test_engine_notify_success_clears_the_guard_and_forgets_the_cached_probes(qt
     assert panel._engine_available_cache is True
     assert not panel.download_engine_button.isVisibleTo(panel)
     assert panel.engine_status_label.text() == "Installed"
-    assert panel.download_model_button.isEnabled()
+    assert not panel.download_model_button.isEnabled()  # C11: the model download started by itself
 
 
 def test_engine_notify_failure_keeps_the_error_text_and_does_not_reprobe(qtbot, tmp_path, monkeypatch):
@@ -1614,7 +1623,6 @@ def test_frozen_build_without_pack_support_says_so_in_the_row(qtbot, tmp_path, m
     _wait_state_settled(qtbot, panel)
 
     assert not panel.download_engine_button.isVisibleTo(panel)
-    assert not panel._engine_help_label.isVisibleTo(panel)
     assert panel._engine_guidance_label.isVisibleTo(panel)
     assert "not available" in panel._engine_guidance_label.text().lower()
     assert not panel._asr_engine_guidance.isVisibleTo(panel)
@@ -1628,7 +1636,6 @@ def test_source_install_without_pack_support_keeps_the_pip_guidance(qtbot, tmp_p
     _wait_state_settled(qtbot, panel)
 
     assert not panel.download_engine_button.isVisibleTo(panel)
-    assert not panel._engine_help_label.isVisibleTo(panel)
     assert not panel._engine_guidance_label.isVisibleTo(panel)
     assert panel.engine_status_label.text() == ""
     assert panel._asr_engine_guidance.isVisibleTo(panel)
@@ -1643,7 +1650,6 @@ def test_source_install_with_pack_support_still_gets_the_pip_guidance(qtbot, tmp
     _wait_state_settled(qtbot, panel)
 
     assert not panel.download_engine_button.isVisibleTo(panel)
-    assert not panel._engine_help_label.isVisibleTo(panel)
     assert panel._asr_engine_guidance.isVisibleTo(panel)
 
     received: list[None] = []
@@ -1658,3 +1664,105 @@ def test_set_asr_pack_status_sets_label(qtbot):
     qtbot.addWidget(panel)
     panel.set_asr_pack_status("Downloading…")
     assert panel.engine_status_label.text() == "Downloading…"
+
+
+def test_install_status_labels_are_neutral_unless_installed(qtbot, monkeypatch):
+    """C04: "Not installed" used to reuse the green settings-save-status style."""
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: True)
+    panel = SubtitlesSettingsPanel(suppress_optional_startup=False)
+    qtbot.addWidget(panel)
+    labels = [
+        panel.engine_status_label,
+        panel.model_status_label,
+        panel.cuda_status_label,
+        panel.vad_status_label,
+        panel.alass_status_label,
+    ]
+    assert all(label.objectName() == "validation-status" for label in labels)
+
+    panel.set_model_status(panel.tr("Not installed"))
+    panel.set_alass_status(panel.tr("Installed"))
+
+    assert panel.model_status_label.property("status") == "info"
+    assert panel.alass_status_label.property("status") == "success"
+
+
+def test_technical_rows_have_plain_labels(qtbot):
+    """C16: ASR model / ASR device / alass download read as what they are."""
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    texts = {label.text() for label in panel.findChildren(QLabel)}
+    assert {"Transcription model:", "Run transcription on:"} <= texts
+    assert not {"ASR model:", "ASR device:", "alass download:"} & texts
+
+
+def test_alass_path_row_is_gone_where_the_download_exists(qtbot, monkeypatch, tmp_path):
+    """D15 item 4: Windows and Linux download alass in-app; a path is config-only there."""
+    from dataclasses import replace
+
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: True)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    assert not hasattr(panel, "alass_selector")
+    labels = {label.text() for label in panel.findChildren(QLabel)}
+    assert "Subtitle aligner:" in labels
+    config = replace(AnkiMinerConfig(), alass_location=tmp_path / "alass")
+    panel.load_from_config(config)
+    _wait_state_settled(qtbot, panel)
+    assert panel.contribute(config).alass_location == tmp_path / "alass"
+
+
+def test_macos_keeps_the_alass_path_row(qtbot, monkeypatch):
+    """A Finder-launched app does not see /opt/homebrew/bin, so the path stays."""
+    monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: False)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    assert panel.alass_selector is not None
+
+
+def test_setup_is_one_button_that_names_the_whole_size(qtbot, tmp_path, monkeypatch):
+    """C11: engine and model are two downloads that are useless apart."""
+    _patch_engine_pack(monkeypatch, available=False, supported=True, frozen=True)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    assert panel.download_engine_button.text() == "Set up speech-to-text (about 3180 MB)"
+    assert not panel.download_model_button.isVisibleTo(panel)
+
+
+def test_the_model_download_follows_the_engine_by_itself(qtbot, tmp_path, monkeypatch):
+    _patch_engine_pack(monkeypatch, available=False, supported=True, frozen=True)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+    models: list[str] = []
+    panel.asr_download_requested.connect(models.append)
+
+    panel.download_engine_button.click()
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.available", lambda: True)
+    panel.notify_asr_pack_download_finished(True)
+    _wait_state_settled(qtbot, panel)
+
+    assert models == ["large-v3"]
+    assert panel.download_model_button.isVisibleTo(panel)
+    assert not panel.download_model_button.isEnabled()  # in flight
+
+
+def test_a_failed_engine_download_does_not_chain_the_model(qtbot, tmp_path, monkeypatch):
+    _patch_engine_pack(monkeypatch, available=False, supported=True, frozen=True)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+    models: list[str] = []
+    panel.asr_download_requested.connect(models.append)
+
+    panel.download_engine_button.click()
+    panel.notify_asr_pack_download_finished(False)
+    _wait_state_settled(qtbot, panel)
+
+    assert models == []
+    assert not panel._model_after_engine

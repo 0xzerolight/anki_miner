@@ -37,6 +37,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from anki_miner.gui.utils.language_gate import field_row_widgets
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton
@@ -60,6 +61,12 @@ _MODEL_OPTIONS: list[tuple[str, str]] = [
     ("large-v3", "large-v3"),
     ("small", "small"),
 ]
+
+#: Approximate download size per Whisper model, in MB, for the one-button setup
+#: label (C11). faster-whisper's CTranslate2 weights on Hugging Face
+#: (Systran/faster-whisper-<name>): large-v3's model.bin is about 3.09 GB,
+#: small's about 484 MB.
+_MODEL_APPROX_MB: dict[str, int] = {"large-v3": 3090, "small": 480}
 
 # Ordered (display_label, config_value) pairs for the ASR device dropdown that
 # are offered on every platform (CT2 backend: auto/cuda/cpu).
@@ -144,7 +151,7 @@ class SubtitlesSettingsPanel(FormPanel):
     #: Emitted when the user clicks "Download silence removal"; the managed
     #: install target (``config.onnx_pack_root``) is resolved by the wiring.
     vad_pack_download_requested = pyqtSignal()
-    #: Emitted when the user clicks "Download transcription engine"; the managed
+    #: Emitted when the user clicks "Set up speech-to-text"; the managed
     #: install target (``asr_pack_installer.asr_pack_root()``) is resolved by
     #: the wiring.
     asr_pack_download_requested = pyqtSignal()
@@ -169,6 +176,14 @@ class SubtitlesSettingsPanel(FormPanel):
         self._cuda_libs_root: Path | None = None
         self._onnx_pack_root: Path | None = None
         self._alass_supported = False if suppress_optional_startup else alass_installer.alass_install_supported()
+        # D15 item 4: where "Download alass" exists (Windows, Linux) the path
+        # override leaves the GUI; macOS keeps it, because Homebrew installs to
+        # /opt/homebrew/bin, which a Finder-launched app does not search. Read
+        # from the platform check, not _alass_supported, which startup
+        # suppression also turns off. Suppressed startup (the installer smoke)
+        # must not run that check at all; without the row, contribute leaves
+        # alass_location as loaded, so nothing is lost.
+        self._alass_path_offered = False if suppress_optional_startup else not alass_installer.alass_install_supported()
         # Vulkan ASR is "offerable" only where it can actually run: non-macOS AND
         # the whisper.cpp Vulkan backend lib (libggml-vulkan) is installed. That
         # lib ships only in the bundled release (built from source with the Vulkan
@@ -196,6 +211,10 @@ class SubtitlesSettingsPanel(FormPanel):
         self._cuda_pack_active = False
         self._vad_pack_active = False
         self._asr_pack_active = False
+        # Set by the one "Set up speech-to-text" click when the selected model is
+        # not downloaded yet: the model download then follows the engine by
+        # itself (C11). Cleared when it starts or when the engine download fails.
+        self._model_after_engine = False
         self._vulkan_active = False
         # Off-thread state probe coordination. The heavy probes (ctranslate2
         # import + CUDA init, find_spec, model.bin disk walk) run on a worker;
@@ -266,17 +285,19 @@ class SubtitlesSettingsPanel(FormPanel):
         # on-demand pack (services/asr/asr_pack_installer.py), not bundle content;
         # a pip install with the [asr] extra has it importable and never sees
         # this row. Gated in _apply_engine_state on importability + support.
-        self.download_engine_button = ModernButton(self.tr("Download transcription engine"), variant="secondary")
+        # The caption names the selected model's size too, so it is set once the
+        # model combo exists (_refresh_setup_button_text).
+        self.download_engine_button = ModernButton("", variant="secondary")
         self.download_engine_button.setToolTip(
             self.tr(
-                "Download the faster-whisper speech-to-text engine into Anki Miner's folder. "
-                "Required before subtitle generation can run on a packaged install."
+                "Download the speech-to-text engine and the selected Whisper model into Anki Miner's folder. "
+                "Generate Subtitles and Audiobook Sync need both."
             )
         )
         self.download_engine_button.clicked.connect(self._on_asr_pack_download_clicked)
 
         self.engine_status_label = QLabel("")
-        self.engine_status_label.setObjectName("settings-save-status")
+        self.engine_status_label.setObjectName("validation-status")
 
         # Guidance shown when the pack cannot be offered on this build. Same HBox
         # as the button/status so it renders in the field column; mutually
@@ -297,34 +318,33 @@ class SubtitlesSettingsPanel(FormPanel):
             engine_container,
             anchor="transcription_engine",
             anchor_focus=self.download_engine_button,
-            anchor_text=lambda: (self.download_engine_button.text(), self.download_engine_button.toolTip()),
-        )
-        # Shown in lockstep with the button; see _apply_engine_state. The row's
-        # label itself never hides: the settings-search index is built once at
-        # construction and must keep pointing at a visible row (the VAD precedent).
-        self._engine_help_label = self._add_help(
-            tr_format(
-                self.tr("Speech-to-text engine (faster-whisper), about %1 MB, downloaded once."),
-                str(asr_pack_installer.PACK.approx_download_mb),
-            )
+            anchor_text=lambda: (
+                self.download_engine_button.text(),
+                self.download_engine_button.toolTip(),
+                "Download transcription engine",
+            ),
         )
 
         self.model_combo = QComboBox()
         for label, _value in _MODEL_OPTIONS:
             self.model_combo.addItem(label)
+        self._refresh_setup_button_text()
+        self.model_combo.currentIndexChanged.connect(lambda _index: self._refresh_setup_button_text())
         self.add_field(
-            self.tr("ASR model"),
+            self.tr("Transcription model"),
             self.model_combo,
             helper=self.tr("large-v3 is the most accurate; small is much faster."),
+            anchor_text=lambda: ("ASR model",),
         )
 
         self.device_combo = QComboBox()
         for label, _value in self._device_options:
             self.device_combo.addItem(label)
         self.add_field(
-            self.tr("ASR device"),
+            self.tr("Run transcription on"),
             self.device_combo,
             helper=self.tr("Auto uses the GPU when available, else CPU. Each GPU option needs its own download below."),
+            anchor_text=lambda: ("ASR device",),
         )
 
         # GPU acceleration pack download. Mirrors the model-download row; gated by
@@ -341,7 +361,7 @@ class SubtitlesSettingsPanel(FormPanel):
         self.download_cuda_button.clicked.connect(self._on_cuda_pack_download_clicked)
 
         self.cuda_status_label = QLabel("")
-        self.cuda_status_label.setObjectName("settings-save-status")
+        self.cuda_status_label.setObjectName("validation-status")
 
         # Short guidance shown when GPU acceleration is unavailable (no support
         # on this platform, or no NVIDIA GPU detected). Lives in the same HBox as
@@ -390,7 +410,7 @@ class SubtitlesSettingsPanel(FormPanel):
             self.download_vulkan_button.clicked.connect(self._on_vulkan_download_clicked)
 
             self.vulkan_status_label = QLabel("")
-            self.vulkan_status_label.setObjectName("settings-save-status")
+            self.vulkan_status_label.setObjectName("validation-status")
 
             vulkan_container = QWidget()
             vulkan_row = QHBoxLayout(vulkan_container)
@@ -417,7 +437,7 @@ class SubtitlesSettingsPanel(FormPanel):
         self.download_model_button.clicked.connect(self._on_download_clicked)
 
         self.model_status_label = QLabel("")
-        self.model_status_label.setObjectName("settings-save-status")
+        self.model_status_label.setObjectName("validation-status")
 
         download_container = QWidget()
         download_row = QHBoxLayout(download_container)
@@ -432,6 +452,9 @@ class SubtitlesSettingsPanel(FormPanel):
             anchor_focus=self.download_model_button,
             anchor_text=lambda: (self.download_model_button.text(), self.download_model_button.toolTip()),
         )
+        # Hidden until the engine imports: before that the one setup button
+        # above covers the model too (C11).
+        self._model_row_widgets = field_row_widgets(self, download_container)
 
         # Guidance shown only when faster-whisper is not installed AND the engine
         # pack cannot be offered here (a source install on a Python the pack does
@@ -467,7 +490,7 @@ class SubtitlesSettingsPanel(FormPanel):
         self.download_vad_button.clicked.connect(self._on_vad_pack_download_clicked)
 
         self.vad_status_label = QLabel("")
-        self.vad_status_label.setObjectName("settings-save-status")
+        self.vad_status_label.setObjectName("validation-status")
 
         # Guidance shown when VAD is already available (no download needed) or
         # unavailable on this platform. Lives in the same HBox as the button/status
@@ -499,20 +522,21 @@ class SubtitlesSettingsPanel(FormPanel):
         )
 
     def _setup_alass_section(self) -> None:
-        """alass path override plus in-app download (or Homebrew guidance)."""
+        """alass download (Windows, Linux) or Homebrew guidance plus the path override (macOS)."""
         self.add_section(self.tr("Alignment"))
 
-        self.alass_selector = FileSelector(
-            label="",
-            file_mode=True,
-            file_filter="All Files (*)",
-            placeholder=self.tr("Optional: path to the alass executable"),
-        )
-        self.add_field(
-            self.tr("alass binary"),
-            self.alass_selector,
-            helper=self.tr("Leave blank to use the downloaded, bundled, or PATH alass."),
-        )
+        if self._alass_path_offered:
+            self.alass_selector = FileSelector(
+                label="",
+                file_mode=True,
+                file_filter="All Files (*)",
+                placeholder=self.tr("Optional: path to the alass executable"),
+            )
+            self.add_field(
+                self.tr("alass binary"),
+                self.alass_selector,
+                helper=self.tr("Leave blank to use the downloaded, bundled, or PATH alass."),
+            )
 
         if self._alass_supported:
             self.download_alass_button = ModernButton(self.tr("Download alass"), variant="secondary")
@@ -525,7 +549,7 @@ class SubtitlesSettingsPanel(FormPanel):
             self.download_alass_button.clicked.connect(self._on_alass_download_clicked)
 
             self.alass_status_label = QLabel("")
-            self.alass_status_label.setObjectName("settings-save-status")
+            self.alass_status_label.setObjectName("validation-status")
 
             alass_container = QWidget()
             alass_row = QHBoxLayout(alass_container)
@@ -535,11 +559,11 @@ class SubtitlesSettingsPanel(FormPanel):
             alass_row.addStretch()
             alass_button = self.download_alass_button
             self.add_field(
-                self.tr("alass download"),
+                self.tr("Subtitle aligner"),
                 alass_container,
                 anchor="alass_download",
                 anchor_focus=alass_button,
-                anchor_text=lambda: (alass_button.text(), alass_button.toolTip()),
+                anchor_text=lambda: (alass_button.text(), alass_button.toolTip(), "alass"),
             )
         else:
             # macOS: no upstream v2.0.0 binary — point users at Homebrew.
@@ -620,7 +644,7 @@ class SubtitlesSettingsPanel(FormPanel):
 
     def set_model_status(self, text: str) -> None:
         """Set the ASR status label text (shown next to the Download button)."""
-        self.set_status_text(self.model_status_label, text)
+        self.set_status_text(self.model_status_label, text, status=self._install_status_kind(text))
 
     def set_model(self, value: str) -> None:
         """Select the dropdown entry matching *value*; falls back to 'large-v3'."""
@@ -722,7 +746,15 @@ class SubtitlesSettingsPanel(FormPanel):
     def set_alass_status(self, text: str) -> None:
         """Set the alass status label text (no-op on unsupported platforms)."""
         if self._alass_supported:
-            self.set_status_text(self.alass_status_label, text)
+            self.set_status_text(self.alass_status_label, text, status=self._install_status_kind(text))
+
+    def _install_status_kind(self, text: str) -> str:
+        """Colour for an install status line: green only for "Installed" (C04).
+
+        Every other line -- "Not installed", "Downloading…", a download error
+        passed through from a worker -- renders neutral.
+        """
+        return "success" if text == self.tr("Installed") else "info"
 
     def _apply_alass_state(self, installed: bool) -> None:
         """Reflect whether the managed alass binary is present; re-enable the button.
@@ -767,7 +799,7 @@ class SubtitlesSettingsPanel(FormPanel):
 
     def set_cuda_pack_status(self, text: str) -> None:
         """Set the GPU-pack status label text (shown next to the Download button)."""
-        self.set_status_text(self.cuda_status_label, text)
+        self.set_status_text(self.cuda_status_label, text, status=self._install_status_kind(text))
 
     def notify_cuda_pack_download_finished(self, cuda_libs_root) -> None:
         """Clear the in-flight guard and refresh the GPU-pack button after a download.
@@ -848,7 +880,7 @@ class SubtitlesSettingsPanel(FormPanel):
     def set_vulkan_status(self, text: str) -> None:
         """Set the Vulkan status label text (no-op when the button is omitted)."""
         if self.vulkan_status_label is not None:
-            self.set_status_text(self.vulkan_status_label, text)
+            self.set_status_text(self.vulkan_status_label, text, status=self._install_status_kind(text))
 
     def notify_vulkan_download_finished(self, ok: bool, msg: str) -> None:
         """Clear the in-flight guard, set the status label + installed cache,
@@ -1155,7 +1187,6 @@ class SubtitlesSettingsPanel(FormPanel):
         if engine_available:
             self.download_engine_button.setVisible(False)
             self.download_engine_button.setEnabled(False)
-            self._engine_help_label.setVisible(False)
             self._engine_guidance_label.setVisible(False)
             self.set_asr_pack_status(self.tr("Installed"))
             self._asr_engine_guidance.setVisible(False)
@@ -1173,14 +1204,13 @@ class SubtitlesSettingsPanel(FormPanel):
         if not supported:
             self.download_engine_button.setEnabled(False)
             self.download_engine_button.setVisible(False)
-            self._engine_help_label.setVisible(False)
             self.set_asr_pack_status("")
             self._engine_guidance_label.setText(self.tr("Local transcription is not available for this build."))
             self._engine_guidance_label.setVisible(frozen)
             return
 
         self._engine_guidance_label.setVisible(False)
-        self._engine_help_label.setVisible(True)
+        self._refresh_setup_button_text()
         self.download_engine_button.setVisible(True)
         self.download_engine_button.setEnabled(True)
         if pack_installed:
@@ -1194,11 +1224,20 @@ class SubtitlesSettingsPanel(FormPanel):
         Applies pre-probed values. The button is enabled only when the engine is
         importable — without it a model download cannot run. Preserves the
         in-flight guard: a download in flight keeps the button disabled and the
-        "Downloading…" status untouched.
+        "Downloading…" status untouched. Hidden until the engine imports; after
+        the one setup click it starts the model download itself (C11).
         """
+        for widget in self._model_row_widgets:
+            widget.setVisible(engine_available or self._asr_download_active)
         if self._asr_download_active:
             self.download_model_button.setEnabled(False)
             return
+        if self._model_after_engine and engine_available:
+            # The one setup click asked for both downloads (C11).
+            self._model_after_engine = False
+            if not model_downloaded:
+                self._on_download_clicked()
+                return
         self.download_model_button.setEnabled(engine_available)
         if not engine_available:
             self.set_model_status("")
@@ -1212,6 +1251,15 @@ class SubtitlesSettingsPanel(FormPanel):
     # Transcription engine (ASR pack) download flow
     # ------------------------------------------------------------------
 
+    def _setup_button_text(self) -> str:
+        """ "Set up speech-to-text (about N MB)": engine plus the model still missing."""
+        model_mb = 0 if self._model_downloaded_cache else _MODEL_APPROX_MB.get(self.get_model(), 0)
+        total = asr_pack_installer.PACK.approx_download_mb + model_mb
+        return tr_format(self.tr("Set up speech-to-text (about %1 MB)"), str(total))
+
+    def _refresh_setup_button_text(self) -> None:
+        self.download_engine_button.setText(self._setup_button_text())
+
     def _on_asr_pack_download_clicked(self) -> None:
         """Disable the button in flight and request the engine pack download.
 
@@ -1221,13 +1269,14 @@ class SubtitlesSettingsPanel(FormPanel):
         if not self._asr_pack_offerable():
             self._refresh_state_async(self.get_model(), self._models_root, self._cuda_libs_root)
             return
+        self._model_after_engine = not self._model_downloaded_cache
         self._asr_pack_active = True
         self.download_engine_button.setEnabled(False)
         self.asr_pack_download_requested.emit()
 
     def set_asr_pack_status(self, text: str) -> None:
         """Set the engine-pack status label text (shown next to the Download button)."""
-        self.set_status_text(self.engine_status_label, text)
+        self.set_status_text(self.engine_status_label, text, status=self._install_status_kind(text))
 
     def notify_asr_pack_download_finished(self, ok: bool) -> None:
         """Clear the in-flight guard after an engine pack download; re-probe on success.
@@ -1246,6 +1295,7 @@ class SubtitlesSettingsPanel(FormPanel):
         """
         self._asr_pack_active = False
         if not ok:
+            self._model_after_engine = False
             self.download_engine_button.setEnabled(self._asr_pack_offerable())
             return
         self._engine_available_cache = None
@@ -1275,7 +1325,7 @@ class SubtitlesSettingsPanel(FormPanel):
 
     def set_vad_pack_status(self, text: str) -> None:
         """Set the VAD-pack status label text (shown next to the Download button)."""
-        self.set_status_text(self.vad_status_label, text)
+        self.set_status_text(self.vad_status_label, text, status=self._install_status_kind(text))
 
     def notify_vad_pack_download_finished(self, onnx_pack_root) -> None:
         """Clear the in-flight guard and refresh the VAD-pack button after a download.
@@ -1355,7 +1405,8 @@ class SubtitlesSettingsPanel(FormPanel):
         available_devices = {value for _label, value in self._device_options}
         self.set_device(config.asr_device if config.asr_device in available_devices else "auto")
         # alass
-        self.alass_selector.set_path(str(config.alass_location) if config.alass_location else "")
+        if self._alass_path_offered:
+            self.alass_selector.set_path(str(config.alass_location) if config.alass_location else "")
         self._bin_root = config.bin_root
         self._alass_location = config.alass_location
         self._onnx_pack_root = config.onnx_pack_root
@@ -1372,10 +1423,9 @@ class SubtitlesSettingsPanel(FormPanel):
         preserved. Called by :meth:`SettingsTab.commit_settings` as part of
         the contribute fold.
         """
+        updated = replace(config, asr_model=self.get_model(), asr_device=self.get_device())
+        if not self._alass_path_offered:
+            # The row is not on this platform; a hand-set path is kept (D15 item 4).
+            return updated
         path = self.alass_selector.path_or_none()
-        return replace(
-            config,
-            asr_model=self.get_model(),
-            asr_device=self.get_device(),
-            alass_location=Path(path) if path is not None else None,
-        )
+        return replace(updated, alass_location=Path(path) if path is not None else None)

@@ -58,7 +58,10 @@ def test_import_token_survives_refresh_rebuild(tab, qtbot, flow_name, panel_name
     flow._set_import_buttons_enabled(True)
 
     assert panel._list.isEnabled()
-    assert panel._remove_btn.isEnabled()
+    assert panel._reorder_enabled
+    # C09: ✕ needs a selected row too, and a fresh frequency chain has none.
+    panel._list.setCurrentRow(0)
+    assert panel._remove_btn.isEnabled() == bool(panel._rows())
     assert panel._list.dragEnabled()
     rows = panel._rows()
     # Boundary-aware once released: interior rows offer both directions.
@@ -81,6 +84,7 @@ def test_named_tokens_are_ref_counted_and_release_is_idempotent(tab):
 
     panel.release(second)
 
+    panel._list.setCurrentRow(0)
     assert panel._remove_btn.isEnabled()
     assert panel.dicts_root_selector.isEnabled()
 

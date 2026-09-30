@@ -4,13 +4,10 @@ A frozen bundle cannot carry every mining language's engine and model -- the
 Korean model alone is ~88 MB -- so each language that declares a pack has to be
 downloadable from the UI or a bundled user can never mine it: the pack is also
 what the availability probe gates on, so the language is absent from the mining-
-language selector until the download lands. The rows therefore live beside that
-selector (Settings -> Mining Language), and the plumbing mirrors the CUDA pack:
+language selector until the download lands. Since D12 the selector itself lists
+such a language with "(download)" and offers "Download and switch" (Settings ->
+Mining Language), and the plumbing mirrors the CUDA pack:
 panel signal -> SettingsTab -> app wiring -> BackgroundTaskController -> InstallWorker.
-
-One row per language, built from the manifests rather than hand-written per
-language: the ko-shaped bespoke row this replaced would have been copied for zh
-and again for every language after it.
 """
 
 from __future__ import annotations
@@ -23,74 +20,10 @@ pytest.importorskip("PyQt6.QtWidgets")
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from anki_miner.gui.widgets.panels.mining_language_settings_panel import MiningLanguageSettingsPanel
-from anki_miner.languages.pack_spec import ArtifactSpec, LanguagePack, PackComponent
 from anki_miner.services import language_pack_installer
 from tests.unit._worker_sync import _run_worker_sync
 
 _INSTALL = "anki_miner.services.language_pack_installer.install_language_pack"
-
-#: A pack for a language that exists nowhere else. Its import names can never be
-#: importable, so the row state is decided by the disk tier alone -- this venv
-#: has kiwipiepy and jieba installed, and a real manifest would report itself
-#: satisfied by ``find_spec`` before any pack directory is consulted.
-_SYNTHETIC = LanguagePack(
-    code="xx",
-    approx_download_mb=42,
-    components=(
-        PackComponent(
-            import_name="xxpkg",
-            required=True,
-            sentinels=("__init__.py",),
-            universal=ArtifactSpec(
-                url="https://example.invalid/xxpkg.whl",
-                sha256="0" * 64,
-                kind="wheel",
-                member_prefix="xxpkg/",
-            ),
-        ),
-    ),
-)
-
-#: The same pack with no artifact for any platform this test can run on.
-_UNSUPPORTED = LanguagePack(
-    code="xx",
-    approx_download_mb=42,
-    components=(
-        PackComponent(
-            import_name="xxpkg",
-            required=True,
-            sentinels=("__init__.py",),
-            per_platform={("noplat", "noarch"): _SYNTHETIC.components[0].universal},
-        ),
-    ),
-)
-
-
-def _synthetic_panel(qtbot, monkeypatch, tmp_path, *, pack=_SYNTHETIC, importable=False):
-    """A panel carrying one synthetic-language row, with a home under *tmp_path*."""
-    import anki_miner.gui.widgets.panels.mining_language_settings_panel as module
-
-    monkeypatch.setattr(module, "AVAILABLE_LANGUAGES", ("ja", "xx"))
-    monkeypatch.setattr(module, "pack_already_importable", lambda _pack: importable)
-    monkeypatch.setattr(language_pack_installer, "load_pack", lambda code: pack if code == "xx" else None)
-    monkeypatch.setattr(language_pack_installer.paths, "ANKI_MINER_HOME", tmp_path)
-    panel = MiningLanguageSettingsPanel()
-    qtbot.addWidget(panel)
-    return panel
-
-
-def _seed_pack(code: str, pack: LanguagePack) -> None:
-    """Put a complete extraction of every component in *code*'s pack on disk."""
-    root = language_pack_installer.language_pack_root(code)
-    for comp in pack.components:
-        package = root / comp.import_name
-        package.mkdir(parents=True, exist_ok=True)
-        for name in comp.sentinels:
-            (package / name).write_bytes(b"x")
-        spec = comp.universal or next(iter((comp.per_platform or {}).values()), None)
-        for prefix in () if spec is None else spec.root_members:
-            (root / f"{prefix}so").write_bytes(b"x")
 
 
 class TestInstallTask:
@@ -284,124 +217,25 @@ class TestControllerStarter:
         assert built[0] in joined
 
 
-class TestPanelRows:
-    def test_a_language_with_no_pack_grows_no_row(self, qtbot) -> None:
-        """ja's engine is bundled; a row offering nothing to download is noise."""
-        panel = MiningLanguageSettingsPanel()
-        qtbot.addWidget(panel)
-
-        assert "ja" not in panel.language_pack_rows
-        assert "ko" in panel.language_pack_rows
-
-    def test_the_row_is_named_for_the_language_it_unlocks(self, qtbot) -> None:
-        panel = MiningLanguageSettingsPanel()
-        qtbot.addWidget(panel)
-
-        assert "한국어" in panel.language_pack_rows["ko"].button.text()
-        assert "中文" in panel.language_pack_rows["zh"].button.text()
-
-    def test_the_row_offers_the_download_with_its_size(self, qtbot, monkeypatch, tmp_path) -> None:
-        panel = _synthetic_panel(qtbot, monkeypatch, tmp_path)
-        row = panel.language_pack_rows["xx"]
-
-        assert row.button.isVisibleTo(panel)
-        assert row.button.isEnabled()
-        assert row.status_label.text() == "Not installed - about 42 MB download"
-
-    def test_a_satisfied_language_with_nothing_on_disk_hides_its_row(self, qtbot, monkeypatch, tmp_path) -> None:
-        """A pip install with the language's extra needs no pack and must see no row."""
-        panel = _synthetic_panel(qtbot, monkeypatch, tmp_path, importable=True)
-
-        assert not panel.language_pack_rows["xx"].button.isVisibleTo(panel)
-
-    def test_an_unsupported_platform_hides_the_row(self, qtbot, monkeypatch, tmp_path) -> None:
-        """No artifact resolves here, so the button could only ever fail."""
-        panel = _synthetic_panel(qtbot, monkeypatch, tmp_path, pack=_UNSUPPORTED)
-
-        assert not panel.language_pack_rows["xx"].button.isVisibleTo(panel)
-
-    def test_an_installed_pack_reports_itself(self, qtbot, monkeypatch, tmp_path) -> None:
-        """Installed has to be reachable: the row must not vanish once a pack lands."""
-        import anki_miner.gui.widgets.panels.mining_language_settings_panel as module
-
-        monkeypatch.setattr(module, "AVAILABLE_LANGUAGES", ("ja", "xx"))
-        monkeypatch.setattr(language_pack_installer, "load_pack", lambda code: _SYNTHETIC if code == "xx" else None)
-        monkeypatch.setattr(language_pack_installer.paths, "ANKI_MINER_HOME", tmp_path)
-        _seed_pack("xx", _SYNTHETIC)
-        # What a finished download leaves behind: the packages are importable
-        # (the pack root is on sys.path) AND the pack is on disk.
-        monkeypatch.setattr(module, "pack_already_importable", lambda _pack: True)
-        panel = MiningLanguageSettingsPanel()
-        qtbot.addWidget(panel)
-        row = panel.language_pack_rows["xx"]
-
-        assert row.button.isVisibleTo(panel)
-        assert row.status_label.text() == "Installed"
-        assert not row.button.isEnabled()
-
-    def test_pressing_it_asks_the_caller_to_download_that_language(self, qtbot, monkeypatch, tmp_path) -> None:
-        panel = _synthetic_panel(qtbot, monkeypatch, tmp_path)
-        requested: list[str] = []
-        panel.language_pack_download_requested.connect(requested.append)
-
-        panel.language_pack_rows["xx"].button.click()
-        # The per-code in-flight guard: a second press changes nothing.
-        panel.language_pack_rows["xx"].button.click()
-
-        assert requested == ["xx"]
-        assert not panel.language_pack_rows["xx"].button.isEnabled()
-
-    def test_status_lines_land_on_the_row_that_asked(self, qtbot, monkeypatch, tmp_path) -> None:
-        panel = _synthetic_panel(qtbot, monkeypatch, tmp_path)
-
-        panel.set_language_pack_status("xx", "xx pack (1/1): downloading (50%)")
-
-        assert panel.language_pack_rows["xx"].status_label.text() == "xx pack (1/1): downloading (50%)"
-
-    def test_a_status_for_a_language_with_no_row_is_ignored(self, qtbot, monkeypatch, tmp_path) -> None:
-        panel = _synthetic_panel(qtbot, monkeypatch, tmp_path)
-
-        panel.set_language_pack_status("ja", "Downloading…")  # must not raise
-
-    def test_finishing_refreshes_the_row_and_the_selector(self, qtbot, monkeypatch, tmp_path) -> None:
-        # The availability probe gates on the pack, so the language is missing
-        # from the selector until it lands -- the finish hook has to repopulate
-        # it or the user downloads the pack and still cannot pick the language.
-        panel = _synthetic_panel(qtbot, monkeypatch, tmp_path)
-        panel.language_pack_rows["xx"].button.click()
-        _seed_pack("xx", _SYNTHETIC)
-
-        with qtbot.assertNotEmitted(panel.mining_language_requested, wait=10):
-            panel.notify_language_pack_download_finished("xx")
-
-        assert panel.language_pack_rows["xx"].status_label.text() == "Installed"
-        assert not panel.language_pack_rows["xx"].button.isEnabled()
-
-    def test_finishing_repopulates_the_language_selector(self, qtbot, monkeypatch, tmp_path) -> None:
-        panel = _synthetic_panel(qtbot, monkeypatch, tmp_path)
-        panel.set_mining_language("zh")
-        repopulated: list[bool] = []
-        monkeypatch.setattr(panel, "_repopulate_mining_languages", lambda: repopulated.append(True))
-
-        panel.notify_language_pack_download_finished("xx")
-
-        assert repopulated == [True]
-
-
 class TestSettingsTabForwarding:
-    def test_the_tab_re_emits_the_code_and_forwards_status(self, test_config, qtbot) -> None:
+    def test_the_tab_re_emits_the_code_and_forwards_status(self, test_config, qtbot, monkeypatch) -> None:
         from anki_miner.gui.widgets.settings_tab import SettingsTab
 
+        monkeypatch.setattr(
+            "anki_miner.gui.utils.language_choices._pack_download_mb", lambda code: 50 if code == "ko" else None
+        )
+        monkeypatch.setattr("anki_miner.languages.ko.availability.module_importable", lambda _name: False)
         tab = SettingsTab(test_config)
         qtbot.addWidget(tab)
+        assert tab.mining_language_panel.propose_download("ko")
 
         with qtbot.waitSignal(tab.language_pack_download_requested, timeout=1000) as blocker:
             tab.mining_language_panel.language_pack_download_requested.emit("ko")
         assert blocker.args == ["ko"]
-        assert tab.mining_language_panel.language_pack_rows["ko"].status_label.text() == "Downloading…"
+        assert tab.mining_language_panel.pending_download_status.text() == "Downloading…"
 
         tab.set_language_pack_status("ko", "Installed")
-        assert tab.mining_language_panel.language_pack_rows["ko"].status_label.text() == "Installed"
+        assert tab.mining_language_panel.pending_download_status.text() == "Installed"
 
     def test_the_panel_joins_the_save_path_but_its_own_combo_stays_unwired(self, test_config, qtbot) -> None:
         """T10: the variant combos write ``script_variant``, so the panel now
@@ -432,8 +266,13 @@ class TestAppWiring:
 
         window = MainWindow()
         qtbot.addWidget(window)
+        monkeypatch.setattr(
+            "anki_miner.gui.utils.language_choices._pack_download_mb", lambda code: 50 if code == "ko" else None
+        )
+        monkeypatch.setattr("anki_miner.languages.ko.availability.module_importable", lambda _name: False)
         settings_tab = SettingsTab(window.get_config())
         qtbot.addWidget(settings_tab)
+        settings_tab.mining_language_panel.propose_download("ko")
 
         captured: dict = {}
 
@@ -477,11 +316,9 @@ class TestAppWiring:
         captured["on_finished"](True, "한국어 pack installed.")
 
         assert order == ["inject", "notify:ko"]
-        assert (
-            settings_tab.mining_language_panel.language_pack_rows["ko"].status_label.text() == "한국어 pack installed."
-        )
+        assert settings_tab.mining_language_panel.pending_download_status.text() == "한국어 pack installed."
 
-    def test_the_finish_makes_the_revealed_row_searchable(self, wired, monkeypatch) -> None:
+    def test_the_finish_rebuilds_the_search_index(self, wired, monkeypatch) -> None:
         """The row is hidden at index time and revealed by the download, so the
         index built during construction still calls it invisible."""
         _window, settings_tab, captured = wired
@@ -500,6 +337,5 @@ class TestAppWiring:
         captured["status_cb"]("한국어 pack (1/2): downloading (10%)")
 
         assert (
-            settings_tab.mining_language_panel.language_pack_rows["ko"].status_label.text()
-            == "한국어 pack (1/2): downloading (10%)"
+            settings_tab.mining_language_panel.pending_download_status.text() == "한국어 pack (1/2): downloading (10%)"
         )

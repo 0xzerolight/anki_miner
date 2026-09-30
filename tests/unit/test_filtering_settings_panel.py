@@ -1,10 +1,8 @@
-"""Tooltip regression tests for FilteringSettingsPanel.
+"""Tests for FilteringSettingsPanel.
 
-The settings-density work deduped tooltips. These assertions lock in the
-load-bearing facts that must survive layout tightening: the facts restored to
-the i+1 and sentence-length tooltips. (The bold-target and regex/replacement
-tooltip cases moved to ``test_sentences_settings_panel.py`` with the fields
-they cover, T9.)
+The i+1, sentence-rule and sentence-length cases moved to
+``test_sentences_settings_panel.py`` with the rows they cover (C13), as the
+bold-target and regex/replacement tooltip cases did before them (T9).
 """
 
 from __future__ import annotations
@@ -15,43 +13,8 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtCore import Qt
-
 from anki_miner.config.defaults import create_default_config
 from anki_miner.gui.widgets.panels.filtering_settings_panel import FilteringSettingsPanel
-
-
-def test_i_plus_one_tooltip_mentions_dedup_override(qtbot):
-    panel = FilteringSettingsPanel()
-    qtbot.addWidget(panel)
-    index = panel.sentence_rule_combo.findData("i_plus_one")
-    tip = panel.sentence_rule_combo.itemData(index, Qt.ItemDataRole.ToolTipRole)
-    assert "i+1" in tip
-    assert "deduplication" in tip.lower()
-
-
-def test_sentence_length_helper_names_the_no_toggle_rule(qtbot):
-    # No master checkbox: the section helper is the only place that says the
-    # filter turns on by setting a cap.
-    panel = FilteringSettingsPanel()
-    qtbot.addWidget(panel)
-    assert not hasattr(panel, "use_sentence_length_checkbox")
-    text = panel.sentence_length_helper.text()
-    assert text == "Set either limit above 0 to turn the filter on."
-    assert "Set to 0 for no limit" in panel.max_sentence_duration_spinbox.toolTip()
-    assert "Set to 0 for no limit" in panel.max_sentence_chars_spinbox.toolTip()
-
-
-def test_max_sentence_duration_tooltip_describes_seconds_not_chars(qtbot):
-    # The field is an audio-duration spinbox (suffix " s"); its helper must
-    # describe seconds of audio, not character length (the prior helper wrongly
-    # said "subtitle line is longer than this").
-    panel = FilteringSettingsPanel()
-    qtbot.addWidget(panel)
-    tip = panel.max_sentence_duration_spinbox.toolTip()
-    assert "seconds" in tip.lower()
-    assert "audio" in tip.lower()
-    assert "subtitle line is longer" not in tip.lower()
 
 
 def test_reading_min_occurrence_spinbox_range_and_off_text(qtbot):
@@ -243,29 +206,6 @@ def test_the_unranked_checkbox_is_disabled_while_no_bound_is_set(qtbot):
     assert panel.keep_unranked_checkbox.isEnabled()
 
 
-@pytest.mark.parametrize(
-    "dedup, i1, index",
-    [(False, False, 0), (True, False, 1), (False, True, 2), (True, True, 2)],
-)
-def test_sentence_rule_loads(qtbot, dedup, i1, index):
-    panel = FilteringSettingsPanel()
-    qtbot.addWidget(panel)
-    panel.load_from_config(replace(create_default_config(), deduplicate_sentences=dedup, use_i_plus_one_filter=i1))
-    assert panel.sentence_rule_combo.currentIndex() == index
-
-
-@pytest.mark.parametrize(
-    "index, expected",
-    [(0, (False, False)), (1, (True, False)), (2, (False, True))],
-)
-def test_sentence_rule_contributes(qtbot, index, expected):
-    panel = FilteringSettingsPanel()
-    qtbot.addWidget(panel)
-    panel.sentence_rule_combo.setCurrentIndex(index)
-    out = panel.contribute(create_default_config())
-    assert (out.deduplicate_sentences, out.use_i_plus_one_filter) == expected
-
-
 def test_known_words_db_checkbox_names_the_effect(qtbot):
     # "Use Local Known Words Database" told the user nothing about what turning
     # it on actually does; the label now names the effect directly.
@@ -274,71 +214,117 @@ def test_known_words_db_checkbox_names_the_effect(qtbot):
     assert panel.use_known_words_db_checkbox.text() == "Keep words known after their cards are deleted"
     tip = panel.use_known_words_db_checkbox.toolTip()
     expected_tip = (
-        "Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild forgets them."
+        "Words stay known after their Anki cards are deleted or moved to an excluded deck. "
+        "Rebuild (in Manage Known Words) forgets them."
     )
     assert tip == expected_tip
 
 
-def test_rebuild_known_words_button_follows_the_checkbox(qtbot):
-    from anki_miner.config import AnkiMinerConfig
-
+def test_rebuild_moved_to_the_known_words_dialog(qtbot):
+    """C13: the Word Filters page keeps the setting and Manage Known Words only."""
     panel = FilteringSettingsPanel()
     qtbot.addWidget(panel)
-
-    # Construction leaves the checkbox unchecked; the button must start in step.
-    assert not panel.rebuild_known_words_button.isEnabled()
-
-    panel.load_from_config(replace(AnkiMinerConfig(), use_known_words_db=True))
-    assert panel.rebuild_known_words_button.isEnabled()
-
-    panel.load_from_config(AnkiMinerConfig())
-    assert not panel.rebuild_known_words_button.isEnabled()
-
-    # And toggling without a reload keeps the button in step.
-    panel.use_known_words_db_checkbox.setChecked(True)
-    assert panel.rebuild_known_words_button.isEnabled()
-    panel.use_known_words_db_checkbox.setChecked(False)
-    assert not panel.rebuild_known_words_button.isEnabled()
-
-    # "Manage Known Words..." is unaffected: the user list works either way.
-    assert panel.manage_known_words_button.isEnabled()
-
-
-def test_rebuild_button_stays_disabled_mid_rebuild_despite_checkbox_toggling(qtbot):
-    """A rebuild in flight must survive both the checkbox-toggled sync and a
-    load_from_config reload -- neither may re-enable the button mid-rebuild."""
-    from anki_miner.config import AnkiMinerConfig
-
-    panel = FilteringSettingsPanel()
-    qtbot.addWidget(panel)
-    panel.use_known_words_db_checkbox.setChecked(True)
-    assert panel.rebuild_known_words_button.isEnabled()
-
-    panel.set_rebuild_known_words_in_flight(True)
-    assert not panel.rebuild_known_words_button.isEnabled()
-
-    # Toggling the checkbox off and back on must not re-enable the button.
-    panel.use_known_words_db_checkbox.setChecked(False)
-    assert not panel.rebuild_known_words_button.isEnabled()
-    panel.use_known_words_db_checkbox.setChecked(True)
-    assert not panel.rebuild_known_words_button.isEnabled()
-
-    # A config reload while the rebuild is in flight must not re-enable it either.
-    panel.load_from_config(replace(AnkiMinerConfig(), use_known_words_db=True))
-    assert not panel.rebuild_known_words_button.isEnabled()
-
-    panel.set_rebuild_known_words_in_flight(False)
-    assert panel.rebuild_known_words_button.isEnabled()
+    assert not hasattr(panel, "rebuild_known_words_button")
+    assert not hasattr(panel, "rebuild_known_words_requested")
+    assert panel.manage_known_words_button.text() == "Manage Known Words…"
 
 
 def test_kana_variant_row_lives_in_the_known_words_section(qtbot):
-    # FormPanel.add_section opens a new QFormLayout per section (form_panel.py),
-    # so the two widgets sharing one layout is the proof the row moved.
-    from PyQt6.QtWidgets import QFormLayout
+    # FormPanel opens a new QFormLayout per section and after every add_widget /
+    # add_layout block (C01), so the row may sit in a later form than the
+    # checkbox; what proves it moved is that no other section heading lies
+    # between the Known Words heading and the row.
+    from PyQt6.QtWidgets import QFormLayout, QLabel
 
     panel = FilteringSettingsPanel()
     qtbot.addWidget(panel)
+    main = panel.main_layout
+    items = [main.itemAt(i) for i in range(main.count())]
 
-    layouts = panel.findChildren(QFormLayout)
-    home = next(layout for layout in layouts if layout.indexOf(panel.use_known_words_db_checkbox) >= 0)
-    assert home.indexOf(panel.match_kana_variants_checkbox) >= 0
+    def index_of_form_holding(widget) -> int:
+        return next(
+            i
+            for i, item in enumerate(items)
+            if isinstance(item.layout(), QFormLayout) and item.layout().indexOf(widget) >= 0
+        )
+
+    headings = {i: item.widget().text() for i, item in enumerate(items) if isinstance(item.widget(), QLabel)}
+    checkbox_at = index_of_form_holding(panel.use_known_words_db_checkbox)
+    kana_at = index_of_form_holding(panel.match_kana_variants_checkbox)
+    section_of_checkbox = max(i for i in headings if i < checkbox_at)
+
+    assert headings[section_of_checkbox] == "Known Words Database"
+    assert checkbox_at <= kana_at
+    assert not [i for i in headings if section_of_checkbox < i < kana_at]
+
+
+def test_choosing_a_word_list_file_turns_it_on(qtbot, tmp_path):
+    """D15 item 1: the file is the switch; there are no Enable boxes."""
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+    assert not hasattr(panel, "use_blacklist_checkbox")
+    assert not hasattr(panel, "use_whitelist_checkbox")
+    black = tmp_path / "black.txt"
+    black.write_text("a\n", encoding="utf-8")
+
+    panel.load_from_config(create_default_config())
+    panel.set_blacklist_path(black)
+    out = panel.contribute(create_default_config())
+
+    assert out.blacklist_path == black and out.use_blacklist is True
+    assert out.whitelist_path is None and out.use_whitelist is False
+
+
+def test_a_stored_path_that_was_switched_off_loads_empty(qtbot, tmp_path):
+    black = tmp_path / "black.txt"
+    white = tmp_path / "white.txt"
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+
+    panel.load_from_config(
+        replace(
+            create_default_config(),
+            blacklist_path=black,
+            use_blacklist=False,
+            whitelist_path=white,
+            use_whitelist=True,
+        )
+    )
+
+    assert panel.blacklist_selector.get_path() == ""
+    assert panel.whitelist_selector.get_path() == str(white)
+    out = panel.contribute(create_default_config())
+    assert out.blacklist_path is None and out.use_blacklist is False
+    assert out.whitelist_path == white and out.use_whitelist is True
+
+
+@pytest.mark.parametrize(
+    "hiragana, katakana, data",
+    [(False, False, "keep"), (True, False, "hiragana"), (False, True, "katakana"), (True, True, "all_kana")],
+)
+def test_script_type_is_one_choice_over_the_same_two_fields(qtbot, hiragana, katakana, data):
+    """C12: four states of two booleans, the fourth (mixed kana) now visible."""
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+    config = replace(
+        create_default_config(), exclude_hiragana_only_words=hiragana, exclude_katakana_only_words=katakana
+    )
+
+    panel.load_from_config(config)
+
+    assert panel.script_type_combo.currentData() == data
+    out = panel.contribute(create_default_config())
+    assert (out.exclude_hiragana_only_words, out.exclude_katakana_only_words) == (hiragana, katakana)
+
+
+def test_script_type_names_the_mixed_kana_option(qtbot):
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+    texts = [panel.script_type_combo.itemText(i) for i in range(panel.script_type_combo.count())]
+    assert texts == [
+        "Keep all words",
+        "Skip hiragana-only words",
+        "Skip katakana-only words",
+        "Skip all kana-only words (including mixed)",
+    ]
+    assert not hasattr(panel, "exclude_hiragana_only_checkbox")

@@ -175,6 +175,11 @@ class KeyboardSettingsPanel(FormPanel):
         reset_button = ModernButton(self.tr("Reset"), variant="ghost")
         reset_button.setToolTip(self.tr("Go back to this action's default key"))
         reset_button.clicked.connect(partial(self._on_reset_clicked, action_id))
+        # Shown only when the key differs from the default (C07); the space is
+        # kept while hidden so the editors stay one column.
+        policy = reset_button.sizePolicy()
+        policy.setRetainSizeWhenHidden(True)
+        reset_button.setSizePolicy(policy)
 
         error = QLabel()
         error.setObjectName("validation-status")
@@ -205,6 +210,11 @@ class KeyboardSettingsPanel(FormPanel):
             anchor=action_id.replace(".", "_"),
             anchor_focus=editor,
         )
+        self._sync_reset_button(action_id)
+
+    def _sync_reset_button(self, action_id: str) -> None:
+        """Offer Reset only where it would change something (C07)."""
+        self._reset_buttons[action_id].setVisible(self._keys[action_id] != default_sequence(action_id))
 
     def _on_editing_finished(self, action_id: str) -> None:
         editor = self._editors[action_id]
@@ -233,6 +243,7 @@ class KeyboardSettingsPanel(FormPanel):
         if sequence == self._keys[action_id]:
             editor.setKeySequence(sequence)
             self._show_problem(action_id, None, sequence)
+            self._sync_reset_button(action_id)
             return True
         problem = binding_problem(action_id, sequence, self._keys)
         if problem is not None:
@@ -243,6 +254,7 @@ class KeyboardSettingsPanel(FormPanel):
         editor.setKeySequence(sequence)
         self._show_problem(action_id, None, sequence)
         self.key_bindings_changed.emit(overrides_for(self._keys))
+        self._sync_reset_button(action_id)
         return True
 
     def restore_defaults(self) -> None:
@@ -262,6 +274,7 @@ class KeyboardSettingsPanel(FormPanel):
         for action_id, editor in self._editors.items():
             editor.setKeySequence(self._keys[action_id])
             self._show_problem(action_id, None, QKeySequence())
+            self._sync_reset_button(action_id)
 
     def _show_problem(self, action_id: str, problem: BindingProblem | None, sequence: QKeySequence) -> None:
         label = self._errors[action_id]

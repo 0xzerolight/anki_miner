@@ -80,14 +80,13 @@ def test_ja_never_sees_the_ko_rows_and_keeps_its_own(qtbot, test_config):
     panel = _filtering(qtbot, test_config)
     for checkbox in panel.script_filter_checkboxes.values():
         assert not checkbox.isVisibleTo(panel)
-    assert panel.exclude_hiragana_only_checkbox.isVisibleTo(panel)
-    assert panel.exclude_katakana_only_checkbox.isVisibleTo(panel)
+    assert panel.script_type_combo.isVisibleTo(panel)
 
 
 def test_a_ja_save_reads_the_ja_boxes_not_the_hidden_ko_ones(qtbot, test_config):
     """Both sets bind to the same two fields; only the visible set may write."""
     panel = _filtering(qtbot, test_config)
-    panel.exclude_hiragana_only_checkbox.setChecked(True)
+    panel.script_type_combo.setCurrentIndex(panel.script_type_combo.findData("hiragana"))
     panel.script_filter_checkboxes["hangul_only"].setChecked(False)
     assert panel.contribute(test_config).exclude_hiragana_only_words is True
 
@@ -95,7 +94,7 @@ def test_a_ja_save_reads_the_ja_boxes_not_the_hidden_ko_ones(qtbot, test_config)
 def test_a_ko_save_reads_the_ko_boxes_not_the_hidden_ja_ones(qtbot, test_config):
     config = _ko(test_config)
     panel = _filtering(qtbot, config)
-    panel.exclude_katakana_only_checkbox.setChecked(False)
+    panel.script_type_combo.setCurrentIndex(panel.script_type_combo.findData("keep"))
     panel.script_filter_checkboxes["hanja_containing"].setChecked(True)
     assert panel.contribute(config).exclude_katakana_only_words is True
 
@@ -109,19 +108,17 @@ def test_switching_ko_to_ja_and_back_lands_where_it_started(qtbot, test_config):
     assert panel.script_filter_checkboxes["hangul_only"].isVisibleTo(panel)
 
 
-def test_the_ja_kana_rows_are_untouched_by_the_option_driven_build(qtbot, test_config):
-    """A ja user must see zero change: same objects, same source strings, same gate."""
+def test_the_ja_script_type_is_not_option_driven(qtbot, test_config):
+    """ja's combo is hand-built; the option-driven rows are Korean's."""
     panel = _filtering(qtbot, test_config)
-    assert panel.exclude_hiragana_only_checkbox.text() == "Exclude Hiragana-Only Words"
-    assert panel.exclude_katakana_only_checkbox.text() == "Exclude Katakana-Only Words"
+    assert panel.script_type_combo.itemText(1) == "Skip hiragana-only words"
     # The ja rows are NOT option-driven, so ja's third option (mixed_kana_only,
     # which has no config field of its own) still grows no checkbox.
     assert "mixed_kana_only" not in panel.script_filter_checkboxes
     assert len(get_profile("ja").script.filter_options()) == 3
 
     pairs = dict(panel._language_gate_pairs)
-    assert pairs[panel.exclude_hiragana_only_checkbox] == "kana_filters"
-    assert pairs[panel.exclude_katakana_only_checkbox] == "kana_filters"
+    assert pairs[panel.script_type_combo] == "kana_filters"
     assert pairs[panel.match_kana_variants_checkbox] == "kana_filters"
     for checkbox in panel.script_filter_checkboxes.values():
         assert pairs[checkbox] == "hangul_filters"

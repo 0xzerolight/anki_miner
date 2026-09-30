@@ -179,6 +179,59 @@ class TestYouTubePanelValueHelpers:
         finally:
             panel.deleteLater()
 
+    def test_cookies_are_one_combo_with_a_file_choice(self, qtbot):
+        """C10: browser and file were two rows for one choice."""
+        panel = YouTubeSettingsPanel()
+        qtbot.addWidget(panel)
+        assert not hasattr(panel, "cookies_file_selector")
+        combo = panel.cookies_browser_combo
+        assert combo.itemText(combo.count() - 1) == "From a cookies.txt file…"
+
+    def test_a_cookies_file_shows_as_its_own_item(self, tmp_path, qtbot):
+        panel = YouTubeSettingsPanel()
+        qtbot.addWidget(panel)
+        cookies = tmp_path / "cookies.txt"
+        panel.set_cookies_file(cookies)
+        assert panel.cookies_browser_combo.currentText() == "cookies.txt (file)"
+        assert panel.get_cookies_from_browser() is None
+        assert panel.get_cookies_file() == str(cookies)
+
+    def test_choosing_a_browser_clears_the_file(self, tmp_path, qtbot):
+        panel = YouTubeSettingsPanel()
+        qtbot.addWidget(panel)
+        panel.set_cookies_file(tmp_path / "cookies.txt")
+        combo = panel.cookies_browser_combo
+        combo.setCurrentIndex(combo.findText("Firefox"))
+        combo.activated.emit(combo.currentIndex())
+        assert panel.get_cookies_file() == ""
+        assert panel.get_cookies_from_browser() == "firefox"
+        assert combo.findData("__cookies_file__") == -1
+
+    def test_the_file_action_opens_the_picker_and_selects_the_file(self, tmp_path, qtbot, monkeypatch):
+        from anki_miner.gui.widgets.panels import youtube_settings_panel as module
+
+        cookies = tmp_path / "cookies.txt"
+        monkeypatch.setattr(module.file_dialogs, "pick_open_file", lambda *a, on_done, **k: on_done(str(cookies)))
+        panel = YouTubeSettingsPanel()
+        qtbot.addWidget(panel)
+        combo = panel.cookies_browser_combo
+        with qtbot.waitSignal(panel.edited, timeout=1000):
+            combo.activated.emit(combo.findData("__pick_cookies_file__"))
+        assert panel.get_cookies_file() == str(cookies)
+        assert combo.currentText() == "cookies.txt (file)"
+
+    def test_a_cancelled_picker_keeps_the_previous_choice(self, qtbot, monkeypatch):
+        from anki_miner.gui.widgets.panels import youtube_settings_panel as module
+
+        monkeypatch.setattr(module.file_dialogs, "pick_open_file", lambda *a, on_done, **k: on_done(""))
+        panel = YouTubeSettingsPanel()
+        qtbot.addWidget(panel)
+        panel.set_cookies_from_browser("chrome")
+        combo = panel.cookies_browser_combo
+        combo.activated.emit(combo.findData("__pick_cookies_file__"))
+        assert panel.get_cookies_from_browser() == "chrome"
+        assert panel.get_cookies_file() == ""
+
 
 class TestSettingsTabRoundTrip:
     """Editing widgets and clicking Save should propagate to config_changed."""
@@ -245,48 +298,12 @@ class TestSettingsTabRoundTrip:
         assert len(received) == 1
         assert received[0].ytdlp_prerelease is True
 
-    def test_save_emits_ytdlp_location(self, tab, monkeypatch, tmp_path):
-        from PyQt6.QtWidgets import QMessageBox
-
-        monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: None)
-
-        binary = tmp_path / "my yt-dlp dir " / "yt-dlp"
-        binary.parent.mkdir(parents=True)
-        binary.write_text("#!/bin/sh\n")
-
-        received: list[AnkiMinerConfig] = []
-        tab.config_changed.connect(received.append)
-
-        tab.youtube_panel.set_ytdlp_location(binary)
-        tab.commit_settings()
-
-        assert len(received) == 1
-        # A trailing space in a directory name must survive: the getter uses
-        # path_or_none(), never strip().
-        assert received[0].ytdlp_location == binary
-
-    def test_ytdlp_fields_round_trip_through_load_from_config(self, tab, tmp_path):
-        binary = tmp_path / "yt-dlp"
-        binary.write_text("#!/bin/sh\n")
-        config = replace(tab.config, auto_update_ytdlp=False, ytdlp_location=binary)
+    def test_ytdlp_fields_round_trip_through_load_from_config(self, tab):
+        config = replace(tab.config, auto_update_ytdlp=False)
 
         tab.youtube_panel.load_from_config(config)
 
         assert tab.youtube_panel.get_auto_update_ytdlp() is False
-        assert tab.youtube_panel.get_ytdlp_location() == str(binary)
-
-    def test_empty_ytdlp_location_clears_the_override(self, tab, monkeypatch):
-        from PyQt6.QtWidgets import QMessageBox
-
-        monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: None)
-
-        received: list[AnkiMinerConfig] = []
-        tab.config_changed.connect(received.append)
-
-        tab.youtube_panel.set_ytdlp_location("")
-        tab.commit_settings()
-
-        assert received[0].ytdlp_location is None
 
     def test_save_flashes_inline_status_not_popup(self, tab, monkeypatch):
         """A successful save shows the inline label, not a modal popup."""
@@ -584,7 +601,7 @@ class TestIPlusOneFilterRoundTrip:
         widget = SettingsTab(cfg_on)
         qtbot.addWidget(widget)
         try:
-            assert widget.filtering_panel.sentence_rule_combo.currentData() == "i_plus_one"
+            assert widget.sentences_panel.sentence_rule_combo.currentData() == "i_plus_one"
         finally:
             widget.deleteLater()
 
@@ -592,7 +609,7 @@ class TestIPlusOneFilterRoundTrip:
         widget = SettingsTab(cfg_off)
         qtbot.addWidget(widget)
         try:
-            assert widget.filtering_panel.sentence_rule_combo.currentData() != "i_plus_one"
+            assert widget.sentences_panel.sentence_rule_combo.currentData() != "i_plus_one"
         finally:
             widget.deleteLater()
 
@@ -604,15 +621,15 @@ class TestIPlusOneFilterRoundTrip:
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
-        index = tab.filtering_panel.sentence_rule_combo.findData("i_plus_one")
-        tab.filtering_panel.sentence_rule_combo.setCurrentIndex(index)
+        index = tab.sentences_panel.sentence_rule_combo.findData("i_plus_one")
+        tab.sentences_panel.sentence_rule_combo.setCurrentIndex(index)
         tab.commit_settings()
 
         assert len(received) == 1
         assert received[0].use_i_plus_one_filter is True
 
-        index = tab.filtering_panel.sentence_rule_combo.findData("all")
-        tab.filtering_panel.sentence_rule_combo.setCurrentIndex(index)
+        index = tab.sentences_panel.sentence_rule_combo.findData("all")
+        tab.sentences_panel.sentence_rule_combo.setCurrentIndex(index)
         tab.commit_settings()
 
         assert len(received) == 2
@@ -721,8 +738,8 @@ class TestSentenceLengthFilterRoundTrip:
         widget = SettingsTab(cfg)
         qtbot.addWidget(widget)
         try:
-            assert widget.filtering_panel.max_sentence_duration_spinbox.value() == pytest.approx(7.5)
-            assert widget.filtering_panel.max_sentence_chars_spinbox.value() == 60
+            assert widget.sentences_panel.max_sentence_duration_spinbox.value() == pytest.approx(7.5)
+            assert widget.sentences_panel.max_sentence_chars_spinbox.value() == 60
         finally:
             widget.deleteLater()
 
@@ -734,8 +751,8 @@ class TestSentenceLengthFilterRoundTrip:
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
-        tab.filtering_panel.max_sentence_duration_spinbox.setValue(7.5)
-        tab.filtering_panel.max_sentence_chars_spinbox.setValue(60)
+        tab.sentences_panel.max_sentence_duration_spinbox.setValue(7.5)
+        tab.sentences_panel.max_sentence_chars_spinbox.setValue(60)
         tab.commit_settings()
 
         assert len(received) == 1
@@ -1037,7 +1054,7 @@ class TestBlacklistWhitelistSelectorClearedOnNone:
         bl.write_text("a\n", encoding="utf-8")
         wl = tmp_path / "whitelist.txt"
         wl.write_text("b\n", encoding="utf-8")
-        cfg = replace(test_config, blacklist_path=bl, whitelist_path=wl)
+        cfg = replace(test_config, blacklist_path=bl, use_blacklist=True, whitelist_path=wl, use_whitelist=True)
         widget = SettingsTab(cfg)
         qtbot.addWidget(widget)
         try:
@@ -1079,7 +1096,7 @@ class TestBlacklistWhitelistSelectorClearedOnNone:
         selector (the same _load_config branch Reset relies on)."""
         bl = tmp_path / "blacklist.txt"
         bl.write_text("a\n", encoding="utf-8")
-        widget = SettingsTab(replace(test_config, blacklist_path=bl))
+        widget = SettingsTab(replace(test_config, blacklist_path=bl, use_blacklist=True))
         qtbot.addWidget(widget)
         try:
             assert widget.filtering_panel.blacklist_selector.get_path() == str(bl)
@@ -1123,44 +1140,75 @@ class TestSubtitlesPanelRegistration:
         tab.open_subtab("subtitles")
         assert tab.subtitles_panel in tab.pages.currentWidget().findChildren(type(tab.subtitles_panel))
 
-    def test_subtitles_panel_loads_alass_location(self, test_config: AnkiMinerConfig, qtbot, tmp_path):
+    def test_subtitles_panel_loads_alass_location(self, test_config: AnkiMinerConfig, qtbot, tmp_path, monkeypatch):
+        monkeypatch.setattr(
+            "anki_miner.gui.widgets.panels.subtitles_settings_panel.alass_installer.alass_install_supported",
+            lambda: False,
+        )
         alass_path = tmp_path / "alass"
-        cfg = replace(test_config, alass_location=alass_path)
-        widget = SettingsTab(cfg)
+        widget = SettingsTab(replace(test_config, alass_location=alass_path))
         qtbot.addWidget(widget)
         try:
             assert widget.subtitles_panel.alass_selector.get_path() == str(alass_path)
         finally:
             widget.deleteLater()
 
-    def test_save_persists_alass_location(self, tab, monkeypatch, tmp_path):
+    def test_save_persists_alass_location(self, test_config: AnkiMinerConfig, qtbot, monkeypatch, tmp_path):
         from PyQt6.QtWidgets import QMessageBox
 
+        monkeypatch.setattr(
+            "anki_miner.gui.widgets.panels.subtitles_settings_panel.alass_installer.alass_install_supported",
+            lambda: False,
+        )
         monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
+        widget = SettingsTab(test_config)
+        qtbot.addWidget(widget)
+        try:
+            alass_path = tmp_path / "alass"
+            received: list[AnkiMinerConfig] = []
+            widget.config_changed.connect(received.append)
 
-        alass_path = tmp_path / "alass"
-        received: list[AnkiMinerConfig] = []
-        tab.config_changed.connect(received.append)
+            widget.subtitles_panel.alass_selector.set_path(str(alass_path))
+            widget.commit_settings()
 
-        tab.subtitles_panel.alass_selector.set_path(str(alass_path))
-        tab.commit_settings()
+            assert len(received) == 1
+            assert received[0].alass_location == alass_path
+        finally:
+            # Save starts a styling probe worker; join it as the tab fixture does.
+            widget.shutdown()
+            for worker in widget.iter_close_workers():
+                if worker is not None:
+                    worker.wait(3000)
+            qtbot.wait(10)
+            widget.deleteLater()
 
-        assert len(received) == 1
-        assert received[0].alass_location == alass_path
-
-    def test_save_empty_alass_location_is_none(self, tab, monkeypatch):
+    def test_save_empty_alass_location_is_none(self, test_config: AnkiMinerConfig, qtbot, monkeypatch):
         from PyQt6.QtWidgets import QMessageBox
 
+        monkeypatch.setattr(
+            "anki_miner.gui.widgets.panels.subtitles_settings_panel.alass_installer.alass_install_supported",
+            lambda: False,
+        )
         monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
+        widget = SettingsTab(test_config)
+        qtbot.addWidget(widget)
+        try:
+            received: list[AnkiMinerConfig] = []
+            widget.config_changed.connect(received.append)
 
-        received: list[AnkiMinerConfig] = []
-        tab.config_changed.connect(received.append)
+            widget.subtitles_panel.alass_selector.set_path("")
+            widget.commit_settings()
 
-        tab.subtitles_panel.alass_selector.set_path("")
-        tab.commit_settings()
-
-        assert len(received) == 1
-        assert received[0].alass_location is None
+            assert len(received) == 1
+            assert received[0].alass_location is None
+        finally:
+            # Save starts a styling probe worker; join it as the tab fixture does.
+            widget.shutdown()
+            for worker in widget.iter_close_workers():
+                if worker is not None:
+                    worker.wait(3000)
+            qtbot.wait(10)
+            widget.deleteLater()
 
 
 def test_offline_load_and_save_preserves_deck_and_note_type(tab, test_config):
@@ -1179,13 +1227,12 @@ def test_offline_load_and_save_preserves_deck_and_note_type(tab, test_config):
     assert saved.anki_note_type == "Lapis"
 
 
-def test_sync_buttons_refresh_the_name_lists(tab):
+def test_the_refresh_button_reloads_the_name_lists(tab):
     from unittest.mock import patch  # noqa: PLC0415 — module convention
 
     with patch.object(tab._anki_probe, "refresh_name_lists") as refresh:
-        tab.anki_panel.deck_sync_requested.emit()
-        tab.anki_panel.notetype_sync_requested.emit()
-    assert refresh.call_count == 2
+        tab.anki_panel.name_lists_requested.emit()
+    assert refresh.call_count == 1
 
 
 def test_name_lists_are_refetched_on_show_until_they_arrive(tab):
@@ -1212,7 +1259,7 @@ def test_name_lists_are_refetched_on_show_until_they_arrive(tab):
     assert refresh.call_count == 2
 
 
-def test_rebuild_known_words_does_not_block_gui_and_reenables_action(tab, tmp_path, monkeypatch, qtbot):
+def test_rebuild_reports_back_when_the_work_ends(tab, tmp_path, monkeypatch, qtbot):
     import sqlite3
     import time
 
@@ -1226,12 +1273,12 @@ def test_rebuild_known_words_does_not_block_gui_and_reenables_action(tab, tmp_pa
     db.initialize()
     db.add_words({"食べる"}, source="anki")
     tab.config = replace(tab.config, known_words_db_path=db_path)
-    # Rebuild only means anything (and is only reachable in the real UI) while
-    # the checkbox is on; the finish handler now re-syncs from it (Task 7).
-    tab.filtering_panel.use_known_words_db_checkbox.setChecked(True)
-    monkeypatch.setattr(QMessageBox, "question", lambda *args, **kwargs: QMessageBox.StandardButton.Yes)
-    monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: QMessageBox.StandardButton.Ok)
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
+    monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
+    finished: list[bool] = []
 
+    # The clear still runs off the GUI thread: a held write lock must not
+    # freeze the window, and the caller hears back only when the work ends.
     holder = sqlite3.connect(db_path)
     holder.execute("BEGIN IMMEDIATE")
     event_loop_tick: list[bool] = []
@@ -1239,12 +1286,12 @@ def test_rebuild_known_words_does_not_block_gui_and_reenables_action(tab, tmp_pa
     workers = []
     try:
         started = time.monotonic()
-        tab._on_rebuild_known_words()
+        tab._on_rebuild_known_words(on_finished=lambda: finished.append(True))
         elapsed = time.monotonic() - started
         workers = list(getattr(tab, "_off_thread_workers", ()))
 
         assert elapsed < 0.5
-        assert tab.filtering_panel.rebuild_known_words_button.isEnabled() is False
+        assert finished == []
         qtbot.waitUntil(lambda: bool(event_loop_tick), timeout=500)
         assert len(workers) == 1
     finally:
@@ -1253,30 +1300,39 @@ def test_rebuild_known_words_does_not_block_gui_and_reenables_action(tab, tmp_pa
         for worker in workers:
             worker.wait(6000)
 
-    qtbot.waitUntil(lambda: tab.filtering_panel.rebuild_known_words_button.isEnabled(), timeout=1000)
+    qtbot.waitUntil(lambda: finished == [True], timeout=3000)
 
 
-def test_rebuild_finish_handler_leaves_the_button_disabled_when_unchecked_mid_run(tab):
-    """The checkbox can be toggled off while a rebuild runs off-thread; the
-    finish handler must not force the button back on regardless of it."""
-    panel = tab.filtering_panel
-    panel.use_known_words_db_checkbox.setChecked(True)
-    panel.rebuild_known_words_button.setEnabled(False)  # simulates the in-flight disable
+def test_a_declined_rebuild_reports_back_at_once(tab, monkeypatch):
+    from PyQt6.QtWidgets import QMessageBox
 
-    panel.use_known_words_db_checkbox.setChecked(False)
-    tab._on_rebuild_known_words_finished()
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.No)
+    finished: list[bool] = []
 
-    assert panel.rebuild_known_words_button.isEnabled() is False
+    tab._on_rebuild_known_words(on_finished=lambda: finished.append(True))
+
+    assert finished == [True]
 
 
-def test_rebuild_finish_handler_reenables_the_button_when_still_checked(tab):
-    panel = tab.filtering_panel
-    panel.use_known_words_db_checkbox.setChecked(True)
-    panel.rebuild_known_words_button.setEnabled(False)  # simulates the in-flight disable
+def test_manage_known_words_hands_the_dialog_the_rebuild(tab, monkeypatch):
+    from anki_miner.gui.widgets.dialogs import known_words_dialog
 
-    tab._on_rebuild_known_words_finished()
+    seen: dict[str, object] = {}
 
-    assert panel.rebuild_known_words_button.isEnabled() is True
+    class _Recorder:
+        def __init__(self, *_a, **kwargs):
+            seen.update(kwargs)
+
+        def exec(self):
+            return 0
+
+    monkeypatch.setattr(known_words_dialog, "KnownWordsManagerDialog", _Recorder)
+    tab.filtering_panel.use_known_words_db_checkbox.setChecked(True)
+
+    tab._on_manage_known_words()
+
+    assert seen["rebuild_enabled"] is True
+    assert callable(seen["on_rebuild"])
 
 
 def test_pending_field_names_reports_a_dirty_save_panel_field(tab):
@@ -1291,13 +1347,6 @@ def test_pending_field_names_reports_check_for_updates(tab):
     tab.ui_panel.check_for_updates_checkbox.setChecked(not tab.config.check_for_updates)
 
     assert "check_for_updates" in tab._pending_field_names()
-
-
-def test_pending_field_names_reports_max_parallel_workers(tab):
-    """max_parallel_workers lives on the UI panel too, outside _save_panels."""
-    tab.ui_panel.max_workers_spinbox.setValue(tab.config.max_parallel_workers + 1)
-
-    assert "max_parallel_workers" in tab._pending_field_names()
 
 
 def test_a_completed_install_turns_the_button_back_into_an_update(tab):

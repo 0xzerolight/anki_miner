@@ -56,10 +56,9 @@ def test_kana_and_wordset_rows_hide_without_the_capability(qtbot, monkeypatch):
         lambda code: _profile_without("kana_filters", "name_wordsets"),
     )
     panel.load_from_config(dataclasses.replace(AnkiMinerConfig(), language="zh"))
-    assert panel.exclude_hiragana_only_checkbox.isHidden() is True
-    assert panel.exclude_katakana_only_checkbox.isHidden() is True
+    assert panel.script_type_combo.isHidden() is True
     assert panel.match_kana_variants_checkbox.isHidden() is True
-    assert all(cb.isHidden() for cb in panel.wordset_checkboxes.values())
+    assert panel.names_checkbox.isHidden() is True
     assert panel.min_frequency_spinbox.isHidden() is False
 
 
@@ -67,8 +66,8 @@ def test_ja_config_hides_nothing(qtbot):
     panel = filtering_settings_panel.FilteringSettingsPanel()
     qtbot.addWidget(panel)
     panel.load_from_config(AnkiMinerConfig())
-    assert panel.exclude_katakana_only_checkbox.isHidden() is False
-    assert all(not cb.isHidden() for cb in panel.wordset_checkboxes.values())
+    assert panel.script_type_combo.isHidden() is False
+    assert panel.names_checkbox.isHidden() is False
 
 
 def test_furigana_and_pitch_rows_hide_without_the_capability(qtbot, monkeypatch):
@@ -88,5 +87,5 @@ def test_gate_pairs_survive_a_later_contributor(qtbot):
     qtbot.addWidget(panel)
     # Stage 2B extends the same list; the kana rows must still be in it.
     gated = {widget for widget, _capability in panel._language_gate_pairs}
-    assert panel.exclude_hiragana_only_checkbox in gated
+    assert panel.script_type_combo in gated
     assert panel.match_kana_variants_checkbox in gated

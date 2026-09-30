@@ -1,11 +1,10 @@
 """The silent refusals around settings, queue restore, probes and confirmations.
 
 Every arm covered here used to ``return`` without a word: a settings commit the
-mutation preflight refused, rows a queue snapshot dropped on restore, a language
-whose engine probe raised, and a destructive action the user declined. The
-support reports they produce ("settings don't stick", "restore lost my items",
-"language vanished", "Delete did nothing") are indistinguishable from a bug
-until the log says which arm ran.
+mutation preflight refused, rows a queue snapshot dropped on restore, and a
+destructive action the user declined. The support reports they produce
+("settings don't stick", "restore lost my items", "Delete did nothing") are
+indistinguishable from a bug until the log says which arm ran.
 """
 
 from __future__ import annotations
@@ -19,7 +18,6 @@ from PyQt6.QtWidgets import QMessageBox
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils import queue_state_store
-from anki_miner.gui.widgets.panels import mining_language_settings_panel
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 
 
@@ -156,31 +154,6 @@ class TestQueueRestoreDroppedRows:
 
         line = next(r.getMessage() for r in caplog.records if "Queue restore skipped" in r.getMessage())
         assert "reason=version_mismatch" in line
-
-
-class TestLanguagePickerProbe:
-    """A picker row whose engine probe raised names the language it dropped."""
-
-    def test_find_spec_failure_logs_a_warning(self, caplog, monkeypatch):
-        from anki_miner.languages.pack_spec import LanguagePack, PackComponent
-
-        pack = LanguagePack(
-            code="zh",
-            approx_download_mb=1,
-            components=(PackComponent(import_name="jieba", required=True, sentinels=()),),
-        )
-
-        def explode(_name):
-            raise ValueError("bad module name")
-
-        monkeypatch.setattr("importlib.util.find_spec", explode)
-
-        with caplog.at_level(logging.WARNING, logger="anki_miner.gui.widgets.panels.mining_language_settings_panel"):
-            assert mining_language_settings_panel.pack_already_importable(pack) is False
-
-        line = next(r.getMessage() for r in caplog.records if "Language unavailable in picker" in r.getMessage())
-        assert "code=zh" in line
-        assert "ValueError" in line
 
 
 class TestConfirmationAnswers:

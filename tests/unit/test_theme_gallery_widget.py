@@ -325,3 +325,19 @@ class TestKeyboardFocus:
         gallery.setFocus()
 
         qtbot.waitUntil(lambda: gallery.card(first_key).hasFocus())
+
+
+def test_a_non_scrolling_gallery_has_no_scroll_area_of_its_own(qtbot):
+    """C08: Settings -> General scrolls once, at the page."""
+    from PyQt6.QtWidgets import QScrollArea
+
+    from anki_miner.gui.widgets.enhanced.theme_gallery import ThemeGalleryWidget
+
+    flat = ThemeGalleryWidget(scrolling=False)
+    qtbot.addWidget(flat)
+    assert flat.findChildren(QScrollArea) == []
+    assert flat.card_keys()
+
+    scrolled = ThemeGalleryWidget()
+    qtbot.addWidget(scrolled)
+    assert len(scrolled.findChildren(QScrollArea)) == 1

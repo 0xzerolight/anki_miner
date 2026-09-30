@@ -152,23 +152,24 @@ def test_about_does_not_advertise_a_removed_binding(qapp):
 
 def test_a_rebinding_is_live_without_a_restart(main_window):
     main_window.update_config(
-        replace(main_window.config, key_bindings={"app.open_settings": "Ctrl+Shift+S", "app.usage_guide": ""})
+        replace(main_window.config, key_bindings={"app.tab.settings": "Ctrl+Shift+S", "app.usage_guide": ""})
     )
     keys = _shortcut_keys(main_window)
     assert "Ctrl+Shift+S" in keys
-    assert "Ctrl+," not in keys
+    assert "Ctrl+6" not in keys
+    assert "Ctrl+," in keys  # the alias is fixed (C07)
     assert main_window.usage_guide_action.shortcut().isEmpty()
 
 
-def test_about_is_built_from_the_live_bindings(main_window, monkeypatch):
+def test_about_keeps_the_fixed_settings_alias(main_window, monkeypatch):
     captured = _capture_about(monkeypatch)
     main_window.update_config(replace(main_window.config, key_bindings={"app.open_settings": "Ctrl+Shift+S"}))
     main_window._show_about()
-    assert ("Ctrl+Shift+S", "Open Settings") in captured[0]
-    assert all(keys != "Ctrl+," for keys, _ in captured[0])
+    assert ("Ctrl+,", "Open Settings") in captured[0]
+    assert all(keys != "Ctrl+Shift+S" for keys, _ in captured[0])
 
 
-def test_rebinding_open_settings_in_the_panel_is_live_everywhere(wired_window, qtbot, monkeypatch):
+def test_rebinding_go_to_settings_in_the_panel_is_live_everywhere(wired_window, qtbot, monkeypatch):
     """Review Focus 4: Settings -> Keyboard, then the window, About and the Usage Guide."""
     window, _titles, _tabs = wired_window
     settings_tab = window.tabs.widget(window._main_tab_index("settings"))
@@ -177,13 +178,13 @@ def test_rebinding_open_settings_in_the_panel_is_live_everywhere(wired_window, q
     # with a live AnkiConnect probe (see its docstring).
     monkeypatch.setattr(settings_tab._anki_probe, "refresh_name_lists", lambda: None)
 
-    assert settings_tab.keyboard_panel.set_binding("app.open_settings", QKeySequence("Ctrl+Shift+S"))
+    assert settings_tab.keyboard_panel.set_binding("app.tab.settings", QKeySequence("Ctrl+Shift+S"))
 
     # Committed through SettingsTab -> MainWindow.update_config, and re-keyed in place.
-    assert window.config.key_bindings == {"app.open_settings": "Ctrl+Shift+S"}
+    assert window.config.key_bindings == {"app.tab.settings": "Ctrl+Shift+S"}
     keys = _shortcut_keys(window)
     assert "Ctrl+Shift+S" in keys
-    assert "Ctrl+," not in keys
+    assert "Ctrl+6" not in keys
 
     # A real key press opens Settings from another tab.
     window.show()
@@ -196,7 +197,7 @@ def test_rebinding_open_settings_in_the_panel_is_live_everywhere(wired_window, q
     # About prints the new key.
     captured = _capture_about(monkeypatch)
     window._show_about()
-    assert ("Ctrl+Shift+S", "Open Settings") in captured[0]
+    assert ("Ctrl+Shift+S", "Go to Settings") in captured[0]
 
     # The Usage Guide entry opens the page that shows it.
     entry = next(cap for cap in CAPABILITIES if cap.id == "keyboard-shortcuts")
@@ -204,6 +205,6 @@ def test_rebinding_open_settings_in_the_panel_is_live_everywhere(wired_window, q
     window.reveal_capability(entry.target)
     assert window._current_main_tab_key() == "settings"
     assert settings_tab.current_subtab_key() == "keyboard"
-    shown = settings_tab.keyboard_panel._editors["app.open_settings"].keySequence()
+    shown = settings_tab.keyboard_panel._editors["app.tab.settings"].keySequence()
     assert shown.toString(PORTABLE) == "Ctrl+Shift+S"
     window.hide()

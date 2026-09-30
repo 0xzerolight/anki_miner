@@ -51,11 +51,11 @@ def _seed_config(test_config: AnkiMinerConfig) -> AnkiMinerConfig:
 
 
 def test_reset_button_exists_without_shortcut(test_config: AnkiMinerConfig, qtbot):
-    """The button is present; no Ctrl+R (or any) shortcut is wired to reset."""
+    """Reset is present (run from the Profile Manager, D14); no Ctrl+R shortcut is wired to it."""
     tab = SettingsTab(test_config)
     qtbot.addWidget(tab)
 
-    assert hasattr(tab, "reset_settings_button")
+    assert hasattr(tab, "reset_settings")
     from PyQt6.QtGui import QShortcut
 
     shortcuts = {sc.key().toString() for sc in tab.findChildren(QShortcut)}

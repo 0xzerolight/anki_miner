@@ -113,6 +113,9 @@ def test_explanation_matches_frequency_aggregation_and_display_order(qapp, qtbot
     )
 
     assert panel._explanation_label.text() == (
+        "All enabled lists are used. The order only changes how they are listed on the card."
+    )
+    assert panel._explanation_label.toolTip() == (
         "Every enabled source counts: filtering uses the lowest rank, Frequency "
         "Sort the harmonic mean. Order only sets the card's source list."
     )
@@ -585,5 +588,5 @@ class TestRescanWhileInFlight:
 
         panel.remove(0)
         assert panel._remove_btn.isEnabled() is False
-        qtbot.waitUntil(lambda: panel._remove_btn.isEnabled(), timeout=3000)
+        qtbot.waitUntil(lambda: panel._reorder_enabled, timeout=3000)
         assert not (tmp_path / "jpdb").exists()

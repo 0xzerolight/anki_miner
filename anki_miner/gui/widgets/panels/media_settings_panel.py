@@ -17,6 +17,26 @@ ANIMATED_SIZE_PRESETS: dict[str, tuple[int, int, int]] = {
 }
 
 
+class _ClipLengthSpinBox(QDoubleSpinBox):
+    """Animated clip length whose lowest value means "Same as sentence audio" (C14).
+
+    Choosing that value sets ``screenshot_animated_match_audio`` and leaves the
+    stored length alone; stepping up from it resumes that length rather than
+    the first step above the minimum, so a round trip keeps the user's length.
+    """
+
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        #: The user's own length, remembered while "Same as sentence audio" shows.
+        self.resume_value = 2.0
+
+    def stepBy(self, steps: int) -> None:  # noqa: N802 - Qt override
+        if steps > 0 and self.value() == self.minimum():
+            self.setValue(self.resume_value)
+            return
+        super().stepBy(steps)
+
+
 class MediaSettingsPanel(FormPanel):
     """Panel for media extraction settings.
 
@@ -88,7 +108,7 @@ class MediaSettingsPanel(FormPanel):
         # _set_reading_tts never trips the touched flag.
         self.reading_tts_combo.activated.connect(self._on_reading_tts_activated)
         self.add_field(
-            self.tr("Spoken sentences for manga and books"),
+            self.tr("Read aloud (manga, books)"),
             self.reading_tts_combo,
             helper=self.tr(
                 "Add spoken audio to cards from manga and books, which have no source "
@@ -97,6 +117,7 @@ class MediaSettingsPanel(FormPanel):
             anchor="reading_tts",
             anchor_text=lambda: (
                 "TTS",
+                "Spoken sentences for manga and books",
                 *(self.reading_tts_combo.itemText(i) for i in range(self.reading_tts_combo.count())),
             ),
         )
@@ -133,22 +154,24 @@ class MediaSettingsPanel(FormPanel):
             helper=self.tr("AVIF: smaller files; WebP: broader Anki client support"),
         )
 
-        # Match audio duration toggle
-        self.animated_match_audio_checkbox = QCheckBox(self.tr("Match audio duration"))
-        self.animated_match_audio_checkbox.setToolTip(
-            self.tr("Animated clip spans the audio clip's time range. Overrides Clip Duration.")
-        )
-        self.add_field("", self.animated_match_audio_checkbox)
-
-        # Clip duration
-        self.animated_duration_spinbox = QDoubleSpinBox()
-        self.animated_duration_spinbox.setRange(0.5, 10.0)
+        # Clip length (C14). Its lowest value, "Same as sentence audio", is the
+        # old "Match audio duration" checkbox folded in.
+        self.animated_duration_spinbox = _ClipLengthSpinBox()
+        self.animated_duration_spinbox.setRange(0.0, 10.0)
+        self.animated_duration_spinbox.setDecimals(1)
         self.animated_duration_spinbox.setSingleStep(0.5)
         self.animated_duration_spinbox.setSuffix(self.tr(" seconds"))
-        self.animated_duration_spinbox.setToolTip(
-            self.tr("Clip length, capped by subtitle duration. Ignored if Match audio duration is on.")
+        self.animated_duration_spinbox.setSpecialValueText(self.tr("Same as sentence audio"))
+        self.animated_duration_spinbox.valueChanged.connect(self._remember_clip_length)
+        self.add_field(
+            self.tr("Clip length"),
+            self.animated_duration_spinbox,
+            helper=self.tr(
+                "Length of the animated clip, capped by the subtitle's duration. "
+                "“Same as sentence audio” spans the sentence audio clip instead."
+            ),
+            anchor_text=lambda: ("Clip Duration", "Match audio duration"),
         )
-        self.add_field(self.tr("Clip Duration"), self.animated_duration_spinbox)
 
         # Size (fps / height / quality preset)
         self._custom_animated_triple: tuple[int, int, int] = ANIMATED_SIZE_PRESETS["balanced"]
@@ -165,32 +188,20 @@ class MediaSettingsPanel(FormPanel):
         )
 
         self.animated_checkbox.toggled.connect(self._set_animated_enabled)
-        self.animated_match_audio_checkbox.toggled.connect(self._set_match_audio)
         self._set_animated_enabled(self.animated_checkbox.isChecked())
 
         self.add_stretch()
 
     def _set_animated_enabled(self, enabled: bool) -> None:
         """Enable or disable the animated screenshot sub-controls."""
-        for widget in (
-            self.animated_format_combo,
-            self.animated_match_audio_checkbox,
-            self.animated_duration_spinbox,
-            self.animated_size_combo,
-        ):
+        for widget in (self.animated_format_combo, self.animated_duration_spinbox, self.animated_size_combo):
             widget.setEnabled(enabled)
-        # Re-apply match-audio gating so the duration spinbox stays disabled
-        # when match-audio is on, even after the parent feature is re-enabled.
-        self._set_match_audio(self.animated_match_audio_checkbox.isChecked())
 
-    def _set_match_audio(self, match: bool) -> None:
-        """Disable the duration spinbox when match-audio overrides it.
-
-        Only enables the spinbox when the parent animated feature is on AND
-        match-audio is off; otherwise the spinbox value is irrelevant.
-        """
-        feature_on = self.animated_checkbox.isChecked()
-        self.animated_duration_spinbox.setEnabled(feature_on and not match)
+    def _remember_clip_length(self, value: float) -> None:
+        """Keep the user's own length while "Same as sentence audio" is chosen."""
+        spin = self.animated_duration_spinbox
+        if value > spin.minimum():
+            spin.resume_value = max(value, 0.5)
 
     def _on_animated_size_activated(self, index: int) -> None:
         """Drop the Custom entry once the user picks a real preset.
@@ -350,21 +361,26 @@ class MediaSettingsPanel(FormPanel):
         self.animated_format_combo.setCurrentText(value)
 
     def get_screenshot_animated_clip_duration(self) -> float:
-        """Return the animated clip duration (seconds)."""
-        return self.animated_duration_spinbox.value()
+        """The stored clip length; untouched while "Same as sentence audio" is chosen."""
+        spin = self.animated_duration_spinbox
+        return spin.resume_value if spin.value() == spin.minimum() else max(spin.value(), 0.5)
 
     def set_screenshot_animated_clip_duration(self, value: float) -> None:
-        """Set the animated clip duration spinbox."""
-        self.animated_duration_spinbox.setValue(value)
+        """Remember ``value``; show it unless "Same as sentence audio" is chosen."""
+        spin = self.animated_duration_spinbox
+        spin.resume_value = value
+        if spin.value() != spin.minimum():
+            spin.setValue(value)
 
     def get_screenshot_animated_match_audio(self) -> bool:
-        """Return whether match-audio duration is enabled."""
-        return self.animated_match_audio_checkbox.isChecked()
+        """Whether "Same as sentence audio" (the spinbox minimum) is chosen."""
+        spin = self.animated_duration_spinbox
+        return spin.value() == spin.minimum()
 
     def set_screenshot_animated_match_audio(self, value: bool) -> None:
-        """Set the match-audio checkbox and update dependent widgets."""
-        self.animated_match_audio_checkbox.setChecked(value)
-        self._set_match_audio(value)
+        """Show "Same as sentence audio", or the remembered length."""
+        spin = self.animated_duration_spinbox
+        spin.setValue(spin.minimum() if value else spin.resume_value)
 
     # ------------------------------------------------------------------
     # Config marshalling contract (OVH-019)

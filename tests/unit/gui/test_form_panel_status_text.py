@@ -96,3 +96,29 @@ def test_no_status_setter_writes_the_label_directly(module_name: str) -> None:
     source = importlib.import_module(module_name).__file__
     assert source is not None
     assert "status_label.setText(text)" not in Path(source).read_text(encoding="utf-8")
+
+
+def test_status_kind_sets_the_property_and_keeps_the_text(qtbot):
+    from PyQt6.QtWidgets import QLabel
+
+    from anki_miner.gui.widgets.base.form_panel import FormPanel
+
+    label = QLabel()
+    qtbot.addWidget(label)
+    FormPanel.set_status_text(label, "Installed", status="success")
+
+    assert label.text() == "Installed"
+    assert label.property("status") == "success"
+
+
+def test_status_text_without_a_kind_leaves_the_property_alone(qtbot):
+    from PyQt6.QtWidgets import QLabel
+
+    from anki_miner.gui.widgets.base.form_panel import FormPanel
+
+    label = QLabel()
+    qtbot.addWidget(label)
+    label.setProperty("status", "error")
+    FormPanel.set_status_text(label, "anything")
+
+    assert label.property("status") == "error"

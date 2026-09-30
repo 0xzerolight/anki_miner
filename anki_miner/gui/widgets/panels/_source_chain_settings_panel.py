@@ -151,6 +151,7 @@ class _SourceChainSettingsPanel(ChainSettingsPanelBase):
             anchor_focus=self._list,
             anchor_text=lambda: (
                 self._explanation_label.text(),
+                self._explanation_label.toolTip(),
                 self._add_btn.text(),
                 self._reimport_btn.text(),
                 self._restore_btn.text(),

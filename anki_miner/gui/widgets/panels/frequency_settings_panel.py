@@ -35,6 +35,7 @@ class FrequencySettingsPanel(_SourceChainSettingsPanel):
     """Reorderable chain of additive frequency sources."""
 
     ANCHOR_NAMESPACE = "frequency"
+    _RECOMMENDED_KIND = "freq"
 
     _SCAN_ERROR_LABEL = "Frequency registry scan failed"
     _REMOVE_ERROR_NOUN = "frequency source folder"
@@ -83,7 +84,11 @@ class FrequencySettingsPanel(_SourceChainSettingsPanel):
                 # Not the first-match sentence the other three chains carry:
                 # frequency layers every enabled source, while order controls
                 # only the source list rendered on cards.
+                # C16: the plain line; today's exact rule stays as its tooltip.
                 explanation=self.tr(
+                    "All enabled lists are used. The order only changes how they are listed on the card."
+                ),
+                explanation_tooltip=self.tr(
                     "Every enabled source counts: filtering uses the lowest rank, Frequency "
                     "Sort the harmonic mean. Order only sets the card's source list."
                 ),
@@ -96,6 +101,8 @@ class FrequencySettingsPanel(_SourceChainSettingsPanel):
                 move_down_tooltip=self.tr("Move down in the card's source list"),
                 more=self.tr("More"),
                 more_tooltip=self.tr("More actions"),
+                empty=self.tr("No frequency lists yet."),
+                download=self.tr("Download recommended"),
             ),
             entries=self.tr("%1 entries"),
             enabled=self.tr("Enabled"),

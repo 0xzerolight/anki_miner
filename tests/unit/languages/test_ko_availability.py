@@ -114,7 +114,7 @@ def test_a_missing_engine_drops_ko_from_the_selector(monkeypatch: pytest.MonkeyP
 def test_a_present_engine_keeps_ko_offered_under_its_native_name(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(availability, "module_importable", lambda _name: True)
 
-    assert dict(language_choices.available_mining_languages())["ko"] == "한국어"
+    assert dict(language_choices.available_mining_languages())["ko"] == "한국어 — Korean"
 
 
 class _FakeWindow:

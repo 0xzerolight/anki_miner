@@ -309,7 +309,11 @@ class SettingsSearchBox(QWidget):
             item.setToolTip(entry.row_text())
             self.results.addItem(item)
         row_height = metric_row_height(self.results)
-        self.results.setMaximumHeight(row_height * _MAX_VISIBLE_ROWS + 2 * SPACING.xxs)
+        # Fixed, not only capped (C05): with a maximum alone the Settings column
+        # squeezed the list to about three rows, so the fourth hit needed a
+        # scroll. Up to six rows show; more scroll.
+        visible_rows = min(self.results.count(), _MAX_VISIBLE_ROWS)
+        self.results.setFixedHeight(visible_rows * row_height + 2 * SPACING.xxs)
         self.results.setVisible(True)
         if matches:
             self.results.setCurrentRow(0)

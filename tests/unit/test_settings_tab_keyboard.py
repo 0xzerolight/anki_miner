@@ -28,8 +28,8 @@ def _shown(tab: SettingsTab, action_id: str) -> str:
 
 def test_an_accepted_key_commits_at_once(tab, qtbot):
     with qtbot.waitSignal(tab.config_changed, timeout=1000) as blocker:
-        assert tab.keyboard_panel.set_binding("app.open_settings", QKeySequence("Ctrl+Shift+S"))
-    assert blocker.args[0].key_bindings == {"app.open_settings": "Ctrl+Shift+S"}
+        assert tab.keyboard_panel.set_binding("app.usage_guide", QKeySequence("Ctrl+Shift+S"))
+    assert blocker.args[0].key_bindings == {"app.usage_guide": "Ctrl+Shift+S"}
 
 
 def test_a_refused_key_commits_nothing(tab, qtbot):

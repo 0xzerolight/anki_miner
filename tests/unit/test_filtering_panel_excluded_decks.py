@@ -89,3 +89,33 @@ def test_set_available_decks_caches_and_skips_already_excluded(qtbot, monkeypatc
     assert panel.get_excluded_decks() == ("RTK", "Mining")
     # Keep the names until the next fetch replaces them.
     assert panel._available_decks == ["RTK", "Mining", "Default"]
+
+
+def test_an_empty_exclusion_list_says_so_and_offers_only_add(qtbot):
+    """C09: no empty bordered box and no dead Remove."""
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_excluded_decks(())
+    assert panel.excluded_decks_list.isHidden()
+    assert panel.excluded_decks_empty_label.text() == "No decks excluded."
+    assert not panel.excluded_decks_empty_label.isHidden()
+    assert panel.remove_deck_button.isHidden()
+
+    panel.set_excluded_decks(("A",))
+    assert not panel.excluded_decks_list.isHidden()
+    assert panel.excluded_decks_empty_label.isHidden()
+    assert not panel.remove_deck_button.isHidden()
+    assert not panel.remove_deck_button.isEnabled()
+    panel.excluded_decks_list.setCurrentRow(0)
+    assert panel.remove_deck_button.isEnabled()
+
+
+def test_loading_an_empty_list_over_decks_shows_the_empty_line(qtbot):
+    """C09: clear() resets the model without rowsRemoved, so a reload to empty still says so."""
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_excluded_decks(("A", "B"))
+    panel.set_excluded_decks(())
+    assert panel.excluded_decks_list.isHidden()
+    assert not panel.excluded_decks_empty_label.isHidden()
+    assert panel.remove_deck_button.isHidden()

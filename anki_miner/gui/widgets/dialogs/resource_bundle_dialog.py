@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
 from anki_miner.services.resource_bundle import BundleItem
 
 _FAMILY_OF = {
@@ -59,6 +60,8 @@ class ResourceBundleDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle(title)
         self.resize(520, 440)
+        # gui.md: every resizable QDialog; Windows otherwise shows Close only.
+        add_min_max_buttons(self)
         layout = QVBoxLayout(self)
         layout.setSpacing(SPACING.sm)
 

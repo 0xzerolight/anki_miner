@@ -2,8 +2,8 @@
 
 Regression for the dead Anki panel: ``SettingsTab.validation_requested`` (fed by
 Test Connection) was connected to nothing, so the button did nothing and the
-connection badge never updated. The two deck/note-type refresh buttons used to
-feed it too; they now drive ``AnkiProbeController.refresh_name_lists`` instead. The production wiring that
+connection badge never updated. One Refresh button on the Anki panel feeds it
+and also reloads the deck and note-type lists (C03). The production wiring that
 fixes this lives in ``anki_miner.gui.app._connect_settings_validation``; these
 tests call that real helper (not a shadow of ``main()``) so the connection
 cannot silently regress.
@@ -112,6 +112,7 @@ def wired(monkeypatch, patch_heavy_init, test_config, qtbot):
     window = MainWindow()
     qtbot.addWidget(window)
     settings_tab = SettingsTab(window.get_config())
+    monkeypatch.setattr(settings_tab._anki_probe, "refresh_name_lists", lambda: None)
     qtbot.addWidget(settings_tab)
     app_module._connect_settings_validation(window, settings_tab)
     # MainWindow.__init__ runs a startup validation; drop that call so each
@@ -151,6 +152,7 @@ def controlled_validation(monkeypatch, patch_heavy_init, test_config, qtbot):
     window = MainWindow()
     qtbot.addWidget(window)
     settings_tab = SettingsTab(window.get_config())
+    monkeypatch.setattr(settings_tab._anki_probe, "refresh_name_lists", lambda: None)
     qtbot.addWidget(settings_tab)
     window.tabs.addTab(settings_tab, "Settings")
     app_module._connect_settings_validation(window, settings_tab)
@@ -189,7 +191,7 @@ class TestSettingsValidationWiring:
         running = _ControlledValidationWorker.instances[-1]
 
         settings_tab.anki_panel.ankiconnect_url_input.setText("http://127.0.0.1:9999")
-        settings_tab.anki_panel.test_connection_button.click()
+        settings_tab.anki_panel.refresh_button.click()
         running.succeed(_passing_result())
 
         replacement = _ControlledValidationWorker.instances[-1]
@@ -204,7 +206,7 @@ class TestSettingsValidationWiring:
         window.background_tasks.validation_worker = _FinishesDuringLivenessCheck()
         settings_tab.anki_panel.ankiconnect_url_input.setText("http://127.0.0.1:9999")
 
-        settings_tab.anki_panel.test_connection_button.click()
+        settings_tab.anki_panel.refresh_button.click()
 
         assert calls == ["http://127.0.0.1:9999"]
 
@@ -218,7 +220,7 @@ class TestSettingsValidationWiring:
         old_worker = _ControlledValidationWorker.instances[-1]
 
         settings_tab.anki_panel.ankiconnect_url_input.setText("http://127.0.0.1:9999")
-        settings_tab.anki_panel.test_connection_button.click()
+        settings_tab.anki_panel.refresh_button.click()
         old_worker.fail("old endpoint A exploded")
 
         assert errors == []
@@ -229,13 +231,13 @@ class TestSettingsValidationWiring:
         replacement.succeed(_passing_result())
 
         assert settings_tab.anki_panel.connection_status.status == "success"
-        assert settings_tab.anki_panel.test_connection_button.isEnabled()
+        assert settings_tab.anki_panel.refresh_button.isEnabled()
 
     def test_single_validation_badges_the_endpoint_it_tested(self, controlled_validation):
         _window, settings_tab, errors, _validation_service_type = controlled_validation
         settings_tab.anki_panel.ankiconnect_url_input.setText("  http://127.0.0.1:9999  ")
 
-        settings_tab.anki_panel.test_connection_button.click()
+        settings_tab.anki_panel.refresh_button.click()
 
         worker = _ControlledValidationWorker.instances[-1]
         assert worker.validator.config.ankiconnect_url == "http://127.0.0.1:9999"
@@ -245,18 +247,17 @@ class TestSettingsValidationWiring:
 
         assert errors == []
         assert settings_tab.anki_panel.connection_status.status == "success"
-        assert settings_tab.anki_panel.test_connection_button.isEnabled()
+        assert settings_tab.anki_panel.refresh_button.isEnabled()
 
-    def test_sync_buttons_no_longer_run_validation(self, wired):
-        """The refresh buttons reload the dropdowns; only Test Connection validates."""
+    def test_refresh_runs_validation_and_reloads_the_lists(self, wired):
+        """C03: one Refresh does both jobs Test Connection and the two refreshes did."""
         from unittest.mock import patch  # noqa: PLC0415
 
         _window, settings_tab, calls = wired
         with patch.object(settings_tab._anki_probe, "refresh_name_lists") as refresh:
-            settings_tab.anki_panel.deck_sync_requested.emit()
-            settings_tab.anki_panel.notetype_sync_requested.emit()
-        assert calls == []
-        assert refresh.call_count == 2
+            settings_tab.anki_panel.refresh_button.click()
+        assert calls == [settings_tab.anki_panel.get_ankiconnect_url()]
+        assert refresh.call_count == 1
 
 
 class TestAnkiReachableRefetch:
@@ -289,7 +290,7 @@ class TestAnkiReachableRefetch:
         window, settings_tab, _errors, _validation_service_type = controlled_validation
         names, subtitles_tab = self._wire(monkeypatch, window, settings_tab)
 
-        settings_tab.anki_panel.test_connection_button.click()
+        settings_tab.anki_panel.refresh_button.click()
         _ControlledValidationWorker.instances[-1].succeed(_passing_result())
 
         names.assert_called_once_with()
@@ -301,7 +302,7 @@ class TestAnkiReachableRefetch:
         window, settings_tab, _errors, _validation_service_type = controlled_validation
         names, subtitles_tab = self._wire(monkeypatch, window, settings_tab)
 
-        settings_tab.anki_panel.test_connection_button.click()
+        settings_tab.anki_panel.refresh_button.click()
         _ControlledValidationWorker.instances[-1].succeed(
             ValidationResult(
                 ankiconnect_ok=False,

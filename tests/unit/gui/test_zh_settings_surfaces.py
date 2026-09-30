@@ -234,26 +234,30 @@ def test_measure_word_is_a_zh_card_field(qtbot, test_config):
     assert panel.get_card_fields()["measure_word"] == "MW"
 
 
-def test_zh_hides_the_note_type_preset_row(qtbot, test_config):
+def test_zh_fill_never_applies_a_japanese_preset(qtbot, test_config):
     """All three presets are Japanese note types, so one click maps four dead fields."""
+    from anki_miner.services.note_presets import LAPIS
+
     panel = _anki(qtbot, _zh(test_config))
-    assert not panel.preset_combo.isVisibleTo(panel)
-    assert not panel.preset_apply_button.isVisibleTo(panel)
-    assert not panel.preset_status.isVisibleTo(panel)
+    preset, _cleared = panel.fill_from_field_list(sorted(LAPIS.signature))
+    assert preset is None
 
 
-def test_ja_keeps_the_note_type_preset_row(qtbot, test_config):
+def test_ja_fill_recognises_lapis(qtbot, test_config):
+    from anki_miner.services.note_presets import LAPIS
+
     panel = _anki(qtbot, test_config)
-    assert panel.preset_combo.isVisibleTo(panel)
-    assert panel.preset_apply_button.isVisibleTo(panel)
-    assert panel.preset_status.isVisibleTo(panel)
+    preset, _cleared = panel.fill_from_field_list(sorted(LAPIS.signature))
+    assert preset is LAPIS
 
 
-def test_the_preset_row_comes_back_on_a_return_to_ja(qtbot, test_config):
+def test_presets_come_back_on_a_return_to_ja(qtbot, test_config):
+    from anki_miner.services.note_presets import LAPIS
+
     panel = _anki(qtbot, _zh(test_config))
     panel.load_from_config(test_config)
-    assert panel.preset_combo.isVisibleTo(panel)
-    assert panel.preset_status.isVisibleTo(panel)
+    preset, _cleared = panel.fill_from_field_list(sorted(LAPIS.signature))
+    assert preset is LAPIS
 
 
 def test_zh_hides_the_pitch_source_helper(qtbot, test_config):

@@ -30,7 +30,9 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.gui.widgets.base.sizing import metric_row_height
 from anki_miner.gui.widgets.settings_search import (
     BREADCRUMB_SEPARATOR,
     SEARCH_HIT_PROPERTY,
@@ -177,24 +179,24 @@ class TestMatching:
         must carry the search text, including the "i+1" one item spells out."""
         results = _ids(search(entries, "i+1"))
 
-        assert "filtering.sentence_rule_combo" in results
+        assert "sentences.sentence_rule_combo" in results
 
     def test_dedup_finds_the_sentence_rule_combo(self, entries):
         results = _ids(search(entries, "dedup"))
 
-        assert "filtering.sentence_rule_combo" in results
+        assert "sentences.sentence_rule_combo" in results
 
     def test_deduplicate_finds_the_sentence_rule_combo(self, entries):
         """ "deduplicate" is not a substring of the tooltip's "deduplication";
         it needs its own keyword."""
         results = _ids(search(entries, "deduplicate"))
 
-        assert "filtering.sentence_rule_combo" in results
+        assert "sentences.sentence_rule_combo" in results
 
     def test_one_card_per_sentence_finds_the_sentence_rule_combo(self, entries):
         results = _ids(search(entries, "one card per sentence"))
 
-        assert "filtering.sentence_rule_combo" in results
+        assert "sentences.sentence_rule_combo" in results
 
 
 class TestRenamedDestinations:
@@ -202,14 +204,14 @@ class TestRenamedDestinations:
         """D10 renamed the destination; nobody renamed the users' vocabulary."""
         results = _ids(search(entries, "ASR"))
 
-        assert "subtitles.alass_selector" in results
+        assert "subtitles.model_combo" in results
 
     def test_the_filtering_destination_name_finds_its_settings(self, entries):
         """The old "Filtering" name still finds it (T9 renamed the label to
         "Word Filters"; the legacy term keeps the vocabulary users typed)."""
         results = _ids(search(entries, "filtering"))
 
-        assert "filtering.sentence_rule_combo" in results
+        assert "filtering.frequency_rank_range" in results
 
     def test_the_filtering_destination_name_also_finds_the_sentences_page(self, entries):
         """These settings used to live on Filtering; the old name still reaches
@@ -313,6 +315,25 @@ class TestSearchBox:
         qtbot.keyClick(tab.search_box.input, Qt.Key.Key_Down)
 
         assert tab.search_box.results.currentRow() == 1
+
+    def test_a_long_result_list_shows_six_rows(self, tab):
+        """C05: a maximum height alone let the page squeeze the list to three rows."""
+        results = tab.search_box.results
+        tab.search_box.input.setText("Field")
+        assert results.count() > 6
+
+        expected = 6 * metric_row_height(results) + 2 * SPACING.xxs
+        assert results.minimumHeight() == expected
+        assert results.maximumHeight() == expected
+
+    def test_a_short_result_list_is_only_as_tall_as_its_rows(self, tab):
+        results = tab.search_box.results
+        tab.search_box.input.setText("zzz-nothing-matches-this")
+        assert results.count() == 1
+
+        expected = metric_row_height(results) + 2 * SPACING.xxs
+        assert results.minimumHeight() == expected
+        assert results.maximumHeight() == expected
 
     def test_return_with_nothing_listed_emits_nothing(self, qtbot):
         box = SettingsSearchBox()

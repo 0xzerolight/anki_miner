@@ -39,6 +39,7 @@ class PitchSettingsPanel(_SourceChainSettingsPanel):
     """Reorderable chain of first-hit-wins pitch accent sources."""
 
     ANCHOR_NAMESPACE = "pitch"
+    _RECOMMENDED_KIND = "pitch"
 
     _SCAN_ERROR_LABEL = "Pitch registry scan failed"
     _REMOVE_ERROR_NOUN = "pitch source folder"
@@ -91,6 +92,8 @@ class PitchSettingsPanel(_SourceChainSettingsPanel):
                 move_down_tooltip=self.tr("Move down (checked after the rows above)"),
                 more=self.tr("More"),
                 more_tooltip=self.tr("More actions"),
+                empty=self.tr("No pitch accent lists yet."),
+                download=self.tr("Download recommended"),
             ),
             entries=self.tr("%1 entries"),
             enabled=self.tr("Enabled"),

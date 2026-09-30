@@ -276,3 +276,130 @@ def test_add_widget_anchors_only_when_asked(qapp, qtbot):
     anchors = panel.setting_anchors()
     assert [a.stable_id for a in anchors] == ["demo.excluded_decks"]
     assert anchors[0].focus_widget is panel.decks
+
+
+# ---------------------------------------------------------------------------
+# Render order equals call order (C01, UI/UX audit 2026-09-29)
+# ---------------------------------------------------------------------------
+
+
+def _top_in(panel, widget) -> int:
+    from PyQt6.QtCore import QPoint
+
+    return widget.mapTo(panel, QPoint(0, 0)).y()
+
+
+def test_add_widget_renders_between_the_fields_around_it(qapp, qtbot):
+    """A status line or button added after a row must sit under that row."""
+    panel = FormPanel("Test")
+    qtbot.addWidget(panel)
+    first = QCheckBox("first")
+    panel.add_field("First", first)
+    status = QLabel("status line")
+    panel.add_widget(status)
+    second = QCheckBox("second")
+    panel.add_field("Second", second)
+    panel.resize(600, 400)
+    panel.show()
+    qtbot.waitExposed(panel)
+
+    assert _top_in(panel, first) < _top_in(panel, status) < _top_in(panel, second)
+
+
+def test_add_layout_renders_between_the_fields_around_it(qapp, qtbot):
+    from PyQt6.QtWidgets import QHBoxLayout, QPushButton
+
+    panel = FormPanel("Test")
+    qtbot.addWidget(panel)
+    first = QCheckBox("first")
+    panel.add_field("First", first)
+    row = QHBoxLayout()
+    button = QPushButton("Action")
+    row.addWidget(button)
+    panel.add_layout(row)
+    second = QCheckBox("second")
+    panel.add_field("Second", second)
+    panel.resize(600, 400)
+    panel.show()
+    qtbot.waitExposed(panel)
+
+    assert _top_in(panel, first) < _top_in(panel, button) < _top_in(panel, second)
+
+
+def test_a_field_after_a_widget_lands_in_a_fresh_form(qapp, qtbot):
+    panel = FormPanel("Test")
+    qtbot.addWidget(panel)
+    panel.add_field("First", QCheckBox())
+    panel.add_widget(QLabel("between"))
+    panel.add_field("Second", QCheckBox())
+
+    forms = [item for kind, item in _layout_sequence(panel.main_layout) if kind == "form"]
+    assert [form.rowCount() for form in forms] == [1, 1]
+
+
+def test_every_section_shares_one_label_column(qapp, qtbot):
+    """C02: sections open their own forms, but inputs still start at one x."""
+    from PyQt6.QtCore import QPoint
+
+    panel = FormPanel("Test")
+    qtbot.addWidget(panel)
+    short_input = QLineEdit()
+    panel.add_field("A", short_input)
+    panel.add_section("Next")
+    long_input = QLineEdit()
+    panel.add_field("A much longer label than the first one", long_input)
+    panel.resize(900, 400)
+    panel.show()
+    qtbot.waitExposed(panel)
+
+    assert short_input.mapTo(panel, QPoint(0, 0)).x() == long_input.mapTo(panel, QPoint(0, 0)).x()
+
+
+def test_a_hidden_row_does_not_widen_the_label_column(qapp, qtbot):
+    panel = FormPanel("Test")
+    qtbot.addWidget(panel)
+    visible_input = QLineEdit()
+    panel.add_field("Short", visible_input)
+    hidden_input = QLineEdit()
+    panel.add_field("An extremely long label that a language gate hides", hidden_input)
+    form = panel._active_form_layout
+    hidden_label = form.labelForField(hidden_input)
+    hidden_label.setVisible(False)
+    hidden_input.setVisible(False)
+    panel.resize(900, 400)
+    panel.show()
+    qtbot.waitExposed(panel)
+
+    visible_label = form.labelForField(visible_input)
+    assert visible_label.minimumWidth() < hidden_label.sizeHint().width()
+
+
+def test_a_section_can_carry_a_button_in_its_heading(qapp, qtbot):
+    from PyQt6.QtCore import QPoint
+    from PyQt6.QtWidgets import QPushButton
+
+    panel = FormPanel("Test")
+    qtbot.addWidget(panel)
+    button = QPushButton("Fill")
+    panel.add_section("Mappings", trailing=button)
+    field = QLineEdit()
+    panel.add_field("Word", field)
+    panel.resize(700, 300)
+    panel.show()
+    qtbot.waitExposed(panel)
+
+    heading = panel._active_section_label
+    assert heading is not None and heading.text() == "Mappings"
+    assert abs(button.mapTo(panel, QPoint(0, 0)).y() - heading.mapTo(panel, QPoint(0, 0)).y()) < button.height()
+    assert button.mapTo(panel, QPoint(0, 0)).y() < field.mapTo(panel, QPoint(0, 0)).y()
+
+
+def test_section_synonyms_are_searchable_on_its_rows(qapp, qtbot):
+    panel = _AnchoredPanel("Panel")
+    qtbot.addWidget(panel)
+    panel.add_section("Extra Fields", synonyms=("Auxiliary Data Fields",))
+    panel.pitch_input = QLineEdit()
+    panel.add_field("Pitch", panel.pitch_input)
+
+    (anchor,) = panel.setting_anchors()
+    assert "Auxiliary Data Fields" in anchor.search_text()

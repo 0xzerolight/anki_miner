@@ -120,6 +120,15 @@ class ChainListLabels:
     move_down_tooltip: str = ""
     #: Falls back to ``more`` (mirroring ``_make_square_button``) when unset.
     more_tooltip: str = ""
+    #: One line shown in place of the list while the chain is empty (C09),
+    #: e.g. "No frequency lists yet.". Empty keeps the (empty) list instead.
+    empty: str = ""
+    #: Caption of the button that downloads only this family's recommended
+    #: resources (C09). Shown with ``empty`` when the catalogue has any.
+    download: str = ""
+    #: Tooltip on the explanation line: the exact rule, when the visible line
+    #: says it more simply (C16).
+    explanation_tooltip: str = ""
 
 
 @dataclass(frozen=True, eq=False)
@@ -159,11 +168,17 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
     # wires this for reorder/toggle; remove uses an outcome-aware synchronous
     # commit callback so it can distinguish pre-save from post-save failure.
     chain_changed = pyqtSignal()
+    #: The empty state's "Download recommended" was clicked; carries
+    #: ``_RECOMMENDED_KIND``. SettingsTab re-emits it for the window.
+    download_recommended_requested = pyqtSignal(str)
 
     # --- Class-level knobs the subclass sets (declared for the type checker) ---
     # WARNING/ERROR log labels (English, not user-facing → not translated).
     _SCAN_ERROR_LABEL: ClassVar[str] = "Registry scan failed"
     _REMOVE_ERROR_NOUN: ClassVar[str] = "folder"
+    #: ``ResourceSpec.kind`` this panel's empty state downloads ("dict",
+    #: "freq", "pitch"); "" means the family has no catalogue download (C09).
+    _RECOMMENDED_KIND: ClassVar[str] = ""
 
     #: Glyph on the remove control. The move arrows live on the rows, so their
     #: glyphs live with them in ``chain_priority_list``.
@@ -183,6 +198,9 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
     _explanation_label: QLabel
     _add_btn: ModernButton
     _remove_btn: ModernButton
+    _empty_row: QWidget
+    _empty_label: QLabel
+    _download_recommended_btn: ModernButton
     #: The quiet "More" tool button holding ``extra_actions``, or ``None`` when
     #: the panel was built with none.
     _more_btn: ModernButton | None
@@ -220,6 +238,10 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
         self._remove_mutation_token: MutationToken | None = None
         self._remove_chain_commit: Callable[[tuple[Any, ...]], ConfigCommitResult] | None = None
         self._after_scan_callbacks: list[Callable[[], None]] = []
+        # C09: whether the active language's catalogue has this family, and
+        # whether reorder/remove are currently allowed (✕ also needs a selection).
+        self._recommended_available = False
+        self._reorder_enabled = True
         # Set while the base is repopulating the list. Rebuilding removes and
         # re-adds every row, so anything that reads the *visual* order has to
         # stand down until the render finishes -- otherwise a rebuild would look
@@ -261,6 +283,7 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
         self._explanation_label = QLabel(labels.explanation)
         self._explanation_label.setObjectName("helper-text")
         self._explanation_label.setWordWrap(True)
+        self._explanation_label.setToolTip(labels.explanation_tooltip)
         layout.addWidget(self._explanation_label)
 
         # The move controls live on the rows, so their copy is panel-wide state
@@ -276,6 +299,27 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
         self._list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._list.order_changed.connect(self._sync_chain_from_visual_order)
         layout.addWidget(self._list)
+
+        # The empty state (C09): one line instead of an empty bordered box,
+        # plus the download for this family only when the catalogue has one.
+        self._empty_row = QWidget()
+        empty_layout = QHBoxLayout(self._empty_row)
+        empty_layout.setContentsMargins(0, 0, 0, 0)
+        empty_layout.setSpacing(SPACING.xs)
+        self._empty_label = QLabel(labels.empty)
+        self._empty_label.setObjectName("helper-text")
+        self._empty_label.setWordWrap(True)
+        empty_layout.addWidget(self._empty_label)
+        self._download_recommended_btn = ModernButton(labels.download, variant="secondary")
+        self._download_recommended_btn.clicked.connect(
+            lambda: self.download_recommended_requested.emit(self._RECOMMENDED_KIND)
+        )
+        empty_layout.addWidget(self._download_recommended_btn)
+        empty_layout.addStretch()
+        self._empty_row.setVisible(False)
+        layout.addWidget(self._empty_row)
+        # ✕ acts on the selected row, so it is offered only while one is.
+        self._list.itemSelectionChanged.connect(self._sync_remove_enabled)
 
         toolbar = QHBoxLayout()
         toolbar.setSpacing(SPACING.xs)
@@ -309,6 +353,25 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
         button.setAccessibleName(name)
         button.setToolTip(tooltip or name)
         return button
+
+    def set_recommended_available(self, available: bool) -> None:
+        """Whether the active language's catalogue has this family (SettingsTab, per load)."""
+        self._recommended_available = available
+        self._sync_empty_state()
+
+    def _sync_empty_state(self) -> None:
+        """Show the one-line empty state instead of an empty list (C09)."""
+        empty = not self._chain and bool(self._empty_label.text())
+        self._list.setVisible(not empty)
+        self._empty_row.setVisible(empty)
+        self._download_recommended_btn.setVisible(
+            empty and self._recommended_available and bool(self._RECOMMENDED_KIND)
+        )
+
+    def _sync_remove_enabled(self) -> None:
+        """✕ only while a real row is selected and no mutation holds the list (C09)."""
+        selected = bool(self._list.selectedItems()) and self._row_widget(self._list.currentRow()) is not None
+        self._remove_btn.setEnabled(self._reorder_enabled and selected)
 
     # ------------------------------------------------------------------
     # First-show / refresh lifecycle
@@ -526,7 +589,8 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
         last = len(rows) - 1
         for index, row in enumerate(rows):
             row.set_move_enabled(up=enabled and index > 0, down=enabled and index < last)
-        self._remove_btn.setEnabled(enabled)
+        self._reorder_enabled = enabled
+        self._sync_remove_enabled()
         # Dragging is a reorder like any other, so it answers to the same gate.
         self._list.setDragEnabled(enabled)
 
@@ -1050,6 +1114,7 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
             self._list.setUpdatesEnabled(True)
             self._rebuilding = False
             self._sync_mutation_controls()
+            self._sync_empty_state()
 
     # ------------------------------------------------------------------
     # Subclass hooks

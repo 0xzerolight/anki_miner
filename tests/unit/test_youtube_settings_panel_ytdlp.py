@@ -59,3 +59,47 @@ def test_absent_ytdlp_turns_the_button_into_a_download(qtbot):
 
     panel.set_ytdlp_present(True)
     assert panel.update_ytdlp_button.text() == "Update yt-dlp now"
+
+
+def test_ytdlp_status_label_is_not_success_green(qtbot):
+    from anki_miner.gui.widgets.panels.youtube_settings_panel import YouTubeSettingsPanel
+
+    panel = YouTubeSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_ytdlp_status("yt-dlp could not be updated")
+
+    assert panel.ytdlp_status_label.objectName() == "validation-status"
+    assert panel.ytdlp_status_label.property("status") == "info"
+
+
+def test_the_ytdlp_path_row_is_gone(qtbot):
+    """D15 item 3: the app manages yt-dlp itself; a custom path is config-only."""
+    from anki_miner.gui.widgets.panels.youtube_settings_panel import YouTubeSettingsPanel
+
+    panel = YouTubeSettingsPanel()
+    qtbot.addWidget(panel)
+    assert not hasattr(panel, "ytdlp_location_selector")
+
+
+def test_a_hand_set_ytdlp_path_survives_a_save(qtbot, tmp_path):
+    from dataclasses import replace
+
+    from anki_miner.config import AnkiMinerConfig
+    from anki_miner.gui.widgets.panels.youtube_settings_panel import YouTubeSettingsPanel
+
+    panel = YouTubeSettingsPanel()
+    qtbot.addWidget(panel)
+    config = replace(AnkiMinerConfig(), ytdlp_location=tmp_path / "yt-dlp")
+    panel.load_from_config(config)
+    assert panel.contribute(config).ytdlp_location == tmp_path / "yt-dlp"
+
+
+def test_a_validation_verdict_reads_as_a_version(qtbot):
+    """C16: "2026.08.19 [app-managed]" becomes "Version 2026.08.19"; the origin is the tooltip."""
+    from anki_miner.gui.widgets.panels.youtube_settings_panel import YouTubeSettingsPanel
+
+    panel = YouTubeSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_ytdlp_status("2026.08.19 [app-managed]")
+    assert panel.ytdlp_status_label.text() == "Version 2026.08.19"
+    assert panel.ytdlp_status_label.toolTip() == "Downloaded by Anki Miner"

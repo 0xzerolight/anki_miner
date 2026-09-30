@@ -16,10 +16,13 @@ Consumers resolve where they install shortcuts:
 Ctrl+Enter (confirm / run this screen's main action) is deliberately not here:
 it is bound at a dozen sites and printed in button tooltips, so it stays fixed
 (``keyboard_shortcuts.primary_action_shortcut``).
+Ctrl+, (Open Settings) is a fixed alias too, since C07 (UI/UX audit 2026-09-29):
+it did exactly what Go to Settings does.
 
 :func:`binding_problem` is the only validator, and the Settings -> Keyboard
-page is its only caller. :func:`resolve_bindings` parses and never validates:
-a hand-edited file gets exactly the keys it names.
+page is its only caller. :func:`resolve_bindings` parses and never validates,
+with one exception: an app action's override on the fixed Ctrl+, alias is
+ignored. Otherwise a hand-edited file gets exactly the keys it names.
 """
 
 from __future__ import annotations
@@ -41,6 +44,12 @@ TRANSLATION_CONTEXT = "KeyBindings"
 #: top-level window of its own, so the main window's keys never fire in it.
 CURATOR = "curator"
 APP = "app"
+
+#: Ctrl+, opens Settings everywhere: a fixed alias of "Go to Settings", not a
+#: remappable row (C07). resolve_bindings still returns it under this id, so
+#: MainWindow and the About card keep reading keys["app.open_settings"].
+OPEN_SETTINGS_ACTION_ID = "app.open_settings"
+OPEN_SETTINGS_KEY = "Ctrl+,"
 
 _PORTABLE = QKeySequence.SequenceFormat.PortableText
 _NATIVE = QKeySequence.SequenceFormat.NativeText
@@ -82,7 +91,6 @@ KEY_ACTIONS: tuple[KeyAction, ...] = (
     KeyAction("curator.exclude_visible", CURATOR, QT_TRANSLATE_NOOP("KeyBindings", "Exclude visible"), "Ctrl+D"),
     KeyAction("curator.next_word", CURATOR, QT_TRANSLATE_NOOP("KeyBindings", "Next word"), ""),
     KeyAction("curator.previous_word", CURATOR, QT_TRANSLATE_NOOP("KeyBindings", "Previous word"), ""),
-    KeyAction("app.open_settings", APP, QT_TRANSLATE_NOOP("KeyBindings", "Open Settings"), "Ctrl+,"),
     KeyAction("app.usage_guide", APP, QT_TRANSLATE_NOOP("KeyBindings", "Usage Guide"), "F1"),
     KeyAction(tab_action_id("video"), APP, QT_TRANSLATE_NOOP("KeyBindings", "Go to Video"), "Ctrl+1"),
     KeyAction(tab_action_id("audiobook"), APP, QT_TRANSLATE_NOOP("KeyBindings", "Go to Audiobooks"), "Ctrl+2"),
@@ -123,18 +131,26 @@ def resolve_bindings(overrides: Mapping[str, str]) -> dict[str, QKeySequence]:
 
     An id no action answers to (a hand edit, another version's action) is
     ignored; ``""`` unbinds; a sequence Qt cannot read as one chord keeps the
-    default. Never raises on config content.
+    default. Never raises on config content. The Open Settings alias is always
+    Ctrl+,; an app action's saved override on Ctrl+, is ignored (C07).
     """
     keys = {action.id: default_sequence(action.id) for action in KEY_ACTIONS}
+    keys[OPEN_SETTINGS_ACTION_ID] = QKeySequence.fromString(OPEN_SETTINGS_KEY, _PORTABLE)
     for action_id, text in overrides.items():
-        if action_id not in keys:
+        if action_id not in _BY_ID:
             continue
         if text == "":
             keys[action_id] = QKeySequence()
             continue
         parsed = _parse(text)
-        if parsed is not None:
-            keys[action_id] = parsed
+        if parsed is None:
+            continue
+        # A config saved before C07 may give Ctrl+, to another app action. The
+        # fixed alias has it now, and two window shortcuts on one key both go
+        # dead (activatedAmbiguously), so that action keeps its default.
+        if _BY_ID[action_id].group == APP and parsed.toString(_PORTABLE) == OPEN_SETTINGS_KEY:
+            continue
+        keys[action_id] = parsed
     return keys
 
 
@@ -191,9 +207,11 @@ def _reserved(group: str) -> list[QKeySequence]:
         ]
     # Keys a screen inside the main window already binds: the primary action on
     # every screen, Copy on every table, Ctrl+O on Single/Batch, Ctrl+Shift+A on
-    # Batch, Alt+Up/Down on the queues. A window-wide duplicate kills both.
+    # Batch, Alt+Up/Down on the queues, and Ctrl+, (the fixed Open Settings
+    # alias). A window-wide duplicate kills both.
     return [
         *_sequences("Ctrl+Return", "Ctrl+Enter", "Ctrl+O", "Ctrl+Shift+A", "Alt+Up", "Alt+Down"),
+        *_sequences(OPEN_SETTINGS_KEY),
         *copy_keys,
     ]
 
@@ -256,9 +274,9 @@ def about_rows(keys: Mapping[str, QKeySequence]) -> list[tuple[str, str]]:
             if not keys[tab_id].isEmpty():
                 label = QCoreApplication.translate(TRANSLATION_CONTEXT, _BY_ID[tab_id].label)
                 rows.append((display_text(keys[tab_id]), label))
-    if not keys["app.open_settings"].isEmpty():
+    if not keys[OPEN_SETTINGS_ACTION_ID].isEmpty():
         open_settings = QCoreApplication.translate("AboutDialog", "Open Settings")
-        rows.append((display_text(keys["app.open_settings"]), open_settings))
+        rows.append((display_text(keys[OPEN_SETTINGS_ACTION_ID]), open_settings))
     main_action = QCoreApplication.translate("AboutDialog", "Run this screen's main action")
     rows.append((primary_action_display(), main_action))
     if not keys["app.usage_guide"].isEmpty():

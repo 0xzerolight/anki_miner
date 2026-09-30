@@ -8,13 +8,13 @@ from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
-    QDoubleSpinBox,
     QHBoxLayout,
     QInputDialog,
     QLabel,
     QListWidget,
     QPushButton,
     QSpinBox,
+    QVBoxLayout,
     QWidget,
 )
 
@@ -69,11 +69,11 @@ SCRIPT_FILTER_HELPERS: dict[str, str] = {
 }
 
 #: Capabilities whose profile supplies the option-driven script-filter rows.
-#: Japanese keeps its own hand-built rows under ``kana_filters``: they carry
-#: helper prose, search anchors derived from their panel attributes, and a third
-#: option (``mixed_kana_only``) that deliberately has no checkbox because it has
-#: no config field. Rebuilding those from options would move ja's extracted
-#: strings and anchors, and a ja user must see zero change.
+#: Japanese keeps its own hand-built Script Type combo under ``kana_filters``
+#: (C12): its four items are the four states of the two booleans, and the
+#: field-less third option (``mixed_kana_only``) is the "both on" item. A combo
+#: built from Korean's options could not show a saved "both on" state, which is
+#: why Korean keeps its option-driven checkboxes.
 _OPTION_DRIVEN_FILTER_CAPABILITIES = ("hangul_filters",)
 
 
@@ -110,13 +110,12 @@ class FilteringSettingsPanel(FormPanel):
 
     Provides:
     - Word frequency filtering options
-    - Known-words database toggle, deck exclusions, and cache rebuild (Issue #38)
+    - Known-words database toggle and deck exclusions (Issue #38); the cache
+      rebuild lives in the Manage Known Words dialog (C13)
 
     Signals:
         fetch_decks_requested: Emitted when the deck list must be fetched from
             AnkiConnect to populate the "Add Deck…" picker.
-        rebuild_known_words_requested: Emitted when the user asks to clear the
-            local known-words cache.
         manage_known_words_requested: Emitted when the user opens the Manage
             Known Words dialog (Issue #42).
     """
@@ -124,7 +123,6 @@ class FilteringSettingsPanel(FormPanel):
     ANCHOR_NAMESPACE = "filtering"
 
     fetch_decks_requested = pyqtSignal()
-    rebuild_known_words_requested = pyqtSignal()
     manage_known_words_requested = pyqtSignal()
 
     def __init__(self, parent=None):
@@ -132,9 +130,6 @@ class FilteringSettingsPanel(FormPanel):
         # Most recently fetched deck names. Every picker open refreshes them
         # first because the connected endpoint or Anki collection may change.
         self._available_decks: list[str] = []
-        # Whether SettingsTab currently has a rebuild running off-thread; see
-        # sync_rebuild_known_words_button_state.
-        self._rebuild_in_flight = False
         super().__init__(self.tr("Word Filters"), parent=parent)
         self._setup_fields()
 
@@ -237,31 +232,15 @@ class FilteringSettingsPanel(FormPanel):
         self.use_known_words_db_checkbox.setToolTip(
             self.tr(
                 "Words stay known after their Anki cards are deleted or moved to an "
-                "excluded deck. Rebuild forgets them."
+                "excluded deck. Rebuild (in Manage Known Words) forgets them."
             )
         )
-        self.use_known_words_db_checkbox.toggled.connect(self.sync_rebuild_known_words_button_state)
         self.add_field("", self.use_known_words_db_checkbox)
 
-        # Rebuild button: clears the local cache so deck exclusions take effect.
-        # The cache is additive (never removes), so a deck synced before being
-        # excluded would otherwise stay cached forever (Issue #38).
-        rebuild_row = QHBoxLayout()
-        self.rebuild_known_words_button = QPushButton(self.tr("Rebuild Known Words DB"))
-        self.rebuild_known_words_button.setToolTip(
-            self.tr(
-                "Clear the local known-words cache so it re-syncs from Anki on the "
-                "next run. Needed for deck exclusions below to take effect when the "
-                "local cache is enabled."
-            )
-        )
-        self.rebuild_known_words_button.clicked.connect(self.rebuild_known_words_requested.emit)
-        # Rebuild has nothing to clear while the cache itself is off (Task 7);
-        # sync the initial state now that the button exists — construction
-        # leaves the checkbox unchecked, and setChecked(False) below fires no
-        # signal for a value that was already False.
-        self.sync_rebuild_known_words_button_state()
-        rebuild_row.addWidget(self.rebuild_known_words_button)
+        # Rebuild (clearing the additive local cache so deck exclusions take
+        # effect, Issue #38) sits in the Manage Known Words dialog beside the
+        # "cached from Anki" count it clears (C13).
+        known_words_row = QHBoxLayout()
 
         # Manage the user-curated known/ignore list (Issue #42): view, remove,
         # export, reset words added from the Word Curator.
@@ -273,9 +252,9 @@ class FilteringSettingsPanel(FormPanel):
             )
         )
         self.manage_known_words_button.clicked.connect(self.manage_known_words_requested.emit)
-        rebuild_row.addWidget(self.manage_known_words_button)
-        rebuild_row.addStretch()
-        self.add_layout(rebuild_row)
+        known_words_row.addWidget(self.manage_known_words_button)
+        known_words_row.addStretch()
+        self.add_layout(known_words_row)
 
         # Kana-variant fold: a kana-spelled word (うなずく) counts as known when
         # the kanji dictionary form (頷く) is already carded. Script-gated in
@@ -310,9 +289,20 @@ class FilteringSettingsPanel(FormPanel):
         configure_data_view(self.excluded_decks_list)
         install_copy_rows(self.excluded_decks_list)
         self.excluded_decks_list.setMaximumHeight(_EXCLUDED_DECK_ROWS * data_row_height(self.excluded_decks_list))
+        # C09: an empty list is one line, not an empty bordered box.
+        self.excluded_decks_empty_label = QLabel(self.tr("No decks excluded."))
+        self.excluded_decks_empty_label.setObjectName("helper-text")
+        excluded_container = QWidget()
+        excluded_layout = QVBoxLayout(excluded_container)
+        excluded_layout.setContentsMargins(0, 0, 0, 0)
+        excluded_layout.addWidget(self.excluded_decks_list)
+        excluded_layout.addWidget(self.excluded_decks_empty_label)
+        # The anchor is the container, so search still finds the row while the
+        # list itself is hidden (empty).
         self.add_widget(
-            self.excluded_decks_list,
+            excluded_container,
             anchor="excluded_decks",
+            anchor_focus=self.excluded_decks_list,
             anchor_text=lambda: (excluded_helper.text(),),
         )
 
@@ -325,8 +315,18 @@ class FilteringSettingsPanel(FormPanel):
         excluded_buttons.addWidget(self.remove_deck_button)
         excluded_buttons.addStretch()
         self.add_layout(excluded_buttons)
+        self.excluded_decks_list.itemSelectionChanged.connect(self._sync_excluded_decks)
+        list_model = self.excluded_decks_list.model()
+        if list_model is not None:
+            list_model.rowsInserted.connect(self._sync_excluded_decks)
+            list_model.rowsRemoved.connect(self._sync_excluded_decks)
+            # clear() resets the model without a rowsRemoved.
+            list_model.modelReset.connect(self._sync_excluded_decks)
+        self._sync_excluded_decks()
 
-        # Word Lists section
+        # Word Lists section. The chosen file IS the switch (D15 item 1):
+        # choosing a file turns the list on, clearing it turns it off. The two
+        # use_* config fields stay, derived from the field on every save.
         self.add_section(self.tr("Word Lists"))
 
         self.blacklist_selector = FileSelector(
@@ -335,11 +335,9 @@ class FilteringSettingsPanel(FormPanel):
         self.add_field(
             self.tr("Blacklist File"),
             self.blacklist_selector,
-            helper=self.tr("Text file with one word per line to always skip"),
+            helper=self.tr("Text file with one word per line to always skip. Leave empty to skip nothing."),
+            anchor_text=lambda: ("Enable Blacklist",),
         )
-
-        self.use_blacklist_checkbox = QCheckBox(self.tr("Enable Blacklist"))
-        self.add_field("", self.use_blacklist_checkbox)
 
         self.whitelist_selector = FileSelector(
             label="", file_mode=True, placeholder=self.tr("Select whitelist file...")
@@ -350,12 +348,10 @@ class FilteringSettingsPanel(FormPanel):
             helper=self.tr(
                 "Text file with one word per line to force-include, bypassing frequency, "
                 "script, length and other filters. A word must still have a dictionary entry "
-                "and not already be in Anki or your known-words list."
+                "and not already be in Anki or your known-words list. Leave empty to force nothing."
             ),
+            anchor_text=lambda: ("Enable Whitelist",),
         )
-
-        self.use_whitelist_checkbox = QCheckBox(self.tr("Enable Whitelist"))
-        self.add_field("", self.use_whitelist_checkbox)
 
         # Name Wordsets section (Issue #59). Bundled proper-noun lists derived
         # from JMnedict; checking one excludes those names from mining. Catches
@@ -377,82 +373,65 @@ class FilteringSettingsPanel(FormPanel):
         self._wordsets_helper.setWordWrap(True)
         self.add_widget(self._wordsets_helper)
 
-        self.wordset_checkboxes: dict[str, QCheckBox] = {}
-        for info in load_wordset_catalog():
-            cb = QCheckBox(tr_format(self.tr("%1 (%2)"), info.label, f"{info.count:,}"))
-            cb.setToolTip(
-                tr_format(
-                    self.tr("Exclude the bundled '%1' wordset (%2 entries) from mining."), info.label, f"{info.count:,}"
-                )
+        # One box for all four bundled lists (D15 item 2). Checked = every
+        # list is excluded, unchecked = none; a subset saved before this change
+        # shows partly checked until the user clicks, and then means "all".
+        catalog = load_wordset_catalog()
+        self._wordset_ids: tuple[str, ...] = tuple(info.id for info in catalog)
+        self._partial_wordsets: tuple[str, ...] = ()
+        self.names_checkbox = QCheckBox(self.tr("Skip names of people, places and companies"))
+        self.names_checkbox.setToolTip(
+            tr_format(
+                self.tr("Excludes the bundled name lists from mining: %1."),
+                ", ".join(f"{info.label} ({info.count:,})" for info in catalog),
             )
-            self.wordset_checkboxes[info.id] = cb
-            # Built in a loop, so there is no panel attribute to derive an id
-            # from; the catalog id is the stable name.
-            self.add_field("", cb, anchor=f"wordset_{info.id}")
-
-        # Sentence Rule section. Folds the old separate "Deduplicate by
-        # Sentence" and "Only Mine i+1 Sentences" checkboxes into one choice --
-        # i+1 already overrode dedup in EpisodeProcessor, so the pair never
-        # expressed four independent states.
-        self.add_section(self.tr("Sentence Rule"))
-
-        self.sentence_rule_combo = QComboBox()
-        self.sentence_rule_combo.addItem(self.tr("Mine every unknown word"), "all")
-        self.sentence_rule_combo.addItem(self.tr("One card per sentence"), "dedup")
-        self.sentence_rule_combo.setItemData(
-            1,
-            self.tr(
-                "Mines at most one word per example sentence — the first one found in that sentence. "
-                "Every other word sharing it is skipped."
-            ),
-            Qt.ItemDataRole.ToolTipRole,
         )
-        self.sentence_rule_combo.addItem(self.tr("Only i+1 sentences (exactly one unknown word)"), "i_plus_one")
-        self.sentence_rule_combo.setItemData(
-            2,
-            self.tr(
-                "Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication."
-            ),
-            Qt.ItemDataRole.ToolTipRole,
-        )
+        self.names_checkbox.clicked.connect(self._on_names_clicked)
         self.add_field(
             "",
-            self.sentence_rule_combo,
-            anchor_text=self._sentence_rule_search_text,
+            self.names_checkbox,
+            anchor_text=lambda: tuple(info.label for info in catalog),
         )
 
         # Script Type section (Issue #57)
         self.add_section(self.tr("Script Type"))
         self._script_type_section_label = self._active_section_label
 
-        self.exclude_hiragana_only_checkbox = QCheckBox(self.tr("Exclude Hiragana-Only Words"))
-        self.add_field(
-            "",
-            self.exclude_hiragana_only_checkbox,
-            helper=self.tr(
+        # One choice over the two kana booleans (C12). Both on also skips words
+        # that mix the two kana scripts (サボる, ヤバい): ja's third filter
+        # option, mixed_kana_only, has no field of its own, which is why it was
+        # invisible as two checkboxes.
+        self.script_type_combo = QComboBox()
+        self.script_type_combo.addItem(self.tr("Keep all words"), "keep")
+        self.script_type_combo.addItem(self.tr("Skip hiragana-only words"), "hiragana")
+        self.script_type_combo.setItemData(
+            1,
+            self.tr(
                 "Skip words written entirely in hiragana (e.g. する, これ), including "
                 "long-vowel spellings like すごーい. Focuses the deck on kanji vocabulary."
             ),
+            Qt.ItemDataRole.ToolTipRole,
         )
-
-        self.exclude_katakana_only_checkbox = QCheckBox(self.tr("Exclude Katakana-Only Words"))
-        self.add_field(
-            "",
-            self.exclude_katakana_only_checkbox,
-            helper=self.tr(
-                "Skip words written entirely in katakana (e.g. コーヒー). Tick both boxes "
-                "to also skip words mixing the two kana scripts (サボる, ヤバい)."
-            ),
+        self.script_type_combo.addItem(self.tr("Skip katakana-only words"), "katakana")
+        self.script_type_combo.setItemData(
+            2, self.tr("Skip words written entirely in katakana (e.g. コーヒー)."), Qt.ItemDataRole.ToolTipRole
         )
+        self.script_type_combo.addItem(self.tr("Skip all kana-only words (including mixed)"), "all_kana")
+        self.script_type_combo.setItemData(
+            3,
+            self.tr("Skip every word written without kanji, including words that mix hiragana and katakana."),
+            Qt.ItemDataRole.ToolTipRole,
+        )
+        self.add_field("", self.script_type_combo, anchor_text=self._script_type_search_text)
 
         # Option-driven script filters. The Korean pair binds to the SAME two
-        # language-scoped booleans the kana rows above use, and the mapping is
-        # counter-intuitive (hangul-only -> exclude_hiragana_only_words), so the
+        # language-scoped booleans the Script Type combo above uses, and the
+        # mapping is counter-intuitive (hangul-only -> exclude_hiragana_only_words), so the
         # binding is taken from the profile's own options instead of restated
         # here: the panel and WordFilterService then read one source of truth.
         # It gets a heading of its own because "Script Type" above is gated on
         # kana_filters and hides here, which would leave these rows reading as
-        # part of "Sentence Rule".
+        # part of the section above.
         self.add_section(self.tr("Script Type"))
         self._script_filter_section_label = self._active_section_label
 
@@ -471,38 +450,6 @@ class FilteringSettingsPanel(FormPanel):
             )
             self.script_filter_checkboxes[option.option_id] = checkbox
             self._script_filter_fields[option.option_id] = option.config_field
-
-        # Sentence Length section (Issue #33). No master toggle: the filter is
-        # active whenever either cap below is above 0.
-        self.add_section(self.tr("Sentence Length"))
-
-        self.sentence_length_helper = QLabel(self.tr("Set either limit above 0 to turn the filter on."))
-        self.sentence_length_helper.setObjectName("helper-text")
-        self.sentence_length_helper.setWordWrap(True)
-        self.add_widget(self.sentence_length_helper)
-
-        self.max_sentence_duration_spinbox = QDoubleSpinBox()
-        self.max_sentence_duration_spinbox.setRange(0.0, 600.0)
-        self.max_sentence_duration_spinbox.setDecimals(1)
-        self.max_sentence_duration_spinbox.setSingleStep(0.5)
-        self.max_sentence_duration_spinbox.setSuffix(self.tr(" s"))
-        self.max_sentence_duration_spinbox.setSpecialValueText(self.tr("No limit"))
-        self.add_field(
-            self.tr("Max Sentence Duration"),
-            self.max_sentence_duration_spinbox,
-            helper=self.tr(
-                "Drops cards whose example sentence audio is longer than this many seconds. Set to 0 for no limit."
-            ),
-        )
-
-        self.max_sentence_chars_spinbox = QSpinBox()
-        self.max_sentence_chars_spinbox.setRange(0, 1000)
-        self.max_sentence_chars_spinbox.setSpecialValueText(self.tr("No limit"))
-        self.add_field(
-            self.tr("Max Sentence Characters"),
-            self.max_sentence_chars_spinbox,
-            helper=self.tr("Drops cards whose sentence text exceeds this many characters. Set to 0 for no limit."),
-        )
 
         # Reading section: per-book minimum word occurrence (Reading tab).
         self.add_section(self.tr("Reading"))
@@ -523,11 +470,7 @@ class FilteringSettingsPanel(FormPanel):
         # field never leaves a dangling caption behind.
         self._language_gate_pairs.extend(
             (w, "kana_filters")
-            for cb in (
-                self.exclude_hiragana_only_checkbox,
-                self.exclude_katakana_only_checkbox,
-                self.match_kana_variants_checkbox,
-            )
+            for cb in (self.script_type_combo, self.match_kana_variants_checkbox)
             for w in field_row_widgets(self, cb)
         )
         if self._script_type_section_label is not None:
@@ -554,27 +497,25 @@ class FilteringSettingsPanel(FormPanel):
             self._language_gate_pairs.extend(
                 (self._script_filter_section_label, capability) for capability in _OPTION_DRIVEN_FILTER_CAPABILITIES
             )
-        self._language_gate_pairs.extend(
-            (w, "name_wordsets") for cb in self.wordset_checkboxes.values() for w in field_row_widgets(self, cb)
-        )
+        self._language_gate_pairs.extend((w, "name_wordsets") for w in field_row_widgets(self, self.names_checkbox))
         self._language_gate_pairs.extend(
             (w, "name_wordsets") for w in (self._wordset_section_label, self._wordsets_helper) if w is not None
         )
 
         self.add_stretch()
 
-    def _sentence_rule_search_text(self) -> tuple[str, ...]:
-        """Searchable text for ``sentence_rule_combo``: every item plus its tooltip.
+    #: combo item data -> (exclude_hiragana_only_words, exclude_katakana_only_words).
+    _SCRIPT_TYPE_VALUES: dict[str, tuple[bool, bool]] = {
+        "keep": (False, False),
+        "hiragana": (True, False),
+        "katakana": (False, True),
+        "all_kana": (True, True),
+    }
 
-        The combo has no field label (``add_field("", ...)``), so without this
-        the row's item texts and per-item tooltips (set via ``ItemDataRole.
-        ToolTipRole``) are invisible to search. "dedup" and "deduplicate" are
-        plain English keywords, not translated strings: the tooltip only spells
-        out "deduplication", which contains "dedup" as a substring but not
-        "deduplicate".
-        """
-        parts: list[str] = ["dedup", "deduplicate"]
-        combo = self.sentence_rule_combo
+    def _script_type_search_text(self) -> tuple[str, ...]:
+        """Searchable text for the label-less Script Type combo: items, tips, script names."""
+        parts: list[str] = ["hiragana", "katakana", "kana"]
+        combo = self.script_type_combo
         for index in range(combo.count()):
             parts.append(combo.itemText(index))
             tooltip = combo.itemData(index, Qt.ItemDataRole.ToolTipRole)
@@ -618,6 +559,14 @@ class FilteringSettingsPanel(FormPanel):
         if ok and deck:
             self.excluded_decks_list.addItem(deck)
 
+    def _sync_excluded_decks(self, *_args) -> None:
+        """Empty: one line and Add only. Otherwise the list, and Remove for a selection (C09)."""
+        empty = self.excluded_decks_list.count() == 0
+        self.excluded_decks_list.setVisible(not empty)
+        self.excluded_decks_empty_label.setVisible(empty)
+        self.remove_deck_button.setVisible(not empty)
+        self.remove_deck_button.setEnabled(bool(self.excluded_decks_list.selectedItems()))
+
     def _on_remove_deck_clicked(self) -> None:
         """Remove the currently selected excluded deck."""
         row = self.excluded_decks_list.currentRow()
@@ -642,14 +591,36 @@ class FilteringSettingsPanel(FormPanel):
     # --- Name Wordsets (Issue #59) ---
 
     def get_excluded_wordsets(self) -> tuple[str, ...]:
-        """Return the IDs of the checked name wordsets, in catalog order."""
-        return tuple(set_id for set_id, cb in self.wordset_checkboxes.items() if cb.isChecked())
+        """The excluded name-list ids, in catalog order (D15 item 2)."""
+        state = self.names_checkbox.checkState()
+        if state == Qt.CheckState.Checked:
+            return self._wordset_ids
+        if state == Qt.CheckState.PartiallyChecked:
+            return tuple(set_id for set_id in self._wordset_ids if set_id in self._partial_wordsets)
+        return ()
 
     def set_excluded_wordsets(self, ids: tuple[str, ...]) -> None:
-        """Check the wordset boxes whose IDs are in ``ids``."""
-        wanted = set(ids)
-        for set_id, cb in self.wordset_checkboxes.items():
-            cb.setChecked(set_id in wanted)
+        """Show ``ids``: all -> checked, none -> unchecked, a subset -> partly checked."""
+        wanted = tuple(set_id for set_id in self._wordset_ids if set_id in set(ids))
+        if wanted and len(wanted) == len(self._wordset_ids):
+            self.names_checkbox.setTristate(False)
+            self.names_checkbox.setCheckState(Qt.CheckState.Checked)
+        elif not wanted:
+            self.names_checkbox.setTristate(False)
+            self.names_checkbox.setCheckState(Qt.CheckState.Unchecked)
+        else:
+            self._partial_wordsets = wanted
+            self.names_checkbox.setTristate(True)
+            self.names_checkbox.setCheckState(Qt.CheckState.PartiallyChecked)
+
+    def _on_names_clicked(self, _checked: bool) -> None:
+        """A click is a real choice: leave the partial state for good.
+
+        Qt has already moved a partial box to checked (its tristate cycle is
+        unchecked -> partial -> checked); dropping tristate keeps a later click
+        from ever landing on "partial" again.
+        """
+        self.names_checkbox.setTristate(False)
 
     # --- Frequency rank band ---
 
@@ -722,32 +693,6 @@ class FilteringSettingsPanel(FormPanel):
         """Set the kana-variant fold checkbox."""
         self.match_kana_variants_checkbox.setChecked(value)
 
-    def sync_rebuild_known_words_button_state(self) -> None:
-        """Rebuild only means anything while the cache the checkbox names is on,
-        and only while no rebuild is already running.
-
-        Public: also called by ``SettingsTab`` when a background rebuild finishes,
-        so the button lands back in step with the checkbox instead of being
-        force-enabled regardless of it (the checkbox can be toggled off while a
-        rebuild is still running off-thread). The checkbox-toggled sync and
-        ``load_from_config`` both reach this too, so it must never re-enable the
-        button mid-rebuild -- hence the in-flight flag gates it alongside the
-        checkbox.
-        """
-        self.rebuild_known_words_button.setEnabled(
-            self.use_known_words_db_checkbox.isChecked() and not self._rebuild_in_flight
-        )
-
-    def set_rebuild_known_words_in_flight(self, in_flight: bool) -> None:
-        """Record whether ``SettingsTab`` has a rebuild running off-thread.
-
-        The only public path that flips :attr:`_rebuild_in_flight`; it
-        re-syncs the button immediately so the caller never has to remember to
-        call :meth:`sync_rebuild_known_words_button_state` itself.
-        """
-        self._rebuild_in_flight = in_flight
-        self.sync_rebuild_known_words_button_state()
-
     # --- Word lists ---
 
     def get_blacklist_path(self) -> Path | None:
@@ -760,12 +705,8 @@ class FilteringSettingsPanel(FormPanel):
         self.blacklist_selector.set_path(str(value) if value else "")
 
     def get_use_blacklist(self) -> bool:
-        """Return whether the blacklist is enabled."""
-        return self.use_blacklist_checkbox.isChecked()
-
-    def set_use_blacklist(self, value: bool) -> None:
-        """Set the blacklist-enabled checkbox."""
-        self.use_blacklist_checkbox.setChecked(value)
+        """The blacklist is on exactly when a file is chosen (D15 item 1)."""
+        return self.get_blacklist_path() is not None
 
     def get_whitelist_path(self) -> Path | None:
         """Return the whitelist path (None when the field is empty)."""
@@ -777,75 +718,23 @@ class FilteringSettingsPanel(FormPanel):
         self.whitelist_selector.set_path(str(value) if value else "")
 
     def get_use_whitelist(self) -> bool:
-        """Return whether the whitelist is enabled."""
-        return self.use_whitelist_checkbox.isChecked()
-
-    def set_use_whitelist(self, value: bool) -> None:
-        """Set the whitelist-enabled checkbox."""
-        self.use_whitelist_checkbox.setChecked(value)
-
-    # --- Sentence rule (dedup / i+1) ---
-
-    #: combo item data -> (deduplicate_sentences, use_i_plus_one_filter). i+1
-    #: already overrides dedup in EpisodeProcessor, so a source config with
-    #: both booleans set selects "i_plus_one" same as one with only i+1 set.
-    _SENTENCE_RULE_VALUES: dict[str, tuple[bool, bool]] = {
-        "all": (False, False),
-        "dedup": (True, False),
-        "i_plus_one": (False, True),
-    }
-
-    def get_sentence_rule(self) -> tuple[bool, bool]:
-        """Return (deduplicate_sentences, use_i_plus_one_filter) for the current selection."""
-        return self._SENTENCE_RULE_VALUES[self.sentence_rule_combo.currentData()]
-
-    def set_sentence_rule(self, deduplicate_sentences: bool, use_i_plus_one_filter: bool) -> None:
-        """Select the combo item matching the two source booleans."""
-        if use_i_plus_one_filter:
-            value = "i_plus_one"
-        elif deduplicate_sentences:
-            value = "dedup"
-        else:
-            value = "all"
-        index = self.sentence_rule_combo.findData(value)
-        if index >= 0:
-            self.sentence_rule_combo.setCurrentIndex(index)
+        """The whitelist is on exactly when a file is chosen (D15 item 1)."""
+        return self.get_whitelist_path() is not None
 
     # --- Script type ---
 
     def get_exclude_hiragana_only_words(self) -> bool:
-        """Return whether hiragana-only words are excluded."""
-        return self.exclude_hiragana_only_checkbox.isChecked()
-
-    def set_exclude_hiragana_only_words(self, value: bool) -> None:
-        """Set the exclude-hiragana-only checkbox."""
-        self.exclude_hiragana_only_checkbox.setChecked(value)
+        """Whether hiragana-only words are skipped (Script Type combo)."""
+        return self._SCRIPT_TYPE_VALUES[self.script_type_combo.currentData()][0]
 
     def get_exclude_katakana_only_words(self) -> bool:
-        """Return whether katakana-only words are excluded."""
-        return self.exclude_katakana_only_checkbox.isChecked()
+        """Whether katakana-only words are skipped (Script Type combo)."""
+        return self._SCRIPT_TYPE_VALUES[self.script_type_combo.currentData()][1]
 
-    def set_exclude_katakana_only_words(self, value: bool) -> None:
-        """Set the exclude-katakana-only checkbox."""
-        self.exclude_katakana_only_checkbox.setChecked(value)
-
-    # --- Sentence length ---
-
-    def get_max_sentence_duration_seconds(self) -> float:
-        """Return the max sentence duration (seconds)."""
-        return self.max_sentence_duration_spinbox.value()
-
-    def set_max_sentence_duration_seconds(self, value: float) -> None:
-        """Set the max sentence duration spinbox."""
-        self.max_sentence_duration_spinbox.setValue(value)
-
-    def get_max_sentence_chars(self) -> int:
-        """Return the max sentence character count."""
-        return self.max_sentence_chars_spinbox.value()
-
-    def set_max_sentence_chars(self, value: int) -> None:
-        """Set the max sentence chars spinbox."""
-        self.max_sentence_chars_spinbox.setValue(value)
+    def set_script_type(self, hiragana_only: bool, katakana_only: bool) -> None:
+        """Select the combo item for the two stored booleans."""
+        value = next(key for key, pair in self._SCRIPT_TYPE_VALUES.items() if pair == (hiragana_only, katakana_only))
+        self.script_type_combo.setCurrentIndex(self.script_type_combo.findData(value))
 
     # --- Reading ---
 
@@ -904,25 +793,20 @@ class FilteringSettingsPanel(FormPanel):
                 max_frequency_rank=config.max_frequency_rank,
             )
         self.set_use_known_words_db(config.use_known_words_db)
-        self.sync_rebuild_known_words_button_state()
         self.set_match_kana_variants(config.known_words_match_kana_variants)
         self.set_excluded_decks(config.excluded_decks)
         self.set_excluded_wordsets(config.excluded_wordsets)
         # T-11: always set (including '' for None) so Reset-to-Defaults clears
         # the selector; without this the stale path stays visible and the next
         # Save re-reads it back via get_path().
-        self.set_blacklist_path(config.blacklist_path)
-        self.set_use_blacklist(config.use_blacklist)
-        self.set_whitelist_path(config.whitelist_path)
-        self.set_use_whitelist(config.use_whitelist)
-        self.set_sentence_rule(config.deduplicate_sentences, config.use_i_plus_one_filter)
-        self.set_exclude_hiragana_only_words(config.exclude_hiragana_only_words)
-        self.set_exclude_katakana_only_words(config.exclude_katakana_only_words)
+        # D15 item 1: a stored path whose switch was off is shown empty, so it
+        # stays off -- and the next save drops the path with it.
+        self.set_blacklist_path(config.blacklist_path if config.use_blacklist else None)
+        self.set_whitelist_path(config.whitelist_path if config.use_whitelist else None)
+        self.set_script_type(bool(config.exclude_hiragana_only_words), bool(config.exclude_katakana_only_words))
         # Same two booleans, read through whichever language's option named them.
         for option_id, checkbox in self.script_filter_checkboxes.items():
             checkbox.setChecked(bool(getattr(config, self._script_filter_fields[option_id])))
-        self.set_max_sentence_duration_seconds(config.max_sentence_duration_seconds)
-        self.set_max_sentence_chars(config.max_sentence_chars)
         self.set_reading_min_occurrence(config.reading_min_occurrence)
         apply_language_gate(self._language_gate_pairs, get_profile(config_language(config)).capabilities)
 
@@ -932,7 +816,6 @@ class FilteringSettingsPanel(FormPanel):
         Uses ``dataclasses.replace`` so the frozen-config invariant is preserved.
         Called by :meth:`SettingsTab.commit_settings` as part of the contribute fold.
         """
-        deduplicate_sentences, use_i_plus_one_filter = self.get_sentence_rule()
         updated = replace(
             config,
             min_frequency_rank=self.get_min_frequency_rank(),
@@ -946,12 +829,8 @@ class FilteringSettingsPanel(FormPanel):
             use_blacklist=self.get_use_blacklist(),
             whitelist_path=self.get_whitelist_path(),
             use_whitelist=self.get_use_whitelist(),
-            deduplicate_sentences=deduplicate_sentences,
             exclude_hiragana_only_words=self.get_exclude_hiragana_only_words(),
             exclude_katakana_only_words=self.get_exclude_katakana_only_words(),
-            use_i_plus_one_filter=use_i_plus_one_filter,
-            max_sentence_duration_seconds=self.get_max_sentence_duration_seconds(),
-            max_sentence_chars=self.get_max_sentence_chars(),
             reading_min_occurrence=self.get_reading_min_occurrence(),
         )
         # Language-scoped rows contribute only while their capability is present.
@@ -963,7 +842,7 @@ class FilteringSettingsPanel(FormPanel):
         # language that has neither setting. Visibility is the gate's own
         # output, so there is one source of truth for "does this language have
         # this setting".
-        # The kana boxes above already wrote these two fields unconditionally --
+        # The Script Type combo above already wrote these two fields unconditionally --
         # under another language they are hidden and still hold the loaded
         # value, so that write is a no-op. The visible option-driven row is the
         # one the user can actually reach, so it wins.

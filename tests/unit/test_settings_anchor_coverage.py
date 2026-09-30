@@ -177,9 +177,9 @@ def test_every_panel_contributes_anchors(tab):
 
 def test_label_less_checkboxes_index_their_own_caption(tab):
     by_id = {anchor.stable_id: anchor for anchor in tab.setting_anchors()}
-    checkbox = tab.filtering_panel.use_blacklist_checkbox
+    checkbox = tab.filtering_panel.keep_unranked_checkbox
 
-    assert checkbox.text() in by_id["filtering.use_blacklist_checkbox"].search_text()
+    assert checkbox.text() in by_id["filtering.keep_unranked_checkbox"].search_text()
 
 
 def test_the_update_checkbox_is_anchored_on_the_ui_panel(tab):
@@ -194,14 +194,13 @@ def test_ui_panel_controls_are_anchored(tab):
 
     assert by_id["ui.language"].focus_widget is tab.ui_panel.language_combo
     assert by_id["ui.theme"].focus_widget is tab.ui_panel.gallery
-    assert by_id["ui.max_parallel_workers"].focus_widget is tab.ui_panel.max_workers_spinbox
 
 
 def test_anchor_search_text_follows_a_relabelled_control(tab):
     """Proves the index is resolved lazily, not snapshotted at construction."""
     by_id = {anchor.stable_id: anchor for anchor in tab.setting_anchors()}
-    anchor = by_id["filtering.use_blacklist_checkbox"]
-    tab.filtering_panel.use_blacklist_checkbox.setText("ブラックリストを有効にする")
+    anchor = by_id["filtering.keep_unranked_checkbox"]
+    tab.filtering_panel.keep_unranked_checkbox.setText("ブラックリストを有効にする")
 
     assert "ブラックリストを有効にする" in anchor.search_text()
 
@@ -219,7 +218,6 @@ def test_moved_capability_targets_track_the_anchor_that_owns_the_control(tab):
 
     for cap_id, anchor_id in (
         ("sentence-tts", "media.reading_tts"),
-        ("parallel-workers", "ui.max_parallel_workers"),
         ("update-check", "ui.check_for_updates"),
     ):
         assert anchor_id in by_id, f"{cap_id}: anchor {anchor_id!r} no longer exists"

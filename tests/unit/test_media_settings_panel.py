@@ -1,4 +1,4 @@
-"""Tests for MediaSettingsPanel — Match Audio Duration gating."""
+"""Tests for MediaSettingsPanel: clip length, animated size and reading TTS."""
 
 from __future__ import annotations
 
@@ -22,46 +22,59 @@ def test_audio_bitrate_tooltip_merges_helper_and_old_tooltip(qtbot):
     )
 
 
-def test_match_audio_toggle_disables_duration_spinbox(qtbot):
-    """Ticking match-audio while the feature is on disables the duration spinbox."""
+def test_clip_length_lowest_value_means_same_as_sentence_audio(qtbot):
+    """C14: "Match audio duration" folded into the clip length spinbox."""
     panel = MediaSettingsPanel()
     qtbot.addWidget(panel)
-
-    panel.animated_checkbox.setChecked(True)
-    assert panel.animated_duration_spinbox.isEnabled() is True
-
-    panel.animated_match_audio_checkbox.setChecked(True)
-    assert panel.animated_duration_spinbox.isEnabled() is False
-
-    panel.animated_match_audio_checkbox.setChecked(False)
-    assert panel.animated_duration_spinbox.isEnabled() is True
+    spin = panel.animated_duration_spinbox
+    assert not hasattr(panel, "animated_match_audio_checkbox")
+    assert spin.minimum() == 0.0
+    assert spin.specialValueText() == "Same as sentence audio"
 
 
-def test_duration_spinbox_stays_disabled_when_feature_off(qtbot):
-    """If the parent animated feature is off, match-audio cannot enable the spinbox."""
+def test_choosing_same_as_audio_keeps_the_stored_length(qtbot):
     panel = MediaSettingsPanel()
     qtbot.addWidget(panel)
+    panel.load_from_config(
+        replace(create_default_config(), screenshot_animated=True, screenshot_animated_clip_duration=3.5)
+    )
 
+    panel.animated_duration_spinbox.setValue(0.0)
+    out = panel.contribute(create_default_config())
+
+    assert out.screenshot_animated_match_audio is True
+    assert out.screenshot_animated_clip_duration == 3.5
+
+
+def test_stepping_up_from_same_as_audio_resumes_the_users_length(qtbot):
+    panel = MediaSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(
+        replace(
+            create_default_config(),
+            screenshot_animated=True,
+            screenshot_animated_clip_duration=3.5,
+            screenshot_animated_match_audio=True,
+        )
+    )
+    spin = panel.animated_duration_spinbox
+    assert spin.value() == 0.0
+
+    spin.stepBy(1)
+
+    assert spin.value() == 3.5
+    out = panel.contribute(create_default_config())
+    assert out.screenshot_animated_match_audio is False
+    assert out.screenshot_animated_clip_duration == 3.5
+
+
+def test_clip_length_follows_the_animated_switch(qtbot):
+    panel = MediaSettingsPanel()
+    qtbot.addWidget(panel)
     panel.animated_checkbox.setChecked(False)
     assert panel.animated_duration_spinbox.isEnabled() is False
-
-    panel.animated_match_audio_checkbox.setChecked(True)
-    assert panel.animated_duration_spinbox.isEnabled() is False
-
-    panel.animated_match_audio_checkbox.setChecked(False)
-    assert panel.animated_duration_spinbox.isEnabled() is False
-
-
-def test_match_audio_disabled_when_feature_off(qtbot):
-    """The match-audio checkbox itself is gated by the parent animated feature."""
-    panel = MediaSettingsPanel()
-    qtbot.addWidget(panel)
-
-    panel.animated_checkbox.setChecked(False)
-    assert panel.animated_match_audio_checkbox.isEnabled() is False
-
     panel.animated_checkbox.setChecked(True)
-    assert panel.animated_match_audio_checkbox.isEnabled() is True
+    assert panel.animated_duration_spinbox.isEnabled() is True
 
 
 def test_default_triple_is_balanced(qtbot):
@@ -294,3 +307,15 @@ class TestReadingTtsCombo:
             replace(create_default_config(), reading_tts_enabled=True, reading_tts_google_enabled=True)
         )
         assert panel._tts_touched is False
+
+
+def test_read_aloud_row_uses_the_short_label(qtbot):
+    """C02: the outlier label that pushed the Card Media input column right."""
+    from PyQt6.QtWidgets import QLabel
+
+    panel = MediaSettingsPanel()
+    qtbot.addWidget(panel)
+    texts = [label.text() for label in panel.findChildren(QLabel)]
+
+    assert "Read aloud (manga, books):" in texts
+    assert not any("Spoken sentences for manga" in text for text in texts)

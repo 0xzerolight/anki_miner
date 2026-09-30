@@ -1,7 +1,7 @@
 """Anki configuration settings panel."""
 
 import logging
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Iterable, Mapping
 from dataclasses import replace
 from typing import Literal, cast
 
@@ -25,13 +25,14 @@ from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages.profile import CardFieldSpec
 from anki_miner.languages.registry import config_language, get_profile
+from anki_miner.services.note_presets import FIELD_KEYWORDS as _FIELD_KEYWORDS  # noqa: F401 - re-exported
 from anki_miner.services.note_presets import (
-    NOTE_PRESETS,
     NotePreset,
-    preset_by_id,
-    preset_for_note_type_name,
+    NoteTypeFill,
+    auto_map_fields,  # noqa: F401 - re-exported for setup_wizard/pages.py
+    auto_map_profile_fields,  # noqa: F401 - re-exported for setup_wizard/pages.py
+    fill_note_type_fields,
 )
-from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
@@ -203,43 +204,6 @@ _HOOK_FIELD_ROW_TEXTS: dict[str, tuple[str, str]] = {
     ),
 }
 
-# Keywords used by populate_from_field_list to auto-map Anki field names.
-# Each key is a card data type; the list is lowercase/stripped patterns that
-# a field name must match (after lowercasing and removing spaces/underscores).
-# Exported at module level so setup wizards and future callers can reuse the
-# same sets without duplication.
-_FIELD_KEYWORDS: dict[str, list[str]] = {
-    # The Chinese spellings are a subset of the word-field aliases in
-    # services/expression_field.py (which also reads 简体, 簡體, 繁体, 繁體, 生词
-    # and 詞語), and the two match differently: that one looks for an alias
-    # anywhere inside the field name, this one wants the whole normalised name.
-    # The traditional spellings stay out on purpose: zh carries a dedicated
-    # expression_traditional key, and on a note type that lists Traditional
-    # above Simplified it would silently become the card front.
-    "word": ["expression", "word", "vocab", "hanzi", "simplified", "汉字", "漢字", "中文", "单词", "词语"],
-    "sentence": ["sentence", "context", "example"],
-    "definition": ["definition", "meaning", "maindefinition"],
-    "glossary": ["glossary", "definitions", "dictionary"],
-    "picture": ["picture", "image", "screenshot", "photo"],
-    "audio": ["audio", "sound", "sentenceaudio"],
-    "expression_audio": ["expressionaudio", "wordaudio"],
-    "expression_furigana": ["expressionfurigana", "wordfurigana"],
-    "expression_reading": ["expressionreading", "wordreading", "reading"],
-    "sentence_furigana": ["sentencefurigana", "contextfurigana"],
-    "sentence_reading": ["sentencereading", "contextreading"],
-    # The plurals are the names Lapis / Kiku / Senren actually ship. Those three
-    # are matched exactly by note_presets; this table is what a FORK of one of
-    # them falls back to, so it has to know the same spellings.
-    "pitch_position": ["pitchposition", "pitchpositions", "pitchaccent", "pitch"],
-    "pitch_category": ["pitchcategory", "pitchcategories", "accenttype", "accentcategory"],
-    "pitch_graph": ["pitchgraph", "pitchsvg"],
-    "pitch_text": ["pitchtext", "pitchaccents"],
-    "frequency": ["frequency", "frequencies", "freq", "rank", "frequencyrank"],
-    "frequency_sort": ["freqsort", "frequencysort"],
-    "source": ["source", "origin", "miscinfo"],
-    "sentence_translation": ["sentencetranslation", "translation", "sentencemeaning"],
-}
-
 # JP Mining Note card-type marker ids → default field names. Mirrors the
 # AnkiMinerConfig.card_type_marker_fields default factory; duplicated here (like
 # set_card_fields' "Expression"/"Sentence" literals) to prefill the inputs
@@ -250,79 +214,6 @@ _CARD_TYPE_MARKER_DEFAULTS: dict[str, str] = {
     "sentence": "IsSentenceCard",
     "audio": "IsAudioCard",
 }
-
-
-def _normalized_field_name(name: str) -> str:
-    """The spelling both matchers compare on: lowercase, no spaces or underscores."""
-    return name.lower().replace(" ", "").replace("_", "")
-
-
-def auto_map_fields(field_names: list[str]) -> dict[str, str]:
-    """Map Anki field names to card data keys via :data:`_FIELD_KEYWORDS`.
-
-    Pure (Qt-free) so the setup wizard and the settings panel share one
-    matching algorithm. For every key in ``_FIELD_KEYWORDS``, returns the first
-    field name (in ``field_names`` order) that matches after lowercasing and
-    removing spaces/underscores; unmatched keys map to ``""``.
-
-    Args:
-        field_names: Field names fetched from AnkiConnect.
-
-    Returns:
-        ``{field_key: matched_field_name_or_""}`` for every key in
-        ``_FIELD_KEYWORDS``.
-    """
-    mapping: dict[str, str] = {}
-    for key, keywords in _FIELD_KEYWORDS.items():
-        normalized = [kw.lower() for kw in keywords]
-        matched = ""
-        for field_name in field_names:
-            if _normalized_field_name(field_name) in normalized:
-                matched = field_name
-                break
-        mapping[key] = matched
-    return mapping
-
-
-def auto_map_profile_fields(
-    field_names: Sequence[str],
-    specs: Sequence[CardFieldSpec],
-    claimed: Iterable[str],
-) -> dict[str, str]:
-    """Map Anki field names to the card-field keys ``specs`` declares.
-
-    The profile-declared rows match on their own spec's placeholder instead of
-    through :data:`_FIELD_KEYWORDS`: a keyword entry there is stamped into
-    every language's ``anki_fields`` by the wizard's sanitizer, which would
-    seed an empty Pinyin key into a Japanese mapping. So the caller passes only
-    the specs the active language actually shows — a hidden row contributes no
-    key anyway.
-
-    ``claimed`` is the field names :func:`auto_map_fields` already took: th
-    spells its hook field "Reading" and so does ``expression_reading``, and one
-    Anki field cannot carry two logical keys.
-
-    Args:
-        field_names: Field names fetched from AnkiConnect.
-        specs: The card-field specs to match, in priority order.
-        claimed: Field names another key already holds.
-
-    Returns:
-        ``{spec_key: matched_field_name}`` for the specs that matched; a spec
-        with no match is absent, never present as ``""``.
-    """
-    taken = {name for name in claimed if name}
-    mapping: dict[str, str] = {}
-    for spec in specs:
-        placeholder = _normalized_field_name(spec.placeholder)
-        match = next(
-            (n for n in field_names if n not in taken and _normalized_field_name(n) == placeholder),
-            "",
-        )
-        if match:
-            mapping[spec.key] = match
-            taken.add(match)
-    return mapping
 
 
 def select_or_insert(combo: QComboBox, name: str, *, known: bool = True) -> None:
@@ -402,36 +293,25 @@ def hook_field_row_text(key: str) -> tuple[str, str]:
 
 
 class AnkiSettingsPanel(FormPanel):
-    """Panel for Anki connection and configuration settings.
+    """Panel for the Anki target, the connection and the card field mappings.
 
-    Provides:
-    - Deck name dropdown with refresh button
-    - Note type dropdown with refresh button
-    - AnkiConnect URL configuration
-    - Connection status indicator
-    - Test connection button
-    - Card field mappings
+    Provides (C03, UI/UX audit 2026-09-29): Deck, Note Type and Card tags
+    first; then one connection row, "Anki: ● Connected [Refresh]", whose
+    Refresh re-tests the connection and reloads both lists; at most one status
+    line, shown only when something is wrong; the AnkiConnect URL last; then
+    the card field mappings.
 
     Signals:
-        deck_sync_requested: Emitted when deck sync is requested
-        notetype_sync_requested: Emitted when note type sync is requested
-        test_connection_requested: Emitted when connection test is requested
+        test_connection_requested: Refresh asks for a validation sweep.
+        name_lists_requested: Refresh asks for the deck and note type lists.
+        fetch_fields_requested: The field-mapping fill button was clicked.
     """
 
     ANCHOR_NAMESPACE = "anki"
 
-    deck_sync_requested = pyqtSignal()
-    notetype_sync_requested = pyqtSignal()
     test_connection_requested = pyqtSignal()
+    name_lists_requested = pyqtSignal()
     fetch_fields_requested = pyqtSignal()
-
-    # Dynamically created by _add_labeled_field_with_button via setattr
-    deck_combo: QComboBox
-    notetype_combo: QComboBox
-    preset_combo: QComboBox
-    deck_sync_button: ModernButton
-    notetype_sync_button: ModernButton
-    preset_apply_button: ModernButton
 
     def __init__(self, parent=None):
         """Initialize the Anki settings panel."""
@@ -441,6 +321,10 @@ class AnkiSettingsPanel(FormPanel):
         # doesn't expose (future/opt-in keys set via gui_config.json) survive a
         # Save round-trip instead of being wiped.
         self._loaded_fields: dict[str, str] = {}
+        # Whether "Fill in automatically" may apply a community preset: all
+        # three are Japanese note types (the "note_presets" capability).
+        # Refreshed from the profile on every load_from_config.
+        self._presets_allowed = True
         self._setup_fields()
 
     def _setup_fields(self) -> None:
@@ -450,20 +334,28 @@ class AnkiSettingsPanel(FormPanel):
         # pairs, so this is the only place it is bound.
         self._language_gate_pairs: list[tuple[QWidget, str]] = []
 
-        # Connection status badge
-        self.connection_status = StatusBadge("AnkiConnect", status="checking", clickable=False)
-        self.add_widget(self.connection_status)
-
-        # AnkiConnect URL
-        self.ankiconnect_url_input = QLineEdit()
-        self.ankiconnect_url_input.setPlaceholderText("http://127.0.0.1:8765")
+        # Deck and note type first: they are what a user comes here to set
+        # (C03). Strict combos: these two names must match Anki exactly, and the
+        # list is authoritative -- see select_or_insert.
+        self.deck_combo = self._make_name_combo(self.tr("Select a deck…"))
         self.add_field(
-            self.tr("AnkiConnect URL"),
-            self.ankiconnect_url_input,
-            helper=self.tr("Default http://127.0.0.1:8765. Change if AnkiConnect uses a different port."),
+            self.tr("Deck Name"),
+            self.deck_combo,
+            helper=self.tr("Target deck for new cards."),
+            anchor="deck_name",
         )
+        self.notetype_combo = self._make_name_combo(self.tr("Select a note type…"))
+        self.add_field(
+            self.tr("Note Type"),
+            self.notetype_combo,
+            helper=self.tr("Anki note type whose fields you'll map below."),
+            anchor="note_type",
+        )
+        # Clear a stale not-in-Anki warning as soon as the user acts on it.
+        # _repopulate blocks signals, so only a real user selection fires these.
+        self.deck_combo.currentIndexChanged.connect(self._on_deck_selection_changed)
+        self.notetype_combo.currentIndexChanged.connect(self._on_notetype_selection_changed)
 
-        # Card tags
         self.anki_tags_input = QLineEdit()
         self.add_field(
             self.tr("Card tags"),
@@ -471,112 +363,79 @@ class AnkiSettingsPanel(FormPanel):
             helper=self.tr("Space-separated tags applied to every mined card. Leave blank for no tags."),
         )
 
-        # Test connection button
-        button_layout = QHBoxLayout()
-        button_layout.addStretch()
-
-        self.test_connection_button = ModernButton(self.tr("Test Connection"), variant="secondary")
-        self.test_connection_button.setToolTip(self.tr("Anki must be running with AnkiConnect installed."))
-        self.test_connection_button.clicked.connect(self._on_test_connection)
-        button_layout.addWidget(self.test_connection_button)
-
-        self.add_layout(button_layout)
-
-        # Deck name with refresh button
-        self._add_labeled_field_with_button(
-            anchor="deck_name",
-            label_text=self.tr("Deck Name"),
-            input_widget_name="deck_combo",
-            placeholder=self.tr("Select a deck…"),
-            tooltip="",
-            button_name="deck_sync_button",
-            button_tooltip=self.tr("Reload the deck list from Anki"),
-            button_callback=self._on_deck_sync,
-            helper_text=self.tr("Target deck for new cards."),
+        # One connection row (C03). Refresh replaces Test Connection and the two
+        # list Refresh buttons: it re-tests AnkiConnect and reloads both lists,
+        # which is what a user who has just started Anki wants either way.
+        self.connection_status = StatusBadge("AnkiConnect", status="checking", clickable=False)
+        self.refresh_button = ModernButton(self.tr("Refresh"), variant="secondary")
+        self.refresh_button.setToolTip(
+            self.tr(
+                "Check the connection to Anki again and reload the deck and note type lists. "
+                "Anki must be running with AnkiConnect installed."
+            )
+        )
+        self.refresh_button.clicked.connect(self._on_refresh)
+        connection_row = QWidget()
+        connection_layout = QHBoxLayout(connection_row)
+        connection_layout.setContentsMargins(0, 0, 0, 0)
+        connection_layout.setSpacing(SPACING.xs)
+        connection_layout.addWidget(self.connection_status)
+        connection_layout.addWidget(self.refresh_button)
+        connection_layout.addStretch()
+        self.add_field(
+            self.tr("Anki"),
+            connection_row,
+            anchor="anki_connection",
+            anchor_focus=self.refresh_button,
+            # Untranslated vocabulary users type (like LEGACY_DESTINATION_TERMS):
+            # the button this row replaced was called "Test Connection".
+            anchor_text=lambda: (self.refresh_button.text(), self.refresh_button.toolTip(), "Test Connection"),
         )
 
-        # Deck status
-        self.deck_status = QLabel()
-        self.deck_status.setObjectName("validation-status")
-        self.add_widget(self.deck_status)
+        # The one status line (C03): the most important problem, or nothing.
+        # "3 deck(s) loaded" and "Loading…" are gone -- a line that only ever
+        # confirms things trains the eye to skip the line that matters.
+        self._status_parts: dict[str, str] = {"connection": "", "deck": "", "notetype": ""}
+        self.anki_status = QLabel()
+        self.anki_status.setObjectName("validation-status")
+        self.anki_status.setProperty("status", "error")
+        self.anki_status.setWordWrap(True)
+        self.anki_status.setVisible(False)
+        self.add_widget(self.anki_status)
 
-        # Note type with refresh button
-        self._add_labeled_field_with_button(
-            anchor="note_type",
-            label_text=self.tr("Note Type"),
-            input_widget_name="notetype_combo",
-            placeholder=self.tr("Select a note type…"),
-            tooltip="",
-            button_name="notetype_sync_button",
-            button_tooltip=self.tr("Reload the note type list from Anki"),
-            button_callback=self._on_notetype_sync,
-            helper_text=self.tr("Anki note type whose fields you'll map below."),
+        # AnkiConnect URL last: almost nobody changes it.
+        self.ankiconnect_url_input = QLineEdit()
+        self.ankiconnect_url_input.setPlaceholderText("http://127.0.0.1:8765")
+        self.add_field(
+            self.tr("AnkiConnect URL"),
+            self.ankiconnect_url_input,
+            helper=self.tr("Default http://127.0.0.1:8765. Change if AnkiConnect uses a different port."),
         )
+        # Every problem on either line described the previous address.
+        self.ankiconnect_url_input.textChanged.connect(lambda _text: self._clear_status_parts())
+        self.ankiconnect_url_input.textChanged.connect(lambda _text: self.set_fill_status(None, ""))
 
-        # Clear a stale not-in-Anki warning as soon as the user acts on it.
-        # _repopulate blocks signals, so only a real user selection fires these.
-        self.deck_combo.currentIndexChanged.connect(self._on_deck_selection_changed)
-        self.notetype_combo.currentIndexChanged.connect(self._on_notetype_selection_changed)
-
-        # Note type status
-        self.notetype_status = QLabel()
-        self.notetype_status.setObjectName("validation-status")
-        self.add_widget(self.notetype_status)
-        self.ankiconnect_url_input.textChanged.connect(lambda _text: self._clear_status(self.notetype_status))
-
-        # Note-type preset. Lapis / Kiku / Senren publish fixed field names, so
-        # their mapping is knowable without asking Anki — and it carries three
-        # things auto-map cannot: the names the keyword table misses
-        # (PitchCategories, MiscInfo), romaji pitch categories, and Senren's own
-        # marker field names. Same combo + button row as Deck / Note Type above,
-        # so the panel gains a row, not a new kind of control. All three are
-        # Japanese note types, so the row rides the "note_presets" capability:
-        # applying one elsewhere writes furigana and pitch mappings the language
-        # cannot fill and every run's field check then rejects.
-        preset_row = self._add_labeled_field_with_button(
-            anchor="note_type_preset",
-            label_text=self.tr("Preset"),
-            input_widget_name="preset_combo",
-            placeholder=self.tr("Select a preset…"),
-            tooltip="",
-            button_name="preset_apply_button",
-            button_text=self.tr("Apply"),
-            button_tooltip=self.tr("Fill every mapping below from this note type's published field names"),
-            button_callback=self._on_apply_preset,
-            helper_text=self.tr(
-                "Lapis, Kiku and Senren ship fixed field names. Applying overwrites the mappings below."
-            ),
-        )
-        for preset in NOTE_PRESETS:
-            self.preset_combo.addItem(preset.name, preset.id)
-        self.preset_combo.setCurrentIndex(-1)
-
-        # Preset status
-        self.preset_status = QLabel()
-        self.preset_status.setObjectName("validation-status")
-        self.preset_status.setWordWrap(True)
-        self.add_widget(self.preset_status)
-
-        self._language_gate_pairs.extend(
-            (w, "note_presets") for w in (*field_row_widgets(self, preset_row), self.preset_status)
-        )
-
-        # Auto-Map Fields button — prominent, immediately below the Note Type row
-        self.fetch_fields_button = ModernButton(self.tr("Auto-Map Fields from Note Type"), variant="primary")
+        # Card Field Mappings section. One secondary "Fill in automatically" in
+        # its heading (D13) replaces the Preset row and the full-width Auto-Map
+        # bar: it reads the note type's fields, applies Lapis / Kiku / Senren
+        # when their fields are all there, and otherwise maps by keyword.
+        self.fetch_fields_button = ModernButton(self.tr("Fill in automatically"), variant="secondary")
         self.fetch_fields_button.setToolTip(
-            self.tr("Query AnkiConnect for this note type's fields and fill the mappings below automatically.")
+            self.tr(
+                "Read this note type's fields from Anki and fill every mapping below. "
+                "Lapis, Kiku and Senren are recognised and filled completely."
+            )
         )
         self.fetch_fields_button.clicked.connect(self._on_fetch_fields)
-        self.add_widget(self.fetch_fields_button)
+        self.add_section(self.tr("Card Field Mappings"), trailing=self.fetch_fields_button)
 
-        # The three combo+button rows are read as one column. Their labels are
-        # different words ("Refresh", "Refresh", "Apply") and so are their
-        # natural widths, which would stagger both the button edges and the
-        # combos beside them. Widen them all to the widest.
-        self._align_row_buttons(self.deck_sync_button, self.notetype_sync_button, self.preset_apply_button)
-
-        # Card Field Mappings section
-        self.add_section(self.tr("Card Field Mappings"))
+        # The fill result: which note type was recognised, or how many fields
+        # were mapped and cleared. Hidden until a fill has run.
+        self.fill_status = QLabel()
+        self.fill_status.setObjectName("validation-status")
+        self.fill_status.setWordWrap(True)
+        self.fill_status.setVisible(False)
+        self.add_widget(self.fill_status)
 
         # Helper text for card fields
         card_fields_helper = QLabel(self.tr("Map data to note fields (names must match exactly). Blank = skip."))
@@ -706,8 +565,8 @@ class AnkiSettingsPanel(FormPanel):
             (w, "tone_color") for w in field_row_widgets(self, self.reading_tone_color_checkbox)
         )
 
-        # Auxiliary Data Fields section
-        self.add_section(self.tr("Auxiliary Data Fields"))
+        # "Extra Fields" (C16); the old heading stays a search synonym.
+        self.add_section(self.tr("Extra Fields"), synonyms=("Auxiliary Data Fields",))
 
         # Paired with "pitch" below: the heading stays for frequency and source,
         # but a language with no pitch rows must not be told to go and configure
@@ -899,125 +758,33 @@ class AnkiSettingsPanel(FormPanel):
 
         self.add_stretch()
 
-    def _add_labeled_field_with_button(
-        self,
-        label_text: str,
-        input_widget_name: str,
-        placeholder: str,
-        tooltip: str,
-        button_name: str,
-        button_tooltip: str,
-        button_callback,
-        helper_text: str = "",
-        *,
-        anchor: str,
-        button_text: str = "",
-    ) -> QWidget:
-        """Add a labeled dropdown + inline refresh button as one compact form row.
-
-        The input and button are wrapped in a container widget so the whole pair
-        sits in one ``add_field`` row (label beside control), matching the other
-        densified settings panels. Helper text becomes the field's hover tooltip.
-
-        Args:
-            anchor: Stable settings-search anchor name. Required because the
-                row's widget is a throwaway container with no panel attribute
-                to derive an id from.
-            label_text: Label text (no colon; ``add_field`` appends it)
-            input_widget_name: Attribute name for the input widget
-            placeholder: Placeholder text for input
-            tooltip: Tooltip for input
-            button_name: Attribute name for the button
-            button_tooltip: Tooltip for button
-            button_callback: Callback for button click
-            helper_text: Optional helper text shown as a tooltip on the field
-            button_text: Button label, defaulting to "Refresh". The row was
-                built for the two combos that reload a list from Anki; a row
-                whose button does something else has to say so.
-
-        Returns:
-            The container holding the input and the button — the widget
-            ``field_row_widgets`` matches a language gate against.
-        """
-        # Container for input + button
-        container = QWidget()
-        row = QHBoxLayout(container)
-        row.setContentsMargins(0, 0, 0, 0)
-        row.setSpacing(SPACING.xs)
-
-        # Input. Strict (non-editable) on purpose: these two names must match
-        # Anki exactly, and the list is authoritative — see select_or_insert.
-        input_widget = QComboBox()
-        input_widget.setEditable(False)
-        input_widget.setPlaceholderText(placeholder)
-        input_widget.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+    @staticmethod
+    def _make_name_combo(placeholder: str) -> QComboBox:
+        """A strict deck / note-type combo, sized so an empty list keeps its width."""
+        combo = QComboBox()
+        combo.setEditable(False)
+        combo.setPlaceholderText(placeholder)
+        combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
         # Pair the policy with a minimum length (as header_widget and
         # single_episode_tab do) or the row collapses when the list is empty.
-        input_widget.setMinimumContentsLength(20)
-        # Large collections: a strict combo loses the old line edit's "type a
-        # fragment" affordance; sorted() in _repopulate plus Qt's prefix
-        # keyboardSearch is the mitigation. NOTE setMaxVisibleItems is ignored
-        # by styles where SH_ComboBox_Popup is true (macOS).
-        input_widget.setMaxVisibleItems(20)
-        # Put the helper on the input itself: add_field sets it on the wrapping
-        # container, but the input + button cover the container with zero margins
-        # and Qt tooltips don't propagate to children, so the container tooltip
-        # is unreachable on hover. Fall back to the explicit tooltip when given.
-        input_widget.setToolTip(tooltip or helper_text)
-        row.addWidget(input_widget, 1)
-        setattr(self, input_widget_name, input_widget)
+        combo.setMinimumContentsLength(20)
+        # Large collections: sorted() in _repopulate plus Qt's prefix keyboard
+        # search stand in for typing a fragment. setMaxVisibleItems is ignored
+        # where SH_ComboBox_Popup is true (macOS).
+        combo.setMaxVisibleItems(20)
+        return combo
 
-        # Refresh button. LABELLED, not the empty ghost it used to be: with a
-        # strict combo this button is the only way back from an empty list, so
-        # an invisible 40px hit box is a dead end (open Settings with Anki
-        # closed, start Anki, and there is nothing to click — showEvent's fetch
-        # is one-shot). Wording and variant match the wizard's deck/note-type
-        # Refresh so the two surfaces read the same.
-        sync_button = ModernButton(button_text or self.tr("Refresh"), variant="secondary")
-        sync_button.clicked.connect(button_callback)
-        sync_button.setToolTip(button_tooltip)
-        row.addWidget(sync_button)
-        setattr(self, button_name, sync_button)
-
-        self.add_field(
-            label_text,
-            container,
-            helper=helper_text,
-            anchor=anchor,
-            anchor_focus=input_widget,
-        )
-        return container
-
-    @staticmethod
-    def _align_row_buttons(*buttons: ModernButton) -> None:
-        """Give every combo-row button the width of the widest one."""
-        widest = max(button.sizeHint().width() for button in buttons)
-        for button in buttons:
-            button.setMinimumWidth(widest)
-
-    def _on_deck_sync(self) -> None:
-        """Handle deck refresh button click.
-
-        Writes no status: ``AnkiProbeController.refresh_name_lists`` is the
-        single owner of both status lines and sets them on entry. Writing here
-        too would set the same message twice per click.
-        """
-        self.deck_sync_requested.emit()
-
-    def _on_notetype_sync(self) -> None:
-        """Handle note type refresh button click (status owned by the refresh)."""
-        self.notetype_sync_requested.emit()
-
-    def _on_test_connection(self) -> None:
-        """Handle test connection button click."""
+    def _on_refresh(self) -> None:
+        """Re-test the connection and reload both lists (C03)."""
         self.set_connection_status("checking")
         self.test_connection_requested.emit()
+        self.name_lists_requested.emit()
 
     def set_connection_status(self, status: str) -> None:
-        """Update the connection status.
+        """Update the connection badge, and the status line when Anki is unreachable.
 
         Args:
-            status: Status string (connected, disconnected, checking, unknown)
+            status: connected, disconnected, checking or unknown.
         """
         status_map = {
             "connected": ("success", self.tr("Connected"), self.tr("Connected to AnkiConnect")),
@@ -1030,65 +797,44 @@ class AnkiSettingsPanel(FormPanel):
         )
         self.connection_status.set_name(name)
         self.connection_status.set_status(badge_status, text)
+        unreachable = self.tr("Anki isn't reachable. Start Anki (with AnkiConnect) and press Refresh.")
+        self._set_status_part("connection", unreachable if status == "disconnected" else "")
 
     def set_deck_status(self, exists: bool | None, message: str = "") -> None:
-        """Update the deck validation status.
-
-        Args:
-            exists: Whether the deck exists (None for checking)
-            message: Status message
-        """
-        if exists is None:
-            self.deck_status.setText(message or self.tr("Checking..."))
-            self.deck_status.setProperty("status", "checking")
-        elif exists:
-            self.deck_status.setText(message or self.tr("Deck exists"))
-            self.deck_status.setProperty("status", "success")
-        else:
-            self.deck_status.setText(message or self.tr("Deck not found"))
-            self.deck_status.setProperty("status", "error")
-
-        if style := self.deck_status.style():
-            style.unpolish(self.deck_status)
-            style.polish(self.deck_status)
+        """Report the deck check. Only a failure (``False``) is ever shown (C03)."""
+        self._set_status_part("deck", (message or self.tr("Deck not found")) if exists is False else "")
 
     def set_notetype_status(self, exists: bool | None, message: str = "") -> None:
-        """Update the note type validation status.
+        """Report the note type check. Only a failure (``False``) is ever shown (C03)."""
+        self._set_status_part("notetype", (message or self.tr("Note type not found")) if exists is False else "")
 
-        Args:
-            exists: Whether the note type exists (None for checking)
-            message: Status message
-        """
-        if exists is None:
-            self.notetype_status.setText(message or self.tr("Checking..."))
-            self.notetype_status.setProperty("status", "checking")
-        elif exists:
-            self.notetype_status.setText(message or self.tr("Note type exists"))
-            self.notetype_status.setProperty("status", "success")
-        else:
-            self.notetype_status.setText(message or self.tr("Note type not found"))
-            self.notetype_status.setProperty("status", "error")
+    def _set_status_part(self, key: str, text: str) -> None:
+        self._status_parts[key] = text
+        self._render_status()
 
-        if style := self.notetype_status.style():
-            style.unpolish(self.notetype_status)
-            style.polish(self.notetype_status)
+    def _clear_status_parts(self, *keys: str) -> None:
+        """Blank the named problems (all three when none are named) and re-render."""
+        for key in keys or tuple(self._status_parts):
+            self._status_parts[key] = ""
+        self._render_status()
+
+    def _render_status(self) -> None:
+        """Show the most important problem -- connection, then deck, then note type -- or nothing."""
+        text = next(
+            (self._status_parts[key] for key in ("connection", "deck", "notetype") if self._status_parts[key]),
+            "",
+        )
+        self.anki_status.setText(text)
+        self.anki_status.setVisible(bool(text))
 
     def _on_fetch_fields(self) -> None:
         """Handle fetch fields button click."""
         self.fetch_fields_requested.emit()
 
-    # === Note-type preset ===
-
-    def _on_apply_preset(self) -> None:
-        """Apply the selected preset, or say why nothing happened."""
-        preset = preset_by_id(self.preset_combo.currentData())
-        if preset is None:
-            self._set_preset_status(False, self.tr("Pick a preset first."))
-            return
-        self.apply_note_type_preset(preset)
+    # === "Fill in automatically" ===
 
     def apply_note_type_preset(self, preset: NotePreset) -> None:
-        """Overwrite every mapping this panel owns with ``preset``'s names.
+        """Overwrite every mapping this panel owns with ``preset``'s names (the fill's preset path).
 
         Writes more than the field rows on purpose: all three presets read
         pitch categories as romaji (the config default is Japanese), and Senren
@@ -1109,40 +855,33 @@ class AnkiSettingsPanel(FormPanel):
             self.set_card_type("")
         if not self.get_note_type():
             self.set_note_type(preset.name)
-        mapped = sum(1 for value in preset.fields.values() if value)
-        self._set_preset_status(
-            True,
-            tr_format(
-                self.tr("Applied %1 — %2 field mappings, romaji pitch categories."),
-                preset.name,
-                str(mapped),
-            ),
-        )
 
-    def _set_preset_status(self, ok: bool, message: str) -> None:
-        """Write the preset row's status line and repolish its colour."""
-        self.preset_status.setText(message)
-        self.preset_status.setProperty("status", "success" if ok else "error")
-        if style := self.preset_status.style():
-            style.unpolish(self.preset_status)
-            style.polish(self.preset_status)
+    def _visible_hook_specs(self) -> list[CardFieldSpec]:
+        """The extra card-field rows the active language shows (Pinyin, Hanja, ...)."""
+        return [spec for spec in self._hook_field_specs if self._hook_field_inputs[spec.key].isVisibleTo(self)]
 
-    def _sync_preset_to_note_type(self) -> None:
-        """Preselect the preset whose note type is the one now chosen.
+    def fill_from_field_list(self, field_names: list[str]) -> tuple[NotePreset | None, int]:
+        """ "Fill in automatically" (D13): preset when recognised, else the keyword pass.
 
-        Only ever selects — never clears. Landing on "Lapis-modified" after
-        "Lapis" leaves the Lapis preset picked, which is the useful default for
-        a fork.
+        Returns:
+            ``(preset, 0)`` when a preset was applied, else ``(None, cleared)``
+            where ``cleared`` counts mappings blanked because the note type has
+            no such field.
         """
-        preset = preset_for_note_type_name(self.get_note_type())
-        if preset is None:
-            return
-        index = self.preset_combo.findData(preset.id)
-        if index >= 0:
-            self.preset_combo.setCurrentIndex(index)
+        fill = fill_note_type_fields(
+            field_names, allow_presets=self._presets_allowed, extra_specs=self._visible_hook_specs()
+        )
+        if fill.preset is not None:
+            self.apply_note_type_preset(fill.preset)
+            for key, match in fill.extra_fields.items():
+                self._hook_field_inputs[key].setText(match)
+            return fill.preset, 0
+        return None, self._apply_keyword_fill(field_names, fill)
 
     def populate_from_field_list(self, field_names: list[str]) -> int:
         """Auto-map fetched field names to the card field inputs.
+
+        Keyword pass only; the fill button calls :meth:`fill_from_field_list`.
 
         Tries to match fetched field names to known data types using
         common naming patterns, then gives the rows the active mining language
@@ -1158,8 +897,11 @@ class AnkiSettingsPanel(FormPanel):
             How many mappings were cleared because the note type has no such
             field. The caller reports it — a silent blank reads as data loss.
         """
-        # Map each data key to its input widget; the matching algorithm lives in
-        # the module-level pure helper so the setup wizard reuses it verbatim.
+        fill = fill_note_type_fields(field_names, allow_presets=False, extra_specs=self._visible_hook_specs())
+        return self._apply_keyword_fill(field_names, fill)
+
+    def _apply_keyword_fill(self, field_names: list[str], fill: NoteTypeFill) -> int:
+        """Write a keyword-pass proposal: matched rows only, then clear stale ones."""
         widget_map = {
             "word": self.expression_field_input,
             "sentence": self.sentence_field_input,
@@ -1181,21 +923,23 @@ class AnkiSettingsPanel(FormPanel):
             "source": self.source_field_input,
             "sentence_translation": self.sentence_translation_field_input,
         }
-
-        # Only overwrite a widget when a field actually matched — an empty result
-        # leaves the existing value untouched (exact prior behavior).
-        mapped = auto_map_fields(field_names)
+        # Only overwrite a widget when a field actually matched -- an empty
+        # result leaves the existing value untouched (exact prior behaviour).
         for key, widget in widget_map.items():
-            if mapped.get(key):
-                widget.setText(mapped[key])
-
-        # Visibility is how the panel names the active language's rows; the
-        # wizard passes its working config's profile specs to the same helper.
-        visible = [spec for spec in self._hook_field_specs if self._hook_field_inputs[spec.key].isVisibleTo(self)]
-        for key, match in auto_map_profile_fields(field_names, visible, mapped.values()).items():
+            if fill.fields.get(key):
+                widget.setText(fill.fields[key])
+        for key, match in fill.extra_fields.items():
             self._hook_field_inputs[key].setText(match)
-
         return self._clear_missing_mappings(field_names, (*widget_map.values(), *self._hook_field_inputs.values()))
+
+    def set_fill_status(self, ok: bool | None, message: str) -> None:
+        """Show the fill result under the Card Field Mappings heading ("" hides it)."""
+        self.fill_status.setText(message)
+        self.fill_status.setProperty("status", "checking" if ok is None else ("success" if ok else "error"))
+        self.fill_status.setVisible(bool(message))
+        if style := self.fill_status.style():
+            style.unpolish(self.fill_status)
+            style.polish(self.fill_status)
 
     def _clear_missing_mappings(self, field_names: Iterable[str], widgets: Iterable[QLineEdit]) -> int:
         """Blank every shown mapping naming a field this note type lacks.
@@ -1358,7 +1102,6 @@ class AnkiSettingsPanel(FormPanel):
     def set_note_type(self, value: str) -> None:
         """Select ``value``; insert it when Anki hasn't listed it, "" clears."""
         select_or_insert(self.notetype_combo, value, known=False)
-        self._sync_preset_to_note_type()
 
     def set_available_decks(self, names: list[str]) -> None:
         """Repopulate the deck list, preserving the current selection.
@@ -1384,23 +1127,13 @@ class AnkiSettingsPanel(FormPanel):
         """
         index = self.deck_combo.currentIndex()
         if index >= 0 and not self.deck_combo.itemData(index, Qt.ItemDataRole.ToolTipRole):
-            self._clear_status(self.deck_status)
+            self._clear_status_parts("deck")
 
     def _on_notetype_selection_changed(self) -> None:
         """Clear the not-in-Anki warning once the user picks a real note type."""
         index = self.notetype_combo.currentIndex()
         if index >= 0 and not self.notetype_combo.itemData(index, Qt.ItemDataRole.ToolTipRole):
-            self._clear_status(self.notetype_status)
-        self._sync_preset_to_note_type()
-
-    @staticmethod
-    def _clear_status(label: QLabel) -> None:
-        """Blank a validation-status label and drop its colour property."""
-        label.setText("")
-        label.setProperty("status", "")
-        if style := label.style():
-            style.unpolish(label)
-            style.polish(label)
+            self._clear_status_parts("notetype")
 
     @staticmethod
     def _repopulate(combo: QComboBox, names: list[str]) -> None:
@@ -1432,7 +1165,7 @@ class AnkiSettingsPanel(FormPanel):
         self.anki_tags_input.setText(value)
 
     def set_fetch_fields_button_enabled(self, enabled: bool) -> None:
-        """Enable or disable the Fetch Fields button."""
+        """Enable or disable the "Fill in automatically" button."""
         self.fetch_fields_button.setEnabled(enabled)
 
     # ------------------------------------------------------------------
@@ -1444,7 +1177,7 @@ class AnkiSettingsPanel(FormPanel):
 
         Called by :meth:`SettingsTab._load_config` as part of the panel loop.
 
-        Both status lines are cleared first, because the message they carry
+        The deck and note-type problems are cleared first, because the message they carry
         belongs to the selection that was on screen before this load, not to
         the one being loaded. A settings import or profile switch can name a
         deck this collection does not have — ``set_deck_name`` inserts it as a
@@ -1454,9 +1187,8 @@ class AnkiSettingsPanel(FormPanel):
         combo showing a deck that will fail the run. The refresh owns writing
         a message; nothing here invents one.
         """
-        self._clear_status(self.deck_status)
-        self._clear_status(self.notetype_status)
-        self._clear_status(self.preset_status)
+        self._clear_status_parts("deck", "notetype")
+        self.set_fill_status(None, "")
         self.set_deck_name(config.anki_deck_name)
         self.set_note_type(config.anki_note_type)
         self.set_ankiconnect_url(config.ankiconnect_url)
@@ -1467,7 +1199,9 @@ class AnkiSettingsPanel(FormPanel):
         self.set_card_type_marker_fields(config.card_type_marker_fields)
         self.set_strict_card_order(config.strict_card_order)
         self.reading_tone_color_checkbox.setChecked(config.reading_tone_color)
-        apply_language_gate(self._language_gate_pairs, get_profile(config_language(config)).capabilities)
+        capabilities = get_profile(config_language(config)).capabilities
+        self._presets_allowed = "note_presets" in capabilities
+        apply_language_gate(self._language_gate_pairs, capabilities)
 
     def contribute(self, config):
         """Return a new config with this panel's fields applied.

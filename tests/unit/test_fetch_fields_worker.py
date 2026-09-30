@@ -5,7 +5,7 @@ dead-end signal with no connected slot. These tests pin the wired behaviour:
 
 - The worker calls ``AnkiService.get_note_type_fields`` and emits its result.
 - The probe controller dispatches the worker and routes the result back into
-  ``AnkiSettingsPanel.populate_from_field_list``.
+  ``AnkiSettingsPanel.fill_from_field_list``.
 - An empty note-type input short-circuits without spawning a worker.
 """
 
@@ -85,14 +85,14 @@ class TestFetchFieldsWorker:
 
 
 class TestSettingsTabFetchFieldsWiring:
-    """Pin the button-click -> service -> populate_from_field_list path."""
+    """Pin the button-click -> service -> fill_from_field_list path."""
 
     def test_click_with_empty_note_type_does_not_spawn_worker(self, test_config: AnkiMinerConfig, monkeypatch, qtbot):
         tab = SettingsTab(test_config)
         qtbot.addWidget(tab)
         tab.anki_panel.set_note_type("")  # explicit empty
         populate = MagicMock()
-        monkeypatch.setattr(tab.anki_panel, "populate_from_field_list", populate)
+        monkeypatch.setattr(tab.anki_panel, "fill_from_field_list", populate)
 
         with patch("anki_miner.gui.controllers.anki_probe_controller.FetchFieldsWorker") as worker_cls:
             tab.anki_panel.fetch_fields_button.click()
@@ -100,7 +100,7 @@ class TestSettingsTabFetchFieldsWiring:
         worker_cls.assert_not_called()
         populate.assert_not_called()
         # Friendly status on the note-type line.
-        assert "Select a note type" in tab.anki_panel.notetype_status.text()
+        assert "Select a note type" in tab.anki_panel.fill_status.text()
 
     def test_click_routes_fetched_fields_into_populate(self, test_config: AnkiMinerConfig, monkeypatch, qtbot):
         tab = SettingsTab(test_config)
@@ -108,8 +108,8 @@ class TestSettingsTabFetchFieldsWiring:
         tab.anki_panel.set_note_type("Japanese-1.0")
         tab.anki_panel.ankiconnect_url_input.setText("http://localhost:8765")
 
-        populate = MagicMock(return_value=0)
-        monkeypatch.setattr(tab.anki_panel, "populate_from_field_list", populate)
+        populate = MagicMock(return_value=(None, 0))
+        monkeypatch.setattr(tab.anki_panel, "fill_from_field_list", populate)
 
         # Build a fake worker class whose instances:
         #   - record what they were called with
@@ -139,10 +139,10 @@ class TestSettingsTabFetchFieldsWiring:
         assert built[0].note_type == "Japanese-1.0"
         built[0].start.assert_called_once()
 
-        # The fetched list was handed to populate_from_field_list on the main thread.
+        # The fetched list was handed to fill_from_field_list on the main thread.
         populate.assert_called_once_with(["Expression", "Sentence", "MainDefinition"])
         # Status surfaces the count.
-        assert tab.anki_panel.notetype_status.text() == "Fetched 3 field(s) and auto-mapped them"
+        assert tab.anki_panel.fill_status.text() == "Fetched 3 field(s) and auto-mapped them"
         # Button is re-enabled after the result lands.
         assert tab.anki_panel.fetch_fields_button.isEnabled()
 
@@ -158,7 +158,7 @@ class TestSettingsTabFetchFieldsWiring:
 
         tab._anki_probe._on_fetch_fields_finished("Chinese Basic", ["Expression", "Sentence"])
 
-        status = tab.anki_panel.notetype_status.text()
+        status = tab.anki_panel.fill_status.text()
         # Both halves are Qt numerus sources, so the count renders as "%n"
         # substituted into the English fallback rather than a Python ternary a
         # catalogue cannot reach.
@@ -175,7 +175,7 @@ class TestSettingsTabFetchFieldsWiring:
 
         tab._anki_probe._on_fetch_fields_finished("Japanese-1.0", ["Expression", "Sentence"])
 
-        assert "cleared" not in tab.anki_panel.notetype_status.text()
+        assert "cleared" not in tab.anki_panel.fill_status.text()
 
     def test_empty_fetch_result_shows_friendly_status(self, test_config: AnkiMinerConfig, monkeypatch, qtbot):
         tab = SettingsTab(test_config)
@@ -183,7 +183,7 @@ class TestSettingsTabFetchFieldsWiring:
         tab.anki_panel.set_note_type("Missing")
 
         populate = MagicMock()
-        monkeypatch.setattr(tab.anki_panel, "populate_from_field_list", populate)
+        monkeypatch.setattr(tab.anki_panel, "fill_from_field_list", populate)
 
         def fake_worker_factory(service, note_type, parent):
             inst = MagicMock()
@@ -198,7 +198,7 @@ class TestSettingsTabFetchFieldsWiring:
             tab.anki_panel.fetch_fields_button.click()
 
         populate.assert_not_called()
-        assert "Could not fetch" in tab.anki_panel.notetype_status.text()
+        assert "Could not fetch" in tab.anki_panel.fill_status.text()
         assert tab.anki_panel.fetch_fields_button.isEnabled()
 
     def test_late_field_fetch_does_not_map_into_new_note_type(self, test_config: AnkiMinerConfig, monkeypatch, qtbot):
@@ -206,7 +206,7 @@ class TestSettingsTabFetchFieldsWiring:
         qtbot.addWidget(tab)
         tab.anki_panel.set_note_type("Type A")
         populate = MagicMock()
-        monkeypatch.setattr(tab.anki_panel, "populate_from_field_list", populate)
+        monkeypatch.setattr(tab.anki_panel, "fill_from_field_list", populate)
 
         worker = MagicMock()
         worker.isRunning.return_value = False
@@ -218,3 +218,14 @@ class TestSettingsTabFetchFieldsWiring:
         on_fields(["Expression", "Sentence"])
 
         populate.assert_not_called()
+
+    def test_a_recognised_note_type_reports_its_name(self, test_config: AnkiMinerConfig, qtbot):
+        from anki_miner.services.note_presets import LAPIS
+
+        tab = SettingsTab(test_config)
+        qtbot.addWidget(tab)
+        tab.anki_panel.set_note_type("Lapis")
+
+        tab._anki_probe._on_fetch_fields_finished("Lapis", sorted(LAPIS.signature))
+
+        assert tab.anki_panel.fill_status.text() == "Lapis recognised: 15 fields filled."

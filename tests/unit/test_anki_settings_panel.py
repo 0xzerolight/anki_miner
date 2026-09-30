@@ -31,21 +31,66 @@ def test_deck_and_notetype_are_strict_combos(qtbot):
     assert not panel.notetype_combo.isEditable()
 
 
-def test_refresh_buttons_are_visible_and_labelled(qtbot):
-    """A strict combo makes Refresh the only way back from an empty list.
-
-    These were empty ghost buttons — an invisible hit box. With a QLineEdit you
-    could still type the name, so it merely looked odd; with a strict combo,
-    open Settings while Anki is closed and there is nothing clickable to
-    recover with (the first-show fetch is one-shot).
-    """
+def test_one_refresh_button_replaces_test_connection_and_both_refreshes(qtbot):
+    """C03: one connection row; Refresh re-tests and reloads both lists."""
     panel = AnkiSettingsPanel()
     qtbot.addWidget(panel)
-    for button in (panel.deck_sync_button, panel.notetype_sync_button):
-        assert button.text().strip()
-        assert button.toolTip().strip()
-        # An explicit cap here would elide the label back into nothing.
-        assert button.maximumWidth() >= button.sizeHint().width()
+
+    assert panel.refresh_button.text() == "Refresh"
+    assert panel.refresh_button.toolTip().strip()
+    assert panel.refresh_button.maximumWidth() >= panel.refresh_button.sizeHint().width()
+    for gone in ("deck_sync_button", "notetype_sync_button", "test_connection_button"):
+        assert not hasattr(panel, gone), gone
+
+
+def test_refresh_retests_the_connection_and_asks_for_both_lists(qtbot):
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    with qtbot.waitSignals([panel.test_connection_requested, panel.name_lists_requested], timeout=1000):
+        panel.refresh_button.click()
+    assert panel.connection_status.status == "checking"
+
+
+def test_rows_run_deck_note_type_tags_connection_then_url(qtbot):
+    from PyQt6.QtCore import QPoint
+
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.resize(900, 1400)
+    panel.show()
+    qtbot.waitExposed(panel)
+
+    def top(widget):
+        return widget.mapTo(panel, QPoint(0, 0)).y()
+
+    assert (
+        top(panel.deck_combo)
+        < top(panel.notetype_combo)
+        < top(panel.anki_tags_input)
+        < top(panel.refresh_button)
+        < top(panel.ankiconnect_url_input)
+    )
+
+
+def test_only_a_problem_is_shown_and_only_one_at_a_time(qtbot):
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+
+    panel.set_deck_status(True, "3 decks loaded")
+    panel.set_notetype_status(None, "Loading note types from Anki…")
+    assert panel.anki_status.text() == ""
+    assert panel.anki_status.isHidden()
+
+    panel.set_notetype_status(False, "Note type 'X' is not in Anki — pick one below.")
+    panel.set_deck_status(False, "Deck 'Y' is not in Anki — pick one below.")
+    assert panel.anki_status.text() == "Deck 'Y' is not in Anki — pick one below."
+
+    panel.set_connection_status("disconnected")
+    assert panel.anki_status.text() == "Anki isn't reachable. Start Anki (with AnkiConnect) and press Refresh."
+    assert not panel.anki_status.isHidden()
+
+    panel.set_connection_status("connected")
+    assert panel.anki_status.text() == "Deck 'Y' is not in Anki — pick one below."
 
 
 def test_saved_value_survives_when_anki_is_unreachable(qtbot):
@@ -115,7 +160,7 @@ def test_picking_a_real_deck_clears_the_not_in_anki_warning(qtbot):
     panel.set_available_decks(["Default", "JP::Mining"])
     panel.set_deck_status(False, "Deck 'Ghost' is not in Anki — pick one below.")
     panel.deck_combo.setCurrentIndex(panel.deck_combo.findText("JP::Mining"))
-    assert panel.deck_status.text() == ""
+    assert panel.anki_status.text() == ""
 
 
 def test_setting_an_empty_name_clears_the_selection(qtbot):
@@ -271,18 +316,47 @@ def test_no_styling_buttons_or_checkbox(qtbot):
 # ---------------------------------------------------------------------------
 
 
-def test_fetch_fields_button_label(qtbot):
-    """Button text must be the new 'Auto-Map Fields from Note Type' label."""
+def test_fill_button_says_what_it_does_and_is_secondary(qtbot):
+    """D13: one secondary "Fill in automatically", not a full-width accent bar."""
     panel = AnkiSettingsPanel()
     qtbot.addWidget(panel)
-    assert panel.fetch_fields_button.text() == "Auto-Map Fields from Note Type"
+    assert panel.fetch_fields_button.text() == "Fill in automatically"
+    assert panel.fetch_fields_button.objectName() == "secondary"
 
 
-def test_fetch_fields_button_variant_is_primary(qtbot):
-    """Button must use the primary variant (objectName == 'primary')."""
+def test_the_preset_row_is_gone(qtbot):
     panel = AnkiSettingsPanel()
     qtbot.addWidget(panel)
-    assert panel.fetch_fields_button.objectName() == "primary"
+    for gone in ("preset_combo", "preset_apply_button", "preset_status"):
+        assert not hasattr(panel, gone), gone
+
+
+def test_fill_applies_lapis_when_its_fields_are_reported(qtbot, test_config):
+    from anki_miner.services.note_presets import LAPIS
+
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(test_config)
+    panel.set_pitch_category_format("jp")
+
+    preset, cleared = panel.fill_from_field_list(sorted(LAPIS.signature))
+
+    assert preset is LAPIS
+    assert cleared == 0
+    assert panel.get_card_fields()["pitch_category"] == "PitchCategories"
+    assert panel.get_pitch_category_format() == "romaji"
+
+
+def test_fill_runs_the_keyword_pass_for_an_unknown_note_type(qtbot, test_config):
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(test_config)
+
+    preset, cleared = panel.fill_from_field_list(["Word", "Sentence"])
+
+    assert preset is None
+    assert panel.get_card_fields()["word"] == "Word"
+    assert cleared >= 1  # MainDefinition, Picture, ... are not on this note type
 
 
 def test_fetch_fields_button_emits_signal(qtbot):
@@ -648,38 +722,17 @@ def test_load_from_config_clears_a_status_from_the_previous_selection(qtbot, tes
     qtbot.addWidget(panel)
     panel.set_available_decks(["Default", "JP::Mining"])
     panel.set_available_note_types(["Lapis"])
-    panel.set_deck_status(True, "2 decks loaded")
-    panel.set_notetype_status(True, "1 note type loaded")
+    panel.set_deck_status(False, "Deck 'JP::Gone' is not in Anki — pick one below.")
+    panel.set_notetype_status(False, "Note type 'Gone' is not in Anki — pick one below.")
 
     panel.load_from_config(replace(test_config, anki_deck_name="JP::Old", anki_note_type="Ghost"))
 
-    assert panel.deck_status.text() == ""
-    assert panel.notetype_status.text() == ""
+    assert panel.anki_status.text() == ""
 
 
 # ---------------------------------------------------------------------------
 # Note-type preset row
 # ---------------------------------------------------------------------------
-
-
-def test_preset_row_is_a_strict_combo_with_the_three_note_types(qtbot):
-    panel = AnkiSettingsPanel()
-    qtbot.addWidget(panel)
-    assert isinstance(panel.preset_combo, QComboBox)
-    assert not panel.preset_combo.isEditable()
-    ids = [panel.preset_combo.itemData(index) for index in range(panel.preset_combo.count())]
-    assert ids == ["lapis", "kiku", "senren"]
-    # Nothing preselected: applying is a deliberate act.
-    assert panel.preset_combo.currentIndex() == -1
-    # The shared combo+button row defaults its button to "Refresh"; this one
-    # applies a preset and must not inherit the wrong verb.
-    assert panel.preset_apply_button.text() == "Apply"
-    assert panel.deck_sync_button.text() == "Refresh"
-    assert panel.notetype_sync_button.text() == "Refresh"
-    assert panel.preset_apply_button.toolTip().strip()
-    # One column: a narrower verb must not stagger the row beside it.
-    widths = {b.minimumWidth() for b in (panel.deck_sync_button, panel.notetype_sync_button, panel.preset_apply_button)}
-    assert len(widths) == 1, widths
 
 
 def test_applying_lapis_fills_the_mapping_and_the_pitch_format(qtbot):
@@ -697,7 +750,6 @@ def test_applying_lapis_fills_the_mapping_and_the_pitch_format(qtbot):
     assert fields["sentence_reading"] == ""
     assert panel.get_pitch_category_format() == "romaji"
     assert panel.get_card_type_marker_fields()["sentence"] == "IsSentenceCard"
-    assert panel.preset_status.text().strip()
 
 
 def test_applying_senren_rewrites_the_markers_and_drops_an_unsupported_card_type(qtbot):
@@ -734,40 +786,6 @@ def test_applying_a_preset_preserves_keys_the_panel_does_not_own(qtbot):
     panel.apply_note_type_preset(preset_by_id("lapis"))
 
     assert panel.get_card_fields()["future_key"] == "Whatever"
-
-
-def test_apply_with_nothing_selected_reports_and_changes_nothing(qtbot):
-    panel = AnkiSettingsPanel()
-    qtbot.addWidget(panel)
-    panel.set_card_fields({"word": "MyWord"})
-    panel.preset_combo.setCurrentIndex(-1)
-
-    panel.preset_apply_button.click()
-
-    assert panel.get_card_fields()["word"] == "MyWord"
-    assert panel.preset_status.text().strip()
-    assert panel.preset_status.property("status") == "error"
-
-
-def test_choosing_a_known_note_type_preselects_its_preset(qtbot):
-    panel = AnkiSettingsPanel()
-    qtbot.addWidget(panel)
-    panel.set_available_note_types(["Lapis", "Senren", "Basic"])
-
-    panel.set_note_type("Senren")
-
-    assert panel.preset_combo.currentData() == "senren"
-
-
-def test_an_unknown_note_type_leaves_the_preset_selection_alone(qtbot):
-    panel = AnkiSettingsPanel()
-    qtbot.addWidget(panel)
-    panel.set_available_note_types(["Lapis", "Lapis-modified"])
-
-    panel.set_note_type("Lapis")
-    panel.set_note_type("Lapis-modified")
-
-    assert panel.preset_combo.currentData() == "lapis"
 
 
 def test_apply_fills_an_empty_note_type_but_never_overwrites_one(qtbot):
