@@ -285,9 +285,16 @@ The Setup Wizard downloads only the frequency list for the variety set in Settin
 
 ## Note types
 
+Anki Miner does not ship a note type. Use any note type you like: it works once its fields are mapped.
+
+- The word goes in the note type's **first field**. Name it **Word** (or Expression, Vocab) and Anki Miner maps it by itself.
+- It needs a field for the **example sentence**. Name it **Sentence** (or Context, Example) and Anki Miner maps it by itself.
+- Anki Miner fills the other fields it recognises by name, such as Reading, Definition, Glossary, Picture, SentenceAudio, WordAudio, Frequency, SentenceTranslation and Source. The whole field name has to match, spaces and underscores aside: "Sentence" is recognised, "Example sentence" is not.
+- Fields named anything else: press **Skip Setup** in the Setup Wizard, then choose the fields yourself in Settings -> Cards & Anki.
+
 | Note type | Fields |
 |-----------|--------|
-| [Lapis](https://github.com/donkuri/lapis) (Japanese) | Settings -> Cards & Anki -> Preset |
-| [Kiku](https://github.com/youyoumu/kiku) (Japanese) | Settings -> Cards & Anki -> Preset |
-| [Senren](https://github.com/BrenoAqua/Senren) (Japanese) | Settings -> Cards & Anki -> Preset |
-| Any other note type with a word field and a sentence field | Settings -> Cards & Anki -> Auto-Map Fields from Note Type |
+| [Lapis](https://github.com/donkuri/lapis) (Japanese) | Filled by the Setup Wizard, or Settings -> Cards & Anki -> Fill in automatically |
+| [Kiku](https://github.com/youyoumu/kiku) (Japanese) | Filled by the Setup Wizard, or Settings -> Cards & Anki -> Fill in automatically |
+| [Senren](https://github.com/BrenoAqua/Senren) (Japanese) | Filled by the Setup Wizard, or Settings -> Cards & Anki -> Fill in automatically |
+| Any other note type with a word field and a sentence field | Filled by the Setup Wizard, or Settings -> Cards & Anki -> Fill in automatically |

@@ -299,3 +299,19 @@ def test_wizard_note_type_link_lands_on_a_section_naming_every_preset() -> None:
     assert anchor in headings
     section = _resources_section(headings[anchor])
     assert [preset.name for preset in NOTE_PRESETS if preset.url not in section] == []
+
+
+def test_note_types_section_says_any_note_type_works() -> None:
+    """D10 = B: nothing to download; the section says what a note type needs."""
+    section = _resources_section("Note types")
+
+    assert "Anki Miner does not ship a note type" in section
+    assert "works once its fields are mapped" in section
+    assert "first field" in section
+    # The names the wizard's guidance gives (T2.12) must match the keyword table.
+    assert "**Word**" in section
+    assert "**Sentence**" in section
+    assert "Skip Setup" in section
+    assert "Fill in automatically" in section
+    assert ".apkg" not in section
+    assert "Auto-Map Fields from Note Type" not in section
