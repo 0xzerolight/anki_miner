@@ -1216,9 +1216,49 @@ def test_an_empty_word_mapping_shows_no_field_warning(qtbot, wiz_config):
 
     page._on_fields_fetched("Basic", ["Front", "Back"])
 
-    assert wiz.working_config().anki_fields["word"] == ""
+    # WB I1: the word now goes in the first field, as the guidance says.
+    assert wiz.working_config().anki_fields["word"] == "Front"
     assert page.warning_label.text() == ""
-    assert page.mapping_summary.text() == "No fields could be filled automatically."
+    assert page.mapping_summary.text() == "Fields filled automatically: 1."
+
+
+def test_a_basic_note_type_opens_next_for_a_first_run_spanish_user(qtbot, wiz_config):
+    """WB I1: a fresh Anki holds only Basic. The word goes in its first field and
+    Next opens, so the user never needs Skip Setup (which reverts the language
+    they picked and cancels the dictionary download)."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.languages.switching import switch_language  # noqa: PLC0415
+
+    wiz = SetupWizard(replace(switch_language(wiz_config, "es"), anki_note_type="Basic"))
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    page.select_note_type("Basic", notify=False)
+    page._fetched_note_types = ["Basic"]
+    page._notetypes_loaded = True
+
+    page._on_fields_fetched("Basic", ["Front", "Back"])
+
+    fields = wiz.working_config().anki_fields
+    assert fields["word"] == "Front"
+    assert {key for key, value in fields.items() if value} == {"word"}
+    assert page.isComplete() is True
+
+
+def test_the_first_field_fallback_never_takes_a_field_already_mapped(qtbot, wiz_config):
+    """A first field the keyword pass gave to another key keeps that key."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(replace(wiz_config, anki_note_type="Mining"))
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    page.select_note_type("Mining", notify=False)
+    page._fetched_note_types = ["Mining"]
+
+    page._on_fields_fetched("Mining", ["Sentence", "Back"])
+
+    fields = wiz.working_config().anki_fields
+    assert fields["sentence"] == "Sentence"
+    assert fields["word"] == ""
 
 
 def test_notetype_page_fetch_stages_fields(qtbot, wiz_config):
@@ -1645,8 +1685,10 @@ def test_other_languages_get_the_any_note_type_guidance(qtbot, wiz_config):
     assert "Word, Sentence" in text
     assert "name its" not in text
     assert "add a field" not in text
-    assert "Skip Setup" in text
-    assert "Settings → Cards & Anki" in text
+    # WB I1: Skip Setup reverts the picked language and cancels the download,
+    # so the guidance never sends anyone there.
+    assert "Skip Setup" not in text
+    assert "Settings → Cards & Anki after setup" in text
     assert f'href="{pages_mod.NOTE_TYPE_HELP_URL}"' in text
     assert ".apkg" not in text
 

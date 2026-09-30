@@ -1128,10 +1128,12 @@ class NoteTypePage(_WizardSection):
         """What any note type needs (D10 = B): the app ships none, any one works once mapped.
 
         The wizard has no field-mapping table: it maps only by name, through
-        the keyword pass (`FIELD_KEYWORDS`, whole normalised name). So the text
+        the keyword pass (`FIELD_KEYWORDS`, whole normalised name), and the
+        word falls back to the first field (`_apply_keyword_fill`). So the text
         says the word goes in the first field, names field names that pass
-        recognises ("Word", "Sentence", ...) and gives the manual route for any
-        other naming. It never tells the user to build or rename a note type
+        recognises ("Word", "Sentence", ...) and points to Settings for the
+        rest after setup. It never says Skip Setup, which reverts the picked
+        language and cancels the dictionary download (WB I1). It never tells the user to build or rename a note type
         (the owner's D10 note: the user picks a note type they like). A fresh
         Anki holds only Basic (Front/Back), which is the common case for the 31
         languages without note presets.
@@ -1141,8 +1143,8 @@ class NoteTypePage(_WizardSection):
                 self.tr(
                     "Any note type works once its fields are mapped. Pick one of your note types: Anki Miner "
                     "puts the word in its first field and fills the fields it recognises by name, such as Word, "
-                    "Sentence, Reading, Definition, Picture and audio. If it can't tell which field is which, "
-                    "press Skip Setup and choose the fields yourself in Settings → Cards & Anki. "
+                    "Sentence, Reading, Definition, Picture and audio. You can change which field gets what "
+                    "in Settings → Cards & Anki after setup. "
                     '<a href="%1">Which fields can Anki Miner fill?</a>'
                 ),
                 NOTE_TYPE_HELP_URL,
@@ -1263,6 +1265,15 @@ class NoteTypePage(_WizardSection):
         for key, value in mapped.items():
             if value and not merged.get(key):
                 merged[key] = value
+        # The word goes in the first field when no name gave it one (WB I1): a
+        # fresh Anki holds only Basic (Front/Back), and without this Next stays
+        # off, leaving Skip Setup, which reverts the picked language and cancels
+        # the dictionary download. A first field another key already holds stays
+        # with that key.
+        first = self._field_names[0] if self._field_names else ""
+        if first and not merged.get("word") and first not in merged.values():
+            merged["word"] = first
+            mapped["word"] = first
         # Stage anki_fields as a PLAIN dict; config re-wraps it in MappingProxyType.
         if merged != dict(config.anki_fields):
             self._wizard.update_working_config(replace(config, anki_fields=merged))

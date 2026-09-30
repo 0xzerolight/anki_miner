@@ -311,7 +311,9 @@ def test_note_types_section_says_any_note_type_works() -> None:
     # The names the wizard's guidance gives (T2.12) must match the keyword table.
     assert "**Word**" in section
     assert "**Sentence**" in section
-    assert "Skip Setup" in section
+    # WB I1: Skip Setup reverts the picked language; the route is Settings after setup.
+    assert "Skip Setup" not in section
+    assert "finish the Setup Wizard" in section
     assert "Fill in automatically" in section
     assert ".apkg" not in section
     assert "Auto-Map Fields from Note Type" not in section
