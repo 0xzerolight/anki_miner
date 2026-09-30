@@ -58,6 +58,20 @@ def _make_tab(config, qtbot):
     return tab
 
 
+def _assert_probe_lands_false(tab, qtbot):
+    """Seed a True verdict, re-probe, and wait for the probe to overwrite it.
+
+    ``_alass_is_available`` starts False, so asserting False after a fixed
+    wait would pass whether or not the probe ever landed. Callers run this
+    inside their patches so the re-probe sees them.
+    """
+    assert tab._availability_worker.wait(3000)
+    tab._alass_is_available = True
+    tab._refresh_engine_state()
+    assert tab._availability_worker.wait(3000)
+    qtbot.waitUntil(lambda: not tab._alass_available(), timeout=3000)
+
+
 # ---------------------------------------------------------------------------
 # Construction
 # ---------------------------------------------------------------------------
@@ -96,11 +110,9 @@ def test_alass_absent_keeps_retime_enabled(qtbot, tmp_path):
     config = _make_config(tmp_path)
     with patch(_COMPUTE_AVAILABLE, return_value=False):
         tab = SubtitleRetimeTab(config)
-        assert tab._availability_worker.wait(3000)
-        qtbot.wait(100)
-    qtbot.addWidget(tab)
+        qtbot.addWidget(tab)
+        _assert_probe_lands_false(tab, qtbot)
     assert tab.retime_button.isEnabled()
-    assert tab._alass_available() is False
 
 
 def test_alass_available_via_path_check(qtbot, tmp_path):
@@ -125,10 +137,9 @@ def test_alass_unavailable_via_path_check(qtbot, tmp_path):
         patch("anki_miner.gui.widgets.subtitle_retime_tab.shutil.which", return_value=None),
     ):
         tab = SubtitleRetimeTab(config)
-        assert tab._availability_worker.wait(3000)
-        qtbot.wait(100)
-    qtbot.addWidget(tab)
-    assert tab._alass_available() is False
+        qtbot.addWidget(tab)
+        assert tab._compute_alass_available(config) is False
+        _assert_probe_lands_false(tab, qtbot)
     assert tab.retime_button.isEnabled()
 
 
@@ -138,10 +149,9 @@ def test_alass_resolved_path_missing_unavailable(qtbot, tmp_path):
     missing = str(tmp_path / "nope" / "alass")
     with patch("anki_miner.gui.widgets.subtitle_retime_tab.resolve_alass", return_value=missing):
         tab = SubtitleRetimeTab(config)
-        assert tab._availability_worker.wait(3000)
-        qtbot.wait(100)
-    qtbot.addWidget(tab)
-    assert tab._alass_available() is False
+        qtbot.addWidget(tab)
+        assert tab._compute_alass_available(config) is False
+        _assert_probe_lands_false(tab, qtbot)
     assert tab.retime_button.isEnabled()
 
 
