@@ -294,3 +294,15 @@ class TestReadingTtsCombo:
             replace(create_default_config(), reading_tts_enabled=True, reading_tts_google_enabled=True)
         )
         assert panel._tts_touched is False
+
+
+def test_read_aloud_row_uses_the_short_label(qtbot):
+    """C02: the outlier label that pushed the Card Media input column right."""
+    from PyQt6.QtWidgets import QLabel
+
+    panel = MediaSettingsPanel()
+    qtbot.addWidget(panel)
+    texts = [label.text() for label in panel.findChildren(QLabel)]
+
+    assert "Read aloud (manga, books):" in texts
+    assert not any("Spoken sentences for manga" in text for text in texts)

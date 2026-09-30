@@ -88,7 +88,7 @@ class MediaSettingsPanel(FormPanel):
         # _set_reading_tts never trips the touched flag.
         self.reading_tts_combo.activated.connect(self._on_reading_tts_activated)
         self.add_field(
-            self.tr("Spoken sentences for manga and books"),
+            self.tr("Read aloud (manga, books)"),
             self.reading_tts_combo,
             helper=self.tr(
                 "Add spoken audio to cards from manga and books, which have no source "
@@ -97,6 +97,7 @@ class MediaSettingsPanel(FormPanel):
             anchor="reading_tts",
             anchor_text=lambda: (
                 "TTS",
+                "Spoken sentences for manga and books",
                 *(self.reading_tts_combo.itemText(i) for i in range(self.reading_tts_combo.count())),
             ),
         )

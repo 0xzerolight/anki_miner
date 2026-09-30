@@ -141,11 +141,21 @@ class FormPanel(SettingAnchorHost, QFrame):
         Runs on show and again on a font change, not once at construction: the
         UI text scale is applied live from Settings, and a width frozen at build
         time is stale the moment the user moves that slider.
+
+        It also gives every row label the width of the widest visible label, so
+        the forms that sections and T3.01's blocks open all share one input
+        column (C02). Labels hidden by a language gate do not count; the next
+        show re-measures.
         """
         if not self._form_rows:
             return
-        widest = max((label.sizeHint().width() for label, _ in self._form_rows if label is not None), default=0)
+        widest = max(
+            (label.sizeHint().width() for label, _ in self._form_rows if label is not None and label.isVisibleTo(self)),
+            default=0,
+        )
         for label, field in self._form_rows:
+            if label is not None:
+                label.setMinimumWidth(widest)
             spacing = self._form_layout.horizontalSpacing() if label is not None else 0
             cap = form_row_cap(field) - (widest + max(spacing, 0) if label is not None else 0)
             # Never below what the field itself needs: Qt applies a maximum
@@ -155,6 +165,11 @@ class FormPanel(SettingAnchorHost, QFrame):
     def showEvent(self, event) -> None:  # noqa: N802 - Qt override
         super().showEvent(event)
         self._apply_field_cap()
+        # Qt activated this layout before the show event, so the label widths
+        # set just now would only land on a later, posted relayout; the first
+        # frame (and a search jump measuring positions) would see each form's
+        # own label column. Lay out again now.
+        self._main_layout.activate()
 
     def changeEvent(self, event) -> None:  # noqa: N802 - Qt override
         super().changeEvent(event)
@@ -175,6 +190,10 @@ class FormPanel(SettingAnchorHost, QFrame):
         label = QLabel(f"{text}:")
         label.setObjectName("field-label")
         make_label_fit_text(label)
+        # Right-aligned inside the shared column width _apply_field_cap gives
+        # every label (C02); QFormLayout's own label alignment only positions
+        # the label box, not the text inside a box wider than the text.
+        label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         return label
 
     def add_field(
