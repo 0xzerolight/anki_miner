@@ -52,7 +52,6 @@ from anki_miner.gui.widgets._anki_plan_tab_base import _AnkiPlanTabBase, _PlanTa
 from anki_miner.gui.widgets.base import (
     PageWidth,
     ScreenIssue,
-    capped_page_column,
     configure_card_layout,
     install_workflow_shell,
     page_filler,
@@ -319,10 +318,12 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         # Backfill has no activity log, so Activity is hidden rather than opened
         # onto an empty panel.
         self.action_bar = install_workflow_shell(outer, scroll_area, container, self.PAGE_WIDTH, log=None)
-        # The run's own status line and bar go beside the buttons that produce
-        # them, on the same capped column, instead of scrolling away under a
-        # 240px preview table.
-        outer.insertWidget(outer.count() - 1, capped_page_column(self._create_run_status(), self.PAGE_WIDTH))
+        # D1: the run line folds into the pinned bar. The strip stays built as
+        # the line's model (status_label, progress_bar) but is never shown.
+        strip = self._create_run_status()
+        strip.setParent(self)
+        strip.hide()
+        self.action_bar.set_keeps_last_result(True)
         self.install_issue_banner(outer)
         self._sync_action_prominence()
         # Ctrl+Enter runs whichever verb the stage is showing (D48-B): Scan
@@ -512,7 +513,7 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         self.worker_thread = worker
         self._set_running(True)
         self._publish_task_start(self.tr("Card backfill scan"))
-        self.status_label.setText(self.tr("Scanning…"))
+        self._set_run_line(self.tr("Scanning…"))
         logger.info(
             "Card Backfill scan started: field_groups=%d overwrite=%s deck=%s note_type=%s",
             sum(checkbox.isChecked() for checkbox in self.field_checkboxes.values()),
@@ -532,7 +533,7 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         self.page_filler.setVisible(not has_rows)
         self.apply_button.setEnabled(self._can_apply_plan())
         self._sync_action_prominence()
-        self.status_label.setText("")
+        self._set_run_line("")
 
     def _can_apply_plan(self) -> bool:
         if self._plan is None:
@@ -709,7 +710,7 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         self.worker_thread = worker
         self._set_running(True)
         self._publish_task_start(self.tr("Card backfill"), total=len(plan.notes))
-        self.status_label.setText(self._strings.applying)
+        self._set_run_line(self._strings.applying)
         logger.info(
             "Card Backfill apply started: field_groups=%d overwrite=%s deck=%s note_type=%s",
             sum(
@@ -746,7 +747,7 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
                 self.tr("%n audio file(s) could not be added to Anki; scan again to retry.", "", result.media_failed)
             )
             self._run_failed = True
-        self.status_label.setText(" ".join(parts))
+        self._set_run_line(" ".join(parts))
 
     # ------------------------------------------------------------------
     # Worker plumbing
@@ -773,5 +774,5 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         logger.warning("Card Backfill worker failed: error=%s", message)
         self._run_failed = True
         self._set_running(False)
-        self.status_label.setText("")
+        self._set_run_line("")
         self.show_screen_issue(ScreenIssue(summary=self._strings.worker_failed, details=message))

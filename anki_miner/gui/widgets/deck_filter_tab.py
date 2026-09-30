@@ -49,7 +49,6 @@ from anki_miner.gui.widgets._anki_plan_tab_base import _AnkiPlanTabBase, _PlanTa
 from anki_miner.gui.widgets.base import (
     PageWidth,
     ScreenIssue,
-    capped_page_column,
     configure_card_layout,
     install_workflow_shell,
     page_filler,
@@ -246,7 +245,12 @@ class DeckFilterTab(_AnkiPlanTabBase):
         outer.setContentsMargins(0, 0, 0, 0)
         # No activity log; Activity stays hidden rather than opening empty.
         self.action_bar = install_workflow_shell(outer, scroll_area, container, self.PAGE_WIDTH, log=None)
-        outer.insertWidget(outer.count() - 1, capped_page_column(self._create_run_status(), self.PAGE_WIDTH))
+        # D1: the run line folds into the pinned bar. The strip stays built as
+        # the line's model (status_label, progress_bar) but is never shown.
+        strip = self._create_run_status()
+        strip.setParent(self)
+        strip.hide()
+        self.action_bar.set_keeps_last_result(True)
         self.install_issue_banner(outer)
         self._sync_action_prominence()
         # Ctrl+Enter runs whichever verb the stage is showing (D48-B).
@@ -431,7 +435,7 @@ class DeckFilterTab(_AnkiPlanTabBase):
         self.worker_thread = worker
         self._set_running(True)
         self._publish_task_start(self.tr("Deck filter scan"))
-        self.status_label.setText(self.tr("Scanning…"))
+        self._set_run_line(self.tr("Scanning…"))
         logger.info(
             "Deck Filter scan started: source=%s expression_field=%s",
             options.source_deck,
@@ -449,7 +453,7 @@ class DeckFilterTab(_AnkiPlanTabBase):
         self.page_filler.setVisible(not has_rows)
         self.apply_button.setEnabled(self._plan is not None)
         self._sync_action_prominence()
-        self.status_label.setText("")
+        self._set_run_line("")
 
     def _drop_reason_labels(self) -> dict[str, str]:
         return {
@@ -548,7 +552,7 @@ class DeckFilterTab(_AnkiPlanTabBase):
         self.worker_thread = worker
         self._set_running(True)
         self._publish_task_start(self.tr("Deck filter copy"), total=len(plan.kept))
-        self.status_label.setText(self._strings.applying)
+        self._set_run_line(self._strings.applying)
         logger.info(
             "Deck Filter apply started: target=%s notes=%d",
             plan.options.target_deck,
@@ -563,7 +567,7 @@ class DeckFilterTab(_AnkiPlanTabBase):
         if result.not_created:
             parts.append(self.tr("%n note(s) were not accepted by Anki (see log).", "", result.not_created))
             self._run_failed = True
-        self.status_label.setText(" ".join(parts))
+        self._set_run_line(" ".join(parts))
 
     # ------------------------------------------------------------------
     # Worker plumbing
@@ -589,5 +593,5 @@ class DeckFilterTab(_AnkiPlanTabBase):
         logger.warning("Deck Filter worker failed: error=%s", message)
         self._run_failed = True
         self._set_running(False)
-        self.status_label.setText("")
+        self._set_run_line("")
         self.show_screen_issue(ScreenIssue(summary=self._strings.worker_failed, details=message))

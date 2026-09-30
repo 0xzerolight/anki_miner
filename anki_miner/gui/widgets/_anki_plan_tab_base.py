@@ -171,6 +171,18 @@ class _AnkiPlanTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
 
         return strip
 
+    def _set_run_line(self, text: str) -> None:
+        """Say what the run is doing or how it ended, in the pinned bar (D1).
+
+        ``status_label`` stays the line's model (its strip is built but never
+        shown), so every rule that reads the last line reads it there; the bar
+        shows the same text once the run is over.
+        """
+        self.status_label.setText(text)
+        action_bar = getattr(self, "action_bar", None)
+        if action_bar is not None:
+            action_bar.set_last_result(text)
+
     def _sync_action_prominence(self) -> None:
         """Put the action the user can actually take next on the right.
 
@@ -214,7 +226,7 @@ class _AnkiPlanTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
             return False
         self._drop_plan()
         self._sync_action_prominence()
-        self.status_label.setText(self._strings.settings_changed)
+        self._set_run_line(self._strings.settings_changed)
         return True
 
     # ------------------------------------------------------------------
@@ -242,12 +254,12 @@ class _AnkiPlanTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         if not urls_from_event(event):
             return
         event.acceptProposedAction()
-        self.status_label.setText(self._drop_refusal())
+        self._set_run_line(self._drop_refusal())
 
     def dragLeaveEvent(self, event: QDragLeaveEvent | None) -> None:  # noqa: N802 - Qt override
         """Take the refusal back down when the drag moves off the screen."""
         if self.status_label.text() == self._drop_refusal():
-            self.status_label.setText("")
+            self._set_run_line("")
         if event is not None:
             event.accept()
 
@@ -256,7 +268,7 @@ class _AnkiPlanTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         if event is None:
             return
         if self._may_answer_a_drop():
-            self.status_label.setText(self._drop_refusal())
+            self._set_run_line(self._drop_refusal())
             self._deck_combo().setFocus(Qt.FocusReason.OtherFocusReason)
         event.ignore()
 
@@ -338,7 +350,7 @@ class _AnkiPlanTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
             self._publish_task_cancelling()
             self.worker_thread.cancel()
             self.cancel_button.setEnabled(False)
-            self.status_label.setText(self._strings.cancelling)
+            self._set_run_line(self._strings.cancelling)
 
     def _on_progress(self, done: int, total: int) -> None:
         if total:
@@ -350,9 +362,9 @@ class _AnkiPlanTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         self._drop_plan()
         receipt = self.status_label.text()
         if receipt in {self._strings.applying, self._strings.cancelling}:
-            self.status_label.setText(self._strings.cancelled)
+            self._set_run_line(self._strings.cancelled)
         elif not receipt.startswith(self._strings.cancelled):
-            self.status_label.setText(f"{self._strings.cancelled} {receipt}")
+            self._set_run_line(f"{self._strings.cancelled} {receipt}")
 
     def _on_worker_finished(self) -> None:
         self._set_running(False)
@@ -362,7 +374,7 @@ class _AnkiPlanTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         # on the exact live text: the Apply path has already written its partial
         # receipt here by the time ``finished`` arrives.
         if cancelled and self.status_label.text() == self._strings.cancelling:
-            self.status_label.setText(self._strings.cancelled)
+            self._set_run_line(self._strings.cancelled)
         self._publish_task_finish(self._task_outcome(cancelled=cancelled, failed=self._run_failed))
         self._run_failed = False
         self.worker_thread = None

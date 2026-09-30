@@ -434,3 +434,24 @@ class TestCloseWorkers:
         tab._deck_worker = _dead_worker(tab)
 
         assert list(tab.iter_close_workers()) == []
+
+
+class TestRunLineInThePinnedBar:
+    """D1 point 6: the run strip under the page folds into the pinned bar."""
+
+    def test_the_run_strip_is_not_on_screen(self, tab):
+        assert not tab.status_label.isVisibleTo(tab)
+        assert not tab.progress_bar.isVisibleTo(tab)
+
+    def test_a_run_line_is_the_bars_kept_line(self, tab):
+        tab._set_run_line("Cancelled. 1 done.")
+
+        assert tab.status_label.text() == "Cancelled. 1 done."
+        assert tab.action_bar.stage_label.full_text == "Cancelled. 1 done."
+
+    def test_a_cancelled_apply_keeps_its_verdict_in_the_bar(self, tab):
+        tab._set_run_line("1 done.")
+
+        tab._on_apply_cancelled()
+
+        assert tab.action_bar.stage_label.full_text == "Cancelled. 1 done."
