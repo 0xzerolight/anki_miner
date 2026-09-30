@@ -589,6 +589,30 @@ class TestFrame:
         assert [b.text() for b in footer] == ["Close"]
         assert footer[0].objectName() == "primary"
 
+    def test_close_is_looked_up_in_the_catalogued_context(self, qtbot, tmp_path):
+        """Z.5 (UI audit 2026-09-29): the German manager read "Close". PyQt's
+        ``self.tr`` looks the string up under the runtime class name, and the
+        catalogs hold the shared button under ``EnhancedDialog`` only.
+        """
+        from PyQt6.QtCore import QTranslator
+        from PyQt6.QtWidgets import QApplication, QPushButton
+
+        class _ContextTranslator(QTranslator):
+            def translate(self, context, source, disambiguation=None, n=-1):  # noqa: N802
+                return f"{context}:{source}" if source == "Close" else None
+
+        app = QApplication.instance()
+        assert app is not None
+        translator = _ContextTranslator()
+        app.installTranslator(translator)
+        try:
+            dlg = KnownWordsManagerDialog(_db_with_user_words(tmp_path))
+            qtbot.addWidget(dlg)
+            footer = dlg._footer_widget.findChildren(QPushButton)
+            assert [b.text() for b in footer] == ["EnhancedDialog:Close"]
+        finally:
+            app.removeTranslator(translator)
+
     def test_the_action_row_is_never_clipped_at_the_minimum_size(self, qtbot, tmp_path):
         """Z.5 (UI audit 2026-09-29): shrunk to its minimum at 1024x768, the
         manager was narrower than its action row, so "Remove Selected" and

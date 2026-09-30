@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QCoreApplication, Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
@@ -208,7 +208,10 @@ class EnhancedDialog(QDialog):
         Returns:
             The created button
         """
-        return self.add_button(text or self.tr("Close"), "primary", self.accept)
+        # A literal context: PyQt's self.tr looks up the runtime subclass's name,
+        # and the catalogs hold this string under EnhancedDialog only (Z.5).
+        close = QCoreApplication.translate("EnhancedDialog", "Close")
+        return self.add_button(text or close, "primary", self.accept)
 
     def keyPressEvent(self, event) -> None:
         """Handle key press events."""
