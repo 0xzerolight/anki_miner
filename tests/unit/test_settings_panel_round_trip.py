@@ -169,12 +169,8 @@ _SAVE_PATH_FIELDS = frozenset(
         "use_blacklist",
         "whitelist_path",
         "use_whitelist",
-        "deduplicate_sentences",
         "exclude_hiragana_only_words",
         "exclude_katakana_only_words",
-        "use_i_plus_one_filter",
-        "max_sentence_duration_seconds",
-        "max_sentence_chars",
         "reading_min_occurrence",
         # SentencesSettingsPanel
         "subtitle_regex_filter",
@@ -183,6 +179,10 @@ _SAVE_PATH_FIELDS = frozenset(
         "secondary_subtitle_enabled",
         "merge_incomplete_cues",
         "bold_target_in_sentence",
+        "deduplicate_sentences",
+        "use_i_plus_one_filter",
+        "max_sentence_duration_seconds",
+        "max_sentence_chars",
         # YouTubeSettingsPanel
         "youtube_cookies_from_browser",
         "youtube_cookies_file",
@@ -357,12 +357,8 @@ class TestSavePathRoundTrip:
             "use_blacklist",
             "whitelist_path",
             "use_whitelist",
-            "deduplicate_sentences",
             "exclude_hiragana_only_words",
             "exclude_katakana_only_words",
-            "use_i_plus_one_filter",
-            "max_sentence_duration_seconds",
-            "max_sentence_chars",
             "reading_min_occurrence",
         ):
             assert getattr(result, field_name) == getattr(original, field_name), field_name
@@ -408,6 +404,10 @@ class TestSavePathRoundTrip:
             "secondary_subtitle_enabled",
             "merge_incomplete_cues",
             "bold_target_in_sentence",
+            "deduplicate_sentences",
+            "use_i_plus_one_filter",
+            "max_sentence_duration_seconds",
+            "max_sentence_chars",
         ):
             assert getattr(result, field_name) == getattr(original, field_name), field_name
 

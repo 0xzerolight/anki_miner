@@ -8,7 +8,6 @@ from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
-    QDoubleSpinBox,
     QHBoxLayout,
     QInputDialog,
     QLabel,
@@ -395,37 +394,6 @@ class FilteringSettingsPanel(FormPanel):
             anchor_text=lambda: tuple(info.label for info in catalog),
         )
 
-        # Sentence Rule section. Folds the old separate "Deduplicate by
-        # Sentence" and "Only Mine i+1 Sentences" checkboxes into one choice --
-        # i+1 already overrode dedup in EpisodeProcessor, so the pair never
-        # expressed four independent states.
-        self.add_section(self.tr("Sentence Rule"))
-
-        self.sentence_rule_combo = QComboBox()
-        self.sentence_rule_combo.addItem(self.tr("Mine every unknown word"), "all")
-        self.sentence_rule_combo.addItem(self.tr("One card per sentence"), "dedup")
-        self.sentence_rule_combo.setItemData(
-            1,
-            self.tr(
-                "Mines at most one word per example sentence — the first one found in that sentence. "
-                "Every other word sharing it is skipped."
-            ),
-            Qt.ItemDataRole.ToolTipRole,
-        )
-        self.sentence_rule_combo.addItem(self.tr("Only i+1 sentences (exactly one unknown word)"), "i_plus_one")
-        self.sentence_rule_combo.setItemData(
-            2,
-            self.tr(
-                "Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication."
-            ),
-            Qt.ItemDataRole.ToolTipRole,
-        )
-        self.add_field(
-            "",
-            self.sentence_rule_combo,
-            anchor_text=self._sentence_rule_search_text,
-        )
-
         # Script Type section (Issue #57)
         self.add_section(self.tr("Script Type"))
         self._script_type_section_label = self._active_section_label
@@ -464,7 +432,7 @@ class FilteringSettingsPanel(FormPanel):
         # here: the panel and WordFilterService then read one source of truth.
         # It gets a heading of its own because "Script Type" above is gated on
         # kana_filters and hides here, which would leave these rows reading as
-        # part of "Sentence Rule".
+        # part of the section above.
         self.add_section(self.tr("Script Type"))
         self._script_filter_section_label = self._active_section_label
 
@@ -483,38 +451,6 @@ class FilteringSettingsPanel(FormPanel):
             )
             self.script_filter_checkboxes[option.option_id] = checkbox
             self._script_filter_fields[option.option_id] = option.config_field
-
-        # Sentence Length section (Issue #33). No master toggle: the filter is
-        # active whenever either cap below is above 0.
-        self.add_section(self.tr("Sentence Length"))
-
-        self.sentence_length_helper = QLabel(self.tr("Set either limit above 0 to turn the filter on."))
-        self.sentence_length_helper.setObjectName("helper-text")
-        self.sentence_length_helper.setWordWrap(True)
-        self.add_widget(self.sentence_length_helper)
-
-        self.max_sentence_duration_spinbox = QDoubleSpinBox()
-        self.max_sentence_duration_spinbox.setRange(0.0, 600.0)
-        self.max_sentence_duration_spinbox.setDecimals(1)
-        self.max_sentence_duration_spinbox.setSingleStep(0.5)
-        self.max_sentence_duration_spinbox.setSuffix(self.tr(" s"))
-        self.max_sentence_duration_spinbox.setSpecialValueText(self.tr("No limit"))
-        self.add_field(
-            self.tr("Max Sentence Duration"),
-            self.max_sentence_duration_spinbox,
-            helper=self.tr(
-                "Drops cards whose example sentence audio is longer than this many seconds. Set to 0 for no limit."
-            ),
-        )
-
-        self.max_sentence_chars_spinbox = QSpinBox()
-        self.max_sentence_chars_spinbox.setRange(0, 1000)
-        self.max_sentence_chars_spinbox.setSpecialValueText(self.tr("No limit"))
-        self.add_field(
-            self.tr("Max Sentence Characters"),
-            self.max_sentence_chars_spinbox,
-            helper=self.tr("Drops cards whose sentence text exceeds this many characters. Set to 0 for no limit."),
-        )
 
         # Reading section: per-book minimum word occurrence (Reading tab).
         self.add_section(self.tr("Reading"))
@@ -568,25 +504,6 @@ class FilteringSettingsPanel(FormPanel):
         )
 
         self.add_stretch()
-
-    def _sentence_rule_search_text(self) -> tuple[str, ...]:
-        """Searchable text for ``sentence_rule_combo``: every item plus its tooltip.
-
-        The combo has no field label (``add_field("", ...)``), so without this
-        the row's item texts and per-item tooltips (set via ``ItemDataRole.
-        ToolTipRole``) are invisible to search. "dedup" and "deduplicate" are
-        plain English keywords, not translated strings: the tooltip only spells
-        out "deduplication", which contains "dedup" as a substring but not
-        "deduplicate".
-        """
-        parts: list[str] = ["dedup", "deduplicate"]
-        combo = self.sentence_rule_combo
-        for index in range(combo.count()):
-            parts.append(combo.itemText(index))
-            tooltip = combo.itemData(index, Qt.ItemDataRole.ToolTipRole)
-            if tooltip:
-                parts.append(str(tooltip))
-        return tuple(parts)
 
     #: combo item data -> (exclude_hiragana_only_words, exclude_katakana_only_words).
     _SCRIPT_TYPE_VALUES: dict[str, tuple[bool, bool]] = {
@@ -823,33 +740,6 @@ class FilteringSettingsPanel(FormPanel):
         """The whitelist is on exactly when a file is chosen (D15 item 1)."""
         return self.get_whitelist_path() is not None
 
-    # --- Sentence rule (dedup / i+1) ---
-
-    #: combo item data -> (deduplicate_sentences, use_i_plus_one_filter). i+1
-    #: already overrides dedup in EpisodeProcessor, so a source config with
-    #: both booleans set selects "i_plus_one" same as one with only i+1 set.
-    _SENTENCE_RULE_VALUES: dict[str, tuple[bool, bool]] = {
-        "all": (False, False),
-        "dedup": (True, False),
-        "i_plus_one": (False, True),
-    }
-
-    def get_sentence_rule(self) -> tuple[bool, bool]:
-        """Return (deduplicate_sentences, use_i_plus_one_filter) for the current selection."""
-        return self._SENTENCE_RULE_VALUES[self.sentence_rule_combo.currentData()]
-
-    def set_sentence_rule(self, deduplicate_sentences: bool, use_i_plus_one_filter: bool) -> None:
-        """Select the combo item matching the two source booleans."""
-        if use_i_plus_one_filter:
-            value = "i_plus_one"
-        elif deduplicate_sentences:
-            value = "dedup"
-        else:
-            value = "all"
-        index = self.sentence_rule_combo.findData(value)
-        if index >= 0:
-            self.sentence_rule_combo.setCurrentIndex(index)
-
     # --- Script type ---
 
     def get_exclude_hiragana_only_words(self) -> bool:
@@ -864,24 +754,6 @@ class FilteringSettingsPanel(FormPanel):
         """Select the combo item for the two stored booleans."""
         value = next(key for key, pair in self._SCRIPT_TYPE_VALUES.items() if pair == (hiragana_only, katakana_only))
         self.script_type_combo.setCurrentIndex(self.script_type_combo.findData(value))
-
-    # --- Sentence length ---
-
-    def get_max_sentence_duration_seconds(self) -> float:
-        """Return the max sentence duration (seconds)."""
-        return self.max_sentence_duration_spinbox.value()
-
-    def set_max_sentence_duration_seconds(self, value: float) -> None:
-        """Set the max sentence duration spinbox."""
-        self.max_sentence_duration_spinbox.setValue(value)
-
-    def get_max_sentence_chars(self) -> int:
-        """Return the max sentence character count."""
-        return self.max_sentence_chars_spinbox.value()
-
-    def set_max_sentence_chars(self, value: int) -> None:
-        """Set the max sentence chars spinbox."""
-        self.max_sentence_chars_spinbox.setValue(value)
 
     # --- Reading ---
 
@@ -951,13 +823,10 @@ class FilteringSettingsPanel(FormPanel):
         # stays off -- and the next save drops the path with it.
         self.set_blacklist_path(config.blacklist_path if config.use_blacklist else None)
         self.set_whitelist_path(config.whitelist_path if config.use_whitelist else None)
-        self.set_sentence_rule(config.deduplicate_sentences, config.use_i_plus_one_filter)
         self.set_script_type(bool(config.exclude_hiragana_only_words), bool(config.exclude_katakana_only_words))
         # Same two booleans, read through whichever language's option named them.
         for option_id, checkbox in self.script_filter_checkboxes.items():
             checkbox.setChecked(bool(getattr(config, self._script_filter_fields[option_id])))
-        self.set_max_sentence_duration_seconds(config.max_sentence_duration_seconds)
-        self.set_max_sentence_chars(config.max_sentence_chars)
         self.set_reading_min_occurrence(config.reading_min_occurrence)
         apply_language_gate(self._language_gate_pairs, get_profile(config_language(config)).capabilities)
 
@@ -967,7 +836,6 @@ class FilteringSettingsPanel(FormPanel):
         Uses ``dataclasses.replace`` so the frozen-config invariant is preserved.
         Called by :meth:`SettingsTab.commit_settings` as part of the contribute fold.
         """
-        deduplicate_sentences, use_i_plus_one_filter = self.get_sentence_rule()
         updated = replace(
             config,
             min_frequency_rank=self.get_min_frequency_rank(),
@@ -981,12 +849,8 @@ class FilteringSettingsPanel(FormPanel):
             use_blacklist=self.get_use_blacklist(),
             whitelist_path=self.get_whitelist_path(),
             use_whitelist=self.get_use_whitelist(),
-            deduplicate_sentences=deduplicate_sentences,
             exclude_hiragana_only_words=self.get_exclude_hiragana_only_words(),
             exclude_katakana_only_words=self.get_exclude_katakana_only_words(),
-            use_i_plus_one_filter=use_i_plus_one_filter,
-            max_sentence_duration_seconds=self.get_max_sentence_duration_seconds(),
-            max_sentence_chars=self.get_max_sentence_chars(),
             reading_min_occurrence=self.get_reading_min_occurrence(),
         )
         # Language-scoped rows contribute only while their capability is present.

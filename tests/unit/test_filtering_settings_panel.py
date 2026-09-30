@@ -1,10 +1,8 @@
-"""Tooltip regression tests for FilteringSettingsPanel.
+"""Tests for FilteringSettingsPanel.
 
-The settings-density work deduped tooltips. These assertions lock in the
-load-bearing facts that must survive layout tightening: the facts restored to
-the i+1 and sentence-length tooltips. (The bold-target and regex/replacement
-tooltip cases moved to ``test_sentences_settings_panel.py`` with the fields
-they cover, T9.)
+The i+1, sentence-rule and sentence-length cases moved to
+``test_sentences_settings_panel.py`` with the rows they cover (C13), as the
+bold-target and regex/replacement tooltip cases did before them (T9).
 """
 
 from __future__ import annotations
@@ -15,43 +13,8 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtCore import Qt
-
 from anki_miner.config.defaults import create_default_config
 from anki_miner.gui.widgets.panels.filtering_settings_panel import FilteringSettingsPanel
-
-
-def test_i_plus_one_tooltip_mentions_dedup_override(qtbot):
-    panel = FilteringSettingsPanel()
-    qtbot.addWidget(panel)
-    index = panel.sentence_rule_combo.findData("i_plus_one")
-    tip = panel.sentence_rule_combo.itemData(index, Qt.ItemDataRole.ToolTipRole)
-    assert "i+1" in tip
-    assert "deduplication" in tip.lower()
-
-
-def test_sentence_length_helper_names_the_no_toggle_rule(qtbot):
-    # No master checkbox: the section helper is the only place that says the
-    # filter turns on by setting a cap.
-    panel = FilteringSettingsPanel()
-    qtbot.addWidget(panel)
-    assert not hasattr(panel, "use_sentence_length_checkbox")
-    text = panel.sentence_length_helper.text()
-    assert text == "Set either limit above 0 to turn the filter on."
-    assert "Set to 0 for no limit" in panel.max_sentence_duration_spinbox.toolTip()
-    assert "Set to 0 for no limit" in panel.max_sentence_chars_spinbox.toolTip()
-
-
-def test_max_sentence_duration_tooltip_describes_seconds_not_chars(qtbot):
-    # The field is an audio-duration spinbox (suffix " s"); its helper must
-    # describe seconds of audio, not character length (the prior helper wrongly
-    # said "subtitle line is longer than this").
-    panel = FilteringSettingsPanel()
-    qtbot.addWidget(panel)
-    tip = panel.max_sentence_duration_spinbox.toolTip()
-    assert "seconds" in tip.lower()
-    assert "audio" in tip.lower()
-    assert "subtitle line is longer" not in tip.lower()
 
 
 def test_reading_min_occurrence_spinbox_range_and_off_text(qtbot):
@@ -241,29 +204,6 @@ def test_the_unranked_checkbox_is_disabled_while_no_bound_is_set(qtbot):
     panel.load_from_config(AnkiMinerConfig())
     panel.set_max_frequency_rank(15000)
     assert panel.keep_unranked_checkbox.isEnabled()
-
-
-@pytest.mark.parametrize(
-    "dedup, i1, index",
-    [(False, False, 0), (True, False, 1), (False, True, 2), (True, True, 2)],
-)
-def test_sentence_rule_loads(qtbot, dedup, i1, index):
-    panel = FilteringSettingsPanel()
-    qtbot.addWidget(panel)
-    panel.load_from_config(replace(create_default_config(), deduplicate_sentences=dedup, use_i_plus_one_filter=i1))
-    assert panel.sentence_rule_combo.currentIndex() == index
-
-
-@pytest.mark.parametrize(
-    "index, expected",
-    [(0, (False, False)), (1, (True, False)), (2, (False, True))],
-)
-def test_sentence_rule_contributes(qtbot, index, expected):
-    panel = FilteringSettingsPanel()
-    qtbot.addWidget(panel)
-    panel.sentence_rule_combo.setCurrentIndex(index)
-    out = panel.contribute(create_default_config())
-    assert (out.deduplicate_sentences, out.use_i_plus_one_filter) == expected
 
 
 def test_known_words_db_checkbox_names_the_effect(qtbot):

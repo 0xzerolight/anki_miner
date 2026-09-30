@@ -584,7 +584,7 @@ class TestIPlusOneFilterRoundTrip:
         widget = SettingsTab(cfg_on)
         qtbot.addWidget(widget)
         try:
-            assert widget.filtering_panel.sentence_rule_combo.currentData() == "i_plus_one"
+            assert widget.sentences_panel.sentence_rule_combo.currentData() == "i_plus_one"
         finally:
             widget.deleteLater()
 
@@ -592,7 +592,7 @@ class TestIPlusOneFilterRoundTrip:
         widget = SettingsTab(cfg_off)
         qtbot.addWidget(widget)
         try:
-            assert widget.filtering_panel.sentence_rule_combo.currentData() != "i_plus_one"
+            assert widget.sentences_panel.sentence_rule_combo.currentData() != "i_plus_one"
         finally:
             widget.deleteLater()
 
@@ -604,15 +604,15 @@ class TestIPlusOneFilterRoundTrip:
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
-        index = tab.filtering_panel.sentence_rule_combo.findData("i_plus_one")
-        tab.filtering_panel.sentence_rule_combo.setCurrentIndex(index)
+        index = tab.sentences_panel.sentence_rule_combo.findData("i_plus_one")
+        tab.sentences_panel.sentence_rule_combo.setCurrentIndex(index)
         tab.commit_settings()
 
         assert len(received) == 1
         assert received[0].use_i_plus_one_filter is True
 
-        index = tab.filtering_panel.sentence_rule_combo.findData("all")
-        tab.filtering_panel.sentence_rule_combo.setCurrentIndex(index)
+        index = tab.sentences_panel.sentence_rule_combo.findData("all")
+        tab.sentences_panel.sentence_rule_combo.setCurrentIndex(index)
         tab.commit_settings()
 
         assert len(received) == 2
@@ -721,8 +721,8 @@ class TestSentenceLengthFilterRoundTrip:
         widget = SettingsTab(cfg)
         qtbot.addWidget(widget)
         try:
-            assert widget.filtering_panel.max_sentence_duration_spinbox.value() == pytest.approx(7.5)
-            assert widget.filtering_panel.max_sentence_chars_spinbox.value() == 60
+            assert widget.sentences_panel.max_sentence_duration_spinbox.value() == pytest.approx(7.5)
+            assert widget.sentences_panel.max_sentence_chars_spinbox.value() == 60
         finally:
             widget.deleteLater()
 
@@ -734,8 +734,8 @@ class TestSentenceLengthFilterRoundTrip:
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
-        tab.filtering_panel.max_sentence_duration_spinbox.setValue(7.5)
-        tab.filtering_panel.max_sentence_chars_spinbox.setValue(60)
+        tab.sentences_panel.max_sentence_duration_spinbox.setValue(7.5)
+        tab.sentences_panel.max_sentence_chars_spinbox.setValue(60)
         tab.commit_settings()
 
         assert len(received) == 1

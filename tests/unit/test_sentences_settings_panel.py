@@ -16,6 +16,7 @@ pytest.importorskip("PyQt6.QtWidgets")
 from PyQt6.QtCore import Qt
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.config.defaults import create_default_config
 from anki_miner.gui.widgets.panels.sentences_settings_panel import SentencesSettingsPanel
 from anki_miner.languages._spaced import script as spaced_script
 
@@ -224,3 +225,106 @@ def test_the_raw_fields_sit_behind_a_collapsed_disclosure(qtbot):
     assert not panel.subtitle_regex_edit.isVisibleTo(panel)
     panel.subtitle_regex_group.setChecked(True)
     assert panel.subtitle_regex_edit.isVisibleTo(panel)
+
+
+def test_sentence_rule_and_length_live_on_the_sentences_page(qtbot):
+    """C13: they shape the example sentence, so they sit with the other sentence rows."""
+    from anki_miner.gui.widgets.panels.filtering_settings_panel import FilteringSettingsPanel
+
+    panel = SentencesSettingsPanel()
+    qtbot.addWidget(panel)
+    filtering = FilteringSettingsPanel()
+    qtbot.addWidget(filtering)
+    for name in ("sentence_rule_combo", "max_sentence_duration_spinbox", "max_sentence_chars_spinbox"):
+        assert hasattr(panel, name), name
+        assert not hasattr(filtering, name), name
+    assert not hasattr(filtering, "sentence_length_helper")
+
+
+def test_the_page_has_two_groups(qtbot):
+    from PyQt6.QtWidgets import QLabel
+
+    panel = SentencesSettingsPanel()
+    qtbot.addWidget(panel)
+    headings = {label.text() for label in panel.findChildren(QLabel)}
+    assert {"Clean up subtitle text", "Sentence options"} <= headings
+    assert not {"Secondary Subtitles", "Full Sentences", "Card Formatting", "Sentence Length"} & headings
+
+
+def test_moved_rows_round_trip(qtbot):
+    panel = SentencesSettingsPanel()
+    qtbot.addWidget(panel)
+    config = replace(
+        AnkiMinerConfig(),
+        deduplicate_sentences=True,
+        use_i_plus_one_filter=False,
+        max_sentence_duration_seconds=7.5,
+        max_sentence_chars=60,
+    )
+    panel.load_from_config(config)
+    out = panel.contribute(AnkiMinerConfig())
+    assert (out.deduplicate_sentences, out.use_i_plus_one_filter) == (True, False)
+    assert out.max_sentence_duration_seconds == 7.5
+    assert out.max_sentence_chars == 60
+
+
+def test_secondary_subtitles_helper_names_every_video_screen(qtbot):
+    """C17: the toggle also adds rows to Batch, its Edit dialog and Deck Builder."""
+    panel = SentencesSettingsPanel()
+    qtbot.addWidget(panel)
+    tip = panel.secondary_subtitle_checkbox.toolTip()
+    assert "Video screens (Single, Batch, Deck Builder)" in tip
+    assert "Video -> Single" not in tip
+
+
+def test_sentence_length_needs_no_helper_line(qtbot):
+    """C13: "No limit" at 0 says it; the helper line is gone."""
+    panel = SentencesSettingsPanel()
+    qtbot.addWidget(panel)
+    assert not hasattr(panel, "sentence_length_helper")
+    assert panel.max_sentence_duration_spinbox.specialValueText() == "No limit"
+    assert "Set to 0 for no limit" in panel.max_sentence_chars_spinbox.toolTip()
+
+
+def test_i_plus_one_tooltip_mentions_dedup_override(qtbot):
+    panel = SentencesSettingsPanel()
+    qtbot.addWidget(panel)
+    index = panel.sentence_rule_combo.findData("i_plus_one")
+    tip = panel.sentence_rule_combo.itemData(index, Qt.ItemDataRole.ToolTipRole)
+    assert "i+1" in tip
+    assert "deduplication" in tip.lower()
+
+
+def test_max_sentence_duration_tooltip_describes_seconds_not_chars(qtbot):
+    # The field is an audio-duration spinbox (suffix " s"); its helper must
+    # describe seconds of audio, not character length (the prior helper wrongly
+    # said "subtitle line is longer than this").
+    panel = SentencesSettingsPanel()
+    qtbot.addWidget(panel)
+    tip = panel.max_sentence_duration_spinbox.toolTip()
+    assert "seconds" in tip.lower()
+    assert "audio" in tip.lower()
+    assert "subtitle line is longer" not in tip.lower()
+
+
+@pytest.mark.parametrize(
+    "dedup, i1, index",
+    [(False, False, 0), (True, False, 1), (False, True, 2), (True, True, 2)],
+)
+def test_sentence_rule_loads(qtbot, dedup, i1, index):
+    panel = SentencesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(replace(create_default_config(), deduplicate_sentences=dedup, use_i_plus_one_filter=i1))
+    assert panel.sentence_rule_combo.currentIndex() == index
+
+
+@pytest.mark.parametrize(
+    "index, expected",
+    [(0, (False, False)), (1, (True, False)), (2, (False, True))],
+)
+def test_sentence_rule_contributes(qtbot, index, expected):
+    panel = SentencesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.sentence_rule_combo.setCurrentIndex(index)
+    out = panel.contribute(create_default_config())
+    assert (out.deduplicate_sentences, out.use_i_plus_one_filter) == expected

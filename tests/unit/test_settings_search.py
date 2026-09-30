@@ -179,24 +179,24 @@ class TestMatching:
         must carry the search text, including the "i+1" one item spells out."""
         results = _ids(search(entries, "i+1"))
 
-        assert "filtering.sentence_rule_combo" in results
+        assert "sentences.sentence_rule_combo" in results
 
     def test_dedup_finds_the_sentence_rule_combo(self, entries):
         results = _ids(search(entries, "dedup"))
 
-        assert "filtering.sentence_rule_combo" in results
+        assert "sentences.sentence_rule_combo" in results
 
     def test_deduplicate_finds_the_sentence_rule_combo(self, entries):
         """ "deduplicate" is not a substring of the tooltip's "deduplication";
         it needs its own keyword."""
         results = _ids(search(entries, "deduplicate"))
 
-        assert "filtering.sentence_rule_combo" in results
+        assert "sentences.sentence_rule_combo" in results
 
     def test_one_card_per_sentence_finds_the_sentence_rule_combo(self, entries):
         results = _ids(search(entries, "one card per sentence"))
 
-        assert "filtering.sentence_rule_combo" in results
+        assert "sentences.sentence_rule_combo" in results
 
 
 class TestRenamedDestinations:
@@ -211,7 +211,7 @@ class TestRenamedDestinations:
         "Word Filters"; the legacy term keeps the vocabulary users typed)."""
         results = _ids(search(entries, "filtering"))
 
-        assert "filtering.sentence_rule_combo" in results
+        assert "filtering.frequency_rank_range" in results
 
     def test_the_filtering_destination_name_also_finds_the_sentences_page(self, entries):
         """These settings used to live on Filtering; the old name still reaches
