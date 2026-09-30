@@ -7392,8 +7392,8 @@ Tiếp tục?</translation>
         <translation>Không tìm thấy trường nào. Đảm bảo Anki đang chạy và tên loại ghi chú được viết đúng chính xác như trong Anki.</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. If it can't tell which field is which, press Skip Setup and choose the fields yourself in Settings → Cards &amp; Anki. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>Loại ghi chú nào cũng dùng được khi đã ánh xạ các trường. Hãy chọn một loại ghi chú của bạn: Anki Miner đặt từ vào trường đầu tiên và điền các trường nó nhận ra theo tên, như Word, Sentence, Reading, Definition, Picture và âm thanh. Nếu không phân biệt được trường nào là trường nào, hãy nhấn Bỏ qua cài đặt và tự chọn các trường trong Cài đặt → Thẻ &amp; Anki. &lt;a href="%1"&gt;Anki Miner điền được những trường nào?&lt;/a&gt;</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Anki Miner fills a note type called Lapis. Your Anki doesn't have it yet. &lt;a href="%1"&gt;Get Lapis&lt;/a&gt; (free), then in Anki choose File → Import and pick the file. This page updates when you come back.</source>

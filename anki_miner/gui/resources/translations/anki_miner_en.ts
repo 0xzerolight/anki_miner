@@ -7399,7 +7399,7 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. If it can't tell which field is which, press Skip Setup and choose the fields yourself in Settings → Cards &amp; Anki. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
         <translation type="unfinished" />
     </message>
     <message>

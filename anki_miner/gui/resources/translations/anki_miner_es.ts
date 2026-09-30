@@ -7429,8 +7429,8 @@ Cierre primero el navegador de tarjetas y el editor de notas de Anki — una not
         <translation>No se encontraron campos. Asegúrese de que Anki esté en ejecución y de que el nombre del tipo de nota esté escrito exactamente como en Anki.</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. If it can't tell which field is which, press Skip Setup and choose the fields yourself in Settings → Cards &amp; Anki. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>Cualquier tipo de nota funciona una vez asignados sus campos. Elija uno de sus tipos de nota: Anki Miner pone la palabra en su primer campo y rellena los campos que reconoce por su nombre, como Word, Sentence, Reading, Definition, Picture y audio. Si no sabe cuál es cada campo, pulse Omitir configuración y elija los campos usted mismo en Ajustes → Tarjetas y Anki. &lt;a href="%1"&gt;¿Qué campos puede rellenar Anki Miner?&lt;/a&gt;</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Anki Miner fills a note type called Lapis. Your Anki doesn't have it yet. &lt;a href="%1"&gt;Get Lapis&lt;/a&gt; (free), then in Anki choose File → Import and pick the file. This page updates when you come back.</source>

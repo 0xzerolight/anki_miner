@@ -7392,8 +7392,8 @@ Continue?</source>
         <translation>找不到欄位。請確認 Anki 正在執行，且筆記類型名稱與 Anki 中的完全一致。</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. If it can't tell which field is which, press Skip Setup and choose the fields yourself in Settings → Cards &amp; Anki. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>只要對應好欄位，任何筆記類型都能使用。請選擇您的一個筆記類型：Anki Miner 會將單字放入第一個欄位，並依名稱填入它能辨識的欄位，例如 Word、Sentence、Reading、Definition、Picture 與音訊。若無法判斷哪個欄位對應什麼，請按「略過設定」，然後在「設定 → 卡片與 Anki」中自行選擇欄位。&lt;a href="%1"&gt;Anki Miner 能填入哪些欄位？&lt;/a&gt;</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Anki Miner fills a note type called Lapis. Your Anki doesn't have it yet. &lt;a href="%1"&gt;Get Lapis&lt;/a&gt; (free), then in Anki choose File → Import and pick the file. This page updates when you come back.</source>

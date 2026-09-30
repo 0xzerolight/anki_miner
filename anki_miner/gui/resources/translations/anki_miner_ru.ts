@@ -7466,8 +7466,8 @@ Continue?</source>
         <translation>Поля не найдены. Убедитесь, что Anki запущен, а имя типа заметки написано точно так же, как в Anki.</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. If it can't tell which field is which, press Skip Setup and choose the fields yourself in Settings → Cards &amp; Anki. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>Подойдёт любой тип заметки, если сопоставить его поля. Выберите один из своих типов заметок: Anki Miner помещает слово в его первое поле и заполняет поля, которые распознаёт по названию, например Word, Sentence, Reading, Definition, Picture и аудио. Если он не может определить, какое поле какое, нажмите «Пропустить настройку» и выберите поля сами в Настройки → Карточки и Anki. &lt;a href="%1"&gt;Какие поля может заполнять Anki Miner?&lt;/a&gt;</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Anki Miner fills a note type called Lapis. Your Anki doesn't have it yet. &lt;a href="%1"&gt;Get Lapis&lt;/a&gt; (free), then in Anki choose File → Import and pick the file. This page updates when you come back.</source>

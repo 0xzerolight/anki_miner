@@ -7392,8 +7392,8 @@ Lanjutkan?</translation>
         <translation>Tidak ada bidang ditemukan. Pastikan Anki berjalan dan nama tipe catatan dieja persis seperti di Anki.</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. If it can't tell which field is which, press Skip Setup and choose the fields yourself in Settings → Cards &amp; Anki. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>Tipe catatan apa pun bisa dipakai setelah bidangnya dipetakan. Pilih salah satu tipe catatan Anda: Anki Miner menaruh kata di bidang pertamanya dan mengisi bidang yang dikenalinya dari nama, seperti Word, Sentence, Reading, Definition, Picture, dan audio. Jika tidak bisa membedakan bidang-bidangnya, tekan Lewati Penyiapan dan pilih sendiri bidangnya di Pengaturan → Kartu &amp; Anki. &lt;a href="%1"&gt;Bidang apa saja yang dapat diisi Anki Miner?&lt;/a&gt;</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Anki Miner fills a note type called Lapis. Your Anki doesn't have it yet. &lt;a href="%1"&gt;Get Lapis&lt;/a&gt; (free), then in Anki choose File → Import and pick the file. This page updates when you come back.</source>
