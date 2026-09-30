@@ -26,6 +26,7 @@ Three rules shape it.
 
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass, field, replace
 from datetime import datetime
 
@@ -45,6 +46,8 @@ __all__ = [
     "HEALTH_FIX_ROUTES",
     "HEALTH_GROUPS",
     "HEALTH_KEYS",
+    "HEALTH_NOT_INSTALLED",
+    "HEALTH_NOT_SET_UP",
     "HEALTH_OK",
     "HEALTH_UNKNOWN",
     "HEALTH_WARN",
@@ -59,11 +62,39 @@ HEALTH_UNKNOWN = "unknown"
 HEALTH_OK = "ok"
 HEALTH_WARN = "warn"
 HEALTH_FAIL = "fail"
+#: An optional resource family the user never configured (E10). Rows come from a
+#: static group tuple, so frequency and pitch always render; "Not set up" in
+#: neutral grey beats a green tick for something absent or amber for a choice.
+HEALTH_NOT_SET_UP = "not_set_up"
+#: An optional tool that is simply not installed (E10): neutral grey, and its
+#: Fix button reads "Install…". Amber stays for a tool that is there but broken.
+HEALTH_NOT_INSTALLED = "not_installed"
 
-#: Detail shown for an optional resource family the user has not set up. Rows
-#: come from a static group tuple, so frequency and pitch always render; saying
-#: so plainly beats a green tick for something absent or a warning for a choice.
-_NOT_CONFIGURED = "Not configured (optional)"
+#: How the validation service words an absent optional tool
+#: (services/validation_service.py, the ``missing_message`` of each check). A
+#: warning that starts this way is absence, not breakage. Pinned by
+#: test_the_not_installed_prefixes_match_the_validation_service.
+_ABSENT_PREFIXES: dict[str, str] = {
+    "tools.ytdlp": "yt-dlp not found",
+    "tools.alass": "alass not found",
+    "tools.mokuro": "mokuro not found",
+}
+
+#: Report keys the window folds into another row (E10): ffmpeg and ffprobe are
+#: one "ffmpeg (video tools)" row. The report keeps both keys, so the
+#: diagnostics export still lists each probe.
+_MERGED_ROWS: dict[str, tuple[str, ...]] = {"tools.ffmpeg": ("tools.ffmpeg", "tools.ffprobe")}
+_FOLDED_KEYS: frozenset[str] = frozenset({"tools.ffprobe"})
+
+#: Which state wins when folded rows disagree; higher is worse.
+_SEVERITY: dict[str, int] = {
+    HEALTH_OK: 0,
+    HEALTH_NOT_SET_UP: 1,
+    HEALTH_NOT_INSTALLED: 1,
+    HEALTH_UNKNOWN: 2,
+    HEALTH_WARN: 3,
+    HEALTH_FAIL: 4,
+}
 
 #: Row order, grouped exactly as D26 names the groups. The group keys are
 #: stable; their titles are translated at render time.
@@ -138,6 +169,8 @@ _BADGE_STATUS: dict[str, str] = {
     HEALTH_OK: "success",
     HEALTH_WARN: "warning",
     HEALTH_FAIL: "error",
+    HEALTH_NOT_SET_UP: "pending",
+    HEALTH_NOT_INSTALLED: "pending",
 }
 
 
@@ -203,9 +236,18 @@ def checks_from_validation(result: ValidationResult, checked_at: datetime) -> di
         state, detail = _issue_state("anki.fields")
         checks["anki.fields"] = _record("anki.fields", state, detail)
 
-    for key in ("tools.ffmpeg", "tools.ffprobe", "tools.alass"):
+    for key in ("tools.ffmpeg", "tools.ffprobe"):
         state, detail = _issue_state(key)
         checks[key] = _record(key, state, detail)
+
+    def _optional_tool_state(key: str) -> tuple[str, str]:
+        state, detail = _issue_state(key)
+        if state == HEALTH_WARN and detail.startswith(_ABSENT_PREFIXES[key]):
+            return HEALTH_NOT_INSTALLED, detail
+        return state, detail
+
+    alass_state, alass_detail = _optional_tool_state("tools.alass")
+    checks["tools.alass"] = _record("tools.alass", alass_state, alass_detail)
 
     dictionary_state, dictionary_detail = _issue_state("resources.dictionary")
     checks["resources.dictionary"] = _record(
@@ -226,17 +268,31 @@ def checks_from_validation(result: ValidationResult, checked_at: datetime) -> di
         state, detail = _issue_state(key)
         summary = versions.get(version_key, "")
         if state == HEALTH_OK and not detail and not summary:
-            checks[key] = HealthCheck(key=key, state=HEALTH_UNKNOWN, detail=_NOT_CONFIGURED, checked_at=checked_at)
+            checks[key] = HealthCheck(key=key, state=HEALTH_NOT_SET_UP, checked_at=checked_at)
             continue
         checks[key] = _record(key, state, detail or summary)
 
-    ytdlp_state, ytdlp_detail = _issue_state("tools.ytdlp")
+    ytdlp_state, ytdlp_detail = _optional_tool_state("tools.ytdlp")
     checks["tools.ytdlp"] = _record("tools.ytdlp", ytdlp_state, ytdlp_detail or versions.get("yt-dlp", ""))
 
-    mokuro_state, mokuro_detail = _issue_state("tools.mokuro")
+    mokuro_state, mokuro_detail = _optional_tool_state("tools.mokuro")
     checks["tools.mokuro"] = _record("tools.mokuro", mokuro_state, mokuro_detail or versions.get("mokuro", ""))
 
     return checks
+
+
+def _merged_check(key: str, parts: list[tuple[str, HealthCheck]]) -> HealthCheck:
+    """One row's fact from several report keys: the worst state, and which part failed (E10)."""
+    worst = max((check for _name, check in parts), key=lambda check: _SEVERITY.get(check.state, 2))
+    failing = [(name, check) for name, check in parts if check.state in (HEALTH_WARN, HEALTH_FAIL)]
+    shown = failing or parts
+    lines = []
+    for name, check in shown:
+        if not check.detail:
+            continue
+        lines.append(check.detail if check.detail.startswith(name) else f"{name}: {check.detail}")
+    times = [check.checked_at for _name, check in parts if check.checked_at is not None]
+    return HealthCheck(key=key, state=worst.state, detail="\n".join(lines), checked_at=max(times) if times else None)
 
 
 @dataclass(frozen=True)
@@ -355,8 +411,13 @@ class _HealthRow(QFrame):
 
         from anki_miner.gui.widgets.enhanced.modern_button import ModernButton
 
-        self.fix_button = ModernButton(self.tr("Fix"), variant="secondary")
+        self.fix_button = ModernButton(self.tr("Install…"), variant="secondary")
         self.fix_button.clicked.connect(lambda: self.fix_requested.emit(self._key))
+        # Sized for the longer of its two words, so switching between "Fix" and
+        # "Install…" never moves the time column beside it (E10).
+        self.fix_button.ensurePolished()
+        self.fix_button.setMinimumWidth(self.fix_button.sizeHint().width())
+        self.fix_button.setText(self.tr("Fix"))
         # Hiding the button must not give its width back: the rows that have
         # one are exactly the rows being read, and releasing the space slid the
         # time column sideways on precisely those. Retaining it also makes
@@ -398,10 +459,9 @@ class _HealthRow(QFrame):
         # Nothing to repair while a row is healthy or unreported, and no route
         # to offer for a row with no in-app control behind it — a Settings
         # anchor or a whole-tab route (mokuro's Manga OCR tab) both count.
-        self.fix_button.setVisible(
-            check.state in (HEALTH_WARN, HEALTH_FAIL)
-            and (self._key in HEALTH_FIX_ANCHORS or self._key in HEALTH_FIX_ROUTES),
-        )
+        repairable = self._key in HEALTH_FIX_ANCHORS or self._key in HEALTH_FIX_ROUTES
+        self.fix_button.setText(self.tr("Install…") if check.state == HEALTH_NOT_INSTALLED else self.tr("Fix"))
+        self.fix_button.setVisible(repairable and check.state in (HEALTH_WARN, HEALTH_FAIL, HEALTH_NOT_INSTALLED))
 
 
 class SystemHealthWindow(EnhancedDialog):
@@ -434,6 +494,11 @@ class SystemHealthWindow(EnhancedDialog):
             self.tr("System Health"),
             self.tr("What Anki Miner needs in order to mine, and whether it has it."),
         )
+        # E10: when the sweep ran, said once; a row shows its own time only when
+        # it differs (the update check runs on its own schedule).
+        self.last_checked_label = QLabel(self.tr("Not checked yet"))
+        self.last_checked_label.setObjectName("row-meta")
+        self.add_content(self.last_checked_label)
 
         self.error_label = QLabel("")
         self.error_label.setObjectName("validation-status")
@@ -499,6 +564,8 @@ class SystemHealthWindow(EnhancedDialog):
             column.addWidget(title)
             column.addSpacing(SPACING.xxs)
             for key in keys:
+                if key in _FOLDED_KEYS:
+                    continue
                 row = _HealthRow(key, labels[key])
                 row.fix_requested.connect(self._on_fix_requested)
                 self._rows[key] = row
@@ -559,7 +626,14 @@ class SystemHealthWindow(EnhancedDialog):
         badge_width = (
             max(
                 badge_metrics.horizontalAdvance(self._state_text(state))
-                for state in (HEALTH_UNKNOWN, HEALTH_OK, HEALTH_WARN, HEALTH_FAIL)
+                for state in (
+                    HEALTH_UNKNOWN,
+                    HEALTH_OK,
+                    HEALTH_WARN,
+                    HEALTH_FAIL,
+                    HEALTH_NOT_SET_UP,
+                    HEALTH_NOT_INSTALLED,
+                )
             )
             + 2 * SPACING.sm
         )
@@ -570,7 +644,7 @@ class SystemHealthWindow(EnhancedDialog):
         # "00:00".
         widest_digit = max("0123456789", key=meta_metrics.horizontalAdvance)
         meta_width = max(
-            meta_metrics.horizontalAdvance(self._checked_text(None)),
+            meta_metrics.horizontalAdvance(self.tr("Not checked yet")),
             meta_metrics.horizontalAdvance(self._checked_at_text(f"{widest_digit * 2}:{widest_digit * 2}")),
         )
 
@@ -625,15 +699,34 @@ class SystemHealthWindow(EnhancedDialog):
 
     def show_health(self, report: HealthReport) -> None:
         """Repaint every row from ``report``. Safe to call while hidden."""
+        sweep_clock = self._sweep_clock(report)
         for key, row in self._rows.items():
-            check = report.get(key)
+            parts = _MERGED_ROWS.get(key)
+            check = (
+                _merged_check(key, [(self._probe_name(k), report.get(k)) for k in parts]) if parts else report.get(key)
+            )
+            clock = check.checked_at.strftime("%H:%M") if check.checked_at is not None else None
             row.apply_check(
                 check,
                 state_text=self._state_text(check.state),
-                checked_text=self._checked_text(check.checked_at),
+                checked_text=self._checked_at_text(clock) if clock is not None and clock != sweep_clock else "",
             )
+        self.last_checked_label.setText(
+            tr_format(self.tr("Last checked %1"), sweep_clock) if sweep_clock else self.tr("Not checked yet")
+        )
         self.error_label.setText(report.error)
         self.error_label.setVisible(bool(report.error))
+
+    @staticmethod
+    def _sweep_clock(report: HealthReport) -> str | None:
+        """The time most rows were checked at: the sweep's own time."""
+        clocks = [check.checked_at.strftime("%H:%M") for check in report.checks.values() if check.checked_at]
+        return Counter(clocks).most_common(1)[0][0] if clocks else None
+
+    @staticmethod
+    def _probe_name(key: str) -> str:
+        """The bare tool name a folded row's detail line is prefixed with."""
+        return key.split(".", 1)[1]
 
     def _state_text(self, state: str) -> str:
         """The state as a word, so the row does not depend on its colour."""
@@ -641,12 +734,9 @@ class SystemHealthWindow(EnhancedDialog):
             HEALTH_OK: self.tr("Ready"),
             HEALTH_WARN: self.tr("Needs attention"),
             HEALTH_FAIL: self.tr("Not working"),
+            HEALTH_NOT_SET_UP: self.tr("Not set up"),
+            HEALTH_NOT_INSTALLED: self.tr("Not installed"),
         }.get(state, self.tr("Unknown"))
-
-    def _checked_text(self, checked_at: datetime | None) -> str:
-        if checked_at is None:
-            return self.tr("Not checked yet")
-        return self._checked_at_text(checked_at.strftime("%H:%M"))
 
     def _checked_at_text(self, clock: str) -> str:
         """The "Checked …" line for an already-formatted clock time.
@@ -671,8 +761,7 @@ class SystemHealthWindow(EnhancedDialog):
             "anki.deck": self.tr("Deck"),
             "anki.note_type": self.tr("Note type"),
             "anki.fields": self.tr("Field mapping"),
-            "tools.ffmpeg": self.tr("ffmpeg"),
-            "tools.ffprobe": self.tr("ffprobe"),
+            "tools.ffmpeg": self.tr("ffmpeg (video tools)"),
             "resources.dictionary": self.tr("Offline dictionary"),
             "resources.frequency": self.tr("Frequency lists"),
             "resources.pitch": self.tr("Pitch accent"),

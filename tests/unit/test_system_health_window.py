@@ -27,6 +27,8 @@ from anki_miner.gui.widgets.dialogs.system_health_window import (
     HEALTH_FIX_ANCHORS,
     HEALTH_FIX_ROUTES,
     HEALTH_KEYS,
+    HEALTH_NOT_INSTALLED,
+    HEALTH_NOT_SET_UP,
     HEALTH_OK,
     HEALTH_UNKNOWN,
     HEALTH_WARN,
@@ -73,17 +75,13 @@ def test_healthy_sweep_marks_every_row_ready():
     assert all(check.checked_at == CHECKED_AT for check in checks.values())
 
 
-def test_unconfigured_optional_resources_read_as_unknown_not_ready():
-    """The three optional families must not paint a green tick when absent.
-
-    The rows come from a static group tuple and so always render; without this
-    the screen would claim a resource is ready when the user never added one.
-    """
+def test_unconfigured_optional_resources_say_not_set_up():
+    """E10: an optional family nobody configured is "Not set up", in neutral grey."""
     checks = checks_from_validation(_result(), CHECKED_AT)
 
     for key in ("resources.frequency", "resources.pitch", "resources.audio"):
-        assert checks[key].state == HEALTH_UNKNOWN
-        assert checks[key].detail == "Not configured (optional)"
+        assert checks[key].state == HEALTH_NOT_SET_UP
+        assert checks[key].detail == ""
     assert checks["resources.dictionary"].state == HEALTH_OK
 
 
@@ -165,7 +163,7 @@ def test_warnings_and_errors_map_to_distinct_states():
     result = _result(
         issues=[
             ValidationIssue(component="ffmpeg", severity="ERROR", message="ffmpeg not found"),
-            ValidationIssue(component="yt-dlp", severity="WARNING", message="yt-dlp not found"),
+            ValidationIssue(component="yt-dlp", severity="WARNING", message="yt-dlp check timed out"),
         ]
     )
 
@@ -173,7 +171,7 @@ def test_warnings_and_errors_map_to_distinct_states():
 
     assert checks["tools.ffmpeg"].state == HEALTH_FAIL
     assert checks["tools.ytdlp"].state == HEALTH_WARN
-    assert checks["tools.ytdlp"].detail == "yt-dlp not found"
+    assert checks["tools.ytdlp"].detail == "yt-dlp check timed out"
 
 
 def test_passing_tool_rows_carry_the_version_the_sweep_already_resolved():
@@ -205,7 +203,7 @@ def test_mokuro_row_exists_and_has_a_repair_route():
     assert HEALTH_FIX_ROUTES["tools.mokuro"] == ("subtitles", "mokuro")
 
 
-def test_mokuro_missing_warns_on_its_own_row():
+def test_mokuro_missing_is_not_installed_on_its_own_row():
     result = _result(
         issues=[
             ValidationIssue(
@@ -218,7 +216,7 @@ def test_mokuro_missing_warns_on_its_own_row():
 
     checks = checks_from_validation(result, CHECKED_AT)
 
-    assert checks["tools.mokuro"].state == HEALTH_WARN
+    assert checks["tools.mokuro"].state == HEALTH_NOT_INSTALLED
     assert "Manga OCR" in checks["tools.mokuro"].detail
 
 
@@ -337,16 +335,26 @@ def test_mokuro_fix_emits_the_manga_ocr_route(health_window, qtbot):
     assert blocker.args == list(HEALTH_FIX_ROUTES["tools.mokuro"])
 
 
-def test_row_shows_when_it_was_checked(health_window):
+def test_one_line_says_when_everything_was_checked(health_window):
+    """E10: one "Last checked" line, not the same time on every row."""
     health_window.show_health(HealthReport.unknown().with_validation(_result(), CHECKED_AT))
 
-    assert "14:32" in health_window._rows["anki.connect"].checked_label.text()
+    assert health_window.last_checked_label.text() == "Last checked 14:32"
+    assert health_window._rows["anki.connect"].checked_label.text() == ""
 
 
-def test_unchecked_row_says_so_rather_than_showing_a_time(health_window):
-    text = health_window._rows["app.updates"].checked_label.text()
+def test_a_row_checked_at_another_time_shows_its_own(health_window):
+    report = HealthReport.unknown().with_validation(_result(), CHECKED_AT)
+    report = report.with_update_check(state=HEALTH_OK, detail="", checked_at=datetime(2026, 7, 27, 9, 5))
 
-    assert text == "Not checked yet"
+    health_window.show_health(report)
+
+    assert health_window._rows["app.updates"].checked_label.text() == "Checked 09:05"
+
+
+def test_nothing_checked_yet_is_said_once(health_window):
+    assert health_window.last_checked_label.text() == "Not checked yet"
+    assert health_window._rows["app.updates"].checked_label.text() == ""
 
 
 def test_mokuro_row_label_names_the_tool(health_window):
@@ -676,3 +684,73 @@ def test_every_fix_button_lands_on_a_real_control(qtbot, test_config):
     known = {anchor.stable_id for anchor in settings_tab.setting_anchors()}
 
     assert set(HEALTH_FIX_ANCHORS.values()) <= known
+
+
+@pytest.mark.parametrize(
+    ("component", "key", "message"),
+    [
+        ("yt-dlp", "tools.ytdlp", "yt-dlp not found — YouTube mining will be unavailable"),
+        ("alass", "tools.alass", "alass not found — retiming will use ffsubsync only"),
+        ("mokuro", "tools.mokuro", "mokuro not found — Utilities → Manga OCR is unavailable"),
+    ],
+)
+def test_an_absent_optional_tool_is_not_installed_not_a_warning(component, key, message):
+    """E10: a tool the user never installed is not a problem to fix in amber."""
+    result = _result(issues=[ValidationIssue(component=component, severity="WARNING", message=message)])
+
+    checks = checks_from_validation(result, CHECKED_AT)
+
+    assert checks[key].state == HEALTH_NOT_INSTALLED
+
+
+def test_a_broken_optional_tool_still_warns():
+    result = _result(issues=[ValidationIssue(component="yt-dlp", severity="WARNING", message="yt-dlp check timed out")])
+
+    assert checks_from_validation(result, CHECKED_AT)["tools.ytdlp"].state == HEALTH_WARN
+
+
+def test_the_not_installed_prefixes_match_the_validation_service():
+    """The window recognises absence by the service's own wording; pin it."""
+    from pathlib import Path
+
+    import anki_miner.services.validation_service as service
+
+    source = Path(service.__file__).read_text(encoding="utf-8")
+    for prefix in ("yt-dlp not found", "alass not found", "mokuro not found"):
+        assert prefix in source
+
+
+def test_not_installed_offers_install_not_fix(health_window):
+    result = _result(issues=[ValidationIssue(component="mokuro", severity="WARNING", message="mokuro not found — x")])
+    health_window.show()
+
+    health_window.show_health(HealthReport.unknown().with_validation(result, CHECKED_AT))
+
+    row = health_window._rows["tools.mokuro"]
+    assert row.fix_button.isVisible()
+    assert row.fix_button.text() == "Install…"
+    assert row.badge.text() == "Not installed"
+
+
+def test_ffmpeg_and_ffprobe_are_one_row(health_window):
+    window_rows = health_window._rows
+
+    assert "tools.ffmpeg" in window_rows
+    assert "tools.ffprobe" not in window_rows
+    assert window_rows["tools.ffmpeg"].label.text() == "ffmpeg (video tools)"
+
+
+def test_the_ffmpeg_row_names_the_probe_that_failed(health_window):
+    result = _result(issues=[ValidationIssue(component="ffprobe", severity="ERROR", message="ffprobe not found")])
+
+    health_window.show_health(HealthReport.unknown().with_validation(result, CHECKED_AT))
+
+    row = health_window._rows["tools.ffmpeg"]
+    assert row.badge.text() == "Not working"
+    assert "ffprobe" in row.detail_label.text()
+
+
+def test_the_report_still_carries_both_probes_for_diagnostics():
+    checks = checks_from_validation(_result(), CHECKED_AT)
+
+    assert {"tools.ffmpeg", "tools.ffprobe"} <= set(checks)
