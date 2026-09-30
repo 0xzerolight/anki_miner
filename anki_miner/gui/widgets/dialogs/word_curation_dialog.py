@@ -518,13 +518,13 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
 
     def _setup_ui(self) -> None:
         self.setWindowTitle(self.tr("Word Curation"))
-        # The real width floor is the toolbar row's own minimum (~1010px in
-        # English), which the layout enforces on its own. It is stated here as
-        # the intent, not as the mechanism. What matters is that the row now
-        # spans the dialog: a longer locale widens the window instead of
-        # starving the media column, which is what it did while the row lived
-        # inside the left splitter pane.
-        self.setMinimumWidth(900)
+        # The width floor is the toolbar row's own minimum, which the layout
+        # enforces on its own. The row spans the dialog: a longer locale widens
+        # the window instead of starving the media column, which is what it did
+        # while the row lived inside the left splitter pane. No explicit
+        # minimum width: on a window it REPLACES the layout's minimum instead
+        # of flooring it, so a flat 900 let the window shrink below the row and
+        # cut "Add to Known Words" off at the right edge (Z.5).
         self.setMinimumHeight(600)
         if self._show_player or self._show_image or self._show_dict or self._has_candidates:
             # Taller than it used to be, and for a stated reason: a side column

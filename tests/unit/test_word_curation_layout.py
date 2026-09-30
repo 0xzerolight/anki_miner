@@ -136,3 +136,21 @@ class TestTheDialogFitsOnARealScreen:
         a CI runner resolving ``Sans Serif`` to such a face measured 1039px.
         """
         assert dialog.search_input.minimumWidth() < dialog.minimumSizeHint().width() / 6
+
+    def test_the_toolbar_row_sets_the_window_minimum_width(self, dialog, qtbot):
+        """Z.5 (UI audit 2026-09-29): shrunk to its minimum at 1024x768, the
+        curator was 900px wide and cut "Add to Known Words" off at its right
+        edge. An explicit ``setMinimumWidth`` on a window replaces its layout's
+        minimum instead of flooring it, so a toolbar wider than the flat number
+        was clipped. A wider row (a longer label, a wider face) must widen the
+        window's minimum with it.
+        """
+        dialog.add_known_button.setMinimumWidth(1400)
+        dialog.show()
+        qtbot.waitExposed(dialog)
+        dialog.resize(1, 1)
+        qtbot.wait(20)
+        button = dialog.add_known_button
+        right_edge = button.mapTo(dialog, button.rect().topRight()).x()
+        assert dialog.minimumWidth() >= 1400
+        assert right_edge < dialog.width()
