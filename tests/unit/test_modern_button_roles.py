@@ -431,6 +431,8 @@ ACCENT_ROLES = frozenset(
         "QPushButton:checked, QPushButton#ghost:checked",
         "QPushButton:checked:hover, QPushButton#ghost:checked:hover",
         "QCheckBox::indicator:checked, QRadioButton::indicator:checked",
+        # A partly checked box is a checked control too (WB I2): some of it is on.
+        "QCheckBox::indicator:indeterminate",
         # The navigation indicator. AnimatedTabBar draws the same indicator
         # itself so it can slide, so the accent is handed to its painter here
         # instead of being spent on a border it cannot move.
