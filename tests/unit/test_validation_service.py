@@ -2023,3 +2023,27 @@ def test_the_missing_mokuro_message_names_no_path_field():
 
     assert "mokuro not found — Utilities → Manga OCR is unavailable; install it on that tab" in source
     assert "set its path on that tab" not in source
+
+
+def test_the_missing_alass_message_names_the_download_not_a_path_field(test_config):
+    """D15 item 4: the alass path field is macOS-only now; elsewhere the fix is "Download alass"."""
+    service = ValidationService(test_config)
+
+    with patch("anki_miner.services.validation_service.subprocess.run", side_effect=FileNotFoundError()):
+        ok, message = service._check_alass()
+
+    assert ok is False
+    assert message.startswith("alass not found")
+    assert "download alass in Settings → Transcription & Alignment (on macOS, set its path there)" in message
+    assert "install alass or set its path in Settings" not in message
+
+
+def test_the_alass_engine_hint_names_the_download_not_a_path_field():
+    from pathlib import Path
+
+    import anki_miner.services.sync_engines.alass_engine as engine
+
+    source = Path(engine.__file__).read_text(encoding="utf-8")
+
+    assert "Download alass in Settings → Transcription & Alignment (on macOS, set its path there)." in source
+    assert "Install alass or set its path in Settings" not in source

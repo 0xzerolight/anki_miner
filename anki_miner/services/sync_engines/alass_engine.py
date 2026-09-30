@@ -168,7 +168,8 @@ def sync_with_alass(
     )
     if isinstance(result.error, FileNotFoundError):
         raise AlassNotFoundError(
-            f"alass binary not found: {alass_bin!r}.  Install alass or set its path in Settings → Transcription & Alignment."
+            f"alass binary not found: {alass_bin!r}.  "
+            "Download alass in Settings → Transcription & Alignment (on macOS, set its path there)."
         ) from result.error
 
     if result.state in {SupervisedState.CANCELLED, SupervisedState.TIMED_OUT}:

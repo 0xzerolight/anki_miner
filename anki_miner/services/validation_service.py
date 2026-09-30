@@ -583,8 +583,8 @@ class ValidationService:
             resolve_alass(self.config),
             version_flag="--version",
             missing_message=(
-                "alass not found — retiming will use ffsubsync only; install alass or set its path in Settings "
-                "for a fallback alignment engine"
+                "alass not found — retiming will use ffsubsync only; download alass in Settings → "
+                "Transcription & Alignment (on macOS, set its path there) for a fallback alignment engine"
             ),
         )
 
