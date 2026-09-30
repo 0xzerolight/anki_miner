@@ -84,7 +84,11 @@ class FrequencySettingsPanel(_SourceChainSettingsPanel):
                 # Not the first-match sentence the other three chains carry:
                 # frequency layers every enabled source, while order controls
                 # only the source list rendered on cards.
+                # C16: the plain line; today's exact rule stays as its tooltip.
                 explanation=self.tr(
+                    "All enabled lists are used. The order only changes how they are listed on the card."
+                ),
+                explanation_tooltip=self.tr(
                     "Every enabled source counts: filtering uses the lowest rank, Frequency "
                     "Sort the harmonic mean. Order only sets the card's source list."
                 ),
