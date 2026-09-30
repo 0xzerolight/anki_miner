@@ -299,7 +299,7 @@ class DownloadTab(RunOptionsMixin, YtdlpAvailabilityMixin, _ToolTabBase):
         return str(self.audio_lang_combo.currentData() or "")
 
     def _custom_selected(self) -> bool:
-        return self.preset_combo.currentData() == CUSTOM_FORMAT_ITEM
+        return bool(self.preset_combo.currentData() == CUSTOM_FORMAT_ITEM)
 
     def _effective_custom_format(self) -> str:
         """The raw format a run uses and config stores: only while Custom is chosen."""
