@@ -1,7 +1,6 @@
-"""Header widget for main window.
+"""The settings-profile and theme selectors at the right end of the main tab row.
 
-Provides app branding, settings-profile and theme selection, and quick status
-indicators.
+It used to be a whole row above the tabs that repeated the window title (D16).
 """
 
 from __future__ import annotations
@@ -10,10 +9,10 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFont, QFontMetrics
-from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PyQt6.QtGui import QFontMetrics
+from PyQt6.QtWidgets import QWIDGETSIZE_MAX, QComboBox, QHBoxLayout, QLabel, QWidget
 
-from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils.qt_helpers import install_no_scroll_on_inputs
 from anki_miner.utils.i18n import tr_format
@@ -70,9 +69,14 @@ _PROFILE_NAME_MAX_WIDTH = 150
 # first -- so this is the larger budget of the two that cost nothing.
 _THEME_COMBO_MIN_CHARS = 12
 
+#: The narrowest either header combo may shrink to when the main tab row is
+#: short of room (D16), before the "Settings profile:" caption goes: about eight
+#: characters of a name, the rest elided (the full name is on the tooltip).
+_HEADER_COMBO_FLOOR_PX = 120
+
 
 class HeaderWidget(QWidget):
-    """Header widget with app branding, profile and theme selection.
+    """The profile and theme selectors, installed as the main tab row's corner widget.
 
     The theme selector shows only the user's favorited themes plus an
     "All themes…" sentinel that opens the Themes tab in Settings. This keeps
@@ -81,6 +85,11 @@ class HeaderWidget(QWidget):
     The settings-profile selector is populated entirely from the outside via
     :meth:`set_profiles` and stays hidden until there are at least two profiles,
     so a user who never creates one sees no change to the header.
+
+    When the tab row is short of room, :meth:`fit_captions` hides the "Theme:"
+    caption first, then lets both combos shrink, and hides the "Settings
+    profile:" caption only as a last resort; the combos keep their tooltips and
+    accessible names either way.
     """
 
     # Active theme changed via this widget (theme key emitted).
@@ -102,31 +111,19 @@ class HeaderWidget(QWidget):
         # Id the combo snaps back to when the sentinel is picked or a switch is
         # refused. set_profiles is its ONLY writer — see _on_profile_changed.
         self._active_profile_id: str | None = None
+        # Whether set_profiles has made the profile block visible, and the last
+        # room fit_captions was given (None until the window first measures).
+        self._profile_block_visible = False
+        self._fit_available: int | None = None
         self._setup_ui()
 
     def _setup_ui(self) -> None:
         """Set up the user interface."""
         layout = QHBoxLayout()
-        # Vertical margins are deliberately tighter than horizontal: in an
-        # 800px-tall window height is the scarce axis, and this row sits above
-        # every screen. Horizontal breathing room costs nothing by comparison.
-        layout.setContentsMargins(SPACING.md, SPACING.xxs, SPACING.md, SPACING.xxs)
-
-        # Left side: App branding
-        branding_layout = QVBoxLayout()
-        branding_layout.setSpacing(2)
-
-        # App title
-        title_label = QLabel("Anki Miner")
-        title_font = QFont()
-        title_font.setPixelSize(FONT_SIZES.h2)
-        title_font.setWeight(QFont.Weight.Bold)
-        title_label.setFont(title_font)
-        title_label.setObjectName("heading2")
-        branding_layout.addWidget(title_label)
-
-        layout.addLayout(branding_layout)
-        layout.addStretch()
+        # Tight on every side: this sits inside the main tab row now (D16), and
+        # the row's height is the tab height, not the header's.
+        layout.setContentsMargins(SPACING.xs, 0, SPACING.xs, 0)
+        layout.setSpacing(SPACING.sm)
 
         # Right side: settings-profile selector, then theme selector. Creation
         # order IS tab order, so building the blocks in this order gives
@@ -171,9 +168,9 @@ class HeaderWidget(QWidget):
         theme_layout = QHBoxLayout()
         theme_layout.setSpacing(SPACING.xs)
 
-        theme_label = QLabel(self.tr("Theme:"))
-        theme_label.setObjectName("caption")
-        theme_layout.addWidget(theme_label)
+        self.theme_label = QLabel(self.tr("Theme:"))
+        self.theme_label.setObjectName("caption")
+        theme_layout.addWidget(self.theme_label)
 
         self.theme_combo = QComboBox()
         # These two combos are the first focusable widgets in the window, so
@@ -370,8 +367,86 @@ class HeaderWidget(QWidget):
         # profiles directory could not be enumerated, so the combo holds nothing
         # but the sentinel.
         visible = bool(profiles)
+        self._profile_block_visible = visible
         self.profile_label.setVisible(visible)
         self.profile_combo.setVisible(visible)
+        # A new profile list changes how much room the block needs.
+        if self._fit_available is not None:
+            self.fit_captions(self._fit_available)
+
+    def needed_width(self, *, theme_caption: bool, profile_caption: bool) -> int:
+        """The width this header asks for with the given captions shown (D16).
+
+        Summed from the parts rather than read off ``sizeHint``: a hidden caption
+        must still be measurable to decide whether it can come back.
+        """
+        parts: list[QWidget] = [self.theme_combo]
+        if theme_caption:
+            parts.append(self.theme_label)
+        if self._profile_block_visible:
+            parts.append(self.profile_combo)
+            if profile_caption:
+                parts.append(self.profile_label)
+        layout = self.layout()
+        edges = 0
+        if layout is not None:
+            margins = layout.contentsMargins()
+            edges = margins.left() + margins.right()
+        return sum(part.sizeHint().width() for part in parts) + SPACING.sm * len(parts) + edges
+
+    def fit_captions(self, available: int) -> None:
+        """Fit the header into ``available`` pixels (D16).
+
+        In order: hide "Theme:"; then let both combos shrink evenly, down to
+        ``_HEADER_COMBO_FLOOR_PX`` each; only when even that is not enough, hide
+        "Settings profile:" too, because profiles are the rarer, weightier
+        control. Both combos always stay: their tooltips and accessible names
+        carry the meaning.
+        """
+        self._fit_available = available
+        show_theme = self.needed_width(theme_caption=True, profile_caption=True) <= available
+        show_profile = show_theme or self._fits_by_shrinking(
+            self.needed_width(theme_caption=False, profile_caption=True) - available
+        )
+        self.theme_label.setVisible(show_theme)
+        self.profile_label.setVisible(self._profile_block_visible and show_profile)
+        self._shrink_combos(self.needed_width(theme_caption=show_theme, profile_caption=show_profile) - available)
+
+    def _visible_combos(self) -> list[QComboBox]:
+        """The combos that take part in the fit: the profile one only while shown."""
+        if self._profile_block_visible:
+            return [self.theme_combo, self.profile_combo]
+        return [self.theme_combo]
+
+    def _fits_by_shrinking(self, shortfall: int) -> bool:
+        """Whether taking ``shortfall`` pixels evenly off the combos keeps each at the floor or wider."""
+        if shortfall <= 0:
+            return True
+        combos = self._visible_combos()
+        share = -(-shortfall // len(combos))
+        return all(combo.sizeHint().width() - share >= _HEADER_COMBO_FLOOR_PX for combo in combos)
+
+    def _shrink_combos(self, shortfall: int) -> None:
+        """Take ``shortfall`` pixels evenly off the shown combos (never below the floor).
+
+        With room to spare (``shortfall <= 0``) both combos are released: the
+        theme combo to no cap, the profile combo to its character-budget cap
+        (:meth:`_profile_combo_max_width`), which ``set_profiles`` also sets.
+        A fixed width is needed, not just a maximum: the combos' minimum size
+        hint equals their size hint, and an explicit minimum is what lets the
+        layout go below it.
+        """
+        combos = self._visible_combos()
+        share = -(-shortfall // len(combos)) if shortfall > 0 else 0
+        for combo in (self.theme_combo, self.profile_combo):
+            if share and combo in combos:
+                combo.setFixedWidth(max(_HEADER_COMBO_FLOOR_PX, combo.sizeHint().width() - share))
+                continue
+            combo.setMinimumWidth(0)
+            if combo is self.profile_combo:
+                combo.setMaximumWidth(self._profile_combo_max_width(QFontMetrics(combo.font())))
+            else:
+                combo.setMaximumWidth(QWIDGETSIZE_MAX)
 
     def _profile_combo_max_width(self, metrics: QFontMetrics) -> int:
         """Backstop width for the profile combo, in the combo's CURRENT font.

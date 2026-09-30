@@ -581,11 +581,6 @@ QLabel#validation-badge {
     font-weight: 500;
 }
 
-/* Header widget */
-QWidget#header-widget {
-    border-bottom: 1px solid;
-}
-
 /* Screen issue banner (D24): one persistent surface for recoverable problems.
    Reuses the warning badge endpoints so no theme gains a key: an issue here is
    by definition survivable, and the error red stays reserved for destruction. */
@@ -1533,13 +1528,6 @@ QLabel#validation-badge[status="warning"] {
     background-color: ${color-badge-warning-bg};
     color: ${color-badge-warning-text};
     border-color: ${color-warning};
-}
-
-/* --- Header Widget --- */
-
-QWidget#header-widget {
-    background-color: ${color-surface};
-    border-color: ${color-border};
 }
 
 /* --- Update Banner --- */
