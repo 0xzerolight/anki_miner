@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.1">
+<TS version="2.1" language="en_US">
   <context>
     <name>AboutDialog</name>
     <message>
@@ -237,8 +237,9 @@
     </message>
     <message numerus="yes">
         <source>Fetched %n field(s) and auto-mapped them</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Fetched %n field and auto-mapped it</numerusform>
+            <numerusform>Fetched %n fields and auto-mapped them</numerusform>
         </translation>
     </message>
     <message>
@@ -247,8 +248,9 @@
     </message>
     <message numerus="yes">
         <source>cleared %n stale mapping(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>cleared %n stale mapping</numerusform>
+            <numerusform>cleared %n stale mappings</numerusform>
         </translation>
     </message>
     <message>
@@ -277,8 +279,9 @@
     </message>
     <message numerus="yes">
         <source>%n deck(s) loaded</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n deck loaded</numerusform>
+            <numerusform>%n decks loaded</numerusform>
         </translation>
     </message>
     <message>
@@ -1702,8 +1705,9 @@ No index files are deleted.</source>
     </message>
     <message numerus="yes">
         <source>Collecting words from %n episode(s) for review...</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Collecting words from %n episode for review...</numerusform>
+            <numerusform>Collecting words from %n episodes for review...</numerusform>
         </translation>
     </message>
 </context><context>
@@ -3696,8 +3700,9 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <name>DeckBuilderWorker</name>
     <message numerus="yes">
         <source>Scanning %n episode(s)...</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Scanning %n episode...</numerusform>
+            <numerusform>Scanning %n episodes...</numerusform>
         </translation>
     </message>
 </context><context>
@@ -4785,8 +4790,9 @@ No files on disk are deleted.</source>
     </message>
     <message numerus="yes">
         <source>Found %n unique word(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Found %n unique word</numerusform>
+            <numerusform>Found %n unique words</numerusform>
         </translation>
     </message>
     <message>
@@ -4799,8 +4805,9 @@ No files on disk are deleted.</source>
     </message>
     <message numerus="yes">
         <source>%n new word(s) to mine</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n new word to mine</numerusform>
+            <numerusform>%n new words to mine</numerusform>
         </translation>
     </message>
     <message>
@@ -4809,14 +4816,16 @@ No files on disk are deleted.</source>
     </message>
     <message numerus="yes">
         <source>All %n word(s) from this run are already known — no new cards created</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>The %n word from this run is already known — no new cards created</numerusform>
+            <numerusform>All %n words from this run are already known — no new cards created</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>Whitelist: force-included %n word(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Whitelist: force-included %n word</numerusform>
+            <numerusform>Whitelist: force-included %n words</numerusform>
         </translation>
     </message>
     <message>
@@ -4901,8 +4910,9 @@ No files on disk are deleted.</source>
     </message>
     <message numerus="yes">
         <source>Found %n definition(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Found %n definition</numerusform>
+            <numerusform>Found %n definitions</numerusform>
         </translation>
     </message>
     <message>
@@ -4919,20 +4929,23 @@ No files on disk are deleted.</source>
     </message>
     <message numerus="yes">
         <source>Created %n card(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Created %n card</numerusform>
+            <numerusform>Created %n cards</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%n media file(s) could not be stored in Anki — those cards have no audio or screenshot</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n media file could not be stored in Anki — that card has no audio or screenshot</numerusform>
+            <numerusform>%n media files could not be stored in Anki — those cards have no audio or screenshot</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>Skipped %n word(s) Anki flagged as duplicates (same Expression)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Skipped %n word Anki flagged as a duplicate (same Expression)</numerusform>
+            <numerusform>Skipped %n words Anki flagged as duplicates (same Expression)</numerusform>
         </translation>
     </message>
     <message>
@@ -4945,8 +4958,9 @@ No files on disk are deleted.</source>
     </message>
     <message numerus="yes">
         <source>Mining %n selected word(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Mining %n selected word</numerusform>
+            <numerusform>Mining %n selected words</numerusform>
         </translation>
     </message>
     <message>
@@ -4955,8 +4969,9 @@ No files on disk are deleted.</source>
     </message>
     <message numerus="yes">
         <source>Extracted media for %n word(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Extracted media for %n word</numerusform>
+            <numerusform>Extracted media for %n words</numerusform>
         </translation>
     </message>
     <message>
@@ -4965,8 +4980,9 @@ No files on disk are deleted.</source>
     </message>
     <message numerus="yes">
         <source>Run failed after creating %n card(s); they remain in Anki and can be undone.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Run failed after creating %n card; it remains in Anki and can be undone.</numerusform>
+            <numerusform>Run failed after creating %n cards; they remain in Anki and can be undone.</numerusform>
         </translation>
     </message>
     <message>
@@ -6089,8 +6105,9 @@ Words to add: %3. Continue?</source>
     </message>
     <message numerus="yes">
         <source>Switching to %1 discards %n queued item(s), on screen and in the copy saved for the next launch. Continue?</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Switching to %1 discards %n queued item, on screen and in the copy saved for the next launch. Continue?</numerusform>
+            <numerusform>Switching to %1 discards %n queued items, on screen and in the copy saved for the next launch. Continue?</numerusform>
         </translation>
     </message>
     <message>
@@ -8212,8 +8229,9 @@ No index files are deleted.</source>
     </message>
     <message numerus="yes">
         <source>%n note(s) in the deck.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n note in the deck.</numerusform>
+            <numerusform>%n notes in the deck.</numerusform>
         </translation>
     </message>
     <message>
@@ -8803,8 +8821,9 @@ No index files are deleted.</source>
     </message>
     <message numerus="yes">
         <source>%n queued item(s) from your last session</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n queued item from your last session</numerusform>
+            <numerusform>%n queued items from your last session</numerusform>
         </translation>
     </message>
 </context><context>
@@ -10233,8 +10252,9 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message numerus="yes">
         <source>%n card(s) this session</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n card this session</numerusform>
+            <numerusform>%n cards this session</numerusform>
         </translation>
     </message>
     <message>
@@ -10243,8 +10263,9 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message numerus="yes">
         <source>%n task(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n task</numerusform>
+            <numerusform>%n tasks</numerusform>
         </translation>
     </message>
     <message>
