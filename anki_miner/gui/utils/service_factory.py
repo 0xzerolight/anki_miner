@@ -624,7 +624,13 @@ def _build_expression_audio_fetcher(
                         )
                     )
                 continue
-            slug = custom_audio_slug(entry.url)
+            # {language} makes the same template serve several mining languages;
+            # key the cache and the media name per language too, or de 'die' and
+            # en 'die' share one file. Templates without it keep their slug.
+            slug_key = entry.url
+            if "{language}" in entry.url:
+                slug_key = f"{entry.url}\n{audio.custom_fetcher_language}"
+            slug = custom_audio_slug(slug_key)
             fetchers.append(
                 CustomAudioFetcher(
                     url_template=entry.url,
