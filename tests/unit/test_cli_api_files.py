@@ -165,3 +165,19 @@ def test_cancel_watcher_uncancelled_run_leaves_no_file(tmp_path: Path) -> None:
     with runfolder.CancelWatcher(tmp_path, threading.Event(), interval=0.01) as cancel:
         time.sleep(0.05)
     assert not cancel.is_set()
+
+
+@pytest.mark.parametrize(
+    "words",
+    [
+        [{"word": "約束"}, {"word": "約束\ud83d"}],  # a string cut inside an emoji
+        [{"word": "約束", "line_text": "今日\udc00"}],
+    ],
+)
+def test_parse_run_file_refuses_unpaired_surrogates(tmp_path: Path, words) -> None:
+    """json.loads accepts a lone "\\ud83d" escape, but the result file is UTF-8:
+    such a word must be refused before anything is mined, not after the notes
+    are added and the report cannot be written."""
+    with pytest.raises(ApiError) as err:
+        files.parse_run_file(_run_file(tmp_path, words=words))
+    assert err.value.code == "BAD_RUN_FILE"
