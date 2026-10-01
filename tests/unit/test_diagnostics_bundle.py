@@ -738,3 +738,32 @@ def test_unreadable_resource_root_is_reported_without_raising(tmp_path: Path, mo
 
     resources = _archive_members(target)["resources.txt"].decode("utf-8")
     assert "dicts: <unavailable: PermissionError: locked root>" in resources
+
+
+def test_on_disk_config_copies_redact_custom_audio_urls(tmp_path: Path, monkeypatch) -> None:
+    """The raw gui_config.json, its .bak and every profile sidecar carry the same
+    custom-audio URLs settings.json redacts (AQ5-003); none may ship the query."""
+    home = _seed_home(tmp_path, monkeypatch)
+    _disable_early_crash_member(monkeypatch, tmp_path)
+    secret = "https://audio.example/api?token=PRIVATE_TOKEN&term={term}"
+    entry = {"kind": "custom", "pack_id": None, "url": secret, "enabled": True}
+    stored = {"expression_audio_chain": [entry], "language_stash": {"de": {"expression_audio_chain": [entry]}}}
+    for path in (home / "gui_config.json", home / "gui_config.json.bak", home / "profiles" / "work.json"):
+        path.write_text(json.dumps(stored), encoding="utf-8")
+    target = tmp_path / "secret-diagnostics.zip"
+
+    write_diagnostics_bundle(
+        target,
+        config=AnkiMinerConfig(log_path=home / "anki_miner.log"),
+        snapshot=_snapshot(tmp_path),
+        health_lines=[],
+    )
+
+    members = _archive_members(target)
+    for name in ("config/gui_config.json", "config/gui_config.json.bak", "config/profiles/work.json"):
+        assert b"PRIVATE_TOKEN" not in members[name], name
+        shipped = json.loads(members[name])
+        assert shipped["expression_audio_chain"][0]["url"] == "https://audio.example/api?REDACTED"
+        assert (
+            shipped["language_stash"]["de"]["expression_audio_chain"][0]["url"] == "https://audio.example/api?REDACTED"
+        )
