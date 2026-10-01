@@ -187,6 +187,10 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
     _PROBE_NAME: str = ""
     #: The last verdict the default :meth:`_apply_probe_result` adopted.
     _engine_is_available: bool = False
+    #: True while a run's folder listing is in flight: the primary stays
+    #: disabled until that scan has started its worker or been refused, so a
+    #: config refresh cannot re-arm it for a second, overlapping run.
+    _folder_scan_pending: bool = False
 
     def _refresh_engine_state(self) -> None:
         """Disable the primary action, then probe availability off the GUI thread.
@@ -215,7 +219,7 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         """Adopt a verdict: the notice shows when missing, the primary runs only when present."""
         self._engine_is_available = bool(result)
         self.engine_notice_label.setVisible(not self._engine_is_available)
-        self._primary_button.setEnabled(self._engine_is_available)
+        self._primary_button.setEnabled(self._engine_is_available and not self._folder_scan_pending)
 
     # ------------------------------------------------------------------
     # Progress-section chrome
@@ -532,6 +536,7 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
             return sorted(files) if sort_key is None else sorted(files, key=sort_key)
 
         def _apply(result: object) -> None:
+            self._folder_scan_pending = False
             files = cast("list[Path]", result)
             if not files:
                 self.show_screen_issue(ScreenIssue(summary=empty_summary))
@@ -540,9 +545,11 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
             on_files(files)
 
         def _on_error(msg: str) -> None:
+            self._folder_scan_pending = False
             self.show_screen_issue(ScreenIssue(summary=failed_summary, details=msg))
             on_files([])
 
+        self._folder_scan_pending = True
         run_off_thread(self, _scan, _apply, _on_error)
 
     def _output_dir_writable(self, check_dir: Path, summary: str) -> bool:

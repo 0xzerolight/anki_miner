@@ -440,7 +440,8 @@ class SubtitleRetimeTab(_ToolTabBase):
         front (E08).
         """
         config = self.config
-        self.retime_button.setEnabled(True)
+        # A folder scan in flight keeps Retime disabled until it starts or refuses.
+        self.retime_button.setEnabled(not self._folder_scan_pending)
         if self._suppress_optional_startup:
             return
 
@@ -778,6 +779,7 @@ class SubtitleRetimeTab(_ToolTabBase):
             return all_videos, file_pairs
 
         def _apply(result: object) -> None:
+            self._folder_scan_pending = False
             all_videos, file_pairs = cast("tuple[list[Path], list[FilePair]]", result)
             total_videos = len(all_videos)
             n_matched = len(file_pairs)
@@ -808,6 +810,7 @@ class SubtitleRetimeTab(_ToolTabBase):
             on_pairs([(fp.video, fp.subtitle) for fp in file_pairs])
 
         def _on_error(msg: str) -> None:
+            self._folder_scan_pending = False
             # _scan lists the video folder AND pairs across both, so a failure
             # here is not necessarily the video folder's — and both folders
             # passed is_dir() above, so neither was unreachable. The real
@@ -815,6 +818,7 @@ class SubtitleRetimeTab(_ToolTabBase):
             self.show_screen_issue(ScreenIssue(summary=self.tr("Those folders could not be scanned."), details=msg))
             on_pairs([])
 
+        self._folder_scan_pending = True
         run_off_thread(self, _scan, _apply, _on_error)
 
     # ------------------------------------------------------------------
