@@ -40,7 +40,7 @@ _SENTENCE_ENDS = frozenset(".!?…:")
 def _proper_head(surface: str) -> str:
     """The stem of a capital-headed apostrophe word (``İstanbul'da`` → ``İstanbul``), else ``""``."""
     head = _APOSTROPHE.split(surface, maxsplit=1)[0]
-    return head if head != surface and head[0].isupper() else ""
+    return head if head and head != surface and head[0].isupper() else ""
 
 
 def _starts_sentence(surfaces: list[str], index: int) -> bool:
