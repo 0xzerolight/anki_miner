@@ -12,8 +12,9 @@ import pytest
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.config.config import AudioSourceEntry
 from anki_miner.gui.utils import service_factory
+from anki_miner.languages.switching import switch_language
 from anki_miner.services.audio_packs.importer import import_audio_pack
-from anki_miner.services.custom_audio_fetcher import CustomAudioFetcher
+from anki_miner.services.custom_audio_fetcher import CustomAudioFetcher, custom_audio_slug
 from anki_miner.services.expression_audio_fetcher import (
     ChainedExpressionAudioFetcher,
     JPod101AudioFetcher,
@@ -512,6 +513,27 @@ class TestBuildExpressionAudioFetcherChain:
         dir_b = fetcher._fetchers[1]._cache_dir
         assert dir_a != dir_b
         assert dir_a.name.startswith("custom_")
+
+    def test_language_placeholder_keys_the_custom_cache_per_mining_language(self, base_config):
+        """de 'die' and en 'die' must not share one cached file or Anki media name."""
+        template = "https://audio.example/{language}/{term}.mp3"
+        built = {}
+        for code in ("de", "en"):
+            cfg = dataclasses.replace(
+                switch_language(base_config, code),
+                expression_audio_chain=(AudioSourceEntry(kind="custom", url=template, enabled=True),),
+            )
+            built[code] = service_factory._build_expression_audio_fetcher(cfg)._fetchers[0]
+        assert built["de"]._cache_dir != built["en"]._cache_dir
+        assert built["de"]._file_prefix != built["en"]._file_prefix
+
+    def test_template_without_language_placeholder_keeps_its_slug(self, base_config):
+        template = "http://localhost:5050/?t={term}&r={reading}"
+        cfg = dataclasses.replace(
+            base_config, expression_audio_chain=(AudioSourceEntry(kind="custom", url=template, enabled=True),)
+        )
+        fetcher = service_factory._build_expression_audio_fetcher(cfg)._fetchers[0]
+        assert fetcher._file_prefix == f"custom_{custom_audio_slug(template)}"
 
     def test_duplicate_pack_id_two_fetchers(self, tmp_path, base_config):
         """Two enabled entries with the same pack_id → chain has 2 fetchers (same object twice)."""
