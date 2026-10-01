@@ -84,6 +84,13 @@ _ZIP_SUFFIXES = frozenset(FREQUENCY_SOURCE_SUFFIXES[:1])
 _CSV_SUFFIXES = frozenset(FREQUENCY_SOURCE_SUFFIXES[1:])
 
 
+def _occurrence_preference(row: tuple[int, str | None]) -> tuple[bool, int]:
+    """Collision sort key for a DECLARED occurrence source: as :func:`_rank_preference`,
+    but the LARGEST count wins, because a larger count means a more common word."""
+    count, display_value = row
+    return (is_kana_usage_display(display_value), -count)
+
+
 def _rank_preference(row: tuple[int, str | None]) -> tuple[bool, int]:
     """Collision sort key for a ``(rank, display_value)`` row.
 
@@ -315,7 +322,8 @@ def _import_zip(
         )
 
         # Numeric path: key = (term, reading) -> (best rank, display_value),
-        # "best" per _rank_preference (non-㋕ beats ㋕, then min rank).
+        # "best" per `prefer`: the rank rule (non-㋕ beats ㋕, then min rank), or
+        # the largest count for a declared occurrence source.
         ranks: dict[tuple[str, str | None], tuple[int, str | None]] = {}
         # Categorical path: key = (term, reading) -> level label (first non-empty
         # wins). Accumulated in the same pass so a word-based source is detected
@@ -328,6 +336,9 @@ def _import_zip(
         total_labelled = 0
         total_considered = 0
         fold = _term_fold(language)
+        # The mode is known up front only when declared; an undeclared source is
+        # probed after the scan and keeps the rank rule here.
+        prefer = _occurrence_preference if declared_mode == mode_probe.OCCURRENCE_BASED else _rank_preference
 
         for bank in banks.iter_banks(progress=progress, cancel_check=cancel_check):
             # Entries are already structurally validated by iter_banks (list,
@@ -352,7 +363,7 @@ def _import_zip(
                     key = (term, reading)
                     candidate = (rank, display_value)
                     existing = ranks.get(key)
-                    if existing is None or _rank_preference(candidate) < _rank_preference(existing):
+                    if existing is None or prefer(candidate) < prefer(existing):
                         ranks[key] = candidate
                 else:
                     skipped_display_only += 1

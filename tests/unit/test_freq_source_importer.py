@@ -255,6 +255,31 @@ class TestZipImport:
             ("猫", None, 3),
         ]
 
+    def test_occurrence_declared_collision_keeps_the_largest_count(self, tmp_path: Path) -> None:
+        # Two rows for one key: for occurrence data the larger count is the word's frequency.
+        zip_path = _write_zip(
+            tmp_path / "occ.zip",
+            frequency_mode="occurrence-based",
+            banks=[["犬", "freq", 10], ["犬", "freq", 100], ["猫", "freq", 50], ["鳥", "freq", 20]],
+        )
+        dest = tmp_path / "sources"
+        result = import_frequency_source(zip_path, dest)
+        assert _read_entries(dest, result.source_id) == [
+            ("犬", None, 1),
+            ("猫", None, 2),
+            ("鳥", None, 3),
+        ]
+
+    def test_rank_declared_collision_still_keeps_the_smallest_rank(self, tmp_path: Path) -> None:
+        zip_path = _write_zip(
+            tmp_path / "rank.zip",
+            frequency_mode="rank-based",
+            banks=[["犬", "freq", 10], ["犬", "freq", 1], ["猫", "freq", 5]],
+        )
+        dest = tmp_path / "sources"
+        result = import_frequency_source(zip_path, dest)
+        assert _read_entries(dest, result.source_id) == [("犬", None, 1), ("猫", None, 5)]
+
     def test_occurrence_declared_preserves_display_value(self, tmp_path: Path) -> None:
         zip_path = _write_zip(
             tmp_path / "occd.zip",
