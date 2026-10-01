@@ -33,7 +33,9 @@ def _strip_technical_tokens(name: str) -> str:
     # fire between an underscore and a digit (both are word chars), so
     # "Show_03_720p" kept "720p" — which the old consuming BARE_NUMBER regex
     # silently skipped but the lookahead form would mine as episode 720.
-    name = re.sub(r"(?<![0-9A-Za-z])\d{3,4}[pi](?![0-9A-Za-z])", "", name, flags=re.IGNORECASE)
+    # The optional 2-3 digits are a frame rate glued to the resolution
+    # ("1080p60"); left in, the bare-number fallback mined it as episode 60.
+    name = re.sub(r"(?<![0-9A-Za-z])\d{3,4}[pi](?:\d{2,3})?(?![0-9A-Za-z])", "", name, flags=re.IGNORECASE)
     # Strip release-encoding tags whose embedded digits otherwise win the
     # trailing-number fallback (Issue #80): video codec (x264/x265/h264/
     # h265/av1/vp9), color bit-depth (10-bit/8bit), and the 8-hex CRC32
@@ -46,6 +48,23 @@ def _strip_technical_tokens(name: str) -> str:
     name = re.sub(r"(?<![0-9A-Za-z])(?:[xh]\.?26[45]|av1|vp9)(?![0-9A-Za-z])", "", name, flags=re.IGNORECASE)
     name = re.sub(r"(?<![0-9A-Za-z])\d{1,2}[\s._-]?bit(?![0-9A-Za-z])", "", name, flags=re.IGNORECASE)
     name = re.sub(r"[\[(][0-9A-Fa-f]{8}[\])]", "", name)
+    # Digit-bearing audio and profile tags win the same trailing-number
+    # fallback: a channel layout after an audio codec ("AAC2.0", "DDP5.1",
+    # "TrueHD.7.1" -> 0 or 1), a channel count ("2ch"), the Hi10P profile,
+    # and the AC-3 / E-AC-3 / MP3 codec names. The layout is stripped only
+    # together with its codec, so a bare "5.1" or an episode title word such
+    # as "Opus" is left alone. The codec+layout strip must run first so
+    # "E-AC-3 5.1" goes as one token.
+    name = re.sub(
+        r"(?<![0-9A-Za-z])(?:e-?ac-?3|ac-?3|aac|dd\+?|ddp|flac|opus|truehd|dts(?:-?hd)?(?:[\s._-]?ma)?|l?pcm)"
+        r"[\s._-]?[1-7][\s._][01](?![0-9A-Za-z])",
+        "",
+        name,
+        flags=re.IGNORECASE,
+    )
+    name = re.sub(
+        r"(?<![0-9A-Za-z])(?:\d(?:\.\d)?ch|hi10p?|e-?ac-?3|ac-?3|mp3)(?![0-9A-Za-z])", "", name, flags=re.IGNORECASE
+    )
     # A re-upload's version marker ("24 V2", "24_v2", "S01E02v5") sits
     # directly against the episode digits, so an unstripped name lets the
     # bare-number fallback's LAST-run pick (BARE_NUMBER, below) grab the
