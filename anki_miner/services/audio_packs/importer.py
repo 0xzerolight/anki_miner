@@ -162,8 +162,9 @@ def import_android_audio_db(
     finally:
         robust_rmtree(staging_parent, mode="outcome")
 
-    if overwrite:
-        purge_pack_cache(config_paths.ANKI_MINER_HOME / "audio_cache" / "local_packs", pack_id)
+    # Unconditional, as in import_audio_pack: a fresh slot can reuse the id of
+    # a removed pack whose positive cache is still on disk.
+    purge_pack_cache(config_paths.ANKI_MINER_HOME / "audio_cache" / "local_packs", pack_id)
 
     if progress:
         progress(f"Registered '{pack_id}' ({entry_count:,} entries)")
@@ -331,6 +332,11 @@ def import_audio_pack(
     finally:
         # staging_parent may already be gone via os.replace.
         robust_rmtree(staging_parent, mode="outcome")
+
+    # New content now sits under pack_id. The positive cache is keyed on the id
+    # alone and outlives the slot (Remove deletes only the slot), so a cached
+    # clip from an earlier pack with this id would win over the new index.
+    purge_pack_cache(config_paths.ANKI_MINER_HOME / "audio_cache" / "local_packs", pack_id)
 
     if progress:
         progress(f"Finalised '{pack_id}' ({total_entries:,} entries)")
