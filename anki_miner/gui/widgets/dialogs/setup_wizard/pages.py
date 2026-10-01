@@ -1243,6 +1243,17 @@ class NoteTypePage(_WizardSection):
         if not names or self._field_names_note_type != note_type:
             return
         config = self._wizard.working_config()
+        # A re-run (Tools, System Health's Fix) re-fetches the note type it was
+        # opened on. When setup already ran and that mapping already works, it is
+        # the user's own: re-applying a preset would silently switch features
+        # they turned off (an empty field) and change later cards, and every
+        # close path persists the working config. First runs and a mapping that
+        # does not work yet still fill (D8/D13).
+        if config.first_run_setup_done and self.isComplete():
+            self._update_guidance()
+            self._show_field_problem()
+            self.completeChanged.emit()
+            return
         fill = fill_note_type_fields(
             names,
             allow_presets=self._presets_apply(),
