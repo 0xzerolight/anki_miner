@@ -81,6 +81,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+#: pysubs2 formats whose content sniffer only checks the file's first characters
+#: ('<SAMI>' / 'WEBVTT', case-sensitive, with a UTF-8 BOM left in place).
+_PREFIX_SNIFFED_FORMATS = frozenset({"sami", "vtt"})
+
 # Config fields SubtitleParserService actually reads. Callers that reuse a
 # parser instance across configs (e.g. a later pass reusing an earlier pass's
 # filled per-file tokenization cache) must assert every one of these is
@@ -886,6 +890,24 @@ class SubtitleParserService:
             self._fg_cache[s] = generate_furigana(s, self._tagger())
         return self._fg_cache[s]
 
+    @staticmethod
+    def _own_base_reading(word_token: Any, mined: str) -> str:
+        """Hiragana ``kanaBase`` of a real token whose card front is its own orthBase.
+
+        Returns ``""`` for synthetic/compound tokens, a front that is not the
+        token's own ``orthBase`` (folded or resolver-overridden), or a missing /
+        ``*`` / non-string ``kanaBase``; the caller then re-derives the reading.
+        """
+        if isinstance(word_token, SyntheticToken) or getattr(word_token, "compound", False) is True:
+            return ""
+        feature = getattr(word_token, "feature", None)
+        kana_base = getattr(feature, "kanaBase", None)
+        if getattr(feature, "orthBase", None) != mined or not isinstance(kana_base, str):
+            return ""
+        if kana_base in ("", "*"):
+            return ""
+        return katakana_to_hiragana(kana_base)
+
     def _reading(self, s: str) -> str:
         """Return generate_reading(s, tagger), memoized within the current parse pass."""
         if s not in self._rd_cache:
@@ -997,7 +1019,19 @@ class SubtitleParserService:
 
         try:
             try:
-                subs = pysubs2.load(str(subtitle_file))
+                try:
+                    subs = pysubs2.load(str(subtitle_file))
+                except pysubs2.exceptions.FormatAutodetectionError as autodetect_error:
+                    # A UTF-8 BOM, a lowercase <sami> or a leading comment defeats
+                    # the sniffer; the extension names the format, as on the
+                    # Reading path (reading/subtitle_source.py).
+                    try:
+                        format_ = pysubs2.formats.get_format_identifier(Path(subtitle_file).suffix.lower())
+                    except pysubs2.exceptions.UnknownFileExtensionError:
+                        raise autodetect_error from None
+                    if format_ not in _PREFIX_SNIFFED_FORMATS:
+                        raise
+                    subs = pysubs2.load(str(subtitle_file), format_=format_)
             except UnicodeDecodeError as utf8_error:
                 profile = get_profile(config_language(self.config))
                 subs = load_with_fallback_encoding(
@@ -1483,6 +1517,10 @@ class SubtitleParserService:
                 expression_reading = self._reading(mined)
                 override = resolve_reading_override(mined, expression_reading)
                 pronoun_reading = resolve_pronoun_fold_reading(surface, mined)
+                # A real token whose front is its own orthBase carries that
+                # orthBase's reading in the variant the line used (言っ→kanaBase
+                # イウ); an isolated re-tokenize of 言う picks ユウ, 得る ウル.
+                own_base_reading = self._own_base_reading(word_token, mined)
                 if override is not None:
                     # Inflected misread spelling (マズかった→mined マズい→まじい,
                     # 込んだ→mined 込む→ごむ): apply the curated reading and regenerate
@@ -1499,6 +1537,9 @@ class SubtitleParserService:
                     expression_reading = pronoun_reading
                     expression_furigana = _format_furigana(mined, pronoun_reading)
                     reading_overridden = True
+                elif own_base_reading:
+                    expression_reading = own_base_reading
+                    expression_furigana = _format_furigana(mined, own_base_reading)
                 else:
                     expression_furigana = self._furigana(mined)
 

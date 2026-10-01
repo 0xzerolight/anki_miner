@@ -7132,3 +7132,63 @@ class TestWebVTTFiles:
         words = SubtitleParserService(test_config).parse_subtitle_file(sub_file)
 
         assert "読む" in {word.lemma for word in words}
+
+
+def _write_contextual_reading_srt(path, lines):
+    path.write_text(
+        "".join(f"{i + 1}\n00:00:0{i},000 --> 00:00:0{i},900\n{t}\n\n" for i, t in enumerate(lines)),
+        encoding="utf-8",
+    )
+    return path
+
+
+class TestInflectedFrontReadingFromToken:
+    """An inflected verb/adjective's card reading is the token's own kanaBase.
+
+    Re-tokenizing the dictionary form alone lets unidic pick another variant
+    (言う→ユウ, 得る→ウル, 深い→ブカイ, 丸い→マリイ), while the in-sentence token
+    already carries the reading of the lexeme the line used.
+    """
+
+    def test_inflected_fronts_keep_the_contextual_lexeme_reading(self, test_config, tmp_path):
+        sub = _write_contextual_reading_srt(
+            tmp_path / "x.srt",
+            ["同じ深さで", "三方丸く収まると", "知り得た人物", "彼はそう言った"],
+        )
+        words = {w.mined_form: w for w in SubtitleParserService(test_config).parse_subtitle_file(sub)}
+
+        assert words["言う"].expression_reading == "いう"
+        assert words["言う"].expression_furigana == "言[い]う"
+        assert words["言う"].lemma_reading == "いう"
+        assert words["得る"].expression_reading == "える"
+        assert words["深い"].expression_reading == "ふかい"
+        assert words["丸い"].expression_reading == "まるい"
+        assert words["丸い"].expression_furigana == "丸[まる]い"
+
+
+_PREFIX_SNIFF_SAMI = (
+    "<SAMI>\n<BODY>\n"
+    "<SYNC Start=1000><P Class=KRCC>新しい本を買いました\n<SYNC Start=3000><P Class=KRCC>&nbsp;\n"
+    "</BODY>\n</SAMI>\n"
+)
+
+
+class TestPrefixSniffedFormatsFallBackToTheExtension:
+    """pysubs2 sniffs SAMI/WebVTT only from the file's first characters."""
+
+    @pytest.mark.parametrize(
+        ("name", "raw"),
+        [
+            ("bom.smi", b"\xef\xbb\xbf" + _PREFIX_SNIFF_SAMI.encode()),
+            ("lower.smi", _PREFIX_SNIFF_SAMI.replace("SAMI>", "sami>").encode()),
+            ("comment_first.smi", ("<!-- made by SMIEditor -->\n" + _PREFIX_SNIFF_SAMI).encode()),
+            ("bom.vtt", "﻿WEBVTT\n\n00:01.000 --> 00:03.000\n新しい本を買いました\n".encode()),
+        ],
+    )
+    def test_undetectable_sami_or_vtt_parses_by_extension(self, test_config, tmp_path, name, raw):
+        sub_file = tmp_path / name
+        sub_file.write_bytes(raw)
+
+        entries = SubtitleParserService(test_config).parse_raw_entries(sub_file)
+
+        assert [text for _, _, text in entries] == ["新しい本を買いました"]
