@@ -6531,7 +6531,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Settings are busy with a download or import. Try again when it finishes.</source>
-        <translation type="unfinished" />
+        <translation>設定でダウンロードまたはインポートが実行中です。完了してから再試行してください。</translation>
     </message>
     <message>
         <source>The desktop shortcut could not be created.</source>

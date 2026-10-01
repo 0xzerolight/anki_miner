@@ -6531,7 +6531,7 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
     </message>
     <message>
         <source>Settings are busy with a download or import. Try again when it finishes.</source>
-        <translation type="unfinished" />
+        <translation>Cài đặt đang bận tải xuống hoặc nhập. Hãy thử lại khi hoàn tất.</translation>
     </message>
     <message>
         <source>The desktop shortcut could not be created.</source>

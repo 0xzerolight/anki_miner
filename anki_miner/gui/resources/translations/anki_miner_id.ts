@@ -6531,7 +6531,7 @@ Kata yang akan ditambahkan: %3. Lanjutkan?</translation>
     </message>
     <message>
         <source>Settings are busy with a download or import. Try again when it finishes.</source>
-        <translation type="unfinished" />
+        <translation>Pengaturan sedang sibuk dengan unduhan atau impor. Coba lagi setelah selesai.</translation>
     </message>
     <message>
         <source>The desktop shortcut could not be created.</source>

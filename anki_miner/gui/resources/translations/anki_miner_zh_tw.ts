@@ -6531,7 +6531,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Settings are busy with a download or import. Try again when it finishes.</source>
-        <translation type="unfinished" />
+        <translation>設定正忙於下載或匯入。請在完成後再試一次。</translation>
     </message>
     <message>
         <source>The desktop shortcut could not be created.</source>

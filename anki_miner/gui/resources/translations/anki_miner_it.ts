@@ -6568,7 +6568,7 @@ Parole da aggiungere: %3. Continuare?</translation>
     </message>
     <message>
         <source>Settings are busy with a download or import. Try again when it finishes.</source>
-        <translation type="unfinished" />
+        <translation>Le impostazioni sono occupate da un download o un'importazione. Riprovare al termine.</translation>
     </message>
     <message>
         <source>The desktop shortcut could not be created.</source>
