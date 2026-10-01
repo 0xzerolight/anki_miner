@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from anki_miner.config.config import _LANGUAGE_CODES
 from anki_miner.languages import AVAILABLE_LANGUAGES
-from anki_miner.languages._spaced import create_spaced_parser
 from anki_miner.languages.fa import FA_CARD_FIELDS, FA_EXTRA_CARD_FIELDS, FA_SMOKE_SENTENCE
+from anki_miner.languages.fa import create_parser as fa_create_parser
 from anki_miner.languages.fa.audio import FA_AUDIO
 from anki_miner.languages.fa.availability import fa_missing_reason
 from anki_miner.languages.fa.catalog import FA_CATALOG
@@ -52,9 +52,9 @@ def test_the_profile_names_persian_in_both_scripts():
 
 def test_the_profile_is_wired_to_the_persian_engine():
     profile = get_profile("fa")
-    # The shared spaced factory, not a private copy: it fills exactly the five
-    # seams fa needs and branches on no language code.
-    assert profile.create_parser is create_spaced_parser
+    # The shared spaced factory behind a thin wrapper that only adds the
+    # bilingual-cue line gate; it branches on no language code.
+    assert profile.create_parser is fa_create_parser
     assert isinstance(profile.mined_form, PersianMinedForm)
     assert isinstance(profile.lookup, PersianLookupStrategy)
     assert isinstance(profile.script, PersianScript)

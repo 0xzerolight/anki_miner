@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from anki_miner.languages._spaced import create_spaced_parser
 from anki_miner.languages._spaced.fields import spaced_card_fields, spaced_scoped_defaults
 from anki_miner.languages.fa.audio import FA_AUDIO
@@ -53,6 +55,16 @@ FA_EXTRA_CARD_FIELDS: tuple[CardFieldSpec, ...] = (
 FA_CARD_FIELDS: dict[str, str] = dict(spaced_card_fields(FA_EXTRA_CARD_FIELDS))
 
 
+def create_parser(config: Any, **kwargs: Any) -> Any:
+    """The shared spaced parser with the bilingual-cue line gate (ZH-046, KO-06).
+
+    A bilingual cue puts an English translation line under the Persian one, and
+    the flattened cue becomes the card's Sentence; the script gate drops it.
+    """
+    kwargs.setdefault("has_target_script", PersianScript().contains_target_script)
+    return create_spaced_parser(config, **kwargs)
+
+
 def build_profile() -> LanguageProfile:
     """Build the Persian profile. Never calls ``registry.get_profile`` (non-reentrant lock)."""
     return LanguageProfile(
@@ -61,9 +73,9 @@ def build_profile() -> LanguageProfile:
         # The shared spaced factory fills exactly the seams Persian needs: the
         # script gate, the mined-form policy, the profile's normalise, no
         # compound matcher (the fa tokenizer merges its own light verbs) and no
-        # sentence annotation. It branches on no language code, so fa keeps no
-        # parser.py of its own.
-        create_parser=create_spaced_parser,
+        # sentence annotation, plus the bilingual-cue line gate. It branches on
+        # no language code, so fa keeps no parser.py of its own.
+        create_parser=create_parser,
         mined_form=PersianMinedForm(),
         lookup=PersianLookupStrategy(),
         # No respelling: the dictionary's romanisation is a card field, not a
