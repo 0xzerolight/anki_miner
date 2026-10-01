@@ -12,6 +12,7 @@ from dataclasses import fields
 from pathlib import Path
 from typing import Any, ClassVar
 
+import anki_miner.config.config as _config_module
 from anki_miner.config import ZOOM_PRESETS, AnkiMinerConfig, create_default_config
 from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.services.startup_store_recovery import backup_config_repair_is_safe
@@ -449,6 +450,10 @@ class GUIConfigManager:
 
         # Convert string paths back to Path objects
         config_dict = cls._strings_to_paths(config_dict)
+
+        # A file written under another data folder (copied, or ANKI_MINER_HOME
+        # pointed at a copy) carries that folder's default paths.
+        config_dict = cls._rebase_home_paths(config_dict)
 
         # Migrate old field names
         raw_anki_fields = config_dict.get("anki_fields")
@@ -1182,6 +1187,52 @@ class GUIConfigManager:
             if is_path or is_union_with_path:
                 result.add(name)
         return frozenset(result)
+
+    @staticmethod
+    def _rebase_home_paths(data: dict[str, Any]) -> dict[str, Any]:
+        """Move default-shaped paths from an old data folder onto ANKI_MINER_HOME.
+
+        A field qualifies when its dataclass default is ``ANKI_MINER_HOME /
+        <suffix>``; the suffixes come from the defaults themselves, so a new
+        home-derived field is covered without a list. A stored ``<P>/<suffix>``
+        names ``P`` as a candidate old home. A candidate is trusted only when at
+        least two fields agree on it and it is not the current home; then every
+        ``<P>/<suffix>`` field is rewritten to ``ANKI_MINER_HOME/<suffix>``. Any
+        other stored path is a deliberate override and stays. The file format
+        is unchanged: the next save writes the rebased absolute paths.
+        """
+        # The binding the default factories read, so home and suffixes agree.
+        home = _config_module.ANKI_MINER_HOME
+        defaults = create_default_config()
+        suffixes: dict[str, Path] = {}
+        for name in GUIConfigManager._path_field_names():
+            default = getattr(defaults, name)
+            if isinstance(default, Path) and default != home and default.is_relative_to(home):
+                suffixes[name] = default.relative_to(home)
+
+        old_homes: dict[str, Path] = {}
+        votes: dict[Path, int] = {}
+        for name, suffix in suffixes.items():
+            value = data.get(name)
+            depth = len(suffix.parts)
+            if not isinstance(value, Path) or len(value.parts) <= depth or value.parts[-depth:] != suffix.parts:
+                continue
+            old = Path(*value.parts[:-depth])
+            if old == home:
+                continue
+            old_homes[name] = old
+            votes[old] = votes.get(old, 0) + 1
+
+        moved = {old for old, count in votes.items() if count >= 2}
+        if not moved:
+            return data
+        result = dict(data)
+        for name, old in old_homes.items():
+            if old in moved:
+                result[name] = home / suffixes[name]
+        for old in sorted(moved, key=str):
+            logger.info("Config paths rebased from data folder %s to %s", old, home)
+        return result
 
     @staticmethod
     def _decode_field_types(data: dict[str, Any]) -> dict[str, Any]:

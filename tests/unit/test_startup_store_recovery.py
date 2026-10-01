@@ -12,6 +12,7 @@ from typing import cast
 import pytest
 from PyQt6.QtCore import QLockFile
 
+import anki_miner.config.config as config_module
 import anki_miner.services.startup_store_recovery as recovery_module
 from anki_miner.config import (
     AnkiMinerConfig,
@@ -406,6 +407,9 @@ def test_backup_config_does_not_restore_committed_deletion_tombstone(
 ) -> None:
     config_path = tmp_path / "gui_config.json"
     monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", config_path)
+    # tmp_path holds gui_config.json and the stores, so it is the data folder;
+    # otherwise the load rebases its default-shaped roots onto ANKI_MINER_HOME.
+    monkeypatch.setattr(config_module, "ANKI_MINER_HOME", tmp_path)
     old = _config(tmp_path, frequency_ids=("removed-source",))
     new = replace(old, frequency_chain=())
     slot = old.freqs_root / "removed-source"
@@ -455,6 +459,9 @@ def test_backup_config_defers_primary_repair_when_deletion_marker_cannot_be_writ
 ) -> None:
     config_path = tmp_path / "gui_config.json"
     monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", config_path)
+    # tmp_path holds gui_config.json and the stores, so it is the data folder;
+    # otherwise the load rebases its default-shaped roots onto ANKI_MINER_HOME.
+    monkeypatch.setattr(config_module, "ANKI_MINER_HOME", tmp_path)
     old = _config(tmp_path, frequency_ids=("removed-source",))
     new = replace(old, frequency_chain=())
     slot = old.freqs_root / "removed-source"

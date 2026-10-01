@@ -34,6 +34,7 @@ from typing import Any
 
 import pytest
 
+import anki_miner.config.config as config_module
 from anki_miner import __version__
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.controllers.profile_controller import (
@@ -1170,6 +1171,13 @@ class TestSettingsRepaint:
 
 
 class TestRestartNote:
+    @pytest.fixture(autouse=True)
+    def _temp_dir_is_the_data_folder(self, monkeypatch, temp_dir):
+        """``test_config`` keeps its data paths in ``temp_dir``; make that the
+        home so a profile reload does not rebase them onto ANKI_MINER_HOME and
+        report a boot-only ``stats_db_path`` change (BA-009)."""
+        monkeypatch.setattr(config_module, "ANKI_MINER_HOME", temp_dir)
+
     def test_the_note_names_the_boot_only_field_that_differs(self, controller, window, profile_a):
         _seed("a", profile_a, "A")
         _seed("b", replace(profile_a, ui_language="ja", anki_deck_name="Deck B"), "B")
