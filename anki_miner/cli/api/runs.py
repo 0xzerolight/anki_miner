@@ -45,7 +45,7 @@ from anki_miner.models import MiningOutcome, ProcessingResult, classify_result
 from anki_miner.presenters.null_presenter import NullPresenter
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.cue_merge import merge_budget_seconds
-from anki_miner.utils.audio_track_detector import get_media_duration_seconds
+from anki_miner.utils.audio_track_detector import get_media_duration_seconds, get_primary_video_codec
 from anki_miner.utils.ffmpeg_resolver import binary_available, resolve_ffmpeg, resolve_ffprobe
 
 logger = logging.getLogger(__name__)
@@ -101,7 +101,14 @@ def _episode_config(config: AnkiMinerConfig, episode: Episode, folder: Path) -> 
 
 
 def _check_video(config: AnkiMinerConfig, episode: Episode) -> None:
-    if get_media_duration_seconds(episode.video_file, resolve_ffprobe(config)) is None:
+    ffprobe = resolve_ffprobe(config)
+    # No container duration means "duration unknown" (a live-mode MKV, an
+    # interrupted recording), not "cannot be opened": such a file still plays
+    # and mines, so a readable video stream is enough.
+    if (
+        get_media_duration_seconds(episode.video_file, ffprobe) is None
+        and get_primary_video_codec(episode.video_file, ffprobe) is None
+    ):
         raise ApiError(VIDEO_UNREADABLE, f"The video cannot be opened: {episode.video_file}")
 
 

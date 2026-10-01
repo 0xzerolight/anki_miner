@@ -75,6 +75,7 @@ def services(test_config):
         patch.object(runs, "AnkiService"),
         patch.object(runs, "binary_available", return_value=True),
         patch.object(runs, "get_media_duration_seconds", return_value=1.0) as duration,
+        patch.object(runs, "get_primary_video_codec", return_value=None),
         patch.object(runs, "create_episode_processor", return_value=processor) as factory,
     ):
         ns.processor = processor
@@ -238,3 +239,19 @@ def test_relative_paths_are_taken_from_the_callers_folder(services, tmp_path, vi
     job = files.parse_run_file({"schema": 1, "run_dir": ".", "language": "ja", "episodes": [episode]})
     assert runs.mine_runs(job, threading.Event())[0]["ok"] is True
     assert services.processor.process_episode.call_args.args[0] == tmp_path.resolve() / "v.mkv"
+
+
+def test_a_video_without_a_container_duration_is_readable(tmp_path, test_config) -> None:
+    """A live-mode MKV (stream dump, interrupted recording) plays and mines but
+    carries no format.duration; "duration unknown" is not "cannot be opened"."""
+    import subprocess
+
+    video = tmp_path / "live.mkv"
+    video.write_bytes(b"x")
+    probe = json.dumps({"format": {}, "streams": [{"index": 0, "codec_type": "video", "codec_name": "h264"}]})
+    episode = SimpleNamespace(video_file=video)
+    with patch(
+        "anki_miner.utils.audio_track_detector.subprocess.run",
+        return_value=subprocess.CompletedProcess([], 0, probe, ""),
+    ):
+        runs._check_video(test_config, episode)  # must not raise VIDEO_UNREADABLE
