@@ -1429,6 +1429,19 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             if issue is not None and issue.action_id == "resource-download.retry":
                 self.clear_screen_issue()
 
+    def _clear_validation_issue(self) -> None:
+        """Clear only an issue a validation sweep raised: its failure or its error.
+
+        A passing sweep proves AnkiConnect, ffmpeg, the deck, the note type and
+        the fields; it says nothing about a missing language pack, a restyle
+        that was not confirmed or a failed export, so those banners stay.
+        """
+        banner = self.issue_banner()
+        if banner is not None:
+            issue = banner.current_issue()
+            if issue is not None and issue.action_id in {"settings.open", "validation.retry"}:
+                self.clear_screen_issue()
+
     def _activate_downloaded_resources(self, summary: object) -> "AnkiMinerConfig | None":
         """Switch downloaded resources on, or refuse without claiming success.
 
@@ -1912,7 +1925,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
 
         if result.all_passed:
             self.status_bar.set_operation(self.tr("All system checks passed"), "success")
-            self.clear_screen_issue()
+            self._clear_validation_issue()
         elif not silent:
             # A wall of "- component: message" lines was the whole modal. The
             # sentence says what happened; the component list is the diagnostic
