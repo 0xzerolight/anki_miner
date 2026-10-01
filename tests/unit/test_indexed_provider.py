@@ -1762,3 +1762,22 @@ class TestTokenPosRowRank:
         assert verb.index("To choose.") < verb.index("A pickaxe.") < verb.index("A surname.")
         assert untagged.index("A pickaxe.") < untagged.index("To choose.") < untagged.index("A surname.")
         assert single == untagged
+
+
+def test_attest_quality_folds_the_query_through_the_profile_keys(tmp_path: Path):
+    """A casefolding index stores 'shop'; the deinflection ladder asks for 'Shop'."""
+    keys = get_profile("de").dict_keys
+    db = tmp_path / "de.sqlite"
+    create_index(db)
+    bulk_insert(
+        db, [DictRow(term="Shop", reading=None, content="<div>shop</div>", tags="", rules="", sequence=1)], keys=keys
+    )
+    write_meta(db, {"schema_version": str(SCHEMA_VERSION), "source_name": "Test"})
+    provider = IndexedDictProvider("de-test", db, keys=keys)
+    assert provider.load() is True
+    try:
+        quality = provider.attest_quality(["Shop", "Online"], include_readings=False)
+    finally:
+        provider.close()
+    assert quality["Shop"]["term_rules"] == frozenset({""})
+    assert quality["Online"]["term_rules"] == frozenset()

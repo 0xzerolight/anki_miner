@@ -423,7 +423,7 @@ class IndexedDictProvider:
         if self._conn is None:
             return {w: dict(empty) for w in deduped}
         try:
-            detail = storage_attest_detail(self._conn, deduped, include_readings)
+            detail = storage_attest_detail(self._conn, deduped, include_readings, keys=self._keys)
         except sqlite3.DatabaseError as e:
             logger.warning(
                 "Dictionary '%s' (%s) raised DatabaseError during attest_quality; treating as all-miss: %s",

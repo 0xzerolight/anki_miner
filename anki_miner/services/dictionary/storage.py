@@ -1356,7 +1356,13 @@ def exact_term_sequences(
     return found
 
 
-def attest_detail(conn: sqlite3.Connection, words: list[str], include_readings: bool) -> dict[str, list[AttestRow]]:
+def attest_detail(
+    conn: sqlite3.Connection,
+    words: list[str],
+    include_readings: bool,
+    *,
+    keys: DictKeyFolding | None = None,
+) -> dict[str, list[AttestRow]]:
     """Per-word attesting rows for the commonness/quality probes (U10 infra).
 
     For each requested word returns the rows that attest it, each carrying its
@@ -1373,13 +1379,17 @@ def attest_detail(conn: sqlite3.Connection, words: list[str], include_readings: 
     requested word is present (``[]`` when unattested); duplicate words collapse
     to one key. Row order within a word is unspecified — this is a probe, not a
     render path; the provider unions into order-independent frozensets.
+
+    ``keys`` folds the query words exactly as the import folded the stored
+    terms and readings; ``None`` is the Japanese pair (see :func:`_folders`).
     """
+    fold_t, fold_r = _folders(keys)
     unique = list(dict.fromkeys(words))
     result: dict[str, list[AttestRow]] = {w: [] for w in unique}
     if not unique:
         return result
 
-    normalized_by_word = {word: unicodedata.normalize("NFC", word) for word in unique}
+    normalized_by_word = {word: fold_t(word) for word in unique}
 
     # The reading arm batches fewer words per round trip (see _ATTEST_READING_CHUNK):
     # a common kana reading can attest thousands of rows, and every word sharing
@@ -1396,7 +1406,7 @@ def attest_detail(conn: sqlite3.Connection, words: list[str], include_readings: 
             # (touch point b) and map a reading hit back through the folded key —
             # a katakana requested word still attests via a kanji headword's
             # folded reading (mirrors lookup_many's reading_reverse).
-            folded_chunk = [katakana_to_hiragana(w) for w in normalized_chunk]
+            folded_chunk = [fold_r(w) or "" for w in normalized_chunk]
             reading_reverse: dict[str, list[str]] = {}
             for w, wf in zip(chunk, folded_chunk, strict=True):
                 reading_reverse.setdefault(wf, []).append(w)
@@ -1409,7 +1419,7 @@ def attest_detail(conn: sqlite3.Connection, words: list[str], include_readings: 
             for term, reading, rules, tags in rows:
                 rules_val = rules if rules is not None else ""
                 tags_val = tags if tags is not None else ""
-                folded_reading = katakana_to_hiragana(reading) if reading is not None else None
+                folded_reading = fold_r(reading)
                 # Term wins over reading for the same (row, word) pair.
                 matched: dict[str, str] = {}
                 for w in term_reverse.get(term, ()):
