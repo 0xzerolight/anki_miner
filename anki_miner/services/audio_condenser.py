@@ -525,7 +525,13 @@ class AudioCondenserService:
 
         codec = (stream.codec_name or "").lower()
         ext = ".ass" if codec in ("ass", "ssa") else ".srt"
-        out_path = out_dir / f"{video.stem}.s{stream.sub_index}{ext}"
+        # Unique per call: Condense and Retime both extract into the shared
+        # media_temp_folder and may run at once on videos with the same stem;
+        # a fixed name let one tool overwrite, read or delete the other's file.
+        # ffmpeg -y overwrites the placeholder and infers the format from ext.
+        fd, tmp_name = tempfile.mkstemp(prefix=f"{video.stem}.s{stream.sub_index}.", suffix=ext, dir=out_dir)
+        os.close(fd)
+        out_path = Path(tmp_name)
 
         cmd = [
             resolve_ffmpeg(self.config),
