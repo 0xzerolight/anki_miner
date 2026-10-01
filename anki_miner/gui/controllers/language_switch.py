@@ -307,6 +307,52 @@ def request_language_change(window: Any, code: str) -> bool:
     return True
 
 
+def apply_imported_language(window: Any, imported: Any) -> bool:
+    """Commit a settings import that changes the mining language; return whether it landed.
+
+    The third trigger. ``import_config`` already ran ``switch_language``, so the
+    chains are swapped in ``imported``; what is still owed is what the other two
+    triggers run first: the busy refusals and the queue rule, in the same order,
+    then the commit hooks. No first-visit prompt: the file is configured settings.
+    """
+    try:
+        display_name = get_profile(imported.language).display_name
+    except (LookupError, ValueError, ImportError):
+        display_name = imported.language
+    with window._dictionary_mutation_guard(MUTATION_KIND) as ready:
+        if not ready:
+            _refuse(
+                window,
+                QCoreApplication.translate("LanguageSwitch", "Settings are busy. Nothing was switched."),
+            )
+            return False
+        previous = window.get_config()
+        if not window.release_dictionary_resources():
+            _refuse(
+                window,
+                QCoreApplication.translate("LanguageSwitch", "Mining is running. Stop it, then switch language."),
+            )
+            return False
+        pending = queued_screens(window)
+        if pending and not confirm_queue_flush(window, pending, display_name):
+            return False  # Declined: nothing touched, on screen or on disk.
+        try:
+            window.update_config(imported)
+        except Exception as error:  # noqa: BLE001 - a failed commit must not crash a Qt slot
+            logger.exception("Could not commit an imported switch to %r", imported.language)
+            _refuse(
+                window,
+                tr_format(
+                    QCoreApplication.translate("LanguageSwitch", "Could not switch to %1. Nothing was switched."),
+                    display_name,
+                ),
+                details=str(error),
+            )
+            return False
+    commit_language_change(window, previous, flush=bool(pending), first_visit=False)
+    return True
+
+
 def _refuse(window: Any, summary: str, *, details: str = "") -> None:
     """Report a refusal on the window's banner (D24), never in a modal.
 

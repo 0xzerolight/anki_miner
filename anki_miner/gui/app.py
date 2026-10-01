@@ -1832,9 +1832,14 @@ def compose_main_window(
     )
     window.tabs.addTab(subtitles_tab, QCoreApplication.translate("MainWindow", "Utilities"))
 
+    from anki_miner.gui.controllers import language_switch
+
     settings_tab = SettingsTab(
         window.get_config(),
         commit_config=window.update_config,
+        # A settings import for another mining language owes what every other
+        # language change runs: busy refusals, the queue rule, then the hooks.
+        commit_language_import=lambda cfg: language_switch.apply_imported_language(window, cfg),
         suppress_optional_startup=suppress_optional_startup,
     )
     window.background_tasks.set_dictionary_mutation_panel(settings_tab.dictionary_panel)
@@ -1843,14 +1848,6 @@ def compose_main_window(
     # POST-SAVE committed object out to every tab. This prevents a scan worker's
     # stale pre-save config snapshot from regaining authority after save.
     settings_tab.config_changed.connect(lambda cfg: window.update_config(cfg))
-    # A settings import that changed the mining language owes the same hooks a
-    # selector switch does. Nothing to flush and no first-visit prompt: the
-    # file is already-configured settings, like a profile snapshot.
-    from anki_miner.gui.controllers import language_switch
-
-    settings_tab.import_changed_language.connect(
-        lambda previous: language_switch.commit_language_change(window, previous, flush=False, first_visit=False)
-    )
     # Make Test Connection live: it emits SettingsTab.validation_requested,
     # which was previously connected to nothing (T-53). Routing it to
     # _run_validation also drives the Anki connection badge via

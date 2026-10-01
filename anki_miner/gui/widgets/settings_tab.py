@@ -175,10 +175,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         mining_language_requested: Re-emitted from the Mining Language panel's
             language selector. The window runs the guard and commits, because a
             switch clears queues and reloads every panel in this tab.
-        import_changed_language: A settings import changed the mining language.
-            Carries the config from before the import, so the window can run
-            the hooks a durable language change owes (tagger evict, prewarm,
-            surface sync).
         language_pack_download_requested: Emitted with a language code when the
             Mining Language page's "Download and switch" is clicked.
         resource_family_download_requested: An empty Dictionaries, Frequency or
@@ -201,7 +197,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     asr_pack_download_requested = pyqtSignal()
     vulkan_model_download_requested = pyqtSignal(str)  # Emits model name
     mining_language_requested = pyqtSignal(str)  # Emits the requested language code
-    import_changed_language = pyqtSignal(object)  # Emits the pre-import AnkiMinerConfig
     language_pack_download_requested = pyqtSignal(str)  # Emits the language code
     resource_family_download_requested = pyqtSignal(str)  # "dict" | "freq" | "pitch" (C09)
 
@@ -249,6 +244,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         parent: QWidget | None = None,
         *,
         commit_config: Callable[[AnkiMinerConfig], None] | None = None,
+        commit_language_import: Callable[[AnkiMinerConfig], bool] | None = None,
         suppress_optional_startup: bool = False,
     ) -> None:
         """Initialize the settings tab.
@@ -258,6 +254,10 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             parent: Optional parent widget
             commit_config: Synchronous config commit used by import flows.
                 Defaults to ``config_changed.emit`` for standalone tabs.
+            commit_language_import: Commits a settings import that changes the
+                mining language the way a language switch does (busy refusals,
+                queue rule, hooks); returns whether it landed. ``None`` (a
+                standalone tab) commits through ``config_changed`` instead.
         """
         super().__init__(parent)
         self.config = config
@@ -265,6 +265,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self._commit_config: Callable[[AnkiMinerConfig], None] = (
             commit_config if commit_config is not None else self.config_changed.emit
         )
+        self._commit_language_import = commit_language_import
         # True between a manual "Update yt-dlp now" click and its result, so the
         # shared result signal can surface a dialog on the manual path only.
         self._ytdlp_manual_pending = False
@@ -2021,13 +2022,15 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                     )
                 )
         # Import can touch any field — full reload, unlike the targeted
-        # auto-save commit. Captured before the emit: the window's fan-out
-        # replaces self.config synchronously.
-        previous_config = self.config
-        self.config_changed.emit(new_config)
+        # auto-save commit. Another mining language is a language switch: the
+        # window may refuse it (mining, a dictionary mutation, declined queue
+        # flush), and then nothing was imported.
+        if new_config.language != self.config.language and self._commit_language_import is not None:
+            if not self._commit_language_import(new_config):
+                return
+        else:
+            self.config_changed.emit(new_config)
         self._load_config()
-        if new_config.language != previous_config.language:
-            self.import_changed_language.emit(previous_config)
         if import_result.invalid_fields or import_result.notices:
             summary: list[str] = []
             if import_result.invalid_fields:

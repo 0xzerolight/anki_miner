@@ -63,6 +63,24 @@ class TestTheSelectorReachesTheController:
         assert seen == ["zh"]
 
 
+class TestACrossLanguageImportReachesTheController:
+    """``app.py``: SettingsTab's ``commit_language_import`` is the guarded controller."""
+
+    def test_the_settings_import_hook_calls_the_controller(self, wired_window, monkeypatch):
+        window, _titles, _tabs = wired_window
+        seen: list[tuple[object, object]] = []
+        monkeypatch.setattr(
+            language_switch,
+            "apply_imported_language",
+            lambda win, cfg: seen.append((win, cfg)) or False,
+        )
+        imported = dataclasses.replace(window.get_config(), language="de")
+
+        assert _settings_tab(window)._commit_language_import(imported) is False
+
+        assert seen == [(window, imported)]
+
+
 class _IdleWorker(QThread):
     """A prewarm worker that is adopted but never actually started."""
 

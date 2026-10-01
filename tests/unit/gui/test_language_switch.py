@@ -315,3 +315,62 @@ def test_every_durable_queue_screen_answers_clear_queue():
     for screen in (AudiobookTab, BatchProcessingTab, DeckBuilderTab, ReadingSubtitlesTab, YouTubeTab):
         assert screen.QUEUE_STATE_KEY, screen.__name__
         assert callable(getattr(screen, "clear_queue", None)), screen.__name__
+
+
+# ---------------------------------------------------------------------------
+# A settings import for another mining language is a language change too
+# ---------------------------------------------------------------------------
+
+
+def _imported_de(config: AnkiMinerConfig) -> AnkiMinerConfig:
+    from anki_miner.languages.switching import switch_language
+
+    return switch_language(config, "de")
+
+
+def test_an_import_refused_while_mining_keeps_the_language_and_queues(test_config, saved_snapshot):
+    window = _FakeWindow(test_config, rows=1)
+    window.resources_ready = False
+
+    assert language_switch.apply_imported_language(window, _imported_de(test_config)) is False
+    assert window.config.language == "ja"
+    assert queue_state_store.stored_keys() == ("queue.youtube",)
+    assert window.screen.cleared == 0
+    assert window.issues
+
+
+def test_an_import_refused_by_the_guard_changes_nothing(test_config, saved_snapshot):
+    """A dictionary download or import in flight holds the chains: no swap under it."""
+    window = _FakeWindow(test_config, rows=1)
+    window.guard_ready = False
+
+    assert language_switch.apply_imported_language(window, _imported_de(test_config)) is False
+    assert window.config.language == "ja"
+    assert window.guard_kinds == ["language-switch"]
+    assert window.screen.cleared == 0
+
+
+def test_declining_the_flush_on_an_import_keeps_the_queues(test_config, saved_snapshot, monkeypatch):
+    monkeypatch.setattr(QMessageBox, "question", staticmethod(lambda *a, **k: QMessageBox.StandardButton.No))
+    window = _FakeWindow(test_config, rows=2)
+
+    assert language_switch.apply_imported_language(window, _imported_de(test_config)) is False
+    assert window.config.language == "ja"
+    assert queue_state_store.stored_keys() == ("queue.youtube",)
+    assert window.screen.cleared == 0
+
+
+def test_a_confirmed_import_commits_flushes_and_runs_the_hooks(test_config, saved_snapshot, monkeypatch):
+    monkeypatch.setattr(QMessageBox, "question", staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes))
+    monkeypatch.setattr(
+        language_switch, "offer_first_visit_setup", lambda *a, **k: pytest.fail("an import is not a first visit")
+    )
+    window = _FakeWindow(test_config, rows=2)
+    imported = _imported_de(test_config)
+
+    assert language_switch.apply_imported_language(window, imported) is True
+    assert window.config is imported
+    assert window.screen.cleared == 1
+    assert queue_state_store.stored_keys() == ()
+    assert window.prewarms == 1
+    assert window.syncs == 1

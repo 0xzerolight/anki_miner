@@ -274,13 +274,19 @@ def test_old_build_drops_the_key_without_raising(isolated_config_file):
     assert GUIConfigManager.load_config().language == "ja"
 
 
-def test_a_cross_language_import_hands_the_window_its_language_change(test_config, qtbot, monkeypatch, tmp_path):
-    """The window owes an imported language change the same hooks as a selector switch."""
+@pytest.mark.parametrize("landed", [True, False])
+def test_a_cross_language_import_goes_through_the_windows_language_change(
+    test_config, qtbot, monkeypatch, tmp_path, landed
+):
+    """An import for another mining language is committed by the window, which
+    refuses while mining or a dictionary mutation runs and asks before flushing
+    queues. A refusal leaves the live config alone."""
     from PyQt6.QtWidgets import QMessageBox
 
     from anki_miner.gui.widgets.settings_tab import SettingsTab
 
-    tab = SettingsTab(test_config)
+    requested: list[AnkiMinerConfig] = []
+    tab = SettingsTab(test_config, commit_language_import=lambda cfg: requested.append(cfg) or landed)
     qtbot.addWidget(tab)
     monkeypatch.setattr(
         "anki_miner.gui.widgets.settings_tab.QMessageBox.question",
@@ -289,14 +295,12 @@ def test_a_cross_language_import_hands_the_window_its_language_change(test_confi
     path = tmp_path / "de.json"
     path.write_text(json.dumps({"anki_miner_settings": True, "settings": {"language": "de"}}), encoding="utf-8")
     emitted: list[AnkiMinerConfig] = []
-    previous: list[AnkiMinerConfig] = []
     tab.config_changed.connect(emitted.append)
-    tab.import_changed_language.connect(previous.append)
 
     tab._apply_settings_import(str(path))
 
-    assert emitted[-1].language == "de"
-    assert [config.language for config in previous] == ["ja"]
+    assert [config.language for config in requested] == ["de"]
+    assert emitted == []
 
 
 def test_reset_to_defaults_uses_the_active_languages_scoped_defaults(test_config, qtbot, monkeypatch):
