@@ -353,3 +353,24 @@ def test_download_skips_if_cancel_event_already_set(monkeypatch, tmp_path):
     monkeypatch.setattr(model_manager._engine, "get_download_fn", lambda: fake_download_fn)
     download("small", tmp_path, cancel_event=cancel)
     assert not called
+
+
+def test_download_reclaims_staging_left_by_a_killed_download(monkeypatch, tmp_path):
+    """A hard kill mid-transfer skips the finally; the orphaned .staging-* dir
+    (up to ~3 GB of partial blobs) must be reclaimed by the next download."""
+    orphan = tmp_path / ".staging-large-v3-dead1234"
+    (orphan / "blobs").mkdir(parents=True)
+    (orphan / "blobs" / "partial").write_bytes(b"\x00" * 1024)
+
+    def fake_download_fn(name, *, cache_dir):
+        snap = Path(cache_dir) / f"models--Systran--faster-whisper-{name}" / "snapshots" / "rev"
+        snap.mkdir(parents=True)
+        (snap / "model.bin").write_bytes(b"\x00\x01")
+        (snap / "config.json").write_text("{}")
+
+    monkeypatch.setattr(model_manager._engine, "get_download_fn", lambda: fake_download_fn)
+
+    download("large-v3", tmp_path)
+
+    assert is_downloaded("large-v3", tmp_path) is True
+    assert not orphan.exists()
