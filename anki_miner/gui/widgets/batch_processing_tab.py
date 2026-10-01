@@ -405,8 +405,8 @@ class BatchProcessingTab(FolderSeriesScreenBase):
             n += 1
         return f"{base} ({n})"
 
-    def _has_runnable_duplicate(self, video_folder: Path, subtitle_folder: Path) -> bool:
-        """Whether a pending or errored row already mines this exact folder pair.
+    def _runnable_duplicates(self, video_folder: Path, subtitle_folder: Path) -> list[QueueItem]:
+        """The pending or errored rows that already mine this exact folder pair.
 
         Checked before folding the Add Series card into the queue, so pressing
         Process with the same folders still sitting in the card mines that row
@@ -414,11 +414,59 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         row is not a match: re-mining one on purpose already goes through
         selecting it and running it, not through this card.
         """
-        return any(
-            is_same_folder(item.video_folder, video_folder) and is_same_folder(item.subtitle_folder, subtitle_folder)
+        return [
+            item
             for item in self.batch_queue.get_all_items()
             if item.status in (QueueItemStatus.PENDING, QueueItemStatus.ERROR)
+            and is_same_folder(item.video_folder, video_folder)
+            and is_same_folder(item.subtitle_folder, subtitle_folder)
+        ]
+
+    def _card_matches_row(self, item: QueueItem, secondary_folder: Path | None) -> bool:
+        """Whether the Add Series card's offsets and translation settings equal ``item``'s.
+
+        The translation side counts only while the setting is on: with it off
+        the run ignores a row's translation folder, so a hidden difference is
+        nothing the user could see or act on. Without a translation folder on
+        either side, the translation offset has nothing to shift.
+        """
+        if item.subtitle_offset != self.offset_spinbox.value():
+            return False
+        if not self.config.secondary_subtitle_enabled:
+            return True
+        if item.secondary_folder is None and secondary_folder is None:
+            return True
+        if item.secondary_folder is None or secondary_folder is None:
+            return False
+        return is_same_folder(item.secondary_folder, secondary_folder) and (
+            item.secondary_offset == self._secondary_offset()
         )
+
+    def _show_queued_settings_conflict(self, item: QueueItem) -> None:
+        """Refuse a fold whose card differs from the queued row it names (BA-014).
+
+        The row is never rewritten: the offset spinbox is sticky across adds,
+        so copying it in could just as well overwrite a correct row offset.
+        """
+        summary = tr_format(
+            self.tr(
+                "%1 is already queued with other settings (subtitle offset %2). To use the card's "
+                "settings, remove that row and add the series again, or set the card back to the "
+                "queued settings."
+            ),
+            item.display_name,
+            f"{item.subtitle_offset:+.2f} s",
+        )
+        details = ""
+        if self.config.secondary_subtitle_enabled:
+            folder = str(item.secondary_folder) if item.secondary_folder is not None else self.tr("none")
+            details = "\n".join(
+                (
+                    tr_format(self.tr("Translation folder: %1"), folder),
+                    tr_format(self.tr("Translation offset: %1"), f"{item.secondary_offset:+.2f} s"),
+                )
+            )
+        self.show_screen_issue(ScreenIssue(summary=summary, details=details))
 
     def _fold_pickers_into_queue(self) -> bool:
         """Add the Add Series card's folders to the queue before a run.
@@ -441,14 +489,18 @@ class BatchProcessingTab(FolderSeriesScreenBase):
             return False
 
         video_folder, subtitle_folder = folders
-        ok, _secondary_folder = self._validated_secondary_folder(subtitle_folder)
+        ok, secondary_folder = self._validated_secondary_folder(subtitle_folder)
         if not ok:
             return False
 
-        if self._has_runnable_duplicate(video_folder, subtitle_folder):
-            self._clear_add_series_pickers(_secondary_folder)
+        duplicates = self._runnable_duplicates(video_folder, subtitle_folder)
+        if not duplicates:
+            return self._add_series_from_pickers() is not None
+        if any(self._card_matches_row(item, secondary_folder) for item in duplicates):
+            self._clear_add_series_pickers(secondary_folder)
             return True
-        return self._add_series_from_pickers() is not None
+        self._show_queued_settings_conflict(duplicates[0])
+        return False
 
     def _warn_incomplete_items(self) -> None:
         """Report every series this run skipped, in ONE banner.
