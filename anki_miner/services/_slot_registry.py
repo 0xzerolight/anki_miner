@@ -107,7 +107,10 @@ class IndexedSlotRegistry(ABC, Generic[MetaT, EntryT]):
         """Return on-disk slots not referenced by any chain entry.
 
         Only slots with schema_ok=True are returned: a stale or future slot
-        cannot be loaded and the chain build would drop it anyway. A slot
+        cannot be loaded and the chain build would drop it anyway. Only slots
+        stamped for the config's mining language are returned: the roots are
+        shared by every language, and the chain build would skip another
+        language's slot anyway. A slot
         referenced by a *disabled* chain entry is still considered listed (it
         has a visible, unchecked row the user can re-enable), so it is excluded
         — unlisted() surfaces only slots with no chain row at all. Results are
@@ -116,8 +119,13 @@ class IndexedSlotRegistry(ABC, Generic[MetaT, EntryT]):
         Does NOT call load(); callers control when the scan happens.
         """
         chained_ids = {slot_id for entry in self._chain(config) if (slot_id := self._slot_id(entry)) is not None}
+        language = config_language(config)
         return sorted(
-            (meta for meta in self._slots.values() if self._meta_id(meta) not in chained_ids and meta.schema_ok),
+            (
+                meta
+                for meta in self._slots.values()
+                if self._meta_id(meta) not in chained_ids and meta.schema_ok and meta.language == language
+            ),
             key=self._meta_id,
         )
 
