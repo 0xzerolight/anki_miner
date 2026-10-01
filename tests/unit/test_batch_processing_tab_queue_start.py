@@ -385,3 +385,165 @@ def test_the_screen_has_exactly_one_primary_button(tab):
 
     assert len(primaries) == 1
     assert primaries[0] is tab.queue_panel.process_queue_button
+
+
+# ---------------------------------------------------------------------------
+# BA-014: Add Series names a runnable row's folders but different settings.
+# Mine Queue refuses with a banner instead of silently mining the row's old
+# values; it never edits the row and never adds a second one.
+# ---------------------------------------------------------------------------
+
+
+def _secondary_tab(qtbot, test_config) -> BatchProcessingTab:
+    widget = BatchProcessingTab(
+        config=replace(test_config, secondary_subtitle_enabled=True),
+        presenter=MagicMock(name="Presenter"),
+        progress_callback=MagicMock(name="ProgressCallback"),
+    )
+    qtbot.addWidget(widget)
+    return widget
+
+
+def _queued_item(tab):
+    (item,) = tab.batch_queue.get_all_items()
+    return item
+
+
+def test_process_with_a_queued_row_and_a_different_offset_refuses(tab, tmp_path):
+    video, subs = _fill_pickers(tab, tmp_path, name="Show")
+    tab.queue_panel.add_series(display_name="Show", video_folder=video, subtitle_folder=subs, subtitle_offset=0.0)
+    _fill_pickers(tab, tmp_path, name="Show")
+    tab.offset_spinbox.setValue(1.5)
+
+    with patch("anki_miner.gui.workers.batch_queue_worker.BatchQueueWorkerThread") as worker_cls:
+        tab.queue_panel.process_queue_button.click()
+
+    worker_cls.assert_not_called()
+    issue = tab.issue_banner().current_issue()
+    assert issue is not None
+    assert "Show" in issue.summary
+    assert "+0.00 s" in issue.summary
+    assert "remove that row" in issue.summary
+    assert [w.display_name for w in tab.queue_panel.queue_item_widgets] == ["Show"]
+    assert _queued_item(tab).subtitle_offset == 0.0
+    # A refusal leaves the card as the user left it.
+    assert tab.video_folder_selector.path_or_none() == str(video)
+    assert tab.subtitle_folder_selector.path_or_none() == str(subs)
+
+
+@pytest.mark.parametrize(
+    ("row_translation", "row_translation_offset", "card_translation_offset"),
+    [
+        (False, 0.0, 0.0),  # the card adds a translation folder the row lacks
+        (True, 0.0, 2.0),  # same translation folder, different translation offset
+    ],
+    ids=["translation-folder", "translation-offset"],
+)
+def test_process_with_a_queued_row_and_different_translation_settings_refuses(
+    qtbot, test_config, tmp_path, row_translation, row_translation_offset, card_translation_offset
+):
+    tab = _secondary_tab(qtbot, test_config)
+    video, subs = _fill_pickers(tab, tmp_path, name="Show")
+    translation = tmp_path / "Show Translations"
+    translation.mkdir()
+    tab.queue_panel.add_series(
+        display_name="Show",
+        video_folder=video,
+        subtitle_folder=subs,
+        subtitle_offset=tab.offset_spinbox.value(),
+        secondary_folder=translation if row_translation else None,
+        secondary_offset=row_translation_offset,
+    )
+    _fill_pickers(tab, tmp_path, name="Show")
+    tab.secondary_folder_selector.set_path(str(translation))
+    tab.secondary_offset_spinbox.setValue(card_translation_offset)
+
+    with patch("anki_miner.gui.workers.batch_queue_worker.BatchQueueWorkerThread") as worker_cls:
+        tab.queue_panel.process_queue_button.click()
+
+    worker_cls.assert_not_called()
+    issue = tab.issue_banner().current_issue()
+    assert issue is not None
+    assert "Show" in issue.summary
+    assert "Translation folder:" in issue.details
+    assert "Translation offset: +0.00 s" in issue.details
+    assert [w.display_name for w in tab.queue_panel.queue_item_widgets] == ["Show"]
+    item = _queued_item(tab)
+    assert item.secondary_folder == (translation if row_translation else None)
+    assert item.secondary_offset == row_translation_offset
+    tab.deleteLater()
+
+
+def test_process_with_a_queued_row_and_identical_settings_runs_that_row(qtbot, test_config, tmp_path):
+    tab = _secondary_tab(qtbot, test_config)
+    video, subs = _fill_pickers(tab, tmp_path, name="Show")
+    translation = tmp_path / "Show Translations"
+    translation.mkdir()
+    tab.queue_panel.add_series(
+        display_name="Show",
+        video_folder=video,
+        subtitle_folder=subs,
+        subtitle_offset=1.5,
+        secondary_folder=translation,
+        secondary_offset=0.5,
+    )
+    _fill_pickers(tab, tmp_path, name="Show")
+    tab.offset_spinbox.setValue(1.5)
+    tab.secondary_folder_selector.set_path(str(translation))
+    tab.secondary_offset_spinbox.setValue(0.5)
+
+    fake_worker = MagicMock(name="BatchQueueWorkerThread")
+    with patch(
+        "anki_miner.gui.workers.batch_queue_worker.BatchQueueWorkerThread", return_value=fake_worker
+    ) as worker_cls:
+        tab.queue_panel.process_queue_button.click()
+
+    worker_cls.assert_called_once()
+    assert tab.issue_banner().current_issue() is None
+    assert [w.display_name for w in tab.queue_panel.queue_item_widgets] == ["Show"]
+    assert tab.video_folder_selector.path_or_none() is None
+    assert tab.subtitle_folder_selector.path_or_none() is None
+    assert tab.secondary_folder_selector.path_or_none() is None
+    tab.deleteLater()
+
+
+def test_a_hidden_translation_folder_on_the_row_does_not_refuse(tab, tmp_path):
+    """With translations off the run ignores the row's translation folder, so
+    it is no difference the user could see or act on."""
+    video, subs = _fill_pickers(tab, tmp_path, name="Show")
+    tab.queue_panel.add_series(
+        display_name="Show",
+        video_folder=video,
+        subtitle_folder=subs,
+        subtitle_offset=tab.offset_spinbox.value(),
+        secondary_folder=tmp_path / "Show Translations",
+        secondary_offset=1.0,
+    )
+    _fill_pickers(tab, tmp_path, name="Show")
+
+    fake_worker = MagicMock(name="BatchQueueWorkerThread")
+    with patch(
+        "anki_miner.gui.workers.batch_queue_worker.BatchQueueWorkerThread", return_value=fake_worker
+    ) as worker_cls:
+        tab.queue_panel.process_queue_button.click()
+
+    worker_cls.assert_called_once()
+    assert [w.display_name for w in tab.queue_panel.queue_item_widgets] == ["Show"]
+
+
+def test_a_new_series_with_its_own_offset_still_queues_beside_a_row(tab, tmp_path):
+    old_video, old_subs = _fill_pickers(tab, tmp_path, name="Old Show")
+    tab.queue_panel.add_series(
+        display_name="Old Show", video_folder=old_video, subtitle_folder=old_subs, subtitle_offset=0.0
+    )
+    _fill_pickers(tab, tmp_path, name="New Show")
+    tab.offset_spinbox.setValue(1.5)
+
+    fake_worker = MagicMock(name="BatchQueueWorkerThread")
+    with patch(
+        "anki_miner.gui.workers.batch_queue_worker.BatchQueueWorkerThread", return_value=fake_worker
+    ) as worker_cls:
+        tab.queue_panel.process_queue_button.click()
+
+    items = worker_cls.call_args.kwargs["items"]
+    assert {item.display_name: item.subtitle_offset for item in items} == {"Old Show": 0.0, "New Show": 1.5}
