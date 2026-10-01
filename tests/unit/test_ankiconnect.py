@@ -1,8 +1,8 @@
-"""Tests for the AnkiConnect HTTP transport: keep-alive session and its patch seam.
+"""Tests for the AnkiConnect HTTP transport: fresh connections and the patch seam.
 
-``post_action``/``post_multi`` reuse one ``requests.Session`` across calls
-instead of a fresh connection per call, but many other test modules patch
-``anki_miner.services._ankiconnect.requests.post`` directly (see the module
+``post_action``/``post_multi`` send each call on a fresh connection, because
+AnkiConnect closes its socket after every response, and many other test modules
+patch ``anki_miner.services._ankiconnect.requests.post`` directly (see the module
 docstring). These tests pin both halves of that contract.
 """
 
@@ -26,29 +26,30 @@ def _mock_response(result=None, error=None):
     return resp
 
 
-@pytest.fixture(autouse=True)
-def _reset_shared_session():
-    """Isolate the module-level session singleton between tests."""
-    previous = _ankiconnect._session
-    _ankiconnect._session = None
-    yield
-    _ankiconnect._session = previous
+def _fake_send_into(sent):
+    def fake_send(adapter, request, **kwargs):
+        sent.append(adapter)
+        response = requests.Response()
+        response.status_code = 200
+        response._content = b'{"result": "ok", "error": null}'
+        response.request = request
+        return response
+
+    return fake_send
 
 
-class TestSharedSession:
-    """post_action/post_multi keep one Session alive across calls."""
+class TestFreshConnectionPerCall:
+    """AnkiConnect closes its socket after every response, so no call may reuse one."""
 
-    def test_two_calls_reuse_one_session(self):
-        resp = _mock_response(result="ok")
-        session = MagicMock()
-        session.post.return_value = resp
+    def test_back_to_back_calls_never_share_a_connection_pool(self):
+        """BA-019: a pooled keep-alive socket races AnkiConnect's close and resets."""
+        sent: list = []
+        with patch("requests.adapters.HTTPAdapter.send", autospec=True, side_effect=_fake_send_into(sent)):
+            post_action("http://localhost:8765", "modelNames")
+            post_action("http://localhost:8765", "modelFieldNames", {"modelName": "Lapis"})
 
-        with patch.object(_ankiconnect.requests, "Session", return_value=session) as session_cls:
-            post_action("http://localhost:8765", "findNotes")
-            post_action("http://localhost:8765", "findNotes")
-
-        session_cls.assert_called_once()
-        assert session.post.call_count == 2
+        assert len(sent) == 2
+        assert sent[0] is not sent[1]
 
 
 class TestPatchSeam:

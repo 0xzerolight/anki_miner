@@ -8,15 +8,12 @@ services. White-box unit tests import it directly and patch
 underscore therefore stays and the module path is a deliberately stable test surface;
 do not rename it or reroute those patch targets.
 
-In production, ``post_action``/``post_multi`` send through one shared, lazily
-created ``requests.Session`` (see ``_post``) so the 20-200 calls a typical run
-makes reuse a keep-alive TCP connection instead of paying a fresh
-socket+TLS-free handshake per call. This is invisible to the patch seam above:
-``_post`` compares the live ``requests.post`` against the original captured at
-import time, and if a test has replaced it, routes the call through the patched
-callable instead of the session. Do not call ``requests.post`` directly from new
-code in this module - go through ``_post`` so both the keep-alive path and the
-patch seam keep working.
+Every call goes out through ``requests.post`` on a fresh connection (see ``_post``).
+Do not reintroduce a shared keep-alive ``requests.Session``: AnkiConnect closes the
+socket after every response without a ``Connection: close`` header, so a pooled
+socket can be handed to the next action just as the server closes it, and that
+action dies with a connection reset (BA-019). A ``Connection: close`` request header
+does not prevent the reuse.
 """
 
 import logging
@@ -142,38 +139,13 @@ def _log_request_failed(
     )
 
 
-# Stashed at import time so `_post` can detect a test having patched
-# `requests.post` on this module (see module docstring) and honour it instead
-# of the shared session below.
-_ORIGINAL_POST = requests.post
-
-# Lazily created, reused across calls to keep the AnkiConnect TCP connection
-# alive instead of opening a fresh one per action. Guarded by _SESSION_LOCK
-# (double-checked lock, mirroring tagger.py's get_shared_tagger()) since
-# validation/episode/backfill/deck-filter/batch workers can all reach this
-# from their own QThreads concurrently.
-_SESSION_LOCK = threading.Lock()
-_session: requests.Session | None = None
-
-
-def _get_session() -> requests.Session:
-    """Return the shared keep-alive session, building it once (double-checked lock)."""
-    global _session
-    if _session is None:
-        with _SESSION_LOCK:
-            if _session is None:
-                _session = requests.Session()
-    return _session
-
-
 def _post(url: str, **kwargs: Any) -> requests.Response:
-    """POST to AnkiConnect, reusing one session - unless a test has patched ``requests.post``.
+    """POST to AnkiConnect on a fresh connection (see the module docstring).
 
-    See the module docstring for the patch-seam contract this preserves.
+    Looked up as ``requests.post`` at call time, so the documented patch seam
+    (``anki_miner.services._ankiconnect.requests.post``) intercepts it.
     """
-    if requests.post is not _ORIGINAL_POST:
-        return requests.post(url, **kwargs)
-    return _get_session().post(url, **kwargs)
+    return requests.post(url, **kwargs)
 
 
 # Cap the fully-buffered response body before JSON-decoding it. AnkiConnect can
