@@ -425,6 +425,17 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
         """A Mine waiting on its links holds the queue as a run does (D29-A)."""
         return super()._queue_locked() or self._mine_pending
 
+    def release_dictionary_resources(self) -> bool:
+        """Refuse while a Mine waits on its links: it is a run (D29-A).
+
+        The language and profile switches use this as their busy check. Saying
+        "idle" here let a switch commit and the waiting run then start under
+        the new language's config (BA-013).
+        """
+        if self._mine_pending:
+            return False
+        return super().release_dictionary_resources()
+
     def _refresh_mine_button(self) -> None:
         """Offer Mine when there are links to check or rows to mine."""
         has_links = bool(self.url_edit.toPlainText().strip())
