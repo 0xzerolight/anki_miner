@@ -594,6 +594,12 @@ class DeckFilterTab(_AnkiPlanTabBase):
 
     def _on_worker_error(self, message: str) -> None:
         logger.warning("Deck Filter worker failed: error=%s", message)
+        if isinstance(self.worker_thread, DeckFilterApplyWorker):
+            # Chunks committed before the failure are in the target deck, and
+            # Apply sends allowDuplicate=True, so re-applying this plan would
+            # copy them again. Forget it, as Cancel does: a fresh scan counts
+            # the copies as already in Anki (BA-023).
+            self._drop_plan()
         self._run_failed = True
         self._set_running(False)
         self._set_run_line("")

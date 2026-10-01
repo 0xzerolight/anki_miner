@@ -347,3 +347,32 @@ class TestCloseWorkerHandles:
         tab.worker_thread, tab._deck_worker, tab._inspect_worker = run, fetch, inspect
 
         assert list(tab.iter_close_workers()) == [run, fetch, inspect]
+
+
+class TestFailedApply:
+    def test_a_failed_apply_drops_the_plan_so_a_retry_cannot_copy_twice(self, tab):
+        """BA-023: notes copied before the failure are already in the target deck and Apply
+        sends allowDuplicate=True, so re-applying the held plan would copy them again. A fresh
+        scan counts them as already in Anki, as Cancel already forces."""
+        from anki_miner.gui.workers.deck_filter_worker import DeckFilterApplyWorker
+
+        tab._on_scan_finished(_plan())
+        tab.worker_thread = MagicMock(spec=DeckFilterApplyWorker)
+
+        tab._on_worker_error("AnkiConnect timed out")
+
+        assert tab._plan is None
+        assert not tab.apply_button.isEnabled()
+        tab.worker_thread = None
+
+    def test_a_failed_scan_keeps_the_held_plan(self, tab):
+        """BA-023: only a failed Apply forgets the plan; a failed rescan changes nothing."""
+        from anki_miner.gui.workers.deck_filter_worker import DeckFilterScanWorker
+
+        tab._on_scan_finished(_plan())
+        tab.worker_thread = MagicMock(spec=DeckFilterScanWorker)
+
+        tab._on_worker_error("AnkiConnect timed out")
+
+        assert tab._plan is not None
+        tab.worker_thread = None
