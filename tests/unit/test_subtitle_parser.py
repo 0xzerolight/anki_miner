@@ -7164,3 +7164,31 @@ class TestInflectedFrontReadingFromToken:
         assert words["深い"].expression_reading == "ふかい"
         assert words["丸い"].expression_reading == "まるい"
         assert words["丸い"].expression_furigana == "丸[まる]い"
+
+
+_PREFIX_SNIFF_SAMI = (
+    "<SAMI>\n<BODY>\n"
+    "<SYNC Start=1000><P Class=KRCC>新しい本を買いました\n<SYNC Start=3000><P Class=KRCC>&nbsp;\n"
+    "</BODY>\n</SAMI>\n"
+)
+
+
+class TestPrefixSniffedFormatsFallBackToTheExtension:
+    """pysubs2 sniffs SAMI/WebVTT only from the file's first characters."""
+
+    @pytest.mark.parametrize(
+        ("name", "raw"),
+        [
+            ("bom.smi", b"\xef\xbb\xbf" + _PREFIX_SNIFF_SAMI.encode()),
+            ("lower.smi", _PREFIX_SNIFF_SAMI.replace("SAMI>", "sami>").encode()),
+            ("comment_first.smi", ("<!-- made by SMIEditor -->\n" + _PREFIX_SNIFF_SAMI).encode()),
+            ("bom.vtt", "﻿WEBVTT\n\n00:01.000 --> 00:03.000\n新しい本を買いました\n".encode()),
+        ],
+    )
+    def test_undetectable_sami_or_vtt_parses_by_extension(self, test_config, tmp_path, name, raw):
+        sub_file = tmp_path / name
+        sub_file.write_bytes(raw)
+
+        entries = SubtitleParserService(test_config).parse_raw_entries(sub_file)
+
+        assert [text for _, _, text in entries] == ["新しい本を買いました"]

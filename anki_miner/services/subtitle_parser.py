@@ -81,6 +81,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+#: pysubs2 formats whose content sniffer only checks the file's first characters
+#: ('<SAMI>' / 'WEBVTT', case-sensitive, with a UTF-8 BOM left in place).
+_PREFIX_SNIFFED_FORMATS = frozenset({"sami", "vtt"})
+
 # Config fields SubtitleParserService actually reads. Callers that reuse a
 # parser instance across configs (e.g. a later pass reusing an earlier pass's
 # filled per-file tokenization cache) must assert every one of these is
@@ -1015,7 +1019,19 @@ class SubtitleParserService:
 
         try:
             try:
-                subs = pysubs2.load(str(subtitle_file))
+                try:
+                    subs = pysubs2.load(str(subtitle_file))
+                except pysubs2.exceptions.FormatAutodetectionError as autodetect_error:
+                    # A UTF-8 BOM, a lowercase <sami> or a leading comment defeats
+                    # the sniffer; the extension names the format, as on the
+                    # Reading path (reading/subtitle_source.py).
+                    try:
+                        format_ = pysubs2.formats.get_format_identifier(Path(subtitle_file).suffix.lower())
+                    except pysubs2.exceptions.UnknownFileExtensionError:
+                        raise autodetect_error from None
+                    if format_ not in _PREFIX_SNIFFED_FORMATS:
+                        raise
+                    subs = pysubs2.load(str(subtitle_file), format_=format_)
             except UnicodeDecodeError as utf8_error:
                 profile = get_profile(config_language(self.config))
                 subs = load_with_fallback_encoding(
