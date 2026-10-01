@@ -8,6 +8,7 @@ import io
 import json
 import logging
 import os
+import platform
 import subprocess
 import time
 
@@ -17,6 +18,12 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import OperationCancelled
 from anki_miner.services import ytdlp_updater
 from anki_miner.services.ytdlp_updater import YtdlpUpdater, YtdlpUpdateResult
+
+
+@pytest.fixture(autouse=True)
+def _x86_64_host(monkeypatch):
+    """The Linux rows below assume an x86_64 host unless a test says otherwise."""
+    monkeypatch.setattr(platform, "machine", lambda: "x86_64")
 
 
 @pytest.fixture
@@ -841,3 +848,25 @@ class TestUpdaterProvenanceLogging:
         assert f"dst={dst}" in retries[0].getMessage()
         assert "error_type=PermissionError" in retries[0].getMessage()
         assert dst.read_text() == "x"
+
+
+class TestLinuxArchitecture:
+    def test_linux_aarch64_picks_the_aarch64_standalone_asset(self, config, home, monkeypatch):
+        monkeypatch.setattr(ytdlp_updater.sys, "platform", "linux")
+        monkeypatch.setattr(platform, "machine", lambda: "aarch64")
+        payload = _releases_json(asset_names=["yt-dlp_linux", "yt-dlp_linux_aarch64", "SHA2-256SUMS"])
+        monkeypatch.setattr(ytdlp_updater.urllib.request, "urlopen", _fake_urlopen_json(payload))
+
+        version, url = YtdlpUpdater(config).latest_version_and_asset()
+
+        assert version == "2024.03.10"
+        assert url is not None and url.endswith("/yt-dlp_linux_aarch64")
+
+    def test_linux_on_an_unknown_arch_offers_no_asset(self, config, home, monkeypatch):
+        monkeypatch.setattr(ytdlp_updater.sys, "platform", "linux")
+        monkeypatch.setattr(platform, "machine", lambda: "riscv64")
+        monkeypatch.setattr(ytdlp_updater.urllib.request, "urlopen", _fake_urlopen_json(_releases_json()))
+
+        _version, url = YtdlpUpdater(config).latest_version_and_asset()
+
+        assert url is None

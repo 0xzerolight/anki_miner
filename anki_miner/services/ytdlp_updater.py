@@ -16,6 +16,7 @@ import hashlib
 import json
 import logging
 import os
+import platform
 import subprocess
 import sys
 import tempfile
@@ -68,6 +69,24 @@ _ASSET_BY_PLATFORM: dict[str, str] = {
     "win32": "yt-dlp.exe",
     "darwin": "yt-dlp_macos",
 }
+
+# "yt-dlp_linux" is an x86_64 build. Linux on ARM gets its own standalone
+# asset; any other Linux architecture gets none, because an installed binary
+# that cannot execute outranks a working pip yt-dlp in ytdlp_resolver.
+_LINUX_AARCH64_ASSET = "yt-dlp_linux_aarch64"
+
+
+def _asset_name() -> str | None:
+    """This host's standalone yt-dlp release asset, or None when there is none."""
+    if sys.platform != "linux":
+        return _ASSET_BY_PLATFORM.get(sys.platform)
+    machine = platform.machine().lower()
+    if machine in ("x86_64", "amd64"):
+        return _ASSET_BY_PLATFORM["linux"]
+    if machine in ("aarch64", "arm64"):
+        return _LINUX_AARCH64_ASSET
+    return None
+
 
 _SUMS_ASSET_NAME = "SHA2-256SUMS"
 _RELEASE_DOWNLOAD_PREFIX = _download_prefix(_STABLE_REPO)
@@ -365,7 +384,7 @@ class YtdlpUpdater:
                 log_summary(logger, "yt-dlp asset refused", level=logging.WARNING, reason="no_tag_name", url=api_url)
                 return (None, None)
 
-            asset_name = _ASSET_BY_PLATFORM.get(sys.platform)
+            asset_name = _asset_name()
             url: str | None = None
             if asset_name is None:
                 log_summary(
@@ -497,7 +516,7 @@ class YtdlpUpdater:
                 )
                 return YtdlpUpdateResult(action="skipped_throttle", message="Checked recently; skipped.")
 
-            with ytdlp_resolver.managed_ytdlp_lock(blocking=False) as acquired:
+            with ytdlp_resolver.managed_slot_promotion_lock() as acquired:
                 if not acquired:
                     log_summary(logger, "yt-dlp update deferred", reason="managed_binary_in_use")
                     return YtdlpUpdateResult(
@@ -566,7 +585,7 @@ class YtdlpUpdater:
         Returns the installed binary path. Raises on failure (the caller's
         ``check_and_update`` wraps it into a ``failed`` result).
         """
-        asset_name = _ASSET_BY_PLATFORM.get(sys.platform)
+        asset_name = _asset_name()
         if asset_name is None:
             raise ValueError(f"No yt-dlp asset for platform {sys.platform!r}")
         tag = _release_tag_from_asset_url(url, asset_name, self._repo)
@@ -619,7 +638,7 @@ class YtdlpUpdater:
                 expected_sha256 = _manifest_sha256(manifest, asset_name)
             self._raise_if_cancelled()
 
-            with ytdlp_resolver.managed_ytdlp_lock(blocking=False) as acquired:
+            with ytdlp_resolver.managed_slot_promotion_lock() as acquired:
                 if not acquired:
                     raise _PromotionDeferred
                 digest = hashlib.sha256()

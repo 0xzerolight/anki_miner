@@ -141,7 +141,7 @@ class YouTubeFetcherService:
             # INFO, not the DEBUG run_supervised already emits: a probe failure is
             # user-facing, and its argv is the record a support report needs.
             log_command(logger, "yt-dlp probe", cmd, timeout_s=timeout_s, level=logging.INFO)
-            # Only the managed slot keeps the lock across the run; see
+            # A managed-slot run stays counted so promotion waits for it; see
             # ytdlp_generation_lock. Must stay the last statement before the spawn.
             release_unless_managed(cmd[0])
             proc = run_supervised(
@@ -296,7 +296,7 @@ class YouTubeFetcherService:
             # INFO, not the DEBUG run_supervised already emits: a probe failure is
             # user-facing, and its argv is the record a support report needs.
             log_command(logger, "yt-dlp probe", cmd, timeout_s=timeout_s, level=logging.INFO)
-            # Only the managed slot keeps the lock across the run; see
+            # A managed-slot run stays counted so promotion waits for it; see
             # ytdlp_generation_lock. Must stay the last statement before the spawn.
             release_unless_managed(cmd[0])
             proc = run_supervised(
@@ -566,9 +566,9 @@ class YouTubeFetcherService:
             # path are the three facts a failed fetch is diagnosed from, and a user
             # who hits one has not enabled debug logging first.
             log_command(logger, "yt-dlp fetch", cmd, timeout_s=_YTDLP_FETCH_TIMEOUT_S, level=logging.INFO)
-            # A fetch runs for as long as the video takes, so only the managed slot
-            # keeps the lock across it; see ytdlp_generation_lock. Must stay the
-            # last statement before the spawn.
+            # Drops the lock before the fetch; a managed-slot run stays counted so
+            # promotion waits for it. See ytdlp_generation_lock. Must stay the last
+            # statement before the spawn.
             release_unless_managed(cmd[0])
             process_result = run_supervised(
                 cmd,

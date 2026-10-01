@@ -603,7 +603,7 @@ def _lock_acquirable_from_another_thread() -> bool:
 
 
 class TestGenerationLockScope:
-    """A running download holds the generation lock only when it IS the managed binary.
+    """A running yt-dlp blocks promotion only when it IS the managed binary.
 
     Holding it across a multi-hour transfer starved every other resolver caller
     (System Health validation, diagnostics, availability probes); the lock is only
@@ -641,7 +641,7 @@ class TestGenerationLockScope:
         thread.start()
         try:
             assert spawned.wait(10), "run_supervised was never reached"
-            with ytdlp_resolver.managed_ytdlp_lock(blocking=False) as acquired:
+            with ytdlp_resolver.managed_slot_promotion_lock() as acquired:
                 outcome.append(bool(acquired))
         finally:
             finish.set()
@@ -654,7 +654,7 @@ class TestGenerationLockScope:
     ) -> None:
         assert self._lock_free_during_download(monkeypatch, service, tmp_path, "/usr/bin/yt-dlp")
 
-    def test_managed_binary_holds_the_lock_mid_download(
+    def test_managed_binary_blocks_promotion_mid_download(
         self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
     ) -> None:
         managed = str(tmp_path / "home" / "bin" / ytdlp_resolver.ytdlp_binary_name())

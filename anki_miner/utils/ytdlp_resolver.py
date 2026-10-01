@@ -64,6 +64,7 @@ from anki_miner.utils.resolver_log import log_resolution, log_resolution_refused
 
 __all__ = [
     "resolve_ytdlp",
+    "managed_slot_promotion_lock",
     "managed_ytdlp_lock",
     "ytdlp_available",
     "ytdlp_binary_name",
@@ -85,6 +86,13 @@ logger = logging.getLogger(__name__)
 # construction while capability probes take the same lock around their
 # subprocess lifetime.
 _MANAGED_YTDLP_LOCK = threading.RLock()
+
+# Managed-slot processes spawned through ytdlp_generation_lock and still
+# running. Changed only under _MANAGED_YTDLP_LOCK. A running process needs the
+# slot to stay unchanged, not exclusive use of the lock: promotion
+# (managed_slot_promotion_lock) refuses while this is non-zero, and every other
+# caller only waits for the short resolution/argv hold.
+_managed_users = 0
 
 
 def _clear_cache() -> None:
@@ -220,7 +228,7 @@ def managed_ytdlp_lock(
     blocking: bool = True,
     timeout: float | None = None,
 ) -> Iterator[bool]:
-    """Lock a resolver transaction, managed process lifetime, or promotion.
+    """Lock a resolver transaction or a short managed-slot probe's lifetime.
 
     ``executable=None`` always addresses the managed slot. Other executables do
     not share its Windows image lock and pass through without serialization.
@@ -248,18 +256,20 @@ def managed_ytdlp_lock(
 
 @contextlib.contextmanager
 def ytdlp_generation_lock() -> Iterator[Callable[[str | Path], None]]:
-    """Hold the generation lock over argv construction, and over execution only for the managed slot.
+    """Hold the generation lock over argv construction; count managed-slot runs until they exit.
 
     Callers resolve yt-dlp and build their argv inside the block, then hand the
     resolved executable to the yielded ``release_unless_managed`` immediately
     before spawning:
 
-    - **Managed slot** — nothing is released, so the lock spans resolution ->
-      argv -> exec unbroken. That is the whole point of the lock (c963c8a1): the
-      updater must not be able to promote a new binary into the slot after a
-      caller has built argv naming it, and on Windows a running image cannot be
-      replaced. NEVER release and re-acquire around the spawn instead — that
-      reopens exactly the TOCTOU window this closes.
+    - **Managed slot** — the lock spans resolution -> argv; at the spawn the
+      process is counted (under the lock) and the lock is released. Promotion
+      (:func:`managed_slot_promotion_lock`) refuses while any counted process
+      runs, so the c963c8a1 TOCTOU window (the updater promoting a new binary
+      after a caller built argv naming the slot; on Windows a running image
+      cannot be replaced) stays closed without serialising callers against a
+      running transfer. NEVER release before counting — that reopens exactly
+      the window this closes.
     - **Anything else** (config override, PATH, interpreter sibling) —
       the lock is dropped before the subprocess starts. Those binaries are not
       the updater's to swap, and a transfer can run for hours; holding the lock
@@ -269,19 +279,48 @@ def ytdlp_generation_lock() -> Iterator[Callable[[str | Path], None]]:
     Re-entrant by construction: an early release only drops this frame's
     recursion count, so a caller that already holds the lock keeps holding it.
     """
+    global _managed_users
     _MANAGED_YTDLP_LOCK.acquire()
     held = True
+    counted = False
 
     def release_unless_managed(executable: str | Path) -> None:
-        nonlocal held
-        if held and not _addresses_managed_slot(executable):
-            _MANAGED_YTDLP_LOCK.release()
-            held = False
+        global _managed_users
+        nonlocal held, counted
+        if not held:
+            return
+        if _addresses_managed_slot(executable):
+            # Counted while the lock is still held, so there is no instant in
+            # which argv names the slot and promotion could still swap it.
+            _managed_users += 1
+            counted = True
+        _MANAGED_YTDLP_LOCK.release()
+        held = False
 
     try:
         yield release_unless_managed
     finally:
         if held:
+            _MANAGED_YTDLP_LOCK.release()
+        if counted:
+            with _MANAGED_YTDLP_LOCK:
+                _managed_users -= 1
+
+
+@contextlib.contextmanager
+def managed_slot_promotion_lock() -> Iterator[bool]:
+    """Non-blocking exclusive hold for replacing the managed binary.
+
+    Yields ``False`` while another thread holds the generation lock or any
+    managed-slot process started through :func:`ytdlp_generation_lock` is still
+    running (on Windows a running image cannot be replaced, and a process whose
+    argv names the slot must keep the bytes it was resolved against).
+    """
+    acquired = _MANAGED_YTDLP_LOCK.acquire(blocking=False)
+    try:
+        yield acquired and _managed_users == 0
+    finally:
+        if acquired:
             _MANAGED_YTDLP_LOCK.release()
 
 

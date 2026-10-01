@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import io
 import os
+import platform
 import zipfile
 from pathlib import Path
 
@@ -24,6 +25,12 @@ _FAKE_LINUX_SHA = hashlib.sha256(_FAKE_LINUX_PAYLOAD).hexdigest()
 
 # Bytes used as the inner alass-cli.exe of a fake Windows zip.
 _FAKE_EXE_PAYLOAD = b"MZ fake alass-cli.exe payload\n"
+
+
+@pytest.fixture(autouse=True)
+def _x86_64_host(monkeypatch):
+    """The Linux rows below assume an x86_64 host unless a test says otherwise."""
+    monkeypatch.setattr(platform, "machine", lambda: "x86_64")
 
 
 def _make_zip_bytes(member_name: str, payload: bytes) -> bytes:
@@ -337,3 +344,10 @@ def test_install_cancel_before_download_leaves_bin_clean(tmp_path, monkeypatch):
 
     assert not (bin_root / "alass").exists()
     assert not list(bin_root.glob("*.part")) if bin_root.exists() else True
+
+
+@pytest.mark.parametrize("machine", ["aarch64", "arm64", "riscv64"])
+def test_alass_unsupported_on_non_x86_64_linux(monkeypatch, machine):
+    monkeypatch.setattr(alass_installer.sys, "platform", "linux")
+    monkeypatch.setattr(platform, "machine", lambda: machine)
+    assert alass_installer.alass_install_supported() is False

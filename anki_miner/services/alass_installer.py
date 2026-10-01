@@ -23,6 +23,7 @@ from __future__ import annotations
 import contextlib
 import logging
 import os
+import platform
 import sys
 import tempfile
 import zipfile
@@ -81,7 +82,8 @@ _WINDOWS_SPEC = _AlassSpec(
 def _current_spec() -> _AlassSpec | None:
     """Return the spec for the current platform, or ``None`` if unsupported."""
     if sys.platform == "linux":
-        return _LINUX_SPEC
+        # alass v2.0.0 ships only an x86_64 Linux build (alass-linux64).
+        return _LINUX_SPEC if platform.machine().lower() in ("x86_64", "amd64") else None
     if sys.platform == "win32":
         return _WINDOWS_SPEC
     return None
@@ -90,7 +92,7 @@ def _current_spec() -> _AlassSpec | None:
 def alass_install_supported() -> bool:
     """Return True when in-app alass download is supported on this platform.
 
-    True on Linux and Windows; False elsewhere (notably macOS, which has no
+    True on x86_64 Linux and on Windows; False elsewhere (notably macOS, which has no
     upstream v2.0.0 binary).
     """
     return _current_spec() is not None
