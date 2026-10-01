@@ -6530,6 +6530,10 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
         <translation>Tham gia Discord</translation>
     </message>
     <message>
+        <source>Settings are busy with a download or import. Try again when it finishes.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>The desktop shortcut could not be created.</source>
         <translation>Không thể tạo lối tắt trên màn hình.</translation>
     </message>

@@ -6530,6 +6530,10 @@ Words to add: %3. Continue?</source>
         <translation>加入 Discord</translation>
     </message>
     <message>
+        <source>Settings are busy with a download or import. Try again when it finishes.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>The desktop shortcut could not be created.</source>
         <translation>無法建立桌面捷徑。</translation>
     </message>

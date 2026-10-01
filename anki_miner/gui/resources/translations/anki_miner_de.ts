@@ -6567,6 +6567,10 @@ Hinzuzufügende Wörter: %3. Fortfahren?</translation>
         <translation>Discord beitreten</translation>
     </message>
     <message>
+        <source>Settings are busy with a download or import. Try again when it finishes.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>The desktop shortcut could not be created.</source>
         <translation>Die Desktop-Verknüpfung konnte nicht erstellt werden.</translation>
     </message>

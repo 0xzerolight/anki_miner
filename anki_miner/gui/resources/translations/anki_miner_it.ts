@@ -6567,6 +6567,10 @@ Parole da aggiungere: %3. Continuare?</translation>
         <translation>Unisciti a Discord</translation>
     </message>
     <message>
+        <source>Settings are busy with a download or import. Try again when it finishes.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>The desktop shortcut could not be created.</source>
         <translation>Impossibile creare il collegamento sul desktop.</translation>
     </message>

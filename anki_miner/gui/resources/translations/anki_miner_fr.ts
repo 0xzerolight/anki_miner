@@ -6567,6 +6567,10 @@ Mots à ajouter : %3. Continuer ?</translation>
         <translation>Rejoindre Discord</translation>
     </message>
     <message>
+        <source>Settings are busy with a download or import. Try again when it finishes.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>The desktop shortcut could not be created.</source>
         <translation>Le raccourci sur le bureau n'a pas pu être créé.</translation>
     </message>

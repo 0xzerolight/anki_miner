@@ -6530,6 +6530,10 @@ Kata yang akan ditambahkan: %3. Lanjutkan?</translation>
         <translation>Gabung Discord</translation>
     </message>
     <message>
+        <source>Settings are busy with a download or import. Try again when it finishes.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>The desktop shortcut could not be created.</source>
         <translation>Pintasan desktop tidak dapat dibuat.</translation>
     </message>
