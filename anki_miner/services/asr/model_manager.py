@@ -11,6 +11,7 @@ import shutil
 import tempfile
 from pathlib import Path
 
+from anki_miner.services._install_common import sweep_stale
 from anki_miner.services.asr import _engine
 from anki_miner.utils.atomic_io import atomic_replace_dir, reconcile_backups_in
 from anki_miner.utils.logging_ext import log_summary
@@ -122,6 +123,10 @@ def download(name: str, models_root: Path, cancel_event=None) -> None:
     if cancel_event is not None and cancel_event.is_set():
         return
     models_root.mkdir(parents=True, exist_ok=True)
+    # Reclaim orphans from a previous killed download: a hard kill skips the
+    # finally below, and HF cannot resume into a new staging dir. Only one model
+    # download runs at a time, and sweep_stale does not enter ggml/.
+    sweep_stale(models_root)
 
     staging = Path(tempfile.mkdtemp(prefix=f".staging-{name}-", dir=models_root))
     try:
