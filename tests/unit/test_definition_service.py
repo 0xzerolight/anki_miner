@@ -2220,9 +2220,9 @@ class TestAttestQualityRunCache:
         calls: list[tuple[tuple[str, ...], bool]] = []
         original = indexed_provider_module.storage_attest_detail
 
-        def spy(conn, words, include_readings):
+        def spy(conn, words, include_readings, *, keys=None):
             calls.append((tuple(words), include_readings))
-            return original(conn, words, include_readings)
+            return original(conn, words, include_readings, keys=keys)
 
         monkeypatch.setattr(indexed_provider_module, "storage_attest_detail", spy)
         return calls
