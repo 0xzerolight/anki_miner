@@ -12,6 +12,7 @@ from anki_miner.languages.registry import get_profile
 from anki_miner.languages.switching import switch_language
 from anki_miner.languages.token import LanguageToken
 from anki_miner.models.reading import ReadingUnit
+from anki_miner.services.morphology import iter_token_spans
 from anki_miner.services.tagger import LockedTagger
 
 
@@ -217,3 +218,43 @@ def test_real_kiwi_tokenizes_into_duck_tokens(text):
     assert any(t.feature.pos1 == "NN" for t in tokens)
     assert any(t.feature.pos1 == "VV" for t in tokens)
     assert all(t.surface in text for t in tokens if t.surface.strip())
+
+
+def test_contracted_ending_sharing_a_span_does_not_steal_a_later_syllable():
+    # kiwi on "빨리 가 엄마가 기다려": the contracted 가 is 가/VV 3-4 + 어/EC 3-4.
+    text = "빨리 가 엄마가 기다려"
+    tokens = ko_tokenizer.to_duck_tokens(
+        [
+            _FakeKiwiToken("빨리", "MAG", "", 0, 2),
+            _FakeKiwiToken("가", "VV", "가다", 3, 4),
+            _FakeKiwiToken("어", "EC", "", 3, 4),
+            _FakeKiwiToken("엄마", "NNG", "", 5, 7),
+            _FakeKiwiToken("가", "JKS", "", 7, 8),
+            _FakeKiwiToken("기다리", "VV", "기다리다", 9, 12),
+            _FakeKiwiToken("어", "EC", "", 11, 12),
+        ],
+        text,
+    )
+    located = [(t.surface, start, end) for t, start, end in iter_token_spans(text, tokens)]
+    assert ("엄마", 5, 7) in located
+    assert [t.surface for t in tokens] == ["빨리", "가", "엄마", "가", "기다려"]
+
+
+def test_partly_covered_ending_keeps_only_its_uncovered_tail():
+    # kiwi on "반가워요": 반갑/VA-I 0-3, 어요/EF 2-4.
+    tokens = ko_tokenizer.to_duck_tokens(
+        [_FakeKiwiToken("반갑", "VA-I", "반갑다", 0, 3), _FakeKiwiToken("어요", "EF", "", 2, 4)],
+        "반가워요",
+    )
+    assert [t.surface for t in tokens] == ["반가워", "요"]
+
+
+def test_real_kiwi_line_mines_the_words_after_a_contraction():
+    pytest.importorskip("kiwipiepy")
+    parser = get_profile("ko").create_parser(switch_language(AnkiMinerConfig(), "ko"))
+    words, _index, _counts = parser.parse_text_units(
+        [ReadingUnit(text="사랑해 정말 많이 보고 싶어 해", index=0, location_label="fixture")], False
+    )
+    forms = [w.mined_form for w in words]
+    assert "정말" in forms
+    assert "많이" in forms
