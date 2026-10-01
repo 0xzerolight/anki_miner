@@ -285,5 +285,10 @@ def _emit(
         timings.append(SentenceTiming(index=s, start=start, end=end))
         prev_end = end
     if timings:
-        cursor.sentence = max(cursor.sentence, timings[-1].index + 1)
+        # Just past the last TIMED sentence, not max() with the loop's cursor:
+        # the last window is committed whole, and a file cut mid-sentence ends
+        # on a fragment whose stray equal characters can land in a later
+        # sentence. Kept, that cursor makes the next file skip the sentences
+        # in between for good.
+        cursor.sentence = timings[-1].index + 1
     return timings

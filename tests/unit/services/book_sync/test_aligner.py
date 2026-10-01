@@ -258,3 +258,24 @@ def test_file_that_reads_the_end_of_the_book_aligns_through_the_last_span():
     assert len(timings) >= 95
     assert cursor.sentence == 2000
     _assert_monotonic(timings)
+
+
+def test_stray_tail_match_does_not_carry_the_cursor_into_the_next_file():
+    """A file cut mid-sentence ends on a fragment whose characters also open a
+    LATER sentence. The last window is committed whole, the fragment equal-
+    matches that later sentence, and the cursor must not stay there: the next
+    file starts with the sentences in between."""
+    book = _book(60)
+    cursor = BookCursor()
+    part1 = _read(book, 0, 29, rng=random.Random(6))
+    stray = book.sentences[32][:8]  # 8 chars: under the 12 that would time sentence 32
+    part1.append(TimedText(start=part1[-1].end, end=part1[-1].end + 1.0, text=stray))
+    part2 = _read(book, 30, 59, rng=random.Random(7))
+
+    t1 = align_to_book(part1, book, cursor)
+    assert t1[-1].index == 29
+    assert cursor.sentence == 30
+    t2 = align_to_book(part2, book, cursor)
+
+    assert t2[0].index == 30
+    assert t2[0].start < 1.0
