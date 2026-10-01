@@ -961,6 +961,18 @@ def _hold_window_marker(home: Path) -> QLockFile | None:
     return marker if marker.tryLock(0) else None
 
 
+def _release_window_marker(app: QApplication) -> None:
+    """Remove this window's marker file once the event loop has returned.
+
+    QLockFile removes its file only when unlocked or destroyed, and a wrapper
+    still referenced from the QApplication at interpreter exit is never
+    destroyed, so without this every session left its marker behind.
+    """
+    marker = getattr(app, "_window_marker", None)
+    if marker is not None:
+        marker.unlock()
+
+
 def _relaunch_if_requested(app: QApplication) -> None:
     """Start the replacement process, if a restart was asked for (D39b-A).
 
@@ -2451,6 +2463,7 @@ def main():
     dump_stacks_later(20)
     _relaunch_if_requested(app)
     _destroy_window_before_exit(app, window)
+    _release_window_marker(app)
     _log_session_end(exit_code, reason="exec-returned")
     cancel_stack_dump()
     sys.exit(exit_code)

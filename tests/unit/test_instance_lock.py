@@ -53,3 +53,26 @@ def test_known_word_db_sets_busy_timeout(tmp_path):
         assert conn.execute("PRAGMA busy_timeout").fetchone()[0] == 5000
     finally:
         conn.close()
+
+
+class TestReleaseWindowMarker:
+    def test_release_removes_this_windows_marker_file(self, tmp_path):
+        from types import SimpleNamespace
+
+        from anki_miner.gui.app import _hold_window_marker, _release_window_marker
+
+        marker = _hold_window_marker(tmp_path)
+        assert marker is not None
+        assert list(tmp_path.glob("instance.window-*.lock"))
+
+        _release_window_marker(SimpleNamespace(_window_marker=marker))
+
+        assert list(tmp_path.glob("instance.window-*.lock")) == []
+
+    def test_release_without_a_marker_is_a_no_op(self):
+        from types import SimpleNamespace
+
+        from anki_miner.gui.app import _release_window_marker
+
+        _release_window_marker(SimpleNamespace())
+        _release_window_marker(SimpleNamespace(_window_marker=None))

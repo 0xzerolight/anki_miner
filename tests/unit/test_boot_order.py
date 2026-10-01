@@ -49,6 +49,7 @@ MAIN_BOOT_STEPS = (
     "window.show()",
     "exit_code = app.exec()",
     "_relaunch_if_requested(app)",
+    "_release_window_marker(app)",
 )
 
 
