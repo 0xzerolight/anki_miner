@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+import anki_miner.config.config as config_module
 from anki_miner.config import AnkiMinerConfig, ChainEntry, create_default_config
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 
@@ -103,6 +104,8 @@ def test_pre_change_config_loads_every_field_unchanged(isolated_config_file):
     build loads with every pre-existing field equal to its recorded value, and
     the only added keys are Stage 0's `language` / `language_stash` plus task
     2A.11's two language-scoped fields, which load as their ja-inert defaults.
+    The recorded `/fixture-home` default paths are rebased onto the current
+    ANKI_MINER_HOME (BA-009), so they compare against that home.
 
     Fields added after that stage join the set as they land. `strict_card_order`
     is deliberately NOT in LANGUAGE_SCOPED_FIELDS: card creation order is the
@@ -125,6 +128,8 @@ def test_pre_change_config_loads_every_field_unchanged(isolated_config_file):
             assert {k: reserialized[key][k] for k in value} == value
             assert set(reserialized[key]) - set(value) == {"sentence_translation"}
             continue
+        if isinstance(value, str) and value.startswith("/fixture-home/"):
+            value = str(config_module.ANKI_MINER_HOME / value.removeprefix("/fixture-home/"))
         assert reserialized[key] == value, key
     assert not (REMOVED_FIELDS & set(reserialized)), "removed field survived reload"
     assert set(reserialized) - set(recorded) == {
