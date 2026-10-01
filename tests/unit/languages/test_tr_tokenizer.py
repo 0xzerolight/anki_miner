@@ -120,3 +120,11 @@ def test_the_module_imports_without_zeyrek_and_the_build_names_it():
         [sys.executable, "-c", _WITHOUT_ZEYREK], capture_output=True, text=True, check=True, cwd=ROOT
     )
     assert result.stdout.strip().splitlines()[-1] == "refused ModuleNotFoundError"
+
+
+def test_a_word_led_by_a_modifier_letter_apostrophe_does_not_crash_the_line(tagger):
+    # U+02BC is a letter (Lm), so TOKEN_RE swallows it into the word and the
+    # apostrophe split leaves an empty head.
+    rows = _rows(tagger, "Ona ʼMerhabaʼ dedi.")
+    assert ("dedi", "VERB", "demek") in rows
+    assert _rows(tagger, "ʼ")
