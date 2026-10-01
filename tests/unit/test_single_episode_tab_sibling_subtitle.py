@@ -101,3 +101,44 @@ def test_video_path_change_empty_string_is_safe(tab):
     """Emitting an empty path via path_changed must not raise."""
     tab.video_selector.path_changed.emit("")
     # No exception → pass
+
+
+# ---------------------------------------------------------------------------
+# 5. The tab's own auto-fill follows the video (BA-003)
+# ---------------------------------------------------------------------------
+
+
+def test_video_change_replaces_the_tabs_own_autofilled_subtitle(tab, tmp_path):
+    """BA-003: the subtitle this tab auto-filled follows the video to its new sibling."""
+    for name in ("Show - 01.mkv", "Show - 01.srt", "Show - 02.mkv", "Show - 02.srt"):
+        (tmp_path / name).touch()
+
+    tab.video_selector.set_path(str(tmp_path / "Show - 01.mkv"))
+    assert tab.subtitle_selector.get_path() == str(tmp_path / "Show - 01.srt")
+
+    tab.video_selector.set_path(str(tmp_path / "Show - 02.mkv"))
+
+    assert tab.subtitle_selector.get_path() == str(tmp_path / "Show - 02.srt")
+
+
+def test_video_change_clears_autofill_when_new_video_has_no_sibling(tab, tmp_path):
+    """BA-003: an auto-filled subtitle never outlives its video when the new one has no sibling."""
+    for name in ("Show - 01.mkv", "Show - 01.srt", "Other.mkv"):
+        (tmp_path / name).touch()
+
+    tab.video_selector.set_path(str(tmp_path / "Show - 01.mkv"))
+    tab.video_selector.set_path(str(tmp_path / "Other.mkv"))
+
+    assert tab.subtitle_selector.get_path().strip() == ""
+
+
+def test_video_change_keeps_a_subtitle_picked_after_the_autofill(tab, tmp_path):
+    """BA-003: once the user replaces the auto-fill by hand, a video change keeps their choice."""
+    for name in ("Show - 01.mkv", "Show - 01.srt", "Show - 02.mkv", "Show - 02.srt", "custom.ass"):
+        (tmp_path / name).touch()
+
+    tab.video_selector.set_path(str(tmp_path / "Show - 01.mkv"))
+    tab.subtitle_selector.set_path(str(tmp_path / "custom.ass"))
+    tab.video_selector.set_path(str(tmp_path / "Show - 02.mkv"))
+
+    assert tab.subtitle_selector.get_path() == str(tmp_path / "custom.ass")
