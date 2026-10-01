@@ -949,3 +949,11 @@ class TestWebVTTCueTimestamps:
     def test_clean_subtitle_text_drops_cue_timestamps(self):
         """The card sentence is clean_subtitle_text's output, so it must be clean there."""
         assert clean_subtitle_text("新しい本を<00:00:01.500>買いました") == "新しい本を買いました"
+
+
+def test_strip_subtitle_markup_converts_ass_hard_space_to_a_space():
+    assert strip_subtitle_markup(r"えっ\h\h先生が来た") == "えっ  先生が来た"
+
+
+def test_clean_subtitle_text_collapses_ass_hard_spaces():
+    assert clean_subtitle_text(r"えっ\h\h先生が来た") == "えっ 先生が来た"

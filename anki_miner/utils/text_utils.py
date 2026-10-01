@@ -19,8 +19,8 @@ def strip_subtitle_markup(text: str) -> str:
 
     Removes the four tag families that :func:`clean_subtitle_text` handles:
     ASS/SSA override blocks (``{\\...}``), the ``\\N``/``\\n`` line-break markers
-    (each replaced by a space), WebVTT cue-timestamp tags (``<00:00:01.500>``),
-    and HTML tags (``<tag ...>``). It deliberately does
+    and the ``\\h`` hard space (each replaced by a space), WebVTT cue-timestamp
+    tags (``<00:00:01.500>``), and HTML tags (``<tag ...>``). It deliberately does
     NOT run the MeCab-oriented Japanese normalization (halfwidth→fullwidth kana,
     NFKD folding, kanji-variant mapping) nor collapse whitespace, so the returned
     string is safe to display verbatim to the user (e.g. condensed subtitles).
@@ -34,8 +34,8 @@ def strip_subtitle_markup(text: str) -> str:
     # Remove backslash-led ASS/SSA override tags like {\pos(x,y)}, {\fad(100,200)}, etc.
     text = re.sub(r"\{\\[^}]*\}", "", text)
 
-    # Remove line break tags
-    text = re.sub(r"\\[nN]", " ", text)
+    # Line break tags and the ASS hard space (libass renders \h as a space)
+    text = re.sub(r"\\[nNh]", " ", text)
 
     # WebVTT inline cue timestamps: <hh:mm:ss.ttt> / <mm:ss.ttt>, hours unbounded.
     # yt-dlp writes one per word on auto-captions. The HTML rule below cannot
