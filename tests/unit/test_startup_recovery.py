@@ -230,3 +230,21 @@ class TestStartupOffer:
         assert started == []
         # No live task was published either — restoring is not running.
         assert window.task_registry.running() == ()
+
+
+class TestRecoveryNeedsTheInstanceLock:
+    def test_an_instance_without_the_lock_neither_offers_nor_discards(self, _home, window):
+        """A window started past the 'already running' warning must not delete
+        the running instance's live partials or queue snapshots."""
+        state = _seed_partial()
+        with patch.object(app_module.RecoveryController, "offer", return_value=False) as offer:
+            assert app_module._offer_recovery_if_locked(window, None) is False
+        offer.assert_not_called()
+        assert state.part_path.exists()
+        assert state.manifest_path.exists()
+
+    def test_the_lock_owner_is_offered_as_before(self, _home, window):
+        _seed_partial()
+        with patch.object(app_module.RecoveryController, "offer", return_value=True) as offer:
+            assert app_module._offer_recovery_if_locked(window, MagicMock()) is True
+        offer.assert_called_once()

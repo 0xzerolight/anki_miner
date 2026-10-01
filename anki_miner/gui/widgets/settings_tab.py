@@ -175,6 +175,10 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         mining_language_requested: Re-emitted from the Mining Language panel's
             language selector. The window runs the guard and commits, because a
             switch clears queues and reloads every panel in this tab.
+        import_changed_language: A settings import changed the mining language.
+            Carries the config from before the import, so the window can run
+            the hooks a durable language change owes (tagger evict, prewarm,
+            surface sync).
         language_pack_download_requested: Emitted with a language code when the
             Mining Language page's "Download and switch" is clicked.
         resource_family_download_requested: An empty Dictionaries, Frequency or
@@ -197,6 +201,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     asr_pack_download_requested = pyqtSignal()
     vulkan_model_download_requested = pyqtSignal(str)  # Emits model name
     mining_language_requested = pyqtSignal(str)  # Emits the requested language code
+    import_changed_language = pyqtSignal(object)  # Emits the pre-import AnkiMinerConfig
     language_pack_download_requested = pyqtSignal(str)  # Emits the language code
     resource_family_download_requested = pyqtSignal(str)  # "dict" | "freq" | "pitch" (C09)
 
@@ -2016,9 +2021,13 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                     )
                 )
         # Import can touch any field — full reload, unlike the targeted
-        # auto-save commit.
+        # auto-save commit. Captured before the emit: the window's fan-out
+        # replaces self.config synchronously.
+        previous_config = self.config
         self.config_changed.emit(new_config)
         self._load_config()
+        if new_config.language != previous_config.language:
+            self.import_changed_language.emit(previous_config)
         if import_result.invalid_fields or import_result.notices:
             summary: list[str] = []
             if import_result.invalid_fields:
@@ -2079,9 +2088,19 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             if self._settings_dirty:
                 self._debounce_timer.start()
             return
+        from anki_miner.languages.registry import config_language, get_profile
+
         preserve = GUIConfigManager.machine_specific_fields() | self._RESET_PRESERVE_UI
         preserved = {name: getattr(self.config, name) for name in preserve}
-        self.config = replace(create_default_config(), **preserved)
+        # The dataclass defaults are Japanese. `language` is preserved, so the
+        # scoped fields must come from that language's own defaults, exactly as
+        # a first visit to it would give, or a German profile resets to Japanese
+        # POS tags and mines nothing. The machine-specific scoped names (the
+        # chains, the word-list paths) stay preserved and are skipped here.
+        scoped = get_profile(config_language(self.config)).scoped_defaults
+        scoped_values: dict[str, Any] = {k: v for k, v in scoped.items() if k not in preserve}
+        base = replace(create_default_config(), **scoped_values)
+        self.config = replace(base, **preserved)
         self._load_config()  # repaint the reset panels (under the _loading guard)
         self._settings_dirty = False
         self.config_changed.emit(self.config)  # persist via MainWindow.update_config

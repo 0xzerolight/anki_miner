@@ -486,3 +486,69 @@ def test_export_config_extra_keys_sit_beside_settings(tmp_path, test_config) -> 
     assert data["configured"] is False and "settings" in data
     # still importable through Settings: the extra key is ignored
     assert GUIConfigManager.import_config(out, test_config).config.anki_deck_name == test_config.anki_deck_name
+
+
+class TestImportAcrossMiningLanguages:
+    def test_import_for_another_language_switches_like_a_language_change(self, tmp_path):
+        """A file for another mining language parks the outgoing language and
+        restores the incoming one's local chains before the file is overlaid."""
+        de_chain = (ChainEntry(kind="indexed", dict_id="wiktionary-de"),)
+        ja_chain = (ChainEntry(kind="indexed", dict_id="jitendex"),)
+        current = replace(
+            AnkiMinerConfig(),
+            anki_deck_name="JP Mining",
+            dictionary_chain=ja_chain,
+            language_stash={"de": {"dictionary_chain": de_chain, "anki_deck_name": "DE old"}},
+        )
+        path = _write_import_file(
+            tmp_path,
+            {"anki_miner_settings": True, "settings": {"language": "de", "anki_deck_name": "DE Mining"}},
+        )
+
+        result = GUIConfigManager.import_config(path, current).config
+
+        assert result.language == "de"
+        assert result.anki_deck_name == "DE Mining"  # the file wins over the parked value
+        assert result.dictionary_chain == de_chain  # the machine-local chain follows the language
+        assert "de" not in result.language_stash
+        assert result.language_stash["ja"]["anki_deck_name"] == "JP Mining"
+        assert result.language_stash["ja"]["dictionary_chain"] == ja_chain
+
+    def test_import_for_the_same_language_does_not_touch_the_stash(self, tmp_path):
+        ja_chain = (ChainEntry(kind="indexed", dict_id="jitendex"),)
+        current = replace(AnkiMinerConfig(), dictionary_chain=ja_chain, language_stash={"de": {"anki_deck_name": "DE"}})
+        path = _write_import_file(
+            tmp_path, {"anki_miner_settings": True, "settings": {"language": "ja", "anki_deck_name": "Imported"}}
+        )
+
+        result = GUIConfigManager.import_config(path, current).config
+
+        assert result.language == "ja"
+        assert result.anki_deck_name == "Imported"
+        assert result.dictionary_chain == ja_chain
+        assert result.language_stash == {"de": {"anki_deck_name": "DE"}}
+
+    def test_switching_back_after_a_cross_language_import_keeps_both_languages(self, tmp_path):
+        from anki_miner.languages.switching import switch_language
+
+        de_chain = (ChainEntry(kind="indexed", dict_id="wiktionary-de"),)
+        ja_chain = (ChainEntry(kind="indexed", dict_id="jitendex"),)
+        current = replace(
+            AnkiMinerConfig(),
+            anki_deck_name="JP Mining",
+            dictionary_chain=ja_chain,
+            language_stash={"de": {"dictionary_chain": de_chain, "anki_deck_name": "DE old"}},
+        )
+        path = _write_import_file(
+            tmp_path,
+            {"anki_miner_settings": True, "settings": {"language": "de", "anki_deck_name": "DE Mining"}},
+        )
+
+        back = switch_language(GUIConfigManager.import_config(path, current).config, "ja")
+
+        assert back.language == "ja"
+        assert back.anki_deck_name == "JP Mining"
+        assert back.dictionary_chain == ja_chain
+        assert back.language_stash["de"]["dictionary_chain"] == de_chain
+        assert back.language_stash["de"]["anki_deck_name"] == "DE Mining"
+        assert "ja" not in back.language_stash

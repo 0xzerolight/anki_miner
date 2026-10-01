@@ -944,7 +944,12 @@ def _acquire_instance_lock(
     # A crashed instance leaves a lock QLockFile auto-reclaims once its PID is
     # gone (built-in stale detection); 0 ms try = never block startup.
     if lock.tryLock(0):
-        return lock, True
+        # instance.lock is free, but a window started past this same warning
+        # never took it: its marker is the only sign it is still open.
+        if not _live_window_marker(lock_path.parent) or on_conflict():
+            return lock, True
+        lock.unlock()
+        return None, False
     return None, on_conflict()
 
 
@@ -959,6 +964,38 @@ def _hold_window_marker(home: Path) -> QLockFile | None:
     """This window's own lock file, so other Anki Miner processes can see it."""
     marker = QLockFile(str(home / f"{WINDOW_MARKER_PREFIX}{os.getpid()}.lock"))
     return marker if marker.tryLock(0) else None
+
+
+def _release_window_marker(app: QApplication) -> None:
+    """Remove this window's marker file once the event loop has returned.
+
+    QLockFile removes its file only when unlocked or destroyed, and a wrapper
+    still referenced from the QApplication at interpreter exit is never
+    destroyed, so without this every session left its marker behind.
+    """
+    marker = getattr(app, "_window_marker", None)
+    if marker is not None:
+        marker.unlock()
+
+
+def _live_window_marker(home: Path) -> bool:
+    """Whether another Anki Miner window holds its marker under ``home``.
+
+    A window started past the "already running" warning holds no
+    instance.lock, only its marker, so instance.lock alone can be free while a
+    window is open. A dead process's marker is removed on the way, the same
+    probe cli/entry.py's busy check uses.
+    """
+    own = f"{WINDOW_MARKER_PREFIX}{os.getpid()}.lock"
+    for path in sorted(home.glob(f"{WINDOW_MARKER_PREFIX}*.lock")):
+        if path.name == own:
+            continue
+        probe = QLockFile(str(path))
+        if probe.tryLock(0):
+            probe.unlock()  # a dead process's marker: tryLock reclaimed it, unlock removes it
+            continue
+        return True
+    return False
 
 
 def _relaunch_if_requested(app: QApplication) -> None:
@@ -984,6 +1021,9 @@ def _relaunch_if_requested(app: QApplication) -> None:
     lock = getattr(app, "_instance_lock", None)
     if lock is not None:
         lock.unlock()
+    # The child counts a live window marker as a running instance, so ours goes
+    # too, or the restarted app warns about its own parent.
+    _release_window_marker(app)
     if _qt_scale_factor_set_by_app:
         # QProcess.startDetached inherits this process's environment verbatim,
         # so a value THIS process's own _apply_ui_zoom wrote must not ride
@@ -1802,6 +1842,14 @@ def compose_main_window(
     # POST-SAVE committed object out to every tab. This prevents a scan worker's
     # stale pre-save config snapshot from regaining authority after save.
     settings_tab.config_changed.connect(lambda cfg: window.update_config(cfg))
+    # A settings import that changed the mining language owes the same hooks a
+    # selector switch does. Nothing to flush and no first-visit prompt: the
+    # file is already-configured settings, like a profile snapshot.
+    from anki_miner.gui.controllers import language_switch
+
+    settings_tab.import_changed_language.connect(
+        lambda previous: language_switch.commit_language_change(window, previous, flush=False, first_visit=False)
+    )
     # Make Test Connection live: it emits SettingsTab.validation_requested,
     # which was previously connected to nothing (T-53). Routing it to
     # _run_validation also drives the Anki connection badge via
@@ -1949,6 +1997,23 @@ def offer_recovery(window: MainWindow) -> bool:
         return False
     window.restore_queue_snapshots()
     return True
+
+
+def _offer_recovery_if_locked(window: MainWindow, instance_lock: QLockFile | None) -> bool:
+    """Offer the last session's leftovers only while this process owns the lock.
+
+    Discard deletes every partial under the resume root and every queue
+    snapshot. A window started past the "already running" warning would offer
+    (and could delete) the running instance's LIVE transfer and queues, so this
+    is gated exactly like _run_store_recovery_if_locked.
+
+    Returns:
+        True when the user chose Restore.
+    """
+    if instance_lock is None:
+        logger.info("Skipping the recovery offer because the instance lock is not held")
+        return False
+    return offer_recovery(window)
 
 
 class _DeferredDeleteWatcher(QObject):
@@ -2393,7 +2458,7 @@ def main():
     # put the rows; skipped in the installer smoke, where no modal may open.
     if not installer_smoke:
         try:
-            offer_recovery(window)
+            _offer_recovery_if_locked(window, getattr(app, "_instance_lock", None))
         except Exception:  # noqa: BLE001 — bucket A: recovery offer is skipped for this session.
             logger.exception("Could not offer the previous session's downloads and queues")
 
@@ -2443,6 +2508,7 @@ def main():
     dump_stacks_later(20)
     _relaunch_if_requested(app)
     _destroy_window_before_exit(app, window)
+    _release_window_marker(app)
     _log_session_end(exit_code, reason="exec-returned")
     cancel_stack_dump()
     sys.exit(exit_code)
