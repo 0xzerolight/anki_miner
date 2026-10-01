@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import shutil
 import sqlite3
 from pathlib import Path
 from unittest.mock import patch
@@ -895,3 +896,30 @@ class TestImportReceipts:
         assert "entries=2" in dones[0]
         assert "parser_skipped=4" in dones[0]
         assert "storage_skipped=0" in dones[0]
+
+
+@pytest.mark.parametrize("replace_by", ["remove_then_import", "overwrite"])
+def test_a_new_pack_under_a_reused_id_does_not_serve_the_old_cache(tmp_path: Path, monkeypatch, replace_by):
+    """Remove + re-add (or Re-import with overwrite) puts new content under the
+    same pack_id; the positive cache keyed on that id must not survive it."""
+    home = tmp_path / "home"
+    monkeypatch.setattr(config_paths, "ANKI_MINER_HOME", home)
+    dest = home / "audio_packs"
+    cache = home / "audio_cache" / "local_packs"
+    old_pack = make_ajt_pack(tmp_path / "old")
+    new_pack = make_ajt_pack(tmp_path / "new")
+    (old_pack / "media" / "word_0.mp3").write_bytes(b"OLD")
+    (new_pack / "media" / "word_0.mp3").write_bytes(b"NEW")
+    import_audio_pack(old_pack, dest, pack_id="pack")
+    stale = LocalAudioPackFetcher(dest / "pack" / "index.sqlite", old_pack, "pack", cache).fetch("食べる", "reading_0")
+    assert stale is not None and stale.read_bytes() == b"OLD"
+
+    if replace_by == "remove_then_import":
+        shutil.rmtree(dest / "pack")  # what Settings -> Word Audio -> Remove leaves behind
+        import_audio_pack(new_pack, dest, pack_id="pack")
+    else:
+        import_audio_pack(new_pack, dest, pack_id="pack", overwrite=True)
+
+    served = LocalAudioPackFetcher(dest / "pack" / "index.sqlite", new_pack, "pack", cache).fetch("食べる", "reading_0")
+    assert served is not None
+    assert served.read_bytes() == b"NEW"
