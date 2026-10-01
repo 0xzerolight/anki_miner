@@ -196,3 +196,19 @@ def test_a_member_declaring_more_than_the_cap_is_refused_before_extraction(bundl
     assert "Test Dict" in [name for name, _ in result.failures]
     assert any("limit" in message for _, message in result.failures)
     assert not (receiver.dicts_root / sender.dictionary_chain[0].dict_id).exists()
+
+
+def test_a_word_list_never_replaces_an_existing_managed_file(bundle_and_receiver, tmp_path):
+    """Another settings profile of the same language may still point at the
+    managed blacklist.txt; a second bundle import must land beside it."""
+    sender, bundle, receiver = bundle_and_receiver
+    existing = tmp_path / "home" / "wordlists" / "ja" / "blacklist.txt"
+    existing.parent.mkdir(parents=True)
+    existing.write_text("profile-A-word\n", encoding="utf-8")
+
+    result = _install(bundle, receiver, tmp_path)
+
+    assert existing.read_text(encoding="utf-8") == "profile-A-word\n"
+    landed = result.wordlist_paths["blacklist"]
+    assert landed != existing and landed.parent == existing.parent
+    assert landed.read_bytes() == sender.blacklist_path.read_bytes()

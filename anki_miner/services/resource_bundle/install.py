@@ -242,14 +242,20 @@ def _install_known_words(zf: zipfile.ZipFile, item: BundleItem, known_words_db: 
 
 
 def _install_wordlist(zf: zipfile.ZipFile, item: BundleItem, language_dir: Path) -> Path:
-    """Land a word list as the managed ``wordlists/<lang>/<kind>.txt``, bytes as sent.
+    """Land a word list as a new managed ``wordlists/<lang>/<kind>[-N].txt``, bytes as sent.
 
     Kept byte-for-byte: ``WordListService`` decodes with the language's
     encoding ladder when it reads the file, exactly as for a hand-picked list.
     """
     data = _read_text_member(zf, item.member)
     language_dir.mkdir(parents=True, exist_ok=True)
+    # Never replace an existing file: plan_import only sees the ACTIVE profile,
+    # and another profile of this language may still point at the managed name.
     target = language_dir / f"{item.kind}.txt"
+    suffix = 2
+    while target.exists():
+        target = language_dir / f"{item.kind}-{suffix}.txt"
+        suffix += 1
     with atomic_write_path(target) as staged:
         staged.write_bytes(data)
     return target
