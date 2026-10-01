@@ -199,7 +199,11 @@ class ReadingQueueWorker(SequentialQueueWorker[ReadingQueueItem]):
             item.status = ReadyItemStatus.ERROR
             item.cards_created = cards
             item.error_message = message
-            self.item_finished.emit(idx, None, message, attempts)
+            # Forward the result, like the Audiobook/YouTube workers: a partial
+            # failure carries the notes it created (cards_created, card_ids),
+            # which the receipt counts and offers to Undo. The tabs classify
+            # error=None + a failed result as FAILED and log its text.
+            self.item_finished.emit(idx, result, None, attempts)
 
     def _fail_item(self, idx: int, item: ReadingQueueItem, message: str, attempts: int = 1) -> None:
         """Record a per-item failure on the item and via ``item_finished``."""
