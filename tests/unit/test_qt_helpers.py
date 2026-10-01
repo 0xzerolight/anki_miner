@@ -592,11 +592,29 @@ class TestInstallCopyRows:
 
         assert qapp.clipboard().text() == "これは長い例文です。"
 
-    def test_skips_empty_cells_such_as_a_checkbox_column(self, qtbot, qapp):
+    def test_keeps_an_empty_data_cell_so_pasted_columns_stay_aligned(self, qtbot, qapp):
+        table = QTableWidget(2, 3)
+        qtbot.addWidget(table)
+        table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        for row, values in enumerate((("約束", "promise", "12"), ("今日", "", "3"))):
+            for col, text in enumerate(values):
+                table.setItem(row, col, make_table_item(text))
+        table.selectAll()
+        shortcut = install_copy_rows(table)
+
+        shortcut.activated.emit()
+
+        assert qapp.clipboard().text() == "約束\tpromise\t12\n今日\t\t3"
+
+    def test_skips_a_checkbox_column(self, qtbot, qapp):
         table = QTableWidget(1, 2)
         qtbot.addWidget(table)
         table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        table.setItem(0, 0, make_table_item("", CellRole.STATE))
+        check = make_table_item("", CellRole.STATE)
+        check.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+        check.setCheckState(Qt.CheckState.Checked)
+        table.setItem(0, 0, check)
         table.setItem(0, 1, make_table_item("食べる"))
         table.selectRow(0)
         shortcut = install_copy_rows(table)

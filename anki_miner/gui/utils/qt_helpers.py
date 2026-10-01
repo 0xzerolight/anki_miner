@@ -508,8 +508,14 @@ def _row_payload(view: QAbstractItemView, row: int) -> str:
         if value is None:
             value = model.data(index, Qt.ItemDataRole.DisplayRole)
         text = "" if value is None else str(value)
-        if text:  # a checkbox or spacer column contributes nothing to copy
-            values.append(text)
+        # A checkbox column carries no data to copy. Every other column keeps
+        # its field, empty or not, so a pasted row lines up under its
+        # neighbours instead of shifting left past a blank cell. A checkbox is
+        # recognised by its check state, not by ItemIsUserCheckable, which a
+        # QTableWidgetItem carries by default.
+        if not text and model.data(index, Qt.ItemDataRole.CheckStateRole) is not None:
+            continue
+        values.append(text)
     return "\t".join(values)
 
 
