@@ -13,6 +13,7 @@ import hashlib
 import io
 import logging
 import sys
+import threading
 import zipfile
 from pathlib import Path
 
@@ -255,6 +256,45 @@ class TestInstallComponents:
         )
         assert core.components_supported((_PURE_COMPONENT, optional))
         assert not core.components_supported((_PURE_COMPONENT, required))
+
+
+class TestConcurrentInstalls:
+    def test_concurrent_installs_into_one_root_download_each_component_once(
+        self, tmp_path, downloader, monkeypatch
+    ) -> None:
+        """Two language packs that share a requirement install it into the same
+        root at once. The second call must wait and then skip what the first
+        installed, not race it over the same .part, staging dir and package dirs."""
+        root = tmp_path / "shared"
+        second_downloading = threading.Event()
+        real_call = downloader.__call__
+
+        def slow_download(url, **kwargs):
+            if threading.current_thread().name == "second":
+                second_downloading.set()
+            else:
+                second_downloading.wait(timeout=1.0)  # baseline: overlap; fixed: the second waits on the lock
+            return real_call(url, **kwargs)
+
+        monkeypatch.setattr(core, "download_to_temp", slow_download)
+        errors: list[BaseException] = []
+
+        def run() -> None:
+            try:
+                _install("shr", _PACK.components, root, satisfied=lambda comp: core.component_complete(root, comp))
+            except BaseException as exc:  # noqa: BLE001 - collected for the assertion
+                errors.append(exc)
+
+        first = threading.Thread(target=run, name="first")
+        second = threading.Thread(target=run, name="second")
+        first.start()
+        second.start()
+        first.join(10)
+        second.join(10)
+
+        assert errors == []
+        assert len(downloader.urls) == 2  # each component once
+        assert all(core.component_complete(root, comp) for comp in _PACK.components)
 
 
 class TestSyspath:
