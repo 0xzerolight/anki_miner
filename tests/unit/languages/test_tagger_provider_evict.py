@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import gc
+import threading
+import time
 import weakref
 
 from anki_miner.config import AnkiMinerConfig
@@ -82,3 +84,44 @@ def test_a_worker_owned_processor_still_releases_the_engine(monkeypatch, test_co
     processor.release_dictionary_resources()
 
     assert parser.tagger is None
+
+
+def _slow_build(started: threading.Event, release: threading.Event):
+    def build(language: str) -> _Engine:
+        started.set()
+        release.wait(5)
+        return _Engine()
+
+    return build
+
+
+def test_evict_does_not_wait_for_another_languages_build(monkeypatch):
+    started, release = threading.Event(), threading.Event()
+    monkeypatch.setattr(tagger_provider, "_build", _slow_build(started, release))
+    builder = threading.Thread(target=tagger_provider.get_tagger, args=("slow",))
+    builder.start()
+    try:
+        assert started.wait(5)
+        t0 = time.monotonic()
+        tagger_provider.evict("other")
+        assert time.monotonic() - t0 < 1.0
+    finally:
+        release.set()
+        builder.join(5)
+
+
+def test_a_language_evicted_mid_build_is_not_cached_afterwards(monkeypatch):
+    started, release = threading.Event(), threading.Event()
+    monkeypatch.setattr(tagger_provider, "_build", _slow_build(started, release))
+    builder = threading.Thread(target=tagger_provider.get_tagger, args=("slow",))
+    builder.start()
+    try:
+        assert started.wait(5)
+        evictor = threading.Thread(target=tagger_provider.evict, args=("slow",))
+        evictor.start()
+        time.sleep(0.05)
+    finally:
+        release.set()
+        builder.join(5)
+        evictor.join(5)
+    assert "slow" not in tagger_provider._TAGGERS
