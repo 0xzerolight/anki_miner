@@ -46,6 +46,7 @@ import shutil
 import sys
 import tarfile
 import tempfile
+import threading
 import zipfile
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from importlib.util import find_spec
@@ -238,6 +239,22 @@ def _check_cancelled(cancelled_check: Callable[[], bool] | None, display_noun: s
         raise OperationCancelled(f"{display_noun} installation cancelled")
 
 
+# One lock per pack root. Two language packs that share a requirement (every
+# spaCy language requires "_spacy") can be downloaded at once, and both then
+# install that requirement into the same root: same resume keys (one .part
+# file), sweep_stale() removing the other call's staging dir, and both
+# promoting the same component dirs. Serialising per root, with the plan
+# computed inside the lock, makes the second call skip what the first one
+# installed.
+_ROOT_LOCKS: dict[Path, threading.Lock] = {}
+_ROOT_LOCKS_GUARD = threading.Lock()
+
+
+def _root_lock(root: Path) -> threading.Lock:
+    with _ROOT_LOCKS_GUARD:
+        return _ROOT_LOCKS.setdefault(root.resolve(), threading.Lock())
+
+
 def install_components(
     label: str,
     components: Sequence[PackComponent],
@@ -285,7 +302,35 @@ def install_components(
         OperationCancelled: When *cancelled_check* returns True.
     """
     _check_cancelled(cancelled_check, display_noun)
+    lock = _root_lock(root)
+    # Polled, so a cancel still lands while another install holds the root.
+    while not lock.acquire(timeout=0.25):
+        _check_cancelled(cancelled_check, display_noun)
+    try:
+        return _install_components_locked(
+            label,
+            components,
+            root,
+            display_noun=display_noun,
+            satisfied=satisfied,
+            progress=progress,
+            cancelled_check=cancelled_check,
+        )
+    finally:
+        lock.release()
 
+
+def _install_components_locked(
+    label: str,
+    components: Sequence[PackComponent],
+    root: Path,
+    *,
+    display_noun: str,
+    satisfied: Callable[[PackComponent], bool],
+    progress: DownloadProgressFn | None,
+    cancelled_check: Callable[[], bool] | None,
+) -> Path:
+    """The body of :func:`install_components`; the caller holds *root*'s lock."""
     # Resolved up front so an unsupported platform refuses before any bytes are
     # fetched, rather than half-installing and failing on the last component.
     plan: list[tuple[PackComponent, ArtifactSpec]] = []
