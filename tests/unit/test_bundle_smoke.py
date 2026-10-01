@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import os
 import re
 import shutil
@@ -441,6 +442,86 @@ def test_bundle_smoke_skips_the_youtube_leg_without_a_receipt(tmp_path: Path) ->
     assert result.returncode == 0, result.stdout + result.stderr
     assert "SKIP youtube" in result.stdout
     assert "::warning::" in result.stdout
+
+
+def _qt_xcb_plugin() -> Path | None:
+    """The installed PyQt6's real xcb platform plugin, or None off Linux."""
+    spec = importlib.util.find_spec("PyQt6")
+    if spec is None or not spec.submodule_search_locations:
+        return None
+    plugin = Path(next(iter(spec.submodule_search_locations))) / "Qt6" / "plugins" / "platforms" / "libqxcb.so"
+    return plugin if plugin.is_file() else None
+
+
+needs_qt_xcb_plugin = pytest.mark.skipif(
+    shutil.which("bash") is None or shutil.which("readelf") is None or _qt_xcb_plugin() is None,
+    reason="needs bash, readelf and PyQt6's libqxcb.so",
+)
+
+
+def _write_xcb_plugin(dist: Path, *, bundle_deps: bool) -> list[str]:
+    """Copy the real libqxcb.so into *dist*; touch its libxcb-* deps when asked."""
+    plugin = _qt_xcb_plugin()
+    assert plugin is not None
+    platforms = dist / "_internal" / "PyQt6" / "Qt6" / "plugins" / "platforms"
+    platforms.mkdir(parents=True)
+    shutil.copy2(plugin, platforms / "libqxcb.so")
+    dynamic = subprocess.run(["readelf", "-d", str(plugin)], check=True, capture_output=True, text=True).stdout
+    deps = re.findall(r"\(NEEDED\).*\[(libxcb-[^\]]+)\]", dynamic)
+    if bundle_deps:
+        for soname in deps:
+            (dist / "_internal" / soname).touch()
+    return deps
+
+
+def _run_bundle_smoke(tmp_path: Path, dist: Path) -> subprocess.CompletedProcess[str]:
+    (tmp_path / "caller-home").mkdir()
+    return subprocess.run(
+        ["bash", str(PROJECT_ROOT / "scripts" / "bundle_smoke.sh"), str(dist)],
+        cwd=tmp_path,
+        env=_smoke_env(tmp_path, tmp_path / "probe-homes.txt"),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+
+@needs_qt_xcb_plugin
+def test_xcb_leg_fails_when_a_qt_xcb_plugin_dep_is_not_bundled(tmp_path: Path) -> None:
+    """v3.5.0 shipped without libxcb-cursor & co. and aborted on X11 hosts lacking them."""
+    dist = _write_smoke_dist(tmp_path)
+    deps = _write_xcb_plugin(dist, bundle_deps=False)
+    assert "libxcb-cursor.so.0" in deps
+
+    result = _run_bundle_smoke(tmp_path, dist)
+
+    assert result.returncode != 0
+    assert "FAIL xcb" in result.stdout
+    assert "libxcb-cursor.so.0" in result.stdout
+    assert "BUNDLE_SMOKE_FAILED: xcb" in result.stdout
+
+
+@needs_qt_xcb_plugin
+def test_xcb_leg_passes_when_every_qt_xcb_plugin_dep_is_bundled(tmp_path: Path) -> None:
+    dist = _write_smoke_dist(tmp_path)
+    _write_xcb_plugin(dist, bundle_deps=True)
+
+    result = _run_bundle_smoke(tmp_path, dist)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "PASS xcb" in result.stdout
+
+
+@pytest.mark.skipif(shutil.which("bash") is None, reason="bash is unavailable")
+def test_xcb_leg_skips_a_bundle_without_the_qt_xcb_plugin(tmp_path: Path) -> None:
+    """Windows and macOS bundles have no libqxcb.so: nothing to check."""
+    dist = _write_smoke_dist(tmp_path)
+
+    result = _run_bundle_smoke(tmp_path, dist)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "SKIP xcb" in result.stdout
 
 
 @pytest.mark.skipif(shutil.which("bash") is None, reason="bash is unavailable")

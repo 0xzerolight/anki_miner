@@ -20,6 +20,8 @@
 #   2e. cli      "$APP" version (stdout captured)            -> "status": "success"
 #                 proves the windowed exe writes JSON to a caller's pipe (fd 1)
 #   2c. mpv      ANKI_MINER_MPV_PROBE=1                     -> MPV_PROBE_OK
+#   2f. xcb      libqxcb.so's libxcb-* NEEDED all bundled    -> PASS xcb
+#                 (file-only, no app run; SKIP without a libqxcb.so)
 #   2d. language  ANKI_MINER_SMOKE=<code> (opt-in: BUNDLE_SMOKE_LANGS) -> BUNDLED_SMOKE_PASS
 #                 each leg needs a pack seed under BUNDLE_SMOKE_PACK_SEEDS/<code>
 #                 (engines are in-app downloads, not bundle content); without one
@@ -374,6 +376,37 @@ else
       echo "FAIL mpv"
       FAILED+=("mpv")
     fi
+  fi
+fi
+echo
+
+# --- 2f. xcb: Qt's xcb platform plugin has its libxcb-* closure ----------------
+# Qt >= 6.5's libqxcb.so hard-NEEDs a set of libxcb-* extensions. PyInstaller
+# bundles the ones the build host has and only WARNS about the rest, and every
+# leg above runs QT_QPA_PLATFORM=offscreen, so the xcb plugin never loads here.
+# One missing aborts the app on any X11 host that lacks it ("no Qt platform
+# plugin could be initialized") — v3.5.0 shipped that way. libxcb.so.1 itself is
+# host-provided by design (PyInstaller excludes it); the "libxcb-" dash keeps it
+# out of scope. File-only, no app run. No libqxcb.so (Windows/macOS) means SKIP.
+echo "=== smoke: xcb (Qt xcb plugin's libxcb-* deps are bundled) ==="
+QXCB=$(find "$DIST" -name 'libqxcb.so' -print -quit)
+if [ -z "$QXCB" ]; then
+  echo "SKIP xcb (no libqxcb.so in the bundle)"
+elif ! QXCB_DYNAMIC=$(readelf -d "$QXCB" 2>&1); then
+  echo "::error::readelf could not read $QXCB: $QXCB_DYNAMIC"
+  echo "FAIL xcb"
+  FAILED+=("xcb")
+else
+  XCB_MISSING=()
+  for soname in $(printf '%s\n' "$QXCB_DYNAMIC" | sed -n 's/.*(NEEDED).*\[\(libxcb-[^]]*\)\].*/\1/p'); do
+    [ -n "$(find "$DIST" -name "$soname" -print -quit)" ] || XCB_MISSING+=("$soname")
+  done
+  if [ ${#XCB_MISSING[@]} -gt 0 ]; then
+    echo "::error::Qt's xcb plugin needs ${XCB_MISSING[*]}, not bundled — install them on the build runner (release.yml)"
+    echo "FAIL xcb"
+    FAILED+=("xcb")
+  else
+    echo "PASS xcb"
   fi
 fi
 echo
