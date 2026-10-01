@@ -139,3 +139,20 @@ def test_config_refresh_repartitions_subsequent_calls(tmp_path: Path):
     assert svc.language == "zh"
     window.config_refreshed.emit(AnkiMinerConfig(language="ja"))
     assert svc.language == "ja"
+
+
+def test_reset_removes_only_the_active_language(tmp_path: Path):
+    """BA-018: Reset Statistics from the zh view must not delete the hidden ja history."""
+    svc = StatsService(tmp_path / "stats.db", language="ja")
+    assert svc.load()
+    svc.record_session(MiningSession(series_name="JA Show", cards_created=3))
+    svc.record_difficulty("JA Show", "ep01", 100, 20)
+    svc.language = "zh"
+    svc.record_session(MiningSession(series_name="ZH Show", cards_created=7))
+
+    assert svc.reset() == 1
+
+    assert svc.get_overall_stats().total_sessions == 0
+    svc.language = "ja"
+    assert svc.get_overall_stats().total_cards_created == 3
+    assert len(svc.get_series_difficulty()) == 1
