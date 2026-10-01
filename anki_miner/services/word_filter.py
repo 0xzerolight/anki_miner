@@ -748,7 +748,15 @@ class WordFilterService:
         expr_furigana = word.expression_furigana
         expr_reading = word.expression_reading
         surface_is_expression = self._tracks_surface(word)
-        if surface_is_expression and new_surface != word.surface and self.tagger is not None:
+        # The generators are Japanese (contiguous kana tokens): a language with
+        # no sentence annotator keeps its parse-time values, as expand_word_lines
+        # does (BA-054).
+        if (
+            surface_is_expression
+            and new_surface != word.surface
+            and self.tagger is not None
+            and self._sentence_annotation
+        ):
             expr_furigana = generate_furigana(new_surface, self.tagger)
             expr_reading = generate_reading(new_surface, self.tagger)
 
