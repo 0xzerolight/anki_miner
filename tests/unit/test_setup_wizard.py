@@ -3071,3 +3071,35 @@ def test_rerun_keeps_a_working_custom_mapping_on_the_same_note_type(qtbot):
     assert after.anki_fields["source"] == ""
     assert after.anki_fields["definition"] == "Glossary"
     assert after.pitch_category_format == "jp"
+
+
+def test_resources_page_activator_stands_down_after_an_in_wizard_language_change(qtbot, wiz_config, monkeypatch):
+    """A Japanese download finishing after Back -> Chinese -> Next must not fill zh's chains."""
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.workers.resource_download_worker import (  # noqa: PLC0415
+        ResourceDownloadResult,
+        ResourceDownloadSummary,
+    )
+
+    wiz = SetupWizard(wiz_config, offer_mining_language=True)
+    qtbot.addWidget(wiz)
+    monkeypatch.setattr(dialog_mod, "start_resource_download", lambda *a, **kw: MagicMock())
+    wiz.resources_page._on_download_clicked()  # started while ja is the working language
+
+    page = wiz.language_page
+    assert page is not None
+    page.language_combo.setCurrentIndex(page.language_combo.findData("zh"))
+    assert page.validatePage()
+    switched = wiz.working_config()
+    assert switched.language == "zh"
+    summary = ResourceDownloadSummary(
+        results=[
+            ResourceDownloadResult(
+                "jmdict-english", "dict", "JMdict", "u", True, "10 entries", dict_id="jmdict-english"
+            )
+        ]
+    )
+
+    assert wiz.resources_page._activate_resources(summary) is None
+    assert wiz.working_config() == switched
