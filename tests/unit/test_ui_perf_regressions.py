@@ -11,6 +11,7 @@ synchronous disk work / lacking bulk-insert guards on click:
 from __future__ import annotations
 
 import time
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -374,4 +375,29 @@ def test_curation_apply_search_filters_same_rows_as_before(qtbot):
         dialog._apply_search()
         assert all(not dialog.table.isRowHidden(r) for r in range(dialog.table.rowCount()))
     finally:
+        dialog.deleteLater()
+
+
+def test_repainting_an_episodes_merged_rows_re_sorts_the_table_once(qtbot):
+    """Season curation: one landed media context costs one re-sort, not one per merged row."""
+    episode = Path("ep01.mkv")
+    words = [
+        replace(word, video_file=episode, frequency_rank=100 - i) for i, word in enumerate(_make_curation_words(40))
+    ]
+    dialog = WordCurationDialog(words)
+    qtbot.addWidget(dialog)
+    try:
+        dialog.table.sortByColumn(5, dialog.table.horizontalHeader().sortIndicatorOrder())
+        assert dialog.table.isSortingEnabled()
+        dialog._line_expansions = dict.fromkeys(range(15), (1, 0))
+        toggles: list[bool] = []
+        real = dialog.table.setSortingEnabled
+        dialog.table.setSortingEnabled = lambda enabled: (toggles.append(enabled), real(enabled))[1]
+
+        dialog._repaint_expanded_rows(episode)
+
+        assert toggles == [False, True]
+        assert dialog.table.isSortingEnabled()
+    finally:
+        dialog._stop_player()
         dialog.deleteLater()
