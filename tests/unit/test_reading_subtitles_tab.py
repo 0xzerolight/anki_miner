@@ -370,7 +370,7 @@ class TestQueueRecovery:
         assert snapshot.items[1].result_count == 3
         assert snapshot.items[1].error == "Anki unavailable"
 
-    def test_restore_holds_interrupted_item_out_of_next_run(self, tab, tmp_path):
+    def test_restore_holds_interrupted_item_until_the_next_mine(self, tab, tmp_path):
         interrupted_path = _sub_file(tmp_path, "interrupted.srt")
         ready_path = _sub_file(tmp_path, "ready.srt")
         interrupted_ref = ReadingSourceRef(kind="subtitle", path=interrupted_path, title="interrupted")
@@ -396,7 +396,17 @@ class TestQueueRecovery:
             ),
         )
 
+        tab._launch_run = MagicMock(return_value=False)
+
         assert tab.restore_queue_snapshot(snapshot) == 2
+
+        # Restore never starts a run by itself; the row waits, marked interrupted.
+        tab._launch_run.assert_not_called()
+        interrupted = tab.file_list.item(0).data(Qt.ItemDataRole.UserRole)
+        assert interrupted.status is ReadyItemStatus.ERROR
+        assert interrupted.cards_created == 2
+        assert interrupted.error_message == "Interrupted when Anki Miner closed"
+
         launched: list[ReadingQueueItem] = []
         tab._detect_or_report = MagicMock(
             side_effect=lambda path: [ReadingSourceRef(kind="subtitle", path=path, title=path.stem)]
@@ -405,13 +415,40 @@ class TestQueueRecovery:
 
         tab._on_mine_clicked()
 
-        assert [item.title for item in launched] == ["ready"]
-        interrupted = tab.file_list.item(0).data(Qt.ItemDataRole.UserRole)
-        assert interrupted.status is ReadyItemStatus.ERROR
-        assert interrupted.cards_created == 2
-        assert interrupted.error_message == "Interrupted when Anki Miner closed"
+        # D16-C: an explicit Mine runs the interrupted row again, in list order.
+        assert [item.title for item in launched] == ["interrupted", "ready"]
+        assert launched[0] is interrupted
+        assert interrupted.status is ReadyItemStatus.READY
+        assert interrupted.error_message is None
 
-    def test_restored_terminal_only_rows_explain_mine(self, tab, tmp_path):
+    def test_mine_refuses_only_when_every_row_is_completed(self, tab, tmp_path):
+        sources = []
+        for name in ("one", "two"):
+            source = queue_state_store.reading_source(
+                ReadingSourceRef(kind="subtitle", path=_sub_file(tmp_path, f"{name}.srt"), title=name)
+            )
+            assert source is not None
+            sources.append(source)
+        snapshot = QueueSnapshot(
+            key=tab.QUEUE_STATE_KEY,
+            items=tuple(
+                QueueItemSnapshot(item_id=str(i), source=source, status=queue_state_store.STATUS_COMPLETED)
+                for i, source in enumerate(sources)
+            ),
+        )
+
+        assert tab.restore_queue_snapshot(snapshot) == 2
+        tab._launch_run = MagicMock()
+
+        # A04: Mine stays offered; the click explains why nothing runs.
+        assert tab.mine_button.isEnabled()
+        tab.mine_button.click()
+        tab._launch_run.assert_not_called()
+        assert tab.issue_banner().current_issue().summary == (
+            "Every listed file has been mined. Add more files, or Clear the list."
+        )
+
+    def test_mine_reruns_interrupted_row_and_skips_completed_one(self, tab, tmp_path):
         completed_path = _sub_file(tmp_path, "completed.srt")
         interrupted_path = _sub_file(tmp_path, "interrupted.srt")
         completed_source = queue_state_store.reading_source(
@@ -439,15 +476,53 @@ class TestQueueRecovery:
         )
 
         assert tab.restore_queue_snapshot(snapshot) == 2
-        tab._launch_run = MagicMock()
+        launched: list[ReadingQueueItem] = []
+        tab._launch_run = MagicMock(side_effect=lambda items: launched.extend(items) or False)
 
-        # A04: Mine stays offered; the click explains why nothing runs.
-        assert tab.mine_button.isEnabled()
         tab.mine_button.click()
-        tab._launch_run.assert_not_called()
-        assert tab.issue_banner().current_issue().summary == (
-            "Every listed file has been mined. Add more files, or Clear the list."
-        )
+
+        assert [item.title for item in launched] == ["interrupted"]
+        assert tab.file_list.item(0).data(Qt.ItemDataRole.UserRole).status is ReadyItemStatus.COMPLETED
+        assert tab.issue_banner().current_issue() is None
+
+    def test_mine_reruns_a_row_that_failed_this_session(self, tab, tmp_path):
+        queue_cls = tab._queue_worker_cls
+        failed_path = _sub_file(tmp_path, "failed.srt")
+        done_path = _sub_file(tmp_path, "done.srt")
+        _mine(tab, [failed_path, done_path])
+        failed, done = queue_cls.call_args.kwargs["items"]
+        # The worker records the outcomes on the row-backed items, then the run ends.
+        failed.status = ReadyItemStatus.ERROR
+        failed.error_message = "AnkiConnect is not reachable"
+        failed.cards_created = 1
+        done.status = ReadyItemStatus.COMPLETED
+        done.cards_created = 4
+        tab._on_worker_finished()
+        assert tab.worker_thread is None
+
+        with patch(_DETECT) as detect:
+            tab._on_mine_clicked()
+        detect.assert_not_called()  # rows keep their item; nothing is re-detected
+
+        assert queue_cls.call_count == 2
+        assert queue_cls.call_args.kwargs["items"] == [failed]
+        assert failed.status is ReadyItemStatus.READY
+        assert failed.error_message is None
+        assert done.status is ReadyItemStatus.COMPLETED
+        assert tab.file_list.item(0).data(Qt.ItemDataRole.UserRole) is failed
+
+    def test_re_adding_a_listed_errored_path_adds_no_row(self, tab, tmp_path):
+        path = _sub_file(tmp_path, "failed.srt")
+        _mine(tab, [path])
+        item = tab._queue_worker_cls.call_args.kwargs["items"][0]
+        item.status = ReadyItemStatus.ERROR
+        item.error_message = "AnkiConnect is not reachable"
+        tab._on_worker_finished()
+
+        tab._add_paths([path])
+
+        assert tab.listed_paths() == [path]
+        assert tab.file_list.item(0).data(Qt.ItemDataRole.UserRole) is item
 
 
 class TestItemSlots:
