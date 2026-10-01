@@ -9,6 +9,7 @@ speak or behave like the other.
 
 from __future__ import annotations
 
+import importlib
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -79,6 +80,10 @@ class Screen:
     #: Whether Apply stays live when the scan's warnings are not on screen.
     #: Card Backfill refuses to apply past a warning the user cannot see.
     applies_past_unseen_warnings: bool
+    #: Whether a failed Apply leaves the plan held so Apply can be retried as is.
+    #: Deck Filter forgets it: chunks copied before the failure would be copied
+    #: twice, so a retry must rescan first (BA-023).
+    failed_apply_keeps_plan: bool
 
 
 SCREENS = {
@@ -96,6 +101,7 @@ SCREENS = {
         fetch_failed_log="Card Backfill deck fetch degraded:",
         worker_failed="Card Backfill could not finish.",
         applies_past_unseen_warnings=False,
+        failed_apply_keeps_plan=True,
     ),
     "deckfilter": Screen(
         build=DeckFilterTab,
@@ -111,6 +117,7 @@ SCREENS = {
         fetch_failed_log="Deck Filter deck fetch failed:",
         worker_failed="Deck Filter could not finish.",
         applies_past_unseen_warnings=True,
+        failed_apply_keeps_plan=False,
     ),
 }
 
@@ -181,17 +188,28 @@ class TestApplyStart:
 
     def test_a_retried_apply_clears_the_failed_applys_banner(self, tab, test_config, screen):
         tab._on_scan_finished(screen.plan(test_config.config_version))
+        apply_worker_cls = getattr(importlib.import_module(screen.module), screen.apply_worker)
 
-        with (
-            patch(f"{screen.module}.QMessageBox.question", return_value=QMessageBox.StandardButton.Yes),
-            patch(f"{screen.module}.{screen.apply_worker}"),
-        ):
-            tab._start_apply()
-            tab._on_worker_error("Apply failed: boom")
-            assert _issue(tab).summary == screen.worker_failed
+        def confirmed_apply():
+            with (
+                patch(f"{screen.module}.QMessageBox.question", return_value=QMessageBox.StandardButton.Yes),
+                patch(f"{screen.module}.{screen.apply_worker}"),
+            ):
+                tab._start_apply()
+
+        confirmed_apply()
+        # The failing worker is a real Apply worker; the screen tells Apply and Scan apart by type.
+        tab.worker_thread = MagicMock(spec=apply_worker_cls)
+        tab._on_worker_error("Apply failed: boom")
+        assert _issue(tab).summary == screen.worker_failed
+        if screen.failed_apply_keeps_plan:
             assert tab._plan is not None  # the plan survives, so Apply is live again
+        else:
+            assert tab._plan is None  # the retry rescans first (BA-023)
+            tab._on_scan_finished(screen.plan(test_config.config_version))
+        tab.worker_thread = None
 
-            tab._start_apply()
+        confirmed_apply()
 
         assert _issue(tab) is None
 
