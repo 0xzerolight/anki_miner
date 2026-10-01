@@ -64,6 +64,13 @@ def _keys(obj: Mapping[str, object], allowed: frozenset[str], required: frozense
 def _str(value: object, where: str) -> str:
     if not isinstance(value, str):
         raise _bad(f"{where} must be a string.")
+    # json.loads accepts a lone "\ud83d" escape (a string cut inside an emoji),
+    # but every file this run writes is UTF-8: refuse it now, before anything is
+    # mined, not after the notes are added and the result cannot be written.
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError:
+        raise _bad(f"{where} is not valid text (it holds an unpaired surrogate).") from None
     return value
 
 
