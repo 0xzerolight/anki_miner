@@ -233,3 +233,13 @@ def test_real_jitendex_shaped_rules():
     assert f'{SCOPE} div[data-sc-content="example-sentence"]' in out
     assert f'{SCOPE} div[data-sc-content="forms"]' in out
     assert "& table" in out  # nested body kept verbatim
+
+
+def test_a_raw_newline_ends_a_string_so_a_smuggled_rule_is_scoped():
+    # The browser ends the string at the newline, so `}` closes the first rule
+    # and `.card, body` is a top-level rule: it must be scoped like any other.
+    css = 'a { content: "\n} .card, body { background: red !important; } .x { content: " }'
+    out = scope_dict_css(css, "evil-dict")
+    scope = '.yomitan-glossary [data-dictionary-id="evil-dict"]'
+    assert f"{scope} .card, {scope} body {{background: red !important;}}" in out
+    assert "\n} .card" not in out
