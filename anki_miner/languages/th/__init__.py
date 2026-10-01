@@ -108,8 +108,9 @@ def build_profile() -> LanguageProfile:
             # boundary, which is what split_on_whitespace (S9) is for.
             terminators=frozenset("!?"),
             ellipses=frozenset("…"),
-            openers=frozenset('“‘("'),
-            closers=frozenset('”’)"'),
+            # No ASCII ' or ": a symmetric quote can only ever open here, and a stray closer would then glue sentences.
+            openers=frozenset("“‘("),
+            closers=frozenset("”’)"),
             space_aware=False,
             split_on_whitespace=True,
             whitespace_joiners=TH_WHITESPACE_JOINERS,

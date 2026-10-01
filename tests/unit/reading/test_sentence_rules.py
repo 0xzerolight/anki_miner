@@ -2,6 +2,9 @@
 
 import pytest
 
+from anki_miner.languages.ar.script import AR_SENTENCE_RULES
+from anki_miner.languages.fa.script import FA_SENTENCE_RULES
+from anki_miner.languages.he.script import HE_SENTENCE_RULES
 from anki_miner.languages.profile import SentenceRules
 from anki_miner.languages.registry import get_profile
 from anki_miner.services.reading.sentence_splitter import split_sentences
@@ -115,3 +118,24 @@ def test_a_thai_space_beside_a_joiner_is_not_a_boundary(text, sentences):
 def test_the_new_rule_data_defaults_empty():
     rules = SentenceRules(terminators=frozenset("."), ellipses=frozenset(), openers=frozenset(), closers=frozenset())
     assert rules.ordinal_leads == frozenset() and rules.whitespace_joiners == frozenset()
+
+
+def test_a_hebrew_apostrophe_geresh_does_not_glue_sentences_up_to_a_stray_closer():
+    text = "קניתי ג'ינס חדש. זה עלה מאה שקל. איזה כיף :)"
+    assert split_sentences(text, rules=HE_SENTENCE_RULES) == [
+        "קניתי ג'ינס חדש.",
+        "זה עלה מאה שקל.",
+        "איזה כיף :)",
+    ]
+
+
+@pytest.mark.parametrize("rules", [AR_SENTENCE_RULES, FA_SENTENCE_RULES], ids=["ar", "fa"])
+def test_an_ascii_double_quote_does_not_glue_sentences_up_to_a_stray_closer(rules):
+    text = 'قال "مرحبا". ثم ذهب. :)'
+    assert split_sentences(text, rules=rules) == ['قال "مرحبا".', "ثم ذهب.", ":)"]
+
+
+def test_no_symmetric_ascii_quote_is_both_opener_and_closer():
+    for code in ("he", "ar", "fa", "th"):
+        rules = get_profile(code).sentence_rules
+        assert not (rules.openers & rules.closers & {"'", '"'}), code
