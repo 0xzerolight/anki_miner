@@ -19,7 +19,7 @@ import pytest
 
 pytest.importorskip("PyQt6.QtCore")
 
-from PyQt6.QtCore import qWarning  # noqa: E402
+from PyQt6.QtCore import QtMsgType, qWarning  # noqa: E402
 
 from anki_miner.gui import qt_log_bridge  # noqa: E402
 from anki_miner.utils import log_hooks  # noqa: E402
@@ -148,3 +148,20 @@ class TestQtMessageBridge:
         with caplog.at_level(logging.WARNING, logger="anki_miner.qt"):
             qWarning(b"single install")
         assert len([r for r in caplog.records if r.name == "anki_miner.qt"]) == 1
+
+    def test_fatal_is_echoed_to_stderr_and_still_logged(self, qt_bridge, caplog, capsys):
+        # Called directly: a real qFatal aborts the test process.
+        message = "This application failed to start because no Qt platform plugin could be initialized."
+        with caplog.at_level(logging.CRITICAL, logger="anki_miner.qt"):
+            qt_log_bridge._handler(QtMsgType.QtFatalMsg, None, message)
+
+        assert message in capsys.readouterr().err
+        records = [r for r in caplog.records if r.name == "anki_miner.qt"]
+        assert len(records) == 1
+        assert message in records[0].getMessage()
+        assert records[0].levelno == logging.CRITICAL
+
+    def test_warning_stays_off_stderr(self, qt_bridge, capsys):
+        qWarning(b"probe warning off stderr")
+
+        assert "probe warning off stderr" not in capsys.readouterr().err

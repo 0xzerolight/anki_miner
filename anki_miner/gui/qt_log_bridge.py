@@ -1,11 +1,15 @@
 """Send Qt's own diagnostics to ``anki_miner.log``.
 
 Qt writes platform-plugin, OpenGL, paint and QSS diagnostics through
-``qDebug``/``qWarning``, whose default handler goes to stderr. A frozen bundle
-has no stderr a user can read, so the single most useful line in a
-"black window" or "app will not start" report — ``could not load the Qt
-platform plugin``, ``QOpenGLWidget: Failed to create context`` — was never in
-the log the user sent. This handler puts it there.
+``qDebug``/``qWarning``, whose default handler goes to stderr. A windowed
+Windows or macOS bundle has no stderr a user can read, so the single most
+useful line in a "black window" or "app will not start" report — ``could not
+load the Qt platform plugin``, ``QOpenGLWidget: Failed to create context`` —
+was never in the log the user sent. This handler puts it there.
+
+A fatal message is also echoed to stderr. Qt aborts right after it, and a Linux
+AppImage or .deb started from a terminal or a test harness (AppImageHub's
+catalog check) otherwise dies with no word of why.
 
 Two rules keep it safe to leave installed for the life of the process:
 
@@ -26,6 +30,7 @@ complaints from the app's.
 from __future__ import annotations
 
 import logging
+import sys
 import threading
 from typing import Any
 
@@ -95,6 +100,11 @@ def _handler(msg_type: QtMsgType, context: Any, message: str | None) -> None:
     with suppressed(logger, "qt message handler"):
         level = _LEVELS.get(msg_type, logging.WARNING)
         body = _format(msg_type, context, message or "")
+        # Before the collapse check: the abort that follows leaves no later
+        # message to flush a repeat receipt. None for a windowed Windows exe.
+        if msg_type == QtMsgType.QtFatalMsg and sys.stderr is not None:
+            sys.stderr.write(f"{body}\n")
+            sys.stderr.flush()
         key = (level, body)
         with _repeat_lock:
             if key == _last_key:
