@@ -203,6 +203,9 @@ def open_yomitan_meta_banks(
         # if/when Yomitan ships a v4 we want to accept. (Both meta-bank
         # importers gate on == 3, unlike the term importer's >= 3.)
         format_version = raw_index.get("format")
+        if not isinstance(format_version, int) or isinstance(format_version, bool):
+            # Yomitan's index schema: "version" is an alias for "format".
+            format_version = raw_index.get("version")
         if format_version != 3:
             raise SetupError(
                 f"'{title}' uses unsupported Yomitan format version {format_version!r}. "

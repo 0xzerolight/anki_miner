@@ -615,3 +615,14 @@ class TestMalformedEntries:
         result = import_yomitan_pitch_zip(zip_path, dest)
         assert result.entry_count == 1
         assert result.skipped_display_only == 1
+
+
+def test_pitch_dictionary_declaring_version_instead_of_format_imports(tmp_path: Path):
+    zip_path = tmp_path / "old.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("index.json", json.dumps({"title": "Old dict", "revision": "v1", "version": 3}))
+        zf.writestr(
+            "term_meta_bank_1.json", json.dumps([["猫", "pitch", {"reading": "ねこ", "pitches": [{"position": 1}]}]])
+        )
+    import_yomitan_pitch_zip(zip_path, tmp_path / "out.csv")
+    assert (tmp_path / "out.csv").is_file()
