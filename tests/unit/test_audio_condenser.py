@@ -1082,17 +1082,16 @@ def test_extract_embedded_subtitle_failure_returns_none_not_a_truthy_struct(tmp_
     """
     svc = _service(tmp_path, global_index=0)
     stream = _sub_stream(sub_index=0, codec="subrip")
-    out_path = tmp_path / "ep01.s0.srt"
-    out_path.write_text("partial", encoding="utf-8")
 
-    with (
-        patch(_RESOLVE, return_value="ffmpeg"),
-        patch(_POPEN, side_effect=_factory({}, ["Conversion failed!"], returncode=1)),
-    ):
+    def _make(cmd: list[str], **kwargs: Any) -> _FakePopen:
+        Path(cmd[-1]).write_text("partial", encoding="utf-8")  # simulate a partial write
+        return _FakePopen(["Conversion failed!"], returncode=1)
+
+    with patch(_RESOLVE, return_value="ffmpeg"), patch(_POPEN, side_effect=_make):
         result = svc.extract_embedded_subtitle(Path("/v/ep01.mkv"), stream, tmp_path)
 
     assert result is None
-    assert not out_path.exists()
+    assert list(tmp_path.glob("ep01.s0*")) == []
 
 
 def test_condense_removes_partial_output_on_failure(tmp_path):
@@ -1170,7 +1169,9 @@ def test_extract_embedded_subtitle_map_and_srt_extension(tmp_path):
     cmd = captured["cmd"]
     assert cmd[cmd.index("-map") + 1] == "0:s:1"
     assert "-progress" not in cmd  # extraction runs the runner without progress
-    assert out == tmp_path / "ep01.s1.srt"
+    assert out is not None and out.parent == tmp_path
+    assert out.name.startswith("ep01.s1.") and out.suffix == ".srt"
+    assert cmd[-1] == str(out)
 
 
 @pytest.mark.parametrize("codec", ["ass", "ssa"])
@@ -1182,7 +1183,7 @@ def test_extract_embedded_subtitle_ass_extension(tmp_path, codec):
         patch(_POPEN, side_effect=_factory({}, [], returncode=0)),
     ):
         out = svc.extract_embedded_subtitle(Path("/v/ep01.mkv"), stream, tmp_path)
-    assert out == tmp_path / "ep01.s0.ass"
+    assert out is not None and out.name.startswith("ep01.s0.") and out.suffix == ".ass"
 
 
 @pytest.mark.parametrize("codec", ["subrip", "webvtt", "mov_text"])
@@ -1194,7 +1195,7 @@ def test_extract_embedded_subtitle_srt_extension_for_text_codecs(tmp_path, codec
         patch(_POPEN, side_effect=_factory({}, [], returncode=0)),
     ):
         out = svc.extract_embedded_subtitle(Path("/v/ep01.mkv"), stream, tmp_path)
-    assert out == tmp_path / "ep01.s2.srt"
+    assert out is not None and out.name.startswith("ep01.s2.") and out.suffix == ".srt"
 
 
 def test_extract_embedded_subtitle_refuses_bitmap_without_running_ffmpeg(tmp_path):
@@ -1235,7 +1236,7 @@ def test_extract_embedded_subtitle_cleans_partial_on_failure(tmp_path):
         out = svc.extract_embedded_subtitle(Path("/v/ep01.mkv"), stream, tmp_path)
 
     assert out is None
-    assert not (tmp_path / "ep01.s0.srt").exists()
+    assert list(tmp_path.glob("ep01.s0*")) == []
 
 
 # --- concat: merge-run stream copy (F5) ------------------------------------
@@ -1872,3 +1873,20 @@ def test_merge_condensed_tags_the_merged_file(tmp_path, monkeypatch):
 
     assert result.tag_error is None
     assert tagged == {"path": tmp_path / "season.mp3", "meta": meta}
+
+
+def test_extract_embedded_subtitle_gives_each_call_its_own_file(tmp_path):
+    """Condense and Retime share media_temp_folder and can run at once on videos
+    with the same stem (two seasons' "Episode 01.mkv"); each extraction needs its
+    own file, or one tool reads or deletes the other's subtitle."""
+    svc = _service(tmp_path)
+    stream = _sub_stream(sub_index=0, codec="subrip")
+    with (
+        patch(_RESOLVE, return_value="ffmpeg"),
+        patch(_POPEN, side_effect=_factory({}, [], returncode=0)),
+    ):
+        season1 = svc.extract_embedded_subtitle(Path("/s1/Episode 01.mkv"), stream, tmp_path)
+        season2 = svc.extract_embedded_subtitle(Path("/s2/Episode 01.mkv"), stream, tmp_path)
+
+    assert season1 is not None and season2 is not None
+    assert season1 != season2
