@@ -421,3 +421,50 @@ def test_a_finished_run_states_its_completion_in_the_pinned_bar(spec, qtbot, tmp
         slot(TerminalOutcome.SUCCESS)
 
     assert tab.action_bar.stage_label.full_text != ""
+
+
+# ---------------------------------------------------------------------------
+# BA-017: a folder scan in flight owns the disabled primary
+# ---------------------------------------------------------------------------
+
+
+def test_probe_landing_mid_folder_scan_keeps_generate_disabled(qtbot, tmp_path):
+    """BA-017: a config refresh's availability verdict must not re-arm Generate while
+    its folder scan is still listing; a second click would start a second worker."""
+    tab = _make_tab(_CREATION, qtbot, tmp_path)
+    tab.folder_mode_button.click()
+    tab.folder_selector.set_path(str(tmp_path))
+    held: list[tuple] = []
+    with patch(
+        "anki_miner.gui.widgets._tool_tab_base.run_off_thread",
+        side_effect=lambda *args, **kwargs: held.append(args),
+    ):
+        tab.generate_button.click()
+    assert len(held) == 1  # the folder scan is still in flight
+    assert not tab.generate_button.isEnabled()
+
+    tab._apply_probe_result(True)  # the refreshed availability probe lands
+
+    assert not tab.generate_button.isEnabled()
+
+
+def test_config_refresh_mid_folder_scan_keeps_retime_disabled(qtbot, tmp_path):
+    """BA-017: Retime's own synchronous engine refresh must not re-arm Retime mid-scan."""
+    tab = _make_tab(_RETIME, qtbot, tmp_path)
+    tab.folder_mode_button.click()
+    tab.video_folder_selector.set_path(str(tmp_path))
+    tab.subtitle_folder_selector.set_path(str(tmp_path))
+    held: list[tuple] = []
+    with patch(
+        "anki_miner.gui.widgets.subtitle_retime_tab.run_off_thread",
+        side_effect=lambda *args, **kwargs: held.append(args),
+    ):
+        tab.retime_button.click()
+    assert len(held) == 1
+    assert not tab.retime_button.isEnabled()
+
+    with _patched(_RETIME.construct_patches):
+        tab.update_config(tab.config)
+        assert tab._availability_worker.wait(3000)
+
+    assert not tab.retime_button.isEnabled()
