@@ -2899,6 +2899,7 @@ class EpisodeProcessor:
                 cards_created=cards_created,
                 card_ids=created_note_ids,
                 mined_forms=mined_forms,
+                mined_forms_language=config_language(self.config),
             )
             self._record_session(ctx, result)
             return result
@@ -3394,6 +3395,7 @@ class EpisodeProcessor:
                 cards_created=cards_created,
                 card_ids=created_note_ids,
                 mined_forms=mined_forms,
+                mined_forms_language=config_language(self.config),
             )
             self._record_session(ctx, result)
             return result

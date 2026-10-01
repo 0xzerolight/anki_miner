@@ -2074,7 +2074,14 @@ class MainWindow(ScreenIssueHost, QMainWindow):
                     from anki_miner.gui.utils.service_factory import resolve_known_words_db_path
                     from anki_miner.services.known_word_db import KnownWordDB
 
-                    kw_db = KnownWordDB(resolve_known_words_db_path(self.config), language=config_language(self.config))
+                    # The run's own language, not the live one: a receipt
+                    # outlives a mining-language switch, and the rows this run
+                    # wrote are in that language's DB.
+                    run_language = result.mined_forms_language or config_language(self.config)
+                    kw_db = KnownWordDB(
+                        resolve_known_words_db_path(replace(self.config, language=run_language)),
+                        language=run_language,
+                    )
                     if kw_db.is_available():
                         kw_db.remove_words(set(result.mined_forms), source="mined")
                 except Exception:

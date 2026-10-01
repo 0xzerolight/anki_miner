@@ -241,6 +241,26 @@ class TestDetails:
         assert aggregate is not None
         assert aggregate.mined_forms == ["食べる"]
 
+    def test_the_aggregate_result_keeps_the_runs_mining_language(self):
+        acc = _accumulator(2)
+        acc.record_result(
+            ProcessingResult(
+                total_words_found=2,
+                new_words_found=1,
+                cards_created=1,
+                card_ids=[1],
+                mined_forms=["学生"],
+                mined_forms_language="ja",
+            )
+        )
+        acc.record_result(ProcessingResult(total_words_found=0, new_words_found=0, cards_created=0))
+
+        aggregate = _finish(acc).aggregate_result()
+
+        assert aggregate is not None
+        assert aggregate.mined_forms == ["学生"]
+        assert aggregate.mined_forms_language == "ja"
+
 
 class TestWhitelist:
     def test_coverage_folds_across_items_and_mined_outranks_known(self):

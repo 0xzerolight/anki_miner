@@ -94,6 +94,8 @@ class RunReceipt:
             comprehension_percentage=(known / total_words * 100) if total_words else 0.0,
             card_ids=note_ids,
             mined_forms=mined_forms,
+            # A run mines one language; the first item that wrote rows names it.
+            mined_forms_language=next((r.mined_forms_language for r in self.results if r.mined_forms), ""),
             terminal_outcome=self.outcome,
         )
 
