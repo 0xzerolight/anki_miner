@@ -147,7 +147,11 @@ class MokuroRunnerService:
             self._build_cmd(volume, options),
             timeout_s=_VOLUME_TIMEOUT_S,
             cancel=cancel_event,
-            env=self._child_env(),
+            # mokuro caches its detector under $XDG_CACHE_HOME/manga-ocr, and
+            # huggingface_hub defaults HF_HOME to $XDG_CACHE_HOME/huggingface:
+            # pointing XDG_CACHE_HOME next to the managed venv keeps both
+            # (~970 MB) inside ANKI_MINER_HOME. A user's explicit HF_HOME still wins.
+            env=self._child_env() | {"XDG_CACHE_HOME": str(self._config.uv_root / "model_cache")},
             line_callback=handle_line,
             combine_stderr=True,
             retain_output=False,
