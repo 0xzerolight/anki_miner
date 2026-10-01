@@ -213,3 +213,18 @@ def test_atomic_write_path_replacement_keeps_the_existing_mode(tmp_path: Path) -
 
     assert dest.read_text(encoding="utf-8") == "new"
     assert (dest.stat().st_mode & 0o777) == 0o640
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits")
+def test_atomic_write_path_overwrites_a_read_only_destination(tmp_path: Path) -> None:
+    """Copying the destination's 0444 onto the staged file must not stop the caller
+    writing it: replacing a read-only file needs only directory write access."""
+    dest = tmp_path / "episode.srt"
+    dest.write_text("old", encoding="utf-8")
+    dest.chmod(0o444)
+
+    with atomic_write_path(dest) as staged:
+        staged.write_text("new", encoding="utf-8")
+
+    assert dest.read_text(encoding="utf-8") == "new"
+    assert (dest.stat().st_mode & 0o777) == 0o644

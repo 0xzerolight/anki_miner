@@ -49,8 +49,10 @@ def atomic_write_path(dest: Path) -> Iterator[Path]:
             mode = stat.S_IMODE(dest.stat().st_mode)
         except OSError:
             mode = 0o666 & ~_UMASK
+        # Owner write stays on: the caller still has to write the staged file, and
+        # a read-only destination (0444) is replaceable with directory access alone.
         with contextlib.suppress(OSError):
-            os.chmod(tmp, mode)
+            os.chmod(tmp, mode | stat.S_IWUSR)
     try:
         yield tmp
         os.replace(tmp, dest)
