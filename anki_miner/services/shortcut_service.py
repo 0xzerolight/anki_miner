@@ -113,18 +113,20 @@ class ShortcutService:
         if getattr(sys, "frozen", False):
             return Path(sys.executable).resolve()
 
-        exe = shutil.which("anki_miner_gui")
-        if exe:
-            return Path(exe).resolve()
-
+        # The running interpreter's own script first: another anki_miner_gui on
+        # PATH (pipx, pip --user, a second venv) is a different install, and a
+        # restart or shortcut must start the one that is running.
         venv_dir = Path(sys.prefix)
         if sys.platform == "win32":
             candidate = venv_dir / "Scripts" / "anki_miner_gui.exe"
         else:
             candidate = venv_dir / "bin" / "anki_miner_gui"
-
         if candidate.exists():
             return candidate.resolve()
+
+        exe = shutil.which("anki_miner_gui")
+        if exe:
+            return Path(exe).resolve()
         return None
 
     @classmethod
