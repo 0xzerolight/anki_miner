@@ -1640,6 +1640,22 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Choisissez des dossiers existants de vidéos et de sous-titres.</translation>
     </message>
     <message>
+        <source>%1 is already queued with other settings (subtitle offset %2). To use the card's settings, remove that row and add the series again, or set the card back to the queued settings.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>none</source>
+        <translation type="unfinished">aucun</translation>
+    </message>
+    <message>
+        <source>Translation folder: %1</source>
+        <translation type="unfinished">Dossier de traduction : %1</translation>
+    </message>
+    <message>
+        <source>Translation offset: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 was skipped: its folders no longer exist.</source>
         <translation>%1 a été ignoré : ses dossiers n’existent plus.</translation>
     </message>

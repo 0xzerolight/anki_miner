@@ -1642,6 +1642,22 @@ No index files are deleted.</source>
         <translation>Выберите существующие папки с видео и субтитрами.</translation>
     </message>
     <message>
+        <source>%1 is already queued with other settings (subtitle offset %2). To use the card's settings, remove that row and add the series again, or set the card back to the queued settings.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>none</source>
+        <translation type="unfinished">нет</translation>
+    </message>
+    <message>
+        <source>Translation folder: %1</source>
+        <translation type="unfinished">Папка перевода: %1</translation>
+    </message>
+    <message>
+        <source>Translation offset: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 was skipped: its folders no longer exist.</source>
         <translation>%1 пропущен: его папки больше не существуют.</translation>
     </message>

@@ -1631,6 +1631,22 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>%1 is already queued with other settings (subtitle offset %2). To use the card's settings, remove that row and add the series again, or set the card back to the queued settings.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>none</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Translation folder: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Translation offset: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 was skipped: its folders no longer exist.</source>
         <translation type="unfinished" />
     </message>

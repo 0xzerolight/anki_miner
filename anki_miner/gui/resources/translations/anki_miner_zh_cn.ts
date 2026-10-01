@@ -1638,6 +1638,22 @@ No index files are deleted.</source>
         <translation>选择已有的视频和字幕文件夹。</translation>
     </message>
     <message>
+        <source>%1 is already queued with other settings (subtitle offset %2). To use the card's settings, remove that row and add the series again, or set the card back to the queued settings.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>none</source>
+        <translation type="unfinished">无</translation>
+    </message>
+    <message>
+        <source>Translation folder: %1</source>
+        <translation type="unfinished">翻译文件夹：%1</translation>
+    </message>
+    <message>
+        <source>Translation offset: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 was skipped: its folders no longer exist.</source>
         <translation>已跳过 %1：其文件夹已不存在。</translation>
     </message>
