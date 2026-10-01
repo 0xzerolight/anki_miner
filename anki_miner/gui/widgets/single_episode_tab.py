@@ -121,6 +121,10 @@ class SingleEpisodeTab(MiningTabBase):
         self._cancel_requested = False
         self.recent_manager = RecentFilesManager()
         self._audio_track_override: int | None = None
+        # The subtitle path this tab auto-filled from the video's sibling, so a
+        # later video change replaces it instead of treating it as the user's
+        # choice (BA-003; same ownership rule as AudiobookTab, A22-001).
+        self._last_auto_filled_subtitle: str | None = None
         # Bumped in shutdown() so a Tracks/Timing probe callback already queued
         # for delivery when app close begins finds itself stale and never
         # touches a button the close may be tearing down (M7).
@@ -414,8 +418,10 @@ class SingleEpisodeTab(MiningTabBase):
         """Reset the audio-track override when the video file changes.
 
         Selection is per-run and must not silently carry over across files.
-        Also auto-fills the subtitle selector from a sibling subtitle when the
-        selector is currently empty and a matching sibling exists.
+        Also auto-fills the subtitle selector from a sibling subtitle. A
+        subtitle this tab auto-filled follows the video (replaced, or cleared
+        when the new video has no sibling); a subtitle the user chose is never
+        overwritten.
         """
         self._audio_track_override = None
 
@@ -425,13 +431,22 @@ class SingleEpisodeTab(MiningTabBase):
 
         self.card_source_edit.setText(sanitize_source_label(Path(new_path).stem))
 
-        if self.subtitle_selector.get_path().strip():
+        current_subtitle = self.subtitle_selector.path_or_none()
+        owns_subtitle = (
+            self._last_auto_filled_subtitle is not None and current_subtitle == self._last_auto_filled_subtitle
+        )
+        if current_subtitle is not None and not owns_subtitle:
             # User already has a subtitle chosen — don't overwrite it.
+            self._last_auto_filled_subtitle = None
             return
 
+        self._last_auto_filled_subtitle = None
         sibling = find_sibling_subtitle(Path(new_path))
         if sibling is not None:
+            self._last_auto_filled_subtitle = str(sibling)
             self.subtitle_selector.set_path(str(sibling))
+        elif owns_subtitle:
+            self.subtitle_selector.clear()
 
     def _refresh_input_rows(self, *_args: object) -> None:
         """Show only what the chosen files make useful (A05).
