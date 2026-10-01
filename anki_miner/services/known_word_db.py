@@ -7,6 +7,7 @@ import unicodedata
 from collections.abc import Callable
 from contextlib import closing
 from pathlib import Path
+from typing import ClassVar
 
 from anki_miner.utils.logging_ext import log_summary
 
@@ -49,6 +50,12 @@ class KnownWordDB:
     Supports differential sync: words are only added, never removed.
     """
 
+    # Bumped by every write through ANY instance in this process. The curator's
+    # Confirm (add_user_known_words), Settings' Manage/Rebuild Known Words and
+    # Undo each write through a fresh instance, so a long-lived run instance
+    # compares this against the generation its memo was filled under (BA-004).
+    _write_generation: ClassVar[int] = 0
+
     def __init__(self, db_path: Path, *, language: str = "ja"):
         """Initialize the known word database.
 
@@ -65,13 +72,16 @@ class KnownWordDB:
         # Run-lifetime memo (T24): the batch worker keeps one processor — and
         # one KnownWordDB — alive for every queue item (T20), so a full-table
         # scan + NFC-normalize on every get_known_words()/get_words_by_source()
-        # call was pure repeat work within a run. Invalidated by every writer
-        # below. It does NOT see a write from another process sharing this DB
-        # file (Issue #100 double launch); that staleness window already
-        # existed on the underlying reads and matches what the other
-        # run-cached queue services tolerate.
+        # call was pure repeat work within a run. Invalidated by a write
+        # through any instance in this process (``_write_generation``), since
+        # the curator, Settings and Undo write through fresh instances. It
+        # does NOT see a write from another process sharing this DB file
+        # (Issue #100 double launch); that staleness window already existed on
+        # the underlying reads and matches what the other run-cached queue
+        # services tolerate.
         self._known_cache: set[str] | None = None
         self._source_cache: dict[str, set[str]] = {}
+        self._cache_generation = KnownWordDB._write_generation
         # Anki-vocabulary normalization memo for sync_with_anki: AnkiService
         # caches get_existing_vocabulary() for the run too, so the same set
         # object is passed here on every queue item. Keyed by identity against
@@ -82,9 +92,18 @@ class KnownWordDB:
         self._anki_vocab_normalized: set[str] | None = None
 
     def _invalidate_cache(self) -> None:
-        """Drop the run-cached known/source sets after a write."""
+        """Drop the run-cached known/source sets after a write, in every instance."""
+        KnownWordDB._write_generation += 1
+        self._cache_generation = KnownWordDB._write_generation
         self._known_cache = None
         self._source_cache = {}
+
+    def _drop_cache_if_stale(self) -> None:
+        """Forget the memo when any instance in this process wrote since it was filled."""
+        if self._cache_generation != KnownWordDB._write_generation:
+            self._known_cache = None
+            self._source_cache = {}
+            self._cache_generation = KnownWordDB._write_generation
 
     def _resolved_fold(self) -> Callable[[str], str] | None:
         """The language's comparison fold, looked up once on first use."""
@@ -213,6 +232,7 @@ class KnownWordDB:
         Returns:
             Set of all lemma strings in the database.
         """
+        self._drop_cache_if_stale()
         if self._known_cache is not None:
             return self._known_cache
         with closing(self._connect()) as conn:
@@ -241,6 +261,7 @@ class KnownWordDB:
         Returns:
             Set of lemma strings with the matching source.
         """
+        self._drop_cache_if_stale()
         if source in self._source_cache:
             return self._source_cache[source]
         with closing(self._connect()) as conn:
