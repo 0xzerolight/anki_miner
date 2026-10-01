@@ -2555,9 +2555,20 @@ class EpisodeProcessor:
             and not self.config.bypass_optional_filters
         ):
             before = len(stamped)
-            stamped = self.word_filter.deduplicate_by_sentence(
-                stamped, lambda word: merged_text.get(id(word), word.sentence)
+            # Whitelist force-includes bypass sentence dedup in phase 2, so they
+            # bypass it here too: only the other words are deduplicated, among
+            # themselves, and every word keeps its place (BA-053).
+            forced_ids: set[int] = set()
+            whitelist_service = self._active_whitelist()
+            if whitelist_service is not None:
+                forced, _rest = self.word_filter.partition_whitelisted(stamped, whitelist_service)
+                forced_ids = {id(word) for word in forced}
+            kept = self.word_filter.deduplicate_by_sentence(
+                [word for word in stamped if id(word) not in forced_ids],
+                lambda word: merged_text.get(id(word), word.sentence),
             )
+            kept_ids = {id(word) for word in kept}
+            stamped = [word for word in stamped if id(word) in forced_ids or id(word) in kept_ids]
             if before != len(stamped):
                 logger.info("automatic cue merge: %d word(s) dropped as duplicate sentences", before - len(stamped))
         return stamped

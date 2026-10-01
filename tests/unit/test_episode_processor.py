@@ -7023,3 +7023,50 @@ def test_phase5_records_words_with_no_definition(test_config, mock_services, tmp
     processor = build_processor(replace(test_config, bypass_optional_filters=True), **mock_services)
     processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
     assert processor.last_word_drops == {run.mined_form: "no_definition"}
+
+
+class TestAutoMergeKeepsForcedWords:
+    """The automatic cue merge's second sentence dedup honours whitelist force-include."""
+
+    @staticmethod
+    def _word(form, sentence, start, end):
+        return TokenizedWord(
+            surface=form,
+            lemma=form,
+            reading="",
+            sentence=sentence,
+            start_time=start,
+            end_time=end,
+            duration=end - start,
+            pos="名詞",
+        )
+
+    def test_merge_re_dedup_never_drops_a_whitelist_force_include(self, test_config, tmp_path):
+        """BA-053: phase 2 keeps both whitelisted line-mates (force-include bypasses sentence
+        dedup); a merge elsewhere in the episode must not drop the second one."""
+        config = replace(test_config, merge_incomplete_cues=True, deduplicate_sentences=True, use_whitelist=True)
+        parser = MagicMock()
+        parser.parse_raw_entries.return_value = [
+            (1.0, 2.0, "猫と犬。"),
+            (10.0, 11.0, "それは"),
+            (11.2, 12.0, "鳥だ。"),
+        ]
+        whitelist = MagicMock()
+        whitelist.is_available.return_value = True
+        whitelist.is_whitelisted.side_effect = lambda key: key in {"猫", "犬"}
+        proc = build_processor(
+            config=config,
+            subtitle_parser=parser,
+            word_filter=WordFilterService(config),
+            word_list_service=whitelist,
+        )
+        words = [
+            self._word("猫", "猫と犬。", 1.0, 2.0),
+            self._word("犬", "猫と犬。", 1.0, 2.0),
+            self._word("鳥", "それは", 10.0, 11.0),
+        ]
+
+        out = proc._auto_stamp_line_expansions(words, tmp_path / "ep01.srt")
+
+        assert [w.mined_form for w in out] == ["猫", "犬", "鳥"]
+        assert out[2].line_expansion == (0, 1)
