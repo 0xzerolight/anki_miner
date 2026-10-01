@@ -272,3 +272,28 @@ def test_old_build_drops_the_key_without_raising(isolated_config_file):
     assert AnkiMinerConfig(**migrated).language == "zh"
     isolated_config_file.write_text(json.dumps({"language_of_the_future": "xx"}), encoding="utf-8")
     assert GUIConfigManager.load_config().language == "ja"
+
+
+def test_a_cross_language_import_hands_the_window_its_language_change(test_config, qtbot, monkeypatch, tmp_path):
+    """The window owes an imported language change the same hooks as a selector switch."""
+    from PyQt6.QtWidgets import QMessageBox
+
+    from anki_miner.gui.widgets.settings_tab import SettingsTab
+
+    tab = SettingsTab(test_config)
+    qtbot.addWidget(tab)
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.settings_tab.QMessageBox.question",
+        lambda *a, **kw: QMessageBox.StandardButton.Yes,
+    )
+    path = tmp_path / "de.json"
+    path.write_text(json.dumps({"anki_miner_settings": True, "settings": {"language": "de"}}), encoding="utf-8")
+    emitted: list[AnkiMinerConfig] = []
+    previous: list[AnkiMinerConfig] = []
+    tab.config_changed.connect(emitted.append)
+    tab.import_changed_language.connect(previous.append)
+
+    tab._apply_settings_import(str(path))
+
+    assert emitted[-1].language == "de"
+    assert [config.language for config in previous] == ["ja"]

@@ -175,6 +175,10 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         mining_language_requested: Re-emitted from the Mining Language panel's
             language selector. The window runs the guard and commits, because a
             switch clears queues and reloads every panel in this tab.
+        import_changed_language: A settings import changed the mining language.
+            Carries the config from before the import, so the window can run
+            the hooks a durable language change owes (tagger evict, prewarm,
+            surface sync).
         language_pack_download_requested: Emitted with a language code when the
             Mining Language page's "Download and switch" is clicked.
         resource_family_download_requested: An empty Dictionaries, Frequency or
@@ -197,6 +201,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     asr_pack_download_requested = pyqtSignal()
     vulkan_model_download_requested = pyqtSignal(str)  # Emits model name
     mining_language_requested = pyqtSignal(str)  # Emits the requested language code
+    import_changed_language = pyqtSignal(object)  # Emits the pre-import AnkiMinerConfig
     language_pack_download_requested = pyqtSignal(str)  # Emits the language code
     resource_family_download_requested = pyqtSignal(str)  # "dict" | "freq" | "pitch" (C09)
 
@@ -2016,9 +2021,13 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                     )
                 )
         # Import can touch any field — full reload, unlike the targeted
-        # auto-save commit.
+        # auto-save commit. Captured before the emit: the window's fan-out
+        # replaces self.config synchronously.
+        previous_config = self.config
         self.config_changed.emit(new_config)
         self._load_config()
+        if new_config.language != previous_config.language:
+            self.import_changed_language.emit(previous_config)
         if import_result.invalid_fields or import_result.notices:
             summary: list[str] = []
             if import_result.invalid_fields:

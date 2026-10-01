@@ -14,6 +14,7 @@ from typing import Any, ClassVar
 
 from anki_miner.config import ZOOM_PRESETS, AnkiMinerConfig, create_default_config
 from anki_miner.config.paths import ANKI_MINER_HOME
+from anki_miner.languages.switching import switch_language
 from anki_miner.services.startup_store_recovery import backup_config_repair_is_safe
 from anki_miner.utils.atomic_io import atomic_write_path
 from anki_miner.utils.bounded_reader import read_json_bounded
@@ -794,7 +795,18 @@ class GUIConfigManager:
         incoming = {k: v for k, v in incoming.items() if k not in excluded}
 
         incoming, invalid_fields = cls._validate_incoming(incoming)
-        cls._overlay_mapping_fields(incoming, current_config)
+        # `language` is portable but the chains and language_stash are not, so a
+        # file for another mining language must land the way a language switch
+        # does: park the outgoing language, restore the incoming one's local
+        # chains, then overlay the file. The target is folded through the
+        # config's own normalisation first, so an unknown code (which the config
+        # turns into "ja") never reaches switch_language.
+        base = current_config
+        if "language" in incoming:
+            target = dataclasses.replace(current_config, language=incoming["language"]).language
+            if target != current_config.language:
+                base = switch_language(current_config, target)
+        cls._overlay_mapping_fields(incoming, base)
 
         notices: list[str] = []
         if legacy_ytdlp_forced:
@@ -817,7 +829,7 @@ class GUIConfigManager:
         )
 
         return ImportConfigResult(
-            config=dataclasses.replace(current_config, **incoming),
+            config=dataclasses.replace(base, **incoming),
             invalid_fields=invalid_fields,
             notices=notices,
         )
