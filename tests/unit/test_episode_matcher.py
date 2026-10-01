@@ -887,3 +887,59 @@ class TestParseMediaFilename:
         # an in-word hyphen must not be eaten.
         parsed = parse_media_filename(Path("Show - 01 - Re-Start.mkv"))
         assert parsed.episode_title == "Re-Start"
+
+
+@pytest.mark.parametrize(
+    "filename",
+    [
+        "Title.05.1080p.NF.WEB-DL.DDP5.1.H.264-GRP.mkv",
+        "Title.05.1080p.WEB-DL.AAC2.0.H.264-GRP.mkv",
+        "[Group] Title 05 [BD 1080p AAC2.0].mkv",
+        "Title.05.1080p.BluRay.TrueHD.7.1.Atmos.mkv",
+        "Title.05.1080p.WEB-DL.DD+5.1.H.264-GRP.mkv",
+        "Title 05 [BD 1080p FLAC 2.0].mkv",
+        "[Group] Title 05 [Hi10P 720p].mkv",
+        "[Group] Title 05 [BD 1080p 2ch].mkv",
+        "[Group] Title 05 [1080p60].mkv",
+        "Title 05 [WEB 1080p AV1 E-AC-3].mkv",
+        "Title 05 [480p][MP3].mkv",
+        "Title 05 [DVD AC3].mkv",
+    ],
+)
+def test_audio_and_profile_tags_do_not_win_the_bare_number(tmp_path, filename):
+    path = tmp_path / filename
+    path.touch()
+    result = EpisodeNumberExtractor.extract_episode_info(path)
+    assert result is not None
+    assert result.episode_number == 5
+
+
+def test_channel_tagged_videos_pair_with_their_own_subtitles(tmp_path):
+    videos = [tmp_path / f"Title.{n:02d}.1080p.NF.WEB-DL.DDP5.1.H.264-GRP.mkv" for n in range(1, 7)]
+    subs = [tmp_path / f"Title - {n:02d}.ja.srt" for n in range(1, 7)]
+    for p in videos + subs:
+        p.touch()
+
+    pairs = EpisodeMatcher.match_by_episode_number(videos, subs)
+
+    assert [(v.name[:8], s.name[:10]) for v, s in pairs] == [
+        (f"Title.{n:02d}", f"Title - {n:02d}") for n in range(1, 7)
+    ]
+
+
+@pytest.mark.parametrize(
+    ("filename", "episode"),
+    [
+        ("Mob Psycho 100 - 05 [1080p AAC2.0].mkv", 5),
+        ("Title - 05 - Opus.mkv", 5),
+        ("Title - 120 [DVD AC3].mkv", 120),
+        ("[Group] Title - 05v2 [Hi10P][AAC2.0].mkv", 5),
+        ("Title_05_2ch.mkv", 5),
+    ],
+)
+def test_tag_strips_leave_real_episode_numbers_alone(tmp_path, filename, episode):
+    path = tmp_path / filename
+    path.touch()
+    result = EpisodeNumberExtractor.extract_episode_info(path)
+    assert result is not None
+    assert result.episode_number == episode
