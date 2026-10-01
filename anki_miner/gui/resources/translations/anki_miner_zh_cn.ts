@@ -1639,19 +1639,19 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 is already queued with other settings (subtitle offset %2). To use the card's settings, remove that row and add the series again, or set the card back to the queued settings.</source>
-        <translation type="unfinished" />
+        <translation>%1 已以其他设置加入队列（字幕偏移 %2）。要使用“添加剧集”中的设置，请移除该行后重新添加该系列，或将“添加剧集”恢复为队列中的设置。</translation>
     </message>
     <message>
         <source>none</source>
-        <translation type="unfinished">无</translation>
+        <translation>无</translation>
     </message>
     <message>
         <source>Translation folder: %1</source>
-        <translation type="unfinished">翻译文件夹：%1</translation>
+        <translation>翻译文件夹：%1</translation>
     </message>
     <message>
         <source>Translation offset: %1</source>
-        <translation type="unfinished" />
+        <translation>翻译偏移：%1</translation>
     </message>
     <message>
         <source>%1 was skipped: its folders no longer exist.</source>

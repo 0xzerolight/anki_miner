@@ -1643,19 +1643,19 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 is already queued with other settings (subtitle offset %2). To use the card's settings, remove that row and add the series again, or set the card back to the queued settings.</source>
-        <translation type="unfinished" />
+        <translation>%1 уже в очереди с другими настройками (смещение субтитров %2). Чтобы использовать настройки из «Добавить сериал», удалите эту строку и добавьте сериал заново или верните в «Добавить сериал» настройки из очереди.</translation>
     </message>
     <message>
         <source>none</source>
-        <translation type="unfinished">нет</translation>
+        <translation>нет</translation>
     </message>
     <message>
         <source>Translation folder: %1</source>
-        <translation type="unfinished">Папка перевода: %1</translation>
+        <translation>Папка перевода: %1</translation>
     </message>
     <message>
         <source>Translation offset: %1</source>
-        <translation type="unfinished" />
+        <translation>Смещение перевода: %1</translation>
     </message>
     <message>
         <source>%1 was skipped: its folders no longer exist.</source>

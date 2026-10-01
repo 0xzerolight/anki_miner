@@ -1641,19 +1641,19 @@ Nenhum arquivo de índice é excluído.</translation>
     </message>
     <message>
         <source>%1 is already queued with other settings (subtitle offset %2). To use the card's settings, remove that row and add the series again, or set the card back to the queued settings.</source>
-        <translation type="unfinished" />
+        <translation>%1 já está na fila com outras configurações (deslocamento da legenda %2). Para usar as configurações de “Adicionar Série”, remova essa linha e adicione a série novamente, ou volte “Adicionar Série” às configurações da fila.</translation>
     </message>
     <message>
         <source>none</source>
-        <translation type="unfinished">nenhum</translation>
+        <translation>nenhuma</translation>
     </message>
     <message>
         <source>Translation folder: %1</source>
-        <translation type="unfinished">Pasta de tradução: %1</translation>
+        <translation>Pasta de tradução: %1</translation>
     </message>
     <message>
         <source>Translation offset: %1</source>
-        <translation type="unfinished" />
+        <translation>Deslocamento da tradução: %1</translation>
     </message>
     <message>
         <source>%1 was skipped: its folders no longer exist.</source>

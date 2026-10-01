@@ -1641,19 +1641,19 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>%1 is already queued with other settings (subtitle offset %2). To use the card's settings, remove that row and add the series again, or set the card back to the queued settings.</source>
-        <translation type="unfinished" />
+        <translation>%1 ist bereits mit anderen Einstellungen in der Warteschlange (Untertitel-Versatz %2). Um die Einstellungen unter „Serie hinzufügen“ zu verwenden, entfernen Sie diese Zeile und fügen Sie die Serie erneut hinzu, oder stellen Sie unter „Serie hinzufügen“ wieder die Einstellungen aus der Warteschlange ein.</translation>
     </message>
     <message>
         <source>none</source>
-        <translation type="unfinished">keine</translation>
+        <translation>keine</translation>
     </message>
     <message>
         <source>Translation folder: %1</source>
-        <translation type="unfinished">Übersetzungsordner: %1</translation>
+        <translation>Übersetzungsordner: %1</translation>
     </message>
     <message>
         <source>Translation offset: %1</source>
-        <translation type="unfinished" />
+        <translation>Übersetzungs-Versatz: %1</translation>
     </message>
     <message>
         <source>%1 was skipped: its folders no longer exist.</source>

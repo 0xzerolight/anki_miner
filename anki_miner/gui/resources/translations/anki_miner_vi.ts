@@ -1639,19 +1639,19 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>%1 is already queued with other settings (subtitle offset %2). To use the card's settings, remove that row and add the series again, or set the card back to the queued settings.</source>
-        <translation type="unfinished" />
+        <translation>%1 đã có trong hàng đợi với thiết lập khác (độ lệch phụ đề %2). Để dùng thiết lập trong “Thêm series”, hãy xóa hàng đó rồi thêm lại loạt phim, hoặc đặt “Thêm series” về lại thiết lập trong hàng đợi.</translation>
     </message>
     <message>
         <source>none</source>
-        <translation type="unfinished">không có</translation>
+        <translation>không có</translation>
     </message>
     <message>
         <source>Translation folder: %1</source>
-        <translation type="unfinished">Thư mục bản dịch: %1</translation>
+        <translation>Thư mục bản dịch: %1</translation>
     </message>
     <message>
         <source>Translation offset: %1</source>
-        <translation type="unfinished" />
+        <translation>Độ lệch phụ đề dịch: %1</translation>
     </message>
     <message>
         <source>%1 was skipped: its folders no longer exist.</source>

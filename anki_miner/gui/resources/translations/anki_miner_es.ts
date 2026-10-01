@@ -1641,19 +1641,19 @@ No se elimina ningún archivo de índice.</translation>
     </message>
     <message>
         <source>%1 is already queued with other settings (subtitle offset %2). To use the card's settings, remove that row and add the series again, or set the card back to the queued settings.</source>
-        <translation type="unfinished" />
+        <translation>%1 ya está en la cola con otra configuración (desfase de subtítulos %2). Para usar la configuración de «Añadir serie», quite esa fila y vuelva a añadir la serie, o devuelva «Añadir serie» a la configuración de la cola.</translation>
     </message>
     <message>
         <source>none</source>
-        <translation type="unfinished">ninguno</translation>
+        <translation>ninguna</translation>
     </message>
     <message>
         <source>Translation folder: %1</source>
-        <translation type="unfinished">Carpeta de traducción: %1</translation>
+        <translation>Carpeta de traducción: %1</translation>
     </message>
     <message>
         <source>Translation offset: %1</source>
-        <translation type="unfinished" />
+        <translation>Desfase de traducción: %1</translation>
     </message>
     <message>
         <source>%1 was skipped: its folders no longer exist.</source>

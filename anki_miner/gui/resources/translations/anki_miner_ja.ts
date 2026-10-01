@@ -1639,19 +1639,19 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 is already queued with other settings (subtitle offset %2). To use the card's settings, remove that row and add the series again, or set the card back to the queued settings.</source>
-        <translation type="unfinished" />
+        <translation>%1 は別の設定（字幕オフセット %2）でキューに追加済みです。「シリーズを追加」の設定を使うには、その行を削除してシリーズを追加し直すか、「シリーズを追加」をキューの設定に戻してください。</translation>
     </message>
     <message>
         <source>none</source>
-        <translation type="unfinished">なし</translation>
+        <translation>なし</translation>
     </message>
     <message>
         <source>Translation folder: %1</source>
-        <translation type="unfinished">翻訳字幕フォルダ: %1</translation>
+        <translation>翻訳字幕フォルダ: %1</translation>
     </message>
     <message>
         <source>Translation offset: %1</source>
-        <translation type="unfinished" />
+        <translation>翻訳字幕オフセット: %1</translation>
     </message>
     <message>
         <source>%1 was skipped: its folders no longer exist.</source>
