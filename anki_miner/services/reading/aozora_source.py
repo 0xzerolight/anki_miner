@@ -275,14 +275,29 @@ def _is_aozora(text: str) -> bool:
     return _SYMBOL_BLOCK_HEADING in text
 
 
+#: Line endings no Aozora title/author line has but nearly every story paragraph does.
+_SENTENCE_LINE_ENDINGS = ("。", "」")
+
+
 def _extract_header(lines: list[str]) -> tuple[str, list[str]]:
-    """Return (header title, body lines) for the Aozora path."""
+    """Return (header title, body lines) for the Aozora path.
+
+    The header is the first non-blank block, but only when a blank line follows
+    it and none of its lines ends like a sentence. Attached ruby alone marks a
+    file as Aozora, and a headerless web-novel manuscript (one paragraph per
+    line, often no blank lines) would otherwise lose its opening, or its whole
+    body, as a "header".
+    """
     i = 0
     while i < len(lines) and not lines[i].strip():
         i += 1
-    title = _strip_ruby(_resolve_gaiji(lines[i])).strip() if i < len(lines) else ""
+    start = i
     while i < len(lines) and lines[i].strip():  # pre-blank block = header
         i += 1
+    block = lines[start:i]
+    if block and (i == len(lines) or any(ln.rstrip().endswith(_SENTENCE_LINE_ENDINGS) for ln in block)):
+        return "", _drop_symbol_block(lines[start:])
+    title = _strip_ruby(_resolve_gaiji(block[0])).strip() if block else ""
     while i < len(lines) and not lines[i].strip():  # skip the blank gap
         i += 1
     return title, _drop_symbol_block(lines[i:])

@@ -667,3 +667,19 @@ def test_chinese_fullwidth_bar_before_a_title_is_not_aozora(tmp_path):
     doc = _zh_doc(tmp_path, "\n".join(lines), "zh-bar.txt")
     assert doc.title == "zh-bar"
     assert [u.text for u in doc.units] == list(lines)
+
+
+def test_headerless_ruby_novel_without_blank_lines_keeps_every_paragraph(tmp_path):
+    # Web-novel manuscript convention: attached ruby, one paragraph per line,
+    # no Aozora title/author header and no blank lines.
+    text = "\n".join(["彼は魔法《まほう》を使った。", "少女は笑った。", "空は青かった。"])
+    doc = load(_ref(_write(tmp_path, text, "utf-8", name="web_novel.txt")))
+    assert doc.title == "web_novel"
+    assert [u.text for u in doc.units] == ["彼は魔法を使った。", "少女は笑った。", "空は青かった。"]
+
+
+def test_headerless_ruby_novel_keeps_its_first_block(tmp_path):
+    text = "\n".join(["彼は｜魔法《まほう》を使った。", "空は青かった。", "", "少女は笑った。"])
+    doc = load(_ref(_write(tmp_path, text, "utf-8", name="web_novel.txt")))
+    assert doc.title == "web_novel"
+    assert [u.text for u in doc.units] == ["彼は魔法を使った。", "空は青かった。", "少女は笑った。"]
