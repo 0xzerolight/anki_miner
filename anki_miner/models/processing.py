@@ -172,6 +172,10 @@ class ProcessingResult:
     video_file: str = ""
     subtitle_file: str = ""
     mined_forms: list[str] = field(default_factory=list)
+    #: The mining language whose known-words DB holds ``mined_forms``'
+    #: source='mined' rows. Undo reverts them there even after a language
+    #: switch. "" = not stamped (Undo falls back to the live language).
+    mined_forms_language: str = ""
     #: Anki note-write provenance for this run (D30). Stamped by
     #: ``EpisodeProcessor._run_pipeline`` on every result it returns. The
     #: default is the FAIL-CLOSED answer: a result nobody stamped has made no

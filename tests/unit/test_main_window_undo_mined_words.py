@@ -496,3 +496,39 @@ def test_deck_builder_owner_is_gated_by_the_video_main_tab() -> None:
     from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 
     assert DeckBuilderTab.TASK_OWNER.main_tab == "video"
+
+
+class TestUndoUsesTheRunsLanguage:
+    def _seed(self, db_path, words, *, language="ja"):
+        from anki_miner.services.known_word_db import KnownWordDB
+
+        db = KnownWordDB(db_path, language=language)
+        db.initialize()
+        for lemma, source in words.items():
+            db.add_words({lemma}, source=source)
+
+    def test_undo_after_a_language_switch_reverts_the_runs_language_db(self, main_window, monkeypatch, test_config):
+        """A receipt from a Japanese run still undoes into known_words.db after a switch to zh."""
+        from anki_miner.gui.utils.service_factory import resolve_known_words_db_path
+        from anki_miner.languages.switching import switch_language
+        from anki_miner.services.known_word_db import KnownWordDB
+
+        ja_path = test_config.known_words_db_path
+        self._seed(ja_path, {"学生": "mined"})
+        captured = _capture_undo_callback(monkeypatch)
+        _fake_delete_notes(monkeypatch, deleted_count=1)
+        result = ProcessingResult(
+            total_words_found=1, new_words_found=1, cards_created=1, card_ids=[10], mined_forms=["学生"]
+        )
+        result.mined_forms_language = "ja"  # what EpisodeProcessor stamps after the fix
+
+        zh_config = switch_language(replace(main_window.config, use_known_words_db=True), "zh")
+        main_window.update_config(zh_config)
+        zh_path = resolve_known_words_db_path(zh_config)
+        self._seed(zh_path, {"学生": "mined"}, language="zh")
+
+        main_window._on_run_details(result)
+        captured["cb"]([10])
+
+        assert KnownWordDB(ja_path).get_known_words() == set()
+        assert KnownWordDB(zh_path, language="zh").get_known_words() == {"学生"}

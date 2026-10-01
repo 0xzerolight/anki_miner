@@ -108,3 +108,21 @@ def test_no_dialog_is_opened_on_the_queue_path(tab, clock):
     _finish(tab, [failed, succeeded])
 
     assert not hasattr(module, "QMessageBox")
+
+
+def test_cancelled_series_counts_the_cards_its_finished_episodes_added(tab, clock):
+    """BA-015: the receipt of a cancelled run reports the notes a partly mined series created."""
+    tab.batch_queue.add_item(Path("/v0"), Path("/s0"), "Show 0")
+    with patch("anki_miner.gui.workers.batch_queue_worker.BatchQueueWorkerThread", MagicMock()):
+        tab._start_queue_worker()
+    item = tab.batch_queue.get_all_items()[0]
+
+    tab._on_item_interrupted(item.id, 124)
+    tab._on_queue_finished(124)
+    tab._finish_receipt(cancelled=True)
+
+    receipt = tab._receipt_widget.receipt
+    assert receipt.outcome is TerminalOutcome.CANCELLED
+    assert receipt.notes_added == 124
+    assert receipt.items_completed == 0
+    assert receipt.items_failed == 0

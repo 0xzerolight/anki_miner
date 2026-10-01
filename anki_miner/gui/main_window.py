@@ -632,6 +632,13 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             yield True
             return
         if not preflight():
+            # The JMdict arm above reports itself; this one used to refuse in
+            # silence, so Tools -> Setup Wizard and System Health's Fix looked
+            # dead during a download or import (D24). Callers with a more
+            # specific refusal (language switch, profile switch) replace it.
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("Settings are busy with a download or import. Try again when it finishes."))
+            )
             yield False
             return
         token = panel.hold_mutation(kind)
@@ -1429,6 +1436,19 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             if issue is not None and issue.action_id == "resource-download.retry":
                 self.clear_screen_issue()
 
+    def _clear_validation_issue(self) -> None:
+        """Clear only an issue a validation sweep raised: its failure or its error.
+
+        A passing sweep proves AnkiConnect, ffmpeg, the deck, the note type and
+        the fields; it says nothing about a missing language pack, a restyle
+        that was not confirmed or a failed export, so those banners stay.
+        """
+        banner = self.issue_banner()
+        if banner is not None:
+            issue = banner.current_issue()
+            if issue is not None and issue.action_id in {"settings.open", "validation.retry"}:
+                self.clear_screen_issue()
+
     def _activate_downloaded_resources(self, summary: object) -> "AnkiMinerConfig | None":
         """Switch downloaded resources on, or refuse without claiming success.
 
@@ -1912,7 +1932,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
 
         if result.all_passed:
             self.status_bar.set_operation(self.tr("All system checks passed"), "success")
-            self.clear_screen_issue()
+            self._clear_validation_issue()
         elif not silent:
             # A wall of "- component: message" lines was the whole modal. The
             # sentence says what happened; the component list is the diagnostic
@@ -2061,7 +2081,14 @@ class MainWindow(ScreenIssueHost, QMainWindow):
                     from anki_miner.gui.utils.service_factory import resolve_known_words_db_path
                     from anki_miner.services.known_word_db import KnownWordDB
 
-                    kw_db = KnownWordDB(resolve_known_words_db_path(self.config), language=config_language(self.config))
+                    # The run's own language, not the live one: a receipt
+                    # outlives a mining-language switch, and the rows this run
+                    # wrote are in that language's DB.
+                    run_language = result.mined_forms_language or config_language(self.config)
+                    kw_db = KnownWordDB(
+                        resolve_known_words_db_path(replace(self.config, language=run_language)),
+                        language=run_language,
+                    )
                     if kw_db.is_available():
                         kw_db.remove_words(set(result.mined_forms), source="mined")
                 except Exception:

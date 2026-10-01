@@ -6892,6 +6892,24 @@ class TestCurationSentenceEdit:
         assert extracted[0].mined_form == "時給"
         assert extracted[0].sentence_edit is None
 
+    def test_edit_onto_another_selected_word_keeps_one_card(self, test_config, mock_services, tmp_path):
+        """BA-020: an edit that turns a word into another selected word's card front would put
+        two notes with one first field into one addNotes request, which AnkiConnect rejects
+        and rolls back as a whole; the run keeps the first of the two."""
+        first = _make_word("持久", surface="持久", pos="名詞", start_time=1.0)
+        second = _make_word("時給", surface="時給", pos="名詞", start_time=5.0)
+        self._wire(mock_services, [first, second], _make_media())
+        intent = replace(second, sentence_edit=SentenceEdit(text="持久系", target_start=0, target_end=2))
+        sp = mock_services["subtitle_parser"]
+        sp.parse_text_units.side_effect = lambda units, want_line_index, **kw: ([self._parsed(units[0].text)], None, {})
+        proc = build_processor(config=test_config, presenter=NullPresenter(), **mock_services)
+
+        proc.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", curation_callback=lambda ws: [first, intent])
+
+        extracted = mock_services["media_extractor"].extract_media_batch.call_args[0][1]
+        assert [w.mined_form for w in extracted] == ["持久"]
+        assert extracted[0].start_time == 1.0
+
 
 class TestParseSentenceFacade:
     def test_parse_sentence_fn_wraps_one_reading_unit(self, test_config):
@@ -7005,3 +7023,50 @@ def test_phase5_records_words_with_no_definition(test_config, mock_services, tmp
     processor = build_processor(replace(test_config, bypass_optional_filters=True), **mock_services)
     processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
     assert processor.last_word_drops == {run.mined_form: "no_definition"}
+
+
+class TestAutoMergeKeepsForcedWords:
+    """The automatic cue merge's second sentence dedup honours whitelist force-include."""
+
+    @staticmethod
+    def _word(form, sentence, start, end):
+        return TokenizedWord(
+            surface=form,
+            lemma=form,
+            reading="",
+            sentence=sentence,
+            start_time=start,
+            end_time=end,
+            duration=end - start,
+            pos="名詞",
+        )
+
+    def test_merge_re_dedup_never_drops_a_whitelist_force_include(self, test_config, tmp_path):
+        """BA-053: phase 2 keeps both whitelisted line-mates (force-include bypasses sentence
+        dedup); a merge elsewhere in the episode must not drop the second one."""
+        config = replace(test_config, merge_incomplete_cues=True, deduplicate_sentences=True, use_whitelist=True)
+        parser = MagicMock()
+        parser.parse_raw_entries.return_value = [
+            (1.0, 2.0, "猫と犬。"),
+            (10.0, 11.0, "それは"),
+            (11.2, 12.0, "鳥だ。"),
+        ]
+        whitelist = MagicMock()
+        whitelist.is_available.return_value = True
+        whitelist.is_whitelisted.side_effect = lambda key: key in {"猫", "犬"}
+        proc = build_processor(
+            config=config,
+            subtitle_parser=parser,
+            word_filter=WordFilterService(config),
+            word_list_service=whitelist,
+        )
+        words = [
+            self._word("猫", "猫と犬。", 1.0, 2.0),
+            self._word("犬", "猫と犬。", 1.0, 2.0),
+            self._word("鳥", "それは", 10.0, 11.0),
+        ]
+
+        out = proc._auto_stamp_line_expansions(words, tmp_path / "ep01.srt")
+
+        assert [w.mined_form for w in out] == ["猫", "犬", "鳥"]
+        assert out[2].line_expansion == (0, 1)

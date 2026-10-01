@@ -198,3 +198,39 @@ class TestStartupValidationLogging:
         assert "not reachable" not in issue.summary
         assert "not reachable" in issue.details
         assert _startup_validation_records(caplog) == []
+
+
+class TestPassingValidationClearsOnlyItsOwnIssue:
+    def test_passing_validation_keeps_an_unrelated_window_issue(self, window_with_settings):
+        """The boot 'language pack missing' banner is not validation's to clear."""
+        from anki_miner.gui.widgets.base.screen_issue_banner import ScreenIssue
+
+        window, _settings_tab = window_with_settings
+        window.show_screen_issue(
+            ScreenIssue(
+                summary="Chinese needs its language pack. Download it in Settings.",
+                action_id="language.open-settings",
+                action_text="Open Settings",
+            ),
+            action=lambda: None,
+        )
+
+        window._on_validation_result(_result(ankiconnect_ok=True))
+
+        issue = window.issue_banner().current_issue()
+        assert issue is not None
+        assert issue.action_id == "language.open-settings"
+
+    def test_passing_validation_clears_its_own_earlier_failure(self, window_with_settings):
+        window, _settings_tab = window_with_settings
+        window._validation_silent = False
+        failing = _result(
+            ankiconnect_ok=False,
+            issues=[ValidationIssue(component="AnkiConnect", severity="ERROR", message="not reachable")],
+        )
+        window._on_validation_result(failing)
+        assert window.issue_banner().current_issue() is not None
+
+        window._on_validation_result(_result(ankiconnect_ok=True))
+
+        assert window.issue_banner().current_issue() is None
