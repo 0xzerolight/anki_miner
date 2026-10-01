@@ -409,7 +409,8 @@ class DeckFilterTab(_AnkiPlanTabBase):
         if not target:
             self.show_screen_issue(ScreenIssue(summary=self.tr("Name the new deck first.")))
             return None
-        if target == source:
+        if target.casefold() == source.casefold():
+            # Anki resolves deck names ignoring case, so "core 2k" IS "Core 2k" (BA-022).
             self.show_screen_issue(
                 ScreenIssue(summary=self.tr("The new deck needs a different name than the source deck."))
             )
@@ -593,6 +594,12 @@ class DeckFilterTab(_AnkiPlanTabBase):
 
     def _on_worker_error(self, message: str) -> None:
         logger.warning("Deck Filter worker failed: error=%s", message)
+        if isinstance(self.worker_thread, DeckFilterApplyWorker):
+            # Chunks committed before the failure are in the target deck, and
+            # Apply sends allowDuplicate=True, so re-applying this plan would
+            # copy them again. Forget it, as Cancel does: a fresh scan counts
+            # the copies as already in Anki (BA-023).
+            self._drop_plan()
         self._run_failed = True
         self._set_running(False)
         self._set_run_line("")

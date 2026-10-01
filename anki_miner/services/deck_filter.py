@@ -497,10 +497,12 @@ def apply_deck_filter(
 
     Copies scan-time values verbatim (no staleness recheck — a note edited
     between scan and apply copies as previewed). Every copy is a
-    collection-wide duplicate by construction, so notes ship with
-    ``allowDuplicate`` scoped to the target deck. Cancellation is honored
-    between chunks; committed chunks stay. The vocab cache is invalidated in
-    a ``finally`` — earlier chunks' notes exist even if a later one raises.
+    collection-wide duplicate by construction, so notes ship with duplicates
+    allowed (AnkiConnect ignores ``duplicateScope`` when ``allowDuplicate``
+    is true). Cancellation is honored between chunks; committed chunks stay,
+    and a cancelled or failed Apply drops the plan so a retry rescans. The
+    vocab cache is invalidated in a ``finally`` — earlier chunks' notes exist
+    even if a later one raises.
     """
     log_summary(
         logger,
