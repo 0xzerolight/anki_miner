@@ -512,7 +512,8 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
 
         Each new file is classified by ``detector.detect`` (one subtitle ref
         per valid file) into a :class:`ReadingQueueItem` stored on its list row;
-        restored rows reuse their stored item. A ``True`` launch swaps Mine for
+        restored rows reuse their stored item, an errored one reset to READY.
+        A ``True`` launch swaps Mine for
         Cancel and resets the progress bar.
         """
         if self.worker_thread is not None:
@@ -533,7 +534,10 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
             list_item = self.file_list.item(row)
             restored_item = list_item.data(_ITEM_ROLE) if list_item is not None else None
             if isinstance(restored_item, ReadingQueueItem):
-                if restored_item.status is ReadyItemStatus.READY:
+                # D16-C: an interrupted or failed row is ready to run again on an
+                # explicit Mine (this tab has no Retry); the already-in-Anki gate
+                # keeps a re-run from duplicating cards. Completed rows stay done.
+                if restored_item.status in (ReadyItemStatus.READY, ReadyItemStatus.ERROR):
                     items.append(restored_item)
                 continue
             refs = self._detect_or_report(path)
@@ -550,6 +554,11 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         if not items:
             self._report_refusal(self.tr("Every listed file has been mined. Add more files, or Clear the list."))
             return
+        # Reset only once nothing can refuse, so an aborted click keeps the error.
+        for item in items:
+            if item.status is ReadyItemStatus.ERROR:
+                item.status = ReadyItemStatus.READY
+                item.error_message = None
         if self._launch_run(items):
             self._begin_progress()
 
