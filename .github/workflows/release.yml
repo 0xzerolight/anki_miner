@@ -186,7 +186,14 @@ jobs:
           sudo apt-get update
           # patchelf rewrites the vendored ffmpeg/ffprobe rpath — see the
           # "Fetch shared ffmpeg (Linux)" step below.
-          sudo apt-get install -y libxcb-xinerama0 libxkbcommon-x11-0 libegl1 patchelf
+          # The libxcb-* extensions are hard NEEDED deps of Qt >= 6.5's xcb
+          # plugin. PyInstaller bundles only what this runner has; without them
+          # it just warns "Library not found", and the bundle aborts ("no Qt
+          # platform plugin could be initialized") on any X11 host that lacks
+          # them. bundle_smoke.sh's xcb leg fails the build if one goes missing.
+          sudo apt-get install -y libxcb-xinerama0 libxkbcommon-x11-0 libegl1 patchelf \
+            libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+            libxcb-render-util0 libxcb-shape0 libxcb-util1
 
       - name: Install dependencies
         run: |
