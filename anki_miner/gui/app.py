@@ -1999,6 +1999,23 @@ def offer_recovery(window: MainWindow) -> bool:
     return True
 
 
+def _offer_recovery_if_locked(window: MainWindow, instance_lock: QLockFile | None) -> bool:
+    """Offer the last session's leftovers only while this process owns the lock.
+
+    Discard deletes every partial under the resume root and every queue
+    snapshot. A window started past the "already running" warning would offer
+    (and could delete) the running instance's LIVE transfer and queues, so this
+    is gated exactly like _run_store_recovery_if_locked.
+
+    Returns:
+        True when the user chose Restore.
+    """
+    if instance_lock is None:
+        logger.info("Skipping the recovery offer because the instance lock is not held")
+        return False
+    return offer_recovery(window)
+
+
 class _DeferredDeleteWatcher(QObject):
     """A global event filter that counts ``DeferredDelete`` deliveries.
 
@@ -2441,7 +2458,7 @@ def main():
     # put the rows; skipped in the installer smoke, where no modal may open.
     if not installer_smoke:
         try:
-            offer_recovery(window)
+            _offer_recovery_if_locked(window, getattr(app, "_instance_lock", None))
         except Exception:  # noqa: BLE001 — bucket A: recovery offer is skipped for this session.
             logger.exception("Could not offer the previous session's downloads and queues")
 
