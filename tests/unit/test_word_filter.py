@@ -2036,3 +2036,56 @@ class TestExpandWordLines:
         word = _expansion_word(screenshot_override=6.25)
         result = service.expand_word_lines(word, EXPANSION_ENTRIES)
         assert result.screenshot_override == 6.25
+
+
+class TestSwapWithoutSentenceAnnotation:
+    def test_swap_keeps_parse_time_expression_fields_without_sentence_annotation(self):
+        """BA-054: a language with no sentence annotator (ko, zh, yue, th) must not have the
+        Japanese furigana/reading generators run over its swapped surface; the parse left
+        expression_furigana/expression_reading empty and a swap keeps them as parsed."""
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock
+
+        from anki_miner.config import AnkiMinerConfig
+
+        def _tagger(text):
+            token = MagicMock()
+            token.surface = text
+            token.feature.kana = ""
+            return [token]
+
+        service = WordFilterService(
+            AnkiMinerConfig(language="ko"),
+            tagger=_tagger,
+            # Korean fronts are the lemma (듣다), whatever the inflected stem is.
+            mined_form=SimpleNamespace(mined_form=lambda pos, orth_base, lemma, surface, pronunciation: lemma),
+            expression_tracks_surface=lambda word: True,
+            sentence_annotation=False,
+        )
+        word = TokenizedWord(
+            surface="들",
+            lemma="듣다",
+            reading="",
+            sentence="나는 음악을 들었다.",
+            start_time=0.0,
+            end_time=1.0,
+            duration=1.0,
+            pos="VV",
+            mined_form_override="듣다",
+        )
+        line = LineLemmas(
+            line_text="그는 음악을 듣는다.",
+            lemmas=frozenset({"듣다"}),
+            start_time=10.0,
+            end_time=12.0,
+            duration=2.0,
+            lemma_spans=(("듣다", "듣", 7, 8, 8),),
+        )
+
+        result = service.filter_i_plus_one([word], [line])
+
+        assert len(result) == 1
+        assert result[0].surface == "듣"
+        assert result[0].mined_form == "듣다"
+        assert result[0].expression_furigana == ""
+        assert result[0].expression_reading == ""
