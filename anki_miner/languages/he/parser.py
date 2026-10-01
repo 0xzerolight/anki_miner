@@ -19,6 +19,10 @@ def create_parser(config: Any, **kwargs: Any) -> Any:
     """Build the Hebrew SubtitleParser for ``config``."""
     from anki_miner.languages._spaced import create_spaced_parser
     from anki_miner.languages.he.morphology import HebrewLemmaPass
+    from anki_miner.languages.registry import get_profile
 
     kwargs.setdefault("token_post_pass", HebrewLemmaPass())
+    # Bilingual cues put an English translation line under the native one, and the
+    # flattened cue becomes the card's Sentence (ZH-046, KO-06): the script gate drops it.
+    kwargs.setdefault("has_target_script", get_profile(config.language).script.contains_target_script)
     return create_spaced_parser(config, **kwargs)
