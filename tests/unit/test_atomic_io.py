@@ -185,3 +185,31 @@ def test_reconcile_backups_in_continues_after_entry_oserror(tmp_path: Path, monk
 
     assert not (tmp_path / "first").exists()
     assert (tmp_path / "second" / "payload").read_bytes() == b"second"
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits")
+def test_atomic_write_path_new_file_gets_the_umask_mode(tmp_path: Path) -> None:
+    """User outputs (generated SRT, condensed audio, bundles) must be readable the
+    way a plain open() file is, e.g. by a media server running as another user;
+    mkstemp's 0600 must not leak into the published file."""
+    umask = os.umask(0o022)
+    os.umask(umask)
+    dest = tmp_path / "episode.srt"
+
+    with atomic_write_path(dest) as staged:
+        staged.write_text("1\n00:00:00,000 --> 00:00:01,000\nx\n", encoding="utf-8")
+
+    assert (dest.stat().st_mode & 0o777) == (0o666 & ~umask)
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits")
+def test_atomic_write_path_replacement_keeps_the_existing_mode(tmp_path: Path) -> None:
+    dest = tmp_path / "episode.srt"
+    dest.write_text("old", encoding="utf-8")
+    dest.chmod(0o640)
+
+    with atomic_write_path(dest) as staged:
+        staged.write_text("new", encoding="utf-8")
+
+    assert dest.read_text(encoding="utf-8") == "new"
+    assert (dest.stat().st_mode & 0o777) == 0o640
