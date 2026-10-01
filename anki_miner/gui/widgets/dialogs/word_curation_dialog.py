@@ -2788,6 +2788,39 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             text, sort_value, tooltip = self._audio_cell_value(found)
             update_table_item(item, text, sort_value=sort_value, tooltip=tooltip)
 
+    def _write_pick_cells(self, row: int, idx: int, chosen: TokenizedWord) -> None:
+        """Write every pick-dependent cell of visual ``row`` from ``chosen``.
+
+        The caller has already suspended sorting and blocked the table's
+        signals (see :meth:`_apply_pick_to_row` for why both are load-bearing).
+        """
+        word = self._words[idx]
+        for column, text, tooltip, copy_text in self._pick_cell_values(word, chosen):
+            item = self.table.item(row, column)
+            if item is not None:
+                update_table_item(item, text, tooltip=tooltip, copy_text=copy_text)
+        self._stamp_word_form(row, chosen)
+        # The sort indicator may sit on a signal column too, and these describe
+        # the sentence the pick just changed.
+        for column, text, sort_value in self._signal_cell_values(chosen):
+            item = self.table.item(row, column)
+            if item is not None:
+                update_table_item(item, text, sort_value=sort_value)
+        for column, text, tooltip, copy_text in self._translation_cell_values(idx):
+            item = self.table.item(row, column)
+            if item is not None:
+                update_table_item(item, text, tooltip=tooltip, copy_text=copy_text)
+        # A candidate variant inherits the primary's rank, so this is a
+        # no-op for a sentence pick; an edited row's token has none yet.
+        for column, text, sort_value in self._rank_cell_values(chosen):
+            item = self.table.item(row, column)
+            if item is not None:
+                update_table_item(item, text, sort_value=sort_value)
+        for column, text, sort_value, episode in self._position_cell_values(word, chosen):
+            item = self.table.item(row, column)
+            if item is not None:
+                update_table_item(item, text, sort_value=sort_value, tooltip=episode)
+
     def _apply_pick_to_row(self, idx: int, chosen: TokenizedWord) -> None:
         """Repaint every pick-dependent cell of ``idx``'s row from ``chosen``.
 
@@ -2816,36 +2849,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         row = self._visual_row_for_index(idx)
         if row is None:
             return
-        word = self._words[idx]
         sorting = self.table.isSortingEnabled()
         self.table.blockSignals(True)
         self.table.setSortingEnabled(False)
         try:
-            for column, text, tooltip, copy_text in self._pick_cell_values(word, chosen):
-                item = self.table.item(row, column)
-                if item is not None:
-                    update_table_item(item, text, tooltip=tooltip, copy_text=copy_text)
-            self._stamp_word_form(row, chosen)
-            # Inside the same suspension: the sort indicator may sit on a signal
-            # column too, and these describe the sentence the pick just changed.
-            for column, text, sort_value in self._signal_cell_values(chosen):
-                item = self.table.item(row, column)
-                if item is not None:
-                    update_table_item(item, text, sort_value=sort_value)
-            for column, text, tooltip, copy_text in self._translation_cell_values(idx):
-                item = self.table.item(row, column)
-                if item is not None:
-                    update_table_item(item, text, tooltip=tooltip, copy_text=copy_text)
-            # A candidate variant inherits the primary's rank, so this is a
-            # no-op for a sentence pick; an edited row's token has none yet.
-            for column, text, sort_value in self._rank_cell_values(chosen):
-                item = self.table.item(row, column)
-                if item is not None:
-                    update_table_item(item, text, sort_value=sort_value)
-            for column, text, sort_value, episode in self._position_cell_values(word, chosen):
-                item = self.table.item(row, column)
-                if item is not None:
-                    update_table_item(item, text, sort_value=sort_value, tooltip=episode)
+            self._write_pick_cells(row, idx, chosen)
         finally:
             if sorting:
                 self.table.setSortingEnabled(True)
@@ -3001,15 +3009,46 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         This is the first moment the two can be made to agree; the focused row
         also reseeds the clip strip, which was seeded from the same fragment.
         """
-        for idx in range(len(self._words)):
-            if self._line_expansions.get(idx, (0, 0)) == (0, 0):
-                continue
-            chosen = self._chosen.get(idx, self._words[idx])
-            if chosen.video_file != video_file:
-                continue
-            self._apply_pick_to_row(idx, self._shown_line(idx))
-            if idx == self._pending_index:
-                self._seed_clip_editor(chosen, idx)
+        targets = [
+            idx
+            for idx in range(len(self._words))
+            if self._line_expansions.get(idx, (0, 0)) != (0, 0)
+            and self._chosen.get(idx, self._words[idx]).video_file == video_file
+        ]
+        if not targets:
+            return
+        # One original-index -> visual-row map and ONE sort suspension for the
+        # whole episode: _apply_pick_to_row's per-call suspension re-sorts the
+        # entire table each time, which made a season-sized table freeze for
+        # seconds when an episode with many merged rows landed.
+        rows: dict[int, int] = {}
+        for row in range(self.table.rowCount()):
+            item = self.table.item(row, 0)
+            if item is not None:
+                rows[item.data(Qt.ItemDataRole.UserRole)] = row
+        sorting = self.table.isSortingEnabled()
+        self.table.blockSignals(True)
+        self.table.setSortingEnabled(False)
+        try:
+            for idx in targets:
+                visual = rows.get(idx)
+                if visual is not None:
+                    self._write_pick_cells(visual, idx, self._shown_line(idx))
+        finally:
+            if sorting:
+                self.table.setSortingEnabled(True)
+                self._apply_data_surface()
+            self.table.blockSignals(False)
+        pending = self._pending_index
+        if pending in targets:
+            # The re-sort may have moved the focused row; its scroll signal was
+            # swallowed above. The clip strip was seeded from the fragment.
+            moved_to = self._visual_row_for_index(pending)
+            anchor = self.table.item(moved_to, 0) if moved_to is not None else None
+            if anchor is not None:
+                self.table.scrollToItem(anchor, QAbstractItemView.ScrollHint.EnsureVisible)
+            self._seed_clip_editor(self._chosen.get(pending, self._words[pending]), pending)
+        self._refresh_summary()
 
     def _chosen_episode_displayed(self) -> bool:
         """Whether the player shows the focused word's episode.
