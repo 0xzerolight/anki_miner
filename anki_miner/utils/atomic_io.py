@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import logging
 import os
+import stat
 import tempfile
 import time
 import uuid
@@ -18,12 +19,38 @@ from anki_miner.utils.robust_fs import robust_rmtree
 logger = logging.getLogger(__name__)
 
 
+def _read_umask() -> int:
+    """The process umask. Read once at import: os.umask can only be read by
+    setting it, and doing that later would race other threads creating files."""
+    current = os.umask(0o022)
+    os.umask(current)
+    return current
+
+
+_UMASK = _read_umask()
+
+
 @contextmanager
 def atomic_write_path(dest: Path) -> Iterator[Path]:
-    """Yield a unique sibling temp path, then atomically replace *dest*."""
+    """Yield a unique sibling temp path, then atomically replace *dest*.
+
+    The temp file gets the mode a plain ``open()`` would give: *dest*'s current
+    mode when it exists, else ``0o666 & ~umask``. mkstemp creates 0600, and that
+    mode would otherwise be published with the file, so a generated subtitle or
+    condensed audio in a shared media folder became unreadable to other users.
+    Callers that need owner-only files (config, profiles) still chmod the staged
+    path themselves.
+    """
     fd, tmp_name = tempfile.mkstemp(prefix=".anki-miner-", suffix=dest.suffix, dir=dest.parent)
     os.close(fd)
     tmp = Path(tmp_name)
+    if os.name == "posix":
+        try:
+            mode = stat.S_IMODE(dest.stat().st_mode)
+        except OSError:
+            mode = 0o666 & ~_UMASK
+        with contextlib.suppress(OSError):
+            os.chmod(tmp, mode)
     try:
         yield tmp
         os.replace(tmp, dest)
