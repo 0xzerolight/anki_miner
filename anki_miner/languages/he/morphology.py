@@ -291,6 +291,10 @@ class HebrewLemmaPass:
         del attest  # existence is not enough: this pass needs the rows themselves
         if forms is None:
             return tokens
+        if len(self._cache) >= _CACHE_MAX:
+            # Clear between lines, never inside one: the apply loop below reads every
+            # WORD token of this line back from the cache.
+            self._cache.clear()
         pending = [t for t in tokens if t.feature.pos1 == "WORD" and t.feature.lemma not in self._cache]
         if pending:
             wanted: list[str] = []
@@ -340,8 +344,6 @@ class HebrewLemmaPass:
             return {}
 
     def _remember(self, key: str, rows: _Rows) -> None:
-        if len(self._cache) >= _CACHE_MAX:
-            self._cache.clear()
         self._cache[key] = self._resolve(key, rows)
 
     def _resolve(self, key: str, rows: _Rows) -> _Resolution:
