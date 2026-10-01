@@ -6892,6 +6892,24 @@ class TestCurationSentenceEdit:
         assert extracted[0].mined_form == "時給"
         assert extracted[0].sentence_edit is None
 
+    def test_edit_onto_another_selected_word_keeps_one_card(self, test_config, mock_services, tmp_path):
+        """BA-020: an edit that turns a word into another selected word's card front would put
+        two notes with one first field into one addNotes request, which AnkiConnect rejects
+        and rolls back as a whole; the run keeps the first of the two."""
+        first = _make_word("持久", surface="持久", pos="名詞", start_time=1.0)
+        second = _make_word("時給", surface="時給", pos="名詞", start_time=5.0)
+        self._wire(mock_services, [first, second], _make_media())
+        intent = replace(second, sentence_edit=SentenceEdit(text="持久系", target_start=0, target_end=2))
+        sp = mock_services["subtitle_parser"]
+        sp.parse_text_units.side_effect = lambda units, want_line_index, **kw: ([self._parsed(units[0].text)], None, {})
+        proc = build_processor(config=test_config, presenter=NullPresenter(), **mock_services)
+
+        proc.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", curation_callback=lambda ws: [first, intent])
+
+        extracted = mock_services["media_extractor"].extract_media_batch.call_args[0][1]
+        assert [w.mined_form for w in extracted] == ["持久"]
+        assert extracted[0].start_time == 1.0
+
 
 class TestParseSentenceFacade:
     def test_parse_sentence_fn_wraps_one_reading_unit(self, test_config):

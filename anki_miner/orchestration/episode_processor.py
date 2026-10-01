@@ -2595,6 +2595,12 @@ class EpisodeProcessor:
         window. Rebuilt words are re-ranked here because phase 2 ranked the
         spelling the user replaced. The all-None fast path is every run where
         nobody opened the editor.
+
+        An edit can turn a word into another selected word's card front after
+        phase 2's within-run collapse ran. AnkiConnect's addNotes rejects and
+        rolls back a whole request holding two notes with one first field, so
+        the first of each ``mined_form`` is kept, under phase 2's own
+        ``allow_duplicate_cards`` gate (BA-020).
         """
         if all(word.sentence_edit is None for word in words):
             return words
@@ -2605,7 +2611,17 @@ class EpisodeProcessor:
         edited = [new for new, old in zip(rebuilt, words, strict=True) if old.sentence_edit is not None]
         self._attach_frequency(edited)
         logger.info("sentence edits materialised: %d word(s) rebuilt", len(edited))
-        return rebuilt
+        if self.config.allow_duplicate_cards:
+            return rebuilt
+        seen: set[str] = set()
+        unique: list[TokenizedWord] = []
+        for word in rebuilt:
+            if word.mined_form in seen:
+                logger.info("sentence edit: dropped a second card for %r in this run", word.mined_form)
+                continue
+            seen.add(word.mined_form)
+            unique.append(word)
+        return unique
 
     def _load_secondary_entries(self, secondary_subtitle_file: Path | None) -> list[tuple[float, float, str]] | None:
         """Raw cues of the secondary-language track at a ZERO offset, or None without one.
