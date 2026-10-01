@@ -1217,3 +1217,35 @@ def test_clear_queue_resets_form(ready_tab):
     assert ready_tab.secondary_offset_spinbox.value() == 0.0
     assert ready_tab.deck_name_edit.text() == ""
     assert ready_tab.issue_banner().current_issue() is None
+
+
+def test_typed_decimal_coverage_survives_the_config_round_trip(qtbot, test_config):
+    """BA-052: each keystroke persists the value and the window refreshes every tab
+    synchronously; re-seeding the spinbox inside its own valueChanged reformats '85' to
+    '85.0', so the '.5' the user types next is rejected."""
+    from PyQt6.QtCore import QLocale
+    from PyQt6.QtTest import QTest
+
+    config = replace(
+        test_config,
+        deck_builder_mode=DeckSelectionMode.COVERAGE_PCT.value,
+        deck_builder_coverage_pct=90.0,
+    )
+    tab = _tab(qtbot, config)
+
+    def window_update_config(new_config):
+        # MainWindow.update_config: commit, then config_refreshed -> tab.update_config.
+        tab.update_config(replace(new_config, config_version=new_config.config_version + 1))
+
+    tab.run_options_changed.connect(window_update_config)
+    # A '.' decimal separator whatever the test machine's locale is.
+    tab.coverage_spinbox.setLocale(QLocale(QLocale.Language.English, QLocale.Country.UnitedStates))
+    tab.show()
+    edit = tab.coverage_spinbox.lineEdit()
+    tab.coverage_spinbox.setFocus()
+    edit.selectAll()
+    QTest.keyClicks(edit, "85.5")
+    QTest.keyClick(edit, Qt.Key.Key_Return)
+
+    assert tab.coverage_spinbox.value() == 85.5
+    assert tab.config.deck_builder_coverage_pct == 85.5
