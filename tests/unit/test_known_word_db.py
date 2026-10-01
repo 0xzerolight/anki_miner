@@ -8,7 +8,7 @@ import threading
 
 import pytest
 
-from anki_miner.services.known_word_db import _SCHEMA_VERSION, KnownWordDB
+from anki_miner.services.known_word_db import _SCHEMA_VERSION, KnownWordDB, add_user_known_words
 
 
 class TestInitialize:
@@ -842,6 +842,37 @@ class TestRunCache:
 
         assert known_after is not known_before
         assert user_after is not user_before
+
+    def test_write_through_another_instance_invalidates_the_memo(self, tmp_path):
+        """BA-004: the curator commits through add_user_known_words, which builds a NEW
+        KnownWordDB; the run's long-lived instance must not keep serving its pre-commit memo."""
+        db_path = tmp_path / "known_words.db"
+        run_db = KnownWordDB(db_path)
+        run_db.initialize()
+        run_db.add_words({"既知"}, source="user")
+        assert run_db.get_words_by_source("user") == {"既知"}
+        assert run_db.get_known_words() == {"既知"}
+
+        add_user_known_words(db_path, {"猫"}, language="ja")
+
+        assert run_db.get_words_by_source("user") == {"既知", "猫"}
+        assert run_db.get_known_words() == {"既知", "猫"}
+
+    def test_remove_through_another_instance_invalidates_the_memo(self, tmp_path):
+        """BA-004: Undo removes 'mined' rows through a fresh KnownWordDB."""
+        db_path = tmp_path / "known_words.db"
+        run_db = KnownWordDB(db_path)
+        run_db.initialize()
+        run_db.add_words({"猫", "犬"}, source="mined")
+        assert run_db.get_known_words() == {"猫", "犬"}
+        assert run_db.get_words_by_source("mined") == {"猫", "犬"}
+
+        undo_db = KnownWordDB(db_path)
+        undo_db.initialize()
+        assert undo_db.remove_words({"猫"}, source="mined") == 1
+
+        assert run_db.get_known_words() == {"犬"}
+        assert run_db.get_words_by_source("mined") == {"犬"}
 
     def test_sync_with_anki_normalizes_same_vocab_object_once(self, tmp_path, monkeypatch):
         """Passing the identical set object twice normalizes it only once.
