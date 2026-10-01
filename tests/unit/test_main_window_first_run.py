@@ -888,3 +888,30 @@ def test_the_usage_guide_describes_the_four_step_wizard():
     entry = next(cap for cap in CAPABILITIES if cap.id == "setup-wizard")
     assert "theme" not in entry.description
     assert "dictionary" in entry.description
+
+
+class _BusySettings(QWidget):
+    """Settings while a resource download or import holds a chain panel's mutation token."""
+
+    dictionary_panel = object()
+
+    def open_ui_subtab(self) -> None:  # what MainWindow._settings_tab_index looks for
+        pass
+
+    def commit_pending_settings_for_mutation(self) -> bool:
+        return False  # SettingsTab refuses while a panel has_active_mutation()
+
+
+def test_setup_wizard_tool_reports_a_busy_settings_refusal(main_window, monkeypatch, qtbot):
+    """Tools -> Setup Wizard and System Health's Fix never fail silently (D24)."""
+    busy = _BusySettings()
+    main_window.tabs.addTab(busy, "Settings")
+    dialog = MagicMock()
+    monkeypatch.setattr("anki_miner.gui.widgets.dialogs.setup_wizard.run_setup_wizard", dialog)
+
+    main_window._run_setup_wizard_tool()
+
+    dialog.assert_not_called()
+    issue = main_window.issue_banner().current_issue()
+    assert issue is not None
+    assert issue.summary == "Settings are busy with a download or import. Try again when it finishes."

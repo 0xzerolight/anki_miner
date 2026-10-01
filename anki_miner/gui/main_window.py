@@ -632,6 +632,13 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             yield True
             return
         if not preflight():
+            # The JMdict arm above reports itself; this one used to refuse in
+            # silence, so Tools -> Setup Wizard and System Health's Fix looked
+            # dead during a download or import (D24). Callers with a more
+            # specific refusal (language switch, profile switch) replace it.
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("Settings are busy with a download or import. Try again when it finishes."))
+            )
             yield False
             return
         token = panel.hold_mutation(kind)
