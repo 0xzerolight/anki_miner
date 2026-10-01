@@ -243,13 +243,20 @@ def strip_inline_annotations(text: str) -> str:
 
     Each pass applies independently to every physical line (actual newlines or
     ASS/SSA ``\\N``/``\\n`` markers), so an annotation at any physical line start
-    cannot become mid-cue dialogue when whitespace is later flattened. Mid-line
+    cannot become mid-cue dialogue when whitespace is later flattened. A cue
+    that is a whole caption only once its lines are joined (a caption wrapped
+    over two lines) is dropped as a whole. Mid-line
     paren groups containing kanji are left untouched (conservative). Balanced-
     paren matching only:
     malformed/unbalanced parens leave the text unchanged. Pure function — no
     I/O, no config; the caller gates it.
     """
-    return "\n".join(_strip_inline_annotations_line(line) for line in re.split(r"\\[nN]|\r\n?|\n", text))
+    lines = re.split(r"\\[nN]|\r\n?|\n", text)
+    # A caption wrapped over several physical lines (（ミコトと / 東海林の笑い声）)
+    # is unbalanced on every line alone; judged as one cue it is a whole caption.
+    if len(lines) > 1 and _is_whole_line_caption(" ".join(lines)):
+        return ""
+    return "\n".join(_strip_inline_annotations_line(line) for line in lines)
 
 
 def _strip_inline_annotations_line(text: str) -> str:

@@ -896,6 +896,14 @@ class TestStripInlineAnnotations:
         for weird in ("）（", "(((", ")))", "（（あ）", "あ）（い", "()()()"):
             strip_inline_annotations(weird)
 
+    def test_a_caption_wrapped_over_two_lines_is_dropped(self):
+        assert strip_inline_annotations("（ミコトと\n東海林の笑い声）") == ""
+        assert strip_inline_annotations(r"（男性たちの\N言い争う声）") == ""
+        assert clean_subtitle_text("（ミコトと\n東海林の笑い声）") == ""
+
+    def test_a_speaker_tag_on_a_later_line_is_still_peeled_per_line(self):
+        assert clean_subtitle_text("猫が好き\n（案内）犬が眠る") == "猫が好き 犬が眠る"
+
 
 class TestStripFormatChars:
     """Tests for strip_format_chars (Cf removal for comparison keys)."""
