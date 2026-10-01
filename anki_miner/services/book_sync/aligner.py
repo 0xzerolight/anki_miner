@@ -21,10 +21,11 @@ passage. Two probes, one attempt each: the book window's first
 ``REANCHOR_PROBE_CHARS`` searched inside the transcript window (an unbooked
 transcript prefix — narrator intro, chapter announcement — is dropped and the
 window redone from the first booked character), then the transcript window's
-first ``REANCHOR_PROBE_CHARS`` searched in the next ``REANCHOR_SPAN_CHARS``
-of book (an unread preface or skipped chapter — the cursor jumps there and
-the window is redone; a jump that does not pay off is undone). If both fail
-the window's transcript is skipped and the cursor stays.
+first ``REANCHOR_PROBE_CHARS`` searched in the book ahead,
+``REANCHOR_SPAN_CHARS`` at a time, nearest first (an unread preface or
+skipped chapter — the cursor jumps there and the window is redone; a jump
+that does not pay off is undone). If both fail the window's transcript is
+skipped and the cursor stays.
 
 Timing: a transcript character's time is linear interpolation inside its
 segment; a sentence's cue is [time of its first matched char, time after its
@@ -220,16 +221,13 @@ def align_to_book(
                     continue  # redo from the first booked character
         if not tried_jump:
             tried_jump = True
-            probe = window[:REANCHOR_PROBE_CHARS]
-            search = _book_stream(book, cursor.sentence, REANCHOR_SPAN_CHARS)
-            if len(search.chars) > len(probe):
-                hit = fuzz.partial_ratio_alignment(probe, search.chars)
-                if hit is not None and hit.score >= REANCHOR_MIN_SCORE:
-                    jumped_from = cursor.sentence
-                    cursor.sentence = search.owner[min(hit.dest_start, len(search.owner) - 1)]
-                    if log is not None:
-                        log(f"Re-anchored at sentence {cursor.sentence + 1}")
-                    continue  # redo against the book from the new cursor
+            target = _find_ahead(window[:REANCHOR_PROBE_CHARS], book, cursor.sentence)
+            if target is not None:
+                jumped_from = cursor.sentence
+                cursor.sentence = target
+                if log is not None:
+                    log(f"Re-anchored at sentence {cursor.sentence + 1}")
+                continue  # redo against the book from the new cursor
         # Both probes tried (or inapplicable): give this window up. A jump that
         # did not pay off is undone — kept, it would skip every sentence in
         # between for good.
@@ -242,6 +240,27 @@ def align_to_book(
         jumped_from = None
 
     return _emit(segments, transcript, book, cursor, hits, first_char, last_char)
+
+
+def _find_ahead(probe: str, book: BookText, first: int) -> int | None:
+    """Sentence where ``probe`` starts in the book at or after ``first``, or None.
+
+    Searches ``REANCHOR_SPAN_CHARS`` at a time, nearest span first, so a hit
+    close to the cursor wins over an equal one further on. Consecutive spans
+    overlap by the probe's length, so a match across a span edge is not lost.
+    """
+    start = first
+    while start < len(book.keys):
+        search = _book_stream(book, start, REANCHOR_SPAN_CHARS)
+        if len(search.chars) <= len(probe):
+            return None
+        hit = fuzz.partial_ratio_alignment(probe, search.chars)
+        if hit is not None and hit.score >= REANCHOR_MIN_SCORE:
+            return search.owner[min(hit.dest_start, len(search.owner) - 1)]
+        if start + len(search.lengths) >= len(book.keys):
+            return None  # this span reached the end of the book
+        start = max(start + 1, search.owner[len(search.chars) - len(probe)])
+    return None
 
 
 def _emit(
@@ -266,5 +285,10 @@ def _emit(
         timings.append(SentenceTiming(index=s, start=start, end=end))
         prev_end = end
     if timings:
-        cursor.sentence = max(cursor.sentence, timings[-1].index + 1)
+        # Just past the last TIMED sentence, not max() with the loop's cursor:
+        # the last window is committed whole, and a file cut mid-sentence ends
+        # on a fragment whose stray equal characters can land in a later
+        # sentence. Kept, that cursor makes the next file skip the sentences
+        # in between for good.
+        cursor.sentence = timings[-1].index + 1
     return timings
