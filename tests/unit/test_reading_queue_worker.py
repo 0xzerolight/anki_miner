@@ -135,9 +135,9 @@ def test_failed_result_marks_item_error(make_worker, mock_processor, fake_load):
 
     assert items[0].status == ReadyItemStatus.ERROR
     assert items[0].error_message == "ffmpeg exploded"
-    # item_finished carries the error string (result=None), so the tab logs a failure.
-    assert caps["finished"].calls[0][1] is None
-    assert caps["finished"].calls[0][2] == "ffmpeg exploded"
+    # item_finished forwards the failed result (error=None); the tab classifies it as FAILED.
+    assert caps["finished"].calls[0][1] is failed
+    assert caps["finished"].calls[0][2] is None
 
 
 def test_cancelled_result_marks_item_ready(make_worker, mock_processor, fake_load):
@@ -918,3 +918,28 @@ def test_stale_dict_aborts_queue_once(qapp, mock_processor, test_config, fake_lo
     assert caps["finished"].calls == []
     assert len(caps["queue_finished"].calls) == 1
     mock_processor.process_reading.assert_not_called()
+
+
+def test_failed_result_with_partial_notes_is_forwarded(make_worker, mock_processor, fake_load):
+    """BA-016: a failed run that already created notes forwards its ProcessingResult,
+    so the run receipt counts those notes and offers Undo for them."""
+    from anki_miner.models import ProcessingResult
+
+    partial = ProcessingResult(
+        total_words_found=5,
+        new_words_found=5,
+        cards_created=2,
+        card_ids=[1111, 2222],
+        errors=["Run failed after creating 2 card(s); they remain in Anki and can be undone."],
+    )
+    mock_processor.process_reading.side_effect = lambda *a, **kw: partial
+    items = [_make_item("vol01")]
+
+    worker = make_worker(items=items)
+    caps = _connect_all(worker)
+    worker.run()
+
+    assert items[0].status is ReadyItemStatus.ERROR
+    assert items[0].cards_created == 2
+    assert caps["finished"].calls[0][1] is partial
+    assert caps["finished"].calls[0][2] is None
