@@ -22,12 +22,19 @@ import dataclasses
 import logging
 
 from anki_miner.config import AnkiMinerConfig, PitchSourceEntry
+from anki_miner.languages.registry import config_language
 from anki_miner.services.pitch_accent.source_importer import import_pitch_source
 
 logger = logging.getLogger(__name__)
 
 _LEGACY_SOURCE_ID = "legacy-pitch"
 _LEGACY_SOURCE_NAME = "Pitch Accent"
+# The pre-chain single pitch file was Japanese data and is imported under the
+# importer's default "ja" stamp, so only a Japanese mining session may fold it
+# in or back-fill a reference to it. pitch_chain is language-scoped: writing
+# the slot into another language's chain activates a source the chain build
+# then refuses ("indexed for 日本語 and was skipped") on every run.
+_LEGACY_LANGUAGE = "ja"
 
 
 def migrate_legacy_pitch_csv(config: AnkiMinerConfig) -> AnkiMinerConfig | None:
@@ -39,6 +46,11 @@ def migrate_legacy_pitch_csv(config: AnkiMinerConfig) -> AnkiMinerConfig | None:
     """
     # Already on the multi-source model: leave the user's chain untouched.
     if config.pitch_chain:
+        return None
+
+    # Another mining language: neither the fold nor the back-fill belongs in
+    # its chain. Nothing is marked, so the next Japanese launch still runs it.
+    if config_language(config) != _LEGACY_LANGUAGE:
         return None
 
     legacy_db = config.pitch_root / _LEGACY_SOURCE_ID / "index.sqlite"

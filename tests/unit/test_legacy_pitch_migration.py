@@ -92,3 +92,22 @@ class TestMigration:
         meta = registry.get("legacy-pitch")
         assert meta is not None
         assert meta.source_name == "Pitch Accent"
+
+
+class TestOtherMiningLanguage:
+    def test_backfill_does_not_reach_a_non_japanese_chain(self, tmp_path: Path) -> None:
+        (tmp_path / "pitch_accent.csv").write_text("ねこ,猫,1\n", encoding="utf-8")
+        ja = migrate_legacy_pitch_csv(_cfg(tmp_path))
+        assert ja is not None  # the ja launch built pitch/legacy-pitch
+
+        es = replace(ja, language="es", pitch_chain=())
+
+        assert migrate_legacy_pitch_csv(es) is None
+
+    def test_csv_is_not_imported_while_another_language_is_active(self, tmp_path: Path) -> None:
+        (tmp_path / "pitch_accent.csv").write_text("ねこ,猫,1\n", encoding="utf-8")
+
+        assert migrate_legacy_pitch_csv(_cfg(tmp_path, language="es")) is None
+        assert not (tmp_path / "pitch" / "legacy-pitch").exists()
+        # The fold still happens on the next Japanese launch.
+        assert migrate_legacy_pitch_csv(_cfg(tmp_path)) is not None
