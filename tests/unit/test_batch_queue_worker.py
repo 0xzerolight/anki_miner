@@ -1787,3 +1787,38 @@ def test_each_pair_s_translation_track_reaches_process_episode(tmp_path):
     assert first.kwargs["secondary_subtitle_offset"] == -1.5
     assert second.kwargs["secondary_subtitle_file"] is None
     assert second.kwargs["secondary_subtitle_offset"] == -1.5
+
+
+def test_cancel_after_a_finished_pair_reports_its_cards_as_interrupted(tmp_path):
+    """BA-015: a series cancelled after an episode created cards must still report those cards,
+    so the run receipt does not read 'Cancelled - 0 cards added' while the notes sit in Anki."""
+    pair1 = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"), secondary=None)
+    pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"), secondary=None)
+
+    queue = BatchQueue()
+    item = queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
+    proc = MagicMock()
+
+    def cancel_during_first_pair(*_args, **_kwargs):
+        worker.cancel()
+        return _ok_result(cards=2)
+
+    proc.process_episode.side_effect = cancel_during_first_pair
+    worker = _make_worker_with_queue(queue)
+    results = _wire_capture_only(worker)
+    interrupted: list[tuple[str, int]] = []
+    worker.item_interrupted.connect(lambda item_id, cards: interrupted.append((item_id, cards)))
+
+    with (
+        patch("anki_miner.gui.workers.batch_queue_worker.create_episode_processor", return_value=proc),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[pair1, pair2],
+        ),
+    ):
+        worker.run()
+
+    assert item.status == QueueItemStatus.PENDING
+    assert results["completed"] == []
+    assert results["failed"] == []
+    assert interrupted == [(item.id, 2)]

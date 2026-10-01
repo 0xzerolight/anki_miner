@@ -525,6 +525,7 @@ class BatchProcessingTab(FolderSeriesScreenBase):
             worker.item_pairs_progress.connect(self._on_item_pairs_progress)
             worker.item_completed.connect(self._on_item_completed)
             worker.item_failed.connect(self._on_item_failed)
+            worker.item_interrupted.connect(self._on_item_interrupted)
             worker.queue_finished.connect(self._on_queue_finished)
             worker.run_paused.connect(self._on_run_paused)
             worker.run_resumed.connect(self._on_run_resumed)
@@ -786,6 +787,15 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         # QueueItem's status but never drove the widget, so the row otherwise
         # stuck at "Processing" during the run and fell back to "Pending" after.
         self.queue_panel.set_item_status(item_id, "error")
+
+    def _on_item_interrupted(self, item_id: str, cards_created: int) -> None:
+        """A series cancelled between episodes: its finished episodes' notes still count.
+
+        Render-only, like the other item slots: the worker already returned the
+        item to PENDING. The receipt gains the notes but no completed or failed
+        series (BA-015).
+        """
+        self._record_receipt_counts(notes_added=cards_created, failed=False, interrupted=True)
 
     def _on_item_pairs_progress(self, item_id: str, done: int, total: int) -> None:
         """Fill the bar within a series from the worker's real episode counts.

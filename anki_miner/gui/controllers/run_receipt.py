@@ -156,15 +156,20 @@ class RunReceiptAccumulator:
             self._failed += 1
         # A cancelled item is neither: it did not finish and it did not fail.
 
-    def record_counts(self, *, notes_added: int, failed: bool) -> None:
+    def record_counts(self, *, notes_added: int, failed: bool, interrupted: bool = False) -> None:
         """Record one item that produced counts but no result object.
 
         The Batch queue worker owns its own item lifecycle and emits
         ``item_completed(id, cards_created)`` /
-        ``item_failed(id, message, cards_created)``, so this is the only shape
-        available there.
+        ``item_failed(id, message, cards_created)`` /
+        ``item_interrupted(id, cards_created)``, so this is the only shape
+        available there. An interrupted item (cancelled between episodes)
+        adds its notes but is neither completed nor failed, the same rule
+        :meth:`record_result` applies to a cancelled result.
         """
         self._notes += max(0, notes_added)
+        if interrupted:
+            return
         if failed:
             self._failed += 1
             return

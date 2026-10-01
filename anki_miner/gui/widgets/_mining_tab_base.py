@@ -397,10 +397,10 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         if self._receipt_accumulator is not None:
             self._receipt_accumulator.record_result(result, error)
 
-    def _record_receipt_counts(self, *, notes_added: int, failed: bool) -> None:
+    def _record_receipt_counts(self, *, notes_added: int, failed: bool, interrupted: bool = False) -> None:
         """Record one item that reported counts but no result object."""
         if self._receipt_accumulator is not None:
-            self._receipt_accumulator.record_counts(notes_added=notes_added, failed=failed)
+            self._receipt_accumulator.record_counts(notes_added=notes_added, failed=failed, interrupted=interrupted)
 
     def _record_receipt_whitelist(self, coverage: object) -> None:
         """Fold a run-level whitelist coverage a counts-only worker reported."""

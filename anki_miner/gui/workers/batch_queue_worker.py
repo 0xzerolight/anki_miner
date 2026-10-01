@@ -52,6 +52,9 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
     item_pairs_progress = pyqtSignal(str, int, int)  # item_id, pairs_done, pairs_total
     item_completed = pyqtSignal(str, int)  # item_id, run_cards_created
     item_failed = pyqtSignal(str, str, int)  # item_id, error_message, run_cards_created
+    # Cancelled between pairs: the item returns to PENDING with no terminal
+    # signal, but the episodes it finished created real notes (BA-015).
+    item_interrupted = pyqtSignal(str, int)  # item_id, run_cards_created
     # run_cards_created, and the whitelist coverage folded over every pair this
     # run processed (None when no whitelist was in effect). This worker reports
     # counts rather than results, so the run's one coverage object travels here
@@ -461,6 +464,7 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                     # snapshot and the cancel check at its top ends the run, so
                     # the item cannot be re-picked here.
                     item.status = QueueItemStatus.PENDING
+                    self.item_interrupted.emit(item.id, cards_for_item)
                 elif failed_pairs:
                     # The per-episode exception text is already in the log
                     # (logger.exception above); the row states the count and
