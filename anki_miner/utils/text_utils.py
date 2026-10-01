@@ -19,8 +19,8 @@ def strip_subtitle_markup(text: str) -> str:
 
     Removes the four tag families that :func:`clean_subtitle_text` handles:
     ASS/SSA override blocks (``{\\...}``), the ``\\N``/``\\n`` line-break markers
-    (each replaced by a space), WebVTT cue-timestamp tags (``<00:00:01.500>``),
-    and HTML tags (``<tag ...>``). It deliberately does
+    and the ``\\h`` hard space (each replaced by a space), WebVTT cue-timestamp
+    tags (``<00:00:01.500>``), and HTML tags (``<tag ...>``). It deliberately does
     NOT run the MeCab-oriented Japanese normalization (halfwidth→fullwidth kana,
     NFKD folding, kanji-variant mapping) nor collapse whitespace, so the returned
     string is safe to display verbatim to the user (e.g. condensed subtitles).
@@ -34,8 +34,8 @@ def strip_subtitle_markup(text: str) -> str:
     # Remove backslash-led ASS/SSA override tags like {\pos(x,y)}, {\fad(100,200)}, etc.
     text = re.sub(r"\{\\[^}]*\}", "", text)
 
-    # Remove line break tags
-    text = re.sub(r"\\[nN]", " ", text)
+    # Line break tags and the ASS hard space (libass renders \h as a space)
+    text = re.sub(r"\\[nNh]", " ", text)
 
     # WebVTT inline cue timestamps: <hh:mm:ss.ttt> / <mm:ss.ttt>, hours unbounded.
     # yt-dlp writes one per word on auto-captions. The HTML rule below cannot
@@ -243,13 +243,20 @@ def strip_inline_annotations(text: str) -> str:
 
     Each pass applies independently to every physical line (actual newlines or
     ASS/SSA ``\\N``/``\\n`` markers), so an annotation at any physical line start
-    cannot become mid-cue dialogue when whitespace is later flattened. Mid-line
+    cannot become mid-cue dialogue when whitespace is later flattened. A cue
+    that is a whole caption only once its lines are joined (a caption wrapped
+    over two lines) is dropped as a whole. Mid-line
     paren groups containing kanji are left untouched (conservative). Balanced-
     paren matching only:
     malformed/unbalanced parens leave the text unchanged. Pure function — no
     I/O, no config; the caller gates it.
     """
-    return "\n".join(_strip_inline_annotations_line(line) for line in re.split(r"\\[nN]|\r\n?|\n", text))
+    lines = re.split(r"\\[nN]|\r\n?|\n", text)
+    # A caption wrapped over several physical lines (（ミコトと / 東海林の笑い声）)
+    # is unbalanced on every line alone; judged as one cue it is a whole caption.
+    if len(lines) > 1 and _is_whole_line_caption(" ".join(lines)):
+        return ""
+    return "\n".join(_strip_inline_annotations_line(line) for line in lines)
 
 
 def _strip_inline_annotations_line(text: str) -> str:

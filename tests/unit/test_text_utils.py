@@ -896,6 +896,14 @@ class TestStripInlineAnnotations:
         for weird in ("）（", "(((", ")))", "（（あ）", "あ）（い", "()()()"):
             strip_inline_annotations(weird)
 
+    def test_a_caption_wrapped_over_two_lines_is_dropped(self):
+        assert strip_inline_annotations("（ミコトと\n東海林の笑い声）") == ""
+        assert strip_inline_annotations(r"（男性たちの\N言い争う声）") == ""
+        assert clean_subtitle_text("（ミコトと\n東海林の笑い声）") == ""
+
+    def test_a_speaker_tag_on_a_later_line_is_still_peeled_per_line(self):
+        assert clean_subtitle_text("猫が好き\n（案内）犬が眠る") == "猫が好き 犬が眠る"
+
 
 class TestStripFormatChars:
     """Tests for strip_format_chars (Cf removal for comparison keys)."""
@@ -949,3 +957,11 @@ class TestWebVTTCueTimestamps:
     def test_clean_subtitle_text_drops_cue_timestamps(self):
         """The card sentence is clean_subtitle_text's output, so it must be clean there."""
         assert clean_subtitle_text("新しい本を<00:00:01.500>買いました") == "新しい本を買いました"
+
+
+def test_strip_subtitle_markup_converts_ass_hard_space_to_a_space():
+    assert strip_subtitle_markup(r"えっ\h\h先生が来た") == "えっ  先生が来た"
+
+
+def test_clean_subtitle_text_collapses_ass_hard_spaces():
+    assert clean_subtitle_text(r"えっ\h\h先生が来た") == "えっ 先生が来た"
