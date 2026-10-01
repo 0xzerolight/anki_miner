@@ -169,7 +169,14 @@ def _iter_rules(css: str):
 
 
 def _skip_string(css: str, i: int) -> int:
-    """Return the index just past the string literal starting at ``css[i]``."""
+    """Return the index just past the string literal starting at ``css[i]``.
+
+    An unescaped newline ends the string as a bad-string without consuming the
+    newline, as the browser tokenizer does (CSS Syntax 3, "consume a string
+    token"). Reading on to the next quote would let a ``}`` after the newline
+    close the rule in the browser while the scoper still saw string text, so
+    the following rule would reach the card unscoped.
+    """
     quote = css[i]
     i += 1
     n = len(css)
@@ -180,6 +187,8 @@ def _skip_string(css: str, i: int) -> int:
             continue
         if c == quote:
             return i + 1
+        if c in "\n\r\f":
+            return i
         i += 1
     return n
 
