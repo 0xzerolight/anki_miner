@@ -308,8 +308,9 @@ FA_SENTENCE_RULES = SentenceRules(
         "\N{QUESTION EXCLAMATION MARK}"
     ),
     ellipses=frozenset("\N{HORIZONTAL ELLIPSIS}\N{TWO DOT LEADER}"),
-    openers=frozenset('\N{LEFT-POINTING DOUBLE ANGLE QUOTATION MARK}([{\N{LEFT DOUBLE QUOTATION MARK}"'),
-    closers=frozenset('\N{RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK})]}\N{RIGHT DOUBLE QUOTATION MARK}"'),
+    # No ASCII ' or ": a symmetric quote can only ever open here, and a stray closer would then glue sentences.
+    openers=frozenset("\N{LEFT-POINTING DOUBLE ANGLE QUOTATION MARK}([{\N{LEFT DOUBLE QUOTATION MARK}"),
+    closers=frozenset("\N{RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK})]}\N{RIGHT DOUBLE QUOTATION MARK}"),
     space_aware=True,
     # Empty, like ja/ko/zh: hazm's abbreviations.dat lives in the PACK, and a
     # rule that only fires once the user has downloaded a pack would split

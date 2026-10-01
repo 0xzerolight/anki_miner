@@ -112,8 +112,9 @@ class ArabicDictKeys:
 AR_SENTENCE_RULES = SentenceRules(
     terminators=frozenset(".!?‼⁉⁇⁈\N{ARABIC QUESTION MARK}\N{ARABIC FULL STOP}"),
     ellipses=frozenset("…‥"),
-    openers=frozenset('«([{“"'),
-    closers=frozenset('»)]}”"'),
+    # No ASCII ' or ": a symmetric quote can only ever open here, and a stray closer would then glue sentences.
+    openers=frozenset("«([{“"),
+    closers=frozenset("»)]}”"),
     space_aware=True,
 )
 

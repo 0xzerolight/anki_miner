@@ -158,8 +158,9 @@ class HebrewDictKeys:
 HE_SENTENCE_RULES = SentenceRules(
     terminators=frozenset(".!?" + SOF_PASUQ),
     ellipses=frozenset("…‥"),
-    openers=frozenset("([{“„«'"),
-    closers=frozenset(")]}”»'"),
+    # No ASCII ' or ": a symmetric quote can only ever open here, and a stray closer would then glue sentences.
+    openers=frozenset("([{“„«"),
+    closers=frozenset(")]}”»"),
     space_aware=True,
 )
 """S8. ``abbreviations`` stays empty and the dot mechanism is inert for Hebrew: every Hebrew
