@@ -106,21 +106,35 @@ class TestFindExecutable:
         assert result == real_appimage.resolve()
         assert result != mount_exe.resolve()
 
-    def test_finds_via_path_when_not_frozen(self, tmp_path):
+    def test_finds_via_path_when_not_frozen(self, tmp_path, monkeypatch):
         fake_exe = tmp_path / "anki_miner_gui"
         fake_exe.touch()
+        monkeypatch.delenv("APPIMAGE", raising=False)
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
+        monkeypatch.setattr(sys, "prefix", str(tmp_path / "empty-prefix"))
 
-        if hasattr(sys, "frozen"):
-            with (
-                patch.object(sys, "frozen", False),
-                patch("shutil.which", return_value=str(fake_exe)),
-            ):
-                result = ShortcutService.resolve_executable()
-        else:
-            with patch("shutil.which", return_value=str(fake_exe)):
-                result = ShortcutService.resolve_executable()
+        with patch("shutil.which", return_value=str(fake_exe)):
+            result = ShortcutService.resolve_executable()
 
         assert result == fake_exe.resolve()
+
+    def test_prefers_the_running_interpreters_own_script_over_path(self, tmp_path, monkeypatch):
+        """Restart-to-apply and the shortcut start the install that is running, not another one on PATH."""
+        monkeypatch.delenv("APPIMAGE", raising=False)
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
+        own_bin = tmp_path / "venv" / ("Scripts" if sys.platform == "win32" else "bin")
+        own_bin.mkdir(parents=True)
+        own = own_bin / ("anki_miner_gui.exe" if sys.platform == "win32" else "anki_miner_gui")
+        own.touch()
+        other = tmp_path / "pipx" / "anki_miner_gui"
+        other.parent.mkdir()
+        other.touch()
+        monkeypatch.setattr(sys, "prefix", str(tmp_path / "venv"))
+
+        with patch("shutil.which", return_value=str(other)):
+            result = ShortcutService.resolve_executable()
+
+        assert result == own.resolve()
 
     def test_returns_none_when_executable_missing(self, tmp_path):
         with patch("shutil.which", return_value=None), patch.object(sys, "prefix", str(tmp_path)):
