@@ -139,18 +139,35 @@ def _source_slice(tok: Any, text: str) -> str:
 
 
 def to_duck_tokens(kiwi_tokens: Iterable[Any], text: str) -> list[LanguageToken]:
-    """Convert kiwi Tokens to fugashi-shaped LanguageTokens."""
+    """Convert kiwi Tokens to fugashi-shaped LanguageTokens.
+
+    A contracted syllable gives two morphemes the same source span (해 = 하/XSV
+    2-3 + 어/EC 2-3). Copying that slice twice lets iter_token_spans' running
+    cursor match the second copy at a LATER occurrence of the syllable and drop
+    every token in between, so a token already covered by an emitted span is
+    skipped and a partly covered one keeps only its uncovered tail.
+    """
     out: list[LanguageToken] = []
+    covered_end = 0
     for tok in kiwi_tokens:
         raw_tag = str(getattr(tok, "tag", "") or "")
         base = base_tag(raw_tag)
         if base == Z_CODA_TAG:
             continue
+        surface = _source_slice(tok, text)
+        start = getattr(tok, "start", None)
+        end = getattr(tok, "end", None)
+        if isinstance(start, int) and isinstance(end, int) and 0 <= start < end <= len(text):
+            if end <= covered_end:
+                continue
+            if start < covered_end:
+                surface = text[covered_end:end]
+            covered_end = end
         coarse = base[:2]
         lemma = str(getattr(tok, "lemma", "") or "") or str(tok.form)
         out.append(
             LanguageToken(
-                surface=_source_slice(tok, text),
+                surface=surface,
                 pos1=coarse,
                 pos2="" if base == coarse else base,
                 lemma=lemma,
