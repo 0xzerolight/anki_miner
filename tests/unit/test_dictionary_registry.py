@@ -263,6 +263,18 @@ class TestDictionaryRegistry:
         assert len(result) == 1
         assert result[0].dict_id == "extra-dict"
 
+    def test_unlisted_skips_dicts_stamped_for_another_mining_language(self, tmp_path: Path):
+        """dicts_root is shared by every mining language; Restore from Disk in a
+        German session must not offer (and append) the Japanese dictionaries."""
+        _seed_dict(tmp_path, "ja-dict", "JaDict", language="ja")
+        _seed_dict(tmp_path, "de-dict", "DeDict", language="de")
+        config = replace(AnkiMinerConfig(), language="de", dictionary_chain=())
+
+        registry = DictionaryRegistry(tmp_path)
+        registry.load()
+
+        assert [m.dict_id for m in registry.unlisted(config)] == ["de-dict"]
+
     def test_unlisted_excludes_dict_already_in_chain(self, tmp_path: Path):
         """A dict referenced in the chain must not appear in unlisted()."""
         _seed_dict(tmp_path, "jmdict-english", "JMdict")
