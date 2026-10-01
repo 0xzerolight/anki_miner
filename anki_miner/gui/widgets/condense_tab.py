@@ -1040,6 +1040,7 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
             return all_media, file_pairs
 
         def _apply(result: object) -> None:
+            self._folder_scan_pending = False
             all_media, file_pairs = cast("tuple[list[Path], list[FilePair]]", result)
             total_media = len(all_media)
             n_matched = len(file_pairs)
@@ -1069,12 +1070,14 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
             on_items([CondenseItem(fp.video, fp.subtitle) for fp in file_pairs])
 
         def _on_error(msg: str) -> None:
+            self._folder_scan_pending = False
             # _scan lists the media folder AND pairs across both, so a failure
             # here is not necessarily the media folder's, and both folders
             # already passed is_dir(). The real message is the Details.
             self.show_screen_issue(ScreenIssue(summary=self.tr("Those folders could not be scanned."), details=msg))
             on_items([])
 
+        self._folder_scan_pending = True
         run_off_thread(self, _scan, _apply, _on_error)
 
     # ------------------------------------------------------------------

@@ -468,3 +468,27 @@ def test_config_refresh_mid_folder_scan_keeps_retime_disabled(qtbot, tmp_path):
         assert tab._availability_worker.wait(3000)
 
     assert not tab.retime_button.isEnabled()
+
+
+def test_probe_landing_mid_pair_scan_keeps_condense_disabled(qtbot, tmp_path):
+    """BA-017: Condense's two-folder pairing scan holds the primary like the one-folder scan."""
+    tab = _make_tab(_CONDENSE, qtbot, tmp_path)
+    tab.folder_mode_button.click()
+    tab.media_folder_selector.set_path(str(tmp_path))
+    tab.subtitle_folder_selector.set_path(str(tmp_path))
+    held: list[tuple] = []
+    with patch(
+        "anki_miner.gui.widgets.condense_tab.run_off_thread",
+        side_effect=lambda *args, **kwargs: held.append(args),
+    ):
+        tab.condense_button.click()
+    assert len(held) == 1
+    assert not tab.condense_button.isEnabled()
+
+    tab._apply_probe_result(True)
+
+    assert not tab.condense_button.isEnabled()
+
+    _, _scan, _apply, _on_error = held[0]
+    _on_error("boom")
+    assert tab._folder_scan_pending is False
