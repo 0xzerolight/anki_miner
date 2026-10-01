@@ -248,11 +248,51 @@ def collect_state_members() -> tuple[list[tuple[str, bytes]], list[str]]:
     missing: list[str] = []
     for name, path in _state_sources(paths.ANKI_MINER_HOME):
         content = _read_plain(path)
+        if content is not None and name.startswith("config/") and name != f"config/{_UI_STATE_NAME}":
+            content = _redact_config_json(content)
+            if content is None:
+                missing.append(f"{name} (not valid JSON; withheld because it may hold custom-audio credentials)")
+                continue
         if content is None:
             missing.append(name)
         else:
             members.append((name, _capped_bytes(content)))
     return members, missing
+
+
+def _redact_config_json(content: bytes) -> bytes | None:
+    """*content* with every custom-audio URL redacted the way settings.json is (AQ5-003).
+
+    gui_config.json, its recovery copies and the profile sidecars hold the same
+    ``expression_audio_chain`` entries (also parked per language inside
+    ``language_stash``), so every dict carrying a custom ``kind`` and a ``url``
+    is redacted wherever it sits. Unchanged bytes are returned when there is
+    nothing to redact; None when the file is not JSON, since a raw copy could
+    carry the credential.
+    """
+    try:
+        data = json.loads(content)
+    except ValueError:
+        return None
+    changed = False
+
+    def walk(value: Any) -> Any:
+        nonlocal changed
+        if isinstance(value, dict):
+            out = {key: walk(item) for key, item in value.items()}
+            url = out.get("url")
+            if out.get("kind") in ("custom", "custom_json") and isinstance(url, str) and url:
+                out["url"] = _redact_custom_audio_url(url)
+                changed = True
+            return out
+        if isinstance(value, list):
+            return [walk(item) for item in value]
+        return value
+
+    redacted = walk(data)
+    if not changed:
+        return content
+    return (json.dumps(redacted, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
 
 
 def _unavailable(exc: BaseException) -> str:
