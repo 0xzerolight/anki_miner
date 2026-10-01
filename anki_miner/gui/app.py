@@ -944,7 +944,12 @@ def _acquire_instance_lock(
     # A crashed instance leaves a lock QLockFile auto-reclaims once its PID is
     # gone (built-in stale detection); 0 ms try = never block startup.
     if lock.tryLock(0):
-        return lock, True
+        # instance.lock is free, but a window started past this same warning
+        # never took it: its marker is the only sign it is still open.
+        if not _live_window_marker(lock_path.parent) or on_conflict():
+            return lock, True
+        lock.unlock()
+        return None, False
     return None, on_conflict()
 
 
@@ -973,6 +978,26 @@ def _release_window_marker(app: QApplication) -> None:
         marker.unlock()
 
 
+def _live_window_marker(home: Path) -> bool:
+    """Whether another Anki Miner window holds its marker under ``home``.
+
+    A window started past the "already running" warning holds no
+    instance.lock, only its marker, so instance.lock alone can be free while a
+    window is open. A dead process's marker is removed on the way, the same
+    probe cli/entry.py's busy check uses.
+    """
+    own = f"{WINDOW_MARKER_PREFIX}{os.getpid()}.lock"
+    for path in sorted(home.glob(f"{WINDOW_MARKER_PREFIX}*.lock")):
+        if path.name == own:
+            continue
+        probe = QLockFile(str(path))
+        if probe.tryLock(0):
+            probe.unlock()  # a dead process's marker: tryLock reclaimed it, unlock removes it
+            continue
+        return True
+    return False
+
+
 def _relaunch_if_requested(app: QApplication) -> None:
     """Start the replacement process, if a restart was asked for (D39b-A).
 
@@ -996,6 +1021,9 @@ def _relaunch_if_requested(app: QApplication) -> None:
     lock = getattr(app, "_instance_lock", None)
     if lock is not None:
         lock.unlock()
+    # The child counts a live window marker as a running instance, so ours goes
+    # too, or the restarted app warns about its own parent.
+    _release_window_marker(app)
     if _qt_scale_factor_set_by_app:
         # QProcess.startDetached inherits this process's environment verbatim,
         # so a value THIS process's own _apply_ui_zoom wrote must not ride

@@ -104,6 +104,21 @@ class TestRequestedRestart:
         assert lock.unlocked
         assert seen and seen[0][2] is True
 
+    def test_the_window_marker_is_released_before_the_child_starts(self, launches, tmp_path, monkeypatch):
+        """The child counts a live window marker as a running instance, so ours
+        must be gone before it starts or it warns about its own parent."""
+        seen, holder = launches
+        monkeypatch.setattr(restart, "resolve_relaunch_target", lambda: tmp_path / "anki_miner_gui")
+        marker = _FakeLock()
+        holder["lock"] = marker
+        app = _FakeApp(None)
+        app._window_marker = marker  # type: ignore[attr-defined]
+        restart.request_restart()
+
+        app_module._relaunch_if_requested(app)
+
+        assert seen and seen[0][2] is True
+
     def test_no_private_command_line_flag_is_passed(self, launches, tmp_path, monkeypatch):
         """CONS trims the wait-for-lock CLI mode: the parent is already gone."""
         seen, holder = launches

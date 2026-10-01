@@ -1,6 +1,6 @@
 """Single-instance guard + KnownWordDB busy timeout (Issue #100 double launch)."""
 
-from PyQt6.QtCore import QLockFile
+from PyQt6.QtCore import QLockFile, QSysInfo
 
 from anki_miner.gui.app import _acquire_instance_lock
 from anki_miner.services.known_word_db import KnownWordDB
@@ -76,3 +76,31 @@ class TestReleaseWindowMarker:
 
         _release_window_marker(SimpleNamespace())
         _release_window_marker(SimpleNamespace(_window_marker=None))
+
+
+class TestWindowMarkersCountAsRunningInstances:
+    def test_a_live_window_marker_asks_even_when_instance_lock_is_free(self, tmp_path):
+        """A window started past the warning holds no instance.lock, only its marker."""
+        marker = QLockFile(str(tmp_path / "instance.window-424242.lock"))
+        assert marker.tryLock(0)
+        calls: list[bool] = []
+        try:
+            lock, proceed = _acquire_instance_lock(tmp_path / "instance.lock", lambda: calls.append(True) or False)
+            assert calls == [True]
+            assert proceed is False
+            assert lock is None
+        finally:
+            marker.unlock()
+
+    def test_a_dead_window_marker_is_swept_and_does_not_ask(self, tmp_path):
+        stale = tmp_path / "instance.window-999999999.lock"
+        stale.write_text(f"999999999\nanki_miner_gui\n{QSysInfo.machineHostName()}\n", encoding="utf-8")
+        calls: list[bool] = []
+
+        lock, proceed = _acquire_instance_lock(tmp_path / "instance.lock", lambda: calls.append(True) or False)
+
+        assert calls == []
+        assert proceed is True
+        assert lock is not None
+        assert not stale.exists()
+        lock.unlock()
