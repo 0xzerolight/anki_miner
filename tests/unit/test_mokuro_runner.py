@@ -191,3 +191,17 @@ def test_child_env_drops_the_host_python_selection(monkeypatch):
     assert not set(_HOST_PYTHON_VARS) & env.keys()
     assert env["PYTHONUTF8"] == "1" and env["PYTHONIOENCODING"] == "utf-8"
     assert env["PYTHONUNBUFFERED"] == "1" and env["NO_COLOR"] == "1"
+
+
+def test_model_downloads_stay_under_the_app_home(monkeypatch, tmp_path, config):
+    """mokuro caches comictextdetector.pt under $XDG_CACHE_HOME/manga-ocr and the
+    manga-ocr-base model under the Hugging Face home ($XDG_CACHE_HOME/huggingface
+    by default); both must land next to the managed venv, not in ~/.cache."""
+    monkeypatch.delenv("XDG_CACHE_HOME", raising=False)
+    vol = _volume(tmp_path)
+    fake = _fake_run(_OK_LINES, write_output=vol.output)
+    monkeypatch.setattr(mr, "run_supervised", fake)
+
+    mr.MokuroRunnerService(config).process_volume(vol, mr.MokuroOptions())
+
+    assert fake.calls["kwargs"]["env"]["XDG_CACHE_HOME"] == str(config.uv_root / "model_cache")
