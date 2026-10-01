@@ -2261,3 +2261,16 @@ class TestLinkBoxMine:
         qtbot.keyClick(tab.url_edit, Qt.Key.Key_Return, Qt.KeyboardModifier.ControlModifier)
 
         assert len(tab._queue.all_items()) == 1
+
+
+class TestWaitingMineHoldsResources:
+    def test_waiting_mine_refuses_a_language_or_profile_switch(self, tab):
+        """BA-013: a Mine still checking its links is a run, so the switch preflight must see it as busy."""
+        tab.url_edit.setPlainText("https://youtu.be/aaaaaaaaaaa")
+        tab._on_mine_clicked()
+        assert tab._mine_pending
+        assert tab.worker_thread is None
+        processor = tab._processor
+
+        assert tab.release_dictionary_resources() is False
+        assert tab._processor is processor
