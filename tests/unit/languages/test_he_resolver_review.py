@@ -354,3 +354,34 @@ def test_an_unpointed_head_reads_as_its_first_spelling():
 
 def test_a_single_spelling_is_read_unchanged():
     assert vocalised_from_content(_grammar(AKHSHAV_POINTED)) == AKHSHAV_POINTED
+
+
+def _katav_forms(keys: list[str]) -> dict[str, list[tuple[str, str]]]:
+    """Every asked key is a form row of katav; katav's own lemma row is a verb."""
+    katav = _word("KAF", "TAV", "BET")
+    rows = {key: [(f'<div class="gloss-content">{katav}</div>', "non-lemma")] for key in keys}
+    rows[katav] = [("<div>to write</div>", "v")]
+    return rows
+
+
+def test_a_full_cache_never_drops_a_word_resolved_earlier_in_the_same_line(monkeypatch: pytest.MonkeyPatch) -> None:
+    from anki_miner.languages.he import morphology as he_morphology
+
+    monkeypatch.setattr(he_morphology, "_CACHE_MAX", 2)
+    resolver = HebrewLemmaPass()
+    # One entry first, so the next line fills the cache in the middle of the line.
+    resolver(to_duck_tokens(_word("KAF", "TAV", "BET", "HE")), None, _katav_forms)
+
+    line = " ".join(
+        (
+            _word("KAF", "TAV", "BET", "TAV", "YOD"),
+            _word("KAF", "TAV", "BET", "NUN", "VAV"),
+            _word("KAF", "TAV", "BET", "VAV"),
+        )
+    )
+    tokens = to_duck_tokens(line)
+    resolver(tokens, None, _katav_forms)
+
+    katav = _word("KAF", "TAV", "BET")
+    assert [t.feature.lemma for t in tokens] == [katav, katav, katav]
+    assert [t.feature.pos1 for t in tokens] == ["VERB", "VERB", "VERB"]
