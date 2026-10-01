@@ -1571,3 +1571,12 @@ class TestImportReceipts:
         assert len(dones) == 1
         assert "media_copied=0" in dones[0]
         assert "media_rejected=1" in dones[0]
+
+
+def test_term_dictionary_declaring_version_instead_of_format_imports(tmp_path: Path):
+    """Yomitan's index schema: ``version`` is an alias for ``format``."""
+    zip_path = tmp_path / "old.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("index.json", json.dumps({"title": "Old dict", "revision": "v1", "version": 3}))
+        zf.writestr("term_bank_1.json", json.dumps([["食べる", "たべる", "v1", "v1", 0, ["to eat"], 1, ""]]))
+    import_yomitan_zip(zip_path, tmp_path / "dicts")

@@ -234,6 +234,9 @@ def import_yomitan_zip(
         title = str(index.get("title", "")).strip()
         revision = str(index.get("revision", "")).strip()
         format_version = index.get("format")
+        if not isinstance(format_version, int) or isinstance(format_version, bool):
+            # Yomitan's index schema: "version" is an alias for "format".
+            format_version = index.get("version")
         if not isinstance(format_version, int) or isinstance(format_version, bool) or format_version < 3:
             raise SetupError(f"Unsupported Yomitan format version {format_version!r}; need format >= 3")
         if not title:
