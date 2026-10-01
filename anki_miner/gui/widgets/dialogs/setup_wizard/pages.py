@@ -854,6 +854,9 @@ class NoteTypePage(_WizardSection):
         self._field_names: list[str] = []
         self._field_names_note_type: str | None = None
         self._notetypes_loaded = False
+        # The note type the wizard was opened on: only its mapping is the user's
+        # own on a re-run. One they pick here still takes its preset.
+        self._opened_note_type = wizard.working_config().anki_note_type
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -1247,9 +1250,9 @@ class NoteTypePage(_WizardSection):
         # opened on. When setup already ran and that mapping already works, it is
         # the user's own: re-applying a preset would silently switch features
         # they turned off (an empty field) and change later cards, and every
-        # close path persists the working config. First runs and a mapping that
-        # does not work yet still fill (D8/D13).
-        if config.first_run_setup_done and self.isComplete():
+        # close path persists the working config. First runs, a note type picked
+        # here and a mapping that does not work yet still fill (D8/D13).
+        if config.first_run_setup_done and note_type == self._opened_note_type and self.isComplete():
             self._update_guidance()
             self._show_field_problem()
             self.completeChanged.emit()

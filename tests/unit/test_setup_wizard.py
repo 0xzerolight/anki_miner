@@ -3073,6 +3073,36 @@ def test_rerun_keeps_a_working_custom_mapping_on_the_same_note_type(qtbot):
     assert after.pitch_category_format == "jp"
 
 
+def test_rerun_fills_a_note_type_the_user_picks_in_the_wizard(qtbot, monkeypatch):
+    """Picking another note type in a re-run takes its preset, even when the
+    old mapping's word field happens to share the new type's first field name."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    base = AnkiMinerConfig()
+    fields = dict.fromkeys(base.anki_fields, "")
+    fields.update({"word": "Expression", "definition": "Meaning", "reading": "Reading"})
+    config = replace(
+        base,
+        ankiconnect_url="http://127.0.0.1:8765",
+        anki_note_type="MyType",
+        anki_fields=fields,
+        first_run_setup_done=True,
+    )
+    wiz = SetupWizard(config, start_page="anki")
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    monkeypatch.setattr(page, "_fetch_fields", lambda *a, **kw: None)
+    page._on_notetypes_fetched(["MyType", "Lapis"])
+    page.select_note_type("Lapis")
+
+    page._on_fields_fetched("Lapis", _LAPIS_FIELDS)
+
+    after = wiz.working_config()
+    assert after.anki_note_type == "Lapis"
+    assert after.anki_fields["definition"] == "MainDefinition"
+    assert after.anki_fields["sentence"] == "Sentence"
+
+
 def test_resources_page_activator_stands_down_after_an_in_wizard_language_change(qtbot, wiz_config, monkeypatch):
     """A Japanese download finishing after Back -> Chinese -> Next must not fill zh's chains."""
     from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod  # noqa: PLC0415
