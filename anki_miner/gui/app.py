@@ -945,11 +945,12 @@ def _acquire_instance_lock(
     # gone (built-in stale detection); 0 ms try = never block startup.
     if lock.tryLock(0):
         # instance.lock is free, but a window started past this same warning
-        # never took it: its marker is the only sign it is still open.
-        if not _live_window_marker(lock_path.parent) or on_conflict():
+        # never took it: its marker is the only sign it is still open. Give the
+        # lock back either way, so continuing does not run store repair or the
+        # recovery offer beside that window.
+        if not _live_window_marker(lock_path.parent):
             return lock, True
         lock.unlock()
-        return None, False
     return None, on_conflict()
 
 

@@ -92,6 +92,21 @@ class TestWindowMarkersCountAsRunningInstances:
         finally:
             marker.unlock()
 
+    def test_continuing_past_a_live_window_marker_does_not_take_instance_lock(self, tmp_path):
+        """Owning instance.lock gates startup store repair and the recovery offer,
+        which must not run beside another open window."""
+        marker = QLockFile(str(tmp_path / "instance.window-424242.lock"))
+        assert marker.tryLock(0)
+        try:
+            lock, proceed = _acquire_instance_lock(tmp_path / "instance.lock", lambda: True)
+            assert proceed is True
+            assert lock is None
+            other = QLockFile(str(tmp_path / "instance.lock"))
+            assert other.tryLock(0)
+            other.unlock()
+        finally:
+            marker.unlock()
+
     def test_a_dead_window_marker_is_swept_and_does_not_ask(self, tmp_path):
         stale = tmp_path / "instance.window-999999999.lock"
         stale.write_text(f"999999999\nanki_miner_gui\n{QSysInfo.machineHostName()}\n", encoding="utf-8")
