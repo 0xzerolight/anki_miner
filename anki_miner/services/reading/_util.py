@@ -286,7 +286,7 @@ def _decode(
     encodings: tuple[str, ...] | None = None,
     script_check: Callable[[str], bool] | None = None,
 ) -> str:
-    """Decode bytes: BOM sniff → strict utf-8 → cp932/euc_jp (JP-ratio tiebreak).
+    """Decode bytes: BOM sniff → utf-8 (strict, then mostly) → cp932/euc_jp (JP-ratio tiebreak).
 
     ``encodings`` is the mining language's ``get_profile(...).import_encodings``
     and hands the decode to :func:`decode_with_ladder`. ``None`` — never ``()``,
@@ -310,6 +310,10 @@ def _decode(
         return raw.decode("utf-8")
     except UnicodeDecodeError:
         pass
+    if mostly_utf8(raw):
+        # UTF-8 with a few stray bytes stays UTF-8, as on the video path
+        # (load_with_fallback_encoding); cp932 would read it all as mojibake.
+        return raw.decode("utf-8", errors="replace")
     candidates: list[str] = []
     for enc in ("cp932", "euc_jp"):
         try:

@@ -251,3 +251,16 @@ def test_the_ladder_resolves_to_the_profile_s_own_for_another_language(monkeypat
     zh_config = dataclasses.replace(AnkiMinerConfig(), language="zh")
 
     assert import_decode_ladder(zh_config) == profile.import_encodings
+
+
+def test_one_stray_byte_keeps_a_japanese_utf8_file_utf8_on_the_builtin_path() -> None:
+    """The built-in Japanese path read the whole file as cp932 mojibake for one bad byte."""
+    good = "猫が走った。\n犬が鳴いた。\n今日はいい天気ですね。\n" * 5
+    raw = good.encode() + b"\xe9" + "鳥が飛んだ。\n".encode()
+
+    assert _decode(raw) == good + "�" + "鳥が飛んだ。\n"
+
+
+def test_a_real_cp932_file_still_decodes_as_cp932_on_the_builtin_path() -> None:
+    text = "日本語のテキストです。漢字とかなが混ざる。"
+    assert _decode(text.encode("cp932")) == text
