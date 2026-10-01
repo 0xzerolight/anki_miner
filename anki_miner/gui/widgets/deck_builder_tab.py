@@ -429,6 +429,16 @@ class DeckBuilderTab(FolderSeriesScreenBase):
     # Slot: mode combo change
     # ------------------------------------------------------------------
 
+    def _selection_differs_from_widgets(self) -> bool:
+        """Whether the config's deck_builder_* values differ from the live controls."""
+        mode_index = self.mode_combo.findData(DeckSelectionMode(self.config.deck_builder_mode))
+        return (
+            mode_index != self.mode_combo.currentIndex()
+            or self.config.deck_builder_top_n != self.top_n_spinbox.value()
+            or self.config.deck_builder_coverage_pct != self.coverage_spinbox.value()
+            or self.config.deck_builder_skip_known != self.skip_known_checkbox.isChecked()
+        )
+
     def _seed_selection_controls(self) -> None:
         """Seed the deck-settings controls from the remembered config.
 
@@ -986,10 +996,16 @@ class DeckBuilderTab(FolderSeriesScreenBase):
     def update_config(self, config: AnkiMinerConfig) -> None:
         """Update configuration.
 
+        The selection controls are re-seeded only when the incoming config's
+        deck_builder_* values differ from the live widgets: this tab's own
+        persist comes straight back through here on every keystroke, and
+        re-seeding the spinbox being typed into reformats it mid-edit.
+
         Args:
             config: New configuration
         """
         self._adopt_offset_config(config)
         self._apply_secondary_gate()
-        self._seed_selection_controls()
+        if self._selection_differs_from_widgets():
+            self._seed_selection_controls()
         self._seed_review_words_checkbox()
