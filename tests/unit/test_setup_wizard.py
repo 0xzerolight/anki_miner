@@ -3041,3 +3041,65 @@ def test_notetype_page_leaves_an_unknown_note_type_to_the_keyword_map(qtbot, wiz
     # No preset matched, so nothing outside the field map was touched.
     assert config.pitch_category_format == "jp"
     assert config.anki_fields["pitch_category"] == ""
+
+
+def test_rerun_keeps_a_working_custom_mapping_on_the_same_note_type(qtbot):
+    """A Tools / System Health re-run that re-fetches the note type it opened
+    with leaves a complete, customised mapping alone (no preset re-applied)."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    base = AnkiMinerConfig()
+    fields = dict(base.anki_fields)
+    fields.update({"expression_audio": "", "source": "", "definition": "Glossary", "glossary": ""})
+    config = replace(
+        base,
+        ankiconnect_url="http://127.0.0.1:8765",
+        anki_note_type="Lapis",
+        anki_fields=fields,
+        pitch_category_format="jp",
+        first_run_setup_done=True,
+    )
+    wiz = SetupWizard(config, start_page="anki")
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    page._on_notetypes_fetched(["Basic", "Lapis"])
+
+    page._on_fields_fetched("Lapis", _LAPIS_FIELDS)
+
+    after = wiz.working_config()
+    assert after.anki_fields["expression_audio"] == ""
+    assert after.anki_fields["source"] == ""
+    assert after.anki_fields["definition"] == "Glossary"
+    assert after.pitch_category_format == "jp"
+
+
+def test_resources_page_activator_stands_down_after_an_in_wizard_language_change(qtbot, wiz_config, monkeypatch):
+    """A Japanese download finishing after Back -> Chinese -> Next must not fill zh's chains."""
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.workers.resource_download_worker import (  # noqa: PLC0415
+        ResourceDownloadResult,
+        ResourceDownloadSummary,
+    )
+
+    wiz = SetupWizard(wiz_config, offer_mining_language=True)
+    qtbot.addWidget(wiz)
+    monkeypatch.setattr(dialog_mod, "start_resource_download", lambda *a, **kw: MagicMock())
+    wiz.resources_page._on_download_clicked()  # started while ja is the working language
+
+    page = wiz.language_page
+    assert page is not None
+    page.language_combo.setCurrentIndex(page.language_combo.findData("zh"))
+    assert page.validatePage()
+    switched = wiz.working_config()
+    assert switched.language == "zh"
+    summary = ResourceDownloadSummary(
+        results=[
+            ResourceDownloadResult(
+                "jmdict-english", "dict", "JMdict", "u", True, "10 entries", dict_id="jmdict-english"
+            )
+        ]
+    )
+
+    assert wiz.resources_page._activate_resources(summary) is None
+    assert wiz.working_config() == switched

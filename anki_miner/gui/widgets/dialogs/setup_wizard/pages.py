@@ -1243,6 +1243,17 @@ class NoteTypePage(_WizardSection):
         if not names or self._field_names_note_type != note_type:
             return
         config = self._wizard.working_config()
+        # A re-run (Tools, System Health's Fix) re-fetches the note type it was
+        # opened on. When setup already ran and that mapping already works, it is
+        # the user's own: re-applying a preset would silently switch features
+        # they turned off (an empty field) and change later cards, and every
+        # close path persists the working config. First runs and a mapping that
+        # does not work yet still fill (D8/D13).
+        if config.first_run_setup_done and self.isComplete():
+            self._update_guidance()
+            self._show_field_problem()
+            self.completeChanged.emit()
+            return
         fill = fill_note_type_fields(
             names,
             allow_presets=self._presets_apply(),
@@ -1450,6 +1461,9 @@ class ResourcesPage(_LiveCheckPage):
         self._dictionary_ready = False
         # _sync_download_button reads these, so they exist before any widget.
         self._download_running = False
+        #: The mining language the current/last run was started for; its slots
+        #: belong to that language's chains only. None before any run.
+        self._download_language: str | None = None
         #: How the last run ended, for the Ready page: "", "failed" or "cancelled".
         self._download_ending = ""
         #: The registry's latest detailed line for the running download.
@@ -1751,6 +1765,7 @@ class ResourcesPage(_LiveCheckPage):
         if session is None:
             return
         self._session = session
+        self._download_language = config_language(self._wizard.working_config())
         self._download_running = True
         self._download_ending = ""
         self._progress_text = ""
@@ -1808,12 +1823,19 @@ class ResourcesPage(_LiveCheckPage):
 
         A walk-away is the one case where that config is the wrong one: the
         slots were picked for a language the close path has already reverted,
-        and the chains would silently drop them for not matching.
+        and the chains would silently drop them for not matching. A language
+        changed inside the wizard (Back, another language, Next) while the run
+        was going is the same case.
         """
         from anki_miner.gui.utils.resource_setup import apply_download_summary  # noqa: PLC0415
         from anki_miner.gui.workers.resource_download_worker import ResourceDownloadSummary  # noqa: PLC0415
 
         if self._wizard.is_walking_away():
+            return None
+        if (
+            self._download_language is not None
+            and config_language(self._wizard.working_config()) != self._download_language
+        ):
             return None
         if not isinstance(summary, ResourceDownloadSummary) or not summary.succeeded:
             return None
