@@ -279,6 +279,14 @@ class _QueueMiningTabBase(MiningTabBase):
             def processor_factory() -> EpisodeProcessor:
                 return self._create_processor(presenter)
 
+        else:
+            # The cached processor's AnkiService keeps the collection vocabulary
+            # for its lifetime. A new run re-reads it, so notes deleted by Undo
+            # (through MainWindow's own AnkiService) or changed in Anki since
+            # the last run are seen; queue items inside one run still share the
+            # cache (BA-021).
+            self._processor.anki_service.invalidate_existing_vocabulary_cache()
+
         # Snapshot BEFORE constructing the worker so all idx-based signal handlers
         # resolve against a frozen list that survives mid-run removals.
         self._run_items = list(items)

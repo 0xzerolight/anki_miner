@@ -1050,3 +1050,15 @@ class TestUpdateConfigClosesDiscardedProcessor:
             return_value=MagicMock(),
         ):
             tab.update_config(new_cfg)  # must not raise
+
+
+class TestCachedProcessorVocabulary:
+    def test_a_run_on_the_cached_processor_rereads_the_anki_vocabulary(self, tab, tmp_path):
+        """BA-021: the cached processor's AnkiService keeps the collection vocabulary for its
+        lifetime; each run must drop it so notes deleted by Undo (or in Anki) are seen again."""
+        _add_pair(tab, tmp_path)
+        processor = tab._processor
+
+        tab._on_mine_clicked()
+
+        processor.anki_service.invalidate_existing_vocabulary_cache.assert_called_once_with()
