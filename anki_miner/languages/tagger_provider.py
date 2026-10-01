@@ -17,7 +17,12 @@ from anki_miner.utils.logging_ext import log_summary
 logger = logging.getLogger(__name__)
 
 _TAGGERS: dict[str, Any] = {}
+#: Guards the three dicts; never held across an engine build.
 _LOCK = threading.Lock()
+#: One build lock per language: a slow build (zeyrek, CAMeL) serialises only that language's callers.
+_BUILD_LOCKS: dict[str, threading.Lock] = {}
+#: Bumped by evict(); a build that was already running when its language was evicted is not cached.
+_EVICTIONS: dict[str, int] = {}
 
 
 def _build(language: str) -> Any:
@@ -60,16 +65,23 @@ def _build(language: str) -> Any:
 
 
 def get_tagger(language: str = "ja") -> Any:
-    """Return the cached tokenizer for ``language`` (double-checked lock)."""
+    """Return the cached tokenizer for ``language`` (double-checked, per-language build lock)."""
     cached = _TAGGERS.get(language)
     if cached is not None:
         return cached
     with _LOCK:
-        cached = _TAGGERS.get(language)
-        if cached is None:
-            cached = _build(language)
-            _TAGGERS[language] = cached
-        return cached
+        build_lock = _BUILD_LOCKS.setdefault(language, threading.Lock())
+    with build_lock:
+        with _LOCK:
+            cached = _TAGGERS.get(language)
+            generation = _EVICTIONS.get(language, 0)
+        if cached is not None:
+            return cached
+        built = _build(language)
+        with _LOCK:
+            if _EVICTIONS.get(language, 0) == generation:
+                _TAGGERS[language] = built
+        return built
 
 
 def evict(language: str) -> bool:
@@ -82,4 +94,5 @@ def evict(language: str) -> bool:
     entry goes: ``services.tagger`` keeps its own shared instance.
     """
     with _LOCK:
+        _EVICTIONS[language] = _EVICTIONS.get(language, 0) + 1
         return _TAGGERS.pop(language, None) is not None
