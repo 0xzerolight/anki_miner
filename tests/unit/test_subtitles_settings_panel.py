@@ -1766,3 +1766,21 @@ def test_a_failed_engine_download_does_not_chain_the_model(qtbot, tmp_path, monk
 
     assert models == []
     assert not panel._model_after_engine
+
+
+def test_picking_another_model_re_probes_its_install_state(qtbot, tmp_path, monkeypatch):
+    """The status beside Download describes the model now selected, not the loaded one."""
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.available", lambda: True)
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.cuda_device_count", lambda: 0)
+    monkeypatch.setattr(f"{_PANEL_MOD}.model_manager.is_downloaded", lambda name, root: name == "large-v3")
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_model="large-v3", asr_models_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+    assert "not installed" not in panel.model_status_label.text().lower()
+
+    panel.set_model("small")
+    _wait_state_settled(qtbot, panel)
+
+    assert panel.get_model() == "small"
+    assert "not installed" in panel.model_status_label.text().lower()

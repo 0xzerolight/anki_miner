@@ -329,7 +329,7 @@ class SubtitlesSettingsPanel(FormPanel):
         for label, _value in _MODEL_OPTIONS:
             self.model_combo.addItem(label)
         self._refresh_setup_button_text()
-        self.model_combo.currentIndexChanged.connect(lambda _index: self._refresh_setup_button_text())
+        self.model_combo.currentIndexChanged.connect(self._on_model_changed)
         self.add_field(
             self.tr("Transcription model"),
             self.model_combo,
@@ -1260,6 +1260,16 @@ class SubtitlesSettingsPanel(FormPanel):
     def _refresh_setup_button_text(self) -> None:
         self.download_engine_button.setText(self._setup_button_text())
 
+    def _on_model_changed(self, _index: int) -> None:
+        """A different model was picked: the status beside Download must describe it.
+
+        The auto-save echo never reaches load_from_config (SettingsTab adopts its
+        own commit without reloading), so this is the only place a user's pick
+        can re-probe the install state. The probe is off-thread and coalesces.
+        """
+        self._refresh_setup_button_text()
+        self._refresh_state_async(self.get_model(), self._models_root, self._cuda_libs_root)
+
     def _on_asr_pack_download_clicked(self) -> None:
         """Disable the button in flight and request the engine pack download.
 
@@ -1397,7 +1407,15 @@ class SubtitlesSettingsPanel(FormPanel):
         """
         # ASR
         self._models_root = config.asr_models_root
-        self.set_model(config.asr_model)
+        # Signals blocked: this method probes the loaded model itself at the end
+        # (or deliberately not at all under suppress_optional_startup), so the
+        # programmatic selection must not start a probe of its own.
+        self.model_combo.blockSignals(True)
+        try:
+            self.set_model(config.asr_model)
+        finally:
+            self.model_combo.blockSignals(False)
+        self._refresh_setup_button_text()
         # Persisted-device hygiene: a value not offered on this platform (e.g. a
         # config carrying "vulkan" opened on macOS, or any unknown value) must
         # not silently round-trip. Fall back to "auto" so get_device()/contribute()
