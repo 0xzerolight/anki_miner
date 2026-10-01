@@ -372,6 +372,21 @@ def _acquirable_from_another_thread() -> bool:
     return seen == [True]
 
 
+def _promotable_from_another_thread() -> bool:
+    """True when a foreign thread could promote a new managed binary right now."""
+    seen: list[bool] = []
+
+    def probe() -> None:
+        with ytdlp_resolver.managed_slot_promotion_lock() as acquired:
+            seen.append(acquired)
+
+    thread = threading.Thread(target=probe)
+    thread.start()
+    thread.join(10)
+    assert not thread.is_alive()
+    return seen == [True]
+
+
 class TestManagedLockTimeout:
     """``timeout`` bounds a blocking acquire for callers that can neither park nor give up instantly."""
 
@@ -441,19 +456,25 @@ class TestGenerationLock:
             release_unless_managed("/usr/bin/yt-dlp")
             assert _acquirable_from_another_thread()
 
-    def test_managed_executable_keeps_the_lock_through_execution(self, tmp_path):
+    def test_managed_executable_blocks_promotion_but_frees_the_lock(self, tmp_path):
+        """A long managed-slot transfer must not park every other yt-dlp caller
+        (probes, availability checks, diagnostics) until it exits; only the
+        updater's promotion has to wait for it."""
         managed = tmp_path / "home" / "bin" / ytdlp_binary_name()
         with ytdlp_generation_lock() as release_unless_managed:
-            release_unless_managed(managed)
-            assert not _acquirable_from_another_thread()
-        assert _acquirable_from_another_thread()
+            assert not _acquirable_from_another_thread()  # resolution + argv stay serialised
+            release_unless_managed(managed)  # the process starts here
+            assert _acquirable_from_another_thread()
+            assert not _promotable_from_another_thread()
+        assert _promotable_from_another_thread()
 
-    def test_a_sibling_of_the_managed_slot_also_keeps_the_lock(self, tmp_path):
+    def test_a_sibling_of_the_managed_slot_also_blocks_promotion(self, tmp_path):
         """Anything inside the managed directory shares its Windows image lock."""
         staged = tmp_path / "home" / "bin" / "yt-dlp.new"
         with ytdlp_generation_lock() as release_unless_managed:
             release_unless_managed(staged)
-            assert not _acquirable_from_another_thread()
+            assert not _promotable_from_another_thread()
+        assert _promotable_from_another_thread()
 
     def test_repeated_release_does_not_over_release(self):
         with ytdlp_generation_lock() as release_unless_managed:

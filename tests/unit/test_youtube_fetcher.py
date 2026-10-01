@@ -2848,7 +2848,7 @@ def _lock_acquirable_from_another_thread() -> bool:
 
 
 class TestGenerationLockScope:
-    """A running yt-dlp only holds the generation lock when it IS the managed binary.
+    """A running yt-dlp blocks promotion only when it IS the managed binary.
 
     The lock exists so the updater cannot swap the app-managed binary between argv
     construction and exec (c963c8a1). A user-supplied / PATH / bundled yt-dlp carries
@@ -2888,7 +2888,7 @@ class TestGenerationLockScope:
             thread.start()
             try:
                 assert spawned.wait(10), "run_supervised was never reached"
-                with ytdlp_resolver.managed_ytdlp_lock(blocking=False) as acquired:
+                with ytdlp_resolver.managed_slot_promotion_lock() as acquired:
                     outcome.append(bool(acquired))
             finally:
                 finish.set()
@@ -2904,7 +2904,7 @@ class TestGenerationLockScope:
             "/usr/bin/yt-dlp",
         )
 
-    def test_fetch_video_with_the_managed_binary_holds_the_lock(
+    def test_fetch_video_with_the_managed_binary_blocks_promotion(
         self, service: YouTubeFetcherService, tmp_path: Path
     ) -> None:
         managed = str(tmp_path / "home" / "bin" / ytdlp_resolver.ytdlp_binary_name())
@@ -2919,7 +2919,7 @@ class TestGenerationLockScope:
             "/usr/bin/yt-dlp",
         )
 
-    def test_probe_metadata_with_the_managed_binary_holds_the_lock(
+    def test_probe_metadata_with_the_managed_binary_blocks_promotion(
         self, service: YouTubeFetcherService, tmp_path: Path
     ) -> None:
         managed = str(tmp_path / "home" / "bin" / ytdlp_resolver.ytdlp_binary_name())
@@ -2931,7 +2931,7 @@ class TestGenerationLockScope:
             "/usr/bin/yt-dlp",
         )
 
-    def test_probe_playlist_with_the_managed_binary_holds_the_lock(
+    def test_probe_playlist_with_the_managed_binary_blocks_promotion(
         self, service: YouTubeFetcherService, tmp_path: Path
     ) -> None:
         managed = str(tmp_path / "home" / "bin" / ytdlp_resolver.ytdlp_binary_name())

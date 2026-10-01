@@ -516,7 +516,7 @@ class YtdlpUpdater:
                 )
                 return YtdlpUpdateResult(action="skipped_throttle", message="Checked recently; skipped.")
 
-            with ytdlp_resolver.managed_ytdlp_lock(blocking=False) as acquired:
+            with ytdlp_resolver.managed_slot_promotion_lock() as acquired:
                 if not acquired:
                     log_summary(logger, "yt-dlp update deferred", reason="managed_binary_in_use")
                     return YtdlpUpdateResult(
@@ -638,7 +638,7 @@ class YtdlpUpdater:
                 expected_sha256 = _manifest_sha256(manifest, asset_name)
             self._raise_if_cancelled()
 
-            with ytdlp_resolver.managed_ytdlp_lock(blocking=False) as acquired:
+            with ytdlp_resolver.managed_slot_promotion_lock() as acquired:
                 if not acquired:
                     raise _PromotionDeferred
                 digest = hashlib.sha256()
