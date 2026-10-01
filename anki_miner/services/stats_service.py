@@ -354,14 +354,15 @@ class StatsService:
     # === Maintenance ===
 
     def reset(self) -> int:
-        """Delete every recorded session and difficulty row. Returns rows removed.
+        """Delete the active mining language's sessions and difficulty rows. Returns rows removed.
 
-        Milestones are derived from these two tables, so they reset with them.
+        Scoped by the ``language`` column like every other read and write here,
+        so a reset made from one language's Analytics view never touches
+        another language's history. Milestones are derived from these two
+        tables, so they reset with them.
 
-        The count is taken *before* the deletes rather than from ``rowcount``:
-        SQLite's truncate optimisation applies to a bare ``DELETE FROM t``, and
-        the change count it reports is not the row count. Same reason
-        :meth:`KnownWordDB.clear` counts first.
+        The count is taken *before* the deletes rather than from ``rowcount``,
+        the same as :meth:`KnownWordDB.clear` counts first.
 
         Two things are deliberately left out. ``VACUUM`` cannot run here --
         :meth:`_connect` yields inside ``with conn:``, an open transaction, and
@@ -371,12 +372,13 @@ class StatsService:
         """
         if not self._ensure_loaded():
             return 0
+        language = (self._language,)
         with self._connect() as conn:
-            removed = conn.execute("SELECT COUNT(*) FROM mining_sessions").fetchone()[0]
-            removed += conn.execute("SELECT COUNT(*) FROM series_difficulty").fetchone()[0]
-            conn.execute("DELETE FROM mining_sessions")
-            conn.execute("DELETE FROM series_difficulty")
-        logger.info("Reset stats database, removed %d row(s)", removed)
+            removed = conn.execute("SELECT COUNT(*) FROM mining_sessions WHERE language = ?", language).fetchone()[0]
+            removed += conn.execute("SELECT COUNT(*) FROM series_difficulty WHERE language = ?", language).fetchone()[0]
+            conn.execute("DELETE FROM mining_sessions WHERE language = ?", language)
+            conn.execute("DELETE FROM series_difficulty WHERE language = ?", language)
+        logger.info("Reset stats database for language %s, removed %d row(s)", self._language, removed)
         return int(removed)
 
     @staticmethod
