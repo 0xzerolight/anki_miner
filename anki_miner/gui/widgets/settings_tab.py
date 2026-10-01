@@ -2088,9 +2088,19 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             if self._settings_dirty:
                 self._debounce_timer.start()
             return
+        from anki_miner.languages.registry import config_language, get_profile
+
         preserve = GUIConfigManager.machine_specific_fields() | self._RESET_PRESERVE_UI
         preserved = {name: getattr(self.config, name) for name in preserve}
-        self.config = replace(create_default_config(), **preserved)
+        # The dataclass defaults are Japanese. `language` is preserved, so the
+        # scoped fields must come from that language's own defaults, exactly as
+        # a first visit to it would give, or a German profile resets to Japanese
+        # POS tags and mines nothing. The machine-specific scoped names (the
+        # chains, the word-list paths) stay preserved and are skipped here.
+        scoped = get_profile(config_language(self.config)).scoped_defaults
+        scoped_values: dict[str, Any] = {k: v for k, v in scoped.items() if k not in preserve}
+        base = replace(create_default_config(), **scoped_values)
+        self.config = replace(base, **preserved)
         self._load_config()  # repaint the reset panels (under the _loading guard)
         self._settings_dirty = False
         self.config_changed.emit(self.config)  # persist via MainWindow.update_config
