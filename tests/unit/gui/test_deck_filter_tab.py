@@ -87,6 +87,31 @@ class TestScanGating:
         worker_cls.assert_not_called()
         assert "different name" in tab.issue_banner().current_issue().summary
 
+    def test_target_naming_the_source_in_another_case_is_refused(self, tab):
+        """BA-022: Anki deck names ignore case, so 'premade' resolves to the Premade deck
+        and Apply would copy every kept note back into the source deck."""
+        _select_source(tab, "Premade")
+        tab.target_edit.setText("premade")
+        with patch(f"{_TAB_MOD}.DeckFilterScanWorker") as worker_cls:
+            tab._start_scan()
+
+        worker_cls.assert_not_called()
+        assert "different name" in tab.issue_banner().current_issue().summary
+
+    @pytest.mark.parametrize(
+        ("source", "target"),
+        [("Mining::Ärger", "mining::ÄRGER"), ("日本語::Core 2K", "日本語::core 2k"), ("Écoute::Ça", "écoute::ça")],
+    )
+    def test_target_in_another_unicode_case_is_refused(self, tab, source, target):
+        """BA-022: Anki's case-insensitive deck lookup covers nested and non-ASCII names."""
+        _select_source(tab, source)
+        tab.target_edit.setText(target)
+        with patch(f"{_TAB_MOD}.DeckFilterScanWorker") as worker_cls:
+            tab._start_scan()
+
+        worker_cls.assert_not_called()
+        assert "different name" in tab.issue_banner().current_issue().summary
+
     def test_valid_inputs_start_the_scan_worker(self, tab):
         _select_source(tab)
         worker = MagicMock()

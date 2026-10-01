@@ -409,7 +409,8 @@ class DeckFilterTab(_AnkiPlanTabBase):
         if not target:
             self.show_screen_issue(ScreenIssue(summary=self.tr("Name the new deck first.")))
             return None
-        if target == source:
+        if target.casefold() == source.casefold():
+            # Anki resolves deck names ignoring case, so "core 2k" IS "Core 2k" (BA-022).
             self.show_screen_issue(
                 ScreenIssue(summary=self.tr("The new deck needs a different name than the source deck."))
             )
