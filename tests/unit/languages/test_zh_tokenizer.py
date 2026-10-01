@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import tempfile
+from pathlib import Path
+
 import pytest
 
+from anki_miner.config import paths as config_paths
 from anki_miner.languages.tagger_provider import get_tagger
 from anki_miner.languages.token import LanguageToken
 from anki_miner.languages.zh import tokenizer
@@ -124,3 +128,17 @@ class TestTaggerProvider:
 
     def test_ja_tagger_is_a_different_instance(self) -> None:
         assert get_tagger("zh") is not get_tagger("ja")
+
+
+def test_the_jieba_prefix_cache_lives_under_the_app_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    pytest.importorskip("jieba")
+    home = tmp_path / "home"
+    system_tmp = tmp_path / "system_tmp"
+    system_tmp.mkdir()
+    monkeypatch.setattr(config_paths, "ANKI_MINER_HOME", home)
+    monkeypatch.setattr(tempfile, "tempdir", str(system_tmp))
+
+    build_tagger()
+
+    assert (home / "cache" / "jieba" / "jieba.cache").is_file()
+    assert not (system_tmp / "jieba.cache").exists()

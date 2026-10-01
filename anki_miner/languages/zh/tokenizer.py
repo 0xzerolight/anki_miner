@@ -99,7 +99,15 @@ def build_tagger() -> LockedTagger:
     """
     import jieba.posseg
 
+    from anki_miner.config import paths as config_paths
+
     cutter = jieba.posseg.POSTokenizer()
+    # jieba dumps its prefix-dictionary cache into the system temp dir and loads
+    # any file found there unchecked; keep it under ANKI_MINER_HOME. Set before
+    # del_word, which runs the lazy initialize() that reads or writes it.
+    cache_dir = config_paths.ANKI_MINER_HOME / "cache" / "jieba"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cutter.tokenizer.tmp_dir = str(cache_dir)
     for word in ZH_SPLIT_ENTRIES:
         cutter.del_word(word)
     return LockedTagger(JiebaTagger(cutter))
