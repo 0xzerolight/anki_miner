@@ -128,6 +128,7 @@ def _publishing_screens():
     from anki_miner.gui.widgets.deck_filter_tab import DeckFilterTab
     from anki_miner.gui.widgets.download_tab import DownloadTab
     from anki_miner.gui.widgets.mokuro_tab import MokuroTab
+    from anki_miner.gui.widgets.readability_tab import ReadabilityTab
     from anki_miner.gui.widgets.reading_deck_tab import ReadingDeckTab
     from anki_miner.gui.widgets.reading_manga_tab import ReadingMangaTab
     from anki_miner.gui.widgets.reading_novels_tab import ReadingNovelsTab
@@ -157,6 +158,7 @@ def _publishing_screens():
         DownloadTab,
         MokuroTab,
         BookSyncTab,
+        ReadabilityTab,
     )
 
 

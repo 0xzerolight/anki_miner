@@ -5,7 +5,9 @@ toggle or Overwrite box) each used to carry its own copy of these tests and of
 a fake worker. Each tab's own file now keeps only what is specific to that
 tool. Every translated string stays in its tab: these tests assert behaviour
 and non-empty copy, never wording. Manga OCR is left out: no Output row, no
-mode toggle, and its run starts behind an off-thread volume scan.
+mode toggle, and its run starts behind an off-thread volume scan. Readability
+has neither an Output row nor a mode toggle either, so it joins only the
+run-lifecycle and probe tests (``_RUN_TABS``, ``_PROBED_TABS``).
 """
 
 from __future__ import annotations
@@ -25,6 +27,7 @@ pytest.importorskip("PyQt6.QtWidgets")
 from anki_miner.gui.widgets.booksync_tab import BookSyncTab
 from anki_miner.gui.widgets.condense_tab import CondenseTab
 from anki_miner.gui.widgets.download_tab import DownloadTab
+from anki_miner.gui.widgets.readability_tab import ReadabilityTab
 from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
 from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
 from tests.unit._tool_tab_harness import OS_ACCESS, FakeToolWorker, capture_slots, make_config
@@ -65,6 +68,12 @@ def _fill_booksync(tab, tmp_path: Path) -> None:
 
 def _fill_download(tab, tmp_path: Path) -> None:
     tab.url_input.setPlainText("https://example.com/watch?v=1")
+
+
+def _fill_readability(tab, tmp_path: Path) -> None:
+    sub = tmp_path / "episode.srt"
+    sub.write_text("1\n00:00:00,000 --> 00:00:01,000\n猫\n", encoding="utf-8")
+    tab.input_selector.set_path(str(sub))
 
 
 @dataclass(frozen=True)
@@ -142,13 +151,23 @@ _DOWNLOAD = _Spec(
     run_patches=(("anki_miner.gui.widgets.download_tab.DownloadTab._ytdlp_ready", True),),
     fill_single=_fill_download,
 )
+_READABILITY = _Spec(
+    tab_cls=ReadabilityTab,
+    primary="check_button",
+    worker_cls="anki_miner.gui.widgets.readability_tab.ReadabilityWorker",
+    construct_patches=(("anki_miner.gui.widgets.readability_tab.ReadabilityTab._compute_engine_available", True),),
+    run_patches=(),
+    fill_single=_fill_readability,
+)
 
 #: Tabs with a Single File / Folder toggle and an Overwrite box.
 _MODE_TABS = [_CREATION, _RETIME, _CONDENSE, _BOOKSYNC]
 #: Tabs with an Output row whose run is one queue worker started from the primary.
 _ALL_TABS = [*_MODE_TABS, _DOWNLOAD]
+#: Tabs whose run is one queue worker started from the primary, Output row or not.
+_RUN_TABS = [*_ALL_TABS, _READABILITY]
 #: Tabs whose engine probe is the base template (Retime keeps its own).
-_PROBED_TABS = [_CREATION, _CONDENSE, _BOOKSYNC, _DOWNLOAD]
+_PROBED_TABS = [_CREATION, _CONDENSE, _BOOKSYNC, _DOWNLOAD, _READABILITY]
 
 
 def _spec_id(spec: _Spec) -> str:
@@ -198,7 +217,7 @@ def _assert_mode(tab, spec: _Spec, *, single: bool) -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("spec", _ALL_TABS, ids=_spec_id)
+@pytest.mark.parametrize("spec", _RUN_TABS, ids=_spec_id)
 def test_construction_leaves_the_tab_idle_and_ready(spec, qtbot, tmp_path):
     tab = _make_tab(spec, qtbot, tmp_path)
     assert tab.worker_thread is None
@@ -306,12 +325,12 @@ def test_choose_folder_then_reset(spec, qtbot, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("spec", _ALL_TABS, ids=_spec_id)
+@pytest.mark.parametrize("spec", _RUN_TABS, ids=_spec_id)
 def test_iter_close_workers_empty_when_idle(spec, qtbot, tmp_path):
     assert list(_make_tab(spec, qtbot, tmp_path).iter_close_workers()) == []
 
 
-@pytest.mark.parametrize("spec", _ALL_TABS, ids=_spec_id)
+@pytest.mark.parametrize("spec", _RUN_TABS, ids=_spec_id)
 def test_a_started_run_owns_its_worker(spec, qtbot, tmp_path):
     tab = _make_tab(spec, qtbot, tmp_path)
     worker = FakeToolWorker()
@@ -326,7 +345,7 @@ def test_a_started_run_owns_its_worker(spec, qtbot, tmp_path):
     assert not tab.cancel_button.isHidden()
 
 
-@pytest.mark.parametrize("spec", _ALL_TABS, ids=_spec_id)
+@pytest.mark.parametrize("spec", _RUN_TABS, ids=_spec_id)
 def test_worker_released_on_thread_finished(spec, qtbot, tmp_path):
     """Native QThread.finished clears the handle and schedules deleteLater (M9)."""
     tab = _make_tab(spec, qtbot, tmp_path)
@@ -341,7 +360,7 @@ def test_worker_released_on_thread_finished(spec, qtbot, tmp_path):
     worker.deleteLater.assert_called_once()
 
 
-@pytest.mark.parametrize("spec", _ALL_TABS, ids=_spec_id)
+@pytest.mark.parametrize("spec", _RUN_TABS, ids=_spec_id)
 def test_file_skipped_logs_skipped_not_done(spec, qtbot, tmp_path):
     """file_skipped(idx, out_path, reason) logs 'Skipped: <name> — <reason>', not 'Done' (T1)."""
     tab = _make_tab(spec, qtbot, tmp_path)
@@ -384,7 +403,7 @@ def test_the_output_hint_moves_into_the_choose_folder_tooltip(spec, sentence, qt
     assert [label for label in tab.findChildren(QLabel) if label.text() == sentence] == []
 
 
-@pytest.mark.parametrize("spec", _ALL_TABS, ids=_spec_id)
+@pytest.mark.parametrize("spec", _RUN_TABS, ids=_spec_id)
 def test_the_in_page_progress_card_is_hidden(spec, qtbot, tmp_path):
     """D1: the pinned bar is the one live readout; the in-page card went."""
     tab = _make_tab(spec, qtbot, tmp_path)
@@ -392,7 +411,7 @@ def test_the_in_page_progress_card_is_hidden(spec, qtbot, tmp_path):
     assert not tab.progress_widget.isVisibleTo(tab)
 
 
-@pytest.mark.parametrize("spec", _ALL_TABS, ids=_spec_id)
+@pytest.mark.parametrize("spec", _RUN_TABS, ids=_spec_id)
 def test_a_failed_run_keeps_its_result_in_the_pinned_bar(spec, qtbot, tmp_path):
     """D1: a tool has no receipt, so the bar keeps its last line until the next run."""
     from anki_miner.models import TerminalOutcome
@@ -408,7 +427,7 @@ def test_a_failed_run_keeps_its_result_in_the_pinned_bar(spec, qtbot, tmp_path):
     assert tab.action_bar.stage_label.full_text == tab._strings.failed
 
 
-@pytest.mark.parametrize("spec", _ALL_TABS, ids=_spec_id)
+@pytest.mark.parametrize("spec", _RUN_TABS, ids=_spec_id)
 def test_a_finished_run_states_its_completion_in_the_pinned_bar(spec, qtbot, tmp_path):
     from anki_miner.models import TerminalOutcome
 

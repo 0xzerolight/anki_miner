@@ -23,8 +23,9 @@ class FakeToolWorker:
     """Stand-in for any FileQueueWorker a tool tab starts.
 
     Signals are per-instance MagicMocks, so ``connect()`` on two instances stays
-    independent. ``file_note`` covers Retime and Condense; the three probe
-    signals let the same fake stand in for Download's probe workers.
+    independent. ``file_note`` covers Retime and Condense, ``file_measured``
+    Readability; the three probe signals let the same fake stand in for
+    Download's probe workers.
     """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -34,6 +35,7 @@ class FakeToolWorker:
         self.file_progress = MagicMock()
         self.file_finished = MagicMock()
         self.file_note = MagicMock()
+        self.file_measured = MagicMock()
         self.file_skipped = MagicMock()
         self.queue_finished = MagicMock()
         self.error = MagicMock()
