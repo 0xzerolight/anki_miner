@@ -118,10 +118,20 @@ SCREENS = [
 
 
 def _focusables(root: QWidget) -> set[QWidget]:
+    """Every Tab stop under ``root``.
+
+    A widget with a focus proxy is not one: Tab skips it, as it skips a spin
+    box's inner line edit. Counting that edit compared its top edge, 3px under
+    the spin box's, against the row's -- under DejaVu metrics the two landed
+    either side of a row boundary and read as out of order.
+    """
     return {
         widget
         for widget in root.findChildren(QWidget)
-        if widget.focusPolicy() != Qt.FocusPolicy.NoFocus and widget.isVisibleTo(root) and widget.isEnabled()
+        if widget.focusPolicy() != Qt.FocusPolicy.NoFocus
+        and widget.focusProxy() is None
+        and widget.isVisibleTo(root)
+        and widget.isEnabled()
     }
 
 
