@@ -7,6 +7,7 @@ read-only, then measures each file. Writes nothing.
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from PyQt6.QtCore import pyqtSignal
@@ -18,6 +19,8 @@ from anki_miner.gui.workers.file_queue_worker import FileQueueWorker
 from anki_miner.services.audio_fetch_common import close_all
 from anki_miner.services.known_word_db import collect_known_forms
 from anki_miner.services.readability import measure
+
+logger = logging.getLogger(__name__)
 
 
 class ReadabilityWorker(FileQueueWorker):
@@ -46,8 +49,13 @@ class ReadabilityWorker(FileQueueWorker):
                 # Not degraded: an empty set on a timeout would read as "0% known".
                 vocabulary = services.anki_service.get_existing_vocabulary(allow_degraded=False)
             except AnkiConnectionError as exc:
+                # Anki simply not running is expected: one WARNING line, not the
+                # traceback run() would write (report_failure's rule).
+                logger.warning("ReadabilityWorker: Anki not reachable: %s", exc)
                 self.fatal_exception = exc  # the tab names it in its own words
-                raise
+                self._fatal_error = True
+                self.error.emit(str(exc))
+                return
             self._known = collect_known_forms(services.known_word_db, self._config, vocabulary)
             self._services = services
             super()._process_queue()

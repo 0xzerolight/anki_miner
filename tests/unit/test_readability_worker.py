@@ -7,6 +7,7 @@ The parser is a fake; ``measure`` and the known-forms recipe run for real.
 
 from __future__ import annotations
 
+import logging
 from collections import Counter
 from pathlib import Path
 from types import SimpleNamespace
@@ -127,6 +128,19 @@ def test_anki_unreachable_fails_the_run_with_a_typed_fault(qapp, tmp_path):
     shared.close.assert_called_once()
     services.expression_audio_fetcher.close.assert_called_once()
     services.sentence_audio_fetcher.close.assert_called_once()
+
+
+def test_anki_unreachable_logs_one_warning_not_a_traceback(qapp, tmp_path, caplog):
+    """Anki simply being closed is expected: report_failure's rule, one WARNING line."""
+    config = AnkiMinerConfig()
+    services = _services(config, _FakeParser({"1.srt": _parsed(("猫",))}))
+    services.anki_service.get_existing_vocabulary.side_effect = AnkiConnectionError("refused")
+
+    with caplog.at_level(logging.WARNING):
+        _run(config, _files(tmp_path, "1.srt"), services)
+
+    assert [r for r in caplog.records if r.levelno >= logging.ERROR or r.exc_info] == []
+    assert any("refused" in r.getMessage() for r in caplog.records if r.levelno == logging.WARNING)
 
 
 def test_one_unreadable_file_is_partial(qapp, tmp_path):

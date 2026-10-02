@@ -18,6 +18,7 @@ Guard contract:
 
 from __future__ import annotations
 
+import functools
 from collections.abc import Callable
 from pathlib import Path
 
@@ -44,10 +45,12 @@ from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout, field_label_width
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, StatCard
 from anki_miner.gui.workers.readability_worker import ReadabilityWorker
+from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.models.readability import I_PLUS_0, I_PLUS_1, I_PLUS_2_OR_MORE, ReadabilityStats
 from anki_miner.services.readability import combine
 from anki_miner.services.reading._util import natural_sort_key
+from anki_miner.utils.audio_track_detector import matches_language_tag
 from anki_miner.utils.file_pairing import FilePairMatcher
 from anki_miner.utils.i18n import tr_format
 
@@ -57,6 +60,25 @@ _NUMBER_COLUMNS = (1, 2, 3, 4, 5)
 #: Rows the table shows before it scrolls (a floor in rows, not pixels).
 _MIN_VISIBLE_ROWS = 8
 _NO_VALUE = "—"
+
+
+@functools.cache
+def _language_codes() -> frozenset[str]:
+    """Every code a mining language answers to (ja, jpn, en, eng, pt, ...)."""
+    return frozenset().union(*(get_profile(code).audio_track_codes for code in AVAILABLE_LANGUAGES))
+
+
+def _tagged_for_another_language(path: Path, mining_codes: frozenset[str]) -> bool:
+    """Whether the name ends in a language tag for another language (``ep01.en.srt``, ``ep01.en.forced.srt``).
+
+    Only the last two dot-separated parts of the stem are read, and only a
+    lowercase one counts: release names capitalise their words, so a title word
+    such as ``All.In`` is not taken for Indonesian.
+    """
+    for token in path.stem.split(".")[1:][-2:]:
+        if token.partition("-")[0].islower() and matches_language_tag(token, _language_codes()):
+            return not matches_language_tag(token, mining_codes)
+    return False
 
 
 def _pct(value: float | None, decimals: int) -> str:
@@ -358,10 +380,15 @@ class ReadabilityTab(_ToolTabBase):
                     return
                 self._start_run(files)
 
+            # A folder often holds the same episodes in other languages too
+            # (ep01.en.srt beside ep01.es.srt); scoring those would skew the
+            # totals, and a Latin-script mining language cannot tell them apart.
+            mining_codes = get_profile(config_language(self.config)).audio_track_codes
             # Natural order (1, 2, 10): the rows read as the season does.
             self._scan_folder_async(
                 path,
-                lambda f: f.suffix.lower() in _SUBTITLE_EXTENSIONS,
+                lambda f: f.suffix.lower() in _SUBTITLE_EXTENSIONS
+                and not _tagged_for_another_language(f, mining_codes),
                 _on_files,
                 sort_key=lambda f: natural_sort_key(f.name),
                 empty_summary=self.tr("No subtitle files were found in that folder."),
