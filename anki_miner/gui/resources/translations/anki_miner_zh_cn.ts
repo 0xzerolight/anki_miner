@@ -2669,11 +2669,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Check how much of a show you can read</source>
-        <translation type="unfinished" />
+        <translation>查看一部剧你能看懂多少</translation>
     </message>
     <message>
         <source>Pick a subtitle file or a folder of them to see the share of words you already know, how many new words there are, and how many lines are i+1. Uses your Anki cards and known words; nothing is written.</source>
-        <translation type="unfinished" />
+        <translation>选择一个字幕文件或一个字幕文件夹，查看你已认识的单词占比、生词数量，以及有多少行是 i+1。使用你的 Anki 卡片和已知单词；不会写入任何内容。</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -6451,7 +6451,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Readability</source>
-        <translation type="unfinished" />
+        <translation>可读性</translation>
     </message>
     <message>
         <source>Anki Miner updated</source>
@@ -8345,193 +8345,193 @@ No index files are deleted.</source>
     <name>ReadabilityTab</name>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">进度</translation>
+        <translation>进度</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">完成</translation>
+        <translation>完成</translation>
     </message>
     <message>
         <source>Done: </source>
-        <translation type="unfinished">完成：</translation>
+        <translation>完成：</translation>
     </message>
     <message>
         <source>Skipped</source>
-        <translation type="unfinished">已跳过</translation>
+        <translation>已跳过</translation>
     </message>
     <message>
         <source>Skipped: </source>
-        <translation type="unfinished">已跳过：</translation>
+        <translation>已跳过：</translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">取消</translation>
+        <translation>取消</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">正在取消…</translation>
+        <translation>正在取消…</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">已取消</translation>
+        <translation>已取消</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">失败——请查看日志</translation>
+        <translation>失败——请查看日志</translation>
     </message>
     <message>
         <source>Finished with errors — see log</source>
-        <translation type="unfinished">完成但有错误 — 请查看日志</translation>
+        <translation>完成但有错误 — 请查看日志</translation>
     </message>
     <message>
         <source>Some subtitle files could not be read.</source>
-        <translation type="unfinished" />
+        <translation>有些字幕文件无法读取。</translation>
     </message>
     <message>
         <source>This subtitle file could not be read.</source>
-        <translation type="unfinished" />
+        <translation>无法读取此字幕文件。</translation>
     </message>
     <message>
         <source>Complete — %1 file(s) checked</source>
-        <translation type="unfinished" />
+        <translation>完成——已检查 %1 个文件</translation>
     </message>
     <message>
         <source>Complete — %1 checked, %2 skipped (no words in the mining language)</source>
-        <translation type="unfinished" />
+        <translation>完成——已检查 %1 个，已跳过 %2 个（不含挖词语言的单词）</translation>
     </message>
     <message>
         <source>Nothing to report — no file had words in the mining language.</source>
-        <translation type="unfinished" />
+        <translation>没有可报告的内容——没有文件包含挖词语言的单词。</translation>
     </message>
     <message>
         <source>Readability check</source>
-        <translation type="unfinished" />
+        <translation>可读性检查</translation>
     </message>
     <message>
         <source>Subtitles</source>
-        <translation type="unfinished">字幕</translation>
+        <translation>字幕</translation>
     </message>
     <message>
         <source>Your mining language can't read text on this computer yet. Download its language pack in Settings → Mining Language.</source>
-        <translation type="unfinished" />
+        <translation>这台电脑还无法读取你挖词语言的文本。请在“设置 → 挖词语言”中下载该语言的语言包。</translation>
     </message>
     <message>
         <source>See how much of a subtitle file, or a folder of them, you already know. Uses your Anki cards and known words; nothing is written.</source>
-        <translation type="unfinished" />
+        <translation>查看一个字幕文件或一个字幕文件夹中有多少内容是你已认识的。使用你的 Anki 卡片和已知单词；不会写入任何内容。</translation>
     </message>
     <message>
         <source>This field takes a subtitle file or a folder.</source>
-        <translation type="unfinished" />
+        <translation>此字段需要字幕文件或文件夹。</translation>
     </message>
     <message>
         <source>Subtitle file or folder:</source>
-        <translation type="unfinished" />
+        <translation>字幕文件或文件夹：</translation>
     </message>
     <message>
         <source>Report</source>
-        <translation type="unfinished" />
+        <translation>报告</translation>
     </message>
     <message>
         <source>Known words</source>
-        <translation type="unfinished">已知单词</translation>
+        <translation>已知单词</translation>
     </message>
     <message>
         <source>Share of all words in these files you already know. A word said ten times counts ten times.</source>
-        <translation type="unfinished" />
+        <translation>这些文件的所有单词中你已认识的占比。一个单词出现十次就计十次。</translation>
     </message>
     <message>
         <source>New words</source>
-        <translation type="unfinished" />
+        <translation>生词</translation>
     </message>
     <message>
         <source>Different words you don't know yet, counted once across all files.</source>
-        <translation type="unfinished" />
+        <translation>你还不认识的不同单词，在所有文件中只计一次。</translation>
     </message>
     <message>
         <source>Lines fully known</source>
-        <translation type="unfinished" />
+        <translation>完全认识的行</translation>
     </message>
     <message>
         <source>Lines with no new words (i+0).</source>
-        <translation type="unfinished" />
+        <translation>没有生词的行（i+0）。</translation>
     </message>
     <message>
         <source>Lines with one new word</source>
-        <translation type="unfinished" />
+        <translation>含一个生词的行</translation>
     </message>
     <message>
         <source>Lines with exactly one new word (i+1): the easiest sentences to learn from.</source>
-        <translation type="unfinished" />
+        <translation>恰好含一个生词的行（i+1）：最容易从中学习的句子。</translation>
     </message>
     <message>
         <source>File</source>
-        <translation type="unfinished">文件</translation>
+        <translation>文件</translation>
     </message>
     <message>
         <source>Subtitle file.</source>
-        <translation type="unfinished" />
+        <translation>字幕文件。</translation>
     </message>
     <message>
         <source>Known</source>
-        <translation type="unfinished" />
+        <translation>已知</translation>
     </message>
     <message>
         <source>Share of the file's words you already know.</source>
-        <translation type="unfinished" />
+        <translation>该文件中你已认识的单词占比。</translation>
     </message>
     <message>
         <source>Different words in this file you don't know yet. The total above counts a word once.</source>
-        <translation type="unfinished" />
+        <translation>该文件中你还不认识的不同单词。上方的总数中每个单词只计一次。</translation>
     </message>
     <message>
         <source>Lines with no new words.</source>
-        <translation type="unfinished" />
+        <translation>没有生词的行。</translation>
     </message>
     <message>
         <source>Lines with exactly one new word.</source>
-        <translation type="unfinished" />
+        <translation>恰好含一个生词的行。</translation>
     </message>
     <message>
         <source>Lines with two or more new words.</source>
-        <translation type="unfinished" />
+        <translation>含两个或更多生词的行。</translation>
     </message>
     <message>
         <source>Check Readability</source>
-        <translation type="unfinished" />
+        <translation>检查可读性</translation>
     </message>
     <message>
         <source>Anki isn't reachable. Start Anki (with AnkiConnect) and check again.</source>
-        <translation type="unfinished" />
+        <translation>无法连接到 Anki。请启动 Anki（需安装 AnkiConnect），然后重新检查。</translation>
     </message>
     <message>
         <source>Choose a subtitle file or a folder first.</source>
-        <translation type="unfinished" />
+        <translation>请先选择一个字幕文件或文件夹。</translation>
     </message>
     <message>
         <source>No subtitle files were found in that folder.</source>
-        <translation type="unfinished" />
+        <translation>该文件夹中未找到字幕文件。</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
-        <translation type="unfinished">无法扫描该文件夹。</translation>
+        <translation>无法扫描该文件夹。</translation>
     </message>
     <message>
         <source>That file or folder no longer exists.</source>
-        <translation type="unfinished" />
+        <translation>该文件或文件夹已不存在。</translation>
     </message>
     <message>
         <source>Pick a subtitle file (.ass, .srt, .ssa, .vtt or .smi).</source>
-        <translation type="unfinished" />
+        <translation>请选择一个字幕文件（.ass、.srt、.ssa、.vtt 或 .smi）。</translation>
     </message>
     <message>
         <source>Checking file %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>正在检查第 %1 个文件，共 %2 个</translation>
     </message>
 </context><context>
     <name>ReadabilityWorker</name>
     <message>
         <source>No words in the mining language</source>
-        <translation type="unfinished" />
+        <translation>不含挖词语言的单词</translation>
     </message>
 </context><context>
     <name>ReadingDeckTab</name>

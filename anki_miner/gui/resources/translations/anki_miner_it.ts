@@ -2672,11 +2672,11 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Check how much of a show you can read</source>
-        <translation type="unfinished" />
+        <translation>Verifica quanto di una serie riesci a leggere</translation>
     </message>
     <message>
         <source>Pick a subtitle file or a folder of them to see the share of words you already know, how many new words there are, and how many lines are i+1. Uses your Anki cards and known words; nothing is written.</source>
-        <translation type="unfinished" />
+        <translation>Scegli un file di sottotitoli o una cartella che ne contiene per vedere la percentuale di parole che conosci già, quante parole nuove ci sono e quante righe sono i+1. Usa le tue carte Anki e le parole conosciute; non viene scritto nulla.</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -6488,7 +6488,7 @@ Parole da aggiungere: %3. Continuare?</translation>
     </message>
     <message>
         <source>Readability</source>
-        <translation type="unfinished" />
+        <translation>Leggibilità</translation>
     </message>
     <message>
         <source>Anki Miner updated</source>
@@ -8382,193 +8382,193 @@ Nessun file indice viene eliminato.</translation>
     <name>ReadabilityTab</name>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">Avanzamento</translation>
+        <translation>Avanzamento</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">Completato</translation>
+        <translation>Completato</translation>
     </message>
     <message>
         <source>Done: </source>
-        <translation type="unfinished">Completato: </translation>
+        <translation>Completato: </translation>
     </message>
     <message>
         <source>Skipped</source>
-        <translation type="unfinished">Saltato</translation>
+        <translation>Saltato</translation>
     </message>
     <message>
         <source>Skipped: </source>
-        <translation type="unfinished">Saltato: </translation>
+        <translation>Saltato: </translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Annulla</translation>
+        <translation>Annulla</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Annullamento…</translation>
+        <translation>Annullamento…</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Annullato</translation>
+        <translation>Annullato</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">Non riuscito — vedi il registro</translation>
+        <translation>Non riuscito — vedi il registro</translation>
     </message>
     <message>
         <source>Finished with errors — see log</source>
-        <translation type="unfinished">Terminato con errori — vedere il registro</translation>
+        <translation>Terminato con errori — vedere il registro</translation>
     </message>
     <message>
         <source>Some subtitle files could not be read.</source>
-        <translation type="unfinished" />
+        <translation>Impossibile leggere alcuni file di sottotitoli.</translation>
     </message>
     <message>
         <source>This subtitle file could not be read.</source>
-        <translation type="unfinished" />
+        <translation>Impossibile leggere questo file di sottotitoli.</translation>
     </message>
     <message>
         <source>Complete — %1 file(s) checked</source>
-        <translation type="unfinished" />
+        <translation>Completato — %1 file verificati</translation>
     </message>
     <message>
         <source>Complete — %1 checked, %2 skipped (no words in the mining language)</source>
-        <translation type="unfinished" />
+        <translation>Completato — %1 verificati, %2 saltati (nessuna parola nella lingua di mining)</translation>
     </message>
     <message>
         <source>Nothing to report — no file had words in the mining language.</source>
-        <translation type="unfinished" />
+        <translation>Niente da segnalare — nessun file conteneva parole nella lingua di mining.</translation>
     </message>
     <message>
         <source>Readability check</source>
-        <translation type="unfinished" />
+        <translation>Verifica della leggibilità</translation>
     </message>
     <message>
         <source>Subtitles</source>
-        <translation type="unfinished">Sottotitoli</translation>
+        <translation>Sottotitoli</translation>
     </message>
     <message>
         <source>Your mining language can't read text on this computer yet. Download its language pack in Settings → Mining Language.</source>
-        <translation type="unfinished" />
+        <translation>Su questo computer non è ancora possibile leggere il testo nella lingua di mining. Scaricarne il pacchetto lingua in Impostazioni → Lingua di mining.</translation>
     </message>
     <message>
         <source>See how much of a subtitle file, or a folder of them, you already know. Uses your Anki cards and known words; nothing is written.</source>
-        <translation type="unfinished" />
+        <translation>Mostra quanto si conosce già di un file di sottotitoli o di una cartella che ne contiene. Usa le carte Anki e le parole conosciute; non viene scritto nulla.</translation>
     </message>
     <message>
         <source>This field takes a subtitle file or a folder.</source>
-        <translation type="unfinished" />
+        <translation>Questo campo accetta un file di sottotitoli o una cartella.</translation>
     </message>
     <message>
         <source>Subtitle file or folder:</source>
-        <translation type="unfinished" />
+        <translation>File di sottotitoli o cartella:</translation>
     </message>
     <message>
         <source>Report</source>
-        <translation type="unfinished" />
+        <translation>Resoconto</translation>
     </message>
     <message>
         <source>Known words</source>
-        <translation type="unfinished">Parole conosciute</translation>
+        <translation>Parole conosciute</translation>
     </message>
     <message>
         <source>Share of all words in these files you already know. A word said ten times counts ten times.</source>
-        <translation type="unfinished" />
+        <translation>Percentuale di tutte le parole di questi file già conosciute. Una parola detta dieci volte conta dieci volte.</translation>
     </message>
     <message>
         <source>New words</source>
-        <translation type="unfinished" />
+        <translation>Parole nuove</translation>
     </message>
     <message>
         <source>Different words you don't know yet, counted once across all files.</source>
-        <translation type="unfinished" />
+        <translation>Parole diverse non ancora conosciute, contate una sola volta su tutti i file.</translation>
     </message>
     <message>
         <source>Lines fully known</source>
-        <translation type="unfinished" />
+        <translation>Righe interamente conosciute</translation>
     </message>
     <message>
         <source>Lines with no new words (i+0).</source>
-        <translation type="unfinished" />
+        <translation>Righe senza parole nuove (i+0).</translation>
     </message>
     <message>
         <source>Lines with one new word</source>
-        <translation type="unfinished" />
+        <translation>Righe con una parola nuova</translation>
     </message>
     <message>
         <source>Lines with exactly one new word (i+1): the easiest sentences to learn from.</source>
-        <translation type="unfinished" />
+        <translation>Righe con esattamente una parola nuova (i+1): le frasi più facili da cui imparare.</translation>
     </message>
     <message>
         <source>File</source>
-        <translation type="unfinished">File</translation>
+        <translation>File</translation>
     </message>
     <message>
         <source>Subtitle file.</source>
-        <translation type="unfinished" />
+        <translation>File di sottotitoli.</translation>
     </message>
     <message>
         <source>Known</source>
-        <translation type="unfinished" />
+        <translation>Conosciute</translation>
     </message>
     <message>
         <source>Share of the file's words you already know.</source>
-        <translation type="unfinished" />
+        <translation>Percentuale delle parole del file già conosciute.</translation>
     </message>
     <message>
         <source>Different words in this file you don't know yet. The total above counts a word once.</source>
-        <translation type="unfinished" />
+        <translation>Parole diverse di questo file non ancora conosciute. Il totale sopra conta ogni parola una sola volta.</translation>
     </message>
     <message>
         <source>Lines with no new words.</source>
-        <translation type="unfinished" />
+        <translation>Righe senza parole nuove.</translation>
     </message>
     <message>
         <source>Lines with exactly one new word.</source>
-        <translation type="unfinished" />
+        <translation>Righe con esattamente una parola nuova.</translation>
     </message>
     <message>
         <source>Lines with two or more new words.</source>
-        <translation type="unfinished" />
+        <translation>Righe con due o più parole nuove.</translation>
     </message>
     <message>
         <source>Check Readability</source>
-        <translation type="unfinished" />
+        <translation>Verifica leggibilità</translation>
     </message>
     <message>
         <source>Anki isn't reachable. Start Anki (with AnkiConnect) and check again.</source>
-        <translation type="unfinished" />
+        <translation>Anki non è raggiungibile. Avviare Anki (con AnkiConnect) e ripetere la verifica.</translation>
     </message>
     <message>
         <source>Choose a subtitle file or a folder first.</source>
-        <translation type="unfinished" />
+        <translation>Scegliere prima un file di sottotitoli o una cartella.</translation>
     </message>
     <message>
         <source>No subtitle files were found in that folder.</source>
-        <translation type="unfinished" />
+        <translation>Nessun file di sottotitoli trovato in quella cartella.</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
-        <translation type="unfinished">Impossibile analizzare quella cartella.</translation>
+        <translation>Impossibile analizzare quella cartella.</translation>
     </message>
     <message>
         <source>That file or folder no longer exists.</source>
-        <translation type="unfinished" />
+        <translation>Quel file o quella cartella non esiste più.</translation>
     </message>
     <message>
         <source>Pick a subtitle file (.ass, .srt, .ssa, .vtt or .smi).</source>
-        <translation type="unfinished" />
+        <translation>Scegliere un file di sottotitoli (.ass, .srt, .ssa, .vtt o .smi).</translation>
     </message>
     <message>
         <source>Checking file %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>Verifica del file %1 di %2</translation>
     </message>
 </context><context>
     <name>ReadabilityWorker</name>
     <message>
         <source>No words in the mining language</source>
-        <translation type="unfinished" />
+        <translation>Nessuna parola nella lingua di mining</translation>
     </message>
 </context><context>
     <name>ReadingDeckTab</name>

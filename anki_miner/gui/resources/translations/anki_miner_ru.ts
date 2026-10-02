@@ -2675,11 +2675,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Check how much of a show you can read</source>
-        <translation type="unfinished" />
+        <translation>Проверка, какую часть сериала вы понимаете</translation>
     </message>
     <message>
         <source>Pick a subtitle file or a folder of them to see the share of words you already know, how many new words there are, and how many lines are i+1. Uses your Anki cards and known words; nothing is written.</source>
-        <translation type="unfinished" />
+        <translation>Выберите файл субтитров или папку с ними, чтобы узнать долю уже известных вам слов, количество новых слов и число строк i+1. Используются ваши карточки Anki и известные слова; ничего не записывается.</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -6525,7 +6525,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Readability</source>
-        <translation type="unfinished" />
+        <translation>Понятность</translation>
     </message>
     <message>
         <source>Anki Miner updated</source>
@@ -8419,193 +8419,193 @@ No index files are deleted.</source>
     <name>ReadabilityTab</name>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">Прогресс</translation>
+        <translation>Прогресс</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">Готово</translation>
+        <translation>Готово</translation>
     </message>
     <message>
         <source>Done: </source>
-        <translation type="unfinished">Готово: </translation>
+        <translation>Готово: </translation>
     </message>
     <message>
         <source>Skipped</source>
-        <translation type="unfinished">Пропущено</translation>
+        <translation>Пропущено</translation>
     </message>
     <message>
         <source>Skipped: </source>
-        <translation type="unfinished">Пропущено: </translation>
+        <translation>Пропущено: </translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Отмена</translation>
+        <translation>Отмена</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Отмена…</translation>
+        <translation>Отмена…</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Отменено</translation>
+        <translation>Отменено</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">Ошибка — см. журнал</translation>
+        <translation>Ошибка — см. журнал</translation>
     </message>
     <message>
         <source>Finished with errors — see log</source>
-        <translation type="unfinished">Завершено с ошибками — см. журнал</translation>
+        <translation>Завершено с ошибками — см. журнал</translation>
     </message>
     <message>
         <source>Some subtitle files could not be read.</source>
-        <translation type="unfinished" />
+        <translation>Не удалось прочитать некоторые файлы субтитров.</translation>
     </message>
     <message>
         <source>This subtitle file could not be read.</source>
-        <translation type="unfinished" />
+        <translation>Не удалось прочитать этот файл субтитров.</translation>
     </message>
     <message>
         <source>Complete — %1 file(s) checked</source>
-        <translation type="unfinished" />
+        <translation>Завершено — проверено файлов: %1</translation>
     </message>
     <message>
         <source>Complete — %1 checked, %2 skipped (no words in the mining language)</source>
-        <translation type="unfinished" />
+        <translation>Завершено — проверено: %1, пропущено: %2 (нет слов на языке майнинга)</translation>
     </message>
     <message>
         <source>Nothing to report — no file had words in the mining language.</source>
-        <translation type="unfinished" />
+        <translation>Нечего показать — ни в одном файле нет слов на языке майнинга.</translation>
     </message>
     <message>
         <source>Readability check</source>
-        <translation type="unfinished" />
+        <translation>Проверка понятности</translation>
     </message>
     <message>
         <source>Subtitles</source>
-        <translation type="unfinished">Субтитры</translation>
+        <translation>Субтитры</translation>
     </message>
     <message>
         <source>Your mining language can't read text on this computer yet. Download its language pack in Settings → Mining Language.</source>
-        <translation type="unfinished" />
+        <translation>Ваш язык майнинга пока не может обрабатывать текст на этом компьютере. Загрузите его языковой пакет в разделе Настройки → Язык майнинга.</translation>
     </message>
     <message>
         <source>See how much of a subtitle file, or a folder of them, you already know. Uses your Anki cards and known words; nothing is written.</source>
-        <translation type="unfinished" />
+        <translation>Узнайте, какую часть файла субтитров или папки с ними вы уже знаете. Используются ваши карточки Anki и известные слова; ничего не записывается.</translation>
     </message>
     <message>
         <source>This field takes a subtitle file or a folder.</source>
-        <translation type="unfinished" />
+        <translation>Это поле принимает файл субтитров или папку.</translation>
     </message>
     <message>
         <source>Subtitle file or folder:</source>
-        <translation type="unfinished" />
+        <translation>Файл субтитров или папка:</translation>
     </message>
     <message>
         <source>Report</source>
-        <translation type="unfinished" />
+        <translation>Отчёт</translation>
     </message>
     <message>
         <source>Known words</source>
-        <translation type="unfinished">Известные слова</translation>
+        <translation>Известные слова</translation>
     </message>
     <message>
         <source>Share of all words in these files you already know. A word said ten times counts ten times.</source>
-        <translation type="unfinished" />
+        <translation>Доля уже известных вам слов среди всех слов в этих файлах. Слово, произнесённое десять раз, учитывается десять раз.</translation>
     </message>
     <message>
         <source>New words</source>
-        <translation type="unfinished" />
+        <translation>Новые слова</translation>
     </message>
     <message>
         <source>Different words you don't know yet, counted once across all files.</source>
-        <translation type="unfinished" />
+        <translation>Разные слова, которых вы ещё не знаете; каждое учитывается один раз по всем файлам.</translation>
     </message>
     <message>
         <source>Lines fully known</source>
-        <translation type="unfinished" />
+        <translation>Полностью известные строки</translation>
     </message>
     <message>
         <source>Lines with no new words (i+0).</source>
-        <translation type="unfinished" />
+        <translation>Строки без новых слов (i+0).</translation>
     </message>
     <message>
         <source>Lines with one new word</source>
-        <translation type="unfinished" />
+        <translation>Строки с одним новым словом</translation>
     </message>
     <message>
         <source>Lines with exactly one new word (i+1): the easiest sentences to learn from.</source>
-        <translation type="unfinished" />
+        <translation>Строки ровно с одним новым словом (i+1): самые удобные предложения для изучения.</translation>
     </message>
     <message>
         <source>File</source>
-        <translation type="unfinished">Файл</translation>
+        <translation>Файл</translation>
     </message>
     <message>
         <source>Subtitle file.</source>
-        <translation type="unfinished" />
+        <translation>Файл субтитров.</translation>
     </message>
     <message>
         <source>Known</source>
-        <translation type="unfinished" />
+        <translation>Известно</translation>
     </message>
     <message>
         <source>Share of the file's words you already know.</source>
-        <translation type="unfinished" />
+        <translation>Доля слов файла, которые вы уже знаете.</translation>
     </message>
     <message>
         <source>Different words in this file you don't know yet. The total above counts a word once.</source>
-        <translation type="unfinished" />
+        <translation>Разные слова в этом файле, которых вы ещё не знаете. В общем итоге выше каждое слово учитывается один раз.</translation>
     </message>
     <message>
         <source>Lines with no new words.</source>
-        <translation type="unfinished" />
+        <translation>Строки без новых слов.</translation>
     </message>
     <message>
         <source>Lines with exactly one new word.</source>
-        <translation type="unfinished" />
+        <translation>Строки ровно с одним новым словом.</translation>
     </message>
     <message>
         <source>Lines with two or more new words.</source>
-        <translation type="unfinished" />
+        <translation>Строки с двумя и более новыми словами.</translation>
     </message>
     <message>
         <source>Check Readability</source>
-        <translation type="unfinished" />
+        <translation>Проверить понятность</translation>
     </message>
     <message>
         <source>Anki isn't reachable. Start Anki (with AnkiConnect) and check again.</source>
-        <translation type="unfinished" />
+        <translation>Anki недоступен. Запустите Anki (с AnkiConnect) и проверьте снова.</translation>
     </message>
     <message>
         <source>Choose a subtitle file or a folder first.</source>
-        <translation type="unfinished" />
+        <translation>Сначала выберите файл субтитров или папку.</translation>
     </message>
     <message>
         <source>No subtitle files were found in that folder.</source>
-        <translation type="unfinished" />
+        <translation>В этой папке не найдено ни одного файла субтитров.</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
-        <translation type="unfinished">Не удалось просканировать эту папку.</translation>
+        <translation>Не удалось просканировать эту папку.</translation>
     </message>
     <message>
         <source>That file or folder no longer exists.</source>
-        <translation type="unfinished" />
+        <translation>Этот файл или папка больше не существует.</translation>
     </message>
     <message>
         <source>Pick a subtitle file (.ass, .srt, .ssa, .vtt or .smi).</source>
-        <translation type="unfinished" />
+        <translation>Выберите файл субтитров (.ass, .srt, .ssa, .vtt или .smi).</translation>
     </message>
     <message>
         <source>Checking file %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>Проверка файла %1 из %2</translation>
     </message>
 </context><context>
     <name>ReadabilityWorker</name>
     <message>
         <source>No words in the mining language</source>
-        <translation type="unfinished" />
+        <translation>Нет слов на языке майнинга</translation>
     </message>
 </context><context>
     <name>ReadingDeckTab</name>

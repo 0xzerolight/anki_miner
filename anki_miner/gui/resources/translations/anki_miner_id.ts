@@ -2669,11 +2669,11 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Check how much of a show you can read</source>
-        <translation type="unfinished" />
+        <translation>Periksa seberapa banyak isi sebuah acara yang dapat Anda baca</translation>
     </message>
     <message>
         <source>Pick a subtitle file or a folder of them to see the share of words you already know, how many new words there are, and how many lines are i+1. Uses your Anki cards and known words; nothing is written.</source>
-        <translation type="unfinished" />
+        <translation>Pilih berkas subtitel atau folder berisi berkas subtitel untuk melihat persentase kata yang sudah Anda kenal, jumlah kata baru, dan jumlah baris i+1. Menggunakan kartu Anki dan kata yang dikenal milik Anda; tidak ada yang ditulis.</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -6451,7 +6451,7 @@ Kata yang akan ditambahkan: %3. Lanjutkan?</translation>
     </message>
     <message>
         <source>Readability</source>
-        <translation type="unfinished" />
+        <translation>Keterbacaan</translation>
     </message>
     <message>
         <source>Anki Miner updated</source>
@@ -8345,193 +8345,193 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <name>ReadabilityTab</name>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">Kemajuan</translation>
+        <translation>Kemajuan</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">Selesai</translation>
+        <translation>Selesai</translation>
     </message>
     <message>
         <source>Done: </source>
-        <translation type="unfinished">Selesai: </translation>
+        <translation>Selesai: </translation>
     </message>
     <message>
         <source>Skipped</source>
-        <translation type="unfinished">Dilewati</translation>
+        <translation>Dilewati</translation>
     </message>
     <message>
         <source>Skipped: </source>
-        <translation type="unfinished">Dilewati: </translation>
+        <translation>Dilewati: </translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Batal</translation>
+        <translation>Batal</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Membatalkan…</translation>
+        <translation>Membatalkan…</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Dibatalkan</translation>
+        <translation>Dibatalkan</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">Gagal — lihat log</translation>
+        <translation>Gagal — lihat log</translation>
     </message>
     <message>
         <source>Finished with errors — see log</source>
-        <translation type="unfinished">Selesai dengan kesalahan — lihat log</translation>
+        <translation>Selesai dengan kesalahan — lihat log</translation>
     </message>
     <message>
         <source>Some subtitle files could not be read.</source>
-        <translation type="unfinished" />
+        <translation>Beberapa berkas subtitel tidak dapat dibaca.</translation>
     </message>
     <message>
         <source>This subtitle file could not be read.</source>
-        <translation type="unfinished" />
+        <translation>Berkas subtitel ini tidak dapat dibaca.</translation>
     </message>
     <message>
         <source>Complete — %1 file(s) checked</source>
-        <translation type="unfinished" />
+        <translation>Selesai — %1 berkas diperiksa</translation>
     </message>
     <message>
         <source>Complete — %1 checked, %2 skipped (no words in the mining language)</source>
-        <translation type="unfinished" />
+        <translation>Selesai — %1 diperiksa, %2 dilewati (tidak ada kata dalam bahasa mining)</translation>
     </message>
     <message>
         <source>Nothing to report — no file had words in the mining language.</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada yang perlu dilaporkan — tidak ada berkas yang memiliki kata dalam bahasa mining.</translation>
     </message>
     <message>
         <source>Readability check</source>
-        <translation type="unfinished" />
+        <translation>Pemeriksaan keterbacaan</translation>
     </message>
     <message>
         <source>Subtitles</source>
-        <translation type="unfinished">Subtitel</translation>
+        <translation>Subtitel</translation>
     </message>
     <message>
         <source>Your mining language can't read text on this computer yet. Download its language pack in Settings → Mining Language.</source>
-        <translation type="unfinished" />
+        <translation>Teks dalam bahasa mining Anda belum dapat dibaca di komputer ini. Unduh paket bahasanya di Pengaturan → Bahasa Mining.</translation>
     </message>
     <message>
         <source>See how much of a subtitle file, or a folder of them, you already know. Uses your Anki cards and known words; nothing is written.</source>
-        <translation type="unfinished" />
+        <translation>Lihat seberapa banyak isi berkas subtitel, atau folder berisi berkas subtitel, yang sudah Anda kenal. Menggunakan kartu Anki dan kata yang dikenal milik Anda; tidak ada yang ditulis.</translation>
     </message>
     <message>
         <source>This field takes a subtitle file or a folder.</source>
-        <translation type="unfinished" />
+        <translation>Bidang ini menerima berkas subtitel atau folder.</translation>
     </message>
     <message>
         <source>Subtitle file or folder:</source>
-        <translation type="unfinished" />
+        <translation>Berkas subtitel atau folder:</translation>
     </message>
     <message>
         <source>Report</source>
-        <translation type="unfinished" />
+        <translation>Laporan</translation>
     </message>
     <message>
         <source>Known words</source>
-        <translation type="unfinished">Kata yang dikenal</translation>
+        <translation>Kata yang dikenal</translation>
     </message>
     <message>
         <source>Share of all words in these files you already know. A word said ten times counts ten times.</source>
-        <translation type="unfinished" />
+        <translation>Persentase semua kata dalam berkas-berkas ini yang sudah Anda kenal. Kata yang diucapkan sepuluh kali dihitung sepuluh kali.</translation>
     </message>
     <message>
         <source>New words</source>
-        <translation type="unfinished" />
+        <translation>Kata baru</translation>
     </message>
     <message>
         <source>Different words you don't know yet, counted once across all files.</source>
-        <translation type="unfinished" />
+        <translation>Kata berbeda yang belum Anda kenal, dihitung sekali di seluruh berkas.</translation>
     </message>
     <message>
         <source>Lines fully known</source>
-        <translation type="unfinished" />
+        <translation>Baris sepenuhnya dikenal</translation>
     </message>
     <message>
         <source>Lines with no new words (i+0).</source>
-        <translation type="unfinished" />
+        <translation>Baris tanpa kata baru (i+0).</translation>
     </message>
     <message>
         <source>Lines with one new word</source>
-        <translation type="unfinished" />
+        <translation>Baris dengan satu kata baru</translation>
     </message>
     <message>
         <source>Lines with exactly one new word (i+1): the easiest sentences to learn from.</source>
-        <translation type="unfinished" />
+        <translation>Baris dengan tepat satu kata baru (i+1): kalimat yang paling mudah dijadikan bahan belajar.</translation>
     </message>
     <message>
         <source>File</source>
-        <translation type="unfinished">Berkas</translation>
+        <translation>Berkas</translation>
     </message>
     <message>
         <source>Subtitle file.</source>
-        <translation type="unfinished" />
+        <translation>Berkas subtitel.</translation>
     </message>
     <message>
         <source>Known</source>
-        <translation type="unfinished" />
+        <translation>Dikenal</translation>
     </message>
     <message>
         <source>Share of the file's words you already know.</source>
-        <translation type="unfinished" />
+        <translation>Persentase kata dalam berkas ini yang sudah Anda kenal.</translation>
     </message>
     <message>
         <source>Different words in this file you don't know yet. The total above counts a word once.</source>
-        <translation type="unfinished" />
+        <translation>Kata berbeda dalam berkas ini yang belum Anda kenal. Total di atas menghitung setiap kata sekali.</translation>
     </message>
     <message>
         <source>Lines with no new words.</source>
-        <translation type="unfinished" />
+        <translation>Baris tanpa kata baru.</translation>
     </message>
     <message>
         <source>Lines with exactly one new word.</source>
-        <translation type="unfinished" />
+        <translation>Baris dengan tepat satu kata baru.</translation>
     </message>
     <message>
         <source>Lines with two or more new words.</source>
-        <translation type="unfinished" />
+        <translation>Baris dengan dua kata baru atau lebih.</translation>
     </message>
     <message>
         <source>Check Readability</source>
-        <translation type="unfinished" />
+        <translation>Periksa Keterbacaan</translation>
     </message>
     <message>
         <source>Anki isn't reachable. Start Anki (with AnkiConnect) and check again.</source>
-        <translation type="unfinished" />
+        <translation>Anki tidak dapat dijangkau. Jalankan Anki (dengan AnkiConnect) lalu periksa lagi.</translation>
     </message>
     <message>
         <source>Choose a subtitle file or a folder first.</source>
-        <translation type="unfinished" />
+        <translation>Pilih berkas subtitel atau folder terlebih dahulu.</translation>
     </message>
     <message>
         <source>No subtitle files were found in that folder.</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada berkas subtitel yang ditemukan di folder tersebut.</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
-        <translation type="unfinished">Folder itu tidak dapat dipindai.</translation>
+        <translation>Folder itu tidak dapat dipindai.</translation>
     </message>
     <message>
         <source>That file or folder no longer exists.</source>
-        <translation type="unfinished" />
+        <translation>Berkas atau folder tersebut sudah tidak ada.</translation>
     </message>
     <message>
         <source>Pick a subtitle file (.ass, .srt, .ssa, .vtt or .smi).</source>
-        <translation type="unfinished" />
+        <translation>Pilih berkas subtitel (.ass, .srt, .ssa, .vtt atau .smi).</translation>
     </message>
     <message>
         <source>Checking file %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>Memeriksa berkas %1 dari %2</translation>
     </message>
 </context><context>
     <name>ReadabilityWorker</name>
     <message>
         <source>No words in the mining language</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada kata dalam bahasa mining</translation>
     </message>
 </context><context>
     <name>ReadingDeckTab</name>

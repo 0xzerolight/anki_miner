@@ -2669,11 +2669,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Check how much of a show you can read</source>
-        <translation type="unfinished" />
+        <translation>Kiểm tra mức độ đọc hiểu một bộ phim</translation>
     </message>
     <message>
         <source>Pick a subtitle file or a folder of them to see the share of words you already know, how many new words there are, and how many lines are i+1. Uses your Anki cards and known words; nothing is written.</source>
-        <translation type="unfinished" />
+        <translation>Chọn một tệp phụ đề hoặc một thư mục phụ đề để xem tỷ lệ từ đã biết, số từ mới và số dòng i+1. Dùng thẻ Anki và từ đã biết của bạn; không ghi dữ liệu nào.</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -6451,7 +6451,7 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
     </message>
     <message>
         <source>Readability</source>
-        <translation type="unfinished" />
+        <translation>Độ dễ đọc</translation>
     </message>
     <message>
         <source>Anki Miner updated</source>
@@ -8345,193 +8345,193 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <name>ReadabilityTab</name>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">Tiến trình</translation>
+        <translation>Tiến trình</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">Xong</translation>
+        <translation>Xong</translation>
     </message>
     <message>
         <source>Done: </source>
-        <translation type="unfinished">Xong: </translation>
+        <translation>Xong: </translation>
     </message>
     <message>
         <source>Skipped</source>
-        <translation type="unfinished">Đã bỏ qua</translation>
+        <translation>Đã bỏ qua</translation>
     </message>
     <message>
         <source>Skipped: </source>
-        <translation type="unfinished">Đã bỏ qua: </translation>
+        <translation>Đã bỏ qua: </translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Hủy</translation>
+        <translation>Hủy</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Đang hủy…</translation>
+        <translation>Đang hủy…</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Đã hủy</translation>
+        <translation>Đã hủy</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">Thất bại — xem nhật ký</translation>
+        <translation>Thất bại — xem nhật ký</translation>
     </message>
     <message>
         <source>Finished with errors — see log</source>
-        <translation type="unfinished">Hoàn tất với lỗi — xem nhật ký</translation>
+        <translation>Hoàn tất với lỗi — xem nhật ký</translation>
     </message>
     <message>
         <source>Some subtitle files could not be read.</source>
-        <translation type="unfinished" />
+        <translation>Không thể đọc một số tệp phụ đề.</translation>
     </message>
     <message>
         <source>This subtitle file could not be read.</source>
-        <translation type="unfinished" />
+        <translation>Không thể đọc tệp phụ đề này.</translation>
     </message>
     <message>
         <source>Complete — %1 file(s) checked</source>
-        <translation type="unfinished" />
+        <translation>Hoàn tất — đã kiểm tra %1 tệp</translation>
     </message>
     <message>
         <source>Complete — %1 checked, %2 skipped (no words in the mining language)</source>
-        <translation type="unfinished" />
+        <translation>Hoàn tất — đã kiểm tra %1, đã bỏ qua %2 (không có từ nào bằng ngôn ngữ khai thác)</translation>
     </message>
     <message>
         <source>Nothing to report — no file had words in the mining language.</source>
-        <translation type="unfinished" />
+        <translation>Không có gì để báo cáo — không tệp nào có từ bằng ngôn ngữ khai thác.</translation>
     </message>
     <message>
         <source>Readability check</source>
-        <translation type="unfinished" />
+        <translation>Kiểm tra độ dễ đọc</translation>
     </message>
     <message>
         <source>Subtitles</source>
-        <translation type="unfinished">Phụ đề</translation>
+        <translation>Phụ đề</translation>
     </message>
     <message>
         <source>Your mining language can't read text on this computer yet. Download its language pack in Settings → Mining Language.</source>
-        <translation type="unfinished" />
+        <translation>Chưa thể đọc văn bản bằng ngôn ngữ khai thác của bạn trên máy tính này. Hãy tải gói ngôn ngữ tương ứng trong Cài đặt → Ngôn ngữ khai thác.</translation>
     </message>
     <message>
         <source>See how much of a subtitle file, or a folder of them, you already know. Uses your Anki cards and known words; nothing is written.</source>
-        <translation type="unfinished" />
+        <translation>Xem bạn đã biết bao nhiêu phần của một tệp phụ đề hoặc một thư mục phụ đề. Dùng thẻ Anki và từ đã biết của bạn; không ghi dữ liệu nào.</translation>
     </message>
     <message>
         <source>This field takes a subtitle file or a folder.</source>
-        <translation type="unfinished" />
+        <translation>Trường này nhận tệp phụ đề hoặc thư mục.</translation>
     </message>
     <message>
         <source>Subtitle file or folder:</source>
-        <translation type="unfinished" />
+        <translation>Tệp phụ đề hoặc thư mục:</translation>
     </message>
     <message>
         <source>Report</source>
-        <translation type="unfinished" />
+        <translation>Báo cáo</translation>
     </message>
     <message>
         <source>Known words</source>
-        <translation type="unfinished">Từ đã biết</translation>
+        <translation>Từ đã biết</translation>
     </message>
     <message>
         <source>Share of all words in these files you already know. A word said ten times counts ten times.</source>
-        <translation type="unfinished" />
+        <translation>Tỷ lệ từ đã biết trên tổng số từ trong các tệp này. Một từ xuất hiện mười lần được tính mười lần.</translation>
     </message>
     <message>
         <source>New words</source>
-        <translation type="unfinished" />
+        <translation>Từ mới</translation>
     </message>
     <message>
         <source>Different words you don't know yet, counted once across all files.</source>
-        <translation type="unfinished" />
+        <translation>Số từ khác nhau chưa biết, mỗi từ chỉ tính một lần trên tất cả các tệp.</translation>
     </message>
     <message>
         <source>Lines fully known</source>
-        <translation type="unfinished" />
+        <translation>Dòng đã biết hết</translation>
     </message>
     <message>
         <source>Lines with no new words (i+0).</source>
-        <translation type="unfinished" />
+        <translation>Các dòng không có từ mới (i+0).</translation>
     </message>
     <message>
         <source>Lines with one new word</source>
-        <translation type="unfinished" />
+        <translation>Dòng có một từ mới</translation>
     </message>
     <message>
         <source>Lines with exactly one new word (i+1): the easiest sentences to learn from.</source>
-        <translation type="unfinished" />
+        <translation>Các dòng có đúng một từ mới (i+1): những câu dễ học nhất.</translation>
     </message>
     <message>
         <source>File</source>
-        <translation type="unfinished">Tệp</translation>
+        <translation>Tệp</translation>
     </message>
     <message>
         <source>Subtitle file.</source>
-        <translation type="unfinished" />
+        <translation>Tệp phụ đề.</translation>
     </message>
     <message>
         <source>Known</source>
-        <translation type="unfinished" />
+        <translation>Đã biết</translation>
     </message>
     <message>
         <source>Share of the file's words you already know.</source>
-        <translation type="unfinished" />
+        <translation>Tỷ lệ từ đã biết trong tệp.</translation>
     </message>
     <message>
         <source>Different words in this file you don't know yet. The total above counts a word once.</source>
-        <translation type="unfinished" />
+        <translation>Số từ khác nhau chưa biết trong tệp này. Tổng ở trên tính mỗi từ một lần.</translation>
     </message>
     <message>
         <source>Lines with no new words.</source>
-        <translation type="unfinished" />
+        <translation>Các dòng không có từ mới.</translation>
     </message>
     <message>
         <source>Lines with exactly one new word.</source>
-        <translation type="unfinished" />
+        <translation>Các dòng có đúng một từ mới.</translation>
     </message>
     <message>
         <source>Lines with two or more new words.</source>
-        <translation type="unfinished" />
+        <translation>Các dòng có hai từ mới trở lên.</translation>
     </message>
     <message>
         <source>Check Readability</source>
-        <translation type="unfinished" />
+        <translation>Kiểm tra độ dễ đọc</translation>
     </message>
     <message>
         <source>Anki isn't reachable. Start Anki (with AnkiConnect) and check again.</source>
-        <translation type="unfinished" />
+        <translation>Không kết nối được tới Anki. Hãy khởi động Anki (có AnkiConnect) rồi kiểm tra lại.</translation>
     </message>
     <message>
         <source>Choose a subtitle file or a folder first.</source>
-        <translation type="unfinished" />
+        <translation>Hãy chọn tệp phụ đề hoặc thư mục trước.</translation>
     </message>
     <message>
         <source>No subtitle files were found in that folder.</source>
-        <translation type="unfinished" />
+        <translation>Không tìm thấy tệp phụ đề nào trong thư mục đó.</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
-        <translation type="unfinished">Không thể quét thư mục đó.</translation>
+        <translation>Không thể quét thư mục đó.</translation>
     </message>
     <message>
         <source>That file or folder no longer exists.</source>
-        <translation type="unfinished" />
+        <translation>Tệp hoặc thư mục đó không còn tồn tại.</translation>
     </message>
     <message>
         <source>Pick a subtitle file (.ass, .srt, .ssa, .vtt or .smi).</source>
-        <translation type="unfinished" />
+        <translation>Hãy chọn một tệp phụ đề (.ass, .srt, .ssa, .vtt hoặc .smi).</translation>
     </message>
     <message>
         <source>Checking file %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>Đang kiểm tra tệp %1 trên %2</translation>
     </message>
 </context><context>
     <name>ReadabilityWorker</name>
     <message>
         <source>No words in the mining language</source>
-        <translation type="unfinished" />
+        <translation>Không có từ nào bằng ngôn ngữ khai thác</translation>
     </message>
 </context><context>
     <name>ReadingDeckTab</name>
