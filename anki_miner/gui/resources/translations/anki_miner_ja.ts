@@ -2668,6 +2668,14 @@ No index files are deleted.</source>
         <translation>オーディオブックを文字起こしし、書籍自体の文をそれに合わせてタイミング調整して、「オーディオブック」タブ、リーディング → 字幕ファイル、またはリーダーアプリで使える .srt を書き出します。</translation>
     </message>
     <message>
+        <source>Check how much of a show you can read</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pick a subtitle file or a folder of them to see the share of words you already know, how many new words there are, and how many lines are i+1. Uses your Anki cards and known words; nothing is written.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Restyle mined cards</source>
         <translation>マイニングしたカードのスタイルを再適用</translation>
     </message>
@@ -6442,6 +6450,10 @@ Words to add: %3. Continue?</source>
         <translation>オーディオブック同期</translation>
     </message>
     <message>
+        <source>Readability</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Anki Miner updated</source>
         <translation>Anki Miner が更新されました</translation>
     </message>
@@ -8328,6 +8340,198 @@ No index files are deleted.</source>
     <message>
         <source>Complete</source>
         <translation>完了</translation>
+    </message>
+</context><context>
+    <name>ReadabilityTab</name>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished">進捗</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation type="unfinished">完了</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation type="unfinished">完了: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation type="unfinished">スキップ</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation type="unfinished">スキップ: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished">キャンセル</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished">キャンセル中…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">キャンセルされました</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished">失敗しました — ログを確認してください</translation>
+    </message>
+    <message>
+        <source>Finished with errors — see log</source>
+        <translation type="unfinished">エラーが発生して完了しました — ログを確認してください</translation>
+    </message>
+    <message>
+        <source>Some subtitle files could not be read.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This subtitle file could not be read.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 file(s) checked</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 checked, %2 skipped (no words in the mining language)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing to report — no file had words in the mining language.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Readability check</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitles</source>
+        <translation type="unfinished">字幕</translation>
+    </message>
+    <message>
+        <source>Your mining language can't read text on this computer yet. Download its language pack in Settings → Mining Language.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>See how much of a subtitle file, or a folder of them, you already know. Uses your Anki cards and known words; nothing is written.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This field takes a subtitle file or a folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle file or folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Report</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Known words</source>
+        <translation type="unfinished">既知単語</translation>
+    </message>
+    <message>
+        <source>Share of all words in these files you already know. A word said ten times counts ten times.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>New words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Different words you don't know yet, counted once across all files.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lines fully known</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lines with no new words (i+0).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lines with one new word</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lines with exactly one new word (i+1): the easiest sentences to learn from.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>File</source>
+        <translation type="unfinished">ファイル</translation>
+    </message>
+    <message>
+        <source>Subtitle file.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Known</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Share of the file's words you already know.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Different words in this file you don't know yet. The total above counts a word once.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lines with no new words.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lines with exactly one new word.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lines with two or more new words.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Check Readability</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki isn't reachable. Start Anki (with AnkiConnect) and check again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose a subtitle file or a folder first.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No subtitle files were found in that folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That folder could not be scanned.</source>
+        <translation type="unfinished">そのフォルダをスキャンできませんでした。</translation>
+    </message>
+    <message>
+        <source>That file or folder no longer exists.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pick a subtitle file (.ass, .srt, .ssa, .vtt or .smi).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Checking file %1 of %2</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>ReadabilityWorker</name>
+    <message>
+        <source>No words in the mining language</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>ReadingDeckTab</name>
