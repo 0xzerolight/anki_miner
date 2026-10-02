@@ -5,10 +5,12 @@ import sqlite3
 import stat
 import sys
 import threading
+from unittest.mock import MagicMock
 
 import pytest
 
-from anki_miner.services.known_word_db import _SCHEMA_VERSION, KnownWordDB, add_user_known_words
+from anki_miner.config import AnkiMinerConfig
+from anki_miner.services.known_word_db import _SCHEMA_VERSION, KnownWordDB, add_user_known_words, collect_known_forms
 
 
 class TestInitialize:
@@ -965,3 +967,37 @@ class TestRunCache:
 
         assert added == 0  # both sides fold to the same NFC lemma
         assert total == 1
+
+
+class TestCollectKnownForms:
+    """The read-only known set shared by Deck Filter and Readability."""
+
+    def _db(self, tmp_path):
+        db = KnownWordDB(tmp_path / "known_words.db")
+        db.initialize()
+        db.add_words({"猫"}, source="user")
+        db.add_words({"犬"}, source="anki")
+        return db
+
+    def test_user_list_always_db_cache_only_when_enabled(self, tmp_path):
+        db = self._db(tmp_path)
+        off = collect_known_forms(db, AnkiMinerConfig(use_known_words_db=False), {"鳥"})
+        on = collect_known_forms(db, AnkiMinerConfig(use_known_words_db=True), {"鳥"})
+        assert off == {"鳥", "猫"}
+        assert on == {"鳥", "猫", "犬"}
+
+    def test_does_not_mutate_the_callers_vocabulary(self, tmp_path):
+        vocabulary = {"鳥"}
+        collect_known_forms(self._db(tmp_path), AnkiMinerConfig(use_known_words_db=True), vocabulary)
+        # AnkiService hands out its cached set object; growing it would leak into later runs.
+        assert vocabulary == {"鳥"}
+
+    def test_missing_db_gives_the_anki_vocabulary(self):
+        assert collect_known_forms(None, AnkiMinerConfig(use_known_words_db=True), {"鳥"}) == {"鳥"}
+
+    def test_locked_db_degrades_to_the_anki_vocabulary(self):
+        locked = MagicMock()
+        locked.is_available.return_value = True
+        locked.get_words_by_source.side_effect = sqlite3.OperationalError("database is locked")
+        locked.get_known_words.side_effect = sqlite3.OperationalError("database is locked")
+        assert collect_known_forms(locked, AnkiMinerConfig(use_known_words_db=True), {"鳥"}) == {"鳥"}

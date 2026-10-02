@@ -36,7 +36,6 @@ Deliberate divergences from ``EpisodeProcessor._phase2_filter``:
 from __future__ import annotations
 
 import logging
-import sqlite3
 from collections import Counter
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -53,6 +52,7 @@ from anki_miner.services.card_backfiller import (
     log_tagger_failures,
 )
 from anki_miner.services.frequency.multi_frequency_service import harmonic_rank, min_rank
+from anki_miner.services.known_word_db import collect_known_forms
 from anki_miner.services.morphology import extract_lemma
 from anki_miner.services.subtitle_parser import _differs_by_okurigana_only
 from anki_miner.services.word_filter import enabled_script_options
@@ -257,37 +257,6 @@ def _synthesize_word(
     )
 
 
-def _collect_known_forms(
-    anki_service: AnkiService,
-    config: AnkiMinerConfig,
-    services: Any,
-    source_deck: str,
-) -> set[str]:
-    """Union of every form that counts as "already known" for this scan.
-
-    Read-only mirror of the ``_phase2_filter`` known-set recipe: the user
-    ignore list is ALWAYS applied (Issue #42), the DB cache only when
-    ``use_known_words_db`` — but never ``sync_with_anki`` (a scan must not
-    write). Guarded reads degrade like the mining path; the Anki vocab query
-    is NOT degraded — a wrong answer here silently keeps the whole source
-    deck, so ``get_vocabulary_excluding_deck`` raises instead.
-    """
-    known: set[str] = set()
-    known_word_db = getattr(services, "known_word_db", None)
-    if known_word_db is not None and known_word_db.is_available():
-        try:
-            known |= known_word_db.get_words_by_source("user")
-        except (sqlite3.Error, OSError) as e:
-            logger.warning("Could not read the user ignore list from known_words.db (%s); proceeding without it.", e)
-        if config.use_known_words_db:
-            try:
-                known |= known_word_db.get_known_words()
-            except (sqlite3.Error, OSError) as e:
-                logger.warning("Could not read known_words.db (%s); using Anki vocabulary only.", e)
-    known |= anki_service.get_vocabulary_excluding_deck(source_deck)
-    return known
-
-
 def _attach_frequency(words: list[TokenizedWord], frequency_service: Any) -> None:
     """Attach per-source ranks (the ``_phase2_filter`` recipe, in-place).
 
@@ -392,7 +361,13 @@ def scan_deck_filter(
     word_filter = services.word_filter
 
     # Known-words subtraction (also the against-the-collection duplicate gate).
-    known = _collect_known_forms(anki_service, config, services, options.source_deck)
+    # The Anki vocab query is NOT degraded: a wrong answer here silently keeps
+    # the whole source deck, so get_vocabulary_excluding_deck raises instead.
+    known = collect_known_forms(
+        getattr(services, "known_word_db", None),
+        config,
+        anki_service.get_vocabulary_excluding_deck(options.source_deck),
+    )
     before = len(words)
     words = word_filter.filter_unknown(words, known)
     drops["known"] += before - len(words)

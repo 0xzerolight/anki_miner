@@ -7,9 +7,12 @@ import unicodedata
 from collections.abc import Callable
 from contextlib import closing
 from pathlib import Path
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from anki_miner.utils.logging_ext import log_summary
+
+if TYPE_CHECKING:
+    from anki_miner.config import AnkiMinerConfig
 
 logger = logging.getLogger(__name__)
 
@@ -548,3 +551,36 @@ def add_user_known_words(db_path: Path, forms: set[str], *, language: str = "ja"
     db = KnownWordDB(db_path, language=language)
     db.initialize()
     return db.add_words(forms, source="user")
+
+
+def collect_known_forms(
+    known_word_db: KnownWordDB | None,
+    config: "AnkiMinerConfig",
+    anki_vocabulary: set[str],
+) -> set[str]:
+    """Every form that counts as already known, read-only.
+
+    The mirror of ``EpisodeProcessor._phase2_known_words`` without
+    ``sync_with_anki`` (a scan or report must not write): the user ignore list
+    always applies (Issue #42), the DB cache only when ``use_known_words_db``,
+    and a locked DB degrades like the mining path. ``include_known_words`` is
+    deliberately not consulted. Copies ``anki_vocabulary``: AnkiService hands
+    out its cached set object.
+
+    Args:
+        known_word_db: The active language's known-words DB, or ``None``.
+        config: Supplies ``use_known_words_db``.
+        anki_vocabulary: The card fronts already in Anki, as the caller fetched them.
+    """
+    known = set(anki_vocabulary)
+    if known_word_db is not None and known_word_db.is_available():
+        try:
+            known |= known_word_db.get_words_by_source("user")
+        except (sqlite3.Error, OSError) as e:
+            logger.warning("Could not read the user ignore list from known_words.db (%s); proceeding without it.", e)
+        if config.use_known_words_db:
+            try:
+                known |= known_word_db.get_known_words()
+            except (sqlite3.Error, OSError) as e:
+                logger.warning("Could not read known_words.db (%s); using Anki vocabulary only.", e)
+    return known
