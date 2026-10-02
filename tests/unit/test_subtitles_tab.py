@@ -1,8 +1,8 @@
 """Tests for SubtitlesTab container.
 
 Covers:
-- Inner QTabWidget has exactly eight tabs: Generate (0), Retime (1), Condense (2), Card Backfill (3),
-  Deck Filter (4), Download (5), Manga OCR (6), Audiobook Sync (7).
+- Inner QTabWidget has exactly nine tabs: Generate (0), Retime (1), Condense (2), Card Backfill (3),
+  Deck Filter (4), Download (5), Manga OCR (6), Audiobook Sync (7), Readability (8).
 - update_config fans out to all child tabs.
 - iter_close_workers yields workers from all children.
 - SubtitlesTab has no worker_thread attribute (or it is None-safe via getattr).
@@ -26,6 +26,7 @@ from anki_miner.gui.widgets.base import AnimatedTabBar
 from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
 from anki_miner.gui.workers.backfill_worker import BackfillApplyWorker, BackfillScanWorker
 from anki_miner.gui.workers.base_worker import CancellableWorker
+from anki_miner.gui.workers.readability_worker import ReadabilityWorker
 
 # ---------------------------------------------------------------------------
 # Patch targets (suppress ASR engine + alass I/O during construction)
@@ -43,6 +44,8 @@ _FFMPEG_COMPUTE_AVAILABLE = "anki_miner.gui.widgets.condense_tab.CondenseTab._co
 _YTDLP_COMPUTE_AVAILABLE = "anki_miner.gui.widgets.download_tab.DownloadTab._compute_ytdlp_available"
 # Same rationale for the Manga OCR sub-tab's mokuro resolver probe.
 _MOKURO_COMPUTE_AVAILABLE = "anki_miner.gui.widgets.mokuro_tab.MokuroTab._compute_mokuro_available"
+# Same rationale for the Readability sub-tab's language-engine probe.
+_READABILITY_COMPUTE_AVAILABLE = "anki_miner.gui.widgets.readability_tab.ReadabilityTab._compute_engine_available"
 
 
 def _make_config(tmp_path: Path) -> AnkiMinerConfig:
@@ -61,6 +64,7 @@ def _make_tab(config: AnkiMinerConfig, qtbot) -> SubtitlesTab:
         patch(_FFMPEG_COMPUTE_AVAILABLE, return_value=True),
         patch(_YTDLP_COMPUTE_AVAILABLE, return_value=True),
         patch(_MOKURO_COMPUTE_AVAILABLE, return_value=True),
+        patch(_READABILITY_COMPUTE_AVAILABLE, return_value=True),
         patch("pathlib.Path.exists", return_value=True),
     ):
         tab = SubtitlesTab(config)
@@ -72,6 +76,7 @@ def _make_tab(config: AnkiMinerConfig, qtbot) -> SubtitlesTab:
             tab.download_tab,
             tab.mokuro_tab,
             tab.booksync_tab,
+            tab.readability_tab,
         ):
             assert child._availability_worker.wait(3000)
         qtbot.waitUntil(tab.generate_tab.generate_button.isEnabled, timeout=3000)
@@ -81,6 +86,7 @@ def _make_tab(config: AnkiMinerConfig, qtbot) -> SubtitlesTab:
         qtbot.waitUntil(tab.mokuro_tab.run_button.isEnabled, timeout=3000)
         # Audiobook Sync probes the same ASR engine as Generate (already patched).
         qtbot.waitUntil(tab.booksync_tab.sync_button.isEnabled, timeout=3000)
+        qtbot.waitUntil(tab.readability_tab.check_button.isEnabled, timeout=3000)
     return tab
 
 
@@ -90,9 +96,9 @@ def _make_tab(config: AnkiMinerConfig, qtbot) -> SubtitlesTab:
 
 
 def test_inner_tab_count(qtbot, tmp_path):
-    """Inner QTabWidget must have exactly eight tabs."""
+    """Inner QTabWidget must have exactly nine tabs."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
-    assert tab._inner_tabs.count() == 8
+    assert tab._inner_tabs.count() == 9
 
 
 def test_inner_tab_labels(qtbot, tmp_path):
@@ -106,6 +112,7 @@ def test_inner_tab_labels(qtbot, tmp_path):
     assert tab._inner_tabs.tabText(5) == "Download"
     assert tab._inner_tabs.tabText(6) == "Manga OCR"
     assert tab._inner_tabs.tabText(7) == "Audiobook Sync"
+    assert tab._inner_tabs.tabText(8) == "Readability"
 
 
 def test_generate_tab_is_first(qtbot, tmp_path):
@@ -156,6 +163,12 @@ def test_booksync_tab_is_eighth(qtbot, tmp_path):
     assert tab._inner_tabs.widget(7) is tab.booksync_tab
 
 
+def test_readability_tab_is_ninth(qtbot, tmp_path):
+    """readability_tab is the widget at index 8."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    assert tab._inner_tabs.widget(8) is tab.readability_tab
+
+
 def test_the_sub_tab_underline_slides(qtbot, tmp_path):
     """Sub-tabs are navigation too -- see tests/unit/gui/test_animated_tab_bar.py."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
@@ -177,6 +190,7 @@ def test_the_sub_tab_underline_slides(qtbot, tmp_path):
         ("download", 5),
         ("mokuro", 6),
         ("booksync", 7),
+        ("readability", 8),
     ],
 )
 def test_open_subtab_switches_inner_tab(qtbot, tmp_path, key, expected_index):
@@ -203,7 +217,8 @@ def test_open_subtab_unknown_key_is_ignored(qtbot, tmp_path):
 
 
 @pytest.mark.parametrize(
-    "key", ["generate", "retime", "condense", "backfill", "deckfilter", "download", "mokuro", "booksync"]
+    "key",
+    ["generate", "retime", "condense", "backfill", "deckfilter", "download", "mokuro", "booksync", "readability"],
 )
 def test_current_subtab_key_round_trips_with_open_subtab(qtbot, tmp_path, key):
     tab = _make_tab(_make_config(tmp_path), qtbot)
@@ -239,6 +254,7 @@ def test_update_config_propagates_to_generate_tab(qtbot, tmp_path):
     tab.download_tab.update_config = MagicMock()
     tab.mokuro_tab.update_config = MagicMock()
     tab.booksync_tab.update_config = MagicMock()
+    tab.readability_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
@@ -260,6 +276,7 @@ def test_update_config_propagates_to_retime_tab(qtbot, tmp_path):
     tab.download_tab.update_config = MagicMock()
     tab.mokuro_tab.update_config = MagicMock()
     tab.booksync_tab.update_config = MagicMock()
+    tab.readability_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
@@ -281,6 +298,7 @@ def test_update_config_propagates_to_condense_tab(qtbot, tmp_path):
     tab.download_tab.update_config = MagicMock()
     tab.mokuro_tab.update_config = MagicMock()
     tab.booksync_tab.update_config = MagicMock()
+    tab.readability_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
@@ -302,6 +320,7 @@ def test_update_config_propagates_to_backfill_tab(qtbot, tmp_path):
     tab.download_tab.update_config = MagicMock()
     tab.mokuro_tab.update_config = MagicMock()
     tab.booksync_tab.update_config = MagicMock()
+    tab.readability_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
@@ -323,6 +342,7 @@ def test_update_config_propagates_to_download_tab(qtbot, tmp_path):
     tab.download_tab.update_config = MagicMock()
     tab.mokuro_tab.update_config = MagicMock()
     tab.booksync_tab.update_config = MagicMock()
+    tab.readability_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
@@ -344,6 +364,7 @@ def test_update_config_propagates_to_mokuro_tab(qtbot, tmp_path):
     tab.download_tab.update_config = MagicMock()
     tab.mokuro_tab.update_config = MagicMock()
     tab.booksync_tab.update_config = MagicMock()
+    tab.readability_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
@@ -365,10 +386,36 @@ def test_update_config_propagates_to_booksync_tab(qtbot, tmp_path):
     tab.download_tab.update_config = MagicMock()
     tab.mokuro_tab.update_config = MagicMock()
     tab.booksync_tab.update_config = MagicMock()
+    tab.readability_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
     tab.booksync_tab.update_config.assert_called_once_with(new_config)
+
+
+def test_update_config_propagates_to_readability_tab(qtbot, tmp_path):
+    """update_config must call readability_tab.update_config with the new config."""
+    import dataclasses
+
+    config = _make_config(tmp_path)
+    tab = _make_tab(config, qtbot)
+
+    new_config = dataclasses.replace(config, asr_model="small")
+    for child in (
+        tab.generate_tab,
+        tab.retime_tab,
+        tab.condense_tab,
+        tab.backfill_tab,
+        tab.download_tab,
+        tab.mokuro_tab,
+        tab.booksync_tab,
+        tab.readability_tab,
+    ):
+        child.update_config = MagicMock()
+
+    tab.update_config(new_config)
+
+    tab.readability_tab.update_config.assert_called_once_with(new_config)
 
 
 def test_update_config_stores_config(qtbot, tmp_path):
@@ -411,6 +458,7 @@ def test_iter_close_workers_yields_generate_worker(qtbot, tmp_path):
     tab.download_tab.iter_close_workers = MagicMock(return_value=iter([]))
     tab.mokuro_tab.iter_close_workers = MagicMock(return_value=iter([]))
     tab.booksync_tab.iter_close_workers = MagicMock(return_value=iter([]))
+    tab.readability_tab.iter_close_workers = MagicMock(return_value=iter([]))
 
     workers = list(tab.iter_close_workers())
     assert fake_gen_worker in workers
@@ -428,6 +476,7 @@ def test_iter_close_workers_yields_retime_worker(qtbot, tmp_path):
     tab.download_tab.iter_close_workers = MagicMock(return_value=iter([]))
     tab.mokuro_tab.iter_close_workers = MagicMock(return_value=iter([]))
     tab.booksync_tab.iter_close_workers = MagicMock(return_value=iter([]))
+    tab.readability_tab.iter_close_workers = MagicMock(return_value=iter([]))
 
     workers = list(tab.iter_close_workers())
     assert fake_retime_worker in workers
@@ -445,6 +494,7 @@ def test_iter_close_workers_yields_condense_worker(qtbot, tmp_path):
     tab.download_tab.iter_close_workers = MagicMock(return_value=iter([]))
     tab.mokuro_tab.iter_close_workers = MagicMock(return_value=iter([]))
     tab.booksync_tab.iter_close_workers = MagicMock(return_value=iter([]))
+    tab.readability_tab.iter_close_workers = MagicMock(return_value=iter([]))
 
     workers = list(tab.iter_close_workers())
     assert fake_condense_worker in workers
@@ -461,6 +511,7 @@ def test_iter_close_workers_yields_all_when_all_active(qtbot, tmp_path):
     fake_download_worker = MagicMock(name="download_worker")
     fake_mokuro_worker = MagicMock(name="mokuro_worker")
     fake_booksync_worker = MagicMock(name="booksync_worker")
+    fake_readability_worker = MagicMock(name="readability_worker")
     tab.generate_tab.iter_close_workers = MagicMock(return_value=iter([fake_gen_worker]))
     tab.retime_tab.iter_close_workers = MagicMock(return_value=iter([fake_retime_worker]))
     tab.condense_tab.iter_close_workers = MagicMock(return_value=iter([fake_condense_worker]))
@@ -468,6 +519,7 @@ def test_iter_close_workers_yields_all_when_all_active(qtbot, tmp_path):
     tab.download_tab.iter_close_workers = MagicMock(return_value=iter([fake_download_worker]))
     tab.mokuro_tab.iter_close_workers = MagicMock(return_value=iter([fake_mokuro_worker]))
     tab.booksync_tab.iter_close_workers = MagicMock(return_value=iter([fake_booksync_worker]))
+    tab.readability_tab.iter_close_workers = MagicMock(return_value=iter([fake_readability_worker]))
 
     workers = list(tab.iter_close_workers())
     assert fake_gen_worker in workers
@@ -477,7 +529,8 @@ def test_iter_close_workers_yields_all_when_all_active(qtbot, tmp_path):
     assert fake_download_worker in workers
     assert fake_mokuro_worker in workers
     assert fake_booksync_worker in workers
-    assert len(workers) == 7
+    assert fake_readability_worker in workers
+    assert len(workers) == 8
 
 
 # ---------------------------------------------------------------------------
@@ -505,6 +558,16 @@ def test_release_dictionary_resources_allows_running_backfill_apply(qtbot, tmp_p
     release = getattr(tab, "release_dictionary_resources", lambda: True)
 
     assert release() is True
+
+
+def test_release_dictionary_resources_refuses_running_readability_check(qtbot, tmp_path):
+    """A readability run parses through the shared dictionary handles (Issue #30)."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    worker = MagicMock(spec=ReadabilityWorker)
+    worker.isRunning.return_value = True
+    tab.readability_tab.worker_thread = worker
+
+    assert tab.release_dictionary_resources() is False
 
 
 # ---------------------------------------------------------------------------
@@ -559,6 +622,7 @@ def _refresh(tab: SubtitlesTab, config: AnkiMinerConfig, qtbot) -> None:
         patch(_FFMPEG_COMPUTE_AVAILABLE, return_value=True),
         patch(_YTDLP_COMPUTE_AVAILABLE, return_value=True),
         patch(_MOKURO_COMPUTE_AVAILABLE, return_value=True),
+        patch(_READABILITY_COMPUTE_AVAILABLE, return_value=True),
     ):
         tab.update_config(config)
         for child in (
@@ -568,6 +632,7 @@ def _refresh(tab: SubtitlesTab, config: AnkiMinerConfig, qtbot) -> None:
             tab.download_tab,
             tab.mokuro_tab,
             tab.booksync_tab,
+            tab.readability_tab,
         ):
             assert child._availability_worker.wait(3000)
     qtbot.wait(10)
@@ -576,7 +641,15 @@ def _refresh(tab: SubtitlesTab, config: AnkiMinerConfig, qtbot) -> None:
 def test_a_hidden_tool_is_off_the_tab_from_construction(qtbot, tmp_path):
     tab = _make_tab(replace(_make_config(tmp_path), hidden_utilities=("retime", "mokuro")), qtbot)
 
-    assert _visible_keys(tab) == ["generate", "condense", "backfill", "deckfilter", "download", "booksync"]
+    assert _visible_keys(tab) == [
+        "generate",
+        "condense",
+        "backfill",
+        "deckfilter",
+        "download",
+        "booksync",
+        "readability",
+    ]
 
 
 def test_hiding_the_default_tool_opens_on_the_next_visible_one(qtbot, tmp_path):

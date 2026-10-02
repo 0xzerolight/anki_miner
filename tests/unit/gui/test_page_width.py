@@ -50,6 +50,7 @@ from anki_miner.gui.widgets.deck_filter_tab import DeckFilterTab
 from anki_miner.gui.widgets.download_tab import DownloadTab
 from anki_miner.gui.widgets.enhanced import FileSelector
 from anki_miner.gui.widgets.mokuro_tab import MokuroTab
+from anki_miner.gui.widgets.readability_tab import ReadabilityTab
 from anki_miner.gui.widgets.reading_manga_tab import ReadingMangaTab
 from anki_miner.gui.widgets.reading_novels_tab import ReadingNovelsTab
 from anki_miner.gui.widgets.reading_subtitles_tab import ReadingSubtitlesTab
@@ -85,6 +86,7 @@ PAGES = (
     DownloadTab,
     MokuroTab,
     BookSyncTab,
+    ReadabilityTab,
 )
 
 PAGE_NAMES = sorted(cls.__name__ for cls in PAGES)
@@ -113,6 +115,7 @@ def _build_page(name: str, config):
         "DownloadTab": lambda: DownloadTab(config, suppress_optional_startup=True),
         "MokuroTab": lambda: MokuroTab(config, suppress_optional_startup=True),
         "BookSyncTab": lambda: BookSyncTab(config, suppress_optional_startup=True),
+        "ReadabilityTab": lambda: ReadabilityTab(config, suppress_optional_startup=True),
     }
     return builders[name]()
 

@@ -33,6 +33,7 @@ from anki_miner.gui.widgets.condense_tab import CondenseTab
 from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.gui.widgets.download_tab import DownloadTab
 from anki_miner.gui.widgets.mokuro_tab import MokuroTab
+from anki_miner.gui.widgets.readability_tab import ReadabilityTab
 from anki_miner.gui.widgets.reading_deck_tab import ReadingDeckTab
 from anki_miner.gui.widgets.reading_manga_tab import ReadingMangaTab
 from anki_miner.gui.widgets.reading_novels_tab import ReadingNovelsTab
@@ -73,7 +74,7 @@ def _build(name: str, config: AnkiMinerConfig) -> QWidget:
         return DeckBuilderTab(config, _presenter(), _progress_callback())
     if name == "audiobook":
         return AudiobookTab(config, MagicMock(name="Processor"), MagicMock())
-    if name in {"condense", "generate", "retime", "download", "mokuro", "booksync"}:
+    if name in {"condense", "generate", "retime", "download", "mokuro", "booksync", "readability"}:
         tool = {
             "condense": CondenseTab,
             "generate": SubtitleCreationTab,
@@ -81,6 +82,7 @@ def _build(name: str, config: AnkiMinerConfig) -> QWidget:
             "download": DownloadTab,
             "mokuro": MokuroTab,
             "booksync": BookSyncTab,
+            "readability": ReadabilityTab,
         }[name]
         return tool(config)
     reading = {
@@ -111,6 +113,7 @@ SCREENS = [
     "download",
     "mokuro",
     "booksync",
+    "readability",
 ]
 
 

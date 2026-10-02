@@ -36,7 +36,7 @@ def test_the_tab_shows_for_japanese(qtbot, tmp_path):
 
 
 def test_the_gate_never_empties_the_tab(qtbot, tmp_path):
-    others = ("generate", "retime", "condense", "backfill", "deckfilter", "download", "booksync")
+    others = ("generate", "retime", "condense", "backfill", "deckfilter", "download", "booksync", "readability")
     tab = _make_tab(replace(_make_config(tmp_path), language="zh", hidden_utilities=others), qtbot)
 
     assert _visible_keys(tab) != []

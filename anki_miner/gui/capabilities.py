@@ -75,6 +75,7 @@ UTILITY_SUBTABS: tuple[str, ...] = (
     "download",
     "mokuro",
     "booksync",
+    "readability",
 )
 # Valid sub-tab keys per container main tab (resolved by the container's
 # duck-typed ``open_subtab``). Main tabs absent here have no sub-tabs.
@@ -103,6 +104,7 @@ def utility_labels() -> dict[str, str]:
         "download": QCoreApplication.translate("MainWindow", "Download"),
         "mokuro": QCoreApplication.translate("MainWindow", "Manga OCR"),
         "booksync": QCoreApplication.translate("MainWindow", "Audiobook Sync"),
+        "readability": QCoreApplication.translate("MainWindow", "Readability"),
     }
 
 
@@ -1279,6 +1281,30 @@ CAPABILITIES: tuple[Capability, ...] = (
         category=_CAT_TOOLS,
         target=CapabilityTarget("subtitles", "booksync"),
         keywords=("audiobook", "epub", "sync", "align", "subplz", "immersion reading", "srt", "whisper"),
+    ),
+    Capability(
+        id="readability-report",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Check how much of a show you can read"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Pick a subtitle file or a folder of them to see the share of words you already know, how many "
+            "new words there are, and how many lines are i+1. Uses your Anki cards and known words; "
+            "nothing is written.",
+        ),
+        category=_CAT_TOOLS,
+        target=CapabilityTarget("subtitles", "readability"),
+        keywords=(
+            "readability",
+            "coverage",
+            "comprehension",
+            "i+1",
+            "known words",
+            "difficulty",
+            "how hard",
+            "percent known",
+            "morphman",
+            "ankimorphs",
+        ),
     ),
     Capability(
         id="restyle-mined-cards",

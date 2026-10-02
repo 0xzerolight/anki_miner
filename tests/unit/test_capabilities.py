@@ -47,6 +47,15 @@ def test_media_downloader_is_findable_by_subtitles_only() -> None:
     assert any(cap.id == "media-downloader" for cap in search("subtitles only"))
 
 
+@pytest.mark.parametrize("query", ["coverage", "readability", "ankimorphs"])
+def test_readability_report_is_findable_the_way_its_users_ask(query) -> None:
+    assert any(cap.id == "readability-report" for cap in search(query))
+
+
+def test_readability_is_the_last_utility_tool() -> None:
+    assert list(utility_labels().items())[-1] == ("readability", "Readability")
+
+
 def test_registry_is_non_trivial() -> None:
     # Guards against an accidental truncation of the catalogue.
     assert len(CAPABILITIES) >= 75

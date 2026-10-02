@@ -39,6 +39,7 @@ _INPUT_KEYS = frozenset(
         "tools.condense.inputs",
         "tools.mokuro.inputs",
         "tools.booksync.inputs",
+        "tools.readability.inputs",
     }
 )
 _OUTPUT_KEYS = frozenset(

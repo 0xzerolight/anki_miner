@@ -1,5 +1,5 @@
 """Utilities container tab — nests Generate, Retime, Condense, Card Backfill, Deck Filter, Download,
-Manga OCR, Audiobook Sync.
+Manga OCR, Audiobook Sync, Readability.
 
 Wraps :class:`~anki_miner.gui.widgets.subtitle_creation_tab.SubtitleCreationTab`
 (Generate), :class:`~anki_miner.gui.widgets.subtitle_retime_tab.SubtitleRetimeTab`
@@ -7,11 +7,12 @@ Wraps :class:`~anki_miner.gui.widgets.subtitle_creation_tab.SubtitleCreationTab`
 :class:`~anki_miner.gui.widgets.backfill_tab.CardBackfillTab` (Card Backfill),
 :class:`~anki_miner.gui.widgets.deck_filter_tab.DeckFilterTab` (Deck Filter),
 :class:`~anki_miner.gui.widgets.download_tab.DownloadTab` (Download),
-:class:`~anki_miner.gui.widgets.mokuro_tab.MokuroTab` (Manga OCR)
-and :class:`~anki_miner.gui.widgets.booksync_tab.BookSyncTab` (Audiobook Sync)
+:class:`~anki_miner.gui.widgets.mokuro_tab.MokuroTab` (Manga OCR),
+:class:`~anki_miner.gui.widgets.booksync_tab.BookSyncTab` (Audiobook Sync)
+and :class:`~anki_miner.gui.widgets.readability_tab.ReadabilityTab` (Readability)
 inside a single top-level tab so the main tab bar stays uncluttered.
 
-Settings → General can hide any of the eight but not all of them
+Settings → General can hide any of the nine but not all of them
 (``config.hidden_utilities``, :meth:`SubtitlesTab.apply_hidden`).
 
 Close contract:
@@ -44,6 +45,7 @@ from anki_miner.gui.widgets.condense_tab import CondenseTab
 from anki_miner.gui.widgets.deck_filter_tab import DeckFilterTab
 from anki_miner.gui.widgets.download_tab import DownloadTab
 from anki_miner.gui.widgets.mokuro_tab import MokuroTab
+from anki_miner.gui.widgets.readability_tab import ReadabilityTab
 from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
 from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
 from anki_miner.gui.workers.backfill_worker import BackfillScanWorker
@@ -57,7 +59,7 @@ logger = logging.getLogger(__name__)
 
 
 class SubtitlesTab(QWidget):
-    """Container tab holding the eight Utilities inner tabs (see the module docstring).
+    """Container tab holding the nine Utilities inner tabs (see the module docstring).
 
     Args:
         config: Frozen application configuration.
@@ -85,6 +87,7 @@ class SubtitlesTab(QWidget):
         self.download_tab = DownloadTab(config, suppress_optional_startup=suppress_optional_startup)
         self.mokuro_tab = MokuroTab(config, suppress_optional_startup=suppress_optional_startup)
         self.booksync_tab = BookSyncTab(config, suppress_optional_startup=suppress_optional_startup)
+        self.readability_tab = ReadabilityTab(config, suppress_optional_startup=suppress_optional_startup)
 
         tools: dict[str, QWidget] = {
             "generate": self.generate_tab,
@@ -95,6 +98,7 @@ class SubtitlesTab(QWidget):
             "download": self.download_tab,
             "mokuro": self.mokuro_tab,
             "booksync": self.booksync_tab,
+            "readability": self.readability_tab,
         }
         labels = utility_labels()
         # Stable sub-tab keys for reveal_capability (see capabilities.SUBTAB_KEYS).
@@ -121,7 +125,7 @@ class SubtitlesTab(QWidget):
         ``key`` is a stable identifier from
         :data:`anki_miner.gui.capabilities.SUBTAB_KEYS` (``"generate"``,
         ``"retime"``, ``"condense"``, ``"backfill"``, ``"deckfilter"``,
-        ``"download"``, ``"mokuro"``, ``"booksync"``). Unknown keys are
+        ``"download"``, ``"mokuro"``, ``"booksync"``, ``"readability"``). Unknown keys are
         ignored so a stale caller can't crash the UI. A tool hidden in
         Settings → General is refused the same way, so a deep
         link or a restored route never lands on a page the tab bar does not
@@ -205,9 +209,13 @@ class SubtitlesTab(QWidget):
         self.download_tab.update_config(config)
         self.mokuro_tab.update_config(config)
         self.booksync_tab.update_config(config)
+        self.readability_tab.update_config(config)
 
     def release_dictionary_resources(self) -> bool:
-        """Refuse resource mutation while a backfill or deck-filter scan uses providers."""
+        """Refuse resource mutation while a backfill or deck-filter scan, or a readability check, uses providers."""
+        # A readability check parses through the shared dictionary handles for its whole run.
+        if still_running(self.readability_tab.worker_thread):
+            return False
         worker = self.backfill_tab.worker_thread
         if isinstance(worker, BackfillScanWorker) and still_running(worker):
             return False
@@ -228,3 +236,4 @@ class SubtitlesTab(QWidget):
         yield from self.download_tab.iter_close_workers()
         yield from self.mokuro_tab.iter_close_workers()
         yield from self.booksync_tab.iter_close_workers()
+        yield from self.readability_tab.iter_close_workers()

@@ -258,6 +258,7 @@ class TestCardsShareOneDensity:
         "DownloadTab",
         "MokuroTab",
         "BookSyncTab",
+        "ReadabilityTab",
         "AnalyticsTab",
         "SettingsTab",
     )

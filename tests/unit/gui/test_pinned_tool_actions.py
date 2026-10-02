@@ -18,6 +18,7 @@ from anki_miner.gui.widgets.booksync_tab import BookSyncTab
 from anki_miner.gui.widgets.condense_tab import CondenseTab
 from anki_miner.gui.widgets.download_tab import DownloadTab
 from anki_miner.gui.widgets.mokuro_tab import MokuroTab
+from anki_miner.gui.widgets.readability_tab import ReadabilityTab
 from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
 from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
 from anki_miner.services.card_backfiller import BackfillOptions, BackfillPlan, FieldChange, NotePlan
@@ -29,6 +30,7 @@ _TOOLS = {
     "download": (DownloadTab, "download_button"),
     "mokuro": (MokuroTab, "run_button"),
     "booksync": (BookSyncTab, "sync_button"),
+    "readability": (ReadabilityTab, "check_button"),
 }
 
 

@@ -33,6 +33,7 @@ from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.gui.widgets.deck_filter_tab import DeckFilterTab
 from anki_miner.gui.widgets.download_tab import DownloadTab
 from anki_miner.gui.widgets.mokuro_tab import MokuroTab
+from anki_miner.gui.widgets.readability_tab import ReadabilityTab
 from anki_miner.gui.widgets.reading_manga_tab import ReadingMangaTab
 from anki_miner.gui.widgets.reading_novels_tab import ReadingNovelsTab
 from anki_miner.gui.widgets.reading_subtitles_tab import ReadingSubtitlesTab
@@ -82,6 +83,8 @@ def _build(name: str, config: AnkiMinerConfig) -> QWidget:
         return MokuroTab(config, suppress_optional_startup=True)
     if name == "booksync":
         return BookSyncTab(config, suppress_optional_startup=True)
+    if name == "readability":
+        return ReadabilityTab(config, suppress_optional_startup=True)
     if name in {"condense", "generate", "retime"}:
         return {"condense": CondenseTab, "generate": SubtitleCreationTab, "retime": SubtitleRetimeTab}[name](config)
     return {
@@ -110,6 +113,7 @@ SCREENS = [
     "download",
     "mokuro",
     "booksync",
+    "readability",
 ]
 
 
