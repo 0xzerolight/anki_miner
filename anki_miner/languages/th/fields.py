@@ -11,7 +11,7 @@ from anki_miner.languages.profile import CardFieldSpec
 #: .test_extra_card_fields_match_the_render_hooks_exactly`` asserts spec keys ==
 #: hook keys, so these land in the same commit as ``render.TH_RENDER_HOOKS``.
 TH_EXTRA_CARD_FIELDS: tuple[CardFieldSpec, ...] = (
-    CardFieldSpec(key="reading_paiboon", capability="thai_reading", placeholder="Reading"),
+    CardFieldSpec(key="reading_paiboon", capability="thai_reading", placeholder="Romanization"),
     CardFieldSpec(key="classifier", capability="thai_classifier", placeholder="Classifier"),
 )
 

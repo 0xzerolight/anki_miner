@@ -165,18 +165,18 @@ def test_auto_map_fills_a_visible_row_from_its_own_placeholder(qtbot, test_confi
     assert panel.get_card_fields()[key] == field_name
 
 
-def test_auto_map_leaves_a_field_name_another_key_already_took(qtbot, test_config):
-    """th spells its hook field "Reading", which is expression_reading's name too.
+def test_auto_map_sends_thai_romanization_and_reading_to_separate_keys(qtbot, test_config):
+    """th spells its Paiboon field "Romanization", so "Reading" stays expression_reading's.
 
     One Anki field cannot carry two logical keys — the second write would
     silently decide which of them reaches the card.
     """
     panel = _anki(qtbot, _lang(config=test_config, code="th"))
-    panel.populate_from_field_list(["Expression", "Sentence", "Reading"])
+    panel.populate_from_field_list(["Expression", "Sentence", "Reading", "Romanization"])
 
     fields = panel.get_card_fields()
     assert fields["expression_reading"] == "Reading"
-    assert fields["reading_paiboon"] == ""
+    assert fields["reading_paiboon"] == "Romanization"
 
 
 def test_every_hook_field_key_has_a_row(qtbot, test_config):

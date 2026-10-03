@@ -372,8 +372,9 @@ def auto_map_profile_fields(
     the specs the active language actually shows — a hidden row contributes no
     key anyway.
 
-    ``claimed`` is the field names :func:`auto_map_fields` already took: th
-    spells its hook field "Reading" and so does ``expression_reading``, and one
+    ``claimed`` is the field names :func:`auto_map_fields` already took: a
+    placeholder spelled like a keyword field (say "Reading", which
+    ``expression_reading`` matches) must not take that field too, because one
     Anki field cannot carry two logical keys.
 
     Args:

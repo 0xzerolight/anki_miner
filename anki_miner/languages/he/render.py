@@ -229,7 +229,7 @@ HE_ROOT_FIELD = CardFieldSpec(key="root", capability="word_root", placeholder="R
 HE_BINYAN_FIELD = CardFieldSpec(key="binyan", capability="hebrew_binyan", placeholder="Binyan")
 HE_GENDER_FIELD = CardFieldSpec(key="noun_gender", capability="noun_gender", placeholder="Gender")
 HE_PLURAL_FIELD = CardFieldSpec(key="noun_plural", capability="noun_plural", placeholder="Plural")
-HE_POS_FIELD = CardFieldSpec(key="pos", capability="pos_tag", placeholder="POS")
+HE_POS_FIELD = CardFieldSpec(key="pos", capability="pos_tag", placeholder="PartOfSpeech")
 
 HE_EXTRA_CARD_FIELDS: tuple[CardFieldSpec, ...] = (
     HE_TRANSLITERATION_FIELD,

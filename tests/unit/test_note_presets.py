@@ -225,7 +225,7 @@ def test_fill_maps_extra_language_fields_without_reusing_a_claimed_field():
     fill = fill_note_type_fields(["Hanzi", "Sentence", "Pinyin", "Reading"], allow_presets=False, extra_specs=specs)
 
     assert fill.extra_fields == {"expression_pinyin": "Pinyin"}
-    # "Reading" is already expression_reading's, so the th spec gets nothing.
+    # "Reading" is already expression_reading's, so the reading_paiboon spec gets nothing.
     assert fill.fields["expression_reading"] == "Reading"
 
 
@@ -234,3 +234,25 @@ def test_the_panel_module_still_re_exports_the_keyword_helpers():
 
     assert panel_module._FIELD_KEYWORDS is FIELD_KEYWORDS
     assert panel_module.auto_map_fields is auto_map_fields
+
+
+# ---------------------------------------------------------------------------
+# Profile placeholders against the Anki Miner Note field names
+# ---------------------------------------------------------------------------
+
+from anki_miner.languages.registry import get_profile  # noqa: E402
+from anki_miner.services.note_presets import auto_map_profile_fields  # noqa: E402
+from tests.unit.amn_fields import AMN_FIELDS  # noqa: E402
+
+
+def test_hebrew_pos_maps_to_part_of_speech():
+    specs = get_profile("he").extra_card_fields
+    extra = auto_map_profile_fields(AMN_FIELDS, specs, auto_map_fields(AMN_FIELDS).values())
+    assert extra["pos"] == "PartOfSpeech"
+
+
+def test_thai_paiboon_maps_to_romanization():
+    specs = get_profile("th").extra_card_fields
+    extra = auto_map_profile_fields(AMN_FIELDS, specs, auto_map_fields(AMN_FIELDS).values())
+    assert extra["reading_paiboon"] == "Romanization"
+    assert extra["classifier"] == "Classifier"
