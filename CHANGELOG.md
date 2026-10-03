@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 - **A Language field.** Map it under Settings → Cards & Anki and each card stores its language tag (ja, zh-Hans, de, …), which note types can use to pick fonts and hyphenation.
+- **Anki Miner Note is recognised in every mining language.** Fill in automatically (Settings → Cards & Anki, and the setup wizard) maps all its fields, including the language's own ones such as Pinyin or Gender, writes the Language field and turns on bold target words, which its audio, sentence and click cards rely on. Card type markers and the pitch category format are now kept per mining language.
 
 ### Changed
 - **Pinyin and Jyutping tone colours can follow the note type's theme.** Each coloured syllable now names a colour the note type may override for light and dark mode (Anki Miner Note does), and keeps today's colour everywhere else.

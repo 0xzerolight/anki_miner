@@ -235,7 +235,7 @@ def test_measure_word_is_a_zh_card_field(qtbot, test_config):
 
 
 def test_zh_fill_never_applies_a_japanese_preset(qtbot, test_config):
-    """All three presets are Japanese note types, so one click maps four dead fields."""
+    """Lapis, Kiku and Senren are Japanese note types, so one click maps four dead fields."""
     from anki_miner.services.note_presets import LAPIS
 
     panel = _anki(qtbot, _zh(test_config))

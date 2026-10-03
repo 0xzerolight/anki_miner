@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import contextlib
 import html
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import replace
 from functools import partial
 from typing import TYPE_CHECKING, Any
@@ -1122,7 +1122,7 @@ class NoteTypePage(_WizardSection):
         self.guidance_label.setText("")
 
     def _presets_apply(self) -> bool:
-        """Lapis, Kiku and Senren are Japanese note types; presets ride the ``note_presets`` capability."""
+        """Lapis, Kiku and Senren are Japanese note types and ride ``note_presets``; Anki Miner Note needs none."""
         from anki_miner.languages.registry import get_profile  # noqa: PLC0415
 
         return "note_presets" in get_profile(config_language(self._wizard.working_config())).capabilities
@@ -1215,17 +1215,24 @@ class NoteTypePage(_WizardSection):
 
     # --- auto-map ---
 
-    def _apply_preset(self, preset: NotePreset) -> None:
-        """Stage ``preset``'s whole answer (fields, pitch format, card markers) onto the working config."""
+    def _apply_preset(self, preset: NotePreset, extra_fields: Mapping[str, str]) -> None:
+        """Stage ``preset``'s whole answer (fields, pitch format, card markers) onto the working config.
+
+        ``extra_fields`` are the active language's own fields the note type has
+        (Anki Miner Note's Pinyin, Gender, ...), merged over the preset's map.
+        """
         config = self._wizard.working_config()
         merged = dict(config.anki_fields)
         merged.update(preset.fields)
+        merged.update(extra_fields)
         updated = replace(
             config,
             anki_fields=merged,
             pitch_category_format=preset.pitch_category_format,
             card_type_marker_fields=dict(preset.card_type_marker_fields),
             card_type=config.card_type if config.card_type in preset.supported_card_types else "",
+            # Turned on, never off: bold is a fine choice with any note type.
+            bold_target_in_sentence=config.bold_target_in_sentence or preset.bold_target_in_sentence,
         )
         if updated != config:
             self._wizard.update_working_config(updated)
@@ -1236,9 +1243,9 @@ class NoteTypePage(_WizardSection):
         """Fill the field mappings the moment a note type's fields arrive (D8).
 
         The same helper as Settings' "Fill in automatically" (D13): a note type
-        it recognises (Lapis, Kiku, Senren) takes its preset, which also carries
-        the pitch format and card markers; anything else gets the keyword pass,
-        which fills only keys that are still empty here.
+        it recognises (Lapis, Kiku, Senren, Anki Miner Note) takes its preset,
+        which also carries the pitch format and card markers; anything else
+        gets the keyword pass, which fills only keys that are still empty here.
         """
         from anki_miner.languages.registry import get_profile  # noqa: PLC0415
 
@@ -1263,7 +1270,7 @@ class NoteTypePage(_WizardSection):
             extra_specs=get_profile(config_language(config)).extra_card_fields,
         )
         if fill.preset is not None:
-            self._apply_preset(fill.preset)
+            self._apply_preset(fill.preset, fill.extra_fields)
         else:
             self._apply_keyword_fill(fill)
         self._update_guidance()

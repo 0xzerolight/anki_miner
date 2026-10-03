@@ -347,6 +347,27 @@ def test_fill_applies_lapis_when_its_fields_are_reported(qtbot, test_config):
     assert panel.get_pitch_category_format() == "romaji"
 
 
+def test_fill_applies_anki_miner_note_in_chinese_with_its_own_fields(qtbot, test_config):
+    from dataclasses import replace
+
+    from anki_miner.services.note_presets import ANKI_MINER_NOTE
+    from tests.unit.amn_fields import AMN_FIELDS
+
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(replace(test_config, language="zh"))
+
+    preset, cleared = panel.fill_from_field_list(list(AMN_FIELDS))
+
+    assert preset is ANKI_MINER_NOTE
+    assert cleared == 0
+    fields = panel.get_card_fields()
+    assert fields["expression_pinyin"] == "Pinyin"
+    assert fields["measure_word"] == "MeasureWord"
+    assert fields["language"] == "Language"
+    assert panel.get_pitch_category_format() == "romaji"
+
+
 def test_fill_runs_the_keyword_pass_for_an_unknown_note_type(qtbot, test_config):
     panel = AnkiSettingsPanel()
     qtbot.addWidget(panel)

@@ -183,6 +183,7 @@ class _FakeSettingsTab(SettingsTab):
             parent=self,
             anki_panel=MagicMock(),
             filtering_panel=MagicMock(),
+            sentences_panel=MagicMock(),
             get_config=MagicMock(),
         )
         self._anki_probe._fetch_fields_worker = _FakeWorker(running=fields_running, wait_result=wait_result)

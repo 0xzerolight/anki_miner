@@ -5,7 +5,8 @@ Lapis, Kiku and Senren are Japanese note types: their published field names map
 ``pitch_category``. Applying one under a language that cannot fill those writes
 mappings every run's field check then rejects — which is why Settings gates the
 Preset row on ``note_presets``. The wizard reaches the presets from one place,
-the fetch result, and must gate it.
+the fetch result, and must gate it. Anki Miner Note serves every language, so
+the gate never holds it back.
 """
 
 from __future__ import annotations
@@ -89,3 +90,16 @@ class TestTheFetchResult:
         assert config.anki_fields["word"] == "Expression"
         assert config.anki_fields["sentence"] == "Sentence"
         assert "Lapis" not in page.mapping_summary.text()
+
+    def test_anki_miner_note_needs_no_capability(self, notetype_page):
+        """Anki Miner Note serves every language, so the gate never holds it back."""
+        from tests.unit.amn_fields import AMN_FIELDS
+
+        wizard, page = notetype_page("zh")
+        # The fixture's note type is called "Lapis"; detection reads the fields, not the name.
+        page._field_names = list(AMN_FIELDS)
+
+        page._on_fields_fetched("Lapis", AMN_FIELDS)
+
+        assert wizard.working_config().pitch_category_format == "romaji"
+        assert "Anki Miner Note" in page.mapping_summary.text()

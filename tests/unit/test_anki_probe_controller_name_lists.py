@@ -26,7 +26,7 @@ def wired(qtbot, test_config: AnkiMinerConfig):
     panel.set_deck_name("JP::Mining")
     panel.set_note_type("Lapis")
     panel.set_ankiconnect_url(test_config.ankiconnect_url)
-    ctrl = AnkiProbeController(panel, panel, MagicMock(), lambda: test_config)
+    ctrl = AnkiProbeController(panel, panel, MagicMock(), MagicMock(), lambda: test_config)
     return ctrl, panel
 
 

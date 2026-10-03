@@ -62,7 +62,7 @@ SENREN_FIELDS = [
 
 
 def test_presets_are_listed_in_display_order():
-    assert [preset.id for preset in NOTE_PRESETS] == ["lapis", "kiku", "senren"]
+    assert [preset.id for preset in NOTE_PRESETS] == ["lapis", "kiku", "senren", "anki_miner_note"]
 
 
 def test_every_preset_covers_every_config_field_key():
@@ -107,9 +107,8 @@ def test_kiku_reuses_the_lapis_names():
     assert kiku.fields["sentence_translation"] == "SentenceTranslation"
 
 
-def test_no_preset_has_a_language_field():
-    for preset in NOTE_PRESETS:
-        assert preset.fields["language"] == "", preset.id
+def test_only_anki_miner_note_has_a_language_field():
+    assert [preset.id for preset in NOTE_PRESETS if preset.fields["language"]] == ["anki_miner_note"]
 
 
 def test_senren_maps_its_translation_field():
@@ -261,3 +260,48 @@ def test_thai_paiboon_maps_to_romanization():
     extra = auto_map_profile_fields(AMN_FIELDS, specs, auto_map_fields(AMN_FIELDS).values())
     assert extra["reading_paiboon"] == "Romanization"
     assert extra["classifier"] == "Classifier"
+
+
+# ---------------------------------------------------------------------------
+# Anki Miner Note: the preset every mining language may apply
+# ---------------------------------------------------------------------------
+
+from anki_miner.services.note_presets import ANKI_MINER_NOTE, KIKU  # noqa: E402
+
+
+def test_amn_signature_is_its_published_field_list():
+    assert ANKI_MINER_NOTE.signature == frozenset(AMN_FIELDS)
+    assert len(AMN_FIELDS) == 46
+
+
+def test_amn_wins_over_lapis_for_full_field_list():
+    fill = fill_note_type_fields(AMN_FIELDS, allow_presets=True)
+    assert fill.preset is ANKI_MINER_NOTE
+    assert fill.fields["sentence_translation"] == "SentenceTranslation"
+    assert fill.fields["language"] == "Language"
+
+
+def test_amn_applies_without_note_presets_capability():
+    fill = fill_note_type_fields(AMN_FIELDS, allow_presets=False, extra_specs=get_profile("zh").extra_card_fields)
+    assert fill.preset is ANKI_MINER_NOTE
+    assert fill.extra_fields["expression_pinyin"] == "Pinyin"
+
+
+def test_lapis_stays_japanese_only():
+    assert fill_note_type_fields(sorted(LAPIS.signature), allow_presets=False).preset is None
+
+
+def test_partial_amn_fork_is_not_amn():
+    names = sorted(LAPIS.signature | {"Language", "SentenceTranslation"})
+    assert fill_note_type_fields(names, allow_presets=True).preset is LAPIS
+
+
+def test_kiku_still_detected():
+    assert fill_note_type_fields(sorted(KIKU.signature), allow_presets=True).preset is KIKU
+
+
+def test_amn_reads_romaji_pitch_and_cues_the_target_in_bold():
+    assert ANKI_MINER_NOTE.pitch_category_format == "romaji"
+    assert ANKI_MINER_NOTE.bold_target_in_sentence is True
+    assert ANKI_MINER_NOTE.every_language is True
+    assert [p.id for p in NOTE_PRESETS if p.every_language or p.bold_target_in_sentence] == ["anki_miner_note"]

@@ -247,6 +247,7 @@ class _FakeRealSettingsTab:
             parent=parent,
             anki_panel=MagicMock(),
             filtering_panel=MagicMock(),
+            sentences_panel=MagicMock(),
             get_config=MagicMock(),
         )
         self._dict_import_flow = DictionaryImportFlow(

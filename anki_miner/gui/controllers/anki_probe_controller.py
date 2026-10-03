@@ -22,7 +22,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils.qt_helpers import widget_alive
 from anki_miner.gui.utils.run_off_thread import still_running
 from anki_miner.gui.widgets.base import ScreenIssue, report_screen_issue
-from anki_miner.gui.widgets.panels import AnkiSettingsPanel, FilteringSettingsPanel
+from anki_miner.gui.widgets.panels import AnkiSettingsPanel, FilteringSettingsPanel, SentencesSettingsPanel
 from anki_miner.gui.workers.base_worker import SingleCallWorker
 from anki_miner.gui.workers.fetch_workers import FetchDecksWorker, FetchFieldsWorker, FetchNotetypesWorker
 from anki_miner.services.anki_service import AnkiService
@@ -43,6 +43,8 @@ class AnkiProbeController:
             field-list + styling status feedback.
         filtering_panel: Target of the fetched deck list (excluded-decks
             picker, Issue #38).
+        sentences_panel: Owner of "Bold target word in sentence", which a fill
+            that recognises a note type relying on it turns on.
         get_config: Returns the tab's *current* config (it is reassigned on
             every save, so a snapshot would go stale).
     """
@@ -52,11 +54,13 @@ class AnkiProbeController:
         parent: QWidget,
         anki_panel: AnkiSettingsPanel,
         filtering_panel: FilteringSettingsPanel,
+        sentences_panel: SentencesSettingsPanel,
         get_config: Callable[[], AnkiMinerConfig],
     ) -> None:
         self._parent = parent
         self._anki_panel = anki_panel
         self._filtering_panel = filtering_panel
+        self._sentences_panel = sentences_panel
         self._get_config = get_config
         # Hold a reference to the fetch-fields worker across its lifetime.
         # Without this attribute, a freshly-spawned QThread can be garbage
@@ -242,6 +246,10 @@ class AnkiProbeController:
             return
         preset, cleared = self._anki_panel.fill_from_field_list(field_names)
         if preset is not None:
+            if preset.bold_target_in_sentence:
+                # Settings -> Sentences owns it, so a fill turns it on and never
+                # off: bold is a fine choice with any note type.
+                self._sentences_panel.set_bold_target_in_sentence(True)
             mapped = sum(1 for value in preset.fields.values() if value)
             self._anki_panel.set_fill_status(
                 True,

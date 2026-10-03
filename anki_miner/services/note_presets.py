@@ -1,13 +1,15 @@
-"""Published field maps for the three note types most Japanese miners use.
+"""Published field maps for the three note types most Japanese miners use, and Anki Miner Note.
 
 Lapis, Kiku and Senren all ship a fixed, documented field list, so the mapping
 Settings -> Anki asks for is knowable without querying AnkiConnect and without
-guessing from field names. Each preset carries three things the keyword matcher
-(``auto_map_fields`` below) cannot:
+guessing from field names. Anki Miner Note is a Lapis-based note type for every
+mining language, and the one preset a non-Japanese language may apply. Each
+preset carries three things the keyword matcher (``auto_map_fields`` below)
+cannot:
 
 * the exact names, including the ones the heuristic misses (``PitchCategories``
   is plural; ``MiscInfo`` matches no ``source`` keyword),
-* ``pitch_category_format`` -- all three read categories as romaji, while the
+* ``pitch_category_format`` -- all four read categories as romaji, while the
   config default is ``"jp"``,
 * the card-type marker field names -- Senren calls them ``sentenceCard`` /
   ``audioCard`` and has no click or word+sentence card at all.
@@ -20,6 +22,7 @@ Field names are copied byte-exact from upstream and are case-sensitive:
   specials, not note fields -- ``merge-context.ts`` strips them, and the
   installation table lists neither)
 * Senren  -- ``BrenoAqua/Senren``, ``docs/yomitan.md`` field table
+* Anki Miner Note -- ``0xzerolight/anki_miner_note``, ``build/fields.lock``
 
 This module is deliberately leaf: no imports from ``config`` or ``gui``, so the
 settings panel and the setup wizard can both read it. The ``Literal`` aliases
@@ -99,6 +102,65 @@ _SENREN_SIGNATURE = frozenset(
     }
 )
 
+#: Every field Anki Miner Note v1 ships (its build/fields.lock; append-only, so a
+#: later version still matches). Written out literally, the same 46 names as
+#: tests/unit/amn_fields.py -- never derived from the test list. The first 22
+#: are Lapis's, so detection must try it before Lapis (and Kiku, whose
+#: RelatedExpression it lacks, can never shadow it).
+_ANKI_MINER_NOTE_SIGNATURE = frozenset(
+    {
+        "Expression",
+        "ExpressionFurigana",
+        "ExpressionReading",
+        "ExpressionAudio",
+        "SelectionText",
+        "MainDefinition",
+        "DefinitionPicture",
+        "Sentence",
+        "SentenceFurigana",
+        "SentenceAudio",
+        "Picture",
+        "Glossary",
+        "Hint",
+        "IsWordAndSentenceCard",
+        "IsClickCard",
+        "IsSentenceCard",
+        "IsAudioCard",
+        "PitchPosition",
+        "PitchCategories",
+        "Frequency",
+        "FreqSort",
+        "MiscInfo",
+        "SentenceTranslation",
+        "Language",
+        # The per-language fields from here on are not in the preset's map:
+        # each one is a profile placeholder, matched by auto_map_profile_fields
+        # for the language that declares it.
+        "Pinyin",
+        "Jyutping",
+        "Traditional",
+        "MeasureWord",
+        "Hanja",
+        "HanViet",
+        "Gender",
+        "Article",
+        "Plural",
+        "PartOfSpeech",
+        "AspectPair",
+        "Root",
+        "Binyan",
+        "Transliteration",
+        "Romanization",
+        "Colloquial",
+        "PresentStem",
+        "Classifier",
+        "Affixes",
+        "Formal",
+        "Grammar",
+        "Segmentation",
+    }
+)
+
 # Lapis and Kiku share every name anki_miner writes except Kiku's
 # SentenceTranslation (the secondary-subtitle field); Kiku's RelatedExpression
 # has no anki_miner counterpart.
@@ -159,6 +221,11 @@ class NotePreset:
         signature: Every field name the note type ships. Used for detection,
             and a superset of ``fields``' non-empty values, so a matched preset
             can never map a field the note type lacks.
+        every_language: Applies in every mining language. False for the
+            Japanese note types, which ride the ``note_presets`` capability.
+        bold_target_in_sentence: The note type's cards rely on the target word
+            being bold in the sentence, so applying it also turns
+            ``bold_target_in_sentence`` on.
     """
 
     id: str
@@ -169,6 +236,8 @@ class NotePreset:
     card_type_marker_fields: Mapping[str, str]
     supported_card_types: tuple[CardTypeId, ...]
     signature: frozenset[str]
+    every_language: bool = False
+    bold_target_in_sentence: bool = False
 
 
 LAPIS = NotePreset(
@@ -239,8 +308,23 @@ SENREN = NotePreset(
     signature=_SENREN_SIGNATURE,
 )
 
+ANKI_MINER_NOTE = NotePreset(
+    id="anki_miner_note",
+    name="Anki Miner Note",
+    url="https://github.com/0xzerolight/anki_miner_note",
+    fields={**_JPMN_FIELDS, "sentence_translation": "SentenceTranslation", "language": "Language"},
+    # Lapis's back script, unchanged.
+    pitch_category_format="romaji",
+    card_type_marker_fields=_JPMN_MARKERS,
+    supported_card_types=_JPMN_CARD_TYPES,
+    signature=_ANKI_MINER_NOTE_SIGNATURE,
+    every_language=True,
+    # The audio card hides the <b> word; the sentence and click cards cue it.
+    bold_target_in_sentence=True,
+)
+
 #: Display order: most widely used first.
-NOTE_PRESETS: tuple[NotePreset, ...] = (LAPIS, KIKU, SENREN)
+NOTE_PRESETS: tuple[NotePreset, ...] = (LAPIS, KIKU, SENREN, ANKI_MINER_NOTE)
 
 
 def preset_by_id(preset_id: object) -> NotePreset | None:
@@ -266,16 +350,20 @@ def preset_for_note_type_name(name: str) -> NotePreset | None:
     return None
 
 
-def preset_for_field_names(field_names: Iterable[str]) -> NotePreset | None:
+def preset_for_field_names(field_names: Iterable[str], *, japanese_presets: bool = True) -> NotePreset | None:
     """Recognize a note type from the field names AnkiConnect reported.
 
     A preset matches when every field it ships is present, so a fork that ADDS
     fields still matches the note type it forked. Candidates are tried
-    largest-signature-first because Kiku is a strict superset of Lapis and the
-    more specific answer has to win.
+    largest-signature-first because Kiku and Anki Miner Note are strict
+    supersets of Lapis and the more specific answer has to win.
+
+    ``japanese_presets=False`` leaves only the ``every_language`` presets as
+    candidates, so a Lapis note type under another language matches nothing.
     """
     available = set(field_names)
-    for preset in sorted(NOTE_PRESETS, key=lambda item: -len(item.signature)):
+    candidates = [preset for preset in NOTE_PRESETS if preset.every_language or japanese_presets]
+    for preset in sorted(candidates, key=lambda item: -len(item.signature)):
         if preset.signature <= available:
             return preset
     return None
@@ -286,9 +374,11 @@ def preset_for_field_names(field_names: Iterable[str]) -> NotePreset | None:
 #
 # One Qt-free pass shared by Settings -> Cards & Anki and the setup wizard, so
 # the two can never map the same note type differently. It recognises Lapis,
-# Kiku and Senren by their field names (the preset carries what keywords
-# cannot: exact plural names, romaji pitch categories, Senren's marker names)
-# and otherwise runs the keyword table below. Moved here from
+# Kiku, Senren and Anki Miner Note by their field names (the preset carries
+# what keywords cannot: exact plural names, romaji pitch categories, Senren's
+# marker names) and otherwise runs the keyword table below. The first three
+# apply in Japanese only; Anki Miner Note applies in every language, its
+# per-language fields mapped by the profile placeholders. Moved here from
 # gui/widgets/panels/anki_settings_panel.py, which re-exports the old names.
 # ---------------------------------------------------------------------------
 
@@ -412,7 +502,8 @@ class NoteTypeFill:
             With a preset, ``fields`` is the preset's whole map (``""`` entries
             included, which are real answers) and the caller also applies the
             preset's pitch format, marker names and supported card types -- the
-            same writes the old Preset -> Apply made.
+            same writes the old Preset -> Apply made -- and turns bold target
+            words on when the preset's ``bold_target_in_sentence`` says so.
         fields: ``anki_fields`` key -> field name. Without a preset this is the
             keyword pass: every ``FIELD_KEYWORDS`` key, ``""`` where nothing
             matched.
@@ -435,17 +526,19 @@ def fill_note_type_fields(
 
     Args:
         field_names: The note type's fields, from AnkiConnect ``modelFieldNames``.
-        allow_presets: Whether the active language carries the ``note_presets``
-            capability. All three presets are Japanese note types; applying one
-            elsewhere writes furigana and pitch mappings the language cannot
-            fill, so callers pass ``"note_presets" in profile.capabilities``.
+        allow_presets: Whether the Japanese presets (Lapis, Kiku, Senren) are
+            eligible, i.e. whether the active language carries the
+            ``note_presets`` capability. Applying one elsewhere writes
+            furigana and pitch mappings the language cannot fill, so callers
+            pass ``"note_presets" in profile.capabilities``. Every-language
+            presets (Anki Miner Note) are always eligible.
         extra_specs: The card-field specs the active language shows.
 
     Returns:
         The proposal. Callers decide how to write it: Settings overwrites the
         rows it shows, the wizard stages it on its working config.
     """
-    preset = preset_for_field_names(field_names) if allow_presets else None
+    preset = preset_for_field_names(field_names, japanese_presets=allow_presets)
     fields: Mapping[str, str] = dict(preset.fields) if preset is not None else auto_map_fields(field_names)
     extra = auto_map_profile_fields(field_names, extra_specs, fields.values())
     return NoteTypeFill(preset=preset, fields=fields, extra_fields=extra)

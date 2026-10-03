@@ -54,14 +54,20 @@ LANGUAGE_SCOPED_FIELDS: tuple[str, ...] = (
     "min_frequency_rank",
     "max_frequency_rank",
     "frequency_keep_unranked",
+    # What the note type reads: Anki Miner Note serves every language, so one
+    # language can use it while another keeps Senren's sentenceCard markers.
+    # Global before; see _FORMERLY_GLOBAL_FIELDS.
+    "pitch_category_format",
+    "card_type_marker_fields",
 )
 
 #: Scoped names that were global config fields: the regex trio before Stage S,
-#: the frequency band after it. Snapshots parked before a name was scoped carry
-#: no key for it; at the first switch after the upgrade the live value is the
-#: one every language shared, so switch_language completes those snapshots
-#: with it once (otherwise a filter the user set would silently become the
-#: profile default). A first visit still gets the profile default.
+#: the frequency band after it, then the note type's pitch format and card-type
+#: markers. Snapshots parked before a name was scoped carry no key for it; at
+#: the first switch after the upgrade the live value is the one every language
+#: shared, so switch_language completes those snapshots with it once
+#: (otherwise a filter the user set would silently become the profile default).
+#: A first visit still gets the profile default.
 _FORMERLY_GLOBAL_FIELDS: tuple[str, ...] = (
     "use_subtitle_regex_filter",
     "subtitle_regex_filter",
@@ -69,7 +75,15 @@ _FORMERLY_GLOBAL_FIELDS: tuple[str, ...] = (
     "min_frequency_rank",
     "max_frequency_rank",
     "frequency_keep_unranked",
+    "pitch_category_format",
+    "card_type_marker_fields",
 )
+
+#: Scoped names whose type-blank is not a value the field can hold: a pitch
+#: format is "jp" or "romaji", never "", and every reader of the marker map
+#: expects all four card-type keys. A first visit keeps the config default,
+#: which is what every language shared while both were global.
+_CONFIG_DEFAULT_FIELDS: frozenset[str] = frozenset({"pitch_category_format", "card_type_marker_fields"})
 
 
 def blank_scoped_defaults() -> dict[str, object]:
@@ -81,9 +95,10 @@ def blank_scoped_defaults() -> dict[str, object]:
     ``blacklist_path``, ``whitelist_path`` today) to ``None`` —
     ``anki_fields`` is always overridden by the caller, and
     ``blacklist_path``/``whitelist_path`` are already ``None`` on a blank
-    ``AnkiMinerConfig()``. Never hand-written: a field appended to
-    ``LANGUAGE_SCOPED_FIELDS`` lands here automatically, typed from whatever
-    the config dataclass gives it as a default.
+    ``AnkiMinerConfig()``. The ``_CONFIG_DEFAULT_FIELDS`` have no legal blank
+    and keep the config default instead. Never hand-written: a field appended
+    to ``LANGUAGE_SCOPED_FIELDS`` lands here automatically, typed from
+    whatever the config dataclass gives it as a default.
     """
     from anki_miner.config.config import AnkiMinerConfig
 
@@ -91,7 +106,9 @@ def blank_scoped_defaults() -> dict[str, object]:
     defaults: dict[str, object] = {}
     for name in LANGUAGE_SCOPED_FIELDS:
         current = getattr(blank, name)
-        if isinstance(current, tuple):
+        if name in _CONFIG_DEFAULT_FIELDS:
+            defaults[name] = current
+        elif isinstance(current, tuple):
             defaults[name] = ()
         elif isinstance(current, bool):  # before int: bool is an int subclass
             defaults[name] = False

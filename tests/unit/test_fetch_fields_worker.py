@@ -229,3 +229,31 @@ class TestSettingsTabFetchFieldsWiring:
         tab._anki_probe._on_fetch_fields_finished("Lapis", sorted(LAPIS.signature))
 
         assert tab.anki_panel.fill_status.text() == "Lapis recognised: 15 fields filled."
+
+    def test_anki_miner_note_turns_on_bold_target_words(self, test_config: AnkiMinerConfig, qtbot):
+        """Its audio card hides the <b> word and its sentence / click cards cue it, so the fill
+        switches Settings -> Sentences -> Bold target word on as well."""
+        from tests.unit.amn_fields import AMN_FIELDS
+
+        tab = SettingsTab(test_config)
+        qtbot.addWidget(tab)
+        tab.anki_panel.set_note_type("Anki Miner Note")
+        tab.sentences_panel.set_bold_target_in_sentence(False)
+
+        tab._anki_probe._on_fetch_fields_finished("Anki Miner Note", list(AMN_FIELDS))
+
+        assert tab.sentences_panel.get_bold_target_in_sentence() is True
+        assert tab.anki_panel.fill_status.text().startswith("Anki Miner Note recognised: ")
+        assert tab.anki_panel.get_card_fields()["language"] == "Language"
+
+    def test_a_preset_without_bold_leaves_the_bold_setting_alone(self, test_config: AnkiMinerConfig, qtbot):
+        from anki_miner.services.note_presets import LAPIS
+
+        tab = SettingsTab(test_config)
+        qtbot.addWidget(tab)
+        tab.anki_panel.set_note_type("Lapis")
+        tab.sentences_panel.set_bold_target_in_sentence(False)
+
+        tab._anki_probe._on_fetch_fields_finished("Lapis", sorted(LAPIS.signature))
+
+        assert tab.sentences_panel.get_bold_target_in_sentence() is False

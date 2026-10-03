@@ -344,6 +344,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             parent=self,
             anki_panel=self.anki_panel,
             filtering_panel=self.filtering_panel,
+            sentences_panel=self.sentences_panel,
             get_config=lambda: self.config,
         )
         # Ordered list of panels that participate in the Save round-trip.

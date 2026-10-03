@@ -298,3 +298,38 @@ def test_the_first_switch_after_the_band_became_scoped_gives_old_snapshots_the_s
     on_fr = switch_language(dataclasses.replace(on_de, min_frequency_rank=500), "fr")
     assert on_fr.min_frequency_rank == 3000
     assert switch_language(on_fr, "it").min_frequency_rank == 0  # a first visit still opens the band
+
+
+#: The note-type answers Anki Miner Note made per-language: one language may use it, another Senren.
+NOTE_TYPE_ANSWERS = ("pitch_category_format", "card_type_marker_fields")
+
+
+def test_a_first_visit_keeps_the_config_default_markers_and_pitch_format():
+    """Neither has a legal type-blank ("" is not a pitch format; every reader wants all four
+    marker keys), so a first visit gets the config default every language shared before."""
+    blank = AnkiMinerConfig()
+
+    de = switch_language(blank, "de")
+
+    assert de.pitch_category_format == blank.pitch_category_format
+    assert dict(de.card_type_marker_fields) == dict(blank.card_type_marker_fields)
+
+
+def test_the_first_switch_after_the_markers_became_scoped_gives_old_snapshots_the_shared_markers():
+    """Snapshots parked before the two were scoped carry neither, so the first switch completes them
+    with the live values once; a change made after that reaches no other language."""
+    senren = {"word_and_sentence": "", "click": "", "sentence": "sentenceCard", "audio": "audioCard"}
+    old = {name: getattr(AnkiMinerConfig(), name) for name in LANGUAGE_SCOPED_FIELDS if name not in NOTE_TYPE_ANSWERS}
+    on_ja = dataclasses.replace(
+        AnkiMinerConfig(),
+        pitch_category_format="romaji",
+        card_type_marker_fields=senren,
+        language_stash={"de": old, "fr": old},
+    )
+
+    on_de = switch_language(on_ja, "de")
+    assert (on_de.pitch_category_format, dict(on_de.card_type_marker_fields)) == ("romaji", senren)
+
+    on_fr = switch_language(dataclasses.replace(on_de, pitch_category_format="jp"), "fr")
+    assert on_fr.pitch_category_format == "romaji"
+    assert switch_language(on_fr, "ja").pitch_category_format == "romaji"

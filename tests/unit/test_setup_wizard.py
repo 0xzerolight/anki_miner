@@ -3043,6 +3043,28 @@ def test_notetype_page_leaves_an_unknown_note_type_to_the_keyword_map(qtbot, wiz
     assert config.anki_fields["pitch_category"] == ""
 
 
+def test_notetype_page_applies_anki_miner_note_in_chinese(qtbot, wiz_config):
+    """Anki Miner Note is recognised in every language: its own Pinyin field, the
+    Language field and bold target words (its cards cue the word with <b>)."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.languages.switching import switch_language  # noqa: PLC0415
+    from tests.unit.amn_fields import AMN_FIELDS  # noqa: PLC0415
+
+    zh = replace(switch_language(wiz_config, "zh"), anki_note_type="Anki Miner Note", bold_target_in_sentence=False)
+    wiz = SetupWizard(zh)
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    _set_notetype_page_state(page, selected="Anki Miner Note", models=["Anki Miner Note"], field_names=None)
+
+    page._on_fields_fetched("Anki Miner Note", AMN_FIELDS)
+
+    config = wiz.working_config()
+    assert config.anki_fields["expression_pinyin"] == "Pinyin"
+    assert config.anki_fields["language"] == "Language"
+    assert config.bold_target_in_sentence is True
+    assert page.mapping_summary.text().startswith("Anki Miner Note recognised: ")
+
+
 def test_rerun_keeps_a_working_custom_mapping_on_the_same_note_type(qtbot):
     """A Tools / System Health re-run that re-fetches the note type it opened
     with leaves a complete, customised mapping alone (no preset re-applied)."""

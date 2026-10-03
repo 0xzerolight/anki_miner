@@ -297,4 +297,5 @@ Anki Miner does not ship a note type. Use any note type you like: it works once 
 | [Lapis](https://github.com/donkuri/lapis) (Japanese) | Filled by the Setup Wizard, or Settings -> Cards & Anki -> Fill in automatically |
 | [Kiku](https://github.com/youyoumu/kiku) (Japanese) | Filled by the Setup Wizard, or Settings -> Cards & Anki -> Fill in automatically |
 | [Senren](https://github.com/BrenoAqua/Senren) (Japanese) | Filled by the Setup Wizard, or Settings -> Cards & Anki -> Fill in automatically |
+| [Anki Miner Note](https://github.com/0xzerolight/anki_miner_note) (every language) | Filled by the Setup Wizard, or Settings -> Cards & Anki -> Fill in automatically |
 | Any other note type with a word field and a sentence field | Filled by the Setup Wizard, or Settings -> Cards & Anki -> Fill in automatically |

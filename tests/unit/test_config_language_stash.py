@@ -157,3 +157,30 @@ def test_pre_change_config_loads_every_field_unchanged(isolated_config_file):
         "key_bindings",
     }
     assert loaded.script_variant == "" and loaded.reading_tone_color is False
+
+
+def test_amn_on_zh_leaves_ja_markers(test_config):
+    """Card-type markers and the pitch format follow the mining language: applying
+    Anki Miner Note on zh must not rewrite the Senren markers ja was set up with."""
+    from anki_miner.languages.switching import switch_language
+    from anki_miner.services.note_presets import ANKI_MINER_NOTE
+
+    ja = dataclasses.replace(
+        test_config,
+        language="ja",
+        card_type="sentence",
+        card_type_marker_fields={
+            "word_and_sentence": "",
+            "click": "",
+            "sentence": "sentenceCard",
+            "audio": "audioCard",
+        },
+        pitch_category_format="jp",
+    )
+    zh = switch_language(ja, "zh")
+    zh = dataclasses.replace(
+        zh, card_type_marker_fields=dict(ANKI_MINER_NOTE.card_type_marker_fields), pitch_category_format="romaji"
+    )
+    back = switch_language(zh, "ja")
+    assert back.card_type_marker_fields["sentence"] == "sentenceCard"
+    assert back.pitch_category_format == "jp"

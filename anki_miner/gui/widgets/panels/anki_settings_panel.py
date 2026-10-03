@@ -321,9 +321,9 @@ class AnkiSettingsPanel(FormPanel):
         # doesn't expose (future/opt-in keys set via gui_config.json) survive a
         # Save round-trip instead of being wiped.
         self._loaded_fields: dict[str, str] = {}
-        # Whether "Fill in automatically" may apply a community preset: all
-        # three are Japanese note types (the "note_presets" capability).
-        # Refreshed from the profile on every load_from_config.
+        # Whether "Fill in automatically" may apply Lapis, Kiku or Senren, the
+        # Japanese note types (the "note_presets" capability); Anki Miner Note
+        # applies in every language. Refreshed on every load_from_config.
         self._presets_allowed = True
         self._setup_fields()
 
@@ -417,13 +417,14 @@ class AnkiSettingsPanel(FormPanel):
 
         # Card Field Mappings section. One secondary "Fill in automatically" in
         # its heading (D13) replaces the Preset row and the full-width Auto-Map
-        # bar: it reads the note type's fields, applies Lapis / Kiku / Senren
-        # when their fields are all there, and otherwise maps by keyword.
+        # bar: it reads the note type's fields, applies Lapis / Kiku / Senren /
+        # Anki Miner Note when their fields are all there, and otherwise maps by
+        # keyword.
         self.fetch_fields_button = ModernButton(self.tr("Fill in automatically"), variant="secondary")
         self.fetch_fields_button.setToolTip(
             self.tr(
                 "Read this note type's fields from Anki and fill every mapping below. "
-                "Lapis, Kiku and Senren are recognised and filled completely."
+                "Lapis, Kiku, Senren and Anki Miner Note are recognised and filled completely."
             )
         )
         self.fetch_fields_button.clicked.connect(self._on_fetch_fields)
@@ -849,7 +850,7 @@ class AnkiSettingsPanel(FormPanel):
     def apply_note_type_preset(self, preset: NotePreset) -> None:
         """Overwrite every mapping this panel owns with ``preset``'s names (the fill's preset path).
 
-        Writes more than the field rows on purpose: all three presets read
+        Writes more than the field rows on purpose: every preset reads
         pitch categories as romaji (the config default is Japanese), and Senren
         names its markers sentenceCard / audioCard. A card type the preset has
         no marker for is reset to None, because an empty marker would silently

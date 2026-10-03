@@ -1146,7 +1146,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
             "Fill in automatically reads your note type's fields and fills every mapping. "
-            "Lapis, Kiku and Senren are recognised and filled completely.",
+            "Lapis, Kiku, Senren and Anki Miner Note are recognised and filled completely.",
         ),
         category=_CAT_CARDS,
         target=CapabilityTarget("settings", "anki"),
@@ -1158,6 +1158,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "lapis",
             "kiku",
             "senren",
+            "anki miner note",
             "note type setup",
         ),
     ),
