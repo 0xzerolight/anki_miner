@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **A Language field.** Map it under Settings → Cards & Anki and each card stores its language tag (ja, zh-Hans, de, …), which note types can use to pick fonts and hyphenation.
 
 ### Changed
 - **Pinyin and Jyutping tone colours can follow the note type's theme.** Each coloured syllable now names a colour the note type may override for light and dark mode (Anki Miner Note does), and keeps today's colour everywhere else.

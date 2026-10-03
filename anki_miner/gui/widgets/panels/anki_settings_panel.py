@@ -652,6 +652,19 @@ class AnkiSettingsPanel(FormPanel):
             ),
         )
 
+        # Language field (the card's BCP-47 tag). Every language writes one, so
+        # the row is never gated.
+        self.language_field_input = QLineEdit()
+        self.language_field_input.setPlaceholderText("Language")
+        self.add_field(
+            self.tr("Language Field"),
+            self.language_field_input,
+            helper=self.tr(
+                "Stores the card's language tag (ja, zh-Hans, de, …) for note types "
+                "that set fonts or hyphenation by language. Blank = skip."
+            ),
+        )
+
         # Card Type section. Some note types render a card differently depending
         # on which marker field holds an "x" (JP Mining Note is the one the four
         # default names come from). The mechanism is language-agnostic, so the
@@ -922,6 +935,7 @@ class AnkiSettingsPanel(FormPanel):
             "frequency_sort": self.frequency_sort_field_input,
             "source": self.source_field_input,
             "sentence_translation": self.sentence_translation_field_input,
+            "language": self.language_field_input,
         }
         # Only overwrite a widget when a field actually matched -- an empty
         # result leaves the existing value untouched (exact prior behaviour).
@@ -999,6 +1013,7 @@ class AnkiSettingsPanel(FormPanel):
             "frequency_sort": self.frequency_sort_field_input.text().strip(),
             "source": self.source_field_input.text().strip(),
             "sentence_translation": self.sentence_translation_field_input.text().strip(),
+            "language": self.language_field_input.text().strip(),
         }
         # Language-scoped keys are contributed only while their row is on screen
         # (or the mapping already carried them). Keeps a ja anki_fields
@@ -1037,6 +1052,7 @@ class AnkiSettingsPanel(FormPanel):
         self.frequency_sort_field_input.setText(fields.get("frequency_sort", ""))
         self.source_field_input.setText(fields.get("source", ""))
         self.sentence_translation_field_input.setText(fields.get("sentence_translation", ""))
+        self.language_field_input.setText(fields.get("language", ""))
 
     def get_pitch_category_format(self) -> Literal["jp", "romaji"]:
         """Return the selected pitch category format ("jp" or "romaji")."""

@@ -460,3 +460,33 @@ class TestCardLangWrapper:
         built = build_note(item, test_config, set(), card_lang=get_profile(code).content_style.card_lang)
         assert "lang=" not in "".join(built.note["fields"].values())
         assert built == build_note(item, test_config, set())
+
+
+class TestLanguageField:
+    """The ``language`` key: the card's own language tag, for a note type that sets lang= on its root."""
+
+    @staticmethod
+    def _fields(config, **kwargs) -> dict:
+        return build_note(_payload(_word()), config, set(), **kwargs).note["fields"]
+
+    def test_it_takes_the_profile_code(self):
+        assert self._fields(_config(language="Language"), content_lang="de")["Language"] == "de"
+
+    def test_a_han_profile_writes_its_sentence_tag(self):
+        fields = self._fields(_config(language="Language"), content_lang="zh", card_lang=lambda t, c: "zh-Hant")
+        assert fields["Language"] == "zh-Hant"
+
+    def test_an_rtl_profile_writes_its_code(self):
+        """card_lang is ignored for an rtl language, here as on the sentence."""
+        fields = self._fields(
+            _config(language="Language"), content_direction="rtl", content_lang="he", card_lang=lambda t, c: "zh-Hans"
+        )
+        assert fields["Language"] == "he"
+
+    def test_unmapped_by_default_and_the_note_is_unchanged(self):
+        config = _config()
+        assert config.anki_fields["language"] == ""
+        item = _payload(_word())
+        built = build_note(item, config, set(), content_lang="de")
+        assert "de" not in built.note["fields"].values()
+        assert built == build_note(item, config, set())

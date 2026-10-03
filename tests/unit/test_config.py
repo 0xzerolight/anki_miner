@@ -252,6 +252,10 @@ def test_anki_fields_includes_sentence_translation_default():
     assert cfg.anki_fields["sentence_translation"] == ""
 
 
+def test_anki_fields_includes_language_default():
+    assert AnkiMinerConfig().anki_fields["language"] == ""
+
+
 def test_secondary_subtitles_default_off():
     assert AnkiMinerConfig().secondary_subtitle_enabled is False
 

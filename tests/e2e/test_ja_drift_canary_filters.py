@@ -111,6 +111,7 @@ FIELD_MAP: dict[str, str] = {
     "source": "Source",
     "expression_audio": "WordAudio",
     "sentence_translation": "SentenceTranslation",
+    "language": "Language",
 }
 MODEL_FIELDS = [*FIELD_MAP.values(), "IsWordAndSentenceCard"]
 

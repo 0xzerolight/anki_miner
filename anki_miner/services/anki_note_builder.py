@@ -343,6 +343,10 @@ def build_note(
     else:
         sentence_furigana_field = html.escape(word.sentence_furigana)
 
+    # The note type's own language tag (Anki Miner Note's root lang=, hyphenation):
+    # the Han profiles' sentence tag (zh-Hans/zh-Hant) when they declare one, else
+    # the profile code; "" on the three-argument call, which maps no such field.
+    language_tag = content_lang
     word_field = html.escape(word.mined_form)
     if content_direction == "rtl":
         word_field = _rtl_wrap(word_field, content_lang)
@@ -357,7 +361,8 @@ def build_note(
         # spelling: a mined sentence keeps the file's own script whatever the
         # language's own script setting says, and the escaped/bolded form would
         # carry markup no script rule can read.
-        sentence_field = _lang_wrap(sentence_field, card_lang(word.sentence, config))
+        language_tag = card_lang(word.sentence, config)
+        sentence_field = _lang_wrap(sentence_field, language_tag)
 
     # Build fields, skipping any with empty config mapping
     field_data = {
@@ -377,6 +382,7 @@ def build_note(
         "sentence_furigana": sentence_furigana_field,
         "sentence_reading": html.escape(word.sentence_reading),
         "sentence_translation": html.escape(word.sentence_translation),
+        "language": html.escape(language_tag),
     }
     # Profile-declared raw-HTML keys only; the four above are already in place
     # at their frozen positions.

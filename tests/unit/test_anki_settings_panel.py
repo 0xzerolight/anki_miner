@@ -833,6 +833,21 @@ def test_sentence_translation_field_round_trips_and_auto_maps(qtbot):
     assert panel.get_card_fields()["sentence"] == "Sentence"
 
 
+@pytest.mark.parametrize("language", ["ja", "de"])
+def test_language_field_round_trips_auto_maps_and_is_never_gated(qtbot, test_config, language):
+    from dataclasses import replace
+
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(replace(test_config, language=language))
+    assert panel.language_field_input.isVisibleTo(panel)
+    assert panel.get_card_fields()["language"] == ""
+    panel.set_card_fields({"language": "Language"})
+    assert panel.get_card_fields()["language"] == "Language"
+    panel.populate_from_field_list(["Expression", "Sentence", "Lang"])
+    assert panel.get_card_fields()["language"] == "Lang"
+
+
 #: A mapping with nothing the auto-map defaults would quietly re-seed, so each
 #: test below states every name it expects to survive or be cleared.
 def _mapping(**overrides: str) -> dict[str, str]:

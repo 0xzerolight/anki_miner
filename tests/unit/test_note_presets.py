@@ -107,6 +107,11 @@ def test_kiku_reuses_the_lapis_names():
     assert kiku.fields["sentence_translation"] == "SentenceTranslation"
 
 
+def test_no_preset_has_a_language_field():
+    for preset in NOTE_PRESETS:
+        assert preset.fields["language"] == "", preset.id
+
+
 def test_senren_maps_its_translation_field():
     senren = preset_by_id("senren")
     assert senren is not None

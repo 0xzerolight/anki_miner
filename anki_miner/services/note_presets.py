@@ -128,6 +128,7 @@ _JPMN_FIELDS: Mapping[str, str] = {
     "source": "MiscInfo",
     # Lapis has no translation field; Kiku overrides below.
     "sentence_translation": "",
+    "language": "",
 }
 
 _JPMN_MARKERS: Mapping[str, str] = {
@@ -224,6 +225,7 @@ SENREN = NotePreset(
         "frequency_sort": "freqSort",
         "source": "miscInfo",
         "sentence_translation": "sentenceTranslation",
+        "language": "",
     },
     pitch_category_format="romaji",
     card_type_marker_fields={
@@ -323,6 +325,7 @@ FIELD_KEYWORDS: dict[str, list[str]] = {
     "frequency_sort": ["freqsort", "frequencysort"],
     "source": ["source", "origin", "miscinfo"],
     "sentence_translation": ["sentencetranslation", "translation", "sentencemeaning"],
+    "language": ["language", "lang"],
 }
 
 

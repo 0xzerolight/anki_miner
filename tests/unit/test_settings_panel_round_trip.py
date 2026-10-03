@@ -66,6 +66,7 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
             "pitch_graph": "PitchGraph",
             "pitch_text": "PitchText",
             "sentence_translation": "SentTrans",
+            "language": "Lang",
         },
         pitch_category_format="romaji",
         card_type="click",

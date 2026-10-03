@@ -208,6 +208,9 @@ class AnkiMinerConfig:
             # Secondary-language subtitle line for the sentence (F7). "" = off;
             # the mapped name is the switch, like sentence_reading.
             "sentence_translation": "",
+            # The card's BCP-47 language tag (ja, zh-Hans, de), for a note type
+            # that sets lang= by it. "" = off; the mapped name is the switch.
+            "language": "",
         }
     )
     # JP Mining Note-style card-type marker. When card_type is non-empty, an "x"

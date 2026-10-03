@@ -126,7 +126,7 @@ def test_pre_change_config_loads_every_field_unchanged(isolated_config_file):
             # Keys added to the default mapping since the fixture are backfilled
             # on load (_backfill_anki_fields); every recorded one must be unchanged.
             assert {k: reserialized[key][k] for k in value} == value
-            assert set(reserialized[key]) - set(value) == {"sentence_translation"}
+            assert set(reserialized[key]) - set(value) == {"sentence_translation", "language"}
             continue
         if isinstance(value, str) and value.startswith("/fixture-home/"):
             value = str(config_module.ANKI_MINER_HOME / value.removeprefix("/fixture-home/"))
