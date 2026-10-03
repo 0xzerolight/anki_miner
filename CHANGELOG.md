@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **Update in place on Windows and the AppImage.** When a new version is out, the banner's Update now downloads it, with progress in the bar at the bottom, and checks it against the release's checksum. Restart now installs it and reopens Anki Miner. macOS, the .deb and pip installs keep the download link.
+- **The AppImage carries update information.** AppImageUpdate, Gear Lever and other AppImage managers can update it and download only the parts that changed.
 
 ### Changed
 

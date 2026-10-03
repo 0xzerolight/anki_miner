@@ -914,6 +914,24 @@ Continue anyway?</source>
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>AppUpdateController</name>
+    <message>
+        <source>Anki Miner update</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloading Anki Miner v%1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Finish or cancel the running task, then restart to update.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Close and reopen Anki Miner to finish updating.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>AsrModelDownloadWorker</name>
     <message>
         <source>Downloading %1…</source>
@@ -2634,7 +2652,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings → General.</source>
+        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings → General. The Windows installer and the AppImage can install the update themselves and restart.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -11871,7 +11889,31 @@ Your installed resources and your theme are kept.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Downloading Anki Miner v%1…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki Miner v%1 is downloaded. Restart to finish updating.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki Miner v%1 could not be installed automatically.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Anki Miner v%1 is available</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restart now</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Update now</source>
         <translation type="unfinished" />
     </message>
     <message>

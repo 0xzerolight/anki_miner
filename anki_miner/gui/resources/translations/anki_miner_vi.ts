@@ -914,6 +914,24 @@ Vẫn tiếp tục?</translation>
         <translation>Mở Cài đặt</translation>
     </message>
 </context><context>
+    <name>AppUpdateController</name>
+    <message>
+        <source>Anki Miner update</source>
+        <translation>Cập nhật Anki Miner</translation>
+    </message>
+    <message>
+        <source>Downloading Anki Miner v%1</source>
+        <translation>Đang tải Anki Miner v%1</translation>
+    </message>
+    <message>
+        <source>Finish or cancel the running task, then restart to update.</source>
+        <translation>Hoàn tất hoặc hủy tác vụ đang chạy, rồi khởi động lại để cập nhật.</translation>
+    </message>
+    <message>
+        <source>Close and reopen Anki Miner to finish updating.</source>
+        <translation>Đóng rồi mở lại Anki Miner để hoàn tất cập nhật.</translation>
+    </message>
+</context><context>
     <name>AsrModelDownloadWorker</name>
     <message>
         <source>Downloading %1…</source>
@@ -2640,8 +2658,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Kiểm tra cập nhật ứng dụng</translation>
     </message>
     <message>
-        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings → General.</source>
-        <translation>Kiểm tra phiên bản Anki Miner mới từ menu Trợ giúp, hoặc bật/tắt việc tự động kiểm tra khi khởi động trong Cài đặt → Chung.</translation>
+        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings → General. The Windows installer and the AppImage can install the update themselves and restart.</source>
+        <translation>Kiểm tra phiên bản Anki Miner mới từ menu Trợ giúp, hoặc bật/tắt việc tự động kiểm tra khi khởi động trong Cài đặt → Chung. Trình cài đặt Windows và AppImage có thể tự cài đặt bản cập nhật rồi khởi động lại.</translation>
     </message>
     <message>
         <source>Download videos or audio</source>
@@ -11877,8 +11895,32 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
         <translation>Đóng</translation>
     </message>
     <message>
+        <source>Downloading Anki Miner v%1…</source>
+        <translation>Đang tải Anki Miner v%1…</translation>
+    </message>
+    <message>
+        <source>Anki Miner v%1 is downloaded. Restart to finish updating.</source>
+        <translation>Đã tải xong Anki Miner v%1. Khởi động lại để hoàn tất cập nhật.</translation>
+    </message>
+    <message>
+        <source>Anki Miner v%1 could not be installed automatically.</source>
+        <translation>Không thể tự động cài đặt Anki Miner v%1.</translation>
+    </message>
+    <message>
         <source>Anki Miner v%1 is available</source>
         <translation>Đã có Anki Miner v%1</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Hủy</translation>
+    </message>
+    <message>
+        <source>Restart now</source>
+        <translation>Khởi động lại ngay</translation>
+    </message>
+    <message>
+        <source>Update now</source>
+        <translation>Cập nhật ngay</translation>
     </message>
     <message>
         <source>View release</source>

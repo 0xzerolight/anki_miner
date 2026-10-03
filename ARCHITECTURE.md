@@ -190,6 +190,7 @@ Stateless business logic classes in `services/`. Each receives the frozen `AnkiM
 - **WordListService**: loads blacklist/whitelist text files for word filtering.
 - **StatsService**: SQLite-backed analytics (`mining_sessions`, `series_difficulty` tables). Provides aggregated stats and milestones.
 - **UpdateChecker**: queries the GitHub Releases API for newer versions.
+- **App updater** (`services/app_updater.py`): installs a newer release over the running AppImage (atomic replace of `$APPIMAGE`) or Windows install (a verified Setup.exe run with `/UPDATE=1` after the app exits), checked against the release API's per-asset sha256. `gui/controllers/app_update_controller.py` drives it from the update banner; `gui/restart.py` carries the relaunch.
 - **ExportService**: exports results to CSV, TSV, or vocabulary list formats.
 - **ShortcutService** (`services/shortcut_service.py`): cross-platform desktop shortcut creation behind Tools → Create Desktop Shortcut — Linux `.desktop`, Windows `.lnk`, macOS informational only. (Keyboard shortcuts are unrelated and live in `gui/utils/keyboard_shortcuts.py`.)
 

@@ -914,6 +914,24 @@ Continue anyway?</source>
         <translation>開啟設定</translation>
     </message>
 </context><context>
+    <name>AppUpdateController</name>
+    <message>
+        <source>Anki Miner update</source>
+        <translation>Anki Miner 更新</translation>
+    </message>
+    <message>
+        <source>Downloading Anki Miner v%1</source>
+        <translation>正在下載 Anki Miner v%1</translation>
+    </message>
+    <message>
+        <source>Finish or cancel the running task, then restart to update.</source>
+        <translation>請先完成或取消進行中的工作，再重新啟動以進行更新。</translation>
+    </message>
+    <message>
+        <source>Close and reopen Anki Miner to finish updating.</source>
+        <translation>請關閉後重新開啟 Anki Miner 以完成更新。</translation>
+    </message>
+</context><context>
     <name>AsrModelDownloadWorker</name>
     <message>
         <source>Downloading %1…</source>
@@ -2640,8 +2658,8 @@ No index files are deleted.</source>
         <translation>檢查應用程式更新</translation>
     </message>
     <message>
-        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings → General.</source>
-        <translation>從「說明」選單檢查是否有新版 Anki Miner，或在「設定 → 一般」中切換啟動時的自動檢查。</translation>
+        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings → General. The Windows installer and the AppImage can install the update themselves and restart.</source>
+        <translation>從「說明」選單檢查是否有新版 Anki Miner，或在「設定 → 一般」中切換啟動時的自動檢查。Windows 安裝程式與 AppImage 可自行安裝更新並重新啟動。</translation>
     </message>
     <message>
         <source>Download videos or audio</source>
@@ -11877,8 +11895,32 @@ Your installed resources and your theme are kept.</source>
         <translation>關閉</translation>
     </message>
     <message>
+        <source>Downloading Anki Miner v%1…</source>
+        <translation>正在下載 Anki Miner v%1…</translation>
+    </message>
+    <message>
+        <source>Anki Miner v%1 is downloaded. Restart to finish updating.</source>
+        <translation>Anki Miner v%1 已下載完成。請重新啟動以完成更新。</translation>
+    </message>
+    <message>
+        <source>Anki Miner v%1 could not be installed automatically.</source>
+        <translation>Anki Miner v%1 無法自動安裝。</translation>
+    </message>
+    <message>
         <source>Anki Miner v%1 is available</source>
         <translation>Anki Miner v%1 現已推出</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message>
+        <source>Restart now</source>
+        <translation>立即重新啟動</translation>
+    </message>
+    <message>
+        <source>Update now</source>
+        <translation>立即更新</translation>
     </message>
     <message>
         <source>View release</source>

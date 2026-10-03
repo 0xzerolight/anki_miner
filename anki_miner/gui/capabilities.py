@@ -1228,7 +1228,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Check for app updates"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings → General.",
+            "Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings → General. The Windows installer and the AppImage can install the update themselves and restart.",
         ),
         category=_CAT_APPEARANCE,
         target=CapabilityTarget("settings", "ui"),
