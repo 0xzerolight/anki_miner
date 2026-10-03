@@ -9,6 +9,7 @@ import pytest
 import requests
 
 from anki_miner.exceptions import AnkiConnectionError, SetupError
+from anki_miner.languages.profile import CARD_FRONT_KEY
 from anki_miner.models import AnkiWriteState, CardPayload, MediaData
 from anki_miner.services import _ankiconnect
 from anki_miner.services._ankiconnect import _expect_list, post_action, post_multi
@@ -4189,7 +4190,8 @@ class TestProbeDuplicates:
     def _make_word_data(self, make_tokenized_word, n=1):
         items = []
         for i in range(n):
-            word = make_tokenized_word(lemma=f"word_{i}")
+            # A front of its own each: a front repeated in one probe is a duplicate.
+            word = make_tokenized_word(surface=f"word_{i}", lemma=f"word_{i}")
             items.append(CardPayload(word=word, media=MediaData(), definition=f"def_{i}"))
         return items
 
@@ -4245,6 +4247,42 @@ class TestProbeDuplicates:
         # addNotes received only the 2 non-duplicates.
         add_call = mock_post.call_args_list[1]
         assert len(add_call[1]["json"]["params"]["notes"]) == 2
+
+    @pytest.mark.parametrize("fallback", [False, True], ids=["error-detail", "can-add-notes"])
+    def test_a_front_repeated_inside_the_batch_is_a_duplicate_not_an_error(
+        self, test_config, make_tokenized_word, fallback
+    ):
+        """Anki probes each note against the collection alone, and addNotes rolls
+        the whole request back on an in-request duplicate. Two mined forms can
+        share a front: ko sends 學校 with the hangul front 학교 beside a mined 학교.
+        """
+        service = AnkiService(test_config)
+        hanja = CardPayload(
+            word=make_tokenized_word(surface="學校", lemma="學校"),
+            media=MediaData(),
+            definition="school",
+            extra_fields={CARD_FRONT_KEY: "학교"},
+        )
+        hangul = CardPayload(word=make_tokenized_word(surface="학교", lemma="학교"), media=MediaData(), definition="d")
+        if fallback:
+            probes = [
+                _mock_response(error="unsupported action"),
+                _mock_response(result=[True, True]),
+                _mock_response(result=[True, True]),
+            ]
+        else:
+            probes = [_mock_response(result=[{"canAdd": True, "error": None}, {"canAdd": True, "error": None}])]
+
+        with patch(
+            "anki_miner.services._ankiconnect.requests.post", side_effect=[*probes, _mock_response(result=[100])]
+        ) as mock_post:
+            assert service.create_cards_batch([hanja, hangul]) == [100]
+
+        submitted = mock_post.call_args_list[-1][1]["json"]["params"]["notes"]
+        assert [next(iter(note["fields"].values())) for note in submitted] == ["학교"]
+        assert service.last_created_mined_forms == ["學校"]
+        assert service.last_skipped_duplicates == 1
+        assert service.last_not_created == {"학교": "duplicate"}
 
     def test_all_duplicates_skips_addnotes_entirely(self, test_config, make_tokenized_word):
         """When every note is a duplicate, no addNotes request is made."""

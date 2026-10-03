@@ -1243,7 +1243,7 @@ class AnkiService:
         carry megabytes of rendered HTML — just to ask "is this a duplicate?"
         wastes bandwidth and AnkiConnect time. ``verify_card_target`` requires
         the word mapping to target the model's first field and rejects mapping
-        collisions; ``build_note`` emits that mined-form field first.
+        collisions; ``build_note`` emits that word field first.
         """
         stripped = dict(note)
         fields = note.get("fields") or {}
@@ -1259,7 +1259,7 @@ class AnkiService:
         """The card front of a probe note — the word every rejection must name.
 
         ``verify_card_target`` requires the word mapping to target the model's
-        first field and ``build_note`` emits that mined-form field first, so the
+        first field and ``build_note`` emits that word field first, so the
         first field of a probed note is the spelling the user sees on the card.
         """
         fields = note.get("fields") or {}
@@ -1363,6 +1363,12 @@ class AnkiService:
         ``canAddNotesWithErrorDetail`` (top-level "unsupported action"), falls back
         to two diffed ``canAddNotes`` calls.
 
+        A note whose front an earlier note of the same call carries is a
+        duplicate too. ``canAdd`` judges each note against the collection
+        alone, but ``addNotes`` adds in order and rolls the whole request back
+        on one in-request duplicate. Two mined forms can share a front: ko
+        sends 學校 with the hangul front 학교 beside a mined 학교.
+
         Raises:
             AnkiConnectionError: connection/transport failure, a malformed
                 response, or a per-note non-duplicate rejection.
@@ -1397,7 +1403,9 @@ class AnkiService:
                     "Anki duplicate probe fallback: reason=unsupported_action error_type=%s",
                     type(e).__name__,
                 )
-                fallback_result = self._probe_duplicates_fallback(stripped, no_dup)
+                fallback_result = self._mark_repeated_fronts(
+                    stripped, self._probe_duplicates_fallback(stripped, no_dup)
+                )
                 logger.debug("Anki duplicate probe done: duplicates=%d", sum(fallback_result))
                 return fallback_result
             raise
@@ -1420,8 +1428,25 @@ class AnkiService:
                     error,
                 )
                 raise AnkiConnectionError(f"Anki refused the card for '{self._first_field_value(no_dup[i])}': {error}")
+        is_duplicate = self._mark_repeated_fronts(stripped, is_duplicate)
         logger.debug("Anki duplicate probe done: duplicates=%d", sum(is_duplicate))
         return is_duplicate
+
+    def _mark_repeated_fronts(self, notes: list[dict], is_duplicate: list[bool]) -> list[bool]:
+        """``is_duplicate`` with every repeat of an earlier note's front marked too.
+
+        Keyed like Anki's own first-field check (``_strip_for_dedup``), never
+        the language's known-words fold: that fold is broader than Anki's rule
+        and would drop a card Anki accepts.
+        """
+        seen: set[str] = set()
+        marked: list[bool] = []
+        for note, duplicate in zip(notes, is_duplicate, strict=True):
+            front = _strip_for_dedup(self._first_field_value(note))
+            marked.append(duplicate or front in seen)
+            if front:
+                seen.add(front)
+        return marked
 
     def _validate_notes_addible(self, notes: list[dict]) -> None:
         """Raise if any first-field-only note is invalid with duplicates allowed."""

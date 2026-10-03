@@ -124,8 +124,8 @@ def _payload(tmp_path: Path, i: int, word: str | None = None, *, media: bool = F
 
 def test_each_chunk_is_probed_then_uploaded_then_submitted(tmp_path, anki):
     """100/100/5 chunks. 語003 is already in Anki; 語050 recurs in chunk 2 after
-    chunk 1 created it; 語201 twice in chunk 3 passes the probe and loses one
-    addNotes slot. Duplicates never reach the upload."""
+    chunk 1 created it; 語201 twice in chunk 3 is a duplicate inside one probe,
+    so its repeat never reaches addNotes. Duplicates never reach the upload."""
     recorder = anki(("Mining", "語003"))
     service = AnkiService(_config(tmp_path))
     payloads = [_payload(tmp_path, i, media=i in (0, 1, 100, 150, 202)) for i in range(205)]
@@ -145,8 +145,7 @@ def test_each_chunk_is_probed_then_uploaded_then_submitted(tmp_path, anki):
         ("addNotes", 99, 60),
         ("on_progress", 202),
         ("canAddNotesWithErrorDetail", 5, 60),
-        ("multi", 2, 30),
-        ("addNotes", 5, 60),
+        ("addNotes", 4, 60),
         ("on_progress", 205),
         ("on_complete",),
     ]
