@@ -101,6 +101,8 @@ def test_scoped_defaults_turn_on_the_french_sdh_filter_and_both_fields():
     ("cue", "kept"),
     [
         ("NARRATEUR : Il était une fois.", "Il était une fois."),  # French spacing before the colon
+        ("JEAN\u202f: Bonjour.", "Bonjour."),  # the narrow no-break space the stored line now keeps
+        ("M.\u00a0DUPONT\u00a0: Entrez.", "Entrez."),  # and the no-break space after a title
         ("JEAN: Viens manger.", "Viens manger."),  # the Latin shape still strips
         ("[porte qui claque] ♪ Bonjour ♪", "Bonjour"),
         ("- Bonjour. - Salut.", "Bonjour. Salut."),
@@ -149,11 +151,10 @@ def test_books_split_after_real_sentence_ends_only():
     assert split_sentences("C'est mon ex. Elle est partie.", rules=rules) == ["C'est mon ex.", "Elle est partie."]
 
 
-def test_normalize_composes_and_turns_french_no_break_spaces_into_spaces():
-    """Item must-resolve 2: the stored line IS the normalised line, and the map is 1:1, so surfaces stay slices."""
+def test_normalize_composes_and_keeps_french_no_break_spaces():
+    """The stored line keeps NBSP/NNBSP so ``? ! : ; »`` never start a card line; only the tagger sees them folded."""
     raw = unicodedata.normalize("NFD", "Attention\u202f: la crème est prête\u00a0!")
-    assert fr_normalize(raw) == "Attention : la crème est prête !"
-    assert len(fr_normalize("a\u00a0\u202fb")) == len("a  b")
+    assert fr_normalize(raw) == "Attention\u202f: la crème est prête\u00a0!"
     assert fr_normalize("aujourd’hui") == "aujourd’hui"  # apostrophes are a tagging-copy concern, not a stored one
     assert get_profile("fr").normalize is fr_normalize
 

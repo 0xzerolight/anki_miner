@@ -9,6 +9,7 @@ from anki_miner.utils.text_utils import (
     _format_furigana,
     _is_kanji,
     clean_subtitle_text,
+    fold_no_break_spaces,
     generate_furigana,
     generate_furigana_from_tokens,
     generate_reading,
@@ -26,6 +27,11 @@ from anki_miner.utils.text_utils import (
 )
 
 _ANKI_FURIGANA_RE = re.compile(r" ?([^ >]+?)\[(.+?)\]")
+
+
+def _identity(text: str) -> str:
+    """A non-Japanese normaliser that changes nothing."""
+    return text
 
 
 def _anki_visible_text(value: str) -> str:
@@ -142,6 +148,25 @@ class TestCleanSubtitleText:
     def test_handles_empty_string(self):
         """Should handle empty string."""
         assert clean_subtitle_text("") == ""
+
+    def test_japanese_folds_no_break_spaces(self):
+        """``normalize=None`` is the Japanese pair: NBSP and NNBSP collapse like any space."""
+        assert clean_subtitle_text("a\u00a0b\u202fc", normalize=None) == "a b c"
+
+    def test_other_languages_keep_no_break_spaces(self):
+        """French puts one before ``? ! : ; »``: the stored line keeps it, so the card never wraps there."""
+        cue = "Tu  viens\u202f?\\N Oui\u00a0\u00a0!"
+        assert clean_subtitle_text(cue, normalize=_identity) == "Tu viens\u202f? Oui\u00a0\u00a0!"
+
+    def test_no_break_spaces_at_the_edges_still_strip(self):
+        """An ``&nbsp;`` placeholder cue is empty, as it was before no-break spaces were kept."""
+        assert clean_subtitle_text("&nbsp;", normalize=_identity) == ""
+        assert clean_subtitle_text("\u00a0 Oui\u202f", normalize=_identity) == "Oui"
+
+    def test_fold_no_break_spaces_is_one_character_for_one(self):
+        text = "Tu viens\u202f? Oui\u00a0!"
+        assert fold_no_break_spaces(text) == "Tu viens ? Oui !"
+        assert len(fold_no_break_spaces(text)) == len(text)
 
     def test_handles_complex_subtitle(self):
         """Should handle complex subtitle with multiple tag types."""

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from pathlib import Path
 
@@ -63,11 +64,38 @@ def test_the_model_never_emits_a_fine_tag(tagger):
     assert FR_EXCLUDED_SUBTYPES == () and FR_ALLOWED_POS == ("ADJ", "ADV", "NOUN", "VERB")
 
 
-def test_no_break_spaces_store_as_spaces_on_the_book_path(parser):
-    """Item must-resolve 2: the normalised line is the stored line and surfaces slice it."""
+def test_no_break_spaces_survive_in_the_stored_book_sentence(parser):
+    """The tagger reads them folded, one character for one, so the offsets still slice the stored line."""
     (word,) = [w for w in _words(parser, "Attention\u202f: le train part\u00a0!") if w.mined_form == "train"]
-    assert word.sentence == "Attention : le train part !"
+    assert word.sentence == "Attention\u202f: le train part\u00a0!"
     assert word.sentence[word.surface_start : word.surface_end] == "train"
+
+
+def _srt(tmp_path: Path, cue: str, name: str = "fr.srt") -> Path:
+    path = tmp_path / name
+    path.write_text(f"1\n00:00:01,000 --> 00:00:02,000\n{cue}\n", encoding="utf-8")
+    return path
+
+
+def test_subtitle_sentences_keep_no_break_spaces(parser, tmp_path):
+    words = parser.parse_subtitle_file(_srt(tmp_path, "Où est la gare\u202f? Ici\u00a0!"))
+    assert words and all(word.sentence == "Où est la gare\u202f? Ici\u00a0!" for word in words)
+    # The tagger reads the folded line: the same fronts as the line typed with plain spaces.
+    plain = parser.parse_subtitle_file(_srt(tmp_path, "Où est la gare ? Ici !", "plain.srt"))
+    assert {word.mined_form for word in words} == {word.mined_form for word in plain} >= {"gare"}
+
+
+def test_the_bold_offsets_survive_a_no_break_space(parser, tmp_path, monkeypatch):
+    monkeypatch.setattr(parser, "config", dataclasses.replace(parser.config, bold_target_in_sentence=True))
+    (word,) = [
+        w for w in parser.parse_subtitle_file(_srt(tmp_path, "Où est la gare\u202f? Ici\u00a0!")) if w.surface == "gare"
+    ]
+    assert word.sentence_bolded == "Où est la <b>gare</b>\u202f? Ici\u00a0!"
+
+
+def test_a_speaker_label_before_a_no_break_space_is_stripped(parser, tmp_path):
+    words = parser.parse_subtitle_file(_srt(tmp_path, "JEAN\u202f: Où est la gare\u202f?"))
+    assert words and all(word.sentence == "Où est la gare\u202f?" for word in words)
 
 
 def test_an_all_caps_cue_bolds_the_original_surface(parser):

@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Reading → Anki Deck: the Word Curator shows the card's line under its picture**, not the card's position in the deck.
 - **Fill in automatically maps Hebrew part of speech and Thai Paiboon readings** to fields named PartOfSpeech and Romanization.
 - **Indonesian affixes no longer break after a hyphen** (ke- / -an stay whole on one line).
+- **French sentences keep their no-break spaces**, so ? ! : ; and » no longer start a new line on the card.
 
 ### Removed
 

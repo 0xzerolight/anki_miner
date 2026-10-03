@@ -67,9 +67,11 @@ def clean_subtitle_text(
     composition, CJK-compat and radical NFKD folding) and the minimal kanji-variant map
     (𠮟 → 叱). Physical lines stay separate through normalization and are
     annotation-stripped (:func:`strip_inline_annotations`) before whitespace is
-    flattened. The returned string *is* the text MeCab tokenizes and the stored
-    card sentence, so token offsets, dedup keys, and script-type filters all see
-    one normalized form.
+    flattened. The returned string *is* the stored card sentence; for Japanese
+    it is also the exact text MeCab tokenizes, so token offsets, dedup keys, and
+    script-type filters all see one normalized form. Other languages keep their
+    no-break spaces here and the parser tokenizes the line with them folded
+    (:func:`collapse_whitespace`).
 
     ``normalize`` replaces the two Japanese steps — ``normalize_for_tokenization``
     and ``standardize_kanji_variants`` — with the mining language's own
@@ -105,7 +107,33 @@ def clean_subtitle_text(
     text = strip_inline_annotations(text)
     if has_target_script is not None:
         text = _drop_other_script_lines(text, has_target_script)
-    return " ".join(text.split())
+    return collapse_whitespace(text, keep_no_break=normalize is not None)
+
+
+#: Every whitespace run except U+00A0 and U+202F, the no-break spaces.
+_COLLAPSIBLE_SPACE_RE = re.compile(r"[^\S\u00a0\u202f]+")
+_NO_BREAK_SPACE_FOLD = str.maketrans({"\u00a0": " ", "\u202f": " "})
+
+
+def collapse_whitespace(text: str, *, keep_no_break: bool) -> str:
+    """Flatten whitespace runs to one space and trim the ends.
+
+    ``keep_no_break=False`` is the Japanese collapse, byte-identical to
+    ``" ".join(text.split())``. Every other language keeps U+00A0 and U+202F
+    inside the line: French puts one before ``: ; ? !`` and ``»`` so the card
+    never starts a line with them. The parser tokenizes the line through
+    :func:`fold_no_break_spaces`; both characters fold one for one, so token
+    offsets index the stored line unchanged. Edge whitespace, no-break
+    included, still strips: an ``&nbsp;`` placeholder cue stays empty.
+    """
+    if not keep_no_break:
+        return " ".join(text.split())
+    return _COLLAPSIBLE_SPACE_RE.sub(" ", text).strip()
+
+
+def fold_no_break_spaces(text: str) -> str:
+    """U+00A0 and U+202F to a plain space, one character for one: the text a tagger reads."""
+    return text.translate(_NO_BREAK_SPACE_FOLD)
 
 
 def _drop_other_script_lines(text: str, has_target_script: Callable[[str], bool]) -> str:

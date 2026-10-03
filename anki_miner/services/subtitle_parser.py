@@ -70,6 +70,8 @@ from anki_miner.utils.logging_ext import capped, log_summary
 from anki_miner.utils.subtitle_encoding import _log_decode, load_with_fallback_encoding, script_check_kwarg
 from anki_miner.utils.text_utils import (
     _format_furigana,
+    collapse_whitespace,
+    fold_no_break_spaces,
     generate_furigana_from_tokens,
     generate_reading_from_tokens,
     is_kana_only,
@@ -976,12 +978,23 @@ class SubtitleParserService:
 
         Runs after cleanup and normalization so filters operate on human-readable
         text. Whitespace is renormalized because regex deletion can leave double
-        spaces behind.
+        spaces behind, with ``clean_subtitle_text``'s rule: only a non-Japanese
+        line keeps its no-break spaces.
         """
         if self._filter_pattern is None:
             return text
         filtered = self._filter_pattern.sub(self.config.subtitle_regex_replacement, text)
-        return " ".join(filtered.split())
+        return collapse_whitespace(filtered, keep_no_break=self._normalize is not None)
+
+    def _tokenizer_text(self, text: str) -> str:
+        """The line as the tagger reads it, and as every token offset is computed against.
+
+        A non-Japanese line keeps NBSP/NNBSP for the card (``collapse_whitespace``)
+        and is tokenized with both folded to spaces. The fold is one character for
+        one, so offsets found on the folded line slice the stored one. Japanese
+        (``normalize is None``) is never folded.
+        """
+        return text if self._normalize is None else fold_no_break_spaces(text)
 
     def _clean_line_text(self, raw_text: str) -> str:
         """Full per-line text pipeline shared by the mining and display paths.
@@ -1089,7 +1102,8 @@ class SubtitleParserService:
 
         Yields ``(text, raw_tokens, merged_tokens, start_time, end_time,
         duration)``. ``text`` is the cleaned + regex-filtered line;
-        ``raw_tokens`` is the direct output of ``self.tagger(text)`` (used by
+        ``raw_tokens`` is the direct output of the tagger over
+        ``_tokenizer_text(text)`` (used by
         ``_from_tokens`` helpers so the sentence is tokenized only once);
         ``merged_tokens`` is the full output of ``_merge_compound_suffixes``
         (callers apply ``_should_include_word`` themselves so the index path and
@@ -1194,7 +1208,11 @@ class SubtitleParserService:
         (``_shifted_line_state``), the text-unit path passes final ones.
         Shared by the subtitle path (``_iter_parsed_lines``) and the future
         text-unit path so per-line tokenization stays in one place.
+        The returned ``text`` is the stored line; the tagger and the merge
+        passes read ``_tokenizer_text(text)``, and so must every consumer that
+        locates these tokens in it.
         """
+        stored_text, text = text, self._tokenizer_text(text)
         tokenize_start = time.perf_counter()
         raw_tokens = list(self._tagger()(text))
         self._tokenize_time_s += time.perf_counter() - tokenize_start
@@ -1218,7 +1236,7 @@ class SubtitleParserService:
         # rendaku/junction kana on the synthetics; no-op (and no lookup) when
         # no reading_lookup is wired or the line produced no merges.
         merged_tokens = attest_merged_readings(merged_tokens, self._reading_lookup)
-        return (text, raw_tokens, merged_tokens, start, end, end - start)
+        return (stored_text, raw_tokens, merged_tokens, start, end, end - start)
 
     @staticmethod
     def _iter_token_spans(text: str, tokens: list) -> Iterator[tuple[Any, int, int]]:
@@ -1362,6 +1380,7 @@ class SubtitleParserService:
         *,
         highlight_end: int,
         text: str,
+        sentence: str,
         display_tokens: list,
         start_time: float,
         end_time: float,
@@ -1376,7 +1395,9 @@ class SubtitleParserService:
         ``parse_subtitle_file_with_index``: mined_form-keyed dedup (first
         occurrence wins, recorded in ``seen_mined_forms``), reading/expression
         assembly and the optional bold-target sentence variants. Returns
-        ``None`` when the token's mined_form was already emitted.
+        ``None`` when the token's mined_form was already emitted. ``text`` is
+        the line the tagger read (``_tokenizer_text``) and ``sentence`` the
+        stored line; the offsets index both.
         """
         # Get lemma (dictionary form) for lookups; surface is the raw token.
         surface = word_token.surface
@@ -1595,7 +1616,7 @@ class SubtitleParserService:
         if self.config.bold_target_in_sentence:
             # Bold the full inflected form (verb/adjective + auxiliary
             # chain), not just the stem morpheme: 蒔いた, not 蒔い.
-            sentence_bolded = wrap_target_plain(text, tok_start, highlight_end)
+            sentence_bolded = wrap_target_plain(sentence, tok_start, highlight_end)
             sentence_furigana_bolded = (
                 wrap_target_furigana_from_tokens(text, display_tokens, tok_start, highlight_end)
                 if self._sentence_annotation
@@ -1610,7 +1631,7 @@ class SubtitleParserService:
             lemma=lemma,
             orth_base=orth_base,
             reading=reading,
-            sentence=text,
+            sentence=sentence,
             start_time=start_time,
             end_time=end_time,
             duration=duration,
@@ -1652,7 +1673,10 @@ class SubtitleParserService:
         the index-only extras: ``lemma_first_span``, the zero-content-lemma line
         skip, and the ``LineLemmas`` build; word emission is unaffected.
         """
-        text, raw_tokens, merged_tokens, start_time, end_time, duration = line_state
+        sentence, raw_tokens, merged_tokens, start_time, end_time, duration = line_state
+        # Offsets come from the line the tagger read; they slice ``sentence``
+        # unchanged (same length), which is what the card and the index store.
+        text = self._tokenizer_text(sentence)
 
         # First pass: collect every content-word lemma/token on this line.
         # _should_include_word handles particle/aux/proper-noun filtering.
@@ -1736,7 +1760,7 @@ class SubtitleParserService:
         line_lemmas_entry: LineLemmas | None = None
         if collect_index:
             line_lemmas_entry = LineLemmas(
-                line_text=text,
+                line_text=sentence,
                 lemmas=frozenset(line_lemmas),
                 start_time=start_time,
                 end_time=end_time,
@@ -1758,6 +1782,7 @@ class SubtitleParserService:
                 tok_end,
                 highlight_end=highlight_end,
                 text=text,
+                sentence=sentence,
                 display_tokens=display_tokens,
                 start_time=start_time,
                 end_time=end_time,
@@ -1968,13 +1993,15 @@ class SubtitleParserService:
             # Reading/OCR text needs the same pre-tokenization JP normalization
             # the subtitle path gets via clean_subtitle_text: mokuro OCR emits
             # Kangxi radicals (⼝) and halfwidth katakana (ﾊﾟｿｺﾝ) that mis-tokenize
-            # into garbage otherwise. The normalized text is BOTH tokenized and
-            # stored as the card sentence, so the displayed sentence matches what
-            # was mined (as on the subtitle path). Order mirrors clean_subtitle_text
-            # (normalize_for_tokenization then standardize_kanji_variants); the
-            # markup strip / regex filter it also runs are applied just below,
-            # subtitle-cue kind only (subtitle_cleanup). An injected normaliser
-            # replaces exactly that pair, as it does in clean_subtitle_text.
+            # into garbage otherwise. The normalized text is stored as the card
+            # sentence and tokenized as _tokenizer_text(text): the same string for
+            # Japanese, the no-break spaces folded for every other language (one
+            # character for one, so offsets carry over), as on the subtitle path.
+            # Order mirrors clean_subtitle_text (normalize_for_tokenization then
+            # standardize_kanji_variants); the markup strip / regex filter it also
+            # runs are applied just below, subtitle-cue kind only
+            # (subtitle_cleanup). An injected normaliser replaces exactly that
+            # pair, as it does in clean_subtitle_text.
             text = (
                 standardize_kanji_variants(normalize_for_tokenization(unit.text))
                 if self._normalize is None
@@ -1991,7 +2018,8 @@ class SubtitleParserService:
             # Dummy timing: the index is both start and end (duration 0.0). No
             # re-windowing exists — the normalized unit text is the card sentence.
             line_state = self._build_line_state(text, float(unit.index), float(unit.index))
-            text, _raw_tokens, merged_tokens, *_ = line_state
+            _text, _raw_tokens, merged_tokens, *_ = line_state
+            text = self._tokenizer_text(text)
 
             # Count through the SAME locator as the mining loop below (and
             # count_lemmas): a token mining drops (find == -1) is counted
@@ -2038,7 +2066,8 @@ class SubtitleParserService:
         # it does tokenize and probe, so it resets the perf counters directly.
         self._reset_perf_counters()
         counts: collections.Counter[str] = collections.Counter()
-        for text, _raw_tokens, merged_tokens, *_ in self._iter_parsed_lines(subtitle_file):
+        for sentence, _raw_tokens, merged_tokens, *_ in self._iter_parsed_lines(subtitle_file):
+            text = self._tokenizer_text(sentence)
             # Spans come from the SAME locator as the mining loops in
             # parse_subtitle_file* — a token mining drops (find == -1),
             # counting drops too, or the count-vs-mine sets diverge and a

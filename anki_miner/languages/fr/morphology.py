@@ -123,26 +123,25 @@ FR_LEADING_WORDS: frozenset[str] = frozenset({"le", "la", "les", "un", "une", "d
 FR_GENDER_LABELS: Mapping[str, str] = MappingProxyType({"masc": "le", "fem": "la"})
 
 #: ``JEAN :``, ``NARRATEUR :`` — the Latin speaker rule, plus the space French
-#: typography puts before a colon (``clean_subtitle_text`` has already turned the
-#: no-break space into a plain one).
-FR_SPEAKER_PATTERN = r"^[A-ZÀ-ÖØ-Þ][A-ZÀ-ÖØ-Þ0-9 .'-]*[A-ZÀ-ÖØ-Þ] ?:\s*"
+#: typography puts before a colon and after a title (``M.\u00a0DUPONT``). The
+#: stored line keeps that space as NBSP/NNBSP (``clean_subtitle_text``), so the
+#: name and the colon accept either no-break space as well as a plain one.
+FR_SPEAKER_PATTERN = r"^[A-ZÀ-ÖØ-Þ][A-ZÀ-ÖØ-Þ0-9 \u00a0\u202f.'-]*[A-ZÀ-ÖØ-Þ][\u00a0\u202f ]?:\s*"
 #: The S10 default for French: en's Latin parts with the French speaker rule. No inline flags.
 FR_SUBTITLE_REGEX = "|".join(
     (BRACKETS_PATTERN, PARENS_PATTERN, MUSIC_PATTERN, FR_SPEAKER_PATTERN, DIALOGUE_DASH_PATTERN)
 )
 
-_NO_BREAK_SPACES = str.maketrans({"\u00a0": " ", "\u202f": " "})
-
 
 def fr_normalize(text: str) -> str:
-    """``LanguageProfile.normalize`` (S5): NFC, then NBSP/NNBSP → space, one character for one.
+    """``LanguageProfile.normalize`` (S5): NFC only.
 
     French typography puts a no-break space before ``: ; ? ! »`` and after ``«``.
-    ``clean_subtitle_text``'s whitespace flattening already turns both into
-    spaces on the subtitle path; this makes a book or a pasted text store and
-    tag the same line. Same length, so offsets never move.
+    The stored line keeps NBSP and NNBSP, so the card never starts a line with
+    that punctuation; the parser folds both to spaces only for the tagger
+    (``fold_no_break_spaces``), one character for one, so offsets never move.
     """
-    return nfc_normalize(text).translate(_NO_BREAK_SPACES)
+    return nfc_normalize(text)
 
 
 def _needs_infinitive(token: Any) -> bool:

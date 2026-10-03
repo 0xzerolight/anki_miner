@@ -14,12 +14,14 @@ from anki_miner.gui.utils.service_factory import create_profile_parser
 from anki_miner.gui.workers import reading_queue_worker
 from anki_miner.languages.ja.text import ja_normalize
 from anki_miner.languages.registry import get_profile
+from anki_miner.languages.token import LanguageToken
 from anki_miner.models.reading import ReadingSourceRef, ReadingUnit
 from anki_miner.services.reading import detector, subtitle_source
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils.ja_normalize import normalize_for_tokenization, standardize_kanji_variants
 from anki_miner.utils.text_utils import clean_subtitle_text, strip_inline_annotations, strip_subtitle_markup
 from tests.e2e.fixtures_subtitle import SUBTITLE_LINES
+from tests.unit.languages.eu_stub import eu_normalize
 from tests.unit.languages.stub_registry import register_stub_profile
 
 _ROOT = Path(__file__).resolve().parents[3]
@@ -92,6 +94,33 @@ def test_text_units_use_the_injected_normalize(make_eu_parser):
         [ReadingUnit(text="don’t stop", index=0, location_label="p.1")], want_line_index=False
     )
     assert words[0].sentence == "don't stop"
+
+
+class _SpaceTokenTagger:
+    """jieba's shape: every whitespace character comes back as a token of its own."""
+
+    def __init__(self) -> None:
+        self.seen: list[str] = []
+
+    def __call__(self, text: str) -> list[LanguageToken]:
+        self.seen.append(text)
+        pieces = [piece for piece in re.split(r"(\s)", text) if piece]
+        return [LanguageToken(piece, "WORD" if piece.strip() else "x", lemma=piece) for piece in pieces]
+
+
+def test_no_break_spaces_fold_for_the_tagger_and_its_offsets_only(make_eu_parser):
+    """Whitespace tokens are located in the line the tagger read; the stored line keeps its no-break space."""
+    parser = make_eu_parser(normalize=eu_normalize)
+    parser.tagger = tagger = _SpaceTokenTagger()
+    line = "alpha\u00a0beta gamma"
+    words, index, counts = parser.parse_text_units(
+        [ReadingUnit(text=line, index=0, location_label="p.1")], want_line_index=True
+    )
+    assert tagger.seen == ["alpha beta gamma"]
+    assert [word.surface for word in words] == ["alpha", "beta", "gamma"]
+    assert all(word.sentence == line for word in words)
+    assert index is not None and index[0].line_text == line
+    assert sum(counts.values()) == 3
 
 
 def test_the_subtitle_loader_takes_the_normalizer(tmp_path: Path):
