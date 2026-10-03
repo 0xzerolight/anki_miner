@@ -8,6 +8,7 @@ import pytest
 from anki_miner.services.update_checker import (
     UpdateChecker,
     UpdateInfo,
+    _asset_sha256,
     _detect_target,
     _pick_asset,
     _validate_github_url,
@@ -145,6 +146,7 @@ def _make_assets() -> list[dict]:
         {
             "name": "AnkiMiner-2.4.0-Windows-x86_64-Setup.exe",
             "browser_download_url": f"{base}AnkiMiner-2.4.0-Windows-x86_64-Setup.exe",
+            "digest": "sha256:" + "AB" * 32,
         },
         {
             "name": "AnkiMiner-Windows-x86_64.zip",
@@ -196,15 +198,18 @@ def _make_assets() -> list[dict]:
 class TestPickAsset:
     """Tests for _pick_asset() per target × asset combo."""
 
+    @staticmethod
+    def _url(assets: list[dict], target: str) -> str | None:
+        asset = _pick_asset(assets, target)
+        return None if asset is None else asset["browser_download_url"]
+
     def test_windows_frozen_picks_setup_exe(self):
-        url = _pick_asset(_make_assets(), "windows-frozen")
-        assert url is not None
-        assert url.endswith("AnkiMiner-2.4.0-Windows-x86_64-Setup.exe")
+        url = self._url(_make_assets(), "windows-frozen")
+        assert url is not None and url.endswith("AnkiMiner-2.4.0-Windows-x86_64-Setup.exe")
 
     def test_linux_frozen_prefers_deb(self):
-        url = _pick_asset(_make_assets(), "linux-frozen")
-        assert url is not None
-        assert url.endswith("anki-miner_2.4.0_amd64.deb")
+        url = self._url(_make_assets(), "linux-frozen")
+        assert url is not None and url.endswith("anki-miner_2.4.0_amd64.deb")
 
     def test_linux_frozen_no_deb_returns_none(self):
         """No .deb published (e.g. only an old tarball) → None, so the caller
@@ -213,19 +218,27 @@ class TestPickAsset:
         assert _pick_asset(assets, "linux-frozen") is None
 
     def test_appimage_picks_appimage(self):
-        url = _pick_asset(_make_assets(), "appimage")
-        assert url is not None
-        assert url.endswith(".AppImage")
+        url = self._url(_make_assets(), "appimage")
+        assert url is not None and url.endswith(".AppImage")
+
+    def test_appimage_ignores_the_zsync_sidecar(self):
+        assets = [
+            {
+                "name": "AnkiMiner-2.4.0-Linux-x86_64.AppImage.zsync",
+                "browser_download_url": "https://github.com/x.zsync",
+            },
+            *_make_assets(),
+        ]
+        url = self._url(assets, "appimage")
+        assert url is not None and url.endswith(".AppImage")
 
     def test_macos_frozen_arm64_picks_arm64_dmg(self):
-        url = _pick_asset(_make_assets(), "macos-frozen-arm64")
-        assert url is not None
-        assert url.endswith("AnkiMiner-2.4.0-macOS-arm64.dmg")
+        url = self._url(_make_assets(), "macos-frozen-arm64")
+        assert url is not None and url.endswith("AnkiMiner-2.4.0-macOS-arm64.dmg")
 
     def test_macos_frozen_x86_64_picks_x86_64_dmg(self):
-        url = _pick_asset(_make_assets(), "macos-frozen-x86_64")
-        assert url is not None
-        assert url.endswith("AnkiMiner-2.4.0-macOS-x86_64.dmg")
+        url = self._url(_make_assets(), "macos-frozen-x86_64")
+        assert url is not None and url.endswith("AnkiMiner-2.4.0-macOS-x86_64.dmg")
 
     def test_pip_target_returns_none(self):
         assert _pick_asset(_make_assets(), "pip") is None
@@ -240,6 +253,20 @@ class TestPickAsset:
         """Asset entries missing browser_download_url are ignored."""
         assets = [{"name": "anki-miner_2.4.0_amd64.deb"}]
         assert _pick_asset(assets, "linux-frozen") is None
+
+
+class TestAssetDigest:
+    """The API's per-asset ``digest`` is the only checksum an in-place update gets."""
+
+    def test_reads_a_sha256_digest_and_lowercases_it(self):
+        assert _asset_sha256({"digest": "sha256:" + "AB" * 32}) == "ab" * 32
+
+    @pytest.mark.parametrize("digest", [None, "", "md5:abc", "sha256:xyz", "sha256:" + "a" * 63, 42])
+    def test_anything_else_is_none(self, digest):
+        assert _asset_sha256({"digest": digest}) is None
+
+    def test_missing_digest_is_none(self):
+        assert _asset_sha256({}) is None
 
 
 # ---------------------------------------------------------------------------
@@ -297,6 +324,22 @@ class TestCheckForUpdate:
         assert result.asset_url is not None
         assert result.asset_url.endswith(".deb")
         assert result.release_notes == "release notes"
+
+    @patch("anki_miner.services.update_checker.urllib.request.urlopen")
+    def test_records_the_digest_and_target(self, mock_urlopen, monkeypatch):
+        monkeypatch.delenv("APPIMAGE", raising=False)
+        monkeypatch.setattr("anki_miner.services.update_checker.sys.frozen", True, raising=False)
+        monkeypatch.setattr("anki_miner.services.update_checker.sys.platform", "win32")
+        self._mock_urlopen(
+            mock_urlopen,
+            self._make_response("v3.0.0", "https://github.com/0xzerolight/anki_miner/releases/tag/v3.0.0"),
+        )
+
+        result = UpdateChecker("2.0.4").check_for_update()
+
+        assert isinstance(result, UpdateInfo)
+        assert result.target == "windows-frozen"
+        assert result.asset_sha256 == "ab" * 32
 
     @patch("anki_miner.services.update_checker.urllib.request.urlopen")
     def test_no_update_available_returns_none(self, mock_urlopen):
@@ -494,13 +537,13 @@ class TestPickAssetUrlValidation:
         url = "https://objects.githubusercontent.com/github-production-release-asset/abc/anki-miner_2.4.0_amd64.deb"
         assets = [{"name": "anki-miner_2.4.0_amd64.deb", "browser_download_url": url}]
         result = _pick_asset(assets, "linux-frozen")
-        assert result == url
+        assert result is not None and result["browser_download_url"] == url
 
     def test_valid_github_com_accepted(self):
         url = "https://github.com/0xzerolight/anki_miner/releases/download/v2.4.0/anki-miner_2.4.0_amd64.deb"
         assets = [{"name": "anki-miner_2.4.0_amd64.deb", "browser_download_url": url}]
         result = _pick_asset(assets, "linux-frozen")
-        assert result == url
+        assert result is not None and result["browser_download_url"] == url
 
 
 class TestCheckForUpdateUrlValidation:
