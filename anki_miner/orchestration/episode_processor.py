@@ -56,6 +56,7 @@ from anki_miner.services.pitch_accent.render import (
     render_pitch_graph_field,
     render_pitch_text_field,
 )
+from anki_miner.services.pitch_accent_service import pitch_position_field_value
 from anki_miner.services.reading.images import ReadingImageArchiveError, ReadingImageMemberError, prepare_card_image
 from anki_miner.services.resource_staleness import stale_resource_reimport_error
 from anki_miner.services.secondary_subtitles import attach_translations
@@ -1967,7 +1968,9 @@ class EpisodeProcessor:
 
             extra_fields: dict[str, str] = {}
             if pitch_position:
-                extra_fields["pitch_position"] = pitch_position
+                # Numeric downsteps for the field only; the renderers below
+                # keep the raw pattern, which carries the full H/L contour.
+                extra_fields["pitch_position"] = pitch_position_field_value(pitch_position)
                 # Inline pitch graph / overline (6.3): rendered self-contained
                 # SVG/HTML, gated on the field being mapped so the default config
                 # stays byte-identical. Uses the SAME reading the pitch lookup

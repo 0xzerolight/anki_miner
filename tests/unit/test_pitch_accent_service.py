@@ -12,6 +12,7 @@ from anki_miner.services.pitch_accent_service import (
     downstep_positions,
     format_categories,
     iter_pitch_csv_rows,
+    pitch_position_field_value,
 )
 
 
@@ -554,6 +555,25 @@ class TestDownstepPositions:
     def test_multiple_downsteps(self):
         # LHLHL: H→L at index 2 and index 4.
         assert downstep_positions("LHLHL") == [2, 4]
+
+
+@pytest.mark.parametrize(
+    "pattern, expected",
+    [
+        ("LHHL", "3"),
+        ("LHH", "0"),
+        ("HLL", "1"),
+        ("LHL,0", "2,0"),
+        ("LHL,2", "2"),
+        ("HHHH", "HHHH"),
+        ("2", "2"),
+        ("0,2", "0,2"),
+    ],
+)
+def test_pitch_position_field_value(pattern, expected):
+    # Lapis, Kiku and Anki Miner Note parse digits only; an unresolvable H/L
+    # token stays raw instead of "-1", which those parsers would read as 1.
+    assert pitch_position_field_value(pattern) == expected
 
 
 class TestReadingScopedLookup:

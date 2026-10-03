@@ -1505,6 +1505,40 @@ class TestOptionalServices:
         # The entry lookup uses the SAME reading the pitch batch lookup used.
         mock_pitch.lookup_entry.assert_called_once_with(word.lemma, "タベル")
 
+    def test_hl_pitch_entry_writes_numeric_position(self, test_config, mock_services, tmp_path):
+        """An H/L entry fills PitchPosition with its downstep; the graph keeps the H/L pattern."""
+        word = _make_word("食べる")  # reading タベル → 3 morae
+        media = _make_media()
+
+        mock_pitch = MagicMock()
+        mock_pitch.is_available.return_value = True
+        mock_pitch.lookup_batch_detailed.return_value = [("LHL", "nakadaka")]
+        mock_pitch.lookup_entry.return_value = PitchEntry("LHL", nasal=(), devoice=())
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
+
+        config = replace(test_config, anki_fields={**test_config.anki_fields, "pitch_graph": "PitchGraph"})
+        processor = build_processor(
+            config=config,
+            presenter=NullPresenter(),
+            pitch_accent_service=mock_pitch,
+            **mock_services,
+        )
+        with patch(
+            "anki_miner.orchestration.episode_processor.render_pitch_graph_field",
+            return_value="<svg/>",
+        ) as render_graph:
+            processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        extra_fields = mock_services["anki_service"].create_cards_batch.call_args[0][0][0].extra_fields
+        assert extra_fields["pitch_position"] == "2"
+        render_graph.assert_called_once_with("LHL", "タベル")
+
     def test_both_services_full_pipeline(self, test_config, mock_services, tmp_path):
         """Both services active should produce card data with both extra fields."""
         word = _make_word("食べる")

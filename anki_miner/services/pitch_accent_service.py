@@ -153,6 +153,27 @@ def normalize_pitch_pattern(pattern: str) -> str | None:
     return ",".join(positions) if positions else None
 
 
+def pitch_position_field_value(pattern: str) -> str:
+    """The PitchPosition field as note types read it: numeric downsteps.
+
+    Lapis, Kiku and Anki Miner Note parse digits only, so an H/L token such as
+    "LHHL" (some Yomitan pitch dictionaries) became an empty graph. Each H/L
+    token becomes its first downstep; one that has none it can resolve
+    ("HHHH") is kept as written, never "-1", which those parsers would read as
+    1. Duplicates after conversion collapse in source order.
+    """
+    out: list[str] = []
+    for raw in pattern.split(","):
+        token = raw.strip()
+        if _HL_PATTERN_RE.fullmatch(token):
+            position = _token_to_position(token)
+            if position is not None:
+                token = str(position)
+        if token and token not in out:
+            out.append(token)
+    return ",".join(out)
+
+
 def classify_pitch(position: int, mora_count: int, pos: str | None = None) -> str:
     """Classify pitch accent pattern into a category.
 
