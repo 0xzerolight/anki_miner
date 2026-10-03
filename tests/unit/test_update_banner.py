@@ -1,5 +1,7 @@
 """Tests for the UpdateBanner widget."""
 
+import pytest
+
 from anki_miner.gui.widgets.update_banner import UpdateBanner
 from anki_miner.services.update_checker import UpdateInfo
 
@@ -180,3 +182,121 @@ class TestCalmStyle:
             assert painted == QColor(Theme.get_colors("dark")["surface"])
         finally:
             qapp.setStyleSheet(previous)
+
+
+def _in_place_info(version: str = "2.4.0") -> UpdateInfo:
+    return UpdateInfo(
+        version=version,
+        release_page_url="https://github.com/0xzerolight/anki_miner/releases/latest",
+        asset_url=f"https://github.com/0xzerolight/anki_miner/releases/download/v{version}/AnkiMiner-{version}-Linux-x86_64.AppImage",
+        release_notes="",
+        asset_sha256="a" * 64,
+        target="appimage",
+    )
+
+
+class TestInPlaceUpdate:
+    """Update now → Cancel → Restart now, with the browser download as the fallback."""
+
+    @pytest.fixture(autouse=True)
+    def _supported(self, monkeypatch):
+        monkeypatch.setattr(
+            "anki_miner.gui.widgets.update_banner.in_place_supported",
+            lambda info: info.asset_sha256 is not None,
+        )
+
+    def _banner(self, qtbot, info=None) -> UpdateBanner:
+        banner = UpdateBanner(info or _in_place_info())
+        qtbot.addWidget(banner)
+        return banner
+
+    def test_offer_says_update_now_and_emits_install(self, qtbot):
+        banner = self._banner(qtbot)
+        captured: list[object] = []
+        banner.install_requested.connect(captured.append)
+
+        assert banner._download_btn.text() == "Update now"
+        banner._download_btn.click()
+
+        assert captured == [banner._info]
+
+    def test_offer_without_in_place_support_keeps_the_browser_label(self, qtbot):
+        info = _in_place_info()
+        info.asset_sha256 = None
+        banner = self._banner(qtbot, info)
+
+        assert banner._download_btn.text() == "Download AppImage"
+
+    def test_downloading_offers_cancel_and_hides_skip(self, qtbot):
+        banner = self._banner(qtbot)
+        fired: list[bool] = []
+        banner.cancel_requested.connect(lambda: fired.append(True))
+
+        banner.show_downloading()
+        banner._download_btn.click()
+
+        assert banner._download_btn.text() == "Cancel"
+        assert banner._skip_btn.isHidden()
+        assert "v2.4.0" in banner._label.text()
+        assert fired == [True]
+
+    def test_ready_offers_restart(self, qtbot):
+        banner = self._banner(qtbot)
+        fired: list[bool] = []
+        banner.restart_requested.connect(lambda: fired.append(True))
+
+        banner.show_ready()
+        banner._download_btn.click()
+
+        assert banner._download_btn.text() == "Restart now"
+        assert banner._skip_btn.isHidden()
+        assert fired == [True]
+
+    def test_failed_falls_back_to_the_browser_download(self, qtbot, monkeypatch):
+        from PyQt6.QtGui import QDesktopServices
+
+        opened: list[str] = []
+        monkeypatch.setattr(QDesktopServices, "openUrl", staticmethod(lambda url: opened.append(url.toString())))
+        banner = self._banner(qtbot)
+
+        banner.show_failed()
+        banner._download_btn.click()
+
+        assert banner._download_btn.text() == "Download AppImage"
+        assert not banner._skip_btn.isHidden()
+        assert opened == [banner._info.asset_url]
+
+    def test_a_later_check_does_not_reset_a_running_download(self, qtbot):
+        banner = self._banner(qtbot)
+        banner.show_downloading()
+
+        banner.update_info(_in_place_info(version="2.5.0"))
+
+        assert banner._download_btn.text() == "Cancel"
+        assert "v2.4.0" in banner._label.text()
+
+    def test_a_later_check_does_not_drop_a_finished_download(self, qtbot):
+        banner = self._banner(qtbot)
+        banner.show_ready()
+
+        banner.update_info(_in_place_info(version="2.5.0"))
+
+        assert banner._download_btn.text() == "Restart now"
+
+    def test_a_failed_banner_takes_a_newer_offer(self, qtbot):
+        banner = self._banner(qtbot)
+        banner.show_failed()
+
+        banner.update_info(_in_place_info(version="2.5.0"))
+
+        assert banner._download_btn.text() == "Update now"
+        assert "v2.5.0" in banner._label.text()
+
+    def test_cancelled_download_returns_to_the_offer(self, qtbot):
+        banner = self._banner(qtbot)
+        banner.show_downloading()
+
+        banner.show_offer()
+
+        assert banner._download_btn.text() == "Update now"
+        assert not banner._skip_btn.isHidden()
