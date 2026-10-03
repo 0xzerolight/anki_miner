@@ -1195,6 +1195,7 @@ jobs:
             ${{ runner.temp }}/uninstall-cleanup.log
             ${{ runner.temp }}/setup-old.log
             ${{ runner.temp }}/setup-upgrade.log
+            ${{ runner.temp }}/setup-update-mode.log
             ${{ runner.temp }}/setup-downgrade-probe.log
             ${{ runner.temp }}/uninstall-upgrade.log
 

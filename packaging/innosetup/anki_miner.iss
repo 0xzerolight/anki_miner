@@ -104,8 +104,41 @@ Name: "{autodesktop}\Anki Miner"; Filename: "{app}\AnkiMiner.exe"; Tasks: deskto
 
 [Run]
 Filename: "{app}\AnkiMiner.exe"; Description: "{cm:LaunchProgram,Anki Miner}"; Flags: nowait postinstall skipifsilent
+; An update the app started (/UPDATE=1, anki_miner/services/app_updater.py) runs
+; silently, so the entry above is skipped; relaunch the app here instead.
+Filename: "{app}\AnkiMiner.exe"; Flags: nowait; Check: IsUpdateMode
 
 [Code]
+// True when the app's in-place updater started this Setup.
+function IsUpdateMode: Boolean;
+begin
+  Result := ExpandConstant('{param:UPDATE|0}') = '1';
+end;
+
+// The app starts this installer and then exits, so in update mode its AppMutex
+// can still be held for a moment. Setup checks AppMutex right AFTER this
+// function returns (issrc Setup.MainFunc.pas) and, under /SUPPRESSMSGBOXES,
+// answers its OK/Cancel box with Cancel and aborts. Wait here first. Bounded:
+// if the app is still running after 60 s, the normal AppMutex prompt follows.
+// The name must match AppMutex above and gui/launch.py APP_MUTEX_NAME.
+function InitializeSetup: Boolean;
+var
+  WaitedMs: Integer;
+begin
+  Result := True;
+  if not IsUpdateMode then
+    Exit;
+  WaitedMs := 0;
+  while CheckForMutexes('Local\AnkiMiner-15B09250-AC39-4792-A15A-B73BD8E218A1') and (WaitedMs < 60000) do
+  begin
+    Sleep(250);
+    WaitedMs := WaitedMs + 250;
+  end;
+  // Read by the installer smoke (scripts/windows_installer_smoke_lib.ps1) and
+  // by whoever reads a user's Setup log.
+  Log(Format('Update mode: waited %d ms for Anki Miner to exit', [WaitedMs]));
+end;
+
 // A nonempty result blocks a downgrade at PrepareToInstall (Setup exit code 7).
 // GetPackedVersion failure (missing/damaged AnkiMiner.exe) deliberately fails
 // open so rerunning any installer can repair a broken installation; this guard
