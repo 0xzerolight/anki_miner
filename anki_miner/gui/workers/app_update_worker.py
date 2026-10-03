@@ -46,11 +46,16 @@ class AppUpdateWorker(CancellableWorker):
             logger.info("App update cancelled")
             return
         except Exception as exc:  # noqa: BLE001 — every failure goes back to the banner
+            # Rebound: Python unbinds `exc` when the except block ends.
+            failure = exc
+
+            def _emit_failure(_msg: str) -> None:
+                self.result_ready.emit(failure)
+
             self.report_failure(
                 exc,
                 context="AppUpdateWorker",
-                # Bound as a default: Python unbinds `exc` when the except ends.
-                on_error=lambda _msg, failure=exc: self.result_ready.emit(failure),
+                on_error=_emit_failure,
                 cancel_flag_suppresses_error=False,
             )
             return
