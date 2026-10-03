@@ -220,6 +220,11 @@ def test_dictionary_chain_default():
     )
 
 
+def test_fresh_ja_starts_with_no_note_type():
+    """Every language starts with nothing chosen; the setup wizard has the user pick."""
+    assert AnkiMinerConfig().anki_note_type == ""
+
+
 def test_chain_entry_is_frozen():
     from dataclasses import FrozenInstanceError
 

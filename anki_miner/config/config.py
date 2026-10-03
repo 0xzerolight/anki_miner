@@ -182,7 +182,9 @@ class AnkiMinerConfig:
 
     # Anki settings
     anki_deck_name: str = "Anki Miner"
-    anki_note_type: str = "Lapis"
+    # Nothing chosen, as in every language: the setup wizard has the user pick.
+    # A saved config keeps its own value (the whole config is written).
+    anki_note_type: str = ""
     anki_fields: Mapping[str, str] = field(
         default_factory=lambda: {
             "word": "Expression",

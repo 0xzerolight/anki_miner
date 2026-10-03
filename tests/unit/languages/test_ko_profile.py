@@ -85,6 +85,6 @@ def test_first_switch_lands_on_a_deck_ankiconnect_accepts():
     assert switched.anki_deck_name == "Anki Miner"
     # Parity with zh: "Anki Miner" is the generic default, not a ja-specific one.
     assert switched.anki_deck_name == switch_language(AnkiMinerConfig(), "zh").anki_deck_name
-    # The ja note type ("Lapis") IS ja-specific, so ko ships empty like zh.
+    # No language starts with a note type chosen.
     assert switched.anki_note_type == ""
     assert switch_language(AnkiMinerConfig(), "zh").anki_note_type == ""

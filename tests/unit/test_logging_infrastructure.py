@@ -909,7 +909,8 @@ class TestValidationServiceExceptionLogging:
         from anki_miner.config import AnkiMinerConfig
         from anki_miner.services.validation_service import ValidationService
 
-        return ValidationService(AnkiMinerConfig())
+        # A picked note type: with none, the checks answer before any request.
+        return ValidationService(AnkiMinerConfig(anki_note_type="Lapis"))
 
     def test_check_ankiconnect_unexpected_exception_logs_traceback(self, caplog):
         """_check_ankiconnect generic except logs exc_info."""

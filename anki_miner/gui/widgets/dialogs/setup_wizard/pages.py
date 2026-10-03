@@ -55,7 +55,13 @@ from anki_miner.languages.registry import config_language
 from anki_miner.languages.switching import LANGUAGE_SCOPED_FIELDS, switch_language
 from anki_miner.services.anki_note_builder import configured_target_field_names
 from anki_miner.services.language_pack_installer import ensure_language_packs_on_syspath, language_pack_root
-from anki_miner.services.note_presets import FIELD_KEYWORDS, NotePreset, NoteTypeFill, fill_note_type_fields
+from anki_miner.services.note_presets import (
+    ANKI_MINER_NOTE,
+    FIELD_KEYWORDS,
+    NotePreset,
+    NoteTypeFill,
+    fill_note_type_fields,
+)
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
@@ -69,12 +75,10 @@ if TYPE_CHECKING:
 
 ANKICONNECT_URL = "https://ankiweb.net/shared/info/2055492159"
 RESOURCES_HELP_URL = "https://github.com/0xzerolight/anki_miner/blob/main/RESOURCES.md"
-# Note types that map cleanly (the Lapis/Kiku/Senren presets, or any word + sentence field list).
+# Note types that map cleanly (the note presets, Anki Miner Note among them, or any word + sentence field list).
 NOTE_TYPE_HELP_URL = f"{RESOURCES_HELP_URL}#note-types"
-#: The note type this app fills out of the box for Japanese (config default).
-LAPIS_NOTE_TYPE = "Lapis"
-#: Lapis' release page; it carries ``Lapis.apkg`` for Anki's File → Import (B01).
-LAPIS_RELEASES_URL = "https://github.com/donkuri/lapis/releases/latest"
+#: Anki Miner Note's release page; it carries the ``.apkg`` for Anki's File → Import (B01).
+ANKI_MINER_NOTE_RELEASES_URL = f"{ANKI_MINER_NOTE.url}/releases/latest"
 
 
 def resources_help_url(language: str) -> str:
@@ -1138,8 +1142,11 @@ class NoteTypePage(_WizardSection):
         rest after setup. It never says Skip Setup, which reverts the picked
         language and cancels the dictionary download (WB I1). It never tells the user to build or rename a note type
         (the owner's D10 note: the user picks a note type they like). A fresh
-        Anki holds only Basic (Front/Back), which is the common case for the 31
-        languages without note presets.
+        Anki holds only Basic (Front/Back), the common case in every language
+        now that none starts with a note type chosen. For a user with no note
+        type for mining, it links Anki Miner Note, which serves every language
+        and maps itself (its preset); the page re-checks when the window
+        regains focus (B02), so an import shows up here.
         """
         self._show_guidance(
             tr_format(
@@ -1148,19 +1155,22 @@ class NoteTypePage(_WizardSection):
                     "puts the word in its first field and fills the fields it recognises by name, such as Word, "
                     "Sentence, Reading, Definition, Picture and audio. You can change which field gets what "
                     "in Settings → Cards & Anki after setup. "
+                    "Don't have one for mining yet? "
+                    '<a href="%2">Get Anki Miner Note</a> (free, works for every language), then in Anki '
+                    "choose File → Import and pick the file. This page updates when you come back. "
                     '<a href="%1">Which fields can Anki Miner fill?</a>'
                 ),
                 NOTE_TYPE_HELP_URL,
+                ANKI_MINER_NOTE_RELEASES_URL,
             )
         )
 
     def _update_guidance(self) -> None:
         """Say what to pick when the note type cannot hold mined cards (B01, D10).
 
-        Nothing until the list has loaded. A present note type with no word or
-        sentence field, or a missing one other than Lapis, gets what any note
-        type needs. A missing Lapis under a language with presets gets where to
-        download it: the config default is Lapis, and a brand-new Anki lacks it.
+        Nothing until the list has loaded. Nothing chosen, a note type Anki
+        lacks, or a present one with no word or sentence field gets what any
+        note type needs, in every language (`_show_note_type_help`).
         """
         if not self._notetypes_loaded:
             self._hide_guidance()
@@ -1173,22 +1183,10 @@ class NoteTypePage(_WizardSection):
             else:
                 self._hide_guidance()
             return
-        if name == LAPIS_NOTE_TYPE and self._presets_apply():
-            self._show_guidance(
-                tr_format(
-                    self.tr(
-                        "Anki Miner fills a note type called Lapis. Your Anki doesn't have it yet. "
-                        '<a href="%1">Get Lapis</a> (free), then in Anki choose File → Import and pick the file. '
-                        "This page updates when you come back."
-                    ),
-                    LAPIS_RELEASES_URL,
-                )
-            )
-            return
         self._show_note_type_help()
 
     def _on_guidance_link_activated(self, url: str) -> None:
-        if url in (NOTE_TYPE_HELP_URL, LAPIS_RELEASES_URL):
+        if url in (NOTE_TYPE_HELP_URL, ANKI_MINER_NOTE_RELEASES_URL):
             _open_url(url)
 
     def _sanitize_field_mappings(self, note_type: str, field_names: list[str]) -> None:

@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 - **Pinyin and Jyutping tone colours can follow the note type's theme.** Each coloured syllable now names a colour the note type may override for light and dark mode (Anki Miner Note does), and keeps today's colour everywhere else.
 - **German nouns used only in the plural show "die (Pl.)"** in the Gender field instead of "die", so they no longer look feminine.
+- **The setup wizard no longer assumes Lapis for Japanese.** Every language starts with no note type chosen. While the chosen one can't hold cards, the wizard's help links to Anki Miner Note, a free note type for every language; any other note type still works once its fields are mapped.
 
 ### Fixed
 - **Reading → Anki Deck: the Word Curator shows the card's line under its picture**, not the card's position in the deck.

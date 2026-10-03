@@ -70,8 +70,8 @@ def _scoped_defaults() -> Mapping[str, object]:
             "excluded_subtypes": TH_EXCLUDED_SUBTYPES,
             "anki_fields": TH_CARD_FIELD_DEFAULTS,
             # "" is not a deck AnkiConnect accepts, and inheriting ja's default
-            # would file Thai cards into the Japanese deck. The ja note type is
-            # ja-specific, so th ships empty and the user picks (zh precedent).
+            # would file Thai cards into the Japanese deck. The note type starts
+            # empty, as in every language: the user picks.
             "anki_deck_name": "Anki Miner",
             "anki_note_type": "",
             # S10: the SDH filter is on for a first visit; parked values stay.

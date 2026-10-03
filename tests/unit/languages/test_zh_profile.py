@@ -96,9 +96,8 @@ def test_zh_targets_neither_the_ja_note_type_nor_a_nameless_deck():
 
     Blanking by type would leave ``anki_deck_name`` "", which AnkiConnect
     rejects, and inheriting ja's default would file Chinese cards into the
-    Japanese deck. ``anki_note_type`` is the opposite case: "Lapis" is a JP
-    Mining Note type whose fields a zh run cannot fill, so the empty string is
-    the honest value and the user picks one.
+    Japanese deck. ``anki_note_type`` stays empty, as in every language: the
+    user picks one.
     """
     scoped = get_profile("zh").scoped_defaults
     assert scoped["anki_deck_name"] == "Anki Miner"

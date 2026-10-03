@@ -64,9 +64,8 @@ def _scoped_defaults() -> Mapping[str, object]:
             "excluded_subtypes": YUE_EXCLUDED_SUBTYPES,
             "anki_fields": YUE_CARD_FIELD_DEFAULTS,
             # "" is not a deck AnkiConnect accepts, and inheriting ja's default
-            # would file Cantonese cards into the Japanese deck. The ja note type
-            # is ja-specific, so yue ships empty and the user picks (zh/th
-            # precedent).
+            # would file Cantonese cards into the Japanese deck. The note type
+            # starts empty, as in every language: the user picks.
             "anki_deck_name": "Anki Miner",
             "anki_note_type": "",
             # The jyutping hook's only consumer; on, like zh's pinyin.

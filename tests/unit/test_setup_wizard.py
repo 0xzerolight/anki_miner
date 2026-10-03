@@ -1642,24 +1642,37 @@ def test_a_deck_anki_lacks_is_listed_and_explained(qtbot, wiz_config):
     assert page.deck_hint.text() == ""
 
 
-def test_a_missing_lapis_says_where_to_get_it(qtbot, wiz_config):
-    """B01: a brand-new Anki has no Lapis; say so and link its release page."""
+@pytest.mark.parametrize(
+    ("language", "note_type"),
+    [
+        pytest.param("ja", "", id="ja-nothing-chosen"),
+        pytest.param("zh", "", id="zh-nothing-chosen"),
+        # An upgrade keeps a saved Lapis that this Anki lacks: the same help.
+        pytest.param("ja", "Lapis", id="ja-missing-lapis"),
+    ],
+)
+def test_missing_note_type_guidance_links_anki_miner_note(qtbot, wiz_config, language, note_type):
+    """B01 for every language: what any note type needs, and where to get Anki Miner Note."""
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
     from anki_miner.gui.widgets.dialogs.setup_wizard import pages as pages_mod  # noqa: PLC0415
+    from anki_miner.languages.switching import switch_language  # noqa: PLC0415
 
-    wiz = SetupWizard(replace(wiz_config, anki_note_type="Lapis"))
+    wiz = SetupWizard(replace(switch_language(wiz_config, language), anki_note_type=note_type))
     qtbot.addWidget(wiz)
     page = wiz.notetype_page
-    page.select_note_type("Lapis", notify=False)
+    page.select_note_type(note_type, notify=False)
 
     page._on_notetypes_fetched(["Basic"])
 
-    assert page.notetype_combo.currentText() == "Lapis (not in Anki yet)"
+    assert page.current_note_type() == note_type
     assert page.isComplete() is False
     text = page.guidance_label.text()
     assert page.guidance_label.isVisibleTo(page)
-    assert f'href="{pages_mod.LAPIS_RELEASES_URL}"' in text
+    assert "Any note type works once its fields are mapped" in text
+    assert f'href="{pages_mod.ANKI_MINER_NOTE_RELEASES_URL}"' in text
+    assert f'href="{pages_mod.NOTE_TYPE_HELP_URL}"' in text
     assert "File → Import" in text
+    assert "Lapis" not in text
 
 
 def test_other_languages_get_the_any_note_type_guidance(qtbot, wiz_config):
@@ -1723,11 +1736,13 @@ def test_the_guidance_links_open_in_the_browser(qtbot, wiz_config, monkeypatch):
     qtbot.addWidget(wiz)
     page = wiz.notetype_page
 
-    page.guidance_label.linkActivated.emit(pages_mod.LAPIS_RELEASES_URL)
+    page.guidance_label.linkActivated.emit(pages_mod.ANKI_MINER_NOTE_RELEASES_URL)
     page.guidance_label.linkActivated.emit(pages_mod.NOTE_TYPE_HELP_URL)
+    # Allow-listed: any other link (the old Lapis one included) stays shut.
+    page.guidance_label.linkActivated.emit("https://github.com/donkuri/lapis/releases/latest")
 
     assert [call.args[0] for call in opened.call_args_list] == [
-        pages_mod.LAPIS_RELEASES_URL,
+        pages_mod.ANKI_MINER_NOTE_RELEASES_URL,
         pages_mod.NOTE_TYPE_HELP_URL,
     ]
 
@@ -1741,6 +1756,25 @@ def test_notetype_page_suitable_fieldlist_hides_guidance(qtbot, wiz_config):
     page.select_note_type("Lapis")
     page._on_fields_fetched("Lapis", ["Expression", "Sentence", "MainDefinition"])
     assert not page.guidance_label.isVisibleTo(page)
+
+
+@pytest.mark.parametrize("language", ["ja", "zh"])
+def test_a_usable_anki_miner_note_shows_no_guidance(qtbot, wiz_config, language):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.languages.switching import switch_language  # noqa: PLC0415
+    from tests.unit.amn_fields import AMN_FIELDS  # noqa: PLC0415
+
+    wiz = SetupWizard(replace(switch_language(wiz_config, language), anki_note_type="Anki Miner Note"))
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    _set_notetype_page_state(page, selected="Anki Miner Note", models=["Basic", "Anki Miner Note"], field_names=None)
+    page._notetypes_loaded = True
+
+    page._on_fields_fetched("Anki Miner Note", AMN_FIELDS)
+
+    assert page.isComplete() is True
+    assert not page.guidance_label.isVisibleTo(page)
+    assert page.guidance_label.text() == ""
 
 
 def test_notetype_page_empty_fieldlist_shows_unreachable_guidance(qtbot, wiz_config):

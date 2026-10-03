@@ -200,10 +200,9 @@ def test_no_ja_shaped_default_survives_the_switch(eu_profile):
     ja_config = AnkiMinerConfig()
     eu_config = switch_language(ja_config, EU_CODE)
 
-    # "Lapis" is a JP Mining Note layout; the jmdict chain, the ja name
-    # wordsets, the unidic POS names and the "ja" subtitle language are all
-    # Japanese answers a first eu visit must not inherit.
-    assert ja_config.anki_note_type == "Lapis" and eu_config.anki_note_type == ""
+    # The jmdict chain, the ja name wordsets, the unidic POS names and the
+    # "ja" subtitle language are all Japanese answers a first eu visit must
+    # not inherit.
     assert ja_config.dictionary_chain and eu_config.dictionary_chain == ()
     assert ja_config.excluded_wordsets and eu_config.excluded_wordsets == ()
     assert eu_config.allowed_pos == ("WORD",)
