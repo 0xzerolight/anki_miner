@@ -229,6 +229,10 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         from anki_miner.gui.widgets.update_banner import UpdateBanner
 
         self._update_banner: UpdateBanner | None = None
+        # Built with the banner, which it drives; None until the first update result.
+        from anki_miner.gui.controllers.app_update_controller import AppUpdateController
+
+        self._app_update: AppUpdateController | None = None
 
     def commit_boot(self, *, suppress_optional: bool = False) -> None:
         """Commit startup state, then start boot work unless suppressed."""
@@ -2617,6 +2621,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
                 when a newer release is available, or ``None`` when there is
                 no update. Checker failures arrive as exceptions.
         """
+        from anki_miner.gui.controllers.app_update_controller import AppUpdateController
         from anki_miner.gui.widgets.update_banner import UpdateBanner
         from anki_miner.services.update_checker import UpdateInfo
 
@@ -2663,10 +2668,13 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # subsequent check result via update_info() (property mutation) rather
         # than reconstructing it. Tearing it down with setParent(None) +
         # deleteLater() would race in-flight Qt callbacks. The skip button only
-        # hides the banner; it never deleteLater()s it.
+        # hides the banner; it never deleteLater()s it. The in-place flow
+        # (Update now / Restart now) is AppUpdateController's; it is built once,
+        # with the banner.
         if self._update_banner is None:
             banner = UpdateBanner(info, self)
             banner.skip_requested.connect(self._on_skip_update_requested)
+            self._app_update = AppUpdateController(self, banner)
             # After the issue banner: a release announcement never outranks a
             # system problem.
             self.central_layout.insertWidget(1, banner)
