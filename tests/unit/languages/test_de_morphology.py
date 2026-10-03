@@ -122,4 +122,4 @@ def test_german_quote_pairs_and_gender_labels():
     assert set("„‚»›") <= DE_OPENERS and set("“‘«‹") <= DE_CLOSERS
     assert not DE_OPENERS & DE_CLOSERS
     assert "“" not in DE_OPENERS  # the English opener is the German closer
-    assert dict(DE_GENDER_LABELS) == {"masc": "der", "fem": "die", "neut": "das", "plural": "die"}
+    assert dict(DE_GENDER_LABELS) == {"masc": "der", "fem": "die", "neut": "das", "plural": "die (Pl.)"}

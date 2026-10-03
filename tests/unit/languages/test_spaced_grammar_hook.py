@@ -185,13 +185,15 @@ def test_an_uncategorised_aspect_chip_is_read_by_its_title(title, morph, aspect)
 
 
 def test_a_plural_only_head_takes_the_plural_article_where_a_language_names_one():
-    """wty heads a plural-only noun ``Eltern pl (plural only)``: de prints ``die``, nl ``de``; others print nothing."""
+    """wty heads a plural-only noun ``Eltern pl (plural only)``: de prints ``die (Pl.)``, nl ``de``; others nothing."""
     from anki_miner.languages.de.morphology import DE_GENDER_LABELS
     from anki_miner.languages.it.morphology import italian_article
     from anki_miner.languages.nl.morphology import NL_ARTICLE_MAP, NL_GRAMMAR_SOURCES
 
     eltern = word(html(block(chip("partOfSpeech", "n"), "Eltern pl (plural only)")))
-    assert render(("noun_gender", "noun_plural"), eltern, gender_labels=DE_GENDER_LABELS) == {"noun_gender": "die"}
+    assert render(("noun_gender", "noun_plural"), eltern, gender_labels=DE_GENDER_LABELS) == {
+        "noun_gender": "die (Pl.)"
+    }
     kleren = word(html(block("", "kleren pl (plural only, diminutive kleertjes n)", dictionary="wty-nl-en")))
     assert render(("noun_article", "noun_gender"), kleren, article_map=NL_ARTICLE_MAP, sources=NL_GRAMMAR_SOURCES) == {
         "noun_article": "de"
