@@ -23,10 +23,18 @@ if TYPE_CHECKING:  # annotation-only: keeps profile.py's resource_catalog import
 # Capture the first group, stop at the first separator or tag boundary.
 _CL_RE = re.compile(r"CL\s*:\s*([^\s;,<]+)")
 # 1 red / 2 orange / 3 green / 4 blue / 5 grey (surveyed convention, spec 9.1).
-# Each hue's lightness sits in the one band that clears 3.5:1 on BOTH a stock
-# white Anki card and Anki night mode (#2f2f31): an inline colour cannot adapt
-# to the theme, and 4.5:1 on white would force under 3:1 on night mode.
-_TONE_COLORS = {1: "#e75353", 2: "#be7500", 3: "#199a39", 4: "#4286e5", 5: "#868686"}
+# The hex is the fallback every other note type renders; Anki Miner Note sets
+# per-theme --amn-tone-* values that clear 4.5:1 in both themes. The fallback's
+# lightness sits in the one band that clears 3.5:1 on BOTH a stock white Anki
+# card and Anki night mode (#2f2f31): a fixed colour cannot adapt to the theme,
+# and 4.5:1 on white would force under 3:1 on night mode.
+_TONE_COLORS = {
+    1: "var(--amn-tone-red, #e75353)",
+    2: "var(--amn-tone-orange, #be7500)",
+    3: "var(--amn-tone-green, #199a39)",
+    4: "var(--amn-tone-blue, #4286e5)",
+    5: "var(--amn-tone-grey, #868686)",
+}
 
 
 class ZhMeasureWordHook:

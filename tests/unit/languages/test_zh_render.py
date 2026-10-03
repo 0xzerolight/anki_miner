@@ -8,6 +8,7 @@ hook had nothing to gate on, so the setting could never do anything.
 from __future__ import annotations
 
 import dataclasses
+import re
 from types import SimpleNamespace
 
 import pytest
@@ -41,6 +42,22 @@ def wcag_contrast(foreground: str, background: str) -> float:
 
     lighter, darker = sorted((luminance(foreground), luminance(background)), reverse=True)
     return (lighter + 0.05) / (darker + 0.05)
+
+
+#: A tone span's whole style: one note-type token, with the hex every other
+#: note type renders as its fallback. Shared with the yue tests.
+TONE_STYLE_RE = re.compile(r"^color:var\(--amn-tone-(red|orange|green|blue|purple|grey), #[0-9a-f]{6}\)$")
+
+
+def fallback_hex(style: str) -> str:
+    """The hex a palette value falls back to when the note type sets no token."""
+    match = re.search(r"#[0-9a-f]{6}", style)
+    assert match, style
+    return match.group()
+
+
+def span_styles(html_out: str) -> list[str]:
+    return re.findall(r'<span style="([^"]*)">', html_out)
 
 
 def _word(mined_form="银行", definition_html="", sentence=""):
@@ -159,7 +176,8 @@ def test_tone_colour_spans_are_self_contained_and_escaped(monkeypatch):
     )
     html_out = ZhToneColorHook().render(_word("银行"), config=TONE_ON)["expression_pinyin"]
     assert html_out.count("<span style=") == 2
-    assert "color:#be7500" in html_out and "color:#868686" in html_out
+    assert "color:var(--amn-tone-orange, #be7500)" in html_out
+    assert "color:var(--amn-tone-grey, #868686)" in html_out
     assert "háng&lt;" in html_out
     assert "class=" not in html_out  # no note-type-global CSS dependency
 
@@ -167,8 +185,19 @@ def test_tone_colour_spans_are_self_contained_and_escaped(monkeypatch):
 @pytest.mark.parametrize("background", CARD_BACKGROUNDS)
 @pytest.mark.parametrize(("tone", "color"), sorted(_TONE_COLORS.items()))
 def test_every_tone_colour_is_readable_on_both_card_backgrounds(tone, color, background):
-    """One inline colour, two backgrounds: the palette lives in the band that clears both."""
-    assert wcag_contrast(color, background) >= MIN_CONTRAST, (tone, color, background)
+    """One inline fallback, two backgrounds: the palette lives in the band that clears both."""
+    assert wcag_contrast(fallback_hex(color), background) >= MIN_CONTRAST, (tone, color, background)
+
+
+def test_every_tone_span_names_a_note_type_token_with_a_hex_fallback(monkeypatch):
+    """Tone 0 is out of range and takes the neutral fallback, which must keep the form too."""
+    monkeypatch.setattr(
+        "anki_miner.languages.zh.render.pinyin_syllables",
+        lambda text: [("a", 1), ("b", 2), ("c", 3), ("d", 4), ("e", 5), ("f", 0)],
+    )
+    styles = span_styles(ZhToneColorHook().render(_word("银行"), config=TONE_ON)["expression_pinyin"])
+    assert len(styles) == 6
+    assert all(TONE_STYLE_RE.match(style) for style in styles), styles
 
 
 def test_tone_colour_keeps_the_syllable_separator(monkeypatch):
@@ -200,7 +229,7 @@ def test_tone_colour_paints_the_word_s_own_reading(monkeypatch):
     word = SimpleNamespace(mined_form="看得见", expression_reading="kàn de jiàn", definition_html="")
     html_out = ZhToneColorHook().render(word, config=TONE_ON)["expression_pinyin"]
     assert html_out.count("<span style=") == 3
-    assert '<span style="color:#868686">de</span>' in html_out
+    assert '<span style="color:var(--amn-tone-grey, #868686)">de</span>' in html_out
 
 
 def test_a_word_without_a_reading_still_paints_from_the_front(monkeypatch):
@@ -212,7 +241,10 @@ def test_a_word_without_a_reading_still_paints_from_the_front(monkeypatch):
     word = _word("银行")
     assert not hasattr(word, "expression_reading")
     html_out = ZhToneColorHook().render(word, config=TONE_ON)["expression_pinyin"]
-    assert html_out == '<span style="color:#be7500">yín</span> <span style="color:#be7500">háng</span>'
+    assert html_out == (
+        '<span style="color:var(--amn-tone-orange, #be7500)">yín</span> '
+        '<span style="color:var(--amn-tone-orange, #be7500)">háng</span>'
+    )
 
 
 def test_hooks_return_empty_dicts_rather_than_raising(monkeypatch):

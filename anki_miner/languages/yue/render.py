@@ -35,9 +35,16 @@ if TYPE_CHECKING:  # annotation-only: keeps profile.py's resource_catalog import
 #: Mandarin does, so this is a default in profile data rather than a setting:
 #: 1 red, 2 orange, 3 green, 4 blue, 5 purple, 6 grey. Tone 0 (a syllable with
 #: no digit, which only imported data produces) takes the neutral grey. The five
-#: shared hues are zh's, in the same both-backgrounds lightness band (see the
-#: note on ``zh.render._TONE_COLORS``); purple joins them there.
-_TONE_COLORS = {1: "#e75353", 2: "#be7500", 3: "#199a39", 4: "#4286e5", 5: "#a66dd2", 6: "#868686"}
+#: shared hues are zh's, note-type token and both-backgrounds fallback alike (see
+#: the note on ``zh.render._TONE_COLORS``); purple joins them there.
+_TONE_COLORS = {
+    1: "var(--amn-tone-red, #e75353)",
+    2: "var(--amn-tone-orange, #be7500)",
+    3: "var(--amn-tone-green, #199a39)",
+    4: "var(--amn-tone-blue, #4286e5)",
+    5: "var(--amn-tone-purple, #a66dd2)",
+    6: "var(--amn-tone-grey, #868686)",
+}
 _NEUTRAL = _TONE_COLORS[6]
 
 #: CC-CEDICT's ``CL:`` classifier -> the one Hong Kong Cantonese uses instead.
