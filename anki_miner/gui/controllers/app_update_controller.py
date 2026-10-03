@@ -126,6 +126,13 @@ class AppUpdateController(TaskPublisherMixin, QObject):
                 self.tr("Finish or cancel the running task, then restart to update."), "warning"
             )
             return
+        if staged.target == "windows-frozen" and not staged.path.is_file():
+            # TEMP cleanup or an antivirus can remove the staged installer while
+            # the banner waits. Closing now would leave no app and no installer,
+            # so fall back to the browser download instead.
+            self._staged = None
+            self._banner.show_failed()
+            return
         command = relaunch_command(staged)
         if command is None:
             if restart.resolve_relaunch_target() is None:

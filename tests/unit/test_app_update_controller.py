@@ -169,9 +169,16 @@ def test_restart_refused_while_another_task_runs(rig, tmp_path):
     window.status_bar.set_operation.assert_called_once()
 
 
+def _setup_exe(tmp_path):
+    """A staged installer that is still on disk when Restart now is clicked."""
+    setup = tmp_path / "Setup.exe"
+    setup.write_bytes(b"MZ")
+    return setup
+
+
 def test_windows_restart_runs_the_installer_in_update_mode(rig, tmp_path):
     window, banner, _, _ = rig
-    setup = tmp_path / "Setup.exe"
+    setup = _setup_exe(tmp_path)
     _stage(rig, StagedUpdate(version="9.9.9", target="windows-frozen", path=setup))
 
     banner._download_btn.click()
@@ -195,7 +202,7 @@ def test_appimage_restart_relaunches_the_replaced_appimage(rig, tmp_path, monkey
 def test_a_refused_close_clears_the_intent(rig, tmp_path):
     window, banner, _, _ = rig
     window.close_result = False
-    _stage(rig, StagedUpdate(version="9.9.9", target="windows-frozen", path=tmp_path / "Setup.exe"))
+    _stage(rig, StagedUpdate(version="9.9.9", target="windows-frozen", path=_setup_exe(tmp_path)))
 
     banner._download_btn.click()
 
@@ -206,8 +213,21 @@ def test_a_deferred_close_keeps_the_intent(rig, tmp_path):
     window, banner, _, _ = rig
     window.close_result = False
     window.shutting_down = True
-    _stage(rig, StagedUpdate(version="9.9.9", target="windows-frozen", path=tmp_path / "Setup.exe"))
+    _stage(rig, StagedUpdate(version="9.9.9", target="windows-frozen", path=_setup_exe(tmp_path)))
 
     banner._download_btn.click()
 
     assert restart.restart_requested()
+
+
+def test_a_vanished_installer_keeps_the_app_open(rig, tmp_path):
+    """TEMP cleanup or an antivirus can remove the staged Setup.exe while the
+    banner waits; closing then would leave the user with no app at all."""
+    window, banner, _, _ = rig
+    _stage(rig, StagedUpdate(version="9.9.9", target="windows-frozen", path=tmp_path / "Setup.exe"))
+
+    banner._download_btn.click()  # "Restart now", but the installer is gone
+
+    assert window.closed == 0
+    assert not restart.restart_requested()
+    assert banner._download_btn.text() == "Download installer"
