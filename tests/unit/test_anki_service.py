@@ -4284,6 +4284,39 @@ class TestProbeDuplicates:
         assert service.last_skipped_duplicates == 1
         assert service.last_not_created == {"학교": "duplicate"}
 
+    @pytest.mark.parametrize("fallback", [False, True], ids=["error-detail", "can-add-notes"])
+    def test_a_repeated_front_is_carded_twice_when_duplicates_are_allowed(
+        self, test_config, make_tokenized_word, fallback
+    ):
+        """allow_duplicate_cards re-cards on purpose, and phase 2 stops collapsing
+        repeats for it. Its notes carry allowDuplicate, so addNotes creates both
+        instead of rolling the request back."""
+        import dataclasses
+
+        service = AnkiService(dataclasses.replace(test_config, allow_duplicate_cards=True))
+        items = [
+            CardPayload(word=make_tokenized_word(), media=MediaData(), definition="eat"),
+            CardPayload(word=make_tokenized_word(), media=MediaData(), definition="eat again"),
+        ]
+        if fallback:
+            probes = [
+                _mock_response(error="unsupported action"),
+                _mock_response(result=[True, True]),
+                _mock_response(result=[True, True]),
+            ]
+        else:
+            probes = [_mock_response(result=[{"canAdd": True, "error": None}, {"canAdd": True, "error": None}])]
+
+        with patch(
+            "anki_miner.services._ankiconnect.requests.post", side_effect=[*probes, _mock_response(result=[100, 101])]
+        ) as mock_post:
+            assert service.create_cards_batch(items) == [100, 101]
+
+        submitted = mock_post.call_args_list[-1][1]["json"]["params"]["notes"]
+        assert [next(iter(note["fields"].values())) for note in submitted] == ["食べる", "食べる"]
+        assert service.last_skipped_duplicates == 0
+        assert service.last_not_created == {}
+
     def test_all_duplicates_skips_addnotes_entirely(self, test_config, make_tokenized_word):
         """When every note is a duplicate, no addNotes request is made."""
         service = AnkiService(test_config)

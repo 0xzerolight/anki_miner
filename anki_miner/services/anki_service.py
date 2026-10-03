@@ -1363,11 +1363,12 @@ class AnkiService:
         ``canAddNotesWithErrorDetail`` (top-level "unsupported action"), falls back
         to two diffed ``canAddNotes`` calls.
 
-        A note whose front an earlier note of the same call carries is a
-        duplicate too. ``canAdd`` judges each note against the collection
-        alone, but ``addNotes`` adds in order and rolls the whole request back
-        on one in-request duplicate. Two mined forms can share a front: ko
-        sends 學校 with the hangul front 학교 beside a mined 학교.
+        A note that leaves ``allowDuplicate`` off and repeats the front of an
+        earlier note in the same call is a duplicate too. ``canAdd`` judges
+        each note against the collection alone, but ``addNotes`` adds in order
+        and rolls the whole request back on one in-request duplicate. Two mined
+        forms can share a front: ko sends 學校 with the hangul front 학교 beside
+        a mined 학교.
 
         Raises:
             AnkiConnectionError: connection/transport failure, a malformed
@@ -1435,15 +1436,22 @@ class AnkiService:
     def _mark_repeated_fronts(self, notes: list[dict], is_duplicate: list[bool]) -> list[bool]:
         """``is_duplicate`` with every repeat of an earlier note's front marked too.
 
-        Keyed like Anki's own first-field check (``_strip_for_dedup``), never
-        the language's known-words fold: that fold is broader than Anki's rule
-        and would drop a card Anki accepts.
+        Only for a note that leaves ``allowDuplicate`` off, read from the note's
+        own options: that flag is what decides the rollback. With it on
+        (allow_duplicate_cards, whose repeats phase 2 deliberately keeps)
+        addNotes creates the repeat instead of failing the request.
+
+        Keyed by ``_strip_for_dedup``: Anki's HTML/media strip, slightly
+        stricter (it also drops format characters and collapses whitespace).
+        Never the language's known-words fold, which is far broader than
+        Anki's rule and would drop cards Anki accepts.
         """
         seen: set[str] = set()
         marked: list[bool] = []
         for note, duplicate in zip(notes, is_duplicate, strict=True):
             front = _strip_for_dedup(self._first_field_value(note))
-            marked.append(duplicate or front in seen)
+            allowed = bool((note.get("options") or {}).get("allowDuplicate"))
+            marked.append(duplicate or (front in seen and not allowed))
             if front:
                 seen.add(front)
         return marked
