@@ -159,6 +159,31 @@ class TestRequestedRestart:
 
         assert len(seen) == 1
 
+    def test_a_requested_program_and_arguments_replace_the_default(self, launches, tmp_path, monkeypatch):
+        """The Windows updater relaunches through the installer, which restarts the app itself."""
+        seen, holder = launches
+        monkeypatch.setattr(restart, "resolve_relaunch_target", lambda: tmp_path / "anki_miner_gui")
+        holder["lock"] = _FakeLock()
+        setup = tmp_path / "AnkiMiner-9.9.9-Setup.exe"
+        restart.request_restart(setup, ("/SILENT", "/UPDATE=1"))
+
+        app_module._relaunch_if_requested(_FakeApp(holder["lock"]))
+
+        assert seen == [(str(setup), ["/SILENT", "/UPDATE=1"], True)]
+
+    def test_clearing_forgets_the_requested_program(self, launches, tmp_path, monkeypatch):
+        seen, holder = launches
+        target = tmp_path / "anki_miner_gui"
+        monkeypatch.setattr(restart, "resolve_relaunch_target", lambda: target)
+        holder["lock"] = _FakeLock()
+        restart.request_restart(tmp_path / "Setup.exe", ("/SILENT",))
+        restart.clear_restart_request()
+        restart.request_restart()
+
+        app_module._relaunch_if_requested(_FakeApp(holder["lock"]))
+
+        assert seen == [(str(target), [], True)]
+
 
 class TestQtScaleFactorAcrossRestart:
     """QProcess.startDetached inherits this process's os.environ verbatim.
