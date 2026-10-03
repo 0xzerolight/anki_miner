@@ -1,6 +1,6 @@
 """Pins the release asset naming scheme across every producer.
 
-Five assets ship per release. Four follow one template; the .deb follows
+Five assets ship per release, plus the AppImage's .zsync sidecar. Four follow one template; the .deb follows
 Debian's mandated shape. Each name is built in a different place — the
 AppImage in a shell script, the installer in an Inno Setup script, the .deb
 and the macOS disk images in release.yml — and nothing but this test stops one
@@ -10,6 +10,7 @@ line for exactly that reason.
 
 from __future__ import annotations
 
+import fnmatch
 import json
 import re
 from pathlib import Path
@@ -137,3 +138,41 @@ def test_every_update_target_is_satisfied_by_a_published_asset():
         assert any(
             fnmatch.fnmatch(name, p) for p in patterns for name in names
         ), f"target {target} matches no published asset"
+
+
+# Published beside an asset for updaters to read; nobody installs it, so it is
+# not an update target. The .zsync is what AppImageUpdate and Gear Lever fetch.
+SIDECAR_NAMES = ("AnkiMiner-{version}-Linux-x86_64.AppImage.zsync",)
+
+APPIMAGE_UPDATE_INFORMATION = "gh-releases-zsync|0xzerolight|anki_miner|latest|AnkiMiner-*-Linux-x86_64.AppImage.zsync"
+
+
+def render_sidecar_names(version: str) -> set[str]:
+    return {name.format(version=version) for name in SIDECAR_NAMES}
+
+
+def test_appimage_embeds_the_github_update_information():
+    text = APPIMAGE_SH.read_text(encoding="utf-8")
+    assert f'UPDATE_INFORMATION="{APPIMAGE_UPDATE_INFORMATION}"' in text.splitlines()
+    assert '-u "$UPDATE_INFORMATION"' in text
+
+
+def test_the_update_information_names_exactly_the_published_zsync():
+    transport, owner, repo, tag, pattern = APPIMAGE_UPDATE_INFORMATION.split("|")
+    assert (transport, owner, repo, tag) == ("gh-releases-zsync", "0xzerolight", "anki_miner", "latest")
+    published = render_asset_names("9.9.9") | render_sidecar_names("9.9.9")
+    assert [n for n in published if fnmatch.fnmatch(n, pattern)] == ["AnkiMiner-9.9.9-Linux-x86_64.AppImage.zsync"]
+
+
+def test_release_yml_uploads_and_publishes_the_zsync():
+    text = RELEASE_YML.read_text(encoding="utf-8")
+    assert "dist/AnkiMiner-${{ steps.version.outputs.version }}-${{ matrix.asset_slug }}.AppImage.zsync" in text
+    assert "artifacts/**/*.AppImage.zsync" in text
+
+
+def test_no_update_target_claims_a_sidecar():
+    from anki_miner.services.update_checker import _TARGET_PATTERNS
+
+    for name in render_sidecar_names("9.9.9"):
+        claimed = [t for t, patterns in _TARGET_PATTERNS.items() if any(fnmatch.fnmatch(name, p) for p in patterns)]
+        assert claimed == [], f"{name} would be offered as an update by {claimed}"

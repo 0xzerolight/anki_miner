@@ -12,6 +12,15 @@ APPDIR="$REPO_ROOT/dist/AnkiMiner.AppDir"
 APPIMAGETOOL_VERSION="1.9.1"
 APPIMAGETOOL_SHA256="ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0"
 APPIMAGETOOL="$REPO_ROOT/dist/appimagetool"
+# Update information (AppImageSpec, transport gh-releases-zsync). AppImageUpdate,
+# Gear Lever and other AppImage managers read it to find the newest GitHub
+# release and fetch only the changed blocks through the .zsync published beside
+# the AppImage. Spelled out rather than appimagetool -g: -g builds the filename
+# from the desktop Name and would never match AnkiMiner-*. "latest" skips
+# pre-releases, so the resources-* and vendor-libmpv-* releases cannot shadow an
+# app release. tests/unit/test_release_asset_names.py pins this exact line, and
+# release.yml reads it back to check the built AppImage.
+UPDATE_INFORMATION="gh-releases-zsync|0xzerolight|anki_miner|latest|AnkiMiner-*-Linux-x86_64.AppImage.zsync"
 
 echo "Building AppImage for Anki Miner v${VERSION}..."
 
@@ -72,9 +81,16 @@ fi
 echo "${APPIMAGETOOL_SHA256}  ${APPIMAGETOOL}" | sha256sum -c -
 chmod +x "$APPIMAGETOOL"
 
-# Build AppImage (--appimage-extract-and-run avoids FUSE requirement on CI)
+# Build AppImage (--appimage-extract-and-run avoids FUSE requirement on CI).
+# -u embeds the update information, and the zsyncmake bundled in appimagetool
+# (its AppRun puts it first on PATH) writes the .zsync. zsyncmake names its
+# output after the input it is given, so the build runs from dist/ with a
+# relative output name to land the .zsync beside the AppImage.
 export ARCH=x86_64
-"$APPIMAGETOOL" --appimage-extract-and-run "$APPDIR" \
-    "$REPO_ROOT/dist/AnkiMiner-${VERSION}-Linux-x86_64.AppImage"
+(
+    cd "$REPO_ROOT/dist"
+    "$APPIMAGETOOL" --appimage-extract-and-run -u "$UPDATE_INFORMATION" "$APPDIR" \
+        "AnkiMiner-${VERSION}-Linux-x86_64.AppImage"
+)
 
 echo "AppImage created: dist/AnkiMiner-${VERSION}-Linux-x86_64.AppImage"
