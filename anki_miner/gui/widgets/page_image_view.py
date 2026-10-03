@@ -116,6 +116,11 @@ class PageImageView(QWidget):
         self._caption = QLabel()
         self._caption.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._caption.setFont(make_scaled_font(11))
+        # An Anki-deck card is captioned with its whole line: wrapped, or the
+        # line's width becomes the pane's floor; plain, because the line comes
+        # from a shared deck and may look like markup.
+        self._caption.setWordWrap(True)
+        self._caption.setTextFormat(Qt.TextFormat.PlainText)
         layout.addWidget(self._caption)
 
     def show_page(self, pixmap: QPixmap, box: tuple[int, int, int, int] | None, caption: str) -> None:

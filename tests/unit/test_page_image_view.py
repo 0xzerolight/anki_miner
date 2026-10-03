@@ -14,6 +14,7 @@ from pathlib import Path
 
 import pytest
 from PIL import Image, UnidentifiedImageError
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QImage, QPixmap
 
 from anki_miner.gui.widgets import page_image_view as piv
@@ -135,6 +136,22 @@ class TestPageImageView:
         assert view.current_box is None
         assert view.current_message == ""
         assert view.caption_text == ""
+
+    def test_a_long_caption_wraps_instead_of_widening_the_pane(self, qtbot):
+        # An Anki-deck card is captioned with its whole line, and the curator's
+        # QSplitter honours this pane's minimum width absolutely.
+        view = PageImageView()
+        qtbot.addWidget(view)
+        view.show_message("x", "p.1")
+        short_floor = view.minimumSizeHint().width()
+        view.show_message("x", "町長と土建屋は その子供も仲ええなあ、さすが町長やわ、ほんまに困ったもんやで")
+        assert view.minimumSizeHint().width() == short_floor
+
+    def test_a_caption_that_looks_like_markup_shows_verbatim(self, qtbot):
+        view = PageImageView()
+        qtbot.addWidget(view)
+        view.show_message("x", "<i>猫</i>")
+        assert view._caption.textFormat() == Qt.TextFormat.PlainText
 
     def test_paints_without_error(self, qtbot):
         # Render each state into an off-screen pixmap: exercises paintEvent

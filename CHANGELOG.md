@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 ### Fixed
+- **Reading → Anki Deck: the Word Curator shows the card's line under its picture**, not the card's position in the deck.
 
 ### Removed
 

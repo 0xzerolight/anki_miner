@@ -254,8 +254,12 @@ class TestCurationContext:
         ctx, lookup_fn = tab._build_curation_context()
 
         assert lookup_fn is tab.worker_thread.curation_processor.offline_lookup_fn
-        assert ctx is not None and ctx.video_file is None
-        assert ctx.page_units == {0: doc.units[0], 1: doc.units[1]}
+        assert ctx is not None and ctx.video_file is None and ctx.page_units is not None
+        # The curator captions a card's picture with the card's own line; the
+        # note ordinal ("#1") belongs to the Position column.
+        assert {i: u.location_label for i, u in ctx.page_units.items()} == {0: "今日は", 1: "明日"}
+        assert ctx.page_units[0].audio_ref is doc.units[0].audio_ref
+        assert doc.units[0].location_label == "#1", "the run's own units must keep the ordinal"
 
     def test_a_deck_without_media_is_table_only(self, tab):
         _pick_first_deck(tab)

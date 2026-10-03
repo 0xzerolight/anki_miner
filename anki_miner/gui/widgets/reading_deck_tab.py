@@ -22,6 +22,7 @@ signal slots are READ-ONLY on item state.
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 from typing import TYPE_CHECKING
 
@@ -594,7 +595,9 @@ class ReadingDeckTab(_ReadingMiningTabBase):
         doc = worker.curation_document if worker is not None else None
         if doc is None or doc.kind != "deck" or not any(u.image_ref or u.audio_ref for u in doc.units):
             return None, lookup
-        units = {u.index: u for u in doc.units}
+        # The caption under the picture is the card's own line, as on the deck's
+        # card; the note ordinal stays in the Position column and the Source field.
+        units = {u.index: dataclasses.replace(u, location_label=u.text) for u in doc.units}
         return CurationMediaContext(video_file=None, subtitle_entries=[], page_units=units), lookup
 
     # ------------------------------------------------------------------
