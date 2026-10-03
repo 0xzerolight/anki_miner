@@ -118,6 +118,21 @@ _HEADWORD = re.compile(r'lang="ko" style="font-weight: bold">([^<]*)<')
 _BASIC_GRADE = "⭐⭐⭐"
 
 
+def krdict_headword(definition_html: str) -> str:
+    """The rendered row's bold headword when it is all hangul syllables, else "".
+
+    KRDICT keys a Sino-Korean word's hanja row on the hanja (學校) and bolds
+    the hangul headword in its content (학교 〔學校〕). Syllables only
+    (U+AC00-U+D7A3): an affix headword (-물) or a spaced phrase is no card
+    front, and neither is a non-KRDICT row that happens to bold Korean text.
+    """
+    match = _HEADWORD.search(definition_html)
+    headword = match.group(1) if match else ""
+    if headword and all("\uac00" <= ch <= "\ud7a3" for ch in headword):
+        return headword
+    return ""
+
+
 class KoreanDictKeys:
     """DictKeyFolding for Korean: NFC only, Rule-A-only homograph mask.
 

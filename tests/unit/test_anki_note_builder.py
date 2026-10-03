@@ -13,6 +13,7 @@ from dataclasses import replace
 import pytest
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.languages.profile import CARD_FRONT_KEY
 from anki_miner.models import CardPayload, MediaData, TokenizedWord
 from anki_miner.services.anki_note_builder import (
     _strip_for_dedup,
@@ -490,3 +491,58 @@ class TestLanguageField:
         built = build_note(item, config, set(), content_lang="de")
         assert "de" not in built.note["fields"].values()
         assert built == build_note(item, config, set())
+
+
+class TestCardFrontOverride:
+    """``CARD_FRONT_KEY``: a render hook's per-note replacement for the word field.
+
+    ko writes the KRDICT hangul headword there for a word mined in Hanja only.
+    ``mined_form`` stays the Hanja, so every lookup and known-words key is the
+    same as before; only the note's front changes.
+    """
+
+    @staticmethod
+    def _payload(extra_fields: dict[str, str]) -> CardPayload:
+        word = _word(
+            surface="學校",
+            lemma="學校",
+            orth_base="",
+            pos="NNG",
+            mined_form_override="學校",
+            sentence="學校에 가요.",
+            expression_furigana="",
+            expression_reading="",
+        )
+        return _payload(word, extra_fields=extra_fields)
+
+    def test_it_replaces_the_word_field_and_nothing_else(self):
+        item = self._payload({"hanja": "學校", CARD_FRONT_KEY: "학교"})
+        config = _config(hanja="Hanja")
+        fields = build_note(item, config, set()).note["fields"]
+        assert fields[config.anki_fields["word"]] == "학교"
+        assert fields["Hanja"] == "學校"
+        assert list(fields.values()).count("학교") == 1
+        assert item.word.mined_form == "學校"
+
+    def test_the_payload_is_not_mutated(self):
+        item = self._payload({"hanja": "學校", CARD_FRONT_KEY: "학교"})
+        build_note(item, _config(hanja="Hanja"), set())
+        assert item.extra_fields == {"hanja": "學校", CARD_FRONT_KEY: "학교"}
+
+    def test_the_front_is_escaped_and_wrapped_like_the_mined_form(self):
+        item = self._payload({CARD_FRONT_KEY: "a<b"})
+        word_field = AnkiMinerConfig().anki_fields["word"]
+        assert build_note(item, _config(), set()).note["fields"][word_field] == "a&lt;b"
+        rtl = build_note(item, _config(), set(), content_direction="rtl", content_lang="ko")
+        assert rtl.note["fields"][word_field] == '<div dir="rtl" lang="ko">a&lt;b</div>'
+
+    def test_the_dedup_key_is_the_front(self):
+        item = self._payload({CARD_FRONT_KEY: "학교"})
+        word_field = AnkiMinerConfig().anki_fields["word"]
+        assert _strip_for_dedup(build_note(item, _config(), set()).note["fields"][word_field]) == "학교"
+
+    def test_an_empty_override_keeps_the_mined_form(self):
+        word_field = AnkiMinerConfig().anki_fields["word"]
+        built = build_note(self._payload({CARD_FRONT_KEY: ""}), _config(), set())
+        assert built.note["fields"][word_field] == "學校"
+        assert built == build_note(self._payload({}), _config(), set())

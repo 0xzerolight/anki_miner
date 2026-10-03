@@ -11,6 +11,7 @@ from types import SimpleNamespace
 import pytest
 
 from anki_miner.exceptions import AnkiConnectionError, SetupError
+from anki_miner.languages.profile import CARD_FRONT_KEY
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.switching import switch_language
 from anki_miner.languages.zh.render import ZhMeasureWordHook, ZhToneColorHook
@@ -1844,6 +1845,38 @@ class TestScanProfileCardFields:
         assert proposed.startswith('<span style="white-space:nowrap">meng-</span>')
         mined = SimpleNamespace(mined_form="membeli", definition_html=gloss)
         assert proposed == get_profile("id").render_hooks[0].render(mined, config=config)["affixes"]
+
+    @staticmethod
+    def _ko_scan(test_config, definition: str, field_keys: set[str]) -> BackfillPlan:
+        config = switch_language(test_config, "ko")
+        config = replace(
+            config,
+            anki_note_type=test_config.anki_note_type,
+            anki_fields={**config.anki_fields, "word": "word", "definition": "definition", "hanja": "Hanja"},
+        )
+        anki = FakeAnkiService({1: _note(1, word="學校", Hanja="")}, note_fields=set(_DEFAULT_NOTE_FIELDS) | {"Hanja"})
+        defs = FakeDefinitionService(defs={"學校": definition})
+        return scan_backfill(anki, config, _services(defs=defs), _options(field_keys))
+
+    def test_korean_backfill_never_writes_the_card_front(self, test_config):
+        """The hook's CARD_FRONT_KEY is a mining-time override, never a field a scan writes.
+
+        Only the profile's own card-field keys survive _hook_proposals, so the
+        hangul headword reaches neither Expression nor any other field, even
+        when a caller passes the key itself.
+        """
+        krdict = (
+            '<span class="gloss-sc-span" lang="ko"><span class="gloss-sc-span" lang="ko" '
+            'style="font-weight: bold">학교</span><span class="gloss-sc-span" lang="ko"> 〔學校〕</span></span>'
+            '<div class="gloss-sc-div" lang="en"><span class="gloss-sc-span" lang="en">school</span></div>'
+        )
+        plan = self._ko_scan(test_config, krdict, {"hanja", CARD_FRONT_KEY})
+        (note,) = plan.notes
+        assert {c.field_key: c.new_value for c in note.changes} == {"hanja": "學校"}
+        assert all(c.field_name != "word" for c in note.changes)
+
+    def test_korean_backfill_proposes_no_hanja_that_would_repeat_the_front(self, test_config):
+        assert self._ko_scan(test_config, "<i>school</i>", {"hanja"}).notes == ()
 
     def test_japanese_declares_no_hook_fields(self, backfill_config):
         # The ja pipeline renders its own fields inline and must never route

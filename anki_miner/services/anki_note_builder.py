@@ -14,6 +14,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.languages.profile import CARD_FRONT_KEY
 from anki_miner.models import CardPayload
 from anki_miner.utils.text_utils import strip_format_chars
 
@@ -250,7 +251,9 @@ def build_note(
     """Map one CardPayload to the note dict ``addNotes`` expects.
 
     Args:
-        item: The card payload (word, media, definition, extra fields).
+        item: The card payload (word, media, definition, extra fields). An
+            extra ``CARD_FRONT_KEY`` value is written to the word field in
+            place of ``mined_form``.
         config: Frozen config providing field mapping, deck, note type, tags.
         stored_files: Filenames confirmed stored in Anki's media collection;
             media fields only reference files in this set so cards never point
@@ -281,6 +284,13 @@ def build_note(
     media = item.media
     definition = item.definition
     extra_fields = item.extra_fields
+
+    # A render hook's front override, popped from a copy before every other
+    # pass: it is no field of its own, and item.extra_fields stays as built.
+    card_front = ""
+    if extra_fields and CARD_FRONT_KEY in extra_fields:
+        card_front = extra_fields[CARD_FRONT_KEY] or ""
+        extra_fields = {k: v for k, v in extra_fields.items() if k != CARD_FRONT_KEY} or None
 
     # Pull glossary out of extra_fields BEFORE the OPTIONAL pass —
     # OPTIONAL_FIELD_KEYS html.escape()s its values, but glossary
@@ -347,7 +357,7 @@ def build_note(
     # the Han profiles' sentence tag (zh-Hans/zh-Hant) when they declare one, else
     # the profile code; "" on the three-argument call, which maps no such field.
     language_tag = content_lang
-    word_field = html.escape(word.mined_form)
+    word_field = html.escape(card_front or word.mined_form)
     if content_direction == "rtl":
         word_field = _rtl_wrap(word_field, content_lang)
         sentence_field = _rtl_wrap(sentence_field, content_lang)

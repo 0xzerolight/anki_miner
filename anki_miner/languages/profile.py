@@ -134,6 +134,12 @@ class DictKeyFolding(Protocol):
     def homograph_keep_mask(self, word: str, rows: list[tuple[str, str]], lemma: str | None = None) -> list[bool]: ...
 
 
+#: The one key a render hook may return beyond its ``field_names()``: the card
+#: front for this note only (ko: the hangul headword of a word mined in Hanja).
+#: ``build_note`` writes it to the word field in place of ``mined_form``.
+CARD_FRONT_KEY = "card_front"
+
+
 class CardRenderHook(Protocol):
     """Non-ja extra card fields. ``field_names`` are LOGICAL anki_fields keys
     (like "frequency"/"glossary"), never Anki field names.
@@ -143,6 +149,11 @@ class CardRenderHook(Protocol):
     ``reading_tone_color`` — has nothing to reach: the field would exist,
     serialize and switch with the language while changing no output anywhere.
     Keyword-only so a hook cannot bind it to ``word`` by accident.
+
+    ``render`` may also return :data:`CARD_FRONT_KEY`, which is not a
+    ``field_names()`` key and replaces the card front for this note only.
+    ``mined_form`` (lookups, known words) is unchanged. Card Backfill keeps
+    only ``field_names()`` keys, so it never rewrites a front.
     """
 
     def field_names(self) -> tuple[str, ...]: ...

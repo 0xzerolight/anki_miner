@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **German nouns used only in the plural show "die (Pl.)"** in the Gender field instead of "die", so they no longer look feminine.
 - **The setup wizard no longer assumes Lapis for Japanese.** Every language starts with no note type chosen. While the chosen one can't hold cards, the wizard's help links to Anki Miner Note, a free note type for every language; any other note type still works once its fields are mapped.
 - **Pitch position fields hold the downstep number** (LHHL becomes 3), so Lapis, Kiku and Anki Miner Note draw the pitch graph for words from pitch dictionaries that list high/low patterns.
+- **Korean words written only in Hanja show their hangul on the card front** (學校 → 학교, with 學校 in the Hanja field) when the dictionary gives the hangul headword, as KRDICT does; otherwise the Hanja field is left empty instead of repeating the word.
 
 ### Fixed
 - **Reading → Anki Deck: the Word Curator shows the card's line under its picture**, not the card's position in the deck.
