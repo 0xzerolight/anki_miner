@@ -6,12 +6,17 @@ The etymology block is the shape the Yomitan importer renders for wty-id-en (cop
 
 from __future__ import annotations
 
+from dataclasses import replace
 from types import SimpleNamespace
 
 import pytest
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.languages.id.render import FormalFormHook, RootAffixHook, etymology_parse
+from anki_miner.languages.registry import get_profile
+from anki_miner.languages.switching import switch_language
+from anki_miner.models import CardPayload, MediaData
+from anki_miner.services.anki_note_builder import build_note
 
 
 def _html(etymology: str) -> str:
@@ -81,19 +86,26 @@ def test_the_first_formula_wins_and_no_block_is_no_parse():
     assert etymology_parse("<div>to buy</div>") is None and etymology_parse("") is None
 
 
+def _nowrap(*parts: str) -> str:
+    return " + ".join(f'<span style="white-space:nowrap">{part}</span>' for part in parts)
+
+
 def test_the_root_hook_fills_both_fields_or_neither():
     hook = RootAffixHook()
     assert hook.field_names() == ("root", "affixes")
     word = SimpleNamespace(definition_html=_html("From meng- + beli."), mined_form="membeli")
-    assert hook.render(word, config=AnkiMinerConfig()) == {"root": "beli", "affixes": "meng- + beli"}
+    assert hook.render(word, config=AnkiMinerConfig()) == {
+        "root": "beli",
+        "affixes": '<span style="white-space:nowrap">meng-</span> + <span style="white-space:nowrap">beli</span>',
+    }
     assert hook.render(SimpleNamespace(definition_html="", mined_form="beli"), config=AnkiMinerConfig()) == {}
 
 
 @pytest.mark.parametrize(
     ("etymology", "front", "fields"),
     [
-        ("Equivalent to ber- + ajar.", "belajar", {"root": "ajar", "affixes": "ber- + ajar"}),  # an allomorph
-        ("From meng- + erti.", "ngerti", {"root": "erti", "affixes": "meng- + erti"}),  # formal: mengerti
+        ("Equivalent to ber- + ajar.", "belajar", {"root": "ajar", "affixes": _nowrap("ber-", "ajar")}),  # allomorph
+        ("From meng- + erti.", "ngerti", {"root": "erti", "affixes": _nowrap("meng-", "erti")}),  # formal: mengerti
         ("From meng- + beli.", "dibeli", {}),  # the entry its form row names
         ("From meng- + beli.", "kubeli", {}),  # the entry the ladder reaches
     ],
@@ -101,6 +113,31 @@ def test_the_root_hook_fills_both_fields_or_neither():
 def test_the_root_hook_takes_a_prefix_only_the_front_opens_with(etymology, front, fields):
     word = SimpleNamespace(definition_html=_html(etymology), mined_form=front)
     assert RootAffixHook().render(word, config=AnkiMinerConfig()) == fields
+
+
+def test_each_affix_is_escaped_inside_its_span(monkeypatch):
+    monkeypatch.setattr("anki_miner.languages.id.render.etymology_parse", lambda _html: ("a<b", "a<b + -&an"))
+    word = SimpleNamespace(definition_html="", mined_form="a<ban")
+    assert RootAffixHook().render(word, config=AnkiMinerConfig())["affixes"] == _nowrap("a&lt;b", "-&amp;an")
+
+
+def test_build_note_sends_the_affixes_markup_unescaped(make_tokenized_word):
+    profile = get_profile("id")
+    config = replace(
+        switch_language(AnkiMinerConfig(), "id"),
+        anki_fields={**profile.card_field_defaults, "word": "Expression", "affixes": "Affixes"},
+    )
+    word = make_tokenized_word(surface="membeli", lemma="membeli", reading="")
+    affixes = _nowrap("meng-", "beli")
+    payload = CardPayload(word=word, media=MediaData(), definition="to buy", extra_fields={"affixes": affixes})
+    note = build_note(
+        payload,
+        config,
+        set(),
+        extra_optional_keys=frozenset(spec.key for spec in profile.extra_card_fields),
+        extra_raw_html_keys=frozenset(spec.key for spec in profile.extra_card_fields if spec.raw_html),
+    ).note
+    assert note["fields"]["Affixes"] == affixes
 
 
 def test_the_formal_hook_names_the_formal_spelling_of_a_colloquial_front():

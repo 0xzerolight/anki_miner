@@ -1826,6 +1826,25 @@ class TestScanProfileCardFields:
         expected = ZhToneColorHook().render(mined, config=config)
         assert _changes_by_key(plan, 1)["expression_pinyin"] == expected["expression_pinyin"]
 
+    def test_indonesian_affixes_markup_is_written_unescaped(self, test_config):
+        """affixes is declared raw_html, so its nowrap spans reach the note as mining writes them."""
+        config = switch_language(test_config, "id")
+        config = replace(
+            config,
+            anki_note_type=test_config.anki_note_type,
+            anki_fields={**config.anki_fields, "word": "word", "definition": "definition", "affixes": "Affixes"},
+        )
+        anki = FakeAnkiService(
+            {1: _note(1, word="membeli", Affixes="")}, note_fields=set(_DEFAULT_NOTE_FIELDS) | {"Affixes"}
+        )
+        gloss = '<div data-sc-content="Etymology-content">From meng- + beli.</div>to buy'
+        defs = FakeDefinitionService(defs={"membeli": gloss})
+        plan = scan_backfill(anki, config, _services(defs=defs), _options({"affixes"}))
+        proposed = _changes_by_key(plan, 1)["affixes"]
+        assert proposed.startswith('<span style="white-space:nowrap">meng-</span>')
+        mined = SimpleNamespace(mined_form="membeli", definition_html=gloss)
+        assert proposed == get_profile("id").render_hooks[0].render(mined, config=config)["affixes"]
+
     def test_japanese_declares_no_hook_fields(self, backfill_config):
         # The ja pipeline renders its own fields inline and must never route
         # one through a hook; nothing here can change what a ja scan proposes.

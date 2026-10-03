@@ -29,6 +29,10 @@ def parser():
     return get_profile("id").create_parser(CONFIG)
 
 
+def _nowrap(*parts: str) -> str:
+    return " + ".join(f'<span style="white-space:nowrap">{part}</span>' for part in parts)
+
+
 def _fronts(parser, text: str) -> list[str]:
     words, _index, _counts = parser.parse_text_units([ReadingUnit(text=text, index=0, location_label="t")], False)
     return [word.mined_form for word in words]
@@ -106,16 +110,16 @@ def test_an_unequal_reduplication_is_looked_up_whole(provider):
 @pytest.mark.parametrize(
     ("headword", "fields"),
     [
-        ("membeli", {"root": "beli", "affixes": "meng- + beli"}),
-        ("merugikan", {"root": "rugi", "affixes": "meng- + rugi + -kan"}),
-        ("keadaban", {"root": "adab", "affixes": "ke- + adab + -an"}),
-        ("berjalan", {"root": "jalan", "affixes": "ber- + jalan"}),
+        ("membeli", {"root": "beli", "affixes": _nowrap("meng-", "beli")}),
+        ("merugikan", {"root": "rugi", "affixes": _nowrap("meng-", "rugi", "-kan")}),
+        ("keadaban", {"root": "adab", "affixes": _nowrap("ke-", "adab", "-an")}),
+        ("berjalan", {"root": "jalan", "affixes": _nowrap("ber-", "jalan")}),
         ("beli", {}),
         # Form rows only: the card shows the meN- entry they name, whose meng- the di- front does not carry.
         ("dibeli", {}),
         ("dijual", {}),
         ("ditulis", {}),  # names tulis and menulis
-        ("menulis", {"root": "tulis", "affixes": "meng- + tulis"}),
+        ("menulis", {"root": "tulis", "affixes": _nowrap("meng-", "tulis")}),
         ("nggak", {}),
     ],
 )

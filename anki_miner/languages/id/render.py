@@ -2,7 +2,8 @@
 
 Root and Affixes come from the dictionary's own etymology line (wty-id-en: ``From meng- + beli``,
 ``ke- + adab + -an``), never from the deinflection ladder's guess, and are blank when the entry
-has none. The affixes print as the dictionary writes them (``meng- + rugi + -kan``). The formal
+has none. The affixes print as the dictionary writes them (``meng- + rugi + -kan``), each part in a
+no-wrap span so a line break never splits ``ke-`` from its hyphen; the field is raw HTML. The formal
 form is the colloquial table's spelling for a colloquial front (``nggak`` -> ``tidak``).
 """
 
@@ -61,6 +62,11 @@ def etymology_parse(definition_html: str) -> tuple[str, str] | None:
     return None
 
 
+def _nowrap(part: str) -> str:
+    """One affix or root that a line break must not split ("ke-", "-an")."""
+    return f'<span style="white-space:nowrap">{html.escape(part)}</span>'
+
+
 class RootAffixHook:
     """``root`` and ``affixes`` from the entry's etymology; nothing when it has no affix formula.
 
@@ -83,7 +89,7 @@ class RootAffixHook:
         front = id_fold(str(getattr(word, "mined_form", "") or ""))
         if openings and not any(form.startswith(openings) for form in (front, ID_COLLOQUIAL.get(front, ""))):
             return {}
-        return {"root": root, "affixes": affixes}
+        return {"root": root, "affixes": " + ".join(_nowrap(part) for part in affixes.split(" + "))}
 
 
 class FormalFormHook:
