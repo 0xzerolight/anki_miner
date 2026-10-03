@@ -349,6 +349,7 @@ class TestBackgroundTasksShutdownDuckTyped:
         ctrl.validation_worker = None
         ctrl.update_worker = None
         ctrl.ytdlp_update_worker = None
+        ctrl.app_update_worker = None
         ctrl.jmdict_migration_worker = None
         ctrl.asr_model_download_worker = None
         ctrl.alass_install_worker = None

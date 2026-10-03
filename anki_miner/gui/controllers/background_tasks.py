@@ -42,6 +42,7 @@ if TYPE_CHECKING:
         ChainSettingsPanelBase,
         MutationToken,
     )
+    from anki_miner.gui.workers.app_update_worker import AppUpdateWorker
     from anki_miner.gui.workers.import_worker import ImportWorker
     from anki_miner.gui.workers.install_worker import InstallWorker
     from anki_miner.gui.workers.restyle_cards_worker import RestyleCardsWorker
@@ -50,6 +51,7 @@ if TYPE_CHECKING:
     from anki_miner.services import ValidationService
     from anki_miner.services.anki_service import AnkiService
     from anki_miner.services.card_restyler import RestyleResult
+    from anki_miner.services.update_checker import UpdateInfo
 
 logger = logging.getLogger(__name__)
 
@@ -158,6 +160,8 @@ class BackgroundTaskController(QObject):
         self._validation_endpoints: dict[QObject, str] = {}
         self.update_worker: UpdateWorkerThread | None = None
         self.ytdlp_update_worker: YtdlpUpdateWorker | None = None
+        # The in-place app update download (gui/controllers/app_update_controller.py).
+        self.app_update_worker: AppUpdateWorker | None = None
         self.jmdict_migration_worker: ImportWorker | None = None
         self._dictionary_mutation_panel: ChainSettingsPanelBase | None = None
         self._jmdict_migration_lease: tuple[ImportWorker, ChainSettingsPanelBase, MutationToken] | None = None
@@ -274,6 +278,36 @@ class BackgroundTaskController(QObject):
         worker.result_ready.connect(self.ytdlp_update_result)
         worker.finished.connect(lambda w=worker: self._release_worker("ytdlp_update_worker", w))
         worker.start()
+
+    def start_app_update(
+        self,
+        info: UpdateInfo,
+        *,
+        on_progress: Callable[[int, int], None],
+        on_result: Callable[[object], None],
+        on_finished: Callable[[], None],
+    ) -> AppUpdateWorker | None:
+        """Start the in-place app update download unless one is already running.
+
+        Held here, not on the app-update controller, so :meth:`shutdown` joins
+        it like every other window-level worker.
+
+        Returns:
+            The started worker, or ``None`` when a run is already live.
+        """
+        if still_running(self.app_update_worker):
+            return None
+
+        from anki_miner.gui.workers.app_update_worker import AppUpdateWorker
+
+        worker = AppUpdateWorker(info, self)
+        self.app_update_worker = worker
+        worker.progress.connect(on_progress)
+        worker.result_ready.connect(on_result)
+        worker.finished.connect(on_finished)
+        worker.finished.connect(lambda w=worker: self._release_worker("app_update_worker", w))
+        worker.start()
+        return worker
 
     def start_asr_model_download(
         self,
@@ -740,11 +774,12 @@ class BackgroundTaskController(QObject):
         # Controller-owned workers: validation, update check, yt-dlp update,
         # JMdict migration, ASR model download, alass install, mokuro install,
         # CUDA pack download, onnxruntime (VAD) pack download, ASR engine pack
-        # download, Vulkan model download, and every in-flight language-pack
-        # download.
+        # download, Vulkan model download, every in-flight language-pack
+        # download, and the in-place app update download.
         join(self.validation_worker)
         join(self.update_worker)
         join(self.ytdlp_update_worker)
+        join(self.app_update_worker)
         join(self.jmdict_migration_worker)
         join(self.asr_model_download_worker)
         join(self.alass_install_worker)
