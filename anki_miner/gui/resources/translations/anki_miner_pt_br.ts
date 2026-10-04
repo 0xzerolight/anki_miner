@@ -924,6 +924,24 @@ Continuar mesmo assim?</translation>
         <translation>Abrir Configurações</translation>
     </message>
 </context><context>
+    <name>AppUpdateController</name>
+    <message>
+        <source>Anki Miner update</source>
+        <translation>Atualização do Anki Miner</translation>
+    </message>
+    <message>
+        <source>Downloading Anki Miner v%1</source>
+        <translation>Baixando o Anki Miner v%1</translation>
+    </message>
+    <message>
+        <source>Finish or cancel the running task, then restart to update.</source>
+        <translation>Conclua ou cancele a tarefa em execução e depois reinicie para atualizar.</translation>
+    </message>
+    <message>
+        <source>Close and reopen Anki Miner to finish updating.</source>
+        <translation>Feche e abra o Anki Miner novamente para concluir a atualização.</translation>
+    </message>
+</context><context>
     <name>AsrModelDownloadWorker</name>
     <message>
         <source>Downloading %1…</source>
@@ -2651,8 +2669,8 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Verificar atualizações do aplicativo</translation>
     </message>
     <message>
-        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings → General.</source>
-        <translation>Verifique se há uma nova versão do Anki Miner pelo menu Ajuda, ou ative/desative a verificação automática ao iniciar em Configurações → Geral.</translation>
+        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings → General. The Windows installer and the AppImage can install the update themselves and restart.</source>
+        <translation>Verifique se há uma nova versão do Anki Miner pelo menu Ajuda, ou ative/desative a verificação automática ao iniciar em Configurações → Geral. O instalador do Windows e o AppImage podem instalar a atualização sozinhos e reiniciar.</translation>
     </message>
     <message>
         <source>Download videos or audio</source>
@@ -11922,8 +11940,32 @@ Seus recursos instalados e seu tema são mantidos.</translation>
         <translation>Fechar</translation>
     </message>
     <message>
+        <source>Downloading Anki Miner v%1…</source>
+        <translation>Baixando o Anki Miner v%1…</translation>
+    </message>
+    <message>
+        <source>Anki Miner v%1 is downloaded. Restart to finish updating.</source>
+        <translation>O Anki Miner v%1 foi baixado. Reinicie para concluir a atualização.</translation>
+    </message>
+    <message>
+        <source>Anki Miner v%1 could not be installed automatically.</source>
+        <translation>Não foi possível instalar o Anki Miner v%1 automaticamente.</translation>
+    </message>
+    <message>
         <source>Anki Miner v%1 is available</source>
         <translation>Anki Miner v%1 disponível</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
+        <source>Restart now</source>
+        <translation>Reiniciar agora</translation>
+    </message>
+    <message>
+        <source>Update now</source>
+        <translation>Atualizar agora</translation>
     </message>
     <message>
         <source>View release</source>

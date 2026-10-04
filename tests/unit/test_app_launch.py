@@ -413,6 +413,18 @@ def test_installer_app_mutex_matches_launch_constant() -> None:
 
     assert match is not None
     assert match.group(1) == launch.APP_MUTEX_NAME
+    # The update-mode wait in [Code] names the same mutex; both copies must agree.
+    assert re.findall(r"Local\\AnkiMiner-[0-9A-F-]+", installer_text) == [launch.APP_MUTEX_NAME] * 2
+
+
+def test_installer_relaunches_only_in_update_mode() -> None:
+    installer_text = (PROJECT_ROOT / "packaging" / "innosetup" / "anki_miner.iss").read_text(encoding="utf-8")
+
+    assert "function IsUpdateMode: Boolean;" in installer_text
+    assert "ExpandConstant('{param:UPDATE|0}') = '1'" in installer_text
+    # The installer smoke asserts on this log line; keep the wording in sync.
+    assert "Update mode: waited %d ms for Anki Miner to exit" in installer_text
+    assert 'Filename: "{app}\\AnkiMiner.exe"; Flags: nowait; Check: IsUpdateMode' in installer_text
 
 
 def test_early_sink_and_root_are_warning_level(tmp_path: Path) -> None:

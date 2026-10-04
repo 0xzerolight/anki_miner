@@ -922,6 +922,24 @@ Tetap lanjutkan?</translation>
         <translation>Buka Pengaturan</translation>
     </message>
 </context><context>
+    <name>AppUpdateController</name>
+    <message>
+        <source>Anki Miner update</source>
+        <translation>Pembaruan Anki Miner</translation>
+    </message>
+    <message>
+        <source>Downloading Anki Miner v%1</source>
+        <translation>Mengunduh Anki Miner v%1</translation>
+    </message>
+    <message>
+        <source>Finish or cancel the running task, then restart to update.</source>
+        <translation>Selesaikan atau batalkan tugas yang sedang berjalan, lalu mulai ulang untuk memperbarui.</translation>
+    </message>
+    <message>
+        <source>Close and reopen Anki Miner to finish updating.</source>
+        <translation>Tutup dan buka kembali Anki Miner untuk menyelesaikan pembaruan.</translation>
+    </message>
+</context><context>
     <name>AsrModelDownloadWorker</name>
     <message>
         <source>Downloading %1…</source>
@@ -2648,8 +2666,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Periksa pembaruan aplikasi</translation>
     </message>
     <message>
-        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings → General.</source>
-        <translation>Periksa versi Anki Miner terbaru dari menu Bantuan, atau aktifkan/nonaktifkan pemeriksaan otomatis saat memulai di Pengaturan → Umum.</translation>
+        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings → General. The Windows installer and the AppImage can install the update themselves and restart.</source>
+        <translation>Periksa versi Anki Miner terbaru dari menu Bantuan, atau aktifkan/nonaktifkan pemeriksaan otomatis saat memulai di Pengaturan → Umum. Pemasang Windows dan AppImage dapat memasang pembaruan secara mandiri lalu memulai ulang.</translation>
     </message>
     <message>
         <source>Download videos or audio</source>
@@ -11881,8 +11899,32 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
         <translation>Tutup</translation>
     </message>
     <message>
+        <source>Downloading Anki Miner v%1…</source>
+        <translation>Mengunduh Anki Miner v%1…</translation>
+    </message>
+    <message>
+        <source>Anki Miner v%1 is downloaded. Restart to finish updating.</source>
+        <translation>Anki Miner v%1 telah diunduh. Mulai ulang untuk menyelesaikan pembaruan.</translation>
+    </message>
+    <message>
+        <source>Anki Miner v%1 could not be installed automatically.</source>
+        <translation>Anki Miner v%1 tidak dapat dipasang secara otomatis.</translation>
+    </message>
+    <message>
         <source>Anki Miner v%1 is available</source>
         <translation>Anki Miner v%1 tersedia</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Batal</translation>
+    </message>
+    <message>
+        <source>Restart now</source>
+        <translation>Mulai ulang sekarang</translation>
+    </message>
+    <message>
+        <source>Update now</source>
+        <translation>Perbarui sekarang</translation>
     </message>
     <message>
         <source>View release</source>

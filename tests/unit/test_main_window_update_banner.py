@@ -238,3 +238,14 @@ def test_skip_with_no_banner_is_noop(main_window):
     # Must not raise.
     main_window._on_skip_update_requested("9.9.9")
     assert main_window._update_banner is None
+
+
+def test_the_banner_gets_one_app_update_controller(main_window):
+    from anki_miner.gui.controllers.app_update_controller import AppUpdateController
+
+    main_window._on_update_check_result(_info("9.9.9"))
+    controller = main_window._app_update
+    main_window._on_update_check_result(_info("9.9.10"))
+
+    assert isinstance(controller, AppUpdateController)
+    assert main_window._app_update is controller

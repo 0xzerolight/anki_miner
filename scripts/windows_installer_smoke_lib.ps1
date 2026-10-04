@@ -55,20 +55,23 @@ function Invoke-BoundedProcess {
   }
 }
 
-function Invoke-InstalledAppSmoke {
+function Use-InstalledAppSmokeEnvironment {
   param(
-    [Parameter(Mandatory)] [string] $FilePath,
-    [Parameter(Mandatory)] [string] $WorkingDirectory,
     [Parameter(Mandatory)] [string] $SmokeHome,
     [Parameter(Mandatory)] [string] $ResultPath,
-    [Parameter(Mandatory)] [string] $Version
+    [Parameter(Mandatory)] [string] $Version,
+    [Parameter(Mandatory)] [scriptblock] $Action
   )
 
+  # Runs $Action with the clean environment the installed-app smoke needs, then
+  # restores this process's environment. Anything $Action starts (Setup, and
+  # the app Setup relaunches) inherits it. $Action reads its caller's variables
+  # through PowerShell's dynamic scoping; no GetNewClosure, which would rebind
+  # it to a module scope that cannot always see this file's functions.
   $savedEnvironment = @{}
   foreach ($item in [Environment]::GetEnvironmentVariables('Process').GetEnumerator()) {
     $savedEnvironment[[string] $item.Key] = [string] $item.Value
   }
-  $process = $null
   try {
     foreach ($name in @([Environment]::GetEnvironmentVariables('Process').Keys)) {
       if (
@@ -87,26 +90,8 @@ function Invoke-InstalledAppSmoke {
     [Environment]::SetEnvironmentVariable('ANKI_MINER_SMOKE', 'installer', 'Process')
     [Environment]::SetEnvironmentVariable('ANKI_MINER_SMOKE_RESULT', $ResultPath, 'Process')
     [Environment]::SetEnvironmentVariable('ANKI_MINER_SMOKE_EXPECTED_VERSION', $Version, 'Process')
-
-    $process = Start-Process -FilePath $FilePath -WorkingDirectory $WorkingDirectory -PassThru
-    Assert-Condition ($null -ne $process) 'Installed app failed to start.'
-    if (-not $process.WaitForExit(120000)) {
-      try {
-        $process.Kill($true)
-      } catch {
-        Write-Warning "Installed app process-tree kill failed: $($_.Exception.Message)"
-      }
-      [void] $process.WaitForExit(10000)
-      throw 'Installed app timed out after 120 seconds.'
-    }
-    $process.WaitForExit()
-    if ($process.ExitCode -ne 0) {
-      throw "Installed app exited $($process.ExitCode)."
-    }
+    & $Action
   } finally {
-    if ($null -ne $process) {
-      $process.Dispose()
-    }
     foreach ($name in @([Environment]::GetEnvironmentVariables('Process').Keys)) {
       if (-not $savedEnvironment.ContainsKey([string] $name)) {
         [Environment]::SetEnvironmentVariable([string] $name, $null, 'Process')
@@ -115,6 +100,94 @@ function Invoke-InstalledAppSmoke {
     foreach ($item in $savedEnvironment.GetEnumerator()) {
       [Environment]::SetEnvironmentVariable([string] $item.Key, [string] $item.Value, 'Process')
     }
+  }
+}
+
+function Invoke-InstalledAppSmoke {
+  param(
+    [Parameter(Mandatory)] [string] $FilePath,
+    [Parameter(Mandatory)] [string] $WorkingDirectory,
+    [Parameter(Mandatory)] [string] $SmokeHome,
+    [Parameter(Mandatory)] [string] $ResultPath,
+    [Parameter(Mandatory)] [string] $Version
+  )
+
+  Use-InstalledAppSmokeEnvironment -SmokeHome $SmokeHome -ResultPath $ResultPath -Version $Version -Action {
+    $process = Start-Process -FilePath $FilePath -WorkingDirectory $WorkingDirectory -PassThru
+    try {
+      Assert-Condition ($null -ne $process) 'Installed app failed to start.'
+      if (-not $process.WaitForExit(120000)) {
+        try {
+          $process.Kill($true)
+        } catch {
+          Write-Warning "Installed app process-tree kill failed: $($_.Exception.Message)"
+        }
+        [void] $process.WaitForExit(10000)
+        throw 'Installed app timed out after 120 seconds.'
+      }
+      $process.WaitForExit()
+      if ($process.ExitCode -ne 0) {
+        throw "Installed app exited $($process.ExitCode)."
+      }
+    } finally {
+      if ($null -ne $process) {
+        $process.Dispose()
+      }
+    }
+  }
+}
+
+function Invoke-UpdateModeSetupSmoke {
+  param(
+    [Parameter(Mandatory)] [string] $InstallerPath,
+    [Parameter(Mandatory)] [string] $WorkingDirectory,
+    [Parameter(Mandatory)] [string] $SmokeHome,
+    [Parameter(Mandatory)] [string] $ResultPath,
+    [Parameter(Mandatory)] [string] $Version,
+    [Parameter(Mandatory)] [string] $LogPath
+  )
+
+  # What the app's in-place updater does (anki_miner/services/app_updater.py):
+  # start Setup with /UPDATE=1 while the exiting app still holds its mutex.
+  # /SUPPRESSMSGBOXES makes a missing InitializeSetup wait fatal here: Setup's
+  # own AppMutex check would answer its OK/Cancel box with Cancel and abort.
+  # The 20 s hold outlasts Setup's startup even on a slow runner, and the log
+  # assertion below proves the wait ran instead of trusting the timing.
+  $mutexName = 'Local\AnkiMiner-15B09250-AC39-4792-A15A-B73BD8E218A1'
+  Remove-Item -LiteralPath $ResultPath -Force -ErrorAction SilentlyContinue
+  $holderCommand = "`$m = [System.Threading.Mutex]::new(`$true, '$mutexName'); Start-Sleep -Seconds 20; `$m.ReleaseMutex(); `$m.Dispose()"
+  $holder = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile', '-NonInteractive', '-Command', $holderCommand) -WindowStyle Hidden -PassThru
+  try {
+    $deadline = [DateTime]::UtcNow.AddSeconds(30)
+    $opened = $null
+    while (-not [System.Threading.Mutex]::TryOpenExisting($mutexName, [ref] $opened)) {
+      Assert-Condition ([DateTime]::UtcNow -lt $deadline) 'Mutex holder never created the app mutex.'
+      Start-Sleep -Milliseconds 100
+    }
+    $opened.Dispose()
+
+    Use-InstalledAppSmokeEnvironment -SmokeHome $SmokeHome -ResultPath $ResultPath -Version $Version -Action {
+      $arguments = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /UPDATE=1 /LOG="{0}"' -f $LogPath
+      [void] (Invoke-BoundedProcess -Label 'Setup leg 3 update mode' -FilePath $InstallerPath -Arguments $arguments -WorkingDirectory $WorkingDirectory -TimeoutSeconds 300)
+    }
+
+    $waited = Select-String -LiteralPath $LogPath -Pattern 'Update mode: waited (\d+) ms' | Select-Object -First 1
+    Assert-Condition ($null -ne $waited) 'Update-mode Setup log has no wait line.'
+    Assert-Condition ([int] $waited.Matches[0].Groups[1].Value -gt 0) 'Update-mode Setup did not wait for the app mutex.'
+
+    # Setup started the app with nowait; the installer smoke inside it writes
+    # the result file and exits.
+    $deadline = [DateTime]::UtcNow.AddSeconds(120)
+    while (-not (Test-Path -LiteralPath $ResultPath -PathType Leaf)) {
+      Assert-Condition ([DateTime]::UtcNow -lt $deadline) 'Update-mode Setup did not relaunch the app.'
+      Start-Sleep -Milliseconds 500
+    }
+    Get-Process -Name 'AnkiMiner' -ErrorAction SilentlyContinue | Wait-Process -Timeout 120
+  } finally {
+    if (-not $holder.HasExited) {
+      $holder.Kill()
+    }
+    $holder.Dispose()
   }
 }
 
@@ -734,6 +807,7 @@ function Invoke-WindowsInstallerSmokeLeg3 {
   $context = New-InstallerSmokeContext -RepoRoot $repoRootFull -SmokeHome $smokeHome -ResultFileName 'installer-upgrade-result.txt'
   $setupOldLog = Join-Path $env:RUNNER_TEMP 'setup-old.log'
   $setupUpgradeLog = Join-Path $env:RUNNER_TEMP 'setup-upgrade.log'
+  $setupUpdateModeLog = Join-Path $env:RUNNER_TEMP 'setup-update-mode.log'
   $setupDowngradeLog = Join-Path $env:RUNNER_TEMP 'setup-downgrade-probe.log'
   $uninstallUpgradeLog = Join-Path $env:RUNNER_TEMP 'uninstall-upgrade.log'
   $oldInstallerPath = $null
@@ -803,6 +877,9 @@ function Invoke-WindowsInstallerSmokeLeg3 {
       Assert-Condition ($configAfter.first_run_setup_done -eq $true) 'Upgrade launch did not seed first_run_setup_done.'
       Assert-Condition ($configAfter.first_run_shortcut_done -eq $true) 'Upgrade launch did not seed first_run_shortcut_done.'
       Assert-Condition ([string] $configAfter.anki_deck_name -eq 'Upgrade Smoke Deck') 'Upgrade launch did not preserve anki_deck_name.'
+      Invoke-UpdateModeSetupSmoke -InstallerPath $installer -WorkingDirectory $repoRootFull -SmokeHome $context.SmokeHome -ResultPath $context.ResultPath -Version $ExpectedVersion -LogPath $setupUpdateModeLog
+      Assert-InstallerResult -ResultPath $context.ResultPath -ExpectedVersion $ExpectedVersion
+      [void] (Assert-Installed -Context $context -ExpectedVersion $ExpectedVersion -AllAppKeys)
       $postLaunchHomeSnapshot = @(Get-SmokeHomeSnapshot -SmokeHome $context.SmokeHome)
 
       $preDowngradeInstallSnapshot = @(Get-TreeSnapshot -Root $context.InstallDir -Label 'install tree')

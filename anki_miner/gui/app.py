@@ -1011,14 +1011,21 @@ def _relaunch_if_requested(app: QApplication) -> None:
 
     Failure is silent-but-logged on purpose: the user asked to restart, the app
     is already closing, and there is no window left to report into.
+
+    For an in-place Windows update the program is the installer (gui/restart.py
+    request_restart).
     """
     if not restart.restart_requested():
         return
+    # Read the command BEFORE consuming the intent: clearing also drops the
+    # override, and the Windows update would then relaunch the old app
+    # instead of running its installer.
+    command = restart.relaunch_command()
     restart.clear_restart_request()
-    program = restart.resolve_relaunch_target()
-    if program is None:
+    if command is None:
         logger.warning("Restart was requested but the executable could not be resolved")
         return
+    program, arguments = command
     lock = getattr(app, "_instance_lock", None)
     if lock is not None:
         lock.unlock()
@@ -1033,7 +1040,7 @@ def _relaunch_if_requested(app: QApplication) -> None:
         # override never reaches this branch (the flag is only set when
         # _apply_ui_zoom itself wrote the var) and is inherited untouched.
         os.environ.pop("QT_SCALE_FACTOR", None)
-    if not QProcess.startDetached(str(program), []):
+    if not QProcess.startDetached(str(program), list(arguments)):
         logger.warning("Restart was requested but launching %s failed", program)
 
 

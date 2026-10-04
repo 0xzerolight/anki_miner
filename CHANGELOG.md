@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **Update in place on Windows and the AppImage.** When a new version is out, the banner's Update now downloads it, with progress in the bar at the bottom, and checks it against the release's checksum. Restart now installs it and reopens Anki Miner. macOS, the .deb and pip installs keep the download link.
+- **The AppImage carries update information.** AppImageUpdate, Gear Lever and other AppImage managers can update it and download only the parts that changed.
 - **A Language field.** Map it under Settings → Cards & Anki and each card stores its language tag (ja, zh-Hans, de, …), which note types can use to pick fonts and hyphenation.
 - **Anki Miner Note is recognised in every mining language.** Fill in automatically (Settings → Cards & Anki, and the setup wizard) maps all its fields, including the language's own ones such as Pinyin or Gender, writes the Language field and turns on bold target words, which its audio, sentence and click cards rely on. Card type markers and the pitch category format are now kept per mining language.
 

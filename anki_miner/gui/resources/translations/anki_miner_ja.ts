@@ -922,6 +922,24 @@ Continue anyway?</source>
         <translation>設定を開く</translation>
     </message>
 </context><context>
+    <name>AppUpdateController</name>
+    <message>
+        <source>Anki Miner update</source>
+        <translation>Anki Miner の更新</translation>
+    </message>
+    <message>
+        <source>Downloading Anki Miner v%1</source>
+        <translation>Anki Miner v%1 をダウンロード中</translation>
+    </message>
+    <message>
+        <source>Finish or cancel the running task, then restart to update.</source>
+        <translation>実行中のタスクを完了またはキャンセルしてから、再起動して更新してください。</translation>
+    </message>
+    <message>
+        <source>Close and reopen Anki Miner to finish updating.</source>
+        <translation>更新を完了するには Anki Miner を閉じて再度開いてください。</translation>
+    </message>
+</context><context>
     <name>AsrModelDownloadWorker</name>
     <message>
         <source>Downloading %1…</source>
@@ -2648,8 +2666,8 @@ No index files are deleted.</source>
         <translation>アプリの更新を確認</translation>
     </message>
     <message>
-        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings → General.</source>
-        <translation>ヘルプメニューから Anki Miner の新しいバージョンを確認するか、「設定 → 一般」で起動時の自動確認を切り替えます。</translation>
+        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings → General. The Windows installer and the AppImage can install the update themselves and restart.</source>
+        <translation>ヘルプメニューから Anki Miner の新しいバージョンを確認するか、「設定 → 一般」で起動時の自動確認を切り替えます。Windows インストーラー版と AppImage 版は、更新を自動でインストールして再起動できます。</translation>
     </message>
     <message>
         <source>Download videos or audio</source>
@@ -11881,8 +11899,32 @@ Your installed resources and your theme are kept.</source>
         <translation>閉じる</translation>
     </message>
     <message>
+        <source>Downloading Anki Miner v%1…</source>
+        <translation>Anki Miner v%1 をダウンロード中…</translation>
+    </message>
+    <message>
+        <source>Anki Miner v%1 is downloaded. Restart to finish updating.</source>
+        <translation>Anki Miner v%1 をダウンロードしました。再起動して更新を完了してください。</translation>
+    </message>
+    <message>
+        <source>Anki Miner v%1 could not be installed automatically.</source>
+        <translation>Anki Miner v%1 を自動でインストールできませんでした。</translation>
+    </message>
+    <message>
         <source>Anki Miner v%1 is available</source>
         <translation>Anki Miner v%1 が利用可能です</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>キャンセル</translation>
+    </message>
+    <message>
+        <source>Restart now</source>
+        <translation>今すぐ再起動</translation>
+    </message>
+    <message>
+        <source>Update now</source>
+        <translation>今すぐ更新</translation>
     </message>
     <message>
         <source>View release</source>

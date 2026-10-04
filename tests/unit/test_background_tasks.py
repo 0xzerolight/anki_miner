@@ -212,6 +212,7 @@ class TestShutdownJoinsOffThreadWorkers:
             "validation_worker",
             "update_worker",
             "ytdlp_update_worker",
+            "app_update_worker",
             "jmdict_migration_worker",
             "asr_model_download_worker",
             "alass_install_worker",
@@ -300,6 +301,16 @@ class TestShutdownJoinsOffThreadWorkers:
         finally:
             assert worker.wait(7000)
             rot._LIVE_OFF_THREAD_WORKERS.discard(worker)
+
+    def test_the_app_update_download_is_joined(self, shutdown_controller):
+        """A download Qt destroyed mid-transfer would abort the close."""
+        ctrl, tabs = shutdown_controller
+        worker = MagicMock(name="AppUpdateWorker")
+        ctrl.app_update_worker = worker
+
+        ctrl.shutdown(tabs)
+
+        assert any(call.args == (worker,) for call in ctrl._join_worker_for_close.call_args_list)
 
     def test_prewarm_uses_bounded_join(self, shutdown_controller):
         ctrl, tabs = shutdown_controller
@@ -1008,3 +1019,69 @@ class TestStartRestyleCards:
 
         assert controller.restyle_cards_worker is None
         worker.deleteLater.assert_called_once()
+
+
+class _FakeAppUpdateWorker(QObject):
+    """Fake app-update worker with real progress/result_ready/finished signals."""
+
+    finished = pyqtSignal()
+    progress = pyqtSignal(int, int)
+    result_ready = pyqtSignal(object)
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._running = False
+        self.deleteLater = MagicMock()  # type: ignore[method-assign]
+
+    def isRunning(self) -> bool:  # noqa: N802 (Qt naming)
+        return self._running
+
+    def start(self) -> None:
+        self._running = True
+
+    def emit_finished(self) -> None:
+        self._running = False
+        self.finished.emit()
+
+
+class TestStartAppUpdate:
+    """start_app_update: guard, wire the three callbacks, release on finish."""
+
+    def _patch(self, monkeypatch, worker) -> None:
+        monkeypatch.setattr(
+            "anki_miner.gui.workers.app_update_worker.AppUpdateWorker",
+            lambda info, parent=None: worker,
+        )
+
+    def _start(self, controller, sink: dict):
+        return controller.start_app_update(
+            object(),
+            on_progress=lambda done, total: sink.setdefault("progress", []).append((done, total)),
+            on_result=lambda result: sink.setdefault("results", []).append(result),
+            on_finished=lambda: sink.setdefault("finished", []).append(True),
+        )
+
+    def test_starts_and_forwards_every_signal(self, controller, qtbot, monkeypatch):
+        worker = _FakeAppUpdateWorker()
+        self._patch(monkeypatch, worker)
+        sink: dict = {}
+
+        assert self._start(controller, sink) is worker
+        assert controller.app_update_worker is worker
+        assert worker.isRunning()
+
+        worker.progress.emit(1, 2)
+        worker.result_ready.emit("staged")
+        worker.emit_finished()
+
+        assert sink == {"progress": [(1, 2)], "results": ["staged"], "finished": [True]}
+        assert controller.app_update_worker is None
+        worker.deleteLater.assert_called_once()
+
+    def test_refused_while_running(self, controller, qtbot, monkeypatch):
+        worker = _FakeAppUpdateWorker()
+        self._patch(monkeypatch, worker)
+
+        assert self._start(controller, {}) is worker
+        assert self._start(controller, {}) is None
+        assert controller.app_update_worker is worker

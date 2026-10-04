@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import platform
+import re
 import sys
 import urllib.parse
 import urllib.request
@@ -29,12 +30,19 @@ class UpdateInfo:
         asset_url: Direct download URL for the asset matching the user's install
             method, or ``None`` if no match (e.g. pip/source installs).
         release_notes: Raw markdown body of the release (may be empty string).
+        asset_sha256: Lowercase hex sha256 of that asset, from the API's
+            per-asset ``digest``; ``None`` when the API reports none. The
+            in-place updater (services/app_updater.py) refuses to run without it.
+        target: The :func:`_detect_target` value the check ran under, so the
+            updater installs the way this install was installed.
     """
 
     version: str
     release_page_url: str
     asset_url: str | None
     release_notes: str
+    asset_sha256: str | None = None
+    target: str = "pip"
 
 
 def _detect_target() -> str:
@@ -133,8 +141,25 @@ def _validate_github_url(url: str) -> bool:
     return parts.scheme == "https" and parts.netloc.lower() in _GITHUB_URL_ALLOWLIST
 
 
-def _pick_asset(assets: list[dict], target: str) -> str | None:
-    """Pick the download URL for the asset matching the given target.
+_SHA256_DIGEST = re.compile(r"sha256:([0-9a-f]{64})")
+
+
+def _asset_sha256(asset: dict) -> str | None:
+    """Return the asset's sha256 from the API's ``digest`` field, or ``None``.
+
+    GitHub reports ``"sha256:<hex>"`` for every release asset. Anything else
+    (absent, another algorithm, malformed) yields None, and the banner then
+    keeps the browser download.
+    """
+    digest = asset.get("digest")
+    if not isinstance(digest, str):
+        return None
+    match = _SHA256_DIGEST.fullmatch(digest.strip().lower())
+    return match.group(1) if match else None
+
+
+def _pick_asset(assets: list[dict], target: str) -> dict | None:
+    """Pick the asset entry matching the given target.
 
     Args:
         assets: GitHub API ``assets`` array — each entry is a dict with at
@@ -142,8 +167,8 @@ def _pick_asset(assets: list[dict], target: str) -> str | None:
         target: Target string from :func:`_detect_target`.
 
     Returns:
-        Direct download URL of the matched asset, or ``None`` if no asset
-        matches (e.g. ``target == "pip"``).
+        The matching entry, whose ``browser_download_url`` has passed the
+        allowlist, or ``None`` if no asset matches (e.g. ``target == "pip"``).
     """
     patterns = _TARGET_PATTERNS.get(target)
     if not patterns:
@@ -154,7 +179,7 @@ def _pick_asset(assets: list[dict], target: str) -> str | None:
             if name and fnmatch.fnmatch(name, pattern):
                 url = asset.get("browser_download_url")
                 if isinstance(url, str) and _validate_github_url(url):
-                    return url
+                    return asset
     return None
 
 
@@ -225,13 +250,15 @@ class UpdateChecker:
                 return None
 
             target = _detect_target()
-            asset_url = _pick_asset(assets if isinstance(assets, list) else [], target)
+            asset = _pick_asset(assets if isinstance(assets, list) else [], target)
 
             return UpdateInfo(
                 version=latest_version,
                 release_page_url=release_page_url,
-                asset_url=asset_url,
+                asset_url=asset["browser_download_url"] if asset is not None else None,
                 release_notes=release_notes,
+                asset_sha256=_asset_sha256(asset) if asset is not None else None,
+                target=target,
             )
 
         except Exception as exc:  # noqa: BLE001 - bucket B: an update check never blocks the app

@@ -924,6 +924,24 @@ Trotzdem fortfahren?</translation>
         <translation>Einstellungen öffnen</translation>
     </message>
 </context><context>
+    <name>AppUpdateController</name>
+    <message>
+        <source>Anki Miner update</source>
+        <translation>Anki-Miner-Update</translation>
+    </message>
+    <message>
+        <source>Downloading Anki Miner v%1</source>
+        <translation>Anki Miner v%1 wird heruntergeladen</translation>
+    </message>
+    <message>
+        <source>Finish or cancel the running task, then restart to update.</source>
+        <translation>Schließen Sie die laufende Aufgabe ab oder brechen Sie sie ab und starten Sie dann für das Update neu.</translation>
+    </message>
+    <message>
+        <source>Close and reopen Anki Miner to finish updating.</source>
+        <translation>Schließen und öffnen Sie Anki Miner erneut, um das Update abzuschließen.</translation>
+    </message>
+</context><context>
     <name>AsrModelDownloadWorker</name>
     <message>
         <source>Downloading %1…</source>
@@ -2651,8 +2669,8 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Auf App-Updates prüfen</translation>
     </message>
     <message>
-        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings → General.</source>
-        <translation>Über das Hilfe-Menü nach einer neuen Version von Anki Miner suchen oder die automatische Prüfung beim Start unter Einstellungen → Allgemein ein- oder ausschalten.</translation>
+        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings → General. The Windows installer and the AppImage can install the update themselves and restart.</source>
+        <translation>Über das Hilfe-Menü nach einer neuen Version von Anki Miner suchen oder die automatische Prüfung beim Start unter Einstellungen → Allgemein ein- oder ausschalten. Das Windows-Installationsprogramm und das AppImage können das Update selbst installieren und neu starten.</translation>
     </message>
     <message>
         <source>Download videos or audio</source>
@@ -11922,8 +11940,32 @@ Ihre installierten Ressourcen und Ihr Design bleiben erhalten.</translation>
         <translation>Schließen</translation>
     </message>
     <message>
+        <source>Downloading Anki Miner v%1…</source>
+        <translation>Anki Miner v%1 wird heruntergeladen…</translation>
+    </message>
+    <message>
+        <source>Anki Miner v%1 is downloaded. Restart to finish updating.</source>
+        <translation>Anki Miner v%1 wurde heruntergeladen. Starten Sie neu, um das Update abzuschließen.</translation>
+    </message>
+    <message>
+        <source>Anki Miner v%1 could not be installed automatically.</source>
+        <translation>Anki Miner v%1 konnte nicht automatisch installiert werden.</translation>
+    </message>
+    <message>
         <source>Anki Miner v%1 is available</source>
         <translation>Anki Miner v%1 ist verfügbar</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Abbrechen</translation>
+    </message>
+    <message>
+        <source>Restart now</source>
+        <translation>Jetzt neu starten</translation>
+    </message>
+    <message>
+        <source>Update now</source>
+        <translation>Jetzt aktualisieren</translation>
     </message>
     <message>
         <source>View release</source>

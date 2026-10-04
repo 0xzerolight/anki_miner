@@ -1195,6 +1195,7 @@ jobs:
             ${{ runner.temp }}/uninstall-cleanup.log
             ${{ runner.temp }}/setup-old.log
             ${{ runner.temp }}/setup-upgrade.log
+            ${{ runner.temp }}/setup-update-mode.log
             ${{ runner.temp }}/setup-downgrade-probe.log
             ${{ runner.temp }}/uninstall-upgrade.log
 
@@ -1216,8 +1217,20 @@ jobs:
       - name: Build AppImage (Linux)
         if: runner.os == 'Linux'
         run: |
+          set -euo pipefail
           chmod +x packaging/render_metainfo.sh packaging/appimage/build-appimage.sh
           packaging/appimage/build-appimage.sh ${{ steps.version.outputs.version }}
+          # Fail closed: an AppImage missing either half is one no updater can follow.
+          # readelf, not "--appimage-updateinformation": reading the ELF section
+          # needs no FUSE and does not execute the artifact.
+          APPIMAGE="dist/AnkiMiner-${{ steps.version.outputs.version }}-${{ matrix.asset_slug }}.AppImage"
+          test -s "${APPIMAGE}.zsync" || { echo "::error::${APPIMAGE}.zsync was not generated"; exit 1; }
+          EXPECTED="$(sed -n 's/^UPDATE_INFORMATION="\(.*\)"$/\1/p' packaging/appimage/build-appimage.sh)"
+          EMBEDDED="$(readelf --string-dump=.upd_info "$APPIMAGE" | sed -n 's/^ *\[ *0\] *//p')"
+          if [ -z "$EXPECTED" ] || [ "$EMBEDDED" != "$EXPECTED" ]; then
+            echo "::error::embedded update information '${EMBEDDED}' != '${EXPECTED}'"
+            exit 1
+          fi
 
       - name: Install nfpm (Linux)
         if: runner.os == 'Linux'
@@ -1290,6 +1303,7 @@ jobs:
           if-no-files-found: error
           path: |
             dist/AnkiMiner-${{ steps.version.outputs.version }}-${{ matrix.asset_slug }}.AppImage
+            dist/AnkiMiner-${{ steps.version.outputs.version }}-${{ matrix.asset_slug }}.AppImage.zsync
             dist/anki-miner_${{ steps.version.outputs.version }}_amd64.deb
 
       - name: Upload artifact (macOS)
@@ -1332,4 +1346,5 @@ jobs:
             artifacts/**/*.dmg
             artifacts/**/*-Setup.exe
             artifacts/**/*.AppImage
+            artifacts/**/*.AppImage.zsync
             artifacts/**/*.deb
