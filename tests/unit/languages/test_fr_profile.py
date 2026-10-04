@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import itertools
 import tomllib
 import unicodedata
@@ -41,7 +42,7 @@ from anki_miner.languages.registry import get_profile
 from anki_miner.languages.switching import switch_language
 from anki_miner.models.reading import ReadingUnit
 from anki_miner.services.reading.sentence_splitter import split_sentences
-from anki_miner.services.subtitle_parser import compile_subtitle_regex_filter
+from anki_miner.services.subtitle_parser import SubtitleParserService, compile_subtitle_regex_filter
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -101,8 +102,6 @@ def test_scoped_defaults_turn_on_the_french_sdh_filter_and_both_fields():
     ("cue", "kept"),
     [
         ("NARRATEUR : Il était une fois.", "Il était une fois."),  # French spacing before the colon
-        ("JEAN\u202f: Bonjour.", "Bonjour."),  # the narrow no-break space the stored line now keeps
-        ("M.\u00a0DUPONT\u00a0: Entrez.", "Entrez."),  # and the no-break space after a title
         ("JEAN: Viens manger.", "Viens manger."),  # the Latin shape still strips
         ("[porte qui claque] ♪ Bonjour ♪", "Bonjour"),
         ("- Bonjour. - Salut.", "Bonjour. Salut."),
@@ -122,6 +121,40 @@ def test_the_french_sdh_default_is_the_latin_one_with_a_french_speaker_rule_and_
         compile_subtitle_regex_filter(part, "")
     for order in itertools.permutations(parts):
         compile_subtitle_regex_filter("|".join(order), "")
+
+
+#: FR_SUBTITLE_REGEX as shipped through 3.6.0. A French user's config stores it verbatim on the first visit
+#: and nothing migrates it, so the parser has to keep this exact string working.
+SAVED_FR_SUBTITLE_REGEX = (
+    r"\[[^\]]*\]|\([^)]*\)|[♪♫♬]+|^[A-ZÀ-ÖØ-Þ][A-ZÀ-ÖØ-Þ0-9 .'-]*[A-ZÀ-ÖØ-Þ] ?:\s*|(?:^|(?<=[.!?…]\s))[-–—]\s+"
+)
+
+
+def test_the_default_is_still_the_string_french_users_saved():
+    """A changed default would leave every saved French filter reading as custom in Settings."""
+    assert FR_SUBTITLE_REGEX == SAVED_FR_SUBTITLE_REGEX
+
+
+@pytest.mark.parametrize(
+    ("cue", "kept"),
+    [
+        ("JEAN\u202f: Bonjour\u202f!", "Bonjour\u202f!"),
+        ("NARRATEUR\u00a0: Il était une fois.", "Il était une fois."),
+        ("M.\u00a0DUPONT\u00a0: Entrez.", "Entrez."),
+        ("Oui [rire]\u00a0!", "Oui\u00a0!"),  # the deletion's space and the NBSP: one no-break space, no double gap
+        ("Attention\u202f: le train part\u00a0!", "Attention\u202f: le train part\u00a0!"),  # mixed case is dialogue
+    ],
+)
+def test_a_saved_french_filter_strips_labels_typed_with_no_break_spaces(test_config, cue, kept):
+    """The parser matches the filter on the folded line and cuts the stored one, which keeps its no-break spaces."""
+    config = dataclasses.replace(
+        test_config,
+        use_subtitle_regex_filter=True,
+        subtitle_regex_filter=SAVED_FR_SUBTITLE_REGEX,
+        subtitle_regex_replacement="",
+    )
+    parser = SubtitleParserService(config, normalize=fr_normalize)
+    assert parser._clean_line_text(cue) == kept
 
 
 def test_the_gender_field_prints_the_article():
@@ -152,7 +185,7 @@ def test_books_split_after_real_sentence_ends_only():
 
 
 def test_normalize_composes_and_keeps_french_no_break_spaces():
-    """The stored line keeps NBSP/NNBSP so ``? ! : ; »`` never start a card line; only the tagger sees them folded."""
+    """Stored lines keep NBSP/NNBSP so ``? ! : ; »`` never start a card line; tagger and filter read them folded."""
     raw = unicodedata.normalize("NFD", "Attention\u202f: la crème est prête\u00a0!")
     assert fr_normalize(raw) == "Attention\u202f: la crème est prête\u00a0!"
     assert fr_normalize("aujourd’hui") == "aujourd’hui"  # apostrophes are a tagging-copy concern, not a stored one

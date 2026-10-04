@@ -980,11 +980,27 @@ class SubtitleParserService:
         text. Whitespace is renormalized because regex deletion can leave double
         spaces behind, with ``clean_subtitle_text``'s rule: only a non-Japanese
         line keeps its no-break spaces.
+
+        A non-Japanese line is matched with its no-break spaces folded, so a
+        pattern written with plain spaces (every saved French SDH filter:
+        ``JEAN :``) still matches a label typed with NBSP/NNBSP. The fold is one
+        character for one, so each match's span cuts the unfolded line and the
+        text between matches keeps its no-break spaces. ``finditer`` +
+        ``Match.expand`` is ``re.sub`` spelled out: same empty-match rule, same
+        replacement template (backreferences expand from the folded match).
         """
         if self._filter_pattern is None:
             return text
-        filtered = self._filter_pattern.sub(self.config.subtitle_regex_replacement, text)
-        return collapse_whitespace(filtered, keep_no_break=self._normalize is not None)
+        replacement = self.config.subtitle_regex_replacement
+        if self._normalize is None:
+            return " ".join(self._filter_pattern.sub(replacement, text).split())
+        parts: list[str] = []
+        last = 0
+        for match in self._filter_pattern.finditer(fold_no_break_spaces(text)):
+            parts += (text[last : match.start()], match.expand(replacement))
+            last = match.end()
+        parts.append(text[last:])
+        return collapse_whitespace("".join(parts), keep_no_break=True)
 
     def _tokenizer_text(self, text: str) -> str:
         """The line as the tagger reads it, and as every token offset is computed against.

@@ -10,6 +10,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+import pytest
+
 from anki_miner.gui.utils.service_factory import create_profile_parser
 from anki_miner.gui.workers import reading_queue_worker
 from anki_miner.languages.ja.text import ja_normalize
@@ -121,6 +123,42 @@ def test_no_break_spaces_fold_for_the_tagger_and_its_offsets_only(make_eu_parser
     assert all(word.sentence == line for word in words)
     assert index is not None and index[0].line_text == line
     assert sum(counts.values()) == 3
+
+
+def _filtering_parser(test_config, pattern: str, replacement: str = "", **kwargs) -> SubtitleParserService:
+    config = dataclasses.replace(
+        test_config,
+        use_subtitle_regex_filter=True,
+        subtitle_regex_filter=pattern,
+        subtitle_regex_replacement=replacement,
+    )
+    return SubtitleParserService(config, **kwargs)
+
+
+@pytest.mark.parametrize(
+    ("pattern", "replacement"),
+    [
+        (r"\[[^\]]*\]", ""),
+        (r"(\w+):", r"\1 -"),  # a backreference
+        (r"(?P<w>a)", r"\g<w>\g<w>"),  # a named one
+        (r"(a)|(b)", r"[\2]"),  # an unmatched group expands to ""
+        (r"x*", "-"),  # empty matches, placed exactly where re.sub places them
+    ],
+)
+def test_the_non_japanese_filter_splice_is_re_sub_on_a_plain_line(test_config, pattern, replacement):
+    """finditer + Match.expand over the folded line is re.sub: no no-break space, same output as before."""
+    line = "JEAN: a [b] xax  b."
+    expected = " ".join(re.sub(pattern, replacement, line).split())
+    assert (
+        _filtering_parser(test_config, pattern, replacement, normalize=eu_normalize)._apply_text_filter(line)
+        == expected
+    )
+
+
+def test_the_japanese_filter_is_unchanged(test_config):
+    """normalize=None keeps re.sub + the full whitespace flatten, no-break spaces included."""
+    line = "猫\u00a0[笑]\u202f犬 \u00a0です"
+    assert _filtering_parser(test_config, r"\[[^\]]*\]")._apply_text_filter(line) == "猫 犬 です"
 
 
 def test_the_subtitle_loader_takes_the_normalizer(tmp_path: Path):

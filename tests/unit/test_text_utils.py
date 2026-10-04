@@ -158,6 +158,11 @@ class TestCleanSubtitleText:
         cue = "Tu  viens\u202f?\\N Oui\u00a0\u00a0!"
         assert clean_subtitle_text(cue, normalize=_identity) == "Tu viens\u202f? Oui\u00a0\u00a0!"
 
+    def test_a_run_mixing_spaces_with_a_no_break_space_keeps_only_the_no_break_space(self):
+        """``Oui [rire]`` + NBSP + ``!`` minus ``[rire]`` must not show a double gap; pure runs keep their rule."""
+        cue = "Oui \u00a0!  Tu viens\t\u202f ?"
+        assert clean_subtitle_text(cue, normalize=_identity) == "Oui\u00a0! Tu viens\u202f?"
+
     def test_no_break_spaces_at_the_edges_still_strip(self):
         """An ``&nbsp;`` placeholder cue is empty, as it was before no-break spaces were kept."""
         assert clean_subtitle_text("&nbsp;", normalize=_identity) == ""

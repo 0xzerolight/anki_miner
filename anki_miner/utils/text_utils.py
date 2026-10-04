@@ -110,9 +110,16 @@ def clean_subtitle_text(
     return collapse_whitespace(text, keep_no_break=normalize is not None)
 
 
-#: Every whitespace run except U+00A0 and U+202F, the no-break spaces.
-_COLLAPSIBLE_SPACE_RE = re.compile(r"[^\S\u00a0\u202f]+")
-_NO_BREAK_SPACE_FOLD = str.maketrans({"\u00a0": " ", "\u202f": " "})
+#: U+00A0 and U+202F, the no-break spaces a non-Japanese stored line keeps.
+_NO_BREAK_SPACES = frozenset("\u00a0\u202f")
+_WHITESPACE_RUN_RE = re.compile(r"\s+")
+_NO_BREAK_SPACE_FOLD = str.maketrans(dict.fromkeys(_NO_BREAK_SPACES, " "))
+
+
+def _collapse_run_keeping_no_break(match: re.Match[str]) -> str:
+    """A run holding a no-break space keeps only those; any other run becomes one space."""
+    kept = "".join(char for char in match.group() if char in _NO_BREAK_SPACES)
+    return kept or " "
 
 
 def collapse_whitespace(text: str, *, keep_no_break: bool) -> str:
@@ -121,14 +128,16 @@ def collapse_whitespace(text: str, *, keep_no_break: bool) -> str:
     ``keep_no_break=False`` is the Japanese collapse, byte-identical to
     ``" ".join(text.split())``. Every other language keeps U+00A0 and U+202F
     inside the line: French puts one before ``: ; ? !`` and ``»`` so the card
-    never starts a line with them. The parser tokenizes the line through
-    :func:`fold_no_break_spaces`; both characters fold one for one, so token
-    offsets index the stored line unchanged. Edge whitespace, no-break
-    included, still strips: an ``&nbsp;`` placeholder cue stays empty.
+    never starts a line with them. A run mixing one with ordinary whitespace
+    (``Oui [rire]`` + NBSP + ``!`` once the filter drops ``[rire]``) keeps only
+    the no-break space, never a visible double space. The parser tokenizes the
+    line through :func:`fold_no_break_spaces`; both characters fold one for
+    one, so token offsets index the stored line unchanged. Edge whitespace,
+    no-break included, still strips: an ``&nbsp;`` placeholder cue stays empty.
     """
     if not keep_no_break:
         return " ".join(text.split())
-    return _COLLAPSIBLE_SPACE_RE.sub(" ", text).strip()
+    return _WHITESPACE_RUN_RE.sub(_collapse_run_keeping_no_break, text).strip()
 
 
 def fold_no_break_spaces(text: str) -> str:
