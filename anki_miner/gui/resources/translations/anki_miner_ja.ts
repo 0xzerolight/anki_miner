@@ -604,8 +604,8 @@
         <translation>自動で入力</translation>
     </message>
     <message>
-        <source>Read this note type's fields from Anki and fill every mapping below. Lapis, Kiku and Senren are recognised and filled completely.</source>
-        <translation>このノートタイプのフィールドを Anki から読み込み、下のすべての対応付けを入力します。Lapis、Kiku、Senren は認識され、すべて入力されます。</translation>
+        <source>Read this note type's fields from Anki and fill every mapping below. Lapis, Kiku, Senren and Anki Miner Note are recognised and filled completely.</source>
+        <translation>このノートタイプのフィールドを Anki から読み込み、下のすべての対応付けを入力します。Lapis、Kiku、Senren、Anki Miner Note は認識され、すべて入力されます。</translation>
     </message>
     <message>
         <source>Card Field Mappings</source>
@@ -774,6 +774,14 @@
     <message>
         <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Sentences). Blank = skip.</source>
         <translation>例文の翻訳字幕の行を格納します（動画 -&gt; 単一、「文」で翻訳字幕を有効にしている場合）。空欄 = スキップ。</translation>
+    </message>
+    <message>
+        <source>Language Field</source>
+        <translation>言語フィールド</translation>
+    </message>
+    <message>
+        <source>Stores the card's language tag (ja, zh-Hans, de, …) for note types that set fonts or hyphenation by language. Blank = skip.</source>
+        <translation>カードの言語コード（ja、zh-Hans、de など）を格納します。言語ごとにフォントやハイフネーションを設定するノートタイプ向けです。空欄 = スキップ。</translation>
     </message>
     <message>
         <source>Card Type</source>
@@ -2584,8 +2592,8 @@ No index files are deleted.</source>
         <translation>フィールドの対応付けを自動で入力</translation>
     </message>
     <message>
-        <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku and Senren are recognised and filled completely.</source>
-        <translation>「自動で入力」はノートタイプのフィールドを読み込み、すべての対応付けを入力します。Lapis、Kiku、Senren は認識され、すべて入力されます。</translation>
+        <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku, Senren and Anki Miner Note are recognised and filled completely.</source>
+        <translation>「自動で入力」はノートタイプのフィールドを読み込み、すべての対応付けを入力します。Lapis、Kiku、Senren、Anki Miner Note は認識され、すべて入力されます。</translation>
     </message>
     <message>
         <source>Bold the mined word in the sentence</source>
@@ -7424,12 +7432,8 @@ Continue?</source>
         <translation>フィールドが見つかりません。Anki が起動しているか、ノートタイプ名が Anki と完全に一致しているか確認してください。</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>フィールドを対応付ければ、どのノートタイプでも使えます。ノートタイプを 1 つ選んでください: Anki Miner は単語を最初のフィールドに入れ、Word、Sentence、Reading、Definition、Picture、音声など、名前で認識できるフィールドを入力します。各フィールドに何を入れるかは、セットアップ後に「設定 → カードと Anki」で変更できます。&lt;a href="%1"&gt;Anki Miner が入力できるフィールドは？&lt;/a&gt;</translation>
-    </message>
-    <message>
-        <source>Anki Miner fills a note type called Lapis. Your Anki doesn't have it yet. &lt;a href="%1"&gt;Get Lapis&lt;/a&gt; (free), then in Anki choose File → Import and pick the file. This page updates when you come back.</source>
-        <translation>Anki Miner は Lapis というノートタイプに入力します。お使いの Anki にはまだありません。&lt;a href="%1"&gt;Lapis を入手&lt;/a&gt;（無料）し、Anki で［ファイル］→［読み込む］を選んでそのファイルを選択してください。戻ってくるとこのページは更新されます。</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation>フィールドを対応付ければ、どのノートタイプでも使えます。ノートタイプを 1 つ選んでください: Anki Miner は単語を最初のフィールドに入れ、Word、Sentence、Reading、Definition、Picture、音声など、名前で認識できるフィールドを入力します。各フィールドに何を入れるかは、セットアップ後に「設定 → カードと Anki」で変更できます。マイニング用のノートタイプがまだない場合は、&lt;a href="%2"&gt;Anki Miner Note を入手&lt;/a&gt;（無料、すべての言語に対応）し、Anki で［ファイル］→［読み込む］を選んでそのファイルを選択してください。戻ってくるとこのページは更新されます。&lt;a href="%1"&gt;Anki Miner が入力できるフィールドは？&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>

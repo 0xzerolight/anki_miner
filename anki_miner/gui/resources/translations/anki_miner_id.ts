@@ -604,8 +604,8 @@
         <translation>Isi otomatis</translation>
     </message>
     <message>
-        <source>Read this note type's fields from Anki and fill every mapping below. Lapis, Kiku and Senren are recognised and filled completely.</source>
-        <translation>Baca bidang tipe catatan ini dari Anki dan isi setiap pemetaan di bawah. Lapis, Kiku, dan Senren dikenali dan diisi sepenuhnya.</translation>
+        <source>Read this note type's fields from Anki and fill every mapping below. Lapis, Kiku, Senren and Anki Miner Note are recognised and filled completely.</source>
+        <translation>Baca bidang tipe catatan ini dari Anki dan isi setiap pemetaan di bawah. Lapis, Kiku, Senren, dan Anki Miner Note dikenali dan diisi sepenuhnya.</translation>
     </message>
     <message>
         <source>Card Field Mappings</source>
@@ -774,6 +774,14 @@
     <message>
         <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Sentences). Blank = skip.</source>
         <translation>Menyimpan baris subtitel bahasa sekunder untuk kalimat (Video -&gt; Tunggal, dengan subtitel sekunder diaktifkan di Kalimat). Kosong = lewati.</translation>
+    </message>
+    <message>
+        <source>Language Field</source>
+        <translation>Bidang Bahasa</translation>
+    </message>
+    <message>
+        <source>Stores the card's language tag (ja, zh-Hans, de, …) for note types that set fonts or hyphenation by language. Blank = skip.</source>
+        <translation>Menyimpan kode bahasa kartu (ja, zh-Hans, de, …) untuk tipe catatan yang mengatur font atau pemenggalan kata berdasarkan bahasa. Kosong = lewati.</translation>
     </message>
     <message>
         <source>Card Type</source>
@@ -2584,8 +2592,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Isi pemetaan bidang secara otomatis</translation>
     </message>
     <message>
-        <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku and Senren are recognised and filled completely.</source>
-        <translation>Isi otomatis membaca bidang tipe catatan Anda dan mengisi setiap pemetaan. Lapis, Kiku, dan Senren dikenali dan diisi sepenuhnya.</translation>
+        <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku, Senren and Anki Miner Note are recognised and filled completely.</source>
+        <translation>Isi otomatis membaca bidang tipe catatan Anda dan mengisi setiap pemetaan. Lapis, Kiku, Senren, dan Anki Miner Note dikenali dan diisi sepenuhnya.</translation>
     </message>
     <message>
         <source>Bold the mined word in the sentence</source>
@@ -7424,12 +7432,8 @@ Lanjutkan?</translation>
         <translation>Tidak ada bidang ditemukan. Pastikan Anki berjalan dan nama tipe catatan dieja persis seperti di Anki.</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>Tipe catatan apa pun bisa dipakai setelah bidangnya dipetakan. Pilih salah satu tipe catatan Anda: Anki Miner menaruh kata di bidang pertamanya dan mengisi bidang yang dikenalinya dari nama, seperti Word, Sentence, Reading, Definition, Picture, dan audio. Setelah penyiapan, Anda dapat mengubah isi tiap bidang di Pengaturan → Kartu &amp; Anki. &lt;a href="%1"&gt;Bidang apa saja yang dapat diisi Anki Miner?&lt;/a&gt;</translation>
-    </message>
-    <message>
-        <source>Anki Miner fills a note type called Lapis. Your Anki doesn't have it yet. &lt;a href="%1"&gt;Get Lapis&lt;/a&gt; (free), then in Anki choose File → Import and pick the file. This page updates when you come back.</source>
-        <translation>Anki Miner mengisi tipe catatan bernama Lapis. Anki Anda belum memilikinya. &lt;a href="%1"&gt;Dapatkan Lapis&lt;/a&gt; (gratis), lalu di Anki pilih Berkas → Impor (File → Import) dan pilih berkasnya. Halaman ini diperbarui saat Anda kembali.</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation>Tipe catatan apa pun bisa dipakai setelah bidangnya dipetakan. Pilih salah satu tipe catatan Anda: Anki Miner menaruh kata di bidang pertamanya dan mengisi bidang yang dikenalinya dari nama, seperti Word, Sentence, Reading, Definition, Picture, dan audio. Setelah penyiapan, Anda dapat mengubah isi tiap bidang di Pengaturan → Kartu &amp; Anki. Belum punya tipe catatan untuk mining? &lt;a href="%2"&gt;Dapatkan Anki Miner Note&lt;/a&gt; (gratis, berfungsi untuk semua bahasa), lalu di Anki pilih Berkas → Impor (File → Import) dan pilih berkasnya. Halaman ini diperbarui saat Anda kembali. &lt;a href="%1"&gt;Bidang apa saja yang dapat diisi Anki Miner?&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>

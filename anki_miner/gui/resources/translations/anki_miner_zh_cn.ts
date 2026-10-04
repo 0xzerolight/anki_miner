@@ -604,8 +604,8 @@
         <translation>自动填写</translation>
     </message>
     <message>
-        <source>Read this note type's fields from Anki and fill every mapping below. Lapis, Kiku and Senren are recognised and filled completely.</source>
-        <translation>从 Anki 读取此笔记类型的字段，并填写下方的全部映射。可识别 Lapis、Kiku 和 Senren 并完整填写。</translation>
+        <source>Read this note type's fields from Anki and fill every mapping below. Lapis, Kiku, Senren and Anki Miner Note are recognised and filled completely.</source>
+        <translation>从 Anki 读取此笔记类型的字段，并填写下方的全部映射。可识别 Lapis、Kiku、Senren 和 Anki Miner Note 并完整填写。</translation>
     </message>
     <message>
         <source>Card Field Mappings</source>
@@ -774,6 +774,14 @@
     <message>
         <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Sentences). Blank = skip.</source>
         <translation>存储该句子的第二语言字幕行（视频 -&gt; 单个，且需在“句子”中启用第二语言字幕）。留空 = 跳过。</translation>
+    </message>
+    <message>
+        <source>Language Field</source>
+        <translation>语言字段</translation>
+    </message>
+    <message>
+        <source>Stores the card's language tag (ja, zh-Hans, de, …) for note types that set fonts or hyphenation by language. Blank = skip.</source>
+        <translation>存储卡片的语言代码（ja、zh-Hans、de 等），供按语言设置字体或断字的笔记类型使用。留空 = 跳过。</translation>
     </message>
     <message>
         <source>Card Type</source>
@@ -2584,8 +2592,8 @@ No index files are deleted.</source>
         <translation>自动填写字段映射</translation>
     </message>
     <message>
-        <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku and Senren are recognised and filled completely.</source>
-        <translation>“自动填写”会读取笔记类型的字段并填写全部映射。可识别 Lapis、Kiku 和 Senren 并完整填写。</translation>
+        <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku, Senren and Anki Miner Note are recognised and filled completely.</source>
+        <translation>“自动填写”会读取笔记类型的字段并填写全部映射。可识别 Lapis、Kiku、Senren 和 Anki Miner Note 并完整填写。</translation>
     </message>
     <message>
         <source>Bold the mined word in the sentence</source>
@@ -7424,12 +7432,8 @@ Continue?</source>
         <translation>未找到字段。请确保 Anki 正在运行，且笔记类型名称与 Anki 中的拼写完全一致。</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>只要映射好字段，任何笔记类型都可以使用。请选择你的一个笔记类型：Anki Miner 会把单词放入第一个字段，并按名称填写它能识别的字段，例如 Word、Sentence、Reading、Definition、Picture 和音频。设置完成后，可在“设置 → 卡片和 Anki”中更改各字段填写的内容。&lt;a href="%1"&gt;Anki Miner 能填写哪些字段？&lt;/a&gt;</translation>
-    </message>
-    <message>
-        <source>Anki Miner fills a note type called Lapis. Your Anki doesn't have it yet. &lt;a href="%1"&gt;Get Lapis&lt;/a&gt; (free), then in Anki choose File → Import and pick the file. This page updates when you come back.</source>
-        <translation>Anki Miner 会填写一个名为 Lapis 的笔记类型。你的 Anki 中还没有它。&lt;a href="%1"&gt;获取 Lapis&lt;/a&gt;（免费），然后在 Anki 中选择“文件 → 导入”并选中该文件。回到此处时，本页面会自动更新。</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation>只要映射好字段，任何笔记类型都可以使用。请选择你的一个笔记类型：Anki Miner 会把单词放入第一个字段，并按名称填写它能识别的字段，例如 Word、Sentence、Reading、Definition、Picture 和音频。设置完成后，可在“设置 → 卡片和 Anki”中更改各字段填写的内容。还没有用于挖词的笔记类型？&lt;a href="%2"&gt;获取 Anki Miner Note&lt;/a&gt;（免费，适用于所有语言），然后在 Anki 中选择“文件 → 导入”并选中该文件。回到此处时，本页面会自动更新。&lt;a href="%1"&gt;Anki Miner 能填写哪些字段？&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>

@@ -606,8 +606,8 @@
         <translation>Preencher automaticamente</translation>
     </message>
     <message>
-        <source>Read this note type's fields from Anki and fill every mapping below. Lapis, Kiku and Senren are recognised and filled completely.</source>
-        <translation>Lê os campos deste tipo de nota no Anki e preenche todos os mapeamentos abaixo. Lapis, Kiku e Senren são reconhecidos e preenchidos por completo.</translation>
+        <source>Read this note type's fields from Anki and fill every mapping below. Lapis, Kiku, Senren and Anki Miner Note are recognised and filled completely.</source>
+        <translation>Lê os campos deste tipo de nota no Anki e preenche todos os mapeamentos abaixo. Lapis, Kiku, Senren e Anki Miner Note são reconhecidos e preenchidos por completo.</translation>
     </message>
     <message>
         <source>Card Field Mappings</source>
@@ -776,6 +776,14 @@
     <message>
         <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Sentences). Blank = skip.</source>
         <translation>Armazena a linha de legenda em idioma secundário da frase (Vídeo -&gt; Único, com legendas secundárias ativadas em Frases). Em branco = ignorar.</translation>
+    </message>
+    <message>
+        <source>Language Field</source>
+        <translation>Campo de Idioma</translation>
+    </message>
+    <message>
+        <source>Stores the card's language tag (ja, zh-Hans, de, …) for note types that set fonts or hyphenation by language. Blank = skip.</source>
+        <translation>Armazena o código de idioma do cartão (ja, zh-Hans, de, …) para tipos de nota que definem a fonte ou a hifenização por idioma. Em branco = ignorar.</translation>
     </message>
     <message>
         <source>Card Type</source>
@@ -2587,8 +2595,8 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Preencher mapeamentos de campos automaticamente</translation>
     </message>
     <message>
-        <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku and Senren are recognised and filled completely.</source>
-        <translation>Preencher automaticamente lê os campos do seu tipo de nota e preenche todos os mapeamentos. Lapis, Kiku e Senren são reconhecidos e preenchidos por completo.</translation>
+        <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku, Senren and Anki Miner Note are recognised and filled completely.</source>
+        <translation>Preencher automaticamente lê os campos do seu tipo de nota e preenche todos os mapeamentos. Lapis, Kiku, Senren e Anki Miner Note são reconhecidos e preenchidos por completo.</translation>
     </message>
     <message>
         <source>Bold the mined word in the sentence</source>
@@ -7461,12 +7469,8 @@ Continuar?</translation>
         <translation>Nenhum campo encontrado. Verifique se o Anki está em execução e se o nome do tipo de nota está escrito exatamente como no Anki.</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>Qualquer tipo de nota funciona depois que os campos dele são mapeados. Escolha um dos seus tipos de nota: o Anki Miner coloca a palavra no primeiro campo e preenche os campos que reconhece pelo nome, como Word, Sentence, Reading, Definition, Picture e áudio. Depois da configuração, você pode mudar o que vai em cada campo em Configurações → Cartões e Anki. &lt;a href="%1"&gt;Quais campos o Anki Miner consegue preencher?&lt;/a&gt;</translation>
-    </message>
-    <message>
-        <source>Anki Miner fills a note type called Lapis. Your Anki doesn't have it yet. &lt;a href="%1"&gt;Get Lapis&lt;/a&gt; (free), then in Anki choose File → Import and pick the file. This page updates when you come back.</source>
-        <translation>O Anki Miner preenche um tipo de nota chamado Lapis. Seu Anki ainda não o tem. &lt;a href="%1"&gt;Obtenha o Lapis&lt;/a&gt; (gratuito) e, no Anki, escolha Arquivo → Importar (File → Import) e selecione o arquivo. Esta página se atualiza quando você voltar.</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation>Qualquer tipo de nota funciona depois que os campos dele são mapeados. Escolha um dos seus tipos de nota: o Anki Miner coloca a palavra no primeiro campo e preenche os campos que reconhece pelo nome, como Word, Sentence, Reading, Definition, Picture e áudio. Depois da configuração, você pode mudar o que vai em cada campo em Configurações → Cartões e Anki. Ainda não tem um para mineração? &lt;a href="%2"&gt;Obtenha o Anki Miner Note&lt;/a&gt; (gratuito, funciona para todos os idiomas) e, no Anki, escolha Arquivo → Importar (File → Import) e selecione o arquivo. Esta página se atualiza quando você voltar. &lt;a href="%1"&gt;Quais campos o Anki Miner consegue preencher?&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>

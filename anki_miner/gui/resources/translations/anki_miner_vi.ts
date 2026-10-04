@@ -604,8 +604,8 @@
         <translation>Tự động điền</translation>
     </message>
     <message>
-        <source>Read this note type's fields from Anki and fill every mapping below. Lapis, Kiku and Senren are recognised and filled completely.</source>
-        <translation>Đọc các trường của loại ghi chú này từ Anki và điền mọi ánh xạ bên dưới. Lapis, Kiku và Senren được nhận ra và điền đầy đủ.</translation>
+        <source>Read this note type's fields from Anki and fill every mapping below. Lapis, Kiku, Senren and Anki Miner Note are recognised and filled completely.</source>
+        <translation>Đọc các trường của loại ghi chú này từ Anki và điền mọi ánh xạ bên dưới. Lapis, Kiku, Senren và Anki Miner Note được nhận ra và điền đầy đủ.</translation>
     </message>
     <message>
         <source>Card Field Mappings</source>
@@ -774,6 +774,14 @@
     <message>
         <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Sentences). Blank = skip.</source>
         <translation>Lưu dòng phụ đề ngôn ngữ thứ hai của câu (Video -&gt; Đơn lẻ, khi đã bật phụ đề ngôn ngữ thứ hai trong mục Câu). Để trống = bỏ qua.</translation>
+    </message>
+    <message>
+        <source>Language Field</source>
+        <translation>Trường Ngôn ngữ</translation>
+    </message>
+    <message>
+        <source>Stores the card's language tag (ja, zh-Hans, de, …) for note types that set fonts or hyphenation by language. Blank = skip.</source>
+        <translation>Lưu mã ngôn ngữ của thẻ (ja, zh-Hans, de, …) cho các loại ghi chú đặt phông chữ hoặc cách ngắt từ theo ngôn ngữ. Để trống = bỏ qua.</translation>
     </message>
     <message>
         <source>Card Type</source>
@@ -2584,8 +2592,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Tự động điền ánh xạ trường</translation>
     </message>
     <message>
-        <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku and Senren are recognised and filled completely.</source>
-        <translation>Tự động điền đọc các trường của loại ghi chú và điền mọi ánh xạ. Lapis, Kiku và Senren được nhận ra và điền đầy đủ.</translation>
+        <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku, Senren and Anki Miner Note are recognised and filled completely.</source>
+        <translation>Tự động điền đọc các trường của loại ghi chú và điền mọi ánh xạ. Lapis, Kiku, Senren và Anki Miner Note được nhận ra và điền đầy đủ.</translation>
     </message>
     <message>
         <source>Bold the mined word in the sentence</source>
@@ -7424,12 +7432,8 @@ Tiếp tục?</translation>
         <translation>Không tìm thấy trường nào. Đảm bảo Anki đang chạy và tên loại ghi chú được viết đúng chính xác như trong Anki.</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>Loại ghi chú nào cũng dùng được khi đã ánh xạ các trường. Hãy chọn một loại ghi chú của bạn: Anki Miner đặt từ vào trường đầu tiên và điền các trường nó nhận ra theo tên, như Word, Sentence, Reading, Definition, Picture và âm thanh. Sau khi cài đặt, bạn có thể đổi nội dung của từng trường trong Cài đặt → Thẻ &amp; Anki. &lt;a href="%1"&gt;Anki Miner điền được những trường nào?&lt;/a&gt;</translation>
-    </message>
-    <message>
-        <source>Anki Miner fills a note type called Lapis. Your Anki doesn't have it yet. &lt;a href="%1"&gt;Get Lapis&lt;/a&gt; (free), then in Anki choose File → Import and pick the file. This page updates when you come back.</source>
-        <translation>Anki Miner điền một loại ghi chú tên Lapis. Anki của bạn chưa có loại này. &lt;a href="%1"&gt;Tải Lapis&lt;/a&gt; (miễn phí), rồi trong Anki chọn Tệp → Nhập (File → Import) và chọn tệp đó. Trang này sẽ cập nhật khi bạn quay lại.</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation>Loại ghi chú nào cũng dùng được khi đã ánh xạ các trường. Hãy chọn một loại ghi chú của bạn: Anki Miner đặt từ vào trường đầu tiên và điền các trường nó nhận ra theo tên, như Word, Sentence, Reading, Definition, Picture và âm thanh. Sau khi cài đặt, bạn có thể đổi nội dung của từng trường trong Cài đặt → Thẻ &amp; Anki. Chưa có loại ghi chú để khai thác? &lt;a href="%2"&gt;Tải Anki Miner Note&lt;/a&gt; (miễn phí, dùng được cho mọi ngôn ngữ), rồi trong Anki chọn Tệp → Nhập (File → Import) và chọn tệp đó. Trang này sẽ cập nhật khi bạn quay lại. &lt;a href="%1"&gt;Anki Miner điền được những trường nào?&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>
