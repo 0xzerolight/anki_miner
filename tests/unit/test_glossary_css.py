@@ -8,9 +8,83 @@ and carry the structured-content hooks our renderer emits.
 """
 
 import re
+from pathlib import Path
 
 from anki_miner.services.dictionary.card_style_block import base_css_variant
 from anki_miner.services.dictionary.card_style_presets import load_glossary_css
+
+_NOTE_TYPES = Path(__file__).resolve().parents[1] / "fixtures" / "note_types"
+
+_SPEC_TOKEN_RE = re.compile(
+    r"""(?P<pe>::[-\w]+)
+      | (?P<pc>:[-\w]+)(?P<args>\()?
+      | (?P<id>\#(?:\\.|[-\w])+)
+      | (?P<cls>\.(?:\\.|[-\w])+)
+      | (?P<attr>\[(?:"[^"]*"|'[^']*'|[^\]])*\])
+      | (?P<type>[a-zA-Z][-\w]*)
+      | [\s>+~*&]+""",
+    re.VERBOSE,
+)
+
+
+def _split_top_level(text: str) -> list[str]:
+    """Split a selector list on commas outside parentheses."""
+    parts, depth, start = [], 0, 0
+    for i, ch in enumerate(text):
+        depth += ch == "("
+        depth -= ch == ")"
+        if ch == "," and depth == 0:
+            parts.append(text[start:i])
+            start = i + 1
+    return [*parts, text[start:]]
+
+
+def _specificity(selector: str) -> tuple[int, int, int]:
+    """(ids, classes+attributes+pseudo-classes, types+pseudo-elements) per Selectors 4.
+
+    ``:is()``/``:not()``/``:has()`` count their most specific argument, ``:where()``
+    counts nothing, and the legacy one-colon ``:before``/``:after`` count as
+    pseudo-elements. Enough for the selectors these tests compare; not a full parser.
+    """
+    a = b = c = 0
+    pos = 0
+    while pos < len(selector):
+        match = _SPEC_TOKEN_RE.match(selector, pos)
+        assert match, f"unparsed selector text at {selector[pos:]!r}"
+        pos = match.end()
+        if match["pe"] or match["pc"] in (":before", ":after"):
+            c += 1
+        elif match["pc"]:
+            inner = ""
+            if match["args"]:
+                depth, end = 1, pos
+                while depth:
+                    depth += {"(": 1, ")": -1}.get(selector[end], 0)
+                    end += 1
+                inner, pos = selector[pos : end - 1], end
+            if match["pc"] in (":is", ":not", ":has"):
+                da, db, dc = max(_specificity(arg.strip()) for arg in _split_top_level(inner))
+                a, b, c = a + da, b + db, c + dc
+            elif match["pc"] != ":where":
+                b += 1
+        elif match["id"]:
+            a += 1
+        elif match["cls"] or match["attr"]:
+            b += 1
+        elif match["type"]:
+            c += 1
+    return a, b, c
+
+
+def _lapis_separator_selector() -> str:
+    """Lapis's nested `" | "` separator rule, flattened the way CSS nesting resolves
+    it: `&` is `:is(<parent selector list>)`, which takes the list's MAX specificity."""
+    css = (_NOTE_TYPES / "lapis.css").read_text(encoding="utf-8")
+    block = re.search(r"/\* Format Definitions \*/\s*(?P<parents>[^{]*)\{(?P<body>.*?)\n\}", css, re.DOTALL)
+    assert block, "Lapis fixture lost its Format Definitions rule"
+    assert "&>li:not(:first-child)::before" in block["body"]
+    parents = " ".join(block["parents"].split())
+    return f":is({parents}) > li:not(:first-child)::before"
 
 
 def _no_comments(css: str) -> str:
@@ -77,6 +151,17 @@ class TestLoadGlossaryCss:
         assert '[data-sc-content="example-sentence"]' in css
         assert '[data-sc-content|="example-sentence"]' not in css
 
+    def test_wty_tag_spans_get_chip_style(self):
+        # Wiktionary (wty) rows tag a sense with `<span data-sc-content="tag">`
+        # inside `<div data-sc-content="tags">`, not Jitendex's `data-sc-class="tag"`.
+        # Unmatched, adjacent tags run together ("countfig"); they take the same
+        # gated chip rule.
+        chip = [grp for grp, _ in _iter_rules(load_glossary_css()) if 'span[data-sc-class="tag"]' in grp]
+        assert len(chip) == 1
+        selectors = [s.strip() for s in chip[0].split(",")]
+        gate = ".yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles])"
+        assert f'{gate} span[data-sc-content="tag"]' in selectors
+
     def test_tree_shaken_gapfill_keeps_forms_ancestor_table_rules(self):
         css = base_css_variant(frozenset({"sc-gapfill"}))
         assert '[data-sc-content="forms"] .gloss-sc-table' in css
@@ -108,10 +193,39 @@ class TestLoadGlossaryCss:
             assert subject in css, f"missing separator neutralizer for {subject}"
         reset = css[css.index("li.gloss-item::before") :]
         assert "content: none" in reset[: reset.index("}")]
-        # The `li` type is load-bearing: it lifts the neutralizer to (0,3,3) so it
-        # ties the host's nested `& > li::before` and wins by source order. A bare
-        # `.gloss-sc-li::before` (0,3,2) would lose and leave the " | " in place.
+        # The `li` type is load-bearing for the specificity floor that
+        # test_separator_cancel_outranks_lapis pins; a bare `.gloss-sc-li::before`
+        # drops a column and the host's " | " comes back.
         assert ".gloss-sc-li::before" not in css.replace("li.gloss-sc-li::before", "")
+
+    def test_separator_cancel_outranks_lapis(self):
+        # ja-05: Lapis's nested `& > li:not(:first-child)::before` resolves `&` to
+        # `:is()` of its parent list, which takes the list's MAX specificity: the
+        # `.yomitan-glossary [data-dictionary^="JMdict"] ul:not([data-sc-content])`
+        # branch, (0,3,1). The separator is therefore (0,4,3), and a (0,3,3)
+        # neutralizer lost on every JMdict card. Ours must reach it; the tie then
+        # goes to our trailing block by source order.
+        lapis = _lapis_separator_selector()
+        assert _specificity(lapis) == (0, 4, 3)
+        cancel = [
+            sel.strip()
+            for grp, decl in _iter_rules(load_glossary_css())
+            if "content: none" in decl
+            for sel in grp.split(",")
+        ]
+        assert len(cancel) == 4
+        for selector in cancel:
+            assert _specificity(selector) >= _specificity(lapis), selector
+
+    def test_specificity_helper(self):
+        assert _specificity(".yomitan-glossary ol[data-count] li.gloss-item::before") == (0, 3, 3)
+        assert _specificity(":where(.yomitan-glossary) [data-dictionary^=JMdict] ul:not([data-sc-content])") == (
+            0,
+            2,
+            1,
+        )
+        assert _specificity(":is(a, .b #c) > li:not(:first-child):after") == (1, 2, 2)
+        assert _specificity("li:not(#\\#)") == (1, 0, 1)
 
 
 class TestGlossaryYomitanLeak:
@@ -625,6 +739,14 @@ class TestThemeAgnostic:
         assert "color-mix(" not in _strip_supports(
             css
         ), "color-mix() used outside an @supports guard — older WebViews would lose the color entirely"
+
+    def test_muted_and_accent_take_note_type_hooks(self):
+        # No solid colour reads at 4.5:1 on both a light and a dark card, and theme
+        # selectors are banned here, so a note type (Anki Miner Note) supplies its
+        # per-theme value through --amn-*; today's value stays the fallback.
+        css = load_glossary_css()
+        assert "--am-muted: var(--amn-muted, rgba(128, 128, 128, 0.95));" in css
+        assert "--am-accent: var(--amn-accent, #4f7cff);" in css
 
     def test_muted_text_never_color_mix_derived(self):
         # Issue #87 Bug 2: --am-muted is body-text color applied to nested

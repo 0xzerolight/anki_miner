@@ -47,11 +47,17 @@
    * paint borders and chip backgrounds — which do NOT inherit, so they can't
    * cascade — and are upgraded to currentColor-derived values under @supports;
    * on engines without `color-mix()` (older AnkiDroid/AnkiMobile WebViews, Anki
-   * Desktop on Chromium < 111) the solid-gray bases apply. */
-  --am-muted: rgba(128, 128, 128, 0.95);
+   * Desktop on Chromium < 111) the solid-gray bases apply.
+   *
+   * `--am-muted` and `--am-accent` read a note type's `--amn-muted`/`--amn-accent`
+   * first. No one solid colour reaches 4.5:1 on both a light and a dark card, and
+   * this sheet may not branch on a theme, so a note type that knows its theme
+   * (Anki Miner Note) supplies the per-theme value. That value must be solid too,
+   * for the same Issue #87 reason. Without it the fallback is today's colour. */
+  --am-muted: var(--amn-muted, rgba(128, 128, 128, 0.95));
   --am-faint: rgba(128, 128, 128, 0.4);
   --am-chip: rgba(128, 128, 128, 0.16);
-  --am-accent: #4f7cff;
+  --am-accent: var(--amn-accent, #4f7cff);
 }
 
 @supports (color: color-mix(in srgb, red 50%, blue 50%)) {
@@ -173,22 +179,30 @@
 /* Cohabitation defense: note types built for native Yomitan/Jitendex JMdict
  * exports ship a "Format Definitions" rule that flattens the definition lists to
  * an inline " | "-separated run — e.g. Lapis:
- *   ul[data-sc-content="glossary"], [data-dictionary^="JMdict"] ul:not([data-sc-content]) {
+ *   ul[data-sc-content="glossary"], [data-sc-content="forms"] ul,
+ *   .yomitan-glossary [data-dictionary^="JMdict"] ul:not([data-sc-content]) {
  *     display:inline; list-style:none; padding-left:0!important;
- *     > li:not(:first-child)::before { content:" | " } }
+ *     &>li:not(:first-child)::before { content:" | " } }
  * Our synthesized plain-dict markup carries the same data-sc-content="glossary" /
  * data-dictionary^="JMdict" hooks, so those rules match and inject a stray
  * separator before BOTH our sense items (li.gloss-item) and our gloss items
- * (li.gloss-sc-li). Neutralize generated content on both. The `li` type keeps
- * these at (0,3,3) — tying the host's nested `& > li::before` (also (0,3,3)) and
- * winning by source order (our trailing <style> sits later in <body> than the
- * note type's <head> CSS). Display/indent flattening is defended separately by
- * the structural `display` declarations above and the gated !important padding
- * below. */
-.yomitan-glossary ol[data-count] li.gloss-item::before,
-.yomitan-glossary ol[data-count] li.gloss-item::after,
-.yomitan-glossary ol[data-count] li.gloss-sc-li::before,
-.yomitan-glossary ol[data-count] li.gloss-sc-li::after {
+ * (li.gloss-sc-li). Neutralize generated content on both.
+ * Specificity: the host's nested `& > li:not(:first-child)::before` resolves `&`
+ * to `:is()` of the parent list, which takes the list's MAX specificity: the
+ * `.yomitan-glossary [data-dictionary^="JMdict"] ul:not(...)` branch, (0,3,1).
+ * So the separator is (0,4,3), on every list it matches. The `[data-dictionary]`
+ * step (the envelope every provider wraps its items in) lifts these from (0,3,3)
+ * to (0,4,3), and the `li` type holds the last column at 3; the tie goes to our
+ * trailing <style>, which comes after the note type's CSS. Raise no further: a
+ * styled dictionary's own scoped CSS follows the base in the same block and must
+ * keep winning its ties.
+ * Pinned by test_separator_cancel_outranks_lapis. Display/indent flattening is
+ * defended separately by the structural `display` declarations above and the
+ * gated !important padding below. */
+.yomitan-glossary ol[data-count] [data-dictionary] li.gloss-item::before,
+.yomitan-glossary ol[data-count] [data-dictionary] li.gloss-item::after,
+.yomitan-glossary ol[data-count] [data-dictionary] li.gloss-sc-li::before,
+.yomitan-glossary ol[data-count] [data-dictionary] li.gloss-sc-li::after {
   content: none;
 }
 
@@ -436,8 +450,14 @@
  * ------------------------------------------------------------------------- */
 
 /* Inline tag pills — part of speech, misc, field, dialect… A neutral chip by
- * default; the few widely shared semantic kinds get their conventional color. */
-.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) span[data-sc-class="tag"] {
+ * default; the few widely shared semantic kinds get their conventional color.
+ * Jitendex marks a tag `data-sc-class="tag"`; Wiktionary (wty) rows mark it
+ * `data-sc-content="tag"` inside a `data-sc-content="tags"` div. wty ships a
+ * styles.css that styles these itself (stamped, so this rule is off); the
+ * selector covers a wty-shaped dictionary imported without one, where adjacent
+ * tags otherwise run together ("countfig"). */
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) span[data-sc-class="tag"],
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) span[data-sc-content="tag"] {
   display: inline-block;
   margin-right: 0.4em;
   padding: 0.05em 0.4em;

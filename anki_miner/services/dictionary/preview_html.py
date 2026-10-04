@@ -87,6 +87,7 @@ a.gloss-sc-a { color: #6f9dff; }
  * plain attribute selectors Qt does support. Kept in step with that tuple by a drift
  * test so a new hook cannot land unstyled in the pane. */
 [data-sc-class="tag"] { background-color: rgba(128, 128, 128, 0.22); font-size: 8pt; }
+[data-sc-content="tag"] { background-color: rgba(128, 128, 128, 0.22); font-size: 8pt; }
 [data-sc-content="part-of-speech-info"] { background-color: rgba(120, 190, 120, 0.26); }
 [data-sc-content="misc-info"] { background-color: rgba(200, 120, 90, 0.26); }
 [data-sc-content="field-info"] { background-color: rgba(160, 120, 200, 0.26); }

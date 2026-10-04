@@ -498,6 +498,17 @@ class TestRestyleField:
         v = attach_card_style_block(BARE, dict_css_entries=[])
         assert self._restyle(v) == v
 
+    def test_pre_owned_marker_block_is_still_recognised(self):
+        # Blocks minted before the owned-style marker open on the old literal
+        # `--am-muted` declaration. The base no longer starts that way (the marker
+        # leads, and --am-muted became a --amn-muted hook), so only
+        # card_restyler's legacy literal recognises them: replaced, never stacked.
+        old_head = ".yomitan-glossary{--am-muted: rgba(128,128,128,0.95);}.yomitan-glossary ol[data-count]{margin:0}"
+        tail = '.yomitan-glossary [data-dictionary="X"]{color:red}'
+        out = self._restyle(f"{BARE}<style>{old_head}\n{tail}</style>")
+        assert out == f"{BARE_STAMPED}<style>{_variant_for(BARE_STAMPED)}\n{tail}</style>"
+        assert out.count("<style>") == 1
+
     def test_stamps_from_carried_tail_not_config(self):
         # Head tail carries scoped CSS for X; the body's unstamped envelope
         # stamps from the card's OWN carried CSS — entries/current config are

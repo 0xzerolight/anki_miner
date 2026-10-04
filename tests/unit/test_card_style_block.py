@@ -177,6 +177,14 @@ class TestCssWitnesses:
             html = UNSTAMPED + f'<span data-sc-content="{value}"></span>'
             assert "sc-gapfill" in css_witnesses([html]), value
 
+    def test_wty_tag_witnesses_the_chip_group(self):
+        # A wty tag (`data-sc-content="tag"`) must ship the sc-gapfill chip rule;
+        # its `data-sc-content="tags"` wrapper alone must not.
+        html = UNSTAMPED + '<div data-sc-content="tags"><span data-sc-content="tag">fig</span></div>'
+        assert css_witnesses([html]) == frozenset({"unstyled-chrome", "sc-gapfill"})
+        assert 'span[data-sc-content="tag"]' in base_css_variant(css_witnesses([html]))
+        assert css_witnesses([UNSTAMPED + '<div data-sc-content="tags"></div>']) == frozenset({"unstyled-chrome"})
+
     def test_example_sentence_witnesses_gapfill(self):
         # A Jitendex-style card keeps the group.
         html = UNSTAMPED + '<div data-sc-content="example-sentence">…</div>'

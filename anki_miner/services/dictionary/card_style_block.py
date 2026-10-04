@@ -217,6 +217,7 @@ _SC_GAPFILL_HOOKS = frozenset(
         'data-sc-content="part-of-speech-info"',
         'data-sc-content="reference-label"',
         'data-sc-content="sense-note"',
+        'data-sc-content="tag"',
         'data-sc-content="xref"',
         'data-sc-class="extra-box"',
         'data-sc-class="extra-label"',
