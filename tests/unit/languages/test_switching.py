@@ -330,6 +330,8 @@ def test_the_first_switch_after_the_markers_became_scoped_gives_old_snapshots_th
     on_de = switch_language(on_ja, "de")
     assert (on_de.pitch_category_format, dict(on_de.card_type_marker_fields)) == ("romaji", senren)
 
-    on_fr = switch_language(dataclasses.replace(on_de, pitch_category_format="jp"), "fr")
-    assert on_fr.pitch_category_format == "romaji"
-    assert switch_language(on_fr, "ja").pitch_category_format == "romaji"
+    edited = dataclasses.replace(on_de, pitch_category_format="jp", card_type_marker_fields=dict.fromkeys(senren, ""))
+    on_fr = switch_language(edited, "fr")
+    assert (on_fr.pitch_category_format, dict(on_fr.card_type_marker_fields)) == ("romaji", senren)
+    back_on_ja = switch_language(on_fr, "ja")
+    assert (back_on_ja.pitch_category_format, dict(back_on_ja.card_type_marker_fields)) == ("romaji", senren)
