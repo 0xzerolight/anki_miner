@@ -124,7 +124,8 @@ def krdict_headword(definition_html: str) -> str:
     KRDICT keys a Sino-Korean word's hanja row on the hanja (學校) and bolds
     the hangul headword in its content (학교 〔學校〕). Syllables only
     (U+AC00-U+D7A3): an affix headword (-물) or a spaced phrase is no card
-    front, and neither is a non-KRDICT row that happens to bold Korean text.
+    front. Only the markup is checked, not the dictionary: any row whose first
+    bold ``lang="ko"`` span is all syllables yields that span.
     """
     match = _HEADWORD.search(definition_html)
     headword = match.group(1) if match else ""

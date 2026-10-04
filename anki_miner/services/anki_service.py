@@ -38,8 +38,10 @@ from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import capped, log_summary
 
 if TYPE_CHECKING:
-    # Type-only: `services` must not take a module-level runtime import of
-    # `languages` (profile.py reaches back into services.resource_catalog).
+    # Type-only. profile.py imports services.resource_catalog, which runs
+    # services/__init__: a module that init imports eagerly must not import
+    # `languages.profile` at module level. Lazily loaded ones may, as
+    # anki_note_builder does for CARD_FRONT_KEY.
     from anki_miner.languages.profile import ScriptSupport
 
 logger = logging.getLogger(__name__)
@@ -1442,7 +1444,8 @@ class AnkiService:
         addNotes creates the repeat instead of failing the request.
 
         Keyed by ``_strip_for_dedup``: Anki's HTML/media strip, slightly
-        stricter (it also drops format characters and collapses whitespace).
+        stricter (it also drops format characters, NFC-normalizes and
+        collapses whitespace).
         Never the language's known-words fold, which is far broader than
         Anki's rule and would drop cards Anki accepts.
         """

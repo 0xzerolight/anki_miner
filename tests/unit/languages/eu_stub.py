@@ -327,8 +327,8 @@ def _scoped_defaults() -> dict[str, object]:
     defaults["anki_fields"] = dict(EU_CARD_FIELDS)
     # The one the blank-by-type loop gets wrong rather than merely empty: "" is
     # not a deck AnkiConnect accepts, and inheriting ja's default would file
-    # these cards into the Japanese deck. Same split as ko/zh — the deck name is
-    # generic, the ja note type ("Lapis") is not, so the note type ships empty.
+    # these cards into the Japanese deck. The note type stays blank: every
+    # language, ja included, defaults to none.
     defaults["anki_deck_name"] = "Anki Miner"
     return defaults
 

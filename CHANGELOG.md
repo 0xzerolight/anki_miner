@@ -22,7 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Fill in automatically maps Hebrew part of speech and Thai Paiboon readings** to fields named PartOfSpeech and Romanization.
 - **Indonesian affixes no longer break after a hyphen** (ke- / -an stay whole on one line).
 - **French sentences keep their no-break spaces**, so ? ! : ; and » no longer start a new line on the card.
-- **Dictionary entries on Lapis-style cards no longer show " | " between bulleted meanings, and Wiktionary tags (countable, figurative, …) show as separate chips.** Existing cards pick this up with Card Backfill → Restyle cards…
+- **Dictionary entries on Lapis-style cards no longer show " | " between bulleted meanings, and Wiktionary tags (countable, figurative, …) show as separate chips even when the dictionary was added without its own styles.** Existing cards pick this up with Card Backfill → Restyle cards…
 
 ### Removed
 

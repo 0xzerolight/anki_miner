@@ -45,12 +45,13 @@ def spaced_scoped_defaults(
 
     Starts from ``blank_scoped_defaults()`` so a scoped field added later
     cannot be missed. Nothing is inherited from the ja dataclass defaults: the
-    jmdict chain, ja subtitle langs and the ja note type are ja-specific; the
-    deck name ``Anki Miner`` is the generic default. The SDH filter is ON for a
-    first visit (S10) with the Latin default unless the language passes its own
-    ``subtitle_regex`` (R11: caption conventions differ, fr ``JEAN : …``); a
-    user's own ja filter stays parked in ja's stash. The dict is fresh: a
-    caller may override any key (pt ``script_variant``).
+    jmdict chain and ja subtitle langs are ja-specific; the deck name
+    ``Anki Miner`` and the empty note type are every language's defaults. The
+    SDH filter is ON for a first visit (S10) with the Latin default unless the
+    language passes its own ``subtitle_regex`` (R11: caption conventions
+    differ, fr ``JEAN : …``); a user's own ja filter stays parked in ja's
+    stash. The dict is fresh: a caller may override any key (pt
+    ``script_variant``).
     """
     from anki_miner.languages.switching import blank_scoped_defaults
 
