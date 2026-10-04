@@ -1443,16 +1443,15 @@ class AnkiService:
         (allow_duplicate_cards, whose repeats phase 2 deliberately keeps)
         addNotes creates the repeat instead of failing the request.
 
-        Keyed by ``_strip_for_dedup``: Anki's HTML/media strip, slightly
-        stricter (it also drops format characters, NFC-normalizes and
-        collapses whitespace).
-        Never the language's known-words fold, which is far broader than
-        Anki's rule and would drop cards Anki accepts.
+        Keyed by ``_dedup_key``, the fold every other dedup site uses (S3).
+        It is broader than Anki's checksum, but safe here: without duplicates
+        allowed, phase 2's word-identity fold has already merged any two words
+        it would join (de Hund/hund), so they never meet in one probe.
         """
         seen: set[str] = set()
         marked: list[bool] = []
         for note, duplicate in zip(notes, is_duplicate, strict=True):
-            front = _strip_for_dedup(self._first_field_value(note))
+            front = self._dedup_key(self._first_field_value(note))
             allowed = bool((note.get("options") or {}).get("allowDuplicate"))
             marked.append(duplicate or (front in seen and not allowed))
             if front:
