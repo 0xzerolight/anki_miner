@@ -1234,7 +1234,7 @@ class NoteTypePage(_WizardSection):
         )
         if updated != config:
             self._wizard.update_working_config(updated)
-        mapped = sum(1 for value in preset.fields.values() if value)
+        mapped = sum(1 for value in preset.fields.values() if value) + len(extra_fields)
         self.mapping_summary.setText(tr_format(self.tr("%1 recognised: %2 fields filled."), preset.name, mapped))
 
     def _auto_fill(self, note_type: str) -> None:

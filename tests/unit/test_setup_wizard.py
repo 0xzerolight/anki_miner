@@ -3096,7 +3096,8 @@ def test_notetype_page_applies_anki_miner_note_in_chinese(qtbot, wiz_config):
     assert config.anki_fields["expression_pinyin"] == "Pinyin"
     assert config.anki_fields["language"] == "Language"
     assert config.bold_target_in_sentence is True
-    assert page.mapping_summary.text().startswith("Anki Miner Note recognised: ")
+    # 17 from the preset plus Pinyin, Traditional and MeasureWord.
+    assert page.mapping_summary.text() == "Anki Miner Note recognised: 20 fields filled."
 
 
 def test_rerun_keeps_a_working_custom_mapping_on_the_same_note_type(qtbot):

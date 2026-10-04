@@ -878,9 +878,10 @@ class AnkiSettingsPanel(FormPanel):
         """ "Fill in automatically" (D13): preset when recognised, else the keyword pass.
 
         Returns:
-            ``(preset, 0)`` when a preset was applied, else ``(None, cleared)``
-            where ``cleared`` counts mappings blanked because the note type has
-            no such field.
+            ``(preset, filled)`` when a preset was applied, where ``filled``
+            counts the fields it mapped, the language's own (Pinyin, ...)
+            included; else ``(None, cleared)`` where ``cleared`` counts
+            mappings blanked because the note type has no such field.
         """
         fill = fill_note_type_fields(
             field_names, allow_presets=self._presets_allowed, extra_specs=self._visible_hook_specs()
@@ -889,7 +890,7 @@ class AnkiSettingsPanel(FormPanel):
             self.apply_note_type_preset(fill.preset)
             for key, match in fill.extra_fields.items():
                 self._hook_field_inputs[key].setText(match)
-            return fill.preset, 0
+            return fill.preset, sum(1 for value in fill.preset.fields.values() if value) + len(fill.extra_fields)
         return None, self._apply_keyword_fill(field_names, fill)
 
     def populate_from_field_list(self, field_names: list[str]) -> int:

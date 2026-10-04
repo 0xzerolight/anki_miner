@@ -244,19 +244,18 @@ class AnkiProbeController:
                 ),
             )
             return
-        preset, cleared = self._anki_panel.fill_from_field_list(field_names)
+        preset, count = self._anki_panel.fill_from_field_list(field_names)
         if preset is not None:
             if preset.bold_target_in_sentence:
                 # Settings -> Sentences owns it, so a fill turns it on and never
                 # off: bold is a fine choice with any note type.
                 self._sentences_panel.set_bold_target_in_sentence(True)
-            mapped = sum(1 for value in preset.fields.values() if value)
             self._anki_panel.set_fill_status(
                 True,
                 tr_format(
                     QCoreApplication.translate("AnkiProbeController", "%1 recognised: %2 fields filled."),
                     preset.name,
-                    str(mapped),
+                    str(count),
                 ),
             )
             return
@@ -266,13 +265,13 @@ class AnkiProbeController:
         status = QCoreApplication.translate(
             "AnkiProbeController", "Fetched %n field(s) and auto-mapped them", "", len(field_names)
         )
-        if cleared:
+        if count:
             # Name the blanking: the rows it empties are ones the user can see,
             # and a silent clear reads as the panel losing their work.
             status = tr_format(
                 QCoreApplication.translate("AnkiProbeController", "%1; %2"),
                 status,
-                QCoreApplication.translate("AnkiProbeController", "cleared %n stale mapping(s)", "", cleared),
+                QCoreApplication.translate("AnkiProbeController", "cleared %n stale mapping(s)", "", count),
             )
         self._anki_panel.set_fill_status(True, status)
 

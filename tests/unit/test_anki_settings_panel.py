@@ -339,10 +339,10 @@ def test_fill_applies_lapis_when_its_fields_are_reported(qtbot, test_config):
     panel.load_from_config(test_config)
     panel.set_pitch_category_format("jp")
 
-    preset, cleared = panel.fill_from_field_list(sorted(LAPIS.signature))
+    preset, filled = panel.fill_from_field_list(sorted(LAPIS.signature))
 
     assert preset is LAPIS
-    assert cleared == 0
+    assert filled == 15
     assert panel.get_card_fields()["pitch_category"] == "PitchCategories"
     assert panel.get_pitch_category_format() == "romaji"
 
@@ -357,10 +357,11 @@ def test_fill_applies_anki_miner_note_in_chinese_with_its_own_fields(qtbot, test
     qtbot.addWidget(panel)
     panel.load_from_config(replace(test_config, language="zh"))
 
-    preset, cleared = panel.fill_from_field_list(list(AMN_FIELDS))
+    preset, filled = panel.fill_from_field_list(list(AMN_FIELDS))
 
     assert preset is ANKI_MINER_NOTE
-    assert cleared == 0
+    # 17 from the preset plus Pinyin, Traditional and MeasureWord.
+    assert filled == 20
     fields = panel.get_card_fields()
     assert fields["expression_pinyin"] == "Pinyin"
     assert fields["measure_word"] == "MeasureWord"

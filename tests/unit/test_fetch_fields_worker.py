@@ -230,6 +230,20 @@ class TestSettingsTabFetchFieldsWiring:
 
         assert tab.anki_panel.fill_status.text() == "Lapis recognised: 15 fields filled."
 
+    def test_a_recognised_note_type_counts_the_language_fields(self, test_config: AnkiMinerConfig, qtbot):
+        """Anki Miner Note on zh writes Pinyin, Traditional and MeasureWord beside its 17."""
+        from dataclasses import replace
+
+        from tests.unit.amn_fields import AMN_FIELDS
+
+        tab = SettingsTab(replace(test_config, language="zh"))
+        qtbot.addWidget(tab)
+        tab.anki_panel.set_note_type("Anki Miner Note")
+
+        tab._anki_probe._on_fetch_fields_finished("Anki Miner Note", list(AMN_FIELDS))
+
+        assert tab.anki_panel.fill_status.text() == "Anki Miner Note recognised: 20 fields filled."
+
     def test_anki_miner_note_turns_on_bold_target_words(self, test_config: AnkiMinerConfig, qtbot):
         """Its audio card hides the <b> word and its sentence / click cards cue it, so the fill
         switches Settings -> Sentences -> Bold target word on as well."""
