@@ -565,6 +565,7 @@ class WordFilterService:
         words: list[TokenizedWord],
         max_duration: float = 0.0,
         max_chars: int = 0,
+        measure: Callable[[TokenizedWord], tuple[float, str]] | None = None,
     ) -> list[TokenizedWord]:
         """Drop words whose example sentence exceeds the configured caps.
 
@@ -577,6 +578,11 @@ class WordFilterService:
                 ``0.0`` means no duration cap.
             max_chars: Maximum allowed ``len(word.sentence)``. ``0`` means
                 no character cap.
+            measure: What to read the ``(duration, sentence)`` from. ``None``
+                (the phase-2 call) reads ``word.duration`` and ``word.sentence``.
+                The automatic cue merge passes the merged window a word is
+                about to acquire, so the caps judge what the card will
+                actually carry rather than the fragment phase 2 measured.
 
         Returns:
             Filtered list of words.
@@ -584,11 +590,13 @@ class WordFilterService:
         if max_duration <= 0.0 and max_chars <= 0:
             return words
 
+        read = measure if measure is not None else (lambda word: (word.duration, word.sentence))
         result = []
         for word in words:
-            if max_duration > 0.0 and word.duration > max_duration:
+            duration, sentence = read(word)
+            if max_duration > 0.0 and duration > max_duration:
                 continue
-            if max_chars > 0 and len(word.sentence) > max_chars:
+            if max_chars > 0 and len(sentence) > max_chars:
                 continue
             result.append(word)
         return result

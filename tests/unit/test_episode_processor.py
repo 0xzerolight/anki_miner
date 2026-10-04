@@ -7104,3 +7104,87 @@ class TestAutoMergeKeepsForcedWords:
 
         assert [w.mined_form for w in out] == ["猫", "犬", "鳥"]
         assert out[2].line_expansion == (0, 1)
+
+
+class TestAutoMergeSentenceLengthCaps:
+    """The sentence-length caps measure the merged sentence, not the fragment phase 2 saw.
+
+    The fragment 鳥は (10-12s) passes a 5s / 6-char cap; merged with 飛んだ。 it spans
+    10-20s and 7 characters, which is what the card would carry.
+    """
+
+    ENTRIES = [(10.0, 12.0, "鳥は"), (12.5, 20.0, "飛んだ。")]
+
+    @staticmethod
+    def _word(form, sentence, start, end):
+        return TokenizedWord(
+            surface=form,
+            lemma=form,
+            reading="",
+            sentence=sentence,
+            start_time=start,
+            end_time=end,
+            duration=end - start,
+            pos="名詞",
+        )
+
+    def _stamp(self, config, tmp_path, word_list_service=None):
+        parser = MagicMock()
+        parser.parse_raw_entries.return_value = list(self.ENTRIES)
+        proc = build_processor(
+            config=config,
+            subtitle_parser=parser,
+            word_filter=WordFilterService(config),
+            word_list_service=word_list_service,
+        )
+        return proc._auto_stamp_line_expansions([self._word("鳥", "鳥は", 10.0, 12.0)], tmp_path / "ep01.srt")
+
+    def test_merged_window_over_the_duration_cap_drops_the_word(self, test_config, tmp_path):
+        config = replace(test_config, merge_incomplete_cues=True, max_sentence_duration_seconds=5.0)
+        assert self._stamp(config, tmp_path) == []
+
+    def test_merged_text_over_the_character_cap_drops_the_word(self, test_config, tmp_path):
+        config = replace(test_config, merge_incomplete_cues=True, max_sentence_chars=6)
+        assert self._stamp(config, tmp_path) == []
+
+    def test_merged_sentence_within_both_caps_keeps_its_stamp(self, test_config, tmp_path):
+        config = replace(
+            test_config, merge_incomplete_cues=True, max_sentence_duration_seconds=10.0, max_sentence_chars=8
+        )
+        out = self._stamp(config, tmp_path)
+        assert [w.line_expansion for w in out] == [(0, 1)]
+
+    def test_bypass_optional_filters_skips_the_caps(self, test_config, tmp_path):
+        config = replace(
+            test_config, merge_incomplete_cues=True, max_sentence_duration_seconds=5.0, bypass_optional_filters=True
+        )
+        out = self._stamp(config, tmp_path)
+        assert [w.line_expansion for w in out] == [(0, 1)]
+
+    def test_whitelist_force_include_bypasses_the_caps(self, test_config, tmp_path):
+        """Phase 2 exempts force-included words from the coverage filters, so the merge does too."""
+        config = replace(test_config, merge_incomplete_cues=True, max_sentence_duration_seconds=5.0, use_whitelist=True)
+        whitelist = MagicMock()
+        whitelist.is_available.return_value = True
+        whitelist.is_whitelisted.side_effect = lambda key: key == "鳥"
+        out = self._stamp(config, tmp_path, word_list_service=whitelist)
+        assert [w.line_expansion for w in out] == [(0, 1)]
+
+    def test_run_that_loses_every_word_to_the_caps_stops_before_media(self, test_config, mock_services, tmp_path):
+        """Phase 2 passes the fragment; the merge pushes it over the cap and the run ends
+        with the filters message instead of extracting media for nothing."""
+        config = replace(test_config, merge_incomplete_cues=True, max_sentence_duration_seconds=5.0)
+        word = self._word("鳥", "鳥は", 10.0, 12.0)
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["subtitle_parser"].parse_raw_entries.return_value = list(self.ENTRIES)
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        presenter = MagicMock(spec=NullPresenter())
+        services = {**mock_services, "word_filter": WordFilterService(config)}
+        processor = build_processor(config=config, presenter=presenter, **services)
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_services["media_extractor"].extract_media_batch.assert_not_called()
+        assert any(
+            "removed by active filters" in str(c.args[0]).lower() for c in presenter.show_warning.call_args_list
+        ), presenter.show_warning.call_args_list

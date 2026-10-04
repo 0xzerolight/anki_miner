@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Korean words written only in Hanja show their hangul on the card front** (學校 → 학교, with 學校 in the Hanja field) when the dictionary gives the hangul headword, as KRDICT does; otherwise the Hanja field is left empty instead of repeating the word.
 
 ### Fixed
+- **Max Sentence Duration and Max Sentence Characters measure the full sentence when "Mine full sentences across subtitle lines" is on (Settings → Sentences).** A word whose merged sentence goes over a limit is skipped before the Word Curator opens. The caps used to judge only the subtitle line the word came from, so a merged card could run far past them.
 - **Reading → Anki Deck: the Word Curator shows the card's line under its picture**, not the card's position in the deck.
 - **Fill in automatically maps Hebrew part of speech and Thai Paiboon readings** to fields named PartOfSpeech and Romanization.
 - **Indonesian affixes no longer break after a hyphen** (ke- / -an stay whole on one line).

@@ -63,6 +63,7 @@ from anki_miner.services.secondary_subtitles import attach_translations
 from anki_miner.services.sentence_edit import resolve_sentence_edit
 from anki_miner.services.subtitle_parser import _differs_by_okurigana_only
 from anki_miner.services.word_filter import (
+    MergedLineWindow,
     enabled_script_options,
     find_cue_index,
     folded_pairs,
@@ -1528,22 +1529,29 @@ class EpisodeProcessor:
             )
             filtered_out = before - len(unknown_words)
             counts.sentence_length_rejects = filtered_out
-            if filtered_out > 0:
-                caps = []
-                if self.config.max_sentence_duration_seconds > 0.0:
-                    caps.append(f"{self.config.max_sentence_duration_seconds:g}s")
-                if self.config.max_sentence_chars > 0:
-                    caps.append(f"{self.config.max_sentence_chars} chars")
-                self.presenter.show_info(
-                    tr_format(
-                        QCoreApplication.translate(
-                            "EpisodeProcessor", "Sentence length filter: removed %1 words (cap: %2)"
-                        ),
-                        filtered_out,
-                        ", ".join(caps),
-                    )
-                )
+            self._report_sentence_length_rejects(filtered_out)
         return unknown_words
+
+    def _report_sentence_length_rejects(self, removed: int) -> None:
+        """Tell the user how many words the sentence-length caps removed, if any.
+
+        Shared by phase 2 and the automatic cue merge's second pass, so both
+        surface the one translated string.
+        """
+        if removed <= 0:
+            return
+        caps = []
+        if self.config.max_sentence_duration_seconds > 0.0:
+            caps.append(f"{self.config.max_sentence_duration_seconds:g}s")
+        if self.config.max_sentence_chars > 0:
+            caps.append(f"{self.config.max_sentence_chars} chars")
+        self.presenter.show_info(
+            tr_format(
+                QCoreApplication.translate("EpisodeProcessor", "Sentence length filter: removed %1 words (cap: %2)"),
+                removed,
+                ", ".join(caps),
+            )
+        )
 
     def _phase2_collapse_duplicates(
         self, unknown_words: list[TokenizedWord], counts: _Phase2Counts
@@ -2516,13 +2524,14 @@ class EpisodeProcessor:
         resolves the cue with the same function against the same texts, and a
         guess here would put the two out of step.
 
-        Sentence dedup runs again here, on the text the card is ABOUT to carry:
-        phase 2 deduped the raw cues, and two words on adjacent cues converge on
-        one merged sentence, which is exactly the duplicate ``deduplicate_by_
-        sentence`` exists to drop. It runs before curation on purpose — dropping
-        a word after the user has reviewed and kept it would be worse than not
-        merging at all — and under phase 2's own gate, so a run that skipped
-        dedup there skips it here too.
+        Sentence dedup and the sentence-length caps run again here, on the
+        sentence and window the card is ABOUT to carry: phase 2 judged the raw
+        cue, two words on adjacent cues converge on one merged sentence (exactly
+        the duplicate ``deduplicate_by_sentence`` exists to drop), and a
+        fragment that passed the caps can grow past them. Both run before
+        curation on purpose — dropping a word after the user has reviewed and
+        kept it would be worse than not merging at all — and under phase 2's
+        own gates, so a run that skipped a filter there skips it here too.
         """
         if not self.config.merge_incomplete_cues:
             return words
@@ -2530,9 +2539,9 @@ class EpisodeProcessor:
         rules = get_profile(config_language(self.config)).sentence_rules
         budget = merge_budget_seconds(self.config.audio_padding)
         stamped: list[TokenizedWord] = []
-        # Merged text per stamped word, keyed by identity — every object is
-        # alive in `stamped` for as long as the dedup below needs it.
-        merged_text: dict[int, str] = {}
+        # Merged window per stamped word, keyed by identity — every object is
+        # alive in `stamped` for as long as the filters below need it.
+        merged: dict[int, MergedLineWindow] = {}
         for word in words:
             index = (
                 None
@@ -2547,34 +2556,56 @@ class EpisodeProcessor:
                 stamped.append(word)
                 continue
             merged_word = replace(word, line_expansion=expansion)
-            merged_text[id(merged_word)] = merge_cue_window(entries, index, *expansion).text
+            merged[id(merged_word)] = merge_cue_window(entries, index, *expansion)
             stamped.append(merged_word)
-        if not merged_text:
+        if not merged:
             return words
-        logger.info("automatic cue merge: %d of %d word(s) stamped", len(merged_text), len(words))
-        if (
+        logger.info("automatic cue merge: %d of %d word(s) stamped", len(merged), len(words))
+        dedup = (
             self.config.deduplicate_sentences
             and not self.config.use_i_plus_one_filter
             and not self.config.bypass_optional_filters
-        ):
-            before = len(stamped)
-            # Whitelist force-includes bypass sentence dedup in phase 2, so they
-            # bypass it here too: only the other words are deduplicated, among
-            # themselves, and every word keeps its place (BA-053).
-            forced_ids: set[int] = set()
-            whitelist_service = self._active_whitelist()
-            if whitelist_service is not None:
-                forced, _rest = self.word_filter.partition_whitelisted(stamped, whitelist_service)
-                forced_ids = {id(word) for word in forced}
-            kept = self.word_filter.deduplicate_by_sentence(
-                [word for word in stamped if id(word) not in forced_ids],
-                lambda word: merged_text.get(id(word), word.sentence),
+        )
+        length_caps = not self.config.bypass_optional_filters and (
+            self.config.max_sentence_duration_seconds > 0.0 or self.config.max_sentence_chars > 0
+        )
+        if not (dedup or length_caps):
+            return stamped
+
+        def card_sentence(word: TokenizedWord) -> tuple[float, str]:
+            window = merged.get(id(word))
+            return (word.duration, word.sentence) if window is None else (window.end - window.start, window.text)
+
+        # Whitelist force-includes bypass phase 2's coverage filters, so they
+        # bypass these too: only the other words are filtered, among
+        # themselves, and every word keeps its place (BA-053).
+        forced_ids: set[int] = set()
+        whitelist_service = self._active_whitelist()
+        if whitelist_service is not None:
+            forced, _rest = self.word_filter.partition_whitelisted(stamped, whitelist_service)
+            forced_ids = {id(word) for word in forced}
+        candidates = [word for word in stamped if id(word) not in forced_ids]
+        if dedup:
+            kept = self.word_filter.deduplicate_by_sentence(candidates, lambda word: card_sentence(word)[1])
+            if len(kept) != len(candidates):
+                logger.info(
+                    "automatic cue merge: %d word(s) dropped as duplicate sentences", len(candidates) - len(kept)
+                )
+            candidates = kept
+        if length_caps:
+            kept = self.word_filter.filter_by_sentence_length(
+                candidates,
+                max_duration=self.config.max_sentence_duration_seconds,
+                max_chars=self.config.max_sentence_chars,
+                measure=card_sentence,
             )
-            kept_ids = {id(word) for word in kept}
-            stamped = [word for word in stamped if id(word) in forced_ids or id(word) in kept_ids]
-            if before != len(stamped):
-                logger.info("automatic cue merge: %d word(s) dropped as duplicate sentences", before - len(stamped))
-        return stamped
+            removed = len(candidates) - len(kept)
+            if removed:
+                logger.info("automatic cue merge: %d word(s) dropped by the sentence-length caps", removed)
+                self._report_sentence_length_rejects(removed)
+            candidates = kept
+        kept_ids = {id(word) for word in candidates}
+        return [word for word in stamped if id(word) in forced_ids or id(word) in kept_ids]
 
     def _materialize_line_expansions(
         self,
@@ -2846,8 +2877,12 @@ class EpisodeProcessor:
 
             # Before curation on purpose: the curator opens on the merged
             # sentence and treats the stamp as what its ± line buttons extend
-            # from. A no-op unless the setting is on.
+            # from. A no-op unless the setting is on. Its sentence-length pass
+            # can drop every word, so the phase-2 guard repeats here.
             unknown_words = self._auto_stamp_line_expansions(unknown_words, subtitle_file, subtitle_offset)
+            if not unknown_words:
+                self._report_no_mineable_words(ctx)
+                return ctx.build_result(new_words_found=0)
 
             if curation_callback is not None:
                 # count_lemmas reuses the phase-1 parse cache, so no second MeCab pass.

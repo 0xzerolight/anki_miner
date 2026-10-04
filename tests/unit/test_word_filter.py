@@ -790,6 +790,20 @@ class TestWordFilterService:
             result = service.filter_by_sentence_length(words, max_duration=5.0, max_chars=40)
             assert result == words
 
+        def test_measure_replaces_the_word_s_own_sentence_and_duration(self, test_config):
+            """The automatic cue merge measures the sentence a word is about to carry."""
+            service = WordFilterService(test_config)
+            short, grown = self._make_word("ok", 2.0), self._make_word("ok", 2.0)
+            merged = {id(grown): (12.0, "ok then")}
+
+            result = service.filter_by_sentence_length(
+                [short, grown],
+                max_duration=5.0,
+                max_chars=40,
+                measure=lambda word: merged.get(id(word), (word.duration, word.sentence)),
+            )
+            assert result == [short]
+
     class TestFilterIPlusOne:
         """Tests for filter_i_plus_one method."""
 

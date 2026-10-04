@@ -563,12 +563,11 @@ class AnkiMinerConfig:
     # language, only the punctuation differs. Every subtitle-timed run inherits
     # it (video, YouTube, batch, audiobook — they all go through
     # process_episode); the reading sources have no cue timeline and ignore it.
-    # The sentence-length filter above is unaffected and still measures the raw
-    # cue in phase 2, so a merged card can be longer than the cap its fragment
-    # passed; the merged window is bounded instead by the clip strip's own
-    # ceiling (services/cue_merge.py). Sentence dedup, by contrast, IS re-run
-    # over the merged text before curation — two words on adjacent cues would
-    # otherwise both survive on one sentence.
+    # The merged window is bounded by the clip strip's own ceiling
+    # (services/cue_merge.py). Sentence dedup and the sentence-length caps
+    # above are re-run over the merged sentence before curation: two words on
+    # adjacent cues would otherwise both survive on one sentence, and a
+    # fragment that passed the caps in phase 2 can grow past them.
     merge_incomplete_cues: bool = False
 
     # Reading tab: minimum times a word must occur in a single book/volume to be
