@@ -635,6 +635,9 @@ class SubtitleParserService:
             rescuable_tags=frozenset(get_profile(language).pos_defaults.rescuable_tags),
         )
         self._force_include = force_include
+        # The same test Anki's vocabulary scan keeps fronts by: a rescued front
+        # outside the mining language's script could never read as known again.
+        self._rescue_script = get_profile(language).script.contains_target_script
         # Exact-headword existence serves compound/front remap gates; the sibling
         # rules-aware probe serves deinflection overrides. Keeping them distinct
         # prevents an attested but POS-incompatible headword from winning solely
@@ -2493,7 +2496,7 @@ class SubtitleParserService:
             return False
         highlight_end = self._emission_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
         _, _, mined, _ = self._resolve_word_identity(word_token, text, tok_start, highlight_end)
-        if not self._force_include(mined):
+        if not self._rescue_script(mined) or not self._force_include(mined):
             return False
         return not (kana and self._rejected_by_lexicalized_window(word_token, tokens))
 

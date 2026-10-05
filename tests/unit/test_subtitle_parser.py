@@ -7309,6 +7309,12 @@ class TestWhitelistParseRescue:
         assert fronts == ["ぐずる"]
         assert spy.calls and set(spy.calls) == {"ぐずる"}
 
+    def test_an_off_script_front_is_never_rescued(self, tmp_path, test_config):
+        """R2 (audit L1-005): Anki's vocabulary scan keeps only target-script fronts, so a
+        rescued 'OK' could never read as known again; the target script is structural."""
+        tokens = [_make_token("OK", "名詞", "普通名詞", lemma="OK")]
+        assert self._fronts(tmp_path, test_config, "OK", tokens, whitelist=_FrontSpy("OK")) == []
+
     def _compound_line(self):
         return [
             _make_token("環", "接頭辞", "*", lemma="環", kana="カン"),
