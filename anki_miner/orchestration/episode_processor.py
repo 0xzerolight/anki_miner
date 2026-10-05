@@ -2985,6 +2985,9 @@ class EpisodeProcessor:
                 if not unknown_words:
                     self._report_no_mineable_words(ctx)
                     return ctx.build_result(new_words_found=0)
+                # The merge's caps and dedup can drop words; a curator re-stamps
+                # this from its selection, a run without one reports it as is.
+                ctx.new_words_found = len(unknown_words)
 
             if curation_callback is not None and fixed_subset is None:
                 # count_lemmas reuses the phase-1 parse cache, so no second MeCab pass.

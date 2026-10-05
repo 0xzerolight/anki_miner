@@ -7270,6 +7270,30 @@ class TestAutoMergeSentenceLengthCaps:
         out = self._stamp(config, tmp_path, word_list_service=whitelist)
         assert [w.line_expansion for w in out] == [(0, 1)]
 
+    def test_new_words_found_counts_what_the_merge_keeps(self, test_config, mock_services, tmp_path):
+        """P3 (audit L2-005): with no curator, a partial drop by the merge's caps must
+        show in new_words_found, as a full drop (0) and the curator's re-stamp already do."""
+        config = replace(test_config, merge_incomplete_cues=True, max_sentence_duration_seconds=5.0)
+        cat = self._word("猫", "猫だ。", 1.0, 2.0)  # a complete cue: not merged, kept
+        bird = self._word("鳥", "鳥は", 10.0, 12.0)  # merged to 10-20s: over the 5s cap
+        parser = mock_services["subtitle_parser"]
+        parser.parse_subtitle_file.return_value = [cat, bird]
+        parser.parse_raw_entries.return_value = [(1.0, 2.0, "猫だ。"), *self.ENTRIES]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["definition_service"].has_offline_definitions.return_value = {"猫": True, "鳥": True}
+        mock_services["definition_service"].offline_term_identities.return_value = {}
+        mock_services["media_extractor"].extract_media_batch.return_value = [(cat, _make_media("cat"))]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["cat"]
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
+        services = {**mock_services, "word_filter": WordFilterService(config)}
+        processor = build_processor(config=config, presenter=NullPresenter(), **services)
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mined = mock_services["media_extractor"].extract_media_batch.call_args.args[1]
+        assert [w.mined_form for w in mined] == ["猫"]
+        assert result.new_words_found == 1
+
     def test_run_that_loses_every_word_to_the_caps_stops_before_media(self, test_config, mock_services, tmp_path):
         """Phase 2 passes the fragment; the merge pushes it over the cap and the run ends
         with the filters message instead of extracting media for nothing."""
