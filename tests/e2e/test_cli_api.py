@@ -96,7 +96,6 @@ def _mine(home: Path, tmp_path: Path, runs_dir: Path, video: Path, subtitle: Pat
                     "min_frequency_rank": 0,
                     "max_frequency_rank": 0,
                     "merge_incomplete_cues": True,
-                    "deduplicate_sentences": False,
                     "allow_duplicate_cards": False,  # the re-mine below must come back duplicate
                     "anki_fields": _EXTRA_FIELDS,
                 },

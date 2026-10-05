@@ -84,12 +84,12 @@ The settings then switch to `language` the way the window's language switch does
 Allowed `config` keys:
 - `anki_deck_name`, `anki_note_type`, `anki_fields`, `card_type`, `card_type_marker_fields`
 - `allow_duplicate_cards`, `merge_incomplete_cues`, `max_parallel_workers`
-- `min_frequency_rank`, `max_frequency_rank`, `use_blacklist`, `use_whitelist`, `deduplicate_sentences`, `use_i_plus_one_filter`
+- `min_frequency_rank`, `max_frequency_rank`, `use_blacklist`, `use_whitelist`
 - `max_sentence_duration_seconds`, `max_sentence_chars`, `exclude_hiragana_only_words`, `exclude_katakana_only_words`
 
 `anki_fields` and `card_type_marker_fields` merge key by key into the profile's. An unknown key, a value of the wrong type, or a value Anki Miner's settings refuse gives `BAD_RUN_FILE`. The ranges themselves are not checked.
 
-API runs never subtract words the user already knows (Anki's cards, the known-words list, the ignore list): the caller names only words it wants mined. The profile's other filters still apply, so use `config` to turn off any that could remove a named word. Two steps cannot be turned off from `config`: the name lists, which remove words that are names, and, unless `allow_duplicate_cards` is on, the merge of words that share one dictionary entry, which keeps the first. A word either step removes comes back `not_found`.
+API runs never subtract words the user already knows (Anki's cards, the known-words list, the ignore list): the caller names only words it wants mined. For the same reason the sentence rules are off: one card per sentence and i+1 never apply to an API run. The profile's other filters still apply, so use `config` to turn off any that could remove a named word. Two steps cannot be turned off from `config`: the name lists, which remove words that are names, and, unless `allow_duplicate_cards` is on, the merge of words that share one dictionary entry, which keeps the first. A word either step removes comes back `not_found`.
 
 An episode:
 
@@ -119,7 +119,7 @@ A word:
   - `line_start` takes the line starting nearest to it; a tie goes to the earlier line.
   - `line_text` takes the first line containing it. Both are compared after the cleaning the subtitle lines get (markup, speaker tags, furigana readings, the profile's text filter) and NFKC normalization, with whitespace ignored, so a whole line copied from the file matches. When no line contains it, the word keeps its own line.
   - With both, `line_start` wins.
-  - With neither, the word keeps its own line: its first in the episode, or the line the i+1 filter chose when that filter is on.
+  - With neither, the word keeps its own line: its first in the episode.
 - **Merging lines.** Left out, `line_expansion` is the automatic merge Anki Miner gives the chosen line (none with `merge_incomplete_cues` off); `[0, 0]` means no merge. Merged lines stop at the file's ends and at 30 seconds including the audio padding, as in the Word Curator. Lines after the chosen one are added first, then lines before.
 - **Repeats.** When two entries reach the same word, the first mines it and the rest come back `duplicate`. Entries for a word the run never produced, or that the dictionary check removed, all share that status (`not_found` or `no_definition`).
 - **Refusals.** These refuse the whole call with `BAD_RUN_FILE` before anything runs: an empty or non-string `word` or `line_text`, a negative or non-finite `line_start`, or a negative `line_expansion`.
@@ -250,8 +250,7 @@ def api(*args):
 
 pathlib.Path("run.json").write_text(json.dumps({
     "schema": 1, "run_dir": str(runs.resolve()), "language": "ja",
-    "config": {"anki_deck_name": "Mining", "min_frequency_rank": 0, "max_frequency_rank": 0,
-               "deduplicate_sentences": False},
+    "config": {"anki_deck_name": "Mining", "min_frequency_rank": 0, "max_frequency_rank": 0},
     "episodes": [{"run_id": "ep05", "video_file": "ep05.mkv", "subtitle_file": "ep05.ja.srt",
                   "words": [{"word": "約束", "line_start": 812.3},
                             {"word": "今日", "line_start": 15.02, "line_expansion": [0, 1]},

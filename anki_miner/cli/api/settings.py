@@ -35,8 +35,6 @@ ALLOWED_OVERLAY_KEYS = frozenset(
         "max_frequency_rank",
         "use_blacklist",
         "use_whitelist",
-        "deduplicate_sentences",
-        "use_i_plus_one_filter",
         "max_sentence_duration_seconds",
         "max_sentence_chars",
         "exclude_hiragana_only_words",
@@ -116,4 +114,13 @@ def resolve_run_config(profile_id: str | None, language: object, overlay: Mappin
     # The caller keeps its own record of what the user knows and mined
     # (proposal, "Calling it"): no known-words subtraction, and no
     # known_words.db file created for it (use_known_words_db initializes one).
-    return replace(config, include_known_words=True, use_known_words_db=False)
+    # With nothing known, i+1 would keep only lines holding a single content
+    # word, and sentence dedup would erase a named word before the selection
+    # runs (audit L5-008/L5-009), so both are off for every API run.
+    return replace(
+        config,
+        include_known_words=True,
+        use_known_words_db=False,
+        deduplicate_sentences=False,
+        use_i_plus_one_filter=False,
+    )

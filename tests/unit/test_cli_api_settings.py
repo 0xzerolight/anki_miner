@@ -58,6 +58,9 @@ def test_overlay_merges_fields_per_key(test_config) -> None:
         {"use_blacklist": 1},
         {"card_type": "bogus"},
         {"max_parallel_workers": 99},
+        # Forced off for API runs (audit L5-008/L5-009): no longer a run-file key.
+        {"deduplicate_sentences": False},
+        {"use_i_plus_one_filter": True},
     ],
 )
 def test_overlay_refusals_are_bad_run_file(test_config, overlay) -> None:
@@ -74,3 +77,12 @@ def test_run_config_switches_language_then_overlays_and_forces_known_words(test_
     with pytest.raises(ApiError) as err:
         settings.resolve_run_config(None, "xx", {})
     assert err.value.code == "BAD_RUN_FILE"
+
+
+def test_run_config_forces_sentence_dedup_and_i_plus_one_off(test_config) -> None:
+    """Audit L5-008/L5-009: with nothing known, i+1 would keep only lines holding a
+    single content word, and dedup would erase a named word before the selection."""
+    GUIConfigManager.save_config(replace(test_config, deduplicate_sentences=True, use_i_plus_one_filter=True))
+    config = settings.resolve_run_config(None, "ja", {})
+    assert config.deduplicate_sentences is False
+    assert config.use_i_plus_one_filter is False
