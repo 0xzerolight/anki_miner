@@ -2243,14 +2243,15 @@ class EpisodeProcessor:
         The receipt records the CONFIGURED intent, not the outcome: the per-filter
         reject counts already ride ``Phase 2 filter``, and what a zero there cannot
         say is whether the filter ran at all. ``bypass_optional_filters`` collapses
-        to a single ``bypass`` token because it disables every entry below it.
+        the optional filters to a single ``bypass`` token; the known-words DB is
+        not one of them (bypass never skips known words), so it is named first.
         """
         config = self.config
-        if config.bypass_optional_filters:
-            return ["bypass"]
         names: list[str] = []
         if config.use_known_words_db:
             names.append("known-db")
+        if config.bypass_optional_filters:
+            return [*names, "bypass"]
         if config.min_frequency_rank > 0 or config.max_frequency_rank > 0:
             names.append("frequency")
         if self.word_list_service is not None:

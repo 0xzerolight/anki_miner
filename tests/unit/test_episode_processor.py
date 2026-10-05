@@ -5492,6 +5492,14 @@ class TestActiveFilterNames:
 
         assert "sentence-length" in processor._active_filter_names()
 
+    def test_a_bypass_run_still_names_the_known_words_db(self, test_config):
+        """P3 (audit L2-006/L5-011): bypass skips the optional filters, not known words,
+        so a Deck Builder run that skips known words names that filter too."""
+        config = replace(test_config, bypass_optional_filters=True, use_known_words_db=True)
+        processor = build_processor(config=config)
+
+        assert processor._active_filter_names() == ["known-db", "bypass"]
+
 
 # ---------------------------------------------------------------------------
 # OVH-023 / OVH-038 — guard record_difficulty against locked stats.db
