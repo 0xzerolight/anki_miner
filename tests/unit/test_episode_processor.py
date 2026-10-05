@@ -6066,6 +6066,30 @@ class TestWithinRunDuplicateCollapse:
 
         assert captured["mined_forms"] == ["食べる", "食べる"]
 
+    def test_collapses_words_that_share_the_languages_comparison_fold(self, test_config):
+        """P4 (audit L3-001): de Essen and essen are one identity to known words, word lists,
+        excluded decks and Anki's in-batch check (profile.dedup_fold), so the collapse keeps
+        one, deterministically. spaCy languages carry no reading, so no dictionary identity."""
+        from anki_miner.languages.registry import get_profile
+        from anki_miner.orchestration.episode_processor import _Phase2Counts
+
+        config = replace(test_config, language="de", allow_duplicate_cards=False)
+        noun = TokenizedWord(
+            surface="Essen", lemma="Essen", reading="", sentence="Das Essen ist kalt.",
+            start_time=1.0, end_time=3.0, duration=2.0, pos="NOUN", mined_form_override="Essen",
+        )  # fmt: skip
+        verb = TokenizedWord(
+            surface="essen", lemma="essen", reading="", sentence="Wir essen jetzt.",
+            start_time=5.0, end_time=7.0, duration=2.0, pos="VERB", mined_form_override="essen",
+        )  # fmt: skip
+        definitions = MagicMock()
+        definitions.offline_term_identities.return_value = {}
+        processor = build_processor(config=config, definition_service=definitions, profile=get_profile("de"))
+
+        result = processor._phase2_collapse_duplicates([noun, verb], _Phase2Counts())
+
+        assert [w.mined_form for w in result] == ["Essen"]
+
 
 class TestDictionaryStalenessGate:
     """4.0 backstop: process_episode refuses to start when an enabled indexed

@@ -1568,8 +1568,11 @@ class EpisodeProcessor:
 
         Fills ``counts.duplicate_expression_rejects``.
         """
-        # Within-run duplicate collapse. Exact mined_form collisions mirror
-        # Anki's Expression-first-field dedup. Orthographic aliases need a
+        # Within-run duplicate collapse. mined_form collisions under the
+        # language's comparison fold (profile.dedup_fold: de Essen/essen, zh
+        # 頭髮/头发) are one card identity, as they are to known words, the word
+        # lists, excluded-deck admission and Anki's in-batch check, so they
+        # collapse here too (P4); raw when the language has no fold. Orthographic aliases need a
         # dictionary identity instead: exact-term sequence + contextual reading,
         # scoped by dictionary. Never use the normal term-OR-reading lookup here;
         # it would falsely give reading-only junk such as いでる the identity of
@@ -1589,14 +1592,16 @@ class EpisodeProcessor:
                 for word in unknown_words
             ]
             identities_by_pair = self.definition_service.offline_term_identities(identity_pairs)
+            fold = self.profile.dedup_fold
             seen: set[str] = set()
             seen_identities: set[tuple[str, int, str]] = set()
             collapsed: list[TokenizedWord] = []
             for word, pair in zip(unknown_words, identity_pairs, strict=True):
                 identities = identities_by_pair.get(pair, set())
-                if word.mined_form in seen or not seen_identities.isdisjoint(identities):
+                key = word.mined_form if fold is None else fold(word.mined_form)
+                if key in seen or not seen_identities.isdisjoint(identities):
                     continue
-                seen.add(word.mined_form)
+                seen.add(key)
                 seen_identities.update(identities)
                 collapsed.append(word)
             removed = len(unknown_words) - len(collapsed)
