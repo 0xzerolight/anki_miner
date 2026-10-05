@@ -2659,7 +2659,8 @@ class EpisodeProcessor:
         phase 2's within-run collapse ran. AnkiConnect's addNotes rejects and
         rolls back a whole request holding two notes with one first field, so
         the first of each ``mined_form`` is kept, under phase 2's own
-        ``allow_duplicate_cards`` gate (BA-020).
+        ``allow_duplicate_cards`` gate (BA-020). Fronts compare under the
+        language's comparison fold, the identity phase 2's collapse uses.
         """
         if all(word.sentence_edit is None for word in words):
             return words
@@ -2672,13 +2673,15 @@ class EpisodeProcessor:
         logger.info("sentence edits materialised: %d word(s) rebuilt", len(edited))
         if self.config.allow_duplicate_cards:
             return rebuilt
+        fold = self.profile.dedup_fold
         seen: set[str] = set()
         unique: list[TokenizedWord] = []
         for word in rebuilt:
-            if word.mined_form in seen:
+            key = word.mined_form if fold is None else fold(word.mined_form)
+            if key in seen:
                 logger.info("sentence edit: dropped a second card for %r in this run", word.mined_form)
                 continue
-            seen.add(word.mined_form)
+            seen.add(key)
             unique.append(word)
         return unique
 

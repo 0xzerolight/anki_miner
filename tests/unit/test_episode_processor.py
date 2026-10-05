@@ -6975,6 +6975,38 @@ class TestCurationSentenceEdit:
         assert [w.mined_form for w in extracted] == ["持久"]
         assert extracted[0].start_time == 1.0
 
+    def test_edit_onto_a_fold_twin_of_another_selected_word_keeps_one_card(self, test_config):
+        """P4 (audit L3-004): the edit dedup keys on the language's comparison fold, the
+        identity phase 2's collapse and Anki's in-batch check use (de essen beside Essen)."""
+        from anki_miner.languages.registry import get_profile
+
+        config = replace(test_config, language="de", allow_duplicate_cards=False)
+        fields = {"lemma": "", "reading": "", "start_time": 1.0, "end_time": 3.0, "duration": 2.0}
+        noun = TokenizedWord(
+            **{**fields, "lemma": "Essen"},
+            surface="Essen",
+            sentence="Das Essen ist kalt.",
+            pos="NOUN",
+            mined_form_override="Essen",
+        )
+        other = TokenizedWord(**{**fields, "lemma": "jetzt"}, surface="jetzt", sentence="Wir essen jetzt.", pos="ADV")
+        other.sentence_edit = SentenceEdit(text="Wir essen jetzt.", target_start=4, target_end=9)
+        edited = TokenizedWord(
+            **{**fields, "lemma": "essen"},
+            surface="essen",
+            sentence="Wir essen jetzt.",
+            pos="VERB",
+            mined_form_override="essen",
+        )
+        processor = build_processor(config=config, profile=get_profile("de"))
+
+        with patch(
+            "anki_miner.orchestration.episode_processor.resolve_sentence_edit", side_effect=lambda word, _p: edited
+        ):
+            result = processor._materialize_sentence_edits([noun, other])
+
+        assert [w.mined_form for w in result] == ["Essen"]
+
 
 class TestParseSentenceFacade:
     def test_parse_sentence_fn_wraps_one_reading_unit(self, test_config):
