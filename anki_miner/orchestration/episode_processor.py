@@ -2522,6 +2522,10 @@ class EpisodeProcessor:
         words: list[TokenizedWord],
         subtitle_file: Path,
         subtitle_offset: float | None = None,
+        *,
+        line_index: list[LineLemmas] | None = None,
+        unknown_lemmas: set[str] | None = None,
+        unknown_fronts: set[str] | None = None,
     ) -> list[TokenizedWord]:
         """Stamp the automatic cue merge onto words still at ``(0, 0)``.
 
@@ -2546,12 +2550,41 @@ class EpisodeProcessor:
         curation on purpose — dropping a word after the user has reviewed and
         kept it would be worse than not merging at all — and under phase 2's
         own gates, so a run that skipped a filter there skips it here too.
+
+        Under i+1 a merge is refused, not filtered: a window whose cues carry
+        more than one unknown word (``line_index`` against phase 2's
+        ``unknown_lemmas``/``unknown_fronts`` snapshot) would hand an i+1 card
+        an i+2 sentence, so the word keeps its i+1 fragment (P5). Force-included
+        words bypass i+1 in phase 2 and merge freely here.
         """
         if not self.config.merge_incomplete_cues:
             return words
         entries = self.subtitle_parser.parse_raw_entries(subtitle_file, subtitle_offset)
         rules = get_profile(config_language(self.config)).sentence_rules
         budget = merge_budget_seconds(self.config.audio_padding)
+        # Whitelist force-includes bypass phase 2's coverage filters (i+1,
+        # dedup, the caps), so they bypass this pass's checks too (BA-053).
+        forced_ids: set[int] = set()
+        whitelist_service = self._active_whitelist()
+        if whitelist_service is not None:
+            forced, _rest = self.word_filter.partition_whitelisted(words, whitelist_service)
+            forced_ids = {id(word) for word in forced}
+        keep_i_plus_one = bool(
+            line_index and self.config.use_i_plus_one_filter and not self.config.bypass_optional_filters
+        )
+        lines_by_text = {line.line_text: line for line in line_index or ()}
+        i1_lemmas = (unknown_lemmas or set()) | {w.lemma for w in words}
+        i1_fronts = (unknown_fronts or set()) | {w.mined_form for w in words}
+
+        def window_unknowns(index: int, prev_count: int, next_count: int) -> int:
+            """Distinct unknown words across the cues a merge would join (i+1's own count)."""
+            found: set[str] = set()
+            for _start, _end, text in entries[max(0, index - prev_count) : index + next_count + 1]:
+                line = lines_by_text.get(text)
+                if line is not None:
+                    found |= line.fronts & i1_fronts if line.front_spans else line.lemmas & i1_lemmas
+            return len(found)
+
         stamped: list[TokenizedWord] = []
         # Merged window per stamped word, keyed by identity — every object is
         # alive in `stamped` for as long as the filters below need it.
@@ -2566,11 +2599,15 @@ class EpisodeProcessor:
                 stamped.append(word)
                 continue
             expansion = auto_line_expansion(entries, index, rules, max_seconds=budget)
-            if expansion == (0, 0):
+            if expansion == (0, 0) or (
+                keep_i_plus_one and id(word) not in forced_ids and window_unknowns(index, *expansion) > 1
+            ):
                 stamped.append(word)
                 continue
             merged_word = replace(word, line_expansion=expansion)
             merged[id(merged_word)] = merge_cue_window(entries, index, *expansion)
+            if id(word) in forced_ids:
+                forced_ids.add(id(merged_word))
             stamped.append(merged_word)
         if not merged:
             return words
@@ -2590,14 +2627,8 @@ class EpisodeProcessor:
             window = merged.get(id(word))
             return (word.duration, word.sentence) if window is None else (window.end - window.start, window.text)
 
-        # Whitelist force-includes bypass phase 2's coverage filters, so they
-        # bypass these too: only the other words are filtered, among
-        # themselves, and every word keeps its place (BA-053).
-        forced_ids: set[int] = set()
-        whitelist_service = self._active_whitelist()
-        if whitelist_service is not None:
-            forced, _rest = self.word_filter.partition_whitelisted(stamped, whitelist_service)
-            forced_ids = {id(word) for word in forced}
+        # Force-included words (partitioned above) are spared: only the other
+        # words are filtered, among themselves, and every word keeps its place.
         candidates = [word for word in stamped if id(word) not in forced_ids]
         if dedup:
             kept = self.word_filter.deduplicate_by_sentence(candidates, lambda word: card_sentence(word)[1])
@@ -2896,7 +2927,14 @@ class EpisodeProcessor:
             # sentence and treats the stamp as what its ± line buttons extend
             # from. A no-op unless the setting is on. Its sentence-length pass
             # can drop every word, so the phase-2 guard repeats here.
-            unknown_words = self._auto_stamp_line_expansions(unknown_words, subtitle_file, subtitle_offset)
+            unknown_words = self._auto_stamp_line_expansions(
+                unknown_words,
+                subtitle_file,
+                subtitle_offset,
+                line_index=line_index,
+                unknown_lemmas=ctx.unknown_lemmas,
+                unknown_fronts=ctx.unknown_fronts,
+            )
             if not unknown_words:
                 self._report_no_mineable_words(ctx)
                 return ctx.build_result(new_words_found=0)

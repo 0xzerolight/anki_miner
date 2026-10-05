@@ -7253,6 +7253,63 @@ class TestAutoMergeSentenceLengthCaps:
         ), presenter.show_warning.call_args_list
 
 
+class TestAutoMergeKeepsIPlusOne:
+    """P5 (audit L4-001): under i+1 the automatic cue merge must not hand a card a merged
+    sentence holding more than one unknown. The word keeps its i+1 fragment instead.
+
+    昨日図書館で has no terminator, so it merges with 変な本を見つけた。; with 見つける
+    also unknown that merged sentence is i+2.
+    """
+
+    ENTRIES = [(1.0, 2.0, "昨日図書館で"), (2.5, 4.0, "変な本を見つけた。")]
+    INDEX = [
+        LineLemmas("昨日図書館で", frozenset({"昨日", "図書館"}), 1.0, 2.0, 1.0),
+        LineLemmas("変な本を見つけた。", frozenset({"変", "本", "見つける"}), 2.5, 4.0, 1.5),
+    ]
+
+    def _stamp(self, config, tmp_path, unknown, word_list_service=None):
+        parser = MagicMock()
+        parser.parse_raw_entries.return_value = list(self.ENTRIES)
+        proc = build_processor(
+            config=config,
+            subtitle_parser=parser,
+            word_filter=WordFilterService(config),
+            word_list_service=word_list_service,
+        )
+        word = TokenizedWord(
+            surface="図書館", lemma="図書館", reading="", sentence="昨日図書館で",
+            start_time=1.0, end_time=2.0, duration=1.0, pos="名詞",
+        )  # fmt: skip
+        out = proc._auto_stamp_line_expansions(
+            [word],
+            tmp_path / "ep01.srt",
+            line_index=self.INDEX,
+            unknown_lemmas=set(unknown),
+            unknown_fronts=set(unknown),
+        )
+        return [w.line_expansion for w in out]
+
+    def test_merge_that_adds_a_second_unknown_is_not_stamped(self, test_config, tmp_path):
+        config = replace(test_config, merge_incomplete_cues=True, use_i_plus_one_filter=True)
+        assert self._stamp(config, tmp_path, {"図書館", "見つける"}) == [(0, 0)]
+
+    def test_merge_that_stays_at_one_unknown_is_stamped(self, test_config, tmp_path):
+        config = replace(test_config, merge_incomplete_cues=True, use_i_plus_one_filter=True)
+        assert self._stamp(config, tmp_path, {"図書館"}) == [(0, 1)]
+
+    def test_without_i_plus_one_the_merge_is_stamped(self, test_config, tmp_path):
+        config = replace(test_config, merge_incomplete_cues=True)
+        assert self._stamp(config, tmp_path, {"図書館", "見つける"}) == [(0, 1)]
+
+    def test_whitelist_force_include_still_merges(self, test_config, tmp_path):
+        """Force-included words bypass i+1 in phase 2, so the merge's i+1 check spares them too."""
+        config = replace(test_config, merge_incomplete_cues=True, use_i_plus_one_filter=True, use_whitelist=True)
+        whitelist = MagicMock()
+        whitelist.is_available.return_value = True
+        whitelist.is_whitelisted.side_effect = lambda key: key == "図書館"
+        assert self._stamp(config, tmp_path, {"図書館", "見つける"}, word_list_service=whitelist) == [(0, 1)]
+
+
 def _tagger_token(surface, pos1, pos2, lemma=None, orth_base=None):
     """A fugashi-shaped token for a real SubtitleParserService under a mock tagger."""
     token = MagicMock()
