@@ -888,6 +888,7 @@ def create_services(
                 blacklist_path=config.blacklist_path if config.use_blacklist else None,
                 whitelist_path=config.whitelist_path if config.use_whitelist else None,
                 dedup_fold=profile.dedup_fold,
+                normalize=profile.normalize,
                 encodings=ladder,
                 **script_check_kwarg(ladder, profile.script),
             )

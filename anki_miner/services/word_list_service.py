@@ -38,6 +38,7 @@ class WordListService:
         dedup_fold: Callable[[str], str] | None = None,
         encodings: tuple[str, ...] | None = None,
         script_check: Callable[[str], bool] | None = None,
+        normalize: Callable[[str], str] | None = None,
     ):
         """Initialize the word list service.
 
@@ -56,8 +57,14 @@ class WordListService:
                 Japanese.
             script_check: Validates a single-byte leg of that ladder
                 (``utils.subtitle_encoding.script_check_kwarg``).
+            normalize: The mining language's text normalizer
+                (``LanguageProfile.normalize``), applied to every entry at load:
+                the parser normalizes width, compatibility forms and kanji
+                variants before a card front exists, so ｺｰﾋｰ must meet コーヒー.
+                Probes are card fronts, already normalized.
         """
         self._dedup_fold = dedup_fold
+        self._normalize = normalize
         self._encodings = _DEFAULT_ENCODINGS if encodings is None else encodings
         self._script_check = script_check
         self._blacklist_path = blacklist_path
@@ -73,11 +80,11 @@ class WordListService:
             SetupError: If a specified file cannot be read.
         """
         if self._blacklist_path is not None:
-            self._blacklist = {self._key(word) for word in self._read_word_file(self._blacklist_path)}
+            self._blacklist = {self._entry_key(word) for word in self._read_word_file(self._blacklist_path)}
             logger.info("Loaded %d blacklisted words", len(self._blacklist))
 
         if self._whitelist_path is not None:
-            self._whitelist = {self._key(word) for word in self._read_word_file(self._whitelist_path)}
+            self._whitelist = {self._entry_key(word) for word in self._read_word_file(self._whitelist_path)}
             logger.info("Loaded %d whitelisted words", len(self._whitelist))
 
         self._loaded = True
@@ -85,6 +92,10 @@ class WordListService:
     def _key(self, word: str) -> str:
         """The comparison key for an entry or a probe (identity without a fold)."""
         return word if self._dedup_fold is None else self._dedup_fold(word)
+
+    def _entry_key(self, entry: str) -> str:
+        """An entry's key: normalized the way subtitle text is, then folded."""
+        return self._key(entry if self._normalize is None else self._normalize(entry))
 
     def is_available(self) -> bool:
         """Check if the service has been loaded.

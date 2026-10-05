@@ -153,6 +153,19 @@ class TestWhitelist:
         assert service.is_whitelisted("新しい") is True
         assert service.is_whitelisted("食べる") is False
 
+    @pytest.mark.parametrize(("entry", "front"), [("ｺｰﾋｰ", "コーヒー"), ("𠮟る", "叱る")])
+    def test_entries_are_normalized_like_subtitle_text(self, tmp_path, entry, front):
+        """P4 (audit L1-003): the parser normalizes width, compat forms and kanji variants
+        before a card front exists, so an entry must go through the same normalizer."""
+        wl = tmp_path / "wl.txt"
+        wl.write_text(entry + "\n", encoding="utf-8")
+        profile = get_profile("ja")
+        service = WordListService(whitelist_path=wl, dedup_fold=profile.dedup_fold, normalize=profile.normalize)
+        service.load()
+
+        assert service.is_whitelisted(front) is True
+        assert service.whitelist_entries() == frozenset({front})
+
 
 class TestBothLists:
     """Tests with both blacklist and whitelist loaded."""
@@ -334,6 +347,15 @@ class TestConstructionSites:
             f"{path}:{node.lineno}"
             for path, node in self._constructions()
             if not any(keyword.arg == "encodings" for keyword in node.keywords)
+        ]
+        assert missing == []
+
+    def test_every_construction_passes_the_normalizer(self):
+        """Entries meet card fronts the parser normalized (audit L1-003)."""
+        missing = [
+            f"{path}:{node.lineno}"
+            for path, node in self._constructions()
+            if not any(keyword.arg == "normalize" for keyword in node.keywords)
         ]
         assert missing == []
 
