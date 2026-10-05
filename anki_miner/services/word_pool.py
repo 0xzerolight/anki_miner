@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+from collections.abc import Callable
 from pathlib import Path
 
 from anki_miner.models.word import TokenizedWord
@@ -42,10 +43,13 @@ def merge_pools(
     pools: list[list[TokenizedWord]],
     *,
     max_candidates: int | None = None,
+    dedup_fold: Callable[[str], str] | None = None,
 ) -> list[TokenizedWord]:
     """Fold per-episode word lists into one deduped season pool.
 
-    One row per ``mined_form``; the first-seen episode's word is the
+    One row per ``mined_form`` under ``dedup_fold`` (the mining language's
+    comparison fold, the identity known words and the within-run collapse
+    use: de Essen/essen is one row); the first-seen episode's word is the
     primary. Sentence candidates are the ordered concatenation of each
     episode's candidate set (a bare word contributes a leaf copy of
     itself); ``occurrence_count`` becomes the season total. A word seen
@@ -64,7 +68,7 @@ def merge_pools(
     candidates: dict[str, list[TokenizedWord]] = {}
     for pool in pools:
         for word in pool:
-            key = word.mined_form
+            key = word.mined_form if dedup_fold is None else dedup_fold(word.mined_form)
             contribution = (
                 [_leaf_copy(c) for c in word.sentence_candidates] if word.sentence_candidates else [_leaf_copy(word)]
             )

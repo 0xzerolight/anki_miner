@@ -18,6 +18,7 @@ from anki_miner.gui.workers._queue_worker_base import CurationEpisode, RunBounda
 from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.interfaces.progress import ProgressCallback
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.models.batch_queue import BatchQueue, QueueItem, QueueItemStatus
 from anki_miner.models.processing import ProcessingResult, WhitelistCoverage
 from anki_miner.models.word import TokenizedWord
@@ -592,7 +593,7 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                 continue
             prepass_ok.append((pair, pair_key))
 
-        pool = merge_pools(capture.pools)
+        pool = merge_pools(capture.pools, dedup_fold=get_profile(config_language(self.config)).dedup_fold)
         if prepass_ok:
             selected = self._select_season_pool(pool, prepass_ok, episode_processor)
             if selected is None or self.check_cancelled():

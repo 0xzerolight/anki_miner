@@ -113,6 +113,13 @@ class TestMergePools:
         merged = merge_pools([[_word("猫", video=EP1)]])
         assert merged[0].sentence_candidates == []
 
+    def test_fold_twins_share_one_row(self):
+        """P4 (audit L3-003): de Essen and essen are one identity under the language's
+        comparison fold, as they are to known words and the within-run collapse."""
+        merged = merge_pools([[_word("Essen", video=EP1)], [_word("essen", video=EP2)]], dedup_fold=str.casefold)
+        assert [w.mined_form for w in merged] == ["Essen"]
+        assert [c.video_file for c in merged[0].sentence_candidates] == [EP1, EP2]
+
 
 class TestSplitSelection:
     def test_splits_by_video_file(self):
