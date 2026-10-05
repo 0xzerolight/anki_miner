@@ -243,8 +243,9 @@ class CurationMediaContext:
     #: The mining language's sentence rules when the full-sentence merge is on
     #: (``config.merge_incomplete_cues``), else None. One field carries both
     #: facts: a sentence pick re-runs ``auto_line_expansion`` for the cue it
-    #: chose exactly when the run would have stamped it, and nothing else here
-    #: needs a flag of its own.
+    #: chose whenever the run's merge is on, and nothing else here needs a flag
+    #: of its own. The run's i+1 refusal (a merge that would add a second
+    #: unknown word) is not repeated for a line the user picked.
     auto_merge_rules: SentenceRules | None = None
     # Secondary-language track (F7): raw cues parsed at a ZERO offset like
     # subtitle_entries, plus the offset the run was started with. Empty on

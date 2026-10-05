@@ -26,7 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Max Sentence Duration and Max Sentence Characters measure the full sentence when "Mine full sentences across subtitle lines" is on (Settings → Sentences).** A word whose merged sentence goes over a limit is skipped before the Word Curator opens. The caps used to judge only the subtitle line the word came from, so a merged card could run far past them.
 - **Reading → Anki Deck: the Word Curator shows the card's line under its picture**, not the card's position in the deck.
 - **i+1 no longer gives a card a sentence that holds only another spelling of its word** (撮る on a line with 取る), and a known word no longer counts as unknown because an unknown one shares its dictionary form. The Word Curator's sentence picker and Unknowns in line column, and Readability's line counts, follow the same rule.
-- **With i+1 on, a sentence merged across subtitle lines never holds a second unknown word.** A word whose merge would add one keeps its own line.
+- **With i+1 on, merging a sentence across subtitle lines no longer adds a second unknown word.** A word whose merge would add one keeps its own line when the Word Curator opens.
 - **Batch in season mode no longer cards a word an earlier episode of the run just added** (分かる, then わかる), and no longer skips a chosen word when the rest of its episode was already known.
 - **Words that differ only by case or character set make one card per run** (German Essen and essen, 頭髮 and 头发), also across a season's episodes and after an edit in the Word Curator.
 - **View details shows the share of words you already know as Comprehension.** It used to count every word a filter or the Word Curator removed as known.
