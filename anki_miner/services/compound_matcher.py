@@ -138,9 +138,14 @@ class CompoundDictionaryMatcher:
         inclusion_rule: TokenInclusionRule,
         max_span_tokens: int = _MAX_SPAN_TOKENS,  # parameterized for tests only
         max_span_chars: int | None = None,
+        force_include: Callable[[str], bool] | None = None,
     ) -> None:
         self._lookup = term_lookup
         self._rule = inclusion_rule
+        # The run's whitelist probe (the parser's own): an attested span whose
+        # synthetic the gate refuses still merges when its headword is
+        # whitelisted and its tags are rescuable (R1); the parser then rescues it.
+        self._force_include = force_include
         self._max_span = max(2, max_span_tokens)
         char_bound = self._default_max_span_chars if max_span_chars is None else max_span_chars
         self._max_span_chars = max(2, char_bound)
@@ -179,7 +184,7 @@ class CompoundDictionaryMatcher:
                             continue
                         synthetic = self._build_synthetic(tokens[i : j + 1], candidate, kind)
                         # Never consume tokens for a word the gate would then drop.
-                        if self._rule.should_include(synthetic):
+                        if self._rule.should_include(synthetic) or self._whitelisted(synthetic, candidate):
                             replacement = synthetic
                             consumed_end = j
                             break
@@ -192,6 +197,10 @@ class CompoundDictionaryMatcher:
                 merged.append(token)
                 i += 1
         return merged
+
+    def _whitelisted(self, synthetic, headword: str) -> bool:
+        """Whether the whitelist rescues a synthetic the inclusion gate refuses (R1)."""
+        return self._force_include is not None and self._rule.rescuable(synthetic) and self._force_include(headword)
 
     def _can_start(self, token) -> bool:
         """Whether candidate spans may start at ``token``."""

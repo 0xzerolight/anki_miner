@@ -7309,6 +7309,31 @@ class TestWhitelistParseRescue:
         assert fronts == ["ぐずる"]
         assert spy.calls and set(spy.calls) == {"ぐずる"}
 
+    def _compound_line(self):
+        return [
+            _make_token("環", "接頭辞", "*", lemma="環", kana="カン"),
+            _make_token("太平洋", "名詞", "固有名詞", lemma="太平洋", kana="タイヘイヨウ"),
+        ]
+
+    def test_rescues_a_whitelisted_dictionary_compound_with_a_name_tail(self, tmp_path, test_config):
+        """Owner ruling (audit L1-002): the compound gate is a preference too, so a
+        whitelisted attested compound whose synthetic token inherits 固有名詞 still forms."""
+        fronts = self._fronts(
+            tmp_path,
+            test_config,
+            "環太平洋",
+            self._compound_line(),
+            whitelist=_FrontSpy("環太平洋"),
+            dictionary={"環太平洋"},
+        )
+        assert fronts == ["環太平洋"]
+
+    def test_attested_compound_with_a_name_tail_stays_unmerged_without_the_whitelist(self, tmp_path, test_config):
+        fronts = self._fronts(
+            tmp_path, test_config, "環太平洋", self._compound_line(), whitelist=_FrontSpy(), dictionary={"環太平洋"}
+        )
+        assert "環太平洋" not in fronts
+
     def test_count_lemmas_counts_a_rescued_token(self, tmp_path, test_config):
         counts = self._invoke(
             tmp_path,
