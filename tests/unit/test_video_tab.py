@@ -542,6 +542,8 @@ class TestClosePathReleasesDeckBuilderWorker:
             ),
             patch.object(AnkiService, "ensure_deck"),
             patch.object(AnkiService, "verify_card_target"),
+            # A build needs an offline dictionary (audit L5-007); the isolated home has none.
+            patch("anki_miner.gui.workers.batch_queue_worker.require_usable_offline_provider"),
         ):
             with qtbot.waitSignal(worker.preview_ready, timeout=5000):
                 worker.start()

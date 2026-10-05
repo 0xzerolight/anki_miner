@@ -287,6 +287,17 @@ def _run_build(
             "anki_miner.services.definition_service.DefinitionService.get_glossaries_batch",
             side_effect=lambda lemmas, *a, **kw: [None] * len(lemmas),
         ),
+        # A build keeps the dictionary gates (audit L5-007): the isolated home
+        # has no offline dictionary, so stand one in that defines every word,
+        # as get_definitions_batch above does.
+        patch(
+            "anki_miner.services.definition_service.DefinitionService.has_usable_offline_provider",
+            return_value=True,
+        ),
+        patch(
+            "anki_miner.services.definition_service.DefinitionService.has_offline_definitions",
+            side_effect=lambda terms: dict.fromkeys(terms, True),
+        ),
     ):
         worker.run()
 
