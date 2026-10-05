@@ -382,8 +382,8 @@ class WordFilterService:
         """Filter words using the user blacklist.
 
         Blacklist entries match against ``word.mined_form`` (the card-front
-        spelling) with a miss-only ``word.lemma`` fallback — a word is dropped
-        when EITHER form is blacklisted. UniDic collapses kanji variants
+        spelling) OR ``word.lemma`` — a word is dropped when EITHER form is
+        blacklisted. UniDic collapses kanji variants
         (賭ける→掛ける) into one lemma, so keying on lemma alone let a blacklist
         entry for the card front (賭ける) be ignored; mirrors the def/freq lookup
         convention (commit 99e2c04). Users should enter dictionary forms in
@@ -414,18 +414,19 @@ class WordFilterService:
 
         Force-included words bypass every optional coverage filter — the caller
         runs the filter chain on ``rest`` only and merges ``forced`` back in
-        before the integrity gates. Matching is on ``word.mined_form`` (the
-        card-front spelling) with a miss-only ``word.lemma`` fallback, the
-        convention shared with :meth:`filter_by_word_lists`: UniDic collapses
-        kanji variants (賭ける→掛ける) into one lemma, so whitelisting the card
-        front must force-include it even though its lemma differs.
-        This OR-match is the explicit alias policy: a canonical-lemma whitelist
-        entry also admits every distinct card-front surface sharing that lemma
-        (its ``lemma-siblings``), including below an occurrence floor.
-        ``all_words`` is already lemma-deduped upstream
-        (``SubtitleParserService``), so exactly one word per whitelisted form is
-        moved to ``forced``. The match itself lives in :func:`whitelisted_keys`,
-        shared with the run-end coverage report.
+        before the within-run duplicate collapse. The integrity gates the
+        whitelist does not override (known words, definition existence) have
+        already run on ``words``. A word matches on ``word.mined_form`` (the
+        card-front spelling) OR ``word.lemma``, the convention shared with
+        :meth:`filter_by_word_lists`: UniDic collapses kanji variants
+        (賭ける→掛ける) into one lemma, so whitelisting the card front must
+        force-include it even though its lemma differs. This OR-match is the
+        explicit alias policy: a canonical-lemma whitelist entry also admits
+        every distinct card-front surface sharing that lemma (its
+        ``lemma-siblings``), including below an occurrence floor. ``words`` is
+        deduped on ``mined_form`` upstream (``SubtitleParserService``), so one
+        entry can force several same-lemma fronts. The match itself lives in
+        :func:`whitelisted_keys`, shared with the run-end coverage report.
 
         Args:
             words: List of candidate words.
@@ -1072,18 +1073,19 @@ class WordFilterService:
         cross_episode_counts: dict[str, int],
         min_appearances: int,
     ) -> list[TokenizedWord]:
-        """Filter words by cross-episode appearance count.
+        """The Reading occurrence floor (``reading_min_occurrence``).
 
-        Only keeps words that appear in at least `min_appearances` episodes.
-        Counts are restated over the mined lemmas the same way
+        Only keeps words that occur at least `min_appearances` times in the
+        document. Counts are restated over the mined lemmas the same way
         :meth:`attach_occurrence_counts` restates them for the curator's
         Occurrences column — the floor must not drop a word the column says
-        cleared it.
+        cleared it. (The parameter names predate the floor: they served the
+        removed cross-episode filter.)
 
         Args:
             words: List of words to filter.
-            cross_episode_counts: Mapping of lemma to episode count.
-            min_appearances: Minimum number of episodes a word must appear in.
+            cross_episode_counts: Mapping of lemma to occurrences in the document.
+            min_appearances: Minimum number of occurrences a word must have.
 
         Returns:
             Filtered list of words.

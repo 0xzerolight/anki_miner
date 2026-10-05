@@ -2384,8 +2384,8 @@ class EpisodeProcessor:
         allocated ``run_temp_folder`` and returns this run's ``ProcessingResult``;
         it may early-return at phase boundaries and may raise (caught here).
         Everything path-specific — identity/ctx construction, the video-only
-        audio-stream-cache invalidation, the reading occurrence floor — lives in
-        the caller's ``body`` closure.
+        audio-stream-cache invalidation, the occurrence counts the reading
+        path hands phase 2's floor — lives in the caller's ``body`` closure.
         """
         # Reset the run-scoped Anki accumulators FIRST — before the pre-flight
         # gates, which can raise SetupError straight out of this method. A
