@@ -83,7 +83,10 @@ class RunReceipt:
             errors.extend(result.errors)
             mined_forms.extend(result.mined_forms)
             note_ids.extend(result.card_ids)
-        known = sum(r.total_words_found - r.new_words_found for r in self.results)
+        # Each item's own share of words already known (phase 2's figure), not
+        # total minus the words left after the filters and the curator: a
+        # filtered or deselected word is not a known one.
+        known = sum(r.comprehension_percentage * r.total_words_found / 100 for r in self.results)
         total_words = sum(r.total_words_found for r in self.results)
         return _RunAggregateResult(
             total_words_found=total_words,

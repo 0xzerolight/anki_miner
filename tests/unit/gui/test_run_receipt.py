@@ -187,6 +187,28 @@ class TestElapsed:
 
 
 class TestDetails:
+    def test_the_aggregate_comprehension_is_the_known_share(self):
+        """P3 (audit L2-004): 'Comprehension' is the share of words already known,
+        not total minus the words left after the coverage filters and the curator."""
+        acc = _accumulator(2)
+        acc.record_result(
+            ProcessingResult(
+                total_words_found=1000, new_words_found=50, cards_created=50, errors=[],
+                comprehension_percentage=60.0, card_ids=list(range(1, 51)),
+            )
+        )  # fmt: skip
+        acc.record_result(
+            ProcessingResult(
+                total_words_found=500, new_words_found=10, cards_created=10, errors=[],
+                comprehension_percentage=90.0, card_ids=list(range(51, 61)),
+            )
+        )  # fmt: skip
+
+        aggregate = _finish(acc).aggregate_result()
+
+        assert aggregate is not None
+        assert aggregate.comprehension_percentage == 70.0  # (600 + 450) / 1500
+
     def test_the_aggregate_result_carries_every_note_id(self):
         acc = _accumulator(2)
         acc.record_result(_result(2, ids=[1, 2]))
