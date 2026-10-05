@@ -35,6 +35,7 @@ from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.asr.subtitle_generation import SubtitleGenResult, SubtitleGenStatus
 from anki_miner.services.definition_service import DefinitionService
 from anki_miner.services.pitch_accent_service import PitchEntry
+from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.services.word_filter import WordFilterService
 from anki_miner.services.word_list_service import WordListService
 from tests.conftest import build_processor
@@ -7188,3 +7189,96 @@ class TestAutoMergeSentenceLengthCaps:
         assert any(
             "removed by active filters" in str(c.args[0]).lower() for c in presenter.show_warning.call_args_list
         ), presenter.show_warning.call_args_list
+
+
+def _tagger_token(surface, pos1, pos2, lemma=None, orth_base=None):
+    """A fugashi-shaped token for a real SubtitleParserService under a mock tagger."""
+    token = MagicMock()
+    token.surface = surface
+    token.feature.pos1 = pos1
+    token.feature.pos2 = pos2
+    token.feature.lemma = lemma if lemma is not None else surface
+    token.feature.kana = surface
+    token.feature.orthBase = orth_base if orth_base is not None else token.feature.lemma
+    token.feature.lForm = None
+    token.feature.kanaBase = None
+    token.feature.cForm = None
+    return token
+
+
+class TestWhitelistRescuesParseGates:
+    """R1 end to end: a whitelisted word the parse gates would drop reaches phase 2,
+    is force-included past the coverage filters, and still answers to the integrity
+    gates (R2). Real parser (mock tagger), real WordFilterService and WordListService."""
+
+    _NAME_LINE = "太郎は猫を見る"
+
+    def _tokens(self):
+        return [
+            _tagger_token("太郎", "名詞", "固有名詞"),
+            _tagger_token("は", "助詞", "係助詞"),
+            _tagger_token("猫", "名詞", "普通名詞"),
+            _tagger_token("を", "助詞", "格助詞"),
+            _tagger_token("見る", "動詞", "一般"),
+        ]
+
+    def _run(self, tmp_path, config, *, rescue, defined, known=frozenset()):
+        wl = tmp_path / "wl.txt"
+        wl.write_text("太郎\n", encoding="utf-8")
+        wls = WordListService(whitelist_path=wl)
+        wls.load()
+        line = MagicMock(text=self._NAME_LINE, start=1000, end=3000)
+        subs = MagicMock()
+        subs.__iter__ = MagicMock(return_value=iter([line]))
+        definitions = MagicMock()
+        definitions.has_offline_definitions.side_effect = lambda terms: {t: t in defined for t in terms}
+        definitions.offline_deinflection_terms_exist.return_value = set()
+        definitions.offline_term_identities.return_value = {}
+        anki = MagicMock()
+        anki.get_existing_vocabulary.return_value = set(known)
+        sub_file = tmp_path / "s.srt"
+        sub_file.write_text("stub", encoding="utf-8")
+        ctx = _EpisodeContext(0.0, "", "", "episode", "series", "")
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=subs),
+            patch(
+                "anki_miner.services.subtitle_parser.get_shared_tagger",
+                return_value=MagicMock(return_value=self._tokens()),
+            ),
+        ):
+            parser = SubtitleParserService(config, force_include=wls.is_whitelisted if rescue else None)
+            processor = build_processor(
+                config=config,
+                subtitle_parser=parser,
+                word_filter=WordFilterService(config),
+                word_list_service=wls,
+                definition_service=definitions,
+                anki_service=anki,
+            )
+            words, line_index = processor._phase1_parse(ctx, sub_file)
+            result = processor._phase2_filter(ctx, words, line_index, None)
+        return [w.mined_form for w in result], ctx
+
+    def test_a_rescued_proper_noun_reaches_the_phase_two_output(self, test_config, tmp_path):
+        config = replace(test_config, use_whitelist=True)
+        fronts, _ctx = self._run(tmp_path, config, rescue=True, defined={"太郎", "猫", "見る"})
+        assert fronts[0] == "太郎"
+        assert set(fronts) == {"太郎", "猫", "見る"}
+
+    def test_an_undefined_rescued_name_is_dropped_and_reported_not_mined(self, test_config, tmp_path):
+        # R2: offline-definition existence still beats the whitelist.
+        config = replace(test_config, use_whitelist=True)
+        fronts, ctx = self._run(tmp_path, config, rescue=True, defined={"猫", "見る"})
+        assert "太郎" not in fronts
+        assert ctx.whitelist_coverage is not None
+        assert "太郎" in ctx.whitelist_coverage.missing
+
+    def test_a_whitelisted_name_counts_as_unknown_in_its_line_for_i_plus_one(self, test_config, tmp_path):
+        # Issue #74 basis: the learner wants 太郎, so it is an unknown on the line,
+        # which makes the line i+2 for 猫. 太郎 itself bypasses i+1 (forced).
+        config = replace(test_config, use_whitelist=True, use_i_plus_one_filter=True)
+        defined = {"太郎", "猫", "見る"}
+        rescued, _ = self._run(tmp_path, config, rescue=True, defined=defined, known=frozenset({"見る"}))
+        plain, _ = self._run(tmp_path, config, rescue=False, defined=defined, known=frozenset({"見る"}))
+        assert rescued == ["太郎"]
+        assert plain == ["猫"]

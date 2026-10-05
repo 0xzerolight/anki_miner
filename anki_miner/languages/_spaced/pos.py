@@ -15,6 +15,11 @@ from types import MappingProxyType
 #: ``token.is_stop``, whose lists hold content words (A.2).
 UPOS_ALLOWED: tuple[str, ...] = ("ADJ", "ADV", "NOUN", "VERB")
 
+#: What a whitelisted card front may be rescued from (R1): the content classes
+#: plus names and interjections. Never a function class (DET ADP PRON AUX CCONJ
+#: SCONJ PART) — a homograph entry (fr ``son``) must not rescue its article use.
+UPOS_RESCUABLE: tuple[str, ...] = (*UPOS_ALLOWED, "PROPN", "INTJ")
+
 UPOS_LABELS: Mapping[str, str] = MappingProxyType(
     {
         "ADJ": "Adjective",

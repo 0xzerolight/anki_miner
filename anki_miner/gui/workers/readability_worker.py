@@ -8,6 +8,7 @@ read-only, then measures each file. Writes nothing.
 from __future__ import annotations
 
 import logging
+from dataclasses import replace
 from pathlib import Path
 
 from PyQt6.QtCore import pyqtSignal
@@ -42,7 +43,9 @@ class ReadabilityWorker(FileQueueWorker):
         shared = create_shared_lookup_services(self._config)
         services: Services | None = None
         try:
-            services = create_services(self._config, shared_lookup=shared)
+            # Readability measures the text: a mining preference list must not
+            # move its numbers, and the parser's whitelist rescue (R1) would.
+            services = create_services(replace(self._config, use_whitelist=False), shared_lookup=shared)
             if self.is_cancelled:
                 return
             try:

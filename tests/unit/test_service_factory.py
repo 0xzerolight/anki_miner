@@ -93,6 +93,42 @@ def test_create_services_reads_word_lists_with_the_language_ladder(base_config, 
     assert services.word_list_service.is_blacklisted("的") is True
 
 
+def _whitelist_config(base_config, tmp_path, **overrides):
+    wl = tmp_path / "whitelist.txt"
+    wl.write_text("太郎\n", encoding="utf-8")
+    return dataclasses.replace(base_config, **{"use_whitelist": True, "whitelist_path": wl, **overrides})
+
+
+def test_parser_rescues_through_the_runs_whitelist(base_config, tmp_path):
+    """R1: the parser's force-include predicate is the loaded whitelist's own probe."""
+    services = service_factory.create_services(_whitelist_config(base_config, tmp_path))
+
+    assert services.word_list_service is not None
+    assert services.subtitle_parser._force_include == services.word_list_service.is_whitelisted
+
+
+def test_parser_has_no_rescue_under_bypass(base_config, tmp_path):
+    """Deck Builder runs bypass: the whitelist is off there, so nothing is rescued at parse."""
+    services = service_factory.create_services(_whitelist_config(base_config, tmp_path, bypass_optional_filters=True))
+
+    assert services.subtitle_parser._force_include is None
+
+
+def test_parser_has_no_rescue_with_the_whitelist_off(base_config, tmp_path):
+    services = service_factory.create_services(_whitelist_config(base_config, tmp_path, use_whitelist=False))
+
+    assert services.subtitle_parser._force_include is None
+
+
+def test_parser_has_no_rescue_when_the_word_lists_fail_to_load(base_config, tmp_path):
+    cfg = dataclasses.replace(base_config, use_whitelist=True, whitelist_path=tmp_path / "missing.txt")
+
+    services = service_factory.create_services(cfg)
+
+    assert services.word_list_service is None
+    assert services.subtitle_parser._force_include is None
+
+
 def test_create_services_uses_provided_anki_service(base_config):
     """When anki_service is passed to create_services, the same instance is
     returned in Services (identity check — no new AnkiService is built)."""

@@ -4,10 +4,14 @@ import logging
 import unicodedata
 from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from anki_miner.exceptions import SetupError
 from anki_miner.services.known_words_import import _MAX_IMPORT_BYTES
 from anki_miner.services.reading._util import decode_with_ladder
+
+if TYPE_CHECKING:
+    from anki_miner.config.config import AnkiMinerConfig
 
 logger = logging.getLogger(__name__)
 
@@ -166,3 +170,16 @@ class WordListService:
         except Exception as e:
             logger.warning("Word list file unreadable: path=%s exc=%s: %s", path, type(e).__name__, e)
             raise SetupError("Could not read your word list file.") from e
+
+
+def active_whitelist(config: "AnkiMinerConfig", service: WordListService | None) -> WordListService | None:
+    """The whitelist a run honours, or None (off, unloaded, or a bypass run).
+
+    One gate for every whitelist seam: the parser's rescue (R1), the phase-2
+    partition, the coverage snapshot and the funnel's mined stamp. Off under
+    ``bypass_optional_filters`` so the Deck Builder preview - which already
+    includes everything - stays unchanged.
+    """
+    if service is None or not config.use_whitelist or config.bypass_optional_filters:
+        return None
+    return service if service.is_available() else None

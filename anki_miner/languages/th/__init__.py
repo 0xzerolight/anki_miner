@@ -127,7 +127,10 @@ def build_profile() -> LanguageProfile:
             bare_fallback=True,
         ),
         pos_defaults=PosDefaults(
-            allowed_pos=TH_ALLOWED_POS, excluded_subtypes=TH_EXCLUDED_SUBTYPES, labels=TH_POS_LABELS
+            allowed_pos=TH_ALLOWED_POS,
+            excluded_subtypes=TH_EXCLUDED_SUBTYPES,
+            labels=TH_POS_LABELS,
+            rescuable_tags=(*TH_ALLOWED_POS, "PROPN"),
         ),
         catalog=TH_CATALOG,
         capabilities=frozenset({"thai_reading", "thai_classifier"}),

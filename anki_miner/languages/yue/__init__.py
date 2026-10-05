@@ -134,7 +134,10 @@ def build_profile() -> LanguageProfile:
             bare_fallback=True,
         ),
         pos_defaults=PosDefaults(
-            allowed_pos=YUE_ALLOWED_POS, excluded_subtypes=YUE_EXCLUDED_SUBTYPES, labels=YUE_POS_LABELS
+            allowed_pos=YUE_ALLOWED_POS,
+            excluded_subtypes=YUE_EXCLUDED_SUBTYPES,
+            labels=YUE_POS_LABELS,
+            rescuable_tags=(*YUE_ALLOWED_POS, "PROPN", "INTJ"),
         ),
         catalog=YUE_CATALOG,
         capabilities=frozenset({"jyutping", "tone_color", "measure_word"}),

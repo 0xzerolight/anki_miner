@@ -106,6 +106,9 @@ def build_profile() -> LanguageProfile:
         pos_defaults=PosDefaults(
             allowed_pos=tuple(base.allowed_pos),
             excluded_subtypes=tuple(base.excluded_subtypes),
+            # R1: the content classes, interjections and names (固有名詞). Not
+            # 数詞/接尾/接頭/非自立: numbers and affix fragments stay out.
+            rescuable_tags=(*base.allowed_pos, "感動詞", "固有名詞"),
         ),
         catalog=RECOMMENDED_DEFAULT_SET,
         # "note_presets": Lapis, Kiku and Senren are Japanese note types, so the

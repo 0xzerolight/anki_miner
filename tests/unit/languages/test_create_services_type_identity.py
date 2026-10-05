@@ -306,6 +306,8 @@ JA_PARSER_KEYWORDS = {
     # ``token_post_pass``, which ja does not inject
     # (tests/unit/test_subtitle_parser_form_lookup.py).
     "form_lookup",
+    # R1: the run's whitelist probe (None when no whitelist is honoured).
+    "force_include",
 }
 
 

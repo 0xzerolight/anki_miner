@@ -13,7 +13,7 @@ from anki_miner.languages.vi.catalog import VI_CATALOG
 from anki_miner.languages.vi.keys import VI_KEYS, vi_fold_term
 from anki_miner.languages.vi.morphology import VietnameseLookup
 from anki_miner.languages.vi.parser import create_parser
-from anki_miner.languages.vi.pos import VI_ALLOWED_POS, VI_EXCLUDED_SUBTYPES, VI_POS_LABELS
+from anki_miner.languages.vi.pos import NAME_TAG, VI_ALLOWED_POS, VI_EXCLUDED_SUBTYPES, VI_POS_LABELS
 from anki_miner.languages.vi.render import HANVIET_FIELD, VI_RENDER_HOOKS
 from anki_miner.languages.vi.script import VI_SENTENCE_RULES, VI_SUBTITLE_REGEX, VietnameseScript, vi_normalize
 
@@ -72,7 +72,10 @@ def build_profile() -> LanguageProfile:
             bare_fallback=True,
         ),
         pos_defaults=PosDefaults(
-            allowed_pos=VI_ALLOWED_POS, excluded_subtypes=VI_EXCLUDED_SUBTYPES, labels=VI_POS_LABELS
+            allowed_pos=VI_ALLOWED_POS,
+            excluded_subtypes=VI_EXCLUDED_SUBTYPES,
+            labels=VI_POS_LABELS,
+            rescuable_tags=(*VI_ALLOWED_POS, "Np", "I", NAME_TAG),
         ),
         catalog=VI_CATALOG,
         capabilities=frozenset({"hanviet"}),

@@ -1065,6 +1065,11 @@ def _has_repeated_kana_run(surface: str) -> bool:
     return False
 
 
+#: Particles, auxiliary verbs, symbols, punctuation: never content, never
+#: rescued by a whitelist entry (R1).
+_JA_FUNCTION_POS = frozenset({"助詞", "助動詞", "記号", "補助記号"})
+
+
 @dataclass(frozen=True)
 class TokenInclusionRule:
     """POS/subtype gate deciding which tokens count as mineable content words.
@@ -1081,6 +1086,55 @@ class TokenInclusionRule:
     #: it was - content_gate_ok, the katakana/loanword branches and the has_kanji
     #: fallback all unchanged.
     script_gate: Callable[[str], bool] | None = None
+    #: Tags a whitelisted card front may rescue from a rejection (R1): the
+    #: profile's ``PosDefaults.rescuable_tags``. Empty rescues nothing.
+    rescuable_tags: frozenset[str] = frozenset()
+
+    def structural_ok(self, word_token) -> bool:
+        """Whether a token is a real, lemma-bearing, non-function word.
+
+        The floor no setting and no whitelist entry can lower: empty or
+        whitespace surfaces, repeated-kana runs, tokens without POS or lemma,
+        and the particle/auxiliary/symbol/punctuation classes. Pure and I/O-free.
+        """
+        surface = word_token.surface
+        if not surface or not surface.strip():
+            return False
+        # Reject ≥3 consecutive identical kana: laughter/scream runs (どおおおお →
+        # the おおおっ token, merged シシシ) unidic mis-tags as content words or the
+        # kana-recovery seam would re-admit. Placed here (the single gate both
+        # should_include and the recovery probe route through) so include-path,
+        # kana recovery and count/mine parity are covered at once; ー and っ/ッ are
+        # excluded so ーーー stylistics and geminate runs survive.
+        if _has_repeated_kana_run(surface):
+            return False
+        try:
+            pos1 = word_token.feature.pos1
+        except AttributeError:
+            _guard("content_gate_ok#1")
+            return False
+        if pos1 in _JA_FUNCTION_POS:
+            return False
+        try:
+            return bool(word_token.feature.lemma)
+        except AttributeError:
+            _guard("content_gate_ok#2")
+            return False
+
+    def rescuable(self, word_token) -> bool:
+        """Whether a whitelist entry may override this token's rejection (R1).
+
+        A fail-safe allowlist: pos1 must be a tag the profile lists as
+        rescuable, and an excluded pos2 is overridden only when it is listed
+        too (固有名詞 is, 数詞 is not). ``structural_ok`` is never overridden.
+        """
+        if not self.rescuable_tags or not self.structural_ok(word_token):
+            return False
+        feature = word_token.feature
+        if feature.pos1 not in self.rescuable_tags:
+            return False
+        pos2 = getattr(feature, "pos2", None)
+        return not (pos2 and pos2 in self.excluded_subtypes and pos2 not in self.rescuable_tags)
 
     def content_gate_ok(self, word_token) -> bool:
         """Content-word gate WITHOUT the final pure-hiragana script decision.
@@ -1106,20 +1160,11 @@ class TokenInclusionRule:
         Returns:
             True if the token clears every non-script content check.
         """
+        # Structure first (empty, repeated kana, no POS/lemma, function classes);
+        # the checks below are the preferences a whitelist entry may override.
+        if not self.structural_ok(word_token):
+            return False
         surface = word_token.surface
-
-        # Skip empty or whitespace-only tokens
-        if not surface or not surface.strip():
-            return False
-
-        # Reject ≥3 consecutive identical kana: laughter/scream runs (どおおおお →
-        # the おおおっ token, merged シシシ) unidic mis-tags as content words or the
-        # kana-recovery seam would re-admit. Placed here (the single gate both
-        # should_include and the recovery probe route through) so include-path,
-        # kana recovery and count/mine parity are covered at once; ー and っ/ッ are
-        # excluded so ーーー stylistics and geminate runs survive.
-        if _has_repeated_kana_run(surface):
-            return False
 
         # Get part-of-speech tags
         try:
@@ -1127,10 +1172,6 @@ class TokenInclusionRule:
             pos2 = word_token.feature.pos2  # Sub POS
         except AttributeError:
             _guard("content_gate_ok#1")
-            return False
-
-        # Skip particles, auxiliary verbs, symbols, punctuation
-        if pos1 in ["助詞", "助動詞", "記号", "補助記号"]:
             return False
 
         # Skip interjections and fillers
@@ -1143,15 +1184,6 @@ class TokenInclusionRule:
 
         # Check for excluded subtypes
         if pos2 and pos2 in self.excluded_subtypes:
-            return False
-
-        # Skip if no lemma available
-        try:
-            lemma = word_token.feature.lemma
-            if not lemma:
-                return False
-        except AttributeError:
-            _guard("content_gate_ok#2")
             return False
 
         # Katakana-onomatopoeia REJECTIONS (the ≥2-char katakana ACCEPTANCE is a

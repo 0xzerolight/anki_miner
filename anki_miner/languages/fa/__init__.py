@@ -117,6 +117,7 @@ def build_profile() -> LanguageProfile:
             allowed_pos=FA_ALLOWED_POS,
             excluded_subtypes=FA_EXCLUDED_SUBTYPES,
             labels=FA_POS_LABELS,
+            rescuable_tags=(*FA_ALLOWED_POS, "INT"),
         ),
         catalog=FA_CATALOG,
         # "rtl" is shared by fa/ar/he (first to merge adds it to

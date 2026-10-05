@@ -1491,7 +1491,7 @@ class TestKanaRecoveryLexicalizedWindow:
         # Dummy span: recovery candidates are pure hiragana, so the should_include
         # branch (the only one consulting the katakana span guard) is never taken.
         cand = tokens[idx]
-        return service._mine_token(cand, cand.surface, 0, len(cand.surface), tokens)
+        return service._mine_token(cand, cand.surface, 0, len(cand.surface), tokens, tokens)
 
     # --- 1. すみません: すむ recovery rejected via the attested full window. ---
 
@@ -7192,3 +7192,130 @@ class TestPrefixSniffedFormatsFallBackToTheExtension:
         entries = SubtitleParserService(test_config).parse_raw_entries(sub_file)
 
         assert [text for _, _, text in entries] == ["新しい本を買いました"]
+
+
+class _FrontSpy:
+    """A whitelist predicate that records every card front it is asked about."""
+
+    def __init__(self, *entries: str) -> None:
+        self.entries = set(entries)
+        self.calls: list[str] = []
+
+    def __call__(self, front: str) -> bool:
+        self.calls.append(front)
+        return front in self.entries
+
+
+class TestWhitelistParseRescue:
+    """R1: a whitelisted card front survives the configurable parse gates (POS,
+    excluded subtypes, interjection, script/kana) that would otherwise drop it.
+    Structure stays absolute: particles, the kana-recovery aux reject and the
+    fragment guards. The rescue matches the card front only."""
+
+    def _invoke(self, tmp_path, test_config, text, tokens, fn, *, whitelist=None, dictionary=None):
+        sub_file = tmp_path / "rescue.srt"
+        sub_file.write_text("stub", encoding="utf-8")
+        mock_line = MagicMock()
+        mock_line.text = text
+        mock_line.start = 1000
+        mock_line.end = 3000
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
+        mock_tagger = MagicMock(return_value=tokens)
+        kwargs = {}
+        if whitelist is not None:
+            kwargs["force_include"] = whitelist
+        if dictionary is not None:
+            kwargs["term_lookup"] = _lookup_for(dictionary)
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(test_config, **kwargs)
+            return fn(service, sub_file)
+
+    def _fronts(self, tmp_path, test_config, text, tokens, **kwargs):
+        words = self._invoke(tmp_path, test_config, text, tokens, lambda s, f: s.parse_subtitle_file(f), **kwargs)
+        return [w.mined_form for w in words]
+
+    def _name_line(self):
+        return [
+            _make_token("太郎", "名詞", "固有名詞", lemma="太郎", kana="タロウ"),
+            _make_token("は", "助詞", "係助詞", lemma="は"),
+        ]
+
+    def test_rescues_a_whitelisted_proper_noun(self, tmp_path, test_config):
+        fronts = self._fronts(tmp_path, test_config, "太郎は", self._name_line(), whitelist=_FrontSpy("太郎"))
+        assert fronts == ["太郎"]
+
+    def test_proper_noun_not_on_the_list_stays_dropped(self, tmp_path, test_config):
+        fronts = self._fronts(tmp_path, test_config, "太郎は", self._name_line(), whitelist=_FrontSpy("花子"))
+        assert fronts == []
+
+    def test_no_predicate_keeps_the_parse_gates(self, tmp_path, test_config):
+        assert self._fronts(tmp_path, test_config, "太郎は", self._name_line()) == []
+
+    def test_rescues_a_whitelisted_pure_hiragana_adverb(self, tmp_path, test_config):
+        tokens = [_make_token("ちょっと", "副詞", "一般", lemma="一寸", orth_base="ちょっと")]
+        fronts = self._fronts(tmp_path, test_config, "ちょっと", tokens, whitelist=_FrontSpy("ちょっと"))
+        assert fronts == ["ちょっと"]
+
+    def test_rescues_a_whitelisted_interjection(self, tmp_path, test_config):
+        tokens = [_make_token("ありがとう", "感動詞", "一般", lemma="有り難う", orth_base="ありがとう")]
+        fronts = self._fronts(tmp_path, test_config, "ありがとう", tokens, whitelist=_FrontSpy("ありがとう"))
+        assert fronts == ["ありがとう"]
+
+    def test_auxiliary_kana_verbs_are_never_rescued(self, tmp_path, test_config):
+        # Both spellings whitelisted: a 動詞 card front is its orthBase (いる), so
+        # whitelisting 居る alone would never match and prove nothing. The
+        # 非自立可能 aux reject must hold anyway; ぐずる (pos2 一般) is the
+        # positive control that a whitelisted hiragana verb IS rescued.
+        tokens = [
+            _make_token("食べ", "動詞", "一般", lemma="食べる", orth_base="食べる"),
+            _make_token("て", "助詞", "接続助詞", lemma="て"),
+            _make_token("いる", "動詞", "非自立可能", lemma="居る", orth_base="いる"),
+            _make_token("と", "助詞", "接続助詞", lemma="と"),
+            _make_token("ぐずる", "動詞", "一般", lemma="愚図る", orth_base="ぐずる"),
+        ]
+        whitelist = _FrontSpy("いる", "居る", "ぐずる")
+        fronts = self._fronts(tmp_path, test_config, "食べているとぐずる", tokens, whitelist=whitelist)
+        assert "いる" not in fronts
+        assert fronts == ["食べる", "ぐずる"]
+
+    def test_particle_homograph_is_never_rescued(self, tmp_path, test_config):
+        tokens = [_make_token("かな", "助詞", "終助詞", lemma="かな")]
+        assert self._fronts(tmp_path, test_config, "かな", tokens, whitelist=_FrontSpy("かな")) == []
+
+    def test_katakana_fragment_guard_still_rejects(self, tmp_path, test_config):
+        tokens = [
+            _make_token("アイス", "名詞", "普通名詞", lemma="アイス", kana="アイス"),
+            _make_token("ベア", "名詞", "普通名詞", lemma="ベア", kana="ベア"),
+        ]
+        fronts = self._fronts(
+            tmp_path, test_config, "アイスベア", tokens, whitelist=_FrontSpy("アイス", "ベア"), dictionary={"ベア"}
+        )
+        assert fronts == []
+
+    def test_rescue_asks_about_the_emitted_card_front(self, tmp_path, test_config):
+        # Rescued ⇒ forced: the front the predicate judges must be the very
+        # mined_form the word is emitted with (an inflected verb's front comes
+        # from its orthBase through the highlight-end resolution).
+        tokens = [
+            _make_token("ぐずっ", "動詞", "一般", lemma="愚図る", orth_base="ぐずる", c_form="連用形-促音便"),
+            _make_token("た", "助動詞", "*", lemma="た"),
+        ]
+        spy = _FrontSpy("ぐずる")
+        fronts = self._fronts(tmp_path, test_config, "ぐずった", tokens, whitelist=spy)
+        assert fronts == ["ぐずる"]
+        assert spy.calls and set(spy.calls) == {"ぐずる"}
+
+    def test_count_lemmas_counts_a_rescued_token(self, tmp_path, test_config):
+        counts = self._invoke(
+            tmp_path,
+            test_config,
+            "太郎は",
+            self._name_line(),
+            lambda s, f: s.count_lemmas(f),
+            whitelist=_FrontSpy("太郎"),
+        )
+        assert counts["太郎"] == 1

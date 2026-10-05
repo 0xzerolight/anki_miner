@@ -71,6 +71,7 @@ from anki_miner.services.word_filter import (
     script_options_kwarg,
     whitelist_hits,
 )
+from anki_miner.services.word_list_service import active_whitelist
 from anki_miner.utils import ensure_directory, katakana_to_hiragana
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import capped, log_summary, suppressed
@@ -895,19 +896,9 @@ class EpisodeProcessor:
     def _active_whitelist(self) -> WordListService | None:
         """The whitelist service when force-include is in effect for this run.
 
-        One gate for the phase-2 partition, the coverage snapshot and the
-        funnel's mined stamp. Off under ``bypass_optional_filters`` so the Deck
-        Builder preview - which already includes everything - stays unchanged.
+        The same gate the parser's rescue is built under (``active_whitelist``).
         """
-        wls = self.word_list_service
-        if (
-            self.config.use_whitelist
-            and wls is not None
-            and wls.is_available()
-            and not self.config.bypass_optional_filters
-        ):
-            return wls
-        return None
+        return active_whitelist(self.config, self.word_list_service)
 
     def _attach_frequency(self, words: list[TokenizedWord]) -> int:
         """Stamp frequency_sources / frequency_rank / frequency_harmonic_rank in place.

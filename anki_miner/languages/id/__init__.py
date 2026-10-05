@@ -85,7 +85,10 @@ def build_profile() -> LanguageProfile:
             primary="id", codes=("id",), orig_codes=("id-orig",), audio_pattern="^id(-|$)", bare_fallback=True
         ),
         pos_defaults=PosDefaults(
-            allowed_pos=ID_ALLOWED_POS, excluded_subtypes=ID_EXCLUDED_SUBTYPES, labels=ID_POS_LABELS
+            allowed_pos=ID_ALLOWED_POS,
+            excluded_subtypes=ID_EXCLUDED_SUBTYPES,
+            labels=ID_POS_LABELS,
+            rescuable_tags=(*ID_ALLOWED_POS, "PROPN"),
         ),
         catalog=ID_CATALOG,
         capabilities=frozenset({"word_root", "indonesian_affixes", "indonesian_register"}),

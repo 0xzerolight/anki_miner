@@ -95,6 +95,18 @@ def _run(config, files, services, shared=None) -> tuple[dict[str, list], Readabi
     return cap, worker, shared
 
 
+def test_services_are_built_without_the_whitelist(qapp, tmp_path):
+    """Readability measures text: a mining preference list must not move its numbers (R1 rescue)."""
+    config = AnkiMinerConfig(use_whitelist=True)
+    services = _services(config, _FakeParser({"a.srt": _parsed(("猫",))}))
+    worker = ReadabilityWorker(config, _files(tmp_path, "a.srt"))
+    with patch(_SHARED, return_value=MagicMock()), patch(_SERVICES, return_value=services) as create:
+        worker.run()
+
+    built_with = create.call_args.args[0]
+    assert built_with.use_whitelist is False
+
+
 def test_measures_each_file_in_order(qapp, tmp_path):
     config = AnkiMinerConfig()
     parser = _FakeParser({"1.srt": _parsed(("猫", "犬")), "2.srt": _parsed(("猫",), ("猫",))})

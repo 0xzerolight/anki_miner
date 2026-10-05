@@ -103,7 +103,10 @@ def build_profile() -> LanguageProfile:
             bare_fallback=True,
         ),
         pos_defaults=PosDefaults(
-            allowed_pos=AR_ALLOWED_POS, excluded_subtypes=AR_EXCLUDED_SUBTYPES, labels=AR_POS_LABELS
+            allowed_pos=AR_ALLOWED_POS,
+            excluded_subtypes=AR_EXCLUDED_SUBTYPES,
+            labels=AR_POS_LABELS,
+            rescuable_tags=(*AR_ALLOWED_POS, "noun_prop"),
         ),
         catalog=AR_CATALOG,
         capabilities=frozenset({"word_root", "arabic_grammar", "arabic_clitics", "lemmatised_frequency", "rtl"}),

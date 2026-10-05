@@ -118,7 +118,10 @@ def build_profile() -> LanguageProfile:
             bare_fallback=True,
         ),
         pos_defaults=PosDefaults(
-            allowed_pos=ZH_ALLOWED_POS, excluded_subtypes=ZH_EXCLUDED_SUBTYPES, labels=ZH_POS_LABELS
+            allowed_pos=ZH_ALLOWED_POS,
+            excluded_subtypes=ZH_EXCLUDED_SUBTYPES,
+            labels=ZH_POS_LABELS,
+            rescuable_tags=(*ZH_ALLOWED_POS, "nrt", "nt"),
         ),
         catalog=ZH_CATALOG,
         capabilities=frozenset({"pinyin", "tone_color", "script_variants", "measure_word"}),

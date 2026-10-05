@@ -6,7 +6,7 @@ from anki_miner.config.config import AudioSourceEntry
 from anki_miner.languages._spaced.audio import spaced_audio_candidates, spaced_speakable
 from anki_miner.languages._spaced.fields import POS_FIELD, spaced_card_fields, spaced_scoped_defaults
 from anki_miner.languages._spaced.morphology import LatinLookupStrategy, SpacedMinedForm
-from anki_miner.languages._spaced.pos import UPOS_LABELS
+from anki_miner.languages._spaced.pos import UPOS_LABELS, UPOS_RESCUABLE
 from anki_miner.languages._spaced.render import PosHook
 from anki_miner.languages._spaced.script import LatinScript
 from anki_miner.languages._spaced.sentence import sentence_rules
@@ -80,7 +80,10 @@ def build_profile() -> LanguageProfile:
             bare_fallback=True,
         ),
         pos_defaults=PosDefaults(
-            allowed_pos=TR_ALLOWED_POS, excluded_subtypes=TR_EXCLUDED_SUBTYPES, labels=UPOS_LABELS
+            allowed_pos=TR_ALLOWED_POS,
+            excluded_subtypes=TR_EXCLUDED_SUBTYPES,
+            labels=UPOS_LABELS,
+            rescuable_tags=UPOS_RESCUABLE,
         ),
         catalog=TR_CATALOG,
         capabilities=frozenset({"pos_tag", "lemmatised_frequency"}),

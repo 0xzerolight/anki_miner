@@ -90,7 +90,10 @@ def build_profile() -> LanguageProfile:
             bare_fallback=True,
         ),
         pos_defaults=PosDefaults(
-            allowed_pos=HE_ALLOWED_POS, excluded_subtypes=HE_EXCLUDED_SUBTYPES, labels=HE_POS_LABELS
+            allowed_pos=HE_ALLOWED_POS,
+            excluded_subtypes=HE_EXCLUDED_SUBTYPES,
+            labels=HE_POS_LABELS,
+            rescuable_tags=(*HE_ALLOWED_POS, "PROPN"),
         ),
         catalog=HE_CATALOG,
         # "rtl" is shared by fa/ar/he and "word_root" by ar/he/id; the four after them gate this

@@ -50,7 +50,7 @@ from anki_miner.services.sentence_tts_fetcher import (
 from anki_miner.services.stats_service import StatsService
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.services.word_filter import WordFilterService
-from anki_miner.services.word_list_service import WordListService
+from anki_miner.services.word_list_service import WordListService, active_whitelist
 from anki_miner.services.wordset_service import WordsetService
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
 from anki_miner.utils.i18n import tr_format
@@ -878,6 +878,29 @@ def create_services(
             )
             wordset_service = None
 
+    profile = get_profile(config_language(config))
+    # Loaded before the parser: the whitelist is the parser's rescue probe (R1).
+    word_list_service = None
+    if config.use_blacklist or config.use_whitelist:
+        try:
+            ladder = import_decode_ladder(config)
+            word_list_service = WordListService(
+                blacklist_path=config.blacklist_path if config.use_blacklist else None,
+                whitelist_path=config.whitelist_path if config.use_whitelist else None,
+                dedup_fold=profile.dedup_fold,
+                encodings=ladder,
+                **script_check_kwarg(ladder, profile.script),
+            )
+            word_list_service.load()
+        except MemoryError:
+            raise  # never an optional-source miss; see the module note
+        except Exception as e:
+            logger.warning("Could not load word lists: %s", e)
+            load_result.warnings.append(
+                tr_format(QCoreApplication.translate("ServiceFactory", "Couldn't load word lists: %1"), e)
+            )
+            word_list_service = None
+
     if subtitle_parser is None:
         # Headword-existence probe: injected iff an indexed offline dict is
         # enabled (compound matching, services/compound_matcher.py, is always on)
@@ -913,6 +936,9 @@ def create_services(
         # language is unaffected by its presence.
         form_lookup = definition_service.offline_term_rows if has_indexed_dict else None
         name_lookup = wordset_service.excluded_terms if wordset_service is not None else None
+        # R1: the run's whitelist rescues tokens the parse gates would drop,
+        # under the same gate as the phase-2 partition (off under bypass).
+        whitelist = active_whitelist(config, word_list_service)
         subtitle_parser = _create_subtitle_parser(
             config,
             term_lookup=term_lookup,
@@ -922,11 +948,11 @@ def create_services(
             term_common_lookup=term_common_lookup,
             term_rules_lookup=term_rules_lookup,
             form_lookup=form_lookup,
+            force_include=whitelist.is_whitelisted if whitelist is not None else None,
         )
     # Share the parser's tagger with the word filter so i+1 swap can
     # rebuild bolded sentence fields without spinning up a second tagger
     # (fugashi.Tagger initialization is non-trivial).
-    profile = get_profile(config_language(config))
     word_filter = WordFilterService(
         config,
         tagger=subtitle_parser.tagger,
@@ -997,27 +1023,6 @@ def create_services(
             tr_format(QCoreApplication.translate("ServiceFactory", "Couldn't initialize known word database: %1"), e)
         )
         known_word_db = None
-
-    word_list_service = None
-    if config.use_blacklist or config.use_whitelist:
-        try:
-            ladder = import_decode_ladder(config)
-            word_list_service = WordListService(
-                blacklist_path=config.blacklist_path if config.use_blacklist else None,
-                whitelist_path=config.whitelist_path if config.use_whitelist else None,
-                dedup_fold=profile.dedup_fold,
-                encodings=ladder,
-                **script_check_kwarg(ladder, profile.script),
-            )
-            word_list_service.load()
-        except MemoryError:
-            raise  # never an optional-source miss; see the module note
-        except Exception as e:
-            logger.warning("Could not load word lists: %s", e)
-            load_result.warnings.append(
-                tr_format(QCoreApplication.translate("ServiceFactory", "Couldn't load word lists: %1"), e)
-            )
-            word_list_service = None
 
     return Services(
         frequency_registry=frequency_registry,

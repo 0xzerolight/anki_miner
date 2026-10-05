@@ -145,6 +145,7 @@ def build_profile() -> LanguageProfile:
             allowed_pos=ko_morphology.KO_ALLOWED_POS,
             excluded_subtypes=ko_morphology.KO_EXCLUDED_SUBTYPES,
             labels=ko_morphology.KO_POS_LABELS,
+            rescuable_tags=ko_morphology.KO_RESCUABLE_TAGS,
         ),
         catalog=KO_CATALOG,  # the KRDICT dict; ko/catalog.py documents the manual frequency import
         capabilities=frozenset({"hangul_filters", "hanja"}),

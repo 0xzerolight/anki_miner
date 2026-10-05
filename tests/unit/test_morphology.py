@@ -472,6 +472,55 @@ class TestContentGateRepeatedKana:
         assert self._rule().content_gate_ok(token) is True
 
 
+class TestWhitelistRescuable:
+    """R1: which rejected tokens a whitelist entry may rescue. A fail-safe
+    allowlist per profile (``PosDefaults.rescuable_tags``): preference gates
+    (POS, excluded subtypes, interjection, script) yield, structure never does."""
+
+    _JA_TAGS = frozenset({"名詞", "動詞", "形容詞", "副詞", "形状詞", "代名詞", "感動詞", "固有名詞"})
+    _UPOS_TAGS = frozenset({"ADJ", "ADV", "NOUN", "VERB", "PROPN", "INTJ"})
+
+    def _ja(self, tags=_JA_TAGS):
+        return TokenInclusionRule(allowed_pos=_ALLOWED_POS, excluded_subtypes=_EXCLUDED_SUBTYPES, rescuable_tags=tags)
+
+    def _upos(self):
+        return TokenInclusionRule(
+            allowed_pos=frozenset({"ADJ", "ADV", "NOUN", "VERB"}),
+            excluded_subtypes=frozenset({"stopword"}),
+            rescuable_tags=self._UPOS_TAGS,
+        )
+
+    def test_proper_noun_is_rescuable(self):
+        assert self._ja().rescuable(_token_pos2("太郎", "名詞", "固有名詞")) is True
+
+    def test_interjection_is_rescuable(self):
+        assert self._ja().rescuable(_token_pos2("ありがとう", "感動詞", "一般")) is True
+
+    def test_particle_is_never_rescuable(self):
+        assert self._ja().rescuable(_token_pos2("かな", "助詞", "終助詞")) is False
+
+    def test_excluded_subtype_not_listed_stays_excluded(self):
+        # 数詞 is excluded by default and not a rescuable tag: numbers stay out.
+        assert self._ja().rescuable(_token_pos2("三", "名詞", "数詞")) is False
+
+    def test_repeated_kana_run_is_never_rescuable(self):
+        assert self._ja().rescuable(_token_pos2("どおおお", "名詞", "普通名詞")) is False
+
+    def test_empty_allowlist_rescues_nothing(self):
+        assert self._ja(frozenset()).rescuable(_token_pos2("太郎", "名詞", "固有名詞")) is False
+
+    def test_upos_proper_noun_and_interjection_are_rescuable(self):
+        assert self._upos().rescuable(_token_pos2("Berlin", "PROPN", "")) is True
+        assert self._upos().rescuable(_token_pos2("ach", "INTJ", "")) is True
+
+    @pytest.mark.parametrize("pos1", ["DET", "AUX", "ADP", "PRON", "PUNCT"])
+    def test_upos_function_classes_are_not_rescuable(self, pos1):
+        assert self._upos().rescuable(_token_pos2("son", pos1, "")) is False
+
+    def test_upos_stopword_tier_is_not_rescuable(self):
+        assert self._upos().rescuable(_token_pos2("aber", "NOUN", "stopword")) is False
+
+
 class TestResolveSpecialReading:
     """Honorific-kinship head reading override (兄/姉/父/母 + ちゃん/さん/さま/様)."""
 

@@ -16,7 +16,7 @@ from anki_miner.languages._spaced.fields import (
 from anki_miner.languages._spaced.grammar_hook import GrammarTagHook
 from anki_miner.languages._spaced.keys import CasefoldDictKeys, spaced_dedup_fold
 from anki_miner.languages._spaced.morphology import LatinLookupStrategy, SpacedMinedForm
-from anki_miner.languages._spaced.pos import UPOS_LABELS
+from anki_miner.languages._spaced.pos import UPOS_LABELS, UPOS_RESCUABLE
 from anki_miner.languages._spaced.render import PosHook
 from anki_miner.languages._spaced.script import LatinScript
 from anki_miner.languages._spaced.sentence import sentence_rules
@@ -113,7 +113,10 @@ def build_profile() -> LanguageProfile:
             bare_fallback=True,
         ),
         pos_defaults=PosDefaults(
-            allowed_pos=RO_ALLOWED_POS, excluded_subtypes=RO_EXCLUDED_SUBTYPES, labels=UPOS_LABELS
+            allowed_pos=RO_ALLOWED_POS,
+            excluded_subtypes=RO_EXCLUDED_SUBTYPES,
+            labels=UPOS_LABELS,
+            rescuable_tags=UPOS_RESCUABLE,
         ),
         catalog=RO_CATALOG,
         capabilities=frozenset({"pos_tag", "noun_gender", "lemmatised_frequency"}),

@@ -56,6 +56,11 @@ KO_ALLOWED_POS: tuple[str, ...] = ("MA", "NN", "SH", "VA", "VV", "VX", "XR")
 #: content words with it.
 KO_EXCLUDED_SUBTYPES: tuple[str, ...] = ("MAJ", "NNB")
 
+#: What a whitelisted card front may be rescued from (R1, ``PosDefaults.rescuable_tags``):
+#: the allowed classes minus VX (an auxiliary predicate is grammar). Proper nouns (NNP)
+#: already pass as coarse NN; MAJ and NNB stay excluded as scaffolding.
+KO_RESCUABLE_TAGS: tuple[str, ...] = tuple(tag for tag in KO_ALLOWED_POS if tag != "VX")
+
 #: Human labels for the settings POS editor (Korean tagset vocabulary - UniDic
 #: strings must never reach this gate). Covers the excluded subtypes too, so the
 #: editor can name what it is dropping.

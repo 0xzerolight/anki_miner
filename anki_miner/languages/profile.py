@@ -280,11 +280,17 @@ class PosDefaults:
 
     ``labels`` has no consumer yet (S20): the settings POS editor still shows
     raw tags. It is populated so a label-aware editor is a later, cheap change.
+
+    ``rescuable_tags`` is the fail-safe allowlist of pos1/pos2 tags a
+    whitelisted card front may be rescued from (R1, the parser's
+    ``force_include`` seam): content classes, names, interjections. Never a
+    function-word or stopword tag. Empty rescues nothing.
     """
 
     allowed_pos: tuple[str, ...]
     excluded_subtypes: tuple[str, ...]
     labels: Mapping[str, str] = field(default_factory=dict)
+    rescuable_tags: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

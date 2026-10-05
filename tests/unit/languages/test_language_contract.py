@@ -392,3 +392,27 @@ def test_zh_lookup_stays_contract_shaped_without_opencc(monkeypatch):
     finally:
         _clear_zh_converter_caches()
     assert result == []
+
+
+#: Tags a whitelist entry may never rescue (R1: structure is absolute).
+_UPOS_FUNCTION_TAGS = {"ADP", "AUX", "CCONJ", "DET", "PART", "PRON", "PUNCT", "SCONJ", "SYM"}
+_JA_FUNCTION_TAGS = {"助詞", "助動詞", "記号", "補助記号"}
+#: ja's PosDefaults carry no labels; 感動詞 is the one rescuable tag outside its POS defaults.
+_EXTRA_TAGS = {"ja": {"感動詞"}}
+
+
+@pytest.mark.parametrize("code", CODES)
+def test_rescuable_tags_come_from_the_profiles_own_tagset(code):
+    pos = get_profile(code).pos_defaults
+    tagset = set(pos.labels) | set(pos.allowed_pos) | set(pos.excluded_subtypes) | _EXTRA_TAGS.get(code, set())
+    assert pos.rescuable_tags, f"{code}: no rescuable tags — the whitelist could not rescue anything"
+    assert set(pos.rescuable_tags) <= tagset
+
+
+@pytest.mark.parametrize("code", CODES)
+def test_rescuable_tags_never_name_a_function_or_stopword_tag(code):
+    tags = set(get_profile(code).pos_defaults.rescuable_tags)
+    assert "stopword" not in tags
+    assert not tags & _JA_FUNCTION_TAGS
+    if "ADJ" in tags:  # a UPOS tagset; zh c/p stay content words by zh's own ruling (zh/pos.py)
+        assert not tags & _UPOS_FUNCTION_TAGS

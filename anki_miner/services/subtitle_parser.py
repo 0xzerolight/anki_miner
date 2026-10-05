@@ -160,6 +160,16 @@ _KANA_RECOVER_POS1: frozenset[str] = frozenset({"動詞", "形容詞", "形状�
 #   should_include and never reach this path.
 _KANA_RECOVER_REJECT_POS2: frozenset[str] = frozenset({"助動詞語幹", "非自立可能"})
 
+
+def _is_kana_candidate(surface: object) -> bool:
+    """Pure hiragana once prolonged-sound marks are set aside (すげー).
+
+    The surface shape kana recovery admits, and the one the whitelist rescue
+    keeps recovery's own guards for.
+    """
+    return isinstance(surface, str) and _is_pure_hiragana(surface.replace("ー", ""))
+
+
 # U4 lexicalized-expression reject. A kana-recovery candidate that IS an attested
 # headword on its own (すむ, しれる) is still junk when it is really a fragment of
 # a longer grammaticalized sequence (すみません, かもしれない). The signal: joining
@@ -409,6 +419,7 @@ class SubtitleParserService:
         ellipsis_fragment_guard: bool = True,
         sentence_annotation: bool = True,
         attested_reading_fallback: bool = False,
+        force_include: Callable[[str], bool] | None = None,
     ):
         """Initialize the subtitle parser.
 
@@ -537,6 +548,13 @@ class SubtitleParserService:
                 stressed headword (читать). Furigana and ``resolved_reading``
                 stay ``""``. ``False`` — every ja/ko/zh path — leaves the
                 injected branch as it was.
+            force_include: The run's whitelist probe over a card front
+                (``WordListService.is_whitelisted``), or None when the run
+                honours no whitelist. A token every inclusion path rejects is
+                still mined when its tag is one of the profile's
+                ``rescuable_tags`` and this accepts its card front (R1). The
+                front is the exact ``mined_form`` the word is emitted with, so a
+                rescued word is always force-included in phase 2.
         """
         self.config = config
         # Perf-audit counters (Task 28): cumulative wall-clock spent in offline-
@@ -596,7 +614,7 @@ class SubtitleParserService:
         # dialog, which builds this service directly) runs through.
         # Function-local for the same reason as _load_subtitle_file's import: a
         # module-level registry import here is circular.
-        from anki_miner.languages.registry import config_language
+        from anki_miner.languages.registry import config_language, get_profile
 
         language = config_language(config)
         self.tagger = get_shared_tagger() if language == "ja" else get_tagger(language)
@@ -614,7 +632,9 @@ class SubtitleParserService:
             allowed_pos=frozenset(config.allowed_pos),
             excluded_subtypes=frozenset(config.excluded_subtypes),
             script_gate=script_gate,
+            rescuable_tags=frozenset(get_profile(language).pos_defaults.rescuable_tags),
         )
+        self._force_include = force_include
         # Exact-headword existence serves compound/front remap gates; the sibling
         # rules-aware probe serves deinflection overrides. Keeping them distinct
         # prevents an attested but POS-incompatible headword from winning solely
@@ -1283,6 +1303,31 @@ class SubtitleParserService:
         """
         return find_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
 
+    def _emission_highlight_end(
+        self, text: str, raw_tokens: list, tok_start: int, tok_end: int, word_token: Any
+    ) -> int:
+        """The highlight end a mined token is emitted with.
+
+        The full-inflected-form end, extended to cover a resolved card front
+        that differs from the orthBase. Emission and the whitelist rescue both
+        resolve ``mined_form`` through it, so a rescued word's front is the one
+        it is emitted with (rescued ⇒ forced in phase 2).
+        """
+        highlight_end = self._find_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
+        orth_base = self._mining_base(word_token)
+        resolved_front = self._resolve_front(word_token, orth_base, text, tok_start, highlight_end)
+        if resolved_front != orth_base:
+            resolved_end, _ = find_highlight_end_with_trace(
+                text,
+                raw_tokens,
+                tok_start,
+                tok_end,
+                word_token,
+                additional_target=resolved_front,
+            )
+            highlight_end = max(highlight_end, resolved_end)
+        return highlight_end
+
     def _resolve_word_identity(
         self,
         word_token: Any,
@@ -1706,26 +1751,14 @@ class SubtitleParserService:
         # Spans come from the shared locator — same offset and drop rule as
         # parse_subtitle_file (Issue #20 / T-38, see _iter_token_spans).
         for word_token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
-            if not self._mine_token(word_token, text, tok_start, tok_end, merged_tokens):
+            if not self._mine_token(word_token, text, tok_start, tok_end, merged_tokens, raw_tokens):
                 continue
             lemma_here = self._extract_lemma(word_token)
             line_lemmas.add(lemma_here)
             included_tokens.append(word_token)
             # Computed once per token here and reused by the second pass, so
             # parse_subtitle_file and _with_index stay output-identical.
-            highlight_end = self._find_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
-            orth_base = self._mining_base(word_token)
-            resolved_front = self._resolve_front(word_token, orth_base, text, tok_start, highlight_end)
-            if resolved_front != orth_base:
-                resolved_end, _ = find_highlight_end_with_trace(
-                    text,
-                    raw_tokens,
-                    tok_start,
-                    tok_end,
-                    word_token,
-                    additional_target=resolved_front,
-                )
-                highlight_end = max(highlight_end, resolved_end)
+            highlight_end = self._emission_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
             included_spans.append((tok_start, tok_end, highlight_end))
             if collect_index:
                 lemma_first_span.setdefault(lemma_here, (word_token.surface, tok_start, tok_end, highlight_end))
@@ -2034,7 +2067,7 @@ class SubtitleParserService:
             # Dummy timing: the index is both start and end (duration 0.0). No
             # re-windowing exists — the normalized unit text is the card sentence.
             line_state = self._build_line_state(text, float(unit.index), float(unit.index))
-            _text, _raw_tokens, merged_tokens, *_ = line_state
+            _text, raw_tokens, merged_tokens, *_ = line_state
             text = self._tokenizer_text(text)
 
             # Count through the SAME locator as the mining loop below (and
@@ -2042,7 +2075,7 @@ class SubtitleParserService:
             # nowhere it is not mined, or the preview over-promises (T-38 — see
             # _iter_token_spans for the drop-rule rationale).
             for token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
-                if self._mine_token(token, text, tok_start, tok_end, merged_tokens):
+                if self._mine_token(token, text, tok_start, tok_end, merged_tokens, raw_tokens):
                     counts[self._extract_lemma(token)] += 1
 
             line_words, line_lemmas_entry = self._emit_line_words_and_index(
@@ -2061,7 +2094,7 @@ class SubtitleParserService:
         Unlike ``parse_subtitle_file``, this method counts every occurrence of a
         lemma (including repeats within and across lines) without deduplication.
         The same word-inclusion rules as mining apply — only tokens that
-        ``_should_include_word`` accepts are counted.
+        ``_mine_token`` accepts (including a whitelist rescue) are counted.
 
         No offset argument: counting reads text and tokens only. It still fills
         and serves the shared (offset-neutral) line cache, so a parse at any
@@ -2082,7 +2115,7 @@ class SubtitleParserService:
         # it does tokenize and probe, so it resets the perf counters directly.
         self._reset_perf_counters()
         counts: collections.Counter[str] = collections.Counter()
-        for sentence, _raw_tokens, merged_tokens, *_ in self._iter_parsed_lines(subtitle_file):
+        for sentence, raw_tokens, merged_tokens, *_ in self._iter_parsed_lines(subtitle_file):
             text = self._tokenizer_text(sentence)
             # Spans come from the SAME locator as the mining loops in
             # parse_subtitle_file* — a token mining drops (find == -1),
@@ -2091,7 +2124,7 @@ class SubtitleParserService:
             # and drop-rule rationale lives on _iter_token_spans; do not
             # inline a divergent copy here.
             for token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
-                if self._mine_token(token, text, tok_start, tok_end, merged_tokens):
+                if self._mine_token(token, text, tok_start, tok_end, merged_tokens, raw_tokens):
                     counts[self._extract_lemma(token)] += 1
         self._log_parse_probe_timing(subtitle_file)
         return counts
@@ -2377,45 +2410,76 @@ class SubtitleParserService:
             return True
         return self._recover_kana_content_word(word_token)
 
-    def _mine_token(self, word_token, text: str, tok_start: int, tok_end: int, tokens: list) -> bool:
+    def _mine_token(self, word_token, text: str, tok_start: int, tok_end: int, tokens: list, raw_tokens: list) -> bool:
         """Context-aware mining acceptance: inclusion, minus fragment reject layers.
 
         The SINGLE acceptance seam every token-span call site routes through —
-        both mining passes (``parse_subtitle_file`` /
-        ``_emit_line_words_and_index``), ``count_lemmas`` and
+        the mining pass (``_emit_line_words_and_index``), ``count_lemmas`` and
         ``parse_text_units``' count loop — so a token counted is a token mined and
-        the T-38 count==mine parity can never break. All four pass ``tokens`` (the
-        full per-line ``merged_tokens`` list) so the recovery path can inspect the
-        candidate's functional neighbors.
+        the T-38 count==mine parity can never break. All three pass ``tokens``
+        (the full per-line ``merged_tokens`` list) so the recovery path can
+        inspect the candidate's functional neighbors, and ``raw_tokens`` so the
+        whitelist rescue resolves the card front exactly as emission does.
 
-        Two disjoint acceptance paths, each with its own reject layer, plus the
+        Three disjoint acceptance paths, each with its own reject layer, plus the
         dict-free U8 ellipsis truncation-fragment reject (``_ellipsis_reject``,
-        off for a parser whose factory closed that seam) applied on BOTH:
+        off for a parser whose factory closed that seam) applied on ALL:
 
         - ``should_include`` accepts (kanji / katakana loanword): apply ONLY the
           U5 katakana run-fragment guard (``_is_katakana_run_fragment``). The U4
           window reject never touches a morphology-accepted token.
-        - ``should_include`` rejects → last-chance ``_recover_kana_content_word``
+        - ``should_include`` rejects → ``_recover_kana_content_word``
           (hiragana content word — pure hiragana once prolonged-sound marks are
           set aside for the script check, e.g. すげー — attested as its own
           front). On a recovery acceptance, apply the U4 lexicalized-window
           reject (``_rejected_by_lexicalized_window``). Recovery surfaces are
           never all-katakana, so the katakana guard can never fire on this
           branch.
+        - both reject → last-chance ``_whitelist_rescues`` (R1): a token of a
+          rescuable tag whose card front is on the run's whitelist. It keeps
+          recovery's own guards for kana surfaces and then the katakana and
+          ellipsis guards: a whitelist entry overrides preferences, never
+          structure.
 
         ``_should_include_word`` stays the token-only, span-free gate that unit
-        tests and non-span callers use directly; this method reproduces its
-        ``should_include``-then-recover order so the two never diverge.
+        tests use directly; it reproduces the first two paths in order. The
+        rescue needs the line, so only this method runs it.
         """
         if self._inclusion_rule.should_include(word_token):
             if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end):
                 return False
             return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
-        if not self._recover_kana_content_word(word_token):
+        if self._recover_kana_content_word(word_token):
+            if self._rejected_by_lexicalized_window(word_token, tokens):
+                return False
+            return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
+        if not self._whitelist_rescues(word_token, text, tok_start, tok_end, tokens, raw_tokens):
             return False
-        if self._rejected_by_lexicalized_window(word_token, tokens):
+        if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end):
             return False
         return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
+
+    def _whitelist_rescues(
+        self, word_token, text: str, tok_start: int, tok_end: int, tokens: list, raw_tokens: list
+    ) -> bool:
+        """Whether the run's whitelist rescues a token every inclusion path rejected (R1).
+
+        Cheap checks first: no whitelist, a tag the profile never rescues, or a
+        kana surface in the recovery's aux reject (いる/ある in ている). Then the
+        card front, resolved exactly as emission resolves it, must be on the
+        list. The lexicalized-window probe (I/O) runs last, for whitelisted
+        tokens only.
+        """
+        if self._force_include is None or not self._inclusion_rule.rescuable(word_token):
+            return False
+        kana = _is_kana_candidate(word_token.surface)
+        if kana and getattr(word_token.feature, "pos2", None) in _KANA_RECOVER_REJECT_POS2:
+            return False
+        highlight_end = self._emission_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
+        _, _, mined, _ = self._resolve_word_identity(word_token, text, tok_start, highlight_end)
+        if not self._force_include(mined):
+            return False
+        return not (kana and self._rejected_by_lexicalized_window(word_token, tokens))
 
     def _ellipsis_reject(self, word_token, text: str, tok_start: int, tok_end: int) -> bool:
         """The U8 guard, or ``False`` outright for a parser that closed the seam.
@@ -2644,7 +2708,7 @@ class SubtitleParserService:
             # grammar, not vocabulary. See constant for the full rationale.
             return False
         surface = word_token.surface
-        if not isinstance(surface, str) or not _is_pure_hiragana(surface.replace("ー", "")):
+        if not _is_kana_candidate(surface):
             return False
         key = (surface, pos1)
         if key not in self._kana_recover_cache:
