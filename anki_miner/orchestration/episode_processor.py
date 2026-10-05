@@ -743,6 +743,7 @@ class EpisodeProcessor:
         total_words_found: int = 0,
         new_words_found: int = 0,
         cards_created: int = 0,
+        comprehension_percentage: float = 0.0,
     ) -> ProcessingResult:
         """Create a ProcessingResult for a cancelled operation."""
         return ProcessingResult(
@@ -751,14 +752,20 @@ class EpisodeProcessor:
             cards_created=cards_created,
             errors=[CANCELLED_ERROR],
             elapsed_time=time.time() - start_time,
+            comprehension_percentage=comprehension_percentage,
         )
 
     def _cancelled_result_from_ctx(self, ctx: _EpisodeContext) -> ProcessingResult:
-        """Cancellation result populated from the accumulator ctx."""
+        """Cancellation result populated from the accumulator ctx.
+
+        Carries phase 2's comprehension: View details aggregates each item's own
+        known share, so a cancelled item reporting 0 would drag the run down.
+        """
         return self._make_cancelled_result(
             ctx.start_time,
             total_words_found=ctx.total_words_found,
             new_words_found=ctx.new_words_found,
+            comprehension_percentage=ctx.comprehension_percentage,
         )
 
     def _announce_stage(

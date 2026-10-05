@@ -5783,6 +5783,26 @@ def test_definition_filter_precedes_sentence_dedup(test_config):
     assert [word.mined_form for word in result] == ["猫"]
 
 
+def test_a_cancelled_run_keeps_its_comprehension(test_config, mock_services, tmp_path):
+    """View details aggregates comprehension from each item's own share (audit L2-004),
+    so a run cancelled in the curator must carry phase 2's figure, not 0."""
+    known, new = _make_word("猫"), _make_word("犬", 5.0)
+    mock_services["subtitle_parser"].parse_subtitle_file_with_index.side_effect = lambda f, offset=None: (
+        [known, new],
+        [],
+    )
+    mock_services["anki_service"].get_existing_vocabulary.return_value = {"猫"}
+    mock_services["definition_service"].has_offline_definitions.side_effect = lambda terms: dict.fromkeys(terms, True)
+    mock_services["definition_service"].offline_term_identities.return_value = {}
+    services = {**mock_services, "word_filter": WordFilterService(test_config)}
+    processor = build_processor(config=test_config, presenter=NullPresenter(), **services)
+
+    result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", curation_callback=lambda words: None)
+
+    assert result.errors == [CANCELLED_ERROR]
+    assert result.comprehension_percentage == 50.0
+
+
 class TestOfflineDefinitionPreFilter:
     """Pre-curator offline definition filter — words with no offline definition
     are dropped before the curation dialog (and batch) sees them."""
