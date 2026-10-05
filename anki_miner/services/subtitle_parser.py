@@ -104,6 +104,11 @@ PARSE_RELEVANT_CONFIG_FIELDS = (
     "subtitle_regex_replacement",
     # zh card fronts follow Character Set (the injected mined-form policy).
     "script_variant",
+    # The whitelist rescue (R1, the injected force_include) keeps a token the
+    # inclusion gate drops; active_whitelist decides it from these three.
+    "use_whitelist",
+    "whitelist_path",
+    "bypass_optional_filters",
 )
 
 # Dictionary-attested compound matching (Yomitan longest-match principle):

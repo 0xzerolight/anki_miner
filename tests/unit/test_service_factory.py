@@ -120,6 +120,13 @@ def test_parser_has_no_rescue_with_the_whitelist_off(base_config, tmp_path):
     assert services.subtitle_parser._force_include is None
 
 
+def test_whitelist_fields_are_parse_relevant():
+    """Audit L1-006: they shape the parser's rescue, so a reused parser must match them."""
+    from anki_miner.services.subtitle_parser import PARSE_RELEVANT_CONFIG_FIELDS
+
+    assert {"use_whitelist", "whitelist_path", "bypass_optional_filters"} <= set(PARSE_RELEVANT_CONFIG_FIELDS)
+
+
 def test_parser_has_no_rescue_when_the_word_lists_fail_to_load(base_config, tmp_path):
     cfg = dataclasses.replace(base_config, use_whitelist=True, whitelist_path=tmp_path / "missing.txt")
 

@@ -807,7 +807,8 @@ def create_services(
             may pass that parser here so a second pass hits its already-filled
             per-file tokenization cache. The caller owns ensuring the parser's
             parse-relevant config matches ``config`` (bold target / allowed POS
-            / excluded subtypes / excluded wordsets / subtitle-filter fields —
+            / excluded subtypes / excluded wordsets / subtitle-filter fields /
+            the whitelist fields its rescue was built under —
             ``PARSE_RELEVANT_CONFIG_FIELDS``); the parser reads only those, so
             reuse is byte-identical for a matching config. The subtitle offset
             is NOT among them: it is a per-call argument on the parse entry
