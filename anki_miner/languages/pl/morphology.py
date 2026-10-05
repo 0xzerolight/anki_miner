@@ -55,7 +55,7 @@ from collections.abc import Mapping
 from types import MappingProxyType
 
 from anki_miner.languages._spaced.keys import CasefoldDictKeys, spaced_dedup_fold
-from anki_miner.languages._spaced.pos import UPOS_ALLOWED
+from anki_miner.languages._spaced.pos import UPOS_ALLOWED, UPOS_RESCUABLE
 from anki_miner.languages._spaced.script import (
     BRACKETS_PATTERN,
     MUSIC_PATTERN,
@@ -71,6 +71,11 @@ PL_ALLOWED_POS: tuple[str, ...] = UPOS_ALLOWED
 PL_EXCLUDED_SUBTYPES: tuple[str, ...] = (
     "ADJA", "AGLT", "BURK", "COMP", "CONJ", "INTERJ", "INTERP", "NUMCOL", "PPRON12", "PPRON3", "PREP", "SIEBIE", "XXX",
 )  # fmt: skip
+
+#: What a whitelisted card front may be rescued from (R1): UPOS_RESCUABLE plus the fine tags
+#: below that restate a name or an interjection. spaCy's fine tag rides in pos2, and the
+#: excluded subtypes list these, so without them the pos2 veto blocks the rescue.
+PL_RESCUABLE_TAGS: tuple[str, ...] = (*UPOS_RESCUABLE, "INTERJ")
 
 PL_ABBREVIATIONS: frozenset[str] = frozenset(
     {

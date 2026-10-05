@@ -38,13 +38,18 @@ from __future__ import annotations
 from collections.abc import Mapping
 from types import MappingProxyType
 
-from anki_miner.languages._spaced.pos import UPOS_ALLOWED
+from anki_miner.languages._spaced.pos import UPOS_ALLOWED, UPOS_RESCUABLE
 from anki_miner.languages.token import LanguageToken
 
 DE_MODEL_PACKAGE = "de_core_news_sm"
 
 DE_ALLOWED_POS: tuple[str, ...] = UPOS_ALLOWED
 DE_EXCLUDED_SUBTYPES: tuple[str, ...] = ("CARD", "ITJ", "NE", "PTKANT", "PTKVZ", "TRUNC", "XY")
+
+#: What a whitelisted card front may be rescued from (R1): UPOS_RESCUABLE plus the fine tags
+#: below that restate a name or an interjection. spaCy's fine tag rides in pos2, and the
+#: excluded subtypes list these, so without them the pos2 veto blocks the rescue.
+DE_RESCUABLE_TAGS: tuple[str, ...] = (*UPOS_RESCUABLE, "NE", "ITJ")
 
 DE_ABBREVIATIONS: frozenset[str] = frozenset(
     {

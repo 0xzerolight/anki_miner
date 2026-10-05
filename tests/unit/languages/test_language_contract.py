@@ -409,6 +409,37 @@ def test_rescuable_tags_come_from_the_profiles_own_tagset(code):
     assert set(pos.rescuable_tags) <= tagset
 
 
+@pytest.mark.parametrize(
+    ("code", "surface", "pos1", "pos2"),
+    [
+        ("de", "London", "PROPN", "NE"),  # spaCy's fine tag rides in pos2 (test_spaced_tokens.py)
+        ("de", "ach", "INTJ", "ITJ"),
+        ("sv", "hej", "INTJ", "IN"),
+        ("pl", "ojej", "INTJ", "INTERJ"),
+        ("hr", "Zagreb", "PROPN", "Npmsn"),
+        ("hr", "joj", "INTJ", "I"),
+        ("sl", "Ljubljana", "PROPN", "Npfsn"),
+        ("sl", "ojoj", "INTJ", "I"),
+    ],
+)
+def test_names_and_interjections_are_rescuable_under_their_fine_tags(code, surface, pos1, pos2):
+    """R1 (audit L1-001): a profile whose excluded subtypes carry the fine name or
+    interjection tag must list it as rescuable too, or the pos2 veto blocks the rescue."""
+    from types import SimpleNamespace
+
+    from anki_miner.services.morphology import TokenInclusionRule
+
+    pos = get_profile(code).pos_defaults
+    rule = TokenInclusionRule(
+        allowed_pos=frozenset(pos.allowed_pos),
+        excluded_subtypes=frozenset(pos.excluded_subtypes),
+        rescuable_tags=frozenset(pos.rescuable_tags),
+    )
+    token = SimpleNamespace(surface=surface, feature=SimpleNamespace(pos1=pos1, pos2=pos2, lemma=surface))
+    assert rule.should_include(token) is False
+    assert rule.rescuable(token) is True
+
+
 @pytest.mark.parametrize("code", CODES)
 def test_rescuable_tags_never_name_a_function_or_stopword_tag(code):
     tags = set(get_profile(code).pos_defaults.rescuable_tags)

@@ -49,7 +49,7 @@ from collections.abc import Mapping
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
 
-from anki_miner.languages._spaced.pos import UPOS_ALLOWED
+from anki_miner.languages._spaced.pos import UPOS_ALLOWED, UPOS_RESCUABLE
 from anki_miner.languages._spaced.script import (
     BRACKETS_PATTERN,
     DIALOGUE_DASH_PATTERN,
@@ -106,6 +106,15 @@ HR_EXCLUDED_SUBTYPES: tuple[str, ...] = (
     "Vaa2s", "Vaa3p", "Vaa3s", "Vae3s", "Vam2p", "Van", "Vap-pf", "Vap-pm", "Vap-pn", "Vap-sf", "Vap-sm", "Vap-sn",
     "Var1p", "Var1s", "Var2p", "Var2s", "Var3p", "Var3s", "X", "Xf", "Y", "Z", "_SP",
 )  # fmt: skip
+
+#: What a whitelisted card front may be rescued from (R1): UPOS_RESCUABLE plus the fine tags
+#: below that restate a name or an interjection. spaCy's fine tag rides in pos2, and the
+#: excluded subtypes list these, so without them the pos2 veto blocks the rescue.
+HR_RESCUABLE_TAGS: tuple[str, ...] = (
+    *UPOS_RESCUABLE,
+    *(tag for tag in HR_EXCLUDED_SUBTYPES if tag.startswith("Np")),
+    "I",
+)
 
 HR_ABBREVIATIONS: frozenset[str] = frozenset(
     {

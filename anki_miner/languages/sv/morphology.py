@@ -45,7 +45,7 @@ from collections.abc import Mapping
 from types import MappingProxyType
 from typing import Any
 
-from anki_miner.languages._spaced.pos import UPOS_ALLOWED
+from anki_miner.languages._spaced.pos import UPOS_ALLOWED, UPOS_RESCUABLE
 from anki_miner.languages._spaced.script import (
     BRACKETS_PATTERN,
     LATIN_SPEAKER_PATTERN,
@@ -60,6 +60,11 @@ SV_MODEL_PACKAGE = "sv_core_news_sm"
 
 SV_ALLOWED_POS: tuple[str, ...] = UPOS_ALLOWED
 SV_EXCLUDED_SUBTYPES: tuple[str, ...] = ("AB|AN", "IN", "NN|AN", "RO|NOM")
+
+#: What a whitelisted card front may be rescued from (R1): UPOS_RESCUABLE plus the fine tags
+#: below that restate a name or an interjection. spaCy's fine tag rides in pos2, and the
+#: excluded subtypes list these, so without them the pos2 veto blocks the rescue.
+SV_RESCUABLE_TAGS: tuple[str, ...] = (*UPOS_RESCUABLE, "IN")
 
 #: UD Swedish labels a verb particle ``compound:prt`` (spec §4.3 item 2), as UD Dutch does.
 SV_SEPARABLE_VERB_DEPS: frozenset[str] = frozenset({"compound:prt"})

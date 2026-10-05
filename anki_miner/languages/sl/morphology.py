@@ -43,7 +43,7 @@ from __future__ import annotations
 
 import unicodedata
 
-from anki_miner.languages._spaced.pos import UPOS_ALLOWED
+from anki_miner.languages._spaced.pos import UPOS_ALLOWED, UPOS_RESCUABLE
 from anki_miner.languages._spaced.script import (
     BRACKETS_PATTERN,
     DIALOGUE_DASH_PATTERN,
@@ -134,6 +134,15 @@ SL_EXCLUDED_SUBTYPES: tuple[str, ...] = (
     "Va-r1s-y", "Va-r2d-n", "Va-r2p-n", "Va-r2p-y", "Va-r2s-n", "Va-r2s-y", "Va-r3d-n", "Va-r3d-y", "Va-r3p-n",
     "Va-r3p-y", "Va-r3s-n", "Va-r3s-y", "X", "Xf", "Y", "Z", "_SP",
 )  # fmt: skip
+
+#: What a whitelisted card front may be rescued from (R1): UPOS_RESCUABLE plus the fine tags
+#: below that restate a name or an interjection. spaCy's fine tag rides in pos2, and the
+#: excluded subtypes list these, so without them the pos2 veto blocks the rescue.
+SL_RESCUABLE_TAGS: tuple[str, ...] = (
+    *UPOS_RESCUABLE,
+    *(tag for tag in SL_EXCLUDED_SUBTYPES if tag.startswith("Np")),
+    "I",
+)
 
 #: The seven accent marks wty writes; NEVER U+030C, where the mark IS the letter (c/s/z).
 _TONE_MARKS = frozenset({"\u0300", "\u0301", "\u0302", "\u0304", "\u030f", "\u0311", "\u0323"})
