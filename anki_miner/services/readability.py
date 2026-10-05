@@ -2,10 +2,12 @@
 
 - known/unknown is ``WordFilterService.filter_unknown`` (kana-variant and language fold included);
 - the lemma bridge ``{w.lemma for w in unknown}`` is ``EpisodeProcessor._phase2_filter``'s;
-- a line's bucket is ``len(line.lemmas & unknown_lemmas)``, the ``filter_i_plus_one`` intersection.
+- a line's bucket counts its unknown card fronts, the ``filter_i_plus_one`` intersection
+  (a hand-built line without fronts counts lemmas).
 
-Shared approximation with i+1: when one lemma has two card fronts and only one
-is known, all of that lemma's occurrences count as unknown.
+Approximation kept for the occurrence share: counts arrive per lemma, so when
+one lemma has two card fronts and only one is known, all of that lemma's
+occurrences count as unknown.
 """
 
 from __future__ import annotations
@@ -30,9 +32,11 @@ def measure(
     """Score one parsed file against the learner's known forms."""
     unknown = word_filter.filter_unknown(words, known_forms)
     unknown_lemmas = {w.lemma for w in unknown}
+    unknown_fronts = {w.mined_form for w in unknown}
     buckets = [0, 0, 0]
     for line in line_index:
-        buckets[min(len(line.lemmas & unknown_lemmas), 2)] += 1
+        unknown_on_line = line.fronts & unknown_fronts if line.front_spans else line.lemmas & unknown_lemmas
+        buckets[min(len(unknown_on_line), 2)] += 1
     return ReadabilityStats(
         word_count=sum(lemma_counts.values()),
         unknown_count=sum(n for lemma, n in lemma_counts.items() if lemma in unknown_lemmas),

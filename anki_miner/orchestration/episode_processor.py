@@ -302,6 +302,9 @@ class _EpisodeContext:
     # curation step reads it to count unknowns per line. Empty on any path
     # that never reached phase 2.
     unknown_lemmas: set[str] = field(default_factory=set)
+    # The same snapshot as card fronts: the key i+1 and the curator's unknowns
+    # column count on (UniDic folds 撮る onto 取る's lemma; known-ness is per front).
+    unknown_fronts: set[str] = field(default_factory=set)
     # Which whitelist entries this item reached (Settings -> Word Filters): phase
     # 2 stamps the entries and the already-known ones; None when no whitelist
     # is in effect. The mined ones are added at the result funnel
@@ -1085,9 +1088,13 @@ class EpisodeProcessor:
         # The i+1 check must see ALL words the learner doesn't know, not
         # just the mineable ones.
         all_unknown_lemmas = {w.lemma for w in unknown_words}
+        # Parsed lines are counted by card front (P4): known-ness was decided
+        # per front, so a known 取る must not count as unknown beside 撮る.
+        all_unknown_fronts = {w.mined_form for w in unknown_words}
         # The curator's "Unknowns in line" column counts against this same
         # basis, so the column and the i+1 filter can never disagree.
         ctx.unknown_lemmas = all_unknown_lemmas
+        ctx.unknown_fronts = all_unknown_fronts
 
         unknown_words = self._phase2_definition_viability(unknown_words, counts)
 
@@ -1107,7 +1114,13 @@ class EpisodeProcessor:
             counts.whitelist_force_includes = len(forced_include)
 
         unknown_words = self._phase2_coverage_filters(
-            unknown_words, line_index, all_unknown_lemmas, occurrence_counts, min_occurrence, counts
+            unknown_words,
+            line_index,
+            all_unknown_lemmas,
+            all_unknown_fronts,
+            occurrence_counts,
+            min_occurrence,
+            counts,
         )
 
         # Merge force-included whitelist words back in before within-run
@@ -1323,6 +1336,7 @@ class EpisodeProcessor:
         unknown_words: list[TokenizedWord],
         line_index: list[LineLemmas] | None,
         all_unknown_lemmas: set[str],
+        all_unknown_fronts: set[str],
         occurrence_counts: dict[str, int] | None,
         min_occurrence: int,
         counts: _Phase2Counts,
@@ -1490,7 +1504,10 @@ class EpisodeProcessor:
         if self.config.use_i_plus_one_filter and not self.config.bypass_optional_filters:
             before = len(unknown_words)
             unknown_words = self.word_filter.filter_i_plus_one(
-                unknown_words, line_index or [], all_unknown_lemmas=all_unknown_lemmas
+                unknown_words,
+                line_index or [],
+                all_unknown_lemmas=all_unknown_lemmas,
+                all_unknown_fronts=all_unknown_fronts,
             )
             kept = len(unknown_words)
             counts.i_plus_one_rejects = before - kept
@@ -2459,6 +2476,7 @@ class EpisodeProcessor:
                 unknown_words,
                 line_index,
                 ctx.unknown_lemmas | {w.lemma for w in unknown_words},
+                unknown_fronts=ctx.unknown_fronts | {w.mined_form for w in unknown_words},
             )
         # Attach per-run occurrence counts for the curator's "Occurrences"
         # column/sort (Issue #88).

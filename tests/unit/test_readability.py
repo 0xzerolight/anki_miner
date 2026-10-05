@@ -47,6 +47,22 @@ def test_lines_bucket_by_unknown_lemmas_capped_at_two(test_config, make_tokenize
     assert [stats.line_pct(i) for i in range(3)] == [25.0, 25.0, 50.0]
 
 
+def test_line_buckets_count_card_fronts_like_i_plus_one(test_config, make_tokenized_word):
+    """A known 取る beside an unknown 撮る (one UniDic lemma) leaves the line i+1."""
+    words = [_w(make_tokenized_word, "撮る", "取る"), _w(make_tokenized_word, "任せる")]
+    line = LineLemmas(
+        line_text="任せろ、取るから",
+        lemmas=frozenset({"任せる", "取る"}),
+        start_time=0.0,
+        end_time=1.0,
+        duration=1.0,
+        front_spans=(("任せる", "任せ", 0, 2, 2), ("取る", "取る", 3, 5, 5)),
+        fronts=frozenset({"任せる", "取る"}),
+    )
+    stats = measure(words, [line], Counter({"取る": 2, "任せる": 1}), {"取る"}, WordFilterService(test_config))
+    assert stats.line_buckets == (0, 1, 0)
+
+
 def test_kana_spelling_of_a_known_lemma_is_known(test_config, make_tokenized_word):
     stats = measure(
         [_w(make_tokenized_word, "うなずく", "頷く")],

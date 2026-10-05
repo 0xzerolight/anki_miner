@@ -1808,6 +1808,18 @@ class SubtitleParserService:
 
         line_lemmas_entry: LineLemmas | None = None
         if collect_index:
+            # Card-front spans: the identity i+1 and the sentence picker judge a
+            # line by (UniDic folds 撮る onto 取る's lemma). Synthetic compounds
+            # resolve here too; the attestation batch above skips them.
+            front_first_span: dict[str, tuple[str, int, int, int]] = {}
+            for word_token, prefetched, (tok_start, tok_end, highlight_end) in zip(
+                included_tokens, mined_forms, included_spans, strict=True
+            ):
+                if prefetched is None:
+                    _, _, front, _ = self._resolve_word_identity(word_token, text, tok_start, highlight_end)
+                else:
+                    front = prefetched
+                front_first_span.setdefault(front, (word_token.surface, tok_start, tok_end, highlight_end))
             line_lemmas_entry = LineLemmas(
                 line_text=sentence,
                 lemmas=frozenset(line_lemmas),
@@ -1820,6 +1832,8 @@ class SubtitleParserService:
                     (lemma_key, surface, span_start, span_end, span_highlight_end)
                     for lemma_key, (surface, span_start, span_end, span_highlight_end) in lemma_first_span.items()
                 ),
+                front_spans=tuple((front, *span) for front, span in front_first_span.items()),
+                fronts=frozenset(front_first_span),
             )
 
         # Second pass: emit deduped TokenizedWord entries (mined_form-keyed).

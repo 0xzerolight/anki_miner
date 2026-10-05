@@ -606,18 +606,27 @@ class WordFilterService:
         mineable_unknowns: list[TokenizedWord],
         line_index: list[LineLemmas],
         all_unknown_lemmas: set[str] | None = None,
+        all_unknown_fronts: set[str] | None = None,
     ) -> list[TokenizedWord]:
         """Restrict mining to words covered by at least one i+1 example sentence.
 
-        An "i+1" line is a subtitle line containing exactly one UNKNOWN lemma
-        — checked against ``all_unknown_lemmas``, the full unknown set — and
-        that one unknown must also be a mineable target. Checking against the
-        mineable set alone is wrong (Issue #74): unknowns removed by optional
-        filters (frequency rank, blacklist, script type, name wordsets) are
-        still unknown to the learner, so a line packed with them must not
-        qualify. For each candidate word, the earliest such line in
-        ``line_index`` order whose card front remains compatible wins the
-        tie-break; words with no compatible i+1 line are dropped.
+        An "i+1" line is a subtitle line containing exactly one UNKNOWN word
+        — checked against the full unknown set — and that one unknown must
+        also be a mineable target. Checking against the mineable set alone is
+        wrong (Issue #74): unknowns removed by optional filters (frequency
+        rank, blacklist, script type, name wordsets) are still unknown to the
+        learner, so a line packed with them must not qualify. For each
+        candidate word, the earliest such line in ``line_index`` order whose
+        card front remains compatible wins the tie-break; words with no
+        compatible i+1 line are dropped.
+
+        A word is its card front (P4): a line that carries ``front_spans`` (every
+        parsed line) is counted and matched on ``all_unknown_fronts``, so a
+        known 取る never counts as unknown beside an unknown 撮る, and 撮る never
+        takes a line holding only 取る, although UniDic gives both the lemma 取る.
+        A hand-built line without fronts, or a caller passing only
+        ``all_unknown_lemmas``, keeps the lemma count and the
+        ``_line_preserves_mined_form`` guard.
 
         The returned words have their sentence/timing/sentence_furigana/
         sentence_reading swapped to those of the selected line. ``surface`` and
@@ -643,9 +652,13 @@ class WordFilterService:
                 subtitle order.
             all_unknown_lemmas: Every lemma the learner doesn't know,
                 snapshotted BEFORE optional filters shrink the unknown set
-                (the count basis for "exactly one unknown"). ``None`` means
-                "no unknowns beyond the targets" and degrades to checking
-                against the mineable set only.
+                (the count basis for "exactly one unknown" on a line without
+                fronts). ``None`` means "no unknowns beyond the targets" and
+                degrades to checking against the mineable set only.
+            all_unknown_fronts: The same snapshot as card fronts — the count
+                basis on every line that carries fronts. ``None`` with
+                ``all_unknown_lemmas`` given keeps those lines on the lemma
+                count (a lemma-only caller).
 
         Returns:
             Filtered list of words with i+1 sentence/timing swapped in,
@@ -655,26 +668,43 @@ class WordFilterService:
             return []
 
         target_lemmas = {w.lemma for w in mineable_unknowns}
+        target_fronts = {w.mined_form for w in mineable_unknowns}
         # Union defensively: a caller-supplied set that somehow misses a
         # target must not make that target unmatchable.
         unknown_lemmas = (all_unknown_lemmas | target_lemmas) if all_unknown_lemmas is not None else target_lemmas
+        unknown_fronts = (all_unknown_fronts | target_fronts) if all_unknown_fronts is not None else target_fronts
+        by_front = all_unknown_fronts is not None or all_unknown_lemmas is None
 
-        lines_by_lemma: dict[str, list[LineLemmas]] = {}
-        for line in line_index:
-            unknown_in_line = line.lemmas & unknown_lemmas
+        # (position, line) per sole unknown, so the two keyings merge back
+        # into subtitle order for the earliest-line tie-break.
+        lines_by_front: dict[str, list[tuple[int, LineLemmas]]] = {}
+        lines_by_lemma: dict[str, list[tuple[int, LineLemmas]]] = {}
+        for position, line in enumerate(line_index):
+            if by_front and line.front_spans:
+                keys, unknown, targets, lines = line.fronts, unknown_fronts, target_fronts, lines_by_front
+            else:
+                keys, unknown, targets, lines = line.lemmas, unknown_lemmas, target_lemmas, lines_by_lemma
+            unknown_in_line = keys & unknown
             if len(unknown_in_line) == 1:
                 (only,) = unknown_in_line
-                if only in target_lemmas:
-                    lines_by_lemma.setdefault(only, []).append(line)
+                if only in targets:
+                    lines.setdefault(only, []).append((position, line))
 
         result: list[TokenizedWord] = []
         for word in mineable_unknowns:
-            match = next(
-                (line for line in lines_by_lemma.get(word.lemma, ()) if self._line_preserves_mined_form(word, line)),
+            front_match = next(iter(lines_by_front.get(word.mined_form, ())), None)
+            lemma_match = next(
+                (
+                    (position, line)
+                    for position, line in lines_by_lemma.get(word.lemma, ())
+                    if self._line_preserves_mined_form(word, line)
+                ),
                 None,
             )
-            if match is None:
+            matches = [m for m in (front_match, lemma_match) if m is not None]
+            if not matches:
                 continue
+            _, match = min(matches, key=lambda m: m[0])
             result.append(self._swap_word_to_line(word, match))
         return result
 
@@ -723,7 +753,12 @@ class WordFilterService:
         # If the entry is missing for any reason (e.g. legacy index without
         # lemma_spans), fall back to the original surface/offsets — bold would
         # then point at the old sentence, so we also disable the bolded fields.
+        # The word's own card front first: the lemma's first span may be a
+        # UniDic sibling (取る beside 撮る on one line).
         span_entry = next(
+            ((s, st, en, he) for (front, s, st, en, he) in match.front_spans if front == word.mined_form),
+            None,
+        ) or next(
             ((s, st, en, he) for (lemma_key, s, st, en, he) in match.lemma_spans if lemma_key == word.lemma),
             None,
         )
@@ -885,9 +920,11 @@ class WordFilterService:
     ) -> None:
         """Populate ``word.sentence_candidates`` for words that repeat across lines.
 
-        For each word, collects every ``line_index`` entry whose content lemmas
-        include ``word.lemma`` and whose matched surface preserves the card front
-        (subtitle order preserved). When a word appears on two or more compatible
+        For each word, collects every ``line_index`` entry that carries its card
+        front (a hand-built line without fronts: whose content lemmas include
+        ``word.lemma`` and whose matched surface preserves the card front), in
+        subtitle order. A line holding only a UniDic lemma-sibling (取る for
+        撮る) is never offered. When a word appears on two or more compatible
         lines, builds one fully-swapped :class:`TokenizedWord` variant per line
         (earliest-first) via :meth:`_swap_word_to_line` and assigns the list —
         including the variant for the word's current sentence, so the curator can
@@ -904,13 +941,23 @@ class WordFilterService:
         """
         if not line_index:
             return
-        lines_by_lemma: dict[str, list[LineLemmas]] = {}
-        for line in line_index:
-            for lemma in line.lemmas:
-                lines_by_lemma.setdefault(lemma, []).append(line)
+        lines_by_front: dict[str, list[tuple[int, LineLemmas]]] = {}
+        lines_by_lemma: dict[str, list[tuple[int, LineLemmas]]] = {}
+        for position, line in enumerate(line_index):
+            if line.front_spans:
+                for front in line.fronts:
+                    lines_by_front.setdefault(front, []).append((position, line))
+            else:
+                for lemma in line.lemmas:
+                    lines_by_lemma.setdefault(lemma, []).append((position, line))
 
         for word in words:
-            lines = [line for line in lines_by_lemma.get(word.lemma, ()) if self._line_preserves_mined_form(word, line)]
+            compatible = lines_by_front.get(word.mined_form, []) + [
+                (position, line)
+                for position, line in lines_by_lemma.get(word.lemma, ())
+                if self._line_preserves_mined_form(word, line)
+            ]
+            lines = [line for _, line in sorted(compatible, key=lambda entry: entry[0])]
             if len(lines) < 2:
                 continue
             if max_candidates is not None:
@@ -981,14 +1028,17 @@ class WordFilterService:
         words: list[TokenizedWord],
         line_index: list[LineLemmas],
         unknown_lemmas: set[str],
+        unknown_fronts: set[str] | None = None,
     ) -> None:
-        """Set ``line_unknown_count`` — distinct unknown lemmas on the word's own line.
+        """Set ``line_unknown_count`` — distinct unknown words on the word's own line.
 
-        ``unknown_lemmas`` must be the basis :meth:`filter_i_plus_one` counts
-        against (the pre-optional-filter snapshot unioned with the mineable
-        targets), or the curator's column disagrees with the filter: a count of
-        1 is exactly the i+1 condition, which is what makes sorting that column
-        ascending i+1 without i+1's word loss.
+        ``unknown_lemmas``/``unknown_fronts`` must be the bases
+        :meth:`filter_i_plus_one` counts against (the pre-optional-filter
+        snapshot unioned with the mineable targets), or the curator's column
+        disagrees with the filter: a count of 1 is exactly the i+1 condition,
+        which is what makes sorting that column ascending i+1 without i+1's
+        word loss. A line carrying fronts counts card fronts when
+        ``unknown_fronts`` is given, exactly as the filter does.
 
         Lines are matched by TEXT, not by time. Both the mining parse and the
         i+1 swap set ``sentence`` to a line's cleaned text, and two lines with
@@ -1005,12 +1055,16 @@ class WordFilterService:
         """
         if not line_index:
             return
-        lemmas_by_text = {line.line_text: line.lemmas for line in line_index}
+        lines_by_text = {line.line_text: line for line in line_index}
         for word in words:
             for variant in (word, *word.sentence_candidates):
-                lemmas = lemmas_by_text.get(variant.sentence)
-                if lemmas is not None:
-                    variant.line_unknown_count = len(lemmas & unknown_lemmas)
+                line = lines_by_text.get(variant.sentence)
+                if line is None:
+                    continue
+                if unknown_fronts is not None and line.front_spans:
+                    variant.line_unknown_count = len(line.fronts & unknown_fronts)
+                else:
+                    variant.line_unknown_count = len(line.lemmas & unknown_lemmas)
 
     def filter_by_episode_count(
         self,

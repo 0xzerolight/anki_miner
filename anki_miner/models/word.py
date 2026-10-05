@@ -380,3 +380,11 @@ class LineLemmas:
     # line; highlight_end covers the full inflected form (-1 = same as end).
     # Tuple-of-tuples instead of dict to keep the dataclass frozen.
     lemma_spans: tuple[tuple[str, str, int, int, int], ...] = field(default_factory=tuple)
+    # The same spans keyed by CARD FRONT (mined_form), one per front's first
+    # appearance, and the set of those fronts. The i+1 filter, the sentence
+    # picker and the curator's unknowns column judge a line by these: UniDic
+    # folds kanji variants onto one lemma (撮る/取る, 賭ける/掛ける), but
+    # known-ness is decided per card front. Empty on hand-built indexes, which
+    # keep the lemma path.
+    front_spans: tuple[tuple[str, str, int, int, int], ...] = field(default_factory=tuple)
+    fronts: frozenset[str] = frozenset()

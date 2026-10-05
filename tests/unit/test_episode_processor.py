@@ -4252,7 +4252,9 @@ class TestIPlusOneFilter:
 
     @pytest.fixture
     def mock_services(self, mock_services):
-        mock_services["word_filter"].filter_i_plus_one.side_effect = lambda words, idx, all_unknown_lemmas=None: words
+        mock_services["word_filter"].filter_i_plus_one.side_effect = (
+            lambda words, idx, all_unknown_lemmas=None, all_unknown_fronts=None: words
+        )
         return mock_services
 
     def _config_with_flag(self, test_config, *, flag: bool, dedup: bool = True):
@@ -4419,7 +4421,9 @@ class TestIPlusOneFilter:
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
         mock_services["word_filter"].filter_unknown.return_value = [word1, word2]
         # Pretend i+1 keeps only word1.
-        mock_services["word_filter"].filter_i_plus_one.side_effect = lambda words, idx, all_unknown_lemmas=None: [word1]
+        mock_services["word_filter"].filter_i_plus_one.side_effect = (
+            lambda words, idx, all_unknown_lemmas=None, all_unknown_fronts=None: [word1]
+        )
         mock_services["media_extractor"].extract_media_batch.return_value = [(word1, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. def"]
         mock_services["anki_service"].create_cards_batch.return_value = [1]
@@ -5282,7 +5286,9 @@ class TestPhase2FilterOrdering:
         word_filter = mock_services["word_filter"]
         # All Phase-2 filters pass through so each one actually fires and the
         # pipeline reaches the next; signatures differ (positional vs kwargs).
-        word_filter.filter_i_plus_one.side_effect = lambda words, idx, all_unknown_lemmas=None: words
+        word_filter.filter_i_plus_one.side_effect = (
+            lambda words, idx, all_unknown_lemmas=None, all_unknown_fronts=None: words
+        )
         word_filter.filter_by_sentence_length.side_effect = lambda words, **kw: words
         word_filter.filter_by_script_type.side_effect = lambda words, **kw: words
         return mock_services
@@ -7282,3 +7288,36 @@ class TestWhitelistRescuesParseGates:
         plain, _ = self._run(tmp_path, config, rescue=False, defined=defined, known=frozenset({"見る"}))
         assert rescued == ["太郎"]
         assert plain == ["猫"]
+
+
+def test_i_plus_one_basis_keys_on_card_fronts_not_lemmas(test_config):
+    """P4 (audit L3-008): a KNOWN 掛ける must not count as unknown on its line because
+    the unknown 賭ける shares its UniDic lemma. Real parser and filters."""
+    from anki_miner.models.reading import ReadingUnit
+
+    config = replace(
+        test_config,
+        use_i_plus_one_filter=True,
+        include_known_words=False,
+        use_known_words_db=False,
+        deduplicate_sentences=False,
+    )
+    units = [
+        ReadingUnit(text=t, index=i, location_label=f"p.{i}")
+        for i, t in enumerate(["相棒に電話を掛ける。", "人生を賭ける。"])
+    ]
+    words, index, _counts = SubtitleParserService(config).parse_text_units(units, True)
+    anki = MagicMock()
+    anki.get_existing_vocabulary.return_value = {"電話", "掛ける", "人生"}
+    definitions = MagicMock()
+    definitions.has_offline_definitions.side_effect = lambda terms: dict.fromkeys(terms, True)
+    definitions.offline_term_identities.return_value = {}
+    processor = build_processor(
+        config=config, anki_service=anki, word_filter=WordFilterService(config), definition_service=definitions
+    )
+    ctx = _EpisodeContext(0.0, "", "", "episode", "series", "")
+
+    result = processor._phase2_filter(ctx, words, index)
+
+    # 相棒's line holds one unknown card front (相棒): 電話 and 掛ける are known.
+    assert {w.mined_form: w.sentence for w in result} == {"相棒": "相棒に電話を掛ける。", "賭ける": "人生を賭ける。"}

@@ -1803,6 +1803,86 @@ class TestOverriddenVerbLemmaCorrelation:
         assert kept == [word]
 
 
+class TestIPlusOneKeysOnCardFront:
+    """P4: i+1 judges a line by the card fronts on it, not by their UniDic lemmas.
+
+    UniDic folds kanji spelling variants onto one lemma (撮る→取る, 賭ける→掛ける,
+    聴く→聞く). Known-ness is decided per card front, so i+1 must count and match
+    card fronts too. Otherwise a card ships its lemma-sibling's sentence, audio and
+    screenshot (audit L2-002/L3-007), or a known sibling blocks a line
+    (L2-003/L3-008). Real parser, so the variant lemmas are UniDic's own.
+    """
+
+    def _parse(self, test_config, *lines):
+        from anki_miner.services.subtitle_parser import SubtitleParserService
+
+        parser = SubtitleParserService(test_config)
+        units = [ReadingUnit(text=t, index=i, location_label=f"p.{i}") for i, t in enumerate(lines)]
+        words, index, _counts = parser.parse_text_units(units, True)
+        return words, index
+
+    def _i_plus_one(self, service, unknown, index):
+        # The two bases EpisodeProcessor._phase2_filter snapshots.
+        return service.filter_i_plus_one(
+            unknown,
+            index,
+            all_unknown_lemmas={w.lemma for w in unknown},
+            all_unknown_fronts={w.mined_form for w in unknown},
+        )
+
+    def test_verb_never_takes_a_line_holding_only_its_lemma_sibling(self, test_config):
+        words, index = self._parse(test_config, "取れ", "撮るぞ")
+        service = WordFilterService(test_config)
+        unknown = service.filter_unknown(words, {"取る"})
+        assert [(w.mined_form, w.lemma) for w in unknown] == [("撮る", "取る")]  # UniDic folds 撮る onto 取る
+
+        result = self._i_plus_one(service, unknown, index)
+
+        assert [(w.mined_form, w.sentence) for w in result] == [("撮る", "撮るぞ")]
+
+    def test_earlier_sibling_line_does_not_win_the_tie_break(self, test_config):
+        words, index = self._parse(test_config, "電話を掛ける。", "人生を賭ける。")
+        service = WordFilterService(test_config)
+        unknown = service.filter_unknown(words, {"電話", "人生", "掛ける"})
+        assert [(w.mined_form, w.lemma) for w in unknown] == [("賭ける", "掛ける")]
+
+        result = self._i_plus_one(service, unknown, index)
+
+        assert [w.sentence for w in result] == ["人生を賭ける。"]
+
+    def test_a_known_lemma_sibling_does_not_count_as_unknown(self, test_config):
+        words, index = self._parse(test_config, "撮るぞ", "任せろ、取るから")
+        service = WordFilterService(test_config)
+        unknown = service.filter_unknown(words, {"取る"})
+        assert sorted(w.mined_form for w in unknown) == ["任せる", "撮る"]
+
+        result = self._i_plus_one(service, unknown, index)
+
+        assert ("任せる", "任せろ、取るから") in [(w.mined_form, w.sentence) for w in result]
+
+    def test_sentence_candidates_skip_lemma_sibling_lines(self, test_config):
+        words, index = self._parse(test_config, "取れ", "撮るぞ", "また撮る")
+        service = WordFilterService(test_config)
+        unknown = service.filter_unknown(words, {"取る", "また"})
+
+        service.attach_sentence_candidates(unknown, index)
+
+        toru = next(w for w in unknown if w.mined_form == "撮る")
+        assert [v.sentence for v in toru.sentence_candidates] == ["撮るぞ", "また撮る"]
+
+    def test_line_unknown_count_counts_card_fronts(self, test_config):
+        words, index = self._parse(test_config, "撮るぞ", "任せろ、取るから")
+        service = WordFilterService(test_config)
+        unknown = service.filter_unknown(words, {"取る"})
+
+        service.attach_line_unknown_counts(
+            unknown, index, {w.lemma for w in unknown}, unknown_fronts={w.mined_form for w in unknown}
+        )
+
+        makaseru = next(w for w in unknown if w.mined_form == "任せる")
+        assert makaseru.line_unknown_count == 1
+
+
 class TestScriptTypeFilterAgainstRealParser:
     """End-to-end guard for the Issue #57 follow-up leak.
 
