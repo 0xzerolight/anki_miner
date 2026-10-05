@@ -69,6 +69,11 @@ class DeckBuilderWorker(BatchQueueWorkerThread):
     ``curation_processor`` from :class:`BatchQueueWorkerThread`.
     """
 
+    #: A build ignores Word Filters / Sentences (bypass), but definition
+    #: viability and the offline-dictionary preflight are integrity gates (R2):
+    #: the preview and curator count only words that can become cards (audit L5-007).
+    bypass_skips_dictionary_gates = False
+
     preview_ready = pyqtSignal(object)  # DeckCorpus
 
     def __init__(

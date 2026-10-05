@@ -53,6 +53,14 @@ def anki_calls(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str]]:
     return calls
 
 
+@pytest.fixture(autouse=True)
+def offline_preflight(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
+    """The queue's offline-dictionary preflight, passed (the isolated home has none)."""
+    preflight = MagicMock(name="require_usable_offline_provider")
+    monkeypatch.setattr("anki_miner.gui.workers.batch_queue_worker.require_usable_offline_provider", preflight)
+    return preflight
+
+
 def _word(lemma: str, *candidate_lemmas: str) -> TokenizedWord:
     word = TokenizedWord(
         surface=lemma,
@@ -161,6 +169,19 @@ def _run(worker: DeckBuilderWorker, proc: _FakeProcessor) -> dict[str, list]:
     with factory_patch, pairs_patch:
         worker.run()
     return seen
+
+
+def test_build_keeps_the_dictionary_gates(offline_preflight):
+    """R2 (audit L5-007): a build ignores Word Filters / Sentences, not the integrity
+    gates: the queue preflight and every processor keep the dictionary checks."""
+    worker = _worker()
+    proc = _FakeProcessor(_words())
+    worker.confirm(DeckSelectionMode.ALL, 0)
+
+    _run(worker, proc)
+
+    assert offline_preflight.call_args.kwargs == {"bypass_skips": False}
+    assert proc.bypass_skips_dictionary_gates is False
 
 
 def test_build_config_forces_bypass_duplicates_and_known_toggle():

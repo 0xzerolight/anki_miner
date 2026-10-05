@@ -5020,6 +5020,21 @@ class TestPreflightCardTarget:
         assert result.success is True
         mock_services["definition_service"].has_usable_offline_provider.assert_not_called()
 
+    def test_bypass_run_keeping_the_dictionary_gates_requires_offline_provider(
+        self, test_config, mock_services, tmp_path
+    ):
+        """R2 (audit L5-007): Deck Builder refuses to start without an offline dictionary."""
+        config = replace(test_config, bypass_optional_filters=True)
+        mock_services["definition_service"].has_usable_offline_provider.return_value = False
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = []
+        processor = build_processor(config=config, presenter=NullPresenter(), **mock_services)
+        processor.bypass_skips_dictionary_gates = False
+
+        with pytest.raises(SetupError):
+            processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_services["definition_service"].has_usable_offline_provider.assert_called_once_with()
+
     # --- process_youtube_url pre-flight tests ---
 
     def _make_youtube_processor(self, test_config, mock_services, mock_fetcher):
@@ -5833,6 +5848,7 @@ class TestOfflineDefinitionPreFilter:
         assert captured["lemmas"] == ["食べる", "走る"]
 
     def test_filter_skipped_when_bypass_optional_filters(self, test_config, mock_services, tmp_path):
+        """The golden contract's bypass path: phase 5 stays the skip point."""
         config = replace(test_config, bypass_optional_filters=True)
         w1, w2 = _make_word("食べる"), _make_word("走る", 5.0)
         self._prime(mock_services, [w1, w2])
@@ -5848,6 +5864,27 @@ class TestOfflineDefinitionPreFilter:
 
         mock_services["definition_service"].has_offline_definitions.assert_not_called()
         assert captured["lemmas"] == ["食べる", "走る"]
+
+    def test_filter_runs_on_a_bypass_run_that_keeps_the_dictionary_gates(self, test_config, mock_services, tmp_path):
+        """R2 (audit L5-007): Deck Builder bypasses the optional filters but keeps this
+        integrity gate, so its preview and curator count only cardable words."""
+        config = replace(test_config, bypass_optional_filters=True)
+        w1, w2 = _make_word("食べる"), _make_word("走る", 5.0)
+        self._prime(mock_services, [w1, w2])
+        mock_services["definition_service"].has_offline_definitions.side_effect = None
+        mock_services["definition_service"].has_offline_definitions.return_value = {"食べる": True, "走る": False}
+
+        captured: dict = {}
+
+        def cb(words):
+            captured["lemmas"] = [w.lemma for w in words]
+            return None
+
+        proc = self._build(config, mock_services)
+        proc.bypass_skips_dictionary_gates = False
+        proc.process_episode(tmp_path / "ep.mkv", tmp_path / "ep.ass", curation_callback=cb)
+
+        assert captured["lemmas"] == ["食べる"]
 
     def test_probe_uses_safe_alternate_and_deinflection_terms(self, test_config, mock_services, tmp_path):
         deinflection_hit = _make_word("返る")

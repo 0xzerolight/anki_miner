@@ -203,9 +203,16 @@ _OFFLINE_DICTIONARY_REQUIRED_MESSAGE = (
 def require_usable_offline_provider(
     config: AnkiMinerConfig,
     definition_service: DefinitionService,
+    *,
+    bypass_skips: bool = True,
 ) -> None:
-    """Fail standard mining when no non-empty offline dictionary can serve it."""
-    if config.bypass_optional_filters:
+    """Fail standard mining when no non-empty offline dictionary can serve it.
+
+    A ``bypass_optional_filters`` run skips this only while ``bypass_skips``
+    holds (the golden contract). Deck Builder passes False: definition existence
+    is an integrity gate (R2), so its builds need a dictionary too.
+    """
+    if config.bypass_optional_filters and bypass_skips:
         return
     if not definition_service.has_usable_offline_provider():
         raise SetupError(_OFFLINE_DICTIONARY_REQUIRED_MESSAGE)
@@ -367,6 +374,12 @@ class EpisodeProcessor:
     #: does that and hand-sets only the collaborators its phase needs, so
     #: ``__init__`` never runs and no instance attribute exists.
     _profile: LanguageProfile | None = None
+    #: Whether a ``bypass_optional_filters`` run also skips the dictionary gates
+    #: (definition viability and the offline-dictionary preflight). True keeps
+    #: the golden contract's bypass path, where phase 5 is the skip point; Deck
+    #: Builder sets False, because those are integrity gates (R2), not the
+    #: optional filters a build ignores. Not a setting: the caller decides.
+    bypass_skips_dictionary_gates: bool = True
 
     def __init__(
         self,
@@ -1266,9 +1279,11 @@ class EpisodeProcessor:
         # Exact misses also use the same rules-validated deinflection candidates
         # as Phase 4, so 帰れる can qualify through 帰る without trusting 返る.
         # Runs before every lossy sentence selector so an undefined first word
-        # cannot erase a definition-backed sentence-mate. Gated on
-        # bypass_optional_filters so the golden contract's bypass path is
-        # unaffected (Phase 5 stays the skip point there).
+        # cannot erase a definition-backed sentence-mate. An integrity gate (R2):
+        # a bypass_optional_filters run skips it only while
+        # bypass_skips_dictionary_gates holds (the golden contract, where phase
+        # 5 stays the skip point); Deck Builder keeps it, so its preview and
+        # curator count only cardable words.
         #
         # Known, intentional asymmetry: this probe is offline-only, but Phase 5
         # looks definitions up over the FULL chain (get_definitions_batch, which
@@ -1276,7 +1291,7 @@ class EpisodeProcessor:
         # words with a Jisho-only definition dropped here before the curator —
         # accepted on purpose so Phase 2 never blocks on network I/O. Do not
         # "fix" this by calling online providers here.
-        if not self.config.bypass_optional_filters and unknown_words:
+        if unknown_words and not (self.config.bypass_optional_filters and self.bypass_skips_dictionary_gates):
             safe_alternates = [self._lookup_alternate(w) for w in unknown_words]
             probe_terms = list(
                 {
@@ -3592,7 +3607,9 @@ class EpisodeProcessor:
 
     def check_offline_dictionary(self) -> None:
         """Fail fast when standard filtering has no usable offline provider."""
-        require_usable_offline_provider(self.config, self.definition_service)
+        require_usable_offline_provider(
+            self.config, self.definition_service, bypass_skips=self.bypass_skips_dictionary_gates
+        )
 
     def check_resource_staleness(self) -> None:
         """Raise SetupError if any enabled indexed slot needs reimport (4.0).

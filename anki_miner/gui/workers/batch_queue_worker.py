@@ -44,6 +44,12 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
     Inherits thread-safe cancellation from CancellableWorker.
     """
 
+    #: Whether a ``bypass_optional_filters`` run also skips the dictionary
+    #: gates (definition viability, the offline-dictionary preflight). Batch
+    #: never bypasses; Deck Builder sets False, since those gates are integrity
+    #: gates (R2), not the optional filters a build ignores.
+    bypass_skips_dictionary_gates = True
+
     # Signals for queue-level progress
     queue_started = pyqtSignal(int)  # total_items
     item_started = pyqtSignal(str, str)  # item_id, display_name
@@ -253,6 +259,7 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                     require_usable_offline_provider,
                     self.config,
                     shared_lookup.definition_service,
+                    bypass_skips=self.bypass_skips_dictionary_gates,
                 ),
             )
             if preflight_error is not None:
@@ -376,6 +383,7 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                         anki_service=shared_anki_service,
                         shared_lookup=shared_lookup,
                     )
+                    self._current_processor.bypass_skips_dictionary_gates = self.bypass_skips_dictionary_gates
                 episode_processor = self._current_processor
 
                 # Use FilePairMatcher for cross-folder pairing
