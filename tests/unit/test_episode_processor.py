@@ -7253,6 +7253,70 @@ class TestAutoMergeSentenceLengthCaps:
         ), presenter.show_warning.call_args_list
 
 
+class TestSeasonMinePass:
+    """Season Batch mines each episode with the season curator's subset (fixed_selection).
+
+    The subset replaces phase 2's coverage picks on the re-parse, so the curated
+    sentence and merge stand. But the known check (T3, R2) still applies, on the mine
+    pass's own snapshot: an earlier episode's mine pass may have just carded a word.
+    """
+
+    @staticmethod
+    def _word(lemma, sentence, start, *, surface=None, mined=None, pos="名詞"):
+        return TokenizedWord(
+            surface=surface or lemma, lemma=lemma, reading="", sentence=sentence, start_time=start,
+            end_time=start + 2.0, duration=2.0, pos=pos, mined_form_override=mined,
+        )  # fmt: skip
+
+    def _run(self, config, mock_services, tmp_path, parsed, index, known, subset):
+        from anki_miner.services.word_pool import fixed_selection
+
+        parser = mock_services["subtitle_parser"]
+        parser.parse_subtitle_file.return_value = parsed
+        parser.parse_subtitle_file_with_index.return_value = (parsed, index)
+        parser.parse_raw_entries.return_value = []
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set(known)
+        definitions = mock_services["definition_service"]
+        definitions.has_offline_definitions.side_effect = lambda terms: dict.fromkeys(terms, True)
+        definitions.offline_term_identities.return_value = {}
+        captured: list[TokenizedWord] = []
+        mock_services["media_extractor"].extract_media_batch.side_effect = lambda _v, batch, *a, **k: (
+            captured.extend(batch) or []
+        )
+        processor = build_processor(config=config, **{**mock_services, "word_filter": WordFilterService(config)})
+        processor.process_episode(tmp_path / "b.mkv", tmp_path / "b.srt", curation_callback=fixed_selection(subset))
+        return [(w.mined_form, w.sentence) for w in captured]
+
+    def test_a_curated_word_this_pass_finds_known_is_not_mined(self, test_config, mock_services, tmp_path):
+        """Audit L4-003: episode A's mine pass carded 分かる, so B's わかる (lemma 分かる) is known now."""
+        config = replace(test_config, known_words_match_kana_variants=True, include_known_words=False)
+        wakaru = self._word("分かる", "わかるよ。", 1.0, surface="わかる", mined="わかる", pos="動詞")
+        hashiru = self._word("走る", "走るぞ。", 5.0, pos="動詞")
+
+        mined = self._run(
+            config, mock_services, tmp_path, [wakaru, hashiru], [], {"分かる"}, [replace(wakaru), replace(hashiru)]
+        )
+
+        assert mined == [("走る", "走るぞ。")]
+
+    def test_a_curated_word_survives_an_empty_rerun_phase_two(self, test_config, mock_services, tmp_path):
+        """Audit L4-004: W became known, i+1 moves X to the long line and the cap drops it,
+        so the re-run phase 2 is empty. X on its curated short line is still valid."""
+        long_line, short_line = "エックスとダブリューが一緒に出てくるとても長い台詞の行だよ。", "エックスだ。"
+        config = replace(test_config, use_i_plus_one_filter=True, max_sentence_chars=20, include_known_words=False)
+        parsed = [self._word("エックス", long_line, 3.0), self._word("ダブリュー", long_line, 3.0)]
+        index = [
+            LineLemmas(long_line, frozenset({"エックス", "ダブリュー"}), 3.0, 5.0, 2.0),
+            LineLemmas(short_line, frozenset({"エックス"}), 10.0, 11.0, 1.0),
+        ]
+
+        mined = self._run(
+            config, mock_services, tmp_path, parsed, index, {"ダブリュー"}, [self._word("エックス", short_line, 10.0)]
+        )
+
+        assert mined == [("エックス", short_line)]
+
+
 class TestAutoMergeKeepsIPlusOne:
     """P5 (audit L4-001): under i+1 the automatic cue merge must not hand a card a merged
     sentence holding more than one unknown. The word keeps its i+1 fragment instead.

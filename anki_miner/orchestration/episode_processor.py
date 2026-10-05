@@ -834,6 +834,28 @@ class EpisodeProcessor:
                 QCoreApplication.translate("EpisodeProcessor", "No cards created. Every word is already known.")
             )
 
+    def _season_subset_still_unknown(self, ctx: _EpisodeContext, subset: list[TokenizedWord]) -> list[TokenizedWord]:
+        """The season curator's subset minus what this mine pass now knows (T3).
+
+        ``ctx.unknown_fronts`` is this pass's post-known snapshot over the same
+        file, so a curated word an earlier episode's mine pass just carded (or
+        its kana spelling, under the kana-variant rule) drops out exactly as it
+        would in per-pair Batch. Nothing else re-judges the subset.
+        """
+        kept = [word for word in subset if word.mined_form in ctx.unknown_fronts]
+        ctx.new_words_found = len(kept)
+        if len(kept) < len(subset):
+            logger.info("season mine pass: %d curated word(s) known since the season curator", len(subset) - len(kept))
+        if kept:
+            self.presenter.show_info(
+                QCoreApplication.translate("EpisodeProcessor", "Mining %n selected word(s)", "", len(kept))
+            )
+        else:
+            self.presenter.show_info(
+                QCoreApplication.translate("EpisodeProcessor", "No cards created. Every word is already known.")
+            )
+        return kept
+
     def _report_ambiguous_readings(self) -> None:
         """Emit one per-parse receipt for real-token reading mismatches."""
         count = getattr(self.subtitle_parser, "ambiguous_reading_count", 0)
@@ -2919,27 +2941,37 @@ class EpisodeProcessor:
                 unknown_words = self._phase2_filter(ctx, all_words, line_index, progress_callback)
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
-            if not unknown_words:
+            fixed_subset = getattr(curation_callback, "fixed_subset", None)
+            if fixed_subset is not None:
+                # The season mine pass: the season curator already chose these
+                # words, sentences and merges, so this re-parse's coverage picks
+                # (and an empty phase 2) do not override them. Only the known
+                # check (T3) applies, on this pass's own snapshot: an earlier
+                # episode's mine pass may have just carded one of them.
+                unknown_words = self._season_subset_still_unknown(ctx, fixed_subset)
+                if not unknown_words:
+                    return ctx.build_result(new_words_found=0)
+            elif not unknown_words:
                 self._report_no_mineable_words(ctx)
                 return ctx.build_result(new_words_found=0)
+            else:
+                # Before curation on purpose: the curator opens on the merged
+                # sentence and treats the stamp as what its ± line buttons extend
+                # from. A no-op unless the setting is on. Its sentence-length pass
+                # can drop every word, so the phase-2 guard repeats here.
+                unknown_words = self._auto_stamp_line_expansions(
+                    unknown_words,
+                    subtitle_file,
+                    subtitle_offset,
+                    line_index=line_index,
+                    unknown_lemmas=ctx.unknown_lemmas,
+                    unknown_fronts=ctx.unknown_fronts,
+                )
+                if not unknown_words:
+                    self._report_no_mineable_words(ctx)
+                    return ctx.build_result(new_words_found=0)
 
-            # Before curation on purpose: the curator opens on the merged
-            # sentence and treats the stamp as what its ± line buttons extend
-            # from. A no-op unless the setting is on. Its sentence-length pass
-            # can drop every word, so the phase-2 guard repeats here.
-            unknown_words = self._auto_stamp_line_expansions(
-                unknown_words,
-                subtitle_file,
-                subtitle_offset,
-                line_index=line_index,
-                unknown_lemmas=ctx.unknown_lemmas,
-                unknown_fronts=ctx.unknown_fronts,
-            )
-            if not unknown_words:
-                self._report_no_mineable_words(ctx)
-                return ctx.build_result(new_words_found=0)
-
-            if curation_callback is not None:
+            if curation_callback is not None and fixed_subset is None:
                 # count_lemmas reuses the phase-1 parse cache, so no second MeCab pass.
                 outcome = self._run_curation(
                     ctx,
