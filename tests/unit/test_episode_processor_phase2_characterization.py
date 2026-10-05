@@ -287,7 +287,7 @@ def _db_failure(test_config, tmp_path):
 
 
 def _bypass(test_config, tmp_path):
-    """bypass_optional_filters: every optional filter configured, only the floor and collapse apply."""
+    """bypass_optional_filters: every optional filter configured (the floor too), only the collapse applies."""
     config = replace(
         test_config,
         **{
@@ -499,6 +499,7 @@ _EXPECTED = {
             ("頻出", "頻出です。"),
             ("ひらがな", "ひらがなです。"),
             ("黒", "黒です。"),
+            ("稀", "稀です。"),
             ("空", "空です。"),
             ("重複", "重複です。"),
         ],
@@ -512,14 +513,14 @@ _EXPECTED = {
         "log": [
             (
                 "INFO",
-                "Phase 2 filter: in=8 out=5 frequency_ranked=8 known_hits=1 known_db_added=0 known_db_total=1 "
-                "frequency_rejects=0 word_list_rejects=0 script_rejects=0 wordset_rejects=0 episode_rejects=1 "
+                "Phase 2 filter: in=8 out=6 frequency_ranked=8 known_hits=1 known_db_added=0 known_db_total=1 "
+                "frequency_rejects=0 word_list_rejects=0 script_rejects=0 wordset_rejects=0 episode_rejects=0 "
                 "duplicate_sentence_rejects=0 i_plus_one_rejects=0 sentence_length_rejects=0 "
                 "whitelist_force_includes=0 no_definition_rejects=0 duplicate_expression_rejects=1",
             ),
         ],
         "ctx": {
-            "new_words_found": 5,
+            "new_words_found": 6,
             "candidate_words_found": 7,
             "comprehension_percentage": 12.5,
             "unknown_lemmas": "ひらがな 稀 空 重複 重複語 頻出 黒",

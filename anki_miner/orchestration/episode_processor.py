@@ -1506,8 +1506,8 @@ class EpisodeProcessor:
         # survive instead of losing the whole sentence to a below-floor first word.
         # Force-included whitelist words were partitioned out in _phase2_filter
         # and merge back there after these filters, so they continue to bypass
-        # this coverage filter.
-        if occurrence_counts is not None:
+        # this coverage filter. Gated on bypass like every other coverage filter.
+        if occurrence_counts is not None and not self.config.bypass_optional_filters:
             before = len(unknown_words)
             unknown_words = self.word_filter.filter_by_episode_count(unknown_words, occurrence_counts, min_occurrence)
             counts.episode_rejects += before - len(unknown_words)

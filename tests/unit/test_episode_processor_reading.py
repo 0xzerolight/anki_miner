@@ -22,7 +22,7 @@ from PIL import Image, UnidentifiedImageError
 from anki_miner.exceptions import AnkiConnectionError, AnkiMinerException, SetupError
 from anki_miner.models import AnkiWriteState, LineLemmas, SentenceEdit, TokenizedWord
 from anki_miner.models.reading import ImageRef, ReadingDocument, ReadingUnit
-from anki_miner.orchestration.episode_processor import EpisodeProcessor, _format_timestamp
+from anki_miner.orchestration.episode_processor import EpisodeProcessor, _EpisodeContext, _format_timestamp
 from anki_miner.presenters import NullPresenter
 from anki_miner.services.anki_media_store import AnkiMediaStore
 from anki_miner.services.word_filter import WordFilterService
@@ -390,6 +390,23 @@ def test_min_occurrence_precedes_sentence_dedup(test_config):
     phase2 = next(call for call in summary.call_args_list if call.args[1] == "Phase 2 filter")
     assert phase2.kwargs["episode_rejects"] == 1
     assert phase2.kwargs["duplicate_sentence_rejects"] == 0
+
+
+def test_bypass_skips_the_occurrence_floor(test_config):
+    """P1 (audit L5-001): the floor is a coverage filter like the others, so
+    ``bypass_optional_filters`` skips it too."""
+    from tests.conftest import build_processor
+
+    cfg = replace(test_config, include_known_words=True, bypass_optional_filters=True, reading_min_occurrence=3)
+    definitions = MagicMock()
+    definitions.offline_term_identities.return_value = {}
+    processor = build_processor(config=cfg, word_filter=WordFilterService(cfg), definition_service=definitions)
+    word = _word("食べる", 0, pos="動詞")
+    ctx = _EpisodeContext(0.0, "", "", "episode", "series", "")
+
+    result = processor._phase2_filter(ctx, [word], None, None, occurrence_counts={"食べる": 2}, min_occurrence=3)
+
+    assert [w.mined_form for w in result] == ["食べる"]
 
 
 def test_whitelist_force_includes_past_min_occurrence(test_config, tmp_path):
