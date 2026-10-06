@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import threading
+import time
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -349,6 +350,27 @@ def test_a_dry_run_reports_what_anki_already_has(services, tmp_path, video) -> N
     assert _result_file(tmp_path)["words"][0]["status"] == "duplicate"
     [cancelled] = services.anki_cls.return_value.set_cancelled_check.call_args.args
     assert cancelled() is False  # the run's cancel event, so a cancel cuts a retry wait short
+
+
+def test_a_dry_run_cancelled_during_its_duplicate_check_is_cancelled(services, tmp_path, video) -> None:
+    anki = services.anki_cls.return_value
+
+    def cancel_mid_check(_payloads):
+        (tmp_path / "ep-01" / "cancel").touch()
+        [cancelled] = anki.set_cancelled_check.call_args.args
+        deadline = time.monotonic() + 2
+        while not cancelled() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert cancelled()
+        return set()  # the check cut short: nothing confirmed
+
+    anki.duplicate_fronts.side_effect = cancel_mid_check
+    [verdict] = runs.mine_runs(_dry(tmp_path, video), threading.Event(), runs.Kind.DRY_RUN)
+    assert verdict["error"] == "CANCELLED" and verdict["file"] == "result-1.json", verdict
+    assert not (tmp_path / "ep-01" / "cancel").exists()
+    result = _result_file(tmp_path)
+    assert (result["outcome"], result["error"]) == ("cancelled", "CANCELLED")
+    assert [w["status"] for w in result["words"]] == ["not_attempted", "not_found"]
 
 
 def _dry_made_row(services, tmp_path, video, *, in_anki: set[str]) -> dict:

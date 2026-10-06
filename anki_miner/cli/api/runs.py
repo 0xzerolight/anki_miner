@@ -50,6 +50,7 @@ from anki_miner.gui.utils.service_factory import (
 )
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.models import (
+    CANCELLED_ERROR,
     CardPayload,
     MediaData,
     MiningOutcome,
@@ -237,8 +238,13 @@ def _mine(
             except (AnkiConnectionError, SetupError) as exc:  # the processor's own preflight
                 raise setup_failure(exc) from exc
             succeeded = classify_result(result) is MiningOutcome.SUCCESS
-            # Inside the watcher, so a cancel also cuts short a dry run's wait on a busy Anki.
-            made = _dry_statuses(run_config, processor, selection, cancel.is_set) if dry and succeeded else {}
+            made: dict[str, str] = {}
+            if dry and succeeded:
+                # Inside the watcher, so a cancel also cuts short a dry run's wait on a busy Anki.
+                made = _dry_statuses(run_config, processor, selection, cancel.is_set)
+                if cancel.is_set():  # the check was cut short: the run stopped there, as one cancelled mid-run
+                    result = replace(result, errors=[*result.errors, CANCELLED_ERROR])
+                    succeeded, made = False, {}
         rendered: dict[str, Rendered] = {}
         if render is not None:  # a stopped render still reports the notes it wrote: their files are in *out*
             rendered = dict(render.rendered)
