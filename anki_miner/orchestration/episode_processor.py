@@ -2994,15 +2994,21 @@ class EpisodeProcessor:
             # Parsed here, not lazily: a second file that will not parse should
             # fail the run before filtering and curation spend their time.
             secondary_entries = self._load_secondary_entries(secondary_subtitle_file)
+            # The --api callback (cli/api/lines.py WordSelection) can make a named
+            # word from its named line, so an empty parse, phase 2 or merge stamp
+            # does not end its run: it gets whatever is left, possibly nothing.
+            makes_words = getattr(curation_callback, "makes_words", False)
             if not all_words:
                 entries = self.subtitle_parser.parse_raw_entries(subtitle_file, subtitle_offset)
                 self.presenter.show_warning(self._no_words_message(text for _start, _end, text in entries))
-                return ctx.build_result()
-
-            with timed_phase("filter", logger):
-                unknown_words = self._phase2_filter(ctx, all_words, line_index, progress_callback)
-            if self.cancelled:
-                return self._cancelled_result_from_ctx(ctx)
+                if not makes_words:
+                    return ctx.build_result()
+                unknown_words: list[TokenizedWord] = []
+            else:
+                with timed_phase("filter", logger):
+                    unknown_words = self._phase2_filter(ctx, all_words, line_index, progress_callback)
+                if self.cancelled:
+                    return self._cancelled_result_from_ctx(ctx)
             fixed_subset = getattr(curation_callback, "fixed_subset", None)
             if fixed_subset is not None:
                 # The season mine pass: the season curator already chose these
@@ -3014,8 +3020,10 @@ class EpisodeProcessor:
                 if not unknown_words:
                     return ctx.build_result(new_words_found=0)
             elif not unknown_words:
-                self._report_no_mineable_words(ctx)
-                return ctx.build_result(new_words_found=0)
+                if all_words:  # an empty parse has said so already
+                    self._report_no_mineable_words(ctx)
+                if not makes_words:
+                    return ctx.build_result(new_words_found=0)
             else:
                 # Before curation on purpose: the curator opens on the merged
                 # sentence and treats the stamp as what its ± line buttons extend
@@ -3031,7 +3039,8 @@ class EpisodeProcessor:
                 )
                 if not unknown_words:
                     self._report_no_mineable_words(ctx)
-                    return ctx.build_result(new_words_found=0)
+                    if not makes_words:
+                        return ctx.build_result(new_words_found=0)
                 # The merge's caps and dedup can drop words; a curator re-stamps
                 # this from its selection, a run without one reports it as is.
                 ctx.new_words_found = len(unknown_words)

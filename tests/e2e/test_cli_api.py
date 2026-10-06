@@ -251,6 +251,31 @@ def test_api_named_words_whitelisted_made_from_their_line_and_dry_run(home, tmp_
     assert _plain(notes["本"]["Sentence"]) == "本屋に行く" and "<b>本</b>" in notes["本"]["Sentence"]
 
 
+def test_api_word_made_from_its_line_when_no_other_word_survives(home, tmp_path) -> None:
+    test_home, fake = home
+    fake.seed_model(E2EConfig().note_type, ["Front", "Back", *_EXTRA_FIELDS.values()])
+    video = tmp_path / "ep.mkv"
+    shutil.copy(get_test_video(), video)
+    runs_dir = tmp_path / "runs"
+    runs_dir.mkdir()
+    subtitle = tmp_path / "ep.ja.srt"
+    # 本屋 and 行く are the file's only words and no dictionary defines them: phase 2 ends empty.
+    subtitle.write_text(_srt([(2.9, 3.9, "本屋に行く")]), encoding="utf-8")
+    words = [{"word": "本", "line_start": 2.9}]
+
+    dry = _api(test_home, "mine", str(_run(tmp_path, runs_dir, video, subtitle, words, dry_run=True)))
+    assert dry["ok"] is True, dry
+    [row] = json.loads((runs_dir / "ep-01" / "result-1.json").read_text(encoding="utf-8"))["words"]
+    assert (row["status"], row["from_line"], row["sentence"]) == ("ready", True, "本屋に行く"), row
+    assert fake.notes(DECK) == []
+
+    verdict = _api(test_home, "mine", str(_run(tmp_path, runs_dir, video, subtitle, words)))
+    assert verdict["ok"] is True, verdict
+    [row] = json.loads((runs_dir / "ep-01" / "result-2.json").read_text(encoding="utf-8"))["words"]
+    assert (row["status"], row["from_line"]) == ("created", True), row
+    assert [_plain(n["Front"]) for n in fake.notes(DECK)] == ["本"]
+
+
 def test_api_render_and_media(home, tmp_path) -> None:
     test_home, fake = home
     fake.seed_model(E2EConfig().note_type, ["Front", "Back", *_EXTRA_FIELDS.values()])

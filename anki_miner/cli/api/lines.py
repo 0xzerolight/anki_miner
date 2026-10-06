@@ -234,6 +234,11 @@ class WordSelection:
         self._allow_duplicates = allow_duplicates
         #: The run's seams for making a named word from its named line; None: never made.
         self._line_words = line_words
+        #: Read by process_episode: a run the parse or the filters leave empty still
+        #: reaches this callback, so a named line can make its word (Z-2).
+        self.makes_words = line_words is not None and any(
+            request.line_start is not None or request.line_text is not None for request in self._requests
+        )
         #: The picks are recorded but none is handed on (``[]``: no media, definitions or cards).
         self._dry_run = dry_run
         self._chosen: dict[int, _Picked] = {}  # by request index

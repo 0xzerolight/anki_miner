@@ -466,6 +466,21 @@ def test_a_subtitle_without_lines_names_no_line() -> None:
     assert chosen.sentence == "off the file"
 
 
+@pytest.mark.parametrize(
+    ("requests", "with_line_words", "makes"),
+    [
+        ([R("約束"), R("言う", line_start=15.02)], True, True),
+        ([R("言う", line_text="言う")], True, True),
+        ([R("約束"), R("言う")], True, False),  # no line named: nothing to make a word from
+        ([R("言う", line_start=15.02)], False, False),  # no seams to make one with
+    ],
+)
+def test_makes_words_when_a_request_names_a_line_it_can_be_made_from(requests, with_line_words, makes) -> None:
+    line_words = _line_words() if with_line_words else None
+    selection = lines.WordSelection(requests, ENTRIES, ENTRIES, MERGES, 30.0, line_words=line_words)
+    assert selection.makes_words is makes
+
+
 def test_find_folded_maps_back_to_the_lines_own_offsets() -> None:
     assert lines.find_folded("ＯＫ 約束だよ", "約束") == (3, 5)
     assert lines.find_folded("約 束だよ", "約束") == (0, 3)
