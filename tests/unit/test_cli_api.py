@@ -142,6 +142,19 @@ def test_check_skips_anki_items_when_unreachable(verdict, monkeypatch, test_conf
     assert items["deck"]["ok"] is False and "not reachable" in items["deck"]["message"]
 
 
+def test_a_missing_speech_model_does_not_count_toward_ready(verdict, monkeypatch, test_config) -> None:
+    from anki_miner.cli.api import commands
+
+    assert test_config.youtube_subtitle_source == "auto"
+    monkeypatch.setattr(commands.settings, "load_profile_config", lambda pid: test_config)
+    _check_ok(monkeypatch, commands)
+    result = verdict("check", "--language", "ja")["result"]
+    items = {i["name"]: i for i in result["items"]}
+    assert items["yt_dlp"]["ok"] is False and items["speech_model"]["ok"] is False
+    assert "speech model" in items["speech_model"]["message"]
+    assert result["ready"] is True
+
+
 def test_fetch_items_do_not_count_toward_ready(verdict, monkeypatch, test_config) -> None:
     from anki_miner.cli.api import commands
 

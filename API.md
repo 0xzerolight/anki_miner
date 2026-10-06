@@ -244,11 +244,11 @@ The fetch file has `schema` (`1`), `run_dir`, `profile` and `language` as in the
 | `youtube_subtitle_source` | `auto` (captions, else transcribe), `captions` (refuse a video without them) or `transcribe`; left out, the profile's |
 | `youtube_align_captions` | `true` aligns downloaded captions with the audio; left out, the profile's |
 
-Per episode it probes the video, downloads it with its subtitle into `fetch-<n>/`, transcribes or aligns, and writes `fetch-<n>.json`: `video_file`, `subtitle_file` (absolute paths), `sub_source` (`manual`, `auto` for YouTube's automatic captions, or `generated` for a transcription), `video_id`, `title`, `duration`, and the `episode_name_override`, `series_name_override` and `source_label_override` a YouTube run in the window sets. Mine the files with an episode that sets those three, so its cards read like the window's YouTube cards.
-- Fetching a `run_id` again downloads again, into the next `fetch-<n>/`. A `fetch-<n>/` that no `fetch-<n>.json` names, left by a fetch that crashed, is removed first.
-- `progress.json` stages are probing, downloading, then transcribing or aligning; a run that does neither ends at stage 2 of 3. `done` and `total` count percent. A `cancel` file stops the run as for `mine`.
+Per episode it probes the video, downloads it with its subtitle into `fetch-<n>/`, transcribes or aligns, and writes `fetch-<n>.json`: `video_file`, `subtitle_file` (absolute paths), `sub_source` (`manual`, `auto` for YouTube's automatic captions, or `generated` for a transcription), `video_id`, `title`, `duration` (whole seconds), and the `episode_name_override`, `series_name_override` and `source_label_override` a YouTube run in the window sets. Mine the files with an episode that sets those three, so its cards read like the window's YouTube cards.
+- Fetching a `run_id` again downloads again, into the next `fetch-<n>/`. It first removes every `fetch-<n>/` in that run folder with no `fetch-<n>.json`, so keep the json while you need its folder.
+- `progress.json` stages are probing, downloading, then transcribing or aligning; a run that does neither ends at stage 2 of 3. `done` and `total` count percent while downloading and transcribing, and stay 0 while probing and aligning. A `cancel` file stops the run as for `mine`.
 - Each run verdict also carries `failure_is_transient`: true for a YouTube login wall, a locked browser cookie database and a timeout, which running again later can get past.
-- Per run: `YOUTUBE_REFUSED`, `FETCH_FAILED`, `SETUP_ERROR` (the speech model a transcription needs) and `CANCELLED`. A missing yt-dlp or ffmpeg refuses the whole call with `SETUP_ERROR`.
+- Per run: `YOUTUBE_REFUSED`, `FETCH_FAILED`, `SETUP_ERROR` (the speech model a transcription needs, or yt-dlp or ffmpeg lost mid-call) and `CANCELLED`. A missing yt-dlp or ffmpeg refuses the whole call with `SETUP_ERROR`.
 
 ## Progress and cancelling
 
