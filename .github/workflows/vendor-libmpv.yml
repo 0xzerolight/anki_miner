@@ -4,7 +4,7 @@
 # (job summary prints the commands); release.yml then fetches these assets by
 # pinned URL + SHA256 (the BtbN/alass idiom).
 #
-# Why a repo-owned mirror instead of pinning upstream URLs directly:
+# Why a self-hosted mirror instead of pinning upstream URLs directly:
 # - Windows: zhongfly/mpv-winbuild retains releases ~30 days — a URL pinned in
 #   release.yml would 404 within a month.
 # - Linux: no official binary exists; we build once via mpv-player/mpv-build
@@ -263,7 +263,9 @@ jobs:
           merge-multiple: true
 
       - name: Checksum the vendor bundle
-        run: sha256sum libmpv-*.tar.gz libmpv-*.zip | tee SHA256SUMS.txt
+        run: |
+          set -euo pipefail
+          sha256sum libmpv-*.tar.gz libmpv-*.zip | tee SHA256SUMS.txt
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
