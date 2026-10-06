@@ -17,6 +17,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from functools import partial
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from anki_miner.cli.api import settings
 from anki_miner.cli.api.contract import (
@@ -31,7 +32,7 @@ from anki_miner.cli.api.contract import (
     setup_failure,
 )
 from anki_miner.cli.api.files import Episode, RunFile
-from anki_miner.cli.api.lines import Fates, WordSelection, line_merges
+from anki_miner.cli.api.lines import Fates, LineWords, WordSelection, line_merges, named_word
 from anki_miner.cli.api.runfolder import MEDIA, CancelWatcher, ProgressFile, next_result_path, write_json
 from anki_miner.cli.runner import SetupFailure, check_card_target, check_environment
 from anki_miner.config import AnkiMinerConfig
@@ -48,6 +49,9 @@ from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.cue_merge import merge_budget_seconds
 from anki_miner.utils.audio_track_detector import get_media_duration_seconds, get_primary_video_codec
 from anki_miner.utils.ffmpeg_resolver import binary_available, resolve_ffmpeg, resolve_ffprobe
+
+if TYPE_CHECKING:
+    from anki_miner.orchestration.episode_processor import EpisodeProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +117,12 @@ def _check_video(config: AnkiMinerConfig, episode: Episode) -> None:
         raise ApiError(VIDEO_UNREADABLE, f"The video cannot be opened: {episode.video_file}")
 
 
+def _removed(processor: EpisodeProcessor, fold: Callable[[str], str] | None, name: str) -> bool:
+    """The dictionary check or the duplicate-expression merge removed the word *name* names."""
+    losers = [word for word, _winner in processor.last_collapsed]
+    return any(named_word(name, words, fold) is not None for words in (processor.last_definition_rejects, losers))
+
+
 @dataclass
 class _Mined:
     result: ProcessingResult
@@ -148,6 +158,14 @@ def _mine(
             raw = parser.parse_raw_entries(episode.subtitle_file, 0.0)
         except SubtitleParseError as exc:
             raise ApiError(SUBTITLE_UNREADABLE, str(exc)) from exc
+        fold = get_profile(config_language(config)).dedup_fold
+        line_words = LineWords(
+            parse_line=processor.parse_sentence_fn,
+            word_on_line=processor.word_on_line,
+            with_reading=processor.word_filter.with_reading,
+            readings=processor.definition_service.offline_term_readings,
+            removed=partial(_removed, processor, fold),
+        )
         selection = WordSelection(
             episode.words,
             entries,
@@ -155,8 +173,9 @@ def _mine(
             line_merges(config, entries),
             merge_budget_seconds(config.audio_padding),
             clean=parser._clean_line_text,  # the cleaner parse_raw_entries applied to the lines
-            fold=get_profile(config_language(config)).dedup_fold,
+            fold=fold,
             allow_duplicates=run_config.allow_duplicate_cards,
+            line_words=line_words,
         )
         with CancelWatcher(folder, cancel_all) as cancel:
             try:

@@ -103,6 +103,19 @@ def test_parse_words_rejects(tmp_path: Path, words) -> None:
     assert err.value.code == "BAD_RUN_FILE"
 
 
+def test_a_word_takes_surface_and_reading(tmp_path: Path) -> None:
+    words = [{"word": "走り出す", "surface": "走り出した", "reading": "はしりだす"}]
+    [request] = files.parse_run_file(_run_file(tmp_path, words=words)).episodes[0].words
+    assert (request.surface, request.reading) == ("走り出した", "はしりだす")
+
+
+@pytest.mark.parametrize("bad", [{"surface": ""}, {"surface": 3}, {"reading": " "}])
+def test_empty_surface_or_reading_is_refused(tmp_path: Path, bad) -> None:
+    with pytest.raises(ApiError) as err:
+        files.parse_run_file(_run_file(tmp_path, words=[{"word": "走る", **bad}]))
+    assert err.value.code == "BAD_RUN_FILE"
+
+
 def test_nan_line_start_in_the_file_is_refused(tmp_path: Path) -> None:
     path = tmp_path / "run.json"
     data = _run_file(tmp_path, words=[{"word": "a", "line_start": float("nan")}])

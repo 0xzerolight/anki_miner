@@ -20,6 +20,7 @@ from anki_miner.services.word_filter import (
     whitelisted_keys,
 )
 from anki_miner.services.word_list_service import WordListService
+from anki_miner.utils import wrap_target_plain
 
 
 def create_word(
@@ -2183,3 +2184,55 @@ class TestSwapWithoutSentenceAnnotation:
         assert result[0].mined_form == "듣다"
         assert result[0].expression_furigana == ""
         assert result[0].expression_reading == ""
+
+
+class TestWordOnLine:
+    """The --api word made from its line (Z-2): the sentence picker's swap at a given span."""
+
+    LINE = (812.3, 815.0, "危害を加えるつもりはない")
+
+    def _service(self, test_config, *, bold: bool):
+        config = dataclasses.replace(test_config, bold_target_in_sentence=bold)
+        return WordFilterService(config, tagger=lambda text: [], sentence_annotation=False)
+
+    def _word(self, front: str) -> TokenizedWord:
+        return TokenizedWord(
+            surface=front,
+            lemma=front,
+            reading="",
+            sentence=front,
+            start_time=0.0,
+            end_time=0.0,
+            duration=0.0,
+            orth_base=front,
+            mined_form_override=front,
+            sentence_candidates=[],
+            line_expansion=(1, 1),
+        )
+
+    def test_the_word_lands_on_the_line_at_the_span_bolded(self, test_config):
+        word = self._service(test_config, bold=True).word_on_line(self._word("危害"), self.LINE, (0, 2))
+        assert (word.sentence, word.start_time, word.end_time) == (self.LINE[2], 812.3, 815.0)
+        assert (word.surface, word.surface_start, word.surface_end) == ("危害", 0, 2)
+        assert word.sentence_bolded == wrap_target_plain(self.LINE[2], 0, 2)
+        assert word.line_expansion == (0, 0) and word.sentence_candidates == []
+        assert word.mined_form == "危害"
+
+    def test_no_bold_when_bold_is_off(self, test_config):
+        word = self._service(test_config, bold=False).word_on_line(self._word("危害"), self.LINE, (0, 2))
+        assert word.sentence_bolded == ""
+
+    def test_a_reading_replaces_the_words_readings(self, test_config):
+        word = self._service(test_config, bold=False).word_on_line(
+            self._word("危害"), self.LINE, (0, 2), reading="きがい"
+        )
+        assert (word.reading, word.expression_reading, word.lemma_reading) == ("きがい", "きがい", "きがい")
+
+    def test_the_reading_survives_the_swaps_regenerated_reading(self, test_config):
+        """A noun template whose surface differs from the matched text gets its reading regenerated
+        by the swap (here: empty, the tagger yields no tokens); the caller's reading must win."""
+        config = dataclasses.replace(test_config, bold_target_in_sentence=False)
+        service = WordFilterService(config, tagger=lambda text: [], sentence_annotation=True)
+        line = (1.0, 2.0, "やくそくだ")
+        word = service.word_on_line(self._word("約束"), line, (0, 4), reading="やくそく")
+        assert (word.surface, word.expression_reading) == ("やくそく", "やくそく")

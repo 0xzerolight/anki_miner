@@ -292,3 +292,26 @@ def test_allowed_duplicate_cards_keep_fold_equal_words_apart(services, tmp_path,
         runs.mine_runs(_run_file(tmp_path, video, words=[{"word": "May"}, {"word": "may"}]), threading.Event())
     assert [w["mined_form"] for w in _result_file(tmp_path)["words"]] == ["May", "may"]
     assert "duplicate" not in [w["status"] for w in _result_file(tmp_path)["words"]]
+
+
+def test_a_run_binds_its_line_words_to_the_processor(services, tmp_path, video) -> None:
+    services.words = lambda: []
+    services.processor.word_on_line.side_effect = lambda word, line, span, **_kw: replace(
+        word, sentence=line[2], start_time=line[0], end_time=line[1]
+    )
+    services.processor.parse_sentence_fn.return_value = []
+    services.processor.definition_service.offline_term_readings.return_value = {}
+    words = [{"word": "約束", "line_start": 30.0}]
+    runs.mine_runs(_run_file(tmp_path, video, words=words), threading.Event())
+    row = _result_file(tmp_path)["words"][0]
+    assert (row["from_line"], row["line_start"], row["sentence"]) == (True, 30.0, "約束だよ")
+
+
+def test_a_merged_word_is_never_made_from_its_line(services, tmp_path, video) -> None:
+    services.words = lambda: []
+    services.processor.last_collapsed = [(_word("約束", 0), "約")]
+    words = [{"word": "約束", "line_start": 30.0}]  # line 30.0 holds 約束: only the merge record stops it
+    runs.mine_runs(_run_file(tmp_path, video, words=words), threading.Event())
+    row = _result_file(tmp_path)["words"][0]
+    assert (row["status"], row["filter"], row["from_line"]) == ("not_found", "duplicate-expression", False)
+    services.processor.word_on_line.assert_not_called()

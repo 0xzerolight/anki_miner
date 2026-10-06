@@ -21,6 +21,7 @@ from anki_miner.utils import (
     wrap_target_furigana,
     wrap_target_plain,
 )
+from anki_miner.utils.text_utils import _format_furigana
 
 if TYPE_CHECKING:
     from anki_miner.languages.profile import MinedFormPolicy, ScriptSupport
@@ -838,6 +839,56 @@ class WordFilterService:
         bold_end = highlight_end if highlight_end >= 0 else end
         furigana_bolded = wrap_target_furigana(text, self.tagger, start, bold_end) if self._sentence_annotation else ""
         return (wrap_target_plain(text, start, bold_end), furigana_bolded)
+
+    def word_on_line(
+        self,
+        word: TokenizedWord,
+        line: tuple[float, float, str],
+        span: tuple[int, int],
+        *,
+        reading: str | None = None,
+    ) -> TokenizedWord:
+        """``word`` rebuilt on one subtitle line at ``span`` (the ``--api`` word made from its line).
+
+        ``line`` is a ``parse_raw_entries`` cue and ``span`` the word's ``[start, end)``
+        in its text. The rebuild is :meth:`_swap_word_to_line`'s, the sentence
+        picker's, over a one-line index made here, with the line's sentence
+        annotations generated the way :meth:`expand_word_lines` generates them.
+        ``reading`` replaces the word's readings, and its furigana in a language
+        that annotates, after the swap (which regenerates a surface-tracked
+        word's reading from its new surface).
+        """
+        start_time, end_time, text = line
+        start, end = span
+        annotate = self.tagger is not None and self._sentence_annotation
+        match = LineLemmas(
+            line_text=text,
+            lemmas=frozenset({word.lemma}),
+            start_time=start_time,
+            end_time=end_time,
+            duration=end_time - start_time,
+            sentence_furigana=generate_furigana(text, self.tagger) if annotate else "",
+            sentence_reading=generate_reading(text, self.tagger) if annotate else "",
+            front_spans=((word.mined_form, text[start:end], start, end, -1),),
+            fronts=frozenset({word.mined_form}),
+        )
+        moved = self._swap_word_to_line(word, match)
+        return self.with_reading(moved, reading) if reading else moved
+
+    def with_reading(self, word: TokenizedWord, reading: str) -> TokenizedWord:
+        """``word`` with ``reading`` as its readings, and its furigana in a language that annotates.
+
+        The ``--api`` entry's ``reading`` (API.md): it chooses among dictionary
+        entries in phase 4 and is the card's reading.
+        """
+        return dataclasses.replace(
+            word,
+            reading=reading,
+            expression_reading=reading,
+            lemma_reading=reading,
+            resolved_reading="",
+            expression_furigana=_format_furigana(word.mined_form, reading) if self._sentence_annotation else "",
+        )
 
     def expand_word_lines(
         self,

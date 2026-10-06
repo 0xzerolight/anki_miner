@@ -614,6 +614,25 @@ class EpisodeProcessor:
         """
         return self._parse_sentence
 
+    def word_on_line(
+        self,
+        word: TokenizedWord,
+        line: tuple[float, float, str],
+        span: tuple[int, int],
+        *,
+        reading: str | None = None,
+    ) -> TokenizedWord:
+        """``word`` rebuilt on one subtitle line at ``span``, ranked again.
+
+        The ``--api`` curation callback's word made from its line (API.md), called
+        while this run is parked in its curation step, like :attr:`parse_sentence_fn`.
+        Re-ranked for the reason :meth:`_materialize_sentence_edits` re-ranks:
+        phase 2 never ranked it.
+        """
+        rebuilt = self.word_filter.word_on_line(word, line, span, reading=reading)
+        self._attach_frequency([rebuilt])
+        return rebuilt
+
     @property
     def expression_audio_curation_fn(self) -> Callable[[TokenizedWord, Callable[[], bool] | None], bool] | None:
         """The Word Curator's expression-audio prefetch, or None when inactive.

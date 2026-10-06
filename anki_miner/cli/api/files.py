@@ -32,7 +32,7 @@ _EPISODE_KEYS = frozenset(
     }
 )
 _EPISODE_REQUIRED = frozenset({"run_id", "video_file", "subtitle_file", "words"})
-_WORD_KEYS = frozenset({"word", "line_start", "line_text", "line_expansion"})
+_WORD_KEYS = frozenset({"word", "line_start", "line_text", "line_expansion", "surface", "reading"})
 
 
 def _bad(message: str) -> ApiError:
@@ -136,6 +136,8 @@ class WordRequest:
     line_start: float | None = None
     line_text: str | None = None
     line_expansion: tuple[int, int] | None = None
+    surface: str | None = None
+    reading: str | None = None
 
 
 def _word_request(raw: object, where: str) -> WordRequest:
@@ -160,7 +162,12 @@ def _word_request(raw: object, where: str) -> WordRequest:
         ):
             raise _bad(f"{where}.line_expansion must be [before, after], two whole numbers of 0 or more.")
         expansion = (raw_expansion[0], raw_expansion[1])
-    return WordRequest(word, line_start, line_text, expansion)
+    surface = _opt_str(obj.get("surface"), f"{where}.surface")
+    reading = _opt_str(obj.get("reading"), f"{where}.reading")
+    for key, value in (("surface", surface), ("reading", reading)):
+        if value is not None and not value.strip():
+            raise _bad(f"{where}.{key} is empty.")
+    return WordRequest(word, line_start, line_text, expansion, surface, reading)
 
 
 @dataclass(frozen=True)

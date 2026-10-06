@@ -40,3 +40,15 @@ def test_no_collapse_records_nothing(test_config) -> None:
     processor = build_processor(replace(test_config, allow_duplicate_cards=True))
     processor._phase2_collapse_duplicates([_noun("本"), _noun("本")], _Phase2Counts())
     assert processor.last_collapsed == []
+
+
+def test_word_on_line_is_the_filters_swap_ranked_again(test_config) -> None:
+    word_filter = MagicMock()
+    moved = _noun("危害")
+    word_filter.word_on_line.return_value = moved
+    processor = build_processor(test_config, word_filter=word_filter)
+    processor._attach_frequency = MagicMock(return_value=0)
+    line = (1.0, 2.0, "危害を加える")
+    assert processor.word_on_line(_noun("危害"), line, (0, 2), reading="きがい") is moved
+    word_filter.word_on_line.assert_called_once_with(_noun("危害"), line, (0, 2), reading="きがい")
+    processor._attach_frequency.assert_called_once_with([moved])

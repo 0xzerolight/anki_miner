@@ -113,16 +113,18 @@ A word:
 | `line_start` | the start of the line to use, in seconds, as written in the subtitle file |
 | `line_text` | text the line to use contains |
 | `line_expansion` | `[before, after]`: the lines merged into the sentence and the clip |
+| `surface` | the word as written on its line, when it differs from `word` (走り出した for 走り出す) |
+| `reading` | its reading, to choose among dictionary entries |
 
 - **Matching the word.** `word` is compared after Unicode NFC normalization. It names the word whose card front equals it. When none does, it names a word whose dictionary form equals it: the one on the line nearest `line_start`, else on a line containing `line_text`, else the first. When neither equals it, the comparison the language uses for one card per run is tried (Chinese Simplified and Traditional, letter case): 头发 names 頭髮 on a Traditional subtitle, and the card keeps the subtitle's spelling.
 - **Choosing the line.** A word can be mined from any line it appears on.
-  - `line_start` takes the line starting nearest to it; a tie goes to the earlier line.
-  - `line_text` takes the first line containing it. Both are compared after the cleaning the subtitle lines get (markup, speaker tags, furigana readings, the profile's text filter) and NFKC normalization, with whitespace ignored, so a whole line copied from the file matches. When no line contains it, the word keeps its own line.
-  - With both, `line_start` wins.
-  - With neither, the word keeps its own line: its first in the episode.
+  - `line_start` names the line starting nearest to it; a tie goes to the earlier line. `line_text` names the first line containing it, compared after the cleaning the subtitle lines get (markup, speaker tags, furigana readings, the profile's text filter) and NFKC normalization, with whitespace ignored, so a whole line copied from the file matches. With both, `line_start` wins.
+  - On the named line the word is the one whose card front equals `word`, else whose dictionary form does, else that matches through the fold.
+  - When the episode produces no such word on that line, the run makes the word from the line: it finds `surface` (else `word`) in the line, compared as `line_text` is, first match. The card's front is `word`; its reading is `reading`, else the dictionary's; its sentence, clip and picture are that line's, the match in bold when bold is on. The row says `from_line: true`. A word the dictionary check or the merge removed is never made from a line. Not in the line: `not_found`.
+  - With neither key, or a `line_text` no line contains, the word keeps its own line: its first in the episode.
 - **Merging lines.** Left out, `line_expansion` is the automatic merge Anki Miner gives the chosen line (none with `merge_incomplete_cues` off); `[0, 0]` means no merge. Merged lines stop at the file's ends and at 30 seconds including the audio padding, as in the Word Curator. Lines after the chosen one are added first, then lines before.
-- **Repeats.** When two entries reach the same word, the first mines it and the rest come back `duplicate`. Entries for a word the run never produced, or that the dictionary check removed, all share that status (`not_found` or `no_definition`).
-- **Refusals.** These refuse the whole call with `BAD_RUN_FILE` before anything runs: an empty or non-string `word` or `line_text`, a negative or non-finite `line_start`, or a negative `line_expansion`.
+- **Repeats.** When two entries reach the same word (fronts compared as one card per run compares them), the first mines it and the rest come back `duplicate`. Entries for a word the run never produced, or that the dictionary check removed, all share that status (`not_found` or `no_definition`).
+- **Refusals.** These refuse the whole call with `BAD_RUN_FILE` before anything runs: an empty or non-string `word`, `line_text`, `surface` or `reading`, a negative or non-finite `line_start`, or a negative `line_expansion`.
 
 Before any episode runs, `mine` checks:
 - the language pack;
@@ -144,11 +146,11 @@ Episodes run one at a time, and each run's `result-<n>.json` is written as it en
  "anki_write_state": "note_write_confirmed", "failure_is_transient": false,
  "error": null, "message": null, "media_store_failures": 0,
  "words": [{"word": "約束", "mined_form": "約束", "status": "created", "note_id": 1727000000001,
-            "media_missing": [], "line_start": 812.3, "sentence": "…", "start": 812.3, "end": 815.0,
-            "filter": null},
+            "from_line": false, "media_missing": [], "line_start": 812.3, "sentence": "…",
+            "start": 812.3, "end": 815.0, "filter": null},
            {"word": "頑張る", "mined_form": null, "status": "not_found", "note_id": null,
-            "media_missing": [], "line_start": null, "sentence": null, "start": null, "end": null,
-            "filter": null}]}
+            "from_line": false, "media_missing": [], "line_start": null, "sentence": null,
+            "start": null, "end": null, "filter": null}]}
 ```
 
 - `outcome` is `success`, `failed` or `cancelled`. `error` and `message` say why a run failed.
@@ -171,6 +173,7 @@ Episodes run one at a time, and each run's `result-<n>.json` is written as it en
 - `media_store_failures` counts the media files Anki could not store during the run.
 - `word` is the entry's own; `mined_form` is the card front it matched.
 - `line_start` is the start of the chosen line as written in the subtitle file.
+- `from_line` is `true` for a word made from its named line.
 - `sentence`, `start` and `end` are the merged sentence and its window in the video, without the audio padding.
 - Every key is always present. `filter` is `duplicate-expression` on a `not_found` word that the merge of words sharing one dictionary entry removed, with `mined_form` set to the word it merged into; otherwise `null`.
 
@@ -213,6 +216,7 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 | `named-words-whitelisted` | every named word counts as whitelisted |
 | `script-fold` | `word` also matches through the language's comparison (Chinese Simplified and Traditional, letter case) |
 | `filter-names` | `filter` is `duplicate-expression` on a word the merge of words sharing one dictionary entry removed |
+| `word-from-line` | a named line is the one used, and a word the episode does not produce there is made from it; `surface`, `reading` and `from_line` |
 
 `profiles` puts `{"profiles": [{"id": "anime", "name": "Anime", "active": true}, …]}` in `result`. Before the user has created any profile, the list holds one, `default`.
 
@@ -225,7 +229,7 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 
 ## Differences from the proposal
 
-This build implements the proposal's "First" list (v7). It takes the full word matching (card front, then dictionary form) and the full word statuses. For the rest it takes the "Smaller version": the six setup codes are one `SETUP_ERROR`, and `filter` names only the merge: with every named word whitelisted and a named line made into a word (below), no other step can remove one. `profiles` is its own command.
+This build implements the proposal's "First" list (v7). It takes the full word matching (card front, then dictionary form) and the full word statuses. For the rest it takes the "Smaller version": the six setup codes are one `SETUP_ERROR`, and `filter` names only the merge: with every named word whitelisted and a named line made into a word (see Choosing the line), no other step can remove one. `profiles` is its own command.
 
 Otherwise:
 - Two codes were added: `BAD_ARGUMENTS` for a command line that does not parse, and `MINING_FAILED` for a run that failed inside the pipeline.
