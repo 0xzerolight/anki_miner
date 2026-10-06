@@ -49,3 +49,17 @@ def test_a_vanished_file_is_a_store_failure_not_a_field(tmp_path, test_config) -
     service = render.RenderService(config, tmp_path / "render-1")
     service.create_cards_batch([payload])
     assert service.rendered["約束"].files == [] and service.last_media_store_failures == 1
+    assert service.rendered["約束"].fields["Picture"] == ""
+
+
+def test_a_file_that_cannot_be_copied_is_a_store_failure_not_a_crash(tmp_path, test_config, monkeypatch) -> None:
+    config = replace(test_config, anki_fields={**test_config.anki_fields, "picture": "Picture"})
+
+    def disk_full(*_args):
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(render.shutil, "copyfile", disk_full)
+    service = render.RenderService(config, tmp_path / "render-1")
+    service.create_cards_batch([_payload(tmp_path, "約束")])
+    rendered = service.rendered["約束"]
+    assert rendered.files == [] and rendered.fields["Picture"] == "" and service.last_media_store_failures == 1

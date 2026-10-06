@@ -114,7 +114,8 @@ class Fates:
     media_missing: Mapping[str, list[str]] = field(default_factory=dict)
     #: the phase-2 duplicate-expression losers and the front each merged into (EpisodeProcessor.last_collapsed)
     collapsed: Sequence[tuple[TokenizedWord, str]] = ()
-    #: mined_form -> the status a run ended a word on other than created: "ready", "duplicate", "no_definition" (dry run)
+    #: mined_form -> the status a run ended a word on other than created: "ready", "duplicate",
+    #: "no_definition" (dry run), "rendered" (render)
     made: Mapping[str, str] = field(default_factory=dict)
     #: True when the run was cancelled or failed; a finished run that never reached
     #: curation (nothing parsed, everything filtered) found nothing rather than stopping

@@ -10,7 +10,7 @@ from pathlib import Path
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.interfaces import ProgressCallback
 from anki_miner.models import CardPayload
-from anki_miner.services.anki_media_store import AnkiMediaStore, _build_store_media_action
+from anki_miner.services.anki_media_store import _MEDIA_FIELD_ATTRS, AnkiMediaStore, _build_store_media_action
 from anki_miner.services.anki_service import AnkiService
 
 logger = logging.getLogger(__name__)
@@ -25,22 +25,30 @@ class Rendered:
 
 
 class LocalMediaStore(AnkiMediaStore):
-    """``store_batch``'s naming without Anki: each file copied into *folder* under the name Anki would give it."""
+    """``store_batch``'s naming without Anki: each file copied into *folder* under the name mine sends Anki."""
 
     def __init__(self, config: AnkiMinerConfig, folder: Path) -> None:
         super().__init__(config)
         self._folder = folder
 
     def store_files(self, paths_by_filename: dict[str, Path]) -> dict[str, str]:
-        """Each file under the name ``store_files`` would send Anki, refused by the same size and read checks."""
-        self._folder.mkdir(parents=True, exist_ok=True)
+        """Each file under the name ``store_files`` would send Anki, refused by the same size and read checks.
+
+        A file that cannot be copied (disk full, no permission) is left out, as an unreadable one is,
+        so ``store_batch`` counts it a store failure.
+        """
         stored: dict[str, str] = {}
         for filename, path in paths_by_filename.items():
             action = _build_store_media_action(filename, path, content_hash=True, by_path=True)
             if action is None:  # it logged why (unreadable, over the cap)
                 continue
             name = action["params"]["filename"]
-            shutil.copyfile(path, self._folder / name)
+            try:
+                self._folder.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(path, self._folder / name)
+            except OSError as exc:
+                logger.warning("Render: media file %s not copied to %s: %s", filename, self._folder, exc)
+                continue
             stored[filename] = name
         return stored
 
@@ -63,12 +71,10 @@ class RenderService(AnkiService):
         """No duplicate check and no addNotes: the notes go to ``rendered``. Returns no note ids."""
         self._reset_last_run()
         self.rendered = {}
-        stored = self._media_store.store_batch(word_data_list)
-        self.last_media_store_failures = self._media_store.last_store_failures
+        stored = self._store_media_files_batch(word_data_list)
         for item in word_data_list:
             note = self._build_note(item, stored).note
-            media = item.media
-            names = (media.screenshot_filename, media.audio_filename, media.expression_audio_filename)
+            names = [getattr(item.media, name_attr) for _key, name_attr, _path_attr in _MEDIA_FIELD_ATTRS]
             self.rendered[item.word.mined_form] = Rendered(
                 fields=dict(note["fields"]), files=[name for name in names if name and name in stored]
             )

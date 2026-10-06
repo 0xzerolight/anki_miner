@@ -411,7 +411,9 @@ def test_render_writes_render_n_beside_the_results_and_no_result_file(services, 
     [verdict] = runs.mine_runs(_run_file(tmp_path, video), threading.Event(), runs.Kind.RENDER)
     assert verdict["file"] == "render-1.json"
     assert not (tmp_path / "ep-01" / "result-1.json").exists()
-    made, missing = json.loads((tmp_path / "ep-01" / "render-1.json").read_text(encoding="utf-8"))["words"]
+    report = json.loads((tmp_path / "ep-01" / "render-1.json").read_text(encoding="utf-8"))
+    assert "dry_run" not in report and "anki_write_state" not in report
+    made, missing = report["words"]
     assert (made["status"], made["fields"], made["files"]) == ("rendered", {"Word": "約束"}, ["render-1/約束_x.jpg"])
     assert (missing["status"], missing["fields"], missing["files"]) == ("not_found", None, [])
     anki = services.factory.call_args.kwargs["anki_service"]
