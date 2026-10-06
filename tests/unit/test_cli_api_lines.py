@@ -88,7 +88,7 @@ def test_word_keeps_its_own_line_with_that_lines_merge() -> None:
     }
 
 
-def test_line_start_takes_the_nearest_of_the_words_lines() -> None:
+def test_line_start_names_the_nearest_of_all_lines() -> None:
     selection = _selection([R("約束", line_start=29.0)])
     [chosen] = selection([_on_lines("約束", 0, 3)])
     assert chosen.start_time == 30.0 and chosen.sentence == "約束だよ"
@@ -370,6 +370,22 @@ def test_a_word_the_dictionary_check_removed_is_not_made_from_its_line() -> None
     assert chosen == []
     [row] = selection.report(lines.Fates(rejected=[_word("走る", 0, entries=entries)]))
     assert (row["status"], row["from_line"]) == ("no_definition", False)
+
+
+def test_a_merged_word_is_not_made_from_its_line_when_a_survivor_shares_its_dictionary_form() -> None:
+    """R2: 出来る merged into できる; naming 出来る on its own line must not bring it back as a second card."""
+    entries = [(1.0, 2.0, "できるよ"), (3.0, 4.0, "出来るさ")]
+    survivor = _word("できる", 0, lemma="出来る", entries=entries)
+    selection, chosen = _made([R("出来る", line_start=3.0)], [survivor], entries=entries, removed={"出来る"})
+    assert chosen == []
+    loser = _word("出来る", 1, entries=entries)
+    [row] = selection.report(lines.Fates(collapsed=[(loser, "できる")]))
+    assert (row["status"], row["filter"], row["mined_form"], row["from_line"]) == (
+        "not_found",
+        "duplicate-expression",
+        "できる",
+        False,
+    )
 
 
 def test_a_fold_match_made_from_its_line_keeps_the_subtitles_spelling() -> None:

@@ -318,7 +318,10 @@ class WordSelection:
             on_line = [p for word in candidates for p in self._lines_of(word) if p.line == named]
             if on_line:
                 return on_line[0]
-        if self._line_words is None or (not pool and self._line_words.removed(request.word)):
+        # R2: a name the dictionary check or the merge removed is never made from a line.
+        # A survivor whose card front is the name (which == 0) makes that word moved;
+        # one matched by dictionary form or fold may sit beside a removed word the name names.
+        if self._line_words is None or (which != 0 and self._line_words.removed(request.word)):
             return None
         template = pool[0] if pool else None
         # (spelling, whether the text it matches may be a card front): a surface, the
