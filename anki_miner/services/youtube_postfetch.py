@@ -14,12 +14,15 @@ import threading
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions.youtube import TranscriptionFailedError, TranscriptionProducedNothingError
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.models.youtube import FetchedMedia
+
+if TYPE_CHECKING:
+    from anki_miner.services.media_extractor import MediaExtractorService
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +32,7 @@ StepReport = Callable[[FetchStep, float | None], None]
 
 def transcribe_fetched(
     config: AnkiMinerConfig,
-    media_extractor: object,
+    media_extractor: MediaExtractorService,
     fetched: FetchedMedia,
     workspace: Path,
     cancel_event: threading.Event,

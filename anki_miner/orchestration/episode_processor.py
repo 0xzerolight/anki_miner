@@ -3718,16 +3718,7 @@ class EpisodeProcessor:
         cancel_event: threading.Event,
         fetch_progress_cb: Callable[[str, float | None], None] | None,
     ) -> FetchedMedia:
-        """Fill a subtitle-less fetch by transcribing the downloaded video.
-
-        The SRT is written into the caller-owned workspace, so the queue
-        worker's existing rmtree still owns the cleanup. Progress rides the
-        fetch callback the worker already forwards: ASR is by far the longest
-        stage in the run and must never look hung.
-
-        Returns the media unchanged (still ``subtitle_file=None``) when the run
-        was cancelled mid-pass; the caller turns that into a cancelled result.
-        """
+        """``youtube_postfetch.transcribe_fetched``, its steps named for ``fetch_progress_cb``."""
         return transcribe_fetched(
             self.config,
             self.media_extractor,
@@ -3744,20 +3735,7 @@ class EpisodeProcessor:
         cancel_event: threading.Event,
         fetch_progress_cb: Callable[[str, float | None], None] | None,
     ) -> FetchedMedia | None:
-        """Retime fetched captions against the video's own audio.
-
-        Returns None when the alignment was cancelled — the outcome carries that
-        fact, so the caller never has to re-read the event to learn it.
-
-        Best-effort by contract: ``retime_subtitle`` never raises for content or
-        tool reasons — every failure comes back as a falsy ``RetimeOutcome`` with
-        the original file untouched — so alignment can degrade but never fail a
-        run. YouTube's auto-captions being out of sync is why this exists.
-
-        Writes a sibling rather than overwriting: ``retime_subtitle`` keeps no
-        copy when ``out_sub`` is ``in_sub``, and a bad alignment must not destroy
-        the captions we would otherwise mine.
-        """
+        """``youtube_postfetch.align_fetched``, its step named for ``fetch_progress_cb``."""
         return align_fetched(self.config, fetched, workspace, cancel_event, self._fetch_step_report(fetch_progress_cb))
 
     def process_youtube_url(
