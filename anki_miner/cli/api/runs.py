@@ -41,6 +41,7 @@ from anki_miner.gui.utils.service_factory import (
     create_episode_processor,
     create_shared_lookup_services,
 )
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.models import MiningOutcome, ProcessingResult, classify_result
 from anki_miner.presenters.null_presenter import NullPresenter
 from anki_miner.services.anki_service import AnkiService
@@ -154,6 +155,7 @@ def _mine(
             line_merges(config, entries),
             merge_budget_seconds(config.audio_padding),
             clean=parser._clean_line_text,  # the cleaner parse_raw_entries applied to the lines
+            fold=get_profile(config_language(config)).dedup_fold,
         )
         with CancelWatcher(folder, cancel_all) as cancel:
             try:
@@ -178,6 +180,7 @@ def _mine(
                 dropped=dict(processor.last_word_drops),
                 rejected=list(processor.last_definition_rejects),
                 media_missing=dict(processor.last_media_missing),
+                collapsed=list(processor.last_collapsed),
                 stopped=classify_result(result) is not MiningOutcome.SUCCESS,
             ),
             media_store_failures=failures if isinstance(failures, int) else 0,

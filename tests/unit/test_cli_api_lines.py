@@ -226,3 +226,17 @@ def test_line_text_that_cleans_to_nothing_is_matched_as_written() -> None:
     )
     [chosen] = selection([_on_lines("約束", 3, 0)])
     assert chosen.start_time == 30.0  # its own line, not the first line an empty needle would match
+
+
+def test_a_word_is_matched_through_the_languages_fold_when_neither_form_equals_it() -> None:
+    fold = {"头发": "头发", "頭髮": "头发"}.get
+    selection = lines.WordSelection([R("头发")], ENTRIES, ENTRIES, MERGES, 30.0, fold=lambda s: fold(s, s))
+    [chosen] = selection([_word("頭髮", 1)])
+    assert chosen.mined_form == "頭髮"  # the card keeps the subtitle's spelling
+
+
+def test_a_merged_word_is_not_found_with_the_merge_named() -> None:
+    selection = _selection([R("わかる")])
+    selection([_word("分かる", 1)])
+    [row] = selection.report(lines.Fates(collapsed=[(_word("わかる", 3, lemma="分かる"), "分かる")]))
+    assert (row["status"], row["mined_form"], row["filter"]) == ("not_found", "分かる", "duplicate-expression")

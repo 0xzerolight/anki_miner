@@ -61,6 +61,7 @@ def services(test_config):
     anki.last_created_mined_forms, anki.last_created_note_ids = [], []
     anki.last_not_created, anki.last_media_store_failures = {}, 0
     processor.last_word_drops, processor.last_definition_rejects, processor.last_media_missing = {}, [], {}
+    processor.last_collapsed = []
 
     def process(*_args, **kwargs):
         kwargs["curation_callback"](ns.words())
@@ -260,3 +261,15 @@ def test_a_video_without_a_container_duration_is_readable(tmp_path, test_config)
 def test_each_episodes_words_are_its_runs_whitelist(services, tmp_path, video) -> None:
     runs.mine_runs(_run_file(tmp_path, video), threading.Event())
     assert services.factory.call_args.kwargs["extra_whitelist"] == frozenset({"約束", "無い"})
+
+
+def test_the_collapse_record_reaches_the_result(services, tmp_path, video) -> None:
+    services.processor.last_collapsed = [(_word("無い", 2), "ない")]
+    runs.mine_runs(_run_file(tmp_path, video), threading.Event())
+    row = _result_file(tmp_path)["words"][1]
+    assert (row["word"], row["status"], row["mined_form"], row["filter"]) == (
+        "無い",
+        "not_found",
+        "ない",
+        "duplicate-expression",
+    )

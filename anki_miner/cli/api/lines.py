@@ -87,6 +87,8 @@ class Fates:
     rejected: Sequence[TokenizedWord] = ()
     #: mined_form -> the cuts that produced no file (EpisodeProcessor.last_media_missing)
     media_missing: Mapping[str, list[str]] = field(default_factory=dict)
+    #: the phase-2 duplicate-expression losers and the front each merged into (EpisodeProcessor.last_collapsed)
+    collapsed: Sequence[tuple[TokenizedWord, str]] = ()
     #: True when the run was cancelled or failed; a finished run that never reached
     #: curation (nothing parsed, everything filtered) found nothing rather than stopping
     stopped: bool = False
@@ -118,6 +120,7 @@ class WordSelection:
         budget: float,
         *,
         clean: Callable[[str], str] | None = None,
+        fold: Callable[[str], str] | None = None,
     ) -> None:
         self._requests = list(requests)
         self._entries = entries
@@ -127,30 +130,41 @@ class WordSelection:
         #: The cleaner the lines went through (markup, speaker tags, furigana, the
         #: user's filter), so a ``line_text`` copied from the file matches its line.
         self._clean = clean or (lambda text: text)
+        #: The language's comparison fold (``LanguageProfile.dedup_fold``): the last
+        #: way a name matches, and how fronts compare for repeats.
+        self._fold = fold
         self._chosen: dict[int, _Picked] = {}  # by request index
         self._repeats: dict[int, str] = {}  # request index -> the mined_form an earlier request took
         #: False until the processor reached the curation step.
         self.ran = False
 
+    def _key(self, front: str) -> str:
+        """How fronts compare for repeats: NFC, then the language's fold (phase 2's collapse key)."""
+        front = _nfc(front)
+        return front if self._fold is None else self._fold(front)
+
     def __call__(self, words: list[TokenizedWord]) -> list[TokenizedWord]:
         self.ran = True
         by_form: dict[str, TokenizedWord] = {}
         by_lemma: dict[str, list[TokenizedWord]] = {}
+        by_fold: dict[str, list[TokenizedWord]] = {}
         for word in words:
             by_form.setdefault(_nfc(word.mined_form), word)
             by_lemma.setdefault(_nfc(word.lemma), []).append(word)
+            if self._fold is not None:
+                by_fold.setdefault(self._key(word.mined_form), []).append(word)
         taken: set[str] = set()
         selected: list[TokenizedWord] = []
         for i, request in enumerate(self._requests):
             key = _nfc(request.word)
-            pool = [by_form[key]] if key in by_form else by_lemma.get(key, [])
+            pool = [by_form[key]] if key in by_form else by_lemma.get(key) or by_fold.get(self._key(key), [])
             if not pool:
                 continue
             placed = self._place(pool, request)
-            if placed.word.mined_form in taken:
+            if self._key(placed.word.mined_form) in taken:
                 self._repeats[i] = placed.word.mined_form
                 continue
-            taken.add(placed.word.mined_form)
+            taken.add(self._key(placed.word.mined_form))
             expansion = self._expansion(request, placed)
             chosen = replace(placed.variant, line_expansion=expansion, clip_override=None, screenshot_override=None)
             self._chosen[i] = _Picked(chosen, placed.line, expansion)
@@ -206,7 +220,7 @@ class WordSelection:
             "sentence": None,
             "start": None,
             "end": None,
-            "filter": None,  # this build does not name the step that removed a word
+            "filter": None,  # the step that removed a named word (API.md): "duplicate-expression" or null
         }
         chosen = self._chosen.get(i)
         if chosen is not None:
@@ -221,8 +235,14 @@ class WordSelection:
             )
         elif i in self._repeats:
             row.update(mined_form=self._repeats[i], status="duplicate")
-        elif (rejected := _match(request.word, fates.rejected)) is not None:
+        elif (rejected := named_word(request.word, fates.rejected, self._fold)) is not None:
             row.update(mined_form=rejected.mined_form, status="no_definition")
+        elif (
+            merged := next(
+                (winner for loser, winner in fates.collapsed if named_word(request.word, [loser], self._fold)), None
+            )
+        ) is not None:
+            row.update(mined_form=merged, filter="duplicate-expression")
         elif not self.ran and fates.stopped:
             row["status"] = "not_attempted"
         return row
@@ -247,8 +267,14 @@ def _status(form: str, fates: Fates) -> str:
     return fates.not_created.get(form) or fates.dropped.get(form) or "not_attempted"
 
 
-def _match(name: str, words: Sequence[TokenizedWord]) -> TokenizedWord | None:
-    """The word *name* names by card front, else by dictionary form (both NFC)."""
+def named_word(
+    name: str, words: Sequence[TokenizedWord], fold: Callable[[str], str] | None = None
+) -> TokenizedWord | None:
+    """The word *name* names by card front, else by dictionary form (both NFC), else by
+    card front under the language's *fold*."""
     key = _nfc(name)
-    by_form = next((w for w in words if _nfc(w.mined_form) == key), None)
-    return by_form or next((w for w in words if _nfc(w.lemma) == key), None)
+    found = next((w for w in words if _nfc(w.mined_form) == key), None)
+    found = found or next((w for w in words if _nfc(w.lemma) == key), None)
+    if found is None and fold is not None:
+        found = next((w for w in words if fold(_nfc(w.mined_form)) == fold(key)), None)
+    return found

@@ -478,6 +478,10 @@ class EpisodeProcessor:
         #: required cuts) or "no_definition" (phase 5 found no definition).
         #: The --api result's word statuses read both. Reset per run.
         self.last_word_drops: dict[str, str] = {}
+        #: This run's phase-2 duplicate-expression losers, each with the card front
+        #: it merged into, in source order. The --api result's `filter` reads it.
+        #: Reset per run.
+        self.last_collapsed: list[tuple[TokenizedWord, str]] = []
         # Resolved, not required: every existing caller builds this positionally
         # or by the create_episode_processor kwargs, and ja is the only profile
         # until Stage 2.
@@ -1637,16 +1641,22 @@ class EpisodeProcessor:
             ]
             identities_by_pair = self.definition_service.offline_term_identities(identity_pairs)
             fold = self.profile.dedup_fold
-            seen: set[str] = set()
-            seen_identities: set[tuple[str, int, str]] = set()
+            owner: dict[str, str] = {}  # comparison key -> the front kept for it
+            identity_owner: dict[tuple[str, int, str], str] = {}
             collapsed: list[TokenizedWord] = []
+            self.last_collapsed = []
             for word, pair in zip(unknown_words, identity_pairs, strict=True):
                 identities = identities_by_pair.get(pair, set())
                 key = word.mined_form if fold is None else fold(word.mined_form)
-                if key in seen or not seen_identities.isdisjoint(identities):
+                winner = owner.get(key) or next(
+                    (identity_owner[i] for i in sorted(identities) if i in identity_owner), None
+                )
+                if winner is not None:
+                    self.last_collapsed.append((word, winner))
                     continue
-                seen.add(key)
-                seen_identities.update(identities)
+                owner[key] = word.mined_form
+                for identity in identities:
+                    identity_owner.setdefault(identity, word.mined_form)
                 collapsed.append(word)
             removed = len(unknown_words) - len(collapsed)
             unknown_words = collapsed
@@ -2411,6 +2421,7 @@ class EpisodeProcessor:
         self.last_media_missing = {}
         self.last_definition_rejects = []
         self.last_word_drops = {}
+        self.last_collapsed = []
 
         self.check_resource_staleness()
         try:
@@ -3842,6 +3853,7 @@ class EpisodeProcessor:
         self.last_media_missing = {}
         self.last_definition_rejects = []
         self.last_word_drops = {}
+        self.last_collapsed = []
         start_time = time.time()
         receipt = self._run_receipt_fields(
             kind="youtube",

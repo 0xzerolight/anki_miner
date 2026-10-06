@@ -89,7 +89,7 @@ Allowed `config` keys:
 
 `anki_fields` and `card_type_marker_fields` merge key by key into the profile's. An unknown key, a value of the wrong type, or a value Anki Miner's settings refuse gives `BAD_RUN_FILE`. The ranges themselves are not checked.
 
-API runs never subtract words the user already knows (Anki's cards, the known-words list, the ignore list): the caller names only words it wants mined. For the same reason the sentence rules are off (one card per sentence and i+1), and every named word counts as whitelisted for its episode: it gets past the profile's optional filters, the name lists and the part-of-speech and script rules, as a word in the profile's whitelist does. The profile's own whitelist still applies to its own words when `use_whitelist` is on. Particles, auxiliaries and other grammar words are never rescued. The dictionary check, Anki's duplicate check and, unless `allow_duplicate_cards` is on, the merge of words that share one dictionary entry still apply. `deduplicate_sentences` and `use_i_plus_one_filter` may be sent as `false`; `true` gives `BAD_RUN_FILE`.
+API runs never subtract words the user already knows (Anki's cards, the known-words list, the ignore list): the caller names only words it wants mined. For the same reason the sentence rules are off (one card per sentence and i+1): `deduplicate_sentences` and `use_i_plus_one_filter` may be sent as `false`; `true` gives `BAD_RUN_FILE`. Every named word also counts as whitelisted for its episode: it gets past the profile's optional filters, the name lists and the part-of-speech and script rules, as a word in the profile's whitelist does. The profile's own whitelist still applies to its own words when `use_whitelist` is on. Particles, auxiliaries and other grammar words are never rescued. The dictionary check, Anki's duplicate check and, unless `allow_duplicate_cards` is on, the merge of words that share one dictionary entry still apply.
 
 An episode:
 
@@ -114,7 +114,7 @@ A word:
 | `line_text` | text the line to use contains |
 | `line_expansion` | `[before, after]`: the lines merged into the sentence and the clip |
 
-- **Matching the word.** `word` is compared after Unicode NFC normalization. It names the word whose card front equals it. When none does, it names a word whose dictionary form equals it: the one on the line nearest `line_start`, else on a line containing `line_text`, else the first.
+- **Matching the word.** `word` is compared after Unicode NFC normalization. It names the word whose card front equals it. When none does, it names a word whose dictionary form equals it: the one on the line nearest `line_start`, else on a line containing `line_text`, else the first. When neither equals it, the comparison the language uses for one card per run is tried (Chinese Simplified and Traditional, letter case): 头发 names 頭髮 on a Traditional subtitle, and the card keeps the subtitle's spelling.
 - **Choosing the line.** A word can be mined from any line it appears on.
   - `line_start` takes the line starting nearest to it; a tie goes to the earlier line.
   - `line_text` takes the first line containing it. Both are compared after the cleaning the subtitle lines get (markup, speaker tags, furigana readings, the profile's text filter) and NFKC normalization, with whitespace ignored, so a whole line copied from the file matches. When no line contains it, the word keeps its own line.
@@ -163,7 +163,7 @@ Episodes run one at a time, and each run's `result-<n>.json` is written as it en
 | `refused` | Anki added no note although its duplicate check passed |
 | `no_definition` | no dictionary defines it |
 | `media_failed` | no card: its picture could not be cut (its audio clip, when no picture field is mapped) |
-| `not_found` | the episode does not produce the word, or one of the profile's filters removed it |
+| `not_found` | the episode does not produce the word, or the merge of words that share one dictionary entry removed it (then `filter` says `duplicate-expression`) |
 | `not_attempted` | the run stopped (cancelled or failed) before reaching it |
 | `uncertain` | its note was being added when the connection failed; check Anki before mining it again |
 
@@ -172,7 +172,7 @@ Episodes run one at a time, and each run's `result-<n>.json` is written as it en
 - `word` is the entry's own; `mined_form` is the card front it matched.
 - `line_start` is the start of the chosen line as written in the subtitle file.
 - `sentence`, `start` and `end` are the merged sentence and its window in the video, without the audio padding.
-- Every key is always present; `filter` is always `null` in this build.
+- Every key is always present. `filter` is `duplicate-expression` on a `not_found` word that the merge of words sharing one dictionary entry removed, with `mined_form` set to the word it merged into; otherwise `null`.
 
 ## Progress and cancelling
 
@@ -211,6 +211,8 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 | `sentence-rules-off` | the sentence rules are off for every run; `deduplicate_sentences` and `use_i_plus_one_filter` may still be sent as `false` |
 | `bold-target` | `bold_target_in_sentence` in `config` |
 | `named-words-whitelisted` | every named word counts as whitelisted |
+| `script-fold` | `word` also matches through the language's comparison (Chinese Simplified and Traditional, letter case) |
+| `filter-names` | `filter` is `duplicate-expression` on a word the merge of words sharing one dictionary entry removed |
 
 `profiles` puts `{"profiles": [{"id": "anime", "name": "Anime", "active": true}, …]}` in `result`. Before the user has created any profile, the list holds one, `default`.
 
@@ -223,7 +225,7 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 
 ## Differences from the proposal
 
-This build implements the proposal's "First" list (v7). It takes the full word matching (card front, then dictionary form) and the full word statuses. For the rest it takes the "Smaller version": the six setup codes are one `SETUP_ERROR`, and `filter` is always `null`. `profiles` is its own command.
+This build implements the proposal's "First" list (v7). It takes the full word matching (card front, then dictionary form) and the full word statuses. For the rest it takes the "Smaller version": the six setup codes are one `SETUP_ERROR`, and `filter` names only the merge: with every named word whitelisted and a named line made into a word (below), no other step can remove one. `profiles` is its own command.
 
 Otherwise:
 - Two codes were added: `BAD_ARGUMENTS` for a command line that does not parse, and `MINING_FAILED` for a run that failed inside the pipeline.
