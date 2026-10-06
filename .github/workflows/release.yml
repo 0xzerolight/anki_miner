@@ -499,8 +499,9 @@ jobs:
 
       # =====================================================================
       # libmpv — fetched from the vendor-libmpv-* release in
-      # 0xzerolight/anki_miner_assets (produced by .github/workflows/vendor-libmpv.yml,
-      # which is the source of truth for how these are produced). Pinned URL + SHA256, fail-closed, like every
+      # 0xzerolight/anki_miner_assets (produced by
+      # .github/workflows/vendor-libmpv.yml, which is the source of truth for
+      # how these are produced). Pinned URL + SHA256, fail-closed, like every
       # other fetch.
       # Lands at vendor/libmpv/ (spec dest "." → _MEIPASS root) and drops the
       # per-artifact Copyright/SOURCES.txt into licenses/libmpv/ next to the
