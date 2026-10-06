@@ -26,7 +26,7 @@ from anki_miner.services.resource_catalog import ResourceSpec
 #: so this URL always returns the same bytes. The release TAG is the upload date and the FILENAME
 #: the corpus build date; they differ on purpose. Pinned by digest in test_zh_frequency_asset.py.
 OPENSUBTITLES_ZH_WORD_URL = (
-    "https://github.com/0xzerolight/anki_miner/releases/download/"
+    "https://github.com/0xzerolight/anki_miner_assets/releases/download/"
     "resources-2026-09-21/opensubtitles-zh-word-2026.09.20.zip"
 )
 

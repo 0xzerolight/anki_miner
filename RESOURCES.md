@@ -29,7 +29,7 @@ The dialect dictionaries import with a note that their language is not Arabic; t
 | Dictionary | [CC-Canto (Cantonese-English)](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-Canto.zip) | Dictionaries -> Add dictionary… | Yes |
 | Dictionary | [CC-CEDICT Canto (Cantonese-English)](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-CEDICT.Canto.zip) | Dictionaries -> Add dictionary… | Yes |
 | Dictionary | [Wiktionary (Cantonese-English)](https://github.com/yomidevs/wiktionary-to-yomitan) | [Yomitan zip](https://huggingface.co/datasets/daxida/wty-release/resolve/main/latest/dict/yue/en/wty-yue-en.zip?download=true) | Dictionaries -> Add dictionary… | Yes |
-| Frequency | [HKCanCor + CTCPC Cantonese frequency](https://github.com/0xzerolight/anki_miner/blob/main/scripts/build_yue_frequency.py) | [Yomitan zip](https://github.com/0xzerolight/anki_miner/releases/download/resources-2026-09-20/hkcancor-yue-2026-09-20.zip) | Frequency -> Add frequency source… | Yes |
+| Frequency | [HKCanCor + CTCPC Cantonese frequency](https://github.com/0xzerolight/anki_miner/blob/main/scripts/build_yue_frequency.py) | [Yomitan zip](https://github.com/0xzerolight/anki_miner_assets/releases/download/resources-2026-09-20/hkcancor-yue-2026-09-20.zip) | Frequency -> Add frequency source… | Yes |
 | Dictionary | [words.hk 粵典](https://github.com/MarvNC/wordshk-yomitan) - non-commercial license | Newest `Words.hk.*.zip` from [Releases](https://github.com/MarvNC/wordshk-yomitan/releases/latest) | Dictionaries -> Add dictionary… | No |
 
 ## Catalan
@@ -44,7 +44,7 @@ The dialect dictionaries import with a note that their language is not Arabic; t
 | Type | Resource | Download | Add via | Setup Wizard |
 |------|----------|----------|---------|--------------|
 | Dictionary | [CC-CEDICT](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-CEDICT.zip) | Dictionaries -> Add dictionary… | Yes |
-| Frequency | [OpenSubtitles 2024 word frequency (Chinese)](https://github.com/0xzerolight/anki_miner/blob/main/scripts/build_zh_frequency.py) | [Yomitan zip](https://github.com/0xzerolight/anki_miner/releases/download/resources-2026-09-21/opensubtitles-zh-word-2026.09.20.zip) | Frequency -> Add frequency source… | Yes |
+| Frequency | [OpenSubtitles 2024 word frequency (Chinese)](https://github.com/0xzerolight/anki_miner/blob/main/scripts/build_zh_frequency.py) | [Yomitan zip](https://github.com/0xzerolight/anki_miner_assets/releases/download/resources-2026-09-21/opensubtitles-zh-word-2026.09.20.zip) | Frequency -> Add frequency source… | Yes |
 | Frequency | [SUBTLEX-CH](https://github.com/MarvNC/yomitan-dictionaries#subtlex-ch-subtitle-corpus) | [Drive](https://drive.google.com/file/d/145uN8r5fMTkQNll4xpYGwR8aS80maIf0/view) | Frequency -> Add frequency source… | No |
 
 ## Croatian
@@ -253,8 +253,8 @@ The Setup Wizard downloads only the frequency list for the variety set in Settin
 | Type | Resource | Download | Add via | Setup Wizard |
 |------|----------|----------|---------|--------------|
 | Dictionary | [Wiktionary (Thai-English)](https://github.com/yomidevs/wiktionary-to-yomitan) | [Yomitan zip](https://huggingface.co/datasets/daxida/wty-release/resolve/main/latest/dict/th/en/wty-th-en.zip) | Dictionaries -> Add dictionary… | Yes |
-| Frequency | [Thai National Corpus frequency](https://github.com/0xzerolight/anki_miner/blob/main/scripts/convert_tnc_thai_frequency.py) | [Yomitan zip](https://github.com/0xzerolight/anki_miner/releases/download/resources-2026-09-20/tnc-th-2026-09-20.zip) | Frequency -> Add frequency source… | Yes |
-| Frequency | [Thai textbook corpus frequency](https://github.com/0xzerolight/anki_miner/blob/main/scripts/convert_tnc_thai_frequency.py) | [Yomitan zip](https://github.com/0xzerolight/anki_miner/releases/download/resources-2026-09-20/ttc-th-2026-09-20.zip) | Frequency -> Add frequency source… | Yes |
+| Frequency | [Thai National Corpus frequency](https://github.com/0xzerolight/anki_miner/blob/main/scripts/convert_tnc_thai_frequency.py) | [Yomitan zip](https://github.com/0xzerolight/anki_miner_assets/releases/download/resources-2026-09-20/tnc-th-2026-09-20.zip) | Frequency -> Add frequency source… | Yes |
+| Frequency | [Thai textbook corpus frequency](https://github.com/0xzerolight/anki_miner/blob/main/scripts/convert_tnc_thai_frequency.py) | [Yomitan zip](https://github.com/0xzerolight/anki_miner_assets/releases/download/resources-2026-09-20/ttc-th-2026-09-20.zip) | Frequency -> Add frequency source… | Yes |
 | Dictionary | [Volubilis](https://github.com/windwerfer/volubilis_dict) | [Yomitan zip](https://github.com/windwerfer/volubilis_dict/releases/latest/download/volubilis_all_yomitan.zip) | Dictionaries -> Add dictionary… | No |
 | Dictionary | [Wiktionary (Thai, monolingual)](https://github.com/yomidevs/wiktionary-to-yomitan) | [Yomitan zip](https://huggingface.co/datasets/daxida/wty-release/resolve/main/latest/dict/th/th/wty-th-th.zip) | Dictionaries -> Add dictionary… | No |
 
@@ -278,7 +278,7 @@ The Setup Wizard downloads only the frequency list for the variety set in Settin
 | Type | Resource | Download | Add via | Setup Wizard |
 |------|----------|----------|---------|--------------|
 | Dictionary | [Wiktionary (Vietnamese)](https://github.com/yomidevs/wiktionary-to-yomitan) | [Yomitan zip](https://huggingface.co/datasets/daxida/wty-release/resolve/main/latest/dict/vi/en/wty-vi-en.zip) | Dictionaries -> Add dictionary… | Yes |
-| Frequency | [OpenSubtitles 2024 word frequency (Vietnamese)](https://github.com/0xzerolight/anki_miner/blob/main/scripts/build_vi_frequency.py) | [Yomitan zip](https://github.com/0xzerolight/anki_miner/releases/download/resources-2026-09-20/opensubtitles-vi-word-2026.09.19.zip) | Frequency -> Add frequency source… | Yes |
+| Frequency | [OpenSubtitles 2024 word frequency (Vietnamese)](https://github.com/0xzerolight/anki_miner/blob/main/scripts/build_vi_frequency.py) | [Yomitan zip](https://github.com/0xzerolight/anki_miner_assets/releases/download/resources-2026-09-20/opensubtitles-vi-word-2026.09.19.zip) | Frequency -> Add frequency source… | Yes |
 | Dictionary | [VNEDICT v4](https://github.com/thu-tram/viet-yomitan) | [Yomitan zip](https://raw.githubusercontent.com/thu-tram/viet-yomitan/main/dictionaries/vnedict-v4.zip) | Dictionaries -> Add dictionary… | No |
 | Dictionary | [Từ điển Tiếng Việt thông dụng (monolingual)](https://github.com/thu-tram/viet-yomitan) | [Yomitan zip](https://raw.githubusercontent.com/thu-tram/viet-yomitan/main/dictionaries/tu-dien-tieng-viet-thong-dung.zip) | Dictionaries -> Add dictionary… | No |
 | Frequency | [Leipzig Corpora (Vietnamese, mixed)](https://github.com/StefanVukovic99/leipzig-to-yomitan) - also ranks punctuation and names | [Yomitan zip](https://github.com/StefanVukovic99/leipzig-to-yomitan/releases/download/v2024-08-31-18-57-16-00-00/Leipzig.Vietnamese.Mixed.zip) | Frequency -> Add frequency source… | No |

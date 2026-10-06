@@ -37,7 +37,7 @@ from anki_miner.languages.profile import ResourceSpec
 #: so this URL always returns the same bytes. The release TAG is the upload date and the FILENAME
 #: the corpus build date; they differ on purpose. Pinned by digest in test_vi_frequency_asset.py.
 OPENSUBTITLES_VI_WORD_URL = (
-    "https://github.com/0xzerolight/anki_miner/releases/download/"
+    "https://github.com/0xzerolight/anki_miner_assets/releases/download/"
     "resources-2026-09-20/opensubtitles-vi-word-2026.09.19.zip"
 )
 

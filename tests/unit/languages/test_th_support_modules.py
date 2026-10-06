@@ -70,4 +70,4 @@ def test_catalog_lists_the_two_self_hosted_frequency_assets():
         assert spec.kind == "freq"
         assert spec.lemmatise is False  # Thai has no inflection to aggregate
         assert "CC0" in spec.license_note
-        assert spec.url.startswith("https://github.com/0xzerolight/anki_miner/releases/download/resources-")
+        assert spec.url.startswith("https://github.com/0xzerolight/anki_miner_assets/releases/download/resources-")

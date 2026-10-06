@@ -45,7 +45,8 @@ TH_CATALOG: tuple[ResourceSpec, ...] = (
         kind="freq",
         display_name="Thai National Corpus frequency",
         url=(
-            "https://github.com/0xzerolight/anki_miner/releases/download/" "resources-2026-09-20/tnc-th-2026-09-20.zip"
+            "https://github.com/0xzerolight/anki_miner_assets/releases/download/"
+            "resources-2026-09-20/tnc-th-2026-09-20.zip"
         ),
         license_note="Thai National Corpus word list via PyThaiNLP, CC0. Built by scripts/convert_tnc_thai_frequency.py.",
     ),
@@ -54,7 +55,8 @@ TH_CATALOG: tuple[ResourceSpec, ...] = (
         kind="freq",
         display_name="Thai textbook corpus frequency",
         url=(
-            "https://github.com/0xzerolight/anki_miner/releases/download/" "resources-2026-09-20/ttc-th-2026-09-20.zip"
+            "https://github.com/0xzerolight/anki_miner_assets/releases/download/"
+            "resources-2026-09-20/ttc-th-2026-09-20.zip"
         ),
         license_note="Thai Textbook Corpus word list via PyThaiNLP, CC0. Built by scripts/convert_tnc_thai_frequency.py.",
     ),

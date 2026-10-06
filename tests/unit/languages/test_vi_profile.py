@@ -95,7 +95,9 @@ def test_the_catalogue_ships_wiktionary_and_the_self_hosted_frequency_list():
     frequency = by_id["opensubtitles-vi-word"]
     assert frequency.kind == "freq" and frequency.lemmatise is False  # keys are already folded words
     assert frequency.url == vi_catalog.OPENSUBTITLES_VI_WORD_URL
-    assert frequency.url.startswith("https://github.com/0xzerolight/anki_miner/releases/download/resources-2026-09-")
+    assert frequency.url.startswith(
+        "https://github.com/0xzerolight/anki_miner_assets/releases/download/resources-2026-09-"
+    )
     assert "ODC-BY 1.0" in frequency.license_note
     dictionary = by_id["wty-vi-en"]
     assert dictionary.kind == "dict" and dictionary.url == (

@@ -74,7 +74,7 @@ YUE_CATALOG: tuple[ResourceSpec, ...] = (
         kind="freq",
         display_name="HKCanCor + CTCPC Cantonese frequency",
         url=(
-            "https://github.com/0xzerolight/anki_miner/releases/download/"
+            "https://github.com/0xzerolight/anki_miner_assets/releases/download/"
             "resources-2026-09-20/hkcancor-yue-2026-09-20.zip"
         ),
         license_note=(

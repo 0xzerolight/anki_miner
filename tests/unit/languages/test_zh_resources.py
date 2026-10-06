@@ -131,6 +131,6 @@ class TestZhCatalog:
         assert frequency.kind == "freq" and frequency.lemmatise is False  # keys are already folded words
         assert frequency.url == zh_catalog.OPENSUBTITLES_ZH_WORD_URL
         assert frequency.url.startswith(
-            "https://github.com/0xzerolight/anki_miner/releases/download/resources-2026-09-"
+            "https://github.com/0xzerolight/anki_miner_assets/releases/download/resources-2026-09-"
         )
         assert "ODC-BY 1.0" in frequency.license_note
