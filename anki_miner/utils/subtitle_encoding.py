@@ -25,7 +25,7 @@ import codecs
 import logging
 from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 import pysubs2
 
@@ -225,7 +225,13 @@ def _single_byte_leg_fails(data: bytes, codec: str, script_check: Callable[[str]
         return True
 
 
-def script_check_kwarg(encodings: tuple[str, ...] | None, script: Any) -> dict[str, Callable[[str], bool]]:
+class ScriptCheckKwarg(TypedDict, total=False):
+    """The ``script_check=`` keyword a decode call is splatted with."""
+
+    script_check: Callable[[str], bool]
+
+
+def script_check_kwarg(encodings: tuple[str, ...] | None, script: Any) -> ScriptCheckKwarg:
     """``{"script_check": ...}`` for a ladder holding a single-byte codec, else nothing.
 
     ja/ko/zh ladders hold none, so their decode calls keep their exact shape —

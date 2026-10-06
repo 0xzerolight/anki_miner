@@ -2,7 +2,7 @@
 
 import logging
 import unicodedata
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -39,6 +39,7 @@ class WordListService:
         encodings: tuple[str, ...] | None = None,
         script_check: Callable[[str], bool] | None = None,
         normalize: Callable[[str], str] | None = None,
+        extra_whitelist: Iterable[str] = (),
     ):
         """Initialize the word list service.
 
@@ -62,6 +63,8 @@ class WordListService:
                 the parser normalizes width, compatibility forms and kanji
                 variants before a card front exists, so ｺｰﾋｰ must meet コーヒー.
                 Probes are card fronts, already normalized.
+            extra_whitelist: Whitelist entries that are not a file: the ``--api``
+                run's named words (API.md). Keyed exactly as file entries are.
         """
         self._dedup_fold = dedup_fold
         self._normalize = normalize
@@ -69,6 +72,7 @@ class WordListService:
         self._script_check = script_check
         self._blacklist_path = blacklist_path
         self._whitelist_path = whitelist_path
+        self._extra_whitelist = tuple(extra_whitelist)
         self._blacklist: set[str] = set()
         self._whitelist: set[str] = set()
         self._loaded = False
@@ -87,6 +91,8 @@ class WordListService:
             self._whitelist = {self._entry_key(word) for word in self._read_word_file(self._whitelist_path)}
             logger.info("Loaded %d whitelisted words", len(self._whitelist))
 
+        named = {unicodedata.normalize("NFC", word.strip()) for word in self._extra_whitelist}
+        self._whitelist |= {self._entry_key(word) for word in named if word}
         self._loaded = True
 
     def _key(self, word: str) -> str:
@@ -128,7 +134,7 @@ class WordListService:
         return self._key(word) in self._whitelist
 
     def whitelist_entries(self) -> frozenset[str]:
-        """Every whitelist entry as written in the file (NFC, stripped, and folded when the language folds).
+        """Every whitelist entry as written in the file or named (NFC, stripped, and folded when the language folds).
 
         The run-end coverage report diffs this against what got mined; it is
         the only reason the set is exposed rather than queried one word at a

@@ -24,7 +24,7 @@ from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.interfaces.expression_audio import ExpressionAudioFetcher
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.interfaces.sentence_audio import SentenceAudioFetcher
-from anki_miner.languages.profile import LookupStrategy
+from anki_miner.languages.profile import LanguageProfile, LookupStrategy
 from anki_miner.languages.registry import bound_mined_form, config_language, get_profile
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.services.anki_service import AnkiService
@@ -201,6 +201,19 @@ def import_decode_ladder(config: AnkiMinerConfig) -> tuple[str, ...] | None:
     """
     profile = get_profile(config_language(config))
     return None if profile is get_profile("ja") else profile.import_encodings
+
+
+def _named_words_only(words: frozenset[str], profile: LanguageProfile) -> WordListService:
+    """A word-list service holding only *words* as its whitelist, loaded."""
+    service = WordListService(
+        dedup_fold=profile.dedup_fold,
+        normalize=profile.normalize,
+        # No file is read, so no ladder applies; None is the UTF-8 default.
+        encodings=None,
+        extra_whitelist=words,
+    )
+    service.load()
+    return service
 
 
 def build_definition_service(
@@ -797,6 +810,8 @@ def create_services(
     subtitle_parser: SubtitleParserService | None = None,
     anki_service: AnkiService | None = None,
     shared_lookup: SharedLookupServices | None = None,
+    *,
+    extra_whitelist: frozenset[str] = frozenset(),
 ) -> Services:
     """Create all services needed for episode processing.
 
@@ -831,6 +846,9 @@ def create_services(
             (``owns_lookup_services=False``). The returned ``load_result``
             then excludes the bundle's load messages — the owner surfaces
             those once per run.
+        extra_whitelist: Words that count as whitelisted for this run besides the
+            whitelist file (the ``--api`` run's named words). Honoured only while
+            ``config.use_whitelist`` is on, which the API forces.
 
     Returns:
         A frozen :class:`Services` bundle holding every constructed
@@ -882,7 +900,7 @@ def create_services(
     profile = get_profile(config_language(config))
     # Loaded before the parser: the whitelist is the parser's rescue probe (R1).
     word_list_service = None
-    if config.use_blacklist or config.use_whitelist:
+    if config.use_blacklist or config.use_whitelist or extra_whitelist:
         try:
             ladder = import_decode_ladder(config)
             word_list_service = WordListService(
@@ -890,6 +908,7 @@ def create_services(
                 whitelist_path=config.whitelist_path if config.use_whitelist else None,
                 dedup_fold=profile.dedup_fold,
                 normalize=profile.normalize,
+                extra_whitelist=extra_whitelist,
                 encodings=ladder,
                 **script_check_kwarg(ladder, profile.script),
             )
@@ -901,7 +920,9 @@ def create_services(
             load_result.warnings.append(
                 tr_format(QCoreApplication.translate("ServiceFactory", "Couldn't load word lists: %1"), e)
             )
-            word_list_service = None
+            # Named words are not a file and cannot fail to load: keep them
+            # whitelisted when a list file does (the API's named words).
+            word_list_service = _named_words_only(extra_whitelist, profile) if extra_whitelist else None
 
     if subtitle_parser is None:
         # Headword-existence probe: injected iff an indexed offline dict is
@@ -1058,6 +1079,7 @@ def create_episode_processor(
     *,
     with_known_words_db: bool = True,
     run_temp_root: Path | None = None,
+    extra_whitelist: frozenset[str] = frozenset(),
 ) -> EpisodeProcessor:
     """Create an EpisodeProcessor with all required services.
 
@@ -1080,12 +1102,17 @@ def create_episode_processor(
             writes): the ``--api`` callers keep their own record.
         run_temp_root: Where each run's temp folder is created (see
             ``EpisodeProcessor``); ``None`` is the system temp dir.
+        extra_whitelist: See :func:`create_services`.
 
     Returns:
         Configured EpisodeProcessor instance
     """
     services = create_services(
-        config, subtitle_parser=subtitle_parser, anki_service=anki_service, shared_lookup=shared_lookup
+        config,
+        subtitle_parser=subtitle_parser,
+        anki_service=anki_service,
+        shared_lookup=shared_lookup,
+        extra_whitelist=extra_whitelist,
     )
 
     # Surface service load feedback to the user

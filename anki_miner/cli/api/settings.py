@@ -125,10 +125,16 @@ def resolve_run_config(profile_id: str | None, language: object, overlay: Mappin
     # With nothing known, i+1 would keep only lines holding a single content
     # word, and sentence dedup would erase a named word before the selection
     # runs (audit L5-008/L5-009), so both are off for every API run.
+    # Named words are whitelisted for the same reason.
     return replace(
         config,
         include_known_words=True,
         use_known_words_db=False,
         deduplicate_sentences=False,
         use_i_plus_one_filter=False,
+        # Every named word counts as whitelisted (API.md, Z-1): the run passes them
+        # as extra_whitelist. The profile's own file applies only while its
+        # use_whitelist is on, as it did before.
+        use_whitelist=True,
+        whitelist_path=config.whitelist_path if config.use_whitelist else None,
     )

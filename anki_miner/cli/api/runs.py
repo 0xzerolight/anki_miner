@@ -137,6 +137,7 @@ def _mine(
         shared_lookup=shared,
         with_known_words_db=False,
         run_temp_root=folder / MEDIA,
+        extra_whitelist=frozenset(request.word for request in episode.words),
     )
     try:
         parser = processor.subtitle_parser

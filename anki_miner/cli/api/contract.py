@@ -9,7 +9,7 @@ API_SCHEMA = 1
 COMMANDS = ("mine", "check", "version", "profiles", "settings-export")
 #: What this build adds beyond 3.5.0's API, by stable name (API.md, "version"). One name per
 #: addition, appended when it ships; a caller checks a name instead of comparing versions.
-FEATURES = ("sentence-rules-off", "bold-target")
+FEATURES = ("sentence-rules-off", "bold-target", "named-words-whitelisted")
 
 BUSY = "BUSY"
 ANKI_UNREACHABLE = "ANKI_UNREACHABLE"

@@ -98,3 +98,12 @@ def test_run_config_forces_sentence_dedup_and_i_plus_one_off(test_config) -> Non
     config = settings.resolve_run_config(None, "ja", {})
     assert config.deduplicate_sentences is False
     assert config.use_i_plus_one_filter is False
+
+
+def test_run_config_turns_the_whitelist_on_keeping_the_profiles_file_only_when_it_was_on(test_config, tmp_path) -> None:
+    wl = tmp_path / "wl.txt"
+    GUIConfigManager.save_config(replace(test_config, use_whitelist=False, whitelist_path=wl))
+    off = settings.resolve_run_config(None, "ja", {})
+    assert off.use_whitelist is True and off.whitelist_path is None
+    on = settings.resolve_run_config(None, "ja", {"use_whitelist": True})
+    assert on.use_whitelist is True and on.whitelist_path == wl

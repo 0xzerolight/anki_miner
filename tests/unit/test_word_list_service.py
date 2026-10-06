@@ -378,3 +378,19 @@ class TestWhitelistEntries:
         service.load()
 
         assert service.whitelist_entries() == frozenset()
+
+
+class TestExtraWhitelist:
+    """The --api run's named words (Z-1): whitelist entries that are not a file."""
+
+    def test_named_words_join_the_file_entries(self, tmp_path):
+        wl = tmp_path / "whitelist.txt"
+        wl.write_text("太郎\n", encoding="utf-8")
+        service = WordListService(whitelist_path=wl, extra_whitelist=["魔王", " 部室 "])
+        service.load()
+        assert all(service.is_whitelisted(w) for w in ("太郎", "魔王", "部室"))
+
+    def test_named_words_are_keyed_like_file_entries(self):
+        service = WordListService(extra_whitelist=["ｺｰﾋｰ"], normalize=get_profile("ja").normalize)
+        service.load()
+        assert service.is_available() and service.is_whitelisted("コーヒー")

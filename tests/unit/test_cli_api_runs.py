@@ -255,3 +255,8 @@ def test_a_video_without_a_container_duration_is_readable(tmp_path, test_config)
         return_value=subprocess.CompletedProcess([], 0, probe, ""),
     ):
         runs._check_video(test_config, episode)  # must not raise VIDEO_UNREADABLE
+
+
+def test_each_episodes_words_are_its_runs_whitelist(services, tmp_path, video) -> None:
+    runs.mine_runs(_run_file(tmp_path, video), threading.Event())
+    assert services.factory.call_args.kwargs["extra_whitelist"] == frozenset({"約束", "無い"})

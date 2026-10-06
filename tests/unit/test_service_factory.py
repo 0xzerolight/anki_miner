@@ -136,6 +136,25 @@ def test_parser_has_no_rescue_when_the_word_lists_fail_to_load(base_config, tmp_
     assert services.subtitle_parser._force_include is None
 
 
+def test_named_words_rescue_without_a_whitelist_file(base_config):
+    cfg = dataclasses.replace(base_config, use_whitelist=True, whitelist_path=None)
+
+    services = service_factory.create_services(cfg, extra_whitelist=frozenset({"魔王"}))
+
+    assert services.word_list_service is not None and services.word_list_service.is_whitelisted("魔王")
+    assert services.subtitle_parser._force_include == services.word_list_service.is_whitelisted
+
+
+def test_named_words_stay_whitelisted_when_a_word_list_file_fails_to_load(base_config, tmp_path):
+    """Review Focus 3: a deleted list file must not silently drop the run's named words."""
+    cfg = dataclasses.replace(base_config, use_whitelist=True, whitelist_path=tmp_path / "missing.txt")
+
+    services = service_factory.create_services(cfg, extra_whitelist=frozenset({"魔王"}))
+
+    assert services.word_list_service is not None and services.word_list_service.is_whitelisted("魔王")
+    assert services.subtitle_parser._force_include == services.word_list_service.is_whitelisted
+
+
 def test_create_services_uses_provided_anki_service(base_config):
     """When anki_service is passed to create_services, the same instance is
     returned in Services (identity check — no new AnkiService is built)."""

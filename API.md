@@ -89,7 +89,7 @@ Allowed `config` keys:
 
 `anki_fields` and `card_type_marker_fields` merge key by key into the profile's. An unknown key, a value of the wrong type, or a value Anki Miner's settings refuse gives `BAD_RUN_FILE`. The ranges themselves are not checked.
 
-API runs never subtract words the user already knows (Anki's cards, the known-words list, the ignore list): the caller names only words it wants mined. For the same reason the sentence rules are off: one card per sentence and i+1 never apply to an API run. `deduplicate_sentences` and `use_i_plus_one_filter` may be sent as `false`; `true` gives `BAD_RUN_FILE`. The profile's other filters still apply, so use `config` to turn off any that could remove a named word. Two steps cannot be turned off from `config`: the name lists, which remove words that are names, and, unless `allow_duplicate_cards` is on, the merge of words that share one dictionary entry, which keeps the first. A word either step removes comes back `not_found`.
+API runs never subtract words the user already knows (Anki's cards, the known-words list, the ignore list): the caller names only words it wants mined. For the same reason the sentence rules are off (one card per sentence and i+1), and every named word counts as whitelisted for its episode: it gets past the profile's optional filters, the name lists and the part-of-speech and script rules, as a word in the profile's whitelist does. The profile's own whitelist still applies to its own words when `use_whitelist` is on. Particles, auxiliaries and other grammar words are never rescued. The dictionary check, Anki's duplicate check and, unless `allow_duplicate_cards` is on, the merge of words that share one dictionary entry still apply. `deduplicate_sentences` and `use_i_plus_one_filter` may be sent as `false`; `true` gives `BAD_RUN_FILE`.
 
 An episode:
 
@@ -210,6 +210,7 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 |---|---|
 | `sentence-rules-off` | the sentence rules are off for every run; `deduplicate_sentences` and `use_i_plus_one_filter` may still be sent as `false` |
 | `bold-target` | `bold_target_in_sentence` in `config` |
+| `named-words-whitelisted` | every named word counts as whitelisted |
 
 `profiles` puts `{"profiles": [{"id": "anime", "name": "Anime", "active": true}, …]}` in `result`. Before the user has created any profile, the list holds one, `default`.
 
