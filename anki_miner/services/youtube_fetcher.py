@@ -24,6 +24,7 @@ from anki_miner.exceptions.youtube import (
     NoSourceSubtitlesError,
     VideoTooLongError,
     YouTubeFetchError,
+    YouTubeTimeoutError,
     YtdlpNotFoundError,
 )
 from anki_miner.models.youtube import FetchedMedia, PlaylistEntry, PlaylistInfo, SubMode, SubtitleSource, VideoInfo
@@ -110,7 +111,7 @@ class YouTubeFetcherService:
         Args:
             url: YouTube URL to probe.
             timeout_s: subprocess timeout in seconds. On timeout, yt-dlp is
-                killed and YouTubeFetchError is raised.
+                killed and YouTubeTimeoutError is raised.
 
         Raises:
             BotDetectionError / CookieDatabaseLockedError: well-known yt-dlp
@@ -153,7 +154,7 @@ class YouTubeFetcherService:
         if isinstance(proc.error, FileNotFoundError):
             raise YtdlpNotFoundError(ytdlp_invocation.YTDLP_MISSING_HINT) from proc.error
         if proc.state is SupervisedState.TIMED_OUT:
-            raise YouTubeFetchError(f"yt-dlp metadata probe timed out after {timeout_s}s")
+            raise YouTubeTimeoutError(f"yt-dlp metadata probe timed out after {timeout_s}s")
 
         if proc.state is SupervisedState.FAILED:
             if proc.returncode is None and proc.error is not None:
@@ -262,7 +263,7 @@ class YouTubeFetcherService:
             limit: maximum entries the caller wants; the command requests
                 ``limit + 1`` from yt-dlp for over-cap detection.
             timeout_s: subprocess timeout in seconds.  On timeout, yt-dlp is
-                killed and YouTubeFetchError is raised.
+                killed and YouTubeTimeoutError is raised.
 
         Raises:
             BotDetectionError / CookieDatabaseLockedError: well-known yt-dlp
@@ -308,7 +309,7 @@ class YouTubeFetcherService:
         if isinstance(proc.error, FileNotFoundError):
             raise YtdlpNotFoundError(ytdlp_invocation.YTDLP_MISSING_HINT) from proc.error
         if proc.state is SupervisedState.TIMED_OUT:
-            raise YouTubeFetchError(f"yt-dlp playlist probe timed out after {timeout_s}s")
+            raise YouTubeTimeoutError(f"yt-dlp playlist probe timed out after {timeout_s}s")
 
         if proc.state is SupervisedState.FAILED:
             if proc.returncode is None and proc.error is not None:
@@ -517,6 +518,7 @@ class YouTubeFetcherService:
             BotDetectionError / CookieDatabaseLockedError: well-known yt-dlp
                 failure modes detected in the tail of stderr.
             NoJapaneseSubtitlesError: yt-dlp succeeded but wrote no subtitle.
+            YouTubeTimeoutError: yt-dlp ran past the download deadline.
             YouTubeFetchError: any other non-zero exit, cancellation, or
                 missing/zero-byte output file.
         """
@@ -585,7 +587,7 @@ class YouTubeFetcherService:
         if process_result.state is SupervisedState.CANCELLED:
             raise YouTubeFetchError("Cancelled by user")
         if process_result.state is SupervisedState.TIMED_OUT:
-            raise YouTubeFetchError(f"yt-dlp download timed out after {_YTDLP_FETCH_TIMEOUT_S}s")
+            raise YouTubeTimeoutError(f"yt-dlp download timed out after {_YTDLP_FETCH_TIMEOUT_S}s")
         if process_result.state is SupervisedState.FAILED:
             if process_result.returncode is None and process_result.error is not None:
                 raise YouTubeFetchError(f"yt-dlp process failed: {process_result.error}") from process_result.error

@@ -3098,3 +3098,19 @@ class TestYtdlpEvidenceLogging:
 
         assert "yt-dlp classify: tag=-" in "\n".join(_fetcher_records(caplog, logging.INFO))
         assert "Video unavailable" in "\n".join(_fetcher_records(caplog, logging.WARNING))
+
+
+def test_timeouts_are_typed(service: YouTubeFetcherService, tmp_path: Path) -> None:
+    from anki_miner.exceptions.youtube import YouTubeTimeoutError
+
+    timed_out = SupervisedResult(SupervisedState.TIMED_OUT, None, "", "")
+    with patch("anki_miner.services.youtube_fetcher.run_supervised", return_value=timed_out):
+        with pytest.raises(YouTubeTimeoutError, match="timed out"):
+            service.probe_metadata("https://youtu.be/abc123")
+        with pytest.raises(YouTubeTimeoutError, match="timed out"):
+            service.probe_playlist("https://www.youtube.com/playlist?list=PLtest", limit=5)
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            pytest.raises(YouTubeTimeoutError, match="timed out"),
+        ):
+            service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")

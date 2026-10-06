@@ -43,6 +43,17 @@ class VideoTooLongError(YouTubeFetchError):
     pass
 
 
+class YouTubeTimeoutError(YouTubeFetchError):
+    """Raised when a yt-dlp probe or download ran past its time limit.
+
+    Not deterministic (absent from the queue worker's no-retry set): a slow
+    network can pass a second time. Typed so ``--api fetch`` reports it
+    transient without matching message text.
+    """
+
+    pass
+
+
 class YtdlpNotFoundError(YouTubeFetchError):
     """Raised when the yt-dlp executable cannot be located/executed.
 

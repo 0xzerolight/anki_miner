@@ -22,10 +22,6 @@ from PyQt6.QtCore import QCoreApplication
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiMinerException, SetupError, SubtitleParseError
-from anki_miner.exceptions.youtube import (
-    TranscriptionFailedError,
-    TranscriptionProducedNothingError,
-)
 from anki_miner.interfaces import PresenterProtocol, ProgressCallback
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.models import (
@@ -72,6 +68,7 @@ from anki_miner.services.word_filter import (
     whitelist_hits,
 )
 from anki_miner.services.word_list_service import active_whitelist
+from anki_miner.services.youtube_postfetch import StepReport, align_fetched, transcribe_fetched
 from anki_miner.utils import ensure_directory, katakana_to_hiragana
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import capped, log_summary, suppressed
@@ -3703,6 +3700,17 @@ class EpisodeProcessor:
         if message is not None:
             raise SetupError(message)
 
+    def _fetch_step_report(self, fetch_progress_cb: Callable[[str, float | None], None] | None) -> StepReport | None:
+        """The fetch callback, fed this processor's translated names for the post-fetch steps."""
+        if fetch_progress_cb is None:
+            return None
+        labels = {
+            "extracting": QCoreApplication.translate("EpisodeProcessor", "Extracting audio"),
+            "transcribing": QCoreApplication.translate("EpisodeProcessor", "Transcribing"),
+            "aligning": QCoreApplication.translate("EpisodeProcessor", "Aligning subtitles"),
+        }
+        return lambda step, frac: fetch_progress_cb(labels[step], frac)
+
     def _transcribe_fetched(
         self,
         fetched: FetchedMedia,
@@ -3720,33 +3728,14 @@ class EpisodeProcessor:
         Returns the media unchanged (still ``subtitle_file=None``) when the run
         was cancelled mid-pass; the caller turns that into a cancelled result.
         """
-        from anki_miner.services.asr.subtitle_generation import SubtitleGenStatus, generate_subtitle_one
-
-        def _report(label: str, frac: float | None) -> None:
-            if fetch_progress_cb is not None:
-                fetch_progress_cb(label, frac)
-
-        extracting = QCoreApplication.translate("EpisodeProcessor", "Extracting audio")
-        transcribing = QCoreApplication.translate("EpisodeProcessor", "Transcribing")
-        out_srt = workspace / f"{fetched.video_file.stem}.srt"
-        result = generate_subtitle_one(
+        return transcribe_fetched(
             self.config,
             self.media_extractor,
-            fetched.video_file,
-            out_srt,
-            on_extract_start=lambda: _report(extracting, None),
-            on_transcribe_start=lambda: _report(transcribing, 0.0),
-            transcribe_progress_cb=lambda frac: _report(transcribing, frac),
-            cancel_event=cancel_event,
-            language=get_profile(config_language(self.config)).asr_language,
+            fetched,
+            workspace,
+            cancel_event,
+            self._fetch_step_report(fetch_progress_cb),
         )
-        if result.status is SubtitleGenStatus.NO_SPEECH:
-            raise TranscriptionProducedNothingError("Local transcription recognised no speech in the downloaded video.")
-        if result.status is SubtitleGenStatus.EXTRACTION_FAILED:
-            raise TranscriptionFailedError("Could not extract audio from the downloaded video for transcription.")
-        if result.out_srt is None:
-            return fetched
-        return replace(fetched, subtitle_file=result.out_srt)
 
     def _align_fetched(
         self,
@@ -3769,29 +3758,7 @@ class EpisodeProcessor:
         copy when ``out_sub`` is ``in_sub``, and a bad alignment must not destroy
         the captions we would otherwise mine.
         """
-        from anki_miner.services.subtitle_retimer import retime_subtitle
-
-        if fetched.subtitle_file is None:  # pragma: no cover - callers gate on this
-            return fetched
-        if fetch_progress_cb is not None:
-            fetch_progress_cb(QCoreApplication.translate("EpisodeProcessor", "Aligning subtitles"), None)
-        source = fetched.subtitle_file
-        out_sub = workspace / f"{source.stem}.retimed{source.suffix}"
-        outcome = retime_subtitle(
-            self.config,
-            fetched.video_file,
-            source,
-            out_sub,
-            cancel_event=cancel_event,
-            log_cb=logger.debug,
-        )
-        if outcome.cancelled:
-            return None
-        if not outcome:
-            logger.info("YouTube caption alignment did not apply: %s", outcome.reason)
-            return fetched
-        logger.info("YouTube captions aligned with %s", outcome.engine)
-        return replace(fetched, subtitle_file=out_sub)
+        return align_fetched(self.config, fetched, workspace, cancel_event, self._fetch_step_report(fetch_progress_cb))
 
     def process_youtube_url(
         self,
