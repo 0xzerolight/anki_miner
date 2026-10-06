@@ -240,7 +240,7 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 | Code | Where | Meaning |
 |---|---|---|
 | `BUSY` | call | the window or another run is open |
-| `BAD_ARGUMENTS` | call | the command line does not parse, or names an unknown language or an `--out` folder that does not exist; for `settings-import`, a FILE it cannot apply, a name in use or the active profile |
+| `BAD_ARGUMENTS` | call | the command line does not parse, or names an unknown language or an `--out` folder that does not exist; for `settings-import`, a FILE it cannot apply, a name it refuses or the active profile |
 | `BAD_RUN_FILE` | call | the run file or media file is not valid JSON or breaks the rules above |
 | `PROFILE_UNREADABLE` | call | the profile does not exist or cannot be read |
 | `SETUP_ERROR` | call, run | language pack, dictionary index, ffmpeg, deck, note type, fields or offline dictionary |
@@ -281,7 +281,7 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 
 `settings-import FILE --language CODE (--name NAME | --profile ID)` applies FILE the way Import from file… does, and puts `{"profile": "surasura", "created": true, "invalid_fields": []}` in `result`.
 - FILE is what `settings-export` writes, or a flat settings object. Keys left out keep their values; `anki_fields` and `card_type_marker_fields` merge key by key. File paths and resource lists in it are ignored, as in the app.
-- `--name` adds a profile called NAME, starting as a copy of the active one. A name already in use, ignoring case, gives `BAD_ARGUMENTS`, and `message` names the `--profile` to use. Before any profile exists, it first saves the current settings as `default`, as the window does; `default` stays active.
+- `--name` adds a profile called NAME, starting as a copy of the active one. A blank name, a name already in use (ignoring case) or a 51st profile gives `BAD_ARGUMENTS`. For a name in use, `message` names the `--profile` to use, or says it is the active profile's. Before any profile exists, it first saves the current settings as `default`, as the window does; `default` stays active.
 - `--profile` updates an existing profile. The active profile gives `BAD_ARGUMENTS`: settings-import never changes the settings the window uses.
 - `--language` is the profile's mining language afterwards, switched the way the window's language switch does, and FILE applies to that language. A FILE whose `language` is another one gives `BAD_ARGUMENTS`.
 - `invalid_fields` lists keys whose value was refused; they keep the profile's value. A subtitle filter that does not compile is listed as `subtitle_regex_filter`.

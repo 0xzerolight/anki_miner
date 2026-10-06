@@ -1,8 +1,8 @@
 """``--api``: the mining API for other programs (API.md).
 
 Each call writes exactly one JSON verdict line to fd 1 and exits 0; any other
-exit is a crash. ``mine`` and ``settings-import`` hold the instance lock (a dry run
-does not); ``render``, ``media``, ``check``, ``version``, ``profiles`` and
+exit is a crash. ``mine`` (but not a dry run) and ``settings-import`` hold the
+instance lock; ``render``, ``media``, ``check``, ``version``, ``profiles`` and
 ``settings-export`` run at any time. The log goes to ``anki_miner.api.log``
 (installed by ``cli.entry`` before this runs).
 """
@@ -148,7 +148,7 @@ def _run(args: argparse.Namespace) -> dict[str, object]:
     job = files.parse_run_file(files.read_json_file(args.run_file))
     cancel = threading.Event()
     with contextlib.ExitStack() as stack:
-        # A dry run writes nothing shared (no Anki, no known-words or stats DB), so it runs beside the window.
+        # A dry run writes nothing shared (no Anki, known-words or stats DB): it runs beside the window and other runs.
         if not job.dry_run:
             stack.enter_context(_locked())
         stack.enter_context(_cancel_on_signals(cancel))

@@ -110,7 +110,12 @@ def _check_new_name(name: str, existing: tuple[Profile, ...]) -> None:
         ProfileStore._validate_name(name, existing)
     except ValueError as exc:
         taken = next((p for p in existing if p.name.casefold() == name.strip().casefold()), None)
-        hint = f"; use --profile {taken.id} to update it" if taken is not None else ""
+        if taken is None:
+            hint = ""
+        elif taken.id == settings.active_profile_id():  # --profile refuses it too
+            hint = "; it is the active profile, which settings-import never changes"
+        else:
+            hint = f"; use --profile {taken.id} to update it"
         raise ApiError(BAD_ARGUMENTS, f"{exc}{hint}.") from exc
     if len(existing) >= MAX_PROFILES:
         raise ApiError(BAD_ARGUMENTS, f"There are already {MAX_PROFILES} profiles, the most Anki Miner keeps.")

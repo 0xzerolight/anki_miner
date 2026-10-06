@@ -321,3 +321,7 @@ def test_api_settings_import_round_trip(isolated_home, tmp_path) -> None:
         {"id": "caller", "name": "Caller", "active": False},
         {"id": "default", "name": "Default", "active": True},
     ]
+    back = tmp_path / "caller.json"
+    assert _api(isolated_home, "settings-export", "--profile", "caller", "--language", "ja", "--out", str(back))["ok"]
+    assert json.loads(back.read_text(encoding="utf-8"))["settings"]["anki_deck_name"] == "Caller"
+    assert GUIConfigManager.load_config().anki_deck_name == "Live"  # the active settings are untouched

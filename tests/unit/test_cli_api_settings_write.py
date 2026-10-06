@@ -83,8 +83,19 @@ def test_name_on_a_fresh_install_writes_the_marked_settings_file(tmp_path) -> No
 def test_a_taken_name_is_refused_before_anything_is_written(live, tmp_path) -> None:
     with pytest.raises(ApiError) as err:
         _import(_file(tmp_path), name="default")
-    assert err.value.code == "BAD_ARGUMENTS" and "--profile default" in err.value.message
+    # Default is the active profile before any profile exists: --profile default is refused too.
+    assert err.value.code == "BAD_ARGUMENTS" and "active profile" in err.value.message
+    assert "--profile" not in err.value.message
     assert not ProfileStore.profiles_dir().exists()
+
+
+def test_a_taken_name_names_the_profile_to_update_unless_it_is_active(two_profiles, tmp_path) -> None:
+    with pytest.raises(ApiError) as err:
+        _import(_file(tmp_path), name="CALLER")
+    assert err.value.code == "BAD_ARGUMENTS" and "use --profile caller to update it" in err.value.message
+    with pytest.raises(ApiError) as err:
+        _import(_file(tmp_path), name="Default")
+    assert "active profile" in err.value.message and "--profile" not in err.value.message
 
 
 def test_a_refused_file_with_name_writes_nothing(live, tmp_path) -> None:
