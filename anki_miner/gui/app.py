@@ -1073,9 +1073,19 @@ def _run_store_recovery_if_locked(
     *,
     allow_collection: bool,
 ) -> None:
-    """Run destructive startup repair only while this process owns the lock."""
+    """Run destructive startup repair only while this process owns the lock.
+
+    It also skips while a command-line or API run holds the run lock.
+    """
     if instance_lock is None:
         logger.warning("Skipping startup store recovery because the instance lock is not held")
+        return
+    # Beside a window a command-line or API run holds only instance.run.lock
+    # (cli/entry.py acquire_run_lock); its stores are open, so leave them be.
+    from anki_miner.cli.entry import RUN_LOCK_NAME, _held  # function-local: cli.entry reaches back into this module
+
+    if _held(ANKI_MINER_HOME / RUN_LOCK_NAME):
+        logger.warning("Skipping startup store recovery because a command-line or API run is working")
         return
     try:
         run_startup_store_recovery(

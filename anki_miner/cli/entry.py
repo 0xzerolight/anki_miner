@@ -8,7 +8,8 @@ The single-instance lock is the GUI's own (``instance.lock``): two processes
 writing the rollback-journal known-words and stats databases lose writes, so a
 run refuses with ``busy`` instead of waiting or proceeding. Everything that
 writes to the user's home — config migration, the log — happens only after the
-lock is held.
+lock is held. ``instance.run.lock`` keeps command-line and API runs one at a
+time, and ``--api mine`` alone may run beside an idle window.
 """
 
 from __future__ import annotations
@@ -67,6 +68,9 @@ _EXIT_BY_STATUS = {
 
 _WINDOW_OPEN_MESSAGE = "The Anki Miner window is open. Close it, then try again."
 _OTHER_RUN_MESSAGE = "Another Anki Miner command-line or API run is working. Wait for it to finish, then try again."
+_WINDOW_MINING_MESSAGE = (
+    "The Anki Miner window is mining, or its Word Curator is open. Wait for that run to end, then try again."
+)
 _NOT_SET_UP_MESSAGE = "Anki Miner has no saved settings yet. Open Anki Miner once and finish setup, then try again."
 
 
@@ -74,8 +78,24 @@ class _UsageError(Exception):
     pass
 
 
+#: Held by every locked command-line and API run, so they go one at a time beside a window too,
+#: where instance.lock is the window's.
+RUN_LOCK_NAME = "instance.run.lock"
+
+
 class Busy(Exception):
     """Another Anki Miner process is using the user's home; the message says which."""
+
+
+class RunLock:
+    """The lock files one run holds; ``unlock`` releases them all."""
+
+    def __init__(self, *locks: QLockFile) -> None:
+        self._locks = locks
+
+    def unlock(self) -> None:
+        for lock in reversed(self._locks):
+            lock.unlock()
 
 
 class _Parser(argparse.ArgumentParser):
@@ -336,26 +356,41 @@ def _prepare_process() -> None:
     ensure_asr_pack_on_syspath()
 
 
-def acquire_run_lock() -> QLockFile:
-    """The GUI's single-instance lock, refused while any window or another run is open.
+def acquire_run_lock(*, beside_window: bool = False) -> RunLock:
+    """Refuse while a window or another run says so; else hold the run lock, and instance.lock with no window.
 
     Every window holds its own marker (gui/app.py WINDOW_MARKER_PREFIX), so a
-    live marker means a window is open even when it runs without instance.lock;
-    with none live, a held instance.lock can only be another run. A dead
-    process's marker is reclaimed by tryLock and removed.
+    live one means a window is open even when it runs without instance.lock;
+    with none live, a held instance.lock can only be another run.
+    ``beside_window`` (``--api mine``, which never touches the known-words or
+    stats databases) runs beside an open window unless it is mining
+    (gui/controllers/mining_marker.py). Every other caller refuses any open
+    window. A dead process's marker is reclaimed by tryLock and removed.
     """
+    from PyQt6.QtCore import QLockFile
+
     from anki_miner.gui.app import WINDOW_MARKER_PREFIX, _acquire_instance_lock
+    from anki_miner.gui.controllers.mining_marker import MINING_MARKER_PREFIX
 
     home = config_paths.ANKI_MINER_HOME
     home.mkdir(parents=True, exist_ok=True)  # QLockFile cannot lock inside a missing directory
     # Probe every marker (no short-circuit), so each stale one is cleared on the way.
     live_windows = [path for path in home.glob(f"{WINDOW_MARKER_PREFIX}*.lock") if _held(path)]
-    if live_windows:
+    mining = [path for path in home.glob(f"{MINING_MARKER_PREFIX}*.lock") if _held(path)]
+    if live_windows and not beside_window:
         raise Busy(_WINDOW_OPEN_MESSAGE)
+    if mining:
+        raise Busy(_WINDOW_MINING_MESSAGE)
+    run = QLockFile(str(home / RUN_LOCK_NAME))
+    if not run.tryLock(0):
+        raise Busy(_OTHER_RUN_MESSAGE)
+    if live_windows:
+        return RunLock(run)
     lock, _proceed = _acquire_instance_lock(home / "instance.lock", lambda: False)
     if lock is None:
+        run.unlock()
         raise Busy(_OTHER_RUN_MESSAGE)
-    return lock
+    return RunLock(run, lock)
 
 
 def _held(path: Path) -> bool:
