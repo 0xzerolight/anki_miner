@@ -87,6 +87,27 @@ def test_a_taken_name_is_refused_before_anything_is_written(live, tmp_path) -> N
     assert not ProfileStore.profiles_dir().exists()
 
 
+def test_a_refused_file_with_name_writes_nothing(live, tmp_path) -> None:
+    before = GUIConfigManager.CONFIG_FILE.read_bytes()
+    with pytest.raises(ApiError) as err:
+        _import(_file(tmp_path, language="ko"), name="Caller")
+    assert err.value.code == "BAD_ARGUMENTS"
+    assert not ProfileStore.profiles_dir().exists()
+    assert GUIConfigManager.CONFIG_FILE.read_bytes() == before
+
+
+def test_name_beside_existing_profiles_adopts_nothing(two_profiles, tmp_path) -> None:
+    before = GUIConfigManager.CONFIG_FILE.read_bytes()
+    default_before = (ProfileStore.profiles_dir() / "default.json").read_bytes()
+    result = _import(_file(tmp_path, anki_deck_name="New deck"), name="New")
+    assert result == {"profile": "new", "created": True, "invalid_fields": []}
+    assert [p.name for p in ProfileStore.list_profiles()] == ["Caller", "Default", "New"]
+    created = ProfileStore.read_profile("new")
+    assert created.anki_deck_name == "New deck" and created.anki_note_type == two_profiles.anki_note_type
+    assert GUIConfigManager.CONFIG_FILE.read_bytes() == before
+    assert (ProfileStore.profiles_dir() / "default.json").read_bytes() == default_before
+
+
 def test_the_active_profile_is_refused(two_profiles, tmp_path) -> None:
     with pytest.raises(ApiError) as err:
         _import(_file(tmp_path), profile_id="default")

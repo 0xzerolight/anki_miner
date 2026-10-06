@@ -47,7 +47,9 @@ def save_profile(profile_id: str | None, config: AnkiMinerConfig) -> str | None:
 
     The active profile's settings are gui_config.json, saved the way the window
     saves it, its marker kept as it is on disk. Any other profile's are its
-    file, keeping its display name.
+    file, keeping its display name. *profile_id* must be the active profile or
+    an existing one: an unknown id would create a profile named after it,
+    past ProfileStore.create's checks.
     """
     active = settings.active_profile_id()
     if profile_id is None or profile_id == active:
@@ -65,12 +67,13 @@ def adopt_default(live: AnkiMinerConfig) -> None:
     profile_controller._reconcile writes default.json and points the marker at
     it; the window stamps the marker on its next save. This process stamps it
     at once: a boot that finds profiles and no marker saves the live settings a
-    second time, as "Recovered settings".
+    second time, as "Recovered settings". The marker goes first, so a failed
+    default.json leaves no profiles, which the window's boot adopts cleanly.
     """
     default = settings.IMPLICIT_PROFILE
-    ProfileStore.write_profile(default.id, live, name=default.name)
     with _active_marker(default.id):
         GUIConfigManager.save_config(live)
+    ProfileStore.write_profile(default.id, live, name=default.name)
 
 
 def import_settings(path: Path, language: str, *, name: str | None, profile_id: str | None) -> dict[str, object]:
@@ -103,14 +106,12 @@ def import_settings(path: Path, language: str, *, name: str | None, profile_id: 
 
 def _check_new_name(name: str, existing: tuple[Profile, ...]) -> None:
     """ProfileStore.create's refusals, checked before anything (default.json included) is written."""
-    clean = name.strip()
-    if not clean:
-        raise ApiError(BAD_ARGUMENTS, "--name is empty.")
-    taken = next((p for p in existing if p.name.casefold() == clean.casefold()), None)
-    if taken is not None:
-        raise ApiError(
-            BAD_ARGUMENTS, f"A profile named {taken.name!r} already exists; use --profile {taken.id} to update it."
-        )
+    try:
+        ProfileStore._validate_name(name, existing)
+    except ValueError as exc:
+        taken = next((p for p in existing if p.name.casefold() == name.strip().casefold()), None)
+        hint = f"; use --profile {taken.id} to update it" if taken is not None else ""
+        raise ApiError(BAD_ARGUMENTS, f"{exc}{hint}.") from exc
     if len(existing) >= MAX_PROFILES:
         raise ApiError(BAD_ARGUMENTS, f"There are already {MAX_PROFILES} profiles, the most Anki Miner keeps.")
 
