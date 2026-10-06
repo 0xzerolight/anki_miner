@@ -183,3 +183,69 @@ def test_api_check_and_version(home) -> None:
     assert _api(test_home, "version")["result"]["commands"][0] == "mine"
     check = _api(test_home, "check", "--language", "ja")
     assert {i["name"] for i in check["result"]["items"]} >= {"anki", "deck", "dictionary", "ffmpeg"}
+
+
+def _run(tmp_path: Path, runs_dir: Path, video: Path, subtitle: Path, words: list[dict], **top) -> Path:
+    run_file = tmp_path / "run.json"
+    run_file.write_text(
+        json.dumps(
+            {
+                "schema": 1,
+                "run_dir": str(runs_dir),
+                "language": "ja",
+                **top,
+                "config": {
+                    "anki_deck_name": DECK,
+                    "min_frequency_rank": 0,
+                    "max_frequency_rank": 0,
+                    # 学校's line is ten characters: the profile's sentence cap would remove it (Z-1)
+                    "max_sentence_chars": 3,
+                    "bold_target_in_sentence": True,
+                    "merge_incomplete_cues": False,  # each sentence is its own line
+                    "deduplicate_sentences": False,
+                    "use_i_plus_one_filter": False,
+                    "anki_fields": _EXTRA_FIELDS,
+                },
+                "episodes": [
+                    {"run_id": "ep-01", "video_file": str(video), "subtitle_file": str(subtitle), "words": words}
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return run_file
+
+
+def test_api_named_words_whitelisted_made_from_their_line_and_dry_run(home, tmp_path) -> None:
+    test_home, fake = home
+    fake.seed_model(E2EConfig().note_type, ["Front", "Back", *_EXTRA_FIELDS.values()])
+    video = tmp_path / "ep.mkv"
+    shutil.copy(get_test_video(), video)
+    runs_dir = tmp_path / "runs"
+    runs_dir.mkdir()
+    subtitle = tmp_path / "ep.ja.srt"
+    subtitle.write_text(
+        _srt([(0.5, 1.5, "新しい本を買いました"), (1.7, 2.7, "今日は学校で勉強する"), (2.9, 3.9, "本屋に行く")]),
+        encoding="utf-8",
+    )
+    words = [
+        {"word": "学校", "line_start": 1.7},  # whitelisted past the sentence cap
+        {"word": "本", "line_start": 2.9},  # produced on line 0 only: made from line 2
+        {"word": "勉強", "line_start": 0.5},  # not in line 0: not_found
+    ]
+    dry = _api(test_home, "mine", str(_run(tmp_path, runs_dir, video, subtitle, words, dry_run=True)))
+    assert dry["ok"] is True, dry
+    rows = json.loads((runs_dir / "ep-01" / "result-1.json").read_text(encoding="utf-8"))["words"]
+    assert [(r["status"], r["from_line"]) for r in rows] == [("ready", False), ("ready", True), ("not_found", False)]
+    assert fake.notes(DECK) == []
+
+    verdict = _api(test_home, "mine", str(_run(tmp_path, runs_dir, video, subtitle, words)))
+    assert verdict["ok"] is True, verdict
+    rows = json.loads((runs_dir / "ep-01" / "result-2.json").read_text(encoding="utf-8"))["words"]
+    assert [(r["word"], r["status"], r["from_line"]) for r in rows] == [
+        ("学校", "created", False),
+        ("本", "created", True),
+        ("勉強", "not_found", False),
+    ], rows
+    notes = {_plain(n["Front"]): n for n in fake.notes(DECK)}
+    assert _plain(notes["本"]["Sentence"]) == "本屋に行く" and "<b>本</b>" in notes["本"]["Sentence"]
