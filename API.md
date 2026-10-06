@@ -330,9 +330,10 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 
 ## Differences from the proposal
 
-This build implements the proposal's "First" list (v7). It takes the full word matching (card front, then dictionary form) and the full word statuses. For the rest it takes the "Smaller version": the six setup codes are one `SETUP_ERROR`, and `filter` names only the merge: with every named word whitelisted and a named line made into a word (see Choosing the line), no other step can remove one. `profiles` is its own command.
+This build implements the v7 proposal's "First" list and the next requests (Z-1 to Z-13; Z-9 is held back). Where it took a request's smaller version or changed it, the bullets below say so.
 
-Otherwise:
+- Of the "First" list it takes the full word matching (card front, then dictionary form) and the full word statuses, and the "Smaller version" of the setup codes: all six are one `SETUP_ERROR`. `profiles` is its own command.
+- `filter` (v7 and Z-6) names only the merge: with every named word whitelisted and a named line made into a word (see Choosing the line), no other step after the parse can leave one `not_found`.
 - Two codes were added: `BAD_ARGUMENTS` for a command line that does not parse, and `MINING_FAILED` for a run that failed inside the pipeline.
 - Verdict runs and result files carry a `message` beside `error`, and result files carry a run-level `media_store_failures`.
 - `check` has a `resources` item for indexes that need re-importing.
@@ -341,9 +342,14 @@ Otherwise:
 - `line_start` is compared with the line starts as written in the subtitle file, not after the offset. The two differ only where a negative offset moves lines before 0.
 - `line_text` is also cleaned the way the subtitle lines are and ignores whitespace, and an empty `word` or `line_text` is refused.
 - Where `line_expansion` is cut to 30 seconds, lines after the chosen one are added first.
-- `media` files go to `media-<n>/`, not `media/`, which a `mine` removes when it ends.
-- `settings-import` has no `--whitelist` (named words are whitelisted already), and its `result` adds `invalid_fields`.
-- `fetch` writes into `fetch-<n>/`, not the run folder itself, and no `secondary_subtitle_file` or `thumbnail_file`; its run verdicts add `failure_is_transient`.
+- A word the merge removed is not made from its line (Z-2): it stays `not_found`, with `filter` naming the merge. A word made from its line without `reading` takes the reading the episode or the parser gives it, else the dictionary's when it has only one.
+- `settings-import` (Z-3) has no `--whitelist` (named words are whitelisted already), and its `result` adds `invalid_fields`.
+- A dry run (Z-7) is the "Smaller version": the per-word rows, without `offered`.
+- `fetch` (Z-8) writes into `fetch-<n>/`, not the run folder itself, and no `secondary_subtitle_file` or `thumbnail_file`; its run verdicts add `failure_is_transient`.
+- `render` (Z-10) does not copy images inside dictionary definitions.
+- `media` (Z-10) files go to `media-<n>/`, not `media/`, which a `mine` removes when it ends.
+- `setup` (Z-11) also takes `--profile`. CODE can differ from the profile's mining language only when the profile has used it, and `result` gives every item a `status`, not only what was installed.
+- The fold that `word` matches through (Z-12) is the language's one-card-per-run comparison, so it covers letter case too.
 
 ## Example (Python)
 
