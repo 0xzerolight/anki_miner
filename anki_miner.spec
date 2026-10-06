@@ -93,8 +93,9 @@ if os.path.isdir(vendor_alass):
             alass_binaries.append((_full, "bin"))
 
 # Bundle the vendored libmpv shared library. CI populates vendor/libmpv/ from the
-# repo-owned vendor-libmpv-* release before invoking PyInstaller; local dev builds
-# leave it absent (empty list → unchanged behavior). Dest is "." (the _MEIPASS
+# vendor-libmpv-* release in 0xzerolight/anki_miner_assets before invoking
+# PyInstaller; local dev builds leave it absent (empty list → unchanged
+# behavior). Dest is "." (the _MEIPASS
 # root), NOT "bin": python-mpv's Windows fallback searches dirname(mpv.__file__),
 # the macOS closure resolves @loader_path siblings, and the Linux onedir loader
 # path covers _internal/ — mpv_loader.bundled_libmpv_path() globs the root.

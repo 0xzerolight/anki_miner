@@ -418,7 +418,7 @@ The in-app video preview runs on libmpv via the `python-mpv` binding (not Qt Mul
 - `MpvVideoWidget` (`gui/widgets/mpv_video_widget.py`): a `QOpenGLWidget` view on the libmpv render API (`render_gl.h`; works on Wayland where `wid` embedding cannot). A dumb view — owns only the render context, which MUST be freed (`detach`) before the owning `MPV` handle terminates or libmpv aborts the process.
 - `SubtitlePlayerWidget` (`gui/widgets/subtitle_player_widget.py`): the controller. Owns the `mpv.MPV` handle (one per widget lifetime; re-sourcing uses `loadfile`), holds all playback policy, and bridges python-mpv's event-thread callbacks to the GUI thread via queued Qt signals (every slot None-guards — a None property value is the normal first event).
 
-Release bundles ship libmpv from the repo-owned `vendor-libmpv-*` GitHub releases, produced by `.github/workflows/vendor-libmpv.yml`. pip and source installs use the system libmpv, and the preview pane shows a notice when none is found.
+Release bundles ship libmpv from the `vendor-libmpv-*` releases in `0xzerolight/anki_miner_assets`, produced by `.github/workflows/vendor-libmpv.yml`. pip and source installs use the system libmpv, and the preview pane shows a notice when none is found.
 
 ### Dialogs
 
@@ -494,7 +494,7 @@ the updater itself against a pinned release) and asserts the resolver picks it.
 
 ### libmpv (video preview)
 
-Loaded in-process through the `python-mpv` binding — see [Video Preview (embedded libmpv)](#video-preview-embedded-libmpv) for the loader/view/controller split. Distribution mirrors ffmpeg's: every standalone build (Windows `Setup.exe`, macOS `.tar.gz`, Linux AppImage and `.deb`) bundles a libmpv shared library fetched by pinned URL + SHA256 from the repo-owned `vendor-libmpv-*` GitHub releases, with GPL bookkeeping in `licenses/libmpv/`. PyPI/`pipx` and source installs resolve the system libmpv. Absence is non-fatal — `mpv_available()` gates the preview UI and a notice replaces the pane.
+Loaded in-process through the `python-mpv` binding — see [Video Preview (embedded libmpv)](#video-preview-embedded-libmpv) for the loader/view/controller split. Distribution mirrors ffmpeg's: every standalone build (Windows `Setup.exe`, macOS `.dmg`, Linux AppImage and `.deb`) bundles a libmpv shared library fetched by pinned URL + SHA256 from the `vendor-libmpv-*` releases in `0xzerolight/anki_miner_assets`, with GPL bookkeeping in `licenses/libmpv/`. PyPI/`pipx` and source installs resolve the system libmpv. Absence is non-fatal — `mpv_available()` gates the preview UI and a notice replaces the pane.
 
 ### mokuro (manga OCR)
 

@@ -25,9 +25,9 @@ work; only the video preview shows a notice.
 
 ## Upstream build sources
 
-The bundled libraries come from the repo-owned
-[`vendor-libmpv-*` releases](https://github.com/0xzerolight/anki_miner/releases),
-produced by `.github/workflows/vendor-libmpv.yml`:
+The bundled libraries come from the
+[`vendor-libmpv-*` releases](https://github.com/0xzerolight/anki_miner_assets/releases)
+in `0xzerolight/anki_miner_assets`, produced by `.github/workflows/vendor-libmpv.yml`:
 
 - **Linux** — built from source via
   [mpv-player/mpv-build](https://github.com/mpv-player/mpv-build) with FFmpeg,

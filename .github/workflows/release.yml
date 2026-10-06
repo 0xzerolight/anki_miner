@@ -498,9 +498,9 @@ jobs:
           Get-ChildItem vendor\alass
 
       # =====================================================================
-      # libmpv — fetched from the repo-owned vendor-libmpv-* release (produced
-      # by .github/workflows/vendor-libmpv.yml, which is the source of truth for
-      # how these are produced). Pinned URL + SHA256, fail-closed, like every
+      # libmpv — fetched from the vendor-libmpv-* release in
+      # 0xzerolight/anki_miner_assets (produced by .github/workflows/vendor-libmpv.yml,
+      # which is the source of truth for how these are produced). Pinned URL + SHA256, fail-closed, like every
       # other fetch.
       # Lands at vendor/libmpv/ (spec dest "." → _MEIPASS root) and drops the
       # per-artifact Copyright/SOURCES.txt into licenses/libmpv/ next to the
@@ -511,7 +511,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          BASE="https://github.com/${{ github.repository }}/releases/download/vendor-libmpv-20260712"
+          BASE="https://github.com/0xzerolight/anki_miner_assets/releases/download/vendor-libmpv-20260712"
           URL="$BASE/libmpv-linux-x86_64.tar.gz"
           SHA256="5d9278463edab8f2a467f45c2c66416070d4e1543024df30fed2f721def663c1"
           curl -fL "$URL" -o libmpv-dl.tar.gz
@@ -544,7 +544,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          BASE="https://github.com/${{ github.repository }}/releases/download/vendor-libmpv-20260712"
+          BASE="https://github.com/0xzerolight/anki_miner_assets/releases/download/vendor-libmpv-20260712"
           if [ "${RUNNER_ARCH}" = "ARM64" ]; then
             URL="$BASE/libmpv-macos-arm64.tar.gz"
             SHA256="f018f36a916890c796cb8d8779252f69851b15766326ef33a3815b9274fccff4"
@@ -568,7 +568,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $url = "https://github.com/${{ github.repository }}/releases/download/vendor-libmpv-20260712/libmpv-windows-x86_64.zip"
+          $url = "https://github.com/0xzerolight/anki_miner_assets/releases/download/vendor-libmpv-20260712/libmpv-windows-x86_64.zip"
           $sha256 = "7b2dd2867d7b214e795d245e71b823089ee5a36d9eabbd159317db878d160199"
           curl.exe -fL $url -o libmpv-dl.zip
           $actual = (Get-FileHash libmpv-dl.zip -Algorithm SHA256).Hash.ToLower()

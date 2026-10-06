@@ -16,6 +16,8 @@ _WORKFLOWS_DIR = Path(__file__).parents[2] / ".github" / "workflows"
 _WORKFLOW_PATH = _WORKFLOWS_DIR / "vendor-libmpv.yml"
 _RELEASE_WORKFLOW_PATH = _WORKFLOWS_DIR / "release.yml"
 _ROOT = Path(__file__).parents[2]
+_PREFLIGHT_PATH = _ROOT / "scripts" / "release_preflight.sh"
+_ASSETS_DOWNLOADS = "https://github.com/0xzerolight/anki_miner_assets/releases/download/"
 
 _WORKFLOW_PATHS = sorted([*_WORKFLOWS_DIR.glob("*.yml"), *_WORKFLOWS_DIR.glob("*.yaml")])
 
@@ -70,3 +72,22 @@ def test_windows_vulkan_loader_is_paired_with_its_license() -> None:
     notice = (_ROOT / "licenses" / "vulkan-loader" / "LICENSE.txt").read_text(encoding="utf-8")
     assert "Apache License" in notice
     assert "Version 2.0, January 2004" in notice
+
+
+def test_libmpv_comes_from_the_assets_repo_and_the_preflight_mirrors_linux() -> None:
+    # The assets repo keeps vendor downloads out of this repo's release counts.
+    # RELEASING.md's bump procedure names release.yml first, so the preflight
+    # pin is the one that drifts.
+    release = _RELEASE_WORKFLOW_PATH.read_text(encoding="utf-8")
+    preflight = _PREFLIGHT_PATH.read_text(encoding="utf-8")
+    linux_step = release.split("- name: Fetch libmpv (Linux)", 1)[1].split("- name:", 1)[0]
+    base = re.search(r'BASE="([^"]+)"', linux_step)
+    sha = re.search(r'SHA256="([0-9a-f]{64})"', linux_step)
+    preflight_url = re.search(r'LIBMPV_URL="([^"]+)"', preflight)
+    preflight_sha = re.search(r'LIBMPV_SHA256="([0-9a-f]{64})"', preflight)
+
+    assert base and sha and preflight_url and preflight_sha
+    assert base.group(1).startswith(_ASSETS_DOWNLOADS)
+    assert preflight_url.group(1) == f"{base.group(1)}/libmpv-linux-x86_64.tar.gz"
+    assert sha.group(1) == preflight_sha.group(1)
+    assert "github.repository }}/releases/download/vendor-libmpv" not in release

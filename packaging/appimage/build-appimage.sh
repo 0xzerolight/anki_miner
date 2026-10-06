@@ -16,10 +16,9 @@ APPIMAGETOOL="$REPO_ROOT/dist/appimagetool"
 # Gear Lever and other AppImage managers read it to find the newest GitHub
 # release and fetch only the changed blocks through the .zsync published beside
 # the AppImage. Spelled out rather than appimagetool -g: -g builds the filename
-# from the desktop Name and would never match AnkiMiner-*. "latest" skips
-# pre-releases, so the resources-* and vendor-libmpv-* releases cannot shadow an
-# app release. tests/unit/test_release_asset_names.py pins this exact line, and
-# release.yml reads it back to check the built AppImage.
+# from the desktop Name and would never match AnkiMiner-*.
+# tests/unit/test_release_asset_names.py pins this exact line, and release.yml
+# reads it back to check the built AppImage.
 UPDATE_INFORMATION="gh-releases-zsync|0xzerolight|anki_miner|latest|AnkiMiner-*-Linux-x86_64.AppImage.zsync"
 
 echo "Building AppImage for Anki Miner v${VERSION}..."
