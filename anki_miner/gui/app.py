@@ -54,6 +54,7 @@ from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.gui import launch as gui_launch
 from anki_miner.gui import restart
 from anki_miner.gui.controllers import recovery_controller
+from anki_miner.gui.controllers.mining_marker import MiningMarker, mining_task_ids
 from anki_miner.gui.controllers.recovery_controller import RecoveryController
 from anki_miner.gui.i18n import install_translators
 from anki_miner.gui.launch import _LOG_DATE_FORMAT, _LOG_FORMAT
@@ -1937,7 +1938,7 @@ def compose_main_window(
     # runs work is bound here, in one place, once its tab exists. Binding is
     # inert on a screen that declares no TASK_ID, and it never touches worker
     # ownership -- that stays on the screen that started the run.
-    for screen in (
+    published = (
         video_tab.single_tab,
         video_tab.batch_tab,
         video_tab.deck_builder_tab,
@@ -1955,8 +1956,17 @@ def compose_main_window(
         subtitles_tab.mokuro_tab,
         subtitles_tab.booksync_tab,
         subtitles_tab.readability_tab,
-    ):
+    )
+    for screen in published:
         screen.bind_task_registry(window.task_registry)
+    # The same registry tells other processes when this window mines: --api mine
+    # refuses while a mining screen's run (and so its Word Curator) is live.
+    window.mining_marker = MiningMarker(
+        window.task_registry,
+        ANKI_MINER_HOME,
+        mining_task_ids(type(screen) for screen in (video_tab.youtube_tab, audiobook_tab, *published)),
+        parent=window,
+    )
     # --- end task-registry publication ------------------------------------
 
     # Inline run options (the curation checkbox, Card Backfill's field groups,
@@ -2507,6 +2517,8 @@ def main():
     # sys.exit so a requested restart (D39b-A) can start the replacement only
     # after the loop has returned and this process is done with its stores.
     exit_code = app.exec()
+    if window.mining_marker is not None:
+        window.mining_marker.release()
     # Everything below is expected to take well under a second. If it wedges
     # instead — a worker that will not join, a sip teardown walking a dead
     # QObject — nothing of ours runs again to report it, so arm the dump first

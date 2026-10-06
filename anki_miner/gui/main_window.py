@@ -88,6 +88,7 @@ from anki_miner.utils.logging_ext import log_summary
 
 if TYPE_CHECKING:
     from anki_miner.gui.capabilities import CapabilityTarget
+    from anki_miner.gui.controllers.mining_marker import MiningMarker
     from anki_miner.gui.widgets.dialogs.resource_download_dialog import ResourceDownloadSession
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizardOutcome
 
@@ -189,6 +190,8 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # Constructed BEFORE _setup_ui so the status strip can bind to it.
         self.task_registry = TaskRegistry(self)
         self.task_registry.reveal_requested.connect(self._on_task_activated)
+        # Set by compose_main_window once the screens exist; held while one of them mines (API.md).
+        self.mining_marker: MiningMarker | None = None
 
         # The live recommended-resource run, if any. Retained here rather than
         # Qt-parented: it outlives its own window, which the user can hide.

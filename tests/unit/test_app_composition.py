@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
@@ -60,6 +62,42 @@ def test_backfill_restyle_button_reaches_the_restyle_entry_point(
     backfill_tab.restyle_button.click()
 
     assert started, "clicking Restyle cards… did not reach the restyle entry point"
+
+
+def test_compose_main_window_marks_mining_runs(qtbot, patch_heavy_init, test_config) -> None:
+    patch_heavy_init(test_config)
+
+    from anki_miner.gui.app import compose_main_window
+
+    composed = compose_main_window(test_config)
+    qtbot.addWidget(composed.window)
+    marker = composed.window.mining_marker
+    assert marker is not None and not marker.held
+    assert marker.task_ids == {
+        "run.single",
+        "run.batch",
+        "run.deckbuilder",
+        "queue.youtube",
+        "queue.audiobook",
+        "queue.reading.manga",
+        "queue.reading.novels",
+        "queue.reading.subtitles",
+        "queue.reading.text",
+        "queue.reading.deck",
+    }
+    # The window's own registry drives it: the one its screens publish their runs to.
+    from anki_miner.cli.entry import _held
+    from anki_miner.config.paths import ANKI_MINER_HOME
+    from anki_miner.gui.capabilities import CapabilityTarget
+    from anki_miner.gui.controllers.task_registry import TaskOutcome, TaskSpec
+
+    handle = composed.window.task_registry.start(
+        TaskSpec(task_id="run.single", title="x", owner=CapabilityTarget("video", "single"))
+    )
+    marker_file = ANKI_MINER_HOME / f"instance.mining-{os.getpid()}.lock"
+    assert marker.held and _held(marker_file)
+    handle.finish(TaskOutcome.SUCCEEDED)
+    assert not marker.held and not marker_file.exists()
 
 
 def _no_extra_checks(window, args, kwargs):
