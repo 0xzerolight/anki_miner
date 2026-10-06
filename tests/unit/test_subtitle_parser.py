@@ -7350,3 +7350,14 @@ class TestWhitelistParseRescue:
             whitelist=_FrontSpy("太郎"),
         )
         assert counts["太郎"] == 1
+
+
+def test_a_deferred_tagger_reads_lines_without_loading_the_tokenizer(test_config, tmp_path, monkeypatch) -> None:
+    import anki_miner.services.subtitle_parser as module
+
+    monkeypatch.setattr(module, "get_shared_tagger", lambda: (_ for _ in ()).throw(AssertionError("tagger loaded")))
+    monkeypatch.setattr(module, "get_tagger", lambda language: (_ for _ in ()).throw(AssertionError("tagger loaded")))
+    sub = tmp_path / "s.srt"
+    sub.write_text("1\n00:00:01,000 --> 00:00:02,000\n<i>約束だよ</i>\n", encoding="utf-8")
+    parser = module.SubtitleParserService(test_config, defer_tagger=True)
+    assert parser.parse_raw_entries(sub, 0.0) == [(1.0, 2.0, "約束だよ")]

@@ -425,6 +425,7 @@ class SubtitleParserService:
         sentence_annotation: bool = True,
         attested_reading_fallback: bool = False,
         force_include: Callable[[str], bool] | None = None,
+        defer_tagger: bool = False,
     ):
         """Initialize the subtitle parser.
 
@@ -560,6 +561,9 @@ class SubtitleParserService:
                 ``rescuable_tags`` and this accepts its card front (R1). The
                 front is the exact ``mined_form`` the word is emitted with, so a
                 rescued word is always force-included in phase 2.
+            defer_tagger: Acquire the tokenizer on first use instead of now: a
+                caller that only reads lines (``parse_raw_entries``) never
+                loads it.
         """
         self.config = config
         # Perf-audit counters (Task 28): cumulative wall-clock spent in offline-
@@ -622,7 +626,8 @@ class SubtitleParserService:
         from anki_miner.languages.registry import config_language, get_profile
 
         language = config_language(config)
-        self.tagger = get_shared_tagger() if language == "ja" else get_tagger(language)
+        # Deferred, the parser starts in the state release_tagger leaves: _tagger() acquires one on first use.
+        self.tagger = None if defer_tagger else (get_shared_tagger() if language == "ja" else get_tagger(language))
         # The language whose tagger this is - NOT config.language: the two part
         # ways on the degrade path, and _warn_if_nothing_mined names both.
         self._tagger_language = language

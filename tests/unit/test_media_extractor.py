@@ -3348,3 +3348,19 @@ class TestExtractAudioWindow:
                 is False
             )
         run.assert_not_called()
+
+
+def test_a_still_height_scales_the_still(test_config, tmp_path, monkeypatch) -> None:
+    service = MediaExtractorService(test_config, still_height=480)
+    seen = {}
+    monkeypatch.setattr(service, "_run_ffmpeg", lambda cmd, *a, **k: seen.setdefault("cmd", cmd) and False)
+    service._extract_static_screenshot(tmp_path / "v.mkv", 1.0, 2.0, tmp_path / "out.jpg")
+    assert seen["cmd"][seen["cmd"].index("-vf") + 1] == "scale=-2:480"
+
+
+def test_no_still_height_keeps_the_still_unscaled(test_config, tmp_path, monkeypatch) -> None:
+    service = MediaExtractorService(test_config)
+    seen = {}
+    monkeypatch.setattr(service, "_run_ffmpeg", lambda cmd, *a, **k: seen.setdefault("cmd", cmd) and False)
+    service._extract_static_screenshot(tmp_path / "v.mkv", 1.0, 2.0, tmp_path / "out.jpg")
+    assert "-vf" not in seen["cmd"]

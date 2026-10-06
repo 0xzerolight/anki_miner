@@ -257,12 +257,11 @@ def test_a_video_without_a_container_duration_is_readable(tmp_path, test_config)
     video = tmp_path / "live.mkv"
     video.write_bytes(b"x")
     probe = json.dumps({"format": {}, "streams": [{"index": 0, "codec_type": "video", "codec_name": "h264"}]})
-    episode = SimpleNamespace(video_file=video)
     with patch(
         "anki_miner.utils.audio_track_detector.subprocess.run",
         return_value=subprocess.CompletedProcess([], 0, probe, ""),
     ):
-        runs._check_video(test_config, episode)  # must not raise VIDEO_UNREADABLE
+        runs.check_video(test_config, video)  # must not raise VIDEO_UNREADABLE
 
 
 def test_each_episodes_words_are_its_runs_whitelist(services, tmp_path, video) -> None:

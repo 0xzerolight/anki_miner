@@ -1,4 +1,4 @@
-"""The run file, validated into typed objects (API.md, "mine")."""
+"""The run file and the media file, validated into typed objects (API.md, "mine" and "media")."""
 
 from __future__ import annotations
 
@@ -33,6 +33,9 @@ _EPISODE_KEYS = frozenset(
 )
 _EPISODE_REQUIRED = frozenset({"run_id", "video_file", "subtitle_file", "words"})
 _WORD_KEYS = frozenset({"word", "line_start", "line_text", "line_expansion", "surface", "reading"})
+_MEDIA_EPISODE_KEYS = frozenset(
+    {"run_id", "video_file", "subtitle_file", "subtitle_offset", "audio_track_override", "lines"}
+)
 
 
 def _bad(message: str) -> ApiError:
@@ -152,22 +155,26 @@ def _word_request(raw: object, where: str) -> WordRequest:
     line_text = _opt_str(obj.get("line_text"), f"{where}.line_text")
     if line_text is not None and not line_text.strip():
         raise _bad(f"{where}.line_text is empty.")
-    raw_expansion = obj.get("line_expansion")
-    expansion: tuple[int, int] | None = None
-    if raw_expansion is not None:
-        if not (
-            isinstance(raw_expansion, list)
-            and len(raw_expansion) == 2
-            and all(isinstance(n, int) and not isinstance(n, bool) and n >= 0 for n in raw_expansion)
-        ):
-            raise _bad(f"{where}.line_expansion must be [before, after], two whole numbers of 0 or more.")
-        expansion = (raw_expansion[0], raw_expansion[1])
+    expansion = _expansion(obj.get("line_expansion"), where)
     surface = _opt_str(obj.get("surface"), f"{where}.surface")
     reading = _opt_str(obj.get("reading"), f"{where}.reading")
     for key, value in (("surface", surface), ("reading", reading)):
         if value is not None and not value.strip():
             raise _bad(f"{where}.{key} is empty.")
     return WordRequest(word, line_start, line_text, expansion, surface, reading)
+
+
+def _expansion(raw: object, where: str) -> tuple[int, int] | None:
+    """A ``line_expansion``: ``[before, after]``, or None when left out."""
+    if raw is None:
+        return None
+    if not (
+        isinstance(raw, list)
+        and len(raw) == 2
+        and all(isinstance(n, int) and not isinstance(n, bool) and n >= 0 for n in raw)
+    ):
+        raise _bad(f"{where}.line_expansion must be [before, after], two whole numbers of 0 or more.")
+    return (raw[0], raw[1])
 
 
 @dataclass(frozen=True)
@@ -261,4 +268,88 @@ def parse_run_file(data: object) -> RunFile:
         overlay=_object(obj.get("config", {}), "config"),
         episodes=episodes,
         dry_run=dry_run,
+    )
+
+
+@dataclass(frozen=True)
+class LineRequest:
+    line_start: float
+    line_expansion: tuple[int, int] | None = None
+
+
+@dataclass(frozen=True)
+class MediaEpisode:
+    run_id: str
+    video_file: Path
+    subtitle_file: Path
+    subtitle_offset: float
+    audio_track_override: int | None
+    lines: tuple[LineRequest, ...]
+
+
+@dataclass(frozen=True)
+class MediaFile:
+    run_dir: Path
+    profile: str | None
+    language: object  # validated by settings.with_language
+    still_height: int | None
+    audio_bitrate: int | None
+    episodes: tuple[MediaEpisode, ...]
+
+
+def _opt_positive(value: object, where: str) -> int | None:
+    number = _opt_int(value, where)
+    if number is not None and number < 1:
+        raise _bad(f"{where} must be 1 or more.")
+    return number
+
+
+def _line_request(raw: object, where: str) -> LineRequest:
+    obj = _object(raw, where)
+    _keys(obj, frozenset({"line_start", "line_expansion"}), frozenset({"line_start"}), where)
+    start = _opt_float(obj["line_start"], f"{where}.line_start")
+    if start is None or start < 0:
+        raise _bad(f"{where}.line_start must be a number of 0 or more.")
+    return LineRequest(start, _expansion(obj.get("line_expansion"), where))
+
+
+def parse_media_file(data: object) -> MediaFile:
+    obj = _object(data, "The media file")
+    _keys(
+        obj,
+        frozenset({"schema", "run_dir", "profile", "language", "still_height", "audio_bitrate", "episodes"}),
+        frozenset({"schema", "run_dir", "language", "episodes"}),
+        "The media file",
+    )
+    _schema(obj, "The media file")
+    raw_episodes = obj["episodes"]
+    if not isinstance(raw_episodes, list) or not raw_episodes:
+        raise _bad("episodes must be a non-empty list.")
+    episodes: list[MediaEpisode] = []
+    for i, raw in enumerate(raw_episodes):
+        where = f"episodes[{i}]"
+        ep = _object(raw, where)
+        _keys(ep, _MEDIA_EPISODE_KEYS, frozenset({"run_id", "video_file", "subtitle_file", "lines"}), where)
+        raw_lines = ep["lines"]
+        if not isinstance(raw_lines, list) or not raw_lines:
+            raise _bad(f"{where}.lines must list at least one line.")
+        episodes.append(
+            MediaEpisode(
+                run_id=_run_id(ep["run_id"], f"{where}.run_id"),
+                video_file=_abs(_str(ep["video_file"], f"{where}.video_file")),
+                subtitle_file=_abs(_str(ep["subtitle_file"], f"{where}.subtitle_file")),
+                subtitle_offset=_opt_float(ep.get("subtitle_offset"), f"{where}.subtitle_offset") or 0.0,
+                audio_track_override=_opt_int(ep.get("audio_track_override"), f"{where}.audio_track_override"),
+                lines=tuple(_line_request(line, f"{where}.lines[{j}]") for j, line in enumerate(raw_lines)),
+            )
+        )
+    if len({e.run_id for e in episodes}) != len(episodes):
+        raise _bad("Two episodes share a run_id.")
+    return MediaFile(
+        run_dir=_run_dir(obj["run_dir"]),
+        profile=_opt_str(obj.get("profile"), "profile"),
+        language=obj["language"],
+        still_height=_opt_positive(obj.get("still_height"), "still_height"),
+        audio_bitrate=_opt_positive(obj.get("audio_bitrate"), "audio_bitrate"),
+        episodes=tuple(episodes),
     )

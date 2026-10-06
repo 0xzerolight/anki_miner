@@ -36,13 +36,17 @@ def cue_index(entries: Entries, word: TokenizedWord) -> int | None:
     return index if index is not None and entries[index][2] == word.sentence else None
 
 
-def line_merges(config: AnkiMinerConfig, entries: Entries) -> list[tuple[int, int]]:
-    """The automatic merge each line would get; all (0, 0) with merge_incomplete_cues off."""
+def line_merge(config: AnkiMinerConfig, entries: Entries, index: int) -> tuple[int, int]:
+    """The automatic merge line *index* would get; (0, 0) with merge_incomplete_cues off."""
     if not config.merge_incomplete_cues:
-        return [(0, 0)] * len(entries)
+        return (0, 0)
     rules = get_profile(config_language(config)).sentence_rules
-    budget = merge_budget_seconds(config.audio_padding)
-    return [auto_line_expansion(entries, i, rules, max_seconds=budget) for i in range(len(entries))]
+    return auto_line_expansion(entries, index, rules, max_seconds=merge_budget_seconds(config.audio_padding))
+
+
+def line_merges(config: AnkiMinerConfig, entries: Entries) -> list[tuple[int, int]]:
+    """The automatic merge each line would get."""
+    return [line_merge(config, entries, i) for i in range(len(entries))]
 
 
 def fit_expansion(entries: Entries, line: int, wanted: tuple[int, int], budget: float) -> tuple[int, int]:

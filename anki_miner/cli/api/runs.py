@@ -101,6 +101,17 @@ class _OfflineAnki(AnkiService):
         return None
 
 
+def require_ffmpeg(config: AnkiMinerConfig) -> None:
+    """SETUP_ERROR unless both ffmpeg and ffprobe run."""
+    tools = (("ffmpeg", resolve_ffmpeg(config)), ("ffprobe", resolve_ffprobe(config)))
+    missing = [name for name, path in tools if not binary_available(path)]
+    if missing:
+        raise ApiError(
+            SETUP_ERROR,
+            f"{' and '.join(missing)} not found. Install ffmpeg, or set its location in Anki Miner's settings.",
+        )
+
+
 @contextmanager
 def _services(config: AnkiMinerConfig, kind: Kind) -> Iterator[SharedLookupServices]:
     """Run-level checks, then the lookup stack the runs share. A dry run checks neither ffmpeg nor Anki."""
@@ -109,13 +120,7 @@ def _services(config: AnkiMinerConfig, kind: Kind) -> Iterator[SharedLookupServi
     except SetupFailure as exc:
         raise ApiError(SETUP_ERROR, str(exc)) from exc
     if kind is not Kind.DRY_RUN:
-        tools = (("ffmpeg", resolve_ffmpeg(config)), ("ffprobe", resolve_ffprobe(config)))
-        missing = [name for name, path in tools if not binary_available(path)]
-        if missing:
-            raise ApiError(
-                SETUP_ERROR,
-                f"{' and '.join(missing)} not found. Install ffmpeg, or set its location in Anki Miner's settings.",
-            )
+        require_ffmpeg(config)
     shared = create_shared_lookup_services(config)
     try:
         anki = _OfflineAnki if kind is Kind.DRY_RUN else AnkiService
@@ -137,16 +142,14 @@ def _episode_config(config: AnkiMinerConfig, episode: Episode, folder: Path) -> 
     return replace(config, anki_tags=tags, media_temp_folder=folder / MEDIA)
 
 
-def _check_video(config: AnkiMinerConfig, episode: Episode) -> None:
+def check_video(config: AnkiMinerConfig, video_file: Path) -> None:
+    """VIDEO_UNREADABLE unless ffprobe can open *video_file*."""
     ffprobe = resolve_ffprobe(config)
     # No container duration means "duration unknown" (a live-mode MKV, an
     # interrupted recording), not "cannot be opened": such a file still plays
     # and mines, so a readable video stream is enough.
-    if (
-        get_media_duration_seconds(episode.video_file, ffprobe) is None
-        and get_primary_video_codec(episode.video_file, ffprobe) is None
-    ):
-        raise ApiError(VIDEO_UNREADABLE, f"The video cannot be opened: {episode.video_file}")
+    if get_media_duration_seconds(video_file, ffprobe) is None and get_primary_video_codec(video_file, ffprobe) is None:
+        raise ApiError(VIDEO_UNREADABLE, f"The video cannot be opened: {video_file}")
 
 
 def _removed(processor: EpisodeProcessor, fold: Callable[[str], str] | None, name: str) -> bool:
@@ -310,7 +313,7 @@ def _outcome_error(result: ProcessingResult) -> ApiError | None:
     return None
 
 
-def _guarded(run_id: str, body: Callable[[], dict[str, object]]) -> dict[str, object]:
+def guarded(run_id: str, body: Callable[[], dict[str, object]]) -> dict[str, object]:
     """One run's verdict: its own ApiError, or INTERNAL for anything unexpected (logged)."""
     try:
         return body()
@@ -329,7 +332,7 @@ def mine_runs(run_file: RunFile, cancel_all: threading.Event, kind: Kind = Kind.
     config = settings.resolve_run_config(run_file.profile, run_file.language, run_file.overlay)
     with _services(config, kind) as shared:
         return [
-            _guarded(episode.run_id, partial(_mine_one, run_file.run_dir, episode, config, shared, cancel_all, kind))
+            guarded(episode.run_id, partial(_mine_one, run_file.run_dir, episode, config, shared, cancel_all, kind))
             for episode in run_file.episodes
         ]
 
@@ -347,7 +350,7 @@ def _mine_one(
     if cancel_all.is_set():
         raise ApiError(CANCELLED, "Cancelled before this run started.")
     if kind is not Kind.DRY_RUN:  # a dry run cuts nothing from the video
-        _check_video(config, episode)
+        check_video(config, episode.video_file)
     # Numbered first: a render's files folder carries the number of its json.
     path = next_numbered(folder, "render" if kind is Kind.RENDER else "result")
     out = folder / path.stem

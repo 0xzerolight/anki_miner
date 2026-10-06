@@ -201,3 +201,36 @@ def test_parse_run_file_refuses_unpaired_surrogates(tmp_path: Path, words) -> No
     with pytest.raises(ApiError) as err:
         files.parse_run_file(_run_file(tmp_path, words=words))
     assert err.value.code == "BAD_RUN_FILE"
+
+
+def _media(**top) -> dict:
+    return {
+        "schema": 1,
+        "run_dir": ".",
+        "language": "ja",
+        **top,
+        "episodes": [
+            {
+                "run_id": "e",
+                "video_file": "v",
+                "subtitle_file": "s",
+                "lines": [{"line_start": 812.3}, {"line_start": 15.02, "line_expansion": [0, 1]}],
+            }
+        ],
+    }
+
+
+def test_a_media_file_takes_lines_and_the_two_media_keys() -> None:
+    media = files.parse_media_file(_media(still_height=480, audio_bitrate=24))
+    assert (media.still_height, media.audio_bitrate) == (480, 24)
+    assert [(line.line_start, line.line_expansion) for line in media.episodes[0].lines] == [
+        (812.3, None),
+        (15.02, (0, 1)),
+    ]
+
+
+@pytest.mark.parametrize("bad", [{"still_height": 0}, {"audio_bitrate": -1}, {"still_height": 1.5}, {"words": []}])
+def test_media_file_refusals(bad) -> None:
+    with pytest.raises(ApiError) as err:
+        files.parse_media_file(_media(**bad))
+    assert err.value.code == "BAD_RUN_FILE"

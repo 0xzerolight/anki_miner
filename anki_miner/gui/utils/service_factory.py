@@ -789,6 +789,16 @@ def _create_subtitle_parser(config: AnkiMinerConfig, **lookups: Any) -> Subtitle
     return cast(SubtitleParserService, factory(config, **lookups))
 
 
+def create_line_parser(config: AnkiMinerConfig) -> SubtitleParserService:
+    """The mining language's parser for reading a subtitle file's lines, without loading its tokenizer.
+
+    ``parse_raw_entries`` cleans lines exactly as mining does (the profile's
+    normalizer and script gate), so the ``--api media`` call reads the lines a
+    ``mine`` reads, at a fraction of the start-up cost.
+    """
+    return _create_subtitle_parser(config, defer_tagger=True)
+
+
 def create_profile_parser(
     config: AnkiMinerConfig, ja_parser_cls: Callable[..., SubtitleParserService]
 ) -> SubtitleParserService:

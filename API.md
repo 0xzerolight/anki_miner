@@ -23,6 +23,7 @@ AnkiMiner --api version
 AnkiMiner --api profiles
 AnkiMiner --api settings-export --language CODE --out FILE [--profile ID]
 AnkiMiner --api render RUN_FILE
+AnkiMiner --api media MEDIA_FILE
 ```
 
 Each call writes one JSON line to stdout: its verdict. Exit code 0 means the verdict was written; any other exit code is a crash.
@@ -48,7 +49,7 @@ A verdict:
 - the Anki Miner window is open, including a window opened past its "already running" warning;
 - another command-line or API run is working.
 
-A dry run and `render` take no lock.
+A dry run, `render` and `media` take no lock.
 
 `check`, `version`, `profiles` and `settings-export` run at any time. On Windows every call holds the app's mutex, so the installer waits for it.
 
@@ -62,6 +63,8 @@ A dry run and `render` take no lock.
 | `result-<n>.json` | mine | one per `mine` of that `run_id`; `n` counts up from 1 |
 | `render-<n>.json` | render | one per `render` of that `run_id` |
 | `render-<n>/` | render | the media its fields name; the caller deletes them |
+| `media-<n>.json` | media | one per `media` of that `run_id` |
+| `media-<n>/` | media | the clips and pictures it cut; the caller deletes them |
 | `cancel` | the caller | stops the run (see Cancelling) |
 | `media/` | mine, render | temporary clips and pictures of a `mine` or `render`, removed before it ends |
 
@@ -195,6 +198,32 @@ Episodes run one at a time, and each run's `result-<n>.json` is written as it en
 
 `render` takes the same run file as `mine` (`dry_run: true` gives `BAD_RUN_FILE`) and does everything `mine` does up to the notes. Instead of adding them, it writes each word's note fields and media to the run folder. Nothing goes to Anki and there is no duplicate check, so a word Anki already has is rendered too; Anki must still answer, for the note type's fields. It runs any time, beside calls on other `run_id`s. `render-<n>.json` has the result file's keys except `anki_write_state` and `dry_run`. A word that became a note is `rendered`; its row adds `fields` (the note's fields by Anki field name) and `files` (the files they name, in `render-<n>/`). Each file has the name `mine` sends Anki for it (Anki may shorten a very long one), so a caller can store it under that name and update a note with the fields as given. Other words have `fields: null` and `files: []`. Images inside dictionary definitions are not copied.
 
+## media
+
+`media` cuts a clip and a picture for each line it is given. The media file:
+
+| Key | Value |
+|---|---|
+| `schema` | `1` |
+| `run_dir` | an existing folder |
+| `profile` | a profile `id`, as for `mine` |
+| `language` | the mining language code |
+| `still_height` | the picture's height in pixels, animated or still; left out, the profile's (a still is the video's own size) |
+| `audio_bitrate` | kbps; left out, the profile's |
+| `episodes` | one or more episodes |
+
+An episode:
+
+| Key | Value |
+|---|---|
+| `run_id` | required |
+| `video_file`, `subtitle_file` | required paths, as for `mine` |
+| `lines` | required: the lines to cut |
+| `subtitle_offset` | seconds added to every subtitle time; `0` when left out |
+| `audio_track_override` | 0-based audio track, or `null` to find the mining language's track |
+
+Each line is a `line_start` and an optional `line_expansion`, chosen and merged as for `mine`. `media` needs no parse, no dictionary and no Anki, and runs any time. `media-<n>.json` lists per line its `line_start`, `start`, `end`, `text`, `picture` and `audio` (paths in the run folder, `null` when that cut failed). The files are `media-<n>/<k>.<ext>`, `k` being the line's place in `lines`, from 1. `still_height` and `audio_bitrate` are whole numbers of 1 or more. Without ffmpeg or ffprobe the call gives `SETUP_ERROR`; per episode, a video that does not open gives `VIDEO_UNREADABLE`, and a subtitle that cannot be read or has no lines gives `SUBTITLE_UNREADABLE`.
+
 ## Progress and cancelling
 
 While a run works, `progress.json` holds `{"schema": 1, "run_id": …, "stage": 3, "stages": 5, "done": 12, "total": 26}`. The stages are parsing, filtering, media, definitions and cards.
@@ -209,7 +238,7 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 |---|---|---|
 | `BUSY` | call | the window or another run is open |
 | `BAD_ARGUMENTS` | call | the command line does not parse, or names an unknown language or an `--out` folder that does not exist |
-| `BAD_RUN_FILE` | call | the run file is not valid JSON or breaks the rules above |
+| `BAD_RUN_FILE` | call | the run file or media file is not valid JSON or breaks the rules above |
 | `PROFILE_UNREADABLE` | call | the profile does not exist or cannot be read |
 | `SETUP_ERROR` | call, run | language pack, dictionary index, ffmpeg, deck, note type, fields or offline dictionary |
 | `ANKI_UNREACHABLE` | call, run | AnkiConnect does not answer |
@@ -237,6 +266,7 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 | `word-from-line` | a named line is the one used, and a word the episode does not produce there is made from it; `surface`, `reading` and `from_line` |
 | `dry-run` | `dry_run` in the run file, the result's `dry_run` and the `ready` status |
 | `render` | the `render` command, `render-<n>.json` and the `rendered` status |
+| `media` | the `media` command and `media-<n>.json` |
 
 `profiles` puts `{"profiles": [{"id": "anime", "name": "Anime", "active": true}, …]}` in `result`. Before the user has created any profile, the list holds one, `default`.
 
@@ -260,6 +290,7 @@ Otherwise:
 - `line_start` is compared with the line starts as written in the subtitle file, not after the offset. The two differ only where a negative offset moves lines before 0.
 - `line_text` is also cleaned the way the subtitle lines are and ignores whitespace, and an empty `word` or `line_text` is refused.
 - Where `line_expansion` is cut to 30 seconds, lines after the chosen one are added first.
+- `media` files go to `media-<n>/`, not `media/`, which a `mine` removes when it ends.
 
 ## Example (Python)
 

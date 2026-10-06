@@ -2,7 +2,7 @@
 
 Each call writes exactly one JSON verdict line to fd 1 and exits 0; any other
 exit is a crash. ``mine`` holds the instance lock (a dry run does not); ``render``,
-``check``, ``version``, ``profiles`` and ``settings-export`` run at any time. The
+``media``, ``check``, ``version``, ``profiles`` and ``settings-export`` run at any time. The
 log goes to ``anki_miner.api.log`` (installed by ``cli.entry`` before this runs).
 """
 
@@ -56,6 +56,7 @@ def build_parser() -> argparse.ArgumentParser:
     export.add_argument("--language", required=True)
     export.add_argument("--out", type=Path, required=True)
     commands.add_parser("render").add_argument("run_file", type=Path)
+    commands.add_parser("media").add_argument("media_file", type=Path)
     return parser
 
 
@@ -102,6 +103,11 @@ def _dispatch(args: argparse.Namespace) -> dict[str, object]:
         return _ok("settings-export")
     if args.command == "render":
         return _render(args)
+    if args.command == "media":
+        from anki_miner.cli.api import files, media
+
+        verdicts = media.media_runs(files.parse_media_file(files.read_json_file(args.media_file)))
+        return {**_ok("media", runs=verdicts), "ok": all(v["ok"] for v in verdicts)}
     return _run(args)
 
 
