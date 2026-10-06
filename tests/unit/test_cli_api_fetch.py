@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import sys
 import threading
@@ -15,10 +16,12 @@ from anki_miner.cli.api.contract import ApiError
 from anki_miner.exceptions.youtube import (
     BotDetectionError,
     CookieDatabaseLockedError,
+    FfmpegNotFoundError,
     NoJapaneseSubtitlesError,
     VideoTooLongError,
     YouTubeFetchError,
     YouTubeTimeoutError,
+    YtdlpNotFoundError,
 )
 from anki_miner.models.youtube import FetchedMedia, VideoInfo
 
@@ -35,9 +38,10 @@ INFO = VideoInfo(
 
 
 class _Fetcher:
-    def __init__(self, info=INFO, *, probe_error=None, fetch_error=None, wait_for_cancel=0.0):
+    def __init__(self, info=INFO, *, probe_error=None, fetch_error=None, wait_for_cancel=0.0, cancel_on_return=False):
         self.info, self.probe_error, self.fetch_error = info, probe_error, fetch_error
         self.wait_for_cancel = wait_for_cancel
+        self.cancel_on_return = cancel_on_return  # a cancel that lands as the download ends
         self.fetches: list[tuple[str, Path, bool]] = []
 
     def probe_metadata(self, url):
@@ -57,6 +61,8 @@ class _Fetcher:
             progress_cb("Downloading video", 0.5)
         video = workspace / f"{video_id}.mp4"
         video.write_bytes(b"video")
+        if self.cancel_on_return and cancel_event is not None:
+            cancel_event.set()
         if sub_mode == "transcribe":
             return FetchedMedia(video, None, "generated")
         subtitle = workspace / f"{video_id}.ja.srt"
@@ -127,6 +133,7 @@ def test_a_fetch_writes_its_files_and_the_overrides_mine_takes(monkeypatch, tmp_
     assert not (tmp_path / "yt-1" / "media").exists()
     assert json.loads((tmp_path / "yt-1" / "progress.json").read_text(encoding="utf-8"))["stage"] == 2
     assert _run(tmp_path)["file"] == "fetch-2.json"
+    assert (workspace / "abcdefghijk.mp4").exists()  # a finished fetch's files stay
 
 
 def test_a_crashed_fetchs_leftover_folder_is_replaced(monkeypatch, tmp_path) -> None:
@@ -134,8 +141,19 @@ def test_a_crashed_fetchs_leftover_folder_is_replaced(monkeypatch, tmp_path) -> 
     leftover = tmp_path / "yt-1" / "fetch-1"
     leftover.mkdir(parents=True)
     (leftover / "abcdefghijk.mp4.part").write_bytes(b"half")
+    (tmp_path / "yt-1" / "fetch-1-old").mkdir()
     assert _run(tmp_path)["file"] == "fetch-1.json"
     assert sorted(p.name for p in leftover.iterdir()) == ["abcdefghijk.ja.srt", "abcdefghijk.mp4"]
+    assert (tmp_path / "yt-1" / "fetch-1-old").is_dir()
+
+
+def test_a_file_named_like_a_workspace_is_kept(monkeypatch, tmp_path) -> None:
+    _use(monkeypatch, _Fetcher())
+    (tmp_path / "yt-1").mkdir()
+    (tmp_path / "yt-1" / "fetch-1").write_text("mine", encoding="utf-8")
+    # next_numbered counts it, so the fetch takes the next number and leaves it alone.
+    assert _run(tmp_path)["file"] == "fetch-2.json"
+    assert (tmp_path / "yt-1" / "fetch-1").read_text(encoding="utf-8") == "mine"
 
 
 @pytest.mark.parametrize(
@@ -150,6 +168,7 @@ def test_what_video_youtube_refuses_is_youtube_refused(monkeypatch, tmp_path, in
     fetcher = _use(monkeypatch, _Fetcher(info, probe_error=probe_error))
     verdict = _run(tmp_path, youtube_subtitle_source="captions")
     assert verdict["error"] == "YOUTUBE_REFUSED" and fragment in verdict["message"] and verdict["file"] is None
+    assert verdict["failure_is_transient"] is False
     assert fetcher.fetches == [] and not (tmp_path / "yt-1" / "fetch-1").exists()
 
 
@@ -173,11 +192,41 @@ def test_fetch_failures_say_whether_running_again_helps(
     assert not (tmp_path / "yt-1" / "fetch-1").exists()
 
 
+@pytest.mark.parametrize("error", [YtdlpNotFoundError("yt-dlp gone"), FfmpegNotFoundError("ffmpeg gone")])
+def test_a_tool_lost_during_the_download_is_setup_error(monkeypatch, tmp_path, error) -> None:
+    _use(monkeypatch, _Fetcher(fetch_error=error))
+    verdict = _run(tmp_path)
+    assert verdict["error"] == "SETUP_ERROR" and verdict["failure_is_transient"] is False
+    assert not (tmp_path / "yt-1" / "fetch-1").exists()
+
+
+def test_a_probe_failure_after_a_cancel_is_cancelled(monkeypatch, tmp_path) -> None:
+    cancel = threading.Event()
+    monkeypatch.setattr(fetch, "CancelWatcher", lambda folder, cancel_all: contextlib.nullcontext(cancel))
+
+    class _Probe(_Fetcher):
+        def probe_metadata(self, url):
+            cancel.set()  # the probe takes no cancel: one lands while it runs
+            raise YouTubeFetchError("yt-dlp metadata probe failed")
+
+    _use(monkeypatch, _Probe())
+    assert _run(tmp_path)["error"] == "CANCELLED"
+
+
+def test_a_cancel_as_the_download_ends_stops_before_transcription(monkeypatch, tmp_path) -> None:
+    _use(monkeypatch, _Fetcher(cancel_on_return=True))
+    transcribed: list[Path] = []
+    monkeypatch.setattr(fetch, "transcribe_fetched", lambda *args: transcribed.append(args[3]))
+    assert _run(tmp_path, youtube_subtitle_source="transcribe")["error"] == "CANCELLED"
+    assert transcribed == [] and not (tmp_path / "yt-1" / "fetch-1").exists()
+
+
 def test_transcription_without_the_speech_model_is_setup_error(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(fetch, "usable_model_installed", lambda config: False)
     fetcher = _use(monkeypatch, _Fetcher())
     verdict = _run(tmp_path, youtube_subtitle_source="transcribe")
     assert verdict["error"] == "SETUP_ERROR" and "speech model" in verdict["message"] and fetcher.fetches == []
+    assert verdict["failure_is_transient"] is False
 
 
 def test_a_transcribed_subtitle_is_generated(monkeypatch, tmp_path) -> None:

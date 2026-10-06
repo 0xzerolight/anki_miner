@@ -113,8 +113,8 @@ def _fetch_one(
     folder.mkdir(exist_ok=True)
     if cancel_all.is_set():
         raise ApiError(CANCELLED, "Cancelled before this run started.")
-    # A crash's leftover: a fetch-<n>/ no fetch-<n>.json names, so nothing can be
-    # reading it. It goes, and its number with it (next_numbered counts folders).
+    # A crash's leftover: a fetch-<n>/ that no fetch-<n>.json names. It goes, and
+    # its number with it (next_numbered counts folders).
     for leftover in folder.iterdir():
         if _WORKSPACE.fullmatch(leftover.name) and leftover.is_dir() and not leftover.with_suffix(".json").exists():
             shutil.rmtree(leftover, ignore_errors=True)
@@ -149,6 +149,8 @@ def _fetch(
     except YtdlpNotFoundError as exc:
         raise ApiError(SETUP_ERROR, str(exc)) from exc
     except YouTubeFetchError as exc:
+        if cancel.is_set():  # the probe takes no cancel, but one can land while it runs
+            raise ApiError(CANCELLED, _CANCELLED) from exc
         raise _failure(exc) from exc
     source = cast(SubtitleSource, episode.subtitle_source or config.youtube_subtitle_source)
     mineable, reason, sub_mode = classify_probe_result(info, config, source)
