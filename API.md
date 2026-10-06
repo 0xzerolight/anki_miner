@@ -25,6 +25,7 @@ AnkiMiner --api settings-export --language CODE --out FILE [--profile ID]
 AnkiMiner --api settings-import FILE --language CODE (--name NAME | --profile ID)
 AnkiMiner --api render RUN_FILE
 AnkiMiner --api media MEDIA_FILE
+AnkiMiner --api setup --language CODE --progress FILE [--profile ID]
 ```
 
 Each call writes one JSON line to stdout: its verdict. Exit code 0 means the verdict was written; any other exit code is a crash.
@@ -44,13 +45,13 @@ A verdict:
 
 - A call refused as a whole has `ok: false`, an `error` code, a `message` and `runs: []`.
 - With several runs, `ok` is false if any run failed. Each run carries its own `error` and `message`, and the top-level `error` stays null.
-- `check`, `version`, `profiles` and `settings-import` put their answer in `result`.
+- `check`, `version`, `profiles`, `settings-import` and `setup` put their answer in `result`.
 
 `mine` runs one at a time: it holds Anki Miner's instance lock. It gives `BUSY` in two cases, and the `message` says which:
 - the Anki Miner window is open, including a window opened past its "already running" warning;
 - another command-line or API run is working.
 
-`settings-import` changes settings, so it gives `BUSY` in the same cases.
+`settings-import` and `setup` change settings, so they give `BUSY` in the same cases.
 
 A dry run, `render` and `media` take no lock.
 
@@ -240,7 +241,7 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 | Code | Where | Meaning |
 |---|---|---|
 | `BUSY` | call | the window or another run is open |
-| `BAD_ARGUMENTS` | call | the command line does not parse, or names an unknown language or an `--out` folder that does not exist; for `settings-import`, a FILE it cannot apply, a name it refuses or the active profile |
+| `BAD_ARGUMENTS` | call | the command line does not parse, or names an unknown language or an `--out` or `--progress` folder that does not exist; for `settings-import`, a FILE it cannot apply, a name it refuses or the active profile |
 | `BAD_RUN_FILE` | call | the run file or media file is not valid JSON or breaks the rules above |
 | `PROFILE_UNREADABLE` | call | the profile does not exist or cannot be read |
 | `SETUP_ERROR` | call, run | language pack, dictionary index, ffmpeg, deck, note type, fields or offline dictionary |
@@ -248,7 +249,7 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 | `VIDEO_UNREADABLE` | run | the video does not open |
 | `SUBTITLE_UNREADABLE` | run | the subtitle file cannot be read |
 | `MINING_FAILED` | run | the run itself failed; `message` says why |
-| `CANCELLED` | run | stopped by a `cancel` file or a signal |
+| `CANCELLED` | call, run | stopped by a `cancel` file or a signal, or `setup` stopped by a signal |
 | `INTERNAL` | call, run | an unexpected error; details are in the log |
 
 `message` carries the English text. Codes never change; new ones may be added.
@@ -271,6 +272,7 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 | `render` | the `render` command, `render-<n>.json` and the `rendered` status |
 | `media` | the `media` command and `media-<n>.json` |
 | `settings-import` | the `settings-import` command |
+| `setup` | the `setup` command |
 
 `profiles` puts `{"profiles": [{"id": "anime", "name": "Anime", "active": true}, …]}` in `result`. Before the user has created any profile, the list holds one, `default`.
 
@@ -288,6 +290,15 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 - A FILE that is not a settings object gives `BAD_ARGUMENTS`, and nothing is written.
 
 `schema` goes up only for breaking changes. New keys can appear; ignore keys you do not know.
+
+## setup
+
+`setup --language CODE --progress FILE [--profile ID]` downloads what the setup wizard downloads for CODE: its language pack when it needs one, then its recommended dictionary, frequency and pitch resources. The deck and note type stay the caller's job.
+- The resources are switched on for CODE in the active profile, or in `--profile`. The profile keeps its own mining language; resources for another language wait in that language's settings.
+- A resource already installed is not downloaded again; it is switched on if the profile does not use it yet.
+- While it works, FILE (its folder must exist) holds `{"schema": 1, "item": "jmdict-english", "stage": 2, "stages": 4, "done": 1048576, "total": 20971520}`. `item` is a resource `id` or `language_pack`; `done` and `total` are bytes while downloading, then steps while installing.
+- `result`: `{"language": "ja", "profile": "default", "language_pack": {"status": "not_needed", "message": null}, "resources": [{"id": "jmdict-english", "kind": "dict", "name": "JMdict", "status": "installed", "message": null}, …]}`. `status` is `installed`, `already_installed`, `not_needed` (language pack only), `failed` (`message` says why) or `not_attempted`.
+- `ok` is false when an item failed; the top-level `error` stays null. SIGINT or SIGTERM stops it after the item in flight with `CANCELLED`; what finished stays installed and switched on.
 
 ## Differences from the proposal
 

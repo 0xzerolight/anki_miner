@@ -42,17 +42,21 @@ def next_result_path(folder: Path) -> Path:
 
 
 class ProgressFile:
-    """ProgressCallback -> ``progress.json`` (stage/stages, done/total; no translated names)."""
+    """ProgressCallback -> ``progress.json`` (stage/stages, done/total; no translated names).
+
+    *path* replaces ``<folder>/progress.json`` for a call with no run folder (setup's ``--progress``).
+    """
 
     def __init__(
         self,
         folder: Path,
         run_id: str,
         *,
+        path: Path | None = None,
         min_interval: float = 0.25,
         clock: Callable[[], float] = time.monotonic,
     ) -> None:
-        self._path = folder / PROGRESS
+        self._path = path if path is not None else folder / PROGRESS
         self._state: dict[str, object] = {
             "schema": 1,
             "run_id": run_id,

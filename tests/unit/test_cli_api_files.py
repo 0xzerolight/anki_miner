@@ -167,6 +167,14 @@ def test_progress_file(tmp_path: Path) -> None:
     }
 
 
+def test_progress_file_can_write_to_a_given_path(tmp_path: Path) -> None:
+    target = tmp_path / "elsewhere.json"
+    progress = runfolder.ProgressFile(tmp_path, "ep-01", path=target, min_interval=0.0)
+    progress.on_stage(1, 2, "x")
+    assert json.loads(target.read_text(encoding="utf-8"))["stage"] == 1
+    assert not (tmp_path / runfolder.PROGRESS).exists()
+
+
 def test_cancel_watcher_file_cancels_and_is_deleted(tmp_path: Path) -> None:
     with runfolder.CancelWatcher(tmp_path, threading.Event(), interval=0.01) as cancel:
         (tmp_path / "cancel").touch()

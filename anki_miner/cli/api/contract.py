@@ -6,7 +6,7 @@ from anki_miner.exceptions import AnkiConnectionError
 from anki_miner.services.anki_service import is_transient_anki_transport_error
 
 API_SCHEMA = 1
-COMMANDS = ("mine", "check", "version", "profiles", "settings-export", "render", "media", "settings-import")
+COMMANDS = ("mine", "check", "version", "profiles", "settings-export", "render", "media", "settings-import", "setup")
 #: What this build adds beyond 3.5.0's API, by stable name (API.md, "version"). One name per
 #: addition, appended when it ships; a caller checks a name instead of comparing versions.
 FEATURES = (
@@ -20,6 +20,7 @@ FEATURES = (
     "render",
     "media",
     "settings-import",
+    "setup",
 )
 
 BUSY = "BUSY"
@@ -31,7 +32,7 @@ VIDEO_UNREADABLE = "VIDEO_UNREADABLE"
 BAD_RUN_FILE = "BAD_RUN_FILE"
 BAD_ARGUMENTS = "BAD_ARGUMENTS"  # not in the proposal: a command line that does not parse
 MINING_FAILED = "MINING_FAILED"  # not in the proposal: the pipeline returned a failure
-CANCELLED = "CANCELLED"
+CANCELLED = "CANCELLED"  # a run, or a whole call (setup)
 INTERNAL = "INTERNAL"
 
 

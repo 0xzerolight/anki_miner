@@ -1,8 +1,8 @@
 """``--api``: the mining API for other programs (API.md).
 
 Each call writes exactly one JSON verdict line to fd 1 and exits 0; any other
-exit is a crash. ``mine`` (but not a dry run) and ``settings-import`` hold the
-instance lock; ``render``, ``media``, ``check``, ``version``, ``profiles`` and
+exit is a crash. ``mine`` (but not a dry run), ``settings-import`` and ``setup``
+hold the instance lock; ``render``, ``media``, ``check``, ``version``, ``profiles`` and
 ``settings-export`` run at any time. The log goes to ``anki_miner.api.log``
 (installed by ``cli.entry`` before this runs).
 """
@@ -24,6 +24,7 @@ from anki_miner.cli.api.contract import (
     BAD_ARGUMENTS,
     BAD_RUN_FILE,
     BUSY,
+    CANCELLED,
     COMMANDS,
     FEATURES,
     INTERNAL,
@@ -65,6 +66,10 @@ def build_parser() -> argparse.ArgumentParser:
     target.add_argument("--profile")
     commands.add_parser("render").add_argument("run_file", type=Path)
     commands.add_parser("media").add_argument("media_file", type=Path)
+    setup = commands.add_parser("setup")
+    setup.add_argument("--language", required=True)
+    setup.add_argument("--progress", type=Path, required=True)
+    setup.add_argument("--profile")
     return parser
 
 
@@ -122,6 +127,8 @@ def _dispatch(args: argparse.Namespace) -> dict[str, object]:
         with _locked():
             result = settings_write.import_settings(args.file, args.language, name=args.name, profile_id=args.profile)
         return _ok("settings-import", result=result)
+    if args.command == "setup":
+        return _setup(args)
     return _run(args)
 
 
@@ -169,6 +176,20 @@ def _render(args: argparse.Namespace) -> dict[str, object]:
     with _cancel_on_signals(cancel):
         verdicts = runs.mine_runs(job, cancel, runs.Kind.RENDER)
     return {**_ok(args.command, runs=verdicts), "ok": all(v["ok"] for v in verdicts)}
+
+
+def _setup(args: argparse.Namespace) -> dict[str, object]:
+    """setup: under the run lock; SIGINT/SIGTERM stop it after the item in flight."""
+    from anki_miner.cli.api import setup
+    from anki_miner.cli.entry import _cancel_on_signals
+
+    cancel = threading.Event()
+    with _locked(), _cancel_on_signals(cancel):
+        outcome = setup.run_setup(args.language, args.profile, args.progress, cancel)
+    verdict = _ok(args.command, result=outcome.result)
+    if outcome.cancelled:
+        return {**verdict, "ok": False, "error": CANCELLED, "message": "Setup was cancelled."}
+    return {**verdict, "ok": not outcome.failed}
 
 
 def _ok(command: str | None, **fields: object) -> dict[str, object]:
