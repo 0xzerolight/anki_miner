@@ -138,8 +138,9 @@ def create_parser(config: Any, **kwargs: Any) -> Any:
 
     # Cantonese is as single-character-dense as Mandarin: see zh/parser.py.
     kwargs.setdefault("ellipsis_fragment_guard", False)
-    # The cached tagger the parser itself tokenizes with.
-    kwargs.setdefault("token_post_pass", YueDecompoundPass(get_tagger("yue")))
+    # The cached tagger the parser itself tokenizes with, fetched when the pass
+    # re-tags: a parser that only reads lines (create_line_parser) never loads it.
+    kwargs.setdefault("token_post_pass", YueDecompoundPass(lambda text, **kw: get_tagger("yue")(text, **kw)))
     # Bilingual cues put an English translation line under the native one, and the
     # flattened cue becomes the card's Sentence (ZH-046, KO-06): the script gate drops it.
     kwargs.setdefault("has_target_script", get_profile(config.language).script.contains_target_script)

@@ -8,6 +8,8 @@ import pytest
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.utils import service_factory
+from anki_miner.languages import AVAILABLE_LANGUAGES
+from anki_miner.languages.switching import switch_language
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.definition_service import DefinitionService
 from anki_miner.services.expression_audio_fetcher import ChainedExpressionAudioFetcher, JPod101AudioFetcher
@@ -754,3 +756,26 @@ class TestSharedLookupServices:
         bundle.close()  # must not raise despite freq.close raising
         bundle.close()  # idempotent
         assert definition.close.call_count == 2
+
+
+def _no_tokenizer(*_args, **_kwargs):
+    raise AssertionError("a tokenizer was loaded")
+
+
+@pytest.mark.parametrize("code", AVAILABLE_LANGUAGES)
+def test_the_line_parser_loads_no_tokenizer(base_config, code, monkeypatch):
+    """create_line_parser (--api media) reads lines without loading the language's engine,
+    nor one a profile factory hands its token post-pass (th, yue)."""
+    from anki_miner.languages import tagger_provider
+    from anki_miner.services import subtitle_parser, tagger
+
+    for module, name in (
+        (tagger_provider, "get_tagger"),
+        (tagger_provider, "_build"),  # any other binding of get_tagger still builds through it
+        (subtitle_parser, "get_tagger"),
+        (subtitle_parser, "get_shared_tagger"),
+        (tagger, "get_shared_tagger"),
+    ):
+        monkeypatch.setattr(module, name, _no_tokenizer)
+    parser = service_factory.create_line_parser(switch_language(base_config, code))
+    assert parser.tagger is None

@@ -11,6 +11,7 @@ import pytest
 
 from anki_miner.cli.api import files, media
 from anki_miner.models import MediaData
+from anki_miner.services.media_extractor import MediaExtractorService
 
 SRT = (
     "1\n00:00:12,480 --> 00:00:14,900\n約束したでしょう\n\n"
@@ -60,11 +61,15 @@ def test_media_cuts_each_named_line_and_lists_it(episode, test_config) -> None:
         patch.object(media.settings, "resolve_run_config", return_value=config),
         patch.object(media, "require_ffmpeg"),
         patch.object(media, "check_video"),
-        patch.object(media.MediaExtractorService, "extract_media", side_effect=_cut) as cut,
+        patch.object(MediaExtractorService, "extract_media", side_effect=_cut) as cut,
+        patch.object(media, "MediaExtractorService", wraps=MediaExtractorService) as extractor,
     ):
         [verdict] = media.media_runs(
             _file(episode, [{"line_start": 15.0}, {"line_start": 12.48, "line_expansion": [0, 1]}], still_height=480)
         )
+    # still_height reaches the still and, through the cut config, an animated picture.
+    [(cut_config,), kwargs] = extractor.call_args
+    assert kwargs == {"still_height": 480} and cut_config.screenshot_animated_height == 480
     assert verdict["file"] == "media-1.json"
     first, second = json.loads((episode / "ep-01" / "media-1.json").read_text(encoding="utf-8"))["lines"]
     assert first == {
@@ -85,7 +90,7 @@ def test_media_never_loads_a_tokenizer_or_a_dictionary(episode, test_config) -> 
         patch.object(media.settings, "resolve_run_config", return_value=test_config),
         patch.object(media, "require_ffmpeg"),
         patch.object(media, "check_video"),
-        patch.object(media.MediaExtractorService, "extract_media", side_effect=_cut),
+        patch.object(MediaExtractorService, "extract_media", side_effect=_cut),
         patch("anki_miner.services.subtitle_parser.get_shared_tagger", side_effect=AssertionError("tagger")),
         patch("anki_miner.gui.utils.service_factory.create_shared_lookup_services", side_effect=AssertionError("dict")),
     ):

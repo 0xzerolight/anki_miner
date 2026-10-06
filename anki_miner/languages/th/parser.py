@@ -98,8 +98,11 @@ def create_parser(config: Any, **kwargs: Any) -> Any:
     from anki_miner.languages.registry import get_profile
     from anki_miner.languages.tagger_provider import get_tagger
 
-    # The cached tagger the parser itself tokenizes with.
-    kwargs.setdefault("token_post_pass", ThaiDecompoundPass(get_tagger("th"), config.allowed_pos))
+    # The cached tagger the parser itself tokenizes with, fetched when the pass
+    # re-tags: a parser that only reads lines (create_line_parser) never loads it.
+    kwargs.setdefault(
+        "token_post_pass", ThaiDecompoundPass(lambda text, **kw: get_tagger("th")(text, **kw), config.allowed_pos)
+    )
     # Bilingual cues put an English translation line under the native one, and the
     # flattened cue becomes the card's Sentence (ZH-046, KO-06): the script gate drops it.
     kwargs.setdefault("has_target_script", get_profile(config.language).script.contains_target_script)

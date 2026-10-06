@@ -222,7 +222,7 @@ An episode:
 | `subtitle_offset` | seconds added to every subtitle time; `0` when left out |
 | `audio_track_override` | 0-based audio track, or `null` to find the mining language's track |
 
-Each line is a `line_start` and an optional `line_expansion`, chosen and merged as for `mine`. `media` needs no parse, no dictionary and no Anki, and runs any time. `media-<n>.json` lists per line its `line_start`, `start`, `end`, `text`, `picture` and `audio` (paths in the run folder, `null` when that cut failed). The files are `media-<n>/<k>.<ext>`, `k` being the line's place in `lines`, from 1. `still_height` and `audio_bitrate` are whole numbers of 1 or more. Without ffmpeg or ffprobe the call gives `SETUP_ERROR`; per episode, a video that does not open gives `VIDEO_UNREADABLE`, and a subtitle that cannot be read or has no lines gives `SUBTITLE_UNREADABLE`.
+Each line is a `line_start` and an optional `line_expansion`, chosen and merged as for `mine`. `media` needs no parse, no dictionary and no Anki, and runs any time. It takes no `cancel` file, and a signal ends it without a verdict. `media-<n>.json` lists per line its `line_start`, `start`, `end`, `text`, `picture` and `audio` (paths in the run folder, `null` when that cut failed). The files are `media-<n>/<k>.<ext>`, `k` being the line's place in `lines`, from 1. `still_height` and `audio_bitrate` are whole numbers of 1 or more. Without ffmpeg or ffprobe the call gives `SETUP_ERROR`; per episode, a video that does not open gives `VIDEO_UNREADABLE`, and a subtitle that cannot be read or has no lines gives `SUBTITLE_UNREADABLE`.
 
 ## Progress and cancelling
 

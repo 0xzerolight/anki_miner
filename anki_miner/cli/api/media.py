@@ -13,7 +13,7 @@ from functools import partial
 from pathlib import Path
 
 from anki_miner.cli.api import settings
-from anki_miner.cli.api.contract import BAD_RUN_FILE, SUBTITLE_UNREADABLE, ApiError, run_verdict
+from anki_miner.cli.api.contract import SUBTITLE_UNREADABLE, ApiError, run_verdict
 from anki_miner.cli.api.files import MediaEpisode, MediaFile
 from anki_miner.cli.api.lines import fit_expansion, line_merge, nearest_line
 from anki_miner.cli.api.runfolder import next_numbered, write_json
@@ -31,10 +31,7 @@ def media_runs(media_file: MediaFile) -> list[dict[str, object]]:
     """Every episode's lines cut in turn; a media-<n>.json for each episode that got as far as cutting."""
     config = settings.resolve_run_config(media_file.profile, media_file.language, {})
     if media_file.audio_bitrate is not None:
-        try:
-            config = replace(config, audio_bitrate=media_file.audio_bitrate)
-        except (ValueError, TypeError) as exc:
-            raise ApiError(BAD_RUN_FILE, f"audio_bitrate was refused: {exc}") from exc
+        config = replace(config, audio_bitrate=media_file.audio_bitrate)
     require_ffmpeg(config)
     return [guarded(episode.run_id, partial(_cut_one, media_file, episode, config)) for episode in media_file.episodes]
 
