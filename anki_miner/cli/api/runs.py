@@ -6,7 +6,9 @@ one lookup stack across its runs. Every run's media and temp folder live under
 processor gets no known-words DB and no stats service, so known_words.db and
 stats.db are never touched (the caller keeps that record). A dry run
 (``Kind.DRY_RUN``) ends at the curation step: nothing is cut and nothing
-reaches Anki.
+reaches Anki. A render (``Kind.RENDER``) runs to the notes and writes them,
+with their media, to ``<run_id>/render-<n>/`` and ``render-<n>.json``
+instead of Anki.
 """
 
 from __future__ import annotations
@@ -14,7 +16,7 @@ from __future__ import annotations
 import logging
 import shutil
 import threading
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from enum import Enum
@@ -36,7 +38,8 @@ from anki_miner.cli.api.contract import (
 )
 from anki_miner.cli.api.files import Episode, RunFile
 from anki_miner.cli.api.lines import Fates, LineWords, WordSelection, line_merges, named_word
-from anki_miner.cli.api.runfolder import MEDIA, CancelWatcher, ProgressFile, next_result_path, write_json
+from anki_miner.cli.api.render import Rendered, RenderService
+from anki_miner.cli.api.runfolder import MEDIA, CancelWatcher, ProgressFile, next_numbered, write_json
 from anki_miner.cli.runner import SetupFailure, check_card_target, check_environment
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiConnectionError, SetupError, SubtitleParseError
@@ -84,10 +87,11 @@ class _LogPresenter(NullPresenter):
 
 
 class Kind(Enum):
-    """What a run does with the words it reaches (API.md): mine them, or only report them."""
+    """What a run does with the words it reaches (API.md): mine them, only report them, or render their notes."""
 
     MINE = "mine"
     DRY_RUN = "dry_run"
+    RENDER = "render"
 
 
 class _OfflineAnki(AnkiService):
@@ -157,6 +161,8 @@ class _Mined:
     selection: WordSelection
     fates: Fates
     media_store_failures: int
+    #: a render's notes by mined_form; empty for the other kinds
+    rendered: dict[str, Rendered]
 
 
 def _mine(
@@ -166,18 +172,22 @@ def _mine(
     shared: SharedLookupServices,
     cancel_all: threading.Event,
     kind: Kind,
+    out: Path,
 ) -> _Mined:
     """One process_episode call, media inside the run folder, cleaned up whatever happens.
 
     The temp folder is ``<run_id>/media/`` for every kind: a run folder serves one call at a time.
+    A render's notes and their media go to *out* (``<run_id>/render-<n>/``), which stays.
     """
     run_config = _episode_config(config, episode, folder)
     dry = kind is Kind.DRY_RUN
+    render = RenderService(run_config, out) if kind is Kind.RENDER else None
+    anki_service = _OfflineAnki(run_config) if dry else render if render is not None else AnkiService(run_config)
     processor = create_episode_processor(
         run_config,
         _LogPresenter(),
         None,
-        anki_service=_OfflineAnki(run_config) if dry else AnkiService(run_config),
+        anki_service=anki_service,
         shared_lookup=shared,
         with_known_words_db=False,
         run_temp_root=folder / MEDIA,
@@ -226,6 +236,10 @@ def _mine(
             succeeded = classify_result(result) is MiningOutcome.SUCCESS
             # Inside the watcher, so a cancel also cuts short a dry run's wait on a busy Anki.
             made = _dry_statuses(run_config, processor, selection, cancel.is_set) if dry and succeeded else {}
+        rendered: dict[str, Rendered] = {}
+        if render is not None:  # a stopped render still reports the notes it wrote: their files are in *out*
+            rendered = dict(render.rendered)
+            made = dict.fromkeys(rendered, "rendered")
         anki = processor.anki_service
         failures = anki.last_media_store_failures
         return _Mined(
@@ -242,6 +256,7 @@ def _mine(
                 made=made,
             ),
             media_store_failures=failures if isinstance(failures, int) else 0,
+            rendered=rendered,
         )
     finally:
         processor.close()
@@ -307,7 +322,10 @@ def _guarded(run_id: str, body: Callable[[], dict[str, object]]) -> dict[str, ob
 
 
 def mine_runs(run_file: RunFile, cancel_all: threading.Event, kind: Kind = Kind.MINE) -> list[dict[str, object]]:
-    """Every episode of *run_file* mined in turn; a result-<n>.json for each that got as far as mining."""
+    """Every episode of *run_file* mined in turn.
+
+    Each run that got as far as mining writes its result-<n>.json (a render, its render-<n>.json).
+    """
     config = settings.resolve_run_config(run_file.profile, run_file.language, run_file.overlay)
     with _services(config, kind) as shared:
         return [
@@ -330,22 +348,36 @@ def _mine_one(
         raise ApiError(CANCELLED, "Cancelled before this run started.")
     if kind is not Kind.DRY_RUN:  # a dry run cuts nothing from the video
         _check_video(config, episode)
-    mined = _mine(config, episode, folder, shared, cancel_all, kind)
+    # Numbered first: a render's files folder carries the number of its json.
+    path = next_numbered(folder, "render" if kind is Kind.RENDER else "result")
+    out = folder / path.stem
+    mined = _mine(config, episode, folder, shared, cancel_all, kind, out)
     error = _outcome_error(mined.result)
-    path = next_result_path(folder)
-    write_json(
-        path,
-        {
-            "schema": 1,
-            "run_id": episode.run_id,
-            "dry_run": kind is Kind.DRY_RUN,
-            "outcome": classify_result(mined.result).value,
-            "anki_write_state": mined.result.anki_write_state.value,
-            "failure_is_transient": bool(mined.result.failure_is_transient),
-            "error": error.code if error else None,
-            "message": error.message if error else None,
-            "media_store_failures": mined.media_store_failures,
-            "words": mined.selection.report(mined.fates),
-        },
-    )
+    words = mined.selection.report(mined.fates)
+    report: dict[str, object] = {
+        "schema": 1,
+        "run_id": episode.run_id,
+        "dry_run": kind is Kind.DRY_RUN,
+        "outcome": classify_result(mined.result).value,
+        "anki_write_state": mined.result.anki_write_state.value,
+        "failure_is_transient": bool(mined.result.failure_is_transient),
+        "error": error.code if error else None,
+        "message": error.message if error else None,
+        "media_store_failures": mined.media_store_failures,
+        "words": words,
+    }
+    if kind is Kind.RENDER:  # nothing reaches Anki, and a render is never a dry run
+        del report["dry_run"], report["anki_write_state"]
+        report["words"] = _render_rows(words, mined.rendered, out)
+    write_json(path, report)
     return run_verdict(episode.run_id, error=error, file=path.name)
+
+
+def _render_rows(rows: list[dict[str, object]], rendered: Mapping[str, Rendered], out: Path) -> list[dict[str, object]]:
+    """A render's rows: each rendered word's fields, and its files as paths inside the run folder."""
+    for row in rows:
+        form = row["mined_form"]
+        note = rendered.get(form) if row["status"] == "rendered" and isinstance(form, str) else None
+        row["fields"] = note.fields if note else None
+        row["files"] = [f"{out.name}/{name}" for name in note.files] if note else []
+    return rows

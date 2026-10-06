@@ -6,7 +6,7 @@ from anki_miner.exceptions import AnkiConnectionError
 from anki_miner.services.anki_service import is_transient_anki_transport_error
 
 API_SCHEMA = 1
-COMMANDS = ("mine", "check", "version", "profiles", "settings-export")
+COMMANDS = ("mine", "check", "version", "profiles", "settings-export", "render")
 #: What this build adds beyond 3.5.0's API, by stable name (API.md, "version"). One name per
 #: addition, appended when it ships; a caller checks a name instead of comparing versions.
 FEATURES = (
@@ -17,6 +17,7 @@ FEATURES = (
     "filter-names",
     "word-from-line",
     "dry-run",
+    "render",
 )
 
 BUSY = "BUSY"

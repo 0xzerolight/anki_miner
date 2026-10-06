@@ -13,7 +13,7 @@ import pytest
 import requests
 
 from anki_miner.cli import runner
-from anki_miner.cli.api import files, runs
+from anki_miner.cli.api import files, render, runfolder, runs
 from anki_miner.cli.api.contract import ApiError
 from anki_miner.exceptions import SubtitleParseError
 from anki_miner.models import CANCELLED_ERROR, AnkiWriteState, ProcessingResult
@@ -398,3 +398,31 @@ def test_a_dry_run_with_anki_closed_asks_once_and_never_waits(services, tmp_path
 def test_a_real_mine_says_dry_run_false(services, tmp_path, video) -> None:
     runs.mine_runs(_run_file(tmp_path, video), threading.Event())
     assert _result_file(tmp_path)["dry_run"] is False
+
+
+def test_render_writes_render_n_beside_the_results_and_no_result_file(services, tmp_path, video) -> None:
+    def process(*_args, **kwargs):
+        kwargs["curation_callback"](services.words())
+        anki = services.factory.call_args.kwargs["anki_service"]
+        anki.rendered = {"約束": render.Rendered(fields={"Word": "約束"}, files=["約束_x.jpg"])}
+        return _result()
+
+    services.processor.process_episode.side_effect = process
+    [verdict] = runs.mine_runs(_run_file(tmp_path, video), threading.Event(), runs.Kind.RENDER)
+    assert verdict["file"] == "render-1.json"
+    assert not (tmp_path / "ep-01" / "result-1.json").exists()
+    made, missing = json.loads((tmp_path / "ep-01" / "render-1.json").read_text(encoding="utf-8"))["words"]
+    assert (made["status"], made["fields"], made["files"]) == ("rendered", {"Word": "約束"}, ["render-1/約束_x.jpg"])
+    assert (missing["status"], missing["fields"], missing["files"]) == ("not_found", None, [])
+    anki = services.factory.call_args.kwargs["anki_service"]
+    assert isinstance(anki, render.RenderService)
+    services.check_card_target.assert_called_once()  # the note type is checked as for mine
+
+
+def test_a_failed_calls_leftover_folder_takes_its_number(tmp_path) -> None:
+    """Review Focus 4: a render or media call that died leaves <stem>-<n>/ and no json behind."""
+    (tmp_path / "render-1").mkdir()
+    (tmp_path / "result-3.json").write_text("{}", encoding="utf-8")
+    assert runfolder.next_numbered(tmp_path, "render").name == "render-2.json"
+    assert runfolder.next_numbered(tmp_path, "result").name == "result-4.json"
+    assert runfolder.next_numbered(tmp_path, "media").name == "media-1.json"

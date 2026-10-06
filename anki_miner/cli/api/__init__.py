@@ -1,9 +1,9 @@
 """``--api``: the mining API for other programs (API.md).
 
 Each call writes exactly one JSON verdict line to fd 1 and exits 0; any other
-exit is a crash. ``mine`` holds the instance lock (a dry run does not); ``check``,
-``version``, ``profiles`` and ``settings-export`` run at any time. The log goes
-to ``anki_miner.api.log`` (installed by ``cli.entry`` before this runs).
+exit is a crash. ``mine`` holds the instance lock (a dry run does not); ``render``,
+``check``, ``version``, ``profiles`` and ``settings-export`` run at any time. The
+log goes to ``anki_miner.api.log`` (installed by ``cli.entry`` before this runs).
 """
 
 from __future__ import annotations
@@ -17,7 +17,16 @@ from pathlib import Path
 from typing import NoReturn
 
 from anki_miner import __version__
-from anki_miner.cli.api.contract import API_SCHEMA, BAD_ARGUMENTS, BUSY, COMMANDS, FEATURES, INTERNAL, ApiError
+from anki_miner.cli.api.contract import (
+    API_SCHEMA,
+    BAD_ARGUMENTS,
+    BAD_RUN_FILE,
+    BUSY,
+    COMMANDS,
+    FEATURES,
+    INTERNAL,
+    ApiError,
+)
 from anki_miner.cli.entry import _prepare_process, _private_stdout
 
 logger = logging.getLogger(__name__)
@@ -46,6 +55,7 @@ def build_parser() -> argparse.ArgumentParser:
     export.add_argument("--profile")
     export.add_argument("--language", required=True)
     export.add_argument("--out", type=Path, required=True)
+    commands.add_parser("render").add_argument("run_file", type=Path)
     return parser
 
 
@@ -90,6 +100,8 @@ def _dispatch(args: argparse.Namespace) -> dict[str, object]:
     if args.command == "settings-export":
         commands.settings_export(args.profile, args.language, args.out)
         return _ok("settings-export")
+    if args.command == "render":
+        return _render(args)
     return _run(args)
 
 
@@ -115,6 +127,20 @@ def _run(args: argparse.Namespace) -> dict[str, object]:
         finally:
             lock.unlock()
     # With several runs the call is ok only if every run is; each run carries its own error.
+    return {**_ok(args.command, runs=verdicts), "ok": all(v["ok"] for v in verdicts)}
+
+
+def _render(args: argparse.Namespace) -> dict[str, object]:
+    """render: the run file as for mine, no lock (nothing reaches Anki)."""
+    from anki_miner.cli.api import files, runs
+    from anki_miner.cli.entry import _cancel_on_signals
+
+    job = files.parse_run_file(files.read_json_file(args.run_file))
+    if job.dry_run:
+        raise ApiError(BAD_RUN_FILE, "dry_run is for mine; render writes nothing to Anki already.")
+    cancel = threading.Event()
+    with _cancel_on_signals(cancel):
+        verdicts = runs.mine_runs(job, cancel, runs.Kind.RENDER)
     return {**_ok(args.command, runs=verdicts), "ok": all(v["ok"] for v in verdicts)}
 
 

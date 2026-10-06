@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 PROGRESS = "progress.json"
 CANCEL = "cancel"
 MEDIA = "media"
-_RESULT = re.compile(r"result-(\d+)\.json")
 
 
 def write_json(path: Path, data: object) -> None:
@@ -26,9 +25,20 @@ def write_json(path: Path, data: object) -> None:
         tmp.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
 
 
+def next_numbered(folder: Path, stem: str) -> Path:
+    """The next ``<stem>-<n>.json`` in *folder*; ``n`` counts up from 1 per stem.
+
+    A ``<stem>-<n>/`` folder counts too: a render or media call that failed
+    midway leaves its files folder without a json, and the next call must not
+    reuse that number.
+    """
+    pattern = re.compile(rf"{re.escape(stem)}-(\d+)(?:\.json)?")
+    numbers = [int(m.group(1)) for p in folder.iterdir() if (m := pattern.fullmatch(p.name))]
+    return folder / f"{stem}-{max(numbers, default=0) + 1}.json"
+
+
 def next_result_path(folder: Path) -> Path:
-    numbers = [int(m.group(1)) for p in folder.iterdir() if (m := _RESULT.fullmatch(p.name))]
-    return folder / f"result-{max(numbers, default=0) + 1}.json"
+    return next_numbered(folder, "result")
 
 
 class ProgressFile:

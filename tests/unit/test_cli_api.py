@@ -227,6 +227,29 @@ def test_a_dry_run_takes_no_lock(verdict, tmp_path, monkeypatch) -> None:
     assert seen["kind"] is runs.Kind.DRY_RUN
 
 
+def test_render_takes_no_lock_and_refuses_a_dry_run(verdict, tmp_path, monkeypatch) -> None:
+    from anki_miner.cli.api import runs
+    from anki_miner.config import paths as config_paths
+    from anki_miner.gui.app import _hold_window_marker
+
+    kinds = []
+    monkeypatch.setattr(
+        runs,
+        "mine_runs",
+        lambda job, cancel, kind=None: kinds.append(kind)
+        or [{"run_id": "e", "ok": True, "error": None, "message": None, "file": "render-1.json"}],
+    )
+    config_paths.ANKI_MINER_HOME.mkdir(parents=True, exist_ok=True)
+    marker = _hold_window_marker(config_paths.ANKI_MINER_HOME)  # the window is open: mine would be BUSY
+    try:
+        assert verdict("render", _write_run_file(tmp_path))["ok"] is True and kinds == [runs.Kind.RENDER]
+    finally:
+        marker.unlock()
+    run = tmp_path / "run.json"
+    run.write_text(json.dumps({**json.loads(run.read_text(encoding="utf-8")), "dry_run": True}), encoding="utf-8")
+    assert verdict("render", str(run))["error"] == "BAD_RUN_FILE"
+
+
 def test_bad_run_file_is_refused_before_the_lock(verdict, tmp_path) -> None:
     bad = tmp_path / "run.json"
     bad.write_text("{}", encoding="utf-8")

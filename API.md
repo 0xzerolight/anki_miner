@@ -22,6 +22,7 @@ AnkiMiner --api check --language CODE [--profile ID]
 AnkiMiner --api version
 AnkiMiner --api profiles
 AnkiMiner --api settings-export --language CODE --out FILE [--profile ID]
+AnkiMiner --api render RUN_FILE
 ```
 
 Each call writes one JSON line to stdout: its verdict. Exit code 0 means the verdict was written; any other exit code is a crash.
@@ -47,7 +48,7 @@ A verdict:
 - the Anki Miner window is open, including a window opened past its "already running" warning;
 - another command-line or API run is working.
 
-A dry run takes no lock.
+A dry run and `render` take no lock.
 
 `check`, `version`, `profiles` and `settings-export` run at any time. On Windows every call holds the app's mutex, so the installer waits for it.
 
@@ -57,10 +58,12 @@ A dry run takes no lock.
 
 | File | Written by | Content |
 |---|---|---|
-| `progress.json` | mine | the current stage while a run works |
+| `progress.json` | mine, render | the current stage while a run works |
 | `result-<n>.json` | mine | one per `mine` of that `run_id`; `n` counts up from 1 |
+| `render-<n>.json` | render | one per `render` of that `run_id` |
+| `render-<n>/` | render | the media its fields name; the caller deletes them |
 | `cancel` | the caller | stops the run (see Cancelling) |
-| `media/` | mine | temporary clips and pictures, removed before the run ends |
+| `media/` | mine, render | temporary clips and pictures of a `mine` or `render`, removed before it ends |
 
 A run folder serves one call at a time: calls on the same `run_id` share its `progress.json`, `cancel` file and `media/`. Calls on different `run_id`s can run side by side.
 
@@ -174,6 +177,7 @@ Episodes run one at a time, and each run's `result-<n>.json` is written as it en
 | `not_attempted` | the run stopped (cancelled or failed) before reaching it |
 | `uncertain` | its note was being added when the connection failed; check Anki before mining it again |
 | `ready` | dry run only: the run would mine it |
+| `rendered` | render only: its note's fields and media are in the run folder |
 
 - `media_missing` lists `picture` and `audio` when that clip or picture could not be cut. Missing pronunciation audio is not reported.
 - `media_store_failures` counts the media files Anki could not store during the run.
@@ -186,6 +190,10 @@ Episodes run one at a time, and each run's `result-<n>.json` is written as it en
 ## A dry run
 
 `dry_run: true` runs the same file without cutting media or writing anything to Anki, and needs neither Anki nor ffmpeg. It does not open the video either, so a `video_file` that does not open shows up only on a real `mine`. It runs any time, beside calls on other `run_id`s. Each word the run would mine comes back `ready`, `no_definition` (a word made from its line that no offline dictionary defines) or, when Anki answers, `duplicate`; the others as for `mine`. The result file says `"dry_run": true`.
+
+## render
+
+`render` takes the same run file as `mine` and does everything `mine` does up to the notes. Instead of adding them, it writes each word's note fields and media to the run folder. Nothing goes to Anki and there is no duplicate check, so a word Anki already has is rendered too; Anki must still answer, for the note type's fields. It runs any time, beside calls on other `run_id`s. `render-<n>.json` has the result file's keys except `anki_write_state` and `dry_run`. A word that became a note is `rendered`; its row adds `fields` (the note's fields by Anki field name) and `files` (the files they name, in `render-<n>/`). Each file has the name `mine` would store it under in Anki, so a caller can store it under that name and update a note with the fields as given. Other words have `fields: null` and `files: []`. Images inside dictionary definitions are not copied.
 
 ## Progress and cancelling
 
@@ -228,6 +236,7 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 | `filter-names` | `filter` is `duplicate-expression` on a word the merge of words sharing one dictionary entry removed |
 | `word-from-line` | a named line is the one used, and a word the episode does not produce there is made from it; `surface`, `reading` and `from_line` |
 | `dry-run` | `dry_run` in the run file, the result's `dry_run` and the `ready` status |
+| `render` | the `render` command, `render-<n>.json` and the `rendered` status |
 
 `profiles` puts `{"profiles": [{"id": "anime", "name": "Anime", "active": true}, …]}` in `result`. Before the user has created any profile, the list holds one, `default`.
 
