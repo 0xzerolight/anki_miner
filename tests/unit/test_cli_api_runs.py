@@ -273,3 +273,22 @@ def test_the_collapse_record_reaches_the_result(services, tmp_path, video) -> No
         "ない",
         "duplicate-expression",
     )
+
+
+def test_the_languages_fold_reaches_the_selection(services, tmp_path, video) -> None:
+    services.words = lambda: [_word("May", 1)]
+    with patch.object(runs, "get_profile", return_value=SimpleNamespace(dedup_fold=str.casefold)):
+        runs.mine_runs(_run_file(tmp_path, video, words=[{"word": "MAY"}]), threading.Event())
+    assert _result_file(tmp_path)["words"][0]["mined_form"] == "May"  # neither front nor lemma is "MAY"
+
+
+def test_allowed_duplicate_cards_keep_fold_equal_words_apart(services, tmp_path, video, test_config) -> None:
+    services.words = lambda: [_word("May", 1), _word("may", 3)]
+    allowed = replace(test_config, allow_duplicate_cards=True)
+    with (
+        patch.object(runs.settings, "resolve_run_config", return_value=allowed),
+        patch.object(runs, "get_profile", return_value=SimpleNamespace(dedup_fold=str.casefold)),
+    ):
+        runs.mine_runs(_run_file(tmp_path, video, words=[{"word": "May"}, {"word": "may"}]), threading.Event())
+    assert [w["mined_form"] for w in _result_file(tmp_path)["words"]] == ["May", "may"]
+    assert "duplicate" not in [w["status"] for w in _result_file(tmp_path)["words"]]

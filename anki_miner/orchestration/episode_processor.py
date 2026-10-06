@@ -1648,8 +1648,10 @@ class EpisodeProcessor:
             for word, pair in zip(unknown_words, identity_pairs, strict=True):
                 identities = identities_by_pair.get(pair, set())
                 key = word.mined_form if fold is None else fold(word.mined_form)
-                winner = owner.get(key) or next(
-                    (identity_owner[i] for i in sorted(identities) if i in identity_owner), None
+                winner = (
+                    owner[key]
+                    if key in owner
+                    else next((identity_owner[i] for i in sorted(identities) if i in identity_owner), None)
                 )
                 if winner is not None:
                     self.last_collapsed.append((word, winner))

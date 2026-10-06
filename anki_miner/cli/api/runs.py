@@ -156,6 +156,7 @@ def _mine(
             merge_budget_seconds(config.audio_padding),
             clean=parser._clean_line_text,  # the cleaner parse_raw_entries applied to the lines
             fold=get_profile(config_language(config)).dedup_fold,
+            allow_duplicates=run_config.allow_duplicate_cards,
         )
         with CancelWatcher(folder, cancel_all) as cancel:
             try:

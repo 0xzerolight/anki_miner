@@ -193,7 +193,7 @@ def test_a_run_that_stopped_before_curation_attempted_nothing() -> None:
 
 
 def test_a_run_that_finished_without_curation_found_nothing() -> None:
-    # e.g. the subtitle yields no words, or the profile's filters removed every one: re-mining will not help
+    # e.g. the subtitle yields no words, or none survives phase 2 (no named word was produced): re-mining will not help
     selection = _selection([R("約束")])
     [row] = selection.report(lines.Fates(stopped=False))
     assert row["status"] == "not_found"
@@ -240,3 +240,17 @@ def test_a_merged_word_is_not_found_with_the_merge_named() -> None:
     selection([_word("分かる", 1)])
     [row] = selection.report(lines.Fates(collapsed=[(_word("わかる", 3, lemma="分かる"), "分かる")]))
     assert (row["status"], row["mined_form"], row["filter"]) == ("not_found", "分かる", "duplicate-expression")
+
+
+def test_fronts_that_fold_together_are_one_word_while_the_merge_is_on() -> None:
+    selection = lines.WordSelection([R("May"), R("may")], ENTRIES, ENTRIES, MERGES, 30.0, fold=str.casefold)
+    assert [w.mined_form for w in selection([_word("May", 1), _word("may", 3)])] == ["May"]
+    assert [r["status"] for r in selection.report(lines.Fates())] == ["not_attempted", "duplicate"]
+
+
+def test_with_duplicate_cards_allowed_fronts_that_fold_together_stay_apart() -> None:
+    # phase 2 keeps fold-equal fronts apart then, so each named one is its own word
+    selection = lines.WordSelection(
+        [R("May"), R("may")], ENTRIES, ENTRIES, MERGES, 30.0, fold=str.casefold, allow_duplicates=True
+    )
+    assert [w.mined_form for w in selection([_word("May", 1), _word("may", 3)])] == ["May", "may"]

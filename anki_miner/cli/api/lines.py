@@ -121,6 +121,7 @@ class WordSelection:
         *,
         clean: Callable[[str], str] | None = None,
         fold: Callable[[str], str] | None = None,
+        allow_duplicates: bool = False,
     ) -> None:
         self._requests = list(requests)
         self._entries = entries
@@ -131,17 +132,24 @@ class WordSelection:
         #: user's filter), so a ``line_text`` copied from the file matches its line.
         self._clean = clean or (lambda text: text)
         #: The language's comparison fold (``LanguageProfile.dedup_fold``): the last
-        #: way a name matches, and how fronts compare for repeats.
+        #: way a name matches, and how fronts compare for repeats while the merge is on.
         self._fold = fold
+        #: ``allow_duplicate_cards``: repeats then compare exact fronts (NFC), as
+        #: phase 2 keeps fold-equal words apart.
+        self._allow_duplicates = allow_duplicates
         self._chosen: dict[int, _Picked] = {}  # by request index
         self._repeats: dict[int, str] = {}  # request index -> the mined_form an earlier request took
         #: False until the processor reached the curation step.
         self.ran = False
 
     def _key(self, front: str) -> str:
-        """How fronts compare for repeats: NFC, then the language's fold (phase 2's collapse key)."""
+        """NFC, then the language's fold (phase 2's collapse key)."""
         front = _nfc(front)
         return front if self._fold is None else self._fold(front)
+
+    def _repeat_key(self, front: str) -> str:
+        """How fronts compare for repeats: the collapse key while the merge is on, else the exact front."""
+        return _nfc(front) if self._allow_duplicates else self._key(front)
 
     def __call__(self, words: list[TokenizedWord]) -> list[TokenizedWord]:
         self.ran = True
@@ -161,10 +169,10 @@ class WordSelection:
             if not pool:
                 continue
             placed = self._place(pool, request)
-            if self._key(placed.word.mined_form) in taken:
+            if self._repeat_key(placed.word.mined_form) in taken:
                 self._repeats[i] = placed.word.mined_form
                 continue
-            taken.add(self._key(placed.word.mined_form))
+            taken.add(self._repeat_key(placed.word.mined_form))
             expansion = self._expansion(request, placed)
             chosen = replace(placed.variant, line_expansion=expansion, clip_override=None, screenshot_override=None)
             self._chosen[i] = _Picked(chosen, placed.line, expansion)
