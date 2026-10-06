@@ -2,8 +2,9 @@
 
 Each call writes exactly one JSON verdict line to fd 1 and exits 0; any other
 exit is a crash. ``mine`` (but not a dry run), ``settings-import`` and ``setup``
-hold the instance lock; ``render``, ``media``, ``fetch``, ``check``, ``version``, ``profiles``
-and ``settings-export`` run at any time. The log goes to ``anki_miner.api.log``
+hold the run lock: ``mine`` runs beside an idle window; ``settings-import`` and
+``setup`` refuse any window. ``render``, ``media``, ``fetch``, ``check``,
+``version``, ``profiles`` and ``settings-export`` run at any time. The log goes to ``anki_miner.api.log``
 (installed by ``cli.entry`` before this runs).
 """
 
@@ -136,12 +137,12 @@ def _dispatch(args: argparse.Namespace) -> dict[str, object]:
 
 
 @contextlib.contextmanager
-def _locked() -> Iterator[None]:
+def _locked(*, beside_window: bool = False) -> Iterator[None]:
     """The run lock for one call; BUSY when a window or another run holds it (acquire_run_lock says which)."""
     from anki_miner.cli.entry import Busy, acquire_run_lock
 
     try:
-        lock = acquire_run_lock()
+        lock = acquire_run_lock(beside_window=beside_window)
     except Busy as exc:
         raise ApiError(BUSY, str(exc)) from exc
     try:
@@ -160,7 +161,7 @@ def _run(args: argparse.Namespace) -> dict[str, object]:
     with contextlib.ExitStack() as stack:
         # A dry run writes nothing shared (no Anki, known-words or stats DB): it runs beside the window and other runs.
         if not job.dry_run:
-            stack.enter_context(_locked())
+            stack.enter_context(_locked(beside_window=True))
         stack.enter_context(_cancel_on_signals(cancel))
         verdicts = runs.mine_runs(job, cancel, runs.Kind.DRY_RUN) if job.dry_run else runs.mine_runs(job, cancel)
     # With several runs the call is ok only if every run is; each run carries its own error.

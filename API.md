@@ -48,11 +48,13 @@ A verdict:
 - With several runs, `ok` is false if any run failed. Each run carries its own `error` and `message`, and the top-level `error` stays null.
 - `check`, `version`, `profiles`, `settings-import` and `setup` put their answer in `result`.
 
-`mine` runs one at a time: it holds Anki Miner's instance lock. It gives `BUSY` in two cases, and the `message` says which:
-- the Anki Miner window is open, including a window opened past its "already running" warning;
+`mine` runs one at a time, and beside an open window that is not mining. It gives `BUSY` in two cases, and the `message` says which:
+- the Anki Miner window is mining, or its Word Curator is open;
 - another command-line or API run is working.
 
-`settings-import` and `setup` change settings, so they give `BUSY` in the same cases.
+`settings-import` and `setup` change settings, so they also give `BUSY` while any Anki Miner window is open, including one opened past its "already running" warning.
+
+A run beside the window does not stop the window from mining. If both add the same word, Anki keeps the first, and the other reports it `refused`. Importing, removing or downloading dictionaries in the window while a run works can fail (on Windows the run holds them open); do it again after the run.
 
 A dry run, `render` and `media` take no lock.
 
@@ -262,7 +264,7 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 
 | Code | Where | Meaning |
 |---|---|---|
-| `BUSY` | call | the window or another run is open |
+| `BUSY` | call | the window is mining, or another run is working; for `settings-import` and `setup`, any open window |
 | `BAD_ARGUMENTS` | call | the command line does not parse, or names an unknown language or an `--out` or `--progress` folder that does not exist; for `settings-import`, a FILE it cannot apply, a name it refuses or the active profile; for `setup`, a language the profile has never used |
 | `BAD_RUN_FILE` | call | the run file, media file or fetch file is not valid JSON or breaks the rules above |
 | `PROFILE_UNREADABLE` | call | the profile does not exist or cannot be read |
@@ -298,6 +300,7 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 | `settings-import` | the `settings-import` command |
 | `setup` | the `setup` command |
 | `fetch` | the `fetch` command, `fetch-<n>.json`, and `check`'s `yt_dlp` and `speech_model` |
+| `beside-window` | `mine` runs beside an open window that is not mining |
 
 `profiles` puts `{"profiles": [{"id": "anime", "name": "Anime", "active": true}, …]}` in `result`. Before the user has created any profile, the list holds one, `default`.
 

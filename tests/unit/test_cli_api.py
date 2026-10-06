@@ -46,6 +46,7 @@ def test_version(verdict) -> None:
         },
     }
     assert {"sentence-rules-off", "bold-target"} <= set(v["result"]["features"])
+    assert "beside-window" in v["result"]["features"]
 
 
 def test_unknown_command_is_bad_arguments(verdict) -> None:
@@ -204,19 +205,42 @@ def _write_run_file(tmp_path) -> str:
     return str(run)
 
 
-def test_mine_busy_while_window_open(verdict, tmp_path) -> None:
+def test_mine_runs_beside_an_idle_window(verdict, tmp_path, monkeypatch) -> None:
+    from anki_miner.cli.api import runs
     from anki_miner.config import paths as config_paths
     from anki_miner.gui.app import _hold_window_marker
 
-    run = _write_run_file(tmp_path)
+    monkeypatch.setattr(
+        runs,
+        "mine_runs",
+        lambda job, cancel: [{"run_id": "e", "ok": True, "error": None, "message": None, "file": "result-1.json"}],
+    )
     config_paths.ANKI_MINER_HOME.mkdir(parents=True, exist_ok=True)
     marker = _hold_window_marker(config_paths.ANKI_MINER_HOME)
     assert marker is not None
     try:
-        v = verdict("mine", run)
+        v = verdict("mine", _write_run_file(tmp_path))
     finally:
         marker.unlock()
-    assert v["error"] == "BUSY" and v["runs"] == [] and "window is open" in v["message"]
+    assert v["ok"] is True and v["runs"][0]["file"] == "result-1.json"
+
+
+def test_mine_busy_while_the_window_mines(verdict, tmp_path) -> None:
+    import os
+
+    from PyQt6.QtCore import QLockFile
+
+    from anki_miner.config import paths as config_paths
+
+    run = _write_run_file(tmp_path)
+    config_paths.ANKI_MINER_HOME.mkdir(parents=True, exist_ok=True)
+    mining = QLockFile(str(config_paths.ANKI_MINER_HOME / f"instance.mining-{os.getpid()}.lock"))
+    assert mining.tryLock(0)
+    try:
+        v = verdict("mine", run)
+    finally:
+        mining.unlock()
+    assert v["error"] == "BUSY" and "mining" in v["message"] and v["runs"] == []
     assert not (tmp_path / "e").exists()  # refused before any run folder
 
 

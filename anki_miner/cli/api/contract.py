@@ -33,6 +33,7 @@ FEATURES = (
     "settings-import",
     "setup",
     "fetch",
+    "beside-window",
 )
 
 BUSY = "BUSY"
