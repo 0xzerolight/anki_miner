@@ -957,8 +957,8 @@ def _acquire_instance_lock(
 
 #: Every window holds a lock file of its own under this prefix for its
 #: lifetime — including one started past the "already running" warning, which
-#: holds no instance.lock. Command-line and API runs refuse while a live one
-#: exists (cli/entry.py acquire_run_lock).
+#: holds no instance.lock. ``--api mine`` runs beside a live one while its window
+#: is idle; every other command-line and API run refuses (cli/entry.py acquire_run_lock).
 WINDOW_MARKER_PREFIX = "instance.window-"
 
 
@@ -1075,16 +1075,19 @@ def _run_store_recovery_if_locked(
 ) -> None:
     """Run destructive startup repair only while this process owns the lock.
 
-    It also skips while a command-line or API run holds the run lock.
+    It also holds the run lock through the repair, and skips when a
+    command-line or API run holds it.
     """
     if instance_lock is None:
         logger.warning("Skipping startup store recovery because the instance lock is not held")
         return
     # Beside a window a command-line or API run holds only instance.run.lock
-    # (cli/entry.py acquire_run_lock); its stores are open, so leave them be.
-    from anki_miner.cli.entry import RUN_LOCK_NAME, _held  # function-local: cli.entry reaches back into this module
+    # (cli/entry.py acquire_run_lock). Holding it here, not probing it, keeps
+    # the repair off a working run's stores and refuses a run that starts mid-repair.
+    from anki_miner.cli.entry import RUN_LOCK_NAME  # function-local: cli.entry reaches back into this module
 
-    if _held(ANKI_MINER_HOME / RUN_LOCK_NAME):
+    run_lock = QLockFile(str(ANKI_MINER_HOME / RUN_LOCK_NAME))
+    if not run_lock.tryLock(0):
         logger.warning("Skipping startup store recovery because a command-line or API run is working")
         return
     try:
@@ -1094,6 +1097,8 @@ def _run_store_recovery_if_locked(
         )
     except Exception:  # noqa: BLE001 — bucket A: recovery is skipped and startup continues.
         logger.exception("Startup store recovery failed; continuing startup")
+    finally:
+        run_lock.unlock()
 
 
 @runtime_checkable

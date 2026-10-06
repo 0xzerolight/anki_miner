@@ -83,7 +83,7 @@ Item `status` is `success`, `failed`, `cancelled` or `skipped` (not reached afte
 
 - stderr carries free-form diagnostics and the output of child processes such as ffmpeg. Read it or send it to `DEVNULL`; an unread stderr pipe can fill up and stall the run.
 - The word curator never opens. Every word that passes the user's filters is mined, even when "Review words before mining" is on.
-- Only one Anki Miner process runs at a time. While the Anki Miner window (including one opened past its "already running" warning) or another command-line run is open, the command exits with `busy`, and `error` says which. Run jobs one after another.
+- The command runs one at a time and never beside the window: while the Anki Miner window (including one opened past its "already running" warning) is open or another command-line or API run is working, it exits with `busy`, and `error` says which. Only `--api mine` (API.md) runs beside an idle window. Run jobs one after another.
 - Nothing is retried automatically. Check `retryable` and run the item again if it is true.
 - YouTube needs yt-dlp, which the app installs the first time it is used (Video → YouTube).
 - To cancel, send SIGINT or SIGTERM on Linux and macOS; the run stops at its next step and reports `cancelled`. On Windows, terminate the process. Notes already added to Anki stay.

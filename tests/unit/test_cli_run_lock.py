@@ -131,3 +131,29 @@ def test_a_window_skips_store_repair_while_a_run_holds_the_run_lock(home, test_c
         assert repaired == [test_config]
     finally:
         own.unlock()
+
+
+def test_a_beside_window_run_is_refused_while_the_window_repairs_its_stores(home, test_config, monkeypatch) -> None:
+    from anki_miner.gui import app
+
+    refused = []
+
+    def repair(config, **kw) -> None:
+        # A --api mine starting mid-repair sees the window's marker and would take only the run lock.
+        try:
+            entry.acquire_run_lock(beside_window=True).unlock()
+        except entry.Busy:
+            refused.append(True)
+        else:
+            refused.append(False)
+
+    monkeypatch.setattr(app, "run_startup_store_recovery", repair)
+    window = _hold(home / f"instance.window-{os.getpid()}.lock")
+    own = _hold(home / "instance.lock")
+    try:
+        app._run_store_recovery_if_locked(test_config, own, allow_collection=True)
+    finally:
+        own.unlock()
+        window.unlock()
+    assert refused == [True]
+    assert _free(home / "instance.run.lock")
