@@ -90,7 +90,9 @@ def test_libmpv_comes_from_the_assets_repo_and_the_preflight_mirrors_linux() -> 
     assert base.group(1).startswith(_ASSETS_DOWNLOADS)
     assert preflight_url.group(1) == f"{base.group(1)}/libmpv-linux-x86_64.tar.gz"
     assert sha.group(1) == preflight_sha.group(1)
-    assert "github.repository }}/releases/download/vendor-libmpv" not in release
+    # The macOS and Windows legs carry their own copy of the base: one host, one tag.
+    leg_bases = set(re.findall(r'https://github\.com/[^"/]+(?:/[^"/]+)?/releases/download/vendor-libmpv-\d+', release))
+    assert leg_bases == {base.group(1)}
 
 
 def test_vendor_libmpv_cannot_publish_into_this_repo() -> None:
