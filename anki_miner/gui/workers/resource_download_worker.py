@@ -138,6 +138,23 @@ def _retype_for_suffix(temp: Path, url: str) -> Path:
     return retyped
 
 
+class PromotionBlocked(Exception):
+    """The indexed resources became busy just before a resource could be installed."""
+
+
+def phase_reporter(spec: ResourceSpec, emit: Callable[[ResourceProgress], None]) -> _ItemPhaseReporter:
+    """One resource's progress reporter: entries for a dictionary, a counted pass otherwise."""
+    return _ItemPhaseReporter(spec, emit, counts_entries=spec.kind == "dict")
+
+
+def pinned_slot(spec: ResourceSpec) -> str | None:
+    """The slot *spec* always imports into, or None when its zip's title names it (see _pinned_slot_kwargs)."""
+    if spec.kind != "freq" or spec.pin_slot:
+        return spec.id
+    suffix = Path(spec.url).suffix.lower()
+    return spec.id if suffix in _FREQ_SUFFIXES - {".zip"} else None
+
+
 class ResourcePhase(Enum):
     """Where one resource is in the pipeline.
 
@@ -393,7 +410,7 @@ class ResourceDownloadWorker(CancellableWorker):
 
     def _reporter_for(self, spec: ResourceSpec) -> _ItemPhaseReporter:
         """Return the phase reporter for one resource."""
-        return _ItemPhaseReporter(spec, self.item_progress.emit, counts_entries=spec.kind == "dict")
+        return phase_reporter(spec, self.item_progress.emit)
 
     def run(self) -> None:
         """Download + import each spec in order, isolating per-item failures."""
@@ -410,176 +427,21 @@ class ResourceDownloadWorker(CancellableWorker):
                 summary.cancelled = True
                 break
 
-            temp: Path | None = None
-            reporter = self._reporter_for(spec)
             try:
-                temp = download_to_temp(
-                    spec.url,
-                    dest_dir=self._download_dir,
-                    progress=reporter.downloading,
-                    cancelled_check=lambda: self.is_cancelled,
-                    read_timeout_seconds=1.0,
-                    # The 580-of-600 MB case D16-C exists for. ``spec.id`` is
-                    # the pinned on-disk slot, so it is stable across releases
-                    # and collision-free across the catalogue; the ``kind``
-                    # prefix keeps a dict and a frequency source that somehow
-                    # shared an id apart.
-                    resume_key=_resume_key(spec),
+                result = install_resource(
+                    spec,
+                    dicts_root=self._dicts_root,
+                    freqs_root=self._freqs_root,
+                    pitch_root=self._pitch_root,
+                    download_dir=self._download_dir,
+                    language=self._language,
+                    reporter=self._reporter_for(spec),
+                    cancelled=lambda: self.is_cancelled,
+                    promotion_allowed=self._promotion_allowed,
+                    before_promote=self._require_promotion_allowed,
                 )
-
-                if self.check_cancelled():
-                    summary.cancelled = True
-                    with contextlib.suppress(OSError):
-                        temp.unlink()
-                    break
-
-                if not self._promotion_allowed():
-                    with contextlib.suppress(OSError):
-                        temp.unlink()
-                    if self.is_cancelled:
-                        summary.cancelled = True
-                    else:
-                        detail = self._promotion_blocked_detail()
-                        summary.results.append(
-                            ResourceDownloadResult(
-                                spec_id=spec.id,
-                                kind=spec.kind,
-                                display_name=spec.display_name,
-                                url=spec.url,
-                                ok=False,
-                                detail=detail,
-                            )
-                        )
-                        self.item_done.emit(spec.id, False, detail)
-                    break
-
-                # The bytes are in; everything after this is local work. Said
-                # before the importer starts so a multi-minute index build is
-                # never mistaken for a stalled download.
-                reporter.installing()
-
-                dict_id: str | None = None
-                source_id: str | None = None
-                removed_dicts: list[tuple[str, str]] = []
-                failed_removals: list[tuple[str, str]] = []
-                if spec.kind == "dict":
-                    # Pin the on-disk slot to the stable catalog id so a title
-                    # embedding a changing release date (Jitendex) overwrites in
-                    # place instead of forking a new dir every download.
-                    result = import_yomitan_zip(
-                        temp,
-                        self._dicts_root,
-                        overwrite=True,
-                        cancel_check=lambda: self.is_cancelled,
-                        progress=reporter.importing,
-                        dict_id=spec.id,
-                        before_promote=self._require_promotion_allowed,
-                        **language_kwarg(self._language),
-                    )
-                    dict_id = result.dict_id
-                    detail = tr_format(
-                        QCoreApplication.translate("ResourceDownloadDialog", "%1 entries"),
-                        f"{result.entry_count:,}",
-                    )
-                    # Remove pre-fix date-versioned duplicates now living in
-                    # sibling dirs. Never fails the item — a broken sweep is
-                    # reported, not raised (sweep is structurally total).
-                    removed_dicts, failed_removals = sweep_superseded_dicts(
-                        self._dicts_root,
-                        keep_id=spec.id,
-                        imported_source_name=result.source_name,
-                    )
-                elif spec.kind == "freq":
-                    # import_frequency_source dispatches on file suffix (.zip vs
-                    # .csv/.tsv/.txt), but download_to_temp always stages a
-                    # ``.part`` file. Re-suffix the temp from the catalog URL so
-                    # the importer routes correctly (and copies a sensibly-named
-                    # source.<ext> alongside the index).
-                    # A single-file list or a pin_slot zip (a moving-URL list)
-                    # imports into its catalog id so a re-download replaces it
-                    # in place (see _pinned_slot_kwargs).
-                    temp = _retype_for_suffix(temp, spec.url)
-                    freq_result = import_frequency_source(
-                        temp,
-                        self._freqs_root,
-                        cancel_check=lambda: self.is_cancelled,
-                        progress=reporter.importing,
-                        overwrite=True,
-                        before_promote=self._require_promotion_allowed,
-                        **language_kwarg(self._language),
-                        **_lemmatise_kwargs(spec, self._language, self._dicts_root),
-                        **_pinned_slot_kwargs(spec, temp),
-                    )
-                    source_id = freq_result.source_id
-                    detail = tr_format(
-                        QCoreApplication.translate("ResourceDownloadDialog", "%1 entries"),
-                        f"{freq_result.entry_count:,}",
-                    )
-                elif spec.kind == "pitch":
-                    # Same suffix re-typing as freq: import_pitch_source
-                    # dispatches on suffix, but download_to_temp stages ``.part``.
-                    # Pin the on-disk slot to the stable catalog id (like dict)
-                    # so a re-download overwrites in place.
-                    temp = _retype_for_suffix(temp, spec.url)
-                    pitch_result = import_pitch_source(
-                        temp,
-                        self._pitch_root,
-                        source_id=spec.id,
-                        source_name=spec.display_name,
-                        cancel_check=lambda: self.is_cancelled,
-                        progress=reporter.importing,
-                        overwrite=True,
-                        before_promote=self._require_promotion_allowed,
-                        **language_kwarg(self._language),
-                    )
-                    source_id = pitch_result.source_id
-                    detail = tr_format(
-                        QCoreApplication.translate("ResourceDownloadDialog", "%1 entries"),
-                        f"{pitch_result.entry_count:,}",
-                    )
-                else:  # pragma: no cover — catalog kinds are constrained
-                    raise ValueError(f"Unknown resource kind: {spec.kind!r}")
-
-                summary.results.append(
-                    ResourceDownloadResult(
-                        spec_id=spec.id,
-                        kind=spec.kind,
-                        display_name=spec.display_name,
-                        url=spec.url,
-                        ok=True,
-                        detail=detail,
-                        dict_id=dict_id,
-                        source_id=source_id,
-                        removed_dicts=removed_dicts,
-                        failed_removals=failed_removals,
-                    )
-                )
-                self.item_done.emit(spec.id, True, detail)
-            except Exception as exc:  # noqa: BLE001 — isolate per-item failures
-                # The downloader returned a staged file but its route failed.
-                # Downloader-owned failures clean themselves; route failures need
-                # this best-effort unlink.
-                if temp is not None:
-                    with contextlib.suppress(OSError):
-                        temp.unlink()
-                if self.is_cancelled:
-                    summary.cancelled = True
-                    break
-                # WARNING with the whole subject: the user asked for this
-                # resource and will not get it. The DEBUG traceback stays for
-                # the unexpected cases; the summary is what a support report
-                # can be read off.
-                log_summary(
-                    logger,
-                    "Resource failed",
-                    level=logging.WARNING,
-                    id=spec.id,
-                    kind=spec.kind,
-                    url=spec.url,
-                    error_type=type(exc).__name__,
-                    error=str(exc),
-                )
-                logger.debug("resource %s failed: %s", spec.id, exc, exc_info=True)
+            except PromotionBlocked:
+                detail = self._promotion_blocked_detail()
                 summary.results.append(
                     ResourceDownloadResult(
                         spec_id=spec.id,
@@ -587,10 +449,16 @@ class ResourceDownloadWorker(CancellableWorker):
                         display_name=spec.display_name,
                         url=spec.url,
                         ok=False,
-                        detail=str(exc),
+                        detail=detail,
                     )
                 )
-                self.item_done.emit(spec.id, False, str(exc))
+                self.item_done.emit(spec.id, False, detail)
+                break
+            if result is None:
+                summary.cancelled = True
+                break
+            summary.results.append(result)
+            self.item_done.emit(spec.id, result.ok, result.detail)
 
         if self.is_cancelled:
             summary.cancelled = True
@@ -601,3 +469,188 @@ class ResourceDownloadWorker(CancellableWorker):
             cancelled=summary.cancelled,
         )
         self.finished_summary.emit(summary)
+
+
+# Kept below the worker: pylupdate6 orders a context's messages by first
+# appearance, and the committed catalogue has "%1 entries" after the worker's
+# promotion-blocked detail.
+def install_resource(
+    spec: ResourceSpec,
+    *,
+    dicts_root: Path,
+    freqs_root: Path,
+    pitch_root: Path,
+    download_dir: Path,
+    language: str,
+    reporter: _ItemPhaseReporter,
+    cancelled: Callable[[], bool],
+    promotion_allowed: Callable[[], bool] = lambda: True,
+    before_promote: Callable[[], None] = lambda: None,
+) -> ResourceDownloadResult | None:
+    """Download and import one catalogue resource: one turn of ResourceDownloadWorker.run.
+
+    Returns None when *cancelled* stopped it and a failed result (logged) for
+    any other failure; raises PromotionBlocked when *promotion_allowed* refused.
+    The staged download is removed on every path but success.
+    """
+    temp: Path | None = None
+    try:
+        temp = download_to_temp(
+            spec.url,
+            dest_dir=download_dir,
+            progress=reporter.downloading,
+            cancelled_check=cancelled,
+            read_timeout_seconds=1.0,
+            # The 580-of-600 MB case D16-C exists for. ``spec.id`` is
+            # the pinned on-disk slot, so it is stable across releases
+            # and collision-free across the catalogue; the ``kind``
+            # prefix keeps a dict and a frequency source that somehow
+            # shared an id apart.
+            resume_key=_resume_key(spec),
+        )
+
+        if cancelled():
+            with contextlib.suppress(OSError):
+                temp.unlink()
+            return None
+
+        if not promotion_allowed():
+            with contextlib.suppress(OSError):
+                temp.unlink()
+            if cancelled():
+                return None
+            raise PromotionBlocked
+
+        # The bytes are in; everything after this is local work. Said
+        # before the importer starts so a multi-minute index build is
+        # never mistaken for a stalled download.
+        reporter.installing()
+
+        dict_id: str | None = None
+        source_id: str | None = None
+        removed_dicts: list[tuple[str, str]] = []
+        failed_removals: list[tuple[str, str]] = []
+        if spec.kind == "dict":
+            # Pin the on-disk slot to the stable catalog id so a title
+            # embedding a changing release date (Jitendex) overwrites in
+            # place instead of forking a new dir every download.
+            result = import_yomitan_zip(
+                temp,
+                dicts_root,
+                overwrite=True,
+                cancel_check=cancelled,
+                progress=reporter.importing,
+                dict_id=spec.id,
+                before_promote=before_promote,
+                **language_kwarg(language),
+            )
+            dict_id = result.dict_id
+            detail = tr_format(
+                QCoreApplication.translate("ResourceDownloadDialog", "%1 entries"),
+                f"{result.entry_count:,}",
+            )
+            # Remove pre-fix date-versioned duplicates now living in
+            # sibling dirs. Never fails the item — a broken sweep is
+            # reported, not raised (sweep is structurally total).
+            removed_dicts, failed_removals = sweep_superseded_dicts(
+                dicts_root,
+                keep_id=spec.id,
+                imported_source_name=result.source_name,
+            )
+        elif spec.kind == "freq":
+            # import_frequency_source dispatches on file suffix (.zip vs
+            # .csv/.tsv/.txt), but download_to_temp always stages a
+            # ``.part`` file. Re-suffix the temp from the catalog URL so
+            # the importer routes correctly (and copies a sensibly-named
+            # source.<ext> alongside the index).
+            # A single-file list or a pin_slot zip (a moving-URL list)
+            # imports into its catalog id so a re-download replaces it
+            # in place (see _pinned_slot_kwargs).
+            temp = _retype_for_suffix(temp, spec.url)
+            freq_result = import_frequency_source(
+                temp,
+                freqs_root,
+                cancel_check=cancelled,
+                progress=reporter.importing,
+                overwrite=True,
+                before_promote=before_promote,
+                **language_kwarg(language),
+                **_lemmatise_kwargs(spec, language, dicts_root),
+                **_pinned_slot_kwargs(spec, temp),
+            )
+            source_id = freq_result.source_id
+            detail = tr_format(
+                QCoreApplication.translate("ResourceDownloadDialog", "%1 entries"),
+                f"{freq_result.entry_count:,}",
+            )
+        elif spec.kind == "pitch":
+            # Same suffix re-typing as freq: import_pitch_source
+            # dispatches on suffix, but download_to_temp stages ``.part``.
+            # Pin the on-disk slot to the stable catalog id (like dict)
+            # so a re-download overwrites in place.
+            temp = _retype_for_suffix(temp, spec.url)
+            pitch_result = import_pitch_source(
+                temp,
+                pitch_root,
+                source_id=spec.id,
+                source_name=spec.display_name,
+                cancel_check=cancelled,
+                progress=reporter.importing,
+                overwrite=True,
+                before_promote=before_promote,
+                **language_kwarg(language),
+            )
+            source_id = pitch_result.source_id
+            detail = tr_format(
+                QCoreApplication.translate("ResourceDownloadDialog", "%1 entries"),
+                f"{pitch_result.entry_count:,}",
+            )
+        else:  # pragma: no cover — catalog kinds are constrained
+            raise ValueError(f"Unknown resource kind: {spec.kind!r}")
+
+        return ResourceDownloadResult(
+            spec_id=spec.id,
+            kind=spec.kind,
+            display_name=spec.display_name,
+            url=spec.url,
+            ok=True,
+            detail=detail,
+            dict_id=dict_id,
+            source_id=source_id,
+            removed_dicts=removed_dicts,
+            failed_removals=failed_removals,
+        )
+    except PromotionBlocked:
+        raise
+    except Exception as exc:  # noqa: BLE001 — isolate per-item failures
+        # The downloader returned a staged file but its route failed.
+        # Downloader-owned failures clean themselves; route failures need
+        # this best-effort unlink.
+        if temp is not None:
+            with contextlib.suppress(OSError):
+                temp.unlink()
+        if cancelled():
+            return None
+        # WARNING with the whole subject: the user asked for this
+        # resource and will not get it. The DEBUG traceback stays for
+        # the unexpected cases; the summary is what a support report
+        # can be read off.
+        log_summary(
+            logger,
+            "Resource failed",
+            level=logging.WARNING,
+            id=spec.id,
+            kind=spec.kind,
+            url=spec.url,
+            error_type=type(exc).__name__,
+            error=str(exc),
+        )
+        logger.debug("resource %s failed: %s", spec.id, exc, exc_info=True)
+        return ResourceDownloadResult(
+            spec_id=spec.id,
+            kind=spec.kind,
+            display_name=spec.display_name,
+            url=spec.url,
+            ok=False,
+            detail=str(exc),
+        )
