@@ -2,7 +2,8 @@
 
 Read-only by construction: gui_config.json and profile files are parsed with
 ``_parse_and_migrate(archive_future=False)`` — never ``load_config``, which can
-repair or archive files — and nothing is ever saved.
+repair or archive files — and nothing is ever saved. The writes live in
+settings_write.
 """
 
 from __future__ import annotations
@@ -48,26 +49,31 @@ FORCED_OFF_KEYS = frozenset({"deduplicate_sentences", "use_i_plus_one_filter"})
 
 #: Before any profile exists the window adopts gui_config.json as "default"
 #: (profile_controller); until then the API reports that implicit profile.
-_IMPLICIT = Profile(id="default", name="Default")
+IMPLICIT_PROFILE = Profile(id="default", name="Default")
 
 
 def profiles() -> list[dict[str, object]]:
     """Every profile with its ``id``, ``name`` and whether it is the active one."""
-    listed = ProfileStore.list_profiles() or (_IMPLICIT,)
+    listed = ProfileStore.list_profiles() or (IMPLICIT_PROFILE,)
     active = _active_id(listed)
     return [{"id": p.id, "name": p.name, "active": p.id == active} for p in listed]
 
 
 def _active_id(listed: tuple[Profile, ...]) -> str | None:
-    if listed == (_IMPLICIT,):
-        return _IMPLICIT.id
+    if listed == (IMPLICIT_PROFILE,):
+        return IMPLICIT_PROFILE.id
     marker = GUIConfigManager.read_active_profile_id()
     return marker if any(p.id == marker for p in listed) else None
 
 
+def active_profile_id() -> str | None:
+    """The id ``profiles`` marks active: ``default`` before any profile exists, None when the marker names none."""
+    return _active_id(ProfileStore.list_profiles() or (IMPLICIT_PROFILE,))
+
+
 def load_profile_config(profile_id: str | None) -> AnkiMinerConfig:
     """The saved settings of *profile_id*; None or the active id reads gui_config.json."""
-    listed = ProfileStore.list_profiles() or (_IMPLICIT,)
+    listed = ProfileStore.list_profiles() or (IMPLICIT_PROFILE,)
     if profile_id is None or profile_id == _active_id(listed):
         return _live_config()
     try:

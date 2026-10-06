@@ -107,3 +107,14 @@ def test_run_config_turns_the_whitelist_on_keeping_the_profiles_file_only_when_i
     assert off.use_whitelist is True and off.whitelist_path is None
     on = settings.resolve_run_config(None, "ja", {"use_whitelist": True})
     assert on.use_whitelist is True and on.whitelist_path == wl
+
+
+def test_active_profile_id_follows_the_marker(test_config, monkeypatch) -> None:
+    assert settings.active_profile_id() == "default"  # before any profile exists
+    monkeypatch.setattr(GUIConfigManager, "ACTIVE_PROFILE_ID", "caller")
+    GUIConfigManager.save_config(test_config)
+    ProfileStore.write_profile("caller", test_config, name="Caller")
+    assert settings.active_profile_id() == "caller"
+    monkeypatch.setattr(GUIConfigManager, "ACTIVE_PROFILE_ID", "gone")
+    GUIConfigManager.save_config(test_config)
+    assert settings.active_profile_id() is None
