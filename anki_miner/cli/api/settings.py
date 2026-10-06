@@ -43,7 +43,7 @@ ALLOWED_OVERLAY_KEYS = frozenset(
     }
 )
 #: Off for every API run (resolve_run_config). A run file may still send them as false,
-#: as 3.5.0 and 3.6.0 required; true is refused rather than silently ignored.
+#: as 3.6.0's run files did; true is refused rather than silently ignored.
 FORCED_OFF_KEYS = frozenset({"deduplicate_sentences", "use_i_plus_one_filter"})
 
 #: Before any profile exists the window adopts gui_config.json as "default"
@@ -106,7 +106,7 @@ def apply_overlay(config: AnkiMinerConfig, overlay: Mapping[str, object]) -> Ank
     unknown = sorted(set(overlay) - ALLOWED_OVERLAY_KEYS)
     if unknown:
         raise ApiError(BAD_RUN_FILE, f"These config keys are not allowed: {', '.join(unknown)}")
-    incoming, invalid = GUIConfigManager._validate_incoming(dict(overlay))
+    incoming, invalid = GUIConfigManager._validate_incoming(overlay)
     if invalid:
         raise ApiError(BAD_RUN_FILE, f"These config values have the wrong type: {', '.join(sorted(invalid))}")
     GUIConfigManager._overlay_mapping_fields(incoming, config)

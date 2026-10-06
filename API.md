@@ -204,11 +204,11 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 
 `check --language CODE [--profile ID]` puts `{"ready": false, "items": [...]}` in `result`, one item per check. The items are `anki`, `deck`, `note_type`, `fields`, `dictionary`, `resources` (dictionary or frequency indexes that need re-importing), `language_pack`, `ffmpeg` and `ffprobe`. Each item has `name`, `ok` and `message` (null when ok). When Anki does not answer, `deck`, `note_type` and `fields` are reported as not checked.
 
-`version` puts `{"schema": 1, "app": "3.5.0", "commands": [...], "features": []}` in `result`. `features` names each addition this build has (table below).
+`version` puts `{"schema": 1, "app": "3.5.0", "commands": [...], "features": [...]}` in `result`. `features` names each addition this build has (table below).
 
 | Feature | Adds |
 |---|---|
-| `sentence-rules-off` | `config` takes `deduplicate_sentences` and `use_i_plus_one_filter` as `false` |
+| `sentence-rules-off` | the sentence rules are off for every run; `deduplicate_sentences` and `use_i_plus_one_filter` may still be sent as `false` |
 | `bold-target` | `bold_target_in_sentence` in `config` |
 
 `profiles` puts `{"profiles": [{"id": "anime", "name": "Anime", "active": true}, …]}` in `result`. Before the user has created any profile, the list holds one, `default`.

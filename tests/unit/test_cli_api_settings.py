@@ -71,7 +71,7 @@ def test_overlay_refusals_are_bad_run_file(test_config, overlay) -> None:
 
 
 def test_overlay_accepts_the_sentence_rules_as_false_and_keeps_them_off(test_config) -> None:
-    """3.5.0 and 3.6.0 required both keys as false; a run file written for them still runs."""
+    """A run file written for 3.6.0, which sent both as false, still runs."""
     GUIConfigManager.save_config(replace(test_config, deduplicate_sentences=True, use_i_plus_one_filter=True))
     config = settings.resolve_run_config(None, "ja", {"deduplicate_sentences": False, "use_i_plus_one_filter": False})
     assert config.deduplicate_sentences is False and config.use_i_plus_one_filter is False
