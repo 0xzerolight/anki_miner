@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -90,20 +91,28 @@ def _fake_validation(**checks):
     )
 
 
+def _check_ok(monkeypatch, commands, **overrides) -> None:
+    """Every check passing, except *overrides*; yt-dlp and the speech model missing."""
+    checks = {
+        "check_ankiconnect": (True, ""),
+        "check_deck_exists": (True, ""),
+        "check_note_type_exists": (True, ""),
+        "check_field_names": (True, ""),
+        "check_offline_dictionary": (True, ""),
+        **overrides,
+    }
+    monkeypatch.setattr(commands, "ValidationService", _fake_validation(**checks))
+    monkeypatch.setattr(commands, "stale_resource_reimport_error", lambda config: None)
+    monkeypatch.setattr(commands, "binary_available", lambda resolved: True)
+    monkeypatch.setattr(commands, "ytdlp_available", lambda config: False)
+    monkeypatch.setattr(commands, "usable_model_installed", lambda config: False)
+
+
 def test_check_reports_every_item(verdict, monkeypatch, test_config) -> None:
     from anki_miner.cli.api import commands
 
     monkeypatch.setattr(commands.settings, "load_profile_config", lambda pid: test_config)
-    fake = _fake_validation(
-        check_ankiconnect=(True, ""),
-        check_deck_exists=(False, "Deck 'x' not found."),
-        check_note_type_exists=(True, ""),
-        check_field_names=(True, ""),
-        check_offline_dictionary=(True, ""),
-    )
-    monkeypatch.setattr(commands, "ValidationService", fake)
-    monkeypatch.setattr(commands, "stale_resource_reimport_error", lambda config: None)
-    monkeypatch.setattr(commands, "binary_available", lambda resolved: True)
+    _check_ok(monkeypatch, commands, check_deck_exists=(False, "Deck 'x' not found."))
     v = verdict("check", "--language", "ja")
     items = {i["name"]: i for i in v["result"]["items"]}
     assert v["result"]["ready"] is False
@@ -117,21 +126,32 @@ def test_check_reports_every_item(verdict, monkeypatch, test_config) -> None:
         "language_pack",
         "ffmpeg",
         "ffprobe",
+        "yt_dlp",
+        "speech_model",
     ]
     assert items["deck"] == {"name": "deck", "ok": False, "message": "Deck 'x' not found."}
-    assert items["anki"]["message"] is None
+    assert items["anki"]["message"] is None and "yt-dlp" in items["yt_dlp"]["message"]
 
 
 def test_check_skips_anki_items_when_unreachable(verdict, monkeypatch, test_config) -> None:
     from anki_miner.cli.api import commands
 
     monkeypatch.setattr(commands.settings, "load_profile_config", lambda pid: test_config)
-    fake = _fake_validation(check_ankiconnect=(False, "Cannot connect"), check_offline_dictionary=(True, ""))
-    monkeypatch.setattr(commands, "ValidationService", fake)
-    monkeypatch.setattr(commands, "stale_resource_reimport_error", lambda config: None)
-    monkeypatch.setattr(commands, "binary_available", lambda resolved: True)
+    _check_ok(monkeypatch, commands, check_ankiconnect=(False, "Cannot connect"))
     items = {i["name"]: i for i in verdict("check", "--language", "ja")["result"]["items"]}
     assert items["deck"]["ok"] is False and "not reachable" in items["deck"]["message"]
+
+
+def test_fetch_items_do_not_count_toward_ready(verdict, monkeypatch, test_config) -> None:
+    from anki_miner.cli.api import commands
+
+    monkeypatch.setattr(
+        commands.settings, "load_profile_config", lambda pid: replace(test_config, youtube_subtitle_source="captions")
+    )
+    _check_ok(monkeypatch, commands)
+    result = verdict("check", "--language", "ja")["result"]
+    assert result["ready"] is True
+    assert [i["name"] for i in result["items"]][-1] == "yt_dlp"  # captions only: no speech model needed
 
 
 def test_check_unknown_language_is_bad_arguments(verdict) -> None:

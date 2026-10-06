@@ -274,3 +274,42 @@ def test_no_yt_dlp_refuses_the_call(monkeypatch, tmp_path) -> None:
     with pytest.raises(ApiError) as err:
         fetch.fetch_runs(_job(tmp_path), threading.Event())
     assert err.value.code == "SETUP_ERROR" and not (tmp_path / "yt-1").exists()
+
+
+def test_the_fetch_command_runs_beside_an_open_window(capfd, monkeypatch, tmp_path) -> None:
+    from anki_miner.cli import api, entry
+    from anki_miner.config import paths as config_paths
+    from anki_miner.gui.app import _hold_window_marker
+
+    monkeypatch.setattr(api, "_prepare_process", lambda: None)
+    monkeypatch.setattr(entry, "_install_api_log", lambda: None)
+    ok = {
+        "run_id": "yt-1",
+        "ok": True,
+        "error": None,
+        "message": None,
+        "file": "fetch-1.json",
+        "failure_is_transient": False,
+    }
+    monkeypatch.setattr(fetch, "fetch_runs", lambda job, cancel: [ok])
+    path = tmp_path / "fetch.json"
+    path.write_text(
+        json.dumps(
+            {
+                "schema": 1,
+                "run_dir": str(tmp_path),
+                "language": "ja",
+                "episodes": [{"run_id": "yt-1", "youtube_url": URL}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    config_paths.ANKI_MINER_HOME.mkdir(parents=True, exist_ok=True)
+    marker = _hold_window_marker(config_paths.ANKI_MINER_HOME)
+    try:
+        assert entry.main(["--api", "fetch", str(path)]) == 0
+    finally:
+        marker.unlock()
+    [line] = capfd.readouterr().out.splitlines()
+    verdict = json.loads(line)
+    assert verdict["ok"] is True and verdict["command"] == "fetch" and verdict["runs"] == [ok]

@@ -2,8 +2,8 @@
 
 Each call writes exactly one JSON verdict line to fd 1 and exits 0; any other
 exit is a crash. ``mine`` (but not a dry run), ``settings-import`` and ``setup``
-hold the instance lock; ``render``, ``media``, ``check``, ``version``, ``profiles`` and
-``settings-export`` run at any time. The log goes to ``anki_miner.api.log``
+hold the instance lock; ``render``, ``media``, ``fetch``, ``check``, ``version``, ``profiles``
+and ``settings-export`` run at any time. The log goes to ``anki_miner.api.log``
 (installed by ``cli.entry`` before this runs).
 """
 
@@ -70,6 +70,7 @@ def build_parser() -> argparse.ArgumentParser:
     setup.add_argument("--language", required=True)
     setup.add_argument("--progress", type=Path, required=True)
     setup.add_argument("--profile")
+    commands.add_parser("fetch").add_argument("fetch_file", type=Path)
     return parser
 
 
@@ -129,6 +130,8 @@ def _dispatch(args: argparse.Namespace) -> dict[str, object]:
         return _ok("settings-import", result=result)
     if args.command == "setup":
         return _setup(args)
+    if args.command == "fetch":
+        return _fetch(args)
     return _run(args)
 
 
@@ -193,6 +196,18 @@ def _setup(args: argparse.Namespace) -> dict[str, object]:
     if outcome.cancelled:
         return {**verdict, "ok": False, "error": CANCELLED, "message": "Setup was cancelled."}
     return {**verdict, "ok": not outcome.failed}
+
+
+def _fetch(args: argparse.Namespace) -> dict[str, object]:
+    """fetch: no lock (it writes only its run folders); SIGINT/SIGTERM stop the current run and every later one."""
+    from anki_miner.cli.api import fetch, files
+    from anki_miner.cli.entry import _cancel_on_signals
+
+    job = files.parse_fetch_file(files.read_json_file(args.fetch_file))
+    cancel = threading.Event()
+    with _cancel_on_signals(cancel):
+        verdicts = fetch.fetch_runs(job, cancel)
+    return {**_ok(args.command, runs=verdicts), "ok": all(v["ok"] for v in verdicts)}
 
 
 def _ok(command: str | None, **fields: object) -> dict[str, object]:

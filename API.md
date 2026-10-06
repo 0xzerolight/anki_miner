@@ -4,7 +4,7 @@ Another program can run Anki Miner without its window. One `mine` call takes an 
 
 `mine` writes to Anki only the words it is given. Anki Miner's known-words list and statistics are never touched: the calling program keeps its own record of what the user knows and mined.
 
-Requirements: Anki running with the AnkiConnect add-on, an offline dictionary, and ffmpeg (bundled with the installers). Sources are video episodes (a video file and a subtitle file); YouTube, audiobooks, books and manga are not supported yet.
+Requirements: Anki running with the AnkiConnect add-on, an offline dictionary, and ffmpeg (bundled with the installers); `fetch` also needs yt-dlp. Sources are video episodes (a video file and a subtitle file), including YouTube videos that `fetch` downloads first; audiobooks, books and manga are not supported yet.
 
 ## Calling it
 
@@ -26,6 +26,7 @@ AnkiMiner --api settings-import FILE --language CODE (--name NAME | --profile ID
 AnkiMiner --api render RUN_FILE
 AnkiMiner --api media MEDIA_FILE
 AnkiMiner --api setup --language CODE --progress FILE [--profile ID]
+AnkiMiner --api fetch FETCH_FILE
 ```
 
 Each call writes one JSON line to stdout: its verdict. Exit code 0 means the verdict was written; any other exit code is a crash.
@@ -55,7 +56,7 @@ A verdict:
 
 A dry run, `render` and `media` take no lock.
 
-`check`, `version`, `profiles` and `settings-export` run at any time. On Windows every call holds the app's mutex, so the installer waits for it.
+`check`, `version`, `profiles`, `settings-export` and `fetch` run at any time. On Windows every call holds the app's mutex, so the installer waits for it.
 
 ## The run folder
 
@@ -63,14 +64,16 @@ A dry run, `render` and `media` take no lock.
 
 | File | Written by | Content |
 |---|---|---|
-| `progress.json` | mine, render | the current stage while a run works |
+| `progress.json` | mine, render, fetch | the current stage while a run works |
 | `result-<n>.json` | mine | one per `mine` of that `run_id`; `n` counts up from 1 |
 | `render-<n>.json` | render | one per `render` of that `run_id` |
 | `render-<n>/` | render | the media its fields name; the caller deletes them |
 | `media-<n>.json` | media | one per `media` of that `run_id` |
 | `media-<n>/` | media | the clips and pictures it cut; the caller deletes them |
-| `cancel` | the caller | stops the run (see Cancelling) |
-| `media/` | mine, render | temporary clips and pictures of a `mine` or `render`, removed before it ends |
+| `fetch-<n>.json` | fetch | one per successful `fetch` of that `run_id`; names the files below |
+| `fetch-<n>/` | fetch | the downloaded video and subtitle; kept until the caller deletes them |
+| `cancel` | the caller | stops a `mine`, `render` or `fetch` run (see Cancelling) |
+| `media/` | mine, render, fetch | temporary clips and pictures of a `mine` or `render`, and the audio a `fetch` transcribes, removed before it ends |
 
 A run folder serves one call at a time: calls on the same `run_id` share its `progress.json`, `cancel` file and `media/`. Calls on different `run_id`s can run side by side.
 
@@ -228,6 +231,25 @@ An episode:
 
 Each line is a `line_start` and an optional `line_expansion`, chosen and merged as for `mine`. `media` needs no parse, no dictionary and no Anki, and runs any time. It takes no `cancel` file, and a signal ends it without a verdict. `media-<n>.json` lists per line its `line_start`, `start`, `end`, `text`, `picture` and `audio` (paths in the run folder, `null` when that cut failed). The files are `media-<n>/<k>.<ext>`, `k` being the line's place in `lines`, from 1. `still_height` and `audio_bitrate` are whole numbers of 1 or more. Without ffmpeg or ffprobe the call gives `SETUP_ERROR`; per episode, a video that does not open gives `VIDEO_UNREADABLE`, and a subtitle that cannot be read or has no lines gives `SUBTITLE_UNREADABLE`.
 
+## fetch
+
+`fetch FETCH_FILE` downloads YouTube videos for `mine`: per episode, what Video → YouTube does before mining. Nothing goes to Anki, and it runs at any time, beside the window too.
+
+The fetch file has `schema` (`1`), `run_dir`, `profile` and `language` as in the run file, and `episodes`:
+
+| Key | Value |
+|---|---|
+| `run_id` | required |
+| `youtube_url` | required: one video's link. A playlist link gives `BAD_RUN_FILE` |
+| `youtube_subtitle_source` | `auto` (captions, else transcribe), `captions` (refuse a video without them) or `transcribe`; left out, the profile's |
+| `youtube_align_captions` | `true` aligns downloaded captions with the audio; left out, the profile's |
+
+Per episode it probes the video, downloads it with its subtitle into `fetch-<n>/`, transcribes or aligns, and writes `fetch-<n>.json`: `video_file`, `subtitle_file` (absolute paths), `sub_source` (`manual`, `auto` for YouTube's automatic captions, or `generated` for a transcription), `video_id`, `title`, `duration`, and the `episode_name_override`, `series_name_override` and `source_label_override` a YouTube run in the window sets. Mine the files with an episode that sets those three, so its cards read like the window's YouTube cards.
+- Fetching a `run_id` again downloads again, into the next `fetch-<n>/`. A `fetch-<n>/` that no `fetch-<n>.json` names, left by a fetch that crashed, is removed first.
+- `progress.json` stages are probing, downloading, then transcribing or aligning; a run that does neither ends at stage 2 of 3. `done` and `total` count percent. A `cancel` file stops the run as for `mine`.
+- Each run verdict also carries `failure_is_transient`: true for a YouTube login wall, a locked browser cookie database and a timeout, which running again later can get past.
+- Per run: `YOUTUBE_REFUSED`, `FETCH_FAILED`, `SETUP_ERROR` (the speech model a transcription needs) and `CANCELLED`. A missing yt-dlp or ffmpeg refuses the whole call with `SETUP_ERROR`.
+
 ## Progress and cancelling
 
 While a run works, `progress.json` holds `{"schema": 1, "run_id": …, "stage": 3, "stages": 5, "done": 12, "total": 26}`. The stages are parsing, filtering, media, definitions and cards.
@@ -242,13 +264,15 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 |---|---|---|
 | `BUSY` | call | the window or another run is open |
 | `BAD_ARGUMENTS` | call | the command line does not parse, or names an unknown language or an `--out` or `--progress` folder that does not exist; for `settings-import`, a FILE it cannot apply, a name it refuses or the active profile; for `setup`, a language the profile has never used |
-| `BAD_RUN_FILE` | call | the run file or media file is not valid JSON or breaks the rules above |
+| `BAD_RUN_FILE` | call | the run file, media file or fetch file is not valid JSON or breaks the rules above |
 | `PROFILE_UNREADABLE` | call | the profile does not exist or cannot be read |
-| `SETUP_ERROR` | call, run | language pack, dictionary index, ffmpeg, deck, note type, fields or offline dictionary |
+| `SETUP_ERROR` | call, run | language pack, dictionary index, ffmpeg, deck, note type, fields or offline dictionary; for fetch, yt-dlp, ffmpeg or the speech model |
 | `ANKI_UNREACHABLE` | call, run | AnkiConnect does not answer |
 | `VIDEO_UNREADABLE` | run | the video does not open |
 | `SUBTITLE_UNREADABLE` | run | the subtitle file cannot be read |
 | `MINING_FAILED` | run | the run itself failed; `message` says why |
+| `YOUTUBE_REFUSED` | run | fetch: a live stream, a video over the profile's length limit, an age-restricted video without cookies, or no captions with `captions` |
+| `FETCH_FAILED` | run | fetch: probing, downloading or transcribing failed; see `failure_is_transient` |
 | `CANCELLED` | call, run | stopped by a `cancel` file or a signal, or `setup` stopped by a signal |
 | `INTERNAL` | call, run | an unexpected error; details are in the log |
 
@@ -256,7 +280,7 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 
 ## check, version, profiles, settings-export, settings-import
 
-`check --language CODE [--profile ID]` puts `{"ready": false, "items": [...]}` in `result`, one item per check. The items are `anki`, `deck`, `note_type`, `fields`, `dictionary`, `resources` (dictionary or frequency indexes that need re-importing), `language_pack`, `ffmpeg` and `ffprobe`. Each item has `name`, `ok` and `message` (null when ok). When Anki does not answer, `deck`, `note_type` and `fields` are reported as not checked.
+`check --language CODE [--profile ID]` puts `{"ready": false, "items": [...]}` in `result`, one item per check. The items are `anki`, `deck`, `note_type`, `fields`, `dictionary`, `resources` (dictionary or frequency indexes that need re-importing), `language_pack`, `ffmpeg`, `ffprobe` and `yt_dlp`, then `speech_model` unless the profile's YouTube subtitles are Captions only. `yt_dlp` and `speech_model` are for `fetch` and do not count toward `ready`. Each item has `name`, `ok` and `message` (null when ok). When Anki does not answer, `deck`, `note_type` and `fields` are reported as not checked.
 
 `version` puts `{"schema": 1, "app": "3.5.0", "commands": [...], "features": [...]}` in `result`. `features` names each addition this build has (table below).
 
@@ -273,6 +297,7 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 | `media` | the `media` command and `media-<n>.json` |
 | `settings-import` | the `settings-import` command |
 | `setup` | the `setup` command |
+| `fetch` | the `fetch` command, `fetch-<n>.json`, and `check`'s `yt_dlp` and `speech_model` |
 
 `profiles` puts `{"profiles": [{"id": "anime", "name": "Anime", "active": true}, …]}` in `result`. Before the user has created any profile, the list holds one, `default`.
 
@@ -315,6 +340,7 @@ Otherwise:
 - Where `line_expansion` is cut to 30 seconds, lines after the chosen one are added first.
 - `media` files go to `media-<n>/`, not `media/`, which a `mine` removes when it ends.
 - `settings-import` has no `--whitelist` (named words are whitelisted already), and its `result` adds `invalid_fields`.
+- `fetch` writes into `fetch-<n>/`, not the run folder itself, and no `secondary_subtitle_file` or `thumbnail_file`; its run verdicts add `failure_is_transient`.
 
 ## Example (Python)
 
