@@ -85,6 +85,16 @@ def test_compose_main_window_marks_mining_runs(qtbot, patch_heavy_init, test_con
         "queue.reading.text",
         "queue.reading.deck",
     }
+    # Every mining screen the window holds, found by type rather than by the
+    # hand-built tuple, so a new one bound elsewhere cannot run unmarked.
+    from PyQt6.QtWidgets import QWidget
+
+    from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
+
+    discovered = {
+        w.TASK_ID for w in composed.window.findChildren(QWidget) if isinstance(w, MiningTabBase) and w.TASK_ID
+    }
+    assert marker.task_ids == discovered
     # The window's own registry drives it: the one its screens publish their runs to.
     from anki_miner.cli.entry import _held
     from anki_miner.config.paths import ANKI_MINER_HOME

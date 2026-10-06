@@ -48,7 +48,7 @@ def test_released_only_when_the_last_mining_run_ends(registry, tmp_path) -> None
     single.finish(TaskOutcome.CANCELLED)
     assert marker.held
     youtube.finish(TaskOutcome.FAILED)
-    assert not marker.held
+    assert not marker.held and not _path(tmp_path).exists()
 
 
 def test_release_is_idempotent(registry, tmp_path) -> None:

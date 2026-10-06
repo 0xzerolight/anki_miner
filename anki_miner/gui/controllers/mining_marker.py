@@ -28,8 +28,9 @@ def mining_task_ids(screen_types: Iterable[type]) -> frozenset[str]:
     """The task ids the mining screens among *screen_types* publish their runs under.
 
     A mining screen is a MiningTabBase. Card Backfill and Restyle write to Anki
-    as well, but only to notes that exist; a mine run adds new ones, and
-    AnkiConnect serializes the two.
+    as well, but only to notes that exist, and Deck Filter adds only copies of
+    existing notes (add_notes_raw); a mine run adds new ones, and AnkiConnect
+    serializes them all.
     """
     from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 
