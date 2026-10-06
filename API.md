@@ -241,7 +241,7 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 | Code | Where | Meaning |
 |---|---|---|
 | `BUSY` | call | the window or another run is open |
-| `BAD_ARGUMENTS` | call | the command line does not parse, or names an unknown language or an `--out` or `--progress` folder that does not exist; for `settings-import`, a FILE it cannot apply, a name it refuses or the active profile |
+| `BAD_ARGUMENTS` | call | the command line does not parse, or names an unknown language or an `--out` or `--progress` folder that does not exist; for `settings-import`, a FILE it cannot apply, a name it refuses or the active profile; for `setup`, a language the profile has never used |
 | `BAD_RUN_FILE` | call | the run file or media file is not valid JSON or breaks the rules above |
 | `PROFILE_UNREADABLE` | call | the profile does not exist or cannot be read |
 | `SETUP_ERROR` | call, run | language pack, dictionary index, ffmpeg, deck, note type, fields or offline dictionary |
@@ -294,11 +294,11 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 ## setup
 
 `setup --language CODE --progress FILE [--profile ID]` downloads what the setup wizard downloads for CODE: its language pack when it needs one, then its recommended dictionary, frequency and pitch resources. The deck and note type stay the caller's job.
-- The resources are switched on for CODE in the active profile, or in `--profile`. The profile keeps its own mining language; resources for another language wait in that language's settings.
+- The resources are switched on for CODE in the active profile, or in `--profile`. The profile keeps its own mining language. CODE can be another language only when the profile has used it before; its resources then wait in that language's settings. Otherwise the call gives `BAD_ARGUMENTS`: make a profile for CODE with `settings-import FILE --language CODE --name NAME` (FILE may be `{}`) and pass it as `--profile`.
 - A resource already installed is not downloaded again; it is switched on if the profile does not use it yet.
-- While it works, FILE (its folder must exist) holds `{"schema": 1, "item": "jmdict-english", "stage": 2, "stages": 4, "done": 1048576, "total": 20971520}`. `item` is a resource `id` or `language_pack`; `done` and `total` are bytes while downloading, then steps while installing.
+- While it works, FILE (its folder must exist) holds `{"schema": 1, "item": "jmdict-english", "stage": 2, "stages": 4, "done": 1048576, "total": 20971520}`. `item` is a resource `id` or `language_pack`; `done` and `total` are bytes while downloading. While a frequency or pitch list installs they count the files or terms it reads; for a dictionary, `done` counts the entries written and `total` stays 0.
 - `result`: `{"language": "ja", "profile": "default", "language_pack": {"status": "not_needed", "message": null}, "resources": [{"id": "jmdict-english", "kind": "dict", "name": "JMdict", "status": "installed", "message": null}, …]}`. `status` is `installed`, `already_installed`, `not_needed` (language pack only), `failed` (`message` says why) or `not_attempted`.
-- `ok` is false when an item failed; the top-level `error` stays null. SIGINT or SIGTERM stops it after the item in flight with `CANCELLED`; what finished stays installed and switched on.
+- `ok` is false when an item failed; the top-level `error` stays null. SIGINT or SIGTERM stops the item in flight with `CANCELLED`. That item is `not_attempted`, and a download cut short resumes on the next call; what finished stays installed and switched on.
 
 ## Differences from the proposal
 

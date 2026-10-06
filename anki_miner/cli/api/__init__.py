@@ -179,7 +179,10 @@ def _render(args: argparse.Namespace) -> dict[str, object]:
 
 
 def _setup(args: argparse.Namespace) -> dict[str, object]:
-    """setup: under the run lock; SIGINT/SIGTERM stop it after the item in flight."""
+    """setup: under the run lock; SIGINT/SIGTERM stop the item in flight (CANCELLED, that item not_attempted).
+
+    A download cut short resumes on the next call (its resume_key); what finished stays installed and switched on.
+    """
     from anki_miner.cli.api import setup
     from anki_miner.cli.entry import _cancel_on_signals
 

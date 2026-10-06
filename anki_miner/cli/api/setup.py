@@ -70,7 +70,9 @@ class _Progress(ProgressFile):
     """``--progress FILE``: ProgressFile's throttled atomic writes, naming the item in hand instead of a run.
 
     Stages count the language pack and each resource; done/total are bytes
-    while downloading, then steps while installing.
+    while downloading. While installing they are the counted pass of a
+    frequency or pitch list (files or terms), and for a dictionary the entries
+    written, with total 0: the reporter knows no entry total ahead.
     """
 
     def __init__(self, path: Path, stages: int) -> None:
@@ -91,6 +93,8 @@ class _Progress(ProgressFile):
     def resource(self, event: ResourceProgress) -> None:
         if event.phase is ResourcePhase.DOWNLOADING:
             self.count(event.downloaded, event.total_bytes or 0)
+        elif event.entries is not None:  # only a dictionary counts entries
+            self.count(event.entries, 0)
         else:
             self.count(event.step or 0, event.steps or 0)
 
@@ -101,6 +105,17 @@ def run_setup(language: str, profile_id: str | None, progress_path: Path, cancel
         raise ApiError(BAD_ARGUMENTS, f"The folder for --progress does not exist: {progress_path.parent}")
     stored = settings.load_profile_config(profile_id)
     config = settings.with_language(stored, language, code=BAD_ARGUMENTS)
+    if language != stored.language and language not in stored.language_stash:
+        # The window treats a language with no stash entry as a first visit and then
+        # offers its setup and deck checklist (language_switch, main_window); parking
+        # these resources would create the entry and spend that visit, as the
+        # wizard's _single_switch avoids.
+        where = f"profile {profile_id!r}" if profile_id is not None else "the active profile"
+        raise ApiError(
+            BAD_ARGUMENTS,
+            f"{language!r} has never been used in {where}. Run setup on a profile that mines {language!r}, "
+            f"e.g. one made with settings-import FILE --language {language} --name NAME (FILE may be {{}}).",
+        )
     # The wizard's selected_specs: the catalogue minus the other regional variety.
     specs = [s for s in get_profile(language).catalog if not s.variant or s.variant == config.script_variant]
     needs_pack = packs.load_pack(language) is not None

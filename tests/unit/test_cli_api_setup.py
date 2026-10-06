@@ -13,6 +13,7 @@ from anki_miner.cli.api import setup as api_setup
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.profile_store import ProfileStore
 from anki_miner.gui.workers.resource_download_worker import ResourceDownloadResult
+from anki_miner.languages.switching import switch_language
 from anki_miner.services.resource_catalog import ResourceSpec
 
 DICT = ResourceSpec(id="test-dict", kind="dict", display_name="Test dict", url="https://x/d.zip", license_note="")
@@ -32,8 +33,8 @@ def catalog(monkeypatch):
     return profile
 
 
-def _installs(monkeypatch, *, fail=()):
-    calls: list[str] = []
+def _installs(monkeypatch, *, fail=(), calls=None):
+    calls = [] if calls is None else calls
 
     def fake(spec, *, reporter, cancelled, **kwargs):
         calls.append(spec.id)
@@ -107,12 +108,27 @@ def test_an_installed_but_disabled_resource_is_switched_back_on(catalog, test_co
 
 
 def test_another_language_waits_in_its_stash(catalog, test_config, tmp_path, monkeypatch) -> None:
-    GUIConfigManager.save_config(test_config)
+    # The profile has mined ko before: ko has its parked settings.
+    GUIConfigManager.save_config(switch_language(switch_language(test_config, "ko"), "ja"))
     _installs(monkeypatch)
     _setup(tmp_path, "ko")
     config = GUIConfigManager.load_config()
     assert config.language == "ja"
     assert config.language_stash["ko"]["dictionary_chain"][0].dict_id == "test-dict"
+
+
+def test_a_language_the_profile_never_used_is_refused(catalog, test_config, tmp_path, monkeypatch) -> None:
+    from anki_miner.cli.api.contract import ApiError
+
+    GUIConfigManager.save_config(test_config)
+    saved = GUIConfigManager.CONFIG_FILE.read_bytes()
+    calls = _installs(monkeypatch)
+    with pytest.raises(ApiError) as err:
+        _setup(tmp_path, "ko")
+    assert err.value.code == "BAD_ARGUMENTS" and "never been used" in err.value.message
+    assert "settings-import FILE --language ko --name NAME" in err.value.message
+    assert calls == [] and not (tmp_path / "progress.json").exists()
+    assert GUIConfigManager.CONFIG_FILE.read_bytes() == saved
 
 
 def test_a_failed_resource_is_listed_and_the_rest_still_apply(catalog, test_config, tmp_path, monkeypatch) -> None:
@@ -150,10 +166,10 @@ def test_the_language_pack_goes_first_and_onto_sys_path(catalog, test_config, tm
     monkeypatch.setattr(api_setup.packs, "is_installed", lambda code: False)
     monkeypatch.setattr(api_setup.packs, "install_language_pack", lambda code, root, **kw: order.append("pack"))
     monkeypatch.setattr(api_setup.packs, "ensure_language_packs_on_syspath", lambda: order.append("syspath"))
-    calls = _installs(monkeypatch)
+    _installs(monkeypatch, calls=order)
     outcome = _setup(tmp_path)
     assert outcome.result["language_pack"] == {"status": "installed", "message": None}
-    assert order == ["pack", "syspath"] and calls == ["test-dict", "test-freq"]
+    assert order == ["pack", "syspath", "test-dict", "test-freq"]
 
 
 def test_a_cancel_stops_before_the_next_item(catalog, test_config, tmp_path, monkeypatch) -> None:
@@ -164,6 +180,57 @@ def test_a_cancel_stops_before_the_next_item(catalog, test_config, tmp_path, mon
     outcome = _setup(tmp_path, cancel=cancel)
     assert outcome.cancelled and calls == []
     assert {r["status"] for r in outcome.result["resources"]} == {"not_attempted"}
+
+
+def test_a_cancel_after_the_first_resource_keeps_it_switched_on(catalog, test_config, tmp_path, monkeypatch) -> None:
+    GUIConfigManager.save_config(test_config)
+    cancel = threading.Event()
+    calls = _installs(monkeypatch)
+    fake = api_setup.install_resource
+
+    def then_cancel(spec, **kwargs):
+        result = fake(spec, **kwargs)
+        cancel.set()
+        return result
+
+    monkeypatch.setattr(api_setup, "install_resource", then_cancel)
+    outcome = _setup(tmp_path, cancel=cancel)
+    assert outcome.cancelled and calls == ["test-dict"]
+    assert [r["status"] for r in outcome.result["resources"]] == ["installed", "not_attempted"]
+    assert GUIConfigManager.load_config().dictionary_chain[0].dict_id == "test-dict"
+
+
+@pytest.mark.parametrize(("index", "downloaded"), [(None, True), ("junk", True), ("current", False)])
+def test_installed_reads_the_slots_index(catalog, test_config, tmp_path, monkeypatch, index, downloaded) -> None:
+    from anki_miner.services.dictionary.storage import SCHEMA_VERSION, create_index, write_meta
+
+    GUIConfigManager.save_config(test_config)
+    # The root the saved settings load with, which is not test_config's temp one.
+    db = api_setup.settings.load_profile_config(None).dicts_root / "test-dict" / "index.sqlite"
+    if index is not None:
+        db.parent.mkdir(parents=True)
+        if index == "junk":
+            db.write_text("not a database", encoding="utf-8")
+        else:
+            create_index(db)
+            write_meta(db, {"schema_version": str(SCHEMA_VERSION), "source_name": "Test dict"})
+    calls = _installs(monkeypatch)
+    outcome = _setup(tmp_path)
+    assert ("test-dict" in calls) is downloaded
+    assert outcome.result["resources"][0]["status"] == ("installed" if downloaded else "already_installed")
+    assert GUIConfigManager.load_config().dictionary_chain[0].dict_id == "test-dict"
+
+
+def test_a_dictionary_install_reports_its_entries(tmp_path) -> None:
+    bar = api_setup._Progress(tmp_path / "progress.json", stages=1)
+    bar._min_interval = 0.0
+    bar.stage(1, DICT.id)
+    reporter = api_setup.phase_reporter(DICT, bar.resource)
+    reporter.downloading(20, 20, "")
+    reporter.installing()
+    reporter.importing(3, 10, "Inserted 1,234 entries")
+    progress = json.loads((tmp_path / "progress.json").read_text(encoding="utf-8"))
+    assert (progress["item"], progress["done"], progress["total"]) == ("test-dict", 1234, 0)
 
 
 def test_a_missing_progress_folder_is_bad_arguments(catalog, tmp_path) -> None:
