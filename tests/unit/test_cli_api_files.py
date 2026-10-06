@@ -66,6 +66,13 @@ def test_subtitle_offset_left_out_or_null_is_zero(tmp_path: Path) -> None:
         assert files.parse_run_file(data).episodes[0].subtitle_offset == 0.0
 
 
+def test_dry_run_is_a_top_level_true_or_false(tmp_path: Path) -> None:
+    assert files.parse_run_file({**_run_file(tmp_path), "dry_run": True}).dry_run is True
+    assert files.parse_run_file(_run_file(tmp_path)).dry_run is False
+    with pytest.raises(ApiError):
+        files.parse_run_file({**_run_file(tmp_path), "dry_run": "yes"})
+
+
 def test_parse_words(tmp_path: Path) -> None:
     words = [
         {"word": "約束", "line_start": 812.3},

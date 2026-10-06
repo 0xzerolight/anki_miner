@@ -16,6 +16,7 @@ FEATURES = (
     "script-fold",
     "filter-names",
     "word-from-line",
+    "dry-run",
 )
 
 BUSY = "BUSY"

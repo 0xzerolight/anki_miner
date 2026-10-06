@@ -73,7 +73,7 @@ def services(test_config):
         patch.object(runs, "check_environment"),
         patch.object(runs, "check_card_target") as check_card_target,
         patch.object(runs, "create_shared_lookup_services", return_value=MagicMock()),
-        patch.object(runs, "AnkiService"),
+        patch.object(runs, "AnkiService") as anki_cls,
         patch.object(runs, "binary_available", return_value=True),
         patch.object(runs, "get_media_duration_seconds", return_value=1.0) as duration,
         patch.object(runs, "get_primary_video_codec", return_value=None),
@@ -83,6 +83,7 @@ def services(test_config):
         ns.factory = factory
         ns.duration = duration
         ns.check_card_target = check_card_target
+        ns.anki_cls = anki_cls
         yield ns
 
 
@@ -315,3 +316,48 @@ def test_a_merged_word_is_never_made_from_its_line(services, tmp_path, video) ->
     row = _result_file(tmp_path)["words"][0]
     assert (row["status"], row["filter"], row["from_line"]) == ("not_found", "duplicate-expression", False)
     services.processor.word_on_line.assert_not_called()
+
+
+def _dry(tmp_path, video, **episode) -> files.RunFile:
+    return replace(_run_file(tmp_path, video, **episode), dry_run=True)
+
+
+def test_a_dry_run_needs_no_anki_nor_ffmpeg_and_cuts_nothing(services, tmp_path, video) -> None:
+    """Review Focus 2: Anki closed."""
+    services.anki_cls.return_value.duplicate_fronts.side_effect = runs.AnkiConnectionError("down")
+    with patch.object(runs, "binary_available", return_value=False):
+        [verdict] = runs.mine_runs(_dry(tmp_path, video), threading.Event(), runs.Kind.DRY_RUN)
+    assert verdict["ok"] is True
+    result = _result_file(tmp_path)
+    assert result["dry_run"] is True and result["anki_write_state"] == "no_note_write"
+    assert [w["status"] for w in result["words"]] == ["ready", "not_found"]
+    anki = services.factory.call_args.kwargs["anki_service"]
+    assert isinstance(anki, runs._OfflineAnki)
+    assert isinstance(services.check_card_target.call_args.args[1], runs._OfflineAnki)  # no card-target check
+    services.duration.assert_not_called()  # no video check
+
+
+def test_a_dry_run_reports_what_anki_already_has(services, tmp_path, video) -> None:
+    services.anki_cls.return_value.duplicate_fronts.return_value = {"約束"}
+    runs.mine_runs(_dry(tmp_path, video), threading.Event(), runs.Kind.DRY_RUN)
+    assert _result_file(tmp_path)["words"][0]["status"] == "duplicate"
+
+
+def test_a_dry_run_checks_a_made_words_definition(services, tmp_path, video) -> None:
+    services.words = lambda: []
+    services.processor.word_on_line.side_effect = lambda word, line, span, **_kw: replace(
+        word, sentence=line[2], start_time=line[0], end_time=line[1]
+    )
+    services.processor.parse_sentence_fn.return_value = []
+    services.processor.definition_service.offline_term_readings.return_value = {}
+    services.processor.definition_viable.return_value = [False]
+    services.anki_cls.return_value.duplicate_fronts.return_value = set()
+    words = [{"word": "約束", "line_start": 30.0}]
+    runs.mine_runs(_dry(tmp_path, video, words=words), threading.Event(), runs.Kind.DRY_RUN)
+    row = _result_file(tmp_path)["words"][0]
+    assert (row["status"], row["from_line"]) == ("no_definition", True)
+
+
+def test_a_real_mine_says_dry_run_false(services, tmp_path, video) -> None:
+    runs.mine_runs(_run_file(tmp_path, video), threading.Event())
+    assert _result_file(tmp_path)["dry_run"] is False

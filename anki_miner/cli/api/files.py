@@ -232,17 +232,21 @@ class RunFile:
     language: object  # validated by settings.with_language
     overlay: Mapping[str, object]
     episodes: tuple[Episode, ...]
+    dry_run: bool = False
 
 
 def parse_run_file(data: object) -> RunFile:
     obj = _object(data, "The run file")
     _keys(
         obj,
-        frozenset({"schema", "run_dir", "profile", "language", "config", "episodes"}),
+        frozenset({"schema", "run_dir", "profile", "language", "config", "episodes", "dry_run"}),
         frozenset({"schema", "run_dir", "language", "episodes"}),
         "The run file",
     )
     _schema(obj, "The run file")
+    dry_run = obj.get("dry_run", False)
+    if not isinstance(dry_run, bool):
+        raise _bad("dry_run must be true or false.")
     raw_episodes = obj["episodes"]
     if not isinstance(raw_episodes, list) or not raw_episodes:
         raise _bad("episodes must be a non-empty list.")
@@ -256,4 +260,5 @@ def parse_run_file(data: object) -> RunFile:
         language=obj["language"],
         overlay=_object(obj.get("config", {}), "config"),
         episodes=episodes,
+        dry_run=dry_run,
     )

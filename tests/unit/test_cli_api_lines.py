@@ -388,6 +388,24 @@ def test_a_merged_word_is_not_made_from_its_line_when_a_survivor_shares_its_dict
     )
 
 
+def test_a_survivor_whose_front_is_the_name_is_moved_to_its_named_line_whatever_else_was_removed() -> None:
+    """R2's guard reads `removed` only for a dictionary-form or fold match: the name's own card is never refused."""
+    entries = [(1.0, 2.0, "約束だ"), (3.0, 4.0, "約束事が多い")]
+    survivor = _word("約束", 0, entries=entries)
+    selection, [chosen] = _made([R("約束", line_start=3.0)], [survivor], entries=entries, removed={"約束"})
+    assert (chosen.mined_form, chosen.sentence, chosen.start_time) == ("約束", "約束事が多い", 3.0)
+    [row] = selection.report(lines.Fates())
+    assert (row["from_line"], row["line_start"]) == (True, 3.0)
+
+
+def test_a_dry_run_hands_nothing_on_and_reports_the_runs_own_statuses() -> None:
+    selection = lines.WordSelection([R("今日"), R("無い")], ENTRIES, ENTRIES, MERGES, 30.0, dry_run=True)
+    assert selection([_word("今日", 1)]) == []
+    assert [w.mined_form for w, _from_line in selection.picked()] == ["今日"]
+    ready, missing = selection.report(lines.Fates(made={"今日": "ready"}))
+    assert (ready["status"], missing["status"]) == ("ready", "not_found")
+
+
 def test_a_fold_match_made_from_its_line_keeps_the_subtitles_spelling() -> None:
     """Z-12 with Z-2: 头发 named; 頭髮 produced on another line and written on the named one."""
     entries = [(1.0, 2.0, "頭髮很長"), (3.0, 4.0, "他的頭髮")]

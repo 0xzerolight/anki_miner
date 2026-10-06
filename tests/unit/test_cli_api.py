@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -200,6 +201,30 @@ def test_mine_runs_under_the_lock_and_reports_per_run(verdict, tmp_path, monkeyp
     assert v["command"] == "mine" and v["ok"] is False and v["error"] is None
     assert v["runs"][0]["error"] == "VIDEO_UNREADABLE"
     assert seen["job"].episodes[0].run_id == "e"
+
+
+def test_a_dry_run_takes_no_lock(verdict, tmp_path, monkeypatch) -> None:
+    from anki_miner.cli.api import runs
+    from anki_miner.config import paths as config_paths
+    from anki_miner.gui.app import _hold_window_marker
+
+    run = tmp_path / "run.json"
+    data = json.loads(Path(_write_run_file(tmp_path)).read_text(encoding="utf-8"))
+    run.write_text(json.dumps({**data, "dry_run": True}), encoding="utf-8")
+    seen = {}
+
+    def fake_mine(job, cancel, kind=None):
+        seen["kind"] = kind
+        return [{"run_id": "e", "ok": True, "error": None, "message": None, "file": "result-1.json"}]
+
+    monkeypatch.setattr(runs, "mine_runs", fake_mine)
+    config_paths.ANKI_MINER_HOME.mkdir(parents=True, exist_ok=True)
+    marker = _hold_window_marker(config_paths.ANKI_MINER_HOME)
+    try:
+        assert verdict("mine", str(run))["ok"] is True
+    finally:
+        marker.unlock()
+    assert seen["kind"] is runs.Kind.DRY_RUN
 
 
 def test_bad_run_file_is_refused_before_the_lock(verdict, tmp_path) -> None:

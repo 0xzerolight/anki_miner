@@ -4,7 +4,9 @@ A call resolves its settings once, runs the run-level checks once, and shares
 one lookup stack across its runs. Every run's media and temp folder live under
 ``<run_dir>/<run_id>/media`` and are removed before the run ends; the
 processor gets no known-words DB and no stats service, so known_words.db and
-stats.db are never touched (the caller keeps that record).
+stats.db are never touched (the caller keeps that record). A dry run
+(``Kind.DRY_RUN``) ends at the curation step: nothing is cut and nothing
+reaches Anki.
 """
 
 from __future__ import annotations
@@ -15,6 +17,7 @@ import threading
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
+from enum import Enum
 from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -43,7 +46,14 @@ from anki_miner.gui.utils.service_factory import (
     create_shared_lookup_services,
 )
 from anki_miner.languages.registry import config_language, get_profile
-from anki_miner.models import MiningOutcome, ProcessingResult, classify_result
+from anki_miner.models import (
+    CardPayload,
+    MediaData,
+    MiningOutcome,
+    ProcessingResult,
+    TokenizedWord,
+    classify_result,
+)
 from anki_miner.presenters.null_presenter import NullPresenter
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.cue_merge import merge_budget_seconds
@@ -72,24 +82,41 @@ class _LogPresenter(NullPresenter):
         logger.error("%s", message)
 
 
+class Kind(Enum):
+    """What a run does with the words it reaches (API.md): mine them, or only report them."""
+
+    MINE = "mine"
+    DRY_RUN = "dry_run"
+
+
+class _OfflineAnki(AnkiService):
+    """A dry run's Anki: no card-target check, and never reached for cards (the selection hands on nothing)."""
+
+    def verify_card_target(self) -> None:
+        return None
+
+
 @contextmanager
-def _services(config: AnkiMinerConfig) -> Iterator[SharedLookupServices]:
-    """Run-level checks, then the lookup stack the runs share."""
+def _services(config: AnkiMinerConfig, kind: Kind) -> Iterator[SharedLookupServices]:
+    """Run-level checks, then the lookup stack the runs share. A dry run checks neither ffmpeg nor Anki."""
     try:
         check_environment(config)
     except SetupFailure as exc:
         raise ApiError(SETUP_ERROR, str(exc)) from exc
-    tools = (("ffmpeg", resolve_ffmpeg(config)), ("ffprobe", resolve_ffprobe(config)))
-    missing = [name for name, path in tools if not binary_available(path)]
-    if missing:
-        raise ApiError(
-            SETUP_ERROR,
-            f"{' and '.join(missing)} not found. Install ffmpeg, or set its location in Anki Miner's settings.",
-        )
+    if kind is not Kind.DRY_RUN:
+        tools = (("ffmpeg", resolve_ffmpeg(config)), ("ffprobe", resolve_ffprobe(config)))
+        missing = [name for name, path in tools if not binary_available(path)]
+        if missing:
+            raise ApiError(
+                SETUP_ERROR,
+                f"{' and '.join(missing)} not found. Install ffmpeg, or set its location in Anki Miner's settings.",
+            )
     shared = create_shared_lookup_services(config)
     try:
+        anki = _OfflineAnki if kind is Kind.DRY_RUN else AnkiService
         try:
-            check_card_target(config, AnkiService(config), shared.definition_service)
+            # A dry run's check is the offline dictionary alone.
+            check_card_target(config, anki(config), shared.definition_service)
         except SetupFailure as exc:
             raise ApiError(SETUP_ERROR, str(exc)) from exc
         except (AnkiConnectionError, ValueError) as exc:  # ValueError: AnkiService refuses incomplete anki_fields
@@ -137,14 +164,19 @@ def _mine(
     folder: Path,
     shared: SharedLookupServices,
     cancel_all: threading.Event,
+    kind: Kind,
 ) -> _Mined:
-    """One process_episode call, media inside the run folder, cleaned up whatever happens."""
+    """One process_episode call, media inside the run folder, cleaned up whatever happens.
+
+    The temp folder is ``<run_id>/media/`` for every kind: a run folder serves one call at a time.
+    """
     run_config = _episode_config(config, episode, folder)
+    dry = kind is Kind.DRY_RUN
     processor = create_episode_processor(
         run_config,
         _LogPresenter(),
         None,
-        anki_service=AnkiService(run_config),
+        anki_service=_OfflineAnki(run_config) if dry else AnkiService(run_config),
         shared_lookup=shared,
         with_known_words_db=False,
         run_temp_root=folder / MEDIA,
@@ -176,6 +208,7 @@ def _mine(
             fold=fold,
             allow_duplicates=run_config.allow_duplicate_cards,
             line_words=line_words,
+            dry_run=dry,
         )
         with CancelWatcher(folder, cancel_all) as cancel:
             try:
@@ -191,6 +224,7 @@ def _mine(
                 raise setup_failure(exc) from exc
         anki = processor.anki_service
         failures = anki.last_media_store_failures
+        succeeded = classify_result(result) is MiningOutcome.SUCCESS
         return _Mined(
             result=result,
             selection=selection,
@@ -201,13 +235,45 @@ def _mine(
                 rejected=list(processor.last_definition_rejects),
                 media_missing=dict(processor.last_media_missing),
                 collapsed=list(processor.last_collapsed),
-                stopped=classify_result(result) is not MiningOutcome.SUCCESS,
+                stopped=not succeeded,
+                made=_dry_statuses(run_config, processor, selection) if dry and succeeded else {},
             ),
             media_store_failures=failures if isinstance(failures, int) else 0,
         )
     finally:
         processor.close()
         shutil.rmtree(folder / MEDIA, ignore_errors=True)
+
+
+def _dry_statuses(config: AnkiMinerConfig, processor: EpisodeProcessor, selection: WordSelection) -> dict[str, str]:
+    """A dry run's status per word it would have mined: ready, no_definition or duplicate (API.md)."""
+    picked = selection.picked()
+    made_here = [word for word, from_line in picked if from_line]
+    # A produced word already passed phase 2's dictionary check; a made one never met it.
+    undefined = {
+        word.mined_form
+        for word, ok in zip(made_here, processor.definition_viable(made_here) if made_here else [], strict=True)
+        if not ok
+    }
+    in_anki = _duplicates_in_anki(config, [word for word, _ in picked])
+    return {
+        word.mined_form: (
+            "no_definition" if word.mined_form in undefined else "duplicate" if word.mined_form in in_anki else "ready"
+        )
+        for word, _ in picked
+    }
+
+
+def _duplicates_in_anki(config: AnkiMinerConfig, words: list[TokenizedWord]) -> set[str]:
+    """The words mine's duplicate checks would refuse, when Anki answers: a dry run needs no Anki."""
+    if not words:
+        return set()
+    try:
+        return AnkiService(config).duplicate_fronts(
+            [CardPayload(word=w, media=MediaData(), definition="") for w in words]
+        )
+    except AnkiConnectionError:
+        return set()
 
 
 def _outcome_error(result: ProcessingResult) -> ApiError | None:
@@ -230,12 +296,12 @@ def _guarded(run_id: str, body: Callable[[], dict[str, object]]) -> dict[str, ob
         return run_verdict(run_id, error=ApiError(INTERNAL, f"{type(exc).__name__}: {exc}"))
 
 
-def mine_runs(run_file: RunFile, cancel_all: threading.Event) -> list[dict[str, object]]:
+def mine_runs(run_file: RunFile, cancel_all: threading.Event, kind: Kind = Kind.MINE) -> list[dict[str, object]]:
     """Every episode of *run_file* mined in turn; a result-<n>.json for each that got as far as mining."""
     config = settings.resolve_run_config(run_file.profile, run_file.language, run_file.overlay)
-    with _services(config) as shared:
+    with _services(config, kind) as shared:
         return [
-            _guarded(episode.run_id, partial(_mine_one, run_file.run_dir, episode, config, shared, cancel_all))
+            _guarded(episode.run_id, partial(_mine_one, run_file.run_dir, episode, config, shared, cancel_all, kind))
             for episode in run_file.episodes
         ]
 
@@ -246,13 +312,15 @@ def _mine_one(
     config: AnkiMinerConfig,
     shared: SharedLookupServices,
     cancel_all: threading.Event,
+    kind: Kind,
 ) -> dict[str, object]:
     folder = run_dir / episode.run_id
     folder.mkdir(exist_ok=True)
     if cancel_all.is_set():
         raise ApiError(CANCELLED, "Cancelled before this run started.")
-    _check_video(config, episode)
-    mined = _mine(config, episode, folder, shared, cancel_all)
+    if kind is not Kind.DRY_RUN:  # a dry run cuts nothing from the video
+        _check_video(config, episode)
+    mined = _mine(config, episode, folder, shared, cancel_all, kind)
     error = _outcome_error(mined.result)
     path = next_result_path(folder)
     write_json(
@@ -260,6 +328,7 @@ def _mine_one(
         {
             "schema": 1,
             "run_id": episode.run_id,
+            "dry_run": kind is Kind.DRY_RUN,
             "outcome": classify_result(mined.result).value,
             "anki_write_state": mined.result.anki_write_state.value,
             "failure_is_transient": bool(mined.result.failure_is_transient),

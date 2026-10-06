@@ -1304,67 +1304,15 @@ class EpisodeProcessor:
         # can never become cards (they would otherwise be silently skipped at
         # Phase 5). Offline-only by design: matches the curator's no-network
         # def-pane and the project's offline-first default (Jisho is off by
-        # default). Probes mined_form plus only same-kanji, okurigana-only lemma
-        # alternates; a different-kanji UniDic lemma may be another homograph.
-        # Exact misses also use the same rules-validated deinflection candidates
-        # as Phase 4, so 帰れる can qualify through 帰る without trusting 返る.
+        # default). The probe itself is definition_viable.
         # Runs before every lossy sentence selector so an undefined first word
         # cannot erase a definition-backed sentence-mate. An integrity gate (R2):
         # a bypass_optional_filters run skips it only while
         # bypass_skips_dictionary_gates holds (the golden contract, where phase
         # 5 stays the skip point); Deck Builder keeps it, so its preview and
         # curator count only cardable words.
-        #
-        # Known, intentional asymmetry: this probe is offline-only, but Phase 5
-        # looks definitions up over the FULL chain (get_definitions_batch, which
-        # includes Jisho when enabled). A user who turns Jisho on therefore has
-        # words with a Jisho-only definition dropped here before the curator —
-        # accepted on purpose so Phase 2 never blocks on network I/O. Do not
-        # "fix" this by calling online providers here.
         if unknown_words and not (self.config.bypass_optional_filters and self.bypass_skips_dictionary_gates):
-            safe_alternates = [self._lookup_alternate(w) for w in unknown_words]
-            probe_terms = list(
-                {
-                    term
-                    for w, alternate in zip(unknown_words, safe_alternates, strict=True)
-                    for term in (w.mined_form, alternate)
-                    if term
-                }
-            )
-            has_def = self.definition_service.has_offline_definitions(probe_terms) or {}
-            # Candidate ladder comes from the PROFILE, never from
-            # definition_service: pre-existing tests stub that service with a
-            # bare MagicMock and assert on this probe's contents, so routing
-            # here through it would starve the probe. JaLookupStrategy is a
-            # pure delegate to DefinitionService._fallback_candidates, so the
-            # Japanese terms are byte-identical to the pre-profile static call.
-            fallback_candidates = [
-                (
-                    []
-                    if has_def.get(w.mined_form) or has_def.get(alternate)
-                    else self.profile.lookup.candidates(w.mined_form, alternate, None)
-                )
-                for w, alternate in zip(unknown_words, safe_alternates, strict=True)
-            ]
-            fallback_probe = list(
-                dict.fromkeys(candidate for candidates in fallback_candidates for candidate in candidates)
-            )
-            deinflection_hits = (
-                self.definition_service.offline_deinflection_terms_exist(fallback_probe) if fallback_probe else set()
-            ) or set()
-            viable = [
-                bool(
-                    has_def.get(w.mined_form)
-                    or has_def.get(alternate)
-                    or any(term in deinflection_hits for term, _conditions in candidates)
-                )
-                for w, alternate, candidates in zip(
-                    unknown_words,
-                    safe_alternates,
-                    fallback_candidates,
-                    strict=True,
-                )
-            ]
+            viable = self.definition_viable(unknown_words)
             kept_words = [w for w, keep in zip(unknown_words, viable, strict=True) if keep]
             self.last_definition_rejects = [w for w, keep in zip(unknown_words, viable, strict=True) if not keep]
             dropped = [w.mined_form for w in self.last_definition_rejects]
@@ -1397,6 +1345,68 @@ class EpisodeProcessor:
                     )
                 )
         return unknown_words
+
+    def definition_viable(self, words: list[TokenizedWord]) -> list[bool]:
+        """Per word, whether an offline dictionary defines it: phase 2's integrity probe (R2).
+
+        Also the ``--api`` dry run's check for a word made from its line, which
+        never went through phase 2.
+        """
+        # Probes mined_form plus only same-kanji, okurigana-only lemma
+        # alternates; a different-kanji UniDic lemma may be another homograph.
+        # Exact misses also use the same rules-validated deinflection candidates
+        # as Phase 4, so 帰れる can qualify through 帰る without trusting 返る.
+        #
+        # Known, intentional asymmetry: this probe is offline-only, but Phase 5
+        # looks definitions up over the FULL chain (get_definitions_batch, which
+        # includes Jisho when enabled). A user who turns Jisho on therefore has
+        # words with a Jisho-only definition dropped here before the curator —
+        # accepted on purpose so Phase 2 never blocks on network I/O. Do not
+        # "fix" this by calling online providers here.
+        safe_alternates = [self._lookup_alternate(w) for w in words]
+        probe_terms = list(
+            {
+                term
+                for w, alternate in zip(words, safe_alternates, strict=True)
+                for term in (w.mined_form, alternate)
+                if term
+            }
+        )
+        has_def = self.definition_service.has_offline_definitions(probe_terms) or {}
+        # Candidate ladder comes from the PROFILE, never from
+        # definition_service: pre-existing tests stub that service with a
+        # bare MagicMock and assert on this probe's contents, so routing
+        # here through it would starve the probe. JaLookupStrategy is a
+        # pure delegate to DefinitionService._fallback_candidates, so the
+        # Japanese terms are byte-identical to the pre-profile static call.
+        fallback_candidates = [
+            (
+                []
+                if has_def.get(w.mined_form) or has_def.get(alternate)
+                else self.profile.lookup.candidates(w.mined_form, alternate, None)
+            )
+            for w, alternate in zip(words, safe_alternates, strict=True)
+        ]
+        fallback_probe = list(
+            dict.fromkeys(candidate for candidates in fallback_candidates for candidate in candidates)
+        )
+        deinflection_hits = (
+            self.definition_service.offline_deinflection_terms_exist(fallback_probe) if fallback_probe else set()
+        ) or set()
+        viable = [
+            bool(
+                has_def.get(w.mined_form)
+                or has_def.get(alternate)
+                or any(term in deinflection_hits for term, _conditions in candidates)
+            )
+            for w, alternate, candidates in zip(
+                words,
+                safe_alternates,
+                fallback_candidates,
+                strict=True,
+            )
+        ]
+        return viable
 
     def _phase2_coverage_filters(
         self,

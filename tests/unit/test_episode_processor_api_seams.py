@@ -52,3 +52,11 @@ def test_word_on_line_is_the_filters_swap_ranked_again(test_config) -> None:
     assert processor.word_on_line(_noun("危害"), line, (0, 2), reading="きがい") is moved
     word_filter.word_on_line.assert_called_once_with(_noun("危害"), line, (0, 2), reading="きがい")
     processor._attach_frequency.assert_called_once_with([moved])
+
+
+def test_definition_viable_is_phase_twos_probe(test_config) -> None:
+    definitions = MagicMock()
+    definitions.has_offline_definitions.side_effect = lambda terms: {t: t != "空" for t in terms}
+    definitions.offline_deinflection_terms_exist.return_value = set()
+    processor = build_processor(test_config, definition_service=definitions)
+    assert processor.definition_viable([_noun("本"), _noun("空")]) == [True, False]

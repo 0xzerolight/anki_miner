@@ -1128,6 +1128,21 @@ class AnkiService:
         )
         return list(all_created_ids)
 
+    def duplicate_fronts(self, word_data_list: list[CardPayload]) -> set[str]:
+        """The mined forms :meth:`create_cards_batch` would refuse as duplicates, adding nothing.
+
+        The ``--api`` dry run's duplicate check, the branch create_cards_batch
+        takes: excluded-deck admission when it applies (those notes are then
+        added with duplicates allowed, never probed), else the per-note probe,
+        whose note options keep ``allow_duplicate_cards``' deck scope. Raises
+        ``AnkiConnectionError`` when Anki does not answer.
+        """
+        if self.config.excluded_decks and not self.config.allow_duplicate_cards:
+            return set(self._admit_against_excluded_decks(word_data_list)[1])
+        notes = [self._build_note(item, set()).note for item in word_data_list]
+        flags = self._probe_duplicates(notes) if notes else []
+        return {item.word.mined_form for item, dup in zip(word_data_list, flags, strict=True) if dup}
+
     def _reset_last_run(self) -> None:
         """Clear the per-call receipts before a new ``create_cards_batch`` run."""
         self.last_created_note_ids = []

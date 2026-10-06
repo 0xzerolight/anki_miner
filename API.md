@@ -47,6 +47,8 @@ A verdict:
 - the Anki Miner window is open, including a window opened past its "already running" warning;
 - another command-line or API run is working.
 
+A dry run takes no lock.
+
 `check`, `version`, `profiles` and `settings-export` run at any time. On Windows every call holds the app's mutex, so the installer waits for it.
 
 ## The run folder
@@ -59,6 +61,8 @@ A verdict:
 | `result-<n>.json` | mine | one per `mine` of that `run_id`; `n` counts up from 1 |
 | `cancel` | the caller | stops the run (see Cancelling) |
 | `media/` | mine | temporary clips and pictures, removed before the run ends |
+
+A run folder serves one call at a time: calls on the same `run_id` share its `progress.json`, `cancel` file and `media/`. Calls on different `run_id`s can run side by side.
 
 Mining a `run_id` again starts over and writes the next `result-<n>.json`; earlier results stay. The folder belongs to the caller, who deletes it when done.
 
@@ -74,6 +78,7 @@ The run file:
 | `language` | the mining language code (`ja`, `zh`, `ko`, …) |
 | `config` | optional settings for this run only (below) |
 | `episodes` | one or more episodes; several in one call share one dictionary load |
+| `dry_run` | `true`: report what the run would do, without cutting media or writing to Anki (below) |
 
 The settings come from the chosen profile:
 - The active profile reads the settings the window uses. Before Anki Miner was ever set up, those are the defaults, as in the app.
@@ -142,7 +147,7 @@ Episodes run one at a time, and each run's `result-<n>.json` is written as it en
 `result-<n>.json`:
 
 ```json
-{"schema": 1, "run_id": "job-1234-ep05", "outcome": "success",
+{"schema": 1, "run_id": "job-1234-ep05", "dry_run": false, "outcome": "success",
  "anki_write_state": "note_write_confirmed", "failure_is_transient": false,
  "error": null, "message": null, "media_store_failures": 0,
  "words": [{"word": "約束", "mined_form": "約束", "status": "created", "note_id": 1727000000001,
@@ -168,6 +173,7 @@ Episodes run one at a time, and each run's `result-<n>.json` is written as it en
 | `not_found` | the episode does not produce the word, or the merge of words that share one dictionary entry removed it (then `filter` says `duplicate-expression`) |
 | `not_attempted` | the run stopped (cancelled or failed) before reaching it |
 | `uncertain` | its note was being added when the connection failed; check Anki before mining it again |
+| `ready` | dry run only: the run would mine it |
 
 - `media_missing` lists `picture` and `audio` when that clip or picture could not be cut. Missing pronunciation audio is not reported.
 - `media_store_failures` counts the media files Anki could not store during the run.
@@ -176,6 +182,10 @@ Episodes run one at a time, and each run's `result-<n>.json` is written as it en
 - `from_line` is `true` for a word made from its named line.
 - `sentence`, `start` and `end` are the merged sentence and its window in the video, without the audio padding.
 - Every key is always present. `filter` is `duplicate-expression` on a `not_found` word that the merge of words sharing one dictionary entry removed, with `mined_form` set to the word it merged into; otherwise `null`.
+
+## A dry run
+
+`dry_run: true` runs the same file without cutting media or writing anything to Anki, and needs neither Anki nor ffmpeg. It runs any time, beside calls on other `run_id`s. Each word the run would mine comes back `ready`, `no_definition` (a word made from its line that no offline dictionary defines) or, when Anki answers, `duplicate`; the others as for `mine`. The result file says `"dry_run": true`.
 
 ## Progress and cancelling
 
@@ -217,6 +227,7 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 | `script-fold` | `word` also matches through the language's comparison (Chinese Simplified and Traditional, letter case) |
 | `filter-names` | `filter` is `duplicate-expression` on a word the merge of words sharing one dictionary entry removed |
 | `word-from-line` | a named line is the one used, and a word the episode does not produce there is made from it; `surface`, `reading` and `from_line` |
+| `dry-run` | `dry_run` in the run file, the result's `dry_run` and the `ready` status |
 
 `profiles` puts `{"profiles": [{"id": "anime", "name": "Anime", "active": true}, …]}` in `result`. Before the user has created any profile, the list holds one, `default`.
 

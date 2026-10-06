@@ -2,6 +2,7 @@
 
 import base64
 import logging
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -10,7 +11,7 @@ import requests
 
 from anki_miner.exceptions import AnkiConnectionError, SetupError
 from anki_miner.languages.profile import CARD_FRONT_KEY
-from anki_miner.models import AnkiWriteState, CardPayload, MediaData
+from anki_miner.models import AnkiWriteState, CardPayload, MediaData, TokenizedWord
 from anki_miner.services import _ankiconnect
 from anki_miner.services._ankiconnect import _expect_list, post_action, post_multi
 from anki_miner.services.anki_media_store import _content_addressed_name
@@ -5232,3 +5233,37 @@ class TestNotCreatedRecord:
         service.last_not_created = {"old": "refused"}
         service.create_cards_batch([])
         assert service.last_not_created == {}
+
+
+def _payload(front: str) -> CardPayload:
+    word = TokenizedWord(
+        surface=front,
+        lemma=front,
+        reading="",
+        sentence=front,
+        start_time=0.0,
+        end_time=1.0,
+        duration=1.0,
+        mined_form_override=front,
+    )
+    return CardPayload(word=word, media=MediaData(), definition="")
+
+
+def test_duplicate_fronts_runs_create_cards_batchs_own_probe(test_config, monkeypatch) -> None:
+    service = AnkiService(test_config)
+    probed = []
+    monkeypatch.setattr(service, "_probe_duplicates", lambda notes: probed.extend(notes) or [True, False])
+    assert service.duplicate_fronts([_payload("本"), _payload("走る")]) == {"本"}
+    assert len(probed) == 2  # one probe note per payload, built as create_cards_batch builds them
+
+
+def test_duplicate_fronts_under_excluded_decks_is_the_admission_alone(test_config, monkeypatch) -> None:
+    """create_cards_batch adds admitted notes with duplicates allowed and never probes them."""
+    service = AnkiService(replace(test_config, excluded_decks=("Old",), allow_duplicate_cards=False))
+    monkeypatch.setattr(service, "_admit_against_excluded_decks", lambda payloads: (payloads[1:], ["本"]))
+
+    def no_probe(notes):
+        raise AssertionError("probed under excluded-deck admission")
+
+    monkeypatch.setattr(service, "_probe_duplicates", no_probe)
+    assert service.duplicate_fronts([_payload("本"), _payload("走る")]) == {"本"}

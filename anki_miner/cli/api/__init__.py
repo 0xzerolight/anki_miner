@@ -1,7 +1,7 @@
 """``--api``: the mining API for other programs (API.md).
 
 Each call writes exactly one JSON verdict line to fd 1 and exits 0; any other
-exit is a crash. ``mine`` holds the instance lock; ``check``,
+exit is a crash. ``mine`` holds the instance lock (a dry run does not); ``check``,
 ``version``, ``profiles`` and ``settings-export`` run at any time. The log goes
 to ``anki_miner.api.log`` (installed by ``cli.entry`` before this runs).
 """
@@ -94,21 +94,26 @@ def _dispatch(args: argparse.Namespace) -> dict[str, object]:
 
 
 def _run(args: argparse.Namespace) -> dict[str, object]:
-    """mine: the run file checked first, then the runs under the instance lock."""
+    """mine: the run file checked first, then the runs under the instance lock (a dry run takes none)."""
     from anki_miner.cli.api import files, runs
     from anki_miner.cli.entry import Busy, _cancel_on_signals, acquire_run_lock
 
     job = files.parse_run_file(files.read_json_file(args.run_file))
-    try:
-        lock = acquire_run_lock()
-    except Busy as exc:
-        raise ApiError(BUSY, str(exc)) from exc
-    try:
-        cancel = threading.Event()
+    cancel = threading.Event()
+    if job.dry_run:
+        # It writes nothing shared (no Anki, no known-words or stats DB), so it runs beside the window and other runs.
         with _cancel_on_signals(cancel):
-            verdicts = runs.mine_runs(job, cancel)
-    finally:
-        lock.unlock()
+            verdicts = runs.mine_runs(job, cancel, runs.Kind.DRY_RUN)
+    else:
+        try:
+            lock = acquire_run_lock()
+        except Busy as exc:
+            raise ApiError(BUSY, str(exc)) from exc
+        try:
+            with _cancel_on_signals(cancel):
+                verdicts = runs.mine_runs(job, cancel)
+        finally:
+            lock.unlock()
     # With several runs the call is ok only if every run is; each run carries its own error.
     return {**_ok(args.command, runs=verdicts), "ok": all(v["ok"] for v in verdicts)}
 
