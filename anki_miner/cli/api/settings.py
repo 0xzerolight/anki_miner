@@ -39,8 +39,12 @@ ALLOWED_OVERLAY_KEYS = frozenset(
         "max_sentence_chars",
         "exclude_hiragana_only_words",
         "exclude_katakana_only_words",
+        "bold_target_in_sentence",
     }
 )
+#: Off for every API run (resolve_run_config). A run file may still send them as false,
+#: as 3.5.0 and 3.6.0 required; true is refused rather than silently ignored.
+FORCED_OFF_KEYS = frozenset({"deduplicate_sentences", "use_i_plus_one_filter"})
 
 #: Before any profile exists the window adopts gui_config.json as "default"
 #: (profile_controller); until then the API reports that implicit profile.
@@ -95,6 +99,10 @@ def with_language(config: AnkiMinerConfig, language: object, *, code: str) -> An
 
 def apply_overlay(config: AnkiMinerConfig, overlay: Mapping[str, object]) -> AnkiMinerConfig:
     """*overlay* applied the way Settings -> Import applies a file: typed, maps merged per key."""
+    overlay = dict(overlay)
+    for key in sorted(FORCED_OFF_KEYS & set(overlay)):
+        if overlay.pop(key) is not False:
+            raise ApiError(BAD_RUN_FILE, f"{key} is always off for API runs: send false, or leave it out.")
     unknown = sorted(set(overlay) - ALLOWED_OVERLAY_KEYS)
     if unknown:
         raise ApiError(BAD_RUN_FILE, f"These config keys are not allowed: {', '.join(unknown)}")

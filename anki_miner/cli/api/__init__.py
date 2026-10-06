@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import NoReturn
 
 from anki_miner import __version__
-from anki_miner.cli.api.contract import API_SCHEMA, BAD_ARGUMENTS, BUSY, COMMANDS, INTERNAL, ApiError
+from anki_miner.cli.api.contract import API_SCHEMA, BAD_ARGUMENTS, BUSY, COMMANDS, FEATURES, INTERNAL, ApiError
 from anki_miner.cli.entry import _prepare_process, _private_stdout
 
 logger = logging.getLogger(__name__)
@@ -80,7 +80,8 @@ def _dispatch(args: argparse.Namespace) -> dict[str, object]:
 
     if args.command == "version":
         return _ok(
-            "version", result={"schema": API_SCHEMA, "app": __version__, "commands": list(COMMANDS), "features": []}
+            "version",
+            result={"schema": API_SCHEMA, "app": __version__, "commands": list(COMMANDS), "features": list(FEATURES)},
         )
     if args.command == "profiles":
         return _ok("profiles", result=commands.profiles_result())

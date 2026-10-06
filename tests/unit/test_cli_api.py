@@ -36,8 +36,14 @@ def test_version(verdict) -> None:
         "ok": True,
         "error": None,
         "message": None,
-        "result": {"schema": 1, "app": __version__, "commands": list(contract.COMMANDS), "features": []},
+        "result": {
+            "schema": 1,
+            "app": __version__,
+            "commands": list(contract.COMMANDS),
+            "features": list(contract.FEATURES),
+        },
     }
+    assert {"sentence-rules-off", "bold-target"} <= set(v["result"]["features"])
 
 
 def test_unknown_command_is_bad_arguments(verdict) -> None:

@@ -84,12 +84,12 @@ The settings then switch to `language` the way the window's language switch does
 Allowed `config` keys:
 - `anki_deck_name`, `anki_note_type`, `anki_fields`, `card_type`, `card_type_marker_fields`
 - `allow_duplicate_cards`, `merge_incomplete_cues`, `max_parallel_workers`
-- `min_frequency_rank`, `max_frequency_rank`, `use_blacklist`, `use_whitelist`
+- `min_frequency_rank`, `max_frequency_rank`, `use_blacklist`, `use_whitelist`, `bold_target_in_sentence`
 - `max_sentence_duration_seconds`, `max_sentence_chars`, `exclude_hiragana_only_words`, `exclude_katakana_only_words`
 
 `anki_fields` and `card_type_marker_fields` merge key by key into the profile's. An unknown key, a value of the wrong type, or a value Anki Miner's settings refuse gives `BAD_RUN_FILE`. The ranges themselves are not checked.
 
-API runs never subtract words the user already knows (Anki's cards, the known-words list, the ignore list): the caller names only words it wants mined. For the same reason the sentence rules are off: one card per sentence and i+1 never apply to an API run. The profile's other filters still apply, so use `config` to turn off any that could remove a named word. Two steps cannot be turned off from `config`: the name lists, which remove words that are names, and, unless `allow_duplicate_cards` is on, the merge of words that share one dictionary entry, which keeps the first. A word either step removes comes back `not_found`.
+API runs never subtract words the user already knows (Anki's cards, the known-words list, the ignore list): the caller names only words it wants mined. For the same reason the sentence rules are off: one card per sentence and i+1 never apply to an API run. `deduplicate_sentences` and `use_i_plus_one_filter` may be sent as `false`; `true` gives `BAD_RUN_FILE`. The profile's other filters still apply, so use `config` to turn off any that could remove a named word. Two steps cannot be turned off from `config`: the name lists, which remove words that are names, and, unless `allow_duplicate_cards` is on, the merge of words that share one dictionary entry, which keeps the first. A word either step removes comes back `not_found`.
 
 An episode:
 
@@ -204,7 +204,12 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 
 `check --language CODE [--profile ID]` puts `{"ready": false, "items": [...]}` in `result`, one item per check. The items are `anki`, `deck`, `note_type`, `fields`, `dictionary`, `resources` (dictionary or frequency indexes that need re-importing), `language_pack`, `ffmpeg` and `ffprobe`. Each item has `name`, `ok` and `message` (null when ok). When Anki does not answer, `deck`, `note_type` and `fields` are reported as not checked.
 
-`version` puts `{"schema": 1, "app": "3.5.0", "commands": [...], "features": []}` in `result`. `features` will list later additions this build has.
+`version` puts `{"schema": 1, "app": "3.5.0", "commands": [...], "features": []}` in `result`. `features` names each addition this build has (table below).
+
+| Feature | Adds |
+|---|---|
+| `sentence-rules-off` | `config` takes `deduplicate_sentences` and `use_i_plus_one_filter` as `false` |
+| `bold-target` | `bold_target_in_sentence` in `config` |
 
 `profiles` puts `{"profiles": [{"id": "anime", "name": "Anime", "active": true}, …]}` in `result`. Before the user has created any profile, the list holds one, `default`.
 

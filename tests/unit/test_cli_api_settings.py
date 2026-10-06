@@ -58,15 +58,27 @@ def test_overlay_merges_fields_per_key(test_config) -> None:
         {"use_blacklist": 1},
         {"card_type": "bogus"},
         {"max_parallel_workers": 99},
-        # Forced off for API runs (audit L5-008/L5-009): no longer a run-file key.
-        {"deduplicate_sentences": False},
+        # Off for every API run (audit L5-008/L5-009): only true is refused.
+        {"deduplicate_sentences": True},
         {"use_i_plus_one_filter": True},
+        {"deduplicate_sentences": 0},
     ],
 )
 def test_overlay_refusals_are_bad_run_file(test_config, overlay) -> None:
     with pytest.raises(ApiError) as err:
         settings.apply_overlay(test_config, overlay)
     assert err.value.code == "BAD_RUN_FILE"
+
+
+def test_overlay_accepts_the_sentence_rules_as_false_and_keeps_them_off(test_config) -> None:
+    """3.5.0 and 3.6.0 required both keys as false; a run file written for them still runs."""
+    GUIConfigManager.save_config(replace(test_config, deduplicate_sentences=True, use_i_plus_one_filter=True))
+    config = settings.resolve_run_config(None, "ja", {"deduplicate_sentences": False, "use_i_plus_one_filter": False})
+    assert config.deduplicate_sentences is False and config.use_i_plus_one_filter is False
+
+
+def test_overlay_takes_bold_target_in_sentence(test_config) -> None:
+    assert settings.apply_overlay(test_config, {"bold_target_in_sentence": True}).bold_target_in_sentence is True
 
 
 def test_run_config_switches_language_then_overlays_and_forces_known_words(test_config) -> None:
