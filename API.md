@@ -185,7 +185,7 @@ Episodes run one at a time, and each run's `result-<n>.json` is written as it en
 
 ## A dry run
 
-`dry_run: true` runs the same file without cutting media or writing anything to Anki, and needs neither Anki nor ffmpeg. It runs any time, beside calls on other `run_id`s. Each word the run would mine comes back `ready`, `no_definition` (a word made from its line that no offline dictionary defines) or, when Anki answers, `duplicate`; the others as for `mine`. The result file says `"dry_run": true`.
+`dry_run: true` runs the same file without cutting media or writing anything to Anki, and needs neither Anki nor ffmpeg. It does not open the video either, so a `video_file` that does not open shows up only on a real `mine`. It runs any time, beside calls on other `run_id`s. Each word the run would mine comes back `ready`, `no_definition` (a word made from its line that no offline dictionary defines) or, when Anki answers, `duplicate`; the others as for `mine`. The result file says `"dry_run": true`.
 
 ## Progress and cancelling
 

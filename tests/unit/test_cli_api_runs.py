@@ -10,12 +10,16 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 
 from anki_miner.cli import runner
 from anki_miner.cli.api import files, runs
 from anki_miner.cli.api.contract import ApiError
 from anki_miner.exceptions import SubtitleParseError
 from anki_miner.models import CANCELLED_ERROR, AnkiWriteState, ProcessingResult
+from anki_miner.services import _ankiconnect, anki_service
+from anki_miner.services.anki_service import AnkiService
+from anki_miner.services.validation_service import ValidationService
 from tests.unit.test_cli_api_lines import ENTRIES, _on_lines, _word
 
 WORDS = [{"word": "約束", "line_start": 30.0}, {"word": "無い"}]
@@ -74,11 +78,13 @@ def services(test_config):
         patch.object(runs, "check_card_target") as check_card_target,
         patch.object(runs, "create_shared_lookup_services", return_value=MagicMock()),
         patch.object(runs, "AnkiService") as anki_cls,
+        patch.object(runs, "ValidationService") as validation,  # Anki answers unless a test says not
         patch.object(runs, "binary_available", return_value=True),
         patch.object(runs, "get_media_duration_seconds", return_value=1.0) as duration,
         patch.object(runs, "get_primary_video_codec", return_value=None),
         patch.object(runs, "create_episode_processor", return_value=processor) as factory,
     ):
+        validation.return_value.check_ankiconnect.return_value = (True, "AnkiConnect is running")
         ns.processor = processor
         ns.factory = factory
         ns.duration = duration
@@ -322,12 +328,13 @@ def _dry(tmp_path, video, **episode) -> files.RunFile:
     return replace(_run_file(tmp_path, video, **episode), dry_run=True)
 
 
-def test_a_dry_run_needs_no_anki_nor_ffmpeg_and_cuts_nothing(services, tmp_path, video) -> None:
+def test_a_dry_run_needs_no_anki_nor_ffmpeg_and_cuts_nothing(services, tmp_path, video, caplog) -> None:
     """Review Focus 2: Anki closed."""
     services.anki_cls.return_value.duplicate_fronts.side_effect = runs.AnkiConnectionError("down")
     with patch.object(runs, "binary_available", return_value=False):
         [verdict] = runs.mine_runs(_dry(tmp_path, video), threading.Event(), runs.Kind.DRY_RUN)
     assert verdict["ok"] is True
+    assert "duplicate check failed" in caplog.text  # the log explains a ready the probe never confirmed
     result = _result_file(tmp_path)
     assert result["dry_run"] is True and result["anki_write_state"] == "no_note_write"
     assert [w["status"] for w in result["words"]] == ["ready", "not_found"]
@@ -341,9 +348,12 @@ def test_a_dry_run_reports_what_anki_already_has(services, tmp_path, video) -> N
     services.anki_cls.return_value.duplicate_fronts.return_value = {"約束"}
     runs.mine_runs(_dry(tmp_path, video), threading.Event(), runs.Kind.DRY_RUN)
     assert _result_file(tmp_path)["words"][0]["status"] == "duplicate"
+    [cancelled] = services.anki_cls.return_value.set_cancelled_check.call_args.args
+    assert cancelled() is False  # the run's cancel event, so a cancel cuts a retry wait short
 
 
-def test_a_dry_run_checks_a_made_words_definition(services, tmp_path, video) -> None:
+def _dry_made_row(services, tmp_path, video, *, in_anki: set[str]) -> dict:
+    """A dry run's row for 約束 made from line 30.0, which no offline dictionary defines."""
     services.words = lambda: []
     services.processor.word_on_line.side_effect = lambda word, line, span, **_kw: replace(
         word, sentence=line[2], start_time=line[0], end_time=line[1]
@@ -351,11 +361,38 @@ def test_a_dry_run_checks_a_made_words_definition(services, tmp_path, video) -> 
     services.processor.parse_sentence_fn.return_value = []
     services.processor.definition_service.offline_term_readings.return_value = {}
     services.processor.definition_viable.return_value = [False]
-    services.anki_cls.return_value.duplicate_fronts.return_value = set()
+    services.anki_cls.return_value.duplicate_fronts.return_value = in_anki
     words = [{"word": "約束", "line_start": 30.0}]
     runs.mine_runs(_dry(tmp_path, video, words=words), threading.Event(), runs.Kind.DRY_RUN)
-    row = _result_file(tmp_path)["words"][0]
+    return _result_file(tmp_path)["words"][0]
+
+
+def test_a_dry_run_checks_a_made_words_definition(services, tmp_path, video) -> None:
+    row = _dry_made_row(services, tmp_path, video, in_anki=set())
     assert (row["status"], row["from_line"]) == ("no_definition", True)
+
+
+def test_in_a_dry_run_no_definition_beats_duplicate(services, tmp_path, video) -> None:
+    """mine never reaches Anki's check for a word phase 4 drops."""
+    assert _dry_made_row(services, tmp_path, video, in_anki={"約束"})["status"] == "no_definition"
+
+
+def test_a_dry_run_with_anki_closed_asks_once_and_never_waits(services, tmp_path, video) -> None:
+    """Review Focus 2: the probe's retries (3 tries, 8 s apart) would hold every episode ~16 s, past a cancel."""
+
+    def no_wait(_seconds):
+        raise AssertionError("the dry run waited to retry a closed Anki")
+
+    with (
+        patch.object(runs, "AnkiService", AnkiService),
+        patch.object(runs, "ValidationService", ValidationService),
+        patch.object(_ankiconnect, "_post", side_effect=requests.exceptions.ConnectionError("refused")) as post,
+        patch.object(anki_service.time, "sleep", side_effect=no_wait),
+    ):
+        [verdict] = runs.mine_runs(_dry(tmp_path, video), threading.Event(), runs.Kind.DRY_RUN)
+    assert verdict["ok"] is True, verdict
+    assert [w["status"] for w in _result_file(tmp_path)["words"]] == ["ready", "not_found"]
+    assert post.call_count == 1  # one refused connection for the episode
 
 
 def test_a_real_mine_says_dry_run_false(services, tmp_path, video) -> None:

@@ -57,6 +57,7 @@ from anki_miner.models import (
 from anki_miner.presenters.null_presenter import NullPresenter
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.cue_merge import merge_budget_seconds
+from anki_miner.services.validation_service import ValidationService
 from anki_miner.utils.audio_track_detector import get_media_duration_seconds, get_primary_video_codec
 from anki_miner.utils.ffmpeg_resolver import binary_available, resolve_ffmpeg, resolve_ffprobe
 
@@ -222,9 +223,11 @@ def _mine(
                 )
             except (AnkiConnectionError, SetupError) as exc:  # the processor's own preflight
                 raise setup_failure(exc) from exc
+            succeeded = classify_result(result) is MiningOutcome.SUCCESS
+            # Inside the watcher, so a cancel also cuts short a dry run's wait on a busy Anki.
+            made = _dry_statuses(run_config, processor, selection, cancel.is_set) if dry and succeeded else {}
         anki = processor.anki_service
         failures = anki.last_media_store_failures
-        succeeded = classify_result(result) is MiningOutcome.SUCCESS
         return _Mined(
             result=result,
             selection=selection,
@@ -236,7 +239,7 @@ def _mine(
                 media_missing=dict(processor.last_media_missing),
                 collapsed=list(processor.last_collapsed),
                 stopped=not succeeded,
-                made=_dry_statuses(run_config, processor, selection) if dry and succeeded else {},
+                made=made,
             ),
             media_store_failures=failures if isinstance(failures, int) else 0,
         )
@@ -245,7 +248,9 @@ def _mine(
         shutil.rmtree(folder / MEDIA, ignore_errors=True)
 
 
-def _dry_statuses(config: AnkiMinerConfig, processor: EpisodeProcessor, selection: WordSelection) -> dict[str, str]:
+def _dry_statuses(
+    config: AnkiMinerConfig, processor: EpisodeProcessor, selection: WordSelection, cancelled: Callable[[], bool]
+) -> dict[str, str]:
     """A dry run's status per word it would have mined: ready, no_definition or duplicate (API.md)."""
     picked = selection.picked()
     made_here = [word for word, from_line in picked if from_line]
@@ -255,7 +260,7 @@ def _dry_statuses(config: AnkiMinerConfig, processor: EpisodeProcessor, selectio
         for word, ok in zip(made_here, processor.definition_viable(made_here) if made_here else [], strict=True)
         if not ok
     }
-    in_anki = _duplicates_in_anki(config, [word for word, _ in picked])
+    in_anki = _duplicates_in_anki(config, [word for word, _ in picked], cancelled)
     return {
         word.mined_form: (
             "no_definition" if word.mined_form in undefined else "duplicate" if word.mined_form in in_anki else "ready"
@@ -264,15 +269,20 @@ def _dry_statuses(config: AnkiMinerConfig, processor: EpisodeProcessor, selectio
     }
 
 
-def _duplicates_in_anki(config: AnkiMinerConfig, words: list[TokenizedWord]) -> set[str]:
+def _duplicates_in_anki(config: AnkiMinerConfig, words: list[TokenizedWord], cancelled: Callable[[], bool]) -> set[str]:
     """The words mine's duplicate checks would refuse, when Anki answers: a dry run needs no Anki."""
     if not words:
         return set()
+    # One try, no retry: the duplicate probe retries a refused connection (three
+    # tries, 8 s apart), which would hold every episode of a closed Anki.
+    if not ValidationService(config).check_ankiconnect()[0]:
+        return set()
+    anki = AnkiService(config)
+    anki.set_cancelled_check(cancelled)
     try:
-        return AnkiService(config).duplicate_fronts(
-            [CardPayload(word=w, media=MediaData(), definition="") for w in words]
-        )
-    except AnkiConnectionError:
+        return anki.duplicate_fronts([CardPayload(word=w, media=MediaData(), definition="") for w in words])
+    except AnkiConnectionError as exc:  # also a refusal that is not a duplicate (a missing deck or note type)
+        logger.warning("Dry run: Anki's duplicate check failed, so no word is reported duplicate: %s", exc)
         return set()
 
 
