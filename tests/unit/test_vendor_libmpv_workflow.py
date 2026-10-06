@@ -91,3 +91,12 @@ def test_libmpv_comes_from_the_assets_repo_and_the_preflight_mirrors_linux() -> 
     assert preflight_url.group(1) == f"{base.group(1)}/libmpv-linux-x86_64.tar.gz"
     assert sha.group(1) == preflight_sha.group(1)
     assert "github.repository }}/releases/download/vendor-libmpv" not in release
+
+
+def test_vendor_libmpv_cannot_publish_into_this_repo() -> None:
+    # Vendor releases live in anki_miner_assets so they stay out of this repo's
+    # download counts. A read-only token makes a stray `gh release create` here fail.
+    workflow = _WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "contents: write" not in workflow
+    assert "-R 0xzerolight/anki_miner_assets" in workflow
