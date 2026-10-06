@@ -430,6 +430,38 @@ def _drain_qt_deletes():
         app.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
 
 
+@pytest.fixture(autouse=True)
+def _release_held_modifiers():
+    """Release a modifier key a test left held, so the next test starts with none.
+
+    QTest key and mouse events that carry a modifier set the application's
+    keyboard-modifier state, and nothing clears it afterwards. Selection
+    commands issued without an event (``setCurrentCell`` on an ExtendedSelection
+    view) read that state, so a Ctrl shortcut test left the next curator test on
+    the same worker Ctrl-toggling rows into the highlight
+    (tests/unit/test_modifier_isolation.py). A key release delivered through a
+    window recomputes the state; the bare ``QWindow`` is never shown, so the
+    event reaches no widget.
+
+    Guarded on QtGui already being imported so non-GUI tests pay no forced
+    PyQt import.
+    """
+    yield
+    if "PyQt6.QtGui" not in sys.modules:
+        return
+    from PyQt6.QtCore import Qt
+    from PyQt6.QtGui import QGuiApplication, QWindow
+    from PyQt6.QtTest import QTest
+
+    if QGuiApplication.instance() is None:
+        return
+    if QGuiApplication.keyboardModifiers() == Qt.KeyboardModifier.NoModifier:
+        return
+    window = QWindow()
+    QTest.keyRelease(window, Qt.Key.Key_Control)
+    window.destroy()
+
+
 # Strong references to every widget handed to ``qtbot.addWidget``, released only
 # in ``_pin_qtbot_widgets``' teardown. See that fixture for the WHY.
 _PINNED_QT_WIDGETS: list[object] = []
