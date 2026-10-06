@@ -22,6 +22,7 @@ AnkiMiner --api check --language CODE [--profile ID]
 AnkiMiner --api version
 AnkiMiner --api profiles
 AnkiMiner --api settings-export --language CODE --out FILE [--profile ID]
+AnkiMiner --api settings-import FILE --language CODE (--name NAME | --profile ID)
 AnkiMiner --api render RUN_FILE
 AnkiMiner --api media MEDIA_FILE
 ```
@@ -43,11 +44,13 @@ A verdict:
 
 - A call refused as a whole has `ok: false`, an `error` code, a `message` and `runs: []`.
 - With several runs, `ok` is false if any run failed. Each run carries its own `error` and `message`, and the top-level `error` stays null.
-- `check`, `version` and `profiles` put their answer in `result`.
+- `check`, `version`, `profiles` and `settings-import` put their answer in `result`.
 
 `mine` runs one at a time: it holds Anki Miner's instance lock. It gives `BUSY` in two cases, and the `message` says which:
 - the Anki Miner window is open, including a window opened past its "already running" warning;
 - another command-line or API run is working.
+
+`settings-import` changes settings, so it gives `BUSY` in the same cases.
 
 A dry run, `render` and `media` take no lock.
 
@@ -237,7 +240,7 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 | Code | Where | Meaning |
 |---|---|---|
 | `BUSY` | call | the window or another run is open |
-| `BAD_ARGUMENTS` | call | the command line does not parse, or names an unknown language or an `--out` folder that does not exist |
+| `BAD_ARGUMENTS` | call | the command line does not parse, or names an unknown language or an `--out` folder that does not exist; for `settings-import`, a FILE it cannot apply, a name in use or the active profile |
 | `BAD_RUN_FILE` | call | the run file or media file is not valid JSON or breaks the rules above |
 | `PROFILE_UNREADABLE` | call | the profile does not exist or cannot be read |
 | `SETUP_ERROR` | call, run | language pack, dictionary index, ffmpeg, deck, note type, fields or offline dictionary |
@@ -250,7 +253,7 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 
 `message` carries the English text. Codes never change; new ones may be added.
 
-## check, version, profiles, settings-export
+## check, version, profiles, settings-export, settings-import
 
 `check --language CODE [--profile ID]` puts `{"ready": false, "items": [...]}` in `result`, one item per check. The items are `anki`, `deck`, `note_type`, `fields`, `dictionary`, `resources` (dictionary or frequency indexes that need re-importing), `language_pack`, `ffmpeg` and `ffprobe`. Each item has `name`, `ok` and `message` (null when ok). When Anki does not answer, `deck`, `note_type` and `fields` are reported as not checked.
 
@@ -267,6 +270,7 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 | `dry-run` | `dry_run` in the run file, the result's `dry_run` and the `ready` status |
 | `render` | the `render` command, `render-<n>.json` and the `rendered` status |
 | `media` | the `media` command and `media-<n>.json` |
+| `settings-import` | the `settings-import` command |
 
 `profiles` puts `{"profiles": [{"id": "anime", "name": "Anime", "active": true}, …]}` in `result`. Before the user has created any profile, the list holds one, `default`.
 
@@ -274,6 +278,14 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 - A language the profile has never used exports its defaults and `"configured": false`.
 - As in the app's export, file paths and resource lists are left out.
 - The file can be imported with Import from file… in the same place.
+
+`settings-import FILE --language CODE (--name NAME | --profile ID)` applies FILE the way Import from file… does, and puts `{"profile": "surasura", "created": true, "invalid_fields": []}` in `result`.
+- FILE is what `settings-export` writes, or a flat settings object. Keys left out keep their values; `anki_fields` and `card_type_marker_fields` merge key by key. File paths and resource lists in it are ignored, as in the app.
+- `--name` adds a profile called NAME, starting as a copy of the active one. A name already in use, ignoring case, gives `BAD_ARGUMENTS`, and `message` names the `--profile` to use. Before any profile exists, it first saves the current settings as `default`, as the window does; `default` stays active.
+- `--profile` updates an existing profile. The active profile gives `BAD_ARGUMENTS`: settings-import never changes the settings the window uses.
+- `--language` is the profile's mining language afterwards, switched the way the window's language switch does, and FILE applies to that language. A FILE whose `language` is another one gives `BAD_ARGUMENTS`.
+- `invalid_fields` lists keys whose value was refused; they keep the profile's value. A subtitle filter that does not compile is listed as `subtitle_regex_filter`.
+- A FILE that is not a settings object gives `BAD_ARGUMENTS`, and nothing is written.
 
 `schema` goes up only for breaking changes. New keys can appear; ignore keys you do not know.
 
@@ -291,6 +303,7 @@ Otherwise:
 - `line_text` is also cleaned the way the subtitle lines are and ignores whitespace, and an empty `word` or `line_text` is refused.
 - Where `line_expansion` is cut to 30 seconds, lines after the chosen one are added first.
 - `media` files go to `media-<n>/`, not `media/`, which a `mine` removes when it ends.
+- `settings-import` has no `--whitelist` (named words are whitelisted already), and its `result` adds `invalid_fields`.
 
 ## Example (Python)
 

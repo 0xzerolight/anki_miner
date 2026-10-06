@@ -18,6 +18,7 @@ from pathlib import Path
 
 import pytest
 
+from anki_miner.config import create_default_config
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.service_factory import resolve_known_words_db_path
 from anki_miner.utils.audio_track_detector import get_media_duration_seconds
@@ -305,3 +306,18 @@ def test_api_render_and_media(home, tmp_path) -> None:
         check=True,
     )
     assert probe.stdout.strip() == "120"
+
+
+def test_api_settings_import_round_trip(isolated_home, tmp_path) -> None:
+    GUIConfigManager.save_config(dataclasses.replace(create_default_config(), anki_deck_name="Live"))
+    exported = tmp_path / "ja.json"
+    assert _api(isolated_home, "settings-export", "--language", "ja", "--out", str(exported))["ok"]
+    data = json.loads(exported.read_text(encoding="utf-8"))
+    data["settings"]["anki_deck_name"] = "Caller"
+    exported.write_text(json.dumps(data), encoding="utf-8")
+    v = _api(isolated_home, "settings-import", str(exported), "--language", "ja", "--name", "Caller")
+    assert v["result"] == {"profile": "caller", "created": True, "invalid_fields": []}, v
+    assert _api(isolated_home, "profiles")["result"]["profiles"] == [
+        {"id": "caller", "name": "Caller", "active": False},
+        {"id": "default", "name": "Default", "active": True},
+    ]

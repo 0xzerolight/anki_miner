@@ -1,18 +1,20 @@
 """``--api``: the mining API for other programs (API.md).
 
 Each call writes exactly one JSON verdict line to fd 1 and exits 0; any other
-exit is a crash. ``mine`` holds the instance lock (a dry run does not); ``render``,
-``media``, ``check``, ``version``, ``profiles`` and ``settings-export`` run at any time. The
-log goes to ``anki_miner.api.log`` (installed by ``cli.entry`` before this runs).
+exit is a crash. ``mine`` and ``settings-import`` hold the instance lock (a dry run
+does not); ``render``, ``media``, ``check``, ``version``, ``profiles`` and
+``settings-export`` run at any time. The log goes to ``anki_miner.api.log``
+(installed by ``cli.entry`` before this runs).
 """
 
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import logging
 import threading
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from pathlib import Path
 from typing import NoReturn
 
@@ -55,6 +57,12 @@ def build_parser() -> argparse.ArgumentParser:
     export.add_argument("--profile")
     export.add_argument("--language", required=True)
     export.add_argument("--out", type=Path, required=True)
+    imported = commands.add_parser("settings-import")
+    imported.add_argument("file", type=Path)
+    imported.add_argument("--language", required=True)
+    target = imported.add_mutually_exclusive_group(required=True)
+    target.add_argument("--name")
+    target.add_argument("--profile")
     commands.add_parser("render").add_argument("run_file", type=Path)
     commands.add_parser("media").add_argument("media_file", type=Path)
     return parser
@@ -108,30 +116,43 @@ def _dispatch(args: argparse.Namespace) -> dict[str, object]:
 
         verdicts = media.media_runs(files.parse_media_file(files.read_json_file(args.media_file)))
         return {**_ok("media", runs=verdicts), "ok": all(v["ok"] for v in verdicts)}
+    if args.command == "settings-import":
+        from anki_miner.cli.api import settings_write
+
+        with _locked():
+            result = settings_write.import_settings(args.file, args.language, name=args.name, profile_id=args.profile)
+        return _ok("settings-import", result=result)
     return _run(args)
 
 
+@contextlib.contextmanager
+def _locked() -> Iterator[None]:
+    """The run lock for one call; BUSY when a window or another run holds it (acquire_run_lock says which)."""
+    from anki_miner.cli.entry import Busy, acquire_run_lock
+
+    try:
+        lock = acquire_run_lock()
+    except Busy as exc:
+        raise ApiError(BUSY, str(exc)) from exc
+    try:
+        yield
+    finally:
+        lock.unlock()
+
+
 def _run(args: argparse.Namespace) -> dict[str, object]:
-    """mine: the run file checked first, then the runs under the instance lock (a dry run takes none)."""
+    """mine: the run file checked first, then the runs; a real mine under the run lock, a dry run without."""
     from anki_miner.cli.api import files, runs
-    from anki_miner.cli.entry import Busy, _cancel_on_signals, acquire_run_lock
+    from anki_miner.cli.entry import _cancel_on_signals
 
     job = files.parse_run_file(files.read_json_file(args.run_file))
     cancel = threading.Event()
-    if job.dry_run:
-        # It writes nothing shared (no Anki, no known-words or stats DB), so it runs beside the window and other runs.
-        with _cancel_on_signals(cancel):
-            verdicts = runs.mine_runs(job, cancel, runs.Kind.DRY_RUN)
-    else:
-        try:
-            lock = acquire_run_lock()
-        except Busy as exc:
-            raise ApiError(BUSY, str(exc)) from exc
-        try:
-            with _cancel_on_signals(cancel):
-                verdicts = runs.mine_runs(job, cancel)
-        finally:
-            lock.unlock()
+    with contextlib.ExitStack() as stack:
+        # A dry run writes nothing shared (no Anki, no known-words or stats DB), so it runs beside the window.
+        if not job.dry_run:
+            stack.enter_context(_locked())
+        stack.enter_context(_cancel_on_signals(cancel))
+        verdicts = runs.mine_runs(job, cancel, runs.Kind.DRY_RUN) if job.dry_run else runs.mine_runs(job, cancel)
     # With several runs the call is ok only if every run is; each run carries its own error.
     return {**_ok(args.command, runs=verdicts), "ok": all(v["ok"] for v in verdicts)}
 
