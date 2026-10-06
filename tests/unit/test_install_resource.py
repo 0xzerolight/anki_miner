@@ -8,6 +8,8 @@ from types import SimpleNamespace
 import pytest
 
 from anki_miner.gui.workers import resource_download_worker as worker_mod
+from anki_miner.languages import AVAILABLE_LANGUAGES
+from anki_miner.languages.registry import get_profile
 from anki_miner.services.resource_catalog import ResourceSpec
 
 DICT = ResourceSpec(id="test-dict", kind="dict", display_name="Test", url="https://example.test/d.zip", license_note="")
@@ -70,6 +72,7 @@ def test_an_import_failure_is_a_failed_result(tmp_path, staged, monkeypatch) -> 
     monkeypatch.setattr(worker_mod, "import_yomitan_zip", broken)
     result = _install(tmp_path, staged)
     assert result is not None and result.ok is False and result.detail == "bad zip"
+    assert not staged.exists()
 
 
 @pytest.mark.parametrize(
@@ -86,3 +89,22 @@ def test_an_import_failure_is_a_failed_result(tmp_path, staged, monkeypatch) -> 
 def test_pinned_slot(kind, url, pin, slot) -> None:
     spec = ResourceSpec(id="s", kind=kind, display_name="S", url=url, license_note="", pin_slot=pin)
     assert worker_mod.pinned_slot(spec) == slot
+
+
+@pytest.mark.parametrize("code", AVAILABLE_LANGUAGES)
+def test_pinned_slot_agrees_with_the_import_call_for_every_catalogue_spec(code, tmp_path) -> None:
+    # --api setup skips a resource whose pinned slot already holds an index, so
+    # the rule must name the slot the import call itself would pin.
+    mismatched = {}
+    for spec in get_profile(code).catalog:
+        if spec.kind == "freq":
+            part = tmp_path / f"{spec.id}.part"
+            part.write_bytes(b"")
+            staged = worker_mod._retype_for_suffix(part, spec.url)
+            expected = worker_mod._pinned_slot_kwargs(spec, staged).get("source_id")
+            staged.unlink()
+        else:
+            expected = spec.id  # dict_id= / source_id= spec.id in the dict and pitch calls
+        if worker_mod.pinned_slot(spec) != expected:
+            mismatched[spec.id] = (worker_mod.pinned_slot(spec), expected)
+    assert mismatched == {}

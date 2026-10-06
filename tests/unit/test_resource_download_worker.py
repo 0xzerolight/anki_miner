@@ -302,6 +302,61 @@ def test_final_promotion_rechecks_resource_release_after_staging(
     assert old_marker.read_text(encoding="utf-8") == "old"
 
 
+def test_a_refused_promotion_before_install_fails_the_item_and_stops_the_loop(tmp_path, monkeypatch):
+    download_dir = tmp_path / "downloads"
+    download_dir.mkdir()
+    download_calls: list[str] = []
+    created_temps: list[Path] = []
+    imported: list[str] = []
+
+    def fake_download(
+        url,
+        *,
+        dest_dir,
+        progress=None,
+        cancelled_check=None,
+        read_timeout_seconds=None,
+        resume_key=None,
+        resume_root=None,
+    ):
+        _assert_stable_resume_key(resume_key)
+        download_calls.append(url)
+        temp = Path(dest_dir) / f"{Path(url).name}.part"
+        temp.write_bytes(b"DATA")
+        created_temps.append(temp)
+        return temp
+
+    monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
+    monkeypatch.setattr(resource_download_worker, "import_yomitan_zip", lambda *_a, **_kw: imported.append("dict"))
+    monkeypatch.setattr(resource_download_worker, "import_frequency_source", lambda *_a, **_kw: imported.append("freq"))
+
+    worker = _make_worker([DICT_SPEC, FREQ_SPEC], tmp_path)
+    requests: list = []
+
+    def refuse(request) -> None:
+        requests.append(request)
+        request.resolve(False)
+
+    worker.require_promotion_approval()
+    worker.promotion_requested.connect(refuse)
+    phases = _phase_events(worker)
+    done, _progress, summaries = _connect_capture(worker)
+
+    worker.run()
+
+    detail = ResourceDownloadWorker._promotion_blocked_detail()
+    summary = summaries[0]
+    assert len(requests) == 1
+    assert download_calls == [DICT_SPEC.url]
+    assert imported == []
+    assert created_temps and not created_temps[0].exists()
+    assert "installing" not in [event.phase.value for event in phases]
+    assert done == [(DICT_SPEC.id, False, detail)]
+    assert [(r.spec_id, r.ok, r.detail) for r in summary.results] == [(DICT_SPEC.id, False, detail)]
+    assert summary.cancelled is False
+    assert summary.not_processed_count == 1
+
+
 def test_per_item_failure_isolation(tmp_path, monkeypatch):
     download_dir = tmp_path / "downloads"
     download_dir.mkdir()
