@@ -41,6 +41,13 @@ DECK = E2EConfig().deck_name
 #: read back and the picture/audio cuts (and media_missing) run for real.
 _EXTRA_FIELDS = {"sentence": "Sentence", "picture": "Picture", "audio": "Audio"}
 
+#: 本 and 買う sit on lines 0 and 2 (line 2 reads differently); 学校 on line 1 only.
+_ROUND_TRIP = [
+    (0.5, 1.5, "新しい本を買いました"),
+    (1.7, 2.7, "今日は学校で勉強する"),
+    (2.9, 3.9, "ねえ、新しい本を買いました"),
+]
+
 
 def _api(home: Path, *args: str) -> dict:
     env = {**os.environ, "ANKI_MINER_HOME": str(home), "QT_QPA_PLATFORM": "offscreen"}
@@ -81,7 +88,9 @@ def _plain(field_html: str) -> str:
     return html.unescape(re.sub(r"<[^>]+>", "", field_html))
 
 
-def _mine(home: Path, tmp_path: Path, runs_dir: Path, video: Path, subtitle: Path, words: list[dict]) -> dict:
+def _mine(
+    home: Path, tmp_path: Path, runs_dir: Path, video: Path, subtitle: Path, words: list[dict], command: str = "mine"
+) -> dict:
     run_file = tmp_path / "run.json"
     run_file.write_text(
         json.dumps(
@@ -112,7 +121,7 @@ def _mine(home: Path, tmp_path: Path, runs_dir: Path, video: Path, subtitle: Pat
         ),
         encoding="utf-8",
     )
-    return _api(home, "mine", str(run_file))
+    return _api(home, command, str(run_file))
 
 
 def test_api_mine_round_trip(home, tmp_path) -> None:
@@ -124,18 +133,8 @@ def test_api_mine_round_trip(home, tmp_path) -> None:
     assert (get_media_duration_seconds(video, "ffprobe") or 0) >= 5
     runs_dir = tmp_path / "runs"
     runs_dir.mkdir()
-    # 本 and 買う sit on lines 0 and 2 (line 2 reads differently); 学校 on line 1 only.
     subtitle = tmp_path / "ep.ja.srt"
-    subtitle.write_text(
-        _srt(
-            [
-                (0.5, 1.5, "新しい本を買いました"),
-                (1.7, 2.7, "今日は学校で勉強する"),
-                (2.9, 3.9, "ねえ、新しい本を買いました"),
-            ]
-        ),
-        encoding="utf-8",
-    )
+    subtitle.write_text(_srt(_ROUND_TRIP), encoding="utf-8")
     words = [
         {"word": "本", "line_start": 2.9, "line_expansion": [0, 0]},
         {"word": "学校", "line_start": 1.7, "line_expansion": [0, 1]},
@@ -249,3 +248,60 @@ def test_api_named_words_whitelisted_made_from_their_line_and_dry_run(home, tmp_
     ], rows
     notes = {_plain(n["Front"]): n for n in fake.notes(DECK)}
     assert _plain(notes["本"]["Sentence"]) == "本屋に行く" and "<b>本</b>" in notes["本"]["Sentence"]
+
+
+def test_api_render_and_media(home, tmp_path) -> None:
+    test_home, fake = home
+    fake.seed_model(E2EConfig().note_type, ["Front", "Back", *_EXTRA_FIELDS.values()])
+    video = tmp_path / "ep.mkv"
+    shutil.copy(get_test_video(), video)
+    runs_dir = tmp_path / "runs"
+    runs_dir.mkdir()
+    subtitle = tmp_path / "ep.ja.srt"
+    subtitle.write_text(_srt(_ROUND_TRIP), encoding="utf-8")
+    folder = runs_dir / "ep-01"
+
+    words = [{"word": "本", "line_start": 2.9, "line_expansion": [0, 0]}, {"word": "学校", "line_start": 1.7}]
+    verdict = _mine(test_home, tmp_path, runs_dir, video, subtitle, words, command="render")
+    assert verdict["ok"] is True and verdict["runs"][0]["file"] == "render-1.json", verdict
+    rows = json.loads((folder / "render-1.json").read_text(encoding="utf-8"))["words"]
+    assert [(r["word"], r["status"]) for r in rows] == [("本", "rendered"), ("学校", "rendered")], rows
+    for row in rows:
+        assert _plain(row["fields"]["Front"]) == row["word"], row
+        assert row["files"] and all((folder / name).is_file() for name in row["files"]), row
+    assert fake.notes(DECK) == []  # nothing reached Anki
+
+    media_file = tmp_path / "media.json"
+    media_file.write_text(
+        json.dumps(
+            {
+                "schema": 1,
+                "run_dir": str(runs_dir),
+                "language": "ja",
+                "still_height": 120,
+                "episodes": [
+                    {
+                        "run_id": "ep-01",
+                        "video_file": str(video),
+                        "subtitle_file": str(subtitle),
+                        "lines": [{"line_start": 1.7, "line_expansion": [0, 0]}],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    verdict = _api(test_home, "media", str(media_file))
+    assert verdict["ok"] is True and verdict["runs"][0]["file"] == "media-1.json", verdict
+    [line] = json.loads((folder / "media-1.json").read_text(encoding="utf-8"))["lines"]
+    assert (line["line_start"], line["text"]) == (1.7, "今日は学校で勉強する"), line
+    picture, audio = folder / line["picture"], folder / line["audio"]
+    assert picture.is_file() and audio.is_file(), line
+    probe = subprocess.run(
+        ["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=height", "-of", "csv=p=0"]
+        + [str(picture)],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert probe.stdout.strip() == "120"
