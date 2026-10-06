@@ -1,4 +1,4 @@
-"""The run file and the media file, validated into typed objects (API.md, "mine" and "media")."""
+"""The run, media and fetch files, validated into typed objects (API.md, "mine", "media" and "fetch")."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from pathlib import Path
 
 from anki_miner.cli.api.contract import BAD_RUN_FILE, ApiError
 from anki_miner.utils.bounded_reader import read_json_bounded
+from anki_miner.utils.youtube_url import classify_youtube_url
 
 MAX_FILE_BYTES = 8 * 1024 * 1024
 _RUN_ID = re.compile(r"[A-Za-z0-9_-]{1,64}")
@@ -36,6 +37,8 @@ _WORD_KEYS = frozenset({"word", "line_start", "line_text", "line_expansion", "su
 _MEDIA_EPISODE_KEYS = frozenset(
     {"run_id", "video_file", "subtitle_file", "subtitle_offset", "audio_track_override", "lines"}
 )
+_FETCH_EPISODE_KEYS = frozenset({"run_id", "youtube_url", "youtube_subtitle_source", "youtube_align_captions"})
+_SUBTITLE_SOURCES = ("auto", "captions", "transcribe")
 
 
 def _bad(message: str) -> ApiError:
@@ -352,4 +355,59 @@ def parse_media_file(data: object) -> MediaFile:
         still_height=_opt_positive(obj.get("still_height"), "still_height"),
         audio_bitrate=_opt_positive(obj.get("audio_bitrate"), "audio_bitrate"),
         episodes=tuple(episodes),
+    )
+
+
+@dataclass(frozen=True)
+class FetchEpisode:
+    run_id: str
+    youtube_url: str
+    subtitle_source: str | None  # None: the profile's youtube_subtitle_source
+    align_captions: bool | None  # None: the profile's youtube_align_captions
+
+
+@dataclass(frozen=True)
+class FetchFile:
+    run_dir: Path
+    profile: str | None
+    language: object  # validated by settings.with_language
+    episodes: tuple[FetchEpisode, ...]
+
+
+def _fetch_episode(raw: object, where: str) -> FetchEpisode:
+    obj = _object(raw, where)
+    _keys(obj, _FETCH_EPISODE_KEYS, frozenset({"run_id", "youtube_url"}), where)
+    url = _str(obj["youtube_url"], f"{where}.youtube_url")
+    if classify_youtube_url(url).kind not in ("video", "video_in_playlist"):
+        raise _bad(f"{where}.youtube_url is not one YouTube video's link (playlist links are not supported).")
+    source = _opt_str(obj.get("youtube_subtitle_source"), f"{where}.youtube_subtitle_source")
+    if source is not None and source not in _SUBTITLE_SOURCES:
+        raise _bad(f"{where}.youtube_subtitle_source must be one of {', '.join(_SUBTITLE_SOURCES)}.")
+    align = obj.get("youtube_align_captions")
+    if align is not None and not isinstance(align, bool):
+        raise _bad(f"{where}.youtube_align_captions must be true or false.")
+    return FetchEpisode(_run_id(obj["run_id"], f"{where}.run_id"), url, source, align)
+
+
+def parse_fetch_file(data: object) -> FetchFile:
+    obj = _object(data, "The fetch file")
+    _keys(
+        obj,
+        frozenset({"schema", "run_dir", "profile", "language", "episodes"}),
+        frozenset({"schema", "run_dir", "language", "episodes"}),
+        "The fetch file",
+    )
+    _schema(obj, "The fetch file")
+    raw_episodes = obj["episodes"]
+    if not isinstance(raw_episodes, list) or not raw_episodes:
+        raise _bad("episodes must be a non-empty list.")
+    episodes = tuple(_fetch_episode(raw, f"episodes[{i}]") for i, raw in enumerate(raw_episodes))
+    ids = [episode.run_id for episode in episodes]
+    if len(set(ids)) != len(ids):
+        raise _bad("Two episodes share a run_id.")
+    return FetchFile(
+        run_dir=_run_dir(obj["run_dir"]),
+        profile=_opt_str(obj.get("profile"), "profile"),
+        language=obj["language"],
+        episodes=episodes,
     )

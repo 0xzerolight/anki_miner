@@ -242,3 +242,47 @@ def test_media_file_refusals(bad) -> None:
     with pytest.raises(ApiError) as err:
         files.parse_media_file(_media(**bad))
     assert err.value.code == "BAD_RUN_FILE"
+
+
+URL = "https://www.youtube.com/watch?v=abcdefghijk"
+
+
+def _fetch_file(tmp_path: Path, **episode) -> dict:
+    return {
+        "schema": 1,
+        "run_dir": str(tmp_path),
+        "language": "ja",
+        "episodes": [{"run_id": "yt-1", "youtube_url": URL, **episode}],
+    }
+
+
+def test_parse_fetch_file(tmp_path: Path) -> None:
+    job = files.parse_fetch_file(_fetch_file(tmp_path, youtube_subtitle_source="captions"))
+    [ep] = job.episodes
+    assert job.run_dir == tmp_path.resolve() and job.profile is None
+    assert ep == files.FetchEpisode("yt-1", URL, "captions", None)
+    in_playlist = files.parse_fetch_file(_fetch_file(tmp_path, youtube_url=URL + "&list=PLx"))
+    assert in_playlist.episodes[0].youtube_url.endswith("list=PLx")
+
+
+@pytest.mark.parametrize(
+    ("episode", "fragment"),
+    [
+        ({"youtube_url": "https://www.youtube.com/playlist?list=PLx"}, "playlist"),
+        ({"youtube_url": "https://example.com/watch?v=1"}, "playlist"),
+        ({"youtube_subtitle_source": "always"}, "youtube_subtitle_source"),
+        ({"youtube_align_captions": 1}, "youtube_align_captions"),
+        ({"video_file": "x.mkv"}, "unknown keys"),
+    ],
+)
+def test_fetch_file_refusals(tmp_path: Path, episode, fragment) -> None:
+    with pytest.raises(ApiError) as err:
+        files.parse_fetch_file(_fetch_file(tmp_path, **episode))
+    assert err.value.code == "BAD_RUN_FILE" and fragment in err.value.message
+
+
+def test_fetch_file_refuses_shared_run_ids(tmp_path: Path) -> None:
+    data = _fetch_file(tmp_path)
+    data["episodes"].append(dict(data["episodes"][0]))
+    with pytest.raises(ApiError, match="share a run_id"):
+        files.parse_fetch_file(data)

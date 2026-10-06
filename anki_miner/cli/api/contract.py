@@ -33,6 +33,8 @@ BAD_RUN_FILE = "BAD_RUN_FILE"
 BAD_ARGUMENTS = "BAD_ARGUMENTS"  # not in the proposal: a command line that does not parse
 MINING_FAILED = "MINING_FAILED"  # not in the proposal: the pipeline returned a failure
 CANCELLED = "CANCELLED"  # a run, or a whole call (setup)
+YOUTUBE_REFUSED = "YOUTUBE_REFUSED"  # fetch: a video Video -> YouTube refuses before downloading
+FETCH_FAILED = "FETCH_FAILED"  # fetch: the probe, download or subtitle step failed
 INTERNAL = "INTERNAL"
 
 
