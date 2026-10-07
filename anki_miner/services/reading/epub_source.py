@@ -153,7 +153,7 @@ def _read_member(zf: zipfile.ZipFile, entry: str, epub_path: Path) -> bytes:
     Declared-size check first, then a bounded read of ``cap + 1`` bytes so an
     archive whose central directory under-declares the size cannot balloon
     memory anyway (same belt-and-suspenders as the Yomitan importer's
-    ``_peek_zip_title_revision``). Raises :class:`SetupError` over the cap;
+    ``read_yomitan_index``). Raises :class:`SetupError` over the cap;
     callers decide whether that aborts (structural members) or soft-degrades
     (spine content, nav/NCX).
     """

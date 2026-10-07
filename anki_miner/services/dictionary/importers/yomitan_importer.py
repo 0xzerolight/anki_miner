@@ -868,14 +868,12 @@ def _derive_dict_id(title: str, revision: str) -> str:
     return _slug(title) + ("-" + _slug(revision) if revision else "")
 
 
-def _peek_zip_title_revision(zip_path: Path) -> tuple[str, str]:
-    """Read a Yomitan zip's `index.json` title+revision without full import.
-
-    Shared by :func:`derive_dict_id_from_zip` and :func:`read_yomitan_title`.
+def read_yomitan_index(zip_path: Path) -> dict[str, Any]:
+    """Read a Yomitan zip's `index.json` without importing it (bounded, validated as an object).
 
     Raises:
-        SetupError: zip is missing, corrupt, missing `index.json`, or
-                    `index.json` lacks a non-empty `title` field.
+        SetupError: zip is missing or corrupt, or `index.json` is missing,
+                    oversized, not JSON, or not an object.
     """
     if not zip_path.exists():
         raise SetupError(f"Yomitan zip not found: {zip_path}")
@@ -907,7 +905,19 @@ def _peek_zip_title_revision(zip_path: Path) -> tuple[str, str]:
         raise SetupError(f"Invalid index.json: {e}") from e
     if not isinstance(index, dict):
         raise SetupError("Invalid index.json: expected a JSON object")
+    return index
 
+
+def read_yomitan_title_revision(zip_path: Path) -> tuple[str, str]:
+    """Read a Yomitan zip's title and revision without importing it.
+
+    Shared by :func:`derive_dict_id_from_zip`, :func:`read_yomitan_title`
+    and the Re-import source guard.
+
+    Raises:
+        SetupError: as :func:`read_yomitan_index`, or `title` is empty.
+    """
+    index = read_yomitan_index(zip_path)
     title = str(index.get("title", "")).strip()
     revision = str(index.get("revision", "")).strip()
     if not title:
@@ -925,7 +935,7 @@ def derive_dict_id_from_zip(zip_path: Path) -> str:
         SetupError: zip is missing, corrupt, missing `index.json`, or
                     `index.json` lacks a non-empty `title` field.
     """
-    title, revision = _peek_zip_title_revision(zip_path)
+    title, revision = read_yomitan_title_revision(zip_path)
     return _derive_dict_id(title, revision)
 
 
@@ -938,7 +948,7 @@ def read_yomitan_title(zip_path: Path) -> str:
 
     Raises: same as :func:`derive_dict_id_from_zip`.
     """
-    title, _ = _peek_zip_title_revision(zip_path)
+    title, _ = read_yomitan_title_revision(zip_path)
     return title
 
 

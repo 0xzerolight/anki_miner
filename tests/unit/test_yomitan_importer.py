@@ -1580,3 +1580,24 @@ def test_term_dictionary_declaring_version_instead_of_format_imports(tmp_path: P
         zf.writestr("index.json", json.dumps({"title": "Old dict", "revision": "v1", "version": 3}))
         zf.writestr("term_bank_1.json", json.dumps([["食べる", "たべる", "v1", "v1", 0, ["to eat"], 1, ""]]))
     import_yomitan_zip(zip_path, tmp_path / "dicts")
+
+
+def test_read_yomitan_index_returns_the_update_fields(tmp_path):
+    from anki_miner.services.dictionary.importers.yomitan_importer import (
+        read_yomitan_index,
+        read_yomitan_title_revision,
+    )
+
+    zip_path = build_yomitan_zip(
+        tmp_path / "d.zip",
+        title=" T ",
+        revision=" 2 ",
+        index_extra={"isUpdatable": True, "indexUrl": "https://x/i.json", "downloadUrl": "https://x/d.zip"},
+    )
+    index = read_yomitan_index(zip_path)
+    assert (index["isUpdatable"], index["indexUrl"], index["downloadUrl"]) == (
+        True,
+        "https://x/i.json",
+        "https://x/d.zip",
+    )
+    assert read_yomitan_title_revision(zip_path) == ("T", "2")

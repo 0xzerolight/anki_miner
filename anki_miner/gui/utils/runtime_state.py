@@ -63,6 +63,11 @@ def queue_state_root() -> Path:
     return runtime_state_root() / _QUEUES_DIRNAME
 
 
+def resource_update_stamp() -> Path:
+    """Return the file whose mtime records the last completed weekly resource-update check."""
+    return runtime_state_root() / "resource_update_check"
+
+
 def is_within(path: Path, root: Path) -> bool:
     """Whether ``path`` resolves to ``root`` itself or something beneath it.
 
