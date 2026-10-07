@@ -2250,6 +2250,23 @@ class TestShareText:
         ]
         assert rejected == []
 
+    def test_text_glued_after_the_link_is_cut(self):
+        """Forwarded Chinese text puts punctuation straight after a link, no space."""
+        accepted, rejected = split_url_lines(
+            "https://b23.tv/AbCdEf，看看\nhttps://www.bilibili.com/video/BV12N4y1M7rh。\n“https://b23.tv/XyZ123”"
+        )
+        assert accepted == [
+            "https://b23.tv/AbCdEf",
+            "https://www.bilibili.com/video/BV12N4y1M7rh",
+            "https://b23.tv/XyZ123",
+        ]
+        assert rejected == []
+
+    def test_a_link_with_unicode_letters_in_its_path_is_kept_whole(self):
+        accepted, rejected = split_url_lines("https://example.com/视频/1")
+        assert accepted == ["https://example.com/视频/1"]
+        assert rejected == []
+
     def test_two_links_on_one_line_are_refused(self):
         accepted, rejected = split_url_lines("https://b23.tv/a https://b23.tv/b")
         assert accepted == []

@@ -109,30 +109,39 @@ def _is_acceptable_add_input(url: str) -> bool:
     return classify_youtube_url(candidate).kind != "unknown"
 
 
-# One web link inside other text: a printable-ASCII run, so it stops at a space
-# or at the CJK text and full-width punctuation around it.
-_EMBEDDED_URL_RE = re.compile(r"https?://[!-~]+")
+# One web link inside other text. It runs until whitespace or CJK / full-width
+# punctuation (curly quotes, 、。【】「」, ，！？ …), which Chinese text puts
+# straight after a link with no space. Letters, CJK ones included, stay: a
+# path may carry them.
+_EMBEDDED_URL_RE = re.compile(
+    r"https?://[^\s‘-‟　-〿！-／：-＠［-｀｛-･]+",
+    re.IGNORECASE,
+)
 
 
 def extract_link(line: str) -> str | None:
     """The link a pasted or dropped line carries, or ``None``.
 
-    A line that is itself an acceptable input comes back as it is. A line
-    holding exactly one http(s) link among other text yields that link:
-    Bilibili's Share button copies "【标题】 https://b23.tv/…". The link must
-    pass :func:`_is_acceptable_add_input` on its own (T-34).
+    A line holding exactly one http(s) link yields that link alone, whatever
+    surrounds it: Bilibili's Share button copies "【标题】 https://b23.tv/…",
+    and forwarded text glues punctuation to it ("https://b23.tv/…，看看"). A
+    line with no link (a bare YouTube id, a scheme-less YouTube URL) comes back
+    as it is when it is acceptable. Either way the result must pass
+    :func:`_is_acceptable_add_input` on its own (T-34).
     """
     candidate = line.strip()
     if not candidate:
         return None
-    if not any(ch.isspace() for ch in candidate) and _is_acceptable_add_input(candidate):
-        return candidate
     found = _EMBEDDED_URL_RE.findall(candidate)
-    if len(found) != 1 or found[0] == candidate:
+    if len(found) > 1:
+        return None  # two links on one line: which one was meant?
+    if found:
+        # Sentence punctuation typed after the link is not part of it.
+        link = found[0].rstrip(".,;:!?)]}>'\"")
+        return link if _is_acceptable_add_input(link) else None
+    if any(ch.isspace() for ch in candidate):
         return None
-    # Sentence punctuation typed after the link is not part of it.
-    link = found[0].rstrip(".,;:!?)]}>'\"")
-    return link if _is_acceptable_add_input(link) else None
+    return candidate if _is_acceptable_add_input(candidate) else None
 
 
 def split_url_lines(text: str) -> tuple[list[str], list[str]]:
