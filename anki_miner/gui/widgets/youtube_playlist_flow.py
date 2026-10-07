@@ -479,6 +479,11 @@ class PlaylistAddController:
 
     def _on_probe_done(self, item: YouTubeQueueItem, info: object) -> None:
         """Probe succeeded — classify the result, or expand a link that was a playlist."""
+        if self._shutdown_started:
+            # A worker's queued result can land after the window is destroyed
+            # (app.py drains deferred deletes past close); every callback below
+            # touches a widget. Same for the other result/finished slots.
+            return
         if isinstance(info, PlaylistInfo):
             self._queue_probed_playlist(item, info)
             return
@@ -576,6 +581,8 @@ class PlaylistAddController:
 
     def _mark_probe_error(self, item: YouTubeQueueItem, message: str) -> None:
         """Shared transition into PROBE_ERROR with consistent fields."""
+        if self._shutdown_started:
+            return  # late signal after shutdown: see _on_probe_done
         item.status = YouTubeItemStatus.PROBE_ERROR
         item.error_message = message
         self._callbacks.refresh_row(item)
@@ -645,6 +652,8 @@ class PlaylistAddController:
 
     def _on_playlist_resolve_error(self, message: str) -> None:
         """Resolve failed — log it; the finished slot handles state cleanup."""
+        if self._shutdown_started:
+            return  # late signal after shutdown: see _on_probe_done
         self._callbacks.log_error(
             tr_format(
                 QCoreApplication.translate("PlaylistAddController", "Playlist resolve failed: %1"),
@@ -663,6 +672,8 @@ class PlaylistAddController:
         self._playlist_resolve_worker = None
         if worker is not None:
             worker.deleteLater()
+        if self._shutdown_started:
+            return  # late signal after shutdown: see _on_probe_done
         self._start_next_playlist()
         self._callbacks.recompute_buttons()
 
@@ -880,5 +891,7 @@ class PlaylistAddController:
         self._playlist_probe_items = []
         if worker is not None:
             worker.deleteLater()
+        if self._shutdown_started:
+            return  # late signal after shutdown: see _on_probe_done
         self._start_next_playlist()
         self._callbacks.recompute_buttons()

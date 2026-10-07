@@ -614,3 +614,57 @@ class TestPlaylistShutdownBoundedJoin:
         assert ctrl._playlist_probe_worker is None
         assert ctrl._playlist_resolve_worker is None
         assert not any("did not stop" in r.message for r in caplog.records)
+
+
+def _probed_video_info():
+    from anki_miner.models.youtube import VideoInfo
+
+    return VideoInfo(
+        video_id="BV12N4y1M7rh",
+        title="Test",
+        duration_s=60,
+        has_manual_ja_subs=False,
+        has_auto_ja_subs=False,
+        is_live=False,
+        is_age_restricted=False,
+        site="Bilibili",
+    )
+
+
+_LATE_SIGNALS = {
+    "probe_done": lambda ctrl, item: ctrl._on_probe_done(item, _probed_video_info()),
+    "probe_error": lambda ctrl, item: ctrl._on_probe_error(item, "boom"),
+    "playlist_entry_probed": lambda ctrl, item: ctrl._on_playlist_entry_probed(0, _probed_video_info()),
+    "playlist_entry_failed": lambda ctrl, item: ctrl._on_playlist_entry_failed(0, "boom"),
+    "playlist_resolve_error": lambda ctrl, item: ctrl._on_playlist_resolve_error("boom"),
+    "playlist_resolve_finished": lambda ctrl, item: ctrl._on_playlist_resolve_finished(),
+    "playlist_probe_finished": lambda ctrl, item: ctrl._on_playlist_probe_finished(),
+}
+
+
+class TestLateSignalsAfterShutdown:
+    """A worker's queued signal can land after the window is destroyed.
+
+    app.py drains deferred deletes past close, so a probe that finished during
+    shutdown still delivers its result and its ``finished``. Every tab callback
+    touches a widget by then, and one raising on a deleted ModernButton put an
+    "Unhandled exception" dialog up at exit (2026-10-07 live check, closing
+    while a Bilibili multi-part video's parts were still probing).
+    """
+
+    @pytest.mark.parametrize("signal", list(_LATE_SIGNALS))
+    def test_a_late_signal_touches_no_widget(self, qtbot, signal):
+        from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueueItem
+
+        ctrl = _make_playlist_controller(qtbot)
+        item = YouTubeQueueItem(url="https://www.bilibili.com/video/BV12N4y1M7rh", status=YouTubeItemStatus.PROBING)
+        ctrl._callbacks = MagicMock()  # every tab seam, recorded
+        ctrl._callbacks.queued_items.return_value = [item]
+        ctrl._playlist_probe_items = [item]
+        ctrl.shutdown()
+        ctrl._callbacks.reset_mock()
+
+        _LATE_SIGNALS[signal](ctrl, item)
+
+        touched = [name for name, *_ in ctrl._callbacks.method_calls if name != "queued_items"]
+        assert touched == []
