@@ -29,6 +29,10 @@ def _strip_technical_tokens(name: str) -> str:
     season=1280, episode=720 by the NxN pattern (Issue #36).
     """
     name = re.sub(r"\d{3,4}[xX]\d{3,4}", "", name)
+    # Utilities -> Tracks names several ticked tracks of one kind
+    # "<stem>.s2.jpn" / "<stem>.a1"; that track number would otherwise win
+    # the trailing-number fallback and pair episode 1's file with episode 2.
+    name = re.sub(r"\.[sa]\d{1,2}(?:\.[a-z]{2,3}(?:-[a-z0-9]{1,8})*)?$", "", name)
     # Use explicit non-alphanumeric boundaries rather than \b: \b does not
     # fire between an underscore and a digit (both are word chars), so
     # "Show_03_720p" kept "720p" — which the old consuming BARE_NUMBER regex

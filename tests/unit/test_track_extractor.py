@@ -395,3 +395,22 @@ def test_unwritable_destination_fails_the_track(tmp_path, monkeypatch):
     gone = PlannedTrack(plan.ref, plan.stream, plan.fmt, tmp_path / "missing-dir" / "EP01.ass")
     result = TrackExtractorService(AnkiMinerConfig()).extract(video, gone)
     assert result.status is ExtractStatus.FAILED and result.reason
+
+
+def test_batch_pairs_each_episode_with_its_own_multi_tick_subtitle(tmp_path):
+    """Two ticked subtitles per episode must not move one episode's file onto another (Batch mining)."""
+    from anki_miner.utils.file_pairing import FilePairMatcher
+
+    tracks = MediaTracks(subtitles=(_sub(0, "ass", "jpn"), _sub(1, "subrip", "eng")))
+    videos = [tmp_path / f"Show - {n:02d}.mkv" for n in range(1, 5)]
+    for video in videos:
+        video.write_bytes(b"video")
+        planned, _ = plan_outputs(video, tracks, [TrackRef(SUB, 0), TrackRef(SUB, 1)], tmp_path)
+        for plan in planned:
+            plan.dest.write_text("x", encoding="utf-8")
+
+    pairs = FilePairMatcher.find_pairs_by_episode_number(tmp_path, tmp_path)
+
+    assert [(p.video.name, p.subtitle.name) for p in pairs] == [
+        (f"Show - {n:02d}.mkv", f"Show - {n:02d}.s1.jpn.ass") for n in range(1, 5)
+    ]
