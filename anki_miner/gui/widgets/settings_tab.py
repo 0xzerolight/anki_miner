@@ -180,6 +180,8 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         resource_family_download_requested: An empty Dictionaries, Frequency or
             Pitch Accent page asked for its own family's recommended download;
             carries the catalogue kind. The window runs it (TX.3.02).
+        resource_update_requested: Dictionaries → Update Now was clicked; the
+            window checks every updatable resource and installs what is newer.
     """
 
     #: A label beside its control; a wider window buys gutters, not longer inputs.
@@ -199,6 +201,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     mining_language_requested = pyqtSignal(str)  # Emits the requested language code
     language_pack_download_requested = pyqtSignal(str)  # Emits the language code
     resource_family_download_requested = pyqtSignal(str)  # "dict" | "freq" | "pitch" (C09)
+    resource_update_requested = pyqtSignal()  # Settings → Dictionaries → Update Now
 
     # Fields written OUTSIDE the Settings Save path (theme selector, update
     # banner, first-run flags).  An update_config call that touches ONLY these
@@ -736,6 +739,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         # C09: an empty chain page downloads its own family only.
         for chain_panel in (self.dictionary_panel, self.frequency_panel, self.pitch_panel):
             chain_panel.download_recommended_requested.connect(self.resource_family_download_requested)
+        self.dictionary_panel.update_now_requested.connect(self.resource_update_requested)
 
         # Audio panel signals — wire Add/Reimport to the import flow controller.
         self.audio_panel.add_pack_requested.connect(self._audio_pack_import_flow.add_pack)
@@ -993,6 +997,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         # mining_language variant combos below.
         self.ui_panel.check_for_updates_checkbox.toggled.connect(self._on_settings_edited)
         self.dictionary_panel.dicts_root_selector.path_changed.connect(self._on_settings_edited)
+        self.dictionary_panel.auto_update_checkbox.toggled.connect(self._on_settings_edited)
 
         # mining_language_panel's two variant combos, individually (see the
         # comment above): only they participate in the Save round-trip.
@@ -1232,6 +1237,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             # immediately via chain_changed / _persist_chain_change).
             self.dictionary_panel.set_dicts_root(self.config.dicts_root)
             self.dictionary_panel.set_chain(self.config.dictionary_chain)
+            self.dictionary_panel.auto_update_checkbox.setChecked(self.config.auto_update_dictionaries)
 
             # Audio source chain (same — immediate persist via its own signal).
             # The root goes first so the chain renders against the current root
@@ -1612,6 +1618,8 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             # through a panel's contribute().
             if self.ui_panel.check_for_updates_checkbox.isChecked() != self.config.check_for_updates:
                 names.append("check_for_updates")
+            if self.dictionary_panel.auto_update_checkbox.isChecked() != self.config.auto_update_dictionaries:
+                names.append("auto_update_dictionaries")
         return capped(sorted(names))
 
     def commit_pending_settings_for_mutation(self) -> bool:
@@ -1803,6 +1811,8 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             # through untouched.
             check_for_updates=now_enabled,
             skipped_update_version=skipped_update_version,
+            # Dictionary-panel field outside _save_panels, like dicts_root.
+            auto_update_dictionaries=self.dictionary_panel.auto_update_checkbox.isChecked(),
         )
 
         # Async import flows can complete between the start-of-Save snapshot

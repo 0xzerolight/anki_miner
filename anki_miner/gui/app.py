@@ -1924,6 +1924,8 @@ def compose_main_window(
     window.install_resource_bundle_actions(settings_tab.export_resources_action, settings_tab.import_resources_action)
     # C09: an empty resource page asks for its own family's recommended download.
     settings_tab.resource_family_download_requested.connect(window.download_resource_family)
+    # Dictionaries → Update Now runs the same check-and-install as Tools → Update Dictionaries Now.
+    settings_tab.resource_update_requested.connect(window.update_resources_now)
     # The selector only ever PROPOSES a switch: the window runs the guard, shows
     # any refusal itself and re-points the combo on every terminal path.
     settings_tab.mining_language_requested.connect(window.request_mining_language)

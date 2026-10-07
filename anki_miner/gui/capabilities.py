@@ -851,6 +851,18 @@ CAPABILITIES: tuple[Capability, ...] = (
         keywords=("import", "yomitan", "add dictionary", "custom dictionary", "zip", "jitendex", "jmdict"),
     ),
     Capability(
+        id="update-dictionaries",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Keep dictionaries up to date"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Dictionaries that publish updates (Jitendex, JMdict, Wiktionary, Jiten, …) update themselves "
+            "once a week; Update Now checks right away.",
+        ),
+        category=_CAT_SOURCES,
+        target=CapabilityTarget("settings", "dictionaries"),
+        keywords=("update", "auto update", "latest version", "new version", "revision", "jitendex", "jmdict"),
+    ),
+    Capability(
         id="jisho-fallback",
         title=QT_TRANSLATE_NOOP("Capabilities", "Jisho.org online fallback (Japanese)"),
         description=QT_TRANSLATE_NOOP(

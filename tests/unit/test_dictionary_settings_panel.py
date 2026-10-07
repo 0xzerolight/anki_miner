@@ -1382,3 +1382,19 @@ def test_reset_is_offered_only_when_the_folder_is_not_the_default(qtbot, tmp_pat
 
     panel._reset_dicts_root_btn.click()
     assert panel._reset_dicts_root_btn.isHidden()
+
+
+def test_update_now_asks_for_an_update(qapp, qtbot, tmp_path):
+    panel = DictionarySettingsPanel(tmp_path / "dicts")
+    qtbot.addWidget(panel)
+    with qtbot.waitSignal(panel.update_now_requested, timeout=1000):
+        panel.update_now_button.click()
+
+
+def test_update_now_follows_the_mutation_lock(qapp, qtbot, tmp_path):
+    panel = DictionarySettingsPanel(tmp_path / "dicts")
+    qtbot.addWidget(panel)
+    panel._set_mutation_controls_enabled(False)
+    assert not panel.update_now_button.isEnabled()
+    panel._set_mutation_controls_enabled(True)
+    assert panel.update_now_button.isEnabled()

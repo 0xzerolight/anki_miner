@@ -8,6 +8,7 @@ from pathlib import Path
 from PyQt6.QtCore import QPoint, Qt, pyqtSignal
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QHBoxLayout,
     QMenu,
     QMessageBox,
@@ -49,6 +50,7 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
     reimport_dict_requested = pyqtSignal(str)
     reimport_all_requested = pyqtSignal()
     rescan_requested = pyqtSignal()
+    update_now_requested = pyqtSignal()
 
     ANCHOR_NAMESPACE = "dictionaries"
     _RECOMMENDED_KIND = "dict"
@@ -159,6 +161,7 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         self._add_btn.setEnabled(enabled)
         self._reimport_btn.setEnabled(enabled)
         self._restore_btn.setEnabled(enabled)
+        self.update_now_button.setEnabled(enabled)
 
     def _setup_fields(self) -> None:
         self.add_section(self.tr("Active Dictionaries"))
@@ -212,6 +215,29 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
                 self._add_btn.text(),
                 self._restore_btn.text(),
             ),
+        )
+
+        self.add_section(self.tr("Updates"))
+        self.auto_update_checkbox = QCheckBox(self.tr("Update automatically once a week"))
+        self.update_now_button = ModernButton(self.tr("Update Now"), variant="secondary")
+        self.update_now_button.clicked.connect(self.update_now_requested.emit)
+        updates_row = QWidget()
+        updates_layout = QHBoxLayout(updates_row)
+        updates_layout.setContentsMargins(0, 0, 0, 0)
+        updates_layout.addWidget(self.auto_update_checkbox)
+        updates_layout.addStretch(1)
+        updates_layout.addWidget(self.update_now_button)
+        self.add_field(
+            "",
+            updates_row,
+            helper=self.tr(
+                "Dictionaries, frequency lists and pitch-accent sources whose publisher posts updates "
+                "(Jitendex, JMdict, Wiktionary, Jiten, …) are downloaded again when a newer version is out. "
+                "Their order and on/off state stay as they are."
+            ),
+            anchor="auto_update",
+            anchor_focus=self.auto_update_checkbox,
+            anchor_text=lambda: (self.auto_update_checkbox.text(), self.update_now_button.text()),
         )
 
         self.add_section(self.tr("Storage"))

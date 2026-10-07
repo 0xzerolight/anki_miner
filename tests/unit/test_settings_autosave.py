@@ -475,3 +475,23 @@ def test_a_hand_set_worker_count_survives_a_commit(tab, test_config, no_modals):
     tab.anki_panel.anki_tags_input.setText("t")
     tab.commit_settings()
     assert received[-1].max_parallel_workers == 11
+
+
+class TestAutoUpdateDictionaries:
+    def test_checkbox_arms_debounce(self, tab):
+        box = tab.dictionary_panel.auto_update_checkbox
+        box.setChecked(not box.isChecked())
+        assert tab._debounce_timer.isActive()
+
+    def test_turning_it_off_is_saved(self, tab, test_config, no_modals):
+        tab.update_config(replace(test_config, auto_update_dictionaries=True))
+        received: list[AnkiMinerConfig] = []
+        tab.config_changed.connect(received.append)
+        tab.dictionary_panel.auto_update_checkbox.setChecked(False)
+        assert "auto_update_dictionaries" in tab._pending_field_names()
+        tab.commit_settings()
+        assert received[-1].auto_update_dictionaries is False
+
+    def test_a_reload_shows_the_saved_value(self, tab, test_config):
+        tab.update_config(replace(test_config, auto_update_dictionaries=False))
+        assert tab.dictionary_panel.auto_update_checkbox.isChecked() is False

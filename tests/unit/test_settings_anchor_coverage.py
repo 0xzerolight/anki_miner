@@ -182,6 +182,12 @@ def test_label_less_checkboxes_index_their_own_caption(tab):
     assert checkbox.text() in by_id["filtering.keep_unranked_checkbox"].search_text()
 
 
+def test_the_dictionary_update_toggle_is_anchored(tab):
+    by_id = {anchor.stable_id: anchor for anchor in tab.setting_anchors()}
+
+    assert by_id["dictionaries.auto_update"].focus_widget is tab.dictionary_panel.auto_update_checkbox
+
+
 def test_the_update_checkbox_is_anchored_on_the_ui_panel(tab):
     """T11: moved from the tab itself onto the UI panel's App section."""
     by_id = {anchor.stable_id: anchor for anchor in tab.setting_anchors()}
