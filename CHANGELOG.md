@@ -7,6 +7,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
+## [3.7.0] - 2026-10-07
+
+Updates install in place on Windows and the AppImage, and cards gain a Language field and a note type for every language. The update banner downloads the new version, checks it against the release's checksum and reopens Anki Miner on it; the AppImage also works with AppImage managers. Anki Miner Note is recognised in every mining language, and the setup wizard no longer assumes Lapis. Programs that drive Anki Miner through `--api` gain `render`, `media`, `fetch`, `settings-import` and `setup`, a dry run, and runs beside an open window. Some mining changes alter card output: the whitelist also keeps names, interjections and kana-only words; sentence length caps and i+1 judge the sentence that reaches the card; words that differ only by case or character set make one card per run; word lists match half-width and old kanji forms; Korean all-Hanja words show their hangul; and pitch position fields hold the downstep number. The Thai, Chinese, Vietnamese and Cantonese frequency lists now download from a separate repository.
+
+### Added
 - **Update in place on Windows and the AppImage.** When a new version is out, the banner's Update now downloads it, with progress in the bar at the bottom, and checks it against the release's checksum. Restart now installs it and reopens Anki Miner. macOS, the .deb and pip installs keep the download link.
 - **The AppImage carries update information.** AppImageUpdate, Gear Lever and other AppImage managers can update it and download only the parts that changed.
 - **A Language field.** Map it under Settings → Cards & Anki and each card stores its language tag (ja, zh-Hans, de, …), which note types can use to pick fonts and hyphenation.
@@ -20,25 +32,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Pitch position fields hold the downstep number** (LHHL becomes 3), so Lapis, Kiku and Anki Miner Note draw the pitch graph for words from pitch dictionaries that list high/low patterns.
 - **Korean words written only in Hanja show their hangul on the card front** (學校 → 학교, with 學校 in the Hanja field) when the dictionary gives the hangul headword, as KRDICT does; otherwise the Hanja field is left empty instead of repeating the word.
 - **The whitelist now also keeps names, interjections and kana-only words** that the part-of-speech or script rules in Settings → Word Filters would skip (a character's name, ちょっと, ありがとう), and dictionary compounds such as 環太平洋. The word still needs an entry in an installed dictionary and must not already be in Anki or your known words; particles and other grammar words are never added.
+- **Max Sentence Duration and Max Sentence Characters measure the full sentence when "Mine full sentences across subtitle lines" is on (Settings → Sentences).** A word whose merged sentence goes over a limit is skipped before the Word Curator opens. The caps used to judge only the subtitle line the word came from, so a merged card could run far past them.
+- **i+1 no longer gives a card a sentence that holds only another spelling of its word** (撮る on a line with 取る), and a known word no longer counts as unknown because an unknown one shares its dictionary form. The Word Curator's sentence picker and Unknowns in line column, and Readability's line counts, follow the same rule.
+- **With i+1 on, merging a sentence across subtitle lines no longer adds a second unknown word.** A word whose merge would add one keeps its own line when the Word Curator opens.
+- **Batch in season mode no longer cards a word an earlier episode of the run just added** (分かる, then わかる), and no longer skips a chosen word when the rest of its episode was already known.
+- **Words that differ only by case or character set make one card per run** (German Essen and essen, 頭髮 and 头发), also across a season's episodes and after an edit in the Word Curator.
+- **Word list entries in half-width katakana or old kanji forms** (ｺｰﾋｰ, 𠮟る) now match the words mined from subtitles.
+- **French sentences keep their no-break spaces**, so ? ! : ; and » no longer start a new line on the card.
 - **Deck Builder leaves out words no installed dictionary defines** before the preview, so Cards to create counts only words that become cards, and a build needs an offline dictionary like any other mining.
 - **The Thai, Chinese, Vietnamese and Cantonese frequency lists download from a separate repository** ([anki_miner_assets](https://github.com/0xzerolight/anki_miner_assets)), so they no longer count as app downloads. Once the old copies are removed, Anki Miner 3.5 and 3.6 can no longer download these lists (lists already installed keep working); update to get them.
 - **API runs (`--api mine`) no longer apply One card per sentence or i+1.** With no word treated as known, both removed most named words. A run file may still send `deduplicate_sentences` and `use_i_plus_one_filter` as `false`; `true` is refused.
 
 ### Fixed
-- **Max Sentence Duration and Max Sentence Characters measure the full sentence when "Mine full sentences across subtitle lines" is on (Settings → Sentences).** A word whose merged sentence goes over a limit is skipped before the Word Curator opens. The caps used to judge only the subtitle line the word came from, so a merged card could run far past them.
 - **Reading → Anki Deck: the Word Curator shows the card's line under its picture**, not the card's position in the deck.
-- **i+1 no longer gives a card a sentence that holds only another spelling of its word** (撮る on a line with 取る), and a known word no longer counts as unknown because an unknown one shares its dictionary form. The Word Curator's sentence picker and Unknowns in line column, and Readability's line counts, follow the same rule.
-- **With i+1 on, merging a sentence across subtitle lines no longer adds a second unknown word.** A word whose merge would add one keeps its own line when the Word Curator opens.
-- **Batch in season mode no longer cards a word an earlier episode of the run just added** (分かる, then わかる), and no longer skips a chosen word when the rest of its episode was already known.
-- **Words that differ only by case or character set make one card per run** (German Essen and essen, 頭髮 and 头发), also across a season's episodes and after an edit in the Word Curator.
-- **View details shows the share of words you already know as Comprehension.** It used to count every word a filter or the Word Curator removed as known.
-- **Word list entries in half-width katakana or old kanji forms** (ｺｰﾋｰ, 𠮟る) now match the words mined from subtitles.
+- **View details shows the share of words you already know as Comprehension.** It used to count every word a filter or the Word Curator removed as known. Without the Word Curator, its New Words count also leaves out words that full-sentence mining's limits or duplicate check dropped.
 - **Fill in automatically maps Hebrew part of speech and Thai Paiboon readings** to fields named PartOfSpeech and Romanization.
 - **Indonesian affixes no longer break after a hyphen** (ke- / -an stay whole on one line).
-- **French sentences keep their no-break spaces**, so ? ! : ; and » no longer start a new line on the card.
 - **Dictionary entries on Lapis-style cards no longer show " | " between bulleted meanings, and Wiktionary tags (countable, figurative, …) show as separate chips even when the dictionary was added without its own styles.** Existing cards pick this up with Card Backfill → Restyle cards…
-
-### Removed
 
 ## [3.6.0] - 2026-10-03
 
