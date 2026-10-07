@@ -389,6 +389,20 @@ class TestSavedSourceBuiltTheSlot:
         saved = build_yomitan_zip(dicts_root / "wty-lt-en" / "source.zip", title="wty-lt-en", revision="2026.08.29")
         assert flow._saved_yomitan_source_matches("wty-lt-en", saved) is True
 
+    def test_an_updated_slot_with_a_corrupt_index_still_finds_its_zip(self, tmp_path: Path):
+        # Re-import exists to repair a broken index; the meta.json sidecar still names the zip.
+        dicts_root = tmp_path / "dicts"
+        flow = _make_flow(dicts_root)
+        flow._get_config().language = "ja"
+        slot = dicts_root / "jitendex-org-2026-09-01-2026-09-01-0"
+        slot.mkdir(parents=True)
+        (slot / "index.sqlite").write_bytes(b"not a database")
+        (slot / "meta.json").write_text(
+            '{"source_name": "Jitendex.org [2026-10-03]", "source_revision": "2026.10.03.0"}', encoding="utf-8"
+        )
+        saved = build_yomitan_zip(slot / "source.zip", title="Jitendex.org [2026-10-03]", revision="2026.10.03.0")
+        assert flow._saved_yomitan_source_matches(slot.name, saved) is True
+
     def test_a_zip_of_another_revision_is_still_refused(self, tmp_path: Path):
         dicts_root = tmp_path / "dicts"
         flow = _make_flow(dicts_root)

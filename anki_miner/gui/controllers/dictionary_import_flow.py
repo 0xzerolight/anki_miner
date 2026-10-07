@@ -8,6 +8,7 @@ panel widgets, the signal wiring, and the narrow chain persist
 stays one-way: tab → controller → workers/services.
 """
 
+import json
 import logging
 from collections.abc import Callable
 from dataclasses import replace
@@ -50,6 +51,21 @@ from anki_miner.services.resource_catalog import LEGACY_DICT_SLOT_IDS
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
+
+
+def _slot_identity_meta(slot_dir: Path) -> dict[str, str] | None:
+    """A slot's recorded meta: its index first, else the ``meta.json`` sidecar that mirrors it; None if neither reads."""
+    db = slot_dir / "index.sqlite"
+    if db.exists():
+        try:
+            return read_meta(db)
+        except Exception as exc:  # noqa: BLE001 — bucket A: fall through to the sidecar.
+            logger.warning("Dictionary index unreadable, trying its sidecar: slot=%s error=%s", slot_dir.name, exc)
+    try:
+        payload = json.loads((slot_dir / "meta.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return payload if isinstance(payload, dict) else None
 
 
 class DictionaryImportFlow(PanelImportFlowBase):
@@ -327,15 +343,18 @@ class DictionaryImportFlow(PanelImportFlowBase):
         from an older revision, and a wty catalog slot pins an id its
         bracket-less title never derives to; both saved zips are still that
         slot's own source.
+
+        The ``meta.json`` sidecar answers when the index cannot: repairing a
+        broken index is what Re-import is for.
         """
-        db = self._get_config().dicts_root / slot_id / "index.sqlite"
-        if not db.exists():
-            return False
+        slot_dir = self._get_config().dicts_root / slot_id
         try:
             title, revision = read_yomitan_title_revision(zip_path)
-            meta = read_meta(db)
         except Exception as exc:  # noqa: BLE001 — bucket A: saved source silently becomes ineligible.
             logger.warning("Dictionary source unavailable: source=%s error=%s", slot_id, type(exc).__name__)
+            return False
+        meta = _slot_identity_meta(slot_dir)
+        if meta is None:
             return False
         return meta.get("source_name") == title and meta.get("source_revision", "") == revision
 
