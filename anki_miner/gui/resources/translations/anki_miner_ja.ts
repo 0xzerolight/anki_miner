@@ -11793,12 +11793,20 @@ Your installed resources and your theme are kept.</source>
         <translation>%1: %2 を保存できませんでした: %3</translation>
     </message>
     <message>
+        <source>Saved %1, but ffmpeg reported: %2</source>
+        <translation>%1 を保存しましたが、ffmpeg が次を報告しました: %2</translation>
+    </message>
+    <message>
         <source>Saved %1</source>
         <translation>%1 を保存しました</translation>
     </message>
     <message>
         <source>No ticked track was saved</source>
         <translation>チェックしたトラックが 1 つも保存されませんでした</translation>
+    </message>
+    <message>
+        <source>%1: %2 is tagged %3 here, not %4 as in the listed video</source>
+        <translation>%1: この動画の %2 は %3 とタグ付けされています (一覧の動画では %4)</translation>
     </message>
     <message>
         <source>%1 would replace the video itself — skipped</source>

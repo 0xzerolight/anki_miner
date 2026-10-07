@@ -11834,12 +11834,20 @@ Seus recursos instalados e seu tema são mantidos.</translation>
         <translation>%1: não foi possível salvar %2: %3</translation>
     </message>
     <message>
+        <source>Saved %1, but ffmpeg reported: %2</source>
+        <translation>%1 salvo, mas o ffmpeg informou: %2</translation>
+    </message>
+    <message>
         <source>Saved %1</source>
         <translation>%1 salvo</translation>
     </message>
     <message>
         <source>No ticked track was saved</source>
         <translation>Nenhuma faixa marcada foi salva</translation>
+    </message>
+    <message>
+        <source>%1: %2 is tagged %3 here, not %4 as in the listed video</source>
+        <translation>%1: aqui %2 tem a tag %3, não %4 como no vídeo listado</translation>
     </message>
     <message>
         <source>%1 would replace the video itself — skipped</source>

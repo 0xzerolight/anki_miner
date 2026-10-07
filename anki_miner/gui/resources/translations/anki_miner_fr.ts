@@ -11834,12 +11834,20 @@ Vos ressources installées et votre thème sont conservés.</translation>
         <translation>%1 : impossible d'enregistrer %2 : %3</translation>
     </message>
     <message>
+        <source>Saved %1, but ffmpeg reported: %2</source>
+        <translation>%1 enregistré, mais ffmpeg a signalé : %2</translation>
+    </message>
+    <message>
         <source>Saved %1</source>
         <translation>%1 enregistré</translation>
     </message>
     <message>
         <source>No ticked track was saved</source>
         <translation>Aucune piste cochée n'a été enregistrée</translation>
+    </message>
+    <message>
+        <source>%1: %2 is tagged %3 here, not %4 as in the listed video</source>
+        <translation>%1 : %2 est étiqueté %3 ici, et non %4 comme dans la vidéo listée</translation>
     </message>
     <message>
         <source>%1 would replace the video itself — skipped</source>

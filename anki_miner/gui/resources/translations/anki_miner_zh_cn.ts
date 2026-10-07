@@ -11793,12 +11793,20 @@ Your installed resources and your theme are kept.</source>
         <translation>%1：%2 无法保存：%3</translation>
     </message>
     <message>
+        <source>Saved %1, but ffmpeg reported: %2</source>
+        <translation>已保存 %1，但 ffmpeg 报告：%2</translation>
+    </message>
+    <message>
         <source>Saved %1</source>
         <translation>已保存 %1</translation>
     </message>
     <message>
         <source>No ticked track was saved</source>
         <translation>未保存任何已勾选的轨道</translation>
+    </message>
+    <message>
+        <source>%1: %2 is tagged %3 here, not %4 as in the listed video</source>
+        <translation>%1：此处 %2 标记为 %3，而非列出的视频中的 %4</translation>
     </message>
     <message>
         <source>%1 would replace the video itself — skipped</source>

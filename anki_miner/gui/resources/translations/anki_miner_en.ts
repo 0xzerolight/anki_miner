@@ -11787,11 +11787,19 @@ Your installed resources and your theme are kept.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Saved %1, but ffmpeg reported: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Saved %1</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>No ticked track was saved</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1: %2 is tagged %3 here, not %4 as in the listed video</source>
         <translation type="unfinished" />
     </message>
     <message>

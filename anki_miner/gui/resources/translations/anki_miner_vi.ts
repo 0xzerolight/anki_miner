@@ -11793,12 +11793,20 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
         <translation>%1: không thể lưu %2: %3</translation>
     </message>
     <message>
+        <source>Saved %1, but ffmpeg reported: %2</source>
+        <translation>Đã lưu %1, nhưng ffmpeg báo: %2</translation>
+    </message>
+    <message>
         <source>Saved %1</source>
         <translation>Đã lưu %1</translation>
     </message>
     <message>
         <source>No ticked track was saved</source>
         <translation>Không có rãnh đã đánh dấu nào được lưu</translation>
+    </message>
+    <message>
+        <source>%1: %2 is tagged %3 here, not %4 as in the listed video</source>
+        <translation>%1: %2 ở đây được gắn thẻ %3, không phải %4 như trong video đã liệt kê</translation>
     </message>
     <message>
         <source>%1 would replace the video itself — skipped</source>

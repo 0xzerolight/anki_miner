@@ -11834,12 +11834,20 @@ Ihre installierten Ressourcen und Ihr Design bleiben erhalten.</translation>
         <translation>%1: %2 konnte nicht gespeichert werden: %3</translation>
     </message>
     <message>
+        <source>Saved %1, but ffmpeg reported: %2</source>
+        <translation>%1 gespeichert, aber ffmpeg meldete: %2</translation>
+    </message>
+    <message>
         <source>Saved %1</source>
         <translation>%1 gespeichert</translation>
     </message>
     <message>
         <source>No ticked track was saved</source>
         <translation>Keine angehakte Spur wurde gespeichert</translation>
+    </message>
+    <message>
+        <source>%1: %2 is tagged %3 here, not %4 as in the listed video</source>
+        <translation>%1: %2 ist hier als %3 gekennzeichnet, nicht als %4 wie im aufgeführten Video</translation>
     </message>
     <message>
         <source>%1 would replace the video itself — skipped</source>

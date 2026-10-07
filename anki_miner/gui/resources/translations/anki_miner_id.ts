@@ -11793,12 +11793,20 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
         <translation>%1: %2 tidak dapat disimpan: %3</translation>
     </message>
     <message>
+        <source>Saved %1, but ffmpeg reported: %2</source>
+        <translation>%1 disimpan, tetapi ffmpeg melaporkan: %2</translation>
+    </message>
+    <message>
         <source>Saved %1</source>
         <translation>%1 disimpan</translation>
     </message>
     <message>
         <source>No ticked track was saved</source>
         <translation>Tidak satu pun trek yang dicentang berhasil disimpan</translation>
+    </message>
+    <message>
+        <source>%1: %2 is tagged %3 here, not %4 as in the listed video</source>
+        <translation>%1: %2 di sini bertag %3, bukan %4 seperti pada video yang ditampilkan</translation>
     </message>
     <message>
         <source>%1 would replace the video itself — skipped</source>

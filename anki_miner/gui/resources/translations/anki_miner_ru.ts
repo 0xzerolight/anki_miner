@@ -11875,12 +11875,20 @@ Your installed resources and your theme are kept.</source>
         <translation>%1: не удалось сохранить «%2»: %3</translation>
     </message>
     <message>
+        <source>Saved %1, but ffmpeg reported: %2</source>
+        <translation>Сохранено: %1, но ffmpeg сообщил: %2</translation>
+    </message>
+    <message>
         <source>Saved %1</source>
         <translation>Сохранено: %1</translation>
     </message>
     <message>
         <source>No ticked track was saved</source>
         <translation>Ни одна отмеченная дорожка не сохранена</translation>
+    </message>
+    <message>
+        <source>%1: %2 is tagged %3 here, not %4 as in the listed video</source>
+        <translation>%1: у «%2» здесь метка %3, а не %4, как в показанном видео</translation>
     </message>
     <message>
         <source>%1 would replace the video itself — skipped</source>
