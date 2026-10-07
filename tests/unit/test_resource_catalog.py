@@ -114,6 +114,7 @@ class TestResourceSpec:
             "lemmatise",
             "variant",
             "pin_slot",
+            "sweep_superseded",
         }
 
 

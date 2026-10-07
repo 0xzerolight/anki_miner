@@ -322,6 +322,10 @@ class ResourceDownloadSummary:
 
     results: list[ResourceDownloadResult] = field(default_factory=list)
     cancelled: bool = False
+    #: The GUI refused a promotion (indexed resources were in use), so the run
+    #: stopped short through no fault of the resource. A weekly update retries
+    #: next launch instead of waiting a week.
+    blocked: bool = False
     requested_count: int = 0
     dicts_root: Path | None = None
     freqs_root: Path | None = None
@@ -385,6 +389,7 @@ class ResourceDownloadWorker(CancellableWorker):
         # importer calls below carry it.
         self._language = language
         self._promotion_approval_required = False
+        self._promotion_refused = False
 
     def require_promotion_approval(self) -> None:
         """Require a GUI-thread release handshake before every importer."""
@@ -395,7 +400,10 @@ class ResourceDownloadWorker(CancellableWorker):
             return True
         request = ResourcePromotionRequest()
         self.promotion_requested.emit(request)
-        return request.wait(lambda: self.is_cancelled)
+        allowed = request.wait(lambda: self.is_cancelled)
+        if not allowed and not self.is_cancelled:
+            self._promotion_refused = True
+        return allowed
 
     @staticmethod
     def _promotion_blocked_detail() -> str:
@@ -462,11 +470,13 @@ class ResourceDownloadWorker(CancellableWorker):
 
         if self.is_cancelled:
             summary.cancelled = True
+        summary.blocked = self._promotion_refused
         self.log_end(
             requested=summary.requested_count,
             succeeded=len(summary.succeeded),
             failed=len(summary.failed),
             cancelled=summary.cancelled,
+            blocked=summary.blocked,
         )
         self.finished_summary.emit(summary)
 
@@ -551,12 +561,14 @@ def install_resource(
             )
             # Remove pre-fix date-versioned duplicates now living in
             # sibling dirs. Never fails the item — a broken sweep is
-            # reported, not raised (sweep is structurally total).
-            removed_dicts, failed_removals = sweep_superseded_dicts(
-                dicts_root,
-                keep_id=spec.id,
-                imported_source_name=result.source_name,
-            )
+            # reported, not raised (sweep is structurally total). An
+            # in-place update skips it (see ResourceSpec.sweep_superseded).
+            if spec.sweep_superseded:
+                removed_dicts, failed_removals = sweep_superseded_dicts(
+                    dicts_root,
+                    keep_id=spec.id,
+                    imported_source_name=result.source_name,
+                )
         elif spec.kind == "freq":
             # import_frequency_source dispatches on file suffix (.zip vs
             # .csv/.tsv/.txt), but download_to_temp always stages a

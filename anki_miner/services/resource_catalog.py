@@ -36,6 +36,12 @@ class ResourceSpec:
             title-derived slot would fork ``<slug>-<hash>`` beside the old one,
             leaving two enabled chain entries for one list. Dict and pitch
             specs always import into ``<id>``.
+        sweep_superseded: Dict only. After the import, delete sibling slots
+            holding the same ``[YYYY-MM-DD]``-dated title
+            (``sweep_superseded_dicts``). False for an in-place update: a
+            user can keep two dated copies on purpose (JMdict and JMdict
+            with examples share one title), and an update must never
+            remove one.
     """
 
     id: str
@@ -46,6 +52,7 @@ class ResourceSpec:
     lemmatise: bool = False
     variant: str = ""
     pin_slot: bool = False
+    sweep_superseded: bool = True
 
 
 # For dict resources, ``id`` is the PINNED on-disk slot the importer writes to

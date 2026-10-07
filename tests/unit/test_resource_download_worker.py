@@ -354,6 +354,7 @@ def test_a_refused_promotion_before_install_fails_the_item_and_stops_the_loop(tm
     assert done == [(DICT_SPEC.id, False, detail)]
     assert [(r.spec_id, r.ok, r.detail) for r in summary.results] == [(DICT_SPEC.id, False, detail)]
     assert summary.cancelled is False
+    assert summary.blocked is True
     assert summary.not_processed_count == 1
 
 
@@ -1485,3 +1486,27 @@ def test_each_resource_starts_its_own_phase_sequence(tmp_path, monkeypatch):
     freq_events = [e for e in events if e.spec_id == "jpdb-freq"]
     assert freq_events[0].phase is resource_download_worker.ResourcePhase.DOWNLOADING
     assert all(e.entries is None for e in freq_events)
+
+
+def test_a_refused_final_promotion_marks_the_run_blocked(tmp_path):
+    worker = _make_worker([DICT_SPEC], tmp_path)
+    worker.require_promotion_approval()
+    worker.promotion_requested.connect(lambda request: request.resolve(False))
+    with pytest.raises(SetupError):
+        worker._require_promotion_allowed()
+    assert worker._promotion_refused is True
+
+
+def test_an_import_failure_does_not_mark_the_run_blocked(tmp_path, monkeypatch):
+    staged = tmp_path / "x.part"
+    staged.write_bytes(b"zip")
+    monkeypatch.setattr(resource_download_worker, "download_to_temp", lambda url, **kw: staged)
+
+    def broken(*args, **kwargs):
+        raise RuntimeError("bad zip")
+
+    monkeypatch.setattr(resource_download_worker, "import_yomitan_zip", broken)
+    worker = _make_worker([DICT_SPEC], tmp_path)
+    _done, _progress, summaries = _connect_capture(worker)
+    worker.run()
+    assert summaries[0].blocked is False and summaries[0].failed

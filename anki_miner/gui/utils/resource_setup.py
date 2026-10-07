@@ -15,6 +15,22 @@ from anki_miner.config import AnkiMinerConfig, ChainEntry, FreqEntry, PitchSourc
 if TYPE_CHECKING:
     from anki_miner.gui.workers.resource_download_worker import ResourceDownloadSummary
 
+_ROOT_FIELDS = {"dict": "dicts_root", "freq": "freqs_root", "pitch": "pitch_root"}
+
+
+def _require_captured_roots(config: AnkiMinerConfig, summary: ResourceDownloadSummary) -> None:
+    """Raise ValueError when a success was imported under a root the config no longer uses."""
+    for result in summary.succeeded:
+        root_field = _ROOT_FIELDS.get(result.kind)
+        if root_field is None:
+            continue
+        captured_root = getattr(summary, root_field, None)
+        live_root = getattr(config, root_field)
+        if captured_root is not None and captured_root != live_root:
+            raise ValueError(
+                f"{result.display_name} was imported under {captured_root}, but the active {root_field} is {live_root}"
+            )
+
 
 def apply_download_summary(config: AnkiMinerConfig, summary: ResourceDownloadSummary) -> AnkiMinerConfig:
     """Return a new config reflecting the successfully-imported resources.
@@ -42,21 +58,7 @@ def apply_download_summary(config: AnkiMinerConfig, summary: ResourceDownloadSum
     if not succeeded:
         return config
 
-    root_fields = {
-        "dict": "dicts_root",
-        "freq": "freqs_root",
-        "pitch": "pitch_root",
-    }
-    for result in succeeded:
-        root_field = root_fields.get(result.kind)
-        if root_field is None:
-            continue
-        captured_root = getattr(summary, root_field, None)
-        live_root = getattr(config, root_field)
-        if captured_root is not None and captured_root != live_root:
-            raise ValueError(
-                f"{result.display_name} was imported under {captured_root}, but the active {root_field} is {live_root}"
-            )
+    _require_captured_roots(config, summary)
 
     chain = list(config.dictionary_chain)
     freq_chain = list(config.frequency_chain)
@@ -92,3 +94,14 @@ def apply_download_summary(config: AnkiMinerConfig, summary: ResourceDownloadSum
         frequency_chain=tuple(freq_chain),
         pitch_chain=tuple(pitch_chain),
     )
+
+
+def apply_update_summary(config: AnkiMinerConfig, summary: ResourceDownloadSummary) -> AnkiMinerConfig:
+    """Return ``config`` unchanged for an update run.
+
+    Every update rebuilt its slot in place under the id the chains already
+    name, so order and enabled state stay as the user left them (Yomitan and
+    Hoshi Reader keep both). Only the roots are checked, as for a download.
+    """
+    _require_captured_roots(config, summary)
+    return config

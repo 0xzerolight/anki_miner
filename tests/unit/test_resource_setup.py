@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+import pytest
+
 from anki_miner.config import AnkiMinerConfig, ChainEntry, FreqEntry, create_default_config
-from anki_miner.gui.utils.resource_setup import apply_download_summary
+from anki_miner.gui.utils.resource_setup import apply_download_summary, apply_update_summary
 from anki_miner.gui.workers.resource_download_worker import (
     ResourceDownloadResult,
     ResourceDownloadSummary,
@@ -287,3 +289,39 @@ class TestFirstRunSetupDoneRoundTrip:
     def test_absent_flag_defaults_false(self) -> None:
         config = AnkiMinerConfig()
         assert config.first_run_setup_done is False
+
+
+def test_update_summary_keeps_every_chain_exactly_as_it_was(tmp_path) -> None:
+    config = replace(
+        create_default_config(),
+        dicts_root=tmp_path / "d",
+        freqs_root=tmp_path / "f",
+        pitch_root=tmp_path / "p",
+        dictionary_chain=(
+            ChainEntry(kind="indexed", dict_id="b", enabled=False),
+            ChainEntry(kind="indexed", dict_id="a", enabled=True),
+        ),
+        frequency_chain=(FreqEntry(source_id="jiten", enabled=True),),
+    )
+    summary = ResourceDownloadSummary(
+        results=[
+            ResourceDownloadResult("b", "dict", "B", "u", True, "", dict_id="b"),
+            ResourceDownloadResult("jiten", "freq", "Jiten", "u", True, "", source_id="jiten"),
+        ],
+        requested_count=2,
+        dicts_root=config.dicts_root,
+        freqs_root=config.freqs_root,
+        pitch_root=config.pitch_root,
+    )
+    assert apply_update_summary(config, summary) is config
+
+
+def test_update_summary_refuses_a_root_that_moved(tmp_path) -> None:
+    config = replace(create_default_config(), dicts_root=tmp_path / "d")
+    summary = ResourceDownloadSummary(
+        results=[ResourceDownloadResult("b", "dict", "B", "u", True, "", dict_id="b")],
+        requested_count=1,
+        dicts_root=tmp_path / "old",
+    )
+    with pytest.raises(ValueError):
+        apply_update_summary(config, summary)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -108,3 +109,36 @@ def test_pinned_slot_agrees_with_the_import_call_for_every_catalogue_spec(code, 
         if worker_mod.pinned_slot(spec) != expected:
             mismatched[spec.id] = (worker_mod.pinned_slot(spec), expected)
     assert mismatched == {}
+
+
+@pytest.mark.parametrize(("sweep", "expected_calls"), [(True, 1), (False, 0)])
+def test_only_a_catalog_spec_sweeps_dated_siblings(tmp_path, staged, monkeypatch, sweep, expected_calls) -> None:
+    """An update must never delete a second dated copy (JMdict + JMdict with examples share a title)."""
+    monkeypatch.setattr(
+        worker_mod,
+        "import_yomitan_zip",
+        lambda zip_path, dest_root, **kwargs: SimpleNamespace(
+            dict_id=kwargs["dict_id"], source_name="JMdict [2026-10-07]", entry_count=1
+        ),
+    )
+    calls: list[dict] = []
+
+    def sweep_fn(root, **kwargs):
+        calls.append(kwargs)
+        return [("jmdict-examples", "JMdict [2026-01-01]")], []
+
+    monkeypatch.setattr(worker_mod, "sweep_superseded_dicts", sweep_fn)
+    spec = replace(DICT, sweep_superseded=sweep)
+    result = worker_mod.install_resource(
+        spec,
+        dicts_root=tmp_path / "dicts",
+        freqs_root=tmp_path / "freqs",
+        pitch_root=tmp_path / "pitch",
+        download_dir=staged.parent,
+        language="ja",
+        reporter=worker_mod.phase_reporter(spec, [].append),
+        cancelled=lambda: False,
+    )
+    assert result is not None and result.ok
+    assert len(calls) == expected_calls
+    assert result.removed_dicts == ([("jmdict-examples", "JMdict [2026-01-01]")] if sweep else [])
