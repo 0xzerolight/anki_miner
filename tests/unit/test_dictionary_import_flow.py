@@ -294,11 +294,14 @@ from anki_miner.services.dictionary.storage import create_index, write_meta  # n
 from tests.fixtures.dictionary.build_yomitan_fixture import build_yomitan_zip  # noqa: E402
 
 
-def _seed_slot(dicts_root: Path, dict_id: str, source_name: str) -> None:
+def _seed_slot(dicts_root: Path, dict_id: str, source_name: str, source_revision: str | None = None) -> None:
     db = dicts_root / dict_id / "index.sqlite"
     db.parent.mkdir(parents=True, exist_ok=True)
     create_index(db)
-    write_meta(db, {"source_name": source_name})
+    meta = {"source_name": source_name}
+    if source_revision is not None:
+        meta["source_revision"] = source_revision
+    write_meta(db, meta)
 
 
 class TestCatalogSlotBaseMatches:
@@ -361,3 +364,35 @@ class TestSavedSourceMatchesFollowTheActiveProfile:
         fresh = build_yomitan_zip(tmp_path / "src" / "j.zip", title="Jitendex.org [2026-06-06]")
 
         assert flow._saved_yomitan_source_matches("jitendex", fresh) is True
+
+
+class TestSavedSourceBuiltTheSlot:
+    """An updated slot, or a wty catalog slot, keeps a saved zip that no longer derives to its id."""
+
+    def test_an_updated_slot_accepts_its_own_newer_zip(self, tmp_path: Path):
+        dicts_root = tmp_path / "dicts"
+        flow = _make_flow(dicts_root)
+        flow._get_config().language = "ja"
+        slot = "jitendex-org-2026-09-01-2026-09-01-0"
+        _seed_slot(dicts_root, slot, "Jitendex.org [2026-10-03]", "2026.10.03.0")
+        saved = build_yomitan_zip(
+            dicts_root / slot / "source.zip", title="Jitendex.org [2026-10-03]", revision="2026.10.03.0"
+        )
+        assert flow._saved_yomitan_source_matches(slot, saved) is True
+
+    def test_a_wty_catalog_slot_accepts_its_bracketless_zip(self, tmp_path: Path):
+        # The live wty index.json title is bracket-less ("wty-ja-en"); the slot id is pinned.
+        dicts_root = tmp_path / "dicts"
+        flow = _make_flow(dicts_root)
+        flow._get_config().language = "lt"
+        _seed_slot(dicts_root, "wty-lt-en", "wty-lt-en", "2026.08.29")
+        saved = build_yomitan_zip(dicts_root / "wty-lt-en" / "source.zip", title="wty-lt-en", revision="2026.08.29")
+        assert flow._saved_yomitan_source_matches("wty-lt-en", saved) is True
+
+    def test_a_zip_of_another_revision_is_still_refused(self, tmp_path: Path):
+        dicts_root = tmp_path / "dicts"
+        flow = _make_flow(dicts_root)
+        flow._get_config().language = "ja"
+        _seed_slot(dicts_root, "my-dict-v1", "My Dict", "v1")
+        other = build_yomitan_zip(tmp_path / "src" / "m.zip", title="My Dict", revision="v2")
+        assert flow._saved_yomitan_source_matches("my-dict-v1", other) is False

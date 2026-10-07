@@ -41,6 +41,7 @@ from anki_miner.services._sqlite_index import (
 from anki_miner.services.dictionary.importers.yomitan_importer import (
     derive_dict_id_from_zip,
     read_yomitan_title,
+    read_yomitan_title_revision,
 )
 from anki_miner.services.dictionary.registry import DictionaryRegistry, DictMeta
 from anki_miner.services.dictionary.storage import read_meta
@@ -312,9 +313,31 @@ class DictionaryImportFlow(PanelImportFlowBase):
                 type(exc).__name__,
             )
             return False
-        return derived_id == slot_id or (
-            slot_id in self._pinned_dict_slot_ids() and self._catalog_slot_base_matches(slot_id, zip_path)
+        return (
+            derived_id == slot_id
+            or self._saved_source_built_slot(slot_id, zip_path)
+            or (slot_id in self._pinned_dict_slot_ids() and self._catalog_slot_base_matches(slot_id, zip_path))
         )
+
+    def _saved_source_built_slot(self, slot_id: str, zip_path: Path) -> bool:
+        """True when ``zip_path`` is the zip ``slot_id`` was last built from.
+
+        Its title and revision equal the ones the slot's index recorded. An
+        update rebuilds a slot in place under the id its first import derived
+        from an older revision, and a wty catalog slot pins an id its
+        bracket-less title never derives to; both saved zips are still that
+        slot's own source.
+        """
+        db = self._get_config().dicts_root / slot_id / "index.sqlite"
+        if not db.exists():
+            return False
+        try:
+            title, revision = read_yomitan_title_revision(zip_path)
+            meta = read_meta(db)
+        except Exception as exc:  # noqa: BLE001 — bucket A: saved source silently becomes ineligible.
+            logger.warning("Dictionary source unavailable: source=%s error=%s", slot_id, type(exc).__name__)
+            return False
+        return meta.get("source_name") == title and meta.get("source_revision", "") == revision
 
     def reimport_dict(
         self,
