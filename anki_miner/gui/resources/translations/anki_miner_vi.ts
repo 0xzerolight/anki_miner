@@ -2702,6 +2702,14 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Chọn một tệp phụ đề hoặc một thư mục phụ đề để xem tỷ lệ từ đã biết, số từ mới và số dòng i+1. Dùng thẻ Anki và từ đã biết của bạn; không ghi dữ liệu nào.</translation>
     </message>
     <message>
+        <source>Save the subtitles or audio inside a video</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pick an .mkv or another video, or a folder of them, tick its subtitle or audio tracks and save each as its own file, copied without re-encoding. A single subtitle is named after its video, so Video mining finds it. The video is never changed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Restyle mined cards</source>
         <translation>Định dạng lại thẻ đã khai thác</translation>
     </message>
@@ -4935,6 +4943,12 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
         <source>No cards created. Every word is already known.</source>
         <translation>Không tạo thẻ nào. Mọi từ đều đã biết.</translation>
     </message>
+    <message numerus="yes">
+        <source>Mining %n selected word(s)</source>
+        <translation>
+            <numerusform>Đang khai thác %n từ đã chọn</numerusform>
+        </translation>
+    </message>
     <message>
         <source>%1 word(s) have more than one reading — the parsed reading was kept.</source>
         <translation>%1 từ có nhiều hơn một cách đọc — cách đọc đã phân tích được giữ lại.</translation>
@@ -5106,12 +5120,6 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     <message>
         <source>No words selected for card creation</source>
         <translation>Chưa chọn từ nào để tạo thẻ</translation>
-    </message>
-    <message numerus="yes">
-        <source>Mining %n selected word(s)</source>
-        <translation>
-            <numerusform>Đang khai thác %n từ đã chọn</numerusform>
-        </translation>
     </message>
     <message>
         <source>Could not extract media for any word — no cards created</source>
@@ -6478,6 +6486,10 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
     <message>
         <source>Readability</source>
         <translation>Độ dễ đọc</translation>
+    </message>
+    <message>
+        <source>Tracks</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Anki Miner updated</source>
@@ -10197,12 +10209,12 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Không thể tải tập từ tên riêng: %1</translation>
     </message>
     <message>
-        <source>Couldn't initialize known word database: %1</source>
-        <translation>Không thể khởi tạo CSDL từ đã biết: %1</translation>
-    </message>
-    <message>
         <source>Couldn't load word lists: %1</source>
         <translation>Không thể tải danh sách từ: %1</translation>
+    </message>
+    <message>
+        <source>Couldn't initialize known word database: %1</source>
+        <translation>Không thể khởi tạo CSDL từ đã biết: %1</translation>
     </message>
 </context><context>
     <name>SettingsSearchBox</name>
@@ -11757,6 +11769,314 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     <message>
         <source>Favorite all %2 %3 variants (%1 favorited).</source>
         <translation>Yêu thích cả %2 biến thể %3 (%1 đã được yêu thích).</translation>
+    </message>
+</context><context>
+    <name>TrackExtractWorker</name>
+    <message>
+        <source>Subtitle %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 has no %2 — skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Saving %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1: %2 could not be saved: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Saved %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No ticked track was saved</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 would replace the video itself — skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 was already saved from another video in this run — skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 already exists — tick Overwrite to replace it</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>TracksTab</name>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished">Tiến trình</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation type="unfinished">Xong</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation type="unfinished">Xong: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation type="unfinished">Đã bỏ qua</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation type="unfinished">Đã bỏ qua: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished">Hủy</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished">Đang hủy…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">Đã hủy</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished">Thất bại — xem nhật ký</translation>
+    </message>
+    <message>
+        <source>Finished with errors — see log</source>
+        <translation type="unfinished">Hoàn tất với lỗi — xem nhật ký</translation>
+    </message>
+    <message>
+        <source>Some tracks could not be saved.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Some tracks of this video could not be saved.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — tracks saved from %1 video(s)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 video(s) done, %2 skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing saved — every video was skipped. The log says why.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation type="unfinished">Chọn thư mục đầu ra</translation>
+    </message>
+    <message>
+        <source>Next to each video</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Track extraction</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Video</source>
+        <translation type="unfinished">Video</translation>
+    </message>
+    <message>
+        <source>ffmpeg and ffprobe were not found. Install ffmpeg and add it to PATH to use this tool.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Save the subtitle and audio tracks inside a video as their own files. Tracks are copied as they are; the video is never changed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Videos (%1)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>All Files (*)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This field takes a video or a folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Video file or folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Tracks</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose a video to list its tracks.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Track</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Tick the tracks to save.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Language</source>
+        <translation type="unfinished">Ngôn ngữ</translation>
+    </message>
+    <message>
+        <source>The language the file says the track is in.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Codec</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The track's format. Hover a row to see the file type it is saved as.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Title</source>
+        <translation type="unfinished">Tiêu đề</translation>
+    </message>
+    <message>
+        <source>The track's name in the file, such as Signs &amp; Songs.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Flags</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Default, Forced, and Image for picture-based subtitles.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Output</source>
+        <translation type="unfinished">Đầu ra</translation>
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation type="unfinished">Đầu ra:</translation>
+    </message>
+    <message>
+        <source>Choose Folder…</source>
+        <translation type="unfinished">Chọn thư mục…</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation type="unfinished">Đặt lại</translation>
+    </message>
+    <message>
+        <source>Tracks are saved next to each video unless you choose a folder. A single ticked subtitle is named after its video, so mining finds it.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Overwrite existing files</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>When unchecked, a track whose file already exists is skipped, not overwritten.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Extract Tracks</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>ffmpeg could not be started. Install it and add it to PATH, then try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reading tracks…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Tracks could not be read.</source>
+        <translation type="unfinished">Không thể đọc các track.</translation>
+    </message>
+    <message>
+        <source>No videos were found in that folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No subtitle or audio tracks were found in %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Tracks of %1, the first of %2 videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Tracks of %1. Tick the ones to save.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Picture-based subtitles: saved as they are for an OCR tool. Mining can't read them.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Saved as %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Default</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Forced</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Image</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose a video or a folder first.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That file or folder no longer exists.</source>
+        <translation type="unfinished">Tệp hoặc thư mục đó không còn tồn tại.</translation>
+    </message>
+    <message>
+        <source>Wait for the track list to load, then tick the tracks to save.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Tick at least one track to save.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That folder could not be scanned.</source>
+        <translation type="unfinished">Không thể quét thư mục đó.</translation>
+    </message>
+    <message>
+        <source>Output folder is not writable.</source>
+        <translation type="unfinished">Không ghi được vào thư mục đầu ra.</translation>
+    </message>
+    <message>
+        <source>Saving tracks from video %1 of %2</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>UISettingsPanel</name>

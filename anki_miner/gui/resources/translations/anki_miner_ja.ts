@@ -2702,6 +2702,14 @@ No index files are deleted.</source>
         <translation>字幕ファイル、または字幕ファイルを含むフォルダを選ぶと、すでに知っている単語の割合、新出単語の数、i+1 の行の数を確認できます。Anki カードと既知単語を使用し、何も書き込みません。</translation>
     </message>
     <message>
+        <source>Save the subtitles or audio inside a video</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pick an .mkv or another video, or a folder of them, tick its subtitle or audio tracks and save each as its own file, copied without re-encoding. A single subtitle is named after its video, so Video mining finds it. The video is never changed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Restyle mined cards</source>
         <translation>マイニングしたカードのスタイルを再適用</translation>
     </message>
@@ -4935,6 +4943,12 @@ No files on disk are deleted.</source>
         <source>No cards created. Every word is already known.</source>
         <translation>カードは作成されませんでした。すべての単語がすでに既知です。</translation>
     </message>
+    <message numerus="yes">
+        <source>Mining %n selected word(s)</source>
+        <translation>
+            <numerusform>選択した %n 語をマイニング中</numerusform>
+        </translation>
+    </message>
     <message>
         <source>%1 word(s) have more than one reading — the parsed reading was kept.</source>
         <translation>%1 語に複数の読みがあります — 解析された読みを採用しました。</translation>
@@ -5106,12 +5120,6 @@ No files on disk are deleted.</source>
     <message>
         <source>No words selected for card creation</source>
         <translation>カード作成用に選択された単語がありません</translation>
-    </message>
-    <message numerus="yes">
-        <source>Mining %n selected word(s)</source>
-        <translation>
-            <numerusform>選択した %n 語をマイニング中</numerusform>
-        </translation>
     </message>
     <message>
         <source>Could not extract media for any word — no cards created</source>
@@ -6478,6 +6486,10 @@ Words to add: %3. Continue?</source>
     <message>
         <source>Readability</source>
         <translation>読みやすさ</translation>
+    </message>
+    <message>
+        <source>Tracks</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Anki Miner updated</source>
@@ -10197,12 +10209,12 @@ No index files are deleted.</source>
         <translation>固有名詞ワードセットを読み込めませんでした: %1</translation>
     </message>
     <message>
-        <source>Couldn't initialize known word database: %1</source>
-        <translation>既知単語DBを初期化できませんでした: %1</translation>
-    </message>
-    <message>
         <source>Couldn't load word lists: %1</source>
         <translation>単語リストを読み込めませんでした: %1</translation>
+    </message>
+    <message>
+        <source>Couldn't initialize known word database: %1</source>
+        <translation>既知単語DBを初期化できませんでした: %1</translation>
     </message>
 </context><context>
     <name>SettingsSearchBox</name>
@@ -11757,6 +11769,314 @@ Your installed resources and your theme are kept.</source>
     <message>
         <source>Favorite all %2 %3 variants (%1 favorited).</source>
         <translation>%2 個の %3 バリアントをすべてお気に入りに（%1 個お気に入り済み）。</translation>
+    </message>
+</context><context>
+    <name>TrackExtractWorker</name>
+    <message>
+        <source>Subtitle %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 has no %2 — skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Saving %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1: %2 could not be saved: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Saved %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No ticked track was saved</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 would replace the video itself — skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 was already saved from another video in this run — skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 already exists — tick Overwrite to replace it</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>TracksTab</name>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished">進捗</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation type="unfinished">完了</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation type="unfinished">完了: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation type="unfinished">スキップ</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation type="unfinished">スキップ: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished">キャンセル</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished">キャンセル中…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">キャンセルされました</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished">失敗しました — ログを確認してください</translation>
+    </message>
+    <message>
+        <source>Finished with errors — see log</source>
+        <translation type="unfinished">エラーが発生して完了しました — ログを確認してください</translation>
+    </message>
+    <message>
+        <source>Some tracks could not be saved.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Some tracks of this video could not be saved.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — tracks saved from %1 video(s)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 video(s) done, %2 skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing saved — every video was skipped. The log says why.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation type="unfinished">出力フォルダを選択</translation>
+    </message>
+    <message>
+        <source>Next to each video</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Track extraction</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Video</source>
+        <translation type="unfinished">動画</translation>
+    </message>
+    <message>
+        <source>ffmpeg and ffprobe were not found. Install ffmpeg and add it to PATH to use this tool.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Save the subtitle and audio tracks inside a video as their own files. Tracks are copied as they are; the video is never changed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Videos (%1)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>All Files (*)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This field takes a video or a folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Video file or folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Tracks</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose a video to list its tracks.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Track</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Tick the tracks to save.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Language</source>
+        <translation type="unfinished">言語</translation>
+    </message>
+    <message>
+        <source>The language the file says the track is in.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Codec</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The track's format. Hover a row to see the file type it is saved as.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Title</source>
+        <translation type="unfinished">タイトル</translation>
+    </message>
+    <message>
+        <source>The track's name in the file, such as Signs &amp; Songs.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Flags</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Default, Forced, and Image for picture-based subtitles.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Output</source>
+        <translation type="unfinished">出力</translation>
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation type="unfinished">出力:</translation>
+    </message>
+    <message>
+        <source>Choose Folder…</source>
+        <translation type="unfinished">フォルダを選択…</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation type="unfinished">リセット</translation>
+    </message>
+    <message>
+        <source>Tracks are saved next to each video unless you choose a folder. A single ticked subtitle is named after its video, so mining finds it.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Overwrite existing files</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>When unchecked, a track whose file already exists is skipped, not overwritten.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Extract Tracks</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>ffmpeg could not be started. Install it and add it to PATH, then try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reading tracks…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Tracks could not be read.</source>
+        <translation type="unfinished">トラックを読み取れませんでした。</translation>
+    </message>
+    <message>
+        <source>No videos were found in that folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No subtitle or audio tracks were found in %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Tracks of %1, the first of %2 videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Tracks of %1. Tick the ones to save.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Picture-based subtitles: saved as they are for an OCR tool. Mining can't read them.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Saved as %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Default</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Forced</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Image</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose a video or a folder first.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That file or folder no longer exists.</source>
+        <translation type="unfinished">そのファイルまたはフォルダは存在しなくなっています。</translation>
+    </message>
+    <message>
+        <source>Wait for the track list to load, then tick the tracks to save.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Tick at least one track to save.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That folder could not be scanned.</source>
+        <translation type="unfinished">そのフォルダをスキャンできませんでした。</translation>
+    </message>
+    <message>
+        <source>Output folder is not writable.</source>
+        <translation type="unfinished">出力フォルダに書き込めません。</translation>
+    </message>
+    <message>
+        <source>Saving tracks from video %1 of %2</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>UISettingsPanel</name>

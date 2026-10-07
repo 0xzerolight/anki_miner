@@ -2708,6 +2708,14 @@ No index files are deleted.</source>
         <translation>Выберите файл субтитров или папку с ними, чтобы узнать долю уже известных вам слов, количество новых слов и число строк i+1. Используются ваши карточки Anki и известные слова; ничего не записывается.</translation>
     </message>
     <message>
+        <source>Save the subtitles or audio inside a video</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pick an .mkv or another video, or a folder of them, tick its subtitle or audio tracks and save each as its own file, copied without re-encoding. A single subtitle is named after its video, so Video mining finds it. The video is never changed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Restyle mined cards</source>
         <translation>Изменить стиль намайненных карточек</translation>
     </message>
@@ -4985,6 +4993,14 @@ No files on disk are deleted.</source>
         <source>No cards created. Every word is already known.</source>
         <translation>Карточки не созданы. Каждое слово уже известно.</translation>
     </message>
+    <message numerus="yes">
+        <source>Mining %n selected word(s)</source>
+        <translation>
+            <numerusform>Майнится %n выбранное слово</numerusform>
+            <numerusform>Майнятся %n выбранных слова</numerusform>
+            <numerusform>Майнится %n выбранных слов</numerusform>
+        </translation>
+    </message>
     <message>
         <source>%1 word(s) have more than one reading — the parsed reading was kept.</source>
         <translation>Слов с более чем одним чтением: %1 — оставлено разобранное чтение.</translation>
@@ -5172,14 +5188,6 @@ No files on disk are deleted.</source>
     <message>
         <source>No words selected for card creation</source>
         <translation>Не выбрано слов для создания карточек</translation>
-    </message>
-    <message numerus="yes">
-        <source>Mining %n selected word(s)</source>
-        <translation>
-            <numerusform>Майнится %n выбранное слово</numerusform>
-            <numerusform>Майнятся %n выбранных слова</numerusform>
-            <numerusform>Майнится %n выбранных слов</numerusform>
-        </translation>
     </message>
     <message>
         <source>Could not extract media for any word — no cards created</source>
@@ -6552,6 +6560,10 @@ Words to add: %3. Continue?</source>
     <message>
         <source>Readability</source>
         <translation>Понятность</translation>
+    </message>
+    <message>
+        <source>Tracks</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Anki Miner updated</source>
@@ -10275,12 +10287,12 @@ No index files are deleted.</source>
         <translation>Не удалось загрузить наборы имён: %1</translation>
     </message>
     <message>
-        <source>Couldn't initialize known word database: %1</source>
-        <translation>Не удалось инициализировать базу данных известных слов: %1</translation>
-    </message>
-    <message>
         <source>Couldn't load word lists: %1</source>
         <translation>Не удалось загрузить списки слов: %1</translation>
+    </message>
+    <message>
+        <source>Couldn't initialize known word database: %1</source>
+        <translation>Не удалось инициализировать базу данных известных слов: %1</translation>
     </message>
 </context><context>
     <name>SettingsSearchBox</name>
@@ -11839,6 +11851,314 @@ Your installed resources and your theme are kept.</source>
     <message>
         <source>Favorite all %2 %3 variants (%1 favorited).</source>
         <translation>Добавить в избранное все варианты %2 %3 (в избранном: %1).</translation>
+    </message>
+</context><context>
+    <name>TrackExtractWorker</name>
+    <message>
+        <source>Subtitle %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 has no %2 — skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Saving %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1: %2 could not be saved: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Saved %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No ticked track was saved</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 would replace the video itself — skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 was already saved from another video in this run — skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 already exists — tick Overwrite to replace it</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>TracksTab</name>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished">Прогресс</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation type="unfinished">Готово</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation type="unfinished">Готово: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation type="unfinished">Пропущено</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation type="unfinished">Пропущено: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished">Отмена</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished">Отмена…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">Отменено</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished">Ошибка — см. журнал</translation>
+    </message>
+    <message>
+        <source>Finished with errors — see log</source>
+        <translation type="unfinished">Завершено с ошибками — см. журнал</translation>
+    </message>
+    <message>
+        <source>Some tracks could not be saved.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Some tracks of this video could not be saved.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — tracks saved from %1 video(s)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 video(s) done, %2 skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing saved — every video was skipped. The log says why.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation type="unfinished">Выбрать папку для вывода</translation>
+    </message>
+    <message>
+        <source>Next to each video</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Track extraction</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Video</source>
+        <translation type="unfinished">Видео</translation>
+    </message>
+    <message>
+        <source>ffmpeg and ffprobe were not found. Install ffmpeg and add it to PATH to use this tool.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Save the subtitle and audio tracks inside a video as their own files. Tracks are copied as they are; the video is never changed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Videos (%1)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>All Files (*)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This field takes a video or a folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Video file or folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Tracks</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose a video to list its tracks.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Track</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Tick the tracks to save.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Language</source>
+        <translation type="unfinished">Язык</translation>
+    </message>
+    <message>
+        <source>The language the file says the track is in.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Codec</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The track's format. Hover a row to see the file type it is saved as.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Title</source>
+        <translation type="unfinished">Название</translation>
+    </message>
+    <message>
+        <source>The track's name in the file, such as Signs &amp; Songs.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Flags</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Default, Forced, and Image for picture-based subtitles.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Output</source>
+        <translation type="unfinished">Вывод</translation>
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation type="unfinished">Вывод:</translation>
+    </message>
+    <message>
+        <source>Choose Folder…</source>
+        <translation type="unfinished">Выбрать папку…</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation type="unfinished">Сбросить</translation>
+    </message>
+    <message>
+        <source>Tracks are saved next to each video unless you choose a folder. A single ticked subtitle is named after its video, so mining finds it.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Overwrite existing files</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>When unchecked, a track whose file already exists is skipped, not overwritten.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Extract Tracks</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>ffmpeg could not be started. Install it and add it to PATH, then try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reading tracks…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Tracks could not be read.</source>
+        <translation type="unfinished">Не удалось прочитать дорожки.</translation>
+    </message>
+    <message>
+        <source>No videos were found in that folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No subtitle or audio tracks were found in %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Tracks of %1, the first of %2 videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Tracks of %1. Tick the ones to save.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Picture-based subtitles: saved as they are for an OCR tool. Mining can't read them.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Saved as %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Default</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Forced</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Image</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose a video or a folder first.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That file or folder no longer exists.</source>
+        <translation type="unfinished">Этот файл или папка больше не существует.</translation>
+    </message>
+    <message>
+        <source>Wait for the track list to load, then tick the tracks to save.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Tick at least one track to save.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That folder could not be scanned.</source>
+        <translation type="unfinished">Не удалось просканировать эту папку.</translation>
+    </message>
+    <message>
+        <source>Output folder is not writable.</source>
+        <translation type="unfinished">В папку вывода нельзя записывать.</translation>
+    </message>
+    <message>
+        <source>Saving tracks from video %1 of %2</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>UISettingsPanel</name>
