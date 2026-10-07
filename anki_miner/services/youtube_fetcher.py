@@ -150,6 +150,28 @@ class YouTubeFetcherService:
         data, stderr = self._run_probe(url, mode_args, timeout_s)
         return self._video_info(data, stderr, youtube=youtube)
 
+    def probe_link(self, url: str, timeout_s: float = 60.0) -> VideoInfo | PlaylistInfo:
+        """Probe a pasted link: one video or, on a site other than YouTube, a playlist.
+
+        A YouTube link is sorted into video or playlist from its URL before it
+        gets here, so it takes :meth:`probe_metadata` unchanged. Another site's
+        link can only be told apart by asking yt-dlp: a Bilibili multi-part
+        video (分P) or collection answers ``_type == "playlist"``. So this probe
+        drops ``--no-playlist`` and lists entries flat, asking for one more
+        than the queue cap (the over-cap contract of :meth:`probe_playlist`).
+        A single video under these flags answers with its full metadata.
+        """
+        if is_youtube_host(url):
+            return self.probe_metadata(url, timeout_s)
+        logger.info("youtube probe starting: %s", redact_youtube_url_for_log(url))
+        cap = self._config.youtube_playlist_max
+        data, stderr = self._run_probe(
+            url, ["--flat-playlist", "--playlist-items", f"1:{cap + 1}", "--write-subs"], timeout_s
+        )
+        if data.get("_type") == "playlist":
+            return self._playlist_info(data, youtube=False)
+        return self._video_info(data, stderr, youtube=False)
+
     def _run_probe(self, url: str, mode_args: list[str], timeout_s: float) -> tuple[dict, str]:
         """Run one ``--dump-single-json`` probe of *url*; return its JSON and stderr.
 
@@ -371,6 +393,17 @@ class YouTubeFetcherService:
                 "yt-dlp could not read this playlist's details — update yt-dlp in Settings → YouTube, then retry."
             ) from e
 
+        return self._playlist_info(data, youtube=True)
+
+    def _playlist_info(self, data: dict, *, youtube: bool) -> PlaylistInfo:
+        """Build a :class:`PlaylistInfo` from a flat playlist probe's JSON.
+
+        A YouTube entry must carry an 11-character id and is queued under its
+        canonical watch URL. Another site's flat entry carries its own URL (a
+        Bilibili part is ``…/video/BV…?p=N``) and often no id or title. Its
+        ``video_id`` then falls back to the URL: the add flow dedups on it
+        until the entry's own probe replaces it with yt-dlp's id.
+        """
         raw_entries = data.get("entries")
         if not isinstance(raw_entries, list):
             raise YouTubeFetchError("That URL is not a playlist — paste a playlist URL.")
@@ -387,12 +420,20 @@ class YouTubeFetcherService:
                 logger.debug("playlist probe: skipping null entry")
                 continue
 
-            video_id = raw.get("id")
-            if not video_id or not _VIDEO_ID_RE.match(str(video_id)):
-                logger.debug("playlist probe: skipping entry with bad/missing id: %r", video_id)
-                continue
+            if youtube:
+                raw_id = raw.get("id")
+                if not raw_id or not _VIDEO_ID_RE.match(str(raw_id)):
+                    logger.debug("playlist probe: skipping entry with bad/missing id: %r", raw_id)
+                    continue
+                video_id = str(raw_id)
+                entry_url = f"https://www.youtube.com/watch?v={video_id}"
+            else:
+                entry_url = str(raw.get("url") or "")
+                if not entry_url.startswith(("http://", "https://")):
+                    logger.debug("playlist probe: skipping entry with no web link: %r", entry_url)
+                    continue
+                video_id = str(raw.get("id") or entry_url)
 
-            video_id = str(video_id)
             entry_title_raw = raw.get("title") or ""
             entry_title = str(entry_title_raw) if entry_title_raw else video_id
 
@@ -403,13 +444,12 @@ class YouTubeFetcherService:
             raw_duration = raw.get("duration")
             duration_s: int | None = int(raw_duration) if raw_duration is not None else None
 
-            canonical_url = f"https://www.youtube.com/watch?v={video_id}"
             entries.append(
                 PlaylistEntry(
                     video_id=video_id,
                     title=entry_title,
                     duration_s=duration_s,
-                    url=canonical_url,
+                    url=entry_url,
                 )
             )
 

@@ -72,7 +72,7 @@ class FetchedMedia:
 
 @dataclass(frozen=True)
 class PlaylistEntry:
-    """A single video entry within a YouTube playlist.
+    """A single video entry within a playlist (YouTube, or another site's multi-part video or collection).
 
     Immutable to keep thread-safety guarantees consistent with the rest of
     the pipeline (see AnkiMinerConfig).  ``duration_s`` is optional because
@@ -82,12 +82,12 @@ class PlaylistEntry:
     video_id: str
     title: str
     duration_s: int | None  # flat extraction may omit duration
-    url: str  # canonical https://www.youtube.com/watch?v=<id>
+    url: str  # the URL probes and fetches take: YouTube's canonical watch URL, or another site's own entry URL
 
 
 @dataclass(frozen=True)
 class PlaylistInfo:
-    """Metadata about a YouTube playlist, gathered before individual video downloads.
+    """Metadata about a playlist (YouTube, or another site's multi-part video or collection), gathered before downloads.
 
     Immutable to keep thread-safety guarantees consistent with the rest of
     the pipeline (see AnkiMinerConfig).  Both ``playlist_id`` and
