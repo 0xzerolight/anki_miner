@@ -137,6 +137,7 @@ def _publishing_screens():
     from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
     from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
     from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
+    from anki_miner.gui.widgets.tracks_tab import TracksTab
     from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 
     return (
@@ -159,6 +160,7 @@ def _publishing_screens():
         MokuroTab,
         BookSyncTab,
         ReadabilityTab,
+        TracksTab,
     )
 
 

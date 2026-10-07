@@ -396,6 +396,7 @@ class TestCallSiteRoles:
             "readability_tab.py",
             "subtitle_creation_tab.py",
             "subtitle_retime_tab.py",
+            "tracks_tab.py",
         ],
     )
     def test_each_screen_offers_a_single_primary_action(self, module):
