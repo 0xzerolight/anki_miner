@@ -196,6 +196,8 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # The live recommended-resource run, if any. Retained here rather than
         # Qt-parented: it outlives its own window, which the user can hide.
         self._resource_download_session: ResourceDownloadSession | None = None
+        self._resource_update_checking = False
+        self._resource_update_check_manual = False
 
         # Config-bound services (validation + the AnkiService shared across undo
         # callbacks). Rebuilt on every config change via update_config — see
@@ -355,6 +357,12 @@ class MainWindow(ScreenIssueHost, QMainWindow):
 
         worker = prewarm_module.PrewarmWorker(self.get_config())
         self.background_tasks.set_prewarm(worker)
+        # The weekly dictionary update waits for prewarm: release_dictionary_resources
+        # refuses while it runs, and prewarm itself starts only after any stale-index
+        # repair has been offered.
+        worker.finished.connect(
+            lambda: self._run_optional_boot_step("dictionary update", self._maybe_auto_update_resources)
+        )
         worker.start()
 
     @staticmethod
@@ -468,6 +476,10 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         shortcut_action = tools_menu.addAction(self.tr("Create Desktop Shortcut..."))
         assert shortcut_action is not None
         shortcut_action.triggered.connect(self._create_desktop_shortcut)
+
+        update_resources_action = tools_menu.addAction(self.tr("Update Dictionaries Now"))
+        assert update_resources_action is not None
+        update_resources_action.triggered.connect(self.update_resources_now)
 
         resources_action = tools_menu.addAction(self.tr("Download Recommended Resources..."))
         assert resources_action is not None
@@ -1411,6 +1423,207 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             self._resource_download_session = session
             self._clear_resource_download_issue()
 
+    def update_resources_now(self) -> None:
+        """Tools menu / Settings → Dictionaries: check now and install every newer revision.
+
+        A resource run already live (the hidden weekly update, or a catalog
+        download) is shown instead; a fresh check would only wait on the
+        network to reach the same busy session.
+        """
+        from anki_miner.gui.widgets.dialogs.resource_download_dialog import TASK_ID
+
+        snapshot = self.task_registry.snapshot(TASK_ID)
+        if snapshot is not None and snapshot.is_running:
+            self.task_registry.request_reveal(TASK_ID)
+            return
+        self._start_resource_update_check(manual=True)
+
+    def _maybe_auto_update_resources(self) -> None:
+        """The weekly automatic update, started when prewarm finishes.
+
+        Skipped while the startup JMdict migration runs: the catalog download
+        path cancels that migration, and an automatic run never may.
+        """
+        from anki_miner.gui.utils.runtime_state import resource_update_stamp
+        from anki_miner.services.resource_updates import update_check_due
+
+        if not self.config.auto_update_dictionaries or self.is_shutting_down():
+            return
+        if self.background_tasks.jmdict_migration_running():
+            return
+        if not update_check_due(resource_update_stamp()):
+            return
+        self._start_resource_update_check(manual=False)
+
+    def _start_resource_update_check(self, *, manual: bool) -> None:
+        """Ask every updatable resource's publisher, off the GUI thread.
+
+        A manual ask during the automatic check joins it: the answer is then
+        reported as if it had been asked for.
+        """
+        from anki_miner.services.resource_updates import check_for_updates, updatable_resources
+
+        if manual:
+            self.status_bar.set_operation(self.tr("Checking for dictionary updates…"), "info", transient=False)
+        if self._resource_update_checking:
+            self._resource_update_check_manual = self._resource_update_check_manual or manual
+            return
+        self._resource_update_checking = True
+        self._resource_update_check_manual = manual
+        checked = self.config
+
+        def work(cancelled: Callable[[], bool]) -> object:
+            return check_for_updates(updatable_resources(checked), cancelled=cancelled)
+
+        def on_done(result: object) -> None:
+            self._on_resource_update_check(result, checked=checked, manual=self._resource_update_check_manual)
+
+        def on_error(message: str) -> None:
+            logger.warning("Dictionary update check failed: %s", message)
+            if self._resource_update_check_manual:
+                self.status_bar.set_operation(
+                    tr_format(self.tr("Could not check for dictionary updates: %1"), message), "error"
+                )
+
+        def on_finished() -> None:
+            self._resource_update_checking = False
+
+        try:
+            run_off_thread(self, work, on_done, on_error, pass_cancel_check=True, on_finished=on_finished)
+        except Exception:
+            self._resource_update_checking = False
+            raise
+
+    def _on_resource_update_check(self, result: object, *, checked: AnkiMinerConfig, manual: bool) -> None:
+        """Install what is newer and still applies; otherwise stamp the week and answer a manual ask."""
+        from anki_miner.gui.utils.runtime_state import resource_update_stamp
+        from anki_miner.services.resource_updates import UpdateCheck, mark_update_checked, updates_still_valid
+
+        if not isinstance(result, UpdateCheck):
+            return
+        if result.updates:
+            # The language, a root or a chain may have changed during the check.
+            updates = updates_still_valid(result.updates, checked=checked, live=self.config)
+            if updates:
+                if manual:
+                    self.status_bar.set_operation(self.tr("Downloading dictionary updates…"), "info")
+                self._start_resource_update([update.to_spec() for update in updates], manual=manual)
+            elif manual:
+                self.status_bar.set_operation(
+                    self.tr("Your dictionaries changed during the check. Try again."), "warning"
+                )
+            return
+        if result.reached:
+            mark_update_checked(resource_update_stamp())
+        if not manual:
+            return
+        if result.checked == 0:
+            self.status_bar.set_operation(self.tr("None of your dictionaries publish updates."), "info")
+        elif not result.reached:
+            self.status_bar.set_operation(
+                tr_format(self.tr("Could not check for dictionary updates: %1"), result.failures[0][1]), "error"
+            )
+        elif result.failures:
+            self.status_bar.set_operation(
+                tr_format(self.tr("Dictionaries are up to date (%1 could not be checked)."), str(len(result.failures))),
+                "success",
+            )
+        else:
+            self.status_bar.set_operation(self.tr("Dictionaries are up to date."), "success")
+
+    def _start_resource_update(self, specs: Sequence[ResourceSpec], *, manual: bool) -> None:
+        """Install update specs through the catalog session, keeping every chain as it is.
+
+        Unlike _start_recommended_download it never cancels the JMdict
+        migration and activates without reordering. An automatic run that
+        cannot start shows nothing and tries again next launch; it also waits
+        for any resource run already live rather than revealing it.
+        """
+        from anki_miner.gui.widgets.dialogs.resource_download_dialog import TASK_ID, start_resource_download
+
+        if not specs:
+            return
+        if self.background_tasks.jmdict_migration_running():
+            if manual:
+                self.show_screen_issue(
+                    ScreenIssue(summary=self.tr("Wait for the startup dictionary setup to finish, then try again."))
+                )
+            return
+        if not manual:
+            snapshot = self.task_registry.snapshot(TASK_ID)
+            if snapshot is not None and snapshot.is_running:
+                return
+
+        def blocked(message: str) -> None:
+            if manual:
+                self.show_screen_issue(
+                    ScreenIssue(summary=message, action_id="resource-update.retry", action_text=self.tr("Retry")),
+                    action=self.update_resources_now,
+                )
+            else:
+                logger.info("Automatic dictionary update did not start: %s", message)
+
+        session = start_resource_download(
+            self,
+            self.config,
+            activate=self._activate_resource_update,
+            release_resources=self.release_dictionary_resources,
+            acquire_mutation=self._acquire_resource_download_mutation,
+            blocked=blocked,
+            task_registry=self.task_registry,
+            adopt_worker=self.background_tasks.adopt_resource_download_worker,
+            specs=specs,
+            show_window=manual,
+            # Hidden when automatic, but a task-strip click or a Download /
+            # Update click while it runs opens its window instead of nothing.
+            window_on_reveal=True,
+            title=self.tr("Dictionary updates"),
+        )
+        if session is None:
+            return
+        # Retained here, not Qt-parented: the session outlives its window.
+        self._resource_download_session = session
+        session.finished.connect(lambda outcome: self._on_resource_update_finished(outcome, manual=manual))
+        self._clear_resource_download_issue("resource-update.retry")
+
+    def _activate_resource_update(self, summary: object) -> "AnkiMinerConfig | None":
+        """Make in-place updates live: the chains stay as they are, and the Settings rows repaint."""
+        from anki_miner.gui.utils.resource_setup import apply_update_summary
+
+        activated = self._activate_downloaded_resources(summary, apply=apply_update_summary)
+        if activated is not None:
+            self._repaint_resource_chains()
+        return activated
+
+    def _repaint_resource_chains(self) -> None:
+        settings_idx = self._settings_tab_index()
+        if settings_idx < 0:
+            return
+        adopt = getattr(self.tabs.widget(settings_idx), "adopt_rebuilt_indexes", None)
+        if callable(adopt):
+            adopt()
+
+    def _on_resource_update_finished(self, outcome: object, *, manual: bool) -> None:
+        """Stamp the week once the run ran its course; name what installed when nobody was watching.
+
+        A cancelled or blocked run (indexed resources were busy) retries next
+        launch. A run whose items failed on their own is stamped, so a release
+        that keeps failing is retried weekly, not re-downloaded every launch.
+        """
+        from anki_miner.gui.utils.runtime_state import resource_update_stamp
+        from anki_miner.gui.widgets.dialogs.resource_download_dialog import ResourceDownloadOutcome
+        from anki_miner.services.resource_updates import mark_update_checked
+
+        if not isinstance(outcome, ResourceDownloadOutcome):
+            return
+        summary = outcome.summary
+        if summary.cancelled or summary.blocked or not summary.results:
+            return
+        mark_update_checked(resource_update_stamp())
+        if not manual and summary.succeeded and outcome.activated:
+            names = ", ".join(result.display_name for result in summary.succeeded)
+            self.status_bar.set_operation(tr_format(self.tr("Dictionaries updated: %1"), names), "success")
+
     def _show_resource_download_blocked(self, message: str, kind: str | None = None) -> None:
         """Keep recoverable resource contention on the main issue surface.
 
@@ -1435,12 +1648,12 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             action=retry,
         )
 
-    def _clear_resource_download_issue(self) -> None:
-        """Clear only contention reported by the recommended-resource run."""
+    def _clear_resource_download_issue(self, action_id: str = "resource-download.retry") -> None:
+        """Clear only contention reported by a resource run with ``action_id``."""
         banner = self.issue_banner()
         if banner is not None:
             issue = banner.current_issue()
-            if issue is not None and issue.action_id == "resource-download.retry":
+            if issue is not None and issue.action_id == action_id:
                 self.clear_screen_issue()
 
     def _clear_validation_issue(self) -> None:
@@ -1456,7 +1669,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             if issue is not None and issue.action_id in {"settings.open", "validation.retry"}:
                 self.clear_screen_issue()
 
-    def _activate_downloaded_resources(self, summary: object) -> "AnkiMinerConfig | None":
+    def _activate_downloaded_resources(
+        self, summary: object, *, apply: Callable[..., AnkiMinerConfig] | None = None
+    ) -> "AnkiMinerConfig | None":
         """Switch downloaded resources on, or refuse without claiming success.
 
         Committing pending Settings is step 0 and aborts activation when it
@@ -1465,8 +1680,13 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         from the base captured when the download started would silently revert
         that edit. The guard commits first, then this reads the *live*
         ``self.config``.
+
+        ``apply`` defaults to ``apply_download_summary``; an update run passes
+        ``apply_update_summary``.
         """
         from anki_miner.gui.utils.resource_setup import apply_download_summary
+
+        apply_summary = apply if apply is not None else apply_download_summary
         from anki_miner.gui.workers.resource_download_worker import ResourceDownloadSummary
 
         if not isinstance(summary, ResourceDownloadSummary) or not summary.succeeded:
@@ -1477,7 +1697,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             # update_config (not from_settings) propagates via config_refreshed
             # to all tabs incl. Settings, and persists.
             try:
-                new_config = apply_download_summary(self.config, summary)
+                new_config = apply_summary(self.config, summary)
             except ValueError as error:
                 self.show_screen_issue(
                     ScreenIssue(

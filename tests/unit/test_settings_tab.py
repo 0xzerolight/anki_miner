@@ -1341,6 +1341,19 @@ def test_pending_field_names_reports_a_dirty_save_panel_field(tab):
     assert "anki_deck_name" in tab._pending_field_names()
 
 
+def test_adopt_rebuilt_indexes_repaints_every_resource_chain(tab, monkeypatch):
+    """An update leaves the chains unchanged, so update_config's allowlist skips _load_config; this repaints."""
+    calls = []
+    for name in ("dictionary_panel", "frequency_panel", "pitch_panel"):
+        panel = getattr(tab, name)
+        monkeypatch.setattr(panel, "refresh_registry", lambda n=name: calls.append((n, "refresh")))
+        monkeypatch.setattr(panel, "set_chain", lambda chain, n=name: calls.append((n, "set")))
+    tab.adopt_rebuilt_indexes()
+    assert calls == [
+        (n, step) for n in ("dictionary_panel", "frequency_panel", "pitch_panel") for step in ("refresh", "set")
+    ]
+
+
 def test_pending_field_names_reports_check_for_updates(tab):
     """check_for_updates lives on the UI panel, outside _save_panels (T11);
     _pending_field_names must still fold it in from its own widget."""

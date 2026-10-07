@@ -633,6 +633,12 @@ class AnkiMinerConfig:
     # yt-dlp#17456). Off does NOT uninstall an installed nightly — the managed
     # copy stays until a newer stable supersedes it (packaging.Version ordering).
     ytdlp_prerelease: bool = False
+    # Once a week at startup, re-download every dictionary, frequency list and
+    # pitch source whose saved index.json publishes a newer revision
+    # (services/resource_updates.py). Each update rebuilds its slot in place,
+    # so the chains keep their order and enabled state. Portable, not
+    # language-scoped: one preference for every mining language.
+    auto_update_dictionaries: bool = True
 
     # --- Bundled media tooling ---
     # Optional explicit overrides for the ffmpeg/ffprobe executables. When unset,

@@ -2312,6 +2312,18 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         chain = cast(tuple[PitchSourceEntry, ...], new_chain)
         return self._commit_remove_config(replace(self.config, pitch_chain=chain))
 
+    def adopt_rebuilt_indexes(self) -> None:
+        """Repaint the three resource chains after slots were rebuilt in place (a dictionary update).
+
+        The chains themselves did not change, so update_config's allowlist
+        short-circuit skips _load_config and the rows would keep their old
+        titles. Same steps as ImportFlow._adopt_rebuilt_index, for every family.
+        """
+        for panel in (self.dictionary_panel, self.frequency_panel, self.pitch_panel):
+            chain = panel.get_chain()
+            panel.refresh_registry()
+            panel.set_chain(chain)
+
     def _persist_chain_change(self, new_chain: tuple[ChainEntry, ...]) -> None:
         """Save a chain mutation to disk and notify listeners.
 

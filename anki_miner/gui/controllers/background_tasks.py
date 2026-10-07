@@ -683,6 +683,10 @@ class BackgroundTaskController(QObject):
             self._finish_jmdict_migration(worker)
         return True
 
+    def jmdict_migration_running(self) -> bool:
+        """Whether the startup JMdict migration is still running (an update run must never cancel it)."""
+        return still_running(self.jmdict_migration_worker)
+
     def cancel_jmdict_migration(self) -> None:
         """Cancel and bounded-join an in-flight legacy JMdict XML migration.
 

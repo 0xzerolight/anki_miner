@@ -648,6 +648,19 @@ def _no_real_ytdlp_autoupdate(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _no_real_resource_autoupdate(monkeypatch):
+    """Keep real-MainWindow tests from starting the weekly dictionary update.
+
+    Prewarm's finish calls it; a real run reads the test home's chains and may
+    reach the network, which the socket tripwire fails. Its own tests capture
+    the real method at import (test_main_window_resource_updates._REAL_AUTO).
+    """
+    from anki_miner.gui.main_window import MainWindow
+
+    monkeypatch.setattr(MainWindow, "_maybe_auto_update_resources", lambda self: None, raising=False)
+
+
+@pytest.fixture(autouse=True)
 def _instant_queue_retry_backoff(monkeypatch):
     """Collapse the D30-B retry backoff to zero for every test.
 

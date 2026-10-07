@@ -155,6 +155,7 @@ def test_pre_change_config_loads_every_field_unchanged(isolated_config_file):
         "merge_incomplete_cues",
         "hidden_utilities",
         "key_bindings",
+        "auto_update_dictionaries",
     }
     assert loaded.script_variant == "" and loaded.reading_tone_color is False
 
