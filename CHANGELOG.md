@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **Mine Bilibili and other video sites.** Video → YouTube takes links from Bilibili and the other sites yt-dlp supports, including the text Bilibili's Share button copies. A multi-part video or a collection adds every part, like a playlist. Bilibili shows subtitles only to logged-in users, so unless a cookies source is set in Settings → YouTube, Auto transcribes the video.
 
 ### Changed
 

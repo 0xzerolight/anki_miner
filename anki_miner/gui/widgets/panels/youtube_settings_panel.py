@@ -78,8 +78,9 @@ class YouTubeSettingsPanel(FormPanel):
             self.tr("Cookies from browser"),
             self.cookies_browser_combo,
             helper=self.tr(
-                "Reuse a browser's YouTube login, or an exported cookies.txt file, when YouTube blocks "
-                "anonymous fetches. Keep a cookies file private — it holds your login."
+                "Reuse a browser's login, or an exported cookies.txt file, when YouTube blocks "
+                "anonymous fetches. Bilibili shows its subtitles only to logged-in users. "
+                "Keep a cookies file private — it holds your login."
             ),
             anchor_text=lambda: ("Cookies file", "cookies.txt"),
         )
@@ -110,7 +111,7 @@ class YouTubeSettingsPanel(FormPanel):
             "",
             self.align_captions_checkbox,
             helper=self.tr(
-                "Retime YouTube's captions against the video's audio before mining. "
+                "Retime the video's captions against its audio before mining. "
                 "Ignored when the subtitle was transcribed locally."
             ),
             anchor="align_captions_checkbox",

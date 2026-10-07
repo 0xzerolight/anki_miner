@@ -2098,8 +2098,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Mining dari YouTube</translation>
     </message>
     <message>
-        <source>Mine straight from a YouTube URL or playlist -- no local files needed.</source>
-        <translation>Mining langsung dari URL atau playlist YouTube -- tanpa perlu berkas lokal.</translation>
+        <source>Mine straight from a YouTube or Bilibili link or playlist -- no local files needed.</source>
+        <translation>Mining langsung dari tautan atau playlist YouTube atau Bilibili -- tanpa perlu berkas lokal.</translation>
     </message>
     <message>
         <source>Mine from an audiobook</source>
@@ -4935,6 +4935,12 @@ Tidak ada berkas di disk yang dihapus.</translation>
         <source>No cards created. Every word is already known.</source>
         <translation>Tidak ada kartu yang dibuat. Setiap kata sudah dikenal.</translation>
     </message>
+    <message numerus="yes">
+        <source>Mining %n selected word(s)</source>
+        <translation>
+            <numerusform>Mining %n kata yang dipilih</numerusform>
+        </translation>
+    </message>
     <message>
         <source>%1 word(s) have more than one reading — the parsed reading was kept.</source>
         <translation>%1 kata memiliki lebih dari satu bacaan — bacaan hasil penguraian dipertahankan.</translation>
@@ -5106,12 +5112,6 @@ Tidak ada berkas di disk yang dihapus.</translation>
     <message>
         <source>No words selected for card creation</source>
         <translation>Tidak ada kata yang dipilih untuk pembuatan kartu</translation>
-    </message>
-    <message numerus="yes">
-        <source>Mining %n selected word(s)</source>
-        <translation>
-            <numerusform>Mining %n kata yang dipilih</numerusform>
-        </translation>
     </message>
     <message>
         <source>Could not extract media for any word — no cards created</source>
@@ -10197,12 +10197,12 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Kumpulan kata nama tidak dapat dimuat: %1</translation>
     </message>
     <message>
-        <source>Couldn't initialize known word database: %1</source>
-        <translation>Basis data kata yang dikenal tidak dapat diinisialisasi: %1</translation>
-    </message>
-    <message>
         <source>Couldn't load word lists: %1</source>
         <translation>Daftar kata tidak dapat dimuat: %1</translation>
+    </message>
+    <message>
+        <source>Couldn't initialize known word database: %1</source>
+        <translation>Basis data kata yang dikenal tidak dapat diinisialisasi: %1</translation>
     </message>
 </context><context>
     <name>SettingsSearchBox</name>
@@ -12345,8 +12345,8 @@ Urutkan berdasarkan kolom ini untuk menelusuri rekaman panjang secara berurutan 
         <translation>Cookie dari peramban</translation>
     </message>
     <message>
-        <source>Reuse a browser's YouTube login, or an exported cookies.txt file, when YouTube blocks anonymous fetches. Keep a cookies file private — it holds your login.</source>
-        <translation>Gunakan kembali login YouTube dari peramban, atau berkas cookies.txt yang diekspor, saat YouTube memblokir pengambilan anonim. Jaga kerahasiaan berkas cookie — berkas itu memuat login Anda.</translation>
+        <source>Reuse a browser's login, or an exported cookies.txt file, when YouTube blocks anonymous fetches. Bilibili shows its subtitles only to logged-in users. Keep a cookies file private — it holds your login.</source>
+        <translation>Gunakan kembali login dari peramban, atau berkas cookies.txt yang diekspor, saat YouTube memblokir pengambilan anonim. Bilibili hanya menampilkan subtitelnya kepada pengguna yang sudah login. Jaga kerahasiaan berkas cookie — berkas itu memuat login Anda.</translation>
     </message>
     <message>
         <source> minutes</source>
@@ -12373,8 +12373,8 @@ Urutkan berdasarkan kolom ini untuk menelusuri rekaman panjang secara berurutan 
         <translation>Selaraskan teks dengan audio</translation>
     </message>
     <message>
-        <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
-        <translation>Atur ulang waktu teks YouTube berdasarkan audio video sebelum mining. Diabaikan jika subtitel ditranskripsi secara lokal.</translation>
+        <source>Retime the video's captions against its audio before mining. Ignored when the subtitle was transcribed locally.</source>
+        <translation>Atur ulang waktu teks video berdasarkan audionya sebelum mining. Diabaikan jika subtitel ditranskripsi secara lokal.</translation>
     </message>
     <message>
         <source>Keep yt-dlp up to date automatically</source>
@@ -12547,8 +12547,8 @@ Urutkan berdasarkan kolom ini untuk menelusuri rekaman panjang secara berurutan 
         <translation>Mengunduh yt-dlp…</translation>
     </message>
     <message>
-        <source>Paste YouTube links or playlists, one per line, then click Mine</source>
-        <translation>Tempel tautan atau playlist YouTube, satu per baris, lalu klik Mining</translation>
+        <source>Paste video or playlist links from YouTube, Bilibili or another site, one per line, then click Mine</source>
+        <translation>Tempel tautan video atau playlist dari YouTube, Bilibili, atau situs lain, satu per baris, lalu klik Mining</translation>
     </message>
     <message>
         <source>Review words before mining</source>
@@ -12575,8 +12575,8 @@ Urutkan berdasarkan kolom ini untuk menelusuri rekaman panjang secara berurutan 
         <translation>Hanya teks</translation>
     </message>
     <message>
-        <source>Auto uses YouTube's captions when they exist and transcribes the video when they do not. Always transcribe ignores YouTube's captions. Captions only skips a video that has none.</source>
-        <translation>Otomatis menggunakan teks YouTube jika tersedia dan mentranskripsi video jika tidak. Selalu transkripsi mengabaikan teks YouTube. Hanya teks melewati video yang tidak memilikinya.</translation>
+        <source>Auto uses the video's own captions when they exist and transcribes the video when they do not. Always transcribe ignores the captions. Captions only skips a video that has none.</source>
+        <translation>Otomatis menggunakan teks bawaan video jika tersedia dan mentranskripsi video jika tidak. Selalu transkripsi mengabaikan teks tersebut. Hanya teks melewati video yang tidak memilikinya.</translation>
     </message>
     <message>
         <source>Some lines are not valid URLs.</source>
@@ -12595,8 +12595,8 @@ Urutkan berdasarkan kolom ini untuk menelusuri rekaman panjang secara berurutan 
         <translation>Terputus saat Anki Miner ditutup</translation>
     </message>
     <message>
-        <source>Drop a YouTube link here. Mine local files from the Video or Audiobooks tab.</source>
-        <translation>Jatuhkan tautan YouTube di sini. Mining berkas lokal dari tab Video atau Buku Audio.</translation>
+        <source>Drop a video link here. Mine local files from the Video or Audiobooks tab.</source>
+        <translation>Jatuhkan tautan video di sini. Mining berkas lokal dari tab Video atau Buku Audio.</translation>
     </message>
     <message>
         <source>This run needs local transcription, but the model %1 is not installed.</source>

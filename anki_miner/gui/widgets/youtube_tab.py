@@ -262,7 +262,11 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
         # this page's one vertical absorber, and a text edit's default Expanding
         # policy keeps the card expansive even at a fixed height.
         self.url_edit = QPlainTextEdit()
-        self.url_edit.setPlaceholderText(self.tr("Paste YouTube links or playlists, one per line, then click Mine"))
+        self.url_edit.setPlaceholderText(
+            self.tr(
+                "Paste video or playlist links from YouTube, Bilibili or another site, one per line, then click Mine"
+            )
+        )
         # Tab must move focus, not insert a literal tab (keyboard-only flow).
         self.url_edit.setTabChangesFocus(True)
         self.url_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -313,8 +317,8 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
         self.subtitle_source_combo.addItem(self.tr("Captions only"), "captions")
         self.subtitle_source_combo.setToolTip(
             self.tr(
-                "Auto uses YouTube's captions when they exist and transcribes the video "
-                "when they do not. Always transcribe ignores YouTube's captions. "
+                "Auto uses the video's own captions when they exist and transcribes the video "
+                "when they do not. Always transcribe ignores the captions. "
                 "Captions only skips a video that has none."
             )
         )

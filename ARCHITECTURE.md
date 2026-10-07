@@ -9,13 +9,14 @@ Anki Miner is a PyQt6 desktop application. It processes video/subtitle files thr
 The core data flow is a linear 5-stage pipeline orchestrated by `EpisodeProcessor`. YouTube mining prepends a fetch pre-stage that produces the same `(video, subtitle)` pair the file-based flow starts from; everything downstream is unchanged.
 
 ```
-YouTube URL (optional entry point)
+Online video URL: YouTube, Bilibili, … (optional entry point)
   │
   ▼
 ┌─────────────────────────────────────────────────────┐
-│ 0. Fetch (YouTube only)                             │
+│ 0. Fetch (online video only)                        │
 │    YouTubeFetcherService (yt-dlp subprocess)        │
 │    probe_metadata(url) → VideoInfo                  │
+│    probe_link(url) → VideoInfo | PlaylistInfo       │
 │    fetch_video(url, video_id, workspace, sub_mode)  │
 │    → FetchedMedia(video_file, subtitle_file, ...)   │
 └─────────────────────────────────────────────────────┘
@@ -155,11 +156,11 @@ Data classes in `models/`:
 | `ReadingDocument` / `ReadingSourceRef` / `ReadingUnit` / `ImageRef` | `reading.py` | Parsed reading source: units of text + page/cover image refs |
 | `DeckBuildRequest` / `DeckCorpus` / `DeckBuildPreview` / `DeckSelectionMode` | `deck_build.py` | Deck Builder's request, aggregated season corpus (lemma counts + row lemmas), preview projection, and selection mode (ALL/TOP_N/COVERAGE_PCT) |
 | `ReadabilityStats` | `readability.py` | One subtitle file's (or a run's) readability: word occurrences and the unknown ones, the distinct unknown `mined_form`s, and line counts with 0 / 1 / 2+ unknown lemmas (Utilities → Readability) |
-| `VideoInfo` | `youtube.py` | YouTube probe result: id, title, duration, sub availability, is_live, is_age_restricted, has_dub_ja_subs |
+| `VideoInfo` | `youtube.py` | Online video probe result: id, title, duration, sub availability, is_live, is_age_restricted, has_dub_ja_subs, site, subtitles_need_login |
 | `FetchedMedia` | `youtube.py` | yt-dlp fetch result: video path, subtitle path (None until local ASR fills it in `transcribe` mode), `sub_source` ("manual", "auto" or "generated") |
 | `SubMode` | `youtube.py` | `Literal["manual_only", "auto_only", "auto_dub", "transcribe"]` — the route one video takes, resolved in the GUI from the probe + the run's `SubtitleSource`; `auto_dub` is an AI Japanese dub with machine-translated captions, `transcribe` downloads no captions at all |
 | `SubtitleSource` | `youtube.py` | `Literal["auto", "transcribe", "captions"]` — what the user asked the *run* to do, from the YouTube tab's per-run picker. Distinct from `SubMode`: intent over the queue, not the route one video got |
-| `PlaylistEntry` | `youtube.py` | A single entry from a flat playlist probe: video_id, title, duration_s (optional), canonical URL |
+| `PlaylistEntry` | `youtube.py` | A single entry from a flat playlist probe: video_id, title, duration_s (optional), URL (YouTube's canonical watch URL, or another site's own entry URL) |
 | `PlaylistInfo` | `youtube.py` | Flat playlist probe result: playlist_id (optional), title, entries tuple, total_count (optional) |
 
 ## Services

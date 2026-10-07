@@ -278,11 +278,11 @@ CAPABILITIES: tuple[Capability, ...] = (
         id="youtube-mining",
         title=QT_TRANSLATE_NOOP("Capabilities", "Mine from YouTube"),
         description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Mine straight from a YouTube URL or playlist -- no local files needed."
+            "Capabilities", "Mine straight from a YouTube or Bilibili link or playlist -- no local files needed."
         ),
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("video", "youtube"),
-        keywords=("youtube", "url", "playlist", "online", "stream", "web video"),
+        keywords=("youtube", "bilibili", "url", "playlist", "online", "stream", "web video"),
     ),
     Capability(
         id="audiobook-mining",
