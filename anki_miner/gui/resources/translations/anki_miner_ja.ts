@@ -2702,6 +2702,14 @@ No index files are deleted.</source>
         <translation>字幕ファイル、または字幕ファイルを含むフォルダを選ぶと、すでに知っている単語の割合、新出単語の数、i+1 の行の数を確認できます。Anki カードと既知単語を使用し、何も書き込みません。</translation>
     </message>
     <message>
+        <source>Save the subtitles or audio inside a video</source>
+        <translation>動画内の字幕や音声を保存</translation>
+    </message>
+    <message>
+        <source>Pick an .mkv or another video, or a folder of them, tick its subtitle or audio tracks and save each as its own file, copied without re-encoding. A single subtitle is named after its video, so Video mining finds it. The video is never changed.</source>
+        <translation>.mkv などの動画、または動画のフォルダを選び、字幕トラックや音声トラックにチェックを入れて、それぞれを再エンコードせずに個別のファイルとして保存します。字幕が 1 つだけの場合は動画と同じ名前が付けられるため、動画マイニングで検出されます。動画は変更されません。</translation>
+    </message>
+    <message>
         <source>Restyle mined cards</source>
         <translation>マイニングしたカードのスタイルを再適用</translation>
     </message>
@@ -6478,6 +6486,10 @@ Words to add: %3. Continue?</source>
     <message>
         <source>Readability</source>
         <translation>読みやすさ</translation>
+    </message>
+    <message>
+        <source>Tracks</source>
+        <translation>トラック</translation>
     </message>
     <message>
         <source>Anki Miner updated</source>
@@ -11757,6 +11769,322 @@ Your installed resources and your theme are kept.</source>
     <message>
         <source>Favorite all %2 %3 variants (%1 favorited).</source>
         <translation>%2 個の %3 バリアントをすべてお気に入りに（%1 個お気に入り済み）。</translation>
+    </message>
+</context><context>
+    <name>TrackExtractWorker</name>
+    <message>
+        <source>Subtitle %1</source>
+        <translation>字幕 %1</translation>
+    </message>
+    <message>
+        <source>Audio %1</source>
+        <translation>音声 %1</translation>
+    </message>
+    <message>
+        <source>%1 has no %2 — skipped</source>
+        <translation>%1 に %2 がありません — スキップしました</translation>
+    </message>
+    <message>
+        <source>Saving %1</source>
+        <translation>%1 を保存しています</translation>
+    </message>
+    <message>
+        <source>%1: %2 could not be saved: %3</source>
+        <translation>%1: %2 を保存できませんでした: %3</translation>
+    </message>
+    <message>
+        <source>Saved %1, but ffmpeg reported: %2</source>
+        <translation>%1 を保存しましたが、ffmpeg が次を報告しました: %2</translation>
+    </message>
+    <message>
+        <source>Saved %1</source>
+        <translation>%1 を保存しました</translation>
+    </message>
+    <message>
+        <source>No ticked track was saved</source>
+        <translation>チェックしたトラックが 1 つも保存されませんでした</translation>
+    </message>
+    <message>
+        <source>%1: %2 is tagged %3 here, not %4 as in the listed video</source>
+        <translation>%1: この動画の %2 は %3 とタグ付けされています (一覧の動画では %4)</translation>
+    </message>
+    <message>
+        <source>%1 would replace the video itself — skipped</source>
+        <translation>%1 は動画そのものを置き換えてしまいます — スキップしました</translation>
+    </message>
+    <message>
+        <source>%1 was already saved from another video in this run — skipped</source>
+        <translation>%1 は今回の実行で別の動画からすでに保存されています — スキップしました</translation>
+    </message>
+    <message>
+        <source>%1 already exists — tick Overwrite to replace it</source>
+        <translation>%1 はすでに存在します — 置き換えるには「上書き」にチェックを入れてください</translation>
+    </message>
+</context><context>
+    <name>TracksTab</name>
+    <message>
+        <source>Progress</source>
+        <translation>進捗</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>完了</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>完了: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>スキップ</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>スキップ: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>キャンセル</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>キャンセル中…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>キャンセルされました</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>失敗しました — ログを確認してください</translation>
+    </message>
+    <message>
+        <source>Finished with errors — see log</source>
+        <translation>エラーが発生して完了しました — ログを確認してください</translation>
+    </message>
+    <message>
+        <source>Some tracks could not be saved.</source>
+        <translation>一部のトラックを保存できませんでした。</translation>
+    </message>
+    <message>
+        <source>Some tracks of this video could not be saved.</source>
+        <translation>この動画の一部のトラックを保存できませんでした。</translation>
+    </message>
+    <message>
+        <source>Complete — tracks saved from %1 video(s)</source>
+        <translation>完了 — %1 本の動画からトラックを保存しました</translation>
+    </message>
+    <message>
+        <source>Complete — %1 video(s) done, %2 skipped</source>
+        <translation>完了 — %1 本の動画を処理、%2 本をスキップしました</translation>
+    </message>
+    <message>
+        <source>Nothing saved — every video was skipped. The log says why.</source>
+        <translation>何も保存されませんでした — すべての動画がスキップされました。理由はログを確認してください。</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>出力フォルダを選択</translation>
+    </message>
+    <message>
+        <source>Next to each video</source>
+        <translation>各動画の隣</translation>
+    </message>
+    <message>
+        <source>Track extraction</source>
+        <translation>トラックの抽出</translation>
+    </message>
+    <message>
+        <source>Video</source>
+        <translation>動画</translation>
+    </message>
+    <message>
+        <source>ffmpeg and ffprobe were not found. Install ffmpeg and add it to PATH to use this tool.</source>
+        <translation>ffmpeg と ffprobe が見つかりません。このツールを使用するには ffmpeg をインストールして PATH に追加してください。</translation>
+    </message>
+    <message>
+        <source>Save the subtitle and audio tracks inside a video as their own files. Tracks are copied as they are; the video is never changed.</source>
+        <translation>動画内の字幕トラックと音声トラックを個別のファイルとして保存します。トラックはそのままコピーされ、動画は変更されません。</translation>
+    </message>
+    <message>
+        <source>Videos (%1)</source>
+        <translation>動画 (%1)</translation>
+    </message>
+    <message>
+        <source>All Files (*)</source>
+        <translation>すべてのファイル (*)</translation>
+    </message>
+    <message>
+        <source>This field takes a video or a folder.</source>
+        <translation>このフィールドには動画またはフォルダを指定します。</translation>
+    </message>
+    <message>
+        <source>Video file or folder:</source>
+        <translation>動画ファイルまたはフォルダ:</translation>
+    </message>
+    <message>
+        <source>Tracks</source>
+        <translation>トラック</translation>
+    </message>
+    <message>
+        <source>Choose a video to list its tracks.</source>
+        <translation>動画を選択するとトラックが一覧表示されます。</translation>
+    </message>
+    <message>
+        <source>Track</source>
+        <translation>トラック</translation>
+    </message>
+    <message>
+        <source>Tick the tracks to save.</source>
+        <translation>保存するトラックにチェックを入れてください。</translation>
+    </message>
+    <message>
+        <source>Language</source>
+        <translation>言語</translation>
+    </message>
+    <message>
+        <source>The language the file says the track is in.</source>
+        <translation>ファイルに記録されているトラックの言語です。</translation>
+    </message>
+    <message>
+        <source>Codec</source>
+        <translation>コーデック</translation>
+    </message>
+    <message>
+        <source>The track's format. Hover a row to see the file type it is saved as.</source>
+        <translation>トラックの形式です。行にカーソルを合わせると、保存されるファイルの種類が表示されます。</translation>
+    </message>
+    <message>
+        <source>Title</source>
+        <translation>タイトル</translation>
+    </message>
+    <message>
+        <source>The track's name in the file, such as Signs &amp; Songs.</source>
+        <translation>ファイル内でのトラック名です（Signs &amp; Songs など）。</translation>
+    </message>
+    <message>
+        <source>Flags</source>
+        <translation>フラグ</translation>
+    </message>
+    <message>
+        <source>Default, Forced, and Image for picture-based subtitles.</source>
+        <translation>「既定」「強制」、および画像ベースの字幕を示す「画像」です。</translation>
+    </message>
+    <message>
+        <source>Output</source>
+        <translation>出力</translation>
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation>出力:</translation>
+    </message>
+    <message>
+        <source>Choose Folder…</source>
+        <translation>フォルダを選択…</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>リセット</translation>
+    </message>
+    <message>
+        <source>Tracks are saved next to each video unless you choose a folder. A single ticked subtitle is named after its video, so mining finds it.</source>
+        <translation>フォルダを選択しない限り、トラックは各動画の隣に保存されます。チェックした字幕が 1 つだけの場合は動画と同じ名前が付けられるため、マイニング時に検出されます。</translation>
+    </message>
+    <message>
+        <source>Overwrite existing files</source>
+        <translation>既存のファイルを上書きする</translation>
+    </message>
+    <message>
+        <source>When unchecked, a track whose file already exists is skipped, not overwritten.</source>
+        <translation>チェックを外すと、ファイルが既に存在するトラックはスキップされ、上書きされません。</translation>
+    </message>
+    <message>
+        <source>Extract Tracks</source>
+        <translation>トラックを抽出</translation>
+    </message>
+    <message>
+        <source>ffmpeg could not be started. Install it and add it to PATH, then try again.</source>
+        <translation>ffmpeg を起動できませんでした。インストールして PATH に追加してから、再試行してください。</translation>
+    </message>
+    <message>
+        <source>Reading tracks…</source>
+        <translation>トラックを読み取っています…</translation>
+    </message>
+    <message>
+        <source>Tracks could not be read.</source>
+        <translation>トラックを読み取れませんでした。</translation>
+    </message>
+    <message>
+        <source>No videos were found in that folder.</source>
+        <translation>そのフォルダに動画が見つかりませんでした。</translation>
+    </message>
+    <message>
+        <source>No subtitle or audio tracks were found in %1.</source>
+        <translation>%1 に字幕トラックも音声トラックも見つかりませんでした。</translation>
+    </message>
+    <message>
+        <source>Tracks of %1, the first of %2 videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
+        <translation>%2 本の動画のうち最初の %1 のトラックです。チェックしたトラックはフォルダ内のすべての動画から保存され、該当するトラックがない動画はスキップされます。</translation>
+    </message>
+    <message>
+        <source>Tracks of %1. Tick the ones to save.</source>
+        <translation>%1 のトラックです。保存するものにチェックを入れてください。</translation>
+    </message>
+    <message>
+        <source>Picture-based subtitles: saved as they are for an OCR tool. Mining can't read them.</source>
+        <translation>画像ベースの字幕: OCR ツール用にそのまま保存されます。マイニングでは読み取れません。</translation>
+    </message>
+    <message>
+        <source>Subtitle %1</source>
+        <translation>字幕 %1</translation>
+    </message>
+    <message>
+        <source>Audio %1</source>
+        <translation>音声 %1</translation>
+    </message>
+    <message>
+        <source>Saved as %1</source>
+        <translation>%1 として保存されます</translation>
+    </message>
+    <message>
+        <source>Default</source>
+        <translation>既定</translation>
+    </message>
+    <message>
+        <source>Forced</source>
+        <translation>強制</translation>
+    </message>
+    <message>
+        <source>Image</source>
+        <translation>画像</translation>
+    </message>
+    <message>
+        <source>Choose a video or a folder first.</source>
+        <translation>先に動画またはフォルダを選択してください。</translation>
+    </message>
+    <message>
+        <source>That file or folder no longer exists.</source>
+        <translation>そのファイルまたはフォルダは存在しなくなっています。</translation>
+    </message>
+    <message>
+        <source>Wait for the track list to load, then tick the tracks to save.</source>
+        <translation>トラック一覧の読み込みを待ってから、保存するトラックにチェックを入れてください。</translation>
+    </message>
+    <message>
+        <source>Tick at least one track to save.</source>
+        <translation>保存するトラックに 1 つ以上チェックを入れてください。</translation>
+    </message>
+    <message>
+        <source>That folder could not be scanned.</source>
+        <translation>そのフォルダをスキャンできませんでした。</translation>
+    </message>
+    <message>
+        <source>Output folder is not writable.</source>
+        <translation>出力フォルダに書き込めません。</translation>
+    </message>
+    <message>
+        <source>Saving tracks from video %1 of %2</source>
+        <translation>動画 %1/%2 からトラックを保存しています</translation>
     </message>
 </context><context>
     <name>UISettingsPanel</name>

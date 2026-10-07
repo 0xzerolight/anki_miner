@@ -7,7 +7,8 @@ tool. Every translated string stays in its tab: these tests assert behaviour
 and non-empty copy, never wording. Manga OCR is left out: no Output row, no
 mode toggle, and its run starts behind an off-thread volume scan. Readability
 has neither an Output row nor a mode toggle either, so it joins only the
-run-lifecycle and probe tests (``_RUN_TABS``, ``_PROBED_TABS``).
+run-lifecycle and probe tests (``_RUN_TABS``, ``_PROBED_TABS``). Tracks has an
+Output row but no mode toggle, so it joins ``_ALL_TABS`` beside Download.
 """
 
 from __future__ import annotations
@@ -30,6 +31,9 @@ from anki_miner.gui.widgets.download_tab import DownloadTab
 from anki_miner.gui.widgets.readability_tab import ReadabilityTab
 from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
 from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
+from anki_miner.gui.widgets.tracks_tab import TracksTab
+from anki_miner.services.track_extractor import InputProbe, MediaTracks, TrackRef
+from anki_miner.utils.audio_track_detector import SubtitleStream
 from tests.unit._tool_tab_harness import OS_ACCESS, FakeToolWorker, capture_slots, make_config
 
 _ENGINE_AVAILABLE = "anki_miner.services.asr._engine.available"
@@ -68,6 +72,20 @@ def _fill_booksync(tab, tmp_path: Path) -> None:
 
 def _fill_download(tab, tmp_path: Path) -> None:
     tab.url_input.setPlainText("https://example.com/watch?v=1")
+
+
+def _fill_tracks(tab, tmp_path: Path) -> None:
+    video = tmp_path / "episode.mkv"
+    video.write_bytes(b"video")
+    tab.input_selector.set_path(str(video))
+    tab._apply_input_probe(
+        InputProbe(
+            source=video,
+            videos=(video,),
+            tracks=MediaTracks(subtitles=(SubtitleStream(2, 0, "ass", "jpn", None, True),)),
+            preselected=(TrackRef("subtitle", 0),),
+        )
+    )
 
 
 def _fill_readability(tab, tmp_path: Path) -> None:
@@ -159,15 +177,23 @@ _READABILITY = _Spec(
     run_patches=(),
     fill_single=_fill_readability,
 )
+_TRACKS = _Spec(
+    tab_cls=TracksTab,
+    primary="extract_button",
+    worker_cls="anki_miner.gui.widgets.tracks_tab.TrackExtractWorker",
+    construct_patches=(("anki_miner.gui.widgets.tracks_tab.TracksTab._compute_ffmpeg_available", True),),
+    run_patches=(),
+    fill_single=_fill_tracks,
+)
 
 #: Tabs with a Single File / Folder toggle and an Overwrite box.
 _MODE_TABS = [_CREATION, _RETIME, _CONDENSE, _BOOKSYNC]
 #: Tabs with an Output row whose run is one queue worker started from the primary.
-_ALL_TABS = [*_MODE_TABS, _DOWNLOAD]
+_ALL_TABS = [*_MODE_TABS, _DOWNLOAD, _TRACKS]
 #: Tabs whose run is one queue worker started from the primary, Output row or not.
 _RUN_TABS = [*_ALL_TABS, _READABILITY]
 #: Tabs whose engine probe is the base template (Retime keeps its own).
-_PROBED_TABS = [_CREATION, _CONDENSE, _BOOKSYNC, _DOWNLOAD, _READABILITY]
+_PROBED_TABS = [_CREATION, _CONDENSE, _BOOKSYNC, _DOWNLOAD, _READABILITY, _TRACKS]
 
 
 def _spec_id(spec: _Spec) -> str:

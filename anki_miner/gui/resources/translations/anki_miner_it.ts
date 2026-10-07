@@ -2705,6 +2705,14 @@ Nessun file indice viene eliminato.</translation>
         <translation>Scegli un file di sottotitoli o una cartella che ne contiene per vedere la percentuale di parole che conosci già, quante parole nuove ci sono e quante righe sono i+1. Usa le tue carte Anki e le parole conosciute; non viene scritto nulla.</translation>
     </message>
     <message>
+        <source>Save the subtitles or audio inside a video</source>
+        <translation>Salva i sottotitoli o l'audio contenuti in un video</translation>
+    </message>
+    <message>
+        <source>Pick an .mkv or another video, or a folder of them, tick its subtitle or audio tracks and save each as its own file, copied without re-encoding. A single subtitle is named after its video, so Video mining finds it. The video is never changed.</source>
+        <translation>Scegli un .mkv o un altro video, oppure una cartella che ne contiene, spunta le sue tracce di sottotitoli o audio e salva ciascuna come file a sé, copiata senza ricodifica. Un singolo sottotitolo prende il nome del suo video, così il mining nella scheda Video lo trova. Il video non viene mai modificato.</translation>
+    </message>
+    <message>
         <source>Restyle mined cards</source>
         <translation>Riapplica stile alle carte estratte</translation>
     </message>
@@ -6515,6 +6523,10 @@ Parole da aggiungere: %3. Continuare?</translation>
     <message>
         <source>Readability</source>
         <translation>Leggibilità</translation>
+    </message>
+    <message>
+        <source>Tracks</source>
+        <translation>Tracce</translation>
     </message>
     <message>
         <source>Anki Miner updated</source>
@@ -11798,6 +11810,322 @@ Le tue risorse installate e il tuo tema vengono mantenuti.</translation>
     <message>
         <source>Favorite all %2 %3 variants (%1 favorited).</source>
         <translation>Aggiungi ai preferiti tutte le %2 varianti %3 (%1 nei preferiti).</translation>
+    </message>
+</context><context>
+    <name>TrackExtractWorker</name>
+    <message>
+        <source>Subtitle %1</source>
+        <translation>Sottotitoli %1</translation>
+    </message>
+    <message>
+        <source>Audio %1</source>
+        <translation>Audio %1</translation>
+    </message>
+    <message>
+        <source>%1 has no %2 — skipped</source>
+        <translation>%1 non contiene %2 — saltato</translation>
+    </message>
+    <message>
+        <source>Saving %1</source>
+        <translation>Salvataggio di %1</translation>
+    </message>
+    <message>
+        <source>%1: %2 could not be saved: %3</source>
+        <translation>%1: impossibile salvare %2: %3</translation>
+    </message>
+    <message>
+        <source>Saved %1, but ffmpeg reported: %2</source>
+        <translation>Salvato %1, ma ffmpeg ha segnalato: %2</translation>
+    </message>
+    <message>
+        <source>Saved %1</source>
+        <translation>Salvato %1</translation>
+    </message>
+    <message>
+        <source>No ticked track was saved</source>
+        <translation>Nessuna traccia selezionata è stata salvata</translation>
+    </message>
+    <message>
+        <source>%1: %2 is tagged %3 here, not %4 as in the listed video</source>
+        <translation>%1: qui %2 è etichettato %3, non %4 come nel video elencato</translation>
+    </message>
+    <message>
+        <source>%1 would replace the video itself — skipped</source>
+        <translation>%1 sostituirebbe il video stesso — saltato</translation>
+    </message>
+    <message>
+        <source>%1 was already saved from another video in this run — skipped</source>
+        <translation>%1 è già stato salvato da un altro video in questa esecuzione — saltato</translation>
+    </message>
+    <message>
+        <source>%1 already exists — tick Overwrite to replace it</source>
+        <translation>%1 esiste già — spunta Sovrascrivi per sostituirlo</translation>
+    </message>
+</context><context>
+    <name>TracksTab</name>
+    <message>
+        <source>Progress</source>
+        <translation>Avanzamento</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Completato</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>Completato: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>Saltato</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>Saltato: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Annulla</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Annullamento…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Annullato</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>Non riuscito — vedi il registro</translation>
+    </message>
+    <message>
+        <source>Finished with errors — see log</source>
+        <translation>Terminato con errori — vedere il registro</translation>
+    </message>
+    <message>
+        <source>Some tracks could not be saved.</source>
+        <translation>Impossibile salvare alcune tracce.</translation>
+    </message>
+    <message>
+        <source>Some tracks of this video could not be saved.</source>
+        <translation>Impossibile salvare alcune tracce di questo video.</translation>
+    </message>
+    <message>
+        <source>Complete — tracks saved from %1 video(s)</source>
+        <translation>Completato — tracce salvate da %1 video</translation>
+    </message>
+    <message>
+        <source>Complete — %1 video(s) done, %2 skipped</source>
+        <translation>Completato — %1 video elaborati, %2 saltati</translation>
+    </message>
+    <message>
+        <source>Nothing saved — every video was skipped. The log says why.</source>
+        <translation>Niente salvato — ogni video è stato saltato. Il registro ne indica il motivo.</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>Seleziona cartella di uscita</translation>
+    </message>
+    <message>
+        <source>Next to each video</source>
+        <translation>Accanto a ciascun video</translation>
+    </message>
+    <message>
+        <source>Track extraction</source>
+        <translation>Estrazione delle tracce</translation>
+    </message>
+    <message>
+        <source>Video</source>
+        <translation>Video</translation>
+    </message>
+    <message>
+        <source>ffmpeg and ffprobe were not found. Install ffmpeg and add it to PATH to use this tool.</source>
+        <translation>ffmpeg e ffprobe non sono stati trovati. Installare ffmpeg e aggiungerlo al PATH per usare questo strumento.</translation>
+    </message>
+    <message>
+        <source>Save the subtitle and audio tracks inside a video as their own files. Tracks are copied as they are; the video is never changed.</source>
+        <translation>Salva le tracce di sottotitoli e audio contenute in un video come file separati. Le tracce vengono copiate così come sono; il video non viene mai modificato.</translation>
+    </message>
+    <message>
+        <source>Videos (%1)</source>
+        <translation>Video (%1)</translation>
+    </message>
+    <message>
+        <source>All Files (*)</source>
+        <translation>Tutti i file (*)</translation>
+    </message>
+    <message>
+        <source>This field takes a video or a folder.</source>
+        <translation>Questo campo accetta un video o una cartella.</translation>
+    </message>
+    <message>
+        <source>Video file or folder:</source>
+        <translation>File video o cartella:</translation>
+    </message>
+    <message>
+        <source>Tracks</source>
+        <translation>Tracce</translation>
+    </message>
+    <message>
+        <source>Choose a video to list its tracks.</source>
+        <translation>Scegliere un video per elencarne le tracce.</translation>
+    </message>
+    <message>
+        <source>Track</source>
+        <translation>Traccia</translation>
+    </message>
+    <message>
+        <source>Tick the tracks to save.</source>
+        <translation>Spuntare le tracce da salvare.</translation>
+    </message>
+    <message>
+        <source>Language</source>
+        <translation>Lingua</translation>
+    </message>
+    <message>
+        <source>The language the file says the track is in.</source>
+        <translation>La lingua della traccia indicata nel file.</translation>
+    </message>
+    <message>
+        <source>Codec</source>
+        <translation>Codec</translation>
+    </message>
+    <message>
+        <source>The track's format. Hover a row to see the file type it is saved as.</source>
+        <translation>Il formato della traccia. Passare il mouse su una riga per vedere il tipo di file con cui viene salvata.</translation>
+    </message>
+    <message>
+        <source>Title</source>
+        <translation>Titolo</translation>
+    </message>
+    <message>
+        <source>The track's name in the file, such as Signs &amp; Songs.</source>
+        <translation>Il nome della traccia nel file, ad esempio Signs &amp; Songs.</translation>
+    </message>
+    <message>
+        <source>Flags</source>
+        <translation>Flag</translation>
+    </message>
+    <message>
+        <source>Default, Forced, and Image for picture-based subtitles.</source>
+        <translation>Predefinita, Forzata e Immagine per i sottotitoli basati su immagini.</translation>
+    </message>
+    <message>
+        <source>Output</source>
+        <translation>Uscita</translation>
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation>Uscita:</translation>
+    </message>
+    <message>
+        <source>Choose Folder…</source>
+        <translation>Scegli cartella…</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>Reimposta</translation>
+    </message>
+    <message>
+        <source>Tracks are saved next to each video unless you choose a folder. A single ticked subtitle is named after its video, so mining finds it.</source>
+        <translation>Le tracce vengono salvate accanto a ciascun video, a meno che non si scelga una cartella. Un singolo sottotitolo selezionato prende il nome del suo video, così il mining lo trova.</translation>
+    </message>
+    <message>
+        <source>Overwrite existing files</source>
+        <translation>Sovrascrivi i file esistenti</translation>
+    </message>
+    <message>
+        <source>When unchecked, a track whose file already exists is skipped, not overwritten.</source>
+        <translation>Se deselezionato, una traccia il cui file esiste già viene saltata, non sovrascritta.</translation>
+    </message>
+    <message>
+        <source>Extract Tracks</source>
+        <translation>Estrai tracce</translation>
+    </message>
+    <message>
+        <source>ffmpeg could not be started. Install it and add it to PATH, then try again.</source>
+        <translation>Impossibile avviare ffmpeg. Installarlo e aggiungerlo al PATH, quindi riprovare.</translation>
+    </message>
+    <message>
+        <source>Reading tracks…</source>
+        <translation>Lettura delle tracce…</translation>
+    </message>
+    <message>
+        <source>Tracks could not be read.</source>
+        <translation>Impossibile leggere le tracce.</translation>
+    </message>
+    <message>
+        <source>No videos were found in that folder.</source>
+        <translation>Nessun video trovato in quella cartella.</translation>
+    </message>
+    <message>
+        <source>No subtitle or audio tracks were found in %1.</source>
+        <translation>Nessuna traccia di sottotitoli o audio trovata in %1.</translation>
+    </message>
+    <message>
+        <source>Tracks of %1, the first of %2 videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
+        <translation>Tracce di %1, il primo di %2 video. Le tracce selezionate vengono salvate da ogni video della cartella; un video che ne è privo viene saltato.</translation>
+    </message>
+    <message>
+        <source>Tracks of %1. Tick the ones to save.</source>
+        <translation>Tracce di %1. Spuntare quelle da salvare.</translation>
+    </message>
+    <message>
+        <source>Picture-based subtitles: saved as they are for an OCR tool. Mining can't read them.</source>
+        <translation>Sottotitoli basati su immagini: vengono salvati così come sono per uno strumento OCR. Il mining non può leggerli.</translation>
+    </message>
+    <message>
+        <source>Subtitle %1</source>
+        <translation>Sottotitoli %1</translation>
+    </message>
+    <message>
+        <source>Audio %1</source>
+        <translation>Audio %1</translation>
+    </message>
+    <message>
+        <source>Saved as %1</source>
+        <translation>Salvata come %1</translation>
+    </message>
+    <message>
+        <source>Default</source>
+        <translation>Predefinita</translation>
+    </message>
+    <message>
+        <source>Forced</source>
+        <translation>Forzata</translation>
+    </message>
+    <message>
+        <source>Image</source>
+        <translation>Immagine</translation>
+    </message>
+    <message>
+        <source>Choose a video or a folder first.</source>
+        <translation>Scegliere prima un video o una cartella.</translation>
+    </message>
+    <message>
+        <source>That file or folder no longer exists.</source>
+        <translation>Quel file o quella cartella non esiste più.</translation>
+    </message>
+    <message>
+        <source>Wait for the track list to load, then tick the tracks to save.</source>
+        <translation>Attendere il caricamento dell'elenco delle tracce, poi spuntare quelle da salvare.</translation>
+    </message>
+    <message>
+        <source>Tick at least one track to save.</source>
+        <translation>Spuntare almeno una traccia da salvare.</translation>
+    </message>
+    <message>
+        <source>That folder could not be scanned.</source>
+        <translation>Impossibile analizzare quella cartella.</translation>
+    </message>
+    <message>
+        <source>Output folder is not writable.</source>
+        <translation>La cartella di output non è scrivibile.</translation>
+    </message>
+    <message>
+        <source>Saving tracks from video %1 of %2</source>
+        <translation>Salvataggio delle tracce dal video %1 di %2</translation>
     </message>
 </context><context>
     <name>UISettingsPanel</name>

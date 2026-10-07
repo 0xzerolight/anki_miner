@@ -21,6 +21,7 @@ from anki_miner.gui.widgets.mokuro_tab import MokuroTab
 from anki_miner.gui.widgets.readability_tab import ReadabilityTab
 from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
 from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
+from anki_miner.gui.widgets.tracks_tab import TracksTab
 from anki_miner.services.card_backfiller import BackfillOptions, BackfillPlan, FieldChange, NotePlan
 
 _TOOLS = {
@@ -31,6 +32,7 @@ _TOOLS = {
     "mokuro": (MokuroTab, "run_button"),
     "booksync": (BookSyncTab, "sync_button"),
     "readability": (ReadabilityTab, "check_button"),
+    "tracks": (TracksTab, "extract_button"),
 }
 
 

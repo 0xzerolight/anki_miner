@@ -76,6 +76,7 @@ UTILITY_SUBTABS: tuple[str, ...] = (
     "mokuro",
     "booksync",
     "readability",
+    "tracks",
 )
 # Valid sub-tab keys per container main tab (resolved by the container's
 # duck-typed ``open_subtab``). Main tabs absent here have no sub-tabs.
@@ -105,6 +106,7 @@ def utility_labels() -> dict[str, str]:
         "mokuro": QCoreApplication.translate("MainWindow", "Manga OCR"),
         "booksync": QCoreApplication.translate("MainWindow", "Audiobook Sync"),
         "readability": QCoreApplication.translate("MainWindow", "Readability"),
+        "tracks": QCoreApplication.translate("MainWindow", "Tracks"),
     }
 
 
@@ -1317,6 +1319,32 @@ CAPABILITIES: tuple[Capability, ...] = (
             "percent known",
             "morphman",
             "ankimorphs",
+        ),
+    ),
+    Capability(
+        id="extract-tracks",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Save the subtitles or audio inside a video"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Pick an .mkv or another video, or a folder of them, tick its subtitle or audio tracks and save each "
+            "as its own file, copied without re-encoding. A single subtitle is named after its video, so Video "
+            "mining finds it. The video is never changed.",
+        ),
+        category=_CAT_TOOLS,
+        target=CapabilityTarget("subtitles", "tracks"),
+        keywords=(
+            "mkv",
+            "extract",
+            "mkvextract",
+            "mkvtoolnix",
+            "demux",
+            "embedded subtitles",
+            "subtitle track",
+            "audio track",
+            "ass",
+            "srt",
+            "sup",
+            "pgs",
         ),
     ),
     Capability(

@@ -52,8 +52,13 @@ def test_readability_report_is_findable_the_way_its_users_ask(query) -> None:
     assert any(cap.id == "readability-report" for cap in search(query))
 
 
-def test_readability_is_the_last_utility_tool() -> None:
-    assert list(utility_labels().items())[-1] == ("readability", "Readability")
+@pytest.mark.parametrize("query", ["mkv", "mkvextract", "demux"])
+def test_track_extraction_is_findable_the_way_its_users_ask(query) -> None:
+    assert any(cap.id == "extract-tracks" for cap in search(query))
+
+
+def test_tracks_is_the_last_utility_tool() -> None:
+    assert list(utility_labels().items())[-1] == ("tracks", "Tracks")
 
 
 def test_registry_is_non_trivial() -> None:

@@ -943,3 +943,22 @@ def test_tag_strips_leave_real_episode_numbers_alone(tmp_path, filename, episode
     result = EpisodeNumberExtractor.extract_episode_info(path)
     assert result is not None
     assert result.episode_number == episode
+
+
+@pytest.mark.parametrize(
+    "filename",
+    [
+        "Show 05.s1.jpn.ass",
+        "Show - 05.s2.eng.srt",
+        "Show_05.s3.ass",
+        "Show 05.a2.jpn.m4a",
+        "Show 05.s1.pt-br.srt",
+    ],
+)
+def test_a_tracks_designator_does_not_win_the_bare_number(tmp_path, filename):
+    """Utilities -> Tracks names several ticked tracks <stem>.s<N>[.<lang>]; N is not the episode."""
+    path = tmp_path / filename
+    path.touch()
+    result = EpisodeNumberExtractor.extract_episode_info(path)
+    assert result is not None
+    assert result.episode_number == 5

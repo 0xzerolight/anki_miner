@@ -266,6 +266,7 @@ _TRANSIENT_OVERWRITE_SCREENS = (
     "SubtitleRetimeTab",
     "CardBackfillTab",
     "BookSyncTab",
+    "TracksTab",
 )
 
 

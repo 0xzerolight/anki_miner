@@ -2702,6 +2702,14 @@ No index files are deleted.</source>
         <translation>选择一个字幕文件或一个字幕文件夹，查看你已认识的单词占比、生词数量，以及有多少行是 i+1。使用你的 Anki 卡片和已知单词；不会写入任何内容。</translation>
     </message>
     <message>
+        <source>Save the subtitles or audio inside a video</source>
+        <translation>保存视频内嵌的字幕或音频</translation>
+    </message>
+    <message>
+        <source>Pick an .mkv or another video, or a folder of them, tick its subtitle or audio tracks and save each as its own file, copied without re-encoding. A single subtitle is named after its video, so Video mining finds it. The video is never changed.</source>
+        <translation>选择一个 .mkv 或其他视频，或一个视频文件夹，勾选其中的字幕或音频轨道，将每条轨道分别保存为独立文件，直接复制而不重新编码。单条字幕会以其视频命名，因此视频挖词能找到它。视频本身不会被修改。</translation>
+    </message>
+    <message>
         <source>Restyle mined cards</source>
         <translation>重新设置挖词卡片样式</translation>
     </message>
@@ -6478,6 +6486,10 @@ Words to add: %3. Continue?</source>
     <message>
         <source>Readability</source>
         <translation>可读性</translation>
+    </message>
+    <message>
+        <source>Tracks</source>
+        <translation>轨道</translation>
     </message>
     <message>
         <source>Anki Miner updated</source>
@@ -11757,6 +11769,322 @@ Your installed resources and your theme are kept.</source>
     <message>
         <source>Favorite all %2 %3 variants (%1 favorited).</source>
         <translation>收藏全部 %2 个 %3 变体（已收藏 %1 个）。</translation>
+    </message>
+</context><context>
+    <name>TrackExtractWorker</name>
+    <message>
+        <source>Subtitle %1</source>
+        <translation>字幕 %1</translation>
+    </message>
+    <message>
+        <source>Audio %1</source>
+        <translation>音频 %1</translation>
+    </message>
+    <message>
+        <source>%1 has no %2 — skipped</source>
+        <translation>%1 没有 %2——已跳过</translation>
+    </message>
+    <message>
+        <source>Saving %1</source>
+        <translation>正在保存 %1</translation>
+    </message>
+    <message>
+        <source>%1: %2 could not be saved: %3</source>
+        <translation>%1：%2 无法保存：%3</translation>
+    </message>
+    <message>
+        <source>Saved %1, but ffmpeg reported: %2</source>
+        <translation>已保存 %1，但 ffmpeg 报告：%2</translation>
+    </message>
+    <message>
+        <source>Saved %1</source>
+        <translation>已保存 %1</translation>
+    </message>
+    <message>
+        <source>No ticked track was saved</source>
+        <translation>未保存任何已勾选的轨道</translation>
+    </message>
+    <message>
+        <source>%1: %2 is tagged %3 here, not %4 as in the listed video</source>
+        <translation>%1：此处 %2 标记为 %3，而非列出的视频中的 %4</translation>
+    </message>
+    <message>
+        <source>%1 would replace the video itself — skipped</source>
+        <translation>%1 会替换视频本身——已跳过</translation>
+    </message>
+    <message>
+        <source>%1 was already saved from another video in this run — skipped</source>
+        <translation>本次运行中已从另一个视频保存过 %1——已跳过</translation>
+    </message>
+    <message>
+        <source>%1 already exists — tick Overwrite to replace it</source>
+        <translation>%1 已存在——勾选“覆盖”以替换它</translation>
+    </message>
+</context><context>
+    <name>TracksTab</name>
+    <message>
+        <source>Progress</source>
+        <translation>进度</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>完成</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>完成：</translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>已跳过</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>已跳过：</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>已取消</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>失败——请查看日志</translation>
+    </message>
+    <message>
+        <source>Finished with errors — see log</source>
+        <translation>完成但有错误 — 请查看日志</translation>
+    </message>
+    <message>
+        <source>Some tracks could not be saved.</source>
+        <translation>无法保存部分轨道。</translation>
+    </message>
+    <message>
+        <source>Some tracks of this video could not be saved.</source>
+        <translation>无法保存此视频的部分轨道。</translation>
+    </message>
+    <message>
+        <source>Complete — tracks saved from %1 video(s)</source>
+        <translation>完成——已从 %1 个视频保存轨道</translation>
+    </message>
+    <message>
+        <source>Complete — %1 video(s) done, %2 skipped</source>
+        <translation>完成——已处理 %1 个视频，已跳过 %2 个</translation>
+    </message>
+    <message>
+        <source>Nothing saved — every video was skipped. The log says why.</source>
+        <translation>未保存任何内容——所有视频均已跳过。原因请查看日志。</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>选择输出文件夹</translation>
+    </message>
+    <message>
+        <source>Next to each video</source>
+        <translation>各视频旁</translation>
+    </message>
+    <message>
+        <source>Track extraction</source>
+        <translation>轨道提取</translation>
+    </message>
+    <message>
+        <source>Video</source>
+        <translation>视频</translation>
+    </message>
+    <message>
+        <source>ffmpeg and ffprobe were not found. Install ffmpeg and add it to PATH to use this tool.</source>
+        <translation>未找到 ffmpeg 和 ffprobe。请安装 ffmpeg 并将其加入 PATH 以使用此工具。</translation>
+    </message>
+    <message>
+        <source>Save the subtitle and audio tracks inside a video as their own files. Tracks are copied as they are; the video is never changed.</source>
+        <translation>将视频内的字幕和音频轨道保存为独立文件。轨道按原样复制；视频本身不会被修改。</translation>
+    </message>
+    <message>
+        <source>Videos (%1)</source>
+        <translation>视频 (%1)</translation>
+    </message>
+    <message>
+        <source>All Files (*)</source>
+        <translation>所有文件 (*)</translation>
+    </message>
+    <message>
+        <source>This field takes a video or a folder.</source>
+        <translation>此字段需要视频或文件夹。</translation>
+    </message>
+    <message>
+        <source>Video file or folder:</source>
+        <translation>视频文件或文件夹：</translation>
+    </message>
+    <message>
+        <source>Tracks</source>
+        <translation>轨道</translation>
+    </message>
+    <message>
+        <source>Choose a video to list its tracks.</source>
+        <translation>选择一个视频以列出其轨道。</translation>
+    </message>
+    <message>
+        <source>Track</source>
+        <translation>轨道</translation>
+    </message>
+    <message>
+        <source>Tick the tracks to save.</source>
+        <translation>勾选要保存的轨道。</translation>
+    </message>
+    <message>
+        <source>Language</source>
+        <translation>语言</translation>
+    </message>
+    <message>
+        <source>The language the file says the track is in.</source>
+        <translation>文件中标注的该轨道语言。</translation>
+    </message>
+    <message>
+        <source>Codec</source>
+        <translation>编解码器</translation>
+    </message>
+    <message>
+        <source>The track's format. Hover a row to see the file type it is saved as.</source>
+        <translation>轨道的格式。将鼠标悬停在某行上可查看其保存后的文件类型。</translation>
+    </message>
+    <message>
+        <source>Title</source>
+        <translation>标题</translation>
+    </message>
+    <message>
+        <source>The track's name in the file, such as Signs &amp; Songs.</source>
+        <translation>轨道在文件中的名称，例如 Signs &amp; Songs。</translation>
+    </message>
+    <message>
+        <source>Flags</source>
+        <translation>标志</translation>
+    </message>
+    <message>
+        <source>Default, Forced, and Image for picture-based subtitles.</source>
+        <translation>默认、强制，以及“图像”（基于图像的字幕）。</translation>
+    </message>
+    <message>
+        <source>Output</source>
+        <translation>输出</translation>
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation>输出：</translation>
+    </message>
+    <message>
+        <source>Choose Folder…</source>
+        <translation>选择文件夹…</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>重置</translation>
+    </message>
+    <message>
+        <source>Tracks are saved next to each video unless you choose a folder. A single ticked subtitle is named after its video, so mining finds it.</source>
+        <translation>除非你另选文件夹，否则轨道会保存在各视频旁边。只勾选一条字幕时，它会以其视频命名，以便挖词时能找到它。</translation>
+    </message>
+    <message>
+        <source>Overwrite existing files</source>
+        <translation>覆盖现有文件</translation>
+    </message>
+    <message>
+        <source>When unchecked, a track whose file already exists is skipped, not overwritten.</source>
+        <translation>未勾选时，文件已存在的轨道会被跳过，而不会被覆盖。</translation>
+    </message>
+    <message>
+        <source>Extract Tracks</source>
+        <translation>提取轨道</translation>
+    </message>
+    <message>
+        <source>ffmpeg could not be started. Install it and add it to PATH, then try again.</source>
+        <translation>无法启动 ffmpeg。请安装并将其加入 PATH，然后重试。</translation>
+    </message>
+    <message>
+        <source>Reading tracks…</source>
+        <translation>正在读取轨道…</translation>
+    </message>
+    <message>
+        <source>Tracks could not be read.</source>
+        <translation>轨道读取失败。</translation>
+    </message>
+    <message>
+        <source>No videos were found in that folder.</source>
+        <translation>该文件夹中未找到视频。</translation>
+    </message>
+    <message>
+        <source>No subtitle or audio tracks were found in %1.</source>
+        <translation>%1 中未找到字幕或音频轨道。</translation>
+    </message>
+    <message>
+        <source>Tracks of %1, the first of %2 videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
+        <translation>%1 的轨道（共 %2 个视频中的第一个）。将从文件夹中的每个视频保存已勾选的轨道；缺少这些轨道的视频会被跳过。</translation>
+    </message>
+    <message>
+        <source>Tracks of %1. Tick the ones to save.</source>
+        <translation>%1 的轨道。勾选要保存的轨道。</translation>
+    </message>
+    <message>
+        <source>Picture-based subtitles: saved as they are for an OCR tool. Mining can't read them.</source>
+        <translation>基于图像的字幕：按原样保存，供 OCR 工具使用。挖词无法读取它们。</translation>
+    </message>
+    <message>
+        <source>Subtitle %1</source>
+        <translation>字幕 %1</translation>
+    </message>
+    <message>
+        <source>Audio %1</source>
+        <translation>音频 %1</translation>
+    </message>
+    <message>
+        <source>Saved as %1</source>
+        <translation>保存为 %1</translation>
+    </message>
+    <message>
+        <source>Default</source>
+        <translation>默认</translation>
+    </message>
+    <message>
+        <source>Forced</source>
+        <translation>强制</translation>
+    </message>
+    <message>
+        <source>Image</source>
+        <translation>图像</translation>
+    </message>
+    <message>
+        <source>Choose a video or a folder first.</source>
+        <translation>请先选择一个视频或文件夹。</translation>
+    </message>
+    <message>
+        <source>That file or folder no longer exists.</source>
+        <translation>该文件或文件夹已不存在。</translation>
+    </message>
+    <message>
+        <source>Wait for the track list to load, then tick the tracks to save.</source>
+        <translation>请等待轨道列表加载完成，然后勾选要保存的轨道。</translation>
+    </message>
+    <message>
+        <source>Tick at least one track to save.</source>
+        <translation>请至少勾选一条要保存的轨道。</translation>
+    </message>
+    <message>
+        <source>That folder could not be scanned.</source>
+        <translation>无法扫描该文件夹。</translation>
+    </message>
+    <message>
+        <source>Output folder is not writable.</source>
+        <translation>输出文件夹不可写。</translation>
+    </message>
+    <message>
+        <source>Saving tracks from video %1 of %2</source>
+        <translation>正在保存第 %1 个视频的轨道，共 %2 个</translation>
     </message>
 </context><context>
     <name>UISettingsPanel</name>

@@ -2702,6 +2702,14 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Chọn một tệp phụ đề hoặc một thư mục phụ đề để xem tỷ lệ từ đã biết, số từ mới và số dòng i+1. Dùng thẻ Anki và từ đã biết của bạn; không ghi dữ liệu nào.</translation>
     </message>
     <message>
+        <source>Save the subtitles or audio inside a video</source>
+        <translation>Lưu phụ đề hoặc âm thanh bên trong video</translation>
+    </message>
+    <message>
+        <source>Pick an .mkv or another video, or a folder of them, tick its subtitle or audio tracks and save each as its own file, copied without re-encoding. A single subtitle is named after its video, so Video mining finds it. The video is never changed.</source>
+        <translation>Chọn một tệp .mkv hoặc video khác, hoặc một thư mục video, đánh dấu các rãnh phụ đề hoặc âm thanh rồi lưu mỗi rãnh thành một tệp riêng, sao chép nguyên trạng không mã hóa lại. Một phụ đề duy nhất được đặt tên theo video của nó, nên khai thác trên tab Video sẽ tìm thấy nó. Video không bao giờ bị thay đổi.</translation>
+    </message>
+    <message>
         <source>Restyle mined cards</source>
         <translation>Định dạng lại thẻ đã khai thác</translation>
     </message>
@@ -6478,6 +6486,10 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
     <message>
         <source>Readability</source>
         <translation>Độ dễ đọc</translation>
+    </message>
+    <message>
+        <source>Tracks</source>
+        <translation>Rãnh</translation>
     </message>
     <message>
         <source>Anki Miner updated</source>
@@ -11757,6 +11769,322 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     <message>
         <source>Favorite all %2 %3 variants (%1 favorited).</source>
         <translation>Yêu thích cả %2 biến thể %3 (%1 đã được yêu thích).</translation>
+    </message>
+</context><context>
+    <name>TrackExtractWorker</name>
+    <message>
+        <source>Subtitle %1</source>
+        <translation>Phụ đề %1</translation>
+    </message>
+    <message>
+        <source>Audio %1</source>
+        <translation>Âm thanh %1</translation>
+    </message>
+    <message>
+        <source>%1 has no %2 — skipped</source>
+        <translation>%1 không có %2 — đã bỏ qua</translation>
+    </message>
+    <message>
+        <source>Saving %1</source>
+        <translation>Đang lưu %1</translation>
+    </message>
+    <message>
+        <source>%1: %2 could not be saved: %3</source>
+        <translation>%1: không thể lưu %2: %3</translation>
+    </message>
+    <message>
+        <source>Saved %1, but ffmpeg reported: %2</source>
+        <translation>Đã lưu %1, nhưng ffmpeg báo: %2</translation>
+    </message>
+    <message>
+        <source>Saved %1</source>
+        <translation>Đã lưu %1</translation>
+    </message>
+    <message>
+        <source>No ticked track was saved</source>
+        <translation>Không có rãnh đã đánh dấu nào được lưu</translation>
+    </message>
+    <message>
+        <source>%1: %2 is tagged %3 here, not %4 as in the listed video</source>
+        <translation>%1: %2 ở đây được gắn thẻ %3, không phải %4 như trong video đã liệt kê</translation>
+    </message>
+    <message>
+        <source>%1 would replace the video itself — skipped</source>
+        <translation>%1 sẽ thay thế chính tệp video — đã bỏ qua</translation>
+    </message>
+    <message>
+        <source>%1 was already saved from another video in this run — skipped</source>
+        <translation>%1 đã được lưu từ một video khác trong lần chạy này — đã bỏ qua</translation>
+    </message>
+    <message>
+        <source>%1 already exists — tick Overwrite to replace it</source>
+        <translation>%1 đã tồn tại — bật Ghi đè để thay thế</translation>
+    </message>
+</context><context>
+    <name>TracksTab</name>
+    <message>
+        <source>Progress</source>
+        <translation>Tiến trình</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Xong</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>Xong: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>Đã bỏ qua</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>Đã bỏ qua: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Hủy</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Đang hủy…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Đã hủy</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>Thất bại — xem nhật ký</translation>
+    </message>
+    <message>
+        <source>Finished with errors — see log</source>
+        <translation>Hoàn tất với lỗi — xem nhật ký</translation>
+    </message>
+    <message>
+        <source>Some tracks could not be saved.</source>
+        <translation>Không thể lưu một số rãnh.</translation>
+    </message>
+    <message>
+        <source>Some tracks of this video could not be saved.</source>
+        <translation>Không thể lưu một số rãnh của video này.</translation>
+    </message>
+    <message>
+        <source>Complete — tracks saved from %1 video(s)</source>
+        <translation>Hoàn tất — đã lưu rãnh từ %1 video</translation>
+    </message>
+    <message>
+        <source>Complete — %1 video(s) done, %2 skipped</source>
+        <translation>Hoàn tất — đã xong %1 video, đã bỏ qua %2</translation>
+    </message>
+    <message>
+        <source>Nothing saved — every video was skipped. The log says why.</source>
+        <translation>Không lưu được gì — mọi video đều bị bỏ qua. Xem nhật ký để biết lý do.</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>Chọn thư mục đầu ra</translation>
+    </message>
+    <message>
+        <source>Next to each video</source>
+        <translation>Cạnh mỗi video</translation>
+    </message>
+    <message>
+        <source>Track extraction</source>
+        <translation>Trích xuất rãnh</translation>
+    </message>
+    <message>
+        <source>Video</source>
+        <translation>Video</translation>
+    </message>
+    <message>
+        <source>ffmpeg and ffprobe were not found. Install ffmpeg and add it to PATH to use this tool.</source>
+        <translation>Không tìm thấy ffmpeg và ffprobe. Hãy cài đặt ffmpeg và thêm vào PATH để dùng công cụ này.</translation>
+    </message>
+    <message>
+        <source>Save the subtitle and audio tracks inside a video as their own files. Tracks are copied as they are; the video is never changed.</source>
+        <translation>Lưu các rãnh phụ đề và âm thanh bên trong video thành các tệp riêng. Rãnh được sao chép nguyên trạng; video không bao giờ bị thay đổi.</translation>
+    </message>
+    <message>
+        <source>Videos (%1)</source>
+        <translation>Tệp video (%1)</translation>
+    </message>
+    <message>
+        <source>All Files (*)</source>
+        <translation>Tất cả tệp (*)</translation>
+    </message>
+    <message>
+        <source>This field takes a video or a folder.</source>
+        <translation>Trường này nhận một video hoặc một thư mục.</translation>
+    </message>
+    <message>
+        <source>Video file or folder:</source>
+        <translation>Tệp video hoặc thư mục:</translation>
+    </message>
+    <message>
+        <source>Tracks</source>
+        <translation>Rãnh</translation>
+    </message>
+    <message>
+        <source>Choose a video to list its tracks.</source>
+        <translation>Chọn một video để liệt kê các rãnh của nó.</translation>
+    </message>
+    <message>
+        <source>Track</source>
+        <translation>Rãnh</translation>
+    </message>
+    <message>
+        <source>Tick the tracks to save.</source>
+        <translation>Đánh dấu các rãnh cần lưu.</translation>
+    </message>
+    <message>
+        <source>Language</source>
+        <translation>Ngôn ngữ</translation>
+    </message>
+    <message>
+        <source>The language the file says the track is in.</source>
+        <translation>Ngôn ngữ của rãnh theo thông tin ghi trong tệp.</translation>
+    </message>
+    <message>
+        <source>Codec</source>
+        <translation>Mã hóa</translation>
+    </message>
+    <message>
+        <source>The track's format. Hover a row to see the file type it is saved as.</source>
+        <translation>Định dạng của rãnh. Di chuột lên một dòng để xem loại tệp mà rãnh được lưu thành.</translation>
+    </message>
+    <message>
+        <source>Title</source>
+        <translation>Tiêu đề</translation>
+    </message>
+    <message>
+        <source>The track's name in the file, such as Signs &amp; Songs.</source>
+        <translation>Tên của rãnh trong tệp, chẳng hạn Signs &amp; Songs.</translation>
+    </message>
+    <message>
+        <source>Flags</source>
+        <translation>Cờ</translation>
+    </message>
+    <message>
+        <source>Default, Forced, and Image for picture-based subtitles.</source>
+        <translation>Mặc định, Bắt buộc, và Ảnh cho phụ đề dạng ảnh.</translation>
+    </message>
+    <message>
+        <source>Output</source>
+        <translation>Đầu ra</translation>
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation>Đầu ra:</translation>
+    </message>
+    <message>
+        <source>Choose Folder…</source>
+        <translation>Chọn thư mục…</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>Đặt lại</translation>
+    </message>
+    <message>
+        <source>Tracks are saved next to each video unless you choose a folder. A single ticked subtitle is named after its video, so mining finds it.</source>
+        <translation>Rãnh được lưu cạnh mỗi video trừ khi chọn một thư mục. Nếu chỉ đánh dấu một phụ đề, phụ đề đó được đặt tên theo video để việc khai thác tìm thấy nó.</translation>
+    </message>
+    <message>
+        <source>Overwrite existing files</source>
+        <translation>Ghi đè các tệp hiện có</translation>
+    </message>
+    <message>
+        <source>When unchecked, a track whose file already exists is skipped, not overwritten.</source>
+        <translation>Khi bỏ chọn, rãnh có tệp đã tồn tại sẽ bị bỏ qua, không ghi đè.</translation>
+    </message>
+    <message>
+        <source>Extract Tracks</source>
+        <translation>Trích xuất rãnh</translation>
+    </message>
+    <message>
+        <source>ffmpeg could not be started. Install it and add it to PATH, then try again.</source>
+        <translation>Không thể khởi động ffmpeg. Hãy cài đặt và thêm vào PATH, rồi thử lại.</translation>
+    </message>
+    <message>
+        <source>Reading tracks…</source>
+        <translation>Đang đọc các rãnh…</translation>
+    </message>
+    <message>
+        <source>Tracks could not be read.</source>
+        <translation>Không thể đọc các rãnh.</translation>
+    </message>
+    <message>
+        <source>No videos were found in that folder.</source>
+        <translation>Không tìm thấy video nào trong thư mục đó.</translation>
+    </message>
+    <message>
+        <source>No subtitle or audio tracks were found in %1.</source>
+        <translation>Không tìm thấy rãnh phụ đề hoặc âm thanh nào trong %1.</translation>
+    </message>
+    <message>
+        <source>Tracks of %1, the first of %2 videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
+        <translation>Các rãnh của %1, video đầu tiên trong %2 video. Các rãnh đã đánh dấu sẽ được lưu từ mọi video trong thư mục; video không có rãnh đó sẽ bị bỏ qua.</translation>
+    </message>
+    <message>
+        <source>Tracks of %1. Tick the ones to save.</source>
+        <translation>Các rãnh của %1. Đánh dấu các rãnh cần lưu.</translation>
+    </message>
+    <message>
+        <source>Picture-based subtitles: saved as they are for an OCR tool. Mining can't read them.</source>
+        <translation>Phụ đề dạng ảnh: được lưu nguyên trạng để dùng với công cụ OCR. Việc khai thác không đọc được loại này.</translation>
+    </message>
+    <message>
+        <source>Subtitle %1</source>
+        <translation>Phụ đề %1</translation>
+    </message>
+    <message>
+        <source>Audio %1</source>
+        <translation>Âm thanh %1</translation>
+    </message>
+    <message>
+        <source>Saved as %1</source>
+        <translation>Lưu dưới dạng %1</translation>
+    </message>
+    <message>
+        <source>Default</source>
+        <translation>Mặc định</translation>
+    </message>
+    <message>
+        <source>Forced</source>
+        <translation>Bắt buộc</translation>
+    </message>
+    <message>
+        <source>Image</source>
+        <translation>Ảnh</translation>
+    </message>
+    <message>
+        <source>Choose a video or a folder first.</source>
+        <translation>Trước tiên hãy chọn một video hoặc một thư mục.</translation>
+    </message>
+    <message>
+        <source>That file or folder no longer exists.</source>
+        <translation>Tệp hoặc thư mục đó không còn tồn tại.</translation>
+    </message>
+    <message>
+        <source>Wait for the track list to load, then tick the tracks to save.</source>
+        <translation>Hãy đợi danh sách rãnh tải xong, rồi đánh dấu các rãnh cần lưu.</translation>
+    </message>
+    <message>
+        <source>Tick at least one track to save.</source>
+        <translation>Đánh dấu ít nhất một rãnh để lưu.</translation>
+    </message>
+    <message>
+        <source>That folder could not be scanned.</source>
+        <translation>Không thể quét thư mục đó.</translation>
+    </message>
+    <message>
+        <source>Output folder is not writable.</source>
+        <translation>Không ghi được vào thư mục đầu ra.</translation>
+    </message>
+    <message>
+        <source>Saving tracks from video %1 of %2</source>
+        <translation>Đang lưu rãnh từ video %1 trên %2</translation>
     </message>
 </context><context>
     <name>UISettingsPanel</name>

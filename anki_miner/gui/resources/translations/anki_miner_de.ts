@@ -2705,6 +2705,14 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Eine Untertiteldatei oder einen Ordner mit Untertiteldateien auswählen, um den Anteil bereits bekannter Wörter, die Zahl neuer Wörter und die Zahl der i+1-Zeilen zu sehen. Nutzt Ihre Anki-Karten und bekannten Wörter; es wird nichts geschrieben.</translation>
     </message>
     <message>
+        <source>Save the subtitles or audio inside a video</source>
+        <translation>Untertitel oder Audio aus einem Video speichern</translation>
+    </message>
+    <message>
+        <source>Pick an .mkv or another video, or a folder of them, tick its subtitle or audio tracks and save each as its own file, copied without re-encoding. A single subtitle is named after its video, so Video mining finds it. The video is never changed.</source>
+        <translation>Eine .mkv-Datei oder ein anderes Video oder einen Ordner mit Videos wählen, die Untertitel- oder Audiospuren markieren und jede ohne Neukodierung als eigene Datei speichern. Ein einzelner Untertitel wird nach seinem Video benannt, damit Video-Mining ihn findet. Das Video wird nie verändert.</translation>
+    </message>
+    <message>
         <source>Restyle mined cards</source>
         <translation>Gesammelte Karten neu gestalten</translation>
     </message>
@@ -6515,6 +6523,10 @@ Hinzuzufügende Wörter: %3. Fortfahren?</translation>
     <message>
         <source>Readability</source>
         <translation>Lesbarkeit</translation>
+    </message>
+    <message>
+        <source>Tracks</source>
+        <translation>Spuren</translation>
     </message>
     <message>
         <source>Anki Miner updated</source>
@@ -11798,6 +11810,322 @@ Ihre installierten Ressourcen und Ihr Design bleiben erhalten.</translation>
     <message>
         <source>Favorite all %2 %3 variants (%1 favorited).</source>
         <translation>Alle %2 %3 Varianten favorisieren (%1 favorisiert).</translation>
+    </message>
+</context><context>
+    <name>TrackExtractWorker</name>
+    <message>
+        <source>Subtitle %1</source>
+        <translation>Untertitel %1</translation>
+    </message>
+    <message>
+        <source>Audio %1</source>
+        <translation>Audio %1</translation>
+    </message>
+    <message>
+        <source>%1 has no %2 — skipped</source>
+        <translation>In %1 fehlt %2 — übersprungen</translation>
+    </message>
+    <message>
+        <source>Saving %1</source>
+        <translation>%1 wird gespeichert</translation>
+    </message>
+    <message>
+        <source>%1: %2 could not be saved: %3</source>
+        <translation>%1: %2 konnte nicht gespeichert werden: %3</translation>
+    </message>
+    <message>
+        <source>Saved %1, but ffmpeg reported: %2</source>
+        <translation>%1 gespeichert, aber ffmpeg meldete: %2</translation>
+    </message>
+    <message>
+        <source>Saved %1</source>
+        <translation>%1 gespeichert</translation>
+    </message>
+    <message>
+        <source>No ticked track was saved</source>
+        <translation>Keine angehakte Spur wurde gespeichert</translation>
+    </message>
+    <message>
+        <source>%1: %2 is tagged %3 here, not %4 as in the listed video</source>
+        <translation>%1: %2 ist hier als %3 gekennzeichnet, nicht als %4 wie im aufgeführten Video</translation>
+    </message>
+    <message>
+        <source>%1 would replace the video itself — skipped</source>
+        <translation>%1 würde das Video selbst ersetzen — übersprungen</translation>
+    </message>
+    <message>
+        <source>%1 was already saved from another video in this run — skipped</source>
+        <translation>%1 wurde in diesem Lauf bereits aus einem anderen Video gespeichert — übersprungen</translation>
+    </message>
+    <message>
+        <source>%1 already exists — tick Overwrite to replace it</source>
+        <translation>%1 existiert bereits — aktivieren Sie Überschreiben, um die Datei zu ersetzen</translation>
+    </message>
+</context><context>
+    <name>TracksTab</name>
+    <message>
+        <source>Progress</source>
+        <translation>Fortschritt</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Fertig</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>Fertig: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>Übersprungen</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>Übersprungen: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Abbrechen</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Wird abgebrochen…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Abgebrochen</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>Fehlgeschlagen — siehe Protokoll</translation>
+    </message>
+    <message>
+        <source>Finished with errors — see log</source>
+        <translation>Mit Fehlern beendet — siehe Protokoll</translation>
+    </message>
+    <message>
+        <source>Some tracks could not be saved.</source>
+        <translation>Einige Spuren konnten nicht gespeichert werden.</translation>
+    </message>
+    <message>
+        <source>Some tracks of this video could not be saved.</source>
+        <translation>Einige Spuren dieses Videos konnten nicht gespeichert werden.</translation>
+    </message>
+    <message>
+        <source>Complete — tracks saved from %1 video(s)</source>
+        <translation>Abgeschlossen — Spuren aus %1 Video(s) gespeichert</translation>
+    </message>
+    <message>
+        <source>Complete — %1 video(s) done, %2 skipped</source>
+        <translation>Abgeschlossen — %1 Video(s) fertig, %2 übersprungen</translation>
+    </message>
+    <message>
+        <source>Nothing saved — every video was skipped. The log says why.</source>
+        <translation>Nichts gespeichert — jedes Video wurde übersprungen. Das Protokoll nennt den Grund.</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>Ausgabeordner auswählen</translation>
+    </message>
+    <message>
+        <source>Next to each video</source>
+        <translation>Neben jedem Video</translation>
+    </message>
+    <message>
+        <source>Track extraction</source>
+        <translation>Spurextraktion</translation>
+    </message>
+    <message>
+        <source>Video</source>
+        <translation>Video</translation>
+    </message>
+    <message>
+        <source>ffmpeg and ffprobe were not found. Install ffmpeg and add it to PATH to use this tool.</source>
+        <translation>ffmpeg und ffprobe wurden nicht gefunden. Installieren Sie ffmpeg und fügen Sie es dem PATH hinzu, um dieses Werkzeug zu verwenden.</translation>
+    </message>
+    <message>
+        <source>Save the subtitle and audio tracks inside a video as their own files. Tracks are copied as they are; the video is never changed.</source>
+        <translation>Die Untertitel- und Audiospuren eines Videos als eigene Dateien speichern. Die Spuren werden so kopiert, wie sie sind; das Video wird nie verändert.</translation>
+    </message>
+    <message>
+        <source>Videos (%1)</source>
+        <translation>Videodateien (%1)</translation>
+    </message>
+    <message>
+        <source>All Files (*)</source>
+        <translation>Alle Dateien (*)</translation>
+    </message>
+    <message>
+        <source>This field takes a video or a folder.</source>
+        <translation>Dieses Feld erwartet ein Video oder einen Ordner.</translation>
+    </message>
+    <message>
+        <source>Video file or folder:</source>
+        <translation>Videodatei oder Ordner:</translation>
+    </message>
+    <message>
+        <source>Tracks</source>
+        <translation>Spuren</translation>
+    </message>
+    <message>
+        <source>Choose a video to list its tracks.</source>
+        <translation>Wählen Sie ein Video, um seine Spuren aufzulisten.</translation>
+    </message>
+    <message>
+        <source>Track</source>
+        <translation>Spur</translation>
+    </message>
+    <message>
+        <source>Tick the tracks to save.</source>
+        <translation>Markieren Sie die zu speichernden Spuren.</translation>
+    </message>
+    <message>
+        <source>Language</source>
+        <translation>Sprache</translation>
+    </message>
+    <message>
+        <source>The language the file says the track is in.</source>
+        <translation>Die Sprache, die die Datei für die Spur angibt.</translation>
+    </message>
+    <message>
+        <source>Codec</source>
+        <translation>Codec</translation>
+    </message>
+    <message>
+        <source>The track's format. Hover a row to see the file type it is saved as.</source>
+        <translation>Das Format der Spur. Zeigen Sie mit der Maus auf eine Zeile, um zu sehen, als welcher Dateityp sie gespeichert wird.</translation>
+    </message>
+    <message>
+        <source>Title</source>
+        <translation>Titel</translation>
+    </message>
+    <message>
+        <source>The track's name in the file, such as Signs &amp; Songs.</source>
+        <translation>Der Name der Spur in der Datei, etwa Signs &amp; Songs.</translation>
+    </message>
+    <message>
+        <source>Flags</source>
+        <translation>Merkmale</translation>
+    </message>
+    <message>
+        <source>Default, Forced, and Image for picture-based subtitles.</source>
+        <translation>Standard, Erzwungen und Bild für bildbasierte Untertitel.</translation>
+    </message>
+    <message>
+        <source>Output</source>
+        <translation>Ausgabe</translation>
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation>Ausgabe:</translation>
+    </message>
+    <message>
+        <source>Choose Folder…</source>
+        <translation>Ordner wählen…</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>Zurücksetzen</translation>
+    </message>
+    <message>
+        <source>Tracks are saved next to each video unless you choose a folder. A single ticked subtitle is named after its video, so mining finds it.</source>
+        <translation>Spuren werden neben jedem Video gespeichert, sofern Sie keinen Ordner wählen. Ein einzelner angehakter Untertitel wird nach seinem Video benannt, damit das Mining ihn findet.</translation>
+    </message>
+    <message>
+        <source>Overwrite existing files</source>
+        <translation>Vorhandene Dateien überschreiben</translation>
+    </message>
+    <message>
+        <source>When unchecked, a track whose file already exists is skipped, not overwritten.</source>
+        <translation>Wenn deaktiviert, wird eine Spur, deren Datei bereits existiert, übersprungen und nicht überschrieben.</translation>
+    </message>
+    <message>
+        <source>Extract Tracks</source>
+        <translation>Spuren extrahieren</translation>
+    </message>
+    <message>
+        <source>ffmpeg could not be started. Install it and add it to PATH, then try again.</source>
+        <translation>ffmpeg konnte nicht gestartet werden. Installieren Sie es, fügen Sie es dem PATH hinzu und versuchen Sie es erneut.</translation>
+    </message>
+    <message>
+        <source>Reading tracks…</source>
+        <translation>Spuren werden gelesen…</translation>
+    </message>
+    <message>
+        <source>Tracks could not be read.</source>
+        <translation>Spuren konnten nicht gelesen werden.</translation>
+    </message>
+    <message>
+        <source>No videos were found in that folder.</source>
+        <translation>In diesem Ordner wurden keine Videos gefunden.</translation>
+    </message>
+    <message>
+        <source>No subtitle or audio tracks were found in %1.</source>
+        <translation>In %1 wurden keine Untertitel- oder Audiospuren gefunden.</translation>
+    </message>
+    <message>
+        <source>Tracks of %1, the first of %2 videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
+        <translation>Spuren von %1, dem ersten von %2 Videos. Die angehakten Spuren werden aus jedem Video im Ordner gespeichert; ein Video ohne eine solche Spur wird übersprungen.</translation>
+    </message>
+    <message>
+        <source>Tracks of %1. Tick the ones to save.</source>
+        <translation>Spuren von %1. Markieren Sie die zu speichernden.</translation>
+    </message>
+    <message>
+        <source>Picture-based subtitles: saved as they are for an OCR tool. Mining can't read them.</source>
+        <translation>Bildbasierte Untertitel: werden unverändert für ein OCR-Werkzeug gespeichert. Das Mining kann sie nicht lesen.</translation>
+    </message>
+    <message>
+        <source>Subtitle %1</source>
+        <translation>Untertitel %1</translation>
+    </message>
+    <message>
+        <source>Audio %1</source>
+        <translation>Audio %1</translation>
+    </message>
+    <message>
+        <source>Saved as %1</source>
+        <translation>Gespeichert als %1</translation>
+    </message>
+    <message>
+        <source>Default</source>
+        <translation>Standard</translation>
+    </message>
+    <message>
+        <source>Forced</source>
+        <translation>Erzwungen</translation>
+    </message>
+    <message>
+        <source>Image</source>
+        <translation>Bild</translation>
+    </message>
+    <message>
+        <source>Choose a video or a folder first.</source>
+        <translation>Wählen Sie zuerst ein Video oder einen Ordner.</translation>
+    </message>
+    <message>
+        <source>That file or folder no longer exists.</source>
+        <translation>Diese Datei oder dieser Ordner existiert nicht mehr.</translation>
+    </message>
+    <message>
+        <source>Wait for the track list to load, then tick the tracks to save.</source>
+        <translation>Warten Sie, bis die Spurliste geladen ist, und markieren Sie dann die zu speichernden Spuren.</translation>
+    </message>
+    <message>
+        <source>Tick at least one track to save.</source>
+        <translation>Markieren Sie mindestens eine Spur zum Speichern.</translation>
+    </message>
+    <message>
+        <source>That folder could not be scanned.</source>
+        <translation>Dieser Ordner konnte nicht durchsucht werden.</translation>
+    </message>
+    <message>
+        <source>Output folder is not writable.</source>
+        <translation>Der Ausgabeordner ist nicht beschreibbar.</translation>
+    </message>
+    <message>
+        <source>Saving tracks from video %1 of %2</source>
+        <translation>Spuren aus Video %1 von %2 werden gespeichert</translation>
     </message>
 </context><context>
     <name>UISettingsPanel</name>
