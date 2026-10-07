@@ -84,6 +84,9 @@ def _extract_one(src: Path, ref: TrackRef) -> Path:
     before = _sha(src)
     result = service.extract(src, planned[0])
     assert result.status is ExtractStatus.SAVED, result.reason
+    # A clean source copies silently at -v error; anything here would put a
+    # false "ffmpeg reported" warning on every save.
+    assert result.reason == ""
     assert _sha(src) == before
     dest = planned[0].dest
     assert dest.stat().st_size > 0
@@ -213,3 +216,37 @@ def test_unicode_and_colon_stem_round_trips_and_pairs(tmp_path, encoders):
     dest = _extract_one(src, TrackRef("subtitle", 0))
     assert dest.name == "Re:Zero 日本語 01.ass"
     assert find_sibling_subtitle(src) == dest
+
+
+def test_a_truncated_source_saves_with_ffmpegs_warning(tmp_path, encoders):
+    """Half a download: ffmpeg exits 0 but says so, and the tool must pass that on."""
+    _need(encoders, "flac")
+    cues = tmp_path / "cues.srt"
+    cues.write_text(
+        "".join(f"{n}\n00:00:{n:02d},000 --> 00:00:{n:02d},500\n{CUE}\n\n" for n in range(1, 30)), encoding="utf-8"
+    )
+    full = tmp_path / "full.mkv"
+    _ffmpeg(
+        "-f",
+        "lavfi",
+        "-i",
+        "sine=frequency=440:sample_rate=48000:duration=30",
+        "-i",
+        str(cues),
+        "-map",
+        "0:a",
+        "-map",
+        "1:s",
+        "-c:a",
+        "flac",
+        "-c:s",
+        "copy",
+        str(full),
+    )
+    src = tmp_path / "EP01.mkv"
+    src.write_bytes(full.read_bytes()[: full.stat().st_size // 2])
+    service = TrackExtractorService(AnkiMinerConfig())
+    planned, _ = plan_outputs(src, service.probe(src), [TrackRef("subtitle", 0)], tmp_path)
+    result = service.extract(src, planned[0])
+    assert result.status is ExtractStatus.SAVED
+    assert result.reason

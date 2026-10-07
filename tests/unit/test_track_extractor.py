@@ -414,3 +414,35 @@ def test_batch_pairs_each_episode_with_its_own_multi_tick_subtitle(tmp_path):
     assert [(p.video.name, p.subtitle.name) for p in pairs] == [
         (f"Show - {n:02d}.mkv", f"Show - {n:02d}.s1.jpn.ass") for n in range(1, 5)
     ]
+
+
+def test_a_save_that_ffmpeg_complained_about_carries_its_warning(tmp_path, monkeypatch):
+    """A half-downloaded .mkv exits 0 with 'File ended prematurely': saved, but not cleanly."""
+    _fake_run(monkeypatch, stderr="[matroska,webm @ 0x1] File ended prematurely\n")
+    video, plan = _plan(tmp_path)
+    result = TrackExtractorService(AnkiMinerConfig()).extract(video, plan)
+    assert result.status is ExtractStatus.SAVED
+    assert "File ended prematurely" in result.reason
+
+
+def test_a_clean_save_has_no_reason(tmp_path, monkeypatch):
+    _fake_run(monkeypatch)
+    video, plan = _plan(tmp_path)
+    assert TrackExtractorService(AnkiMinerConfig()).extract(video, plan).reason == ""
+
+
+def test_ffmpegs_opus_parser_noise_is_not_a_warning(tmp_path, monkeypatch):
+    """ffmpeg 8 prints this on every clean copy from a source with Opus audio (real-ffmpeg test pins it)."""
+    _fake_run(monkeypatch, stderr="[opus @ 0x5fa3e1815580] Error parsing Opus packet header.\n")
+    video, plan = _plan(tmp_path)
+    assert TrackExtractorService(AnkiMinerConfig()).extract(video, plan).reason == ""
+
+
+def test_real_damage_still_shows_past_opus_noise(tmp_path, monkeypatch):
+    _fake_run(
+        monkeypatch,
+        stderr="[opus @ 0x1] Error parsing Opus packet header.\n[matroska,webm @ 0x2] File ended prematurely\n"
+        "[opus @ 0x1] Error parsing Opus packet header.\n",
+    )
+    video, plan = _plan(tmp_path)
+    assert "File ended prematurely" in TrackExtractorService(AnkiMinerConfig()).extract(video, plan).reason

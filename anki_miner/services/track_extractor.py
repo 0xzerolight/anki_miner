@@ -144,6 +144,7 @@ class ExtractStatus(Enum):
 @dataclass(frozen=True)
 class ExtractResult:
     status: ExtractStatus
+    #: Why it failed; on SAVED, what ffmpeg warned about while copying (empty when clean).
     reason: str = ""
 
 
@@ -300,6 +301,17 @@ def _last_line(text: str) -> str:
     return lines[-1] if lines else ""
 
 
+#: Lines ffmpeg prints on a clean copy. ffmpeg 8's Opus parser reports this for
+#: every source carrying Opus audio (WebM, many MKV releases), even when another
+#: stream is the one being copied; passed on, every such save would read as damaged.
+_BENIGN_STDERR = ("Error parsing Opus packet header",)
+
+
+def _copy_warning(stderr: str) -> str:
+    """What ffmpeg warned about during a copy that still exited 0, or ``""``."""
+    return _last_line("\n".join(line for line in stderr.splitlines() if not any(b in line for b in _BENIGN_STDERR)))
+
+
 def _failure(result: SupervisedResult, staged: Path) -> ExtractResult | None:
     """The track's failure, or None when ffmpeg wrote it. Raises when ffmpeg never started."""
     if result.state is SupervisedState.CANCELLED:
@@ -350,4 +362,7 @@ class TrackExtractorService:
             # mkstemp or replace in a read-only, missing or locked folder.
             logger.warning("Track extract to %s failed: %s: %s", plan.dest, type(exc).__name__, exc)
             return ExtractResult(ExtractStatus.FAILED, str(exc))
-        return ExtractResult(ExtractStatus.SAVED)
+        # At -v error a clean copy prints nothing. A damaged source (a
+        # half-downloaded file, a torrent hole) still exits 0 with
+        # "File ended prematurely", having saved only part of the track.
+        return ExtractResult(ExtractStatus.SAVED, _copy_warning(result.stderr))

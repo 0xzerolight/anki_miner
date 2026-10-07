@@ -90,7 +90,12 @@ class TrackExtractWorker(FileQueueWorker):
                 continue
             self._claimed.add(plan.dest.resolve())
             saved += 1
-            self.file_note.emit(idx, tr_format(self.tr("Saved %1"), plan.dest.name))
+            if result.reason:
+                # Saved, but from a damaged source: the track may be missing its end.
+                note = tr_format(self.tr("Saved %1, but ffmpeg reported: %2"), plan.dest.name, result.reason)
+            else:
+                note = tr_format(self.tr("Saved %1"), plan.dest.name)
+            self.file_note.emit(idx, note)
         if failures:
             self.file_finished.emit(idx, None, "\n".join(failures))
         elif saved:

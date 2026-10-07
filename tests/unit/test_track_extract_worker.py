@@ -215,3 +215,16 @@ def test_each_video_is_probed_once(tmp_path):
     service = _saving_service()
     _run(videos, [SUB0, AUD0], service)
     assert [c.args[0] for c in service.probe.call_args_list] == videos
+
+
+def test_a_save_with_an_ffmpeg_warning_says_so(tmp_path):
+    (video,) = _videos(tmp_path, "EP12.mkv")
+    service = _saving_service()
+
+    def extract(v, plan, *, cancel_event=None):
+        plan.dest.write_bytes(b"track")
+        return ExtractResult(ExtractStatus.SAVED, "File ended prematurely")
+
+    service.extract.side_effect = extract
+    rec = _run([video], [SUB0], service)
+    assert any("EP12.ass" in n and "File ended prematurely" in n for n in rec.notes)
