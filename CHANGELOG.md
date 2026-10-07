@@ -16,7 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [3.7.0] - 2026-10-07
 
-Updates install in place on Windows and the AppImage, and cards gain a Language field and a note type for every language. The update banner downloads the new version, checks it against the release's checksum and reopens Anki Miner on it; the AppImage also works with AppImage managers. Anki Miner Note is recognised in every mining language, and the setup wizard no longer assumes Lapis. Programs that drive Anki Miner through `--api` gain `render`, `media`, `fetch`, `settings-import` and `setup`, a dry run, and runs beside an open window. Some mining changes alter card output: the whitelist also keeps names, interjections and kana-only words; sentence length caps and i+1 judge the sentence that reaches the card; words that differ only by case or character set make one card per run; word lists match half-width and old kanji forms; Korean all-Hanja words show their hangul; and pitch position fields hold the downstep number. The Thai, Chinese, Vietnamese and Cantonese frequency lists now download from a separate repository.
+Updates install in place on Windows and the AppImage, and cards gain a Language field. The update banner downloads the new version and checks it against the release's checksum, and Restart now installs it and reopens Anki Miner; AppImage managers can update the AppImage too. Anki Miner Note is recognised in every mining language, and the setup wizard no longer assumes Lapis. Programs that drive Anki Miner through `--api` gain `render`, `media`, `fetch`, `settings-import` and `setup`, and `mine` takes a dry run and runs beside a window that is not mining. Some mining changes alter card output: the whitelist also keeps names, interjections and kana-only words; sentence length caps and i+1 judge the sentence that reaches the card; words that differ only by case or character set make one card per run; word lists match half-width katakana and kanji variants; Korean all-Hanja words show their hangul; and pitch position fields hold the downstep number for pitch dictionaries that list high/low patterns. The Thai, Chinese, Vietnamese and Cantonese frequency lists now download from a separate repository.
 
 ### Added
 - **Update in place on Windows and the AppImage.** When a new version is out, the banner's Update now downloads it, with progress in the bar at the bottom, and checks it against the release's checksum. Restart now installs it and reopens Anki Miner. macOS, the .deb and pip installs keep the download link.
@@ -37,7 +37,7 @@ Updates install in place on Windows and the AppImage, and cards gain a Language 
 - **With i+1 on, merging a sentence across subtitle lines no longer adds a second unknown word.** A word whose merge would add one keeps its own line when the Word Curator opens.
 - **Batch in season mode no longer cards a word an earlier episode of the run just added** (分かる, then わかる), and no longer skips a chosen word when the rest of its episode was already known.
 - **Words that differ only by case or character set make one card per run** (German Essen and essen, 頭髮 and 头发), also across a season's episodes and after an edit in the Word Curator.
-- **Word list entries in half-width katakana or old kanji forms** (ｺｰﾋｰ, 𠮟る) now match the words mined from subtitles.
+- **Word list entries in half-width katakana or kanji variants** (ｺｰﾋｰ, 𠮟る) now match the words mined from subtitles.
 - **French sentences keep their no-break spaces**, so ? ! : ; and » no longer start a new line on the card.
 - **Deck Builder leaves out words no installed dictionary defines** before the preview, so Cards to create counts only words that become cards, and a build needs an offline dictionary like any other mining.
 - **The Thai, Chinese, Vietnamese and Cantonese frequency lists download from a separate repository** ([anki_miner_assets](https://github.com/0xzerolight/anki_miner_assets)), so they no longer count as app downloads. Once the old copies are removed, Anki Miner 3.5 and 3.6 can no longer download these lists (lists already installed keep working); update to get them.
@@ -45,10 +45,10 @@ Updates install in place on Windows and the AppImage, and cards gain a Language 
 
 ### Fixed
 - **Reading → Anki Deck: the Word Curator shows the card's line under its picture**, not the card's position in the deck.
-- **View details shows the share of words you already know as Comprehension.** It used to count every word a filter or the Word Curator removed as known. Without the Word Curator, its New Words count also leaves out words that full-sentence mining's limits or duplicate check dropped.
+- **View details shows the share of words you already know as Comprehension.** It used to count every word a filter or the Word Curator removed as known. Without the Word Curator, its New Words count also leaves out words that Max Sentence Duration, Max Sentence Characters or One card per sentence dropped after merging lines.
 - **Fill in automatically maps Hebrew part of speech and Thai Paiboon readings** to fields named PartOfSpeech and Romanization.
 - **Indonesian affixes no longer break after a hyphen** (ke- / -an stay whole on one line).
-- **Dictionary entries on Lapis-style cards no longer show " | " between bulleted meanings, and Wiktionary tags (countable, figurative, …) show as separate chips even when the dictionary was added without its own styles.** Existing cards pick this up with Card Backfill → Restyle cards…
+- **Dictionary entries on Lapis-style cards no longer show " | " between bulleted meanings, and Wiktionary tags (countable, figurative, …) show as separate chips even when the dictionary was added without its own styles.** Existing cards pick this up with Utilities → Card Backfill → Restyle cards…
 
 ## [3.6.0] - 2026-10-03
 
