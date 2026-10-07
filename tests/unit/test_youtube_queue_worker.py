@@ -576,6 +576,16 @@ def test_source_label_forwarded_from_video_info_title(make_worker, mock_processo
     assert kwargs["source_label"] == "My Great Video"
 
 
+def test_site_forwarded_from_video_info(make_worker, mock_processor):
+    """The worker names the run after the site the probe found."""
+    item = _make_item(video_id="a")
+    item.video_info = replace(item.video_info, site="Bilibili")
+    worker = make_worker(items=[item])
+    worker.run()
+
+    assert mock_processor.process_youtube_url.call_args.kwargs["site"] == "Bilibili"
+
+
 def test_ready_guard_raises_when_video_info_missing(make_worker, mock_processor):
     """A READY item lacking video_info is a terminal error (probe incomplete)."""
     item = _make_item(video_id="a")

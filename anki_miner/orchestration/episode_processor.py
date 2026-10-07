@@ -221,6 +221,18 @@ def sanitize_source_label(label: str) -> str:
     return _ARR_METADATA_RE.sub("", label).strip()
 
 
+def _online_run_identity(site: str, video_id: str) -> tuple[str, str]:
+    """(series, episode) a fetched video is recorded under in stats and receipts.
+
+    YouTube keeps ``YouTube`` / ``YT:<id>``, the identity every recorded
+    YouTube run already carries. Another site uses its own name, so a Bilibili
+    run does not file under YouTube.
+    """
+    if site == "YouTube":
+        return "YouTube", f"YT:{video_id}"
+    return site, f"{site}:{video_id}"
+
+
 def _build_lemma_context(words: list[TokenizedWord]) -> dict[str, str]:
     """Map each word's ``mined_form`` to its UniDic lemma for the definition /
     glossary batches' Rule A′ homograph scope.
@@ -3762,6 +3774,7 @@ class EpisodeProcessor:
         source_label: str | None = None,
         fallback_allowed: bool = False,
         align_captions: bool = False,
+        site: str = "YouTube",
     ) -> ProcessingResult:
         """Fetch a YouTube video + subs then run the standard mining pipeline.
 
@@ -3770,8 +3783,9 @@ class EpisodeProcessor:
         caller's responsibility, typically in a ``try/finally``.
 
         Episode identity recorded to stats_service is ``YT:<video_id>`` with
-        series ``YouTube`` so that YouTube mining rows never collide with
-        file-based folders that happen to share a stem.
+        series ``YouTube`` for YouTube, and ``<site>:<video_id>`` with series
+        ``<site>`` for another site (``VideoInfo.site``), so online rows never
+        collide with file-based folders that share a stem.
 
         Args:
             url: YouTube video URL (or anything yt-dlp accepts).
@@ -3811,6 +3825,8 @@ class EpisodeProcessor:
                 before mining (the tab's per-run checkbox). Ignored in
                 "transcribe" mode, where the subtitle already came from that
                 audio. Best-effort: a failed alignment keeps the original file.
+            site: Where the video lives (``VideoInfo.site``): "YouTube", or
+                another site's name ("Bilibili"). Names the run's identity.
             source_label: Optional origin string for the card "source" field
                 (typically the YouTube video title). Forwarded to
                 ``process_episode`` as ``source_label_override``. The stats/dedup
@@ -3818,7 +3834,7 @@ class EpisodeProcessor:
 
         Returns:
             ProcessingResult from the mining pipeline, with episode identity
-            overridden to ``YT:<video_id>``.
+            overridden to the online identity above (``YT:<video_id>`` on YouTube).
 
         Raises:
             RuntimeError: if no YouTubeFetcherService was injected.
@@ -3833,6 +3849,7 @@ class EpisodeProcessor:
         # Bound to a local because the guard above cannot narrow the attribute
         # inside the nested fetch closure below.
         fetcher = self._youtube_fetcher
+        series, episode = _online_run_identity(site, video_id)
 
         self._reset_run_write_state()
         self.last_media_missing = {}
@@ -3842,8 +3859,8 @@ class EpisodeProcessor:
         start_time = time.time()
         receipt = self._run_receipt_fields(
             kind="youtube",
-            episode=f"YT:{video_id}",
-            series="YouTube",
+            episode=episode,
+            series=series,
             video="",
             subtitle="",
             secondary="",
@@ -3939,8 +3956,8 @@ class EpisodeProcessor:
                 subtitle_file,
                 progress_callback=progress_callback,
                 curation_callback=curation_callback,
-                episode_name_override=f"YT:{video_id}",
-                series_name_override="YouTube",
+                episode_name_override=episode,
+                series_name_override=series,
                 source_label_override=source_label,
                 cancel_event=cancel_event,
                 _outer_kind="youtube",
