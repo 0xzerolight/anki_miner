@@ -239,3 +239,12 @@ def test_track_notes_reach_the_log(qtbot, tmp_path):
 def test_ffmpeg_missing_has_its_own_sentence(qtbot, tmp_path):
     tab = _make_tab(_make_config(tmp_path), qtbot)
     assert "ffmpeg" in tab._typed_problem_summary(FfmpegNotFoundError("x"))
+
+
+def test_the_run_hands_the_worker_the_listed_languages(qtbot, tmp_path):
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    _loaded(tab, _video(tmp_path))
+    tab.tracks_table.item(2, 0).setCheckState(Qt.CheckState.Checked)
+    with patch(_WORKER_CLS, return_value=FakeToolWorker()) as worker_cls:
+        tab.extract_button.click()
+    assert worker_cls.call_args.kwargs["expected_languages"] == {ASS_REF: "jpn", TrackRef("audio", 0): "jpn"}

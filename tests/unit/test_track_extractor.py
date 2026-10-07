@@ -446,3 +446,11 @@ def test_real_damage_still_shows_past_opus_noise(tmp_path, monkeypatch):
     )
     video, plan = _plan(tmp_path)
     assert "File ended prematurely" in TrackExtractorService(AnkiMinerConfig()).extract(video, plan).reason
+
+
+@pytest.mark.parametrize(
+    ("a", "b", "same"),
+    [("jpn", "ja", True), ("JPN", "jpn", True), ("pt-br", "pt", True), ("eng", "en", True), ("jpn", "eng", False)],
+)
+def test_same_language_knows_the_aliases_mining_knows(a, b, same):
+    assert te.same_language(a, b) is same

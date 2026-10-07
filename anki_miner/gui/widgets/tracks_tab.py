@@ -516,6 +516,8 @@ class TracksTab(_ToolTabBase):
         if not ticked:
             self.show_screen_issue(ScreenIssue(summary=self.tr("Tick at least one track to save.")))
             return
+        # Captured now: a path change during the folder scan drops the listing.
+        listed = {ref: getattr(probe.tracks.find(ref), "language_tag", None) for ref in ticked}
 
         if source.is_dir():
             # Listed again, off the GUI thread: the folder may have changed since the probe.
@@ -525,7 +527,7 @@ class TracksTab(_ToolTabBase):
                 if not files:
                     self.extract_button.setEnabled(True)
                     return
-                self._start_run(files, ticked)
+                self._start_run(files, ticked, listed)
 
             self._scan_folder_async(
                 source,
@@ -536,9 +538,9 @@ class TracksTab(_ToolTabBase):
                 failed_summary=self.tr("That folder could not be scanned."),
             )
             return
-        self._start_run([source], ticked)
+        self._start_run([source], ticked, listed)
 
-    def _start_run(self, videos: list[Path], ticked: tuple[TrackRef, ...]) -> None:
+    def _start_run(self, videos: list[Path], ticked: tuple[TrackRef, ...], listed: dict[TrackRef, str | None]) -> None:
         check_dir = self._custom_output_dir or videos[0].parent
         if not self._output_dir_writable(check_dir, self.tr("Output folder is not writable.")):
             self.extract_button.setEnabled(True)
@@ -553,6 +555,7 @@ class TracksTab(_ToolTabBase):
             ticked,
             output_dir=self._custom_output_dir,
             overwrite=self.overwrite_checkbox.isChecked(),
+            expected_languages=listed,
         )
         worker.file_note.connect(self._on_file_note)
         self._start_queue_worker(worker)

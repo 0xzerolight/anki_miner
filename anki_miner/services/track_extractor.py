@@ -13,6 +13,7 @@ caller deletes; this one keeps every track faithful under a deterministic name.
 
 from __future__ import annotations
 
+import functools
 import logging
 import re
 import threading
@@ -25,6 +26,8 @@ from typing import Literal
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import FfmpegNotFoundError
+from anki_miner.languages import AVAILABLE_LANGUAGES
+from anki_miner.languages.registry import get_profile
 from anki_miner.services.audio_condenser import _pick_subtitle_stream
 from anki_miner.services.reading._util import natural_sort_key
 from anki_miner.utils.atomic_io import atomic_write_path
@@ -161,6 +164,18 @@ def track_format(kind: TrackKind, codec: str | None) -> TrackFormat:
     if kind == "subtitle":
         return SUBTITLE_FORMATS.get(codec or "", SUBTITLE_FALLBACK)
     return AUDIO_FORMATS.get(codec or "", AUDIO_FALLBACK)
+
+
+@functools.cache
+def _language_aliases() -> tuple[frozenset[str], ...]:
+    """Every mining language's codes (``ja``, ``jpn``, ``japanese``, …), one set per language."""
+    return tuple(get_profile(code).audio_track_codes for code in AVAILABLE_LANGUAGES)
+
+
+def same_language(a: str, b: str) -> bool:
+    """Whether two language tags name one language (``jpn``/``ja``, ``pt-br``/``pt``)."""
+    primary_a, primary_b = a.lower().partition("-")[0], b.lower().partition("-")[0]
+    return primary_a == primary_b or any(primary_a in codes and primary_b in codes for codes in _language_aliases())
 
 
 def is_track_input(path: Path) -> bool:

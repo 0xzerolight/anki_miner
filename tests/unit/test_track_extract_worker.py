@@ -228,3 +228,19 @@ def test_a_save_with_an_ffmpeg_warning_says_so(tmp_path):
     service.extract.side_effect = extract
     rec = _run([video], [SUB0], service)
     assert any("EP12.ass" in n and "File ended prematurely" in n for n in rec.notes)
+
+
+def test_a_track_whose_language_differs_from_the_listed_one_is_noted(tmp_path):
+    """A mixed-release folder: EP07's Subtitle 1 is English where EP01's was Japanese."""
+    (video,) = _videos(tmp_path, "EP07.mkv")
+    eng_first = MediaTracks(subtitles=(SubtitleStream(2, 0, "subrip", "eng", None, True),))
+    rec = _run([video], [SUB0], _saving_service(eng_first), expected_languages={SUB0: "jpn"})
+    assert (tmp_path / "EP07.srt").exists()
+    assert any("eng" in n and "jpn" in n for n in rec.notes)
+
+
+def test_an_alias_of_the_listed_language_is_not_noted(tmp_path):
+    (video,) = _videos(tmp_path, "EP07.mkv")
+    ja = MediaTracks(subtitles=(SubtitleStream(2, 0, "ass", "ja", None, True),))
+    rec = _run([video], [SUB0], _saving_service(ja), expected_languages={SUB0: "jpn"})
+    assert rec.notes == ["Saved EP07.ass"]
