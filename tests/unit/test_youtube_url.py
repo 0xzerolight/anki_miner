@@ -5,6 +5,7 @@ import pytest
 from anki_miner.utils.youtube_url import (
     YouTubeUrlInfo,
     classify_youtube_url,
+    is_youtube_host,
     redact_youtube_url_for_log,
 )
 
@@ -296,3 +297,42 @@ class TestRedactYouTubeUrlForLog:
 
     def test_garbage_fails_closed(self):
         assert redact_youtube_url_for_log("not-a-url-at-all") == "<redacted-url>"
+
+
+# ---------------------------------------------------------------------------
+# is_youtube_host
+# ---------------------------------------------------------------------------
+
+
+class TestIsYoutubeHost:
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "https://youtu.be/abc123",
+            "music.youtube.com/watch?v=dQw4w9WgXcQ",
+            "https://m.youtube.com/@somechannel",
+            "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
+        ],
+    )
+    def test_youtube_hosts(self, url: str) -> None:
+        assert is_youtube_host(url)
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "https://www.bilibili.com/video/BV12N4y1M7rh",
+            "https://b23.tv/AbCdEf",
+            "https://notyoutube.com/watch?v=dQw4w9WgXcQ",
+            "",
+            "http://[::1",
+        ],
+    )
+    def test_other_hosts(self, url: str) -> None:
+        assert not is_youtube_host(url)
+
+
+def test_log_redaction_keeps_the_bilibili_part_number() -> None:
+    """``p`` says which part of a multi-part video a log line is about."""
+    redacted = redact_youtube_url_for_log("https://www.bilibili.com/video/BV1bK411W797?p=2&share_source=copy_web")
+    assert redacted == "https://www.bilibili.com/video/BV1bK411W797?p=2"

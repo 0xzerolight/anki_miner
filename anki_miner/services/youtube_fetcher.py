@@ -32,7 +32,7 @@ from anki_miner.services import ytdlp_invocation
 from anki_miner.utils.logging_ext import capped, log_summary
 from anki_miner.utils.process_supervisor import SupervisedState, run_supervised
 from anki_miner.utils.subprocess_log import STDERR_TAIL_LINES, log_command
-from anki_miner.utils.youtube_url import redact_youtube_url_for_log
+from anki_miner.utils.youtube_url import is_youtube_host, redact_youtube_url_for_log
 from anki_miner.utils.ytdlp_resolver import resolve_ytdlp, ytdlp_generation_lock
 
 if TYPE_CHECKING:
@@ -47,6 +47,10 @@ logger = logging.getLogger(__name__)
 
 _VIDEO_EXTS = {".mp4", ".webm", ".mkv"}
 _VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
+# Any id another site hands back, held to what is safe as a file-name stem and
+# a glob pattern (_resolve_outputs globs f"{video_id}*"). Bilibili's is
+# "BV12N4y1M7rh", or "BV12N4y1M7rh_p2" for part 2 of a multi-part video.
+_SITE_VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 _PLAYLIST_UNAVAILABLE_TITLES = {"[Private video]", "[Deleted video]"}
 
 _YTDLP_FETCH_TIMEOUT_S = 3 * 60 * 60
@@ -66,6 +70,17 @@ def _log_probe_tail(label: str, reason: str, stderr: str | None) -> None:
     """
     tail = (stderr or "").strip().splitlines()[-10:]
     logger.warning("yt-dlp %s probe %s: stderr_tail=%s", label, reason, " | ".join(tail))
+
+
+# yt-dlp extractor keys spelled the way the site spells itself, for stats and
+# receipts. Any other key is used as it is.
+_SITE_NAMES = {"Youtube": "YouTube", "BiliBili": "Bilibili"}
+
+
+def _site_name(data: dict) -> str:
+    """The site a non-YouTube-host probe landed on, from yt-dlp's extractor key."""
+    key = str(data.get("extractor_key") or "")
+    return _SITE_NAMES.get(key, key) or "Web"
 
 
 class YouTubeFetcherService:
@@ -108,8 +123,15 @@ class YouTubeFetcherService:
     def probe_metadata(self, url: str, timeout_s: float = 60.0) -> VideoInfo:
         """Run yt-dlp --dump-single-json and return a VideoInfo.
 
+        A link on another site (Bilibili, …) takes the same probe plus
+        ``--write-subs``: those extractors fill ``subtitles`` only when asked to
+        write them (yt-dlp's ``InfoExtractor.extract_subtitles``), and ``-J``
+        implies ``--simulate``, so nothing is written. ``--no-playlist`` stays
+        on every host, so a collection entry that is itself a multi-part video
+        probes as its first part.
+
         Args:
-            url: YouTube URL to probe.
+            url: Video URL to probe (YouTube or another yt-dlp site).
             timeout_s: subprocess timeout in seconds. On timeout, yt-dlp is
                 killed and YouTubeTimeoutError is raised.
 
@@ -123,13 +145,47 @@ class YouTubeFetcherService:
             VideoTooLongError: video duration exceeds configured maximum.
         """
         logger.info("youtube probe starting: %s", redact_youtube_url_for_log(url))
+        youtube = is_youtube_host(url)
+        mode_args = ["--no-playlist"] if youtube else ["--no-playlist", "--write-subs"]
+        data, stderr = self._run_probe(url, mode_args, timeout_s)
+        return self._video_info(data, stderr, youtube=youtube)
+
+    def probe_link(self, url: str, timeout_s: float = 60.0) -> VideoInfo | PlaylistInfo:
+        """Probe a pasted link: one video or, on a site other than YouTube, a playlist.
+
+        A YouTube link is sorted into video or playlist from its URL before it
+        gets here, so it takes :meth:`probe_metadata` unchanged. Another site's
+        link can only be told apart by asking yt-dlp: a Bilibili multi-part
+        video (分P) or collection answers ``_type == "playlist"``. So this probe
+        drops ``--no-playlist`` and lists entries flat, asking for one more
+        than the queue cap (the over-cap contract of :meth:`probe_playlist`).
+        A single video under these flags answers with its full metadata.
+        """
+        if is_youtube_host(url):
+            return self.probe_metadata(url, timeout_s)
+        logger.info("youtube probe starting: %s", redact_youtube_url_for_log(url))
+        cap = self._config.youtube_playlist_max
+        data, stderr = self._run_probe(
+            url, ["--flat-playlist", "--playlist-items", f"1:{cap + 1}", "--write-subs"], timeout_s
+        )
+        if data.get("_type") == "playlist":
+            return self._playlist_info(data, youtube=False)
+        return self._video_info(data, stderr, youtube=False)
+
+    def _run_probe(self, url: str, mode_args: list[str], timeout_s: float) -> tuple[dict, str]:
+        """Run one ``--dump-single-json`` probe of *url*; return its JSON and stderr.
+
+        *mode_args* follow ``--dump-single-json``. ``["--no-playlist"]`` is
+        exactly the historical YouTube probe. Raises what :meth:`probe_metadata`
+        documents for a failed run.
+        """
         with ytdlp_generation_lock() as release_unless_managed:
             cmd: list[str] = [
                 self._ytdlp(),
                 "--ignore-config",
                 "--skip-download",
                 "--dump-single-json",
-                "--no-playlist",
+                *mode_args,
             ]
             cmd.extend(ytdlp_invocation.cookie_args(self._config))
             cmd.extend(ytdlp_invocation.js_runtime_args(self._config, self._ytdlp()))
@@ -170,18 +226,27 @@ class YouTubeFetcherService:
             raise YouTubeFetchError(
                 "yt-dlp could not read this video's details — update yt-dlp in Settings → YouTube, then retry."
             ) from e
+        return data, proc.stderr or ""
 
+    def _video_info(self, data: dict, stderr: str, *, youtube: bool) -> VideoInfo:
+        """Build the :class:`VideoInfo` for one probed video (see :meth:`probe_metadata`)."""
         try:
             video_id = data["id"]
             title = data["title"]
             duration = data["duration"]
         except KeyError as e:
-            _log_probe_tail("metadata", "incomplete metadata", proc.stderr)
+            _log_probe_tail("metadata", "incomplete metadata", stderr)
             raise YouTubeFetchError(
                 "yt-dlp returned incomplete details for this video — update yt-dlp in Settings → YouTube, then retry."
             ) from e
 
-        if not isinstance(video_id, str) or not _VIDEO_ID_RE.match(video_id):
+        if not youtube and data.get("_type", "video") != "video":
+            # A Bilibili interactive video answers "playlist" even under
+            # --no-playlist, and an old segmented one answers "multi_video":
+            # the fetch would leave several video files. YouTube is untouched.
+            raise YouTubeFetchError("This link is not a single video, so it cannot be mined.")
+        id_re = _VIDEO_ID_RE if youtube else _SITE_VIDEO_ID_RE
+        if not isinstance(video_id, str) or not id_re.match(video_id):
             raise YouTubeFetchError(f"Unexpected video id format: {video_id!r}")
 
         # Live streams report ``duration: null`` — the key is present so the
@@ -222,6 +287,10 @@ class YouTubeFetcherService:
             has_dub_ja_subs=has_dub_ja,
             is_live=bool(data.get("is_live")),
             is_age_restricted=int(data.get("age_limit") or 0) >= 18,
+            site="YouTube" if youtube else _site_name(data),
+            # Bilibili withholds every CC track from a logged-out probe and says
+            # so only in this warning. The captions-only refusal names the remedy.
+            subtitles_need_login="only available when logged in" in stderr.lower(),
         )
 
     # ------------------------------------------------------------------
@@ -324,6 +393,17 @@ class YouTubeFetcherService:
                 "yt-dlp could not read this playlist's details — update yt-dlp in Settings → YouTube, then retry."
             ) from e
 
+        return self._playlist_info(data, youtube=True)
+
+    def _playlist_info(self, data: dict, *, youtube: bool) -> PlaylistInfo:
+        """Build a :class:`PlaylistInfo` from a flat playlist probe's JSON.
+
+        A YouTube entry must carry an 11-character id and is queued under its
+        canonical watch URL. Another site's flat entry carries its own URL (a
+        Bilibili part is ``…/video/BV…?p=N``) and often no id or title. Its
+        ``video_id`` then falls back to the URL: the add flow dedups on it
+        until the entry's own probe replaces it with yt-dlp's id.
+        """
         raw_entries = data.get("entries")
         if not isinstance(raw_entries, list):
             raise YouTubeFetchError("That URL is not a playlist — paste a playlist URL.")
@@ -340,12 +420,20 @@ class YouTubeFetcherService:
                 logger.debug("playlist probe: skipping null entry")
                 continue
 
-            video_id = raw.get("id")
-            if not video_id or not _VIDEO_ID_RE.match(str(video_id)):
-                logger.debug("playlist probe: skipping entry with bad/missing id: %r", video_id)
-                continue
+            if youtube:
+                raw_id = raw.get("id")
+                if not raw_id or not _VIDEO_ID_RE.match(str(raw_id)):
+                    logger.debug("playlist probe: skipping entry with bad/missing id: %r", raw_id)
+                    continue
+                video_id = str(raw_id)
+                entry_url = f"https://www.youtube.com/watch?v={video_id}"
+            else:
+                entry_url = str(raw.get("url") or "")
+                if not entry_url.startswith(("http://", "https://")):
+                    logger.debug("playlist probe: skipping entry with no web link: %r", entry_url)
+                    continue
+                video_id = str(raw.get("id") or entry_url)
 
-            video_id = str(video_id)
             entry_title_raw = raw.get("title") or ""
             entry_title = str(entry_title_raw) if entry_title_raw else video_id
 
@@ -356,13 +444,12 @@ class YouTubeFetcherService:
             raw_duration = raw.get("duration")
             duration_s: int | None = int(raw_duration) if raw_duration is not None else None
 
-            canonical_url = f"https://www.youtube.com/watch?v={video_id}"
             entries.append(
                 PlaylistEntry(
                     video_id=video_id,
                     title=entry_title,
                     duration_s=duration_s,
-                    url=canonical_url,
+                    url=entry_url,
                 )
             )
 
@@ -843,7 +930,7 @@ class YouTubeFetcherService:
                     "The dub audio track this video listed is no longer available — " "pick another subtitle source."
                 )
             return YouTubeFetchError(
-                "YouTube served no downloadable format — update yt-dlp in Settings → YouTube, then retry."
+                "The site served no downloadable format — update yt-dlp in Settings → YouTube, then retry."
             )
 
         return None
@@ -1042,4 +1129,12 @@ def classify_probe_result(
     # english_name, like the fetcher's NoSourceSubtitlesError: a zh run used
     # to be refused with "No Japanese subtitles available".
     label = get_profile(config_language(config)).english_name or "source"
-    return False, f"No {label} subtitles available for this video.", None
+    message = f"No {label} subtitles available for this video."
+    if info.subtitles_need_login:
+        # Bilibili's warning fires for cookies from a browser that is not
+        # logged in to it too, so the remedy names both halves.
+        message += (
+            " This site shows its subtitles only to logged-in users — log in to it in your browser,"
+            " then pick that browser under Cookies in Settings → YouTube."
+        )
+    return False, message, None

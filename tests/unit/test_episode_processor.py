@@ -3358,6 +3358,42 @@ class TestProcessYoutubeUrl:
         assert session.episode_name == "YT:abc123"
         assert session.series_name == "YouTube"
 
+    def test_episode_identity_names_another_site(self, test_config, mock_services, tmp_path):
+        """A Bilibili run files under its own site, not under YouTube."""
+        video_file = tmp_path / "BV12N4y1M7rh.mp4"
+        subtitle_file = tmp_path / "BV12N4y1M7rh.zh-CN.srt"
+        video_file.touch()
+        subtitle_file.touch()
+        word = _make_word("食べる")
+        media = _make_media()
+        self._happy_pipeline(mock_services, word, media)
+        mock_fetcher = MagicMock()
+        mock_fetcher.fetch_video.return_value = FetchedMedia(
+            video_file=video_file, subtitle_file=subtitle_file, sub_source="manual"
+        )
+        mock_stats = MagicMock()
+        mock_stats.is_available.return_value = True
+        processor = build_processor(
+            config=test_config,
+            presenter=NullPresenter(),
+            youtube_fetcher=mock_fetcher,
+            stats_service=mock_stats,
+            **mock_services,
+        )
+
+        processor.process_youtube_url(
+            url="https://www.bilibili.com/video/BV12N4y1M7rh",
+            video_id="BV12N4y1M7rh",
+            workspace=tmp_path,
+            sub_mode="manual_only",
+            cancel_event=threading.Event(),
+            site="Bilibili",
+        )
+
+        session = mock_stats.record_session.call_args.args[0]
+        assert session.episode_name == "Bilibili:BV12N4y1M7rh"
+        assert session.series_name == "Bilibili"
+
     def test_episode_name_override_preserves_default_when_none(self, test_config, mock_services, tmp_path):
         """process_episode with no override still derives identity from video_file paths."""
         mock_stats = MagicMock()

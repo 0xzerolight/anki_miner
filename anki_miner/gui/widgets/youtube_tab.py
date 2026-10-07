@@ -76,6 +76,7 @@ from anki_miner.gui.widgets.queue_controls_bar import QueueControlsBar
 from anki_miner.gui.widgets.youtube_playlist_flow import (
     PlaylistAddCallbacks,
     PlaylistAddController,
+    extract_link,
     split_url_lines,
 )
 from anki_miner.gui.widgets.youtube_queue_item_widget import YouTubeQueueItemWidget, queue_bucket
@@ -87,7 +88,6 @@ from anki_miner.services.asr.model_availability import usable_model_installed
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
-from anki_miner.utils.youtube_url import classify_youtube_url
 
 if TYPE_CHECKING:
     from anki_miner.gui.workers._queue_worker_base import SequentialQueueWorker
@@ -214,6 +214,7 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
                 queued_items=self._queue.all_items,
                 render_new_item=self._render_new_item,
                 refresh_row=self._refresh_row,
+                remove_item=self._drop_probed_row,
                 recompute_buttons=self._on_add_flow_changed,
                 run_active=self._queue_locked,
                 log_info=self.log_widget.append_info,
@@ -261,7 +262,11 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
         # this page's one vertical absorber, and a text edit's default Expanding
         # policy keeps the card expansive even at a fixed height.
         self.url_edit = QPlainTextEdit()
-        self.url_edit.setPlaceholderText(self.tr("Paste YouTube links or playlists, one per line, then click Mine"))
+        self.url_edit.setPlaceholderText(
+            self.tr(
+                "Paste video or playlist links from YouTube, Bilibili or another site, one per line, then click Mine"
+            )
+        )
         # Tab must move focus, not insert a literal tab (keyboard-only flow).
         self.url_edit.setTabChangesFocus(True)
         self.url_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -312,8 +317,8 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
         self.subtitle_source_combo.addItem(self.tr("Captions only"), "captions")
         self.subtitle_source_combo.setToolTip(
             self.tr(
-                "Auto uses YouTube's captions when they exist and transcribes the video "
-                "when they do not. Always transcribe ignores YouTube's captions. "
+                "Auto uses the video's own captions when they exist and transcribes the video "
+                "when they do not. Always transcribe ignores the captions. "
                 "Captions only skips a video that has none."
             )
         )
@@ -519,11 +524,11 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
 
     @staticmethod
     def _dropped_youtube_urls(event: QDragEnterEvent | QDropEvent) -> list[str]:
-        """Every YouTube link a drag carries, once each, in drag order.
+        """Every link a drag carries, once each, in drag order.
 
         A dragged link arrives as a URL and often as text as well; both are
-        read, text line by line, and classified by the YouTube URL parser, so
-        a link that drops is a link Mine can queue.
+        read, text line by line, by the same rule as a pasted line
+        (``extract_link``), so a link that drops is a link Mine can queue.
         """
         mime = event.mimeData()
         if mime is None:
@@ -533,9 +538,9 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
             candidates.extend(mime.text().splitlines())
         found: list[str] = []
         for candidate in candidates:
-            text = candidate.strip()
-            if text and text not in found and classify_youtube_url(text).kind != "unknown":
-                found.append(text)
+            link = extract_link(candidate)
+            if link is not None and link not in found:
+                found.append(link)
         return found
 
     @staticmethod
@@ -557,7 +562,7 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
             style.polish(self.url_edit)
 
     def dragEnterEvent(self, event: QDragEnterEvent | None) -> None:  # noqa: N802 - Qt override
-        """Light the URL box for a YouTube link; take anything else to refuse it."""
+        """Light the URL box for a video link; take anything else to refuse it."""
         if event is None or not self._carries_a_payload(event):
             return
         self._light_url_field("valid" if self._dropped_youtube_urls(event) else "invalid")
@@ -570,7 +575,7 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
             event.accept()
 
     def dropEvent(self, event: QDropEvent | None) -> None:  # noqa: N802 - Qt override
-        """Queue a dropped YouTube link, or say why the payload was not one."""
+        """Queue a dropped video link, or say why the payload was not one."""
         if event is None:
             return
         self._light_url_field("")
@@ -584,7 +589,7 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
                 reason="invalid_payload",
             )
             self.log_widget.append_warning(
-                self.tr("Drop a YouTube link here. Mine local files from the Video or Audiobooks tab.")
+                self.tr("Drop a video link here. Mine local files from the Video or Audiobooks tab.")
             )
             event.ignore()
             return
@@ -779,6 +784,18 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
         """Invalidate pending playlist work (late-resolve generation bump +
         entry-probe cancel) — that state lives on the add-flow controller."""
         self._add_flow.invalidate_pending()
+
+    def _drop_probed_row(self, item: YouTubeQueueItem) -> None:
+        """Add-flow seam: a probed link turned out to be a playlist; its parts replace it.
+
+        Calls _drop_item directly, not the Remove button's slot, which refuses
+        while a Mine waits on its links. Recomputing the buttons is the
+        caller's job, done after it has queued the parts.
+        """
+        if item.status is YouTubeItemStatus.PROCESSING:
+            return
+        self._drop_item(item)
+        self._apply_queue_view()  # re-filter and refresh the counts
 
     # ------------------------------------------------------------------
     # Lifecycle overrides (fetcher + add-flow teardown)

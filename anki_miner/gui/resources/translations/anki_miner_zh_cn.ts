@@ -2098,8 +2098,8 @@ No index files are deleted.</source>
         <translation>从 YouTube 挖词</translation>
     </message>
     <message>
-        <source>Mine straight from a YouTube URL or playlist -- no local files needed.</source>
-        <translation>直接从 YouTube 网址或播放列表挖词 -- 无需本地文件。</translation>
+        <source>Mine straight from a YouTube or Bilibili link or playlist -- no local files needed.</source>
+        <translation>直接从 YouTube 或哔哩哔哩的链接或播放列表挖词 -- 无需本地文件。</translation>
     </message>
     <message>
         <source>Mine from an audiobook</source>
@@ -12673,8 +12673,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>来自浏览器的 Cookie</translation>
     </message>
     <message>
-        <source>Reuse a browser's YouTube login, or an exported cookies.txt file, when YouTube blocks anonymous fetches. Keep a cookies file private — it holds your login.</source>
-        <translation>当 YouTube 阻止匿名获取时，复用浏览器中的 YouTube 登录状态或导出的 cookies.txt 文件。请妥善保管 cookies 文件——其中包含你的登录信息。</translation>
+        <source>Reuse a browser's login, or an exported cookies.txt file, when YouTube blocks anonymous fetches. Bilibili shows its subtitles only to logged-in users. Keep a cookies file private — it holds your login.</source>
+        <translation>当 YouTube 阻止匿名获取时，复用浏览器中的登录状态或导出的 cookies.txt 文件。哔哩哔哩只向已登录用户显示字幕。请妥善保管 cookies 文件——其中包含你的登录信息。</translation>
     </message>
     <message>
         <source> minutes</source>
@@ -12701,8 +12701,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>将字幕与音频对齐</translation>
     </message>
     <message>
-        <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
-        <translation>挖词前根据视频音频重新校准YouTube字幕的时间。若字幕为本地转录，则忽略此设置。</translation>
+        <source>Retime the video's captions against its audio before mining. Ignored when the subtitle was transcribed locally.</source>
+        <translation>挖词前根据视频音频重新校准视频字幕的时间。若字幕为本地转录，则忽略此设置。</translation>
     </message>
     <message>
         <source>Keep yt-dlp up to date automatically</source>
@@ -12875,8 +12875,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>正在下载 yt-dlp…</translation>
     </message>
     <message>
-        <source>Paste YouTube links or playlists, one per line, then click Mine</source>
-        <translation>粘贴 YouTube 链接或播放列表，每行一个，然后点击“挖词”</translation>
+        <source>Paste video or playlist links from YouTube, Bilibili or another site, one per line, then click Mine</source>
+        <translation>粘贴 YouTube、哔哩哔哩或其他网站的视频或播放列表链接，每行一个，然后点击“挖词”</translation>
     </message>
     <message>
         <source>Review words before mining</source>
@@ -12903,8 +12903,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>仅字幕</translation>
     </message>
     <message>
-        <source>Auto uses YouTube's captions when they exist and transcribes the video when they do not. Always transcribe ignores YouTube's captions. Captions only skips a video that has none.</source>
-        <translation>“自动”在YouTube字幕存在时使用该字幕，不存在时转录视频。“始终转录”忽略YouTube字幕。“仅字幕”会跳过没有字幕的视频。</translation>
+        <source>Auto uses the video's own captions when they exist and transcribes the video when they do not. Always transcribe ignores the captions. Captions only skips a video that has none.</source>
+        <translation>“自动”在视频自带字幕时使用该字幕，没有时转录视频。“始终转录”忽略字幕。“仅字幕”会跳过没有字幕的视频。</translation>
     </message>
     <message>
         <source>Some lines are not valid URLs.</source>
@@ -12923,8 +12923,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>Anki Miner 关闭时中断</translation>
     </message>
     <message>
-        <source>Drop a YouTube link here. Mine local files from the Video or Audiobooks tab.</source>
-        <translation>在此处拖放 YouTube 链接。本地文件请在“视频”或“有声书”标签页中挖取。</translation>
+        <source>Drop a video link here. Mine local files from the Video or Audiobooks tab.</source>
+        <translation>在此处拖放视频链接。本地文件请在“视频”或“有声书”标签页中挖取。</translation>
     </message>
     <message>
         <source>This run needs local transcription, but the model %1 is not installed.</source>

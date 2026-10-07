@@ -2098,8 +2098,8 @@ No index files are deleted.</source>
         <translation>從 YouTube 採集</translation>
     </message>
     <message>
-        <source>Mine straight from a YouTube URL or playlist -- no local files needed.</source>
-        <translation>直接從 YouTube 網址或播放清單採集 -- 無需本機檔案。</translation>
+        <source>Mine straight from a YouTube or Bilibili link or playlist -- no local files needed.</source>
+        <translation>直接從 YouTube 或嗶哩嗶哩的連結或播放清單採集 -- 無需本機檔案。</translation>
     </message>
     <message>
         <source>Mine from an audiobook</source>
@@ -12673,8 +12673,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>從瀏覽器取得的 Cookie</translation>
     </message>
     <message>
-        <source>Reuse a browser's YouTube login, or an exported cookies.txt file, when YouTube blocks anonymous fetches. Keep a cookies file private — it holds your login.</source>
-        <translation>當 YouTube 封鎖匿名擷取時，重複使用瀏覽器中的 YouTube 登入狀態或匯出的 cookies.txt 檔案。請妥善保管 cookies 檔案——其中含有您的登入資訊。</translation>
+        <source>Reuse a browser's login, or an exported cookies.txt file, when YouTube blocks anonymous fetches. Bilibili shows its subtitles only to logged-in users. Keep a cookies file private — it holds your login.</source>
+        <translation>當 YouTube 封鎖匿名擷取時，重複使用瀏覽器中的登入狀態或匯出的 cookies.txt 檔案。嗶哩嗶哩只向已登入的使用者顯示字幕。請妥善保管 cookies 檔案——其中含有您的登入資訊。</translation>
     </message>
     <message>
         <source> minutes</source>
@@ -12701,8 +12701,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>將字幕與音訊對齊</translation>
     </message>
     <message>
-        <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
-        <translation>採集前依照影片音訊重新校準 YouTube 字幕時間軸。若字幕為本機轉錄，則此設定會被忽略。</translation>
+        <source>Retime the video's captions against its audio before mining. Ignored when the subtitle was transcribed locally.</source>
+        <translation>採集前依照影片音訊重新校準影片字幕時間軸。若字幕為本機轉錄，則此設定會被忽略。</translation>
     </message>
     <message>
         <source>Keep yt-dlp up to date automatically</source>
@@ -12875,8 +12875,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>正在下載 yt-dlp…</translation>
     </message>
     <message>
-        <source>Paste YouTube links or playlists, one per line, then click Mine</source>
-        <translation>貼上 YouTube 連結或播放清單，每行一個，然後按「採集」</translation>
+        <source>Paste video or playlist links from YouTube, Bilibili or another site, one per line, then click Mine</source>
+        <translation>貼上 YouTube、嗶哩嗶哩或其他網站的影片或播放清單連結，每行一個，然後按「採集」</translation>
     </message>
     <message>
         <source>Review words before mining</source>
@@ -12903,8 +12903,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>僅使用字幕</translation>
     </message>
     <message>
-        <source>Auto uses YouTube's captions when they exist and transcribes the video when they do not. Always transcribe ignores YouTube's captions. Captions only skips a video that has none.</source>
-        <translation>自動會在 YouTube 字幕存在時使用該字幕，不存在時則轉錄影片。一律轉錄會忽略 YouTube 的字幕。僅使用字幕會略過沒有字幕的影片。</translation>
+        <source>Auto uses the video's own captions when they exist and transcribes the video when they do not. Always transcribe ignores the captions. Captions only skips a video that has none.</source>
+        <translation>自動會在影片本身有字幕時使用該字幕，沒有時則轉錄影片。一律轉錄會忽略字幕。僅使用字幕會略過沒有字幕的影片。</translation>
     </message>
     <message>
         <source>Some lines are not valid URLs.</source>
@@ -12923,8 +12923,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>Anki Miner 關閉時已中斷</translation>
     </message>
     <message>
-        <source>Drop a YouTube link here. Mine local files from the Video or Audiobooks tab.</source>
-        <translation>將 YouTube 連結拖放到這裡。要採集本機檔案，請前往「影片」或「有聲書」分頁。</translation>
+        <source>Drop a video link here. Mine local files from the Video or Audiobooks tab.</source>
+        <translation>將影片連結拖放到這裡。要採集本機檔案，請前往「影片」或「有聲書」分頁。</translation>
     </message>
     <message>
         <source>This run needs local transcription, but the model %1 is not installed.</source>

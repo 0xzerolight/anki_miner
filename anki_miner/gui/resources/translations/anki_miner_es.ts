@@ -2101,8 +2101,8 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Minar desde YouTube</translation>
     </message>
     <message>
-        <source>Mine straight from a YouTube URL or playlist -- no local files needed.</source>
-        <translation>Mina directamente desde una URL o lista de reproducción de YouTube -- sin necesidad de archivos locales.</translation>
+        <source>Mine straight from a YouTube or Bilibili link or playlist -- no local files needed.</source>
+        <translation>Mina directamente desde un enlace o lista de reproducción de YouTube o Bilibili -- sin necesidad de archivos locales.</translation>
     </message>
     <message>
         <source>Mine from an audiobook</source>
@@ -12714,8 +12714,8 @@ Ordene por esta columna para recorrer en orden una grabación larga — luego re
         <translation>Cookies del navegador</translation>
     </message>
     <message>
-        <source>Reuse a browser's YouTube login, or an exported cookies.txt file, when YouTube blocks anonymous fetches. Keep a cookies file private — it holds your login.</source>
-        <translation>Reutilizar el inicio de sesión de YouTube de un navegador, o un archivo cookies.txt exportado, cuando YouTube bloquea las descargas anónimas. Mantenga privado el archivo de cookies — contiene su inicio de sesión.</translation>
+        <source>Reuse a browser's login, or an exported cookies.txt file, when YouTube blocks anonymous fetches. Bilibili shows its subtitles only to logged-in users. Keep a cookies file private — it holds your login.</source>
+        <translation>Reutilizar el inicio de sesión de un navegador, o un archivo cookies.txt exportado, cuando YouTube bloquea las descargas anónimas. Bilibili solo muestra sus subtítulos a los usuarios que han iniciado sesión. Mantenga privado el archivo de cookies — contiene su inicio de sesión.</translation>
     </message>
     <message>
         <source> minutes</source>
@@ -12742,8 +12742,8 @@ Ordene por esta columna para recorrer en orden una grabación larga — luego re
         <translation>Alinear subtítulos con el audio</translation>
     </message>
     <message>
-        <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
-        <translation>Reajusta el tiempo de los subtítulos de YouTube según el audio del video antes de minar. Se ignora cuando el subtítulo se transcribió localmente.</translation>
+        <source>Retime the video's captions against its audio before mining. Ignored when the subtitle was transcribed locally.</source>
+        <translation>Reajusta el tiempo de los subtítulos del video según su audio antes de minar. Se ignora cuando el subtítulo se transcribió localmente.</translation>
     </message>
     <message>
         <source>Keep yt-dlp up to date automatically</source>
@@ -12916,8 +12916,8 @@ Ordene por esta columna para recorrer en orden una grabación larga — luego re
         <translation>Descargando yt-dlp…</translation>
     </message>
     <message>
-        <source>Paste YouTube links or playlists, one per line, then click Mine</source>
-        <translation>Pegue enlaces o listas de reproducción de YouTube, uno por línea, y haga clic en Minar</translation>
+        <source>Paste video or playlist links from YouTube, Bilibili or another site, one per line, then click Mine</source>
+        <translation>Pegue enlaces de videos o listas de reproducción de YouTube, Bilibili u otro sitio, uno por línea, y haga clic en Minar</translation>
     </message>
     <message>
         <source>Review words before mining</source>
@@ -12944,8 +12944,8 @@ Ordene por esta columna para recorrer en orden una grabación larga — luego re
         <translation>Solo subtítulos</translation>
     </message>
     <message>
-        <source>Auto uses YouTube's captions when they exist and transcribes the video when they do not. Always transcribe ignores YouTube's captions. Captions only skips a video that has none.</source>
-        <translation>Automático usa los subtítulos de YouTube cuando existen y transcribe el video cuando no existen. Transcribir siempre ignora los subtítulos de YouTube. Solo subtítulos omite un video que no tenga ninguno.</translation>
+        <source>Auto uses the video's own captions when they exist and transcribes the video when they do not. Always transcribe ignores the captions. Captions only skips a video that has none.</source>
+        <translation>Automático usa los subtítulos propios del video cuando existen y transcribe el video cuando no existen. Transcribir siempre ignora los subtítulos. Solo subtítulos omite un video que no tenga ninguno.</translation>
     </message>
     <message>
         <source>Some lines are not valid URLs.</source>
@@ -12964,8 +12964,8 @@ Ordene por esta columna para recorrer en orden una grabación larga — luego re
         <translation>Interrumpido al cerrar Anki Miner</translation>
     </message>
     <message>
-        <source>Drop a YouTube link here. Mine local files from the Video or Audiobooks tab.</source>
-        <translation>Suelte aquí un enlace de YouTube. Mine archivos locales desde la pestaña Video o Audiolibros.</translation>
+        <source>Drop a video link here. Mine local files from the Video or Audiobooks tab.</source>
+        <translation>Suelte aquí un enlace de video. Mine archivos locales desde la pestaña Video o Audiolibros.</translation>
     </message>
     <message>
         <source>This run needs local transcription, but the model %1 is not installed.</source>

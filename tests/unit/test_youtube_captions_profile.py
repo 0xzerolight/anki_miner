@@ -53,6 +53,27 @@ def _probe(config, **payload):
         return YouTubeFetcherService(config).probe_metadata("https://youtu.be/abc123")
 
 
+def _probe_bilibili(config, **payload):
+    """probe_metadata over a canned Bilibili payload (a non-YouTube host)."""
+    data = {"id": "BV12N4y1M7rh", "title": "Test", "duration": 120, "extractor_key": "BiliBili", **payload}
+    result = SupervisedResult(SupervisedState.COMPLETED, 0, json.dumps(data), "")
+    with patch("anki_miner.services.youtube_fetcher.run_supervised", return_value=result):
+        return YouTubeFetcherService(config).probe_metadata("https://www.bilibili.com/video/BV12N4y1M7rh")
+
+
+def test_bilibili_uploader_cc_is_a_chinese_caption_track(zh_config):
+    """Logged in, Bilibili files uploader CC under its raw lan code, e.g. zh-CN."""
+    info = _probe_bilibili(zh_config, subtitles={"zh-CN": [{"ext": "srt"}], "danmaku": [{"ext": "xml"}]})
+    assert info.has_manual_ja_subs is True
+
+
+def test_bilibili_ai_track_is_not_a_caption_track(zh_config):
+    """ai-zh is Bilibili's own speech recognition, kept out by owner decision."""
+    info = _probe_bilibili(zh_config, subtitles={"ai-zh": [{"ext": "srt"}], "danmaku": [{"ext": "xml"}]})
+    assert info.has_manual_ja_subs is False
+    assert info.has_auto_ja_subs is False
+
+
 def test_no_source_subtitles_error_is_the_same_class():
     assert NoJapaneseSubtitlesError is NoSourceSubtitlesError
 

@@ -2092,7 +2092,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Mine straight from a YouTube URL or playlist -- no local files needed.</source>
+        <source>Mine straight from a YouTube or Bilibili link or playlist -- no local files needed.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -12657,7 +12657,7 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Reuse a browser's YouTube login, or an exported cookies.txt file, when YouTube blocks anonymous fetches. Keep a cookies file private — it holds your login.</source>
+        <source>Reuse a browser's login, or an exported cookies.txt file, when YouTube blocks anonymous fetches. Bilibili shows its subtitles only to logged-in users. Keep a cookies file private — it holds your login.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -12685,7 +12685,7 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
+        <source>Retime the video's captions against its audio before mining. Ignored when the subtitle was transcribed locally.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -12859,7 +12859,7 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Paste YouTube links or playlists, one per line, then click Mine</source>
+        <source>Paste video or playlist links from YouTube, Bilibili or another site, one per line, then click Mine</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -12887,7 +12887,7 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Auto uses YouTube's captions when they exist and transcribes the video when they do not. Always transcribe ignores YouTube's captions. Captions only skips a video that has none.</source>
+        <source>Auto uses the video's own captions when they exist and transcribes the video when they do not. Always transcribe ignores the captions. Captions only skips a video that has none.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -12907,7 +12907,7 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Drop a YouTube link here. Mine local files from the Video or Audiobooks tab.</source>
+        <source>Drop a video link here. Mine local files from the Video or Audiobooks tab.</source>
         <translation type="unfinished" />
     </message>
     <message>

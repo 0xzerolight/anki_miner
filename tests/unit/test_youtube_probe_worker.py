@@ -66,7 +66,7 @@ def test_probe_worker_is_single_call_probe_thread(qapp) -> None:
 def test_probe_worker_success_emits_probe_done(qapp) -> None:
     info = _make_video_info("vid1")
     fetcher = MagicMock()
-    fetcher.probe_metadata.return_value = info
+    fetcher.probe_link.return_value = info
 
     worker = YouTubeProbeWorker(fetcher=fetcher, url="https://youtu.be/vid1")
     done = _SignalCapture()
@@ -78,7 +78,7 @@ def test_probe_worker_success_emits_probe_done(qapp) -> None:
 
     assert done.calls == [(info,)]
     assert errored.calls == []
-    fetcher.probe_metadata.assert_called_once_with("https://youtu.be/vid1", timeout_s=60.0)
+    fetcher.probe_link.assert_called_once_with("https://youtu.be/vid1", timeout_s=60.0)
 
 
 # ---------------------------------------------------------------------------
@@ -88,7 +88,7 @@ def test_probe_worker_success_emits_probe_done(qapp) -> None:
 
 def test_probe_worker_fetch_error_emits_probe_error(qapp) -> None:
     fetcher = MagicMock()
-    fetcher.probe_metadata.side_effect = YouTubeFetchError("timeout")
+    fetcher.probe_link.side_effect = YouTubeFetchError("timeout")
 
     worker = YouTubeProbeWorker(fetcher=fetcher, url="u")
     done = _SignalCapture()
@@ -106,7 +106,7 @@ def test_probe_worker_fetch_error_emits_probe_error(qapp) -> None:
 def test_probe_worker_video_too_long_emits_probe_error(qapp) -> None:
     """VideoTooLongError (a fetch-time guard) surfaces as probe_error."""
     fetcher = MagicMock()
-    fetcher.probe_metadata.side_effect = VideoTooLongError("video exceeds maximum duration")
+    fetcher.probe_link.side_effect = VideoTooLongError("video exceeds maximum duration")
 
     worker = YouTubeProbeWorker(fetcher=fetcher, url="u")
     errored = _SignalCapture()
@@ -120,7 +120,7 @@ def test_probe_worker_video_too_long_emits_probe_error(qapp) -> None:
 
 def test_probe_worker_generic_exception_emits_probe_error(qapp) -> None:
     fetcher = MagicMock()
-    fetcher.probe_metadata.side_effect = RuntimeError("json parse error")
+    fetcher.probe_link.side_effect = RuntimeError("json parse error")
 
     worker = YouTubeProbeWorker(fetcher=fetcher, url="u")
     done = _SignalCapture()
@@ -144,7 +144,7 @@ def test_probe_worker_uses_fetcher_captured_at_construction(qapp) -> None:
     """The worker uses the fetcher passed to __init__, not any later swap."""
     info = _make_video_info("z")
     fetcher_a = MagicMock()
-    fetcher_a.probe_metadata.return_value = info
+    fetcher_a.probe_link.return_value = info
     fetcher_b = MagicMock()
 
     worker = YouTubeProbeWorker(fetcher=fetcher_a, url="https://youtu.be/z")
@@ -152,8 +152,8 @@ def test_probe_worker_uses_fetcher_captured_at_construction(qapp) -> None:
     worker.run()
 
     assert captured is fetcher_a
-    fetcher_a.probe_metadata.assert_called_once()
-    fetcher_b.probe_metadata.assert_not_called()
+    fetcher_a.probe_link.assert_called_once()
+    fetcher_b.probe_link.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -163,19 +163,19 @@ def test_probe_worker_uses_fetcher_captured_at_construction(qapp) -> None:
 
 def test_probe_worker_custom_timeout_forwarded(qapp) -> None:
     fetcher = MagicMock()
-    fetcher.probe_metadata.return_value = _make_video_info("a")
+    fetcher.probe_link.return_value = _make_video_info("a")
 
     worker = YouTubeProbeWorker(fetcher=fetcher, url="u", timeout_s=15.0)
     worker.run()
 
-    fetcher.probe_metadata.assert_called_once_with("u", timeout_s=15.0)
+    fetcher.probe_link.assert_called_once_with("u", timeout_s=15.0)
 
 
 def test_probe_worker_default_timeout_is_60(qapp) -> None:
     fetcher = MagicMock()
-    fetcher.probe_metadata.return_value = _make_video_info("a")
+    fetcher.probe_link.return_value = _make_video_info("a")
 
     worker = YouTubeProbeWorker(fetcher=fetcher, url="u")
     worker.run()
 
-    assert fetcher.probe_metadata.call_args.kwargs["timeout_s"] == 60.0
+    assert fetcher.probe_link.call_args.kwargs["timeout_s"] == 60.0

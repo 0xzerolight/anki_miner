@@ -63,7 +63,7 @@ from anki_miner.services.youtube_fetcher import YouTubeFetcherService
 # the private name stays for this module's call site and its existing tests.
 from anki_miner.services.youtube_fetcher import classify_probe_result as _classify_probe_result
 from anki_miner.utils.i18n import tr_format
-from anki_miner.utils.youtube_url import YouTubeUrlInfo, classify_youtube_url
+from anki_miner.utils.youtube_url import YouTubeUrlInfo, classify_youtube_url, is_youtube_host
 
 logger = logging.getLogger(__name__)
 
@@ -109,18 +109,58 @@ def _is_acceptable_add_input(url: str) -> bool:
     return classify_youtube_url(candidate).kind != "unknown"
 
 
+# One web link inside other text. It runs until whitespace or CJK / full-width
+# punctuation (curly quotes, 、。【】「」, ，！？ …), which Chinese text puts
+# straight after a link with no space. Letters, CJK ones included, stay: a
+# path may carry them.
+_EMBEDDED_URL_RE = re.compile(
+    r"https?://[^\s‘-‟　-〿！-／：-＠［-｀｛-･]+",
+    re.IGNORECASE,
+)
+
+
+def extract_link(line: str) -> str | None:
+    """The link a pasted or dropped line carries, or ``None``.
+
+    A line holding exactly one http(s) link yields that link alone, whatever
+    surrounds it: Bilibili's Share button copies "【标题】 https://b23.tv/…",
+    and forwarded text glues punctuation to it ("https://b23.tv/…，看看"). A
+    line with no link (a bare YouTube id, a scheme-less YouTube URL) comes back
+    as it is when it is acceptable. Either way the result must pass
+    :func:`_is_acceptable_add_input` on its own (T-34).
+    """
+    candidate = line.strip()
+    if not candidate:
+        return None
+    found = _EMBEDDED_URL_RE.findall(candidate)
+    if len(found) > 1:
+        return None  # two links on one line: which one was meant?
+    if found:
+        # Sentence punctuation typed after the link is not part of it.
+        link = found[0].rstrip(".,;:!?)]}>'\"")
+        return link if _is_acceptable_add_input(link) else None
+    if any(ch.isspace() for ch in candidate):
+        return None
+    return candidate if _is_acceptable_add_input(candidate) else None
+
+
 def split_url_lines(text: str) -> tuple[list[str], list[str]]:
     """Split a pasted block into (accepted, rejected) lines, blank lines dropped.
 
-    Acceptance is :func:`_is_acceptable_add_input` (T-34), so a line that passes
-    here is one the add flow will queue.
+    Acceptance is :func:`extract_link`, so a line that passes here is one the
+    add flow will queue, reduced to the link it carries.
     """
     accepted: list[str] = []
     rejected: list[str] = []
     for raw_line in text.splitlines():
         line = raw_line.strip()
-        if line:
-            (accepted if _is_acceptable_add_input(line) else rejected).append(line)
+        if not line:
+            continue
+        link = extract_link(line)
+        if link is None:
+            rejected.append(line)
+        else:
+            accepted.append(link)
     return accepted, rejected
 
 
@@ -145,6 +185,9 @@ class PlaylistAddCallbacks:
 
     refresh_row: Callable[[YouTubeQueueItem], None]
     """Re-render a row after the item's fields changed."""
+
+    remove_item: Callable[[YouTubeQueueItem], None]
+    """Drop an item and its row: a pasted link whose probe found a playlist."""
 
     recompute_buttons: Callable[[], None]
     """Re-derive button enabled/visible state from queue + workers."""
@@ -214,8 +257,10 @@ class PlaylistAddController:
         # Bumped on Clear so a late playlist_resolved from a pre-Clear Add is
         # ignored instead of popping a dialog over an emptied queue.
         self._playlist_generation = 0
-        # Pasted playlists not yet resolved, in paste order.
-        self._playlist_backlog: deque[tuple[str, YouTubeUrlInfo]] = deque()
+        # Pasted playlists not yet resolved, in paste order. A third element is
+        # a playlist another site's link already probed as (``probe_link``); it
+        # skips the resolve worker.
+        self._playlist_backlog: deque[tuple[str, YouTubeUrlInfo, PlaylistInfo | None]] = deque()
         # True while the playlist choice dialog is open. Its nested event loop can
         # deliver the resolve worker's finished signal, so the worker handle alone
         # cannot say the playlist is still being added.
@@ -257,7 +302,7 @@ class PlaylistAddController:
                 url = f"https://www.youtube.com/watch?v={url}"
             url_info = classify_youtube_url(url)
             if url_info.kind in ("playlist", "video_in_playlist"):
-                self._playlist_backlog.append((url, url_info))
+                self._playlist_backlog.append((url, url_info, None))
             else:
                 # "video" and "unknown" both take the single-video probe path —
                 # yt-dlp remains the final validator for unrecognised URLs.
@@ -353,17 +398,20 @@ class PlaylistAddController:
     # ------------------------------------------------------------------
 
     def _queued_keys(self) -> set[str]:
-        """Video ids (or URLs, for non-YouTube links) already in the queue.
+        """Video ids (or URLs, for non-YouTube links), and every queued row's URL.
 
         A single-added row keeps ``video_id=None`` until its probe completes, so
         the id falls back to the one in its URL; otherwise a video added while
         its probe is in flight slips the dedup and gets fetched twice for the
         same ``YT:<video_id>``.
         """
-        return {
-            item.video_id or classify_youtube_url(item.url).video_id or item.url
-            for item in self._callbacks.queued_items()
-        }
+        keys: set[str] = set()
+        for item in self._callbacks.queued_items():
+            keys.add(item.video_id or classify_youtube_url(item.url).video_id or item.url)
+            # The URL too: another site's row is keyed by yt-dlp's id once
+            # probed, and a re-pasted link of the same video cannot know that id.
+            keys.add(item.url)
+        return keys
 
     def _add_videos(self, urls: Sequence[str]) -> None:
         """Queue each video in *urls* that is not already queued or repeated."""
@@ -430,11 +478,55 @@ class PlaylistAddController:
         self._callbacks.recompute_buttons()
 
     def _on_probe_done(self, item: YouTubeQueueItem, info: object) -> None:
-        """Probe succeeded — classify the result and update the item."""
+        """Probe succeeded — classify the result, or expand a link that was a playlist."""
+        if self._shutdown_started:
+            # A worker's queued result can land after the window is destroyed
+            # (app.py drains deferred deletes past close); every callback below
+            # touches a widget. Same for the other result/finished slots.
+            return
+        if isinstance(info, PlaylistInfo):
+            self._queue_probed_playlist(item, info)
+            return
         if not isinstance(info, VideoInfo):  # pragma: no cover - signal guard
             self._mark_probe_error(item, "Invalid probe result.")
             return
+        if not is_youtube_host(item.url) and self._queued_elsewhere(item, info.video_id):
+            # Two links to one video. A YouTube link dedups on the id in its URL
+            # before the probe (and keeps that behaviour unchanged); another
+            # site's links differ per share (b23.tv codes, vd_source /
+            # spm_id_from), so only the probed id can tell. Mining it twice
+            # would only download and transcribe it twice.
+            self._callbacks.remove_item(item)
+            self._callbacks.log_warning(
+                tr_format(QCoreApplication.translate("PlaylistAddController", "Skipped %1 already in the queue."), 1)
+            )
+            self._callbacks.recompute_buttons()
+            return
         self._apply_classification(item, info)
+
+    def _queued_elsewhere(self, item: YouTubeQueueItem, video_id: str) -> bool:
+        """Whether a queued row other than *item* already carries *video_id*."""
+        queued = self._callbacks.queued_items()
+        return item in queued and any(other is not item and other.video_id == video_id for other in queued)
+
+    def _queue_probed_playlist(self, item: YouTubeQueueItem, pl: PlaylistInfo) -> None:
+        """Swap a pasted link's row for the playlist its probe found.
+
+        Only another site's link gets here (``probe_link``), for example a
+        Bilibili multi-part video or collection. Its row stood for the whole
+        list, so it goes. The list then waits its turn in the playlist backlog
+        like a pasted YouTube playlist, already resolved: one playlist adds and
+        probes at a time.
+        """
+        if self._shutdown_started or item not in self._callbacks.queued_items():
+            return  # removed or cleared while its probe ran: expand nothing
+        # Order matters. The backlog entry keeps is_busy true *before* the row
+        # goes, so a Mine waiting on its links (_start_pending_run_when_checked,
+        # run on every recompute) cannot start in the gap and leave the parts out.
+        self._playlist_backlog.append((item.url, classify_youtube_url(item.url), pl))
+        self._callbacks.remove_item(item)
+        self._start_next_playlist()
+        self._callbacks.recompute_buttons()
 
     def _apply_classification(self, item: YouTubeQueueItem, info: VideoInfo) -> None:
         """Resolve one probed item against the current subtitle source.
@@ -489,6 +581,8 @@ class PlaylistAddController:
 
     def _mark_probe_error(self, item: YouTubeQueueItem, message: str) -> None:
         """Shared transition into PROBE_ERROR with consistent fields."""
+        if self._shutdown_started:
+            return  # late signal after shutdown: see _on_probe_done
         item.status = YouTubeItemStatus.PROBE_ERROR
         item.error_message = message
         self._callbacks.refresh_row(item)
@@ -524,7 +618,12 @@ class PlaylistAddController:
         """Resolve the next pasted playlist once the previous one is fully added."""
         if self._shutdown_started or self._playlist_busy() or not self._playlist_backlog:
             return
-        url, url_info = self._playlist_backlog.popleft()
+        url, url_info, resolved = self._playlist_backlog.popleft()
+        if resolved is not None:
+            self._on_playlist_resolved(
+                url, url_info, resolved, self._playlist_generation, self._config.youtube_playlist_max
+            )
+            return
         self._begin_playlist_resolve(url, url_info)
 
     def _begin_playlist_resolve(self, url: str, url_info: YouTubeUrlInfo) -> None:
@@ -553,6 +652,8 @@ class PlaylistAddController:
 
     def _on_playlist_resolve_error(self, message: str) -> None:
         """Resolve failed — log it; the finished slot handles state cleanup."""
+        if self._shutdown_started:
+            return  # late signal after shutdown: see _on_probe_done
         self._callbacks.log_error(
             tr_format(
                 QCoreApplication.translate("PlaylistAddController", "Playlist resolve failed: %1"),
@@ -571,6 +672,8 @@ class PlaylistAddController:
         self._playlist_resolve_worker = None
         if worker is not None:
             worker.deleteLater()
+        if self._shutdown_started:
+            return  # late signal after shutdown: see _on_probe_done
         self._start_next_playlist()
         self._callbacks.recompute_buttons()
 
@@ -622,7 +725,10 @@ class PlaylistAddController:
         only for mixed video+playlist URLs (ambiguous intent) or over-cap
         playlists (truncation needs consent).
         """
-        if url_info.kind == "playlist" and not over_cap:
+        # A pasted YouTube playlist, or another site's link that probed as one
+        # (classify_youtube_url says "unknown"): the user asked for the list,
+        # so under the cap there is nothing to ask.
+        if url_info.kind in ("playlist", "unknown") and not over_cap:
             return "playlist"
 
         if pl.total_count is not None:
@@ -785,5 +891,7 @@ class PlaylistAddController:
         self._playlist_probe_items = []
         if worker is not None:
             worker.deleteLater()
+        if self._shutdown_started:
+            return  # late signal after shutdown: see _on_probe_done
         self._start_next_playlist()
         self._callbacks.recompute_buttons()

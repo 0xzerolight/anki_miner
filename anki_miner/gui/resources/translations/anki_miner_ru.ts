@@ -2104,8 +2104,8 @@ No index files are deleted.</source>
         <translation>Майнинг из YouTube</translation>
     </message>
     <message>
-        <source>Mine straight from a YouTube URL or playlist -- no local files needed.</source>
-        <translation>Майньте напрямую из URL или плейлиста YouTube — локальные файлы не нужны.</translation>
+        <source>Mine straight from a YouTube or Bilibili link or playlist -- no local files needed.</source>
+        <translation>Майньте напрямую из ссылки или плейлиста YouTube или Bilibili — локальные файлы не нужны.</translation>
     </message>
     <message>
         <source>Mine from an audiobook</source>
@@ -12755,8 +12755,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>Cookie из браузера</translation>
     </message>
     <message>
-        <source>Reuse a browser's YouTube login, or an exported cookies.txt file, when YouTube blocks anonymous fetches. Keep a cookies file private — it holds your login.</source>
-        <translation>Использовать вход в YouTube из браузера или экспортированный файл cookies.txt, когда YouTube блокирует анонимные запросы. Храните файл cookie в тайне — в нём ваш вход.</translation>
+        <source>Reuse a browser's login, or an exported cookies.txt file, when YouTube blocks anonymous fetches. Bilibili shows its subtitles only to logged-in users. Keep a cookies file private — it holds your login.</source>
+        <translation>Использовать вход из браузера или экспортированный файл cookies.txt, когда YouTube блокирует анонимные запросы. Bilibili показывает субтитры только вошедшим пользователям. Храните файл cookie в тайне — в нём ваш вход.</translation>
     </message>
     <message>
         <source> minutes</source>
@@ -12783,8 +12783,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>Синхронизировать субтитры со звуком</translation>
     </message>
     <message>
-        <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
-        <translation>Синхронизировать субтитры YouTube со звуковой дорожкой видео перед майнингом. Не применяется, если субтитры были расшифрованы локально.</translation>
+        <source>Retime the video's captions against its audio before mining. Ignored when the subtitle was transcribed locally.</source>
+        <translation>Синхронизировать субтитры видео с его звуковой дорожкой перед майнингом. Не применяется, если субтитры были расшифрованы локально.</translation>
     </message>
     <message>
         <source>Keep yt-dlp up to date automatically</source>
@@ -12957,8 +12957,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>Загрузка yt-dlp…</translation>
     </message>
     <message>
-        <source>Paste YouTube links or playlists, one per line, then click Mine</source>
-        <translation>Вставьте ссылки или плейлисты YouTube, по одной в строке, затем нажмите «Майнить»</translation>
+        <source>Paste video or playlist links from YouTube, Bilibili or another site, one per line, then click Mine</source>
+        <translation>Вставьте ссылки на видео или плейлисты с YouTube, Bilibili или другого сайта, по одной в строке, затем нажмите «Майнить»</translation>
     </message>
     <message>
         <source>Review words before mining</source>
@@ -12985,8 +12985,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>Только субтитры</translation>
     </message>
     <message>
-        <source>Auto uses YouTube's captions when they exist and transcribes the video when they do not. Always transcribe ignores YouTube's captions. Captions only skips a video that has none.</source>
-        <translation>«Авто» использует субтитры YouTube, если они есть, и расшифровывает видео, если их нет. «Всегда расшифровывать» игнорирует субтитры YouTube. «Только субтитры» пропускает видео, у которого их нет.</translation>
+        <source>Auto uses the video's own captions when they exist and transcribes the video when they do not. Always transcribe ignores the captions. Captions only skips a video that has none.</source>
+        <translation>«Авто» использует собственные субтитры видео, если они есть, и расшифровывает видео, если их нет. «Всегда расшифровывать» игнорирует субтитры. «Только субтитры» пропускает видео, у которого их нет.</translation>
     </message>
     <message>
         <source>Some lines are not valid URLs.</source>
@@ -13005,8 +13005,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>Прервано при закрытии Anki Miner</translation>
     </message>
     <message>
-        <source>Drop a YouTube link here. Mine local files from the Video or Audiobooks tab.</source>
-        <translation>Перетащите сюда ссылку на YouTube. Локальные файлы майните на вкладке «Видео» или «Аудиокниги».</translation>
+        <source>Drop a video link here. Mine local files from the Video or Audiobooks tab.</source>
+        <translation>Перетащите сюда ссылку на видео. Локальные файлы майните на вкладке «Видео» или «Аудиокниги».</translation>
     </message>
     <message>
         <source>This run needs local transcription, but the model %1 is not installed.</source>

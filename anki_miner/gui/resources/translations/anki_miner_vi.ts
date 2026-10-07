@@ -2098,8 +2098,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Khai thác từ YouTube</translation>
     </message>
     <message>
-        <source>Mine straight from a YouTube URL or playlist -- no local files needed.</source>
-        <translation>Khai thác trực tiếp từ URL hoặc danh sách phát YouTube -- không cần tệp cục bộ.</translation>
+        <source>Mine straight from a YouTube or Bilibili link or playlist -- no local files needed.</source>
+        <translation>Khai thác trực tiếp từ liên kết hoặc danh sách phát YouTube hay Bilibili -- không cần tệp cục bộ.</translation>
     </message>
     <message>
         <source>Mine from an audiobook</source>
@@ -12673,8 +12673,8 @@ Sắp xếp theo cột này để duyệt hết một bản thu dài theo thứ 
         <translation>Cookie từ trình duyệt</translation>
     </message>
     <message>
-        <source>Reuse a browser's YouTube login, or an exported cookies.txt file, when YouTube blocks anonymous fetches. Keep a cookies file private — it holds your login.</source>
-        <translation>Dùng lại phiên đăng nhập YouTube của trình duyệt, hoặc tệp cookies.txt đã xuất, khi YouTube chặn truy cập ẩn danh. Hãy giữ kín tệp cookie — nó chứa phiên đăng nhập của bạn.</translation>
+        <source>Reuse a browser's login, or an exported cookies.txt file, when YouTube blocks anonymous fetches. Bilibili shows its subtitles only to logged-in users. Keep a cookies file private — it holds your login.</source>
+        <translation>Dùng lại phiên đăng nhập của trình duyệt, hoặc tệp cookies.txt đã xuất, khi YouTube chặn truy cập ẩn danh. Bilibili chỉ hiển thị phụ đề cho người dùng đã đăng nhập. Hãy giữ kín tệp cookie — nó chứa phiên đăng nhập của bạn.</translation>
     </message>
     <message>
         <source> minutes</source>
@@ -12701,8 +12701,8 @@ Sắp xếp theo cột này để duyệt hết một bản thu dài theo thứ 
         <translation>Căn chỉnh phụ đề theo âm thanh</translation>
     </message>
     <message>
-        <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
-        <translation>Chỉnh lại thời gian phụ đề của YouTube theo âm thanh video trước khi khai thác. Bỏ qua khi phụ đề đã được phiên âm cục bộ.</translation>
+        <source>Retime the video's captions against its audio before mining. Ignored when the subtitle was transcribed locally.</source>
+        <translation>Chỉnh lại thời gian phụ đề của video theo âm thanh của nó trước khi khai thác. Bỏ qua khi phụ đề đã được phiên âm cục bộ.</translation>
     </message>
     <message>
         <source>Keep yt-dlp up to date automatically</source>
@@ -12875,8 +12875,8 @@ Sắp xếp theo cột này để duyệt hết một bản thu dài theo thứ 
         <translation>Đang tải yt-dlp…</translation>
     </message>
     <message>
-        <source>Paste YouTube links or playlists, one per line, then click Mine</source>
-        <translation>Dán liên kết hoặc danh sách phát YouTube, mỗi dòng một mục, rồi nhấn Khai thác</translation>
+        <source>Paste video or playlist links from YouTube, Bilibili or another site, one per line, then click Mine</source>
+        <translation>Dán liên kết video hoặc danh sách phát từ YouTube, Bilibili hay trang khác, mỗi dòng một mục, rồi nhấn Khai thác</translation>
     </message>
     <message>
         <source>Review words before mining</source>
@@ -12903,8 +12903,8 @@ Sắp xếp theo cột này để duyệt hết một bản thu dài theo thứ 
         <translation>Chỉ dùng phụ đề</translation>
     </message>
     <message>
-        <source>Auto uses YouTube's captions when they exist and transcribes the video when they do not. Always transcribe ignores YouTube's captions. Captions only skips a video that has none.</source>
-        <translation>Tự động dùng phụ đề của YouTube nếu có, và phiên âm video nếu không có. Luôn phiên âm bỏ qua phụ đề của YouTube. Chỉ dùng phụ đề bỏ qua video không có phụ đề.</translation>
+        <source>Auto uses the video's own captions when they exist and transcribes the video when they do not. Always transcribe ignores the captions. Captions only skips a video that has none.</source>
+        <translation>Tự động dùng phụ đề sẵn có của video nếu có, và phiên âm video nếu không có. Luôn phiên âm bỏ qua phụ đề. Chỉ dùng phụ đề bỏ qua video không có phụ đề.</translation>
     </message>
     <message>
         <source>Some lines are not valid URLs.</source>
@@ -12923,8 +12923,8 @@ Sắp xếp theo cột này để duyệt hết một bản thu dài theo thứ 
         <translation>Đã ngắt khi Anki Miner đóng</translation>
     </message>
     <message>
-        <source>Drop a YouTube link here. Mine local files from the Video or Audiobooks tab.</source>
-        <translation>Thả liên kết YouTube vào đây. Khai thác tệp cục bộ từ tab Video hoặc Sách nói.</translation>
+        <source>Drop a video link here. Mine local files from the Video or Audiobooks tab.</source>
+        <translation>Thả liên kết video vào đây. Khai thác tệp cục bộ từ tab Video hoặc Sách nói.</translation>
     </message>
     <message>
         <source>This run needs local transcription, but the model %1 is not installed.</source>

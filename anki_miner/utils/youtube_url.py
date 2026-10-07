@@ -75,10 +75,11 @@ _YOUTUBE_HOSTS = frozenset(
 _YOUTU_BE_HOST = "youtu.be"
 
 # Query keys a log line may keep verbatim: they identify WHICH video, playlist,
-# playlist position and timestamp a run was about. Everything else in a pasted
-# YouTube URL (``si``, ``pp``, ``ab_channel``, campaign parameters) is tracking
-# that ties the URL to the person who copied it.
-_LOGGABLE_QUERY_KEYS = frozenset({"v", "list", "index", "t"})
+# playlist position and timestamp a run was about, and ``p``, the part of a
+# Bilibili multi-part video. Everything else in a pasted URL (``si``, ``pp``,
+# ``ab_channel``, campaign parameters) is tracking that ties the URL to the
+# person who copied it.
+_LOGGABLE_QUERY_KEYS = frozenset({"v", "list", "index", "t", "p"})
 
 
 # ---------------------------------------------------------------------------
@@ -252,6 +253,20 @@ def classify_youtube_url(url: str) -> YouTubeUrlInfo:
             return _video_result(video_id, qs)
 
     return _UNKNOWN
+
+
+def is_youtube_host(url: str) -> bool:
+    """Whether *url* is on a YouTube host (youtube.com and its forms, youtu.be).
+
+    The fetcher splits YouTube from other sites on this, not on
+    :func:`classify_youtube_url`. A YouTube link the classifier cannot parse
+    (a channel, an embed) is still YouTube to yt-dlp and keeps YouTube's probe.
+    """
+    try:
+        host = (urlparse(_normalise_url(url)).hostname or "").lower()
+    except ValueError:
+        return False
+    return host in _YOUTUBE_HOSTS or host in (_YOUTU_BE_HOST, "youtube-nocookie.com", "www.youtube-nocookie.com")
 
 
 def redact_youtube_url_for_log(url: str) -> str:

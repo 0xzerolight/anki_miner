@@ -95,3 +95,21 @@ def test_age_restricted_videos_are_refused_for_every_source(source: str, test_co
     mineable, error, mode = _classify_probe_result(_info(is_age_restricted=True), config, source)
     assert (mineable, mode) == (False, None)
     assert "Age-restricted" in (error or "")
+
+
+def test_captions_only_names_the_login_a_site_wants(test_config: AnkiMinerConfig) -> None:
+    """Bilibili hides every CC track from a logged-out probe; say how to get them."""
+    mineable, error, mode = _classify_probe_result(_info(subtitles_need_login=True), test_config, "captions")
+    assert mineable is False
+    assert mode is None
+    assert error is not None
+    assert error.startswith("No Japanese subtitles available for this video. ")
+    # Cookies from a browser that is not logged in to the site trip it too,
+    # so the remedy names the login, not only the cookies setting.
+    assert "log in" in error
+    assert "Settings → YouTube" in error
+
+
+def test_auto_still_transcribes_a_logged_out_site(test_config: AnkiMinerConfig) -> None:
+    info = _info(subtitles_need_login=True)
+    assert _classify_probe_result(info, test_config, "auto") == (True, None, "transcribe")

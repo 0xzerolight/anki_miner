@@ -13,7 +13,9 @@ from PyQt6.QtWidgets import QLabel
 
 def test_the_instruction_lives_in_the_placeholder(queue_youtube_tab):
     tab = queue_youtube_tab
-    assert tab.url_edit.placeholderText() == "Paste YouTube links or playlists, one per line, then click Mine"
+    assert tab.url_edit.placeholderText() == (
+        "Paste video or playlist links from YouTube, Bilibili or another site, one per line, then click Mine"
+    )
     assert tab.empty_label is None
 
 
