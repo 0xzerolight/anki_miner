@@ -7,10 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **Dictionary updates.** Dictionaries, frequency lists and pitch-accent sources that publish updates (Jitendex, JMdict, JMnedict, KANJIDIC, Wiktionary/wty, CC-CEDICT, Jiten) now update once a week at startup. Tools → Update Dictionaries Now and Settings → Dictionaries → Update Now check right away. Each one updates in place: list order and on/off state are kept, and a failed download leaves the installed copy untouched. Turn it off under Settings → Dictionaries → Updates.
 
 ### Changed
 
 ### Fixed
+- **Re-import finds a downloaded Wiktionary (wty) dictionary's saved copy.** Re-import and Reimport All said no saved copy was left for a wty dictionary from the recommended downloads.
 
 ### Removed
 

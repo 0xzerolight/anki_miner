@@ -202,6 +202,7 @@ Stateless business logic classes in `services/`. Each receives the frozen `AnkiM
 **Resource acquisition and recovery:**
 
 - **Resource catalog / downloader** (`services/resource_catalog.py`, `services/resource_downloader.py`): the catalog is pure data — the recommended dictionary/frequency/pitch downloads, each tagged with a `kind` the download worker dispatches on. The downloader streams a URL to a uniquely-named `.part` file in a caller-provided directory and returns that path; it never writes the final destination, and unlike the audio fetchers it raises on failure.
+- **Resource updates** (`services/resource_updates.py`): reads each active-language chain slot's saved `source.zip` `index.json` (`isUpdatable`/`indexUrl`/`downloadUrl`), compares the published revision by Yomitan's rule, and re-validates the result against the live config. Newer revisions go to the resource download session as specs pinned to the existing slot: no sweep, chains untouched, Settings rows repainted. MainWindow runs it weekly after prewarm and on demand.
 - **Download resume** (`services/download_resume.py`): durable partial-download state — a `.part` body plus an atomic manifest under `runtime_state/downloads/`. Resume happens only when the server *proves* the artifact is unchanged; every ambiguity discards the partial and refetches from byte zero. The exact validator rules are in the module docstring.
 - **Store recovery** (`services/store_recovery.py`, `services/startup_store_recovery.py`): the indexed stores (dicts, freqs, pitch, audio packs) share one recovery substrate — a pure per-slot decision over backup/tombstone/quarantine residue, run as one lock-gated repair and garbage-collection pass at boot.
 
@@ -556,6 +557,7 @@ All persistent user data under `~/.anki_miner/`:
 | `audio_cache/sentence_tts/` | Files | Reading-path sentence TTS: `sentencetts_{provider}_{sha1(sentence)[:16]}.mp3` (content-hash keys, no `.miss` markers) |
 | `runtime_state/downloads/` | Files | Partial-download resume state: `<key>.part` bodies + `<key>.json` manifests (`services/download_resume.py`) |
 | `runtime_state/queues/` | JSON | Queue-contents snapshots written on close, one file per queue (`gui/utils/queue_state_store.py`) |
+| `runtime_state/resource_update_check` | File (mtime) | When the weekly resource-update check last ran its course (`services/resource_updates.py`) |
 | `asr_models/` | Files | Downloaded local Whisper models (Utilities → Generate); `asr_models/ggml/` holds the whisper.cpp weights |
 | `cuda_libs/` | Files | In-app CUDA acceleration pack for ASR |
 | `onnx_pack/` | Files | In-app ONNX/VAD pack for ASR |
