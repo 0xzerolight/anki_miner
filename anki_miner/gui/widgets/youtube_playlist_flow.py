@@ -63,7 +63,7 @@ from anki_miner.services.youtube_fetcher import YouTubeFetcherService
 # the private name stays for this module's call site and its existing tests.
 from anki_miner.services.youtube_fetcher import classify_probe_result as _classify_probe_result
 from anki_miner.utils.i18n import tr_format
-from anki_miner.utils.youtube_url import YouTubeUrlInfo, classify_youtube_url
+from anki_miner.utils.youtube_url import YouTubeUrlInfo, classify_youtube_url, is_youtube_host
 
 logger = logging.getLogger(__name__)
 
@@ -476,7 +476,24 @@ class PlaylistAddController:
         if not isinstance(info, VideoInfo):  # pragma: no cover - signal guard
             self._mark_probe_error(item, "Invalid probe result.")
             return
+        if not is_youtube_host(item.url) and self._queued_elsewhere(item, info.video_id):
+            # Two links to one video. A YouTube link dedups on the id in its URL
+            # before the probe (and keeps that behaviour unchanged); another
+            # site's links differ per share (b23.tv codes, vd_source /
+            # spm_id_from), so only the probed id can tell. Mining it twice
+            # would only download and transcribe it twice.
+            self._callbacks.remove_item(item)
+            self._callbacks.log_warning(
+                tr_format(QCoreApplication.translate("PlaylistAddController", "Skipped %1 already in the queue."), 1)
+            )
+            self._callbacks.recompute_buttons()
+            return
         self._apply_classification(item, info)
+
+    def _queued_elsewhere(self, item: YouTubeQueueItem, video_id: str) -> bool:
+        """Whether a queued row other than *item* already carries *video_id*."""
+        queued = self._callbacks.queued_items()
+        return item in queued and any(other is not item and other.video_id == video_id for other in queued)
 
     def _queue_probed_playlist(self, item: YouTubeQueueItem, pl: PlaylistInfo) -> None:
         """Swap a pasted link's row for the playlist its probe found.

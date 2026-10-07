@@ -2209,6 +2209,21 @@ class TestOtherSitePlaylists:
 
         assert [i.url for i in tab._queue.all_items()] == [e.url for e in pl.entries]
 
+    def test_the_same_video_from_two_share_links_is_queued_once(self, tab):
+        """Bilibili share links differ per share; only the probed id can tell them apart."""
+        first_link = "https://www.bilibili.com/video/BV12N4y1M7rh?vd_source=aaa"
+        second_link = "https://b23.tv/AbCdEf"
+        tab._add_flow.add_urls([first_link, second_link])
+        first, second = tab._queue.all_items()
+        info = _make_video_info(video_id="BV12N4y1M7rh")
+
+        tab._add_flow._on_probe_done(first, info)
+        tab._add_flow._on_probe_done(second, info)
+
+        assert tab._queue.all_items() == [first]
+        assert second not in tab._list_items
+        assert "Skipped 1 already in the queue." in tab.log_widget.text_edit.toPlainText()
+
     def test_a_probed_part_still_dedups_by_its_url(self, tab):
         """Once probed, a row is keyed by yt-dlp's id; its URL must still match."""
         part = f"{BILI_URL}?p=2"
