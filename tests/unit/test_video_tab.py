@@ -343,6 +343,7 @@ class TestShutdown:
             queued_items=lambda: list(items),
             render_new_item=MagicMock(),
             refresh_row=MagicMock(),
+            remove_item=MagicMock(),
             recompute_buttons=MagicMock(),
             run_active=lambda: False,
             log_info=MagicMock(),

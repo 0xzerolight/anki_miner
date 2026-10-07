@@ -1,6 +1,6 @@
 """Short-lived worker threads for probing YouTube metadata.
 
-``YouTubeFetcherService.probe_metadata`` (and ``probe_playlist``) spawn yt-dlp
+``YouTubeFetcherService.probe_link`` (and ``probe_playlist``) spawn yt-dlp
 and block on HTTP. Running them on the Qt main thread freezes the GUI, so the
 YouTube tab dispatches probes through minimal ``QThread`` subclasses and listens
 for their done / error signals.
@@ -93,14 +93,14 @@ class _SingleCallProbeThread(CancellableWorker):
 
 
 class YouTubeProbeWorker(_SingleCallProbeThread):
-    """Run ``fetcher.probe_metadata(url)`` in a background thread.
+    """Run ``fetcher.probe_link(url)`` in a background thread.
 
-    Emits :data:`probe_done` with the resulting ``VideoInfo`` on success, or
+    Emits :data:`probe_done` with the resulting ``VideoInfo`` (or ``PlaylistInfo``) on success, or
     :data:`probe_error` with the exception message on failure. See
     :class:`_SingleCallProbeThread` for the shutdown guarantees.
     """
 
-    probe_done = pyqtSignal(object)  # VideoInfo
+    probe_done = pyqtSignal(object)  # VideoInfo, or PlaylistInfo for another site's playlist link
     probe_error = pyqtSignal(str)
 
     def __init__(
@@ -114,10 +114,10 @@ class YouTubeProbeWorker(_SingleCallProbeThread):
 
         Args:
             fetcher: Fetcher service used to probe metadata.
-            url: YouTube URL to probe.
+            url: Video or playlist link to probe (YouTube or another site).
             parent: Optional parent QObject.
             timeout_s: Hard upper bound on the probe subprocess, in seconds.
-                Forwarded to ``YouTubeFetcherService.probe_metadata``. On
+                Forwarded to ``YouTubeFetcherService.probe_link``. On
                 timeout, the fetcher kills the yt-dlp subprocess and raises
                 ``YouTubeFetchError``.
         """
@@ -125,7 +125,7 @@ class YouTubeProbeWorker(_SingleCallProbeThread):
         self._url = url
 
     def _do_call(self) -> object:
-        return self._fetcher.probe_metadata(self._url, timeout_s=self._timeout_s)
+        return self._fetcher.probe_link(self._url, timeout_s=self._timeout_s)
 
     def _emit_result(self, result: object) -> None:
         self.probe_done.emit(result)

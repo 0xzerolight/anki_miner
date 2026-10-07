@@ -21,7 +21,7 @@ that has none."""
 
 @dataclass(frozen=True)
 class VideoInfo:
-    """Metadata about a YouTube video, gathered before download.
+    """Metadata about an online video (YouTube or another yt-dlp site), gathered before download.
 
     Immutable to keep thread-safety guarantees consistent with the rest of
     the pipeline (see AnkiMinerConfig).
@@ -38,6 +38,12 @@ class VideoInfo:
     """JA auto-captions usable only via the auto-dub route: a JA audio track
     exists to match them, and they are not already native (has_auto_ja_subs).
     Exactly one of manual/native-auto/dub claims a video."""
+    site: str = "YouTube"
+    """Where the video lives: "YouTube", "Bilibili", or yt-dlp's extractor key
+    for any other site. Names the run in stats and receipts."""
+    subtitles_need_login: bool = False
+    """The site withheld its subtitle tracks from a logged-out probe
+    (Bilibili). Only the captions-only refusal reads it."""
 
 
 @dataclass(frozen=True)
@@ -66,7 +72,7 @@ class FetchedMedia:
 
 @dataclass(frozen=True)
 class PlaylistEntry:
-    """A single video entry within a YouTube playlist.
+    """A single video entry within a playlist (YouTube, or another site's multi-part video or collection).
 
     Immutable to keep thread-safety guarantees consistent with the rest of
     the pipeline (see AnkiMinerConfig).  ``duration_s`` is optional because
@@ -76,12 +82,12 @@ class PlaylistEntry:
     video_id: str
     title: str
     duration_s: int | None  # flat extraction may omit duration
-    url: str  # canonical https://www.youtube.com/watch?v=<id>
+    url: str  # the URL probes and fetches take: YouTube's canonical watch URL, or another site's own entry URL
 
 
 @dataclass(frozen=True)
 class PlaylistInfo:
-    """Metadata about a YouTube playlist, gathered before individual video downloads.
+    """Metadata about a playlist (YouTube, or another site's multi-part video or collection), gathered before downloads.
 
     Immutable to keep thread-safety guarantees consistent with the rest of
     the pipeline (see AnkiMinerConfig).  Both ``playlist_id`` and

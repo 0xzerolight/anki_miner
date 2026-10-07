@@ -31,6 +31,7 @@ from anki_miner.exceptions.youtube import (
     YouTubeFetchError,
     YtdlpNotFoundError,
 )
+from anki_miner.models.youtube import PlaylistInfo, VideoInfo
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
 from anki_miner.utils import ytdlp_resolver
 from anki_miner.utils.process_supervisor import SupervisedResult, SupervisedState
@@ -486,6 +487,176 @@ class TestProbeMetadata:
             pytest.raises(YouTubeFetchError, match="could not read this"),
         ):
             service.probe_metadata("https://youtu.be/abc123")
+
+
+class TestProbeOtherSites:
+    """A non-YouTube host gets subtitles asked for and any file-safe id."""
+
+    BILI = "https://www.bilibili.com/video/BV12N4y1M7rh"
+
+    def _probe(self, service: YouTubeFetcherService, payload: dict, stderr: str = "") -> tuple[VideoInfo, list[str]]:
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised",
+            return_value=_fake_run(0, json.dumps(payload), stderr),
+        ) as run:
+            info = service.probe_metadata(self.BILI)
+        return info, run.call_args.args[0]
+
+    def test_bilibili_id_is_accepted_and_the_site_recorded(self, service: YouTubeFetcherService) -> None:
+        info, _ = self._probe(service, _make_metadata(id="BV12N4y1M7rh_p2", extractor_key="BiliBili"))
+        assert info.video_id == "BV12N4y1M7rh_p2"
+        assert info.site == "Bilibili"  # yt-dlp's "BiliBili", spelled as the site does
+
+    def test_other_extractor_keys_are_kept_as_given(self, service: YouTubeFetcherService) -> None:
+        info, _ = self._probe(service, _make_metadata(id="sm9", extractor_key="Niconico"))
+        assert info.site == "Niconico"
+
+    @pytest.mark.parametrize("kind", ["multi_video", "playlist"])
+    def test_a_link_that_is_not_one_video_is_refused(self, service: YouTubeFetcherService, kind: str) -> None:
+        # Bilibili interactive videos answer playlist even under --no-playlist,
+        # and old segmented (FLV) ones answer multi_video. The fetch would leave
+        # several video files, so refuse at the probe with a reason.
+        with pytest.raises(YouTubeFetchError, match="not a single video"):
+            self._probe(service, _make_metadata(id="BV12N4y1M7rh", extractor_key="BiliBili", _type=kind))
+
+    def test_probe_asks_for_subtitles_and_still_pins_one_video(self, service: YouTubeFetcherService) -> None:
+        # --no-playlist on every host: a collection entry that is itself a
+        # multi-part video probes as its first part, never as a nested playlist.
+        _, cmd = self._probe(service, _make_metadata(id="BV12N4y1M7rh", extractor_key="BiliBili"))
+        assert "--write-subs" in cmd
+        assert "--no-playlist" in cmd
+
+    def test_unsafe_site_id_is_refused(self, service: YouTubeFetcherService) -> None:
+        with pytest.raises(YouTubeFetchError, match="Unexpected video id format"):
+            self._probe(service, _make_metadata(id="../x", extractor_key="Generic"))
+
+    def test_login_warning_sets_the_flag(self, service: YouTubeFetcherService) -> None:
+        info, _ = self._probe(
+            service,
+            _make_metadata(id="BV12N4y1M7rh", extractor_key="BiliBili", subtitles={"danmaku": [{"ext": "xml"}]}),
+            stderr="WARNING: [BiliBili] Subtitles are only available when logged in. Use --cookies-from-browser",
+        )
+        assert info.subtitles_need_login is True
+        assert info.has_manual_ja_subs is False
+
+    def test_missing_extractor_key_names_the_site_web(self, service: YouTubeFetcherService) -> None:
+        info, _ = self._probe(service, _make_metadata(id="BV12N4y1M7rh"))
+        assert info.site == "Web"
+
+    def test_youtube_probe_argv_is_unchanged(self, service: YouTubeFetcherService) -> None:
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised",
+            return_value=_fake_run(0, json.dumps(_make_metadata())),
+        ) as run:
+            info = service.probe_metadata("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+        cmd = run.call_args.args[0]
+        assert cmd[1:5] == ["--ignore-config", "--skip-download", "--dump-single-json", "--no-playlist"]
+        assert "--write-subs" not in cmd
+        assert info.site == "YouTube"
+        assert info.subtitles_need_login is False
+
+    def test_youtube_host_keeps_the_11_char_check(self, service: YouTubeFetcherService) -> None:
+        with (
+            patch(
+                "anki_miner.services.youtube_fetcher.run_supervised",
+                return_value=_fake_run(0, json.dumps(_make_metadata(id="BV12N4y1M7rh"))),
+            ),
+            pytest.raises(YouTubeFetchError, match="Unexpected video id format"),
+        ):
+            service.probe_metadata("https://youtu.be/dQw4w9WgXcQ")
+
+
+class TestProbeLink:
+    """A pasted non-YouTube link may be a multi-part video or a collection."""
+
+    BILI = "https://www.bilibili.com/video/BV1bK411W797"
+
+    def _run(self, service: YouTubeFetcherService, payload: dict) -> tuple[object, list[str]]:
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised",
+            return_value=_fake_run(0, json.dumps(payload)),
+        ) as run:
+            result = service.probe_link(self.BILI)
+        return result, run.call_args.args[0]
+
+    def test_multi_part_video_becomes_a_playlist(self, service: YouTubeFetcherService) -> None:
+        # The shape yt-dlp 2026.08.19 returned live for BV1bK411W797.
+        parts = [f"{self.BILI}?p={n}" for n in (1, 2, 3)]
+        payload = {
+            "_type": "playlist",
+            "id": "BV1bK411W797",
+            "title": "物语中的人物",
+            "playlist_count": None,
+            "extractor_key": "BiliBili",
+            "entries": [{"_type": "url", "id": None, "title": None, "duration": None, "url": u} for u in parts],
+        }
+        result, _ = self._run(service, payload)
+        assert isinstance(result, PlaylistInfo)
+        assert [e.url for e in result.entries] == parts
+        assert [e.video_id for e in result.entries] == parts
+        assert [e.title for e in result.entries] == parts
+        assert result.title == "物语中的人物"
+        assert result.total_count is None
+
+    def test_probe_lists_flat_without_pinning_one_video(
+        self, service: YouTubeFetcherService, yt_config: AnkiMinerConfig
+    ) -> None:
+        _, cmd = self._run(service, _make_metadata(id="BV12N4y1M7rh", extractor_key="BiliBili"))
+        assert "--no-playlist" not in cmd
+        assert "--flat-playlist" in cmd
+        assert "--write-subs" in cmd
+        assert cmd[cmd.index("--playlist-items") + 1] == f"1:{yt_config.youtube_playlist_max + 1}"
+
+    def test_single_video_is_video_info(self, service: YouTubeFetcherService) -> None:
+        result, _ = self._run(service, _make_metadata(id="BV12N4y1M7rh", extractor_key="BiliBili"))
+        assert isinstance(result, VideoInfo)
+        assert result.site == "Bilibili"
+
+    def test_separator_and_app_owned_config(self, service: YouTubeFetcherService) -> None:
+        """The T-34 separator and --ignore-config hold on the new argv too."""
+        hostile = "--update-to=evil/fork@tag"
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised",
+            return_value=_fake_run(0, json.dumps(_make_metadata(extractor_key="Generic"))),
+        ) as run:
+            service.probe_link(hostile)
+        cmd = run.call_args.args[0]
+        assert cmd[1] == "--ignore-config"
+        assert cmd[-2:] == ["--", hostile]
+
+    def test_a_segmented_video_is_refused(self, service: YouTubeFetcherService) -> None:
+        with pytest.raises(YouTubeFetchError, match="not a single video"):
+            self._run(service, _make_metadata(id="BV12N4y1M7rh", extractor_key="BiliBili", _type="multi_video"))
+
+    def test_collection_entry_keeps_its_own_id_and_title(self, service: YouTubeFetcherService) -> None:
+        entry = {
+            "_type": "url",
+            "id": "BV12N4y1M7rh",
+            "title": "第一集",
+            "duration": 300,
+            "url": "https://www.bilibili.com/video/BV12N4y1M7rh",
+        }
+        result, _ = self._run(service, {"_type": "playlist", "id": "1", "title": "合集", "entries": [entry]})
+        assert isinstance(result, PlaylistInfo)
+        assert result.entries[0].video_id == "BV12N4y1M7rh"
+        assert result.entries[0].title == "第一集"
+        assert result.entries[0].duration_s == 300
+
+    def test_entries_without_a_web_link_are_skipped(self, service: YouTubeFetcherService) -> None:
+        payload = {"_type": "playlist", "id": "1", "title": "t", "entries": [None, {"_type": "url", "url": "ftp://x"}]}
+        with pytest.raises(YouTubeFetchError, match="no accessible videos"):
+            self._run(service, payload)
+
+    def test_youtube_link_takes_probe_metadata(self, service: YouTubeFetcherService) -> None:
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised",
+            return_value=_fake_run(0, json.dumps(_make_metadata())),
+        ) as run:
+            result = service.probe_link("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+        cmd = run.call_args.args[0]
+        assert isinstance(result, VideoInfo)
+        assert "--no-playlist" in cmd
+        assert "--flat-playlist" not in cmd
 
 
 class TestProbeClassifiesLikeFetch:

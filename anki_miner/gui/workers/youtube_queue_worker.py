@@ -261,6 +261,9 @@ class YouTubeQueueWorker(SequentialQueueWorker[YouTubeQueueItem]):
             curation_callback=self._active_curation_callback,
             on_fetched=self._capture_curation_media,
             source_label=item.video_info.title,
+            # Names the run in stats and receipts: "YouTube" keeps YT:<id>,
+            # another site ("Bilibili") files under its own name.
+            site=item.video_info.site,
             # The probe already certified whether this video has NATIVE Japanese
             # auto-captions. Passing it lets the fetch fall back to them when a
             # listed manual track turns out to be unavailable, without ever falling

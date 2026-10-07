@@ -125,15 +125,25 @@ class TestYouTubeTakesALink:
             second,
         ]
 
-    def test_a_non_youtube_url_is_marked_invalid_and_refused(self, youtube_tab):
+    def test_a_non_web_link_is_marked_invalid_and_refused(self, youtube_tab):
         youtube_tab._add_flow = MagicMock()
 
-        _enter(youtube_tab, _mime(urls=("https://example.com/video",)))
-        event = _drop(youtube_tab, _mime(urls=("https://example.com/video",)))
+        _enter(youtube_tab, _mime(urls=("ftp://example.com/video",)))
+        event = _drop(youtube_tab, _mime(urls=("ftp://example.com/video",)))
 
         assert youtube_tab.url_edit.property("dropState") == ""  # cleared on drop
         assert youtube_tab.url_edit.toPlainText() == ""
         assert event.isAccepted() is False
+
+    def test_a_bilibili_link_lights_the_url_box(self, youtube_tab):
+        _enter(youtube_tab, _mime(urls=("https://www.bilibili.com/video/BV12N4y1M7rh",)))
+
+        assert youtube_tab.url_edit.property("dropState") == "valid"
+
+    def test_dragged_share_text_lands_as_its_link(self, youtube_tab):
+        _drop(youtube_tab, _mime(text="【标题】 https://www.bilibili.com/video/BV12N4y1M7rh"))
+
+        assert youtube_tab.url_edit.toPlainText() == "https://www.bilibili.com/video/BV12N4y1M7rh"
 
     def test_a_dropped_file_says_where_files_are_mined(self, youtube_tab, tmp_path):
         episode = tmp_path / "ep01.mkv"

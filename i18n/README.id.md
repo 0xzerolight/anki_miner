@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:18fca8a7ef9c5169 -->
+<!-- i18n-source: README.md sha256:b27c964857515c8d -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -115,7 +115,7 @@ Untuk pengaturan pengembangan lengkap, lihat [CONTRIBUTING.md](../CONTRIBUTING.m
 
 ## Tab
 
-- **Video** - mining satu pasang video/subtitel, folder batch, URL YouTube, atau seluruh serial menjadi satu dek yang diurutkan berdasarkan frekuensi.
+- **Video** - mining satu pasang video/subtitel, folder batch, URL YouTube atau Bilibili, atau seluruh serial menjadi satu dek yang diurutkan berdasarkan frekuensi.
 - **Buku Audio** - mining buku audio, podcast, radio, lagu (pasangan audio + subtitel/transkrip).
 - **Bacaan** - mining manga (mokuro), novel (`.epub`, `.txt`; satu buku atau seluruh folder), berkas subtitel mandiri, atau teks yang ditempel.
 - **Analitik** - riwayat mining, peringkat kesulitan, milestone.

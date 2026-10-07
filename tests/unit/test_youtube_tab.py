@@ -2122,6 +2122,158 @@ class TestAddUrls:
 
 
 # ---------------------------------------------------------------------------
+# Other sites: a pasted link that probes as a playlist, Share text
+# ---------------------------------------------------------------------------
+
+BILI_URL = "https://www.bilibili.com/video/BV1bK411W797"
+
+
+def _bili_parts(n: int) -> PlaylistInfo:
+    """What probe_link returns for a Bilibili multi-part video (URL-keyed entries)."""
+    urls = [f"{BILI_URL}?p={k}" for k in range(1, n + 1)]
+    entries = tuple(PlaylistEntry(video_id=u, title=u, duration_s=None, url=u) for u in urls)
+    return PlaylistInfo(playlist_id="BV1bK411W797", title="物语", entries=entries, total_count=None)
+
+
+class TestOtherSitePlaylists:
+    """A pasted link whose probe answers with a playlist becomes its parts."""
+
+    def test_probed_playlist_replaces_the_row_with_its_parts(self, tab):
+        tab._add_flow.add_urls([BILI_URL])
+        row = tab._queue.all_items()[-1]
+        pl = _bili_parts(3)
+
+        with patch("anki_miner.gui.widgets.youtube_playlist_flow.QMessageBox") as box:
+            tab._add_flow._on_probe_done(row, pl)
+
+        assert not box.called  # under the cap: no question
+        items = tab._queue.all_items()
+        assert row not in items
+        assert row not in tab._list_items
+        assert [i.url for i in items] == [e.url for e in pl.entries]
+        assert all(i.status == YouTubeItemStatus.PROBING for i in items)
+        assert tab._playlist_probe_worker_cls.call_args.args[1] == [e.url for e in pl.entries]
+
+    def test_over_cap_asks_first(self, tab):
+        tab._add_flow._config = replace(tab._add_flow._config, youtube_playlist_max=2)
+        tab._add_flow.add_urls([BILI_URL])
+
+        with patch.object(tab._add_flow, "_ask_playlist_choice", return_value="playlist") as ask:
+            tab._add_flow._on_probe_done(tab._queue.all_items()[-1], _bili_parts(3))
+
+        _, _, cap, over_cap = ask.call_args.args
+        assert (cap, over_cap) == (2, True)
+        assert len(tab._queue.all_items()) == 2
+
+    def test_unknown_kind_under_cap_needs_no_dialog(self, tab):
+        with patch("anki_miner.gui.widgets.youtube_playlist_flow.QMessageBox") as box:
+            choice = tab._add_flow._ask_playlist_choice(classify_youtube_url(BILI_URL), _bili_parts(3), 100, False)
+        assert choice == "playlist"
+        assert not box.called
+
+    def test_waits_while_another_playlist_is_probing(self, tab):
+        tab._add_flow.add_urls([PLAYLIST_URL])
+        _resolve_playlist(tab, PLAYLIST_URL, _make_playlist_info(n=2))
+        tab._add_flow._on_playlist_resolve_finished()
+        tab._add_flow.add_urls([BILI_URL])
+        bili_row = next(i for i in tab._queue.all_items() if i.url == BILI_URL)
+
+        tab._add_flow._on_probe_done(bili_row, _bili_parts(3))
+
+        assert tab._playlist_probe_worker_cls.call_count == 1  # still the YouTube playlist's
+        assert tab._add_flow.is_busy
+        tab._add_flow._on_playlist_probe_finished()
+        assert tab._playlist_probe_worker_cls.call_count == 2
+        assert tab._playlist_probe_worker_cls.call_args.args[1] == [e.url for e in _bili_parts(3).entries]
+
+    def test_row_cleared_while_probing_is_not_expanded(self, tab):
+        tab._add_flow.add_urls([BILI_URL])
+        row = tab._queue.all_items()[-1]
+        tab._on_clear_clicked()
+
+        tab._add_flow._on_probe_done(row, _bili_parts(3))
+
+        assert tab._queue.all_items() == []
+        assert not tab._add_flow._playlist_backlog
+
+    def test_same_link_twice_adds_nothing_new(self, tab):
+        pl = _bili_parts(3)
+        tab._add_flow.add_urls([BILI_URL])
+        tab._add_flow._on_probe_done(tab._queue.all_items()[-1], pl)
+        tab._add_flow._on_playlist_probe_finished()
+
+        tab._add_flow.add_urls([BILI_URL])
+        second = tab._queue.all_items()[-1]
+        assert second.url == BILI_URL
+        tab._add_flow._on_probe_done(second, pl)
+
+        assert [i.url for i in tab._queue.all_items()] == [e.url for e in pl.entries]
+
+    def test_the_same_video_from_two_share_links_is_queued_once(self, tab):
+        """Bilibili share links differ per share; only the probed id can tell them apart."""
+        first_link = "https://www.bilibili.com/video/BV12N4y1M7rh?vd_source=aaa"
+        second_link = "https://b23.tv/AbCdEf"
+        tab._add_flow.add_urls([first_link, second_link])
+        first, second = tab._queue.all_items()
+        info = _make_video_info(video_id="BV12N4y1M7rh")
+
+        tab._add_flow._on_probe_done(first, info)
+        tab._add_flow._on_probe_done(second, info)
+
+        assert tab._queue.all_items() == [first]
+        assert second not in tab._list_items
+        assert "Skipped 1 already in the queue." in tab.log_widget.text_edit.toPlainText()
+
+    def test_a_probed_part_still_dedups_by_its_url(self, tab):
+        """Once probed, a row is keyed by yt-dlp's id; its URL must still match."""
+        part = f"{BILI_URL}?p=2"
+        tab._add_flow.add_urls([part])
+        tab._add_flow._on_probe_done(tab._queue.all_items()[-1], _make_video_info(video_id="BV1bK411W797_p2"))
+
+        tab._add_flow.add_urls([part])
+
+        assert len(tab._queue.all_items()) == 1
+
+
+class TestShareText:
+    def test_bilibili_share_text_yields_its_link(self):
+        text = (
+            "【物语中的人物-哔哩哔哩】 https://b23.tv/AbCdEf\n"
+            "看看https://www.bilibili.com/video/BV1bK411W797?p=2。\n"
+            "(see https://www.bilibili.com/video/BV12N4y1M7rh)."
+        )
+        accepted, rejected = split_url_lines(text)
+        assert accepted == [
+            "https://b23.tv/AbCdEf",
+            "https://www.bilibili.com/video/BV1bK411W797?p=2",
+            "https://www.bilibili.com/video/BV12N4y1M7rh",
+        ]
+        assert rejected == []
+
+    def test_text_glued_after_the_link_is_cut(self):
+        """Forwarded Chinese text puts punctuation straight after a link, no space."""
+        accepted, rejected = split_url_lines(
+            "https://b23.tv/AbCdEf，看看\nhttps://www.bilibili.com/video/BV12N4y1M7rh。\n“https://b23.tv/XyZ123”"
+        )
+        assert accepted == [
+            "https://b23.tv/AbCdEf",
+            "https://www.bilibili.com/video/BV12N4y1M7rh",
+            "https://b23.tv/XyZ123",
+        ]
+        assert rejected == []
+
+    def test_a_link_with_unicode_letters_in_its_path_is_kept_whole(self):
+        accepted, rejected = split_url_lines("https://example.com/视频/1")
+        assert accepted == ["https://example.com/视频/1"]
+        assert rejected == []
+
+    def test_two_links_on_one_line_are_refused(self):
+        accepted, rejected = split_url_lines("https://b23.tv/a https://b23.tv/b")
+        assert accepted == []
+        assert rejected == ["https://b23.tv/a https://b23.tv/b"]
+
+
+# ---------------------------------------------------------------------------
 # Mine reads the link box
 # ---------------------------------------------------------------------------
 

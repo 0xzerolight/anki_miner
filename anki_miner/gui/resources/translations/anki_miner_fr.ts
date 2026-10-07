@@ -2101,8 +2101,8 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Extraire depuis YouTube</translation>
     </message>
     <message>
-        <source>Mine straight from a YouTube URL or playlist -- no local files needed.</source>
-        <translation>Extrayez directement depuis une URL ou une liste de lecture YouTube — aucun fichier local nécessaire.</translation>
+        <source>Mine straight from a YouTube or Bilibili link or playlist -- no local files needed.</source>
+        <translation>Extrayez directement depuis un lien ou une liste de lecture YouTube ou Bilibili — aucun fichier local nécessaire.</translation>
     </message>
     <message>
         <source>Mine from an audiobook</source>
@@ -4960,6 +4960,13 @@ Aucun fichier sur le disque n'est supprimé.</translation>
         <source>No cards created. Every word is already known.</source>
         <translation>Aucune carte créée. Chaque mot est déjà connu.</translation>
     </message>
+    <message numerus="yes">
+        <source>Mining %n selected word(s)</source>
+        <translation>
+            <numerusform>Extraction de %n mot sélectionné</numerusform>
+            <numerusform>Extraction de %n mots sélectionnés</numerusform>
+        </translation>
+    </message>
     <message>
         <source>%1 word(s) have more than one reading — the parsed reading was kept.</source>
         <translation>%1 mot(s) ont plusieurs lectures — la lecture analysée a été conservée.</translation>
@@ -5139,13 +5146,6 @@ Aucun fichier sur le disque n'est supprimé.</translation>
     <message>
         <source>No words selected for card creation</source>
         <translation>Aucun mot sélectionné pour la création de cartes</translation>
-    </message>
-    <message numerus="yes">
-        <source>Mining %n selected word(s)</source>
-        <translation>
-            <numerusform>Extraction de %n mot sélectionné</numerusform>
-            <numerusform>Extraction de %n mots sélectionnés</numerusform>
-        </translation>
     </message>
     <message>
         <source>Could not extract media for any word — no cards created</source>
@@ -10236,12 +10236,12 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Impossible de charger les ensembles de noms : %1</translation>
     </message>
     <message>
-        <source>Couldn't initialize known word database: %1</source>
-        <translation>Impossible d'initialiser la BD de mots connus : %1</translation>
-    </message>
-    <message>
         <source>Couldn't load word lists: %1</source>
         <translation>Impossible de charger les listes de mots : %1</translation>
+    </message>
+    <message>
+        <source>Couldn't initialize known word database: %1</source>
+        <translation>Impossible d'initialiser la BD de mots connus : %1</translation>
     </message>
 </context><context>
     <name>SettingsSearchBox</name>
@@ -12386,8 +12386,8 @@ Triez selon cette colonne pour parcourir un long enregistrement dans l'ordre —
         <translation>Cookies du navigateur</translation>
     </message>
     <message>
-        <source>Reuse a browser's YouTube login, or an exported cookies.txt file, when YouTube blocks anonymous fetches. Keep a cookies file private — it holds your login.</source>
-        <translation>Réutiliser la connexion YouTube d'un navigateur, ou un fichier cookies.txt exporté, lorsque YouTube bloque les récupérations anonymes. Gardez un fichier de cookies privé — il contient votre connexion.</translation>
+        <source>Reuse a browser's login, or an exported cookies.txt file, when YouTube blocks anonymous fetches. Bilibili shows its subtitles only to logged-in users. Keep a cookies file private — it holds your login.</source>
+        <translation>Réutiliser la connexion d'un navigateur, ou un fichier cookies.txt exporté, lorsque YouTube bloque les récupérations anonymes. Bilibili ne montre ses sous-titres qu'aux utilisateurs connectés. Gardez un fichier de cookies privé — il contient votre connexion.</translation>
     </message>
     <message>
         <source> minutes</source>
@@ -12414,8 +12414,8 @@ Triez selon cette colonne pour parcourir un long enregistrement dans l'ordre —
         <translation>Aligner les sous-titres sur l'audio</translation>
     </message>
     <message>
-        <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
-        <translation>Recale les sous-titres YouTube sur l'audio de la vidéo avant l'extraction. Ignoré lorsque le sous-titre a été transcrit localement.</translation>
+        <source>Retime the video's captions against its audio before mining. Ignored when the subtitle was transcribed locally.</source>
+        <translation>Recale les sous-titres de la vidéo sur son audio avant l'extraction. Ignoré lorsque le sous-titre a été transcrit localement.</translation>
     </message>
     <message>
         <source>Keep yt-dlp up to date automatically</source>
@@ -12588,8 +12588,8 @@ Triez selon cette colonne pour parcourir un long enregistrement dans l'ordre —
         <translation>Téléchargement de yt-dlp…</translation>
     </message>
     <message>
-        <source>Paste YouTube links or playlists, one per line, then click Mine</source>
-        <translation>Collez des liens ou des playlists YouTube, un par ligne, puis cliquez sur Extraire</translation>
+        <source>Paste video or playlist links from YouTube, Bilibili or another site, one per line, then click Mine</source>
+        <translation>Collez des liens de vidéos ou de playlists YouTube, Bilibili ou d'un autre site, un par ligne, puis cliquez sur Extraire</translation>
     </message>
     <message>
         <source>Review words before mining</source>
@@ -12616,8 +12616,8 @@ Triez selon cette colonne pour parcourir un long enregistrement dans l'ordre —
         <translation>Sous-titres uniquement</translation>
     </message>
     <message>
-        <source>Auto uses YouTube's captions when they exist and transcribes the video when they do not. Always transcribe ignores YouTube's captions. Captions only skips a video that has none.</source>
-        <translation>Auto utilise les sous-titres YouTube lorsqu'ils existent et transcrit la vidéo lorsqu'ils n'existent pas. Toujours transcrire ignore les sous-titres YouTube. Sous-titres uniquement ignore une vidéo qui n'en a aucun.</translation>
+        <source>Auto uses the video's own captions when they exist and transcribes the video when they do not. Always transcribe ignores the captions. Captions only skips a video that has none.</source>
+        <translation>Auto utilise les sous-titres propres à la vidéo lorsqu'ils existent et transcrit la vidéo lorsqu'ils n'existent pas. Toujours transcrire ignore les sous-titres. Sous-titres uniquement ignore une vidéo qui n'en a aucun.</translation>
     </message>
     <message>
         <source>Some lines are not valid URLs.</source>
@@ -12636,8 +12636,8 @@ Triez selon cette colonne pour parcourir un long enregistrement dans l'ordre —
         <translation>Interrompu à la fermeture d'Anki Miner</translation>
     </message>
     <message>
-        <source>Drop a YouTube link here. Mine local files from the Video or Audiobooks tab.</source>
-        <translation>Déposez un lien YouTube ici. Extrayez les fichiers locaux depuis l'onglet Vidéo ou Livres audio.</translation>
+        <source>Drop a video link here. Mine local files from the Video or Audiobooks tab.</source>
+        <translation>Déposez un lien vidéo ici. Extrayez les fichiers locaux depuis l'onglet Vidéo ou Livres audio.</translation>
     </message>
     <message>
         <source>This run needs local transcription, but the model %1 is not installed.</source>

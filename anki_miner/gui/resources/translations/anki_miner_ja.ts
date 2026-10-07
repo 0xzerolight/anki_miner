@@ -2098,8 +2098,8 @@ No index files are deleted.</source>
         <translation>YouTube からマイニング</translation>
     </message>
     <message>
-        <source>Mine straight from a YouTube URL or playlist -- no local files needed.</source>
-        <translation>YouTube の URL またはプレイリストから直接マイニングします — ローカルファイルは不要です。</translation>
+        <source>Mine straight from a YouTube or Bilibili link or playlist -- no local files needed.</source>
+        <translation>YouTube や Bilibili のリンクまたはプレイリストから直接マイニングします — ローカルファイルは不要です。</translation>
     </message>
     <message>
         <source>Mine from an audiobook</source>
@@ -4935,6 +4935,12 @@ No files on disk are deleted.</source>
         <source>No cards created. Every word is already known.</source>
         <translation>カードは作成されませんでした。すべての単語がすでに既知です。</translation>
     </message>
+    <message numerus="yes">
+        <source>Mining %n selected word(s)</source>
+        <translation>
+            <numerusform>選択した %n 語をマイニング中</numerusform>
+        </translation>
+    </message>
     <message>
         <source>%1 word(s) have more than one reading — the parsed reading was kept.</source>
         <translation>%1 語に複数の読みがあります — 解析された読みを採用しました。</translation>
@@ -5106,12 +5112,6 @@ No files on disk are deleted.</source>
     <message>
         <source>No words selected for card creation</source>
         <translation>カード作成用に選択された単語がありません</translation>
-    </message>
-    <message numerus="yes">
-        <source>Mining %n selected word(s)</source>
-        <translation>
-            <numerusform>選択した %n 語をマイニング中</numerusform>
-        </translation>
     </message>
     <message>
         <source>Could not extract media for any word — no cards created</source>
@@ -10197,12 +10197,12 @@ No index files are deleted.</source>
         <translation>固有名詞ワードセットを読み込めませんでした: %1</translation>
     </message>
     <message>
-        <source>Couldn't initialize known word database: %1</source>
-        <translation>既知単語DBを初期化できませんでした: %1</translation>
-    </message>
-    <message>
         <source>Couldn't load word lists: %1</source>
         <translation>単語リストを読み込めませんでした: %1</translation>
+    </message>
+    <message>
+        <source>Couldn't initialize known word database: %1</source>
+        <translation>既知単語DBを初期化できませんでした: %1</translation>
     </message>
 </context><context>
     <name>SettingsSearchBox</name>
@@ -12345,8 +12345,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>ブラウザのCookie</translation>
     </message>
     <message>
-        <source>Reuse a browser's YouTube login, or an exported cookies.txt file, when YouTube blocks anonymous fetches. Keep a cookies file private — it holds your login.</source>
-        <translation>YouTube が匿名での取得をブロックする場合に、ブラウザの YouTube ログイン、またはエクスポートした cookies.txt ファイルを再利用します。cookies ファイルにはログイン情報が含まれるため、他人と共有しないでください。</translation>
+        <source>Reuse a browser's login, or an exported cookies.txt file, when YouTube blocks anonymous fetches. Bilibili shows its subtitles only to logged-in users. Keep a cookies file private — it holds your login.</source>
+        <translation>YouTube が匿名での取得をブロックする場合に、ブラウザのログイン、またはエクスポートした cookies.txt ファイルを再利用します。Bilibili はログインしたユーザーにのみ字幕を表示します。cookies ファイルにはログイン情報が含まれるため、他人と共有しないでください。</translation>
     </message>
     <message>
         <source> minutes</source>
@@ -12373,8 +12373,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>字幕を音声に同期</translation>
     </message>
     <message>
-        <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
-        <translation>マイニング前にYouTubeの字幕を動画の音声に合わせて再調整します。字幕がローカルで文字起こしされた場合は無視されます。</translation>
+        <source>Retime the video's captions against its audio before mining. Ignored when the subtitle was transcribed locally.</source>
+        <translation>マイニング前に動画の字幕をその音声に合わせて再調整します。字幕がローカルで文字起こしされた場合は無視されます。</translation>
     </message>
     <message>
         <source>Keep yt-dlp up to date automatically</source>
@@ -12547,8 +12547,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>yt-dlp をダウンロード中…</translation>
     </message>
     <message>
-        <source>Paste YouTube links or playlists, one per line, then click Mine</source>
-        <translation>YouTube のリンクまたはプレイリストを 1 行に 1 つ貼り付けて、「マイニング」をクリック</translation>
+        <source>Paste video or playlist links from YouTube, Bilibili or another site, one per line, then click Mine</source>
+        <translation>YouTube、Bilibili などのサイトの動画またはプレイリストのリンクを 1 行に 1 つ貼り付けて、「マイニング」をクリック</translation>
     </message>
     <message>
         <source>Review words before mining</source>
@@ -12575,8 +12575,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>字幕のみ</translation>
     </message>
     <message>
-        <source>Auto uses YouTube's captions when they exist and transcribes the video when they do not. Always transcribe ignores YouTube's captions. Captions only skips a video that has none.</source>
-        <translation>「自動」はYouTubeの字幕がある場合はそれを使用し、ない場合は動画を文字起こしします。「常に文字起こし」はYouTubeの字幕を無視します。「字幕のみ」は字幕のない動画をスキップします。</translation>
+        <source>Auto uses the video's own captions when they exist and transcribes the video when they do not. Always transcribe ignores the captions. Captions only skips a video that has none.</source>
+        <translation>「自動」は動画自体の字幕がある場合はそれを使用し、ない場合は動画を文字起こしします。「常に文字起こし」は字幕を無視します。「字幕のみ」は字幕のない動画をスキップします。</translation>
     </message>
     <message>
         <source>Some lines are not valid URLs.</source>
@@ -12595,8 +12595,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>Anki Miner の終了により中断されました</translation>
     </message>
     <message>
-        <source>Drop a YouTube link here. Mine local files from the Video or Audiobooks tab.</source>
-        <translation>ここに YouTube リンクをドロップしてください。ローカルファイルは「動画」または「オーディオブック」タブでマイニングします。</translation>
+        <source>Drop a video link here. Mine local files from the Video or Audiobooks tab.</source>
+        <translation>ここに動画のリンクをドロップしてください。ローカルファイルは「動画」または「オーディオブック」タブでマイニングします。</translation>
     </message>
     <message>
         <source>This run needs local transcription, but the model %1 is not installed.</source>

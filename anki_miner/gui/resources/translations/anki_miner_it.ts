@@ -2101,8 +2101,8 @@ Nessun file indice viene eliminato.</translation>
         <translation>Estrai da YouTube</translation>
     </message>
     <message>
-        <source>Mine straight from a YouTube URL or playlist -- no local files needed.</source>
-        <translation>Estrai direttamente da un URL o una playlist di YouTube -- senza bisogno di file locali.</translation>
+        <source>Mine straight from a YouTube or Bilibili link or playlist -- no local files needed.</source>
+        <translation>Estrai direttamente da un link o una playlist di YouTube o Bilibili -- senza bisogno di file locali.</translation>
     </message>
     <message>
         <source>Mine from an audiobook</source>
@@ -4960,6 +4960,13 @@ Nessun file sul disco viene eliminato.</translation>
         <source>No cards created. Every word is already known.</source>
         <translation>Nessuna carta creata. Tutte le parole sono già conosciute.</translation>
     </message>
+    <message numerus="yes">
+        <source>Mining %n selected word(s)</source>
+        <translation>
+            <numerusform>Estrazione di %n parola selezionata</numerusform>
+            <numerusform>Estrazione di %n parole selezionate</numerusform>
+        </translation>
+    </message>
     <message>
         <source>%1 word(s) have more than one reading — the parsed reading was kept.</source>
         <translation>%1 parola/e con più di una lettura — è stata mantenuta la lettura analizzata.</translation>
@@ -5139,13 +5146,6 @@ Nessun file sul disco viene eliminato.</translation>
     <message>
         <source>No words selected for card creation</source>
         <translation>Nessuna parola selezionata per la creazione delle carte</translation>
-    </message>
-    <message numerus="yes">
-        <source>Mining %n selected word(s)</source>
-        <translation>
-            <numerusform>Estrazione di %n parola selezionata</numerusform>
-            <numerusform>Estrazione di %n parole selezionate</numerusform>
-        </translation>
     </message>
     <message>
         <source>Could not extract media for any word — no cards created</source>
@@ -10236,12 +10236,12 @@ Nessun file indice viene eliminato.</translation>
         <translation>Impossibile caricare gli insiemi di nomi: %1</translation>
     </message>
     <message>
-        <source>Couldn't initialize known word database: %1</source>
-        <translation>Impossibile inizializzare il DB delle parole conosciute: %1</translation>
-    </message>
-    <message>
         <source>Couldn't load word lists: %1</source>
         <translation>Impossibile caricare gli elenchi di parole: %1</translation>
+    </message>
+    <message>
+        <source>Couldn't initialize known word database: %1</source>
+        <translation>Impossibile inizializzare il DB delle parole conosciute: %1</translation>
     </message>
 </context><context>
     <name>SettingsSearchBox</name>
@@ -12386,8 +12386,8 @@ Ordina in base a questa colonna per affrontare in ordine una registrazione lunga
         <translation>Cookie dal browser</translation>
     </message>
     <message>
-        <source>Reuse a browser's YouTube login, or an exported cookies.txt file, when YouTube blocks anonymous fetches. Keep a cookies file private — it holds your login.</source>
-        <translation>Riutilizza l'accesso a YouTube di un browser, o un file cookies.txt esportato, quando YouTube blocca i recuperi anonimi. Mantenere privato il file dei cookie — contiene il proprio accesso.</translation>
+        <source>Reuse a browser's login, or an exported cookies.txt file, when YouTube blocks anonymous fetches. Bilibili shows its subtitles only to logged-in users. Keep a cookies file private — it holds your login.</source>
+        <translation>Riutilizza l'accesso di un browser, o un file cookies.txt esportato, quando YouTube blocca i recuperi anonimi. Bilibili mostra i propri sottotitoli solo agli utenti che hanno effettuato l'accesso. Mantenere privato il file dei cookie — contiene il proprio accesso.</translation>
     </message>
     <message>
         <source> minutes</source>
@@ -12414,8 +12414,8 @@ Ordina in base a questa colonna per affrontare in ordine una registrazione lunga
         <translation>Allinea didascalie all'audio</translation>
     </message>
     <message>
-        <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
-        <translation>Risincronizza le didascalie di YouTube con l'audio del video prima del mining. Ignorato se il sottotitolo è stato trascritto localmente.</translation>
+        <source>Retime the video's captions against its audio before mining. Ignored when the subtitle was transcribed locally.</source>
+        <translation>Risincronizza le didascalie del video con il suo audio prima del mining. Ignorato se il sottotitolo è stato trascritto localmente.</translation>
     </message>
     <message>
         <source>Keep yt-dlp up to date automatically</source>
@@ -12588,8 +12588,8 @@ Ordina in base a questa colonna per affrontare in ordine una registrazione lunga
         <translation>Download di yt-dlp in corso…</translation>
     </message>
     <message>
-        <source>Paste YouTube links or playlists, one per line, then click Mine</source>
-        <translation>Incollare link o playlist di YouTube, uno per riga, poi fare clic su Estrai</translation>
+        <source>Paste video or playlist links from YouTube, Bilibili or another site, one per line, then click Mine</source>
+        <translation>Incollare link di video o playlist da YouTube, Bilibili o un altro sito, uno per riga, poi fare clic su Estrai</translation>
     </message>
     <message>
         <source>Review words before mining</source>
@@ -12616,8 +12616,8 @@ Ordina in base a questa colonna per affrontare in ordine una registrazione lunga
         <translation>Solo didascalie</translation>
     </message>
     <message>
-        <source>Auto uses YouTube's captions when they exist and transcribes the video when they do not. Always transcribe ignores YouTube's captions. Captions only skips a video that has none.</source>
-        <translation>Auto usa le didascalie di YouTube quando esistono e trascrive il video quando non esistono. Trascrivi sempre ignora le didascalie di YouTube. Solo didascalie salta un video che non ne ha.</translation>
+        <source>Auto uses the video's own captions when they exist and transcribes the video when they do not. Always transcribe ignores the captions. Captions only skips a video that has none.</source>
+        <translation>Auto usa le didascalie proprie del video quando esistono e trascrive il video quando non esistono. Trascrivi sempre ignora le didascalie. Solo didascalie salta un video che non ne ha.</translation>
     </message>
     <message>
         <source>Some lines are not valid URLs.</source>
@@ -12636,8 +12636,8 @@ Ordina in base a questa colonna per affrontare in ordine una registrazione lunga
         <translation>Interrotto alla chiusura di Anki Miner</translation>
     </message>
     <message>
-        <source>Drop a YouTube link here. Mine local files from the Video or Audiobooks tab.</source>
-        <translation>Rilasciare qui un link di YouTube. Estrarre i file locali dalla scheda Video o Audiolibri.</translation>
+        <source>Drop a video link here. Mine local files from the Video or Audiobooks tab.</source>
+        <translation>Rilasciare qui il link di un video. Estrarre i file locali dalla scheda Video o Audiolibri.</translation>
     </message>
     <message>
         <source>This run needs local transcription, but the model %1 is not installed.</source>

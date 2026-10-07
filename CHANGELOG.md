@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 - **Dictionary updates.** Dictionaries, frequency lists and pitch-accent sources that publish updates (Jitendex, JMdict, JMnedict, Wiktionary/wty, CC-CEDICT, Jiten) now update once a week at startup. Tools → Update Dictionaries Now and Settings → Dictionaries → Update Now check right away. Each one updates in place: list order and on/off state are kept, and a failed download leaves the installed copy untouched. Turn it off under Settings → Dictionaries → Updates.
+- **Mine Bilibili and other video sites.** Video → YouTube takes links from Bilibili and the other sites yt-dlp supports, including the text Bilibili's Share button copies. A multi-part video or a collection adds every part, like a playlist. Bilibili shows subtitles only to logged-in users, so unless a cookies source is set in Settings → YouTube, Auto transcribes the video.
 
 ### Changed
 
