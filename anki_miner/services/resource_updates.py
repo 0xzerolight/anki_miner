@@ -128,7 +128,10 @@ def is_newer_revision(current: str, latest: str) -> bool:
 def _is_https(url: object) -> TypeGuard[str]:
     if not isinstance(url, str):
         return False
-    parts = urlsplit(url)
+    try:
+        parts = urlsplit(url)
+    except ValueError:  # "https://[x": an unbalanced IPv6 bracket
+        return False
     return parts.scheme == "https" and bool(parts.netloc)
 
 
@@ -161,7 +164,11 @@ def updatable_resources(config: AnkiMinerConfig) -> list[UpdatableResource]:
     language = config_language(config)
     found: list[UpdatableResource] = []
     for kind, family, root, slot_id in _chain_slots(config):
-        resource = _updatable_slot(kind, family, root, slot_id, language)
+        try:
+            resource = _updatable_slot(kind, family, root, slot_id, language)
+        except Exception as exc:  # noqa: BLE001 — one unreadable slot must not stop the others' updates
+            logger.warning("Slot skipped by the update check: slot=%s error=%s", slot_id, type(exc).__name__)
+            continue
         if resource is not None:
             found.append(resource)
     return found
@@ -259,11 +266,22 @@ def check_for_updates(
     for resource in resources:
         if cancelled():
             break
+        # Everything that reads the publisher's answer stays inside the try:
+        # a revision past int()'s digit limit must fail this publisher alone.
         try:
             remote = fetch(resource.index_url)
             latest_revision = str(remote.get("revision", "")).strip()
             if not latest_revision:
                 raise ValueError("the published index.json has no revision")
+            if not is_newer_revision(resource.revision, latest_revision):
+                continue
+            published = remote.get("downloadUrl")
+            update = ResourceUpdate(
+                resource=resource,
+                latest_title=str(remote.get("title", "")).strip() or resource.title,
+                latest_revision=latest_revision,
+                download_url=published if _is_https(published) else resource.download_url,
+            )
         except Exception as exc:  # noqa: BLE001 — isolate one publisher's failure
             logger.warning(
                 "Update check failed: slot=%s url=%s error=%s: %s",
@@ -274,17 +292,7 @@ def check_for_updates(
             )
             failures.append((resource, str(exc) or type(exc).__name__))
             continue
-        if not is_newer_revision(resource.revision, latest_revision):
-            continue
-        published = remote.get("downloadUrl")
-        updates.append(
-            ResourceUpdate(
-                resource=resource,
-                latest_title=str(remote.get("title", "")).strip() or resource.title,
-                latest_revision=latest_revision,
-                download_url=published if _is_https(published) else resource.download_url,
-            )
-        )
+        updates.append(update)
     return UpdateCheck(checked=len(resources), updates=tuple(updates), failures=tuple(failures))
 
 

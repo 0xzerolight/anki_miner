@@ -132,6 +132,26 @@ def test_skips_slots_that_cannot_update_here(config, seed_kwargs):
     assert ru.updatable_resources(config) == []
 
 
+def test_a_malformed_saved_url_skips_only_that_slot(config):
+    _seed(config.dicts_root, "j", index_url="https://[broken/i.json")
+    _seed(config.freqs_root, "jiten", "frequency", title="Jiten")
+    assert [r.slot_id for r in ru.updatable_resources(config)] == ["jiten"]
+
+
+def test_an_unreadable_slot_skips_only_that_slot(config, monkeypatch):
+    _seed(config.dicts_root, "j")
+    _seed(config.freqs_root, "jiten", "frequency", title="Jiten")
+    real = ru.read_slot_language
+
+    def denied(slot_dir, **kwargs):
+        if slot_dir.name == "j":
+            raise PermissionError("denied")
+        return real(slot_dir, **kwargs)
+
+    monkeypatch.setattr(ru, "read_slot_language", denied)
+    assert [r.slot_id for r in ru.updatable_resources(config)] == ["jiten"]
+
+
 def test_skips_unowned_and_zipless_slots(config):
     (config.dicts_root / "j").mkdir(parents=True)  # no ownership marker
     slot = _seed(config.freqs_root, "jiten", "frequency")
@@ -178,7 +198,7 @@ def test_a_newer_revision_is_an_update_with_the_published_url():
     assert check.reached and check.failures == ()
 
 
-@pytest.mark.parametrize("published", [None, "http://cdn.example.test/new.zip"])
+@pytest.mark.parametrize("published", [None, "http://cdn.example.test/new.zip", "https://[bad"])
 def test_a_missing_or_insecure_published_url_falls_back_to_the_saved_one(published):
     remote = {"title": "T", "revision": "2026.10.03.0"}
     if published:
@@ -205,6 +225,20 @@ def test_one_publisher_down_never_stops_the_rest():
     assert [u.resource.slot_id for u in check.updates] == ["b"]
     assert [(r.slot_id, msg) for r, msg in check.failures] == [("j", "offline")]
     assert check.reached
+
+
+def test_an_unparseable_published_revision_fails_only_that_publisher():
+    def fetch(url):
+        if url == INDEX:
+            return {"title": "A", "revision": "9" * 5000}  # past int()'s digit limit
+        return {"title": "B", "revision": "2"}
+
+    check = ru.check_for_updates(
+        [_resource(revision="1"), _resource(slot_id="b", index_url="https://b.test/i.json", revision="1")],
+        fetch=fetch,
+    )
+    assert [u.resource.slot_id for u in check.updates] == ["b"]
+    assert [r.slot_id for r, _msg in check.failures] == ["j"]
 
 
 def test_nobody_reached_is_not_a_completed_check():
