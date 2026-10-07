@@ -42,6 +42,7 @@ from anki_miner.gui.widgets.reading_text_tab import ReadingTextTab
 from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
 from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
 from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
+from anki_miner.gui.widgets.tracks_tab import TracksTab
 from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 
 #: The two sequences ``primary_action_shortcut`` installs, as portable text.
@@ -74,7 +75,7 @@ def _build(name: str, config: AnkiMinerConfig) -> QWidget:
         return DeckBuilderTab(config, _presenter(), _progress_callback())
     if name == "audiobook":
         return AudiobookTab(config, MagicMock(name="Processor"), MagicMock())
-    if name in {"condense", "generate", "retime", "download", "mokuro", "booksync", "readability"}:
+    if name in {"condense", "generate", "retime", "download", "mokuro", "booksync", "readability", "tracks"}:
         tool = {
             "condense": CondenseTab,
             "generate": SubtitleCreationTab,
@@ -83,6 +84,7 @@ def _build(name: str, config: AnkiMinerConfig) -> QWidget:
             "mokuro": MokuroTab,
             "booksync": BookSyncTab,
             "readability": ReadabilityTab,
+            "tracks": TracksTab,
         }[name]
         return tool(config)
     reading = {
@@ -114,6 +116,7 @@ SCREENS = [
     "mokuro",
     "booksync",
     "readability",
+    "tracks",
 ]
 
 

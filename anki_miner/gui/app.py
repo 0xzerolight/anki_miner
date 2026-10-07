@@ -1971,6 +1971,7 @@ def compose_main_window(
         subtitles_tab.mokuro_tab,
         subtitles_tab.booksync_tab,
         subtitles_tab.readability_tab,
+        subtitles_tab.tracks_tab,
     )
     for screen in published:
         screen.bind_task_registry(window.task_registry)
