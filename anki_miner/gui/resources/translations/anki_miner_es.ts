@@ -2706,11 +2706,11 @@ No se elimina ningún archivo de índice.</translation>
     </message>
     <message>
         <source>Save the subtitles or audio inside a video</source>
-        <translation type="unfinished" />
+        <translation>Guardar los subtítulos o el audio incluidos en un video</translation>
     </message>
     <message>
         <source>Pick an .mkv or another video, or a folder of them, tick its subtitle or audio tracks and save each as its own file, copied without re-encoding. A single subtitle is named after its video, so Video mining finds it. The video is never changed.</source>
-        <translation type="unfinished" />
+        <translation>Elija un .mkv u otro video, o una carpeta de videos, marque sus pistas de subtítulos o de audio y guarde cada una como un archivo propio, copiada sin recodificar. Un único subtítulo recibe el nombre de su video, para que la minería de Video lo encuentre. El video nunca se modifica.</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -6526,7 +6526,7 @@ Palabras a añadir: %3. ¿Continuar?</translation>
     </message>
     <message>
         <source>Tracks</source>
-        <translation type="unfinished" />
+        <translation>Pistas</translation>
     </message>
     <message>
         <source>Anki Miner updated</source>
@@ -11815,309 +11815,309 @@ Sus recursos instalados y su tema se conservan.</translation>
     <name>TrackExtractWorker</name>
     <message>
         <source>Subtitle %1</source>
-        <translation type="unfinished" />
+        <translation>Subtítulo %1</translation>
     </message>
     <message>
         <source>Audio %1</source>
-        <translation type="unfinished" />
+        <translation>Audio %1</translation>
     </message>
     <message>
         <source>%1 has no %2 — skipped</source>
-        <translation type="unfinished" />
+        <translation>%1 no tiene %2 — omitido</translation>
     </message>
     <message>
         <source>Saving %1</source>
-        <translation type="unfinished" />
+        <translation>Guardando %1</translation>
     </message>
     <message>
         <source>%1: %2 could not be saved: %3</source>
-        <translation type="unfinished" />
+        <translation>%1: no se pudo guardar %2: %3</translation>
     </message>
     <message>
         <source>Saved %1</source>
-        <translation type="unfinished" />
+        <translation>Se guardó %1</translation>
     </message>
     <message>
         <source>No ticked track was saved</source>
-        <translation type="unfinished" />
+        <translation>No se guardó ninguna pista marcada</translation>
     </message>
     <message>
         <source>%1 would replace the video itself — skipped</source>
-        <translation type="unfinished" />
+        <translation>%1 reemplazaría el propio video — omitido</translation>
     </message>
     <message>
         <source>%1 was already saved from another video in this run — skipped</source>
-        <translation type="unfinished" />
+        <translation>%1 ya se guardó desde otro video en esta ejecución — omitido</translation>
     </message>
     <message>
         <source>%1 already exists — tick Overwrite to replace it</source>
-        <translation type="unfinished" />
+        <translation>%1 ya existe — marque Sobrescribir para reemplazarlo</translation>
     </message>
 </context><context>
     <name>TracksTab</name>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">Progreso</translation>
+        <translation>Progreso</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">Listo</translation>
+        <translation>Listo</translation>
     </message>
     <message>
         <source>Done: </source>
-        <translation type="unfinished">Hecho: </translation>
+        <translation>Hecho: </translation>
     </message>
     <message>
         <source>Skipped</source>
-        <translation type="unfinished">Omitido</translation>
+        <translation>Omitido</translation>
     </message>
     <message>
         <source>Skipped: </source>
-        <translation type="unfinished">Omitido: </translation>
+        <translation>Omitido: </translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Cancelar</translation>
+        <translation>Cancelar</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Cancelando…</translation>
+        <translation>Cancelando…</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Cancelado</translation>
+        <translation>Cancelado</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">Falló — consulte el registro</translation>
+        <translation>Falló — consulte el registro</translation>
     </message>
     <message>
         <source>Finished with errors — see log</source>
-        <translation type="unfinished">Finalizó con errores — vea el registro</translation>
+        <translation>Finalizó con errores — vea el registro</translation>
     </message>
     <message>
         <source>Some tracks could not be saved.</source>
-        <translation type="unfinished" />
+        <translation>No se pudieron guardar algunas pistas.</translation>
     </message>
     <message>
         <source>Some tracks of this video could not be saved.</source>
-        <translation type="unfinished" />
+        <translation>No se pudieron guardar algunas pistas de este video.</translation>
     </message>
     <message>
         <source>Complete — tracks saved from %1 video(s)</source>
-        <translation type="unfinished" />
+        <translation>Completado — pistas guardadas de %1 video(s)</translation>
     </message>
     <message>
         <source>Complete — %1 video(s) done, %2 skipped</source>
-        <translation type="unfinished" />
+        <translation>Completado — %1 video(s) terminado(s), %2 omitido(s)</translation>
     </message>
     <message>
         <source>Nothing saved — every video was skipped. The log says why.</source>
-        <translation type="unfinished" />
+        <translation>No se guardó nada — se omitieron todos los videos. El registro indica el motivo.</translation>
     </message>
     <message>
         <source>Select Output Folder</source>
-        <translation type="unfinished">Seleccionar carpeta de salida</translation>
+        <translation>Seleccionar carpeta de salida</translation>
     </message>
     <message>
         <source>Next to each video</source>
-        <translation type="unfinished" />
+        <translation>Junto a cada video</translation>
     </message>
     <message>
         <source>Track extraction</source>
-        <translation type="unfinished" />
+        <translation>Extracción de pistas</translation>
     </message>
     <message>
         <source>Video</source>
-        <translation type="unfinished">Video</translation>
+        <translation>Video</translation>
     </message>
     <message>
         <source>ffmpeg and ffprobe were not found. Install ffmpeg and add it to PATH to use this tool.</source>
-        <translation type="unfinished" />
+        <translation>No se encontraron ffmpeg ni ffprobe. Instale ffmpeg y añádalo al PATH para usar esta herramienta.</translation>
     </message>
     <message>
         <source>Save the subtitle and audio tracks inside a video as their own files. Tracks are copied as they are; the video is never changed.</source>
-        <translation type="unfinished" />
+        <translation>Guarde las pistas de subtítulos y de audio de un video como archivos independientes. Las pistas se copian tal cual; el video nunca se modifica.</translation>
     </message>
     <message>
         <source>Videos (%1)</source>
-        <translation type="unfinished" />
+        <translation>Archivos de video (%1)</translation>
     </message>
     <message>
         <source>All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Todos los archivos (*)</translation>
     </message>
     <message>
         <source>This field takes a video or a folder.</source>
-        <translation type="unfinished" />
+        <translation>Este campo admite un video o una carpeta.</translation>
     </message>
     <message>
         <source>Video file or folder:</source>
-        <translation type="unfinished" />
+        <translation>Archivo de video o carpeta:</translation>
     </message>
     <message>
         <source>Tracks</source>
-        <translation type="unfinished" />
+        <translation>Pistas</translation>
     </message>
     <message>
         <source>Choose a video to list its tracks.</source>
-        <translation type="unfinished" />
+        <translation>Elija un video para ver sus pistas.</translation>
     </message>
     <message>
         <source>Track</source>
-        <translation type="unfinished" />
+        <translation>Pista</translation>
     </message>
     <message>
         <source>Tick the tracks to save.</source>
-        <translation type="unfinished" />
+        <translation>Marque las pistas que desea guardar.</translation>
     </message>
     <message>
         <source>Language</source>
-        <translation type="unfinished">Idioma</translation>
+        <translation>Idioma</translation>
     </message>
     <message>
         <source>The language the file says the track is in.</source>
-        <translation type="unfinished" />
+        <translation>El idioma de la pista según el archivo.</translation>
     </message>
     <message>
         <source>Codec</source>
-        <translation type="unfinished" />
+        <translation>Códec</translation>
     </message>
     <message>
         <source>The track's format. Hover a row to see the file type it is saved as.</source>
-        <translation type="unfinished" />
+        <translation>El formato de la pista. Pase el cursor sobre una fila para ver el tipo de archivo con el que se guarda.</translation>
     </message>
     <message>
         <source>Title</source>
-        <translation type="unfinished">Título</translation>
+        <translation>Título</translation>
     </message>
     <message>
         <source>The track's name in the file, such as Signs &amp; Songs.</source>
-        <translation type="unfinished" />
+        <translation>El nombre de la pista en el archivo, como Signs &amp; Songs.</translation>
     </message>
     <message>
         <source>Flags</source>
-        <translation type="unfinished" />
+        <translation>Indicadores</translation>
     </message>
     <message>
         <source>Default, Forced, and Image for picture-based subtitles.</source>
-        <translation type="unfinished" />
+        <translation>Predeterminada, Forzada e Imagen para subtítulos basados en imágenes.</translation>
     </message>
     <message>
         <source>Output</source>
-        <translation type="unfinished">Salida</translation>
+        <translation>Salida</translation>
     </message>
     <message>
         <source>Output:</source>
-        <translation type="unfinished">Salida:</translation>
+        <translation>Salida:</translation>
     </message>
     <message>
         <source>Choose Folder…</source>
-        <translation type="unfinished">Elegir carpeta…</translation>
+        <translation>Elegir carpeta…</translation>
     </message>
     <message>
         <source>Reset</source>
-        <translation type="unfinished">Restablecer</translation>
+        <translation>Restablecer</translation>
     </message>
     <message>
         <source>Tracks are saved next to each video unless you choose a folder. A single ticked subtitle is named after its video, so mining finds it.</source>
-        <translation type="unfinished" />
+        <translation>Las pistas se guardan junto a cada video a menos que elija una carpeta. Si marca un solo subtítulo, recibe el nombre de su video, para que la minería lo encuentre.</translation>
     </message>
     <message>
         <source>Overwrite existing files</source>
-        <translation type="unfinished" />
+        <translation>Sobrescribir los archivos existentes</translation>
     </message>
     <message>
         <source>When unchecked, a track whose file already exists is skipped, not overwritten.</source>
-        <translation type="unfinished" />
+        <translation>Si no está marcado, una pista cuyo archivo ya existe se omite, no se sobrescribe.</translation>
     </message>
     <message>
         <source>Extract Tracks</source>
-        <translation type="unfinished" />
+        <translation>Extraer pistas</translation>
     </message>
     <message>
         <source>ffmpeg could not be started. Install it and add it to PATH, then try again.</source>
-        <translation type="unfinished" />
+        <translation>No se pudo iniciar ffmpeg. Instálelo, añádalo al PATH y vuelva a intentarlo.</translation>
     </message>
     <message>
         <source>Reading tracks…</source>
-        <translation type="unfinished" />
+        <translation>Leyendo pistas…</translation>
     </message>
     <message>
         <source>Tracks could not be read.</source>
-        <translation type="unfinished">No se pudieron leer las pistas.</translation>
+        <translation>No se pudieron leer las pistas.</translation>
     </message>
     <message>
         <source>No videos were found in that folder.</source>
-        <translation type="unfinished" />
+        <translation>No se encontraron videos en esa carpeta.</translation>
     </message>
     <message>
         <source>No subtitle or audio tracks were found in %1.</source>
-        <translation type="unfinished" />
+        <translation>No se encontraron pistas de subtítulos ni de audio en %1.</translation>
     </message>
     <message>
         <source>Tracks of %1, the first of %2 videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
-        <translation type="unfinished" />
+        <translation>Pistas de %1, el primero de %2 videos. Las pistas marcadas se guardan de cada video de la carpeta; un video que no tenga una de ellas se omite.</translation>
     </message>
     <message>
         <source>Tracks of %1. Tick the ones to save.</source>
-        <translation type="unfinished" />
+        <translation>Pistas de %1. Marque las que desea guardar.</translation>
     </message>
     <message>
         <source>Picture-based subtitles: saved as they are for an OCR tool. Mining can't read them.</source>
-        <translation type="unfinished" />
+        <translation>Subtítulos basados en imágenes: se guardan tal cual para una herramienta de OCR. La minería no puede leerlos.</translation>
     </message>
     <message>
         <source>Subtitle %1</source>
-        <translation type="unfinished" />
+        <translation>Subtítulo %1</translation>
     </message>
     <message>
         <source>Audio %1</source>
-        <translation type="unfinished" />
+        <translation>Audio %1</translation>
     </message>
     <message>
         <source>Saved as %1</source>
-        <translation type="unfinished" />
+        <translation>Se guarda como %1</translation>
     </message>
     <message>
         <source>Default</source>
-        <translation type="unfinished" />
+        <translation>Predeterminada</translation>
     </message>
     <message>
         <source>Forced</source>
-        <translation type="unfinished" />
+        <translation>Forzada</translation>
     </message>
     <message>
         <source>Image</source>
-        <translation type="unfinished" />
+        <translation>Imagen</translation>
     </message>
     <message>
         <source>Choose a video or a folder first.</source>
-        <translation type="unfinished" />
+        <translation>Elija primero un video o una carpeta.</translation>
     </message>
     <message>
         <source>That file or folder no longer exists.</source>
-        <translation type="unfinished">Ese archivo o esa carpeta ya no existe.</translation>
+        <translation>Ese archivo o esa carpeta ya no existe.</translation>
     </message>
     <message>
         <source>Wait for the track list to load, then tick the tracks to save.</source>
-        <translation type="unfinished" />
+        <translation>Espere a que se cargue la lista de pistas y luego marque las que desea guardar.</translation>
     </message>
     <message>
         <source>Tick at least one track to save.</source>
-        <translation type="unfinished" />
+        <translation>Marque al menos una pista para guardar.</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
-        <translation type="unfinished">No se pudo analizar esa carpeta.</translation>
+        <translation>No se pudo analizar esa carpeta.</translation>
     </message>
     <message>
         <source>Output folder is not writable.</source>
-        <translation type="unfinished">No se puede escribir en la carpeta de salida.</translation>
+        <translation>No se puede escribir en la carpeta de salida.</translation>
     </message>
     <message>
         <source>Saving tracks from video %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>Guardando pistas del video %1 de %2</translation>
     </message>
 </context><context>
     <name>UISettingsPanel</name>

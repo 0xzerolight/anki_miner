@@ -2709,11 +2709,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Save the subtitles or audio inside a video</source>
-        <translation type="unfinished" />
+        <translation>Сохранение встроенных в видео субтитров или аудио</translation>
     </message>
     <message>
         <source>Pick an .mkv or another video, or a folder of them, tick its subtitle or audio tracks and save each as its own file, copied without re-encoding. A single subtitle is named after its video, so Video mining finds it. The video is never changed.</source>
-        <translation type="unfinished" />
+        <translation>Выберите .mkv или другое видео либо папку с видео, отметьте дорожки субтитров или аудио и сохраните каждую в отдельный файл — копированием, без перекодирования. Единственная дорожка субтитров получает имя своего видео, поэтому её находит майнинг на вкладке «Видео». Само видео никогда не изменяется.</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -6563,7 +6563,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Tracks</source>
-        <translation type="unfinished" />
+        <translation>Дорожки</translation>
     </message>
     <message>
         <source>Anki Miner updated</source>
@@ -11856,309 +11856,309 @@ Your installed resources and your theme are kept.</source>
     <name>TrackExtractWorker</name>
     <message>
         <source>Subtitle %1</source>
-        <translation type="unfinished" />
+        <translation>Субтитры %1</translation>
     </message>
     <message>
         <source>Audio %1</source>
-        <translation type="unfinished" />
+        <translation>Аудио %1</translation>
     </message>
     <message>
         <source>%1 has no %2 — skipped</source>
-        <translation type="unfinished" />
+        <translation>В %1 нет дорожки «%2» — пропущено</translation>
     </message>
     <message>
         <source>Saving %1</source>
-        <translation type="unfinished" />
+        <translation>Сохранение %1</translation>
     </message>
     <message>
         <source>%1: %2 could not be saved: %3</source>
-        <translation type="unfinished" />
+        <translation>%1: не удалось сохранить «%2»: %3</translation>
     </message>
     <message>
         <source>Saved %1</source>
-        <translation type="unfinished" />
+        <translation>Сохранено: %1</translation>
     </message>
     <message>
         <source>No ticked track was saved</source>
-        <translation type="unfinished" />
+        <translation>Ни одна отмеченная дорожка не сохранена</translation>
     </message>
     <message>
         <source>%1 would replace the video itself — skipped</source>
-        <translation type="unfinished" />
+        <translation>Файл %1 заменил бы само видео — пропущено</translation>
     </message>
     <message>
         <source>%1 was already saved from another video in this run — skipped</source>
-        <translation type="unfinished" />
+        <translation>Файл %1 уже сохранён из другого видео в этом запуске — пропущено</translation>
     </message>
     <message>
         <source>%1 already exists — tick Overwrite to replace it</source>
-        <translation type="unfinished" />
+        <translation>Файл %1 уже существует — включите «Перезаписывать», чтобы заменить его</translation>
     </message>
 </context><context>
     <name>TracksTab</name>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">Прогресс</translation>
+        <translation>Прогресс</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">Готово</translation>
+        <translation>Готово</translation>
     </message>
     <message>
         <source>Done: </source>
-        <translation type="unfinished">Готово: </translation>
+        <translation>Готово: </translation>
     </message>
     <message>
         <source>Skipped</source>
-        <translation type="unfinished">Пропущено</translation>
+        <translation>Пропущено</translation>
     </message>
     <message>
         <source>Skipped: </source>
-        <translation type="unfinished">Пропущено: </translation>
+        <translation>Пропущено: </translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Отмена</translation>
+        <translation>Отмена</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Отмена…</translation>
+        <translation>Отмена…</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Отменено</translation>
+        <translation>Отменено</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">Ошибка — см. журнал</translation>
+        <translation>Ошибка — см. журнал</translation>
     </message>
     <message>
         <source>Finished with errors — see log</source>
-        <translation type="unfinished">Завершено с ошибками — см. журнал</translation>
+        <translation>Завершено с ошибками — см. журнал</translation>
     </message>
     <message>
         <source>Some tracks could not be saved.</source>
-        <translation type="unfinished" />
+        <translation>Некоторые дорожки не удалось сохранить.</translation>
     </message>
     <message>
         <source>Some tracks of this video could not be saved.</source>
-        <translation type="unfinished" />
+        <translation>Некоторые дорожки этого видео не удалось сохранить.</translation>
     </message>
     <message>
         <source>Complete — tracks saved from %1 video(s)</source>
-        <translation type="unfinished" />
+        <translation>Завершено — дорожки сохранены из видео: %1</translation>
     </message>
     <message>
         <source>Complete — %1 video(s) done, %2 skipped</source>
-        <translation type="unfinished" />
+        <translation>Завершено — обработано видео: %1, пропущено видео: %2</translation>
     </message>
     <message>
         <source>Nothing saved — every video was skipped. The log says why.</source>
-        <translation type="unfinished" />
+        <translation>Ничего не сохранено — все видео пропущены. Причина указана в журнале.</translation>
     </message>
     <message>
         <source>Select Output Folder</source>
-        <translation type="unfinished">Выбрать папку для вывода</translation>
+        <translation>Выбрать папку для вывода</translation>
     </message>
     <message>
         <source>Next to each video</source>
-        <translation type="unfinished" />
+        <translation>Рядом с каждым видео</translation>
     </message>
     <message>
         <source>Track extraction</source>
-        <translation type="unfinished" />
+        <translation>Извлечение дорожек</translation>
     </message>
     <message>
         <source>Video</source>
-        <translation type="unfinished">Видео</translation>
+        <translation>Видео</translation>
     </message>
     <message>
         <source>ffmpeg and ffprobe were not found. Install ffmpeg and add it to PATH to use this tool.</source>
-        <translation type="unfinished" />
+        <translation>ffmpeg и ffprobe не найдены. Установите ffmpeg и добавьте его в PATH, чтобы пользоваться этим инструментом.</translation>
     </message>
     <message>
         <source>Save the subtitle and audio tracks inside a video as their own files. Tracks are copied as they are; the video is never changed.</source>
-        <translation type="unfinished" />
+        <translation>Сохранить дорожки субтитров и аудио, встроенные в видео, в отдельные файлы. Дорожки копируются как есть; само видео никогда не изменяется.</translation>
     </message>
     <message>
         <source>Videos (%1)</source>
-        <translation type="unfinished" />
+        <translation>Видео (%1)</translation>
     </message>
     <message>
         <source>All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Все файлы (*)</translation>
     </message>
     <message>
         <source>This field takes a video or a folder.</source>
-        <translation type="unfinished" />
+        <translation>Это поле принимает видео или папку.</translation>
     </message>
     <message>
         <source>Video file or folder:</source>
-        <translation type="unfinished" />
+        <translation>Видеофайл или папка:</translation>
     </message>
     <message>
         <source>Tracks</source>
-        <translation type="unfinished" />
+        <translation>Дорожки</translation>
     </message>
     <message>
         <source>Choose a video to list its tracks.</source>
-        <translation type="unfinished" />
+        <translation>Выберите видео, чтобы показать список его дорожек.</translation>
     </message>
     <message>
         <source>Track</source>
-        <translation type="unfinished" />
+        <translation>Дорожка</translation>
     </message>
     <message>
         <source>Tick the tracks to save.</source>
-        <translation type="unfinished" />
+        <translation>Отметьте дорожки, которые нужно сохранить.</translation>
     </message>
     <message>
         <source>Language</source>
-        <translation type="unfinished">Язык</translation>
+        <translation>Язык</translation>
     </message>
     <message>
         <source>The language the file says the track is in.</source>
-        <translation type="unfinished" />
+        <translation>Язык дорожки, указанный в файле.</translation>
     </message>
     <message>
         <source>Codec</source>
-        <translation type="unfinished" />
+        <translation>Кодек</translation>
     </message>
     <message>
         <source>The track's format. Hover a row to see the file type it is saved as.</source>
-        <translation type="unfinished" />
+        <translation>Формат дорожки. Наведите курсор на строку, чтобы увидеть, в каком типе файла она будет сохранена.</translation>
     </message>
     <message>
         <source>Title</source>
-        <translation type="unfinished">Название</translation>
+        <translation>Название</translation>
     </message>
     <message>
         <source>The track's name in the file, such as Signs &amp; Songs.</source>
-        <translation type="unfinished" />
+        <translation>Название дорожки в файле, например Signs &amp; Songs.</translation>
     </message>
     <message>
         <source>Flags</source>
-        <translation type="unfinished" />
+        <translation>Флаги</translation>
     </message>
     <message>
         <source>Default, Forced, and Image for picture-based subtitles.</source>
-        <translation type="unfinished" />
+        <translation>«По умолчанию», «Принудительная», а также «Изображение» — для субтитров на основе изображений.</translation>
     </message>
     <message>
         <source>Output</source>
-        <translation type="unfinished">Вывод</translation>
+        <translation>Вывод</translation>
     </message>
     <message>
         <source>Output:</source>
-        <translation type="unfinished">Вывод:</translation>
+        <translation>Вывод:</translation>
     </message>
     <message>
         <source>Choose Folder…</source>
-        <translation type="unfinished">Выбрать папку…</translation>
+        <translation>Выбрать папку…</translation>
     </message>
     <message>
         <source>Reset</source>
-        <translation type="unfinished">Сбросить</translation>
+        <translation>Сбросить</translation>
     </message>
     <message>
         <source>Tracks are saved next to each video unless you choose a folder. A single ticked subtitle is named after its video, so mining finds it.</source>
-        <translation type="unfinished" />
+        <translation>Дорожки сохраняются рядом с каждым видео, если вы не выберете папку. Если отмечена только одна дорожка субтитров, она получает имя своего видео, поэтому майнинг её находит.</translation>
     </message>
     <message>
         <source>Overwrite existing files</source>
-        <translation type="unfinished" />
+        <translation>Перезаписывать существующие файлы</translation>
     </message>
     <message>
         <source>When unchecked, a track whose file already exists is skipped, not overwritten.</source>
-        <translation type="unfinished" />
+        <translation>Если флажок снят, дорожка, файл которой уже существует, пропускается, а не перезаписывается.</translation>
     </message>
     <message>
         <source>Extract Tracks</source>
-        <translation type="unfinished" />
+        <translation>Извлечь дорожки</translation>
     </message>
     <message>
         <source>ffmpeg could not be started. Install it and add it to PATH, then try again.</source>
-        <translation type="unfinished" />
+        <translation>Не удалось запустить ffmpeg. Установите его и добавьте в PATH, затем попробуйте снова.</translation>
     </message>
     <message>
         <source>Reading tracks…</source>
-        <translation type="unfinished" />
+        <translation>Чтение дорожек…</translation>
     </message>
     <message>
         <source>Tracks could not be read.</source>
-        <translation type="unfinished">Не удалось прочитать дорожки.</translation>
+        <translation>Не удалось прочитать дорожки.</translation>
     </message>
     <message>
         <source>No videos were found in that folder.</source>
-        <translation type="unfinished" />
+        <translation>В этой папке не найдено видео.</translation>
     </message>
     <message>
         <source>No subtitle or audio tracks were found in %1.</source>
-        <translation type="unfinished" />
+        <translation>В %1 не найдено ни дорожек субтитров, ни аудиодорожек.</translation>
     </message>
     <message>
         <source>Tracks of %1, the first of %2 videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
-        <translation type="unfinished" />
+        <translation>Дорожки %1 — первого из %2 видео. Отмеченные дорожки сохраняются из каждого видео в папке; видео без такой дорожки пропускается.</translation>
     </message>
     <message>
         <source>Tracks of %1. Tick the ones to save.</source>
-        <translation type="unfinished" />
+        <translation>Дорожки %1. Отметьте те, которые нужно сохранить.</translation>
     </message>
     <message>
         <source>Picture-based subtitles: saved as they are for an OCR tool. Mining can't read them.</source>
-        <translation type="unfinished" />
+        <translation>Субтитры на основе изображений: сохраняются как есть для инструмента OCR. Майнинг не может их прочитать.</translation>
     </message>
     <message>
         <source>Subtitle %1</source>
-        <translation type="unfinished" />
+        <translation>Субтитры %1</translation>
     </message>
     <message>
         <source>Audio %1</source>
-        <translation type="unfinished" />
+        <translation>Аудио %1</translation>
     </message>
     <message>
         <source>Saved as %1</source>
-        <translation type="unfinished" />
+        <translation>Сохраняется как %1</translation>
     </message>
     <message>
         <source>Default</source>
-        <translation type="unfinished" />
+        <translation>По умолчанию</translation>
     </message>
     <message>
         <source>Forced</source>
-        <translation type="unfinished" />
+        <translation>Принудительная</translation>
     </message>
     <message>
         <source>Image</source>
-        <translation type="unfinished" />
+        <translation>Изображение</translation>
     </message>
     <message>
         <source>Choose a video or a folder first.</source>
-        <translation type="unfinished" />
+        <translation>Сначала выберите видео или папку.</translation>
     </message>
     <message>
         <source>That file or folder no longer exists.</source>
-        <translation type="unfinished">Этот файл или папка больше не существует.</translation>
+        <translation>Этот файл или папка больше не существует.</translation>
     </message>
     <message>
         <source>Wait for the track list to load, then tick the tracks to save.</source>
-        <translation type="unfinished" />
+        <translation>Дождитесь загрузки списка дорожек, затем отметьте дорожки, которые нужно сохранить.</translation>
     </message>
     <message>
         <source>Tick at least one track to save.</source>
-        <translation type="unfinished" />
+        <translation>Отметьте хотя бы одну дорожку для сохранения.</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
-        <translation type="unfinished">Не удалось просканировать эту папку.</translation>
+        <translation>Не удалось просканировать эту папку.</translation>
     </message>
     <message>
         <source>Output folder is not writable.</source>
-        <translation type="unfinished">В папку вывода нельзя записывать.</translation>
+        <translation>В папку вывода нельзя записывать.</translation>
     </message>
     <message>
         <source>Saving tracks from video %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>Сохранение дорожек: видео %1 из %2</translation>
     </message>
 </context><context>
     <name>UISettingsPanel</name>

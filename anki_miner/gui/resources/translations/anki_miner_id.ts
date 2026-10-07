@@ -2703,11 +2703,11 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Save the subtitles or audio inside a video</source>
-        <translation type="unfinished" />
+        <translation>Simpan subtitel atau audio di dalam video</translation>
     </message>
     <message>
         <source>Pick an .mkv or another video, or a folder of them, tick its subtitle or audio tracks and save each as its own file, copied without re-encoding. A single subtitle is named after its video, so Video mining finds it. The video is never changed.</source>
-        <translation type="unfinished" />
+        <translation>Pilih berkas .mkv atau video lain, atau folder berisi video, centang trek subtitel atau audionya, lalu simpan masing-masing sebagai berkas tersendiri, disalin tanpa enkode ulang. Jika hanya satu subtitel yang dicentang, subtitel itu diberi nama sesuai videonya agar ditemukan oleh Mining Video. Video tidak pernah diubah.</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -6489,7 +6489,7 @@ Kata yang akan ditambahkan: %3. Lanjutkan?</translation>
     </message>
     <message>
         <source>Tracks</source>
-        <translation type="unfinished" />
+        <translation>Trek</translation>
     </message>
     <message>
         <source>Anki Miner updated</source>
@@ -11774,309 +11774,309 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
     <name>TrackExtractWorker</name>
     <message>
         <source>Subtitle %1</source>
-        <translation type="unfinished" />
+        <translation>Subtitel %1</translation>
     </message>
     <message>
         <source>Audio %1</source>
-        <translation type="unfinished" />
+        <translation>Audio %1</translation>
     </message>
     <message>
         <source>%1 has no %2 — skipped</source>
-        <translation type="unfinished" />
+        <translation>%1 tidak memiliki %2 — dilewati</translation>
     </message>
     <message>
         <source>Saving %1</source>
-        <translation type="unfinished" />
+        <translation>Menyimpan %1</translation>
     </message>
     <message>
         <source>%1: %2 could not be saved: %3</source>
-        <translation type="unfinished" />
+        <translation>%1: %2 tidak dapat disimpan: %3</translation>
     </message>
     <message>
         <source>Saved %1</source>
-        <translation type="unfinished" />
+        <translation>%1 disimpan</translation>
     </message>
     <message>
         <source>No ticked track was saved</source>
-        <translation type="unfinished" />
+        <translation>Tidak satu pun trek yang dicentang berhasil disimpan</translation>
     </message>
     <message>
         <source>%1 would replace the video itself — skipped</source>
-        <translation type="unfinished" />
+        <translation>%1 akan menimpa video itu sendiri — dilewati</translation>
     </message>
     <message>
         <source>%1 was already saved from another video in this run — skipped</source>
-        <translation type="unfinished" />
+        <translation>%1 sudah disimpan dari video lain dalam proses ini — dilewati</translation>
     </message>
     <message>
         <source>%1 already exists — tick Overwrite to replace it</source>
-        <translation type="unfinished" />
+        <translation>%1 sudah ada — centang Timpa untuk menggantinya</translation>
     </message>
 </context><context>
     <name>TracksTab</name>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">Kemajuan</translation>
+        <translation>Kemajuan</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">Selesai</translation>
+        <translation>Selesai</translation>
     </message>
     <message>
         <source>Done: </source>
-        <translation type="unfinished">Selesai: </translation>
+        <translation>Selesai: </translation>
     </message>
     <message>
         <source>Skipped</source>
-        <translation type="unfinished">Dilewati</translation>
+        <translation>Dilewati</translation>
     </message>
     <message>
         <source>Skipped: </source>
-        <translation type="unfinished">Dilewati: </translation>
+        <translation>Dilewati: </translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Batal</translation>
+        <translation>Batal</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Membatalkan…</translation>
+        <translation>Membatalkan…</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Dibatalkan</translation>
+        <translation>Dibatalkan</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">Gagal — lihat log</translation>
+        <translation>Gagal — lihat log</translation>
     </message>
     <message>
         <source>Finished with errors — see log</source>
-        <translation type="unfinished">Selesai dengan kesalahan — lihat log</translation>
+        <translation>Selesai dengan kesalahan — lihat log</translation>
     </message>
     <message>
         <source>Some tracks could not be saved.</source>
-        <translation type="unfinished" />
+        <translation>Beberapa trek tidak dapat disimpan.</translation>
     </message>
     <message>
         <source>Some tracks of this video could not be saved.</source>
-        <translation type="unfinished" />
+        <translation>Beberapa trek dari video ini tidak dapat disimpan.</translation>
     </message>
     <message>
         <source>Complete — tracks saved from %1 video(s)</source>
-        <translation type="unfinished" />
+        <translation>Selesai — trek disimpan dari %1 video</translation>
     </message>
     <message>
         <source>Complete — %1 video(s) done, %2 skipped</source>
-        <translation type="unfinished" />
+        <translation>Selesai — %1 video diproses, %2 dilewati</translation>
     </message>
     <message>
         <source>Nothing saved — every video was skipped. The log says why.</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada yang disimpan — setiap video dilewati. Lihat log untuk alasannya.</translation>
     </message>
     <message>
         <source>Select Output Folder</source>
-        <translation type="unfinished">Pilih Folder Keluaran</translation>
+        <translation>Pilih Folder Keluaran</translation>
     </message>
     <message>
         <source>Next to each video</source>
-        <translation type="unfinished" />
+        <translation>Di sebelah setiap video</translation>
     </message>
     <message>
         <source>Track extraction</source>
-        <translation type="unfinished" />
+        <translation>Ekstraksi trek</translation>
     </message>
     <message>
         <source>Video</source>
-        <translation type="unfinished">Video</translation>
+        <translation>Video</translation>
     </message>
     <message>
         <source>ffmpeg and ffprobe were not found. Install ffmpeg and add it to PATH to use this tool.</source>
-        <translation type="unfinished" />
+        <translation>ffmpeg dan ffprobe tidak ditemukan. Pasang ffmpeg dan tambahkan ke PATH untuk menggunakan alat ini.</translation>
     </message>
     <message>
         <source>Save the subtitle and audio tracks inside a video as their own files. Tracks are copied as they are; the video is never changed.</source>
-        <translation type="unfinished" />
+        <translation>Simpan trek subtitel dan audio di dalam video sebagai berkas tersendiri. Trek disalin apa adanya; video tidak pernah diubah.</translation>
     </message>
     <message>
         <source>Videos (%1)</source>
-        <translation type="unfinished" />
+        <translation>Video (%1)</translation>
     </message>
     <message>
         <source>All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Semua Berkas (*)</translation>
     </message>
     <message>
         <source>This field takes a video or a folder.</source>
-        <translation type="unfinished" />
+        <translation>Bidang ini menerima video atau folder.</translation>
     </message>
     <message>
         <source>Video file or folder:</source>
-        <translation type="unfinished" />
+        <translation>Berkas atau folder video:</translation>
     </message>
     <message>
         <source>Tracks</source>
-        <translation type="unfinished" />
+        <translation>Trek</translation>
     </message>
     <message>
         <source>Choose a video to list its tracks.</source>
-        <translation type="unfinished" />
+        <translation>Pilih video untuk menampilkan daftar treknya.</translation>
     </message>
     <message>
         <source>Track</source>
-        <translation type="unfinished" />
+        <translation>Trek</translation>
     </message>
     <message>
         <source>Tick the tracks to save.</source>
-        <translation type="unfinished" />
+        <translation>Centang trek yang akan disimpan.</translation>
     </message>
     <message>
         <source>Language</source>
-        <translation type="unfinished">Bahasa</translation>
+        <translation>Bahasa</translation>
     </message>
     <message>
         <source>The language the file says the track is in.</source>
-        <translation type="unfinished" />
+        <translation>Bahasa trek sebagaimana tercantum dalam berkas.</translation>
     </message>
     <message>
         <source>Codec</source>
-        <translation type="unfinished" />
+        <translation>Kodek</translation>
     </message>
     <message>
         <source>The track's format. Hover a row to see the file type it is saved as.</source>
-        <translation type="unfinished" />
+        <translation>Format trek. Arahkan kursor ke sebuah baris untuk melihat jenis berkas yang dihasilkan saat disimpan.</translation>
     </message>
     <message>
         <source>Title</source>
-        <translation type="unfinished">Judul</translation>
+        <translation>Judul</translation>
     </message>
     <message>
         <source>The track's name in the file, such as Signs &amp; Songs.</source>
-        <translation type="unfinished" />
+        <translation>Nama trek di dalam berkas, misalnya Signs &amp; Songs.</translation>
     </message>
     <message>
         <source>Flags</source>
-        <translation type="unfinished" />
+        <translation>Penanda</translation>
     </message>
     <message>
         <source>Default, Forced, and Image for picture-based subtitles.</source>
-        <translation type="unfinished" />
+        <translation>Bawaan, Dipaksa, dan Gambar untuk subtitel berbasis gambar.</translation>
     </message>
     <message>
         <source>Output</source>
-        <translation type="unfinished">Keluaran</translation>
+        <translation>Keluaran</translation>
     </message>
     <message>
         <source>Output:</source>
-        <translation type="unfinished">Keluaran:</translation>
+        <translation>Keluaran:</translation>
     </message>
     <message>
         <source>Choose Folder…</source>
-        <translation type="unfinished">Pilih Folder…</translation>
+        <translation>Pilih Folder…</translation>
     </message>
     <message>
         <source>Reset</source>
-        <translation type="unfinished">Setel Ulang</translation>
+        <translation>Setel Ulang</translation>
     </message>
     <message>
         <source>Tracks are saved next to each video unless you choose a folder. A single ticked subtitle is named after its video, so mining finds it.</source>
-        <translation type="unfinished" />
+        <translation>Trek disimpan di sebelah setiap video kecuali Anda memilih folder. Jika hanya satu subtitel yang dicentang, subtitel itu diberi nama sesuai videonya agar ditemukan saat mining.</translation>
     </message>
     <message>
         <source>Overwrite existing files</source>
-        <translation type="unfinished" />
+        <translation>Timpa berkas yang ada</translation>
     </message>
     <message>
         <source>When unchecked, a track whose file already exists is skipped, not overwritten.</source>
-        <translation type="unfinished" />
+        <translation>Jika tidak dicentang, trek yang berkasnya sudah ada akan dilewati, bukan ditimpa.</translation>
     </message>
     <message>
         <source>Extract Tracks</source>
-        <translation type="unfinished" />
+        <translation>Ekstrak Trek</translation>
     </message>
     <message>
         <source>ffmpeg could not be started. Install it and add it to PATH, then try again.</source>
-        <translation type="unfinished" />
+        <translation>ffmpeg tidak dapat dijalankan. Pasang dan tambahkan ke PATH, lalu coba lagi.</translation>
     </message>
     <message>
         <source>Reading tracks…</source>
-        <translation type="unfinished" />
+        <translation>Membaca trek…</translation>
     </message>
     <message>
         <source>Tracks could not be read.</source>
-        <translation type="unfinished">Trek tidak dapat dibaca.</translation>
+        <translation>Trek tidak dapat dibaca.</translation>
     </message>
     <message>
         <source>No videos were found in that folder.</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada video yang ditemukan di folder tersebut.</translation>
     </message>
     <message>
         <source>No subtitle or audio tracks were found in %1.</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada trek subtitel atau audio yang ditemukan dalam %1.</translation>
     </message>
     <message>
         <source>Tracks of %1, the first of %2 videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
-        <translation type="unfinished" />
+        <translation>Trek dari %1, video pertama dari %2 video. Trek yang dicentang disimpan dari setiap video dalam folder; video yang tidak memilikinya dilewati.</translation>
     </message>
     <message>
         <source>Tracks of %1. Tick the ones to save.</source>
-        <translation type="unfinished" />
+        <translation>Trek dari %1. Centang yang akan disimpan.</translation>
     </message>
     <message>
         <source>Picture-based subtitles: saved as they are for an OCR tool. Mining can't read them.</source>
-        <translation type="unfinished" />
+        <translation>Subtitel berbasis gambar: disimpan apa adanya untuk alat OCR. Mining tidak dapat membacanya.</translation>
     </message>
     <message>
         <source>Subtitle %1</source>
-        <translation type="unfinished" />
+        <translation>Subtitel %1</translation>
     </message>
     <message>
         <source>Audio %1</source>
-        <translation type="unfinished" />
+        <translation>Audio %1</translation>
     </message>
     <message>
         <source>Saved as %1</source>
-        <translation type="unfinished" />
+        <translation>Disimpan sebagai %1</translation>
     </message>
     <message>
         <source>Default</source>
-        <translation type="unfinished" />
+        <translation>Bawaan</translation>
     </message>
     <message>
         <source>Forced</source>
-        <translation type="unfinished" />
+        <translation>Dipaksa</translation>
     </message>
     <message>
         <source>Image</source>
-        <translation type="unfinished" />
+        <translation>Gambar</translation>
     </message>
     <message>
         <source>Choose a video or a folder first.</source>
-        <translation type="unfinished" />
+        <translation>Pilih video atau folder terlebih dahulu.</translation>
     </message>
     <message>
         <source>That file or folder no longer exists.</source>
-        <translation type="unfinished">Berkas atau folder tersebut sudah tidak ada.</translation>
+        <translation>Berkas atau folder tersebut sudah tidak ada.</translation>
     </message>
     <message>
         <source>Wait for the track list to load, then tick the tracks to save.</source>
-        <translation type="unfinished" />
+        <translation>Tunggu hingga daftar trek dimuat, lalu centang trek yang akan disimpan.</translation>
     </message>
     <message>
         <source>Tick at least one track to save.</source>
-        <translation type="unfinished" />
+        <translation>Centang setidaknya satu trek untuk disimpan.</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
-        <translation type="unfinished">Folder itu tidak dapat dipindai.</translation>
+        <translation>Folder itu tidak dapat dipindai.</translation>
     </message>
     <message>
         <source>Output folder is not writable.</source>
-        <translation type="unfinished">Folder keluaran tidak dapat ditulisi.</translation>
+        <translation>Folder keluaran tidak dapat ditulisi.</translation>
     </message>
     <message>
         <source>Saving tracks from video %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>Menyimpan trek video %1 dari %2</translation>
     </message>
 </context><context>
     <name>UISettingsPanel</name>
