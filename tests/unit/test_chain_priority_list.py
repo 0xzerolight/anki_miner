@@ -611,7 +611,7 @@ class TestSettingAnchorsAreUnchanged:
     """W6-T3's settings search jumps to these ids; breaking one hides a setting."""
 
     EXPECTED = {
-        "dictionary": {"dictionaries.storage_folder", "dictionaries.chain"},
+        "dictionary": {"dictionaries.storage_folder", "dictionaries.chain", "dictionaries.auto_update"},
         # T11: the sentence-TTS block (formerly audio.reading_tts) folded into
         # the Card Media combo, media.reading_tts.
         "audio": {"audio.chain"},
