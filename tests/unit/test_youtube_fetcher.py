@@ -31,6 +31,7 @@ from anki_miner.exceptions.youtube import (
     YouTubeFetchError,
     YtdlpNotFoundError,
 )
+from anki_miner.models.youtube import VideoInfo
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
 from anki_miner.utils import ytdlp_resolver
 from anki_miner.utils.process_supervisor import SupervisedResult, SupervisedState
@@ -486,6 +487,83 @@ class TestProbeMetadata:
             pytest.raises(YouTubeFetchError, match="could not read this"),
         ):
             service.probe_metadata("https://youtu.be/abc123")
+
+
+class TestProbeOtherSites:
+    """A non-YouTube host gets subtitles asked for and any file-safe id."""
+
+    BILI = "https://www.bilibili.com/video/BV12N4y1M7rh"
+
+    def _probe(self, service: YouTubeFetcherService, payload: dict, stderr: str = "") -> tuple[VideoInfo, list[str]]:
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised",
+            return_value=_fake_run(0, json.dumps(payload), stderr),
+        ) as run:
+            info = service.probe_metadata(self.BILI)
+        return info, run.call_args.args[0]
+
+    def test_bilibili_id_is_accepted_and_the_site_recorded(self, service: YouTubeFetcherService) -> None:
+        info, _ = self._probe(service, _make_metadata(id="BV12N4y1M7rh_p2", extractor_key="BiliBili"))
+        assert info.video_id == "BV12N4y1M7rh_p2"
+        assert info.site == "Bilibili"  # yt-dlp's "BiliBili", spelled as the site does
+
+    def test_other_extractor_keys_are_kept_as_given(self, service: YouTubeFetcherService) -> None:
+        info, _ = self._probe(service, _make_metadata(id="sm9", extractor_key="Niconico"))
+        assert info.site == "Niconico"
+
+    @pytest.mark.parametrize("kind", ["multi_video", "playlist"])
+    def test_a_link_that_is_not_one_video_is_refused(self, service: YouTubeFetcherService, kind: str) -> None:
+        # Bilibili interactive videos answer playlist even under --no-playlist,
+        # and old segmented (FLV) ones answer multi_video. The fetch would leave
+        # several video files, so refuse at the probe with a reason.
+        with pytest.raises(YouTubeFetchError, match="not a single video"):
+            self._probe(service, _make_metadata(id="BV12N4y1M7rh", extractor_key="BiliBili", _type=kind))
+
+    def test_probe_asks_for_subtitles_and_still_pins_one_video(self, service: YouTubeFetcherService) -> None:
+        # --no-playlist on every host: a collection entry that is itself a
+        # multi-part video probes as its first part, never as a nested playlist.
+        _, cmd = self._probe(service, _make_metadata(id="BV12N4y1M7rh", extractor_key="BiliBili"))
+        assert "--write-subs" in cmd
+        assert "--no-playlist" in cmd
+
+    def test_unsafe_site_id_is_refused(self, service: YouTubeFetcherService) -> None:
+        with pytest.raises(YouTubeFetchError, match="Unexpected video id format"):
+            self._probe(service, _make_metadata(id="../x", extractor_key="Generic"))
+
+    def test_login_warning_sets_the_flag(self, service: YouTubeFetcherService) -> None:
+        info, _ = self._probe(
+            service,
+            _make_metadata(id="BV12N4y1M7rh", extractor_key="BiliBili", subtitles={"danmaku": [{"ext": "xml"}]}),
+            stderr="WARNING: [BiliBili] Subtitles are only available when logged in. Use --cookies-from-browser",
+        )
+        assert info.subtitles_need_login is True
+        assert info.has_manual_ja_subs is False
+
+    def test_missing_extractor_key_names_the_site_web(self, service: YouTubeFetcherService) -> None:
+        info, _ = self._probe(service, _make_metadata(id="BV12N4y1M7rh"))
+        assert info.site == "Web"
+
+    def test_youtube_probe_argv_is_unchanged(self, service: YouTubeFetcherService) -> None:
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised",
+            return_value=_fake_run(0, json.dumps(_make_metadata())),
+        ) as run:
+            info = service.probe_metadata("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+        cmd = run.call_args.args[0]
+        assert cmd[1:5] == ["--ignore-config", "--skip-download", "--dump-single-json", "--no-playlist"]
+        assert "--write-subs" not in cmd
+        assert info.site == "YouTube"
+        assert info.subtitles_need_login is False
+
+    def test_youtube_host_keeps_the_11_char_check(self, service: YouTubeFetcherService) -> None:
+        with (
+            patch(
+                "anki_miner.services.youtube_fetcher.run_supervised",
+                return_value=_fake_run(0, json.dumps(_make_metadata(id="BV12N4y1M7rh"))),
+            ),
+            pytest.raises(YouTubeFetchError, match="Unexpected video id format"),
+        ):
+            service.probe_metadata("https://youtu.be/dQw4w9WgXcQ")
 
 
 class TestProbeClassifiesLikeFetch:
