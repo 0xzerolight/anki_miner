@@ -122,6 +122,8 @@ def _start(
     acquire=None,
     clock=None,
     show_window: bool = True,
+    title: str | None = None,
+    window_on_reveal: bool = False,
 ) -> tuple[ResourceDownloadSession, Path]:
     download_dir = tmp_path / "download"
     download_dir.mkdir(exist_ok=True)
@@ -131,6 +133,10 @@ def _start(
     extra = {} if clock is None else {"clock": clock}
     if acquire is not None:
         extra["acquire_mutation"] = acquire
+    if title is not None:
+        extra["title"] = title
+    if window_on_reveal:
+        extra["window_on_reveal"] = True
     session = ResourceDownloadSession(
         parent,
         create_default_config(),
@@ -1126,3 +1132,57 @@ def test_start_resource_download_refuses_an_empty_catalog(qtbot, monkeypatch):
 
     assert session is None
     built.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# A titled run, and a hidden run the user asks to see (dictionary updates)
+# ---------------------------------------------------------------------------
+
+
+def test_a_titled_run_names_itself_in_the_window_and_the_registry(parent, monkeypatch, tmp_path, qtbot):
+    registry = TaskRegistry()
+    worker = _FakeWorker(_successful_summary(), events=[_progress(_DL, downloaded=1, total_bytes=10)])
+    session, _dir = _start(monkeypatch, tmp_path, parent, worker, registry=registry, title="Dictionary updates")
+
+    assert worker.progress_done.wait(2.0)
+    qtbot.waitUntil(lambda: registry.snapshot(mod.TASK_ID) is not None, timeout=3000)
+    assert registry.snapshot(mod.TASK_ID).title == "Dictionary updates"
+    assert session.window is not None and session.window.windowTitle() == "Dictionary updates"
+
+    _drain(qtbot, worker)
+    registry.shutdown()
+
+
+def test_revealing_a_hidden_run_builds_its_window_at_the_current_step(parent, monkeypatch, tmp_path, qtbot):
+    worker = _FakeWorker(_successful_summary(), events=[_progress(_DL, downloaded=5, total_bytes=10)])
+    session, _dir = _start(
+        monkeypatch, tmp_path, parent, worker, show_window=False, window_on_reveal=True, title="Dictionary updates"
+    )
+    assert worker.progress_done.wait(2.0)
+    qtbot.waitUntil(lambda: session._last_event is not None, timeout=3000)
+    assert session.window is None
+
+    session.reveal()
+
+    assert session.window is not None and session.window.isVisible()
+    assert session.window.windowTitle() == "Dictionary updates"
+    _drain(qtbot, worker)
+
+
+def test_a_hidden_run_that_finishes_unwatched_opens_no_window(parent, monkeypatch, tmp_path, qtbot):
+    worker = _FakeWorker(_successful_summary())
+    session, _dir = _start(monkeypatch, tmp_path, parent, worker, show_window=False, window_on_reveal=True)
+    _drain(qtbot, worker)
+    qtbot.waitUntil(lambda: session.worker is None, timeout=3000)
+    assert session.window is None
+
+
+def test_revealing_a_finished_hidden_run_shows_its_result(parent, monkeypatch, tmp_path, qtbot):
+    worker = _FakeWorker(_successful_summary())
+    session, _dir = _start(monkeypatch, tmp_path, parent, worker, show_window=False, window_on_reveal=True)
+    _drain(qtbot, worker)
+    qtbot.waitUntil(lambda: session.worker is None, timeout=3000)
+
+    session.reveal()
+
+    assert session.window is not None and session.window.isVisible()

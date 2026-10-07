@@ -283,8 +283,15 @@ class ResourceDownloadWindow(EnhancedDialog):
     cancel_requested = pyqtSignal()
     retry_requested = pyqtSignal()
 
-    def __init__(self, parent: QWidget | None, specs: Sequence[ResourceSpec]) -> None:
-        super().__init__(parent, QCoreApplication.translate("ResourceDownloadDialog", "Recommended Resources"))
+    def __init__(self, parent: QWidget | None, specs: Sequence[ResourceSpec], title: str | None = None) -> None:
+        super().__init__(
+            parent,
+            (
+                title
+                if title is not None
+                else QCoreApplication.translate("ResourceDownloadDialog", "Recommended Resources")
+            ),
+        )
         self.setWindowModality(Qt.WindowModality.NonModal)
         # A window that only reports on a download must never be the reason
         # the application is still running (mirrors mini_job_monitor.py).
@@ -442,6 +449,8 @@ class ResourceDownloadSession(QObject):
         specs: Sequence[ResourceSpec],
         show_window: bool = True,
         clock: Callable[[], float] = monotonic,
+        title: str | None = None,
+        window_on_reveal: bool = False,
     ) -> None:
         super().__init__()
         self._parent = parent
@@ -456,6 +465,15 @@ class ResourceDownloadSession(QObject):
         # False for a caller that renders progress itself (the setup wizard's
         # dictionary step, D9): the run then reports only to the TaskRegistry.
         self._show_window = show_window
+        # A windowless run that still builds its window when the user asks to
+        # see it (the weekly dictionary update). The wizard's D9 run does not:
+        # its own page is the view.
+        self._window_on_reveal = window_on_reveal
+        self._title = (
+            title
+            if title is not None
+            else QCoreApplication.translate("ResourceDownloadDialog", "Recommended resources")
+        )
         # Injected so stall and rate behaviour is testable without sleeping;
         # the estimator itself already refuses to read a clock of its own.
         self._clock = clock
@@ -526,17 +544,7 @@ class ResourceDownloadSession(QObject):
             self._download_dir = Path(tempfile.mkdtemp(prefix="anki_miner_dl_"))
 
             if self._show_window:
-                window = ResourceDownloadWindow(self._parent, self._specs)
-                window.cancel_requested.connect(self.cancel)
-                window.retry_requested.connect(self._retry_activation)
-                window.destroyed.connect(self._on_window_destroyed)
-                window.show_activity(
-                    QCoreApplication.translate("ResourceDownloadDialog", "Recommended resources"),
-                    QCoreApplication.translate("ResourceDownloadDialog", "Starting download…"),
-                    None,
-                )
-                window.show()
-                self._window = window
+                self._open_window()
 
             worker = ResourceDownloadWorker(
                 self._specs,
@@ -560,7 +568,7 @@ class ResourceDownloadSession(QObject):
                 self._handle = self._registry.start(
                     TaskSpec(
                         task_id=TASK_ID,
-                        title=QCoreApplication.translate("ResourceDownloadDialog", "Recommended resources"),
+                        title=self._title,
                         owner=CapabilityTarget("settings", "dictionaries"),
                     )
                 )
@@ -582,7 +590,41 @@ class ResourceDownloadSession(QObject):
         return True
 
     def reveal(self) -> None:
-        """Bring a hidden window back — what the task strip navigates to."""
+        """Bring a hidden window back — what the task strip navigates to.
+
+        A ``window_on_reveal`` run started without one (the weekly
+        dictionary update) builds it on this ask: at the current step while
+        live, or showing its result once finished. Any other windowless run
+        (the wizard's, D9) has nothing to reveal.
+        """
+        if self._window is None and self._window_on_reveal:
+            if self._worker is not None and not self._terminal_handled:
+                self._open_window()
+                if self._last_event is not None:
+                    self._paint(self._last_event, self._last_stats)
+            elif self._summary is not None:
+                self._open_window()
+                self._render_result(self._summary)
+                return
+        self._raise_window()
+
+    def _open_window(self) -> None:
+        window = ResourceDownloadWindow(self._parent, self._specs, self._title)
+        window.cancel_requested.connect(self.cancel)
+        window.retry_requested.connect(self._retry_activation)
+        window.destroyed.connect(self._on_window_destroyed)
+        window.show_activity(
+            self._title,
+            QCoreApplication.translate("ResourceDownloadDialog", "Starting download…"),
+            None,
+        )
+        if self._cancel_requested:
+            # Built mid-cancel by a reveal: never offer a live Cancel for a run already stopping.
+            window.show_cancelling()
+        window.show()
+        self._window = window
+
+    def _raise_window(self) -> None:
         window = self._window
         if window is None:
             return
@@ -725,7 +767,7 @@ class ResourceDownloadSession(QObject):
 
         self._with_window(
             lambda window: window.show_activity(
-                QCoreApplication.translate("ResourceDownloadDialog", "Recommended resources"),
+                self._title,
                 QCoreApplication.translate("ResourceDownloadDialog", "Activating…"),
                 None,
             )
@@ -760,15 +802,7 @@ class ResourceDownloadSession(QObject):
         has one (a word list being lemmatised can take minutes); the line above
         it stays the install copy.
         """
-        detail = resource_detail(event, locale=self._locale, stats=stats)
-        if stats is not None:
-            fraction = stats.fraction
-        elif event.step is not None and event.steps:
-            fraction = event.step / event.steps
-        else:
-            fraction = None
-        headline = activity_headline(event, self._specs)
-        self._with_window(lambda window: window.show_activity(headline, detail, fraction))
+        detail = self._paint(event, stats)
 
         if self._handle is None:
             return
@@ -780,6 +814,19 @@ class ResourceDownloadSession(QObject):
                 self._handle.count(current=event.entries or 0, total=None, detail=detail)
         finally:
             self._publishing = False
+
+    def _paint(self, event: ResourceProgress, stats: TransferStats | None) -> str:
+        """Render one observation to the window; return the detail line the registry also shows."""
+        detail = resource_detail(event, locale=self._locale, stats=stats)
+        if stats is not None:
+            fraction = stats.fraction
+        elif event.step is not None and event.steps:
+            fraction = event.step / event.steps
+        else:
+            fraction = None
+        headline = activity_headline(event, self._specs)
+        self._with_window(lambda window: window.show_activity(headline, detail, fraction))
+        return detail
 
     def _on_registry_tick(self, task_id: str) -> None:
         """Re-render on the registry's own tick so a stall is visibly a stall.
@@ -808,7 +855,9 @@ class ResourceDownloadSession(QObject):
         lines = result_lines(summary)
         can_retry = bool(summary.succeeded) and not self._activated
         self._with_window(lambda window: window.show_result(headline, lines, can_retry=can_retry))
-        self.reveal()
+        # Raise only a window that exists: a hidden run nobody watched must
+        # not pop one at its end (see reveal).
+        self._raise_window()
 
     # --- plumbing -------------------------------------------------------
 
@@ -865,6 +914,8 @@ def start_resource_download(
     adopt_worker: Callable[[ResourceDownloadWorker], None] | None = None,
     specs: Sequence[ResourceSpec],
     show_window: bool = True,
+    title: str | None = None,
+    window_on_reveal: bool = False,
 ) -> ResourceDownloadSession | None:
     """Start a background recommended-resource run; None means it never started.
 
@@ -886,6 +937,9 @@ def start_resource_download(
 
     ``show_window=False`` starts the run with no window: the caller shows
     progress itself from the task registry (the setup wizard, D9).
+    ``window_on_reveal`` lets such a run build its window anyway when the
+    user asks to see it (the weekly dictionary update). ``title`` names the
+    run in its window and the registry; it defaults to the recommended set.
     """
     session = ResourceDownloadSession(
         parent,
@@ -898,5 +952,7 @@ def start_resource_download(
         adopt_worker=adopt_worker,
         specs=specs,
         show_window=show_window,
+        title=title,
+        window_on_reveal=window_on_reveal,
     )
     return session if session.start() else None
