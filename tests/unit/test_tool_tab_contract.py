@@ -3,11 +3,11 @@
 Generate, Retime, Condense and Audiobook Sync (and Download, which has no mode
 toggle or Overwrite box) each used to carry its own copy of these tests and of
 a fake worker. Each tab's own file now keeps only what is specific to that
-tool. Every translated string stays in its tab: these tests assert behaviour
-and non-empty copy, never wording. Manga OCR is left out: no Output row, no
-mode toggle, and its run starts behind an off-thread volume scan. Readability
-has neither an Output row nor a mode toggle either, so it joins only the
-run-lifecycle and probe tests (``_RUN_TABS``, ``_PROBED_TABS``). Tracks has an
+tool. Every translated string stays in its tab: these tests compare against the
+tab's own ``_strings``, never a wording. Readability and Manga OCR have neither
+an Output row nor a mode toggle, so they join only the run-lifecycle and probe
+tests (``_RUN_TABS``, ``_PROBED_TABS``); Manga OCR's run starts behind an
+off-thread volume scan, which ``_start_single_run`` waits out. Tracks has an
 Output row but no mode toggle, so it joins ``_ALL_TABS`` beside Download.
 """
 
@@ -28,12 +28,15 @@ pytest.importorskip("PyQt6.QtWidgets")
 from anki_miner.gui.widgets.booksync_tab import BookSyncTab
 from anki_miner.gui.widgets.condense_tab import CondenseTab
 from anki_miner.gui.widgets.download_tab import DownloadTab
+from anki_miner.gui.widgets.mokuro_tab import MokuroTab
 from anki_miner.gui.widgets.readability_tab import ReadabilityTab
 from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
 from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
 from anki_miner.gui.widgets.tracks_tab import TracksTab
+from anki_miner.models import TerminalOutcome
 from anki_miner.services.track_extractor import InputProbe, MediaTracks, TrackRef
 from anki_miner.utils.audio_track_detector import SubtitleStream
+from anki_miner.utils.i18n import tr_format
 from tests.unit._tool_tab_harness import OS_ACCESS, FakeToolWorker, capture_slots, make_config
 
 _ENGINE_AVAILABLE = "anki_miner.services.asr._engine.available"
@@ -92,6 +95,13 @@ def _fill_readability(tab, tmp_path: Path) -> None:
     sub = tmp_path / "episode.srt"
     sub.write_text("1\n00:00:00,000 --> 00:00:01,000\n猫\n", encoding="utf-8")
     tab.input_selector.set_path(str(sub))
+
+
+def _fill_mokuro(tab, tmp_path: Path) -> None:
+    volume = tmp_path / "series" / "vol1"
+    volume.mkdir(parents=True, exist_ok=True)
+    (volume / "p.jpg").write_bytes(b"x")
+    tab.folder_selector.set_path(str(tmp_path / "series"))
 
 
 @dataclass(frozen=True)
@@ -185,15 +195,23 @@ _TRACKS = _Spec(
     run_patches=(),
     fill_single=_fill_tracks,
 )
+_MOKURO = _Spec(
+    tab_cls=MokuroTab,
+    primary="run_button",
+    worker_cls="anki_miner.gui.widgets.mokuro_tab.MokuroWorker",
+    construct_patches=(("anki_miner.gui.widgets.mokuro_tab.MokuroTab._compute_mokuro_available", True),),
+    run_patches=(("anki_miner.gui.widgets.mokuro_tab.MokuroTab._mokuro_ready", True),),
+    fill_single=_fill_mokuro,
+)
 
 #: Tabs with a Single File / Folder toggle and an Overwrite box.
 _MODE_TABS = [_CREATION, _RETIME, _CONDENSE, _BOOKSYNC]
 #: Tabs with an Output row whose run is one queue worker started from the primary.
 _ALL_TABS = [*_MODE_TABS, _DOWNLOAD, _TRACKS]
 #: Tabs whose run is one queue worker started from the primary, Output row or not.
-_RUN_TABS = [*_ALL_TABS, _READABILITY]
+_RUN_TABS = [*_ALL_TABS, _READABILITY, _MOKURO]
 #: Tabs whose engine probe is the base template (Retime keeps its own).
-_PROBED_TABS = [_CREATION, _CONDENSE, _BOOKSYNC, _DOWNLOAD, _READABILITY, _TRACKS]
+_PROBED_TABS = [_CREATION, _CONDENSE, _BOOKSYNC, _DOWNLOAD, _READABILITY, _TRACKS, _MOKURO]
 
 
 def _spec_id(spec: _Spec) -> str:
@@ -217,7 +235,7 @@ def _make_tab(spec: _Spec, qtbot, tmp_path: Path):
     return tab
 
 
-def _start_single_run(spec: _Spec, tab, tmp_path: Path, worker: FakeToolWorker) -> MagicMock:
+def _start_single_run(spec: _Spec, tab, tmp_path: Path, worker: FakeToolWorker, qtbot) -> MagicMock:
     """Fill the single-file inputs, click the primary; return the worker-class mock."""
     spec.fill_single(tab, tmp_path)
     with (
@@ -226,6 +244,8 @@ def _start_single_run(spec: _Spec, tab, tmp_path: Path, worker: FakeToolWorker) 
         patch(spec.worker_cls, return_value=worker) as worker_cls,
     ):
         getattr(tab, spec.primary).click()
+        # Manga OCR starts behind an off-thread volume scan; the rest start at once.
+        qtbot.waitUntil(lambda: worker._started, timeout=3000)
     return worker_cls
 
 
@@ -361,7 +381,7 @@ def test_a_started_run_owns_its_worker(spec, qtbot, tmp_path):
     tab = _make_tab(spec, qtbot, tmp_path)
     worker = FakeToolWorker()
 
-    worker_cls = _start_single_run(spec, tab, tmp_path, worker)
+    worker_cls = _start_single_run(spec, tab, tmp_path, worker, qtbot)
 
     assert worker_cls.call_count == 1
     assert tab.worker_thread is worker
@@ -377,7 +397,7 @@ def test_worker_released_on_thread_finished(spec, qtbot, tmp_path):
     tab = _make_tab(spec, qtbot, tmp_path)
     worker = FakeToolWorker()
     finished = capture_slots(worker.finished)
-    _start_single_run(spec, tab, tmp_path, worker)
+    _start_single_run(spec, tab, tmp_path, worker, qtbot)
 
     for slot in finished:
         slot()
@@ -392,7 +412,7 @@ def test_file_skipped_logs_skipped_not_done(spec, qtbot, tmp_path):
     tab = _make_tab(spec, qtbot, tmp_path)
     worker = FakeToolWorker()
     skipped = capture_slots(worker.file_skipped)
-    _start_single_run(spec, tab, tmp_path, worker)
+    _start_single_run(spec, tab, tmp_path, worker, qtbot)
 
     for slot in skipped:
         slot(0, tmp_path / "episode.out", "Skipped, exists")
@@ -449,35 +469,43 @@ def test_the_in_page_progress_card_is_hidden(spec, qtbot, tmp_path):
     assert not tab.progress_widget.isVisibleTo(tab)
 
 
+@pytest.mark.parametrize(
+    ("outcome", "line"),
+    [
+        (TerminalOutcome.FAILED, "failed"),
+        (TerminalOutcome.PARTIAL, "partial"),
+        (TerminalOutcome.CANCELLED, "cancelled"),
+    ],
+    ids=["failed", "partial", "cancelled"],
+)
 @pytest.mark.parametrize("spec", _RUN_TABS, ids=_spec_id)
-def test_a_failed_run_keeps_its_result_in_the_pinned_bar(spec, qtbot, tmp_path):
-    """D1: a tool has no receipt, so the bar keeps its last line until the next run."""
-    from anki_miner.models import TerminalOutcome
+def test_an_unfinished_run_keeps_its_result_in_the_pinned_bar(spec, outcome, line, qtbot, tmp_path):
+    """D1: a tool has no receipt, so the bar keeps its last line until the next run.
 
+    D1-A: a cancelled or partial run shows the tab's plain line, with no count.
+    """
     tab = _make_tab(spec, qtbot, tmp_path)
     worker = FakeToolWorker()
     finished = capture_slots(worker.queue_finished)
-    _start_single_run(spec, tab, tmp_path, worker)
+    _start_single_run(spec, tab, tmp_path, worker, qtbot)
 
     for slot in finished:
-        slot(TerminalOutcome.FAILED)
+        slot(outcome)
 
-    assert tab.action_bar.stage_label.full_text == tab._strings.failed
+    assert tab.action_bar.stage_label.full_text == getattr(tab._strings, line)
 
 
 @pytest.mark.parametrize("spec", _RUN_TABS, ids=_spec_id)
 def test_a_finished_run_states_its_completion_in_the_pinned_bar(spec, qtbot, tmp_path):
-    from anki_miner.models import TerminalOutcome
-
     tab = _make_tab(spec, qtbot, tmp_path)
     worker = FakeToolWorker()
     finished = capture_slots(worker.queue_finished)
-    _start_single_run(spec, tab, tmp_path, worker)
+    _start_single_run(spec, tab, tmp_path, worker, qtbot)
 
     for slot in finished:
         slot(TerminalOutcome.SUCCESS)
 
-    assert tab.action_bar.stage_label.full_text != ""
+    assert tab.action_bar.stage_label.full_text == tr_format(tab._strings.complete_template, 1)
 
 
 # ---------------------------------------------------------------------------
