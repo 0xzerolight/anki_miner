@@ -252,6 +252,9 @@ def _mine(
                 if cancel.is_set():  # the check was cut short: the run stopped there, as one cancelled mid-run
                     result = replace(result, errors=[*result.errors, CANCELLED_ERROR])
                     succeeded, made = False, {}
+        if cancel.is_set() and classify_result(result) is not MiningOutcome.CANCELLED:
+            # A run stops at its next step (API.md); this one had none left, so its result stands.
+            logger.warning("API run %s: a cancel arrived after its last step; its result stands", episode.run_id)
         rendered: dict[str, Rendered] = {}
         if render is not None:  # a stopped render still reports the notes it wrote: their files are in *out*
             rendered = dict(render.rendered)

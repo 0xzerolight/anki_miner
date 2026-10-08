@@ -256,7 +256,7 @@ Per episode it probes the video, downloads it with its subtitle into `fetch-<n>/
 
 While a run works, `progress.json` holds `{"schema": 1, "run_id": …, "stage": 3, "stages": 5, "done": 12, "total": 26}`. The stages are parsing, filtering, media, definitions and cards.
 
-To stop a run, create an empty file named `cancel` in its folder. The run stops at its next step, reports `CANCELLED`, and Anki Miner deletes the file. Only that run stops; a call with several runs moves on to the next.
+To stop a run, create an empty file named `cancel` in its folder. The run stops at its next step, reports `CANCELLED`, and Anki Miner deletes the file. Only that run stops; a call with several runs moves on to the next. A `cancel` that arrives after the run's last step leaves its result as it is; the file is still deleted.
 
 A call starts by deleting the `progress.json` and `cancel` files an earlier call left in its runs' folders. A `cancel` file created after that for a run still waiting its turn cancels it as soon as it starts, and its result lists every word as `not_attempted`. On Linux and macOS, SIGINT or SIGTERM stops the current run and every later run in the call. Notes already added to Anki stay.
 

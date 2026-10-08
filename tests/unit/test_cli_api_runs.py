@@ -265,6 +265,21 @@ def test_an_earlier_calls_progress_file_is_gone_before_the_run(services, tmp_pat
     assert seen == [False]
 
 
+def test_a_cancel_after_the_last_step_leaves_the_result_and_says_so(services, tmp_path, video, caplog) -> None:
+    def finishes_then_a_cancel_lands(*_a, **kw):
+        kw["curation_callback"](services.words())
+        (tmp_path / "ep-01" / "cancel").touch()
+        assert kw["cancel_event"].wait(2)
+        return _result()
+
+    services.processor.process_episode.side_effect = finishes_then_a_cancel_lands
+    with caplog.at_level("WARNING", logger=runs.logger.name):
+        [verdict] = runs.mine_runs(_run_file(tmp_path, video), threading.Event())
+    assert verdict["ok"] is True and _result_file(tmp_path)["outcome"] == "success"
+    assert not (tmp_path / "ep-01" / "cancel").exists()
+    assert any("ep-01" in r.getMessage() and "after its last step" in r.getMessage() for r in caplog.records)
+
+
 def test_signal_before_a_run_cancels_it_without_a_file(services, tmp_path, video) -> None:
     everything = threading.Event()
     everything.set()
