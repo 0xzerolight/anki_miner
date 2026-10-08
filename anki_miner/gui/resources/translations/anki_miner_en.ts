@@ -822,10 +822,6 @@
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Customize marker field names</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Word + Sentence:</source>
         <translation type="unfinished" />
     </message>
@@ -839,6 +835,10 @@
     </message>
     <message>
         <source>Audio:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Customize marker field names</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2405,14 +2405,6 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Dictionaries that publish updates (Jitendex, JMdict, Wiktionary, Jiten, …) update themselves once a week; Update Now checks right away.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Jisho.org online fallback (Japanese)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>For Japanese, fall back to Jisho.org when your offline dictionaries have no entry.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4476,18 +4468,6 @@ This will modify %n notes (%1) and tag them %2. Continue?</numerusform>
     </message>
     <message>
         <source>⚠ missing — add again</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Jisho (online fallback)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>online</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>⚠ rate-limited, slower</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -10113,15 +10093,15 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Edit the pattern (advanced)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Regex Filter:</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Replacement:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Edit the pattern (advanced)</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -10224,10 +10204,6 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Skipping unavailable provider(s): %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>No offline dictionary — definitions will come from Jisho.org only</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -12220,34 +12196,6 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Restore the theme that was active when this tab was opened.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>button labels %1:1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>button labels could not be measured</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>muted text %1:1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>muted text could not be measured</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>cards against the page %1:1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>cards against the page could not be measured</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Low contrast, shown exactly as the theme author wrote it: %1.</source>
         <translation type="unfinished" />
     </message>
     <message>

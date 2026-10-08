@@ -820,10 +820,6 @@
         <translation>Trường đánh dấu nào nhận “x”. None để nguyên thẻ không thay đổi.</translation>
     </message>
     <message>
-        <source>Customize marker field names</source>
-        <translation>Tùy chỉnh tên trường đánh dấu</translation>
-    </message>
-    <message>
         <source>Word + Sentence:</source>
         <translation>Từ + Câu:</translation>
     </message>
@@ -838,6 +834,10 @@
     <message>
         <source>Audio:</source>
         <translation>Âm thanh:</translation>
+    </message>
+    <message>
+        <source>Customize marker field names</source>
+        <translation>Tùy chỉnh tên trường đánh dấu</translation>
     </message>
     <message>
         <source>Card Creation</source>
@@ -2412,14 +2412,6 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <message>
         <source>Dictionaries that publish updates (Jitendex, JMdict, Wiktionary, Jiten, …) update themselves once a week; Update Now checks right away.</source>
         <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Jisho.org online fallback (Japanese)</source>
-        <translation>Dự phòng trực tuyến Jisho.org (tiếng Nhật)</translation>
-    </message>
-    <message>
-        <source>For Japanese, fall back to Jisho.org when your offline dictionaries have no entry.</source>
-        <translation>Với tiếng Nhật, dự phòng sang Jisho.org khi từ điển ngoại tuyến của bạn không có mục nào.</translation>
     </message>
     <message>
         <source>Add frequency lists</source>
@@ -4464,18 +4456,6 @@ Thao tác này sẽ sửa %n ghi chú (%1) và gắn thẻ %2 cho chúng. Tiếp
     <message>
         <source>⚠ missing — add again</source>
         <translation>⚠ thiếu — hãy thêm lại</translation>
-    </message>
-    <message>
-        <source>Jisho (online fallback)</source>
-        <translation>Jisho (dự phòng trực tuyến)</translation>
-    </message>
-    <message>
-        <source>online</source>
-        <translation>trực tuyến</translation>
-    </message>
-    <message>
-        <source>⚠ rate-limited, slower</source>
-        <translation>⚠ bị giới hạn tần suất, chậm hơn</translation>
     </message>
     <message>
         <source>⚠ re-import required (app upgrade)</source>
@@ -10111,16 +10091,16 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Được chèn vào vị trí mỗi kết quả khớp (để trống sẽ xóa nó). Dùng backreference kiểu Python \1 \2, không phải kiểu $1 $2 của asbplayer.</translation>
     </message>
     <message>
-        <source>Edit the pattern (advanced)</source>
-        <translation>Sửa mẫu (nâng cao)</translation>
-    </message>
-    <message>
         <source>Regex Filter:</source>
         <translation>Bộ lọc Regex:</translation>
     </message>
     <message>
         <source>Replacement:</source>
         <translation>Thay thế:</translation>
+    </message>
+    <message>
+        <source>Edit the pattern (advanced)</source>
+        <translation>Sửa mẫu (nâng cao)</translation>
     </message>
     <message>
         <source>Regex Filter</source>
@@ -10223,10 +10203,6 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <message>
         <source>Skipping unavailable provider(s): %1</source>
         <translation>Bỏ qua nhà cung cấp không khả dụng: %1</translation>
-    </message>
-    <message>
-        <source>No offline dictionary — definitions will come from Jisho.org only</source>
-        <translation>Không có từ điển ngoại tuyến — định nghĩa sẽ chỉ lấy từ Jisho.org</translation>
     </message>
     <message>
         <source>Cards will have no definitions until you add a dictionary in Settings → Dictionaries.</source>
@@ -12227,34 +12203,6 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     <message>
         <source>Restore the theme that was active when this tab was opened.</source>
         <translation>Khôi phục chủ đề đã hoạt động khi tab này được mở.</translation>
-    </message>
-    <message>
-        <source>button labels %1:1</source>
-        <translation>nhãn nút %1:1</translation>
-    </message>
-    <message>
-        <source>button labels could not be measured</source>
-        <translation>không thể đo nhãn nút</translation>
-    </message>
-    <message>
-        <source>muted text %1:1</source>
-        <translation>văn bản mờ %1:1</translation>
-    </message>
-    <message>
-        <source>muted text could not be measured</source>
-        <translation>không thể đo văn bản mờ</translation>
-    </message>
-    <message>
-        <source>cards against the page %1:1</source>
-        <translation>thẻ trên nền trang %1:1</translation>
-    </message>
-    <message>
-        <source>cards against the page could not be measured</source>
-        <translation>không thể đo thẻ trên nền trang</translation>
-    </message>
-    <message>
-        <source>Low contrast, shown exactly as the theme author wrote it: %1.</source>
-        <translation>Độ tương phản thấp, hiển thị chính xác như tác giả chủ đề viết: %1.</translation>
     </message>
     <message>
         <source>Open %1; drop theme JSON files here to install on next launch.</source>

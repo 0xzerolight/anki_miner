@@ -820,10 +820,6 @@
         <translation>どのマーカーフィールドに「x」を打刻するか。「なし」の場合、カードは変更されません。</translation>
     </message>
     <message>
-        <source>Customize marker field names</source>
-        <translation>マーカーフィールド名をカスタマイズ</translation>
-    </message>
-    <message>
         <source>Word + Sentence:</source>
         <translation>単語 + 例文：</translation>
     </message>
@@ -838,6 +834,10 @@
     <message>
         <source>Audio:</source>
         <translation>音声：</translation>
+    </message>
+    <message>
+        <source>Customize marker field names</source>
+        <translation>マーカーフィールド名をカスタマイズ</translation>
     </message>
     <message>
         <source>Card Creation</source>
@@ -2412,14 +2412,6 @@ No index files are deleted.</source>
     <message>
         <source>Dictionaries that publish updates (Jitendex, JMdict, Wiktionary, Jiten, …) update themselves once a week; Update Now checks right away.</source>
         <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Jisho.org online fallback (Japanese)</source>
-        <translation>Jisho.org のオンラインフォールバック（日本語）</translation>
-    </message>
-    <message>
-        <source>For Japanese, fall back to Jisho.org when your offline dictionaries have no entry.</source>
-        <translation>日本語では、オフライン辞書に項目がない場合に Jisho.org にフォールバックします。</translation>
     </message>
     <message>
         <source>Add frequency lists</source>
@@ -4464,18 +4456,6 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     <message>
         <source>⚠ missing — add again</source>
         <translation>⚠ 見つかりません — 再追加</translation>
-    </message>
-    <message>
-        <source>Jisho (online fallback)</source>
-        <translation>Jisho（オンラインフォールバック）</translation>
-    </message>
-    <message>
-        <source>online</source>
-        <translation>オンライン</translation>
-    </message>
-    <message>
-        <source>⚠ rate-limited, slower</source>
-        <translation>⚠ レート制限あり、低速</translation>
     </message>
     <message>
         <source>⚠ re-import required (app upgrade)</source>
@@ -10111,16 +10091,16 @@ No index files are deleted.</source>
         <translation>各マッチ箇所に挿入されます（空欄にすると削除）。Python の後方参照 \1 \2 を使用してください（asbplayer の $1 $2 ではありません）。</translation>
     </message>
     <message>
-        <source>Edit the pattern (advanced)</source>
-        <translation>パターンを編集（上級者向け）</translation>
-    </message>
-    <message>
         <source>Regex Filter:</source>
         <translation>正規表現フィルター:</translation>
     </message>
     <message>
         <source>Replacement:</source>
         <translation>置換文字列:</translation>
+    </message>
+    <message>
+        <source>Edit the pattern (advanced)</source>
+        <translation>パターンを編集（上級者向け）</translation>
     </message>
     <message>
         <source>Regex Filter</source>
@@ -10223,10 +10203,6 @@ No index files are deleted.</source>
     <message>
         <source>Skipping unavailable provider(s): %1</source>
         <translation>利用できないプロバイダーをスキップしました: %1</translation>
-    </message>
-    <message>
-        <source>No offline dictionary — definitions will come from Jisho.org only</source>
-        <translation>オフライン辞書がありません — 語義は Jisho.org のみから取得されます</translation>
     </message>
     <message>
         <source>Cards will have no definitions until you add a dictionary in Settings → Dictionaries.</source>
@@ -12227,34 +12203,6 @@ Your installed resources and your theme are kept.</source>
     <message>
         <source>Restore the theme that was active when this tab was opened.</source>
         <translation>このタブを開いたときに有効だったテーマを復元します。</translation>
-    </message>
-    <message>
-        <source>button labels %1:1</source>
-        <translation>ボタンラベル %1:1</translation>
-    </message>
-    <message>
-        <source>button labels could not be measured</source>
-        <translation>ボタンラベルを測定できませんでした</translation>
-    </message>
-    <message>
-        <source>muted text %1:1</source>
-        <translation>淡色テキスト %1:1</translation>
-    </message>
-    <message>
-        <source>muted text could not be measured</source>
-        <translation>淡色テキストを測定できませんでした</translation>
-    </message>
-    <message>
-        <source>cards against the page %1:1</source>
-        <translation>ページに対するカードのコントラスト %1:1</translation>
-    </message>
-    <message>
-        <source>cards against the page could not be measured</source>
-        <translation>ページに対するカードのコントラストを測定できませんでした</translation>
-    </message>
-    <message>
-        <source>Low contrast, shown exactly as the theme author wrote it: %1.</source>
-        <translation>低コントラスト。テーマ作者が記述したとおりに表示されています：%1。</translation>
     </message>
     <message>
         <source>Open %1; drop theme JSON files here to install on next launch.</source>

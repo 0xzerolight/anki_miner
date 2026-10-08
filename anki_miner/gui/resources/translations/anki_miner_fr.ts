@@ -822,10 +822,6 @@
         <translation>Quel champ marqueur reçoit le « x ». Aucun laisse les cartes inchangées.</translation>
     </message>
     <message>
-        <source>Customize marker field names</source>
-        <translation>Personnaliser les noms des champs marqueurs</translation>
-    </message>
-    <message>
         <source>Word + Sentence:</source>
         <translation>Mot + Phrase :</translation>
     </message>
@@ -840,6 +836,10 @@
     <message>
         <source>Audio:</source>
         <translation>Audio :</translation>
+    </message>
+    <message>
+        <source>Customize marker field names</source>
+        <translation>Personnaliser les noms des champs marqueurs</translation>
     </message>
     <message>
         <source>Card Creation</source>
@@ -2415,14 +2415,6 @@ Aucun fichier d'index n'est supprimé.</translation>
     <message>
         <source>Dictionaries that publish updates (Jitendex, JMdict, Wiktionary, Jiten, …) update themselves once a week; Update Now checks right away.</source>
         <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Jisho.org online fallback (Japanese)</source>
-        <translation>Recours en ligne à Jisho.org (japonais)</translation>
-    </message>
-    <message>
-        <source>For Japanese, fall back to Jisho.org when your offline dictionaries have no entry.</source>
-        <translation>Pour le japonais, recourez à Jisho.org lorsque vos dictionnaires hors ligne n'ont aucune entrée.</translation>
     </message>
     <message>
         <source>Add frequency lists</source>
@@ -4489,18 +4481,6 @@ Cela modifiera %n notes (%1) et leur ajoutera l'étiquette %2. Continuer ?</nume
     <message>
         <source>⚠ missing — add again</source>
         <translation>⚠ manquant — ajoutez-le de nouveau</translation>
-    </message>
-    <message>
-        <source>Jisho (online fallback)</source>
-        <translation>Jisho (repli en ligne)</translation>
-    </message>
-    <message>
-        <source>online</source>
-        <translation>en ligne</translation>
-    </message>
-    <message>
-        <source>⚠ rate-limited, slower</source>
-        <translation>⚠ débit limité, plus lent</translation>
     </message>
     <message>
         <source>⚠ re-import required (app upgrade)</source>
@@ -10150,16 +10130,16 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Inséré à la place de chaque correspondance (vide la supprime). Utilisez les rétroréférences Python \1 \2, pas les $1 $2 d'asbplayer.</translation>
     </message>
     <message>
-        <source>Edit the pattern (advanced)</source>
-        <translation>Modifier le motif (avancé)</translation>
-    </message>
-    <message>
         <source>Regex Filter:</source>
         <translation>Filtre regex :</translation>
     </message>
     <message>
         <source>Replacement:</source>
         <translation>Remplacement :</translation>
+    </message>
+    <message>
+        <source>Edit the pattern (advanced)</source>
+        <translation>Modifier le motif (avancé)</translation>
     </message>
     <message>
         <source>Regex Filter</source>
@@ -10262,10 +10242,6 @@ Aucun fichier d'index n'est supprimé.</translation>
     <message>
         <source>Skipping unavailable provider(s): %1</source>
         <translation>Fournisseur(s) indisponible(s) ignoré(s) : %1</translation>
-    </message>
-    <message>
-        <source>No offline dictionary — definitions will come from Jisho.org only</source>
-        <translation>Aucun dictionnaire hors ligne — les définitions proviendront uniquement de Jisho.org</translation>
     </message>
     <message>
         <source>Cards will have no definitions until you add a dictionary in Settings → Dictionaries.</source>
@@ -12268,34 +12244,6 @@ Vos ressources installées et votre thème sont conservés.</translation>
     <message>
         <source>Restore the theme that was active when this tab was opened.</source>
         <translation>Restaurer le thème qui était actif à l'ouverture de cet onglet.</translation>
-    </message>
-    <message>
-        <source>button labels %1:1</source>
-        <translation>libellés des boutons %1:1</translation>
-    </message>
-    <message>
-        <source>button labels could not be measured</source>
-        <translation>les libellés des boutons n'ont pas pu être mesurés</translation>
-    </message>
-    <message>
-        <source>muted text %1:1</source>
-        <translation>texte atténué %1:1</translation>
-    </message>
-    <message>
-        <source>muted text could not be measured</source>
-        <translation>le texte atténué n'a pas pu être mesuré</translation>
-    </message>
-    <message>
-        <source>cards against the page %1:1</source>
-        <translation>contraste des cartes par rapport à la page %1:1</translation>
-    </message>
-    <message>
-        <source>cards against the page could not be measured</source>
-        <translation>le contraste des cartes par rapport à la page n'a pas pu être mesuré</translation>
-    </message>
-    <message>
-        <source>Low contrast, shown exactly as the theme author wrote it: %1.</source>
-        <translation>Faible contraste, affiché exactement comme l'auteur du thème l'a écrit : %1.</translation>
     </message>
     <message>
         <source>Open %1; drop theme JSON files here to install on next launch.</source>

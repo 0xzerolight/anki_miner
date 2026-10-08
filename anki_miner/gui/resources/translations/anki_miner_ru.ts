@@ -824,10 +824,6 @@
         <translation>В какое поле-маркер ставится «x». «Нет» оставляет карточки без изменений.</translation>
     </message>
     <message>
-        <source>Customize marker field names</source>
-        <translation>Настроить имена полей-маркеров</translation>
-    </message>
-    <message>
         <source>Word + Sentence:</source>
         <translation>Слово + Предложение:</translation>
     </message>
@@ -842,6 +838,10 @@
     <message>
         <source>Audio:</source>
         <translation>Аудио:</translation>
+    </message>
+    <message>
+        <source>Customize marker field names</source>
+        <translation>Настроить имена полей-маркеров</translation>
     </message>
     <message>
         <source>Card Creation</source>
@@ -2418,14 +2418,6 @@ No index files are deleted.</source>
     <message>
         <source>Dictionaries that publish updates (Jitendex, JMdict, Wiktionary, Jiten, …) update themselves once a week; Update Now checks right away.</source>
         <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Jisho.org online fallback (Japanese)</source>
-        <translation>Онлайн-резерв Jisho.org (японский)</translation>
-    </message>
-    <message>
-        <source>For Japanese, fall back to Jisho.org when your offline dictionaries have no entry.</source>
-        <translation>Для японского используйте Jisho.org как резерв, когда в ваших офлайн-словарях нет записи.</translation>
     </message>
     <message>
         <source>Add frequency lists</source>
@@ -4514,18 +4506,6 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     <message>
         <source>⚠ missing — add again</source>
         <translation>⚠ отсутствует — добавьте заново</translation>
-    </message>
-    <message>
-        <source>Jisho (online fallback)</source>
-        <translation>Jisho (онлайн-резерв)</translation>
-    </message>
-    <message>
-        <source>online</source>
-        <translation>онлайн</translation>
-    </message>
-    <message>
-        <source>⚠ rate-limited, slower</source>
-        <translation>⚠ ограничение по частоте запросов, медленнее</translation>
     </message>
     <message>
         <source>⚠ re-import required (app upgrade)</source>
@@ -10189,16 +10169,16 @@ No index files are deleted.</source>
         <translation>Подставляется вместо каждого совпадения (пустое значение удаляет его). Используйте обратные ссылки Python \1 \2, а не $1 $2, как в asbplayer.</translation>
     </message>
     <message>
-        <source>Edit the pattern (advanced)</source>
-        <translation>Изменить шаблон (для опытных)</translation>
-    </message>
-    <message>
         <source>Regex Filter:</source>
         <translation>Фильтр регулярных выражений:</translation>
     </message>
     <message>
         <source>Replacement:</source>
         <translation>Замена:</translation>
+    </message>
+    <message>
+        <source>Edit the pattern (advanced)</source>
+        <translation>Изменить шаблон (для опытных)</translation>
     </message>
     <message>
         <source>Regex Filter</source>
@@ -10301,10 +10281,6 @@ No index files are deleted.</source>
     <message>
         <source>Skipping unavailable provider(s): %1</source>
         <translation>Пропускаются недоступные поставщики словарей: %1</translation>
-    </message>
-    <message>
-        <source>No offline dictionary — definitions will come from Jisho.org only</source>
-        <translation>Нет офлайн-словаря — определения будут поступать только с Jisho.org</translation>
     </message>
     <message>
         <source>Cards will have no definitions until you add a dictionary in Settings → Dictionaries.</source>
@@ -12309,34 +12285,6 @@ Your installed resources and your theme are kept.</source>
     <message>
         <source>Restore the theme that was active when this tab was opened.</source>
         <translation>Восстановить тему, которая была активна при открытии этой вкладки.</translation>
-    </message>
-    <message>
-        <source>button labels %1:1</source>
-        <translation>подписи кнопок %1:1</translation>
-    </message>
-    <message>
-        <source>button labels could not be measured</source>
-        <translation>не удалось измерить подписи кнопок</translation>
-    </message>
-    <message>
-        <source>muted text %1:1</source>
-        <translation>приглушённый текст %1:1</translation>
-    </message>
-    <message>
-        <source>muted text could not be measured</source>
-        <translation>не удалось измерить приглушённый текст</translation>
-    </message>
-    <message>
-        <source>cards against the page %1:1</source>
-        <translation>карточки на фоне страницы %1:1</translation>
-    </message>
-    <message>
-        <source>cards against the page could not be measured</source>
-        <translation>не удалось измерить контраст карточек на фоне страницы</translation>
-    </message>
-    <message>
-        <source>Low contrast, shown exactly as the theme author wrote it: %1.</source>
-        <translation>Низкий контраст, показанный точно так, как его задал автор темы: %1.</translation>
     </message>
     <message>
         <source>Open %1; drop theme JSON files here to install on next launch.</source>

@@ -820,10 +820,6 @@
         <translation>哪個標記欄位會被蓋上「x」。選「無」則卡片維持原樣。</translation>
     </message>
     <message>
-        <source>Customize marker field names</source>
-        <translation>自訂標記欄位名稱</translation>
-    </message>
-    <message>
         <source>Word + Sentence:</source>
         <translation>單字＋例句：</translation>
     </message>
@@ -838,6 +834,10 @@
     <message>
         <source>Audio:</source>
         <translation>音訊：</translation>
+    </message>
+    <message>
+        <source>Customize marker field names</source>
+        <translation>自訂標記欄位名稱</translation>
     </message>
     <message>
         <source>Card Creation</source>
@@ -2412,14 +2412,6 @@ No index files are deleted.</source>
     <message>
         <source>Dictionaries that publish updates (Jitendex, JMdict, Wiktionary, Jiten, …) update themselves once a week; Update Now checks right away.</source>
         <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Jisho.org online fallback (Japanese)</source>
-        <translation>Jisho.org 線上備援（日文）</translation>
-    </message>
-    <message>
-        <source>For Japanese, fall back to Jisho.org when your offline dictionaries have no entry.</source>
-        <translation>日文在你的離線字典沒有條目時，備援至 Jisho.org。</translation>
     </message>
     <message>
         <source>Add frequency lists</source>
@@ -4464,18 +4456,6 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     <message>
         <source>⚠ missing — add again</source>
         <translation>⚠ 遺失 — 請重新加入</translation>
-    </message>
-    <message>
-        <source>Jisho (online fallback)</source>
-        <translation>Jisho（線上備援）</translation>
-    </message>
-    <message>
-        <source>online</source>
-        <translation>線上</translation>
-    </message>
-    <message>
-        <source>⚠ rate-limited, slower</source>
-        <translation>⚠ 受速率限制，較慢</translation>
     </message>
     <message>
         <source>⚠ re-import required (app upgrade)</source>
@@ -10111,16 +10091,16 @@ No index files are deleted.</source>
         <translation>插入以取代每個相符項目（留空則刪除該項目）。請使用 Python 的反向參照 \1 \2，而非 asbplayer 的 $1 $2。</translation>
     </message>
     <message>
-        <source>Edit the pattern (advanced)</source>
-        <translation>編輯規則（進階）</translation>
-    </message>
-    <message>
         <source>Regex Filter:</source>
         <translation>正規表示式篩選：</translation>
     </message>
     <message>
         <source>Replacement:</source>
         <translation>取代為：</translation>
+    </message>
+    <message>
+        <source>Edit the pattern (advanced)</source>
+        <translation>編輯規則（進階）</translation>
     </message>
     <message>
         <source>Regex Filter</source>
@@ -10223,10 +10203,6 @@ No index files are deleted.</source>
     <message>
         <source>Skipping unavailable provider(s): %1</source>
         <translation>跳過無法使用的提供者：%1</translation>
-    </message>
-    <message>
-        <source>No offline dictionary — definitions will come from Jisho.org only</source>
-        <translation>沒有離線字典 — 釋義將僅來自 Jisho.org</translation>
     </message>
     <message>
         <source>Cards will have no definitions until you add a dictionary in Settings → Dictionaries.</source>
@@ -12227,34 +12203,6 @@ Your installed resources and your theme are kept.</source>
     <message>
         <source>Restore the theme that was active when this tab was opened.</source>
         <translation>還原開啟此分頁時使用中的主題。</translation>
-    </message>
-    <message>
-        <source>button labels %1:1</source>
-        <translation>按鈕標籤 %1:1</translation>
-    </message>
-    <message>
-        <source>button labels could not be measured</source>
-        <translation>無法測量按鈕標籤</translation>
-    </message>
-    <message>
-        <source>muted text %1:1</source>
-        <translation>淡化文字 %1:1</translation>
-    </message>
-    <message>
-        <source>muted text could not be measured</source>
-        <translation>無法測量淡化文字</translation>
-    </message>
-    <message>
-        <source>cards against the page %1:1</source>
-        <translation>卡片與頁面的對比 %1:1</translation>
-    </message>
-    <message>
-        <source>cards against the page could not be measured</source>
-        <translation>無法測量卡片與頁面的對比</translation>
-    </message>
-    <message>
-        <source>Low contrast, shown exactly as the theme author wrote it: %1.</source>
-        <translation>低對比，完全依主題作者所寫顯示：%1。</translation>
     </message>
     <message>
         <source>Open %1; drop theme JSON files here to install on next launch.</source>

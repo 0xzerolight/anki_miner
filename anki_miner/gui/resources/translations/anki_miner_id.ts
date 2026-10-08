@@ -820,10 +820,6 @@
         <translation>Bidang penanda mana yang mendapat “x”. None membiarkan kartu tak tersentuh.</translation>
     </message>
     <message>
-        <source>Customize marker field names</source>
-        <translation>Sesuaikan nama bidang penanda</translation>
-    </message>
-    <message>
         <source>Word + Sentence:</source>
         <translation>Kata + Kalimat:</translation>
     </message>
@@ -838,6 +834,10 @@
     <message>
         <source>Audio:</source>
         <translation>Audio:</translation>
+    </message>
+    <message>
+        <source>Customize marker field names</source>
+        <translation>Sesuaikan nama bidang penanda</translation>
     </message>
     <message>
         <source>Card Creation</source>
@@ -2412,14 +2412,6 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <message>
         <source>Dictionaries that publish updates (Jitendex, JMdict, Wiktionary, Jiten, …) update themselves once a week; Update Now checks right away.</source>
         <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Jisho.org online fallback (Japanese)</source>
-        <translation>Fallback daring Jisho.org (Jepang)</translation>
-    </message>
-    <message>
-        <source>For Japanese, fall back to Jisho.org when your offline dictionaries have no entry.</source>
-        <translation>Untuk bahasa Jepang, beralih ke Jisho.org ketika kamus luring Anda tidak memiliki entri.</translation>
     </message>
     <message>
         <source>Add frequency lists</source>
@@ -4464,18 +4456,6 @@ Ini akan mengubah %n catatan (%1) dan memberinya tag %2. Lanjutkan?</numerusform
     <message>
         <source>⚠ missing — add again</source>
         <translation>⚠ hilang — tambahkan lagi</translation>
-    </message>
-    <message>
-        <source>Jisho (online fallback)</source>
-        <translation>Jisho (fallback daring)</translation>
-    </message>
-    <message>
-        <source>online</source>
-        <translation>daring</translation>
-    </message>
-    <message>
-        <source>⚠ rate-limited, slower</source>
-        <translation>⚠ dibatasi laju, lebih lambat</translation>
     </message>
     <message>
         <source>⚠ re-import required (app upgrade)</source>
@@ -10111,16 +10091,16 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Disisipkan menggantikan setiap kecocokan (kosongkan untuk menghapusnya). Gunakan backreference Python \1 \2, bukan $1 $2 milik asbplayer.</translation>
     </message>
     <message>
-        <source>Edit the pattern (advanced)</source>
-        <translation>Sunting pola (lanjutan)</translation>
-    </message>
-    <message>
         <source>Regex Filter:</source>
         <translation>Filter Regex:</translation>
     </message>
     <message>
         <source>Replacement:</source>
         <translation>Pengganti:</translation>
+    </message>
+    <message>
+        <source>Edit the pattern (advanced)</source>
+        <translation>Sunting pola (lanjutan)</translation>
     </message>
     <message>
         <source>Regex Filter</source>
@@ -10223,10 +10203,6 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <message>
         <source>Skipping unavailable provider(s): %1</source>
         <translation>Melewati penyedia yang tidak tersedia: %1</translation>
-    </message>
-    <message>
-        <source>No offline dictionary — definitions will come from Jisho.org only</source>
-        <translation>Tidak ada kamus luring — definisi hanya akan berasal dari Jisho.org</translation>
     </message>
     <message>
         <source>Cards will have no definitions until you add a dictionary in Settings → Dictionaries.</source>
@@ -12227,34 +12203,6 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
     <message>
         <source>Restore the theme that was active when this tab was opened.</source>
         <translation>Pulihkan tema yang aktif saat tab ini dibuka.</translation>
-    </message>
-    <message>
-        <source>button labels %1:1</source>
-        <translation>label tombol %1:1</translation>
-    </message>
-    <message>
-        <source>button labels could not be measured</source>
-        <translation>label tombol tidak dapat diukur</translation>
-    </message>
-    <message>
-        <source>muted text %1:1</source>
-        <translation>teks redup %1:1</translation>
-    </message>
-    <message>
-        <source>muted text could not be measured</source>
-        <translation>teks redup tidak dapat diukur</translation>
-    </message>
-    <message>
-        <source>cards against the page %1:1</source>
-        <translation>kartu terhadap halaman %1:1</translation>
-    </message>
-    <message>
-        <source>cards against the page could not be measured</source>
-        <translation>kartu terhadap halaman tidak dapat diukur</translation>
-    </message>
-    <message>
-        <source>Low contrast, shown exactly as the theme author wrote it: %1.</source>
-        <translation>Kontras rendah, ditampilkan persis seperti yang ditulis pembuat tema: %1.</translation>
     </message>
     <message>
         <source>Open %1; drop theme JSON files here to install on next launch.</source>
