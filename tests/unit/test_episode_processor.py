@@ -7462,6 +7462,130 @@ class TestAutoMergeSentenceLengthCaps:
         ), presenter.show_warning.call_args_list
 
 
+class TestCollapseAfterCueMerge:
+    """Audit L2-001 (P2): the within-run collapse is a lossy group selector, so the automatic
+    cue merge's per-word caps and re-dedup run before it on the episode path.
+
+    よそ見 sits on an incomplete cue that the merge stretches; 余所見 on a complete cue. The
+    offline dictionary gives both one identity. Collapsing first kept よそ見, the merge then
+    dropped it, and neither spelling was mined.
+    """
+
+    IDENTITY = ("jmdict", 1, "よそみ")
+    CAP_ENTRIES = [(10.0, 12.0, "よそ見は"), (12.5, 20.0, "飛んだ。"), (30.0, 32.0, "余所見するな。")]
+
+    @staticmethod
+    def _word(form, sentence, start, end, reading="ヨソミ"):
+        return TokenizedWord(
+            surface=form, lemma=form, reading=reading, sentence=sentence,
+            start_time=start, end_time=end, duration=end - start, pos="名詞",
+        )  # fmt: skip
+
+    def _mined(self, config, mock_services, tmp_path, words, entries, *, shared_identity=True, word_list_service=None):
+        sp = mock_services["subtitle_parser"]
+        sp.parse_subtitle_file.return_value = list(words)
+        sp.parse_subtitle_file_with_index.side_effect = lambda f, offset=None: (list(words), [])
+        sp.parse_raw_entries.return_value = list(entries)
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["anki_service"].create_cards_batch.side_effect = lambda cards, *a, **k: list(
+            range(1, len(cards) + 1)
+        )
+        ds = mock_services["definition_service"]
+        ds.has_offline_definitions.side_effect = lambda forms: dict.fromkeys(forms, True)
+        aliases = {"よそ見", "余所見"} if shared_identity else set()
+        ds.offline_term_identities.side_effect = lambda pairs: {
+            pair: {self.IDENTITY} for pair in pairs if pair[0] in aliases
+        }
+        ds.get_definitions_batch.side_effect = lambda pairs, *a, **k: ["gloss"] * len(pairs)
+        mock_services["media_extractor"].extract_media_batch.side_effect = lambda video, batch, *a, **k: [
+            (w, _make_media(w.mined_form)) for w in batch
+        ]
+        services = {**mock_services, "word_filter": WordFilterService(config)}
+        processor = build_processor(
+            config=config, presenter=NullPresenter(), word_list_service=word_list_service, **services
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        calls = mock_services["media_extractor"].extract_media_batch.call_args_list
+        return [w.mined_form for call_ in calls for w in call_.args[1]]
+
+    def test_alias_dropped_by_the_merge_cap_does_not_erase_the_surviving_alias(
+        self, test_config, mock_services, tmp_path
+    ):
+        """よそ見 passes phase 2's 5 s cap on its 2 s cue; merged to 10-20 s the cap drops it."""
+        config = replace(test_config, merge_incomplete_cues=True, max_sentence_duration_seconds=5.0)
+        words = [self._word("よそ見", "よそ見は", 10.0, 12.0), self._word("余所見", "余所見するな。", 30.0, 32.0)]
+
+        assert self._mined(config, mock_services, tmp_path, words, self.CAP_ENTRIES) == ["余所見"]
+
+    def test_control_without_a_shared_identity_the_late_alias_is_mined(self, test_config, mock_services, tmp_path):
+        config = replace(test_config, merge_incomplete_cues=True, max_sentence_duration_seconds=5.0)
+        words = [self._word("よそ見", "よそ見は", 10.0, 12.0), self._word("余所見", "余所見するな。", 30.0, 32.0)]
+
+        mined = self._mined(config, mock_services, tmp_path, words, self.CAP_ENTRIES, shared_identity=False)
+
+        assert mined == ["余所見"]
+
+    def test_alias_dropped_by_the_merge_dedup_does_not_erase_the_surviving_alias(
+        self, test_config, mock_services, tmp_path
+    ):
+        """鳥 and よそ見 merge into one sentence (鳥がよそ見して、飛んだ。); the re-dedup keeps 鳥,
+        so the identity slot must go to 余所見, not to the dropped よそ見."""
+        config = replace(test_config, merge_incomplete_cues=True, deduplicate_sentences=True)
+        entries = [
+            (10.0, 11.0, "鳥が"),
+            (11.5, 12.5, "よそ見して、"),
+            (13.0, 14.0, "飛んだ。"),
+            (30.0, 32.0, "余所見するな。"),
+        ]
+        words = [
+            self._word("鳥", "鳥が", 10.0, 11.0, reading="トリ"),
+            self._word("よそ見", "よそ見して、", 11.5, 12.5),
+            self._word("余所見", "余所見するな。", 30.0, 32.0),
+        ]
+
+        assert self._mined(config, mock_services, tmp_path, words, entries) == ["鳥", "余所見"]
+
+    def test_forced_alias_keeps_the_slot_across_the_merge(self, test_config, mock_services, tmp_path):
+        """Review Focus #3: the whitelisted 余所見 sits on an incomplete cue whose merge (30-40 s)
+        exceeds the cap; BA-053 spares it, and forced words are prepended before the collapse,
+        so it keeps the identity slot over the earlier よそ見 and the collapse still leaves one card."""
+        whitelist = tmp_path / "wl.txt"
+        whitelist.write_text("余所見\n", encoding="utf-8")
+        service = WordListService(whitelist_path=whitelist)
+        service.load()
+        config = replace(test_config, merge_incomplete_cues=True, max_sentence_duration_seconds=5.0, use_whitelist=True)
+        entries = [(10.0, 12.0, "よそ見だ。"), (30.0, 32.0, "余所見は"), (32.5, 40.0, "やめろ。")]
+        words = [self._word("よそ見", "よそ見だ。", 10.0, 12.0), self._word("余所見", "余所見は", 30.0, 32.0)]
+
+        mined = self._mined(config, mock_services, tmp_path, words, entries, word_list_service=service)
+
+        assert mined == ["余所見"]
+
+    def test_an_alias_the_collapse_drops_can_still_take_a_line_mates_merged_sentence(
+        self, test_config, mock_services, tmp_path
+    ):
+        """Characterization of the accepted trade-off (judge F8). 余所見 loses its identity slot to
+        the earlier よそ見, but the merge's re-dedup runs first: 余所見 is first on the merged
+        sentence 余所見して、鳥が飛んだ。 and drops 鳥. Phase 2 has the same order between its own
+        sentence dedup and the collapse. Before L2-001, 鳥 was mined here."""
+        config = replace(test_config, merge_incomplete_cues=True, deduplicate_sentences=True)
+        entries = [
+            (5.0, 7.0, "よそ見だ。"),
+            (10.0, 11.0, "余所見して、"),
+            (11.5, 12.5, "鳥が"),
+            (13.0, 14.0, "飛んだ。"),
+        ]
+        words = [
+            self._word("よそ見", "よそ見だ。", 5.0, 7.0),
+            self._word("余所見", "余所見して、", 10.0, 11.0),
+            self._word("鳥", "鳥が", 11.5, 12.5, reading="トリ"),
+        ]
+
+        assert self._mined(config, mock_services, tmp_path, words, entries) == ["よそ見"]
+
+
 class TestSeasonMinePass:
     """Season Batch mines each episode with the season curator's subset (fixed_selection).
 

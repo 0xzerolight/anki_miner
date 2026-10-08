@@ -1075,11 +1075,18 @@ class EpisodeProcessor:
         progress_callback: ProgressCallback | None = None,
         occurrence_counts: dict[str, int] | None = None,
         min_occurrence: int = 1,
+        *,
+        collapse: bool = True,
     ) -> list[TokenizedWord]:
         """Phase 2: attach frequency data, filter against known vocab, apply optional filters.
 
         Mutates ``ctx.new_words_found`` and ``ctx.comprehension_percentage``.
         Stages difficulty stats for a successful terminal result.
+
+        ``collapse=False`` leaves the within-run duplicate collapse to the caller:
+        ``process_episode`` runs it after the automatic cue merge, whose caps and
+        re-dedup are per-word droppers that must act before this lossy selector
+        (P2, audit L2-001). The reading path and the golden contract keep it here.
         """
         counts = _Phase2Counts()
 
@@ -1216,7 +1223,12 @@ class EpisodeProcessor:
                 )
             )
 
-        unknown_words = self._phase2_collapse_duplicates(unknown_words, counts)
+        if collapse:
+            unknown_words = self._phase2_collapse_duplicates(unknown_words, counts)
+        summary = asdict(counts)
+        if not collapse:
+            # The caller collapses later and logs its own receipt for it.
+            del summary["duplicate_expression_rejects"]
 
         # Stage the pre-filter comprehension counts. ``_run_pipeline`` commits
         # them only after the body returns a successful terminal result.
@@ -1226,7 +1238,7 @@ class EpisodeProcessor:
         log_summary(
             logger,
             "Phase 2 filter",
-            **{"in": len(all_words), "out": len(unknown_words), **asdict(counts)},
+            **{"in": len(all_words), "out": len(unknown_words), **summary},
         )
         return unknown_words
 
@@ -3054,7 +3066,7 @@ class EpisodeProcessor:
                 unknown_words: list[TokenizedWord] = []
             else:
                 with timed_phase("filter", logger):
-                    unknown_words = self._phase2_filter(ctx, all_words, line_index, progress_callback)
+                    unknown_words = self._phase2_filter(ctx, all_words, line_index, progress_callback, collapse=False)
                 if self.cancelled:
                     return self._cancelled_result_from_ctx(ctx)
             fixed_subset = getattr(curation_callback, "fixed_subset", None)
@@ -3084,6 +3096,21 @@ class EpisodeProcessor:
                     line_index=line_index,
                     unknown_lemmas=ctx.unknown_lemmas,
                     unknown_fronts=ctx.unknown_fronts,
+                )
+                # The collapse keeps one word per card identity. It runs after the
+                # merge's caps and re-dedup, so an alias they drop cannot take the
+                # slot its surviving alias needed (P2, audit L2-001). Forced words
+                # are still first, so they keep winning their slot (R2). The
+                # converse is phase 2's own order between its dedup and the
+                # collapse: an alias the collapse drops can still be the first
+                # word on a merged sentence and drop a line-mate in the re-dedup.
+                collapse_counts = _Phase2Counts()
+                unknown_words = self._phase2_collapse_duplicates(unknown_words, collapse_counts)
+                log_summary(
+                    logger,
+                    "Within-run collapse",
+                    out=len(unknown_words),
+                    duplicate_expression_rejects=collapse_counts.duplicate_expression_rejects,
                 )
                 if not unknown_words:
                     self._report_no_mineable_words(ctx)
