@@ -157,6 +157,26 @@ def test_a_saved_french_filter_strips_labels_typed_with_no_break_spaces(test_con
     assert parser._clean_line_text(cue) == kept
 
 
+@pytest.mark.parametrize(
+    ("pattern", "replacement", "kept"),
+    [
+        (r"«\s*(.*?)\s*»", r"\1", "Tu viens ?"),
+        (r"«\s*(?P<inner>.*?)\s*»", r"\g<inner> \g<0>", "Tu viens ? « Tu viens ? »"),
+        (r"«\s*(.*?)\s*(x)?»", r"\1\2", "Tu viens ?"),  # an unmatched group brings back nothing, as in re
+    ],
+)
+def test_a_filter_backreference_keeps_the_no_break_spaces_it_captured(test_config, pattern, replacement, kept):
+    """The filter matches the folded line; what a group brings back is the stored line's text, no-break spaces kept."""
+    config = dataclasses.replace(
+        test_config,
+        use_subtitle_regex_filter=True,
+        subtitle_regex_filter=pattern,
+        subtitle_regex_replacement=replacement,
+    )
+    parser = SubtitleParserService(config, normalize=fr_normalize)
+    assert parser._clean_line_text("« Tu viens ? »") == kept
+
+
 def test_the_gender_field_prints_the_article():
     (hook,) = [hook for hook in get_profile("fr").render_hooks if isinstance(hook, GrammarTagHook)]
     config = AnkiMinerConfig()

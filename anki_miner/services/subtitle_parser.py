@@ -291,6 +291,34 @@ def compile_subtitle_regex_filter(pattern: str, replacement: str) -> re.Pattern[
     return compiled
 
 
+def _expand_unfolded(match: re.Match[str], template: str, text: str) -> str:
+    """``match.expand(template)`` with every group read from ``text``, the line ``match`` ran on unfolded.
+
+    The subtitle filter matches a line with its no-break spaces folded, one
+    character for one, so a group's span cuts ``text`` at the same offsets.
+    ``re`` itself expands the template (escapes, numbered and named references,
+    ``\\g<0>``) against a stand-in match whose groups are single private-use
+    characters absent from the template; each is then swapped for its group's
+    text on ``text``, an unmatched group for ``""`` as ``re`` expands it.
+    """
+    if text[match.start() : match.end()] == match.group():
+        return match.expand(template)
+    pattern = match.re
+    markers = [char for char in map(chr, range(0xE000, 0xF900)) if char not in template][: pattern.groups + 1]
+    names = {index: name for name, index in pattern.groupindex.items()}
+    groups = "".join(
+        f"(?P<{names[index]}>{markers[index]})" if index in names else f"({markers[index]})"
+        for index in range(1, pattern.groups + 1)
+    )
+    stand_in = re.match(f"{markers[0]}(?={groups})", "".join(markers))
+    assert stand_in is not None  # the stand-in pattern reads its own markers by construction
+    captured = {
+        ord(markers[index]): text[match.start(index) : match.end(index)] if match.start(index) >= 0 else ""
+        for index in range(pattern.groups + 1)
+    }
+    return stand_in.expand(template).translate(captured)
+
+
 def _is_katakana_surface_char(ch: str) -> bool:
     """True for any char in the katakana Unicode block U+30A0–U+30FF.
 
@@ -1022,7 +1050,8 @@ class SubtitleParserService:
         character for one, so each match's span cuts the unfolded line and the
         text between matches keeps its no-break spaces. ``finditer`` +
         ``Match.expand`` is ``re.sub`` spelled out: same empty-match rule, same
-        replacement template (backreferences expand from the folded match).
+        replacement template, but a backreference brings back the text it
+        captured on the unfolded line (:func:`_expand_unfolded`).
         """
         if self._filter_pattern is None:
             return text
@@ -1032,7 +1061,7 @@ class SubtitleParserService:
         parts: list[str] = []
         last = 0
         for match in self._filter_pattern.finditer(fold_no_break_spaces(text)):
-            parts += (text[last : match.start()], match.expand(replacement))
+            parts += (text[last : match.start()], _expand_unfolded(match, replacement, text))
             last = match.end()
         parts.append(text[last:])
         return collapse_whitespace("".join(parts), keep_no_break=True)
