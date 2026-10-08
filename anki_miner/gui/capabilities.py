@@ -123,6 +123,24 @@ def effective_hidden_utilities(stored: Iterable[str]) -> frozenset[str]:
     return frozenset() if len(hidden) == len(UTILITY_SUBTABS) else hidden
 
 
+def language_gated_utilities(capabilities: frozenset[str]) -> frozenset[str]:
+    """The Utilities tools a mining language with ``capabilities`` cannot use (E17: Manga OCR reads Japanese)."""
+    return frozenset() if "manga_ocr" in capabilities else frozenset({"mokuro"})
+
+
+def hidden_utilities_on_tab(stored: Iterable[str], capabilities: frozenset[str]) -> frozenset[str]:
+    """The tools the Utilities tab leaves off: the user's hidden ones plus the language-gated ones.
+
+    ``stored`` is ``config.hidden_utilities``, read through
+    :func:`effective_hidden_utilities`. If the two together would hide every
+    tool, only the language gate applies, so the tab always shows a tool.
+    Settings → Utilities reads the same rule, so its boxes say what the tab shows.
+    """
+    gated = language_gated_utilities(capabilities)
+    hidden = effective_hidden_utilities(stored) | gated
+    return gated if hidden >= frozenset(UTILITY_SUBTABS) else hidden
+
+
 # Display categories (deduped; translated at display time).
 _CAT_WORKFLOWS = QT_TRANSLATE_NOOP("Capabilities", "Mining workflows")
 _CAT_FILTERING = QT_TRANSLATE_NOOP("Capabilities", "Filtering: what gets mined")
