@@ -314,7 +314,11 @@ def scan_deck_filter(
     scanned = 0
     tagger = getattr(services, "tagger", None)
     tagger_failures = TaggerFailures()
-    script = get_profile(config_language(config)).script
+    profile = get_profile(config_language(config))
+    script = profile.script
+    # The known gate's fold (the word filter is built with this dedup_fold):
+    # "das Essen" and "essen" are one word there, so they are one word here.
+    fold = profile.dedup_fold
 
     for chunk in _chunks(note_ids, _NOTES_CHUNK):
         if is_cancelled and is_cancelled():
@@ -341,10 +345,11 @@ def scan_deck_filter(
                 # tests/unit/test_deck_filter.py — never renamed.
                 drops["not_japanese"] += 1
                 continue
-            if expression in seen_expressions:
+            key = expression if fold is None else fold(expression)
+            if key in seen_expressions:
                 drops["duplicate_in_source"] += 1
                 continue
-            seen_expressions.add(expression)
+            seen_expressions.add(key)
             word = _synthesize_word(expression, fields, options, tagger, tagger_failures)
             words.append(word)
             candidates[id(word)] = _Candidate(

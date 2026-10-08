@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from anki_miner.languages.registry import get_profile
 from anki_miner.services.deck_filter import (
     DECKFILTER_TAG,
     DeckFilterOptions,
@@ -325,6 +326,37 @@ class TestScanDrops:
 
         assert [kept.expression for kept in plan.kept] == ["頷く"]
         assert _drops(plan) == {"blacklist": 1, "script_type": 1, "name_wordset": 1}
+
+
+class TestScanFoldAndNormalize:
+    """The scan keys each note the way the mining path keys a parsed card front."""
+
+    def test_in_source_duplicate_uses_known_fold(self, test_config):
+        """L3-006: the in-source duplicate gate judges identity on the known gate's fold."""
+        config = replace(test_config, language="de")
+        profile = get_profile("de")
+        word_filter = WordFilterService(
+            config, mined_form=profile.mined_form, script=profile.script, dedup_fold=profile.dedup_fold
+        )
+        notes = {
+            1: _note(1, "Basic", {"Expression": "essen"}),
+            2: _note(2, "Basic", {"Expression": "das Essen"}),
+        }
+        # Control: the known gate treats the pair as one word.
+        known_twin = scan_deck_filter(
+            FakeAnkiService(notes={2: notes[2]}, vocab={profile.dedup_fold("essen")}),
+            config,
+            _services(config, word_filter=word_filter),
+            _options(),
+        )
+        assert _drops(known_twin) == {"known": 1}
+
+        plan = scan_deck_filter(
+            FakeAnkiService(notes=notes), config, _services(config, word_filter=word_filter), _options()
+        )
+
+        assert [kept.expression for kept in plan.kept] == ["essen"]
+        assert _drops(plan) == {"duplicate_in_source": 1}
 
 
 class TestScanFrequency:
