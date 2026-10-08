@@ -2381,6 +2381,80 @@ def test_download_progress_comes_from_the_task_registry(qtbot, wiz_config, monke
     registry.shutdown()
 
 
+def test_another_tasks_progress_never_reaches_the_download_line(qtbot, wiz_config, monkeypatch):
+    """B2.4b: the registry broadcasts every task; only this run's lines are drawn."""
+    from PyQt6.QtWidgets import QWidget  # noqa: PLC0415
+
+    from anki_miner.gui.capabilities import CapabilityTarget  # noqa: PLC0415
+    from anki_miner.gui.controllers.task_registry import TaskOutcome, TaskRegistry, TaskSpec  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    registry = TaskRegistry()
+    parent = QWidget()
+    qtbot.addWidget(parent)
+    parent.task_registry = registry  # type: ignore[attr-defined]
+    monkeypatch.setattr(SetupWizard, "validation_service", lambda self: _FakeValidation(dictionary=False))
+    wiz = SetupWizard(wiz_config, parent)
+    session = MagicMock()
+    session.task_id = "resource-download"
+    monkeypatch.setattr(dialog_mod, "start_resource_download", lambda *a, **kw: session)
+    page = wiz.resources_page
+    page._on_download_clicked()
+    starting = page.status_label.text()
+    broadcast: list[str] = []
+    registry.snapshot_changed.connect(broadcast.append)
+
+    other = registry.start(TaskSpec(task_id="queue.video", title="Video", owner=CapabilityTarget("video", "local")))
+    other.stage(index=1, total=3, name="Episode 01")
+    qtbot.waitUntil(lambda: "queue.video" in broadcast, timeout=3000)
+
+    assert starting.startswith("Downloading: Starting…")
+    assert page.status_label.text() == starting
+    assert "Episode 01" not in page.ready_page_dictionary_line()
+
+    own = registry.start(
+        TaskSpec(task_id="resource-download", title="Recommended resources", owner=CapabilityTarget("settings", "x"))
+    )
+    own.stage(index=1, total=4, name="JMdict")
+    qtbot.waitUntil(lambda: "JMdict (1 of 4)" in page.status_label.text(), timeout=3000)
+    other.finish(TaskOutcome.SUCCEEDED)
+    own.finish(TaskOutcome.SUCCEEDED)
+    registry.shutdown()
+
+
+def test_a_language_change_drops_the_finished_runs_line(qtbot, wiz_config, monkeypatch):
+    """B2.4b: a finished run for the outgoing language describes nothing on screen now."""
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.resource_download_dialog import ResourceDownloadOutcome  # noqa: PLC0415
+    from anki_miner.gui.workers.resource_download_worker import (  # noqa: PLC0415
+        ResourceDownloadResult,
+        ResourceDownloadSummary,
+    )
+    from anki_miner.languages.switching import switch_language  # noqa: PLC0415
+
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation(dictionary=False))
+    page = wiz.resources_page
+    monkeypatch.setattr(dialog_mod, "start_resource_download", lambda *a, **kw: MagicMock())
+    page._on_download_clicked()
+    failure = ResourceDownloadResult("dict", "dict", "Dictionary", "u", False, "network failed")
+    page._on_download_finished(
+        ResourceDownloadOutcome(config=wiz_config, summary=ResourceDownloadSummary(results=[failure]))
+    )
+    assert page.status_label.text() == "No resources were installed."
+    assert page.ready_page_dictionary_line().startswith("Dictionary: download failed.")
+    qtbot.waitUntil(lambda: not page.dictionary_label.text().startswith("Checking"), timeout=5000)
+
+    wiz.update_working_config(switch_language(wiz.working_config(), "zh"))
+    page.initializePage()
+
+    assert page.status_label.text() == ""
+    assert page.status_label.toolTip() == ""
+    assert page._session is None
+    assert page.ready_page_dictionary_line().startswith("Dictionary: not downloaded yet")
+    qtbot.waitUntil(lambda: not page.dictionary_label.text().startswith("Checking"), timeout=5000)
+
+
 def test_a_fresh_install_reads_not_downloaded_yet(qtbot, wiz_config, monkeypatch):
     """B11: the wizard's own line, not the service's repair sentence."""
     wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation(dictionary=False))
