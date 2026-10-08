@@ -167,6 +167,19 @@ def test_subtitle_offset_shifts_the_lines_and_a_second_parse_keeps_the_files_tim
     assert [c.args[1] for c in parse.call_args_list] == [-1.5, 0.0]
 
 
+def test_words_sit_on_the_shifted_lines_and_line_start_is_the_files(services, tmp_path, video) -> None:
+    # The two parses differ: an entries/raw swap in _mine would lose the word or report the shifted time.
+    shifted = [(start + 2.0, end + 2.0, text) for start, end, text in ENTRIES]
+    services.processor.subtitle_parser.parse_raw_entries.side_effect = lambda _path, offset, **_kw: (
+        shifted if offset else ENTRIES
+    )
+    services.words = lambda: [_on_lines("約束", 0, 3, entries=shifted)]
+    words = [{"word": "約束", "line_start": 30.0}]
+    runs.mine_runs(_run_file(tmp_path, video, words=words, subtitle_offset=2.0), threading.Event())
+    [row] = _result_file(tmp_path)["words"]
+    assert (row["line_start"], row["start"], row["sentence"]) == (30.0, 32.0, "約束だよ")
+
+
 def test_unreadable_video_fails_that_run_only(services, tmp_path, video) -> None:
     services.duration.side_effect = [None, 1.0]
     verdicts = runs.mine_runs(_run_file(tmp_path, video, second=True), threading.Event())
