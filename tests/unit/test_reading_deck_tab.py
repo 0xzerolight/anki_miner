@@ -20,6 +20,8 @@ import dataclasses
 from unittest.mock import MagicMock, patch
 
 import pytest
+from PyQt6.QtCore import QMimeData, QPoint, QPointF, Qt, QUrl
+from PyQt6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDropEvent
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets import reading_deck_tab as tab_module
@@ -68,7 +70,9 @@ def _finished_worker() -> MagicMock:
 
 def _sync_run_off_thread(parent, work, on_done, on_error=None, **kwargs):
     try:
-        result = work()
+        # Like SingleCallWorker: with pass_cancel_check the work gets the
+        # worker's cancel predicate (never set here).
+        result = work(lambda: False) if kwargs.get("pass_cancel_check") else work()
     except Exception as exc:  # noqa: BLE001 - mirrors SingleCallWorker's error path
         if on_error is not None:
             on_error(str(exc))
@@ -81,7 +85,7 @@ def _sync_run_off_thread(parent, work, on_done, on_error=None, **kwargs):
 def deck_service(monkeypatch):
     _FakeAnkiService.decks = ["Show::Ep01", "Other"]
     monkeypatch.setattr(tab_module, "AnkiService", _FakeAnkiService)
-    monkeypatch.setattr(tab_module, "inspect_deck", lambda service, deck: _inspection())
+    monkeypatch.setattr(tab_module, "inspect_deck", lambda service, deck, **kw: _inspection())
     monkeypatch.setattr(tab_module, "run_off_thread", _sync_run_off_thread)
     return _FakeAnkiService
 
@@ -183,12 +187,62 @@ class TestDeckAndFields:
         tab.deck_combo.setCurrentIndex(2)  # inspect B supersedes it
         work_a, done_a = pending[0]
 
-        done_a(work_a())
+        done_a(work_a(lambda: False))
 
         assert tab.sentence_combo.count() == 1  # A's late answer filled nothing
 
+    def test_moving_off_a_deck_cancels_its_inspection(self, tab, monkeypatch):
+        workers: list[MagicMock] = []
+
+        def deferred(parent, work, on_done, on_error=None, **kw):
+            worker = MagicMock(name="SingleCallWorker")
+            worker.isRunning.return_value = True
+            workers.append(worker)
+            return worker
+
+        monkeypatch.setattr(tab_module, "run_off_thread", deferred)
+        tab.deck_combo.addItems(["A", "B"])
+        tab.deck_combo.setCurrentIndex(1)  # inspect A (still reading)
+        tab.deck_combo.setCurrentIndex(2)  # B supersedes it
+
+        workers[0].cancel.assert_called_once()
+        workers[1].cancel.assert_not_called()
+
+        tab.deck_combo.setCurrentIndex(0)  # back to "Select a deck…"
+        workers[1].cancel.assert_called_once()
+
+    def test_a_finished_inspection_is_left_alone(self, tab, monkeypatch):
+        finished = _finished_worker()
+        monkeypatch.setattr(tab_module, "run_off_thread", lambda *a, **kw: finished)
+        tab.deck_combo.addItems(["A", "B"])
+        tab.deck_combo.setCurrentIndex(1)
+        tab.deck_combo.setCurrentIndex(2)
+
+        finished.cancel.assert_not_called()
+
+    def test_the_inspection_reads_the_workers_cancel_check(self, tab, monkeypatch):
+        seen: dict = {}
+        cancel_check = MagicMock(name="check_cancelled", return_value=False)
+
+        def run_now(parent, work, on_done, on_error=None, **kw):
+            seen["pass_cancel_check"] = kw.get("pass_cancel_check")
+            on_done(work(cancel_check))
+            return _finished_worker()
+
+        def inspect(service, deck, *, is_cancelled=None):
+            seen["is_cancelled"] = is_cancelled
+            return _inspection()
+
+        tab.ensure_decks()  # the deck list, through the fixture's stub
+        monkeypatch.setattr(tab_module, "run_off_thread", run_now)
+        monkeypatch.setattr(tab_module, "inspect_deck", inspect)
+        tab.deck_combo.setCurrentIndex(1)
+
+        assert seen == {"pass_cancel_check": True, "is_cancelled": cancel_check}
+        assert tab.sentence_combo.currentText() == "Expression"
+
     def test_an_empty_deck_says_so(self, tab, monkeypatch):
-        monkeypatch.setattr(tab_module, "inspect_deck", lambda service, deck: _inspection(note_count=0))
+        monkeypatch.setattr(tab_module, "inspect_deck", lambda service, deck, **kw: _inspection(note_count=0))
         _pick_first_deck(tab)
         assert tab.status_label.text() != ""
         tab._on_mine_clicked()
@@ -244,6 +298,57 @@ def _deck_document(*, with_media: bool) -> ReadingDocument:
     return ReadingDocument(title="D", kind="deck", series="D", episode="D", units=units)
 
 
+def _file_mime(path) -> QMimeData:
+    data = QMimeData()
+    data.setUrls([QUrl.fromLocalFile(str(path))])
+    return data
+
+
+# The events hold a borrowed pointer to the mime data: the caller keeps it alive.
+def _enter_event(data: QMimeData) -> QDragEnterEvent:
+    return QDragEnterEvent(
+        QPoint(1, 1), Qt.DropAction.CopyAction, data, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier
+    )
+
+
+def _drop_event(data: QMimeData) -> QDropEvent:
+    return QDropEvent(
+        QPointF(1.0, 1.0), Qt.DropAction.CopyAction, data, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier
+    )
+
+
+class TestDrops:
+    """A dragged file is refused on the status line, which then gets its note count back."""
+
+    def test_a_drag_that_leaves_puts_the_note_count_back(self, tab, tmp_path):
+        _pick_first_deck(tab)
+        count = tab.status_label.text()
+        episode = tmp_path / "ep01.mkv"
+        episode.touch()
+        data = _file_mime(episode)
+
+        tab.dragEnterEvent(_enter_event(data))
+        assert "Deck list" in tab.status_label.text()
+        tab.dragLeaveEvent(QDragLeaveEvent())
+
+        assert tab.status_label.text() == count
+
+    def test_after_a_drop_the_next_drag_still_puts_the_count_back(self, tab, tmp_path):
+        _pick_first_deck(tab)
+        count = tab.status_label.text()
+        episode = tmp_path / "ep01.mkv"
+        episode.touch()
+        data = _file_mime(episode)
+
+        tab.dragEnterEvent(_enter_event(data))
+        tab.dropEvent(_drop_event(data))
+        assert "Deck list" in tab.status_label.text()  # the refusal stays up after the drop
+        tab.dragEnterEvent(_enter_event(data))
+        tab.dragLeaveEvent(QDragLeaveEvent())
+
+        assert tab.status_label.text() == count
+
+
 class TestCurationContext:
     def test_a_deck_run_hands_the_dialog_its_units(self, tab):
         _pick_first_deck(tab)
@@ -287,6 +392,15 @@ class TestDeckFirst:
         texts = [label.text() for label in tab.fields_widget.findChildren(QLabel)]
         assert texts == ["Sentence from:", "Audio from:", "Picture from:", "Translation from:"]
 
+    def test_the_deck_and_field_pickers_share_one_width(self, tab):
+        # Sized from contents, the deck combo (placeholder only at first show)
+        # came out narrower than the field combos and clipped the deck name.
+        tab.deck_combo.addItem("Japanese::Anime::A Rather Long Show Name::Season 2")
+        _pick_first_deck(tab)
+
+        combos = (tab.deck_combo, *tab._field_combos())
+        assert len({combo.sizeHint().width() for combo in combos}) == 1
+
     def test_the_note_count_sits_right_under_the_deck(self, tab):
         layout = tab.status_label.parentWidget().layout()
         assert layout.indexOf(tab.fields_widget) == layout.indexOf(tab.status_label) + 1
@@ -310,10 +424,22 @@ class TestDeckFirst:
         assert tab.deck_combo.isEnabled()
         assert tab.issue_banner().current_issue() is None
 
+    def test_mine_while_the_deck_list_is_missing_keeps_the_fetch_banner(self, tab, deck_service):
+        deck_service.decks = []
+        tab.ensure_decks()
+        fetch_issue = tab.issue_banner().current_issue()
+
+        tab._on_mine_clicked()  # the deck picker is off; "pick a deck" would mislead
+        assert tab.issue_banner().current_issue() is fetch_issue
+
+        deck_service.decks = ["Show::Ep01"]
+        tab.ensure_decks()
+        assert tab.issue_banner().current_issue() is None
+
     def test_a_truly_empty_deck_is_named_not_its_missing_fields(self, tab, monkeypatch):
         """With no notes, inspect_deck finds no fields; the refusal names the real cause."""
         empty = DeckInspection(note_count=0, models=(), field_names=(), first_field_by_model={}, samples=())
-        monkeypatch.setattr(tab_module, "inspect_deck", lambda service, deck: empty)
+        monkeypatch.setattr(tab_module, "inspect_deck", lambda service, deck, **kw: empty)
         _pick_first_deck(tab)
 
         assert tab.fields_widget.isHidden()

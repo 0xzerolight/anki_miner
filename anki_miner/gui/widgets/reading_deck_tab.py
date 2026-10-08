@@ -13,7 +13,7 @@ deck is never changed.
 The deck list and the field inspection are AnkiConnect calls, so both run off
 the GUI thread (``run_off_thread``, whose global registry joins them at app
 close); the inspection carries a generation guard so a slow answer for a deck
-the user has already moved off never lands.
+the user has already moved off never lands, and moving off cancels it.
 
 The worker OWNS the item lifecycle (it sets ``status``/``cards_created``/
 ``error_message`` on the item before emitting its signals), so this tab's
@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QT_TRANSLATE_NOOP, Qt
@@ -69,6 +70,17 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+#: Every picker on the Deck card is this many characters wide, whatever it
+#: holds. Sized from its items, the deck combo first showed holding only its
+#: placeholder (the list arrives after show), came out narrower than the field
+#: combos and clipped the deck name.
+_PICKER_CHARS = 24
+
+
+def _size_picker(combo: QComboBox) -> None:
+    combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+    combo.setMinimumContentsLength(_PICKER_CHARS)
+
 
 class ReadingDeckTab(_ReadingMiningTabBase):
     """Existing-Anki-deck mining sub-tab (one ephemeral item per run).
@@ -113,10 +125,13 @@ class ReadingDeckTab(_ReadingMiningTabBase):
         # screen is a deck the user may have imported into Anki a minute ago.
         self._deck_worker: SingleCallWorker | None = None
         self._deck_fetch_failed = False
+        self._inspect_worker: SingleCallWorker | None = None
         self._inspect_generation = 0
         # None until the picked deck has been read (an empty deck reads as 0).
         self._note_count: int | None = None
         self._deck_fetch_issue: ScreenIssue | None = None
+        # What the status line said before a drag put its refusal there.
+        self._status_before_drag = ""
         self._setup_ui()
         self._setup_drag_drop()
         self._recompute_buttons()
@@ -215,6 +230,8 @@ class ReadingDeckTab(_ReadingMiningTabBase):
         self.translation_combo.addItem(none)
         self.translation_combo.setToolTip(self.tr("The field with the line's translation, if the deck has one."))
         self.sentence_combo.currentIndexChanged.connect(self._recompute_buttons)
+        for combo in (self.deck_combo, *self._field_combos()):
+            _size_picker(combo)
 
         # A17: the deck comes first, on its own row, capped like every other
         # field; the note count sits right under it.
@@ -367,6 +384,12 @@ class ReadingDeckTab(_ReadingMiningTabBase):
 
     def _on_deck_changed(self, _index: int) -> None:
         self._inspect_generation += 1
+        # The generation guard drops a stale answer; cancelling also stops its
+        # notesInfo reads (a big deck is many 500-note chunks).
+        if still_running(self._inspect_worker):
+            assert self._inspect_worker is not None
+            self._inspect_worker.cancel()
+        self._inspect_worker = None
         self._note_count = None
         for combo in self._field_combos():
             while combo.count() > 1:
@@ -388,19 +411,20 @@ class ReadingDeckTab(_ReadingMiningTabBase):
         contains_target_script = get_profile(config_language(self.config)).script.contains_target_script
         self.status_label.setText(self.tr("Reading the deck…"))
 
-        def work() -> tuple[DeckInspection, DeckFieldMap]:
-            inspection = inspect_deck(service, deck)
+        def work(is_cancelled: Callable[[], bool]) -> tuple[DeckInspection, DeckFieldMap]:
+            inspection = inspect_deck(service, deck, is_cancelled=is_cancelled)
             suggestion = suggest_field_map(
                 inspection.field_names, inspection.samples, contains_target_script=contains_target_script
             )
             return inspection, suggestion
 
-        run_off_thread(
+        self._inspect_worker = run_off_thread(
             self,
             work,
             lambda answer: self._on_inspected(generation, answer),
             lambda message: self._on_inspect_error(generation, message),
             error_prefix=self.tr("Couldn't read the deck: "),
+            pass_cancel_check=True,
         )
 
     def _on_inspected(self, generation: int, answer: object) -> None:
@@ -447,6 +471,11 @@ class ReadingDeckTab(_ReadingMiningTabBase):
             return
         # A fresh attempt supersedes the last complaint (after the reentrancy guard).
         self.clear_screen_issue()
+        if self._deck_fetch_failed and self._deck_fetch_issue is not None:
+            # The picker is off because Anki gave no deck list; that banner is
+            # the answer, and the next good fetch takes it down (same object).
+            self.show_screen_issue(self._deck_fetch_issue)
+            return
         deck = self._selected_deck()
         fields = self._picked_fields()
         # An empty deck is named before the field check: with no notes, the
@@ -607,17 +636,24 @@ class ReadingDeckTab(_ReadingMiningTabBase):
     def _drop_refusal(self) -> str:
         return self.tr("This screen mines a deck already in Anki. Pick it from the Deck list above.")
 
+    def _show_drop_refusal(self) -> None:
+        """Put the refusal on the status line, keeping what it said (the note count)."""
+        refusal = self._drop_refusal()
+        if self.status_label.text() != refusal:
+            self._status_before_drag = self.status_label.text()
+        self.status_label.setText(refusal)
+
     def dragEnterEvent(self, event: QDragEnterEvent | None) -> None:  # noqa: N802 - Qt override
         """Accept a file drag only to say why it cannot land here."""
         if event is None or self.worker_thread is not None or not urls_from_event(event):
             return
         event.acceptProposedAction()
-        self.status_label.setText(self._drop_refusal())
+        self._show_drop_refusal()
 
     def dragLeaveEvent(self, event: QDragLeaveEvent | None) -> None:  # noqa: N802 - Qt override
-        """Take the refusal back down when the drag moves off the screen."""
+        """Put the status line back when the drag moves off the screen."""
         if self.status_label.text() == self._drop_refusal():
-            self.status_label.setText("")
+            self.status_label.setText(self._status_before_drag)
         if event is not None:
             event.accept()
 
@@ -626,6 +662,6 @@ class ReadingDeckTab(_ReadingMiningTabBase):
         if event is None:
             return
         if self.worker_thread is None:
-            self.status_label.setText(self._drop_refusal())
+            self._show_drop_refusal()
             self.deck_combo.setFocus(Qt.FocusReason.OtherFocusReason)
         event.ignore()

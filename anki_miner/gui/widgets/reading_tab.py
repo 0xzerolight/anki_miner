@@ -161,8 +161,8 @@ class ReadingTab(QWidget):
 
         ``key`` is a stable identifier from
         :data:`anki_miner.gui.capabilities.SUBTAB_KEYS` (``"manga"``,
-        ``"novels"``). Unknown keys are ignored so a stale caller can't crash
-        the UI.
+        ``"novels"``, ``"subtitles"``, ``"text"``, ``"deck"``). Unknown keys are
+        ignored so a stale caller can't crash the UI.
         """
         index = self._subtab_index.get(key)
         if index is not None:
