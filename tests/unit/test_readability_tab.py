@@ -275,6 +275,13 @@ def test_anki_unreachable_names_anki_in_the_banner(qtbot, tmp_path):
     assert issue.details == "refused"
 
 
+def test_status_says_what_happens_before_the_first_file(qtbot, tmp_path):
+    """Building dictionaries and reading Anki can take seconds (Readability review, minor 5)."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    _start(tab, _subtitle(tmp_path))
+    assert tab.progress_widget.status_label.text() == "Reading your Anki cards and known words…"
+
+
 def test_load_warnings_land_in_the_log(qtbot, tmp_path):
     tab = _make_tab(_make_config(tmp_path), qtbot)
     worker = FakeToolWorker()

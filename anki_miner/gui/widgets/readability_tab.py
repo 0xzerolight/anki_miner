@@ -423,6 +423,9 @@ class ReadabilityTab(_ToolTabBase):
         self._begin_tool_run(len(files))
         self.log_widget.clear_log()
         self.progress_widget.reset()
+        # Dictionaries and the Anki vocabulary load before the first file; on a
+        # large collection that takes seconds.
+        self.progress_widget.set_status(self.tr("Reading your Anki cards and known words…"))
 
         worker = ReadabilityWorker(self.config, files)
         worker.file_measured.connect(self._on_file_measured)
