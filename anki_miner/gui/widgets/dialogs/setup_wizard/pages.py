@@ -1655,9 +1655,14 @@ class ResourcesPage(_LiveCheckPage):
         self._recheck_resources()
 
     def recheck(self) -> None:
-        """B02: coming back to the wizard asks the disk again (not while downloading)."""
-        if not self._download_running:
-            self._recheck_resources()
+        """B02: coming back to the wizard asks the disk again (not while downloading).
+
+        The last verdict stays up until the new one lands: resetting it here
+        turned Next off and on again on every window focus. A probe already in
+        flight is the answer this re-check would ask for.
+        """
+        if not self._download_running and not still_running(self._live_check):
+            self._start_readiness_probe()
 
     def download_running(self) -> bool:
         """True while the wizard's own download is going (T2.14 holds Finish for it)."""
@@ -1673,17 +1678,21 @@ class ResourcesPage(_LiveCheckPage):
     # --- live dictionary readiness ---
 
     def _recheck_resources(self) -> None:
+        """Show "Checking" on all three lines, then probe: page entry and the end of a download."""
+        self._dictionary_ready = False
+        self.dictionary_label.setText(self.tr("Checking for an offline dictionary..."))
+        self.frequency_label.clear()
+        self.pitch_label.clear()
+        self.completeChanged.emit()
+        self._start_readiness_probe()
+
+    def _start_readiness_probe(self) -> None:
         """Probe off-thread what all three resource families can do.
 
         Off-thread because the probe scans three resource folders, any of which
         can be a slow network path. One worker, not three: the base class keeps
         a single ``_live_check`` as its generation counter.
         """
-        self._dictionary_ready = False
-        self.dictionary_label.setText(self.tr("Checking for an offline dictionary..."))
-        self.frequency_label.clear()
-        self.pitch_label.clear()
-        self.completeChanged.emit()
         self._start_live_check(
             self._wizard.validation_service().check_resource_readiness,
             error_prefix=self.tr("Could not check the installed resources: "),

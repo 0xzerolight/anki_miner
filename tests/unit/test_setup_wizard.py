@@ -2735,6 +2735,28 @@ def test_coming_back_to_the_wizard_rechecks_the_current_page(qtbot, wiz_config, 
     assert staged == [True]
 
 
+def test_a_focus_recheck_while_ready_never_turns_next_off(qtbot, wiz_config, monkeypatch):
+    """B2.3c: re-checking keeps the last readiness until the new answer lands."""
+    fake = _FakeValidation()
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, fake)
+    page = wiz.resources_page
+    _run_page_check(qtbot, page, page.dictionary_label)
+    assert page._live_check is not None and page._live_check.wait(3000)
+    assert page.isComplete() is True
+    states: list[bool] = []
+    page.completeChanged.connect(lambda: states.append(page.isComplete()))
+    label = page.dictionary_label.text()
+
+    page.recheck()
+    assert page.dictionary_label.text() == label  # no "Checking…" flash either
+    qtbot.waitUntil(lambda: fake.calls.count("dictionary") == 2, timeout=5000)
+    assert page._live_check is not None and page._live_check.wait(3000)
+    qtbot.waitUntil(lambda: bool(states), timeout=3000)
+
+    assert False not in states
+    assert page.isComplete() is True
+
+
 def test_a_closing_wizard_rechecks_nothing(qtbot, wiz_config, monkeypatch):
     from PyQt6.QtWidgets import QDialog  # noqa: PLC0415
 
