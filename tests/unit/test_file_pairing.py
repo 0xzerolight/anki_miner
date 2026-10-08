@@ -758,6 +758,23 @@ def test_subtitle_language_tag_without_language_is_untagged():
     assert subtitle_language_tag(Path("ep01.en.srt"), None) is SubtitleTag.UNTAGGED
 
 
+@pytest.mark.parametrize(
+    ("name", "tag"),
+    [
+        ("Show - 01.ENG.srt", SubtitleTag.OTHER),  # all-caps three-letter code
+        ("Show - 01.JPN.srt", SubtitleTag.MINING),
+        ("Movie.en.sdh.forced.srt", SubtitleTag.OTHER),  # Plex: flags after the tag
+        ("Show - 01.en.default.forced.srt", SubtitleTag.OTHER),  # Jellyfin
+        ("Movie.English (SDH).srt", SubtitleTag.OTHER),
+        ("EP01_track4_[eng].ass", SubtitleTag.OTHER),  # mkvextract / gMKVExtractGUI
+        ("Show - 01 [jpn].srt", SubtitleTag.MINING),
+    ],
+)
+def test_subtitle_language_tag_reads_tool_and_library_names(name, tag):
+    """Final review, Important 1: these read as untagged, so another language was auto-filled."""
+    assert subtitle_language_tag(Path(name), JA) is tag
+
+
 class TestBatchLanguageRanking:
     """Two subtitles for one episode: the mining language's wins, nothing is dropped."""
 
@@ -793,3 +810,6 @@ class TestBatchLanguageRanking:
     def test_retime_of_another_language_loses_to_the_mining_track(self, tmp_path):
         names = ("Show - 01.en_retimed.srt", "Show - 01.ja.ass")
         assert self._subtitles_for(tmp_path, *names) == ["Show - 01.ja.ass"]
+
+    def test_uppercase_codes_rank_too(self, tmp_path):
+        assert self._subtitles_for(tmp_path, "Show - 01.ENG.srt", "Show - 01.JPN.srt") == ["Show - 01.JPN.srt"]

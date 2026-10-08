@@ -78,6 +78,18 @@ def _name_match_key(name: str) -> str:
 #: ``_track3_[jpn]`` -> ``track3``, ``jpn``.
 _TAG_SPLIT = re.compile(r"[\s._\[\](){}]+")
 
+#: The same split for the tags after a video's name, but not at spaces:
+#: ``- Just Do It`` stays one token, so an episode title's words never read as codes.
+_TAIL_SPLIT = re.compile(r"[._\[\](){}]+")
+
+#: Flags a release puts after the language tag (``Movie.en.sdh.forced``,
+#: ``EP01.en.default.forced``); skipped, so the tag before them is still read.
+_FLAG_TOKENS = frozenset({"forced", "sdh", "cc", "hi", "default"})
+
+#: A bracketed group closing the name, where mkvextract and fansub tools put the
+#: language: ``EP01_track4_[eng]``, ``Show - 01 [jpn]``.
+_TRAILING_GROUP = re.compile(r"[\[(]([^\[\]()]+)[\])]\s*$")
+
 
 @dataclass(frozen=True)
 class SubtitleLanguage:
@@ -118,49 +130,60 @@ def _tag_of(tokens: Iterable[str], language: SubtitleLanguage | None) -> Subtitl
 
 
 def _counts_as_tag(token: str, *, names_too: bool) -> bool:
-    """A lowercase code (``ja``, ``pt-BR``), or with *names_too* a spelled-out name (``English``).
+    """A lowercase code (``ja``, ``pt-BR``), an all-caps three-letter one (``ENG``), or with
+    *names_too* a spelled-out name (``English``).
 
-    Never a capitalised two- or three-letter word: ``No. 6``, ``It``, ``All.In``
-    are titles, not Norwegian, Italian or Indonesian.
+    Never a capitalised word of three letters or fewer, nor an all-caps one of
+    two: ``No. 6``, ``It``, ``ID``, ``All.In`` are titles, not Norwegian,
+    Italian or Indonesian.
     """
     head = token.partition("-")[0]
-    return head.islower() or (names_too and len(head) > 3)
+    return head.islower() or (len(head) == 3 and head.isupper()) or (names_too and len(head) > 3)
 
 
 def subtitle_language_tag(path: Path, language: SubtitleLanguage | None) -> SubtitleTag:
     """Read a language tag off a whole subtitle filename (``ep01.en.srt``, ``ep01.en.forced.srt``).
 
     A name made of nothing but tags and numbers (``ja.srt``, ``English.srt``,
-    ``3_Japanese.srt``) is read whole. Otherwise only the last two
-    dot-separated parts of the stem are read, each up to a bracket
-    (``ja[cc]``): a lowercase code counts in either, a spelled-out name only in
-    the last (``Movie.2019.English``, not ``My.Big.Fat.Greek.Wedding``). Release
-    names capitalise their words, so ``All.In`` is not taken for Indonesian.
-    A Retime ``_retimed`` suffix is dropped first.
+    ``3_Japanese.srt``) is read whole. Otherwise the last two dot-separated
+    parts of the stem are read, each up to a bracket (``ja[cc]``) and skipping
+    flags such as ``sdh`` and ``forced``: a code counts in either, a
+    spelled-out name only in the last (``Movie.2019.English``, not
+    ``My.Big.Fat.Greek.Wedding``). Then a bracketed group closing the name
+    (``EP01_track4_[eng]``). Release names capitalise their words, so
+    ``All.In`` is not taken for Indonesian. A Retime ``_retimed`` suffix is
+    dropped first.
     """
     if language is None:
         return SubtitleTag.UNTAGGED
     stem = _strip_retimed(path.stem)
     tokens = [token.strip("-") for token in _TAG_SPLIT.split(stem) if token.strip("-")]
     if tokens and all(
-        token.isdigit() or (_counts_as_tag(token, names_too=True) and matches_language_tag(token, language.known))
+        token.isdigit()
+        or token.casefold() in _FLAG_TOKENS
+        or (_counts_as_tag(token, names_too=True) and matches_language_tag(token, language.known))
         for token in tokens
     ):
         return _tag_of(tokens, language)
-    parts = [re.split(r"[\[(]", part, maxsplit=1)[0] for part in stem.split(".")[1:][-2:]]
-    return _tag_of(
-        (part for i, part in enumerate(parts) if _counts_as_tag(part, names_too=i == len(parts) - 1)), language
-    )
+    parts = [re.split(r"[\[(]", part, maxsplit=1)[0].strip() for part in stem.split(".")[1:]]
+    parts = [part for part in parts if part.casefold() not in _FLAG_TOKENS][-2:]
+    readable = [part for i, part in enumerate(parts) if _counts_as_tag(part, names_too=i == len(parts) - 1)]
+    group = _TRAILING_GROUP.search(stem)
+    if group is not None and _counts_as_tag(group.group(1).strip(), names_too=True):
+        readable.append(group.group(1).strip())
+    return _tag_of(readable, language)
 
 
 def _tail_tag(tail: str, language: SubtitleLanguage | None) -> SubtitleTag:
     """Read a language tag off what follows the video's stem in a subtitle's name.
 
-    Everything there is tags (``.ja``, ``.Japanese.forced``, ``_track3_[jpn]``),
-    so every token counts, in any case. Read from the end, where tags sit, so an
-    episode title in the tail (``- Kimi no Na wa.ja``) cannot outvote them.
+    Everything there is tags (``.ja``, ``.Japanese.forced``, ``_track3_[jpn]``,
+    `` [eng]``), so every token counts, in any case. Spaces do not split, so an
+    episode title in the tail (``- Kimi no Na wa``, ``- Just Do It``) stays one
+    token and is never read as Norwegian or Italian; and the tail is read from
+    the end, where tags sit.
     """
-    tokens = [token.strip("-") for token in _TAG_SPLIT.split(_strip_retimed(tail))]
+    tokens = [token.strip(" -") for token in _TAIL_SPLIT.split(_strip_retimed(tail))]
     return _tag_of(reversed(tokens), language)
 
 
@@ -295,10 +318,15 @@ def find_sibling_subtitle(
         if decided:
             return pick
         named_dir = [p for p in per_video if p.suffix.lower() in exts]
-        decided, pick = _decide(_named_candidates(stem_cf, longer_stems, subtitles, named_dir, language), exts)
+        named = _named_candidates(stem_cf, longer_stems, subtitles, named_dir, language)
+        decided, pick = _decide(named, exts)
         if decided:
             return _log_pick(video_path, pick, "named for the video")
-        unnamed.append(subtitles)
+        # Rule 2 read these as another language from the tags after the video's
+        # name (``EP01_track4_[eng]``); the narrower whole-name reader of rules
+        # 3-4 must not get a second look and call them untagged.
+        other = {p for p, tag in named if tag is SubtitleTag.OTHER}
+        unnamed.append([p for p in subtitles if p not in other])
 
     # Pass 2, rules 3-4: guesses from the episode number or the folder's shape.
     video_info = EpisodeNumberExtractor.extract_episode_info(video_path)

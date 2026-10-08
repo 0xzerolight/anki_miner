@@ -132,7 +132,7 @@ class TestFindSiblingSubtitle:
 
 JA = SubtitleLanguage(
     mining=frozenset({"ja", "jpn", "japanese", "jp"}),
-    known=frozenset({"ja", "jpn", "japanese", "jp", "en", "eng", "english", "es", "spa"}),
+    known=frozenset({"ja", "jpn", "japanese", "jp", "en", "eng", "english", "es", "spa", "it", "ita", "no", "nor"}),
 )
 
 
@@ -195,6 +195,32 @@ class TestNamedForTheVideo:
         """Condense writes ep01_condensed.mp3 + ep01_condensed.srt beside the video by default."""
         _folder(tmp_path, "ep01.mkv", "ep01_condensed.mp3", "ep01_condensed.srt")
         assert find_sibling_subtitle(tmp_path / "ep01.mkv", language=JA) is None
+
+    @pytest.mark.parametrize(
+        ("video", "subtitle"),
+        [
+            ("EP01.mkv", "EP01_track4_[eng].ass"),  # mkvextract / gMKVExtractGUI
+            ("Show - 01.mkv", "Show - 01 [eng].srt"),
+            ("Show - 01.mkv", "Show - 01.ENG.srt"),
+            ("Movie.mkv", "Movie.en.sdh.forced.srt"),  # Plex
+            ("Show - 01.mkv", "Show - 01.en.default.forced.srt"),  # Jellyfin
+            ("Movie.mkv", "Movie.English (SDH).srt"),
+        ],
+    )
+    def test_another_language_is_never_filled_whatever_the_tool_named_it(self, tmp_path, video, subtitle):
+        """Final review, Important 1: the looser rules re-read these as untagged and filled them."""
+        _folder(tmp_path, video, subtitle)
+        assert find_sibling_subtitle(tmp_path / video, language=JA) is None
+
+    def test_episode_title_words_are_not_tags(self, tmp_path):
+        """'It' in an episode title is not Italian, 'no' in 'Kimi no Na wa' not Norwegian."""
+        _folder(
+            tmp_path, "Show - 01.mkv", "Show - 02.mkv", "Show - 01 - Just Do It.srt", "Show - 02 - Kimi no Na wa.srt"
+        )
+        assert find_sibling_subtitle(tmp_path / "Show - 01.mkv", language=JA) == tmp_path / "Show - 01 - Just Do It.srt"
+        assert (
+            find_sibling_subtitle(tmp_path / "Show - 02.mkv", language=JA) == tmp_path / "Show - 02 - Kimi no Na wa.srt"
+        )
 
 
 class TestSameEpisodeNumber:
