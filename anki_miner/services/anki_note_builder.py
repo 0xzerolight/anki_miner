@@ -371,8 +371,11 @@ def build_note(
         # spelling: a mined sentence keeps the file's own script whatever the
         # language's own script setting says, and the escaped/bolded form would
         # carry markup no script rule can read.
-        language_tag = card_lang(word.sentence, config)
-        sentence_field = _lang_wrap(sentence_field, language_tag)
+        # "" tags no sentence; the card still has a language, so Language
+        # falls back to the profile code.
+        sentence_tag = card_lang(word.sentence, config)
+        sentence_field = _lang_wrap(sentence_field, sentence_tag)
+        language_tag = sentence_tag or content_lang
 
     # Build fields, skipping any with empty config mapping
     field_data = {

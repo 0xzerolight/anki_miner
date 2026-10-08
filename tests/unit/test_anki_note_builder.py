@@ -477,6 +477,13 @@ class TestLanguageField:
         fields = self._fields(_config(language="Language"), content_lang="zh", card_lang=lambda t, c: "zh-Hant")
         assert fields["Language"] == "zh-Hant"
 
+    def test_an_empty_sentence_tag_still_writes_the_profile_code(self):
+        """An empty tag means "tag no sentence", not "this card has no language"."""
+        config = _config(language="Language")
+        fields = self._fields(config, content_lang="zh", card_lang=lambda t, c: "")
+        assert fields["Language"] == "zh"
+        assert "<span lang=" not in fields[config.anki_fields["sentence"]]
+
     def test_an_rtl_profile_writes_its_code(self):
         """card_lang is ignored for an rtl language, here as on the sentence."""
         fields = self._fields(
