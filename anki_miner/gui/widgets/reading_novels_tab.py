@@ -297,6 +297,10 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
             self._report_refusal(self.tr("Choose a book or a folder of books first."))
             return
         path = Path(raw)
+        if not path.exists():
+            # A stale history entry: say it is gone, not that it is the wrong kind.
+            self._report_refusal(self.tr("That file or folder no longer exists."), details=raw)
+            return
         if path.is_dir():
             refs = self._detect_or_report(path, detect_fn=detector.detect_book_folder)
             if refs is None:

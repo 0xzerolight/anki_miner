@@ -326,6 +326,10 @@ class ReadingMangaTab(_ReadingMiningTabBase):
             self._report_refusal(self.tr("Choose a manga volume or folder first."))
             return
         path = Path(raw)
+        if not path.exists():
+            # A stale history entry: say it is gone, not that it is the wrong kind.
+            self._report_refusal(self.tr("That file or folder no longer exists."), details=raw)
+            return
         if path.is_dir() or (path.is_file() and path.suffix.lower() in _MANGA_EXTS):
             self._detect_and_launch(path)
             return
