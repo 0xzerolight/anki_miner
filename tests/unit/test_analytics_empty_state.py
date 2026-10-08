@@ -99,6 +99,56 @@ def test_a_finished_run_leaves_a_hidden_page_for_its_next_visit(make_tab):
     assert tab._last_refresh is None
 
 
+def _deferred_run_off_thread(pending: list):
+    def _run(parent, work, on_done, on_error=None, *, error_prefix=""):
+        pending.append((work, on_done))
+        return None
+
+    return _run
+
+
+@pytest.fixture
+def deferred_tab(qtbot, monkeypatch):
+    """A tab whose off-thread reads land only when the test says so."""
+    pending: list = []
+    monkeypatch.setattr(analytics_tab_module, "run_off_thread", _deferred_run_off_thread(pending))
+    tab = AnalyticsTab(_service(3))
+    qtbot.addWidget(tab)
+    return tab, pending
+
+
+def _land(pending: list) -> None:
+    work, on_done = pending.pop(0)
+    on_done(work())
+
+
+def test_a_run_finishing_mid_refresh_re_reads_a_visible_page(deferred_tab, qtbot):
+    tab, pending = deferred_tab
+    tab.show()
+    qtbot.waitExposed(tab)
+    assert len(pending) == 1  # showEvent's read is in flight
+
+    tab.mark_stale()
+    tab.mark_stale()  # a second finish during the same read adds nothing
+    _land(pending)
+
+    assert len(pending) == 1
+    _land(pending)
+    assert pending == []
+    assert tab._last_refresh is not None
+
+
+def test_a_run_finishing_mid_refresh_leaves_a_hidden_page_stale(deferred_tab):
+    tab, pending = deferred_tab
+    tab.refresh_data(force=True)
+
+    tab.mark_stale()
+    _land(pending)
+
+    assert pending == []
+    assert tab._last_refresh is None
+
+
 def test_a_reached_milestone_says_so_instead_of_a_checkbox(make_tab):
     tab = make_tab(3)
 
