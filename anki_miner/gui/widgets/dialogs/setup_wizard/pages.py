@@ -79,6 +79,8 @@ RESOURCES_HELP_URL = "https://github.com/0xzerolight/anki_miner/blob/main/RESOUR
 NOTE_TYPE_HELP_URL = f"{RESOURCES_HELP_URL}#note-types"
 #: Anki Miner Note's release page; it carries the ``.apkg`` for Anki's File → Import (B01).
 ANKI_MINER_NOTE_RELEASES_URL = f"{ANKI_MINER_NOTE.url}/releases/latest"
+#: How long "Starting Anki…" waits for AnkiConnect before Open Anki is offered again.
+_ANKI_START_GRACE_MS = 30_000
 
 
 def resources_help_url(language: str) -> str:
@@ -507,6 +509,12 @@ class AnkiConnectPage(_WizardSection):
         self._active_recheck_url: str | None = None
         self._copied = False
         self._launch_command = anki_launch_command()
+        # Anki can start without AnkiConnect (not installed yet), and the poll
+        # never gives up, so "Starting Anki…" cannot wait for a success alone.
+        self._launch_grace = QTimer(self)
+        self._launch_grace.setSingleShot(True)
+        self._launch_grace.setInterval(_ANKI_START_GRACE_MS)
+        self._launch_grace.timeout.connect(self._reset_open_anki_button)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -655,8 +663,7 @@ class AnkiConnectPage(_WizardSection):
         self._has_result = True
         if reachable:
             self.result_label.setText(self.tr("Connected to Anki."))
-            self.open_anki_button.setEnabled(True)
-            self.open_anki_button.setText(self.tr("Open Anki"))
+            self._reset_open_anki_button()
         else:
             self.result_label.setText(self.tr("Anki Miner can't reach Anki yet. Do this once:"))
         # The service's own sentence, for whoever wants the detail (B03).
@@ -696,10 +703,15 @@ class AnkiConnectPage(_WizardSection):
             # The automatic re-check (B02) connects once Anki is up.
             self.open_anki_button.setEnabled(False)
             self.open_anki_button.setText(self.tr("Starting Anki…"))
+            self._launch_grace.start()
             return
         self.open_anki_button.setVisible(False)
         failed = self.tr("Anki did not start. Open it yourself.")
         self.step1_label.setText(f"1. {failed}")
+
+    def _reset_open_anki_button(self) -> None:
+        self.open_anki_button.setEnabled(True)
+        self.open_anki_button.setText(self.tr("Open Anki"))
 
 
 class DeckPage(_WizardSection):

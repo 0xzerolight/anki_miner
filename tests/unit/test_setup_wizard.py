@@ -979,6 +979,27 @@ def test_an_installed_anki_makes_step_one_a_button(qtbot, wiz_config, monkeypatc
     assert page.open_anki_button.text() == "Starting Anki…"
 
 
+def test_open_anki_comes_back_when_anki_never_answers(qtbot, wiz_config, monkeypatch):
+    """B2.3a: Anki started but AnkiConnect is missing; the button must not stay "Starting Anki…"."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import pages as pages_mod  # noqa: PLC0415
+
+    monkeypatch.setattr(pages_mod, "anki_launch_command", lambda: ["/usr/bin/anki"])
+    monkeypatch.setattr(pages_mod, "launch_anki", lambda command: True)
+    monkeypatch.setattr(pages_mod, "_ANKI_START_GRACE_MS", 10)
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    page = wiz.ankiconnect_page
+    page._on_recheck_result((False, "down"))
+
+    page.open_anki_button.click()
+    assert page.open_anki_button.text() == "Starting Anki…"
+    page._on_recheck_result((False, "still down"))
+
+    qtbot.waitUntil(page.open_anki_button.isEnabled, timeout=2000)
+    assert page.open_anki_button.text() == "Open Anki"
+
+
 def test_an_anki_that_does_not_start_falls_back_to_text(qtbot, wiz_config, monkeypatch):
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
     from anki_miner.gui.widgets.dialogs.setup_wizard import pages as pages_mod  # noqa: PLC0415
