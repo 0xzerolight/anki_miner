@@ -81,6 +81,23 @@ def test_probe_worker_success_emits_probe_done(qapp) -> None:
     fetcher.probe_link.assert_called_once_with("https://youtu.be/vid1", timeout_s=60.0)
 
 
+def test_single_video_probe_keeps_no_playlist(qapp) -> None:
+    """A row that stands for one video is probed with probe_metadata, never expanded."""
+    info = _make_video_info("vid1")
+    fetcher = MagicMock()
+    fetcher.probe_metadata.return_value = info
+
+    worker = YouTubeProbeWorker(fetcher=fetcher, url="https://www.bilibili.com/video/BV1x", single_video=True)
+    done = _SignalCapture()
+    worker.probe_done.connect(done)
+
+    worker.run()
+
+    assert done.calls == [(info,)]
+    fetcher.probe_metadata.assert_called_once_with("https://www.bilibili.com/video/BV1x", timeout_s=60.0)
+    fetcher.probe_link.assert_not_called()
+
+
 # ---------------------------------------------------------------------------
 # Failure branches (the shared run()'s except path)
 # ---------------------------------------------------------------------------

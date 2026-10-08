@@ -2234,6 +2234,29 @@ class TestOtherSitePlaylists:
 
         assert len(tab._queue.all_items()) == 1
 
+    def test_retrying_an_entry_probes_that_entry_alone(self, tab):
+        """A collection entry that is itself multi-part must not expand on Retry."""
+        tab._add_flow.add_urls([BILI_URL])
+        tab._add_flow._on_probe_done(tab._queue.all_items()[-1], _bili_parts(2))
+        entry = tab._queue.all_items()[0]
+        tab._add_flow._mark_probe_error(entry, "HTTP Error 412")
+
+        tab._add_flow.retry_probe(entry)
+
+        assert tab._probe_worker_cls.call_args.args[1] == entry.url
+        assert tab._probe_worker_cls.call_args.kwargs["single_video"] is True
+
+    def test_retrying_a_pasted_link_may_still_expand(self, tab):
+        """A pasted link whose first probe failed keeps the expanding probe on Retry."""
+        tab._add_flow.add_urls([BILI_URL])
+        row = tab._queue.all_items()[-1]
+        tab._add_flow._on_probe_error(row, "HTTP Error 412")
+
+        tab._add_flow.retry_probe(row)
+
+        assert tab._probe_worker_cls.call_count == 2
+        assert tab._probe_worker_cls.call_args.kwargs["single_video"] is False
+
 
 class TestShareText:
     def test_bilibili_share_text_yields_its_link(self):

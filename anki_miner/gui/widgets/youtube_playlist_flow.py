@@ -34,6 +34,7 @@ from __future__ import annotations
 import contextlib
 import logging
 import re
+import weakref
 from collections import deque
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -245,6 +246,11 @@ class PlaylistAddController:
         self._probe_workers: list[YouTubeProbeWorker] = []
         # Videos waiting for a free probe slot (_MAX_PARALLEL_PROBES).
         self._probe_backlog: deque[YouTubeQueueItem] = deque()
+        # Rows that stand for one video: a playlist's entries and a "Just this
+        # video" pick. Their probes keep --no-playlist (probe_metadata), so a
+        # retried entry that is itself a multi-part video re-checks that entry
+        # instead of expanding its parts. Weak: a removed row is not kept alive.
+        self._one_video_rows: weakref.WeakSet[YouTubeQueueItem] = weakref.WeakSet()
 
         # Playlist expansion state (Issue #70). At most one playlist may be
         # resolving or probing at a time; later ones wait in _playlist_backlog.
@@ -469,7 +475,9 @@ class PlaylistAddController:
 
     def _spawn_probe(self, item: YouTubeQueueItem) -> None:
         """Spawn a metadata probe worker for *item*."""
-        probe = YouTubeProbeWorker(self._fetcher, item.url, parent=self._parent)
+        probe = YouTubeProbeWorker(
+            self._fetcher, item.url, parent=self._parent, single_video=item in self._one_video_rows
+        )
         probe.probe_done.connect(lambda info, it=item: self._on_probe_done(it, info))
         probe.probe_error.connect(lambda msg, it=item: self._on_probe_error(it, msg))
         probe.finished.connect(lambda pw=probe: self._on_probe_finished(pw))
@@ -825,6 +833,7 @@ class PlaylistAddController:
             item.video_id = entry.video_id
             item.display_title = entry.title
             item.status = YouTubeItemStatus.PROBING
+            self._one_video_rows.add(item)
             self._callbacks.render_new_item(item)
             kept_items.append(item)
 

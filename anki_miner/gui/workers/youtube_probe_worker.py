@@ -109,6 +109,8 @@ class YouTubeProbeWorker(_SingleCallProbeThread):
         url: str,
         parent: object = None,
         timeout_s: float = 60.0,
+        *,
+        single_video: bool = False,
     ) -> None:
         """Initialize the probe worker.
 
@@ -120,11 +122,19 @@ class YouTubeProbeWorker(_SingleCallProbeThread):
                 Forwarded to ``YouTubeFetcherService.probe_link``. On
                 timeout, the fetcher kills the yt-dlp subprocess and raises
                 ``YouTubeFetchError``.
+            single_video: The row stands for one video (a playlist's entry,
+                a "Just this video" pick), so it is probed with
+                ``probe_metadata`` (``--no-playlist``). On another site
+                ``probe_link`` would expand a multi-part video, or the list
+                the link names.
         """
         super().__init__(fetcher, timeout_s=timeout_s, parent=parent)
         self._url = url
+        self._single_video = single_video
 
     def _do_call(self) -> object:
+        if self._single_video:
+            return self._fetcher.probe_metadata(self._url, timeout_s=self._timeout_s)
         return self._fetcher.probe_link(self._url, timeout_s=self._timeout_s)
 
     def _emit_result(self, result: object) -> None:
