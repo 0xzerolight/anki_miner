@@ -263,7 +263,8 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Deck Builder modes (all / top N / coverage %)"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.",
+            "Deck Builder always skips per-episode filters and checks for duplicates only in the deck it builds; "
+            "pick every word, the top N, or a coverage target, and optionally skip known words.",
         ),
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("video", "deckbuilder"),
@@ -702,7 +703,8 @@ CAPABILITIES: tuple[Capability, ...] = (
         id="kana-only-exclude",
         title=QT_TRANSLATE_NOOP("Capabilities", "Exclude kana-only words"),
         description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Drop words written without kanji; “Skip all kana-only words” leaves a kanji-only deck."
+            "Capabilities",
+            "Drop words written without kanji; “Skip all kana-only words (including mixed)” leaves a kanji-only deck.",
         ),
         category=_CAT_FILTERING,
         target=CapabilityTarget("settings", "filtering"),
@@ -1151,7 +1153,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
             "Fill in automatically reads your note type's fields and fills every mapping. "
-            "Lapis, Kiku, Senren and Anki Miner Note are recognised and filled completely.",
+            "Lapis, Kiku and Senren (Japanese only) and Anki Miner Note are recognised and filled completely.",
         ),
         category=_CAT_CARDS,
         target=CapabilityTarget("settings", "anki"),
