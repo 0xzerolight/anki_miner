@@ -118,9 +118,10 @@ def parse_lang_list(value: str) -> tuple[str, ...] | None:
 
     ``--sub-langs`` accepts far more than a comma list — regexes (``en.*``),
     exclusions (``-live_chat``) and the ``all`` wildcard. Those cannot be shown
-    as checkboxes, so the picker routes them to its Advanced field instead. This
-    function is the discriminator: a tuple means "the checkboxes can express
-    it", ``None`` means "leave it to Advanced".
+    as checkboxes, so the picker seeds them into its search box as a raw
+    expression and the Download tab's button shows them verbatim. This function
+    is the discriminator: a tuple means "the checkboxes can express it",
+    ``None`` means "keep it as a raw expression".
     """
     tokens = [token.strip() for token in value.split(",")]
     kept: list[str] = []

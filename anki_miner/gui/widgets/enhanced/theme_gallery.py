@@ -14,10 +14,10 @@ The timer being parented to the card does NOT mean it can never fire into a
 deleted C++ object -- that was tried and is false, proven by a real crash
 trace. Parenting only guarantees the timer itself is destroyed together with
 the card; it says nothing about ordering against the card's *sibling*
-children. When a host (e.g. the setup wizard) tears down the card's widget
+children. When the host (Settings → General) tears down the card's widget
 tree while the zero-interval timer is still pending -- a card painted once,
-then its dialog closed in the same event-loop cadence before the timer got a
-turn -- the ``thumbnail`` label can already be gone by the time the timer
+then torn down in the same event-loop cadence before the timer got a turn --
+the ``thumbnail`` label can already be gone by the time the timer
 fires, and ``_load_thumbnail`` raises ``RuntimeError: wrapped C/C++ object of
 type QLabel has been deleted``. ``_load_thumbnail`` guards against exactly
 that with ``widget_alive``, the same idiom used for late worker-completion

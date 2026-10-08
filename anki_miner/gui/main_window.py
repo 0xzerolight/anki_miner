@@ -1138,8 +1138,6 @@ class MainWindow(ScreenIssueHost, QMainWindow):
 
         It also hands the dialog the Settings tab's whole-profile actions (D14).
         """
-        from typing import cast
-
         from anki_miner.gui.widgets.dialogs.profile_manager_dialog import ProfileManagerDialog, SettingsFileActions
 
         # D14: the live settings' Export / Import / Reset run from the manager.
