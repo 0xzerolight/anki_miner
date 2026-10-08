@@ -1473,10 +1473,10 @@ def _connect_cuda_pack_download(window: MainWindow, settings_tab: SettingsTab) -
 
 
 def _connect_language_pack_download(window: MainWindow, settings_tab: SettingsTab) -> None:
-    """Wire the Mining Language panel's per-language "Download … pack" buttons.
+    """Wire the Mining Language panel's "Download and switch" to the pack download.
 
     Not routed through ``_connect_download``: every callback has to be bound to
-    the language the button carries, and that code is only known per emission,
+    the language the request carries, and that code is only known per emission,
     whereas ``set_status`` is bound once at connect time.
 
     The pack root is derived, not configured: it is a managed directory under the
