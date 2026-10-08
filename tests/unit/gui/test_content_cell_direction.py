@@ -7,13 +7,19 @@ at the wrong end there"). Arabic literals are \\N{} escapes on purpose.
 
 from __future__ import annotations
 
+import dataclasses
+import importlib
+
 import pytest
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QListWidget, QStyledItemDelegate, QTableWidget
+from PyQt6.QtWidgets import QListWidget, QStyledItemDelegate, QStyleOptionViewItem, QTableWidget, QTableWidgetItem
 
+from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils.content_text import ContentCellDelegate, apply_content_direction
 from anki_miner.gui.utils.qt_helpers import make_table_item
+from anki_miner.gui.widgets.dialogs.known_words_dialog import KnownWordsManagerDialog
 from anki_miner.languages.registry import get_profile
+from anki_miner.services.known_word_db import KnownWordDB
 from tests.unit._cell_paint import ink_span, paint_cell
 
 AR = get_profile("ar").content_style
@@ -93,3 +99,50 @@ def test_a_content_list_flips_whole_and_an_ltr_one_is_never_touched(qtbot):
     apply_content_direction(ltr, JA)
     assert rtl.layoutDirection() == Qt.LayoutDirection.RightToLeft
     assert not ltr.testAttribute(Qt.WidgetAttribute.WA_SetLayoutDirection)
+
+
+def _cell_directions(table: QTableWidget, columns: tuple[int, ...]) -> set[Qt.LayoutDirection]:
+    table.setRowCount(1)
+    directions = set()
+    for column in columns:
+        table.setItem(0, column, QTableWidgetItem(KITAB))
+        index = table.model().index(0, column)
+        option = QStyleOptionViewItem()
+        table.initViewItemOption(option)
+        table.itemDelegateForColumn(column).initStyleOption(option, index)
+        directions.add(option.direction)
+    return directions
+
+
+@pytest.mark.parametrize(
+    "module_name, class_name, content_columns, chrome_column",
+    [
+        ("anki_miner.gui.widgets.backfill_tab", "CardBackfillTab", (0,), 1),
+        # Deck Filter's Reading is the stored reading field, which ar/he fill
+        # with vocalised in-script text.
+        ("anki_miner.gui.widgets.deck_filter_tab", "DeckFilterTab", (0, 1), 2),
+    ],
+    ids=["backfill", "deck-filter"],
+)
+def test_the_content_columns_follow_the_mining_language(qtbot, module_name, class_name, content_columns, chrome_column):
+    """An in-session switch flips the columns with no re-install."""
+    tab_cls = getattr(importlib.import_module(module_name), class_name)
+    tab = tab_cls(dataclasses.replace(AnkiMinerConfig(), language="ja"))
+    qtbot.addWidget(tab)
+    table = tab.preview_table
+
+    assert all(isinstance(table.itemDelegateForColumn(c), ContentCellDelegate) for c in content_columns)
+    assert _cell_directions(table, content_columns) == {Qt.LayoutDirection.LeftToRight}
+    tab.update_config(dataclasses.replace(AnkiMinerConfig(), language="ar"))
+    assert _cell_directions(table, content_columns) == {Qt.LayoutDirection.RightToLeft}
+    assert table.itemDelegateForColumn(chrome_column) is None, "a chrome column must keep the stock delegate"
+
+
+def test_the_known_words_list_takes_the_content_direction(qtbot, tmp_path):
+    rtl = KnownWordsManagerDialog(KnownWordDB(tmp_path / "ar.db"), language="ar", content_style=AR)
+    qtbot.addWidget(rtl)
+    ltr = KnownWordsManagerDialog(KnownWordDB(tmp_path / "ja.db"))
+    qtbot.addWidget(ltr)
+
+    assert rtl.word_list.layoutDirection() == Qt.LayoutDirection.RightToLeft
+    assert not ltr.word_list.testAttribute(Qt.WidgetAttribute.WA_SetLayoutDirection)

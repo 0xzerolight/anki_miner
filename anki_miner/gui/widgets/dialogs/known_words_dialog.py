@@ -24,7 +24,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import file_dialogs
-from anki_miner.gui.utils.content_text import content_cell_font
+from anki_miner.gui.utils.content_text import apply_content_direction, content_cell_font
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.keyboard_shortcuts import disown_default_buttons
 from anki_miner.gui.utils.qt_helpers import (
@@ -123,6 +123,9 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
         self.word_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
         configure_data_view(self.word_list)
         install_copy_rows(self.word_list)
+        # Every row is a mined word: the list flips whole for an rtl language,
+        # like the subtitle viewer's line list (S21).
+        apply_content_direction(self.word_list, self._content_style)
         layout.addWidget(self.word_list)
 
         # The count, and Rebuild beside the "cached from Anki" number it clears
