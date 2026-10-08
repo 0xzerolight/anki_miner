@@ -569,6 +569,48 @@ class TestUnreliableReadingWildcard:
         assert fetcher.fetch(mined_form, "たべる") is None
 
 
+class TestStoredNonKanaReading:
+    """A non-kana reading the pack itself stores (zh pinyin, yue jyutping) is
+    an exact key, so a heteronym like 行 háng/xíng serves the reading asked
+    for. A non-kana reading no row stores still takes the guarded wildcard
+    (``TestUnreliableReadingWildcard``), which is ja's OOV kanji fallback.
+    """
+
+    def test_zh_heteronym_serves_the_asked_reading(self, tmp_path: Path):
+        db, pack_dir = _build_pack(tmp_path, [("行", "háng", "hang.mp3"), ("行", "xíng", "xing.mp3")])
+        fetcher = _make_fetcher(db, pack_dir, tmp_path / "cache")
+
+        xing = fetcher.fetch("行", "xíng")
+        hang = fetcher.fetch("行", "háng")
+
+        assert xing is not None
+        assert xing.read_bytes() == b"AUDIO:xing.mp3"
+        assert hang is not None
+        assert hang.read_bytes() == b"AUDIO:hang.mp3"
+
+    def test_zh_reading_no_row_stores_returns_none(self, tmp_path: Path):
+        db, pack_dir = _build_pack(tmp_path, [("行", "háng", "hang.mp3"), ("行", "xíng", "xing.mp3")])
+        fetcher = _make_fetcher(db, pack_dir, tmp_path / "cache")
+
+        assert fetcher.fetch("行", "hàng") is None
+
+    def test_yue_heteronym_serves_the_asked_reading(self, tmp_path: Path):
+        db, pack_dir = _build_pack(tmp_path, [("行", "hang4", "hang4.mp3"), ("行", "hong4", "hong4.mp3")])
+        fetcher = _make_fetcher(db, pack_dir, tmp_path / "cache")
+
+        result = fetcher.fetch("行", "hong4")
+
+        assert result is not None
+        assert result.read_bytes() == b"AUDIO:hong4.mp3"
+
+    def test_has_cached_matches_the_stored_reading(self, tmp_path: Path):
+        db, pack_dir = _build_pack(tmp_path, [("行", "háng", "hang.mp3"), ("行", "xíng", "xing.mp3")])
+        fetcher = _make_fetcher(db, pack_dir, tmp_path / "cache")
+
+        assert fetcher.has_cached("行", "xíng") is True
+        assert fetcher.has_cached("行", "hàng") is False
+
+
 # ---------------------------------------------------------------------------
 # Multiple rows — first by id wins
 # ---------------------------------------------------------------------------

@@ -155,9 +155,12 @@ class LocalAudioPackFetcher:
                 see ``orchestration.audio_stage._expression_audio_candidates``).
                 A pure-kana reading takes the exact-match path (with a
                 katakana-folded retry: packs store ``kana`` verbatim, the miner
-                folds to hiragana). Anything else takes the wildcard path,
-                served ONLY when the pack's rows for the expression are
-                unambiguous — ≤1 distinct hiragana-folded reading — else only
+                folds to hiragana). A non-kana reading some row stores
+                verbatim (zh pinyin, yue jyutping) is an exact match too, so a
+                heteronym such as 行 háng/xíng serves the reading asked for.
+                Anything else takes the wildcard path, served ONLY when the
+                pack's rows for the expression are unambiguous — ≤1
+                distinct hiragana-folded reading — else only
                 NULL-reading (wildcard) rows are eligible. That guard keeps the
                 original homograph safety: 辛い (からい vs つらい) never serves
                 or caches a guessed pronunciation under the word's key.
@@ -320,8 +323,15 @@ class LocalAudioPackFetcher:
                 # miner readings are hiragana-folded; retry in the other script.
                 return storage.lookup(conn, mined_form, katakana_variant)
             return rows
-        # Non-kana (or empty) reading: the exact key is useless. Wildcard the
-        # expression, then guard on ambiguity.
+        # A non-kana reading the pack itself stores (zh pinyin, yue jyutping) is an exact
+        # key: serve those rows plus NULL wildcards, as the kana path does. A reading no
+        # row stores (ja's OOV kanji fallback) falls through to the guarded wildcard.
+        if reading:
+            rows = storage.lookup(conn, mined_form, reading)
+            if any(row.reading is not None for row in rows):
+                return rows
+        # Unstored non-kana (or empty) reading: the exact key is useless.
+        # Wildcard the expression, then guard on ambiguity.
         rows = storage.lookup(conn, mined_form, "")
         distinct = {katakana_to_hiragana(r.reading) for r in rows if r.reading}
         if len(distinct) > 1:
