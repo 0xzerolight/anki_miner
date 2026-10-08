@@ -596,6 +596,18 @@
         <translation>Anki</translation>
     </message>
     <message>
+        <source>Open Anki when Anki Miner starts</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Starts Anki if it isn't running when Anki Miner opens.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki Miner can't find Anki where its installer puts it, so it can't open it.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>AnkiConnect URL</source>
         <translation>URL AnkiConnect</translation>
     </message>
