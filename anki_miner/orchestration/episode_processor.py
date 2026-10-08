@@ -2294,10 +2294,11 @@ class EpisodeProcessor:
         say is whether the filter ran at all. ``bypass_optional_filters`` collapses
         the optional filters to a single ``bypass`` token; the known-words DB is
         not one of them (bypass never skips known words), so it is named first.
+        ``include_known_words`` does skip known words, so it is not named then.
         """
         config = self.config
         names: list[str] = []
-        if config.use_known_words_db:
+        if config.use_known_words_db and not config.include_known_words:
             names.append("known-db")
         if config.bypass_optional_filters:
             return [*names, "bypass"]
