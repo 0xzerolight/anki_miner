@@ -425,8 +425,8 @@ class ReadabilityTab(_ToolTabBase):
         self.log_widget.clear_log()
         self.progress_widget.reset()
         # Dictionaries and the Anki vocabulary load before the first file; on a
-        # large collection that takes seconds.
-        self.progress_widget.set_status(self.tr("Reading your Anki cards and known words…"))
+        # large collection that takes seconds. The pinned bar is the readout (D1).
+        self._show_status(self.tr("Reading your Anki cards and known words…"))
 
         worker = ReadabilityWorker(self.config, files)
         worker.file_measured.connect(self._on_file_measured)
@@ -438,7 +438,12 @@ class ReadabilityTab(_ToolTabBase):
     # ------------------------------------------------------------------
 
     def _on_file_started(self, idx: int) -> None:
-        self.progress_widget.set_status(tr_format(self.tr("Checking file %1 of %2"), idx + 1, self._total_files))
+        # Replaces the loading line in the bar, which would otherwise outlast it.
+        self._show_status(tr_format(self.tr("Checking file %1 of %2"), idx + 1, self._total_files))
+
+    def _show_status(self, status: str) -> None:
+        self.progress_widget.set_status(status)
+        self._publish_task_detail(status)
 
     def _on_file_measured(self, idx: int, stats: object) -> None:
         assert isinstance(stats, ReadabilityStats)

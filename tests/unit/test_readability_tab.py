@@ -18,6 +18,7 @@ pytest.importorskip("PyQt6.QtWidgets")
 from PyQt6.QtCore import Qt
 
 from anki_miner.exceptions import AnkiConnectionError
+from anki_miner.gui.controllers.task_registry import TaskRegistry
 from anki_miner.gui.widgets.readability_tab import ReadabilityTab
 from anki_miner.models import TerminalOutcome
 from anki_miner.models.readability import ReadabilityStats
@@ -292,10 +293,19 @@ def test_anki_unreachable_names_anki_in_the_banner(qtbot, tmp_path):
 
 
 def test_status_says_what_happens_before_the_first_file(qtbot, tmp_path):
-    """Building dictionaries and reading Anki can take seconds (Readability review, minor 5)."""
+    """Building dictionaries and reading Anki can take seconds (Readability review, minor 5).
+
+    The pinned bar is the run's one live readout (D1): the page's progress card is never shown.
+    """
     tab = _make_tab(_make_config(tmp_path), qtbot)
-    _start(tab, _subtitle(tmp_path))
-    assert tab.progress_widget.status_label.text() == "Reading your Anki cards and known words…"
+    registry = TaskRegistry()
+    tab.bind_task_registry(registry)
+    worker, *_slots = _start(tab, _subtitle(tmp_path))
+    assert registry.snapshot("tools.readability").detail == "Reading your Anki cards and known words…"
+
+    worker.file_started.connect.call_args.args[0](0)
+
+    assert registry.snapshot("tools.readability").detail == "Checking file 1 of 1"
 
 
 def test_load_warnings_land_in_the_log(qtbot, tmp_path):
