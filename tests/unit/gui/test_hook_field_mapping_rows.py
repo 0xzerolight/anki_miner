@@ -179,6 +179,29 @@ def test_auto_map_sends_thai_romanization_and_reading_to_separate_keys(qtbot, te
     assert fields["reading_paiboon"] == "Romanization"
 
 
+def test_auto_map_leaves_a_field_name_a_keyword_key_already_took(qtbot, test_config, monkeypatch):
+    """A placeholder spelled like a keyword field must not take that field too.
+
+    No shipped spec collides any more, so th's Paiboon row is respelled "Reading",
+    which expression_reading's keywords also match. One Anki field cannot carry two
+    logical keys — the second write would silently decide which of them reaches the card.
+    """
+    from anki_miner.gui.widgets.panels import anki_settings_panel
+
+    shipped = anki_settings_panel.profile_card_field_specs()
+    monkeypatch.setattr(
+        anki_settings_panel,
+        "profile_card_field_specs",
+        lambda: tuple(replace(s, placeholder="Reading") if s.key == "reading_paiboon" else s for s in shipped),
+    )
+    panel = _anki(qtbot, _lang(config=test_config, code="th"))
+    panel.populate_from_field_list(["Expression", "Sentence", "Reading"])
+
+    fields = panel.get_card_fields()
+    assert fields["expression_reading"] == "Reading"
+    assert fields["reading_paiboon"] == ""
+
+
 def test_auto_map_takes_a_field_named_pos_for_hebrew_part_of_speech(qtbot, test_config):
     """Settings shares one pos row across languages, so the alias must reach that row too."""
     panel = _anki(qtbot, _lang(config=test_config, code="he"))
