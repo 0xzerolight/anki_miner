@@ -139,6 +139,13 @@ def test_read_json_file_refuses_non_json(tmp_path: Path) -> None:
         files.read_json_file(bad)
 
 
+def test_read_json_file_accepts_a_utf8_bom(tmp_path: Path) -> None:
+    """Windows Notepad saves UTF-8 with a BOM; the run file is still JSON."""
+    path = tmp_path / "run.json"
+    path.write_bytes(b"\xef\xbb\xbf" + json.dumps(_run_file(tmp_path)).encode("utf-8"))
+    assert files.parse_run_file(files.read_json_file(path)).episodes[0].run_id == "ep-01"
+
+
 def test_next_result_path_counts_up(tmp_path: Path) -> None:
     assert runfolder.next_result_path(tmp_path).name == "result-1.json"
     (tmp_path / "result-1.json").touch()
