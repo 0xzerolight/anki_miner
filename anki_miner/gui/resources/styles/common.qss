@@ -41,6 +41,13 @@ QLabel#heading3 {
     font-weight: 600;
 }
 
+/* A Settings section heading (FormPanel.add_section). One step above body text
+   and at body weight: it marks a group without competing with the page's
+   heading2 title, so Settings reads 20 / 16 / 14. */
+QLabel#settings-subheading {
+    font-size: ${font-size-h3}px;
+}
+
 /* `caption` is a CHIP, not simply small text: it carries horizontal padding and
    a radius so a short status word can take a tinted background (the theme
    gallery's "Active", the header's profile name). Small secondary text that is

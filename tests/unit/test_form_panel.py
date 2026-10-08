@@ -6,10 +6,11 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QCheckBox, QLabel, QLineEdit, QWidget
 
+from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.widgets.base.form_panel import FormPanel
 
 
@@ -141,23 +142,67 @@ def test_main_layout_spacing_is_xs(qtbot):
     assert panel.main_layout.spacing() == SPACING.xs
 
 
-def test_section_heading_font_pixelsize_is_body_sm(qtbot):
-    """add_section heading QLabel must use FONT_SIZES.body_sm (13) pixel size."""
-    panel = FormPanel("Section Test")
+# ---------------------------------------------------------------------------
+# Type ladder: page title 20 / subheading 16 / body 14, under the app QSS
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(params=["light", "dark"])
+def themed(request, qapp):
+    """Apply a real theme stylesheet: its QWidget font rule beats setFont, so only QSS counts."""
+    previous = qapp.styleSheet()
+    qapp.setStyleSheet(Theme.get_stylesheet(request.param))
+    yield
+    qapp.setStyleSheet(previous)
+
+
+def _rendered(label: QLabel) -> tuple[int, int]:
+    label.ensurePolished()
+    return label.font().pixelSize(), label.font().weight()
+
+
+def _ladder_panel(qtbot) -> FormPanel:
+    panel = FormPanel("Card Media")
     qtbot.addWidget(panel)
-    panel.add_section("My Section")
+    panel.add_section("Sentence Audio")
+    panel.add_field("Audio Format", QLineEdit())
+    panel.add_section("Mappings", trailing=QCheckBox("Fill"))
+    panel.show()
+    return panel
 
-    heading = _find_section_label(panel, "My Section")
+
+@pytest.mark.usefixtures("themed")
+def test_page_title_is_heading2_size_semibold(qtbot):
+    panel = _ladder_panel(qtbot)
+
+    assert _rendered(panel._title_label) == (FONT_SIZES.h2, 600)
+
+
+@pytest.mark.usefixtures("themed")
+@pytest.mark.parametrize("title", ["Sentence Audio", "Mappings"])
+def test_section_heading_is_one_step_up_at_body_weight(qtbot, title):
+    """Noticeably larger than body text, not bold (owner, item 12)."""
+    panel = _ladder_panel(qtbot)
+    heading = _find_section_label(panel, title)
     assert heading is not None, "Section heading QLabel not found"
-    assert heading.font().pixelSize() == FONT_SIZES.body_sm
+
+    assert _rendered(heading) == (FONT_SIZES.h3, 400)
 
 
-def test_section_heading_font_weight_is_demibold(qtbot):
-    """add_section heading QLabel must keep DemiBold weight."""
-    panel = FormPanel("Section Test")
-    qtbot.addWidget(panel)
-    panel.add_section("My Section")
+@pytest.mark.usefixtures("themed")
+def test_field_label_stays_body_text(qtbot):
+    panel = _ladder_panel(qtbot)
+    label = _find_section_label(panel, "Audio Format:")
+    assert label is not None, "Field label QLabel not found"
 
-    heading = _find_section_label(panel, "My Section")
-    assert heading is not None, "Section heading QLabel not found"
-    assert heading.font().weight() == QFont.Weight.DemiBold
+    assert _rendered(label) == (FONT_SIZES.body, 400)
+
+
+def test_section_heading_size_follows_the_text_scale_token():
+    """A literal px would not grow with the UI text scale; the h3 token does."""
+    raw = (get_resource_dir() / "styles" / "common.qss").read_text(encoding="utf-8")
+    # Sliced by hand: a rule body holds "${...}" braces, so a [^}]* regex stops early.
+    start = raw.index("QLabel#settings-subheading {")
+    body = raw[start : raw.index("\n}", start)]
+
+    assert "font-size: ${font-size-h3}px;" in body
