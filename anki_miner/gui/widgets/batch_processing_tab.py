@@ -162,8 +162,8 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         self.overall_progress_widget = ProgressWidget()
         self.overall_progress_widget.hide()
         layout.addWidget(self.overall_progress_widget)
-        # The durable end state of this same card (D20). The noun ("series")
-        # is set per run at _begin_receipt.
+        # The run's durable end state, under the inputs (D20). The noun
+        # ("series") is set per run at _begin_receipt.
         self._install_receipt(layout, self.overall_progress_widget)
 
         # Log widget; install_workflow_shell moves it into the Activity drawer (D6).

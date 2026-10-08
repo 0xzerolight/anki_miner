@@ -199,8 +199,9 @@ class WorkflowActionBar(QWidget):
 
         Call it after the run's ``_publish_task_finish``. The line belongs to
         the run the bar is showing at that moment, so a later run never
-        inherits it. An empty string clears it. Ignored while
-        :meth:`set_keeps_last_result` is off.
+        inherits it. An empty string clears it. Stored either way, but an
+        idle bar shows it only while :meth:`set_keeps_last_result` is on, so
+        turning that on later in the same run shows this line.
 
         Args:
             text: The finished run's one-line result, already translated.

@@ -125,7 +125,7 @@ class SingleEpisodeTab(MiningTabBase):
         # later video change replaces it instead of treating it as the user's
         # choice (BA-003; same ownership rule as AudiobookTab, A22-001).
         self._last_auto_filled_subtitle: str | None = None
-        # Bumped in shutdown() so a Tracks/Timing probe callback already queued
+        # Bumped in shutdown() so an Audio track…/Test Timing probe callback queued
         # for delivery when app close begins finds itself stale and never
         # touches a button the close may be tearing down (M7).
         self._teardown_generation = 0
@@ -199,8 +199,8 @@ class SingleEpisodeTab(MiningTabBase):
         self.progress_widget = ProgressWidget()
         self.progress_widget.hide()
         layout.addWidget(self.progress_widget)
-        # The durable end state of this same card (D20). One episode per run,
-        # so the receipt never needs a noun to count.
+        # The run's durable end state, directly under the inputs (D20). One
+        # episode per run, so the receipt never needs a noun to count.
         self._install_receipt(layout, self.progress_widget)
 
         # Carries its own header and styling; install_workflow_shell moves it into the Activity drawer (D6).
@@ -261,7 +261,7 @@ class SingleEpisodeTab(MiningTabBase):
         # end, and that was right while the button sat in the form; D6 moved it
         # into the pinned action bar at the foot of the screen, so the old line
         # pulled focus from the offset field straight down to the bar and back
-        # up again for Test Timing and Tracks. The bar is laid out in reading
+        # up again for Test Timing and Audio track…. The bar is laid out in reading
         # order and comes last in the page, so leaving it alone is what puts the
         # primary action where the eye already expects it -- last.
         self.setTabOrder(self.video_selector, self.subtitle_selector)
@@ -840,7 +840,7 @@ class SingleEpisodeTab(MiningTabBase):
         so it reads the ``_curation_*`` snapshots captured at ``_start_processing``
         rather than the live selector QWidgets (cross-thread QWidget access is UB).
         The only tab that passes a real ``audio_track_override`` — the per-run
-        Tracks-dialog pick must carry into the curation player.
+        "Audio track…" pick must carry into the curation player.
         """
         media_context = self._make_curation_media_context(
             self.config,
@@ -951,9 +951,9 @@ class SingleEpisodeTab(MiningTabBase):
         self.presenter.show_processing_result(result)
 
         if result.success:
-            # Reset per-run override so next Process uses Auto unless user picks again.
+            # Reset per-run override so the next Mine uses Auto unless the user picks again.
             # Failed runs keep the override intact so the user can retry with the same
-            # track pick without having to reopen the Tracks dialog.
+            # track pick without having to reopen the Audio track… dialog.
             self._audio_track_override = None
 
     def _on_processing_error(self, error_message: str) -> None:
@@ -974,7 +974,7 @@ class SingleEpisodeTab(MiningTabBase):
         self.progress_widget.set_status(self.tr("Failed — see log"))
 
         # Keep the audio-track override on the error path so the user can retry
-        # without having to reopen the Tracks dialog (consistent with failed results).
+        # without having to reopen the Audio track… dialog (consistent with failed results).
 
     def _refresh_recent_combo(self) -> None:
         """Refresh the recent files combo box from disk."""
@@ -1054,11 +1054,11 @@ class SingleEpisodeTab(MiningTabBase):
         self._apply_secondary_gate()
 
     def shutdown(self) -> None:
-        """Invalidate in-flight Tracks/Timing probe callbacks before app close.
+        """Invalidate in-flight Audio track…/Test Timing probe callbacks before app close.
 
         ``MiningTabBase.shutdown`` (called by ``BackgroundTaskController.shutdown``
         for every mining tab) cancels the curation dialog and joins leaked runs;
-        bumping the generation first marks any Tracks/Timing probe callback
+        bumping the generation first marks any Audio track…/Test Timing probe callback
         already queued for delivery as stale, so it never touches a button that
         close may be tearing down (M7).
         """
