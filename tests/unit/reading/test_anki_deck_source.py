@@ -101,32 +101,47 @@ def test_a_webm_video_field_loses_to_the_audio_field_on_name():
     assert fmap.audio == "Audio"
 
 
-def test_core_2k_layout_prefers_the_sentence_media_and_gloss():
-    names = [
-        "Vocabulary-Kanji",
-        "Vocabulary-English",
-        "Vocabulary-Audio",
-        "Sentence-Kanji",
-        "Sentence-English",
-        "Sentence-Audio",
-        "Sentence-Image",
-    ]
-    sample = {
-        "Vocabulary-Kanji": "天気",
-        "Vocabulary-English": "weather",
-        "Vocabulary-Audio": "[sound:v.mp3]",
-        "Sentence-Kanji": "今日はいい天気だ",
-        "Sentence-English": "Nice weather today",
-        "Sentence-Audio": "[sound:s.mp3]",
-        "Sentence-Image": '<img src="s.jpg">',
-    }
-    fmap = suggest_field_map(names, [sample] * 5, contains_target_script=_JA)
+# The Core 2000 note type as shipped: field names and one note's values verbatim
+# from a real export (ken-21-21/Japanese, data/raw/sample_decks.json, note
+# "Core 2000 Step 01 - 001"); the same 18 names, in this order, are the "Core
+# 2000" note type in blance714/StaticeApp's TestData.swift. Expression holds the
+# sentence; Reading, Sentence-Kana and Sentence-Clozed are copies of it.
+_CORE_2K_NOTE = {
+    "Optimized-Voc-Index": "1",
+    "Vocabulary-Kanji": "それ",
+    "Vocabulary-Furigana": "それ",
+    "Vocabulary-Kana": "それ",
+    "Vocabulary-English": "that, that one",
+    "Vocabulary-Audio": "[sound:8b0ee07c0864e07d96871e87f158ad96.mp3]",
+    "Vocabulary-Pos": "Pronoun",
+    "Caution": "",
+    "Expression": "<b>それ</b>はとってもいい話だ。",
+    "Reading": "<b>それ</b>はとってもいい 話[はなし]だ。",
+    "Sentence-Kana": "<b>それ</b> は とっても いい はなし だ",
+    "Sentence-English": "That's a really nice story.",
+    "Sentence-Clozed": "<b>（　）</b>はとってもいい 話[はなし]だ。",
+    "Sentence-Audio": "[sound:c951babc6302fbe6ee96898170363a6e.mp3]",
+    "Notes": "Core 2000 Step 01 - 001",
+    "Core-Index": "1",
+    "Optimized-Sent-Index": "56",
+    "Frequency": "37",
+}
+
+
+def test_core_2k_picks_expression_over_its_kana_and_cloze_copies():
+    fmap = suggest_field_map(list(_CORE_2K_NOTE), [_CORE_2K_NOTE] * 5, contains_target_script=_JA)
     assert (fmap.sentence, fmap.audio, fmap.picture, fmap.translation) == (
-        "Sentence-Kanji",
+        "Expression",
         "Sentence-Audio",
-        "Sentence-Image",
+        "",
         "Sentence-English",
     )
+
+
+def test_a_kana_only_sentence_field_ranks_below_a_plain_one():
+    samples = [{"SentenceReading": "きょうはいいてんき", "Line": "今日はいい天気"}] * 5
+    fmap = suggest_field_map(["SentenceReading", "Line"], samples, contains_target_script=_JA)
+    assert fmap.sentence == "Line"
 
 
 def test_a_fuller_video_field_still_loses_to_the_audio_field():

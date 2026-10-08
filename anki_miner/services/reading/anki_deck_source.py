@@ -45,6 +45,11 @@ SAMPLE_SHARE = 0.5
 # built for word cards (Lapis, Kiku) call their WORD field Expression.
 _SENTENCE_HINTS = ("sentence", "expression", "subs1", "line", "text")
 _TRANSLATION_HINTS = ("meaning", "translation", "english", "subs2", "native")
+# Name parts that mark a field as a copy of the line rather than the line: a
+# kana-only or furigana rendering (Core 2k/6k's Sentence-Kana and Reading) or a
+# blanked one (its Sentence-Clozed). Such a field ranks below every other
+# qualifying field, whatever its hint, so Core 2k/6k gets Expression.
+_DERIVED_LINE_PARTS = ("kana", "reading", "cloze")
 
 _SOUND_RE = re.compile(r"\[sound:([^\]]+)\]")
 _IMG_SRC_RE = re.compile(r"""<img\b[^>]*?\bsrc\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))""", re.IGNORECASE)
@@ -87,6 +92,11 @@ def _hint_rank(name: str, hints: tuple[str, ...]) -> int:
     return next((rank for rank, hint in enumerate(hints) if hint in folded), len(hints))
 
 
+def _is_derived_line(name: str) -> bool:
+    folded = name.casefold()
+    return any(part in folded for part in _DERIVED_LINE_PARTS)
+
+
 def _share(name: str, samples: Sequence[Mapping[str, str]], fits: Callable[[str], bool]) -> float:
     if not samples:
         return 0.0
@@ -124,9 +134,10 @@ def suggest_field_map(
 
     Media fields are judged on content. The sentence is the best-named field
     whose text is in the mining language on at least half the sampled notes
-    (name first, because a marker like ``ep01_0001`` is "Latin text" too), and
-    the translation is picked by name only. ``sentence`` is "" when no field
-    qualifies; the user picks it.
+    (name first, because a marker like ``ep01_0001`` is "Latin text" too; a
+    kana, reading or cloze copy of the line ranks last), and the translation is
+    picked by name only. ``sentence`` is "" when no field qualifies; the user
+    picks it.
     """
     audio = _best_media_field(field_names, samples, lambda v: sound_filename(v) is not None)
     picture = _best_media_field(
@@ -141,11 +152,11 @@ def suggest_field_map(
     # The audio pick stays a sentence candidate: a field may carry the line and
     # its clip together, and field_text drops the [sound:] ref from the line.
     ranked = [
-        (_hint_rank(n, _SENTENCE_HINTS), -share, i, n)
+        (_is_derived_line(n), _hint_rank(n, _SENTENCE_HINTS), -share, i, n)
         for i, n in enumerate(n for n in field_names if n != picture)
         if (share := _share(n, samples, is_line)) >= SAMPLE_SHARE
     ]
-    sentence = min(ranked)[3] if ranked else ""
+    sentence = min(ranked)[-1] if ranked else ""
     hinted = [
         ("sentence" not in n.casefold(), _hint_rank(n, _TRANSLATION_HINTS), i, n)
         for i, n in enumerate(rest)
