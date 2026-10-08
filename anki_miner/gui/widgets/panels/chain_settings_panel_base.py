@@ -750,6 +750,9 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
         self._list.setEnabled(enabled)
         self._set_reorder_controls_enabled(enabled)
         self._set_row_repair_enabled(enabled)
+        # The empty state's download is a mutation too: started during an
+        # import into an empty chain, it would race that import for the list.
+        self._download_recommended_btn.setEnabled(enabled)
         self._set_mutation_controls_enabled(enabled)
 
     def _set_row_repair_enabled(self, enabled: bool) -> None:
