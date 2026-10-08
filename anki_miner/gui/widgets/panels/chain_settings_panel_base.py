@@ -53,7 +53,7 @@ from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.config_commit import ConfigCommitResult
 from anki_miner.gui.utils.focus_ring import KEYBOARD_FOCUS_PROPERTY
 from anki_miner.gui.utils.run_off_thread import run_off_thread
-from anki_miner.gui.widgets.base import FormPanel, ScreenIssue, ScreenIssueHost
+from anki_miner.gui.widgets.base import FormPanel, ScreenIssue, ScreenIssueHost, page_filler
 from anki_miner.gui.widgets.enhanced.modern_button import ButtonVariant, ModernButton, make_menu_button
 from anki_miner.gui.widgets.panels.chain_priority_list import (
     ChainPriorityList,
@@ -201,6 +201,9 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
     _empty_row: QWidget
     _empty_label: QLabel
     _download_recommended_btn: ModernButton
+    #: Takes the page's surplus height while the list is hidden; built by
+    #: ``_add_page_filler``, the last call of every ``_setup_fields``.
+    _page_filler: QWidget
     #: The quiet "More" tool button holding ``extra_actions``, or ``None`` when
     #: the panel was built with none.
     _more_btn: ModernButton | None
@@ -296,6 +299,14 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
         )
 
         self._list = ChainPriorityList()
+        # The list is the page's one grower: a tall window buys rows, not empty
+        # card under the toolbar, and there is no maximum. Its floor is the
+        # height it had before it could grow -- QAbstractScrollArea's fixed
+        # default hint -- so a short window scrolls the page instead of
+        # squeezing the list. Set on the list, never on ``container``: an
+        # explicit minimum on a widget with a layout replaces the layout's
+        # minimum rather than flooring it, and clips the explanation and toolbar.
+        self._list.setMinimumHeight(self._list.sizeHint().height())
         self._list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._list.order_changed.connect(self._sync_chain_from_visual_order)
         layout.addWidget(self._list)
@@ -346,6 +357,19 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
         layout.addLayout(toolbar)
         return container
 
+    def _add_page_filler(self) -> None:
+        """End the page with the block that takes its surplus while the list is hidden.
+
+        Every chain panel calls this last in ``_setup_fields``, where a trailing
+        stretch used to sit. A stretch out-pulls the list for every pixel of a
+        tall window, which is what kept the list at its default height inside a
+        page of empty space. The filler shows only in the empty state (see
+        :meth:`_sync_empty_state`), when the list it stands in for is gone.
+        """
+        self._page_filler = page_filler()
+        self._main_layout.addWidget(self._page_filler)
+        self._page_filler.hide()
+
     @staticmethod
     def _make_square_button(glyph: str, variant: ButtonVariant, name: str, tooltip: str) -> ModernButton:
         """One glyph-only control, named for anyone who cannot see the glyph."""
@@ -360,9 +384,14 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
         self._sync_empty_state()
 
     def _sync_empty_state(self) -> None:
-        """Show the one-line empty state instead of an empty list (C09)."""
+        """Show the one-line empty state instead of an empty list (C09).
+
+        The filler moves with the list: the list is the page's grower, so
+        hiding it alone would deal the page's surplus height across the headings.
+        """
         empty = not self._chain and bool(self._empty_label.text())
         self._list.setVisible(not empty)
+        self._page_filler.setVisible(empty)
         self._empty_row.setVisible(empty)
         self._download_recommended_btn.setVisible(
             empty and self._recommended_available and bool(self._RECOMMENDED_KIND)

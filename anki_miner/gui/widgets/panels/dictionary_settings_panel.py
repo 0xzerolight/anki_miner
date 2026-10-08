@@ -288,7 +288,7 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         # (multi-source additive chain). The old single-file picker that used
         # to sit here was removed.
 
-        self.add_stretch()
+        self._add_page_filler()
 
     def set_chain(self, chain: tuple[ChainEntry, ...]) -> None:
         self._chain = list(chain)
