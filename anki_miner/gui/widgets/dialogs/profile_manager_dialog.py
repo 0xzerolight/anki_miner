@@ -217,10 +217,11 @@ class ProfileManagerDialog(ScreenIssueHost, EnhancedDialog):
 
     def _fit_minimum_width(self) -> None:
         """Never narrower than the widest button row (C19): "New from Current…",
-        "Rename…" and "Switch To" clipped at the old fixed 480px in long locales."""
+        "Rename…" and "Switch To" clipped at the old fixed 480px in long locales.
+        A hidden row (no settings actions) does not count."""
         margins = self._main_layout.contentsMargins()
         widest = max(
-            (row.sizeHint().width() for row in self.findChildren(QWidget, "profile-manager-row")),
+            (row.sizeHint().width() for row in self.findChildren(QWidget, "profile-manager-row") if not row.isHidden()),
             default=0,
         )
         widest = max(widest, self._actions_row.sizeHint().width())
