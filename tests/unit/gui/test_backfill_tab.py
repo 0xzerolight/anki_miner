@@ -101,6 +101,13 @@ class TestDeckDropdown:
     def test_all_decks_at_index_zero(self, tab):
         assert tab.deck_combo.itemText(0) == "All decks"
 
+    def test_the_deck_card_names_the_deck_once(self, tab):
+        """B4.5: the "Deck" header is the combo's caption; no "Deck:" row label under it."""
+        from PyQt6.QtWidgets import QLabel
+
+        assert [label for label in tab.deck_card.findChildren(QLabel) if label.text() == "Deck:"] == []
+        assert tab.deck_combo.accessibleName() == "Deck"
+
     def test_decks_populated_on_fetch(self, tab):
         tab._on_decks_fetched(["Mining", "Core"])
         items = [tab.deck_combo.itemText(i) for i in range(tab.deck_combo.count())]
