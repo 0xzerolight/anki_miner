@@ -8,6 +8,7 @@ merged as ``mine`` chooses and merges them.
 from __future__ import annotations
 
 import shutil
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from functools import partial
 from pathlib import Path
@@ -59,16 +60,17 @@ def _cut_one(media_file: MediaFile, episode: MediaEpisode, config: AnkiMinerConf
     )
     extractor = MediaExtractorService(cut_config, still_height=height)
     budget = merge_budget_seconds(config.audio_padding)
-    rows = []
-    for k, request in enumerate(episode.lines, 1):
+    chosen = []  # (line index, merged window) per requested line
+    for request in episode.lines:
         index = nearest_line(raw, request.line_start)
         before, after = (
             fit_expansion(entries, index, request.line_expansion, budget)
             if request.line_expansion is not None
             else line_merge(config, entries, index)
         )
-        window = merge_cue_window(entries, index, before, after)
-        word = TokenizedWord(
+        chosen.append((index, merge_cue_window(entries, index, before, after)))
+    words = [
+        TokenizedWord(
             surface=str(k),
             lemma="",
             reading="",
@@ -77,19 +79,26 @@ def _cut_one(media_file: MediaFile, episode: MediaEpisode, config: AnkiMinerConf
             end_time=window.end,
             duration=window.end - window.start,
         )
-        cut = extractor.extract_media(
-            episode.video_file, word, temp_folder=out, audio_track_override=episode.audio_track_override
-        )
-        rows.append(
-            {
-                "line_start": raw[index][0],
-                "start": window.start,
-                "end": window.end,
-                "text": window.text,
-                "picture": _keep(cut.screenshot_path, out, k),
-                "audio": _keep(cut.audio_path, out, k),
-            }
-        )
+        for k, (_index, window) in enumerate(chosen, 1)
+    ]
+    cut = partial(
+        extractor.extract_media, episode.video_file, temp_folder=out, audio_track_override=episode.audio_track_override
+    )
+    # Side by side, as a mine's media stage cuts. Not extract_media_batch: it keeps only
+    # the lines whose picture was cut, and a line here keeps whichever cut worked.
+    with ThreadPoolExecutor(max_workers=config.max_parallel_workers) as pool:
+        cuts = list(pool.map(cut, words))
+    rows = [
+        {
+            "line_start": raw[index][0],
+            "start": window.start,
+            "end": window.end,
+            "text": window.text,
+            "picture": _keep(made.screenshot_path, out, k),
+            "audio": _keep(made.audio_path, out, k),
+        }
+        for k, ((index, window), made) in enumerate(zip(chosen, cuts, strict=True), 1)
+    ]
     write_json(path, {"schema": 1, "run_id": episode.run_id, "lines": rows})
     return run_verdict(episode.run_id, file=path.name)
 
