@@ -59,8 +59,6 @@ class _StubStrategy:
 class _StubProvider:
     """Offline provider answering only the strategy's candidate text."""
 
-    is_online = False
-
     def __init__(self, hits: dict[str, str]) -> None:
         self.name = "stub"
         self._hits = hits

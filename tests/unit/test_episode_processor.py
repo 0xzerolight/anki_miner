@@ -4129,8 +4129,7 @@ class TestProcessYoutubeUrlCancelPropagation:
             return None
 
         provider = SimpleNamespace(
-            name="Jisho",
-            is_online=True,
+            name="Legacy",
             load=lambda: None,
             is_available=lambda: True,
             lookup=lookup,

@@ -815,7 +815,6 @@ class TestScanDefinitionGlossary:
 
         provider = SimpleNamespace(
             name="reading-aware",
-            is_online=False,
             load=lambda: None,
             is_available=lambda: True,
             lookup_many=lookup_many,
@@ -962,9 +961,7 @@ class TestScanDefinitionGlossary:
                 batches.append(name)
                 return {word: gloss for word, _reading in pairs if word == "蚊"}
 
-            return SimpleNamespace(
-                name=name, is_online=False, load=lambda: None, is_available=lambda: True, lookup_many=lookup_many
-            )
+            return SimpleNamespace(name=name, load=lambda: None, is_available=lambda: True, lookup_many=lookup_many)
 
         config = replace(backfill_config, language="yue")
         service = DefinitionService(config, [provider("cedict", "<mosquito>"), provider("canto", "<dollar>")])

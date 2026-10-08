@@ -17,14 +17,9 @@ NO_DICT_SNIPPET = "Cards will have no definitions"
 class _FakeProvider:
     """Minimal DictionaryProvider stand-in."""
 
-    def __init__(self, name: str, *, available: bool, online: bool) -> None:
+    def __init__(self, name: str, *, available: bool) -> None:
         self.name = name
         self._available = available
-        self._online = online
-
-    @property
-    def is_online(self) -> bool:
-        return self._online
 
     def is_available(self) -> bool:
         return self._available
@@ -61,7 +56,7 @@ def test_enabled_but_missing_dict_warns_no_dictionary(test_config):
 
 def test_built_but_unavailable_provider_warns_no_dictionary(test_config):
     config = _chain_config(test_config, ChainEntry(kind="indexed", dict_id="broken", enabled=True))
-    broken = _FakeProvider("broken", available=False, online=False)
+    broken = _FakeProvider("broken", available=False)
     load_result = _build(config, [broken])
     # PRESENCE assertion: "Skipping unavailable provider(s)" co-emits here.
     assert any(NO_DICT_SNIPPET in w for w in load_result.warnings)
@@ -69,7 +64,7 @@ def test_built_but_unavailable_provider_warns_no_dictionary(test_config):
 
 def test_available_offline_dict_no_warning(test_config):
     config = _chain_config(test_config, ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True))
-    dict_provider = _FakeProvider("JMdict", available=True, online=False)
+    dict_provider = _FakeProvider("JMdict", available=True)
     load_result = _build(config, [dict_provider])
     assert not any(NO_DICT_SNIPPET in w for w in load_result.warnings)
 

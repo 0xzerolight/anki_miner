@@ -89,8 +89,6 @@ def provider(tmp_path_factory) -> IndexedDictProvider:
 class _FakeProvider:
     """A minimal offline provider: answers only the terms it was given."""
 
-    is_online = False
-
     def __init__(self, name: str, rows: dict[str, list[tuple[str, str]]], *, raises: bool = False) -> None:
         self.name = name
         self._rows = rows
@@ -113,10 +111,6 @@ class _EmptyAnsweringProvider(_FakeProvider):
     def term_rows(self, terms: list[str]) -> dict[str, list[tuple[str, str]]]:
         self.seen.append(list(terms))
         return {term: [] for term in terms}
-
-
-class _OnlineProvider(_FakeProvider):
-    is_online = True
 
 
 def _service(*providers) -> DefinitionService:
@@ -231,21 +225,18 @@ def test_the_first_provider_that_answers_a_term_wins(provider):
     assert second.seen == []
 
 
-def test_an_online_provider_and_one_without_the_method_are_skipped(provider):
+def test_a_provider_without_the_method_is_skipped(provider):
     word = _surface("he01", 2)
 
     class _NoMethod:
-        is_online = False
         name = "no-method"
 
         def is_available(self) -> bool:
             return True
 
-    online = _OnlineProvider("online", {word: [("<p>net</p>", "n")]})
-    service = _service(online, _NoMethod(), provider)
+    service = _service(_NoMethod(), provider)
 
     assert service.offline_term_rows([word]) == {word: provider.term_rows([word])[word]}
-    assert online.seen == []
 
 
 def test_a_provider_that_raises_degrades_to_a_miss_and_the_walk_continues(provider):

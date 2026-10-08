@@ -23,8 +23,6 @@ from tests.conftest import build_processor
 class _Provider:
     """Offline dictionary: exact hits through ``lookup_many``, ladder hits through ``lookup_fallback``."""
 
-    is_online = False
-
     def __init__(self, name: str, exact: dict[str, str] | None = None, fallback: dict[str, str] | None = None):
         self.name = name
         self._exact = exact or {}
