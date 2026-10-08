@@ -21,7 +21,7 @@ def _fail_one(spec, qtbot, tmp_path, *, fatal=None, total=None):
     if fatal is not None:
         worker.fatal_exception = fatal
     finished = capture_slots(worker.file_finished)
-    _start_single_run(spec, tab, tmp_path, worker)
+    _start_single_run(spec, tab, tmp_path, worker, qtbot)
     if total is not None:
         # Folder runs are set up off-thread; the count is all this rule reads.
         tab._total_files = total
@@ -58,7 +58,7 @@ def test_retime_offers_alass_only_while_it_is_missing(qtbot, tmp_path):
     tab = _make_tab(_RETIME, qtbot, tmp_path)
     # Set, not probed: the probe's verdict lands on a queued callback.
     tab._alass_is_available = True
-    _start_single_run(_RETIME, tab, tmp_path, FakeToolWorker())
+    _start_single_run(_RETIME, tab, tmp_path, FakeToolWorker(), qtbot)
     tab.log_widget.append_error("exit status 1: first")
     assert tab.issue_banner().current_issue().action_text == ""
 
