@@ -8,8 +8,10 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+from PyQt6.QtWidgets import QWidget
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
+from anki_miner.gui.widgets.base import ScreenIssueHost
 from anki_miner.gui.widgets.panels.youtube_settings_panel import YouTubeSettingsPanel
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 
@@ -1431,6 +1433,112 @@ def test_a_known_words_dialog_opened_mid_rebuild_cannot_start_another(tab, monke
     tab._on_manage_known_words()
 
     assert offered == [False, True]
+
+
+class _IssueSurface(ScreenIssueHost, QWidget):
+    """Stands in for the open Known Words dialog: records what reaches its banner."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.issues: list[object] = []
+
+    def show_screen_issue(self, issue, *, action=None) -> None:
+        self.issues.append(issue)
+
+    def clear_screen_issue(self) -> None:
+        pass
+
+
+def test_the_known_words_dialog_hosts_its_own_rebuild(tab, monkeypatch):
+    """B3.7b: the confirm and any failure sat behind the modal Known Words dialog."""
+    from anki_miner.gui.widgets.dialogs import known_words_dialog
+
+    surfaces: list[object] = []
+
+    class _Recorder:
+        def __init__(self, *_a, **kwargs):
+            self._on_rebuild = kwargs["on_rebuild"]
+
+        def exec(self):
+            self._on_rebuild(lambda: None)
+            return 0
+
+    monkeypatch.setattr(known_words_dialog, "KnownWordsManagerDialog", _Recorder)
+    monkeypatch.setattr(tab, "_on_rebuild_known_words", lambda on_finished=None, surface=None: surfaces.append(surface))
+
+    tab._on_manage_known_words()
+
+    assert len(surfaces) == 1 and isinstance(surfaces[0], _Recorder)
+
+
+def test_a_rebuild_from_the_open_dialog_asks_and_reports_there(tab, monkeypatch, qtbot):
+    from PyQt6.QtWidgets import QMessageBox
+
+    surface = _IssueSurface()
+    qtbot.addWidget(surface)
+    surface.show()
+    parents: list[object] = []
+    monkeypatch.setattr(
+        QMessageBox, "question", lambda parent, *a, **k: parents.append(parent) or QMessageBox.StandardButton.Yes
+    )
+
+    class _Broken:
+        def __init__(self, *_a, **_kw):
+            raise OSError("database is locked")
+
+    monkeypatch.setattr("anki_miner.gui.widgets.settings_tab.KnownWordDB", _Broken)
+
+    tab._on_rebuild_known_words(surface=surface)
+
+    assert parents == [surface]
+    assert len(surface.issues) == 1
+    assert tab.issue_banner() is None or tab.issue_banner().current_issue() is None
+
+
+def test_a_rebuild_result_lands_on_the_dialog_while_it_is_open(tab, monkeypatch, qtbot):
+    from PyQt6.QtWidgets import QMessageBox
+
+    from anki_miner.gui.widgets import settings_tab as settings_tab_module
+
+    surface = _IssueSurface()
+    qtbot.addWidget(surface)
+    surface.show()
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
+    shown_on: list[object] = []
+    monkeypatch.setattr(QMessageBox, "information", lambda parent, *a, **k: shown_on.append(parent))
+    callbacks: list = []
+    monkeypatch.setattr(
+        settings_tab_module, "run_off_thread", lambda _owner, _work, ok, err, **k: callbacks.append((ok, err))
+    )
+
+    tab._on_rebuild_known_words(surface=surface)
+    on_done, on_error = callbacks[0]
+    on_done(3)
+    on_error("disk I/O error")
+
+    assert shown_on == [surface]
+    assert len(surface.issues) == 1
+
+
+def test_a_rebuild_error_after_the_dialog_closed_lands_on_the_tab(tab, monkeypatch, qtbot):
+    """A slow clear can outlive the dialog; a closed dialog's banner is never seen."""
+    from PyQt6.QtWidgets import QMessageBox
+
+    from anki_miner.gui.widgets import settings_tab as settings_tab_module
+
+    surface = _IssueSurface()
+    qtbot.addWidget(surface)
+    surface.show()
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
+    errors: list = []
+    monkeypatch.setattr(settings_tab_module, "run_off_thread", lambda _owner, _work, _ok, err, **k: errors.append(err))
+
+    tab._on_rebuild_known_words(surface=surface)
+    surface.hide()  # the user closed the dialog while the clear ran
+    errors[0]("disk I/O error")
+
+    assert surface.issues == []
+    assert tab.issue_banner().current_issue() is not None
 
 
 def test_pending_field_names_reports_a_dirty_save_panel_field(tab):
