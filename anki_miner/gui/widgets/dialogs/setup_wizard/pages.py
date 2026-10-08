@@ -288,7 +288,8 @@ class MiningLanguagePage(QWizardPage):
         self.language_combo = QComboBox()
         for choice in mining_language_choices():
             self._choices[choice.code] = choice
-            text = tr_format(self.tr("%1 (download)"), choice.label) if choice.needs_download else choice.label
+            name = choice.native_name
+            text = tr_format(self.tr("%1 (download)"), name) if choice.needs_download else name
             self.language_combo.addItem(text, choice.code)
         self.language_combo.currentIndexChanged.connect(self._on_language_changed)
         layout.addWidget(self.language_combo)

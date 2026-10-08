@@ -21,11 +21,11 @@ def _only(monkeypatch, codes, *, unavailable=(), downloadable=None):
     monkeypatch.setattr(language_choices, "_pack_download_mb", lambda code: (downloadable or {}).get(code))
 
 
-def test_labels_show_native_then_english(monkeypatch):
+def test_labels_show_only_the_native_name(monkeypatch):
     _only(monkeypatch, ("ja", "th", "en"))
     labels = dict(language_choices.available_mining_languages())
-    assert labels["th"] == "ไทย — Thai"
-    assert labels["ja"] == "日本語 — Japanese"
+    assert labels["th"] == "ไทย"
+    assert labels["ja"] == "日本語"
     assert labels["en"] == "English"
 
 

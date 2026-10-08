@@ -6,8 +6,9 @@ is the only import surface consumers use - ``languages/__init__.py`` stays
 sealed because ``profile.py`` imports ``services.resource_catalog`` at module
 level. A code is only offerable once ``get_profile`` builds, and a tokenizer
 extra can be absent from any build, so the selector resolves every code and
-drops what does not resolve rather than assuming. Labels read "native —
-English", sorted by English name with Japanese first (C18);
+drops what does not resolve rather than assuming. The list shows each
+language by its native name alone, sorted by English name with Japanese first
+(C18);
 :func:`mining_language_choices` adds the languages a pack download would
 unlock (D12).
 """
@@ -29,24 +30,18 @@ class MiningLanguageChoice:
 
     Attributes:
         code: The mining-language code.
-        label: "native — English" (the native name alone when both are equal).
-        native_name: The profile's own name for the language.
-        english_name: The English name; also what search matches.
+        native_name: The profile's own name for the language; what the list shows.
+        english_name: The English name. Not shown; settings search matches it.
         needs_download: True when the language can only be mined after its
             pack download (D12).
         download_mb: Size of that download (the pack plus any pack it needs).
     """
 
     code: str
-    label: str
     native_name: str
     english_name: str
     needs_download: bool = False
     download_mb: int = 0
-
-
-def _label(native: str, english: str) -> str:
-    return native if not english or english == native else f"{native} — {english}"
 
 
 def _pack_download_mb(code: str) -> int | None:
@@ -89,20 +84,20 @@ def mining_language_choices() -> tuple[MiningLanguageChoice, ...]:
         probe = profile.unavailable_reason
         reason = probe() if probe is not None else None
         if not reason:
-            choices.append(MiningLanguageChoice(profile.code, _label(native, english), native, english))
+            choices.append(MiningLanguageChoice(profile.code, native, english))
             continue
         download_mb = _pack_download_mb(code)
         if download_mb is None:
             logger.info("Mining language %r is not available here: %s", code, reason)
             continue
-        choices.append(MiningLanguageChoice(profile.code, _label(native, english), native, english, True, download_mb))
+        choices.append(MiningLanguageChoice(profile.code, native, english, True, download_mb))
     choices.sort(key=lambda choice: (choice.code != "ja", choice.english_name.casefold()))
     return tuple(choices)
 
 
 def available_mining_languages() -> tuple[tuple[str, str], ...]:
-    """``(code, "native — English")`` for every language that can be mined right now."""
-    return tuple((choice.code, choice.label) for choice in mining_language_choices() if not choice.needs_download)
+    """``(code, native name)`` for every language that can be mined right now."""
+    return tuple((choice.code, choice.native_name) for choice in mining_language_choices() if not choice.needs_download)
 
 
 def mining_language_display_name(code: str) -> str:

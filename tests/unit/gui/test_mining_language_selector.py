@@ -99,10 +99,10 @@ def test_a_missing_required_package_drops_the_language(monkeypatch):
     assert [code for code, _name in language_choices.available_mining_languages()] == ["ja", "he", "id"]
 
 
-def test_offered_languages_carry_native_and_english_names():
+def test_offered_languages_carry_only_their_native_names():
     names = dict(language_choices.available_mining_languages())
-    assert names["ja"] == "日本語 — Japanese"
-    assert names["zh"] == "中文 — Chinese"
+    assert names["ja"] == "日本語"
+    assert names["zh"] == "中文"
 
 
 def test_the_panel_builds_and_lists_only_buildable_languages(qtbot, test_config):
@@ -204,7 +204,7 @@ def test_a_language_needing_a_download_is_listed_with_a_suffix(qtbot, test_confi
     combo = _panel(qtbot, test_config).mining_language_combo
     index = combo.findData("de")
     assert index >= 0
-    assert combo.itemText(index) == "Deutsch — German (download)"
+    assert combo.itemText(index) == "Deutsch (download)"
 
 
 def test_picking_it_offers_the_download_instead_of_switching(qtbot, test_config, german_downloadable):

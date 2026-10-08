@@ -340,7 +340,7 @@ def test_a_config_naming_an_unofferable_language_is_left_alone(monkeypatch, wiza
     from anki_miner.gui.utils.language_choices import MiningLanguageChoice
 
     monkeypatch.setattr(
-        wizard_pages, "mining_language_choices", lambda: (MiningLanguageChoice("ja", "日本語", "日本語", "日本語"),)
+        wizard_pages, "mining_language_choices", lambda: (MiningLanguageChoice("ja", "日本語", "日本語"),)
     )
     zh_config = switch_language(test_config, "zh")
     wiz = wizard_factory(zh_config)
@@ -396,8 +396,8 @@ def _choices_with_a_download(monkeypatch):
     from anki_miner.gui.utils.language_choices import MiningLanguageChoice
 
     choices = (
-        MiningLanguageChoice("ja", "日本語 — Japanese", "日本語", "Japanese"),
-        MiningLanguageChoice("de", "Deutsch — German", "Deutsch", "German", True, 70),
+        MiningLanguageChoice("ja", "日本語", "Japanese"),
+        MiningLanguageChoice("de", "Deutsch", "German", True, 70),
     )
     monkeypatch.setattr(wizard_pages, "mining_language_choices", lambda: choices)
 
@@ -419,7 +419,7 @@ def test_a_language_needing_a_download_is_offered_with_a_suffix(qtbot, monkeypat
     wiz, _tasks = _wizard_with_tasks(qtbot, monkeypatch, test_config)
     combo = wiz.language_page.language_combo
 
-    assert combo.itemText(combo.findData("de")) == "Deutsch — German (download)"
+    assert combo.itemText(combo.findData("de")) == "Deutsch (download)"
     _pick(wiz.language_page, "de")
     # The name is wrapped in Unicode isolates so an Arabic name cannot turn
     # the English sentence right-to-left.

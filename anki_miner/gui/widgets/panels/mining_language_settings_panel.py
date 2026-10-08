@@ -214,7 +214,8 @@ class MiningLanguageSettingsPanel(FormPanel):
         try:
             combo.clear()
             for choice in self._choices_by_code.values():
-                label = tr_format(self.tr("%1 (download)"), choice.label) if choice.needs_download else choice.label
+                name = choice.native_name
+                label = tr_format(self.tr("%1 (download)"), name) if choice.needs_download else name
                 combo.addItem(label, choice.code)
             index = combo.findData(current)
             if index >= 0:
