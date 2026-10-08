@@ -61,6 +61,33 @@ def test_parse_run_file_rejects(tmp_path: Path, mutate) -> None:
     assert err.value.code == "BAD_RUN_FILE"
 
 
+@pytest.mark.parametrize("run_id", ["CON", "con", "Nul", "aux", "PRN", "COM1", "com9", "LPT1", "lpt9"])
+def test_a_windows_device_name_is_not_a_run_id(tmp_path: Path, run_id: str) -> None:
+    with pytest.raises(ApiError, match="device name") as err:
+        files.parse_run_file(_run_file(tmp_path, run_id=run_id))
+    assert err.value.code == "BAD_RUN_FILE"
+
+
+@pytest.mark.parametrize("run_id", ["CON1", "COM10", "console", "nul-1", "lpt"])
+def test_names_that_only_start_like_a_device_are_run_ids(tmp_path: Path, run_id: str) -> None:
+    assert files.parse_run_file(_run_file(tmp_path, run_id=run_id)).episodes[0].run_id == run_id
+
+
+def test_run_ids_differing_only_in_case_share_a_folder(tmp_path: Path) -> None:
+    run = _run_file(tmp_path, run_id="Ep-01")
+    run["episodes"].append({**run["episodes"][0], "run_id": "ep-01"})
+    with pytest.raises(ApiError, match="share a run_id"):
+        files.parse_run_file(run)
+    media = _media()
+    media["episodes"].append({**media["episodes"][0], "run_id": "E"})
+    with pytest.raises(ApiError, match="share a run_id"):
+        files.parse_media_file(media)
+    fetch = _fetch_file(tmp_path)
+    fetch["episodes"].append({**fetch["episodes"][0], "run_id": "YT-1"})
+    with pytest.raises(ApiError, match="share a run_id"):
+        files.parse_fetch_file(fetch)
+
+
 def test_subtitle_offset_left_out_or_null_is_zero(tmp_path: Path) -> None:
     for data in (_run_file(tmp_path), _run_file(tmp_path, subtitle_offset=None)):
         assert files.parse_run_file(data).episodes[0].subtitle_offset == 0.0

@@ -14,6 +14,10 @@ from anki_miner.utils.youtube_url import classify_youtube_url
 
 MAX_FILE_BYTES = 8 * 1024 * 1024
 _RUN_ID = re.compile(r"[A-Za-z0-9_-]{1,64}")
+#: Names Windows keeps for devices, in any case and with any extension (a run_id has none): no folder can have one.
+_DEVICE_NAMES = frozenset(
+    {"CON", "PRN", "AUX", "NUL", *(f"{port}{n}" for port in ("COM", "LPT") for n in range(1, 10))}
+)
 _UNREADABLE = object()
 
 _EPISODE_KEYS = frozenset(
@@ -124,7 +128,15 @@ def _run_id(value: object, where: str) -> str:
     run_id = _str(value, where)
     if not _RUN_ID.fullmatch(run_id):
         raise _bad(f"{where} may hold only letters, digits, '-' and '_' (at most 64).")
+    if run_id.upper() in _DEVICE_NAMES:
+        raise _bad(f"{where} is a Windows device name, which cannot name a folder: {run_id}")
     return run_id
+
+
+def _unique_run_ids(run_ids: list[str]) -> None:
+    """Each episode its own folder: run_ids differing only in letter case share one on Windows and macOS."""
+    if len({run_id.casefold() for run_id in run_ids}) != len(run_ids):
+        raise _bad("Two episodes share a run_id (letter case aside).")
 
 
 def _abs(value: str) -> Path:
@@ -261,9 +273,7 @@ def parse_run_file(data: object) -> RunFile:
     if not isinstance(raw_episodes, list) or not raw_episodes:
         raise _bad("episodes must be a non-empty list.")
     episodes = tuple(parse_episode(raw, f"episodes[{i}]") for i, raw in enumerate(raw_episodes))
-    ids = [episode.run_id for episode in episodes]
-    if len(set(ids)) != len(ids):
-        raise _bad("Two episodes share a run_id.")
+    _unique_run_ids([episode.run_id for episode in episodes])
     return RunFile(
         run_dir=_run_dir(obj["run_dir"]),
         profile=_opt_str(obj.get("profile"), "profile"),
@@ -346,8 +356,7 @@ def parse_media_file(data: object) -> MediaFile:
                 lines=tuple(_line_request(line, f"{where}.lines[{j}]") for j, line in enumerate(raw_lines)),
             )
         )
-    if len({e.run_id for e in episodes}) != len(episodes):
-        raise _bad("Two episodes share a run_id.")
+    _unique_run_ids([episode.run_id for episode in episodes])
     return MediaFile(
         run_dir=_run_dir(obj["run_dir"]),
         profile=_opt_str(obj.get("profile"), "profile"),
@@ -402,9 +411,7 @@ def parse_fetch_file(data: object) -> FetchFile:
     if not isinstance(raw_episodes, list) or not raw_episodes:
         raise _bad("episodes must be a non-empty list.")
     episodes = tuple(_fetch_episode(raw, f"episodes[{i}]") for i, raw in enumerate(raw_episodes))
-    ids = [episode.run_id for episode in episodes]
-    if len(set(ids)) != len(ids):
-        raise _bad("Two episodes share a run_id.")
+    _unique_run_ids([episode.run_id for episode in episodes])
     return FetchFile(
         run_dir=_run_dir(obj["run_dir"]),
         profile=_opt_str(obj.get("profile"), "profile"),

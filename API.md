@@ -62,7 +62,7 @@ A dry run, `render` and `media` take no lock.
 
 ## The run folder
 
-`run_dir` must exist. Each episode uses `<run_dir>/<run_id>/`; a `run_id` is 1 to 64 letters, digits, `-` and `_`. Files Anki Miner writes are UTF-8 without a BOM and are replaced atomically; the run, media, fetch and settings files it reads may start with one.
+`run_dir` must exist. Each episode uses `<run_dir>/<run_id>/`; a `run_id` is 1 to 64 letters, digits, `-` and `_`, other than a Windows device name (`CON`, `PRN`, `AUX`, `NUL`, `COM1` to `COM9`, `LPT1` to `LPT9`, in any letter case). The run_ids of one file must differ in more than letter case. Files Anki Miner writes are UTF-8 without a BOM and are replaced atomically; the run, media, fetch and settings files it reads may start with one.
 
 | File | Written by | Content |
 |---|---|---|
