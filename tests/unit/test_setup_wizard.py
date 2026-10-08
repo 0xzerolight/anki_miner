@@ -1298,7 +1298,7 @@ def test_the_first_field_fallback_never_takes_a_field_already_mapped(qtbot, wiz_
 
 
 def test_notetype_page_fetch_stages_fields(qtbot, wiz_config):
-    """Auto-Map must stage the mapped anki_fields (plain dict) into the working config."""
+    """Filling the fields on fetch stages the mapped anki_fields (plain dict) into the working config."""
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 
     wiz = SetupWizard(wiz_config)
@@ -1587,7 +1587,7 @@ def test_auto_map_uses_sanitized_base_and_preserves_valid_manual_fields(qtbot, w
 
 
 def _auto_map(qtbot, config, field_names):
-    """Run Auto-Map on a note type with ``field_names`` and return (config, page)."""
+    """Fetch ``field_names`` for a note type, which fills its fields; return (config, page)."""
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 
     wiz = SetupWizard(replace(config, anki_note_type="Mining"))
@@ -1682,7 +1682,7 @@ def test_a_deck_anki_lacks_is_listed_and_explained(qtbot, wiz_config):
     ("language", "note_type"),
     [
         pytest.param("ja", "", id="ja-nothing-chosen"),
-        pytest.param("zh", "", id="zh-nothing-chosen"),
+        # zh nothing-chosen is test_other_languages_get_the_any_note_type_guidance.
         # An upgrade keeps a saved Lapis that this Anki lacks: the same help.
         pytest.param("ja", "Lapis", id="ja-missing-lapis"),
     ],
@@ -1724,9 +1724,13 @@ def test_other_languages_get_the_any_note_type_guidance(qtbot, wiz_config):
     page._on_notetypes_fetched(["Basic"])
 
     assert page.current_note_type() == ""
+    assert page.isComplete() is False
     text = page.guidance_label.text()
     assert page.guidance_label.isVisibleTo(page)
     assert "Any note type works once its fields are mapped" in text
+    assert f'href="{pages_mod.ANKI_MINER_NOTE_RELEASES_URL}"' in text
+    assert "File → Import" in text
+    assert "Lapis" not in text
     # The keyword pass is the wizard's only mapper: say what it recognises and
     # the manual route for any other naming, without telling the user to build
     # or rename a note type (owner's D10 note).

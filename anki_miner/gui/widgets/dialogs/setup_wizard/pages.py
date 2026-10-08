@@ -1236,7 +1236,7 @@ class NoteTypePage(_WizardSection):
             self._wizard.update_working_config(sanitized_config)
             self.completeChanged.emit()
 
-    # --- auto-map ---
+    # --- auto-fill on fetch ---
 
     def _apply_preset(self, preset: NotePreset, extra_fields: Mapping[str, str]) -> None:
         """Stage ``preset``'s whole answer (fields, pitch format, card markers) onto the working config.
