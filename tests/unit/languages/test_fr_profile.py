@@ -141,6 +141,7 @@ def test_the_default_is_still_the_string_french_users_saved():
         ("JEAN\u202f: Bonjour\u202f!", "Bonjour\u202f!"),
         ("NARRATEUR\u00a0: Il était une fois.", "Il était une fois."),
         ("M.\u00a0DUPONT\u00a0: Entrez.", "Entrez."),
+        ("JEAN\u00a0\u00a0: Bonjour\u202f!", "Bonjour\u202f!"),  # a doubled NBSP is one gap, as a doubled space is
         ("Oui [rire]\u00a0!", "Oui\u00a0!"),  # the deletion's space and the NBSP: one no-break space, no double gap
         ("Attention\u202f: le train part\u00a0!", "Attention\u202f: le train part\u00a0!"),  # mixed case is dialogue
     ],
