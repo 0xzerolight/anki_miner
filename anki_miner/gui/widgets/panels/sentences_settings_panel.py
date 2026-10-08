@@ -187,7 +187,7 @@ class SentencesSettingsPanel(FormPanel):
             1,
             self.tr(
                 "Mines at most one word per example sentence — the first one found in that sentence. "
-                "Every other word sharing it is skipped."
+                "Every other word sharing it is skipped. Whitelisted words are still mined."
             ),
             Qt.ItemDataRole.ToolTipRole,
         )
@@ -195,7 +195,8 @@ class SentencesSettingsPanel(FormPanel):
         self.sentence_rule_combo.setItemData(
             2,
             self.tr(
-                "Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication."
+                "Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence "
+                "deduplication. Whitelisted words are still mined."
             ),
             Qt.ItemDataRole.ToolTipRole,
         )

@@ -335,7 +335,10 @@ class FilteringSettingsPanel(FormPanel):
         self.add_field(
             self.tr("Blacklist File"),
             self.blacklist_selector,
-            helper=self.tr("Text file with one word per line to always skip. Leave empty to skip nothing."),
+            helper=self.tr(
+                "Text file with one word per line to skip. Whitelisted words are still mined. "
+                "Leave empty to skip nothing."
+            ),
             anchor_text=lambda: ("Enable Blacklist",),
         )
 
