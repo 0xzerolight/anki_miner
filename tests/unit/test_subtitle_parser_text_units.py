@@ -72,8 +72,8 @@ class TestParseTextUnits:
         assert len(unit_words) > 0
         assert [_strip_timing(w) for w in unit_words] == [_strip_timing(w) for w in sub_words]
 
-    def test_counter_parity_with_count_lemmas_including_dropped_synthetic(self, test_config, tmp_path):
-        """Counter equals count_lemmas on shared text, and a span-dropped compound
+    def test_counter_parity_with_count_fronts_including_dropped_synthetic(self, test_config, tmp_path):
+        """Counter equals count_fronts on shared text, and a span-dropped compound
         synthetic is counted in neither (the T-38 mine-vs-count drop-rule gate)."""
         text = "本を読む"
         tokens = [
@@ -100,7 +100,7 @@ class TestParseTextUnits:
             service = SubtitleParserService(test_config)
 
         with patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs):
-            expected = service.count_lemmas(sub_file)
+            expected = service.count_fronts(sub_file)
 
         units = [ReadingUnit(text=text, index=0, location_label="p.0")]
         _words, _index, counter = service.parse_text_units(units, want_line_index=False)
@@ -254,8 +254,9 @@ class TestParseTextUnitsSubtitleCleanup:
 
         off_words, _oi, off_counts = service.parse_text_units(units, want_line_index=False)
         # Attest the misparse the strip fixes: furigana splits 腑抜け and leaks.
+        # The Counter keys on card fronts: the split's verb half is 抜る (lemma 抜ける).
         assert "腑抜け" not in off_counts
-        assert "腑" in off_counts and "抜ける" in off_counts
+        assert "腑" in off_counts and "抜る" in off_counts
         assert all("(" in w.sentence for w in off_words)
 
         on_words, _i, on_counts = service.parse_text_units(units, want_line_index=False, subtitle_cleanup=True)
@@ -357,3 +358,41 @@ class TestReadingPathDecorationStrip:
         units2 = [ReadingUnit(text="通常兵器　その他", index=0, location_label="p.0")]
         words2, _i, _c = service.parse_text_units(units2, want_line_index=False)
         assert any("　" in w.sentence for w in words2)
+
+
+class TestCountFronts:
+    """count_fronts: count_lemmas' occurrences keyed by card front (audit L3-005), under the
+    T-38 parity: same span locator, same mine gate, same identity as emission."""
+
+    LINES = ["人生を賭ける。"] + [f"電話を掛ける{'!' * n}" for n in range(1, 6)]
+
+    @staticmethod
+    def _service(tmp_path):
+        return SubtitleParserService(AnkiMinerConfig(media_temp_folder=tmp_path / "media"))
+
+    def test_counts_each_card_front_not_its_lemma(self, tmp_path):
+        service = self._service(tmp_path)
+        srt = _write_srt(tmp_path / "kakeru.srt", self.LINES)
+
+        counts = service.count_fronts(srt)
+
+        assert (counts["賭ける"], counts["掛ける"]) == (1, 5)
+        assert service.count_lemmas(srt)["掛ける"] == 6  # Deck Builder's lemma count is unchanged
+
+    def test_keys_are_the_mined_fronts_and_the_total_matches_count_lemmas(self, tmp_path):
+        service = self._service(tmp_path)
+        srt = _write_srt(tmp_path / "parity.srt", [*self.LINES, "猫が魚を食べる", "犬も魚を食べた"])
+
+        counts = service.count_fronts(srt)
+
+        assert set(counts) == {word.mined_form for word in service.parse_subtitle_file(srt)}
+        assert sum(counts.values()) == sum(service.count_lemmas(srt).values())
+
+    def test_text_units_counter_equals_count_fronts(self, tmp_path):
+        service = self._service(tmp_path)
+        srt = _write_srt(tmp_path / "units.srt", self.LINES)
+        units = [ReadingUnit(text=text, index=i, location_label=f"p.{i}") for i, text in enumerate(self.LINES)]
+
+        _words, _index, counter = service.parse_text_units(units, want_line_index=False)
+
+        assert counter == service.count_fronts(srt)

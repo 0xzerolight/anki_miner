@@ -2628,8 +2628,18 @@ class EpisodeProcessor:
                 unknown_fronts=ctx.unknown_fronts | {w.mined_form for w in unknown_words},
             )
         # Attach per-run occurrence counts for the curator's "Occurrences"
-        # column/sort (Issue #88).
-        self.word_filter.attach_occurrence_counts(unknown_words, occurrence_counts)
+        # column/sort (Issue #88). They are per card front, and a spelling the
+        # collapse merged into another card is that card's: its count moves to
+        # the winner (moved, not copied, so the filter's fold restating cannot
+        # credit a fold-twin twice).
+        column_counts: Mapping[str, int] = occurrence_counts
+        if self.last_collapsed:
+            merged = dict(occurrence_counts)
+            for loser, winner in self.last_collapsed:
+                count = merged.pop(loser.mined_form, 0)
+                merged[winner] = merged.get(winner, 0) + count
+            column_counts = merged
+        self.word_filter.attach_occurrence_counts(unknown_words, column_counts)
         # Where each word sits in the source, for the curator's Position column
         # (Issue #129) — the same string the card's Source field will carry.
         # After the candidates, which it stamps too.
@@ -3121,12 +3131,12 @@ class EpisodeProcessor:
                 ctx.new_words_found = len(unknown_words)
 
             if curation_callback is not None and fixed_subset is None:
-                # count_lemmas reuses the phase-1 parse cache, so no second MeCab pass.
+                # count_fronts reuses the phase-1 parse cache, so no second MeCab pass.
                 outcome = self._run_curation(
                     ctx,
                     unknown_words,
                     line_index,
-                    self.subtitle_parser.count_lemmas(subtitle_file),
+                    self.subtitle_parser.count_fronts(subtitle_file),
                     curation_callback,
                 )
                 if isinstance(outcome, ProcessingResult):

@@ -1017,63 +1017,60 @@ class WordFilterService:
             word.sentence_candidates = [self._swap_word_to_line(word, line) for line in lines]
 
     def _counts_for_words(self, words: list[TokenizedWord], counts: Mapping[str, int]) -> Mapping[str, int]:
-        """Lemma→count mapping restated over the lemmas ``words`` were mined under.
+        """Card-front→count mapping restated over the fronts ``words`` were mined under.
 
-        The parser counts every occurrence under the lemma it saw, but a
-        spelling the fold merges away never becomes a word of its own: under the
-        zh script fold 頭髮 and 头发 are one word, so mixed-script material split
-        that word's occurrences across two keys and a lookup read only one of
-        them — the curator under-reported and the reading occurrence floor
-        dropped words that had cleared it.
+        The parser counts every occurrence under the card front it mines
+        (``count_fronts`` / ``parse_text_units``, the T-38 parity), so a card is
+        never credited with a lemma-sibling's lines: UniDic files 賭ける under
+        掛ける's lemma, and they are two cards (audit L3-005).
 
-        A mined lemma therefore keeps its OWN count and collects the counts of
-        spellings that fold onto it only when it is the ONLY mined lemma with
-        that key. Summing the fold outright would double the corpus wherever
-        the run kept both spellings as separate cards (Character Set = As
-        written): each card would report the pair's total, and two cards that
-        occur three times and once would both claim four. Two mined spellings
-        can share a key without either being the other's (裏面 and 裡面 both
-        fold to 里面), and crediting an unmined third spelling to both is that
-        same double count one step further out — so it goes to neither.
+        A spelling the language's fold merges can still arrive under a front of
+        its own: zh As written cards 頭髮 and 头发 apart, and 裏面 and 裡面 both
+        fold to 里面. A mined front therefore keeps its OWN count and collects
+        the counts of spellings that fold onto it only when it is the ONLY mined
+        front with that key. Summing the fold outright would double the corpus
+        wherever the run kept both spellings as separate cards: each card would
+        report the pair's total, and two cards that occur three times and once
+        would both claim four. Crediting an unmined third spelling to two mined
+        ones is that same double count one step further out, so it goes to
+        neither.
 
-        Folding happens HERE and never at the count site
-        (``count_lemmas``/``parse_text_units``): the curator dialog's
-        "Occurrences" column (``EpisodeProcessor._run_curation``) reads those
-        Counter keys straight, unfolded. A language with no fold (ja/ko) gets
-        its own mapping back untouched.
+        Folding happens HERE and never at the count site: the Counter keys stay
+        the unfolded fronts. A language with no fold (ja/ko) gets its own
+        mapping back untouched.
         """
         fold = self._dedup_fold
         if fold is None:
             return counts
-        mined = {word.lemma for word in words}
-        # The one mined lemma holding each key, or None where two of them do.
+        mined = {word.mined_form for word in words}
+        # The one mined front holding each key, or None where two of them do.
         owner: dict[str, str | None] = {}
-        for lemma in mined:
-            key = fold(lemma)
-            owner[key] = None if key in owner else lemma
+        for front in mined:
+            key = fold(front)
+            owner[key] = None if key in owner else front
         credit: dict[str, int] = {}
-        for lemma, count in counts.items():
-            if lemma in mined:
+        for front, count in counts.items():
+            if front in mined:
                 continue
-            claimant = owner.get(fold(lemma))
+            claimant = owner.get(fold(front))
             if claimant is not None:
                 credit[claimant] = credit.get(claimant, 0) + count
         if not credit:
             return counts
-        return {lemma: counts.get(lemma, 0) + credit.get(lemma, 0) for lemma in mined}
+        return {front: counts.get(front, 0) + credit.get(front, 0) for front in mined}
 
     def attach_occurrence_counts(self, words: list[TokenizedWord], counts: Mapping[str, int]) -> None:
-        """Set ``word.occurrence_count`` from in-episode lemma counts (Issue #88).
+        """Set ``word.occurrence_count`` from in-document card-front counts (Issue #88).
 
-        ``counts`` is a lemma→occurrences mapping (e.g. the Counter from
-        ``SubtitleParserService.count_lemmas``), restated over the mined lemmas
-        first, so a word that merged two spellings gets the sum of both (see
-        :meth:`_counts_for_words`). Lemmas absent from the mapping get 0.
+        ``counts`` maps card front → occurrences (``SubtitleParserService.count_fronts``
+        or ``parse_text_units``), restated over the mined fronts first, so a word
+        whose spellings fold together gets the sum of both (see
+        :meth:`_counts_for_words`). Fronts absent from the mapping get 0.
         Mutates ``words`` in place; display/sort-only data for the curator.
         """
         counts = self._counts_for_words(words, counts)
         for word in words:
-            word.occurrence_count = counts.get(word.lemma, 0)
+            word.occurrence_count = counts.get(word.mined_form, 0)
 
     def attach_line_unknown_counts(
         self,
@@ -1127,15 +1124,18 @@ class WordFilterService:
         """The Reading occurrence floor (``reading_min_occurrence``).
 
         Only keeps words that occur at least `min_appearances` times in the
-        document. Counts are restated over the mined lemmas the same way
+        document. Counts are restated over the mined card fronts the same way
         :meth:`attach_occurrence_counts` restates them for the curator's
-        Occurrences column — the floor must not drop a word the column says
-        cleared it. (The parameter names predate the floor: they served the
-        removed cross-episode filter.)
+        Occurrences column. The floor runs in phase 2, before the within-run
+        collapse knows dictionary identities, so a word written two ways that
+        the collapse later merges (よそ見 / 余所見) is judged per spelling; the
+        column, read after the collapse, shows the merged card the sum. (The
+        parameter names predate the floor: they served the removed
+        cross-episode filter.)
 
         Args:
             words: List of words to filter.
-            cross_episode_counts: Mapping of lemma to occurrences in the document.
+            cross_episode_counts: Mapping of card front to occurrences in the document.
             min_appearances: Minimum number of occurrences a word must have.
 
         Returns:
@@ -1145,4 +1145,4 @@ class WordFilterService:
             return words
 
         counts = self._counts_for_words(words, cross_episode_counts)
-        return [word for word in words if counts.get(word.lemma, 0) >= min_appearances]
+        return [word for word in words if counts.get(word.mined_form, 0) >= min_appearances]

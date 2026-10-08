@@ -2662,7 +2662,7 @@ class TestWhitelistForceInclude:
 
         # A curation callback makes phase 1 take the with-index parse.
         mock_services["subtitle_parser"].parse_subtitle_file_with_index.return_value = ([word], [])
-        mock_services["subtitle_parser"].count_lemmas.return_value = {}
+        mock_services["subtitle_parser"].count_fronts.return_value = {}
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
 
         services = {**mock_services, "word_filter": WordFilterService(config)}
@@ -2688,7 +2688,7 @@ class TestWhitelistForceInclude:
 
         # A curation callback makes phase 1 take the with-index parse.
         mock_services["subtitle_parser"].parse_subtitle_file_with_index.return_value = ([taberu, nomu], [])
-        mock_services["subtitle_parser"].count_lemmas.return_value = {}
+        mock_services["subtitle_parser"].count_fronts.return_value = {}
         mock_services["anki_service"].get_existing_vocabulary.return_value = {nomu.mined_form}
 
         services = {**mock_services, "word_filter": WordFilterService(config)}
@@ -7584,6 +7584,71 @@ class TestCollapseAfterCueMerge:
         ]
 
         assert self._mined(config, mock_services, tmp_path, words, entries) == ["よそ見"]
+
+
+class TestCuratorOccurrencesKeyOnCardFront:
+    """Audit L3-005: the video path's Occurrences column reads count_fronts, so a card is not
+    credited with its UniDic lemma-sibling's lines (賭ける and 掛ける share the lemma 掛ける)."""
+
+    @staticmethod
+    def _verb(front: str, start: float) -> TokenizedWord:
+        return TokenizedWord(
+            surface=front, lemma="掛ける", orth_base=front, reading="カケル", sentence=f"{front}。",
+            start_time=start, end_time=start + 1.0, duration=1.0, pos="動詞", mined_form_override=front,
+        )  # fmt: skip
+
+    @staticmethod
+    def _noun(surface: str, sentence: str, start: float) -> TokenizedWord:
+        return TokenizedWord(
+            surface=surface, lemma="余所見", reading="ヨソミ", sentence=sentence,
+            start_time=start, end_time=start + 1.0, duration=1.0, pos="名詞",
+        )  # fmt: skip
+
+    @staticmethod
+    def _curated(test_config, mock_services, tmp_path, words, *, identities=None):
+        mock_services["subtitle_parser"].parse_subtitle_file_with_index.return_value = (list(words), [])
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        ds = mock_services["definition_service"]
+        ds.has_offline_definitions.side_effect = lambda forms: dict.fromkeys(forms, True)
+        ds.offline_term_identities.side_effect = lambda pairs: identities(pairs) if identities else {}
+        services = {**mock_services, "word_filter": WordFilterService(test_config)}
+        processor = build_processor(config=test_config, presenter=NullPresenter(), **services)
+        seen: dict[str, int] = {}
+
+        def curate(curated):
+            seen.update({word.mined_form: word.occurrence_count for word in curated})
+            return None
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", curation_callback=curate)
+        return seen
+
+    def test_curator_sees_each_cards_own_count(self, test_config, mock_services, tmp_path):
+        sp = mock_services["subtitle_parser"]
+        sp.count_lemmas.return_value = {"掛ける": 6}
+        sp.count_fronts.return_value = {"賭ける": 1, "掛ける": 5}
+        words = [self._verb("賭ける", 1.0), self._verb("掛ける", 5.0)]
+
+        seen = self._curated(test_config, mock_services, tmp_path, words)
+
+        assert seen == {"賭ける": 1, "掛ける": 5}
+
+    def test_a_collapsed_alias_counts_toward_the_card_it_merged_into(self, test_config, mock_services, tmp_path):
+        """Judge F1: よそ見 and 余所見 are one dictionary word; the collapse keeps よそ見, so its
+        column shows both spellings' lines (2 + 3), as the lemma count did before L3-005."""
+        sp = mock_services["subtitle_parser"]
+        sp.count_lemmas.return_value = {"余所見": 5}
+        sp.count_fronts.return_value = {"よそ見": 2, "余所見": 3}
+        words = [self._noun("よそ見", "よそ見だ。", 1.0), self._noun("余所見", "余所見するな。", 5.0)]
+
+        seen = self._curated(
+            test_config,
+            mock_services,
+            tmp_path,
+            words,
+            identities=lambda pairs: {pair: {("jmdict", 1, "よそみ")} for pair in pairs},
+        )
+
+        assert seen == {"よそ見": 5}
 
 
 class TestSeasonMinePass:

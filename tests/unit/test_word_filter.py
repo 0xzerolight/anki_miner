@@ -1483,12 +1483,12 @@ class TestAttachSentenceCandidates:
 class TestAttachOccurrenceCounts:
     """Tests for WordFilterService.attach_occurrence_counts (Issue #88)."""
 
-    def test_sets_counts_keyed_by_lemma(self, test_config):
+    def test_sets_counts_keyed_by_card_front(self, test_config):
         service = WordFilterService(test_config)
-        # Noun: mined_form is surface, but the count keys on lemma.
+        # Noun: mined_form is the surface ネコ, and the count keys on it, not on the lemma 猫.
         words = [create_word("食べる"), create_word("猫", surface="ネコ", pos="名詞")]
 
-        service.attach_occurrence_counts(words, {"食べる": 15, "猫": 3})
+        service.attach_occurrence_counts(words, {"食べる": 15, "ネコ": 3, "猫": 99})
 
         assert words[0].occurrence_count == 15
         assert words[1].occurrence_count == 3
@@ -1511,8 +1511,8 @@ class TestAttachOccurrenceCounts:
 
         assert word.occurrence_count == 2
 
-    def test_a_language_without_a_fold_keys_on_the_raw_lemma(self, test_config):
-        """No ``dedup_fold`` (ja/ko): two spellings stay two keys, as before."""
+    def test_a_language_without_a_fold_keys_on_the_raw_front(self, test_config):
+        """No ``dedup_fold`` (ja/ko): two spellings stay two keys."""
         service = WordFilterService(test_config)
         word = create_word("頭髮")
 
@@ -1527,8 +1527,8 @@ class TestOccurrenceCountsFoldToWordIdentity:
     The parser counts each spelling under the lemma it saw, while the script
     fold makes 頭髮 and 头发 one word — so mixed-script material split that
     word's occurrences across two keys and only one of them was ever read. The
-    counts themselves stay keyed on the raw lemma; the restating is per mined
-    word, and a spelling two mined words share belongs to neither.
+    counts are keyed on the card front each Character Set writes; the restating
+    is per mined word, and a spelling two mined words share belongs to neither.
     """
 
     UNITS = ("她的頭髮很長。", "他的头发很短。", "頭髮還是頭髮。")
@@ -1569,12 +1569,13 @@ class TestOccurrenceCountsFoldToWordIdentity:
 
         assert any(word is self._hair(words) for word in kept)
 
-    def test_the_corpus_counter_itself_stays_unfolded(self, test_config):
-        """The curator's Occurrences column reads these keys straight, unfolded."""
-        _config, _words, counts = self._parse(test_config, "simplified")
+    def test_the_counter_keys_on_the_front_each_character_set_writes(self, test_config):
+        """Simplified cards both spellings as 头发; As written keeps 頭髮 and 头发 apart, unfolded."""
+        _config, _words, simplified = self._parse(test_config, "simplified")
+        _config, _words, as_written = self._parse(test_config, "")
 
-        assert counts["頭髮"] == 3
-        assert counts["头发"] == 1
+        assert simplified["头发"] == 4 and "頭髮" not in simplified
+        assert (as_written["頭髮"], as_written["头发"]) == (3, 1)
 
     @staticmethod
     def _both_spellings(words):
@@ -1617,6 +1618,49 @@ class TestOccurrenceCountsFoldToWordIdentity:
         kept = self._service(config).filter_by_episode_count(words, dict(counts), min_appearances=2)
 
         assert [word.mined_form for word in kept if word.mined_form in ("头发", "頭髮")] == ["頭髮"]
+
+
+class TestOccurrenceCountsKeyOnCardFront:
+    """Audit L3-005 (P4): the Reading floor and the curator's Occurrences column judge a card,
+    so they count its own front. UniDic files 賭ける under 掛ける's lemma (golden
+    variant-kakeru); a lemma count credited the one-off 賭ける with 掛ける's five lines."""
+
+    LINES = ["人生を賭ける。"] + [f"電話を掛ける{'!' * n}" for n in range(1, 6)]
+
+    def _parse(self, test_config):
+        config = dataclasses.replace(test_config, language="ja")
+        parser = get_profile("ja").create_parser(config)
+        units = [ReadingUnit(text=text, index=i, location_label=f"p.{i}") for i, text in enumerate(self.LINES)]
+        words, _index, counts = parser.parse_text_units(units, False)
+        by_front = {w.mined_form: w for w in words}
+        assert by_front["賭ける"].lemma == by_front["掛ける"].lemma == "掛ける"  # golden variant-kakeru
+        return config, [by_front["賭ける"], by_front["掛ける"]], counts
+
+    def test_floor_counts_card_front_not_lemma_sibling(self, test_config):
+        config, words, counts = self._parse(test_config)
+
+        kept = WordFilterService(config).filter_by_episode_count(words, dict(counts), 3)
+
+        # 賭ける occurs once; only 掛ける (five times) clears a floor of 3.
+        assert [w.mined_form for w in kept] == ["掛ける"]
+
+    def test_occurrences_column_shows_each_cards_own_count(self, test_config):
+        config, words, counts = self._parse(test_config)
+
+        WordFilterService(config).attach_occurrence_counts(words, counts)
+
+        assert [w.occurrence_count for w in words] == [1, 5]
+
+    def test_the_floor_judges_each_spelling_alone_before_the_collapse(self, test_config):
+        """Accepted trade-off (judge F1): the floor runs in phase 2, before the collapse knows that
+        よそ見 and 余所見 are one dictionary word, so a word split 2 + 2 across them clears no
+        floor of 3. The curator column, read after the collapse, shows the merged card 4."""
+        service = WordFilterService(test_config)
+        words = [create_word("余所見", surface="よそ見", pos="名詞"), create_word("余所見", pos="名詞")]
+
+        kept = service.filter_by_episode_count(words, {"よそ見": 2, "余所見": 2}, 3)
+
+        assert kept == []
 
 
 class TestAttachLineUnknownCounts:
@@ -1746,6 +1790,8 @@ class TestOverriddenVerbLemmaCorrelation:
     leaves ``word.lemma`` at the token lemma (感ずる), which is the correlation
     key for every downstream filter. If the lemma were folded to the resolved
     front, the word would miss its own line and be dropped / zeroed.
+    Occurrence counts are the exception: the parser counts under the card front
+    (count_fronts), so they key on 感じる.
     """
 
     @staticmethod
@@ -1791,16 +1837,16 @@ class TestOverriddenVerbLemmaCorrelation:
         assert result[0].mined_form == "感じる"
         assert result[0].lemma == "感ずる"
 
-    def test_gets_nonzero_occurrence_count_on_lemma(self, test_config):
+    def test_gets_its_occurrence_count_on_the_card_front(self, test_config):
         service = WordFilterService(test_config)
         word = self._overridden_word()
-        service.attach_occurrence_counts([word], {"感ずる": 3})
+        service.attach_occurrence_counts([word], {"感じる": 3, "感ずる": 99})
         assert word.occurrence_count == 3
 
-    def test_survives_cross_episode_filter_on_lemma(self, test_config):
+    def test_survives_the_reading_floor_on_the_card_front(self, test_config):
         service = WordFilterService(test_config)
         word = self._overridden_word()
-        kept = service.filter_by_episode_count([word], {"感ずる": 2}, min_appearances=2)
+        kept = service.filter_by_episode_count([word], {"感じる": 2}, min_appearances=2)
         assert kept == [word]
 
 
