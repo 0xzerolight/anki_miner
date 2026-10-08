@@ -269,7 +269,7 @@ class TestFolderRun:
         assert queue_cls.call_count == 0
         assert "No .epub or .txt books found" in tab.log_widget.text_edit.toPlainText()
         issue = tab.issue_banner().current_issue()
-        assert issue.summary == "Anki Miner can't mine this file."
+        assert issue.summary == "Anki Miner can't mine this folder."  # a folder was picked
         assert issue.details == "No .epub or .txt books found in 'x'."
 
     def test_folder_run_swaps_mine_for_cancel(self, tmp_path, tab):

@@ -393,7 +393,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         folder a picked archive sits in.
         """
         if path is None or _NO_OCR_MARKER not in message.lower():
-            self._report_unmineable(message)
+            self._report_unmineable(message, path)
             return
         self.log_widget.append_error(message)
         folder = path if path.is_dir() else path.parent

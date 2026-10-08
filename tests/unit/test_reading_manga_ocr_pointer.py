@@ -83,6 +83,12 @@ def test_other_failures_stay_plain(tab, tmp_path):
     assert _issue(tab).summary == "Anki Miner can't mine this file."
 
 
+def test_other_failures_on_a_folder_say_folder(tab, tmp_path):
+    tab._report_detection_failure(tmp_path, "Permission denied")
+
+    assert _issue(tab).summary == "Anki Miner can't mine this folder."
+
+
 def test_the_action_opens_manga_ocr_on_that_folder(tab, tmp_path, monkeypatch):
     revealed: list = []
     tool = SimpleNamespace(folder_selector=MagicMock())
