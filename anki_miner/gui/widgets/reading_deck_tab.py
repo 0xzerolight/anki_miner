@@ -119,6 +119,8 @@ class ReadingDeckTab(_ReadingMiningTabBase):
         # None until the picked deck has been read (an empty deck reads as 0).
         self._note_count: int | None = None
         self._deck_fetch_issue: ScreenIssue | None = None
+        # What the status line said before a drag put its refusal there.
+        self._status_before_drag = ""
         self._setup_ui()
         self._setup_drag_drop()
         self._recompute_buttons()
@@ -621,17 +623,24 @@ class ReadingDeckTab(_ReadingMiningTabBase):
     def _drop_refusal(self) -> str:
         return self.tr("This screen mines a deck already in Anki. Pick it from the Deck list above.")
 
+    def _show_drop_refusal(self) -> None:
+        """Put the refusal on the status line, keeping what it said (the note count)."""
+        refusal = self._drop_refusal()
+        if self.status_label.text() != refusal:
+            self._status_before_drag = self.status_label.text()
+        self.status_label.setText(refusal)
+
     def dragEnterEvent(self, event: QDragEnterEvent | None) -> None:  # noqa: N802 - Qt override
         """Accept a file drag only to say why it cannot land here."""
         if event is None or self.worker_thread is not None or not urls_from_event(event):
             return
         event.acceptProposedAction()
-        self.status_label.setText(self._drop_refusal())
+        self._show_drop_refusal()
 
     def dragLeaveEvent(self, event: QDragLeaveEvent | None) -> None:  # noqa: N802 - Qt override
-        """Take the refusal back down when the drag moves off the screen."""
+        """Put the status line back when the drag moves off the screen."""
         if self.status_label.text() == self._drop_refusal():
-            self.status_label.setText("")
+            self.status_label.setText(self._status_before_drag)
         if event is not None:
             event.accept()
 
@@ -640,6 +649,6 @@ class ReadingDeckTab(_ReadingMiningTabBase):
         if event is None:
             return
         if self.worker_thread is None:
-            self.status_label.setText(self._drop_refusal())
+            self._show_drop_refusal()
             self.deck_combo.setFocus(Qt.FocusReason.OtherFocusReason)
         event.ignore()

@@ -20,6 +20,8 @@ import dataclasses
 from unittest.mock import MagicMock, patch
 
 import pytest
+from PyQt6.QtCore import QMimeData, QPoint, QPointF, Qt, QUrl
+from PyQt6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDropEvent
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets import reading_deck_tab as tab_module
@@ -294,6 +296,57 @@ def _deck_document(*, with_media: bool) -> ReadingDocument:
     if with_media:
         units[0] = dataclasses.replace(units[0], audio_ref=MagicMock(name="clip"))
     return ReadingDocument(title="D", kind="deck", series="D", episode="D", units=units)
+
+
+def _file_mime(path) -> QMimeData:
+    data = QMimeData()
+    data.setUrls([QUrl.fromLocalFile(str(path))])
+    return data
+
+
+# The events hold a borrowed pointer to the mime data: the caller keeps it alive.
+def _enter_event(data: QMimeData) -> QDragEnterEvent:
+    return QDragEnterEvent(
+        QPoint(1, 1), Qt.DropAction.CopyAction, data, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier
+    )
+
+
+def _drop_event(data: QMimeData) -> QDropEvent:
+    return QDropEvent(
+        QPointF(1.0, 1.0), Qt.DropAction.CopyAction, data, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier
+    )
+
+
+class TestDrops:
+    """A dragged file is refused on the status line, which then gets its note count back."""
+
+    def test_a_drag_that_leaves_puts_the_note_count_back(self, tab, tmp_path):
+        _pick_first_deck(tab)
+        count = tab.status_label.text()
+        episode = tmp_path / "ep01.mkv"
+        episode.touch()
+        data = _file_mime(episode)
+
+        tab.dragEnterEvent(_enter_event(data))
+        assert "Deck list" in tab.status_label.text()
+        tab.dragLeaveEvent(QDragLeaveEvent())
+
+        assert tab.status_label.text() == count
+
+    def test_after_a_drop_the_next_drag_still_puts_the_count_back(self, tab, tmp_path):
+        _pick_first_deck(tab)
+        count = tab.status_label.text()
+        episode = tmp_path / "ep01.mkv"
+        episode.touch()
+        data = _file_mime(episode)
+
+        tab.dragEnterEvent(_enter_event(data))
+        tab.dropEvent(_drop_event(data))
+        assert "Deck list" in tab.status_label.text()  # the refusal stays up after the drop
+        tab.dragEnterEvent(_enter_event(data))
+        tab.dragLeaveEvent(QDragLeaveEvent())
+
+        assert tab.status_label.text() == count
 
 
 class TestCurationContext:
