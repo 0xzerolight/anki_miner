@@ -2737,6 +2737,16 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         Silent like the startup run it replaces, so an unrelated issue (no
         ffmpeg) is not suddenly announced in a banner the launch suppressed.
         """
+        if self.is_shutting_down():
+            return
+        worker = self.background_tasks.validation_worker
+        if still_running(worker):
+            # A check the user started (Refresh, Re-check) is still running and
+            # may have asked before Anki was up. Run again once it ends; marking
+            # silent now would hide that check's own answer.
+            assert worker is not None
+            worker.finished.connect(self._on_anki_auto_opened)
+            return
         self._validation_silent = True
         self._run_validation()
 

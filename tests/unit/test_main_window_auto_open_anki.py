@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import threading
 from dataclasses import replace
 
 import pytest
+from PyQt6.QtCore import QThread
 
 from anki_miner.models import ValidationIssue, ValidationResult
 
@@ -81,3 +83,43 @@ def test_anki_answering_reruns_the_checks_quietly(make_window, monkeypatch):
     window._on_anki_auto_opened()
 
     assert runs == [True]
+
+
+class _HeldCheck(QThread):
+    """A validation sweep the user started that is still running."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.release = threading.Event()
+
+    def run(self) -> None:
+        self.release.wait(5)
+
+
+def test_hand_off_waits_for_a_check_already_running(make_window, monkeypatch, qtbot):
+    window, _opened = make_window(auto_open=True)
+    window._validation_silent = False
+    runs: list[bool] = []
+    monkeypatch.setattr(window, "_run_validation", lambda: runs.append(window._validation_silent))
+    held = _HeldCheck()
+    window.background_tasks.validation_worker = held
+    held.start()
+
+    window._on_anki_auto_opened()
+
+    # The user's own check keeps its answer: no silence leaks onto it.
+    assert runs == [] and window._validation_silent is False
+    held.release.set()
+    qtbot.waitUntil(lambda: runs == [True], timeout=3000)
+    held.wait(3000)
+
+
+def test_hand_off_after_shutdown_starts_nothing(make_window, monkeypatch):
+    window, _opened = make_window(auto_open=True)
+    runs: list[bool] = []
+    monkeypatch.setattr(window, "_run_validation", lambda: runs.append(True))
+    monkeypatch.setattr(window, "is_shutting_down", lambda: True)
+
+    window._on_anki_auto_opened()
+
+    assert runs == []
