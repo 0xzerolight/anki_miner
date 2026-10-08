@@ -11,8 +11,8 @@ Utilities tab shows is its own page, ``utilities_settings_panel``.
 
 Persistence for this panel's own fields is handled by emitting
 ``state_changed`` / ``zoom_changed`` / ``language_changed`` (re-uses the
-``config_changed`` convention from other panels). The settings tab forwards to ``MainWindow.update_config`` which
-writes ``gui_config.json``.
+``config_changed`` convention from other panels). The settings tab forwards
+to ``MainWindow.update_config`` which writes ``gui_config.json``.
 """
 
 from __future__ import annotations

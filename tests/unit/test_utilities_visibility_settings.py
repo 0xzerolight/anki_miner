@@ -143,6 +143,14 @@ class TestSettingsTab:
         assert "utilities.retime" in [entry.anchor.stable_id for entry in hits]
         assert all(entry.page_key != "ui" for entry in hits)
 
+    def test_search_still_answers_to_the_old_section_name(self, tab):
+        """The boxes sat under a "Utilities tab" heading on General; that phrase still finds them."""
+        from anki_miner.gui.widgets.settings_search import search
+
+        hits = search(tab.setting_search_entries(), "utilities tab")
+
+        assert {f"utilities.{key}" for key in UTILITY_SUBTABS} <= {entry.anchor.stable_id for entry in hits}
+
     def test_jumping_to_a_box_focuses_it(self, tab, qtbot):
         box = tab.utilities_panel.utility_checkboxes["retime"]
         tab.open_subtab("anki")
