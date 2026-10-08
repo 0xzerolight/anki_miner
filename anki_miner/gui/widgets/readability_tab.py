@@ -369,6 +369,9 @@ class ReadabilityTab(_ToolTabBase):
 
         # A fresh attempt supersedes the complaint about the last one (D24).
         self.clear_screen_issue()
+        # And the last report: a refusal must not leave it under its banner.
+        # A cancelled run keeps what it measured until the next attempt.
+        self._clear_report()
 
         path_str = self.input_selector.path_or_none()
         if path_str is None:
@@ -418,8 +421,6 @@ class ReadabilityTab(_ToolTabBase):
     def _start_run(self, files: list[Path]) -> None:
         self._total_files = len(files)
         self._run_files = list(files)
-        # Every run starts empty; a cancelled run keeps what it measured.
-        self._clear_report()
         self._begin_tool_run(len(files))
         self.log_widget.clear_log()
         self.progress_widget.reset()

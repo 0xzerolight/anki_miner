@@ -250,6 +250,22 @@ def test_rerun_clears_report(qtbot, tmp_path):
     assert tab.report_card.isHidden()
 
 
+def test_a_refusal_clears_the_last_report(qtbot, tmp_path):
+    """An old report must not sit under a new complaint (Readability review, minor 7)."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    _worker, measured, _errors, finished = _start(tab, _subtitle(tmp_path))
+    measured[0](0, _stats(100, 10, {"犬"}, (1, 0, 0)))
+    finished[0](TerminalOutcome.SUCCESS)
+    tab.worker_thread = None  # the QThread has exited
+
+    tab.input_selector.set_path(str(tmp_path / "gone.srt"))
+    tab.check_button.click()
+
+    assert tab.issue_banner().current_issue() is not None
+    assert tab.files_table.rowCount() == 0
+    assert tab.report_card.isHidden()
+
+
 def test_cancel_keeps_measured_rows(qtbot, tmp_path):
     tab = _make_tab(_make_config(tmp_path), qtbot)
     _worker, measured, _errors, finished = _start(tab, _subtitle(tmp_path))
