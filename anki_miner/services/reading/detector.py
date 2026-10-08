@@ -195,9 +195,10 @@ def load(
     rules.
 
     ``normalize`` and ``has_target_script`` reach the subtitle and Anki-deck
-    loaders only — the other kinds are normalised per unit by the parser, and a
+    loaders — the other kinds are normalised per unit by the parser, and a
     cue (or a deck card's subtitle line) is the one unit that can carry two
-    languages on two physical lines.
+    languages on two physical lines. ``has_target_script`` also reaches the
+    mokuro loader, where it replaces the built-in Japanese block gate.
 
     ``anki`` reaches the Anki-deck loader only (``kind="deck"`` refs are
     pathless, built by the Anki Deck sub-tab, and read through AnkiConnect).
@@ -218,7 +219,8 @@ def load(
     if ref.kind == "mokuro":
         from . import mokuro_source
 
-        return mokuro_source.load(ref, **common, **splitting)
+        gating: dict[str, Any] = {} if has_target_script is None else {"has_target_script": has_target_script}
+        return mokuro_source.load(ref, **common, **splitting, **gating)
     if ref.kind == "epub":
         from . import epub_source
 

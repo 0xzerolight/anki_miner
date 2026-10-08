@@ -12,6 +12,7 @@ from unittest.mock import MagicMock, patch
 from anki_miner.exceptions.youtube import BotDetectionError, YouTubeFetchError
 from anki_miner.gui.workers import reading_queue_worker, youtube_queue_worker
 from anki_miner.gui.workers._queue_worker_base import anki_write_state_of, exception_retry_eligible
+from anki_miner.languages.registry import get_profile
 from anki_miner.models import AnkiWriteState
 from anki_miner.models.reading import DeckFieldMap, ReadingSourceRef
 
@@ -82,6 +83,23 @@ def test_load_reading_source_keeps_anki_away_from_file_refs(test_config, tmp_pat
     with patch.object(reading_queue_worker.detector, "load", return_value="DOC") as load:
         reading_queue_worker.load_reading_source(processor, test_config, ref, cancel_check=lambda: False)
     assert "anki" not in load.call_args.kwargs
+
+
+def test_load_reading_source_gates_a_mokuro_volume_by_the_mining_language(test_config, tmp_path) -> None:
+    config = replace(test_config, language="es")
+    processor = SimpleNamespace(subtitle_parser=None)
+    ref = ReadingSourceRef(kind="mokuro", path=tmp_path / "v.mokuro")
+    with patch.object(reading_queue_worker.detector, "load", return_value="DOC") as load:
+        reading_queue_worker.load_reading_source(processor, config, ref, cancel_check=lambda: False)
+    assert load.call_args.kwargs["has_target_script"] == get_profile("es").script.contains_target_script
+
+
+def test_load_reading_source_leaves_a_japanese_mokuro_volume_to_its_own_gate(test_config, tmp_path) -> None:
+    processor = SimpleNamespace(subtitle_parser=None)
+    ref = ReadingSourceRef(kind="mokuro", path=tmp_path / "v.mokuro")
+    with patch.object(reading_queue_worker.detector, "load", return_value="DOC") as load:
+        reading_queue_worker.load_reading_source(processor, test_config, ref, cancel_check=lambda: False)
+    assert "has_target_script" not in load.call_args.kwargs
 
 
 def test_load_reading_source_omits_absent_parser_seams(test_config) -> None:

@@ -732,6 +732,17 @@ def test_load_forwards_cancel_check_to_source_module(kind: str, monkeypatch: pyt
     fake_load.assert_called_once_with(ref, cancel_check=cancel_check)
 
 
+def test_load_hands_a_mokuro_ref_the_language_gate(tmp_path):
+    mokuro = tmp_path / "vol.mokuro"
+    blocks = [{"lines": ["Hola amigo"]}, {"lines": ["Adiós amigo"]}, {"lines": ["ドドド"]}]
+    _write_mokuro(mokuro, extra={"pages": [{"img_path": "001.jpg", "blocks": blocks}]})
+    ref = detector.detect(mokuro)[0]
+
+    doc = detector.load(ref, has_target_script=lambda t: "Hola" in t)
+
+    assert [u.text for u in doc.units] == ["Hola amigo"]
+
+
 def test_load_does_not_import_sibling_modules():
     # Dispatching a mokuro ref must not import the epub/txt loaders. Run in a fresh
     # interpreter for total isolation: sibling loaders imported by other tests in the

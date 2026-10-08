@@ -300,9 +300,7 @@ CAPABILITIES: tuple[Capability, ...] = (
     Capability(
         id="manga-mining",
         title=QT_TRANSLATE_NOOP("Capabilities", "Mine from manga"),
-        description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Mine vocabulary from Japanese manga volumes processed with mokuro."
-        ),
+        description=QT_TRANSLATE_NOOP("Capabilities", "Mine vocabulary from manga volumes processed with mokuro."),
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("reading", "manga"),
         keywords=("manga", "mokuro", "reading", "cbz", "comic"),

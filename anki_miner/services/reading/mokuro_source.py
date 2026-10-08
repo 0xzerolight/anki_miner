@@ -30,6 +30,7 @@ from anki_miner.models.reading import (
 from anki_miner.services.reading._util import (
     MAX_MOKURO_JSON_BYTES,
     READING_CANCELLED,
+    _line_join,
     natural_sort_key,
     read_text_capped,
     read_zip_member_text_capped,
@@ -81,11 +82,16 @@ def load(
     *,
     cancel_check: Callable[[], bool] | None = None,
     rules: SentenceRules | None = None,
+    has_target_script: Callable[[str], bool] | None = None,
 ) -> ReadingDocument:
     """Load one mokuro volume into a ``ReadingDocument``. See module docstring.
 
-    ``rules`` is the mining language's sentence-splitting policy, used only by
+    ``rules`` is the mining language's sentence-splitting policy: it sets how
+    a block's OCR lines join (``space_aware`` joins with one space) and drives
     the oversized-block fallback; ``None`` is the built-in Japanese one.
+
+    ``has_target_script`` is the mining language's script gate: a block is
+    kept only when it passes. ``None`` keeps the Japanese gate.
     """
     raise_if_cancelled(cancel_check, READING_CANCELLED)
     # Per-kind ref contract: file-backed kinds always carry a path.
@@ -175,7 +181,9 @@ def load(
             else:
                 image_ref = record.ref
         label = f"p.{page_num}"
-        entries, skipped = _page_unit_entries(page, cancel_check=cancel_check, rules=rules)
+        entries, skipped = _page_unit_entries(
+            page, cancel_check=cancel_check, rules=rules, has_target_script=has_target_script
+        )
         skipped_malformed += skipped
         for text, box in entries:
             doc.units.append(
@@ -205,6 +213,7 @@ def _page_unit_entries(
     *,
     cancel_check: Callable[[], bool] | None = None,
     rules: SentenceRules | None = None,
+    has_target_script: Callable[[str], bool] | None = None,
 ) -> tuple[list[tuple[str, tuple[int, int, int, int] | None]], int]:
     """Mineable (text, block_box) pairs for one page, in block order.
 
@@ -213,6 +222,7 @@ def _page_unit_entries(
     """
     entries: list[tuple[str, tuple[int, int, int, int] | None]] = []
     skipped = 0
+    joiner = _line_join(rules)
     for block in page.get("blocks", []):
         raise_if_cancelled(cancel_check, READING_CANCELLED)
         if not isinstance(block, dict):
@@ -224,7 +234,7 @@ def _page_unit_entries(
             continue
         valid_lines = [line for line in lines if isinstance(line, str)]
         skipped += len(lines) - len(valid_lines)
-        cleaned = _sanitize_block(valid_lines)
+        cleaned = _sanitize_block(valid_lines, joiner=joiner)
         if not cleaned:
             continue
         box = _block_box(block)
@@ -232,7 +242,7 @@ def _page_unit_entries(
             pieces = split_sentences(cleaned, split_adjacent_quotes=True, rules=rules)
         else:
             pieces = [cleaned]
-        entries.extend((piece, box) for piece in pieces if _is_mineable(piece))
+        entries.extend((piece, box) for piece in pieces if _is_mineable(piece, has_target_script))
     return entries, skipped
 
 
@@ -256,13 +266,18 @@ def _block_box(block: dict) -> tuple[int, int, int, int] | None:
     return (xmin, ymin, xmax, ymax)
 
 
-def _sanitize_block(lines: list[str]) -> str:
-    """Drop falsy lines -> join "" -> strip invisibles -> NFC -> collapse runs.
+def _sanitize_block(lines: list[str], joiner: str = "") -> str:
+    """Drop falsy lines -> join -> strip invisibles -> NFC -> collapse runs.
 
-    Vertical manga text wraps mid-word, so lines join with no separator. NFC
-    (never NFKC) composes combining marks without folding full-width forms.
+    Vertical CJK text wraps mid-word, so lines join with no separator. A
+    space-delimited language's balloon wraps between words, so its stripped
+    lines join with ``joiner`` (one space). NFC (never NFKC) composes
+    combining marks without folding full-width forms.
     """
-    joined = "".join(line for line in lines if line)
+    if joiner:
+        joined = joiner.join(s for s in (line.strip() for line in lines) if s)
+    else:
+        joined = "".join(line for line in lines if line)
     stripped = _strip_invisible(joined)
     composed = unicodedata.normalize("NFC", stripped)
     return _REPEAT_RUN_RE.sub(r"\1", composed)
@@ -272,9 +287,17 @@ def _strip_invisible(text: str) -> str:
     return "".join(ch for ch in text if unicodedata.category(ch) not in _INVISIBLE_CATEGORIES)
 
 
-def _is_mineable(text: str) -> bool:
-    """At least two characters and at least one Japanese character."""
-    return len(text) >= 2 and any(_is_japanese(ch) for ch in text)
+def _is_mineable(text: str, has_target_script: Callable[[str], bool] | None = None) -> bool:
+    """At least two characters, written in the mining language (None: Japanese).
+
+    Japanese keeps its own check rather than the profile's script gate, which
+    is narrower: this one also counts halfwidth katakana as mineable.
+    """
+    if len(text) < 2:
+        return False
+    if has_target_script is None:
+        return any(_is_japanese(ch) for ch in text)
+    return has_target_script(text)
 
 
 def _is_japanese(ch: str) -> bool:

@@ -46,7 +46,7 @@ from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.gui.utils.service_factory import import_decode_ladder
 from anki_miner.gui.workers._queue_progress import QueueMiningProgressAdapter
 from anki_miner.gui.workers._queue_worker_base import AttemptOutcome, SequentialQueueWorker
-from anki_miner.languages.registry import get_profile
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.models import CANCELLED_ERROR, MiningOutcome, ProcessingResult, classify_result, result_error_text
 from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.models.reading import ReadingDocument, ReadingSourceRef
@@ -73,10 +73,16 @@ def load_reading_source(
     the Japanese pair / every line kept). Shared with the command line.
     """
     ladder = import_decode_ladder(config)
-    profile = get_profile(config.language)
+    profile = get_profile(config_language(config))
     parser = getattr(processor, "subtitle_parser", None)
     normalize = getattr(parser, "normalize", None)
     has_target_script = getattr(parser, "has_target_script", None)
+    if source.kind == "mokuro":
+        # Gate each block on the mining language's script, even where the
+        # parser keeps every line, so a translated volume's untouched SFX
+        # (ドドド) stays out. The OCR-native language keeps the loader's own
+        # manga-ocr gate (None).
+        has_target_script = None if "manga_ocr" in profile.capabilities else profile.script.contains_target_script
     # One bundle: omitted keywords keep detector.load's pre-seam call shape.
     loader_kwargs: dict[str, Any] = {**script_check_kwarg(ladder, profile.script)}
     if normalize is not None:

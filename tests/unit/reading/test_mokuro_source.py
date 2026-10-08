@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from anki_miner.exceptions import SetupError
+from anki_miner.languages.registry import get_profile
 from anki_miner.models.reading import (
     ImageRef,
     ReadingDocument,
@@ -233,6 +234,48 @@ def test_junk_blocks_dropped(tmp_path):
 
 def test_halfwidth_katakana_block_is_mineable():
     assert _page_unit_entries({"blocks": [{"lines": ["ｶﾅ"]}]}) == ([("ｶﾅ", None)], 0)
+
+
+# ---------------------------------------------------------------------------
+# Mining languages other than Japanese
+# ---------------------------------------------------------------------------
+def test_a_language_gate_replaces_the_japanese_one(tmp_path):
+    es = get_profile("es")
+    blocks = [_block(["Hola, amigo"]), _block(["ドドド"]), _block(["12"]), _block(["¡¿"])]
+    doc = load(
+        _write_ref(tmp_path, _mokuro([_page("001.jpg", blocks)]), None),
+        rules=es.sentence_rules,
+        has_target_script=es.script.contains_target_script,
+    )
+    assert [u.text for u in doc.units] == ["Hola, amigo"]
+
+
+def test_space_aware_rules_join_ocr_lines_with_one_space(tmp_path):
+    es = get_profile("es")
+    doc = load(
+        _write_ref(tmp_path, _mokuro([_page("001.jpg", [_block(["¿Dónde está ", " la estación?"])])]), None),
+        rules=es.sentence_rules,
+        has_target_script=es.script.contains_target_script,
+    )
+    assert doc.units[0].text == "¿Dónde está la estación?"
+
+
+def test_cjk_rules_keep_the_empty_join(tmp_path):
+    zh = get_profile("zh")
+    doc = load(
+        _write_ref(tmp_path, _mokuro([_page("001.jpg", [_block(["我们", "走吧"])])]), None),
+        rules=zh.sentence_rules,
+        has_target_script=zh.script.contains_target_script,
+    )
+    assert doc.units[0].text == "我们走吧"
+
+
+def test_japanese_rules_and_no_gate_are_the_old_path(tmp_path):
+    doc = load(
+        _write_ref(tmp_path, _mokuro([_page("001.jpg", [_block(["わた", "しは"]), _block(["ｶﾅ"])])]), None),
+        rules=get_profile("ja").sentence_rules,
+    )
+    assert [u.text for u in doc.units] == ["わたしは", "ｶﾅ"]
 
 
 def test_repeat_run_over_8_collapsed_boundary_of_8_kept(tmp_path):
