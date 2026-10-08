@@ -250,6 +250,19 @@ def test_anki_unreachable_names_anki_in_the_banner(qtbot, tmp_path):
     assert issue.details == "refused"
 
 
+def test_load_warnings_land_in_the_log(qtbot, tmp_path):
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    worker = FakeToolWorker()
+    slots = capture_slots(worker.load_warning)
+    tab.input_selector.set_path(str(_subtitle(tmp_path)))
+    with patch(_WORKER_CLS, return_value=worker):
+        tab.check_button.click()
+
+    slots[0]("Couldn't load frequency data: gone")
+
+    assert "Couldn't load frequency data: gone" in tab.log_widget.full_text()
+
+
 def test_probe_mid_run_does_not_rearm_check(qtbot, tmp_path):
     tab = _make_tab(_make_config(tmp_path), qtbot)
     _start(tab, _subtitle(tmp_path))

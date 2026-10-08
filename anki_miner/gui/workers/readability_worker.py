@@ -29,6 +29,8 @@ class ReadabilityWorker(FileQueueWorker):
 
     #: (idx, ReadabilityStats), emitted just before that file's ``file_finished``.
     file_measured = pyqtSignal(int, object)
+    #: A dictionary, word list or other source that failed to load; the check goes on without it.
+    load_warning = pyqtSignal(str)
     #: The language cannot tokenize (missing engine): every file would fail alike.
     _FATAL_QUEUE_EXCEPTIONS = (SetupError,)
 
@@ -45,7 +47,13 @@ class ReadabilityWorker(FileQueueWorker):
         try:
             # Readability measures the text: a mining preference list must not
             # move its numbers, and the parser's whitelist rescue (R1) would.
-            services = create_services(replace(self._config, use_whitelist=False), shared_lookup=shared)
+            # use_known_words_db only gates create_services' initialize(), a
+            # write; collect_known_forms below reads the user's own setting.
+            services = create_services(
+                replace(self._config, use_whitelist=False, use_known_words_db=False), shared_lookup=shared
+            )
+            for message in (*shared.load_result.warnings, *services.load_result.warnings):
+                self.load_warning.emit(message)
             if self.is_cancelled:
                 return
             try:

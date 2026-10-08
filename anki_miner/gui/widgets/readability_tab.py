@@ -419,6 +419,7 @@ class ReadabilityTab(_ToolTabBase):
 
         worker = ReadabilityWorker(self.config, files)
         worker.file_measured.connect(self._on_file_measured)
+        worker.load_warning.connect(self.log_widget.append_warning)
         self._start_queue_worker(worker)
 
     # ------------------------------------------------------------------
