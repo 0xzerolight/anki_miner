@@ -37,6 +37,11 @@ def test_name_plate_row_is_dropped():
     assert clean(boxes) == "「行くぞ」"
 
 
+def test_a_punctuation_row_above_a_quote_is_not_a_name_plate():
+    boxes = [box("……", 0, 0, 60, 40), box("「そうか」", 0, 50, 300, 90)]
+    assert clean(boxes) == "……\n「そうか」"
+
+
 @pytest.mark.parametrize(
     ("raw", "expected"),
     [
@@ -46,6 +51,10 @@ def test_name_plate_row_is_dropped():
         ("それは「愛」", "それは「愛」"),  # hiragana prefix: ordinary text, not a name
         ("クラウド「行くぞ」と言った", "クラウド「行くぞ」と言った"),  # bracket does not close the text
         ("「行くぞ」", "「行くぞ」"),
+        ("12:30に集合", "12:30に集合"),
+        ("午前10:00に出発", "午前10:00に出発"),
+        ("兵士A:止まれ", "止まれ"),
+        ("……「そうか」", "……「そうか」"),
     ],
 )
 def test_inline_speaker_names(raw, expected):

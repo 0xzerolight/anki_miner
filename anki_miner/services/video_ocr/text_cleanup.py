@@ -51,6 +51,8 @@ def _rows(boxes: Sequence[OcrBox]) -> list[str]:
 def _is_name(text: str) -> bool:
     if not 1 <= len(text) <= _NAME_MAX:
         return False
+    if not any(ch.isalpha() for ch in text):  # "……" is a stammer, not a speaker
+        return False
     return not any(ch.isspace() or ch in _NOT_IN_NAME or "ぁ" <= ch <= "ゟ" for ch in text)
 
 
@@ -61,7 +63,7 @@ def _strip_speaker(rows: list[str]) -> list[str]:
     for i, ch in enumerate(first):
         if ch in "：:":
             rest = first[i + 1 :].lstrip()
-            if _is_name(first[:i]) and rest:
+            if _is_name(first[:i]) and rest and not rest[0].isdigit():  # 10:00 is a time
                 return [rest, *rows[1:]]
             return rows
         if ch in "「『":
