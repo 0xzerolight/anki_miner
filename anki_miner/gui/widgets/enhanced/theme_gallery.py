@@ -155,7 +155,7 @@ class ThemeCard(QFrame):
         # escapes straight into the Qt event loop, not to any caller. Catch
         # broadly and leave the card blank rather than propagate.
         try:
-            pixmap = render_theme_thumbnail(self._key)
+            pixmap = render_theme_thumbnail(self._key, dpr=self.devicePixelRatioF())
         except Exception:
             logger.warning("Could not render theme thumbnail for %r", self._key, exc_info=True)
             return

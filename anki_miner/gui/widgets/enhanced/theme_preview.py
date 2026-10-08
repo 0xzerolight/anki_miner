@@ -34,10 +34,10 @@ DEFAULT_THUMBNAIL_SIZE = QSize(240, 160)
 #: same widgets read as a miniature of the real window.
 _RENDER_SCALE = 2
 
-#: (theme_key, width, height, font_scale) -> pixmap. The font scale is part of
-#: the key rather than an invalidation hook, so a scale change simply misses
+#: (theme_key, width, height, font_scale, dpr) -> pixmap. The font scale is part
+#: of the key rather than an invalidation hook, so a scale change simply misses
 #: instead of coupling this module to ``Theme.set_font_scale``.
-_cache: dict[tuple[str, int, int, float], QPixmap] = {}
+_cache: dict[tuple[str, int, int, float, float], QPixmap] = {}
 
 
 def clear_thumbnail_cache() -> None:
@@ -87,7 +87,7 @@ def _build_mock(theme_key: str, size: QSize) -> QWidget:
     return page
 
 
-def render_theme_thumbnail(theme_key: str, size: QSize = DEFAULT_THUMBNAIL_SIZE) -> QPixmap:
+def render_theme_thumbnail(theme_key: str, size: QSize = DEFAULT_THUMBNAIL_SIZE, *, dpr: float = 1.0) -> QPixmap:
     """Return a cached miniature of the app rendered in ``theme_key``.
 
     Args:
@@ -96,8 +96,11 @@ def render_theme_thumbnail(theme_key: str, size: QSize = DEFAULT_THUMBNAIL_SIZE)
             raising -- a gallery card naming a theme that left the disk should
             look wrong, not crash the panel.
         size: Logical size of the returned pixmap.
+        dpr: Device pixel ratio of the widget that will show the pixmap (its
+            ``devicePixelRatioF()``). The pixmap holds ``size * dpr`` device
+            pixels, so it fills ``size`` at any monitor scale or UI Zoom.
     """
-    cache_key = (theme_key, size.width(), size.height(), Theme.get_font_scale())
+    cache_key = (theme_key, size.width(), size.height(), Theme.get_font_scale(), dpr)
     cached = _cache.get(cache_key)
     if cached is not None:
         return cached
@@ -107,11 +110,17 @@ def render_theme_thumbnail(theme_key: str, size: QSize = DEFAULT_THUMBNAIL_SIZE)
     try:
         mock.show()  # WA_DontShowOnScreen: polishes and lays out, never maps.
         mock.ensurePolished()
+        # grab() returns device pixels stamped with the mock's screen ratio.
+        # Scaling to `size` device pixels while keeping that ratio drew the
+        # thumbnail at size / dpr, so scale to the target's device pixels and
+        # stamp the target's ratio instead.
         pixmap = mock.grab().scaled(
-            size,
+            round(size.width() * dpr),
+            round(size.height() * dpr),
             Qt.AspectRatioMode.IgnoreAspectRatio,
             Qt.TransformationMode.SmoothTransformation,
         )
+        pixmap.setDevicePixelRatio(dpr)
     finally:
         mock.setParent(None)
         mock.deleteLater()

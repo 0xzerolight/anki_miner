@@ -37,7 +37,21 @@ class TestRendering:
     def test_pixmap_matches_requested_size(self, qapp):
         size = QSize(120, 80)
         pixmap = render_theme_thumbnail("dark", size)
-        assert (pixmap.width(), pixmap.height()) == (120, 80)
+        assert pixmap.deviceIndependentSize().toSize() == size
+
+    @pytest.mark.parametrize("dpr", [1.25, 1.5, 2.0])
+    def test_pixmap_fills_its_logical_size_on_a_scaled_screen(self, qapp, dpr):
+        """grab() hands back device pixels stamped with the screen's ratio.
+
+        Scaling that to ``size`` device pixels kept the ratio, so on a scaled
+        screen (or under UI Zoom) the thumbnail showed at ``size / dpr``
+        logical pixels -- half its slot at DPR 2.
+        """
+        size = QSize(120, 80)
+        pixmap = render_theme_thumbnail("dark", size, dpr=dpr)
+        assert pixmap.devicePixelRatio() == dpr
+        assert (pixmap.width(), pixmap.height()) == (round(120 * dpr), round(80 * dpr))
+        assert pixmap.deviceIndependentSize().toSize() == size
 
     def test_two_themes_render_different_pixels(self, qapp):
         light = render_theme_thumbnail("light").toImage()
@@ -86,6 +100,12 @@ class TestCache:
         a = render_theme_thumbnail("nord", DEFAULT_THUMBNAIL_SIZE)
         b = render_theme_thumbnail("nord", QSize(100, 60))
         assert a is not b
+
+    def test_device_pixel_ratio_is_part_of_the_cache_key(self, qapp):
+        a = render_theme_thumbnail("nord", dpr=1.0)
+        b = render_theme_thumbnail("nord", dpr=2.0)
+        assert a is not b
+        assert b.devicePixelRatio() == 2.0
 
     def test_the_autouse_conftest_theme_reset_also_clears_this_cache(self, qapp):
         """Pin for the cross-test bleed conftest.py's autouse reset now closes.
