@@ -54,6 +54,14 @@ def test_a_held_line_sharing_the_next_lines_start_stays_separate():
     assert approx(segment(stream(values), reader(texts))) == [(0.0, 2.0, "そうだな"), (2.0, 4.0, "そうだね、行こう")]
 
 
+def test_a_held_line_over_a_changing_background_stays_separate():
+    # The background flips every 0.6 s, so the held line arrives as short OCR groups of equal text.
+    # Every pair of codes differs by more than PIXEL_DELTA, so each flip closes a span.
+    values = ([100] * 6 + [40] * 6) * 2 + [200] * 20
+    texts = {100: "そうだな", 40: "そうだな", 200: "そうだね、行こう"}
+    assert approx(segment(stream(values), reader(texts))) == [(0.0, 2.4, "そうだな"), (2.4, 4.4, "そうだね、行こう")]
+
+
 def test_equal_text_across_a_gap_stays_two_cues():
     values = [200] * 10 + [0] * 10 + [200] * 10
     assert len(segment(stream(values), reader({200: "はい"}))) == 2
@@ -93,6 +101,12 @@ def test_the_throttle_bounds_ocr_calls_during_constant_change():
     calls: list[int] = []
     segment(stream(values), reader({}, calls))
     assert len(calls) <= 5 / segmenter.MIN_OCR_SPAN + 1
+
+
+def test_the_gate_view_is_at_most_gate_width_wide():
+    for width in (200, 241, 479, 719, 1280):
+        view = segmenter._gate_view(np.zeros((10, width, 3), dtype=np.uint8))
+        assert view.shape[1] <= segmenter.GATE_WIDTH, width
 
 
 def test_progress_reports_every_sample_time():

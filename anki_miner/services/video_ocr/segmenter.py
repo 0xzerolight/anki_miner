@@ -37,7 +37,7 @@ class _Span:
 
 
 def _gate_view(frame: np.ndarray) -> np.ndarray:
-    step = max(1, frame.shape[1] // GATE_WIDTH)
+    step = max(1, -(-frame.shape[1] // GATE_WIDTH))
     return frame[::step, ::step, :3].astype(np.float32) @ _LUMA_BGR
 
 
@@ -95,7 +95,7 @@ def segment(
     """Cues for the dialogue in ``samples`` (``(t_seconds, BGR region)``, in order, ``1/fps`` apart)."""
     cues: list[Cue] = []
     current: Cue | None = None
-    piece = 0.0  # duration of the group that produced current's latest text
+    piece = 0.0  # how long current's latest text has been on screen
     for group in _groups(_spans(samples, 1.0 / fps, on_progress)):
         text = read_text(group.last)
         if not text:
@@ -103,15 +103,18 @@ def segment(
                 cues.append(current)
                 current = None
             continue
-        if current is not None and (
-            text == current.text or (piece <= TYPEWRITER_PIECE_MAX + 1e-9 and _continues(current.text, text))
-        ):
+        duration = group.end - group.start
+        if current is not None and text == current.text:
             current = Cue(current.start, group.end, text)
+            piece += duration
+        elif current is not None and piece <= TYPEWRITER_PIECE_MAX + 1e-9 and _continues(current.text, text):
+            current = Cue(current.start, group.end, text)
+            piece = duration
         else:
             if current is not None:
                 cues.append(current)
             current = Cue(group.start, group.end, text)
-        piece = group.end - group.start
+            piece = duration
     if current is not None:
         cues.append(current)
     return [c for c in cues if c.end - c.start >= MIN_CUE - 1e-9]
