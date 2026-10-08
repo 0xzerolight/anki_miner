@@ -70,6 +70,9 @@ class MiningLanguageSettingsPanel(FormPanel):
         self._live_code = "ja"
         #: Codes with a pack download in flight (two can run at once).
         self._language_pack_active: set[str] = set()
+        #: Each in-flight download's latest status line. The row shows only the
+        #: pending pick's, so a re-pick restores its own line instead of a blank.
+        self._language_pack_status: dict[str, str] = {}
         self._setup_fields()
 
     def _setup_fields(self) -> None:
@@ -240,8 +243,15 @@ class MiningLanguageSettingsPanel(FormPanel):
                 str(choice.download_mb),
             )
         )
-        self.set_status_text(self.pending_download_status, "", status="info")
-        self.download_and_switch_button.setEnabled(code not in self._language_pack_active)
+        downloading = code in self._language_pack_active
+        self.set_status_text(
+            self.pending_download_status,
+            self._language_pack_status.get(code, "") if downloading else "",
+            status="info",
+        )
+        self.pending_download_label.setVisible(True)
+        self.download_and_switch_button.setVisible(True)
+        self.download_and_switch_button.setEnabled(not downloading)
         self.pending_download_row.setVisible(True)
         return True
 
@@ -271,6 +281,7 @@ class MiningLanguageSettingsPanel(FormPanel):
 
     def set_language_pack_status(self, code: str, text: str) -> None:
         """Show a download status line on the pending row, if ``code`` is the pending pick."""
+        self._language_pack_status[code] = text
         if code == self._pending_code:
             self.set_status_text(self.pending_download_status, text, status="info")
 
@@ -280,14 +291,34 @@ class MiningLanguageSettingsPanel(FormPanel):
         The caller must have put the pack on ``sys.path`` first: the rebuild
         answers from each profile's availability probe. A failed download
         leaves the language needing its pack, so the offer (and the worker's
-        message) stays and Download and switch works again.
+        message) stays and Download and switch works again. A pack that installs
+        but still leaves the language failing its probe drops it from the list
+        (an installed pack is no longer a download), so the combo goes back to
+        the language in force and the row says the language is still unusable.
         """
         self._language_pack_active.discard(code)
+        self._language_pack_status.pop(code, None)
+        offered = self._choices_by_code.get(code)
         self._repopulate_mining_languages()
         if code != self._pending_code:
             return
         choice = self._choices_by_code.get(code)
-        if choice is not None and not choice.needs_download:
+        if choice is None:
+            # Without this the combo sat on whatever the rebuild put at item 0,
+            # under an offer that could no longer help.
+            self.set_mining_language(self._live_code)
+            name = offered.native_name if offered is not None else code
+            # The reason takes the row: the offer's sentence and button are moot.
+            self.pending_download_label.setVisible(False)
+            self.download_and_switch_button.setVisible(False)
+            self.set_status_text(
+                self.pending_download_status,
+                tr_format(self.tr("%1 still can't be mined after its download."), _bidi_isolated(name)),
+                status="error",
+            )
+            self.pending_download_row.setVisible(True)
+            return
+        if not choice.needs_download:
             self._hide_pending()
             self.mining_language_requested.emit(code)
             return

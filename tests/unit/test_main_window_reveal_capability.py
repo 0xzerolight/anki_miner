@@ -17,7 +17,7 @@ from unittest.mock import Mock
 import pytest
 from PyQt6.QtWidgets import QWidget
 
-from anki_miner.gui.capabilities import CapabilityTarget
+from anki_miner.gui.capabilities import UTILITY_SUBTABS, CapabilityTarget
 from anki_miner.gui.controllers.task_registry import TaskSpec
 
 
@@ -152,6 +152,18 @@ def test_a_shown_utility_opens_as_before(window):
 
     assert window.tabs.currentWidget() is window._tabs["subtitles"]
     window._tabs["subtitles"].open_subtab.assert_called_once_with("condense")
+    window._tabs["settings"].jump_to_setting.assert_not_called()
+
+
+def test_a_tool_the_fallback_shows_opens_on_the_tab(window):
+    """X.2d: a ja user kept only Manga OCR, then mines zh; the tab shows every other tool."""
+    only_ocr = tuple(k for k in UTILITY_SUBTABS if k != "mokuro")
+    window.config = replace(window.config, language="zh", hidden_utilities=only_ocr)
+
+    window.reveal_capability(CapabilityTarget("subtitles", "retime"))
+
+    assert window.tabs.currentWidget() is window._tabs["subtitles"]
+    window._tabs["subtitles"].open_subtab.assert_called_once_with("retime")
     window._tabs["settings"].jump_to_setting.assert_not_called()
 
 

@@ -14,7 +14,7 @@ import pytest
 from PyQt6.QtWidgets import QMessageBox
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.gui.capabilities import UTILITY_SUBTABS, utility_labels
+from anki_miner.gui.capabilities import UTILITY_SUBTABS, hidden_utilities_on_tab, utility_labels
 from anki_miner.gui.widgets.panels.utilities_settings_panel import UtilitiesSettingsPanel
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 
@@ -198,3 +198,29 @@ class TestMangaOcrLanguageGate:
         panel.load_from_config(replace(test_config, language="zh", hidden_utilities=hidden))
 
         assert not panel.utility_checkboxes["generate"].isEnabled()
+
+    def test_the_boxes_show_the_tabs_fallback(self, panel, test_config):
+        """X.2d: Manga OCR kept alone in Japanese; outside Japanese the tab shows every other tool."""
+        hidden = tuple(k for k in UTILITY_SUBTABS if k != "mokuro")
+        panel.load_from_config(replace(test_config, language="zh", hidden_utilities=hidden))
+
+        visible = [box for box in panel.utility_checkboxes.values() if not box.isHidden()]
+        assert visible and all(box.isChecked() and box.isEnabled() for box in visible)
+
+    def test_a_toggle_in_the_fallback_never_hides_manga_ocr(self, panel, test_config):
+        """The gate never writes hidden_utilities: back in Japanese, Manga OCR is still shown."""
+        hidden = tuple(k for k in UTILITY_SUBTABS if k != "mokuro")
+        panel.load_from_config(replace(test_config, language="zh", hidden_utilities=hidden))
+        seen = _emitted(panel.hidden_utilities_changed)
+
+        panel.utility_checkboxes["retime"].click()
+
+        assert seen[-1] == ("retime",)
+
+
+def test_the_tab_rule_falls_back_to_the_language_gate_alone():
+    everything_but_ocr = [k for k in UTILITY_SUBTABS if k != "mokuro"]
+    assert hidden_utilities_on_tab(everything_but_ocr, frozenset()) == frozenset({"mokuro"})
+    assert hidden_utilities_on_tab(["retime"], frozenset()) == frozenset({"retime", "mokuro"})
+    assert hidden_utilities_on_tab(["retime"], frozenset({"manga_ocr"})) == frozenset({"retime"})
+    assert hidden_utilities_on_tab(UTILITY_SUBTABS, frozenset({"manga_ocr"})) == frozenset()

@@ -1,7 +1,7 @@
 """Tests for app.py wiring SettingsTab validation requests to MainWindow (T-53).
 
 Regression for the dead Anki panel: ``SettingsTab.validation_requested`` (fed by
-Test Connection) was connected to nothing, so the button did nothing and the
+the button that tested the connection) was connected to nothing, so the button did nothing and the
 connection badge never updated. One Refresh button on the Anki panel feeds it
 and also reloads the deck and note-type lists (C03). The production wiring that
 fixes this lives in ``anki_miner.gui.app._connect_settings_validation``; these
@@ -166,13 +166,13 @@ class TestSettingsValidationWiring:
         settings_tab.validation_requested.emit()
         assert calls == [settings_tab.anki_panel.get_ankiconnect_url()]
 
-    def test_test_connection_button_runs_validation(self, wired):
-        """Test Connection → panel signal → validation_requested → _run_validation."""
+    def test_the_refresh_signal_runs_validation(self, wired):
+        """Refresh → panel signal → validation_requested → _run_validation."""
         _window, settings_tab, calls = wired
         settings_tab.anki_panel.test_connection_requested.emit()
         assert calls == [settings_tab.anki_panel.get_ankiconnect_url()]
 
-    def test_test_connection_uses_unsaved_stripped_url(self, wired):
+    def test_validation_uses_unsaved_stripped_url(self, wired):
         window, settings_tab, calls = wired
         settings_tab.anki_panel.ankiconnect_url_input.setText("  http://127.0.0.1:9999  ")
         assert window.get_config().ankiconnect_url != "http://127.0.0.1:9999"
@@ -250,7 +250,7 @@ class TestSettingsValidationWiring:
         assert settings_tab.anki_panel.refresh_button.isEnabled()
 
     def test_refresh_runs_validation_and_reloads_the_lists(self, wired):
-        """C03: one Refresh does both jobs Test Connection and the two refreshes did."""
+        """C03: one Refresh does the jobs the connection test and the two list refreshes did."""
         from unittest.mock import patch  # noqa: PLC0415
 
         _window, settings_tab, calls = wired

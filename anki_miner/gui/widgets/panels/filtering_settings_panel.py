@@ -335,7 +335,10 @@ class FilteringSettingsPanel(FormPanel):
         self.add_field(
             self.tr("Blacklist File"),
             self.blacklist_selector,
-            helper=self.tr("Text file with one word per line to always skip. Leave empty to skip nothing."),
+            helper=self.tr(
+                "Text file with one word per line to skip. Whitelisted words are still mined. "
+                "Leave empty to skip nothing."
+            ),
             anchor_text=lambda: ("Enable Blacklist",),
         )
 
@@ -365,8 +368,8 @@ class FilteringSettingsPanel(FormPanel):
 
         self._wordsets_helper = QLabel(
             self.tr(
-                "Exclude bundled lists of Japanese people and place names from "
-                "mining. Whitelisted names are still mined."
+                "Exclude bundled lists of Japanese people, place and company names "
+                "from mining. Whitelisted names are still mined."
             )
         )
         self._wordsets_helper.setObjectName("helper-text")
@@ -562,10 +565,15 @@ class FilteringSettingsPanel(FormPanel):
     def _sync_excluded_decks(self, *_args) -> None:
         """Empty: one line and Add only. Otherwise the list, and Remove for a selection (C09)."""
         empty = self.excluded_decks_list.count() == 0
+        selected = bool(self.excluded_decks_list.selectedItems())
+        if empty or not selected:
+            # Removing the last deck clears the selection and then the list, so
+            # Remove is disabled and hidden while it holds focus; Add is what is left.
+            self.hand_off_focus(self.remove_deck_button, self.add_deck_button)
         self.excluded_decks_list.setVisible(not empty)
         self.excluded_decks_empty_label.setVisible(empty)
         self.remove_deck_button.setVisible(not empty)
-        self.remove_deck_button.setEnabled(bool(self.excluded_decks_list.selectedItems()))
+        self.remove_deck_button.setEnabled(selected)
 
     def _on_remove_deck_clicked(self) -> None:
         """Remove the currently selected excluded deck."""

@@ -37,7 +37,7 @@ from typing import TYPE_CHECKING, Iterator
 from PyQt6.QtWidgets import QTabWidget, QVBoxLayout, QWidget
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.gui.capabilities import UTILITY_SUBTABS, effective_hidden_utilities, utility_labels
+from anki_miner.gui.capabilities import UTILITY_SUBTABS, hidden_utilities_on_tab, utility_labels
 from anki_miner.gui.utils.run_off_thread import still_running
 from anki_miner.gui.widgets.backfill_tab import CardBackfillTab
 from anki_miner.gui.widgets.base import install_animated_tab_bar
@@ -174,29 +174,22 @@ class SubtitlesTab(QWidget):
     def apply_hidden(self, stored: Iterable[str]) -> None:
         """Show every tool except the ones ``stored`` hides and the language gates.
 
-        ``stored`` is ``config.hidden_utilities``, read through
-        :func:`~anki_miner.gui.capabilities.effective_hidden_utilities`, so an
-        unknown key is ignored and a list naming every tool hides none. The
-        language gate (E17) hides Manga OCR for a mining language without the
-        ``manga_ocr`` capability; it never writes ``hidden_utilities``, so the
-        user's own choice survives a switch back to Japanese. If the two
-        together would hide every tool, only the language gate applies. A
-        hidden tool stays built and keeps its index: a run it started keeps
-        going, and showing it again puts it back in its place. Hiding the tool
-        on show moves the tab to the next visible one — Qt does that inside
-        ``setTabVisible``, and the underline follows ``currentChanged``.
+        ``stored`` is ``config.hidden_utilities``; the rule is
+        :func:`~anki_miner.gui.capabilities.hidden_utilities_on_tab`, shared
+        with Settings → Utilities. An unknown key is ignored and a list naming
+        every tool hides none. The language gate (E17) hides Manga OCR for a
+        mining language without the ``manga_ocr`` capability; it never writes
+        ``hidden_utilities``, so the user's own choice survives a switch back to
+        Japanese. If the two together would hide every tool, only the language
+        gate applies. A hidden tool stays built and keeps its index: a run it
+        started keeps going, and showing it again puts it back in its place.
+        Hiding the tool on show moves the tab to the next visible one — Qt does
+        that inside ``setTabVisible``, and the underline follows
+        ``currentChanged``.
         """
-        gated = self._language_gated()
-        hidden = effective_hidden_utilities(stored) | gated
-        if len(hidden) >= len(UTILITY_SUBTABS):
-            hidden = gated
+        hidden = hidden_utilities_on_tab(stored, get_profile(config_language(self.config)).capabilities)
         for key, index in self._subtab_index.items():
             self._inner_tabs.setTabVisible(index, key not in hidden)
-
-    def _language_gated(self) -> frozenset[str]:
-        """The tools the active mining language cannot use (E17)."""
-        capabilities = get_profile(config_language(self.config)).capabilities
-        return frozenset() if "manga_ocr" in capabilities else frozenset({"mokuro"})
 
     # ------------------------------------------------------------------
     # Config refresh

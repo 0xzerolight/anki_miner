@@ -170,7 +170,26 @@ def test_apply_puts_new_dictionaries_on_top_and_appends_new_sources(test_config,
     )
     assert new.frequency_chain == (FreqEntry("a"), FreqEntry("b", enabled=False))
     assert new.pitch_chain == (PitchSourceEntry("p"), PitchSourceEntry("q"))
-    assert new.blacklist_path == tmp_path / "blacklist.txt" and new.use_blacklist is False
+    # Word Lists has no off state (D15 item 1): a list the sender had off is not chained.
+    assert new.blacklist_path is None and new.use_blacklist is False
+
+
+def test_a_disabled_word_list_round_trips_through_a_settings_save(test_config, tmp_path, qtbot):
+    """B3.3c: what the import writes is what the Word Filters page saves back."""
+    from anki_miner.gui.widgets.panels.filtering_settings_panel import FilteringSettingsPanel  # noqa: PLC0415
+
+    off = BundleItem(kind="blacklist", item_id="blacklist", name="Blacklist", member="blacklist.txt", enabled=False)
+    on = BundleItem(kind="whitelist", item_id="whitelist", name="Whitelist", member="whitelist.txt")
+    landed = {"blacklist": tmp_path / "blacklist.txt", "whitelist": tmp_path / "whitelist.txt"}
+    imported = apply_install_to_config(test_config, _result(test_config, off, on, wordlist_paths=landed))
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+
+    panel.load_from_config(imported)
+    saved = panel.contribute(imported)
+
+    assert (saved.blacklist_path, saved.use_blacklist) == (imported.blacklist_path, imported.use_blacklist)
+    assert (saved.whitelist_path, saved.use_whitelist) == (landed["whitelist"], True)
 
 
 def test_apply_replaces_a_dangling_entry_instead_of_duplicating_it(test_config):
