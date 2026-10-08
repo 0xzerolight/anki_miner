@@ -370,26 +370,32 @@ class TracksTab(_ToolTabBase):
             self.tracks_status_label.setText(self.tr("No videos were found in that folder."))
             table.hide()
             return
-        first = probe.videos[0]
+        listed = probe.videos[probe.listed_index]
         if probe.tracks.is_empty:
-            self.tracks_status_label.setText(
-                tr_format(self.tr("No subtitle or audio tracks were found in %1."), first.name)
-            )
+            if probe.source != listed:
+                self.tracks_status_label.setText(
+                    self.tr("No subtitle or audio tracks were found in any video in that folder.")
+                )
+            else:
+                self.tracks_status_label.setText(
+                    tr_format(self.tr("No subtitle or audio tracks were found in %1."), listed.name)
+                )
             table.hide()
             return
-        if probe.source != first:
+        if probe.source != listed:
             self.tracks_status_label.setText(
                 tr_format(
                     self.tr(
-                        "Tracks of %1, the first of %2 videos. The ticked tracks are saved from every video "
-                        "in the folder; a video without one is skipped."
+                        "Tracks of %1, one of %n videos. The ticked tracks are saved from every video "
+                        "in the folder; a video without one is skipped.",
+                        "",
+                        len(probe.videos),
                     ),
-                    first.name,
-                    len(probe.videos),
+                    listed.name,
                 )
             )
         else:
-            self.tracks_status_label.setText(tr_format(self.tr("Tracks of %1. Tick the ones to save."), first.name))
+            self.tracks_status_label.setText(tr_format(self.tr("Tracks of %1. Tick the ones to save."), listed.name))
         ticked = set(probe.preselected)
         for sub in probe.tracks.subtitles:
             self._add_subtitle_row(sub, ticked)

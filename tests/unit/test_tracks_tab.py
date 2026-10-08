@@ -162,6 +162,24 @@ def test_folder_caption_names_the_first_video_and_the_rule(qtbot, tmp_path):
     assert "EP01.mkv" in text and "2" in text and "every video" in text
 
 
+def test_folder_caption_names_the_listed_video(qtbot, tmp_path):
+    """EP01 unreadable: the listing and its caption are EP02's (Tracks final review, minor 1)."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    videos = (_video(tmp_path, "EP01.mkv"), _video(tmp_path, "EP02.mkv"), _video(tmp_path, "EP03.mkv"))
+    probe = _probe(tmp_path, videos)
+    _loaded(tab, tmp_path, InputProbe(probe.source, probe.videos, probe.tracks, probe.preselected, listed_index=1))
+    text = tab.tracks_status_label.text()
+    assert "EP02.mkv" in text and "EP01.mkv" not in text and "3" in text and "every video" in text
+
+
+def test_a_folder_without_tracks_says_no_video_had_any(qtbot, tmp_path):
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    videos = (_video(tmp_path, "EP01.mkv"), _video(tmp_path, "EP02.mkv"))
+    _loaded(tab, tmp_path, InputProbe(tmp_path, videos, MediaTracks(), ()))
+    assert tab.tracks_table.isHidden()
+    assert "EP01.mkv" not in tab.tracks_status_label.text()
+
+
 @pytest.mark.parametrize(
     ("setup", "summary"),
     [
