@@ -467,6 +467,49 @@ def test_a_failed_pack_download_offers_retry(qtbot, monkeypatch, test_config):
     assert tasks.started == ["de", "de"]
 
 
+def _with_settings_tab(wiz):
+    """Give the wizard's parent the MainWindow seams _on_pack_finished looks for."""
+    from types import SimpleNamespace
+
+    notified: list[str] = []
+    settings = SimpleNamespace(notify_language_pack_download_finished=notified.append)
+    parent = wiz.parent()
+    parent._settings_tab_index = lambda: 0  # type: ignore[attr-defined]
+    parent.tabs = SimpleNamespace(widget=lambda index: settings)  # type: ignore[attr-defined]
+    return notified
+
+
+@pytest.mark.parametrize("ok", [True, False])
+def test_the_pack_outcome_reaches_settings_either_way(qtbot, monkeypatch, test_config, ok):
+    """X.4b: a Settings "Download and switch" that joined this run must not stay disabled on failure."""
+    _choices_with_a_download(monkeypatch)
+    synced: list[bool] = []
+    monkeypatch.setattr(wizard_pages, "ensure_language_packs_on_syspath", lambda: synced.append(True))
+    wiz, tasks = _wizard_with_tasks(qtbot, monkeypatch, test_config)
+    notified = _with_settings_tab(wiz)
+    _pick(wiz.language_page, "de")
+    wiz.language_page.validatePage()
+
+    tasks.on_finished(ok, "done" if ok else "network down")
+
+    assert notified == ["de"]
+    assert synced == ([True] if ok else [])
+
+
+def test_a_failed_pack_line_says_why(qtbot, monkeypatch, test_config):
+    """X.4c: the worker's message is the only explanation the user gets."""
+    _choices_with_a_download(monkeypatch)
+    wiz, tasks = _wizard_with_tasks(qtbot, monkeypatch, test_config)
+    _pick(wiz.language_page, "de")
+    wiz.language_page.validatePage()
+
+    tasks.on_finished(False, "Cannot reach the download server.")
+
+    line = wiz.language_page.ready_page_pack_line()
+    assert line.startswith("⁨Deutsch⁩ language pack: download failed. Cannot reach the download server.")
+    assert 'href="pack"' in line
+
+
 def test_without_a_downloader_the_pick_is_refused_with_a_reason(qtbot, monkeypatch, test_config):
     _choices_with_a_download(monkeypatch)
     wiz = SetupWizard(test_config, offer_mining_language=True)

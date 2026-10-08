@@ -426,10 +426,14 @@ class MiningLanguagePage(QWizardPage):
         code = self._pack_code
         self._pack_state = "done" if ok else "failed"
         self._pack_status = message
-        if ok and code is not None:
-            # Order is load-bearing (see app._connect_language_pack_download):
-            # the pack must be importable before anything re-probes the language.
-            ensure_language_packs_on_syspath()
+        if code is not None:
+            if ok:
+                # Order is load-bearing (see app._connect_language_pack_download):
+                # the pack must be importable before anything re-probes the language.
+                ensure_language_packs_on_syspath()
+            # Both outcomes, as app._connect_language_pack_download does: a
+            # Settings "Download and switch" that joined this run stays
+            # disabled until it hears the run ended.
             window = self._wizard.parent()
             index_of = getattr(window, "_settings_tab_index", None)
             tabs = getattr(window, "tabs", None)
@@ -450,7 +454,12 @@ class MiningLanguagePage(QWizardPage):
         choice = self._choices.get(self._pack_code or "")
         name = _isolated(choice.native_name if choice is not None else (self._pack_code or ""))
         if self._pack_state == "failed":
-            failed = tr_format(self.tr("%1 language pack: download failed."), name)
+            # The worker's message is the only account of what went wrong.
+            failed = (
+                tr_format(self.tr("%1 language pack: download failed. %2"), name, self._pack_status)
+                if self._pack_status
+                else tr_format(self.tr("%1 language pack: download failed."), name)
+            )
             retry = self.tr("Retry")
             return f'{_html_text(failed)} <a href="pack">{_html_text(retry)}</a>'
         if self._pack_status:
