@@ -699,7 +699,7 @@ def test_curator_gets_the_configs_key_bindings(qapp, qtbot):
 
 
 def test_a_rebinding_reaches_the_next_curator_not_the_open_one(qapp, qtbot):
-    """The Keyboard page promises that an open curator keeps its keys until it next opens."""
+    """A rebinding applies when a curator next opens; one already open keeps the keys it opened with."""
     tab = _Bare()
     qtbot.addWidget(tab)
     tab._init_curation_bridge()

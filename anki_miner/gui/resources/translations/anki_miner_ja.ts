@@ -6022,8 +6022,8 @@ No index files are deleted.</source>
         <translation>キー割り当て</translation>
     </message>
     <message>
-        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
-        <translation>ボックスをクリックして新しいキーを押します。変更はすぐに反映されます。すでに開いている単語キュレーターのウィンドウは、次に開くまで元のキーのままです。上下キーは常に単語間の移動に使われ、左右キーは列間の移動に使われ、%1 は常に確認に使われます。</translation>
+        <source>Click a box and press the new key. Changes apply at once. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
+        <translation>ボックスをクリックして新しいキーを押します。変更はすぐに反映されます。上下キーは常に単語間の移動に使われ、左右キーは列間の移動に使われ、%1 は常に確認に使われます。</translation>
     </message>
     <message>
         <source>Word Curator</source>

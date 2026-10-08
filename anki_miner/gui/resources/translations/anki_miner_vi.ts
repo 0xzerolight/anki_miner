@@ -6022,8 +6022,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Phím tắt</translation>
     </message>
     <message>
-        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
-        <translation>Nhấp vào một ô rồi nhấn phím mới. Thay đổi áp dụng ngay lập tức. Cửa sổ Word Curator đang mở sẽ giữ nguyên các phím cũ cho đến lần mở kế tiếp. Lên và Xuống luôn di chuyển giữa các từ, Trái và Phải di chuyển giữa các cột, và %1 luôn xác nhận.</translation>
+        <source>Click a box and press the new key. Changes apply at once. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
+        <translation>Nhấp vào một ô rồi nhấn phím mới. Thay đổi áp dụng ngay lập tức. Lên và Xuống luôn di chuyển giữa các từ, Trái và Phải di chuyển giữa các cột, và %1 luôn xác nhận.</translation>
     </message>
     <message>
         <source>Word Curator</source>

@@ -6058,8 +6058,8 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Tastenkürzel</translation>
     </message>
     <message>
-        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
-        <translation>Klicken Sie auf ein Feld und drücken Sie die neue Taste. Änderungen wirken sofort. Ein bereits geöffnetes Wort-Kurator-Fenster behält seine Tasten, bis es das nächste Mal geöffnet wird. Mit Oben und Unten wechseln Sie immer zwischen den Wörtern, mit Links und Rechts zwischen den Spalten, und %1 bestätigt immer.</translation>
+        <source>Click a box and press the new key. Changes apply at once. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
+        <translation>Klicken Sie auf ein Feld und drücken Sie die neue Taste. Änderungen wirken sofort. Mit Oben und Unten wechseln Sie immer zwischen den Wörtern, mit Links und Rechts zwischen den Spalten, und %1 bestätigt immer.</translation>
     </message>
     <message>
         <source>Word Curator</source>

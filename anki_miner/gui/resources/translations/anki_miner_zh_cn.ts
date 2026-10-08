@@ -6022,8 +6022,8 @@ No index files are deleted.</source>
         <translation>快捷键</translation>
     </message>
     <message>
-        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
-        <translation>点击按键框，然后按下新的按键。更改会立即生效。已经打开的单词整理器窗口会保留原有的按键，直到下次打开时才更新。上下键始终用于在单词间移动，左右键用于在列间移动，%1 始终用于确认。</translation>
+        <source>Click a box and press the new key. Changes apply at once. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
+        <translation>点击按键框，然后按下新的按键。更改会立即生效。上下键始终用于在单词间移动，左右键用于在列间移动，%1 始终用于确认。</translation>
     </message>
     <message>
         <source>Word Curator</source>

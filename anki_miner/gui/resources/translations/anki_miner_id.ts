@@ -6022,8 +6022,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Pintasan Keyboard</translation>
     </message>
     <message>
-        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
-        <translation>Klik kotak, lalu tekan tombol baru. Perubahan langsung berlaku. Jendela Word Curator yang sudah terbuka tetap memakai tombol lamanya hingga dibuka lagi. Atas dan Bawah selalu berpindah antar kata, Kiri dan Kanan berpindah antar kolom, dan %1 selalu mengonfirmasi.</translation>
+        <source>Click a box and press the new key. Changes apply at once. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
+        <translation>Klik kotak, lalu tekan tombol baru. Perubahan langsung berlaku. Atas dan Bawah selalu berpindah antar kata, Kiri dan Kanan berpindah antar kolom, dan %1 selalu mengonfirmasi.</translation>
     </message>
     <message>
         <source>Word Curator</source>

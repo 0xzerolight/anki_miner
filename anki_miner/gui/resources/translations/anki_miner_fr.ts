@@ -6058,8 +6058,8 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Raccourcis</translation>
     </message>
     <message>
-        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
-        <translation>Cliquez sur un champ, puis appuyez sur la nouvelle touche. Les changements s'appliquent aussitôt. Une fenêtre du Curateur de mots déjà ouverte conserve ses touches jusqu'à sa prochaine ouverture. Les touches Haut et Bas permettent toujours de passer d'un mot à l'autre, Gauche et Droite d'une colonne à l'autre, et %1 confirme toujours.</translation>
+        <source>Click a box and press the new key. Changes apply at once. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
+        <translation>Cliquez sur un champ, puis appuyez sur la nouvelle touche. Les changements s'appliquent aussitôt. Les touches Haut et Bas permettent toujours de passer d'un mot à l'autre, Gauche et Droite d'une colonne à l'autre, et %1 confirme toujours.</translation>
     </message>
     <message>
         <source>Word Curator</source>

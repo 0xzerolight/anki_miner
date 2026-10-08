@@ -303,7 +303,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # Keys from Settings -> Keyboard (config.key_bindings, overrides only),
         # resolved ONCE: the curator is rebuilt for every queue item, so a
         # rebinding applies from the next one and an open window keeps the keys
-        # it was built with -- the Keyboard page says so.
+        # it was built with.
         self._keys = resolve_bindings(key_bindings or {})
         # Known Words are STAGED, not written (D34-B). Add to Known Words marks
         # rows "Known · pending"; only a successful Confirm calls this callback,

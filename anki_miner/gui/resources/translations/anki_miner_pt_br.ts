@@ -6058,8 +6058,8 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Atalhos de Teclado</translation>
     </message>
     <message>
-        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
-        <translation>Clique em uma caixa e pressione a nova tecla. As alterações são aplicadas imediatamente. Uma janela do Curador de Palavras já aberta mantém suas teclas até a próxima abertura. As setas para cima e para baixo sempre navegam entre as palavras, as setas para a esquerda e para a direita navegam entre as colunas, e %1 sempre confirma.</translation>
+        <source>Click a box and press the new key. Changes apply at once. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
+        <translation>Clique em uma caixa e pressione a nova tecla. As alterações são aplicadas imediatamente. As setas para cima e para baixo sempre navegam entre as palavras, as setas para a esquerda e para a direita navegam entre as colunas, e %1 sempre confirma.</translation>
     </message>
     <message>
         <source>Word Curator</source>
