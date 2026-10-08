@@ -7,6 +7,7 @@ lifecycle is tested once in test_tool_tab_contract.py.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
@@ -118,6 +119,27 @@ def test_preselected_track_is_ticked_and_ticks_follow_the_checkboxes(qtbot, tmp_
     tab.tracks_table.item(2, 0).setCheckState(Qt.CheckState.Checked)
     tab.tracks_table.item(0, 0).setCheckState(Qt.CheckState.Unchecked)
     assert tab.ticked_refs() == (TrackRef("audio", 0),)
+
+
+def test_a_language_switch_reticks_for_the_new_language(qtbot, tmp_path):
+    """The jpn subtitle ticked for ja would pair into es mining as EP01.ass (Tracks final review, minor 5)."""
+    config = _make_config(tmp_path)
+    tab = _make_tab(config, qtbot)
+    _loaded(tab, _video(tmp_path))
+    assert tab.ticked_refs() == (ASS_REF,)
+    tab.update_config(replace(config, language="es"))
+    assert tab.ticked_refs() == ()
+    tab.update_config(config)
+    assert tab.ticked_refs() == (ASS_REF,)
+
+
+def test_a_config_update_in_the_same_language_keeps_the_ticks(qtbot, tmp_path):
+    config = _make_config(tmp_path)
+    tab = _make_tab(config, qtbot)
+    _loaded(tab, _video(tmp_path))
+    tab.tracks_table.item(2, 0).setCheckState(Qt.CheckState.Checked)
+    tab.update_config(replace(config, use_whitelist=not config.use_whitelist))
+    assert tab.ticked_refs() == (ASS_REF, TrackRef("audio", 0))
 
 
 def test_a_new_path_drops_the_listing(qtbot, tmp_path):

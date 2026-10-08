@@ -19,6 +19,7 @@ Guard contract:
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 from typing import cast
 
@@ -49,6 +50,7 @@ from anki_miner.services.track_extractor import (
     InputProbe,
     TrackRef,
     is_track_input,
+    preferred_refs,
     probe_input,
     track_format,
 )
@@ -149,9 +151,18 @@ class TracksTab(_ToolTabBase):
         return self._total_files
 
     def update_config(self, config: AnkiMinerConfig) -> None:
-        """Adopt a new config; a run in flight keeps the one it captured."""
+        """Adopt a new config; a run in flight keeps the one it captured.
+
+        A mining-language switch re-ticks the listed tracks: the old ticks
+        picked the old language's subtitle, which would pair into the new
+        language's mining under the video's name. Otherwise the ticks stay.
+        """
+        language_changed = config_language(config) != config_language(self.config)
         self.config = config
         self._refresh_engine_state()
+        if language_changed and self._probe is not None:
+            codes = get_profile(config_language(config)).audio_track_codes
+            self._apply_input_probe(replace(self._probe, preselected=preferred_refs(self._probe.tracks, codes)))
 
     # ------------------------------------------------------------------
     # UI construction
