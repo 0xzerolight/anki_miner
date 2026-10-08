@@ -209,6 +209,30 @@ QGroupBox::title {
     left: ${spacing-sm}px;
 }
 
+/* A checkable group box used as a power-user disclosure (make_disclosure in
+   gui/widgets/base/disclosure.py) is one more checkbox row, not a heading:
+   body text, no frame or fill, title flush with the column. Any margin or
+   padding here would be added under the title row, so a collapsed disclosure
+   would turn into an empty box again; the body's place is set in Python. */
+QGroupBox[disclosure="true"] {
+    font-size: ${font-size-body}px;
+    font-weight: 400;
+    border: none;
+    border-radius: 0;
+    margin: 0;
+    padding: 0;
+    background-color: transparent;
+}
+
+/* Qt centres the tick box on the title row with QRect::center(), which on an
+   even row height lands one pixel high and clips the box's top border. The 1px
+   puts the box where a QCheckBox draws its own; the title text moves down with
+   it by the same pixel. */
+QGroupBox[disclosure="true"]::title {
+    left: 0;
+    padding: 1px 0 0 0;
+}
+
 /* ============== TAB WIDGET STYLES ============== */
 
 QTabWidget::pane {
@@ -472,7 +496,7 @@ QCheckBox {
     spacing: ${spacing-xs}px;
 }
 
-QCheckBox::indicator {
+QCheckBox::indicator, QGroupBox::indicator {
     width: 18px;
     height: 18px;
     border-radius: ${border-radius-small}px;
@@ -1255,17 +1279,17 @@ QCheckBox, QRadioButton {
     color: ${color-text};
 }
 
-QCheckBox::indicator, QRadioButton::indicator {
+QCheckBox::indicator, QRadioButton::indicator, QGroupBox::indicator {
     background-color: ${color-input-bg};
     border-color: ${color-border-subtle};
 }
 
 /* Hovering an unchecked box is not a state change; only checking it is. */
-QCheckBox::indicator:hover, QRadioButton::indicator:hover {
+QCheckBox::indicator:hover, QRadioButton::indicator:hover, QGroupBox::indicator:hover {
     border-color: ${color-border};
 }
 
-QCheckBox::indicator:checked, QRadioButton::indicator:checked {
+QCheckBox::indicator:checked, QRadioButton::indicator:checked, QGroupBox::indicator:checked {
     background-color: ${color-primary};
     border-color: ${color-primary};
 }
@@ -1273,11 +1297,11 @@ QCheckBox::indicator:checked, QRadioButton::indicator:checked {
 /* D17: a ticked box carries a tick, drawn in the colour that sits on the accent,
    so a grid of boxes no longer reads as colour swatches. Radio buttons keep the
    filled dot. */
-QCheckBox::indicator:checked {
+QCheckBox::indicator:checked, QGroupBox::indicator:checked {
     image: url("${glyph-check}");
 }
 
-QCheckBox::indicator:checked:disabled {
+QCheckBox::indicator:checked:disabled, QGroupBox::indicator:checked:disabled {
     image: url("${glyph-check-disabled}");
 }
 
@@ -1299,13 +1323,13 @@ QCheckBox:disabled, QRadioButton:disabled {
     color: ${color-text-disabled};
 }
 
-QCheckBox::indicator:disabled, QRadioButton::indicator:disabled {
+QCheckBox::indicator:disabled, QRadioButton::indicator:disabled, QGroupBox::indicator:disabled {
     background-color: ${color-input-disabled-bg};
     border-color: ${color-disabled};
 }
 
 QCheckBox::indicator:checked:disabled, QRadioButton::indicator:checked:disabled,
-QCheckBox::indicator:indeterminate:disabled {
+QGroupBox::indicator:checked:disabled, QCheckBox::indicator:indeterminate:disabled {
     background-color: ${color-disabled};
     border-color: ${color-disabled};
 }
@@ -1656,7 +1680,8 @@ QLabel#decorative {
    then state — is the spelling Qt honours; `:focus::indicator` parses and does
    nothing. */
 QCheckBox::indicator:focus,
-QRadioButton::indicator:focus {
+QRadioButton::indicator:focus,
+QGroupBox::indicator:focus {
     border-color: ${color-border-focus};
 }
 
