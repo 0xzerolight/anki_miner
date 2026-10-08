@@ -627,7 +627,10 @@ class ReadingDeckTab(_ReadingMiningTabBase):
         # The caption under the picture is the card's own line, as on the deck's
         # card; the note ordinal stays in the Position column and the Source field.
         units = {u.index: dataclasses.replace(u, location_label=u.text) for u in doc.units}
-        return CurationMediaContext(video_file=None, subtitle_entries=[], page_units=units), lookup
+        return (
+            CurationMediaContext(video_file=None, subtitle_entries=[], page_units=units, page_units_are_cards=True),
+            lookup,
+        )
 
     # ------------------------------------------------------------------
     # Drops: nothing to take here -- the deck is picked above (D50)

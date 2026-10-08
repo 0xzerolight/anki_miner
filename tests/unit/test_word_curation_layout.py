@@ -15,7 +15,7 @@ proportions*, not against pixel counts, so a font change moves them together.
 from __future__ import annotations
 
 import pytest
-from PyQt6.QtCore import QRect, Qt
+from PyQt6.QtCore import QPoint, QRect, Qt
 from PyQt6.QtGui import QScreen
 from PyQt6.QtWidgets import QSplitter, QWidget
 
@@ -160,9 +160,9 @@ class TestTheDialogFitsOnARealScreen:
         assert right_edge < dialog.width()
 
     def test_a_row_wider_than_the_screen_never_makes_the_window_wider(self, qtbot, make_tokenized_words, monkeypatch):
-        """French on a 1024px screen: the row wants more than the desktop has.
-        The window keeps to the screen (Confirm stays reachable) and only then
-        cuts the row's right end.
+        """Even stacked, the verbs want more than a 400px desktop has. The window
+        keeps to the screen (Confirm stays reachable) and only then cuts the
+        row's right end.
         """
         monkeypatch.setattr(QScreen, "availableGeometry", lambda self: QRect(0, 0, 400, 800))
         dialog = WordCurationDialog(make_tokenized_words(5), lookup_fn=_lookup)
@@ -171,3 +171,46 @@ class TestTheDialogFitsOnARealScreen:
         assert layout is not None
         assert layout.totalMinimumSize().width() > 400
         assert dialog.minimumWidth() == 400
+        assert dialog.width() <= 400
+
+    def test_a_row_too_wide_for_the_screen_stacks_the_verbs_under_search(
+        self, qtbot, make_tokenized_words, monkeypatch
+    ):
+        """Z.5 residual: fr, id, ru and vi want more than a 1024px screen in one
+        row. Stacked, the whole toolbar shows and the window still fits."""
+        monkeypatch.setattr(QScreen, "availableGeometry", lambda self: QRect(0, 0, 4000, 1080))
+        roomy = WordCurationDialog(make_tokenized_words(5), lookup_fn=_lookup)
+        qtbot.addWidget(roomy)
+        # Measured shown, so the number is the real one-row floor whatever the
+        # code under test measured before its first show.
+        roomy.show()
+        qtbot.waitExposed(roomy)
+        roomy_layout = roomy.layout()
+        assert roomy_layout is not None
+        roomy_layout.activate()
+        narrow = roomy_layout.totalMinimumSize().width() - 1
+        monkeypatch.setattr(QScreen, "availableGeometry", lambda self: QRect(0, 0, narrow, 1080))
+
+        dialog = WordCurationDialog(make_tokenized_words(5), lookup_fn=_lookup)
+        qtbot.addWidget(dialog)
+        # Asserted as the dialog builds and opens, before anything resizes it: a
+        # manual resize would hide a window left at its one-row width.
+        assert dialog.width() <= narrow
+        dialog.show()
+        qtbot.waitExposed(dialog)
+
+        button = dialog.add_known_button
+        assert dialog.width() <= narrow
+        assert button.mapTo(dialog, button.rect().topRight()).x() < dialog.width()
+        assert button.mapTo(dialog, QPoint(0, 0)).y() > dialog.search_input.mapTo(dialog, QPoint(0, 0)).y()
+
+    def test_a_row_that_fits_stays_one_row(self, qtbot, make_tokenized_words, monkeypatch):
+        monkeypatch.setattr(QScreen, "availableGeometry", lambda self: QRect(0, 0, 4000, 1080))
+        dialog = WordCurationDialog(make_tokenized_words(5), lookup_fn=_lookup)
+        qtbot.addWidget(dialog)
+        dialog.show()
+        qtbot.waitExposed(dialog)
+
+        search_mid = dialog.search_input.geometry().center().y()
+        button_mid = dialog.add_known_button.geometry().center().y()
+        assert abs(search_mid - button_mid) < dialog.add_known_button.height() / 2

@@ -36,7 +36,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import SPACING
-from anki_miner.gui.utils.content_text import content_cell_font
+from anki_miner.gui.utils.content_text import ContentCellDelegate, content_cell_font
 from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
 from anki_miner.gui.utils.language_gate import apply_language_gate
 from anki_miner.gui.utils.qt_helpers import (
@@ -285,6 +285,12 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         # field's changes together.
         self.preview_table.setSortingEnabled(True)
         configure_data_view(self.preview_table)
+        # The Expression cells are mined content: an rtl language lays them out
+        # right to left. The style is read at paint time, so update_config's
+        # language switch needs nothing more.
+        self.preview_table.setItemDelegateForColumn(
+            0, ContentCellDelegate(self.preview_table, lambda: self._content_style)
+        )
         install_copy_rows(self.preview_table)
         header = self.preview_table.horizontalHeader()
         if header is not None:
