@@ -1146,17 +1146,20 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         menu.exec(header_view.mapToGlobal(pos))
 
     def _reset_columns(self) -> None:
-        """Unhide every column and put them back in logical order.
+        """Put the columns back to the first-run arrangement (D5).
 
-        The recovery path for an arrangement the user cannot undo by hand: a
-        hidden column has no header section left to right-click.
+        Logical order, every column shown but the D5 defaults, then this run's
+        gates. The recovery path for an arrangement the user cannot undo by
+        hand: a hidden column has no header section left to right-click.
         """
         header_view = self.table.horizontalHeader()
         for column in range(self.table.columnCount()):
-            self.table.setColumnHidden(column, False)
+            self.table.setColumnHidden(column, column in _DEFAULT_HIDDEN_COLUMNS)
             if header_view:
                 header_view.moveSection(header_view.visualIndex(column), column)
-        self._pre_gate_hidden = dict.fromkeys(self._empty_columns, False)
+        # The intent _restore_layout_state records for a first run, so the save
+        # in done() writes the D5 default rather than this run's gate.
+        self._pre_gate_hidden = {column: column in _DEFAULT_HIDDEN_COLUMNS for column in self._empty_columns}
         self._apply_header_resize_modes()
         self._apply_translation_column_gate()
         self._apply_audio_column_gate()
