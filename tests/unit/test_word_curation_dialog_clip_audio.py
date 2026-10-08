@@ -14,7 +14,7 @@ from PyQt6.QtCore import Qt
 from anki_miner.gui.widgets.dialogs import word_curation_dialog as wcd
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext, WordCurationDialog
 from anki_miner.models import TokenizedWord
-from anki_miner.models.reading import ReadingUnit
+from anki_miner.models.reading import ImageRef, ReadingUnit
 
 
 def _make_word(lemma: str, unit_index: int) -> TokenizedWord:
@@ -181,3 +181,38 @@ def test_a_deck_run_names_the_play_key_on_the_hint_line(qtbot, fake_clip_player,
     qtbot.addWidget(dialog)
 
     assert "play/pause" in dialog.key_hint_label.text()
+
+
+def _deck_context(units: dict[int, ReadingUnit]) -> CurationMediaContext:
+    return CurationMediaContext(video_file=None, subtitle_entries=[], page_units=units, page_units_are_cards=True)
+
+
+def test_a_card_without_a_picture_says_so_in_card_words(qtbot, fake_clip_player, deck_units):
+    units, _ = deck_units
+    dialog = WordCurationDialog([_make_word("猫", 0), _make_word("犬", 1)], media_context=_deck_context(units))
+    qtbot.addWidget(dialog)
+
+    _focus_word(dialog, 1)
+
+    assert dialog.page_image_view.current_message == "This card has no picture"
+
+
+def test_a_card_picture_that_fails_to_load_says_so_in_card_words(qtbot, tmp_path, monkeypatch):
+    units = {0: ReadingUnit("猫", 0, "#1", image_ref=ImageRef(tmp_path / "card.jpg"))}
+    monkeypatch.setattr(wcd, "run_off_thread", lambda parent, work, on_done, on_error=None, **kw: on_error("boom"))
+    dialog = WordCurationDialog([_make_word("猫", 0)], media_context=_deck_context(units))
+    qtbot.addWidget(dialog)
+
+    _focus_word(dialog, 0)
+
+    assert dialog.page_image_view.current_message == "Could not load this card's picture"
+
+
+def test_a_manga_page_keeps_its_page_wording(qtbot, fake_clip_player, deck_units):
+    units, _ = deck_units
+    dialog = WordCurationDialog([_make_word("猫", 0), _make_word("犬", 1)], media_context=_context(units))
+    qtbot.addWidget(dialog)
+
+    _focus_word(dialog, 1)
+
+    assert dialog.page_image_view.current_message == "No page image for this word"

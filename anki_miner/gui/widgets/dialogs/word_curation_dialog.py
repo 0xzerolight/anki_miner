@@ -260,6 +260,10 @@ class CurationMediaContext:
     #: calls it off the GUI thread. ``None`` (every single-episode caller)
     #: keeps the player pinned to ``video_file``.
     context_resolver: Callable[[Path], CurationMediaContext | None] | None = None
+    #: Reading → Anki Deck: ``page_units`` are the deck's cards, each with its
+    #: own picture, not a volume's pages, so the picture pane's notices speak
+    #: of a card. Set by the one construction site that knows the run's source.
+    page_units_are_cards: bool = False
 
 
 class WordCurationDialog(ScreenIssueHost, QDialog):
@@ -358,6 +362,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # _closing blocks any dispatch once teardown has run (see _stop_player).
         self._page_units = ctx.page_units if ctx is not None else None
         self._show_image = bool(self._page_units)
+        self._units_are_cards = ctx is not None and ctx.page_units_are_cards
         # Anki-deck runs: units carry their card's own clip, played from a
         # button under the picture (the player pane seeks one source by time,
         # which a clip-per-card deck does not have).
@@ -3091,7 +3096,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         unit = self._page_units.get(unit_index)
         if unit is None or unit.image_ref is None:
             caption = unit.location_label if unit is not None else ""
-            self.page_image_view.show_message(self.tr("No page image for this word"), caption)
+            missing = (
+                self.tr("This card has no picture") if self._units_are_cards else self.tr("No page image for this word")
+            )
+            self.page_image_view.show_message(missing, caption)
             return
         ref = unit.image_ref
         box = unit.block_box
@@ -3124,7 +3132,12 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             if gen != self._page_request_gen:
                 return
             logger.warning("page image load failed for %s: %s", ref, message)
-            self.page_image_view.show_message(self.tr("Could not load page image"), caption)
+            failed = (
+                self.tr("Could not load this card's picture")
+                if self._units_are_cards
+                else self.tr("Could not load page image")
+            )
+            self.page_image_view.show_message(failed, caption)
 
         # QImage decodes off-thread (thread-safe); QPixmap conversion happens
         # in on_done on the GUI thread (QPixmap is GUI-thread-only).

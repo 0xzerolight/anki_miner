@@ -255,6 +255,7 @@ class TestCurationContext:
 
         assert lookup_fn is tab.worker_thread.curation_processor.offline_lookup_fn
         assert ctx is not None and ctx.video_file is None and ctx.page_units is not None
+        assert ctx.page_units_are_cards, "the curator must word its notices for a card"
         # The curator captions a card's picture with the card's own line; the
         # note ordinal ("#1") belongs to the Position column.
         assert {i: u.location_label for i, u in ctx.page_units.items()} == {0: "今日は", 1: "明日"}
