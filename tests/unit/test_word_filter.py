@@ -55,6 +55,11 @@ class TestWordFilterService:
     class TestFilterUnknown:
         """Tests for filter_unknown method."""
 
+        def test_known_forms_probes_with_the_same_fold_as_filter_unknown(self, test_config):
+            """The not-mined report asks which bare card fronts are known."""
+            service = WordFilterService(test_config, dedup_fold=str.casefold)
+            assert service.known_forms(["Essen", "laufen", "ちょっと"], {"essen", "ちょっと"}) == {"Essen", "ちょっと"}
+
         def test_filters_known_lemmas(self, test_config):
             """Should filter out words with known lemmas."""
             service = WordFilterService(test_config)

@@ -53,6 +53,24 @@ class TestNotMinedReport:
         assert result.not_mined.forms(NotMinedReason.KANA_ONLY) == {"ちょっと"}
         assert result.not_mined.words == {"ちょっと"}
 
+    def test_a_known_word_the_parse_turned_away_is_reported_as_known(self, test_config, mock_services, tmp_path):
+        """Whitelisting a known word would not mine it (the known check beats the
+        whitelist), so its parse reason must not tell the user to."""
+        taberu = _word("食べる")
+        mock_services["subtitle_parser"].last_parse_rejects = {
+            "ちょっと": NotMinedReason.KANA_ONLY,
+            "はい": NotMinedReason.WORD_TYPE,
+        }
+        mock_services["anki_service"].get_existing_vocabulary.return_value = {"ちょっと"}
+        mock_services["media_extractor"].extract_media_batch.return_value = _media_for([taberu])
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+
+        _proc, result = _run(test_config, mock_services, tmp_path, [taberu], created=["食べる"])
+
+        assert result.not_mined.forms(NotMinedReason.KNOWN) == {"ちょっと"}
+        assert result.not_mined.forms(NotMinedReason.KANA_ONLY) == frozenset()
+        assert result.not_mined.forms(NotMinedReason.WORD_TYPE) == {"はい"}
+
     def test_known_words_are_reported_and_mined_ones_never(self, test_config, mock_services, tmp_path):
         taberu, nomu = _word("食べる"), _word("飲む", start_time=5.0)
         mock_services["anki_service"].get_existing_vocabulary.return_value = {"飲む"}

@@ -1145,7 +1145,7 @@ class EpisodeProcessor:
             2,
             QCoreApplication.translate("EpisodeProcessor", "Filtering against known vocabulary"),
         )
-        unknown_words = self._phase2_known_words(all_words, counts)
+        unknown_words = self._phase2_known_words(all_words, counts, drops=ctx.not_mined)
         _note_dropped(ctx.not_mined, NotMinedReason.KNOWN, all_words, unknown_words)
         self.presenter.show_success(
             QCoreApplication.translate("EpisodeProcessor", "%n new word(s) to mine", "", len(unknown_words))
@@ -1277,12 +1277,20 @@ class EpisodeProcessor:
         )
         return unknown_words
 
-    def _phase2_known_words(self, all_words: list[TokenizedWord], counts: _Phase2Counts) -> list[TokenizedWord]:
+    def _phase2_known_words(
+        self,
+        all_words: list[TokenizedWord],
+        counts: _Phase2Counts,
+        *,
+        drops: dict[str, NotMinedReason] | None = None,
+    ) -> list[TokenizedWord]:
         """Phase 2: drop the words the learner already knows; return the rest.
 
         Known means in Anki, in the known-words DB (synced from Anki first when
         that DB is on), or on the user ignore list. Fills ``counts.known_hits``
-        and the two ``known_db_*`` counters.
+        and the two ``known_db_*`` counters. A front in ``drops`` (the parse's
+        turned-away tokens) that is known is re-recorded as known: the known
+        check outranks the whitelist, so whitelisting it would not mine it.
         """
         if self.config.include_known_words:
             # "Include everything" mode (set by the e2e harness's no-Anki
@@ -1344,8 +1352,13 @@ class EpisodeProcessor:
             else:
                 known_words = self.anki_service.get_existing_vocabulary()
 
-            unknown_words = self.word_filter.filter_unknown(all_words, known_words | user_words)
+            vocabulary = known_words | user_words
+            unknown_words = self.word_filter.filter_unknown(all_words, vocabulary)
             counts.known_hits = len(all_words) - len(unknown_words)
+            if drops:
+                known = self.word_filter.known_forms(list(drops), vocabulary)
+                if isinstance(known, set):
+                    drops.update(dict.fromkeys(known, NotMinedReason.KNOWN))
         return unknown_words
 
     def _phase2_definition_viability(
