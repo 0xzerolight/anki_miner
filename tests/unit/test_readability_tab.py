@@ -18,6 +18,7 @@ pytest.importorskip("PyQt6.QtWidgets")
 from PyQt6.QtCore import Qt
 
 from anki_miner.exceptions import AnkiConnectionError
+from anki_miner.gui.controllers.task_registry import TaskRegistry
 from anki_miner.gui.widgets.readability_tab import ReadabilityTab
 from anki_miner.models import TerminalOutcome
 from anki_miner.models.readability import ReadabilityStats
@@ -185,6 +186,31 @@ def test_measured_rows_fill_table_and_totals(qtbot, tmp_path):
     assert not tab.report_card.isHidden()
 
 
+def test_totals_never_revisit_earlier_files(qtbot, tmp_path, monkeypatch):
+    """Per-row work must not grow with the folder (Readability review, minor 4: 500+ episodes)."""
+    from anki_miner.gui.widgets import readability_tab
+    from anki_miner.services.readability import combine
+
+    sizes: list[int] = []
+
+    def spy(stats):
+        stats = list(stats)
+        sizes.append(len(stats))
+        return combine(stats)
+
+    monkeypatch.setattr(readability_tab, "combine", spy)
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    _worker, measured, _errors, _finished = _start(tab, _subtitle(tmp_path))
+    tab._run_files = [tmp_path / f"{i}.srt" for i in range(5)]
+
+    for idx in range(5):
+        measured[0](idx, _stats(10, idx, {f"w{idx}", "犬"}, (1, 0, 0)))
+
+    assert max(sizes) <= 2
+    assert tab.new_words_card.value_label.text() == "6"  # w0..w4 and 犬 once
+    assert tab.known_card.value_label.text() == "80.0%"  # 40 of 50 occurrences
+
+
 def test_sorted_insert_keeps_cells_together(qtbot, tmp_path):
     tab = _make_tab(_make_config(tmp_path), qtbot)
     _worker, measured, _errors, _finished = _start(tab, _subtitle(tmp_path))
@@ -225,6 +251,22 @@ def test_rerun_clears_report(qtbot, tmp_path):
     assert tab.report_card.isHidden()
 
 
+def test_a_refusal_clears_the_last_report(qtbot, tmp_path):
+    """An old report must not sit under a new complaint (Readability review, minor 7)."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    _worker, measured, _errors, finished = _start(tab, _subtitle(tmp_path))
+    measured[0](0, _stats(100, 10, {"犬"}, (1, 0, 0)))
+    finished[0](TerminalOutcome.SUCCESS)
+    tab.worker_thread = None  # the QThread has exited
+
+    tab.input_selector.set_path(str(tmp_path / "gone.srt"))
+    tab.check_button.click()
+
+    assert tab.issue_banner().current_issue() is not None
+    assert tab.files_table.rowCount() == 0
+    assert tab.report_card.isHidden()
+
+
 def test_cancel_keeps_measured_rows(qtbot, tmp_path):
     tab = _make_tab(_make_config(tmp_path), qtbot)
     _worker, measured, _errors, finished = _start(tab, _subtitle(tmp_path))
@@ -248,6 +290,35 @@ def test_anki_unreachable_names_anki_in_the_banner(qtbot, tmp_path):
     assert issue is not None
     assert "Anki" in issue.summary
     assert issue.details == "refused"
+
+
+def test_status_says_what_happens_before_the_first_file(qtbot, tmp_path):
+    """Building dictionaries and reading Anki can take seconds (Readability review, minor 5).
+
+    The pinned bar is the run's one live readout (D1): the page's progress card is never shown.
+    """
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    registry = TaskRegistry()
+    tab.bind_task_registry(registry)
+    worker, *_slots = _start(tab, _subtitle(tmp_path))
+    assert registry.snapshot("tools.readability").detail == "Reading your Anki cards and known words…"
+
+    worker.file_started.connect.call_args.args[0](0)
+
+    assert registry.snapshot("tools.readability").detail == "Checking file 1 of 1"
+
+
+def test_load_warnings_land_in_the_log(qtbot, tmp_path):
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    worker = FakeToolWorker()
+    slots = capture_slots(worker.load_warning)
+    tab.input_selector.set_path(str(_subtitle(tmp_path)))
+    with patch(_WORKER_CLS, return_value=worker):
+        tab.check_button.click()
+
+    slots[0]("Couldn't load frequency data: gone")
+
+    assert "Couldn't load frequency data: gone" in tab.log_widget.full_text()
 
 
 def test_probe_mid_run_does_not_rearm_check(qtbot, tmp_path):

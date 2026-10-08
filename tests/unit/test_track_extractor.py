@@ -240,6 +240,33 @@ def test_probe_input_folder_reads_the_first_video(tmp_path, fake_probe):
     assert fake_probe == [(tmp_path / "EP2.mkv", "ffprobe")]
 
 
+def test_probe_input_folder_lists_the_first_readable_video(tmp_path, monkeypatch):
+    """A broken EP01 must not hide the folder's layout (Tracks final review, minor 1)."""
+    for name in ("EP01.mkv", "EP02.mkv", "EP03.mkv"):
+        (tmp_path / name).write_bytes(b"x")
+    probed: list[str] = []
+
+    def subs(video: Path, ffprobe_cmd: str = "ffprobe"):
+        probed.append(video.name)
+        return [] if video.name == "EP01.mkv" else [_sub(0)]
+
+    monkeypatch.setattr(te, "list_subtitle_streams", subs)
+    monkeypatch.setattr(te, "list_audio_streams", lambda video, ffprobe_cmd="ffprobe": [])
+    probe = probe_input(tmp_path, "ffprobe", JA)
+    assert probe.listed_index == 1 and probe.tracks == MediaTracks((_sub(0),))
+    assert probe.preselected == (TrackRef(SUB, 0),)
+    assert probed == ["EP01.mkv", "EP02.mkv"]  # stops at the first readable one
+
+
+def test_probe_input_folder_with_no_readable_video(tmp_path, monkeypatch):
+    for name in ("EP01.mkv", "EP02.mkv"):
+        (tmp_path / name).write_bytes(b"x")
+    monkeypatch.setattr(te, "list_subtitle_streams", lambda video, ffprobe_cmd="ffprobe": [])
+    monkeypatch.setattr(te, "list_audio_streams", lambda video, ffprobe_cmd="ffprobe": [])
+    probe = probe_input(tmp_path, "ffprobe", JA)
+    assert len(probe.videos) == 2 and probe.tracks.is_empty and probe.preselected == ()
+
+
 def test_probe_input_empty_folder(tmp_path, fake_probe):
     probe = probe_input(tmp_path, "ffprobe", JA)
     assert probe.videos == () and probe.tracks.is_empty and probe.preselected == ()

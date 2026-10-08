@@ -93,3 +93,42 @@ def test_combine_is_occurrence_weighted_and_unions_new_words():
 
 def test_combine_of_nothing_has_no_percentages():
     assert combine([]).known_pct is None
+
+
+# --- the real ja parser (Readability final review, minor 6) ------------------
+
+_JA_SRT = "1\n00:00:01,000 --> 00:00:02,000\n猫が魚を食べる\n\n2\n00:00:03,000 --> 00:00:04,000\n猫が寝る\n"
+_EN_SRT = "1\n00:00:01,000 --> 00:00:02,000\nThe cat eats the fish.\n"
+
+
+def _parse(config, path):
+    from anki_miner.services.subtitle_parser import SubtitleParserService
+
+    parser = SubtitleParserService(config)
+    words, index = parser.parse_subtitle_file_with_index(path)
+    return words, index, parser.count_lemmas(path)
+
+
+def test_real_ja_parse_feeds_measure_one_key_space(test_config, tmp_path):
+    """count_lemmas keys, TokenizedWord.lemma and LineLemmas.lemmas name the same words."""
+    pytest.importorskip("fugashi")
+    sub = tmp_path / "ep01.ja.srt"
+    sub.write_text(_JA_SRT, encoding="utf-8")
+    words, index, counts = _parse(test_config, sub)
+
+    assert {w.lemma for w in words} == set(counts) == set().union(*(line.lemmas for line in index))
+    stats = measure(words, index, counts, {"猫"}, WordFilterService(test_config))
+    assert (stats.word_count, stats.unknown_count) == (5, 3)
+    assert stats.new_words == frozenset({"魚", "食べる", "寝る"})
+    assert stats.line_buckets == (0, 1, 1)
+
+
+def test_real_ja_parse_of_an_english_file_has_no_words(test_config, tmp_path):
+    """The worker skips ep01.en.srt under ja because of this (review Focus 2)."""
+    pytest.importorskip("fugashi")
+    sub = tmp_path / "ep01.en.srt"
+    sub.write_text(_EN_SRT, encoding="utf-8")
+    words, index, counts = _parse(test_config, sub)
+
+    stats = measure(words, index, counts, set(), WordFilterService(test_config))
+    assert stats.word_count == 0 and stats.known_pct is None

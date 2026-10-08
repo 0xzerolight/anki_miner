@@ -129,7 +129,8 @@ class SubtitlesTab(QWidget):
         ``key`` is a stable identifier from
         :data:`anki_miner.gui.capabilities.SUBTAB_KEYS` (``"generate"``,
         ``"retime"``, ``"condense"``, ``"backfill"``, ``"deckfilter"``,
-        ``"download"``, ``"mokuro"``, ``"booksync"``, ``"readability"``). Unknown keys are
+        ``"download"``, ``"mokuro"``, ``"booksync"``, ``"readability"``,
+        ``"tracks"``). Unknown keys are
         ignored so a stale caller can't crash the UI. A tool hidden in
         Settings → Utilities is refused the same way, so a deep
         link or a restored route never lands on a page the tab bar does not
