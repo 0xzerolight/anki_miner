@@ -1622,14 +1622,25 @@ class ResourcesPage(_LiveCheckPage):
             if not names:
                 continue
             noun = QCoreApplication.translate("SetupWizard", _KIND_PHRASE_NOUNS[kind])
+            #: %1 is one or more resource names, %2 what they are: "JMdict (dictionary)".
             groups.append(tr_format(self.tr("%1 (%2)"), self._and_list(names), noun))
+        #: %1 lists "name (kind)" groups: "Downloads JMdict (dictionary) and Kanjium (pitch accent)."
         return tr_format(self.tr("Downloads %1."), self._and_list(groups))
 
     def _and_list(self, items: list[str]) -> str:
-        """Join as "A", "A and B" or "A, B and C"; the joining word is translated."""
+        """Join as "A", "A and B" or "A, B and C"; both joiners are translated.
+
+        The catalogue varies by language, so no whole sentence per combination
+        can follow it; the joiners carry translator notes instead.
+        """
+        joined = items[0]
+        for item in items[1:-1]:
+            #: Joins list items before the last one: "JMdict, JPDB and Jiten". Use your language's list comma.
+            joined = tr_format(self.tr("%1, %2"), joined, item)
         if len(items) == 1:
-            return items[0]
-        return tr_format(self.tr("%1 and %2"), ", ".join(items[:-1]), items[-1])
+            return joined
+        #: Joins the last item to the rest of a list: "JMdict, JPDB and Jiten".
+        return tr_format(self.tr("%1 and %2"), joined, items[-1])
 
     def _sync_download_button(self) -> None:
         """Nothing to fetch, or a run already going, is not a run."""

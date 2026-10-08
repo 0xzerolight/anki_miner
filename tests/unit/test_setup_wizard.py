@@ -2298,6 +2298,17 @@ def test_the_dictionary_page_names_what_it_downloads_without_a_checklist(qtbot, 
     assert page.selected_specs() == list(RECOMMENDED_DEFAULT_SET)
 
 
+def test_the_downloads_sentence_takes_every_joiner_from_the_catalogue(qtbot, wiz_config, monkeypatch):
+    """P-B2.4: a CJK catalogue can join with 、 and 和; no Latin comma is hard-coded."""
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
+    page = wiz.resources_page
+    zh = {"%1, %2": "%1、%2", "%1 and %2": "%1和%2", "%1 (%2)": "%1（%2）", "Downloads %1.": "下载%1。"}
+    monkeypatch.setattr(page, "tr", lambda text, *args: zh.get(text, text))
+
+    assert page._and_list(["A", "B", "C", "D"]) == "A、B、C和D"
+    assert ", " not in page._contents_sentence(page.selected_specs())
+
+
 def test_download_fetches_the_whole_catalogue_without_a_window(qtbot, wiz_config, monkeypatch):
     wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
     seen: dict[str, object] = {}
