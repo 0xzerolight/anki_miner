@@ -40,7 +40,7 @@ from anki_miner.gui.utils.qt_helpers import (
 from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout, field_label_width
-from anki_miner.gui.widgets.dialogs.audio_tracks_dialog import _format_channels
+from anki_miner.gui.widgets.dialogs.audio_tracks_dialog import format_channels
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.workers.track_extract_worker import TrackExtractWorker
 from anki_miner.languages.registry import config_language, get_profile
@@ -437,7 +437,7 @@ class TracksTab(_ToolTabBase):
 
     def _add_audio_row(self, stream: AudioStream, ticked: set[TrackRef]) -> None:
         ref = TrackRef("audio", stream.audio_index)
-        codec = " ".join(part for part in (_codec_label(stream.codec), _format_channels(stream.channels)) if part)
+        codec = " ".join(part for part in (_codec_label(stream.codec), format_channels(stream.channels)) if part)
         self._add_row(
             ref,
             tr_format(self.tr("Audio %1"), stream.audio_index + 1),

@@ -1,4 +1,4 @@
-"""Tests for AudioTracksDialog and _format_channels helper."""
+"""Tests for AudioTracksDialog and format_channels helper."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import QLabel, QRadioButton
 
 from anki_miner.gui.widgets.dialogs.audio_tracks_dialog import (
     AudioTracksDialog,
-    _format_channels,
+    format_channels,
 )
 from anki_miner.utils.audio_track_detector import AudioStream
 
@@ -46,7 +46,7 @@ def _labels(dialog: AudioTracksDialog) -> list[QLabel]:
 
 
 # ---------------------------------------------------------------------------
-# 1. _format_channels
+# 1. format_channels
 # ---------------------------------------------------------------------------
 
 
@@ -62,7 +62,7 @@ def _labels(dialog: AudioTracksDialog) -> list[QLabel]:
     ],
 )
 def test_format_channels(channels: int | None, expected: str) -> None:
-    assert _format_channels(channels) == expected
+    assert format_channels(channels) == expected
 
 
 # ---------------------------------------------------------------------------
