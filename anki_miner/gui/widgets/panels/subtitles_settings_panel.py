@@ -26,7 +26,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import cast
 
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, pyqtSignal
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -69,9 +69,10 @@ _MODEL_OPTIONS: list[tuple[str, str]] = [
 _MODEL_APPROX_MB: dict[str, int] = {"large-v3": 3090, "small": 480}
 
 # Ordered (display_label, config_value) pairs for the ASR device dropdown that
-# are offered on every platform (CT2 backend: auto/cuda/cpu).
+# are offered on every platform (CT2 backend: auto/cuda/cpu). Labels are
+# translated where the combo is filled; only "Auto" has words to translate.
 _DEVICE_OPTIONS: list[tuple[str, str]] = [
-    ("Auto (GPU if available)", "auto"),
+    (QT_TRANSLATE_NOOP("SubtitlesSettingsPanel", "Auto (GPU if available)"), "auto"),
     ("GPU (CUDA)", "cuda"),
     ("CPU", "cpu"),
 ]
@@ -160,6 +161,10 @@ class SubtitlesSettingsPanel(FormPanel):
     #: resolved by the wiring. One action fetches BOTH the ggml acoustic model
     #: and the Silero VAD.
     vulkan_model_download_requested = pyqtSignal(str)
+    #: The probe showed or hid a row settings search indexes (Model download
+    #: follows engine availability). Search resolves visibility when its index
+    #: is built, and this row moves after that, so SettingsTab re-indexes.
+    setting_rows_changed = pyqtSignal()
 
     def __init__(
         self,
@@ -339,7 +344,7 @@ class SubtitlesSettingsPanel(FormPanel):
 
         self.device_combo = QComboBox()
         for label, _value in self._device_options:
-            self.device_combo.addItem(label)
+            self.device_combo.addItem(QCoreApplication.translate("SubtitlesSettingsPanel", label))
         self.add_field(
             self.tr("Run transcription on"),
             self.device_combo,
@@ -1238,8 +1243,13 @@ class SubtitlesSettingsPanel(FormPanel):
         "Downloading…" status untouched. Hidden until the engine imports; after
         the one setup click it starts the model download itself (C11).
         """
+        row_shown = engine_available or self._asr_download_active
+        # [-1] is the field half of the (label, field) row.
+        row_moved = self._model_row_widgets[-1].isHidden() == row_shown
         for widget in self._model_row_widgets:
-            widget.setVisible(engine_available or self._asr_download_active)
+            widget.setVisible(row_shown)
+        if row_moved:
+            self.setting_rows_changed.emit()
         if self._asr_download_active:
             self.download_model_button.setEnabled(False)
             return

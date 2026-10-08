@@ -21,6 +21,7 @@ and its fixtures are private to it.
 from __future__ import annotations
 
 import contextlib
+from dataclasses import replace
 
 import pytest
 from PyQt6.QtCore import Qt
@@ -161,3 +162,103 @@ class TestASwitchReindexes:
         tab.set_mining_language("ja")
 
         assert "anki.reading_tone_color_checkbox" not in result_ids(tab, "Colour the reading by tone")
+
+
+_ASR_PANEL = "anki_miner.gui.widgets.panels.subtitles_settings_panel"
+
+
+def _speech_to_text(monkeypatch, *, engine: bool, model_on_disk: bool) -> None:
+    """Pin the ASR probe: engine importable or not, and the selected model on disk or not."""
+    monkeypatch.setattr(f"{_ASR_PANEL}._engine.available", lambda: engine)
+    monkeypatch.setattr(f"{_ASR_PANEL}._engine.cuda_device_count", lambda: 0)
+    monkeypatch.setattr(f"{_ASR_PANEL}.asr_pack_installer.asr_pack_supported", lambda: True)
+    monkeypatch.setattr(f"{_ASR_PANEL}.asr_pack_installer.is_installed", lambda: engine)
+    monkeypatch.setattr(f"{_ASR_PANEL}.model_manager.is_downloaded", lambda name, root: model_on_disk)
+
+
+def _probe_settled(qtbot, tab: SettingsTab) -> None:
+    panel = tab.subtitles_panel
+    qtbot.waitUntil(lambda: not panel._state_in_flight, timeout=5000)
+
+
+def _shown(tab: SettingsTab, monkeypatch, qtbot) -> None:
+    """Show the tab for real isVisible() checks; an unpatched show() opens an AnkiConnect socket."""
+    monkeypatch.setattr(tab._anki_probe, "refresh_name_lists", lambda *a, **k: None)
+    tab._search_hit_ms = 0
+    tab.show()
+    qtbot.waitExposed(tab)
+
+
+def _press_enter_on(tab: SettingsTab, qtbot, query: str) -> None:
+    tab.search_box.input.setText(query)
+    qtbot.keyClick(tab.search_box.input, Qt.Key.Key_Return)
+    qtbot.waitUntil(lambda: not tab._search_jump_timer.isActive(), timeout=2000)
+
+
+class TestTheAsrProbeReindexes:
+    """Edge2: the index was built before the probe hid the Model download row.
+
+    The probe runs off the GUI thread and lands after construction, so a
+    verdict taken at construction describes a row that has since moved.
+    """
+
+    def test_a_row_the_probe_hides_stops_being_searchable(self, tab_factory, test_config, monkeypatch, qtbot):
+        _speech_to_text(monkeypatch, engine=False, model_on_disk=False)
+        tab = tab_factory(test_config)
+        _probe_settled(qtbot, tab)
+
+        panel = tab.subtitles_panel
+        assert not panel.download_model_button.isVisibleTo(panel)  # the probe really hid the row
+        assert "subtitles.model_download" not in result_ids(tab, "model")
+
+    def test_search_after_the_probe_hides_the_model_row_lands_on_a_visible_control(
+        self, tab_factory, test_config, monkeypatch, qtbot
+    ):
+        _speech_to_text(monkeypatch, engine=False, model_on_disk=False)
+        tab = tab_factory(test_config)
+        _shown(tab, monkeypatch, qtbot)
+        _probe_settled(qtbot, tab)
+
+        _press_enter_on(tab, qtbot, "model")
+
+        focused = tab.focusWidget()
+        assert focused is not None and focused is not tab.search_box.input
+        assert focused.isVisible()
+
+
+class TestAJumpFocusesSomethingVisible:
+    """B3.5b: an anchor's own focus target can be hidden by the control's state."""
+
+    def test_an_empty_chain_jump_focuses_a_visible_chain_control(self, tab_factory, test_config, monkeypatch, qtbot):
+        tab = tab_factory(replace(test_config, dictionary_chain=()))
+        _shown(tab, monkeypatch, qtbot)
+        panel = tab.dictionary_panel
+        assert not panel._list.isVisibleTo(panel)  # the empty state hid the list
+
+        tab.jump_to_setting("dictionaries.chain")
+        qtbot.waitUntil(lambda: not tab._search_jump_timer.isActive(), timeout=2000)
+
+        assert tab.focusWidget() in (panel._download_recommended_btn, panel._add_btn)
+        assert tab.focusWidget().isVisible()
+
+    def test_a_row_with_nothing_to_focus_moves_no_focus(self, tab_factory, test_config, monkeypatch, qtbot):
+        """An installed model: the row stays (judge m6) but its Download button is hidden.
+
+        Qt parks focus asked of a hidden widget and hands it over whenever that
+        widget next appears, so a later probe offering the download again would
+        pull focus out from under the user.
+        """
+        _speech_to_text(monkeypatch, engine=True, model_on_disk=True)
+        tab = tab_factory(test_config)
+        _shown(tab, monkeypatch, qtbot)
+        _probe_settled(qtbot, tab)
+        panel = tab.subtitles_panel
+        before = tab.focusWidget()
+
+        tab.jump_to_setting("subtitles.model_download")
+        qtbot.waitUntil(lambda: not tab._search_jump_timer.isActive(), timeout=2000)
+        assert panel._model_row_widgets[-1].isVisible()
+        assert not panel.download_model_button.isVisible()
+        panel.download_model_button.show()  # a later probe offers the download again
+
+        assert tab.focusWidget() is before

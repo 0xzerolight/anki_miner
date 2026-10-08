@@ -337,7 +337,7 @@ def cookie_failure_message(tag: str, browser: str | None, joined_lower: str, *, 
     if platform.startswith("linux") and ("profile" in joined_lower and "not found" in joined_lower):
         msg += (
             " If you installed Firefox via Flatpak or Snap, use the "
-            "system-package Firefox instead, or set Cookies file in "
-            "Settings → YouTube to an exported cookies.txt."
+            'system-package Firefox instead, or choose "From a cookies.txt file…" '
+            "under Cookies from browser in Settings → YouTube."
         )
     return msg
