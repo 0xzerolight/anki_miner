@@ -336,7 +336,7 @@ def test_alass_status_reflects_installed_state(qtbot, tmp_path, monkeypatch):
     _wait_state_settled(qtbot, panel)
 
     assert "installed" in panel.alass_status_label.text().lower()
-    assert panel.download_alass_button.isEnabled()
+    assert not panel.download_alass_button.isVisibleTo(panel)
 
 
 def test_alass_status_installed_when_bundled_without_managed_download(qtbot, tmp_path, monkeypatch):
@@ -369,7 +369,7 @@ def test_alass_status_installed_when_bundled_without_managed_download(qtbot, tmp
     _wait_state_settled(qtbot, panel)
 
     assert "installed" in panel.alass_status_label.text().lower()
-    assert panel.download_alass_button.isEnabled()
+    assert not panel.download_alass_button.isVisibleTo(panel)
     alass_resolver._clear_cache()
 
 
@@ -544,6 +544,7 @@ def test_cuda_button_enabled_when_supported_and_gpu_present(qtbot, tmp_path, mon
     _wait_state_settled(qtbot, panel)
 
     assert panel.download_cuda_button.isEnabled()
+    assert panel.download_cuda_button.isVisibleTo(panel)
     assert "not installed" in panel.cuda_status_label.text().lower()
 
 
@@ -554,7 +555,7 @@ def test_cuda_status_reflects_installed(qtbot, tmp_path, monkeypatch):
     panel.load_from_config(AnkiMinerConfig(cuda_libs_root=tmp_path))
     _wait_state_settled(qtbot, panel)
 
-    assert panel.download_cuda_button.isEnabled()
+    assert not panel.download_cuda_button.isVisibleTo(panel)
     assert "installed" in panel.cuda_status_label.text().lower()
 
 
@@ -827,6 +828,7 @@ def test_notify_alass_download_finished_reprobes_install(qtbot, tmp_path, monkey
     panel.load_from_config(AnkiMinerConfig(bin_root=tmp_path))
     _wait_state_settled(qtbot, panel)
     assert "not installed" in panel.alass_status_label.text().lower()
+    assert panel.download_alass_button.isVisibleTo(panel)
 
     state["installed"] = True
     panel.notify_alass_download_finished()
@@ -834,11 +836,12 @@ def test_notify_alass_download_finished_reprobes_install(qtbot, tmp_path, monkey
 
     assert not panel._alass_download_active
     assert panel.alass_status_label.text().lower() == "installed"
+    assert not panel.download_alass_button.isVisibleTo(panel)
 
 
 def test_probe_error_preserves_last_known_installed_state(qtbot, tmp_path, monkeypatch):
     """A probe FAILURE must not relabel an already-downloaded model as missing or
-    disable its button — it falls back to the last successful probe's flags."""
+    offer its download again — it falls back to the last successful probe's flags."""
     monkeypatch.setattr(f"{_PANEL_MOD}._engine.available", lambda: True)
     monkeypatch.setattr(f"{_PANEL_MOD}._engine.cuda_device_count", lambda: 0)
     monkeypatch.setattr(f"{_PANEL_MOD}.model_manager.is_downloaded", lambda name, root: True)
@@ -853,7 +856,7 @@ def test_probe_error_preserves_last_known_installed_state(qtbot, tmp_path, monke
     # A later probe blows up: the model must STILL read "Downloaded".
     panel._on_state_error("boom")
     assert panel.model_status_label.text().lower() == "installed"
-    assert panel.download_model_button.isEnabled()
+    assert not panel.download_model_button.isVisibleTo(panel)
 
 
 def test_inflight_reload_redispatches_latest(qtbot, tmp_path, monkeypatch):
@@ -927,6 +930,7 @@ def test_vad_button_enabled_when_supported_not_installed(qtbot, tmp_path, monkey
     _wait_state_settled(qtbot, panel)
 
     assert panel.download_vad_button.isEnabled()
+    assert panel.download_vad_button.isVisibleTo(panel)
     assert "not installed" in panel.vad_status_label.text().lower()
 
 
@@ -937,7 +941,7 @@ def test_vad_status_installed_when_present_on_disk(qtbot, tmp_path, monkeypatch)
     panel.load_from_config(AnkiMinerConfig(onnx_pack_root=tmp_path))
     _wait_state_settled(qtbot, panel)
 
-    assert panel.download_vad_button.isEnabled()
+    assert not panel.download_vad_button.isVisibleTo(panel)
     assert "installed" in panel.vad_status_label.text().lower()
 
 
@@ -1083,6 +1087,7 @@ def test_vulkan_installed_probe_requires_both_ggml_and_vad(qtbot, tmp_path, monk
 
     assert "installed" in panel.vulkan_status_label.text().lower()
     assert "not" not in panel.vulkan_status_label.text().lower()
+    assert not panel.download_vulkan_button.isVisibleTo(panel)
 
 
 def test_vulkan_not_installed_when_vad_missing(qtbot, tmp_path, monkeypatch):
@@ -1111,7 +1116,7 @@ def test_vulkan_not_installed_when_ggml_missing(qtbot, tmp_path, monkeypatch):
 
 def test_notify_vulkan_download_finished_updates_status_and_cache(qtbot, tmp_path, monkeypatch):
     """notify_vulkan_download_finished sets the status label + installed cache and
-    re-enables the button."""
+    hides the button: the model is installed now."""
     monkeypatch.setattr(f"{_PANEL_MOD}.sys", _FakePlatform("linux"))
     _patch_vulkan(monkeypatch, ggml=False, vad=False)
     panel = SubtitlesSettingsPanel()
@@ -1129,7 +1134,7 @@ def test_notify_vulkan_download_finished_updates_status_and_cache(qtbot, tmp_pat
     assert not panel._vulkan_active
     assert panel.vulkan_status_label.text() == "Vulkan model installed."
     assert panel._vulkan_installed_cache is True
-    assert panel.download_vulkan_button.isEnabled()
+    assert not panel.download_vulkan_button.isVisibleTo(panel)
 
 
 def test_notify_vulkan_download_finished_failure_clears_guard(qtbot, tmp_path, monkeypatch):
@@ -1149,6 +1154,7 @@ def test_notify_vulkan_download_finished_failure_clears_guard(qtbot, tmp_path, m
     assert panel.vulkan_status_label.text() == "download failed"
     assert panel._vulkan_installed_cache is False
     assert panel.download_vulkan_button.isEnabled()
+    assert panel.download_vulkan_button.isVisibleTo(panel)
 
 
 def test_vulkan_in_flight_guard_survives_reload(qtbot, tmp_path, monkeypatch):
@@ -1458,7 +1464,7 @@ def test_engine_row_says_installed_when_the_pack_is_on_disk_but_not_yet_importab
     panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path))
     _wait_state_settled(qtbot, panel)
 
-    assert panel.download_engine_button.isEnabled()
+    assert not panel.download_engine_button.isVisibleTo(panel)
     assert panel.engine_status_label.text() == "Installed"
 
 
@@ -1784,3 +1790,52 @@ def test_picking_another_model_re_probes_its_install_state(qtbot, tmp_path, monk
 
     assert panel.get_model() == "small"
     assert "not installed" in panel.model_status_label.text().lower()
+
+
+def test_switching_to_a_missing_model_brings_its_download_button_back(qtbot, tmp_path, monkeypatch):
+    """An installed model has no Download button; picking one that is not on disk
+    offers it again, but only once the probe answers, never while it is in flight."""
+    gate = threading.Event()
+    gate.set()
+
+    def _is_downloaded(name, root):
+        gate.wait(5)
+        return name == "large-v3"
+
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.available", lambda: True)
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.cuda_device_count", lambda: 0)
+    monkeypatch.setattr(f"{_PANEL_MOD}.model_manager.is_downloaded", _is_downloaded)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_model="large-v3", asr_models_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+    assert not panel.download_model_button.isVisibleTo(panel)
+
+    gate.clear()
+    panel.set_model("small")
+    assert panel._state_in_flight
+    assert not panel.download_model_button.isVisibleTo(panel)  # no flicker while probing
+    gate.set()
+    _wait_state_settled(qtbot, panel)
+    assert panel.download_model_button.isVisibleTo(panel)
+    assert panel.download_model_button.isEnabled()
+
+    panel.set_model("large-v3")
+    _wait_state_settled(qtbot, panel)
+    assert not panel.download_model_button.isVisibleTo(panel)
+
+
+def test_vulkan_button_tracks_the_selected_models_install_state(qtbot, tmp_path, monkeypatch):
+    """The ggml weights are per model: switching to one without them offers the download again."""
+    monkeypatch.setattr(f"{_PANEL_MOD}.sys", _FakePlatform("linux"))
+    _patch_vulkan(monkeypatch, ggml=True, vad=True)
+    monkeypatch.setattr(f"{_PANEL_MOD}.ggml_model_installer.is_ggml_downloaded", lambda name, root: name == "large-v3")
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_model="large-v3", asr_models_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+    assert not panel.download_vulkan_button.isVisibleTo(panel)
+
+    panel.set_model("small")
+    _wait_state_settled(qtbot, panel)
+    assert panel.download_vulkan_button.isVisibleTo(panel)

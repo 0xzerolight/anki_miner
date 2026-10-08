@@ -757,7 +757,7 @@ class SubtitlesSettingsPanel(FormPanel):
         return "success" if text == self.tr("Installed") else "info"
 
     def _apply_alass_state(self, installed: bool) -> None:
-        """Reflect whether the managed alass binary is present; re-enable the button.
+        """Reflect whether alass is reachable; offer the download only while it is not.
 
         Applies a pre-probed ``installed`` flag (gathered off-thread). Preserves
         every branch from the old synchronous path: unsupported platform / no
@@ -770,6 +770,7 @@ class SubtitlesSettingsPanel(FormPanel):
             self.download_alass_button.setEnabled(False)
             return
         self.download_alass_button.setEnabled(True)
+        self.download_alass_button.setVisible(not installed)
         if installed:
             # "Installed" covers a managed download, a bundled binary, a PATH
             # binary, or an explicit path — anywhere alass is reachable.
@@ -821,7 +822,8 @@ class SubtitlesSettingsPanel(FormPanel):
         * a download in flight keeps the button disabled and the status intact;
         * unsupported platform → hide+disable the button, show guidance;
         * supported but no GPU → disable the button, show guidance;
-        * supported and a GPU is present → enable, reflect the installed state.
+        * supported and a GPU is present → reflect the installed state, with the
+          button only while the pack is missing.
         """
         self._cuda_libs_root = cuda_libs_root
         if self._cuda_pack_active:
@@ -841,8 +843,8 @@ class SubtitlesSettingsPanel(FormPanel):
             self._cuda_help_label.setVisible(False)
             return
 
-        self.download_cuda_button.setVisible(True)
         if device_count <= 0:
+            self.download_cuda_button.setVisible(True)
             self.download_cuda_button.setEnabled(False)
             self.set_cuda_pack_status("")
             self._cuda_guidance_label.setText(self.tr("No NVIDIA GPU detected. This pack needs an NVIDIA card."))
@@ -853,6 +855,7 @@ class SubtitlesSettingsPanel(FormPanel):
         self._cuda_guidance_label.setVisible(False)
         self._cuda_help_label.setVisible(True)
         self.download_cuda_button.setEnabled(True)
+        self.download_cuda_button.setVisible(not installed)
         if cuda_libs_root is None:
             return
         if installed:
@@ -890,16 +893,18 @@ class SubtitlesSettingsPanel(FormPanel):
         worker's result *message* is shown verbatim (unlike the re-probe paths,
         the worker already carries it), the installed cache is set to ``ok`` so a
         later refresh reflects the new on-disk state, and the button is
-        re-enabled. A no-op on macOS where the button is omitted.
+        re-enabled, shown only after a failure (a success installed the model).
+        A no-op on macOS where the button is omitted.
         """
         self._vulkan_active = False
         self._vulkan_installed_cache = ok
         self.set_vulkan_status(msg)
         if self.download_vulkan_button is not None:
             self.download_vulkan_button.setEnabled(True)
+            self.download_vulkan_button.setVisible(not ok)
 
     def _apply_vulkan_state(self, installed: bool) -> None:
-        """Reflect whether the Vulkan model (ggml + VAD) is present; re-enable.
+        """Reflect whether the Vulkan model (ggml + VAD) is present; button only while missing.
 
         Applies a pre-probed ``installed`` flag (gathered off-thread = both
         ``is_ggml_downloaded`` AND ``is_vad_downloaded``). A no-op on macOS where
@@ -912,6 +917,7 @@ class SubtitlesSettingsPanel(FormPanel):
             self.download_vulkan_button.setEnabled(False)
             return
         self.download_vulkan_button.setEnabled(True)
+        self.download_vulkan_button.setVisible(not installed)
         if installed:
             self.set_vulkan_status(self.tr("Installed"))
         else:
@@ -1086,7 +1092,11 @@ class SubtitlesSettingsPanel(FormPanel):
         run_off_thread(self, _probe, self._on_state_ready, self._on_state_error)
 
     def _show_checking_status(self) -> None:
-        """Disable the download buttons + show a neutral status while probing."""
+        """Disable the download buttons + show a neutral status while probing.
+
+        Enable state only: an installed row's hidden button stays hidden until the
+        probe answers "missing", so a model switch does not flash it into view.
+        """
         if not self._asr_download_active:
             self.download_model_button.setEnabled(False)
         if not self._cuda_pack_active:
@@ -1179,7 +1189,7 @@ class SubtitlesSettingsPanel(FormPanel):
           button, no help line, status "Installed": there is nothing to install;
         * a download in flight keeps the button disabled and the status intact;
         * pack supported here (a frozen bundle on a pinned platform/Python) → the
-          button shows enabled with the installed state;
+          installed state, with the button only while the pack is missing;
         * unsupported: a frozen build says so beside the label; a source install
           shows the pip command block instead (the pack pins cp312 wheels, so a
           dev on another Python installs the extra).
@@ -1211,7 +1221,7 @@ class SubtitlesSettingsPanel(FormPanel):
 
         self._engine_guidance_label.setVisible(False)
         self._refresh_setup_button_text()
-        self.download_engine_button.setVisible(True)
+        self.download_engine_button.setVisible(not pack_installed)
         self.download_engine_button.setEnabled(True)
         if pack_installed:
             self.set_asr_pack_status(self.tr("Installed"))
@@ -1222,7 +1232,8 @@ class SubtitlesSettingsPanel(FormPanel):
         """Reflect download state and gate the button on engine availability.
 
         Applies pre-probed values. The button is enabled only when the engine is
-        importable — without it a model download cannot run. Preserves the
+        importable — without it a model download cannot run — and shown only
+        while the selected model is not on disk. Preserves the
         in-flight guard: a download in flight keeps the button disabled and the
         "Downloading…" status untouched. Hidden until the engine imports; after
         the one setup click it starts the model download itself (C11).
@@ -1239,6 +1250,7 @@ class SubtitlesSettingsPanel(FormPanel):
                 self._on_download_clicked()
                 return
         self.download_model_button.setEnabled(engine_available)
+        self.download_model_button.setVisible(not model_downloaded)
         if not engine_available:
             self.set_model_status("")
             return
@@ -1358,7 +1370,8 @@ class SubtitlesSettingsPanel(FormPanel):
         * onnxruntime already importable (source [asr] install) → hide the button,
           say silence removal is available;
         * unsupported platform/Python → hide+disable the button, show guidance;
-        * supported → enable, reflect the installed state.
+        * supported → reflect the installed state, with the button only while
+          the pack is missing.
         """
         if self._vad_pack_active:
             # A download is in flight: keep the button disabled and leave the
@@ -1385,7 +1398,7 @@ class SubtitlesSettingsPanel(FormPanel):
             self._vad_help_label.setVisible(False)
             return
 
-        self.download_vad_button.setVisible(True)
+        self.download_vad_button.setVisible(not installed)
         self._vad_guidance_label.setVisible(False)
         self._vad_help_label.setVisible(True)
         self.download_vad_button.setEnabled(True)
