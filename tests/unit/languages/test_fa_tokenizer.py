@@ -13,13 +13,20 @@ from pathlib import Path
 
 import pytest
 
+from anki_miner.config import AnkiMinerConfig
+from anki_miner.languages import tagger_provider
 from anki_miner.languages.fa import script as fa_script
 from anki_miner.languages.fa import tokenizer as fa_tokenizer
 from anki_miner.languages.fa._hazm import data, lexicon
 from anki_miner.languages.fa.morphology import PersianMinedForm
+from anki_miner.languages.registry import get_profile
+from anki_miner.languages.switching import switch_language
+from anki_miner.services.tagger import LockedTagger
+from anki_miner.services.word_filter import WordFilterService
 
 FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "fa"
 ZWNJ = "\N{ZERO WIDTH NON-JOINER}"
+NBSP = "\N{NO-BREAK SPACE}"
 
 _ALEF = "\N{ARABIC LETTER ALEF}"
 _BEH = "\N{ARABIC LETTER BEH}"
@@ -276,3 +283,26 @@ class TestTagger:
         assert fa_script.FA_SEPARATE_MI_HOOK is not None
         assert [token.surface for token in tagger.parse(KETAB)] == [KETAB]
         assert fa_tokenizer.active_lexicon() is not None
+
+
+class TestParser:
+    """The real parser over the fixture lexicon: the tagger reads the stored line with its no-break spaces folded."""
+
+    def test_a_compound_across_a_no_break_space_keeps_the_offset_invariant(self, armed, monkeypatch, tmp_path):
+        monkeypatch.setitem(tagger_provider._TAGGERS, "fa", LockedTagger(fa_tokenizer.PersianTagger(armed)))
+        parser = get_profile("fa").create_parser(switch_language(AnkiMinerConfig(), "fa"))
+        line = KAR + NBSP + MIKONAM + "."
+        srt = tmp_path / "fa.srt"
+        srt.write_text(f"1\n00:00:01,000 --> 00:00:02,000\n{line}\n", encoding="utf-8")
+
+        words, index = parser.parse_subtitle_file_with_index(srt)
+
+        (word,) = words
+        assert word.sentence == line
+        assert word.sentence[word.surface_start : word.surface_end] == word.surface == KAR + NBSP + MIKONAM
+        assert word.mined_form == KAR + " " + KARDAN  # the card front and every lookup key stay folded
+        (entry,) = index
+        for _key, surface, start, end, _highlight_end in entry.front_spans + entry.lemma_spans:
+            assert entry.line_text[start:end] == surface
+        (swapped,) = WordFilterService(parser.config).filter_i_plus_one(words, index)
+        assert swapped.sentence[swapped.surface_start : swapped.surface_end] == swapped.surface

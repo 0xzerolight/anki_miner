@@ -155,13 +155,18 @@ class TestCleanSubtitleText:
 
     def test_other_languages_keep_no_break_spaces(self):
         """French puts one before ``? ! : ; »``: the stored line keeps it, so the card never wraps there."""
-        cue = "Tu  viens\u202f?\\N Oui\u00a0\u00a0!"
-        assert clean_subtitle_text(cue, normalize=_identity) == "Tu viens\u202f? Oui\u00a0\u00a0!"
+        cue = "Tu  viens\u202f?\\N Oui\u00a0!"
+        assert clean_subtitle_text(cue, normalize=_identity) == "Tu viens\u202f? Oui\u00a0!"
 
     def test_a_run_mixing_spaces_with_a_no_break_space_keeps_only_the_no_break_space(self):
-        """``Oui [rire]`` + NBSP + ``!`` minus ``[rire]`` must not show a double gap; pure runs keep their rule."""
+        """``Oui [rire]`` + NBSP + ``!`` minus ``[rire]`` must not show a double gap."""
         cue = "Oui \u00a0!  Tu viens\t\u202f ?"
         assert clean_subtitle_text(cue, normalize=_identity) == "Oui\u00a0! Tu viens\u202f?"
+
+    def test_a_run_of_no_break_spaces_keeps_one(self):
+        """A doubled no-break space is one gap, as a doubled space is: the run's first one stays."""
+        cue = "Oui\u00a0\u00a0! Non\u202f\u00a0?"
+        assert clean_subtitle_text(cue, normalize=_identity) == "Oui\u00a0! Non\u202f?"
 
     def test_no_break_spaces_at_the_edges_still_strip(self):
         """An ``&nbsp;`` placeholder cue is empty, as it was before no-break spaces were kept."""
