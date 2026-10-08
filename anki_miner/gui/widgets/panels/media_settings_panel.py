@@ -6,6 +6,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QSpinBox
 
 from anki_miner.gui.widgets.base import FormPanel
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.utils.i18n import tr_format
 
 # Animated-screenshot size presets: fps, height (px), quality (0-100).
@@ -100,10 +101,7 @@ class MediaSettingsPanel(FormPanel):
         self._reading_tts_loaded: tuple[bool, bool, bool] = (False, True, True)
         self._tts_touched = False
         self.reading_tts_combo = QComboBox()
-        self.reading_tts_combo.addItem(self.tr("Off"), "off")
-        self.reading_tts_combo.addItem(self.tr("Google, then Papago"), "both")
-        self.reading_tts_combo.addItem(self.tr("Google only"), "google")
-        self.reading_tts_combo.addItem(self.tr("Papago only"), "papago")
+        self._populate_reading_tts_items(papago=True, web_voice="google")
         # `activated` (user-only) so a programmatic setCurrentIndex from
         # _set_reading_tts never trips the touched flag.
         self.reading_tts_combo.activated.connect(self._on_reading_tts_activated)
@@ -268,11 +266,38 @@ class MediaSettingsPanel(FormPanel):
         """Mark the combo user-touched; only past this point does contribute() write it."""
         self._tts_touched = True
 
+    def _populate_reading_tts_items(self, *, papago: bool, web_voice: str) -> None:
+        """Rebuild the combo for the mining language's voices (no signals).
+
+        With Papago (ja, ko): the four items. Otherwise Off plus one item named
+        for ``web_voice`` (``AudioDefaults.sentence_web_voice``) on the "google"
+        key, because ``reading_tts_google_enabled`` is the web-voice leg; a
+        language with no web voice gets Off alone.
+        """
+        combo = self.reading_tts_combo
+        combo.blockSignals(True)
+        try:
+            combo.clear()
+            combo.addItem(self.tr("Off"), "off")
+            if papago:
+                combo.addItem(self.tr("Google, then Papago"), "both")
+                combo.addItem(self.tr("Google only"), "google")
+                combo.addItem(self.tr("Papago only"), "papago")
+            elif web_voice == "google":
+                combo.addItem(self.tr("Google"), "google")
+            elif web_voice == "edge":
+                combo.addItem(self.tr("Microsoft Edge"), "google")
+        finally:
+            combo.blockSignals(False)
+        self._tts_papago_offered = papago
+
     def _set_reading_tts(self, enabled: bool, google: bool, papago: bool) -> None:
         """Load the three reading_tts_* config bools into the combo (no signals)."""
         self._reading_tts_loaded = (enabled, google, papago)
         self._tts_touched = False
-        if not enabled or not (google or papago):
+        if not self._tts_papago_offered:
+            key = "google" if enabled and google else "off"
+        elif not enabled or not (google or papago):
             key = "off"
         elif google and papago:
             key = "both"
@@ -280,11 +305,13 @@ class MediaSettingsPanel(FormPanel):
             key = "google"
         else:
             key = "papago"
-        self.reading_tts_combo.blockSignals(True)
+        combo = self.reading_tts_combo
+        combo.blockSignals(True)
         try:
-            self.reading_tts_combo.setCurrentIndex(self.reading_tts_combo.findData(key))
+            # A language with no web voice offers no "google" item: show Off (index 0).
+            combo.setCurrentIndex(max(combo.findData(key), 0))
         finally:
-            self.reading_tts_combo.blockSignals(False)
+            combo.blockSignals(False)
 
     def _current_reading_tts_triple(self) -> tuple[bool, bool, bool]:
         """Return the (enabled, google, papago) triple this panel contributes.
@@ -294,7 +321,9 @@ class MediaSettingsPanel(FormPanel):
         seeded with, even past an edit to another field on this panel. Past
         that point: Off writes ``enabled=False`` with the providers as loaded
         (the pair a later re-enable would resume with); any other item writes
-        ``enabled=True`` plus its own provider pair.
+        ``enabled=True`` plus its own provider pair. Without Papago on offer the
+        web-voice item leaves the loaded Papago flag alone, since the combo shows
+        no Papago choice to change it with.
         """
         if not self._tts_touched:
             return self._reading_tts_loaded
@@ -303,7 +332,7 @@ class MediaSettingsPanel(FormPanel):
         if key == "both":
             return (True, True, True)
         if key == "google":
-            return (True, True, False)
+            return (True, True, False if self._tts_papago_offered else papago)
         if key == "papago":
             return (True, False, True)
         return (False, google, papago)  # "off"
@@ -395,6 +424,11 @@ class MediaSettingsPanel(FormPanel):
         self.set_audio_format(config.audio_format)
         self.set_audio_bitrate(config.audio_bitrate)
         self.set_audio_padding(config.audio_padding)
+        audio = get_profile(config_language(config)).audio
+        self._populate_reading_tts_items(
+            papago=bool(audio.papago_speaker),
+            web_voice=audio.sentence_web_voice(config),
+        )
         self._set_reading_tts(
             config.reading_tts_enabled,
             config.reading_tts_google_enabled,

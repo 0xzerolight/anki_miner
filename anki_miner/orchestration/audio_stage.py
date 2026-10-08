@@ -87,12 +87,12 @@ def _sentence_chain_labels(config: AnkiMinerConfig) -> tuple[list[str], int]:
     labels are built from those, keeping both stages' ``chain=`` field one
     vocabulary. The labels name what the mining language can actually use, the
     rule ``service_factory._build_sentence_audio_fetcher`` builds by: the web
-    voice is Edge for a language Google cannot speak, and Papago appears only
-    for a language with a Papago voice.
+    voice is ``AudioDefaults.sentence_web_voice`` (Edge for a language Google
+    cannot speak), and each leg appears only when the language has a voice for it.
     """
     audio = get_profile(config_language(config)).audio
-    web = "google" if audio.resolved_gtts_lang(config) or not audio.edge_voice else "edge"
-    providers = [(web, config.reading_tts_google_enabled)]
+    web = audio.sentence_web_voice(config)
+    providers = [(web, config.reading_tts_google_enabled)] if web else []
     if audio.papago_speaker:
         providers.append(("papago", config.reading_tts_papago_enabled))
     labels = [_chain_label(name, None, enabled) for name, enabled in providers]

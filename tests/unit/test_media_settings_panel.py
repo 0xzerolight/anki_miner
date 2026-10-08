@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from types import SimpleNamespace
 
 import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
 from anki_miner.config import create_default_config
+from anki_miner.gui.widgets.panels import media_settings_panel
 from anki_miner.gui.widgets.panels.media_settings_panel import MediaSettingsPanel
+from anki_miner.languages.profile import AudioDefaults
+from anki_miner.languages.switching import switch_language
 
 
 def test_audio_bitrate_tooltip_merges_helper_and_old_tooltip(qtbot):
@@ -307,6 +311,121 @@ class TestReadingTtsCombo:
             replace(create_default_config(), reading_tts_enabled=True, reading_tts_google_enabled=True)
         )
         assert panel._tts_touched is False
+
+
+def _tts_config(code: str, enabled: bool, google: bool, papago: bool):
+    return replace(
+        switch_language(create_default_config(), code),
+        reading_tts_enabled=enabled,
+        reading_tts_google_enabled=google,
+        reading_tts_papago_enabled=papago,
+    )
+
+
+def _tts_items(panel: MediaSettingsPanel) -> tuple[list[str], list[str]]:
+    combo = panel.reading_tts_combo
+    return (
+        [combo.itemText(i) for i in range(combo.count())],
+        [combo.itemData(i) for i in range(combo.count())],
+    )
+
+
+def _tts_out(panel: MediaSettingsPanel) -> tuple[bool, bool, bool]:
+    out = panel.contribute(create_default_config())
+    return (out.reading_tts_enabled, out.reading_tts_google_enabled, out.reading_tts_papago_enabled)
+
+
+def _pick(panel: MediaSettingsPanel, key: str) -> None:
+    idx = panel.reading_tts_combo.findData(key)
+    panel.reading_tts_combo.setCurrentIndex(idx)
+    panel.reading_tts_combo.activated.emit(idx)
+
+
+class TestReadingTtsComboFollowsTheLanguage:
+    """The combo offers only the voices the mining language has.
+
+    ``reading_tts_google_enabled`` is the web-voice leg (Google, or Edge for a
+    language Google cannot speak), so a language without Papago shows Off plus
+    one item on the "google" key, named for the voice the chain will use.
+    """
+
+    def test_a_language_with_google_only_offers_off_and_google(self, qtbot):
+        panel = MediaSettingsPanel()
+        qtbot.addWidget(panel)
+        panel.load_from_config(_tts_config("es", True, True, True))
+
+        assert _tts_items(panel) == (["Off", "Google"], ["off", "google"])
+
+    def test_a_language_google_cannot_speak_names_its_edge_voice(self, qtbot):
+        panel = MediaSettingsPanel()
+        qtbot.addWidget(panel)
+        panel.load_from_config(_tts_config("fa", True, True, False))
+
+        assert _tts_items(panel) == (["Off", "Microsoft Edge"], ["off", "google"])
+        assert panel.reading_tts_combo.currentData() == "google"
+
+    def test_papago_alone_shows_off_and_round_trips_untouched(self, qtbot):
+        panel = MediaSettingsPanel()
+        qtbot.addWidget(panel)
+        panel.load_from_config(_tts_config("es", True, False, True))
+
+        assert panel.reading_tts_combo.currentData() == "off"
+        assert _tts_out(panel) == (True, False, True)
+
+    @pytest.mark.parametrize(
+        ("loaded", "expected"),
+        [
+            ((False, True, False), (True, True, False)),
+            ((True, False, True), (True, True, True)),
+        ],
+    )
+    def test_picking_the_web_voice_keeps_the_loaded_papago_flag(self, qtbot, loaded, expected):
+        panel = MediaSettingsPanel()
+        qtbot.addWidget(panel)
+        panel.load_from_config(_tts_config("es", *loaded))
+
+        _pick(panel, "google")
+
+        assert _tts_out(panel) == expected
+
+    def test_a_language_switch_rebuilds_the_items(self, qtbot):
+        panel = MediaSettingsPanel()
+        qtbot.addWidget(panel)
+
+        panel.load_from_config(_tts_config("ja", True, True, True))
+        assert panel.reading_tts_combo.count() == 4
+        assert panel.reading_tts_combo.currentData() == "both"
+
+        panel.load_from_config(_tts_config("es", True, True, False))
+        assert panel.reading_tts_combo.count() == 2
+        assert panel.reading_tts_combo.currentData() == "google"
+
+        panel.load_from_config(_tts_config("ja", True, False, True))
+        assert _tts_items(panel) == (
+            ["Off", "Google, then Papago", "Google only", "Papago only"],
+            ["off", "both", "google", "papago"],
+        )
+        assert panel.reading_tts_combo.currentData() == "papago"
+
+    def test_a_language_with_no_web_voice_offers_only_off(self, qtbot, monkeypatch):
+        """No real profile reaches this (test_edge_voice_contract), but the
+        combo must still show a real item, never an empty selection."""
+        stub = SimpleNamespace(
+            audio=AudioDefaults(
+                gtts_lang="",
+                cache_stem_prefix="g",
+                sentence_cache_stem_prefix="s",
+                custom_fetcher_language="xx",
+            )
+        )
+        monkeypatch.setattr(media_settings_panel, "get_profile", lambda _code: stub)
+        panel = MediaSettingsPanel()
+        qtbot.addWidget(panel)
+        panel.load_from_config(_tts_config("es", True, True, False))
+
+        assert _tts_items(panel) == (["Off"], ["off"])
+        assert panel.reading_tts_combo.currentData() == "off"
+        assert _tts_out(panel) == (True, True, False)
 
 
 def test_sentence_tts_row_is_labelled_text_to_speech(qtbot):

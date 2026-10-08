@@ -237,11 +237,20 @@ class AudioDefaults:
     #: Settings -> Word Audio does not offer one. A language with no Google voice
     #: (``gtts_lang == ""``) names one and puts ``AudioSourceEntry(kind="edgetts")``
     #: in ``default_chain`` (spec D14, tests/unit/languages/test_edge_voice_contract.py).
+    #: For that language the voice also reads sentence TTS (see sentence_web_voice).
     edge_voice: str = ""
 
     def resolved_gtts_lang(self, config: AnkiMinerConfig) -> str:
         """The gTTS code for *config*; "" when the language has no Google voice."""
         return self.gtts_lang(config) if callable(self.gtts_lang) else self.gtts_lang
+
+    def sentence_web_voice(self, config: AnkiMinerConfig) -> str:
+        """The web voice the sentence-TTS "google" leg speaks with: "google" when Google
+        Translate has a voice for the language, "edge" when only the profile's Edge
+        voice does (fa, sl), "" when neither."""
+        if self.resolved_gtts_lang(config):
+            return "google"
+        return "edge" if self.edge_voice else ""
 
 
 @dataclass(frozen=True)

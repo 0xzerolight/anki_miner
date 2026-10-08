@@ -81,6 +81,21 @@ def test_no_google_voice_means_the_edge_leg_is_the_default(code):
     assert audio.edge_voice and _has_edge_default(audio), code
 
 
+@pytest.mark.parametrize(("code", "voice"), [("ja", "google"), ("es", "google"), ("fa", "edge"), ("sl", "edge")])
+def test_the_sentence_web_voice_is_google_else_edge(code, voice):
+    assert get_profile(code).audio.sentence_web_voice(AnkiMinerConfig(language=code)) == voice
+
+
+def test_a_language_with_neither_voice_has_no_sentence_web_voice():
+    audio = AudioDefaults(
+        gtts_lang="",
+        cache_stem_prefix="g",
+        sentence_cache_stem_prefix="s",
+        custom_fetcher_language="xx",
+    )
+    assert audio.sentence_web_voice(AnkiMinerConfig()) == ""
+
+
 @pytest.mark.parametrize("code", _SHIPPED_BEFORE_EDGETTS)
 def test_the_seam_is_inert_for_the_shipped_languages(code):
     audio = get_profile(code).audio

@@ -706,20 +706,20 @@ def _build_sentence_audio_fetcher(config: AnkiMinerConfig) -> SentenceAudioFetch
     audio = get_profile(config_language(config)).audio
     cache_dir = ANKI_MINER_HOME / "audio_cache" / "sentence_tts"
     fetchers: list[SentenceAudioFetcher] = []
-    gtts_lang = audio.resolved_gtts_lang(config)
     if config.reading_tts_google_enabled:
         # reading_tts_google_enabled is the web-voice leg: Google, or the
         # profile's Edge voice for a language Google has no voice for (fa, sl).
-        if gtts_lang:
+        web_voice = audio.sentence_web_voice(config)
+        if web_voice == "google":
             fetchers.append(
                 GoogleSentenceTtsFetcher(
                     cache_dir=cache_dir,
                     delay=config.expression_audio_delay,
-                    gtts_lang=gtts_lang,
+                    gtts_lang=audio.resolved_gtts_lang(config),
                     cache_stem_prefix=audio.sentence_cache_stem_prefix,
                 )
             )
-        elif audio.edge_voice:
+        elif web_voice == "edge":
             fetchers.append(
                 EdgeSentenceTtsFetcher(
                     cache_dir=cache_dir,

@@ -10,10 +10,13 @@ imported straight from ``orchestration.audio_stage``.
 import logging
 from dataclasses import replace
 from functools import partial
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+from anki_miner.languages.profile import AudioDefaults
 from anki_miner.languages.switching import switch_language
 from anki_miner.models import TokenizedWord
+from anki_miner.orchestration import audio_stage as audio_stage_module
 from anki_miner.orchestration.audio_stage import AudioStage, _audio_failure_diagnosis, _sentence_chain_labels
 from anki_miner.orchestration.episode_processor import _EpisodeContext
 from anki_miner.presenters import NullPresenter
@@ -1115,6 +1118,19 @@ class TestSentenceAudioLanguageVoices:
         config = replace(test_config, reading_tts_google_enabled=True, reading_tts_papago_enabled=True)
 
         assert _sentence_chain_labels(config) == (["google", "papago"], 2)
+
+    def test_a_language_with_no_web_voice_labels_no_web_leg(self, test_config, monkeypatch):
+        """Like Papago, the web leg is labelled only when the language has a voice for it."""
+        audio = AudioDefaults(
+            gtts_lang="",
+            cache_stem_prefix="g",
+            sentence_cache_stem_prefix="s",
+            custom_fetcher_language="xx",
+        )
+        monkeypatch.setattr(audio_stage_module, "get_profile", lambda _code: SimpleNamespace(audio=audio))
+        config = replace(test_config, reading_tts_google_enabled=True, reading_tts_papago_enabled=True)
+
+        assert _sentence_chain_labels(config) == ([], 0)
 
 
 def _probe_word(mined="食べる", reading="たべる"):
