@@ -923,7 +923,9 @@ QPushButton#ghost:checked:hover {
    text. The two filled roles (and Qt's dialog default, which renders as one)
    keep a grey fill: an outline-only primary would read as an enabled
    secondary button. Order matters: these tie with the role rules above on
-   specificity and win by coming later. */
+   specificity and win by coming later. A variant's own `:disabled` rule
+   carries an id, which outranks two pseudo-states, so a default built as
+   secondary, ghost or danger needs its id in the grey-fill rule too. */
 QPushButton:disabled,
 QPushButton#secondary:disabled,
 QPushButton#danger:disabled {
@@ -940,7 +942,10 @@ QPushButton#ghost:disabled {
 
 QPushButton#primary:disabled,
 QPushButton#critical:disabled,
-QPushButton:default:disabled {
+QPushButton:default:disabled,
+QPushButton#secondary:default:disabled,
+QPushButton#ghost:default:disabled,
+QPushButton#danger:default:disabled {
     background-color: ${color-disabled};
     color: ${color-text-on-primary};
     border-color: ${color-disabled};
