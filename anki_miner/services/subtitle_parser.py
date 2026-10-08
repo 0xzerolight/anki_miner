@@ -1703,7 +1703,10 @@ class SubtitleParserService:
             sentence_furigana_bolded = ""
 
         return TokenizedWord(
-            surface=surface,
+            # The stored line's own slice: the token's surface, except that a
+            # no-break space the tagger read folded is kept (fa کار<NBSP>می‌کنم),
+            # so sentence[surface_start:surface_end] == surface holds.
+            surface=sentence[tok_start:tok_end],
             lemma=lemma,
             orth_base=orth_base,
             reading=reading,
@@ -1776,7 +1779,10 @@ class SubtitleParserService:
             highlight_end = self._emission_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
             included_spans.append((tok_start, tok_end, highlight_end))
             if collect_index:
-                lemma_first_span.setdefault(lemma_here, (word_token.surface, tok_start, tok_end, highlight_end))
+                # Surfaces are slices of the stored line, as _emit_word's are.
+                lemma_first_span.setdefault(
+                    lemma_here, (sentence[tok_start:tok_end], tok_start, tok_end, highlight_end)
+                )
 
         # A line with zero content words can never be i+1 — skip it from the
         # index entirely. (Word emission is also skipped trivially.)
@@ -1834,7 +1840,7 @@ class SubtitleParserService:
                     _, _, front, _ = self._resolve_word_identity(word_token, text, tok_start, highlight_end)
                 else:
                     front = prefetched
-                front_first_span.setdefault(front, (word_token.surface, tok_start, tok_end, highlight_end))
+                front_first_span.setdefault(front, (sentence[tok_start:tok_end], tok_start, tok_end, highlight_end))
             line_lemmas_entry = LineLemmas(
                 line_text=sentence,
                 lemmas=frozenset(line_lemmas),

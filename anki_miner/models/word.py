@@ -201,7 +201,9 @@ class TokenizedWord:
     # Character offsets of the target morpheme within ``sentence`` (post-filter).
     # -1 sentinel means "not tracked" — card builder falls back to plain escape.
     # Invariant: sentence[surface_start:surface_end] == surface (the Issue #20
-    # offset-drift canary) — do NOT widen these to the inflected form.
+    # offset-drift canary) — do NOT widen these to the inflected form. The
+    # surface is that slice of the stored line, so it keeps a no-break space
+    # the tagger read folded to a plain one; the lemma and mined_form do not.
     surface_start: int = -1
     surface_end: int = -1
     # End offset of the FULL inflected form (verb/adjective + auxiliary chain,
