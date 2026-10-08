@@ -13,6 +13,11 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.models.reading import ReadingUnit
 from anki_miner.services import morphology
 from anki_miner.services.morphology import (
+    REJECT_KANA_ONLY,
+    REJECT_SCRIPT,
+    REJECT_SOUND_EFFECT,
+    REJECT_STRUCTURE,
+    REJECT_WORD_TYPE,
     SyntheticToken,
     TokenInclusionRule,
     apply_special_readings,
@@ -436,6 +441,63 @@ class TestContentGateOk:
         rule = self._rule()
         assert rule.content_gate_ok(token) is True
         assert rule.should_include(token) is True
+
+
+_REJECTION_CASES = [
+    (_token_pos2("は", "助詞", "係助詞"), REJECT_STRUCTURE),
+    (_token_pos2("ああああ", "感動詞", "一般"), REJECT_STRUCTURE),  # repeated-kana run
+    (_token_pos2("", "名詞", "一般"), REJECT_STRUCTURE),
+    (_token_pos2("はい", "感動詞", "一般"), REJECT_WORD_TYPE),
+    (_token_pos2("えーと", "フィラー", "一般"), REJECT_WORD_TYPE),
+    (_token_pos2("そして", "接続詞", "一般"), REJECT_WORD_TYPE),
+    (_token_pos2("田中", "名詞", "固有名詞"), REJECT_WORD_TYPE),
+    (_token_pos2("三", "名詞", "数詞"), REJECT_WORD_TYPE),
+    (_token_pos2("ドキドキ", "副詞", "一般"), REJECT_SOUND_EFFECT),
+    (_token_pos2("バンッ", "名詞", "一般"), REJECT_SOUND_EFFECT),
+    (_token_pos2("わかる", "動詞", "一般"), REJECT_KANA_ONLY),
+    (_token_pos2("ちょっと", "副詞", "一般"), REJECT_KANA_ONLY),
+    (_token_pos2("ア", "名詞", "一般"), REJECT_KANA_ONLY),  # 1-char katakana
+    (_token_pos2("OK", "名詞", "一般"), REJECT_SCRIPT),
+    (_token_pos2("食べ", "動詞", "一般", lemma="食べる"), None),
+    (_token_pos2("ビル", "名詞", "一般"), None),
+    (_token_pos2("サボる", "動詞", "一般"), None),
+]
+
+
+def _case_id(value):
+    surface = getattr(value, "surface", None)
+    return surface if surface is not None else str(value)
+
+
+class TestInclusionRejection:
+    """rejection() names the check should_include fails on; should_include is
+    exactly ``rejection(t) is None`` (one body, so the two can never drift)."""
+
+    def _rule(self, script_gate=None):
+        return TokenInclusionRule(
+            allowed_pos=_ALLOWED_POS, excluded_subtypes=_EXCLUDED_SUBTYPES, script_gate=script_gate
+        )
+
+    @pytest.mark.parametrize(("token", "expected"), _REJECTION_CASES, ids=_case_id)
+    def test_rejection_names_the_gate(self, token, expected):
+        assert self._rule().rejection(token) == expected
+
+    @pytest.mark.parametrize(("token", "_expected"), _REJECTION_CASES, ids=_case_id)
+    def test_bool_gates_are_the_reason_gates(self, token, _expected):
+        rule = self._rule()
+        assert rule.should_include(token) is (rule.rejection(token) is None)
+        assert rule.content_gate_ok(token) is (rule.content_gate_rejection(token) is None)
+
+    def test_a_rejecting_script_gate_is_a_script_rejection(self):
+        token = _token_pos2("hello", "名詞", "一般")
+        assert self._rule(script_gate=lambda _s: False).rejection(token) == REJECT_SCRIPT
+        assert self._rule(script_gate=lambda _s: True).rejection(token) is None
+
+    def test_the_content_gate_leaves_the_script_decision_to_rejection(self):
+        token = _token_pos2("すべる", "動詞", "一般")
+        rule = self._rule()
+        assert rule.content_gate_rejection(token) is None
+        assert rule.rejection(token) == REJECT_KANA_ONLY
 
 
 class TestContentGateRepeatedKana:
