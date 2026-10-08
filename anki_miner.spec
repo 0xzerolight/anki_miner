@@ -194,6 +194,13 @@ hazm_license_datas = []
 if os.path.isdir(hazm_license_dir):
     hazm_license_datas.append((hazm_license_dir, os.path.join("licenses", "hazm")))
 
+# meikiocr (Apache-2.0): the Video OCR engine (services/video_ocr/meiki_engine.py)
+# is a modified copy that ships in every build, so its notice travels with the bundle.
+meikiocr_license_dir = os.path.join(project_root, "licenses", "meikiocr")
+meikiocr_license_datas = []
+if os.path.isdir(meikiocr_license_dir):
+    meikiocr_license_datas.append((meikiocr_license_dir, os.path.join("licenses", "meikiocr")))
+
 # shekar (Persian text toolkit) MIT notice: 108 rows of the Persian colloquial
 # table are its informal_words.csv. Lands at sys._MEIPASS/licenses/shekar/.
 shekar_license_dir = os.path.join(project_root, "licenses", "shekar")
@@ -627,6 +634,7 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
     + vulkan_loader_license_datas
     + kiwipiepy_license_datas
     + hazm_license_datas
+    + meikiocr_license_datas
     + shekar_license_datas
     + wiktionary_license_datas
     + ca_model_license_datas

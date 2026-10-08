@@ -59,6 +59,9 @@ license-files = [
     "licenses/hkcancor/README.md",
     "licenses/cc-cedict-canto/LICENSE.CC-BY-SA-3.0",
     "licenses/cc-cedict-canto/README.md",
+    # meikiocr (Apache-2.0): the Video OCR engine is a modified copy inside the wheel.
+    "licenses/meikiocr/LICENSE",
+    "licenses/meikiocr/README.md",
 ]
 authors = [
     {name = "Anki Miner Contributors"}
@@ -155,6 +158,11 @@ asr-cuda = [
 asr-vulkan = [
     "faster-whisper>=1.1.0",
     "pywhispercpp>=1.5.0",
+]
+# Utilities -> Video OCR. onnxruntime publishes no Intel-mac wheel at the pinned
+# versions, so the tool reports itself unavailable there.
+ocr = [
+    "onnxruntime>=1.23.2; not (sys_platform == 'darwin' and platform_machine == 'x86_64')",
 ]
 # Chinese mining engine. jieba (pure Python, sdist-only on PyPI) and pypinyin
 # are hard requirements of the zh code paths; OpenCC ships a native extension, so
@@ -474,6 +482,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["numpy.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["onnxruntime.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

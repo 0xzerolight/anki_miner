@@ -88,6 +88,8 @@ REQUIRED_WHEEL_LICENSES = [
     "licenses/hkcancor/README.md",
     "licenses/cc-cedict-canto/LICENSE.CC-BY-SA-3.0",
     "licenses/cc-cedict-canto/README.md",
+    "licenses/meikiocr/LICENSE",
+    "licenses/meikiocr/README.md",
 ]
 
 EXCLUDE_DIRS = {"__pycache__"}
