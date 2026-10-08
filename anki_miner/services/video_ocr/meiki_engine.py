@@ -26,12 +26,9 @@ import numpy as np
 from PIL import Image
 
 from anki_miner.services.video_ocr.errors import EngineLoadError
+from anki_miner.services.video_ocr.model_installer import DET_MODEL_NAME, REC_MODEL_NAME
 
 logger = logging.getLogger(__name__)
-
-# Task 2 moves these two names into model_installer (numpy-free) and imports them here.
-DET_MODEL_NAME = "meiki.text.detect.v0.1.960x544.onnx"
-REC_MODEL_NAME = "meiki.text.rec.v0.960x32.onnx"
 
 _DET_W, _DET_H = 960, 544
 _REC_W, _REC_H = 960, 32
