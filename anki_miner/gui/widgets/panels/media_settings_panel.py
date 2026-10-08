@@ -23,18 +23,34 @@ class _ClipLengthSpinBox(QDoubleSpinBox):
     Choosing that value sets ``screenshot_animated_match_audio`` and leaves the
     stored length alone; stepping up from it resumes that length rather than
     the first step above the minimum, so a round trip keeps the user's length.
+
+    Only a length the user settles on is remembered: a typed value, or the
+    value showing when editing finishes. A step is not one: the way down to
+    "Same as sentence audio" passes through every value above it, and
+    remembering those left 0.5 behind (Edge1).
     """
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         #: The user's own length, remembered while "Same as sentence audio" shows.
         self.resume_value = 2.0
+        self._stepping = False
+        self.valueChanged.connect(self._remember)
+        self.editingFinished.connect(lambda: self._remember(self.value()))
 
     def stepBy(self, steps: int) -> None:  # noqa: N802 - Qt override
         if steps > 0 and self.value() == self.minimum():
             self.setValue(self.resume_value)
             return
-        super().stepBy(steps)
+        self._stepping = True
+        try:
+            super().stepBy(steps)
+        finally:
+            self._stepping = False
+
+    def _remember(self, value: float) -> None:
+        if value > self.minimum() and not self._stepping:
+            self.resume_value = max(value, 0.5)
 
 
 class MediaSettingsPanel(FormPanel):
@@ -163,7 +179,6 @@ class MediaSettingsPanel(FormPanel):
         self.animated_duration_spinbox.setSingleStep(0.5)
         self.animated_duration_spinbox.setSuffix(self.tr(" seconds"))
         self.animated_duration_spinbox.setSpecialValueText(self.tr("Same as sentence audio"))
-        self.animated_duration_spinbox.valueChanged.connect(self._remember_clip_length)
         self.add_field(
             self.tr("Clip length"),
             self.animated_duration_spinbox,
@@ -197,12 +212,6 @@ class MediaSettingsPanel(FormPanel):
         """Enable or disable the animated screenshot sub-controls."""
         for widget in (self.animated_format_combo, self.animated_duration_spinbox, self.animated_size_combo):
             widget.setEnabled(enabled)
-
-    def _remember_clip_length(self, value: float) -> None:
-        """Keep the user's own length while "Same as sentence audio" is chosen."""
-        spin = self.animated_duration_spinbox
-        if value > spin.minimum():
-            spin.resume_value = max(value, 0.5)
 
     def _on_animated_size_activated(self, index: int) -> None:
         """Drop the Custom entry once the user picks a real preset.

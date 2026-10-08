@@ -68,6 +68,55 @@ def test_stepping_up_from_same_as_audio_resumes_the_users_length(qtbot):
     assert out.screenshot_animated_clip_duration == 3.5
 
 
+def _loaded(qtbot, length: float) -> MediaSettingsPanel:
+    panel = MediaSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(
+        replace(create_default_config(), screenshot_animated=True, screenshot_animated_clip_duration=length)
+    )
+    return panel
+
+
+def _step_to_same_as_audio(spin) -> None:
+    while spin.value() > spin.minimum():
+        spin.stepBy(-1)
+
+
+def test_stepping_down_to_same_as_audio_keeps_the_stored_length(qtbot):
+    """Edge1: the way down passes through 0.5, and none of those steps is the user's length."""
+    panel = _loaded(qtbot, 3.0)
+    spin = panel.animated_duration_spinbox
+
+    _step_to_same_as_audio(spin)
+
+    out = panel.contribute(create_default_config())
+    assert out.screenshot_animated_match_audio is True
+    assert out.screenshot_animated_clip_duration == 3.0
+    spin.stepBy(1)
+    assert spin.value() == 3.0
+
+
+def test_a_stepped_length_the_user_settles_on_is_kept(qtbot):
+    panel = _loaded(qtbot, 3.0)
+    spin = panel.animated_duration_spinbox
+    spin.stepBy(-2)
+    spin.editingFinished.emit()  # focus left the field on 2.0
+
+    _step_to_same_as_audio(spin)
+
+    assert panel.contribute(create_default_config()).screenshot_animated_clip_duration == 2.0
+
+
+def test_a_typed_length_is_kept(qtbot):
+    panel = _loaded(qtbot, 3.0)
+    spin = panel.animated_duration_spinbox
+    spin.setValue(4.5)
+
+    spin.setValue(spin.minimum())
+
+    assert panel.contribute(create_default_config()).screenshot_animated_clip_duration == 4.5
+
+
 def test_clip_length_follows_the_animated_switch(qtbot):
     panel = MediaSettingsPanel()
     qtbot.addWidget(panel)
