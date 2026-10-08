@@ -9901,6 +9901,94 @@ Nenhum arquivo de índice é excluído.</translation>
         <source>Already known: %1.</source>
         <translation>Já conhecidas: %1.</translation>
     </message>
+    <message>
+        <source>Not mined: %1 word — search this log for a word to see why.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Not mined: %1 words — search this log for a word to see why.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Name, interjection or other skipped word type — add it to your whitelist to mine it</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sound effect — add it to your whitelist to mine it</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Kana-only word — add it to your whitelist to mine it</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Written partly in another script — add it to your whitelist to mine it</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Already known</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No dictionary entry — Settings → Dictionaries</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Not in your frequency list — Settings → Word Filters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Outside your frequency range — Settings → Word Filters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>On your blacklist — Settings → Word Filters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Excluded by script type — Settings → Word Filters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>On a name list — Settings → Word Filters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Appears fewer times than your minimum — Settings → Word Filters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Another word from its sentence got the card — Settings → Sentences</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No sentence where it is the only unknown word — Settings → Sentences</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence too long — Settings → Sentences</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Same card as another spelling in this run</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Media could not be extracted</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki already has a card for it</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki did not confirm the card</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 (%2): %3</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>ResultsDialog</name>
     <message>

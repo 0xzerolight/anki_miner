@@ -152,6 +152,15 @@ class TestSearch:
         assert len(_lines(log)) == 1
         assert "first failure" in _lines(log)[0]
 
+    def test_search_finds_a_word_inside_a_reason_line(self, log):
+        """The run-end "Not mined" block relies on this: one long line per
+        reason, and the search shows the line that names the word."""
+        log.append_info("Already known (3): 見る, 走る, 飲む")
+        log.append_info("Something else")
+        log.search_input.setText("走る")
+        assert len(_lines(log)) == 1
+        assert "Already known (3): 見る, 走る, 飲む" in _lines(log)[0]
+
     def test_clearing_the_search_restores_every_line(self, log):
         _fill(log)
         log.search_input.setText("ankiconnect")
