@@ -2096,7 +2096,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
+        <source>Deck Builder always skips per-episode filters and checks for duplicates only in the deck it builds; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2312,7 +2312,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Drop words written without kanji; “Skip all kana-only words” leaves a kanji-only deck.</source>
+        <source>Drop words written without kanji; “Skip all kana-only words (including mixed)” leaves a kanji-only deck.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2616,7 +2616,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku, Senren and Anki Miner Note are recognised and filled completely.</source>
+        <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku and Senren (Japanese only) and Anki Miner Note are recognised and filled completely.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2879,10 +2879,6 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries, frequency sources and pitch data.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Deck:</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3796,15 +3792,15 @@ This will modify %n notes (%1) and tag them %2. Continue?</numerusform>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>No video/subtitle pairs found. Check the folders.</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Deck Builder</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cancelling…</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5478,7 +5474,7 @@ No files on disk are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Text file with one word per line to always skip. Leave empty to skip nothing.</source>
+        <source>Text file with one word per line to skip. Whitelisted words are still mined. Leave empty to skip nothing.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5498,7 +5494,7 @@ No files on disk are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Exclude bundled lists of Japanese people and place names from mining. Whitelisted names are still mined.</source>
+        <source>Exclude bundled lists of Japanese people, place and company names from mining. Whitelisted names are still mined.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -7117,6 +7113,10 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>%1 language pack: download failed. %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 language pack: download failed.</source>
         <translation type="unfinished" />
     </message>
@@ -7200,6 +7200,10 @@ Continue?</source>
     </message>
     <message>
         <source>%1 needs a one-time download of about %2 MB.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 still can't be mined after its download.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -8267,13 +8271,11 @@ No index files are deleted.</source>
         <source>Cards: %1</source>
         <translation type="unfinished" />
     </message>
-    <message>
-        <source>1 episode</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>%1 episodes</source>
-        <translation type="unfinished" />
+    <message numerus="yes">
+        <source>%n episode(s)</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
     <message>
         <source>Video folder: %1</source>
@@ -8387,21 +8389,17 @@ No index files are deleted.</source>
         <source>Remove all %1 series from the queue?</source>
         <translation type="unfinished" />
     </message>
-    <message>
-        <source>1 series</source>
-        <translation type="unfinished" />
+    <message numerus="yes">
+        <source>%n series</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
-    <message>
-        <source>%1 series</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>1 episode</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>%1 episodes</source>
-        <translation type="unfinished" />
+    <message numerus="yes">
+        <source>%n episode(s)</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
     <message>
         <source>%1 ready</source>
@@ -8616,6 +8614,10 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Reading your Anki cards and known words…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Checking file %1 of %2</source>
         <translation type="unfinished" />
     </message>
@@ -8825,6 +8827,10 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>That file or folder no longer exists.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Choose a .mokuro, .cbz or .zip volume, or a manga folder.</source>
         <translation type="unfinished" />
     </message>
@@ -8932,6 +8938,10 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Choose a book or a folder of books first.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That file or folder no longer exists.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -9120,6 +9130,10 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki Miner can't mine this folder.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -9601,6 +9615,10 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Installing %1 of %2 · %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Recommended Resources</source>
         <translation type="unfinished" />
     </message>
@@ -9676,14 +9694,22 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 (%2)</source>
+        <extracomment>%1 is one or more resource names, %2 what they are: "JMdict (dictionary)".</extracomment>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Downloads %1.</source>
+        <extracomment>%1 lists "name (kind)" groups: "Downloads JMdict (dictionary) and Kanjium (pitch accent)."</extracomment>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1, %2</source>
+        <extracomment>Joins list items before the last one: "JMdict, JPDB and Jiten". Use your language's list comma.</extracomment>
         <translation type="unfinished" />
     </message>
     <message>
         <source>%1 and %2</source>
+        <extracomment>Joins the last item to the rest of a list: "JMdict, JPDB and Jiten".</extracomment>
         <translation type="unfinished" />
     </message>
     <message>
@@ -10089,7 +10115,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Removes (notes), [sound effects], ♪ music, speaker labels and dialogue dashes from each subtitle line before mining. Half-checked means your own pattern is in use: click to add every built-in cleanup to it.</source>
+        <source>Removes (notes), [sound effects], ♪ music and dialogue dashes from each subtitle line before mining, and speaker labels where the script marks them. Half-checked means your own pattern is in use: click to add every built-in cleanup to it.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -10137,7 +10163,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped.</source>
+        <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped. Whitelisted words are still mined.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -10145,7 +10171,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication.</source>
+        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication. Whitelisted words are still mined.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -11165,6 +11191,10 @@ Your installed resources and your theme are kept.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>%1, as name_retimed.srt</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Subtitle retiming</source>
         <translation type="unfinished" />
     </message>
@@ -11498,6 +11528,10 @@ Your installed resources and your theme are kept.</source>
     </message>
 </context><context>
     <name>SubtitlesSettingsPanel</name>
+    <message>
+        <source>Auto (GPU if available)</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Transcription &amp; Alignment</source>
         <translation type="unfinished" />
@@ -12069,12 +12103,18 @@ Your installed resources and your theme are kept.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>No subtitle or audio tracks were found in %1.</source>
+        <source>No subtitle or audio tracks were found in any video in that folder.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Tracks of %1, the first of %2 videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
+        <source>No subtitle or audio tracks were found in %1.</source>
         <translation type="unfinished" />
+    </message>
+    <message numerus="yes">
+        <source>Tracks of %1, one of %n videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
     <message>
         <source>Tracks of %1. Tick the ones to save.</source>
@@ -12541,7 +12581,15 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation type="unfinished" />
     </message>
     <message>
+        <source>This card has no picture</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>No page image for this word</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not load this card's picture</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -12674,6 +12722,10 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
 </context><context>
     <name>YouTubeSettingsPanel</name>
+    <message>
+        <source>None</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>YouTube</source>
         <translation type="unfinished" />

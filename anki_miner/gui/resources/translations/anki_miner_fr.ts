@@ -2105,8 +2105,8 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Modes du Générateur de paquets (tous / top N / couverture %)</translation>
     </message>
     <message>
-        <source>Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
-        <translation>Le Générateur de paquets ignore toujours les filtres par épisode et les vérifications de doublons ; choisissez tous les mots, les N premiers, ou une couverture cible, et ignorez éventuellement les mots connus.</translation>
+        <source>Deck Builder always skips per-episode filters and checks for duplicates only in the deck it builds; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Mine from YouTube</source>
@@ -2321,8 +2321,8 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Exclure les mots en kana seul</translation>
     </message>
     <message>
-        <source>Drop words written without kanji; “Skip all kana-only words” leaves a kanji-only deck.</source>
-        <translation>Écarter les mots écrits sans kanji ; « Ignorer tous les mots uniquement en kana » donne un paquet composé uniquement de kanji.</translation>
+        <source>Drop words written without kanji; “Skip all kana-only words (including mixed)” leaves a kanji-only deck.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -2625,8 +2625,8 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Remplir automatiquement les mappages de champs</translation>
     </message>
     <message>
-        <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku, Senren and Anki Miner Note are recognised and filled completely.</source>
-        <translation>Remplir automatiquement lit les champs de votre type de note et remplit tous les mappages. Lapis, Kiku, Senren et Anki Miner Note sont reconnus et remplis entièrement.</translation>
+        <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku and Senren (Japanese only) and Anki Miner Note are recognised and filled completely.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Bold the mined word in the sentence</source>
@@ -2889,10 +2889,6 @@ Aucun fichier d'index n'est supprimé.</translation>
     <message>
         <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries, frequency sources and pitch data.</source>
         <translation>Complétez les champs manquants des notes que vous avez extraites précédemment, à l'aide des dictionnaires, sources de fréquence et données d'accent de hauteur actuellement installés.</translation>
-    </message>
-    <message>
-        <source>Deck:</source>
-        <translation>Paquet :</translation>
     </message>
     <message>
         <source>All decks</source>
@@ -3805,16 +3801,16 @@ Cela modifiera %n notes (%1) et leur ajoutera l'étiquette %2. Continuer ?</nume
         <translation>Saisissez un nom de paquet avant l'extraction.</translation>
     </message>
     <message>
+        <source>Cancelling…</source>
+        <translation>Annulation…</translation>
+    </message>
+    <message>
         <source>No video/subtitle pairs found. Check the folders.</source>
         <translation>Aucune paire vidéo/sous-titres trouvée. Vérifiez les dossiers.</translation>
     </message>
     <message>
         <source>Deck Builder</source>
         <translation>Générateur de paquets</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Annulation…</translation>
     </message>
     <message>
         <source>Preview ready. Press Build Deck to create the cards.</source>
@@ -5494,8 +5490,8 @@ Aucun fichier sur le disque n'est supprimé.</translation>
         <translation>Fichier de liste noire</translation>
     </message>
     <message>
-        <source>Text file with one word per line to always skip. Leave empty to skip nothing.</source>
-        <translation>Fichier texte avec un mot par ligne à toujours ignorer. Laissez vide pour n'ignorer aucun mot.</translation>
+        <source>Text file with one word per line to skip. Whitelisted words are still mined. Leave empty to skip nothing.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Select whitelist file...</source>
@@ -5514,8 +5510,8 @@ Aucun fichier sur le disque n'est supprimé.</translation>
         <translation>Ensembles de noms</translation>
     </message>
     <message>
-        <source>Exclude bundled lists of Japanese people and place names from mining. Whitelisted names are still mined.</source>
-        <translation>Exclut de l'extraction les listes intégrées de noms de personnes et de lieux japonais. Les noms figurant dans la liste blanche sont tout de même extraits.</translation>
+        <source>Exclude bundled lists of Japanese people, place and company names from mining. Whitelisted names are still mined.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Skip names of people, places and companies</source>
@@ -7147,6 +7143,10 @@ Continuer ?</translation>
         <translation>Le téléchargement de cette langue ne peut pas démarrer depuis la configuration. Choisissez-la dans Paramètres → Langue d'extraction après la configuration.</translation>
     </message>
     <message>
+        <source>%1 language pack: download failed. %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 language pack: download failed.</source>
         <translation>Pack de langue %1 : échec du téléchargement.</translation>
     </message>
@@ -7231,6 +7231,10 @@ Continuer ?</translation>
     <message>
         <source>%1 needs a one-time download of about %2 MB.</source>
         <translation>%1 nécessite un téléchargement unique d'environ %2 MB.</translation>
+    </message>
+    <message>
+        <source>%1 still can't be mined after its download.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>MiningTabBase</name>
@@ -8302,13 +8306,11 @@ Aucun fichier d'index n'est supprimé.</translation>
         <source>Cards: %1</source>
         <translation>Cartes : %1</translation>
     </message>
-    <message>
-        <source>1 episode</source>
-        <translation>1 épisode</translation>
-    </message>
-    <message>
-        <source>%1 episodes</source>
-        <translation>%1 épisodes</translation>
+    <message numerus="yes">
+        <source>%n episode(s)</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
     <message>
         <source>Video folder: %1</source>
@@ -8422,21 +8424,17 @@ Aucun fichier d'index n'est supprimé.</translation>
         <source>Remove all %1 series from the queue?</source>
         <translation>Retirer toutes les %1 séries de la file d'attente ?</translation>
     </message>
-    <message>
-        <source>1 series</source>
-        <translation>1 série</translation>
+    <message numerus="yes">
+        <source>%n series</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
-    <message>
-        <source>%1 series</source>
-        <translation>%1 séries</translation>
-    </message>
-    <message>
-        <source>1 episode</source>
-        <translation>1 épisode</translation>
-    </message>
-    <message>
-        <source>%1 episodes</source>
-        <translation>%1 épisodes</translation>
+    <message numerus="yes">
+        <source>%n episode(s)</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
     <message>
         <source>%1 ready</source>
@@ -8651,6 +8649,10 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Choisissez un fichier de sous-titres (.ass, .srt, .ssa, .vtt ou .smi).</translation>
     </message>
     <message>
+        <source>Reading your Anki cards and known words…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Checking file %1 of %2</source>
         <translation>Vérification du fichier %1 sur %2</translation>
     </message>
@@ -8860,6 +8862,10 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Choisissez d'abord un volume ou un dossier de manga.</translation>
     </message>
     <message>
+        <source>That file or folder no longer exists.</source>
+        <translation type="unfinished">Ce fichier ou dossier n'existe plus.</translation>
+    </message>
+    <message>
         <source>Choose a .mokuro, .cbz or .zip volume, or a manga folder.</source>
         <translation>Choisissez un volume .mokuro, .cbz ou .zip, ou un dossier de manga.</translation>
     </message>
@@ -8968,6 +8974,10 @@ Aucun fichier d'index n'est supprimé.</translation>
     <message>
         <source>Choose a book or a folder of books first.</source>
         <translation>Choisissez d'abord un livre ou un dossier de livres.</translation>
+    </message>
+    <message>
+        <source>That file or folder no longer exists.</source>
+        <translation type="unfinished">Ce fichier ou dossier n'existe plus.</translation>
     </message>
     <message>
         <source>Choose an .epub or .txt book, or a folder of books.</source>
@@ -9156,6 +9166,10 @@ Aucun fichier d'index n'est supprimé.</translation>
     <message>
         <source>Cancelling…</source>
         <translation>Annulation…</translation>
+    </message>
+    <message>
+        <source>Anki Miner can't mine this folder.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Anki Miner can't mine this file.</source>
@@ -9638,6 +9652,10 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Téléchargement %1 sur %2 · %3</translation>
     </message>
     <message>
+        <source>Installing %1 of %2 · %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Recommended Resources</source>
         <translation>Ressources recommandées</translation>
     </message>
@@ -9713,15 +9731,23 @@ Aucun fichier d'index n'est supprimé.</translation>
     </message>
     <message>
         <source>%1 (%2)</source>
-        <translation>%1 (%2)</translation>
+        <extracomment>%1 is one or more resource names, %2 what they are: "JMdict (dictionary)".</extracomment>
+        <translation type="unfinished">%1 (%2)</translation>
     </message>
     <message>
         <source>Downloads %1.</source>
-        <translation>Télécharge %1.</translation>
+        <extracomment>%1 lists "name (kind)" groups: "Downloads JMdict (dictionary) and Kanjium (pitch accent)."</extracomment>
+        <translation type="unfinished">Télécharge %1.</translation>
+    </message>
+    <message>
+        <source>%1, %2</source>
+        <extracomment>Joins list items before the last one: "JMdict, JPDB and Jiten". Use your language's list comma.</extracomment>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>%1 and %2</source>
-        <translation>%1 et %2</translation>
+        <extracomment>Joins the last item to the rest of a list: "JMdict, JPDB and Jiten".</extracomment>
+        <translation type="unfinished">%1 et %2</translation>
     </message>
     <message>
         <source>Checking for an offline dictionary...</source>
@@ -10126,8 +10152,8 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Retirer les noms des locuteurs, les effets sonores et les notes de musique</translation>
     </message>
     <message>
-        <source>Removes (notes), [sound effects], ♪ music, speaker labels and dialogue dashes from each subtitle line before mining. Half-checked means your own pattern is in use: click to add every built-in cleanup to it.</source>
-        <translation>Retire les (notes), les [effets sonores], la ♪ musique, les noms des locuteurs et les tirets de dialogue de chaque ligne de sous-titre avant l'extraction. Une case à moitié cochée signifie que votre propre motif est utilisé : cliquez pour y ajouter tous les nettoyages intégrés.</translation>
+        <source>Removes (notes), [sound effects], ♪ music and dialogue dashes from each subtitle line before mining, and speaker labels where the script marks them. Half-checked means your own pattern is in use: click to add every built-in cleanup to it.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Python regex matched in subtitle text and removed (or replaced) before mining. Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. Combine alternatives with |. Test patterns at https://regex101.com.</source>
@@ -10174,16 +10200,16 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Une carte par phrase</translation>
     </message>
     <message>
-        <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped.</source>
-        <translation>N'extrait au maximum qu'un mot par phrase d'exemple — le premier trouvé dans cette phrase. Tout autre mot présent dans la même phrase est ignoré.</translation>
+        <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped. Whitelisted words are still mined.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
         <translation>Phrases i+1 uniquement (exactement un mot inconnu)</translation>
     </message>
     <message>
-        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication.</source>
-        <translation>Extrait uniquement les mots d'une phrase ne comportant qu'un seul mot inconnu (i+1) ; prime sur la déduplication des phrases.</translation>
+        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication. Whitelisted words are still mined.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Sentence Rule</source>
@@ -11212,6 +11238,10 @@ Vos ressources installées et votre thème sont conservés.</translation>
         <translation>À côté de la vidéo source, sous le nom name_retimed.srt</translation>
     </message>
     <message>
+        <source>%1, as name_retimed.srt</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Subtitle retiming</source>
         <translation>Resynchronisation des sous-titres</translation>
     </message>
@@ -11545,6 +11575,10 @@ Vos ressources installées et votre thème sont conservés.</translation>
     </message>
 </context><context>
     <name>SubtitlesSettingsPanel</name>
+    <message>
+        <source>Auto (GPU if available)</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Transcription &amp; Alignment</source>
         <translation>Transcription et alignement</translation>
@@ -12116,12 +12150,18 @@ Vos ressources installées et votre thème sont conservés.</translation>
         <translation>Aucune vidéo n'a été trouvée dans ce dossier.</translation>
     </message>
     <message>
+        <source>No subtitle or audio tracks were found in any video in that folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>No subtitle or audio tracks were found in %1.</source>
         <translation>Aucune piste de sous-titres ou audio n'a été trouvée dans %1.</translation>
     </message>
-    <message>
-        <source>Tracks of %1, the first of %2 videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
-        <translation>Pistes de %1, la première des %2 vidéos. Les pistes cochées sont enregistrées depuis chaque vidéo du dossier ; une vidéo sans la piste correspondante est ignorée.</translation>
+    <message numerus="yes">
+        <source>Tracks of %1, one of %n videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
     <message>
         <source>Tracks of %1. Tick the ones to save.</source>
@@ -12598,8 +12638,16 @@ Triez selon cette colonne pour parcourir un long enregistrement dans l'ordre —
         <translation>Phrases (%1)</translation>
     </message>
     <message>
+        <source>This card has no picture</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>No page image for this word</source>
         <translation>Aucune image de page pour ce mot</translation>
+    </message>
+    <message>
+        <source>Could not load this card's picture</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Could not load page image</source>
@@ -12731,6 +12779,10 @@ Triez selon cette colonne pour parcourir un long enregistrement dans l'ordre —
     </message>
 </context><context>
     <name>YouTubeSettingsPanel</name>
+    <message>
+        <source>None</source>
+        <translation type="unfinished">Aucun</translation>
+    </message>
     <message>
         <source>YouTube</source>
         <translation>YouTube</translation>

@@ -2102,8 +2102,8 @@ No index files are deleted.</source>
         <translation>デッキビルダーのモード（すべて／上位N件／カバー率%）</translation>
     </message>
     <message>
-        <source>Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
-        <translation>デッキビルダーはエピソードごとのフィルターと重複チェックを常にスキップします。すべての単語、上位N件、またはカバー率の目標を選び、必要に応じて既知単語を除外できます。</translation>
+        <source>Deck Builder always skips per-episode filters and checks for duplicates only in the deck it builds; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Mine from YouTube</source>
@@ -2318,8 +2318,8 @@ No index files are deleted.</source>
         <translation>かなのみの単語を除外</translation>
     </message>
     <message>
-        <source>Drop words written without kanji; “Skip all kana-only words” leaves a kanji-only deck.</source>
-        <translation>漢字を含まない単語を除外します。「かなだけの単語をすべてスキップ」にすると漢字語だけのデッキになります。</translation>
+        <source>Drop words written without kanji; “Skip all kana-only words (including mixed)” leaves a kanji-only deck.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -2622,8 +2622,8 @@ No index files are deleted.</source>
         <translation>フィールドの対応付けを自動で入力</translation>
     </message>
     <message>
-        <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku, Senren and Anki Miner Note are recognised and filled completely.</source>
-        <translation>「自動で入力」はノートタイプのフィールドを読み込み、すべての対応付けを入力します。Lapis、Kiku、Senren、Anki Miner Note は認識され、すべて入力されます。</translation>
+        <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku and Senren (Japanese only) and Anki Miner Note are recognised and filled completely.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Bold the mined word in the sentence</source>
@@ -2886,10 +2886,6 @@ No index files are deleted.</source>
     <message>
         <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries, frequency sources and pitch data.</source>
         <translation>現在インストールされている辞書・頻度ソース・ピッチデータを使って、以前マイニングしたノートの未入力フィールドを埋めます。</translation>
-    </message>
-    <message>
-        <source>Deck:</source>
-        <translation>デッキ：</translation>
     </message>
     <message>
         <source>All decks</source>
@@ -3788,16 +3784,16 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
         <translation>マイニングの前にデッキ名を入力してください。</translation>
     </message>
     <message>
+        <source>Cancelling…</source>
+        <translation>キャンセル中…</translation>
+    </message>
+    <message>
         <source>No video/subtitle pairs found. Check the folders.</source>
         <translation>動画と字幕のペアが見つかりません。フォルダを確認してください。</translation>
     </message>
     <message>
         <source>Deck Builder</source>
         <translation>デッキビルダー</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>キャンセル中…</translation>
     </message>
     <message>
         <source>Preview ready. Press Build Deck to create the cards.</source>
@@ -5458,8 +5454,8 @@ No files on disk are deleted.</source>
         <translation>ブラックリストファイル</translation>
     </message>
     <message>
-        <source>Text file with one word per line to always skip. Leave empty to skip nothing.</source>
-        <translation>常にスキップする単語を 1 行に 1 つ書いたテキストファイルです。空欄なら何もスキップしません。</translation>
+        <source>Text file with one word per line to skip. Whitelisted words are still mined. Leave empty to skip nothing.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Select whitelist file...</source>
@@ -5478,8 +5474,8 @@ No files on disk are deleted.</source>
         <translation>固有名詞ワードセット</translation>
     </message>
     <message>
-        <source>Exclude bundled lists of Japanese people and place names from mining. Whitelisted names are still mined.</source>
-        <translation>同梱の日本人名・地名リストをマイニング対象から除外します。ホワイトリストに登録された名前は引き続きマイニングされます。</translation>
+        <source>Exclude bundled lists of Japanese people, place and company names from mining. Whitelisted names are still mined.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Skip names of people, places and companies</source>
@@ -7110,6 +7106,10 @@ Continue?</source>
         <translation>この言語のダウンロードはセットアップから開始できません。セットアップ後に「設定 → マイニング言語」で選んでください。</translation>
     </message>
     <message>
+        <source>%1 language pack: download failed. %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 language pack: download failed.</source>
         <translation>%1 言語パック: ダウンロードに失敗しました。</translation>
     </message>
@@ -7194,6 +7194,10 @@ Continue?</source>
     <message>
         <source>%1 needs a one-time download of about %2 MB.</source>
         <translation>%1 には約 %2 MB の初回ダウンロードが必要です。</translation>
+    </message>
+    <message>
+        <source>%1 still can't be mined after its download.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>MiningTabBase</name>
@@ -8265,13 +8269,11 @@ No index files are deleted.</source>
         <source>Cards: %1</source>
         <translation>カード: %1</translation>
     </message>
-    <message>
-        <source>1 episode</source>
-        <translation>1 エピソード</translation>
-    </message>
-    <message>
-        <source>%1 episodes</source>
-        <translation>%1 エピソード</translation>
+    <message numerus="yes">
+        <source>%n episode(s)</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
     <message>
         <source>Video folder: %1</source>
@@ -8385,21 +8387,17 @@ No index files are deleted.</source>
         <source>Remove all %1 series from the queue?</source>
         <translation>%1 件のシリーズすべてをキューから削除しますか？</translation>
     </message>
-    <message>
-        <source>1 series</source>
-        <translation>1 シリーズ</translation>
+    <message numerus="yes">
+        <source>%n series</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
-    <message>
-        <source>%1 series</source>
-        <translation>%1 シリーズ</translation>
-    </message>
-    <message>
-        <source>1 episode</source>
-        <translation>1 エピソード</translation>
-    </message>
-    <message>
-        <source>%1 episodes</source>
-        <translation>%1 エピソード</translation>
+    <message numerus="yes">
+        <source>%n episode(s)</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
     <message>
         <source>%1 ready</source>
@@ -8614,6 +8612,10 @@ No index files are deleted.</source>
         <translation>字幕ファイル（.ass、.srt、.ssa、.vtt、.smi）を選択してください。</translation>
     </message>
     <message>
+        <source>Reading your Anki cards and known words…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Checking file %1 of %2</source>
         <translation>%2 件中 %1 件目のファイルを確認中</translation>
     </message>
@@ -8822,6 +8824,10 @@ No index files are deleted.</source>
         <translation>先にマンガの巻またはフォルダを選んでください。</translation>
     </message>
     <message>
+        <source>That file or folder no longer exists.</source>
+        <translation type="unfinished">そのファイルまたはフォルダは存在しなくなっています。</translation>
+    </message>
+    <message>
         <source>Choose a .mokuro, .cbz or .zip volume, or a manga folder.</source>
         <translation>.mokuro、.cbz、.zip の巻、またはマンガのフォルダを選んでください。</translation>
     </message>
@@ -8930,6 +8936,10 @@ No index files are deleted.</source>
     <message>
         <source>Choose a book or a folder of books first.</source>
         <translation>先に本または本のフォルダを選んでください。</translation>
+    </message>
+    <message>
+        <source>That file or folder no longer exists.</source>
+        <translation type="unfinished">そのファイルまたはフォルダは存在しなくなっています。</translation>
     </message>
     <message>
         <source>Choose an .epub or .txt book, or a folder of books.</source>
@@ -9118,6 +9128,10 @@ No index files are deleted.</source>
     <message>
         <source>Cancelling…</source>
         <translation>キャンセル中…</translation>
+    </message>
+    <message>
+        <source>Anki Miner can't mine this folder.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Anki Miner can't mine this file.</source>
@@ -9599,6 +9613,10 @@ No index files are deleted.</source>
         <translation>ダウンロード中 %2 件中 %1 件目 · %3</translation>
     </message>
     <message>
+        <source>Installing %1 of %2 · %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Recommended Resources</source>
         <translation>推奨リソース</translation>
     </message>
@@ -9674,15 +9692,23 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 (%2)</source>
-        <translation>%1 (%2)</translation>
+        <extracomment>%1 is one or more resource names, %2 what they are: "JMdict (dictionary)".</extracomment>
+        <translation type="unfinished">%1 (%2)</translation>
     </message>
     <message>
         <source>Downloads %1.</source>
-        <translation>%1 をダウンロードします。</translation>
+        <extracomment>%1 lists "name (kind)" groups: "Downloads JMdict (dictionary) and Kanjium (pitch accent)."</extracomment>
+        <translation type="unfinished">%1 をダウンロードします。</translation>
+    </message>
+    <message>
+        <source>%1, %2</source>
+        <extracomment>Joins list items before the last one: "JMdict, JPDB and Jiten". Use your language's list comma.</extracomment>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>%1 and %2</source>
-        <translation>%1 と %2</translation>
+        <extracomment>Joins the last item to the rest of a list: "JMdict, JPDB and Jiten".</extracomment>
+        <translation type="unfinished">%1 と %2</translation>
     </message>
     <message>
         <source>Checking for an offline dictionary...</source>
@@ -10087,8 +10113,8 @@ No index files are deleted.</source>
         <translation>話者名、効果音、音楽記号を取り除く</translation>
     </message>
     <message>
-        <source>Removes (notes), [sound effects], ♪ music, speaker labels and dialogue dashes from each subtitle line before mining. Half-checked means your own pattern is in use: click to add every built-in cleanup to it.</source>
-        <translation>マイニングの前に、各字幕行から（注記）、[効果音]、♪ 音楽、話者ラベル、会話のダッシュを取り除きます。中間の状態は独自のパターンを使用中であることを示します。クリックすると、組み込みの整理ルールがすべてそのパターンに追加されます。</translation>
+        <source>Removes (notes), [sound effects], ♪ music and dialogue dashes from each subtitle line before mining, and speaker labels where the script marks them. Half-checked means your own pattern is in use: click to add every built-in cleanup to it.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Python regex matched in subtitle text and removed (or replaced) before mining. Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. Combine alternatives with |. Test patterns at https://regex101.com.</source>
@@ -10135,16 +10161,16 @@ No index files are deleted.</source>
         <translation>1 文につきカード 1 枚</translation>
     </message>
     <message>
-        <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped.</source>
-        <translation>1 つの例文からマイニングする単語は最大 1 つ（その文で最初に見つかった単語）です。同じ文に含まれる他の単語はスキップされます。</translation>
+        <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped. Whitelisted words are still mined.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
         <translation>i+1 の文のみ（未知語がちょうど 1 つ）</translation>
     </message>
     <message>
-        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication.</source>
-        <translation>文中の未知語がちょうど 1 つの場合のみマイニングします（i+1）。文の重複除去より優先されます。</translation>
+        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication. Whitelisted words are still mined.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Sentence Rule</source>
@@ -11171,6 +11197,10 @@ Your installed resources and your theme are kept.</source>
         <translation>元の動画の隣に name_retimed.srt として</translation>
     </message>
     <message>
+        <source>%1, as name_retimed.srt</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Subtitle retiming</source>
         <translation>字幕のリタイミング</translation>
     </message>
@@ -11504,6 +11534,10 @@ Your installed resources and your theme are kept.</source>
     </message>
 </context><context>
     <name>SubtitlesSettingsPanel</name>
+    <message>
+        <source>Auto (GPU if available)</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Transcription &amp; Alignment</source>
         <translation>文字起こしとアラインメント</translation>
@@ -12075,12 +12109,18 @@ Your installed resources and your theme are kept.</source>
         <translation>そのフォルダに動画が見つかりませんでした。</translation>
     </message>
     <message>
+        <source>No subtitle or audio tracks were found in any video in that folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>No subtitle or audio tracks were found in %1.</source>
         <translation>%1 に字幕トラックも音声トラックも見つかりませんでした。</translation>
     </message>
-    <message>
-        <source>Tracks of %1, the first of %2 videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
-        <translation>%2 本の動画のうち最初の %1 のトラックです。チェックしたトラックはフォルダ内のすべての動画から保存され、該当するトラックがない動画はスキップされます。</translation>
+    <message numerus="yes">
+        <source>Tracks of %1, one of %n videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
     <message>
         <source>Tracks of %1. Tick the ones to save.</source>
@@ -12557,8 +12597,16 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>文（%1）</translation>
     </message>
     <message>
+        <source>This card has no picture</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>No page image for this word</source>
         <translation>この単語のページ画像がありません</translation>
+    </message>
+    <message>
+        <source>Could not load this card's picture</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Could not load page image</source>
@@ -12690,6 +12738,10 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
 </context><context>
     <name>YouTubeSettingsPanel</name>
+    <message>
+        <source>None</source>
+        <translation type="unfinished">なし</translation>
+    </message>
     <message>
         <source>YouTube</source>
         <translation>YouTube</translation>
