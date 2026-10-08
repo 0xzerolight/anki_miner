@@ -2034,19 +2034,22 @@ class DonePage(_LiveCheckPage):
             assert previous_check is not None
             previous_check.cancel()
         self._live_check = None
+        self._results = {}
+        self.summary_label.setText(self.tr("Checking your setup..."))
+        self.completeChanged.emit()
         self._start_sweep()
 
     def recheck(self) -> None:
-        """B02: re-run the sweep when the wizard window becomes active again."""
+        """B02: re-run the sweep when the wizard window becomes active again.
+
+        The last verdict stays up until the new one lands: resetting it here
+        turned Finish off and on again on every window focus.
+        """
         self._start_sweep()
 
     def _start_sweep(self) -> None:
         if still_running(self._live_check):
             return
-        self._results = {}
-        self.summary_label.setText(self.tr("Checking your setup..."))
-        self.completeChanged.emit()
-
         self._start_live_check(
             partial(_final_sweep, self._wizard.validation_service()),
             error_prefix=self.tr("Could not check your setup: "),

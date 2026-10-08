@@ -2757,6 +2757,28 @@ def test_a_focus_recheck_while_ready_never_turns_next_off(qtbot, wiz_config, mon
     assert page.isComplete() is True
 
 
+def test_a_focus_recheck_on_the_ready_page_keeps_finish_on(qtbot, wiz_config, monkeypatch):
+    """B2.3c (Ready page): the sweep re-runs behind the last verdict."""
+    fake = _FakeValidation()
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, fake)
+    page = wiz.done_page
+    _run_page_check(qtbot, page, page.summary_label)
+    assert page._live_check is not None and page._live_check.wait(3000)
+    assert page.isComplete() is True
+    states: list[bool] = []
+    page.completeChanged.connect(lambda: states.append(page.isComplete()))
+    fake.calls.clear()
+
+    page.recheck()
+    assert page.summary_label.text().startswith("You're ready.")
+    qtbot.waitUntil(lambda: "fields" in fake.calls, timeout=5000)
+    assert page._live_check is not None and page._live_check.wait(3000)
+    qtbot.waitUntil(lambda: bool(states), timeout=3000)
+
+    assert False not in states
+    assert page.isComplete() is True
+
+
 def test_a_closing_wizard_rechecks_nothing(qtbot, wiz_config, monkeypatch):
     from PyQt6.QtWidgets import QDialog  # noqa: PLC0415
 
