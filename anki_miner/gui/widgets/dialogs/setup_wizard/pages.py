@@ -79,6 +79,8 @@ RESOURCES_HELP_URL = "https://github.com/0xzerolight/anki_miner/blob/main/RESOUR
 NOTE_TYPE_HELP_URL = f"{RESOURCES_HELP_URL}#note-types"
 #: Anki Miner Note's release page; it carries the ``.apkg`` for Anki's File → Import (B01).
 ANKI_MINER_NOTE_RELEASES_URL = f"{ANKI_MINER_NOTE.url}/releases/latest"
+#: How long "Starting Anki…" waits for AnkiConnect before Open Anki is offered again.
+_ANKI_START_GRACE_MS = 30_000
 
 
 def resources_help_url(language: str) -> str:
@@ -424,10 +426,14 @@ class MiningLanguagePage(QWizardPage):
         code = self._pack_code
         self._pack_state = "done" if ok else "failed"
         self._pack_status = message
-        if ok and code is not None:
-            # Order is load-bearing (see app._connect_language_pack_download):
-            # the pack must be importable before anything re-probes the language.
-            ensure_language_packs_on_syspath()
+        if code is not None:
+            if ok:
+                # Order is load-bearing (see app._connect_language_pack_download):
+                # the pack must be importable before anything re-probes the language.
+                ensure_language_packs_on_syspath()
+            # Both outcomes, as app._connect_language_pack_download does: a
+            # Settings "Download and switch" that joined this run stays
+            # disabled until it hears the run ended.
             window = self._wizard.parent()
             index_of = getattr(window, "_settings_tab_index", None)
             tabs = getattr(window, "tabs", None)
@@ -448,7 +454,12 @@ class MiningLanguagePage(QWizardPage):
         choice = self._choices.get(self._pack_code or "")
         name = _isolated(choice.native_name if choice is not None else (self._pack_code or ""))
         if self._pack_state == "failed":
-            failed = tr_format(self.tr("%1 language pack: download failed."), name)
+            # The worker's message is the only account of what went wrong.
+            failed = (
+                tr_format(self.tr("%1 language pack: download failed. %2"), name, self._pack_status)
+                if self._pack_status
+                else tr_format(self.tr("%1 language pack: download failed."), name)
+            )
             retry = self.tr("Retry")
             return f'{_html_text(failed)} <a href="pack">{_html_text(retry)}</a>'
         if self._pack_status:
@@ -507,6 +518,12 @@ class AnkiConnectPage(_WizardSection):
         self._active_recheck_url: str | None = None
         self._copied = False
         self._launch_command = anki_launch_command()
+        # Anki can start without AnkiConnect (not installed yet), and the poll
+        # never gives up, so "Starting Anki…" cannot wait for a success alone.
+        self._launch_grace = QTimer(self)
+        self._launch_grace.setSingleShot(True)
+        self._launch_grace.setInterval(_ANKI_START_GRACE_MS)
+        self._launch_grace.timeout.connect(self._reset_open_anki_button)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -625,6 +642,9 @@ class AnkiConnectPage(_WizardSection):
             self.result_label.setToolTip("")
             self.steps.setVisible(False)
             self.address_link.setVisible(False)
+            # The field itself, not the link to it: with the steps hidden there
+            # is nothing else on the page to type the address into.
+            self.url_row.setVisible(True)
             self.completeChanged.emit()
             self.reachability_changed.emit(False)
             return
@@ -655,8 +675,7 @@ class AnkiConnectPage(_WizardSection):
         self._has_result = True
         if reachable:
             self.result_label.setText(self.tr("Connected to Anki."))
-            self.open_anki_button.setEnabled(True)
-            self.open_anki_button.setText(self.tr("Open Anki"))
+            self._reset_open_anki_button()
         else:
             self.result_label.setText(self.tr("Anki Miner can't reach Anki yet. Do this once:"))
         # The service's own sentence, for whoever wants the detail (B03).
@@ -696,10 +715,15 @@ class AnkiConnectPage(_WizardSection):
             # The automatic re-check (B02) connects once Anki is up.
             self.open_anki_button.setEnabled(False)
             self.open_anki_button.setText(self.tr("Starting Anki…"))
+            self._launch_grace.start()
             return
         self.open_anki_button.setVisible(False)
         failed = self.tr("Anki did not start. Open it yourself.")
         self.step1_label.setText(f"1. {failed}")
+
+    def _reset_open_anki_button(self) -> None:
+        self.open_anki_button.setEnabled(True)
+        self.open_anki_button.setText(self.tr("Open Anki"))
 
 
 class DeckPage(_WizardSection):
@@ -1212,7 +1236,7 @@ class NoteTypePage(_WizardSection):
             self._wizard.update_working_config(sanitized_config)
             self.completeChanged.emit()
 
-    # --- auto-map ---
+    # --- auto-fill on fetch ---
 
     def _apply_preset(self, preset: NotePreset, extra_fields: Mapping[str, str]) -> None:
         """Stage ``preset``'s whole answer (fields, pitch format, card markers) onto the working config.
@@ -1509,6 +1533,7 @@ class ResourcesPage(_LiveCheckPage):
         self.status_label.setTextFormat(Qt.TextFormat.RichText)
         self.status_label.setOpenExternalLinks(False)
         self.status_label.linkActivated.connect(self.activate_link)
+        self.status_label.setVisible(False)  # written only through _set_status
         layout.addWidget(self.status_label)
 
         # Kept apart from status_label: one reports how the *download* went,
@@ -1583,8 +1608,7 @@ class ResourcesPage(_LiveCheckPage):
             # A finished run for the outgoing language describes nothing on screen now.
             self._session = None
             self._download_ending = ""
-            self.status_label.clear()
-            self.status_label.setToolTip("")
+            self._set_status("")
         specs = self.selected_specs()
         if specs:
             self.contents_label.setText(self._contents_sentence(specs))
@@ -1607,14 +1631,25 @@ class ResourcesPage(_LiveCheckPage):
             if not names:
                 continue
             noun = QCoreApplication.translate("SetupWizard", _KIND_PHRASE_NOUNS[kind])
+            #: %1 is one or more resource names, %2 what they are: "JMdict (dictionary)".
             groups.append(tr_format(self.tr("%1 (%2)"), self._and_list(names), noun))
+        #: %1 lists "name (kind)" groups: "Downloads JMdict (dictionary) and Kanjium (pitch accent)."
         return tr_format(self.tr("Downloads %1."), self._and_list(groups))
 
     def _and_list(self, items: list[str]) -> str:
-        """Join as "A", "A and B" or "A, B and C"; the joining word is translated."""
+        """Join as "A", "A and B" or "A, B and C"; both joiners are translated.
+
+        The catalogue varies by language, so no whole sentence per combination
+        can follow it; the joiners carry translator notes instead.
+        """
+        joined = items[0]
+        for item in items[1:-1]:
+            #: Joins list items before the last one: "JMdict, JPDB and Jiten". Use your language's list comma.
+            joined = tr_format(self.tr("%1, %2"), joined, item)
         if len(items) == 1:
-            return items[0]
-        return tr_format(self.tr("%1 and %2"), ", ".join(items[:-1]), items[-1])
+            return joined
+        #: Joins the last item to the rest of a list: "JMdict, JPDB and Jiten".
+        return tr_format(self.tr("%1 and %2"), joined, items[-1])
 
     def _sync_download_button(self) -> None:
         """Nothing to fetch, or a run already going, is not a run."""
@@ -1640,9 +1675,14 @@ class ResourcesPage(_LiveCheckPage):
         self._recheck_resources()
 
     def recheck(self) -> None:
-        """B02: coming back to the wizard asks the disk again (not while downloading)."""
-        if not self._download_running:
-            self._recheck_resources()
+        """B02: coming back to the wizard asks the disk again (not while downloading).
+
+        The last verdict stays up until the new one lands: resetting it here
+        turned Next off and on again on every window focus. A probe already in
+        flight is the answer this re-check would ask for.
+        """
+        if not self._download_running and not still_running(self._live_check):
+            self._start_readiness_probe()
 
     def download_running(self) -> bool:
         """True while the wizard's own download is going (T2.14 holds Finish for it)."""
@@ -1658,17 +1698,21 @@ class ResourcesPage(_LiveCheckPage):
     # --- live dictionary readiness ---
 
     def _recheck_resources(self) -> None:
+        """Show "Checking" on all three lines, then probe: page entry and the end of a download."""
+        self._dictionary_ready = False
+        self.dictionary_label.setText(self.tr("Checking for an offline dictionary..."))
+        self.frequency_label.clear()
+        self.pitch_label.clear()
+        self.completeChanged.emit()
+        self._start_readiness_probe()
+
+    def _start_readiness_probe(self) -> None:
         """Probe off-thread what all three resource families can do.
 
         Off-thread because the probe scans three resource folders, any of which
         can be a slow network path. One worker, not three: the base class keeps
         a single ``_live_check`` as its generation counter.
         """
-        self._dictionary_ready = False
-        self.dictionary_label.setText(self.tr("Checking for an offline dictionary..."))
-        self.frequency_label.clear()
-        self.pitch_label.clear()
-        self.completeChanged.emit()
         self._start_live_check(
             self._wizard.validation_service().check_resource_readiness,
             error_prefix=self.tr("Could not check the installed resources: "),
@@ -1755,8 +1799,7 @@ class ResourcesPage(_LiveCheckPage):
 
         if self._download_running:
             return
-        self.status_label.clear()
-        self.status_label.setToolTip("")
+        self._set_status("")
         specs = self.selected_specs()
         if not specs:
             return
@@ -1804,9 +1847,15 @@ class ResourcesPage(_LiveCheckPage):
             return
         progress = self._progress_text or self.tr("Starting…")
         cancel = self.tr("Cancel")
-        self.status_label.setText(
+        self._set_status(
             _html_text(tr_format(self.tr("Downloading: %1"), progress)) + f' <a href="cancel">{_html_text(cancel)}</a>'
         )
+
+    def _set_status(self, text: str, tooltip: str = "") -> None:
+        """The download line under Download; hidden while empty, so it leaves no gap."""
+        self.status_label.setText(text)
+        self.status_label.setToolTip(tooltip)
+        self.status_label.setVisible(bool(text))
 
     def _disconnect_registry(self) -> None:
         registry = self._registry
@@ -1871,8 +1920,7 @@ class ResourcesPage(_LiveCheckPage):
         self._sync_download_button()
         if not isinstance(outcome, ResourceDownloadOutcome):
             self._download_ending = "failed"
-            self.status_label.setText(self.tr("The download stopped before it finished."))
-            self.status_label.setToolTip("")
+            self._set_status(self.tr("The download stopped before it finished."))
         else:
             summary = outcome.summary
             if summary.cancelled:
@@ -1897,8 +1945,7 @@ class ResourcesPage(_LiveCheckPage):
             else:
                 self._download_ending = ""
                 status = self.tr("Resources installed.")
-            self.status_label.setText(status)
-            self.status_label.setToolTip("\n".join(result_lines(summary)))
+            self._set_status(status, "\n".join(result_lines(summary)))
         # Re-ask rather than infer: a summary saying the dictionary imported is
         # not the same claim as the chain being able to answer with it.
         self._recheck_resources()
@@ -2010,19 +2057,22 @@ class DonePage(_LiveCheckPage):
             assert previous_check is not None
             previous_check.cancel()
         self._live_check = None
+        self._results = {}
+        self.summary_label.setText(self.tr("Checking your setup..."))
+        self.completeChanged.emit()
         self._start_sweep()
 
     def recheck(self) -> None:
-        """B02: re-run the sweep when the wizard window becomes active again."""
+        """B02: re-run the sweep when the wizard window becomes active again.
+
+        The last verdict stays up until the new one lands: resetting it here
+        turned Finish off and on again on every window focus.
+        """
         self._start_sweep()
 
     def _start_sweep(self) -> None:
         if still_running(self._live_check):
             return
-        self._results = {}
-        self.summary_label.setText(self.tr("Checking your setup..."))
-        self.completeChanged.emit()
-
         self._start_live_check(
             partial(_final_sweep, self._wizard.validation_service()),
             error_prefix=self.tr("Could not check your setup: "),

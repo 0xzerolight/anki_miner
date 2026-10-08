@@ -780,15 +780,15 @@ def test_host_and_licence_lines_live_in_the_licence_tooltip(parent, monkeypatch,
     _drain(qtbot, worker)
 
 
-def test_headline_names_the_position_and_the_kind():
+def test_headline_names_the_position_the_kind_and_the_phase():
     specs = list(RECOMMENDED_DEFAULT_SET)
     first = ResourceProgress(spec_id="jmdict-english", display_name="JMdict", phase=_DL)
-    third = ResourceProgress(spec_id="jiten", display_name="Jiten Frequency", phase=_DL)
+    third = ResourceProgress(spec_id="jiten", display_name="Jiten Frequency", phase=_INDEX)
     last = ResourceProgress(spec_id="kanjium-pitch", display_name="Kanjium Pitch Accent", phase=_INSTALL)
 
     assert mod.activity_headline(first, specs) == "Downloading 1 of 4 · JMdict (dictionary)"
-    assert mod.activity_headline(third, specs) == "Downloading 3 of 4 · Jiten Frequency (word frequency)"
-    assert mod.activity_headline(last, specs) == "Downloading 4 of 4 · Kanjium Pitch Accent (pitch accent)"
+    assert mod.activity_headline(third, specs) == "Installing 3 of 4 · Jiten Frequency (word frequency)"
+    assert mod.activity_headline(last, specs) == "Installing 4 of 4 · Kanjium Pitch Accent (pitch accent)"
 
 
 def test_headline_for_an_id_outside_the_run_names_the_item_alone():

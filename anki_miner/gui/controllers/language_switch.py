@@ -21,6 +21,7 @@ from typing import Any
 from PyQt6.QtCore import QCoreApplication, QObject
 from PyQt6.QtWidgets import QMessageBox, QWidget
 
+from anki_miner.exceptions import AnkiConnectionError
 from anki_miner.gui.utils import queue_state_store
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.languages import tagger_provider
@@ -117,16 +118,22 @@ def _first_visit_choice(
     return dialog.choice, dialog.ticked_decks()
 
 
-def _deck_names_with_note_presence(config: Any) -> tuple[list[str], bool]:
+def _deck_names_with_note_presence(config: Any) -> tuple[list[str], bool | None]:
     """Anki's deck names, and whether its collection holds any note. Off the GUI thread.
 
     One ``findNotes`` call answers "is there anything to exclude at all": a
     brand-new Anki has only an empty Default deck, and a checklist of empty
-    decks right after setup is a question with no right answer (B07).
+    decks right after setup is a question with no right answer (B07). A failed
+    ``findNotes`` loses only that answer (None, as when nobody could ask): the
+    deck names already arrived and are still the list to offer.
     """
     service = AnkiService(config)
     names = [str(name) for name in service.get_deck_names()]
-    return names, bool(service.find_notes("deck:*"))
+    try:
+        holds_notes: bool | None = bool(service.find_notes("deck:*"))
+    except AnkiConnectionError:
+        holds_notes = None
+    return names, holds_notes
 
 
 def offer_first_visit_setup(
@@ -204,7 +211,7 @@ def _offer_with_fetch(window: Any, previous_config: Any, result: object, languag
         raw_names, raw_holds = result
         if isinstance(raw_names, list):
             names = [str(name) for name in raw_names]
-        holds_notes = bool(raw_holds)
+        holds_notes = None if raw_holds is None else bool(raw_holds)
     _offer_with_names(window, previous_config, names, language, decks_hold_notes=holds_notes)
 
 
