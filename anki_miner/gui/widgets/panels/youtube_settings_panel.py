@@ -4,7 +4,7 @@ import re
 from dataclasses import replace
 from pathlib import Path
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, Qt, pyqtSignal
 from PyQt6.QtWidgets import QCheckBox, QComboBox, QHBoxLayout, QLabel, QSpinBox, QWidget
 
 from anki_miner.gui.utils import file_dialogs
@@ -14,10 +14,11 @@ from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.utils.i18n import tr_format
 
 # Ordered pairs of (display label, config value) for the browser dropdown.
-# The sentinel "None" label maps to a Python ``None`` value in the config.
+# The sentinel "None" label maps to a Python ``None`` value in the config; it is
+# the one label translated (at addItem), the rest are product names.
 # Values are passed verbatim to yt-dlp's ``--cookies-from-browser`` flag.
 _COOKIE_BROWSER_OPTIONS: list[tuple[str, str | None]] = [
-    ("None", None),
+    (QT_TRANSLATE_NOOP("YouTubeSettingsPanel", "None"), None),
     ("Firefox", "firefox"),
     ("Chrome", "chrome"),
     ("Chromium", "chromium"),
@@ -71,7 +72,7 @@ class YouTubeSettingsPanel(FormPanel):
         self._last_cookie_index = 0
         self.cookies_browser_combo = QComboBox()
         for label, _value in _COOKIE_BROWSER_OPTIONS:
-            self.cookies_browser_combo.addItem(label)
+            self.cookies_browser_combo.addItem(QCoreApplication.translate("YouTubeSettingsPanel", label))
         self.cookies_browser_combo.addItem(self.tr("From a cookies.txt file…"), _PICK_ITEM)
         self.cookies_browser_combo.activated.connect(self._on_cookies_activated)
         self.add_field(

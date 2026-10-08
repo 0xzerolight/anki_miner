@@ -99,6 +99,28 @@ class TestYouTubePanelValueHelpers:
         finally:
             panel.deleteLater()
 
+    def test_the_none_cookies_item_is_translated(self, qtbot):
+        """Z5b: the label reached the combo as raw module data, so no catalogue ever held it."""
+        from PyQt6.QtCore import QTranslator
+        from PyQt6.QtWidgets import QApplication
+
+        class _Stub(QTranslator):
+            def translate(self, context, source, disambiguation=None, n=-1):  # noqa: N802
+                return {("YouTubeSettingsPanel", "None"): "Aucun"}.get((context, source), source)
+
+        app = QApplication.instance()
+        assert app is not None
+        stub = _Stub()
+        app.installTranslator(stub)
+        try:
+            panel = YouTubeSettingsPanel()
+            qtbot.addWidget(panel)
+        finally:
+            app.removeTranslator(stub)
+
+        assert panel.cookies_browser_combo.itemText(0) == "Aucun"
+        assert panel.get_cookies_from_browser() is None
+
     def test_unknown_cookie_value_falls_back_to_none(self, qtbot):
         panel = YouTubeSettingsPanel()
         qtbot.addWidget(panel)

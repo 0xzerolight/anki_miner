@@ -64,6 +64,31 @@ def test_panel_constructs(qtbot):
     assert panel is not None
 
 
+def test_the_auto_device_item_is_translated(qtbot):
+    """Z5b: the label reached the combo as raw module data, so no catalogue ever held it."""
+    from PyQt6.QtCore import QTranslator
+    from PyQt6.QtWidgets import QApplication
+
+    class _Stub(QTranslator):
+        def translate(self, context, source, disambiguation=None, n=-1):  # noqa: N802
+            return {("SubtitlesSettingsPanel", "Auto (GPU if available)"): "Auto (GPU si disponible)"}.get(
+                (context, source), source
+            )
+
+    app = QApplication.instance()
+    assert app is not None
+    stub = _Stub()
+    app.installTranslator(stub)
+    try:
+        panel = SubtitlesSettingsPanel()
+        qtbot.addWidget(panel)
+    finally:
+        app.removeTranslator(stub)
+
+    assert panel.device_combo.itemText(0) == "Auto (GPU si disponible)"
+    assert panel.get_device() == "auto"
+
+
 def test_panel_has_alass_selector(qtbot, monkeypatch):
     monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: False)
     panel = SubtitlesSettingsPanel()
