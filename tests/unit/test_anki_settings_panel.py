@@ -316,7 +316,7 @@ def test_no_styling_buttons_or_checkbox(qtbot):
 
 
 # ---------------------------------------------------------------------------
-# Task 1: Auto-Map Fields button prominence + _FIELD_KEYWORDS constant
+# Fill in automatically (D13) + _FIELD_KEYWORDS constant
 # ---------------------------------------------------------------------------
 
 

@@ -1167,13 +1167,13 @@ def register_mining_tab(
 def _connect_settings_validation(window: MainWindow, settings_tab: SettingsTab) -> None:
     """Connect the Settings tab's validation requests to the window (T-53).
 
-    ``SettingsTab.validation_requested`` is emitted by Test Connection. It was
-    declared and forwarded but never connected, so the button did nothing and
-    the connection badge stuck at "Checking connection...". (The deck/note-type
-    refresh buttons used to feed this too; they now drive
-    ``AnkiProbeController.refresh_name_lists``.) Wiring
-    it to ``_run_validation`` runs a validation pass; the result flows back
-    through ``_on_validation_result``, which now updates the badge.
+    ``SettingsTab.validation_requested`` is emitted by the Anki panel's Refresh,
+    which also reloads the deck and note-type lists through
+    ``AnkiProbeController.refresh_name_lists`` (C03). It was declared and
+    forwarded but never connected, so the button did nothing and the connection
+    badge stuck at "Checking connection...". Wiring it to ``_run_validation``
+    runs a validation pass; the result flows back through
+    ``_on_validation_result``, which now updates the badge.
 
     Extracted from ``main()`` so the connection is unit-testable without
     standing up the whole app.
@@ -1871,7 +1871,7 @@ def compose_main_window(
     # POST-SAVE committed object out to every tab. This prevents a scan worker's
     # stale pre-save config snapshot from regaining authority after save.
     settings_tab.config_changed.connect(lambda cfg: window.update_config(cfg))
-    # Make Test Connection live: it emits SettingsTab.validation_requested,
+    # Make the Anki panel's Refresh live: it emits SettingsTab.validation_requested,
     # which was previously connected to nothing (T-53). Routing it to
     # _run_validation also drives the Anki connection badge via
     # _on_validation_result.

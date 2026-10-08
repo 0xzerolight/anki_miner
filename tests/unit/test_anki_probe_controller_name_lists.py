@@ -61,10 +61,8 @@ def test_fetched_note_types_populate_the_real_combo(wired):
     assert panel.notetype_combo.count() == 2
 
 
-def test_list_refresh_reports_a_missing_note_type_when_nothing_is_in_flight(wired):
-    """The negative half — without the guard the message must be replaced."""
+def test_list_refresh_reports_a_missing_note_type(wired):
     ctrl, panel = wired
-    ctrl._fetch_fields_worker = None
     ctrl._on_name_notetypes_fetched(["Basic", "Other"])
     assert "Lapis" in panel.anki_status.text()
 
