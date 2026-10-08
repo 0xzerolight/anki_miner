@@ -40,7 +40,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils import queue_state_store
 from anki_miner.gui.utils.queue_state_store import QueueItemSnapshot, QueueSnapshot
 from anki_miner.gui.widgets.base.ytdlp_availability import YTDLP_DOWNLOAD_ACTION
-from anki_miner.gui.widgets.youtube_playlist_flow import split_url_lines
+from anki_miner.gui.widgets.youtube_playlist_flow import _probed_playlist_url_info, split_url_lines
 from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 from anki_miner.models.youtube import PlaylistEntry, PlaylistInfo, VideoInfo
 from anki_miner.models.youtube_queue import YouTubeItemStatus
@@ -2126,6 +2126,8 @@ class TestAddUrls:
 # ---------------------------------------------------------------------------
 
 BILI_URL = "https://www.bilibili.com/video/BV1bK411W797"
+# A video opened from a favourites list: the list, and the one video it names.
+BILI_LIST_URL = "https://www.bilibili.com/list/1958703906?sid=547718&oid=687146339&bvid=BV1DU4y1r7tz"
 
 
 def _bili_parts(n: int) -> PlaylistInfo:
@@ -2233,6 +2235,85 @@ class TestOtherSitePlaylists:
         tab._add_flow.add_urls([part])
 
         assert len(tab._queue.all_items()) == 1
+
+    def test_retrying_an_entry_probes_that_entry_alone(self, tab):
+        """A collection entry that is itself multi-part must not expand on Retry."""
+        tab._add_flow.add_urls([BILI_URL])
+        tab._add_flow._on_probe_done(tab._queue.all_items()[-1], _bili_parts(2))
+        entry = tab._queue.all_items()[0]
+        tab._add_flow._mark_probe_error(entry, "HTTP Error 412")
+
+        tab._add_flow.retry_probe(entry)
+
+        assert tab._probe_worker_cls.call_args.args[1] == entry.url
+        assert tab._probe_worker_cls.call_args.kwargs["single_video"] is True
+
+    def test_retrying_a_pasted_link_may_still_expand(self, tab):
+        """A pasted link whose first probe failed keeps the expanding probe on Retry."""
+        tab._add_flow.add_urls([BILI_URL])
+        row = tab._queue.all_items()[-1]
+        tab._add_flow._on_probe_error(row, "HTTP Error 412")
+
+        tab._add_flow.retry_probe(row)
+
+        assert tab._probe_worker_cls.call_count == 2
+        assert tab._probe_worker_cls.call_args.kwargs["single_video"] is False
+
+    def test_list_link_naming_a_video_asks_first(self, tab):
+        """A video opened from a favourites list asks, like YouTube's watch?v=…&list=…."""
+        tab._add_flow.add_urls([BILI_LIST_URL])
+
+        with patch.object(tab._add_flow, "_ask_playlist_choice", return_value="cancel") as ask:
+            tab._add_flow._on_probe_done(tab._queue.all_items()[-1], _bili_parts(3))
+
+        assert ask.call_args.args[0].kind == "video_in_playlist"
+        assert tab._queue.all_items() == []
+
+    def test_list_link_dialog_offers_just_this_video(self, tab):
+        tab._add_flow.add_urls([BILI_LIST_URL])
+
+        with patch("anki_miner.gui.widgets.youtube_playlist_flow.QMessageBox") as box:
+            box.return_value.clickedButton.return_value = MagicMock(name="Unmatched")
+            tab._add_flow._on_probe_done(tab._queue.all_items()[-1], _bili_parts(3))
+
+        labels = [c.args[0] for c in box.return_value.addButton.call_args_list if isinstance(c.args[0], str)]
+        assert labels == ["Just this video", "Add all 3"]
+
+    def test_just_this_video_probes_it_without_the_list(self, tab):
+        tab._add_flow.add_urls([BILI_LIST_URL])
+
+        with patch.object(tab._add_flow, "_ask_playlist_choice", return_value="single"):
+            tab._add_flow._on_probe_done(tab._queue.all_items()[-1], _bili_parts(3))
+
+        [row] = tab._queue.all_items()
+        assert row.url == BILI_LIST_URL
+        assert tab._probe_worker_cls.call_args.args[1] == BILI_LIST_URL
+        assert tab._probe_worker_cls.call_args.kwargs["single_video"] is True
+
+    def test_list_link_without_a_video_expands_without_asking(self, tab):
+        tab._add_flow.add_urls(["https://www.bilibili.com/list/1958703906?sid=547718"])
+
+        with patch("anki_miner.gui.widgets.youtube_playlist_flow.QMessageBox") as box:
+            tab._add_flow._on_probe_done(tab._queue.all_items()[-1], _bili_parts(3))
+
+        assert not box.called
+        assert len(tab._queue.all_items()) == 3
+
+
+@pytest.mark.parametrize(
+    ("url", "kind"),
+    [
+        (BILI_LIST_URL, "video_in_playlist"),
+        ("https://bilibili.com/medialist/play/1958703906?bvid=BV1DU4y1r7tz", "video_in_playlist"),
+        ("https://www.bilibili.com/list/1958703906?sid=547718", "unknown"),
+        (BILI_URL, "unknown"),
+        ("https://www.bilibili.com/video/BV1DU4y1r7tz?bvid=BV1DU4y1r7tz", "unknown"),
+        ("https://example.com/list/1958703906?bvid=BV1DU4y1r7tz", "unknown"),
+    ],
+)
+def test_probed_playlist_url_info(url, kind):
+    """Only a Bilibili list link that names one video is offered as video-in-playlist."""
+    assert _probed_playlist_url_info(url).kind == kind
 
 
 class TestShareText:
