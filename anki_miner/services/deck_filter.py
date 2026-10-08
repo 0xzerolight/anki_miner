@@ -120,7 +120,7 @@ class KeptNote:
     model_name: str
     fields: dict[str, str]  # raw scan-time values incl. media refs
     tags: tuple[str, ...]
-    expression: str  # dedup-normalized
+    expression: str  # dedup-stripped, then normalized like a parsed card front
     reading: str
     frequency_rank: int | None
     forced: bool  # whitelist force-include
@@ -336,7 +336,11 @@ def scan_deck_filter(
                 # says the first field is the expression.
                 first_field = next(iter(fields))
                 raw = _field_value(fields, first_field) or ""
-            expression = _strip_for_dedup(raw)
+            # Normalized the way the parser normalizes subtitle text before a
+            # card front exists: the word lists normalize their entries on that
+            # promise (WordListService), so a deck spelling 𠮟る must probe as
+            # 叱る, and every later gate sees what the mining path would.
+            expression = profile.normalize(_strip_for_dedup(raw))
             if not expression:
                 drops["no_expression"] += 1
                 continue
