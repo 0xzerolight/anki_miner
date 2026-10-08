@@ -117,9 +117,12 @@ class FileSelector(QWidget):
             allow_folder: A file picker that also takes a folder (Reading →
                 Manga and Novels, D7-B). The Browse button reads "File…", a
                 "Folder…" button sits beside it, and any existing file or folder
-                is valid. Use with ``file_mode=True``.
+                is valid. Requires ``file_mode=True``; raises ``ValueError``
+                otherwise.
             parent: Optional parent widget
         """
+        if allow_folder and not file_mode:
+            raise ValueError("allow_folder needs file_mode=True: it adds a Folder… button beside a file picker")
         super().__init__(parent)
 
         self._file_mode = file_mode
