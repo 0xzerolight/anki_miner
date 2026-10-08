@@ -6,13 +6,14 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtWidgets import QStyleOptionViewItem
+from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem
 
 from anki_miner.gui.utils import session_state
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.widgets.dialogs import word_curation_dialog as module
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import POSITION_COLUMN, WordCurationDialog
 from anki_miner.models import TokenizedWord
+from tests.unit._cell_paint import ink_span, paint_cell
 
 _WORD_COL, _FORM_COL, _UNKNOWNS_COL, _LENGTH_COL = 1, 2, 7, 8
 
@@ -86,6 +87,26 @@ def test_the_grey_form_shows_only_while_form_in_text_is_hidden(qtbot):
     dialog.table.setColumnHidden(_FORM_COL, False)
     assert delegate._form(index) == ""
     assert delegate.sizeHint(option, index).width() < wide
+
+
+def test_the_word_starts_at_qts_own_text_inset_and_the_form_follows_it(qtbot):
+    """B1.8: the custom paint lines the word up with every plain cell's text.
+
+    The stock delegate paints the same cell's text (the mined word alone); the
+    word must start on the same column, and the grey form must extend the ink.
+    """
+    dialog = WordCurationDialog([_verb()])
+    qtbot.addWidget(dialog)
+    index = dialog.table.model().index(0, _WORD_COL)
+    delegate = dialog.table.itemDelegateForColumn(_WORD_COL)
+    assert delegate._form(index) == "食べた"
+    stock = QStyledItemDelegate()
+
+    with_form = ink_span(paint_cell(delegate, dialog.table, index))
+    word_only = ink_span(paint_cell(stock, dialog.table, index))
+
+    assert with_form[0] == word_only[0] > 0
+    assert with_form[1] > word_only[1]
 
 
 def test_a_noun_carries_no_grey_form(qtbot):
