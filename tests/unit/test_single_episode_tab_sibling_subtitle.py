@@ -142,3 +142,22 @@ def test_video_change_keeps_a_subtitle_picked_after_the_autofill(tab, tmp_path):
     tab.video_selector.set_path(str(tmp_path / "Show - 02.mkv"))
 
     assert tab.subtitle_selector.get_path() == str(tmp_path / "custom.ass")
+
+
+def test_video_path_change_autofills_a_downloaded_language_tagged_subtitle(tab, tmp_path):
+    """Utilities -> Download writes "Title [id].ja.vtt" beside "Title [id].mp4"."""
+    for name in ("Title [abc123].mp4", "Title [abc123].en.vtt", "Title [abc123].ja.vtt"):
+        (tmp_path / name).touch()
+
+    tab.video_selector.set_path(str(tmp_path / "Title [abc123].mp4"))
+
+    assert tab.subtitle_selector.get_path() == str(tmp_path / "Title [abc123].ja.vtt")
+
+
+def test_video_path_change_never_fills_another_language(tab, tmp_path):
+    for name in ("ep01.mkv", "ep01.en.srt"):
+        (tmp_path / name).touch()
+
+    tab.video_selector.set_path(str(tmp_path / "ep01.mkv"))
+
+    assert tab.subtitle_selector.get_path().strip() == ""

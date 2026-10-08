@@ -18,7 +18,7 @@ from anki_miner.gui.workers._queue_worker_base import CurationEpisode, RunBounda
 from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.interfaces.progress import ProgressCallback
-from anki_miner.languages.registry import config_language, get_profile
+from anki_miner.languages.registry import config_language, get_profile, subtitle_language
 from anki_miner.models.batch_queue import BatchQueue, QueueItem, QueueItemStatus
 from anki_miner.models.processing import ProcessingResult, WhitelistCoverage
 from anki_miner.models.word import TokenizedWord
@@ -404,6 +404,7 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                     item.video_folder,
                     item.subtitle_folder,
                     secondary_folder=item.secondary_folder if self.config.secondary_subtitle_enabled else None,
+                    language=subtitle_language(config_language(self.config)),
                 )
 
                 if not pairs:

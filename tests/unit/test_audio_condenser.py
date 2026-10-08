@@ -29,6 +29,7 @@ from anki_miner.services.audio_condenser import (
     FfmpegStepFailure,
     FilterUnavailableError,
     _concat_list,
+    _resolve_subtitle_source,
     build_aselect_graph,
     build_periods,
     condense_one,
@@ -1534,6 +1535,22 @@ def test_condense_one_no_source(tmp_path, monkeypatch):
 
     assert result.status is CondenseStatus.NO_SOURCE
     assert svc.condense_calls == []
+
+
+def test_resolve_subtitle_source_takes_a_tagged_sibling(tmp_path, monkeypatch):
+    """A mining-language sibling named differently from the media is used before the embedded track (D9)."""
+    # Red run falls through to the embedded track; keep it off real ffprobe.
+    monkeypatch.setattr(_RESOLVE_FFPROBE, lambda config: "ffprobe")
+    monkeypatch.setattr(_LIST_STREAMS, lambda m, ffprobe: [])
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    (tmp_path / "ep01.en.srt").touch()
+    tagged = tmp_path / "ep01.ja.srt"
+    tagged.touch()
+
+    sub, temp, failure = _resolve_subtitle_source(_StubCondenser(), _make_config(tmp_path), media, None, None, None)
+
+    assert (sub, temp, failure) == (tagged, None, None)
 
 
 def test_condense_one_bitmap_only_reports_codecs(tmp_path, monkeypatch):

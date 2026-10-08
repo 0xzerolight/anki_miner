@@ -50,7 +50,7 @@ from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaCon
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.workers.episode_worker import EpisodeWorkerThread
-from anki_miner.languages.registry import config_language, get_profile
+from anki_miner.languages.registry import config_language, get_profile, subtitle_language
 from anki_miner.orchestration.episode_processor import sanitize_source_label
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils import list_audio_streams
@@ -441,7 +441,7 @@ class SingleEpisodeTab(MiningTabBase):
             return
 
         self._last_auto_filled_subtitle = None
-        sibling = find_sibling_subtitle(Path(new_path))
+        sibling = find_sibling_subtitle(Path(new_path), language=subtitle_language(config_language(self.config)))
         if sibling is not None:
             self._last_auto_filled_subtitle = str(sibling)
             self.subtitle_selector.set_path(str(sibling))
