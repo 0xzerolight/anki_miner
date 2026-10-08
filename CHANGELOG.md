@@ -14,11 +14,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 - **A Settings page for the Utilities tab's tools (Settings → Utilities).** The checkboxes that pick which tools the tab shows moved there from Settings → General.
+- **Settings headings stand out.** Page titles are a size larger and section headings sit a step above body text, so each page's groups are easy to find.
+- **Power-user options look like the checkboxes around them.** "Edit the pattern (advanced)" in Settings → Sentences and "Customize marker field names" in Settings → Cards & Anki no longer have an oversized bold title or an empty frame under it.
+- **Text-to-speech.** The "Read aloud (manga, books)" row in Settings → Card Media is now called Text-to-speech. Searching settings for "Read aloud" still finds it.
+- **Numbers use a decimal point everywhere** ("0.30 seconds"), whatever the system's regional number format.
+- **Mining languages go by their own names.** Settings → Mining Language and the setup wizard list each language by its native name alone (日本語, not "日本語 — Japanese"), A to Z with Latin-script names first. Searching settings for "Japanese" still finds the list.
+- **Download buttons hide once installed.** Settings → Transcription & Alignment shows only "Installed" for anything already installed. A download button appears while something is missing, for example after you pick a model that isn't downloaded.
+- **Resource lists fill the page.** In Settings → Dictionaries, Word Audio, Frequency and Pitch Accent the source list grows with the window instead of scrolling in a small box.
+- Shorter hints under Card Field Mappings (Settings → Cards & Anki) and on Settings → Keyboard.
 
 ### Fixed
 - **Re-import finds a downloaded Wiktionary (wty) dictionary's saved copy.** Re-import and Reimport All said no saved copy was left for a wty dictionary from the recommended downloads.
+- **Theme previews fill their tiles** on scaled displays and under Zoom (Settings → General). They drew at a fraction of their slot, half size at 200%.
 
 ### Removed
+- **The Jisho online dictionary (Settings → Dictionaries).** Definitions come only from installed dictionaries. A saved Jisho entry is dropped from the dictionary list when settings load.
+- **The low-contrast note under the theme gallery** (Settings → General). Themes still show exactly as their author wrote them.
 
 ## [3.7.0] - 2026-10-07
 
