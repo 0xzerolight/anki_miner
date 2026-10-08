@@ -1,13 +1,12 @@
 """Seed a minimal offline dictionary covering the E2E subtitle's vocabulary.
 
 The harness must mine with NO network, so every lemma the test subtitle yields
-needs a local definition. This module writes a tiny
-Yomitan-style indexed dictionary at ``<dicts_root>/<dict_id>/index.sqlite`` with
-one entry per lemma in
-:data:`tests.e2e.fixtures_subtitle.EXPECTED_LEMMAS` — each carrying the lemma's
-kana reading (from :data:`tests.e2e.fixtures_subtitle.LEMMA_READINGS`) and a
-simple English gloss wrapped in the ``gloss-item`` ``<li>`` shape the indexed
-provider expects.
+needs a local definition. This module writes a tiny Yomitan-style indexed
+dictionary at ``<dicts_root>/<dict_id>/index.sqlite`` with one entry per lemma
+in :data:`tests.e2e.fixtures_subtitle.EXPECTED_LEMMAS` — each carrying the
+lemma's kana reading (from :data:`tests.e2e.fixtures_subtitle.LEMMA_READINGS`)
+and a simple English gloss wrapped in the ``gloss-item`` ``<li>`` shape the
+indexed provider expects.
 
 It reuses the real storage primitives
 (:func:`anki_miner.services.dictionary.storage.create_index` /

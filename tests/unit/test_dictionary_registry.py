@@ -153,8 +153,7 @@ class TestDictionaryRegistry:
 
         registry = DictionaryRegistry(tmp_path)
         registry.load()
-        # A missing on-disk dict is logged at DEBUG (not WARNING) and skipped;
-        # the chain continues with the remaining providers.
+        # A missing on-disk dict is logged at DEBUG (not WARNING) and skipped.
         caplog.set_level(logging.DEBUG)
         chain = registry.build_provider_chain(config)
         assert chain == []

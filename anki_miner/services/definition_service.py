@@ -264,10 +264,10 @@ class DefinitionService:
 
         Needed so the GUI can release per-dict ``index.sqlite`` handles before
         deleting a dictionary folder — on Windows, an open SQLite connection
-        keeps a file lock that blocks ``rmtree`` (Issue #30). The Protocol
-        does not require ``close``; probe via ``getattr`` so providers without
-        it are silently skipped. Resets ``_loaded`` so a later
-        ``ensure_loaded()`` will re-open the chain cleanly.
+        keeps a file lock that blocks ``rmtree`` (Issue #30). The Protocol does
+        not require ``close``; probe via ``getattr`` so providers without it
+        are silently skipped. Resets ``_loaded`` so a later ``ensure_loaded()``
+        will re-open the chain cleanly.
         """
         for provider in self._providers:
             closer = getattr(provider, "close", None)
@@ -490,11 +490,11 @@ class DefinitionService:
 
         # NOTE: the two ``except Exception`` clauses below are deliberately broad,
         # not an oversight. This is the never-raises provider boundary: a provider
-        # (an offline index, a user-imported dict) that raises an
-        # UNANTICIPATED exception type must degrade to "miss + continue to the next
-        # provider", never abort the whole mine. Narrowing to specific types would
-        # let a single buggy/edge-case provider crash a run. Words it failed to
-        # resolve fall through to the next provider, and any earlier hits are kept.
+        # (an offline index, a user-imported dict) that raises an UNANTICIPATED
+        # exception type must degrade to "miss + continue to the next provider",
+        # never abort the whole mine. Narrowing to specific types would let a
+        # single buggy/edge-case provider crash a run. Words it failed to resolve
+        # fall through to the next provider, and any earlier hits are kept.
         for provider in self._providers:
             if not remaining or cancellation_requested():
                 break
@@ -764,10 +764,10 @@ class DefinitionService:
         enabled offline dictionary attest for this exact headword". Walks the
         chain exactly like :meth:`offline_terms_exist` — offline-only,
         ``ensure_loaded`` first, per-provider try/except so a provider failure
-        can never raise from inside subtitle parsing —
-        with first-provider-wins semantics per term: once a chain member
-        attests a term's readings, later providers are not consulted for it
-        (chain order is the user's priority order).
+        can never raise from inside subtitle parsing — with first-provider-wins
+        semantics per term: once a chain member attests a term's readings,
+        later providers are not consulted for it (chain order is the user's
+        priority order).
         """
         self.ensure_loaded()
 
@@ -798,8 +798,7 @@ class DefinitionService:
         The form-lookup probe a language's token post-pass reads: "what does the dictionary say
         under this exact headword". Walks the chain exactly like :meth:`offline_term_readings` --
         offline-only, ``ensure_loaded`` first, per-provider try/except so a provider failure can
-        never raise from inside subtitle parsing -- with first-provider-wins
-        semantics per term.
+        never raise from inside subtitle parsing -- with first-provider-wins semantics per term.
 
         A provider that answers a term with an EMPTY row list is treated as not having answered, so
         that term stays in ``remaining`` and the next provider is asked. Without that, a chain whose
@@ -869,8 +868,8 @@ class DefinitionService:
         """Whether ``provider`` exposes a truthy ``commonness_aware`` property.
 
         Optional surface (like ``lookup_many`` / ``has_terms``): a provider
-        lacking it (a legacy dict) is not aware. Never raises: a
-        property that throws degrades to False."""
+        lacking it (a legacy dict) is not aware. Never raises: a property that
+        throws degrades to False."""
         try:
             return bool(getattr(provider, "commonness_aware", False))
         except Exception as e:  # pragma: no cover - defensive
@@ -1012,16 +1011,16 @@ class DefinitionService:
         Fast path (OVH-050): offline providers that expose ``lookup_many`` are
         queried once per word-unique sub-batch (one IN-clause SQLite query per
         sub-batch instead of N per-word queries). Walk semantics:
-        * Every available provider is queried in chain order; each
-          provider's returned HTML is concatenated verbatim (each provider wraps
-          its hit in ``<div class="yomitan-glossary">…</div>``, so the result is
-          a sequence of those wrappers — compatible with the Senren toggle).
+        * Every available provider is queried in chain order; each provider's
+          returned HTML is concatenated verbatim (each provider wraps its hit in
+          ``<div class="yomitan-glossary">…</div>``, so the result is a sequence
+          of those wrappers — compatible with the Senren toggle).
         Providers lacking ``lookup_many`` are consulted per-word.
 
         ``fallback_context`` is ``get_definitions_batch``'s lookup-miss ladder:
-        a word nothing answered retries the candidates, and
-        every offline provider's hit for the first candidate any of them answers
-        is concatenated. Absent (``None``) ⇒ no ladder.
+        a word nothing answered retries the candidates, and every offline
+        provider's hit for the first candidate any of them answers is
+        concatenated. Absent (``None``) ⇒ no ladder.
 
         ``lemma_context`` mirrors ``get_definitions_batch``: word → token lemma,
         forwarded to batch-capable offline providers for the Rule A′ kana-front

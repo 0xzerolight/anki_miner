@@ -43,9 +43,9 @@ class DictionaryProvider(Protocol):
 
     # NOTE: ``lookup_many`` is an OPTIONAL batch fast-path. It is intentionally
     # NOT part of the required Protocol surface — providers predating it do not
-    # implement it. Consumers MUST probe for it at
-    # runtime (``callable(getattr(provider, "lookup_many", None))``) and fall
-    # back to per-word ``lookup`` when absent. An implementer's contract:
+    # implement it. Consumers MUST probe for it at runtime
+    # (``callable(getattr(provider, "lookup_many", None))``) and fall back to
+    # per-word ``lookup`` when absent. An implementer's contract:
     #
     #     def lookup_many(
     #         self,

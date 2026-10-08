@@ -27,7 +27,7 @@ def confirm_remove(monkeypatch):
     )
 
 
-def _set_two_entry_chain(tab: SettingsTab) -> None:
+def _set_three_entry_chain(tab: SettingsTab) -> None:
     """Load a deterministic 3-indexed chain into the dict panel."""
     tab.dictionary_panel.set_chain(
         (
@@ -43,7 +43,7 @@ class TestDictChainReorderPersists:
 
     def test_move_up_persists_new_chain(self, tab):
         """Moving a dict up emits chain_changed → _persist_chain_change is called."""
-        _set_two_entry_chain(tab)
+        _set_three_entry_chain(tab)
         persisted: list[tuple] = []
         tab.config_changed.connect(lambda cfg: persisted.append(cfg.dictionary_chain))
 
@@ -56,7 +56,7 @@ class TestDictChainReorderPersists:
 
     def test_move_down_persists_new_chain(self, tab):
         """Moving a dict down emits chain_changed → _persist_chain_change is called."""
-        _set_two_entry_chain(tab)
+        _set_three_entry_chain(tab)
         persisted: list[tuple] = []
         tab.config_changed.connect(lambda cfg: persisted.append(cfg.dictionary_chain))
 
@@ -69,7 +69,7 @@ class TestDictChainReorderPersists:
 
     def test_toggle_persists_new_chain(self, tab):
         """Toggling a row checkbox emits chain_changed → persist fires."""
-        _set_two_entry_chain(tab)
+        _set_three_entry_chain(tab)
         persisted: list[tuple] = []
         tab.config_changed.connect(lambda cfg: persisted.append(cfg.dictionary_chain))
 
@@ -83,7 +83,7 @@ class TestDictChainReorderPersists:
 
     def test_toggle_waits_for_committed_config(self, tab):
         """After toggle, tab.config remains committed until persistence succeeds."""
-        _set_two_entry_chain(tab)
+        _set_three_entry_chain(tab)
         committed = tab.config
         emitted = []
         tab.config_changed.connect(emitted.append)
