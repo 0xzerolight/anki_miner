@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.ankiconnect_help import anki_launch_command
 from anki_miner.gui.utils.language_gate import apply_language_gate, field_row_widgets
 from anki_miner.gui.widgets.base import FormPanel, StatusBadge
 from anki_miner.gui.widgets.base.disclosure import make_disclosure
@@ -390,6 +391,20 @@ class AnkiSettingsPanel(FormPanel):
             # the button this row replaced was called "Test Connection".
             anchor_text=lambda: (self.refresh_button.text(), self.refresh_button.toolTip(), "Test Connection"),
         )
+
+        self.auto_open_anki_checkbox = QCheckBox(self.tr("Open Anki when Anki Miner starts"))
+        self.add_field(
+            "",
+            self.auto_open_anki_checkbox,
+            helper=self.tr("Starts Anki if it isn't running when Anki Miner opens."),
+        )
+        # Same lookup as the wizard's Open Anki button (D11): one standard
+        # install place per platform, no search.
+        if anki_launch_command() is None:
+            self.auto_open_anki_checkbox.setEnabled(False)
+            self.auto_open_anki_checkbox.setToolTip(
+                self.tr("Anki Miner can't find Anki where its installer puts it, so it can't open it.")
+            )
 
         # The one status line (C03): the most important problem, or nothing.
         # "3 deck(s) loaded" and "Loading…" are gone -- a line that only ever
@@ -1210,6 +1225,7 @@ class AnkiSettingsPanel(FormPanel):
         self.set_card_type(config.card_type)
         self.set_card_type_marker_fields(config.card_type_marker_fields)
         self.set_strict_card_order(config.strict_card_order)
+        self.auto_open_anki_checkbox.setChecked(config.auto_open_anki)
         self.reading_tone_color_checkbox.setChecked(config.reading_tone_color)
         capabilities = get_profile(config_language(config)).capabilities
         self._presets_allowed = "note_presets" in capabilities
@@ -1236,6 +1252,7 @@ class AnkiSettingsPanel(FormPanel):
             ),
             card_type_marker_fields=self.get_card_type_marker_fields(),
             strict_card_order=self.get_strict_card_order(),
+            auto_open_anki=self.auto_open_anki_checkbox.isChecked(),
         )
         # Language-scoped: only written while the row is on screen, same
         # rationale as the hook fields above (see FilteringSettingsPanel's twin

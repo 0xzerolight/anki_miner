@@ -49,6 +49,7 @@ from anki_miner.gui.constants import (
     WINDOW_MIN_WIDTH,
 )
 from anki_miner.gui.controllers import BackgroundTaskController
+from anki_miner.gui.controllers.anki_auto_open import AnkiAutoOpener
 from anki_miner.gui.controllers.profile_controller import ProfileController
 from anki_miner.gui.controllers.task_registry import TaskRegistry
 from anki_miner.gui.launch import get_effective_log_path
@@ -205,6 +206,13 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # the next Undo delete instead of the stale startup endpoint.
         self._build_config_bound_services()
         self._validation_silent = True
+        # Opt-in Open Anki at startup. The lambda reads the current service:
+        # _build_config_bound_services replaces it on every save.
+        self._anki_auto_opener = AnkiAutoOpener(
+            self,
+            check=lambda: self.validation_service.check_ankiconnect(),
+            on_ready=self._on_anki_auto_opened,
+        )
         # Set by the Help menu only: the boot check stays silent, the one the
         # user asked for reports its answer.
         self._update_check_manual = False
@@ -2149,6 +2157,12 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # callers. Use the authoritative result.ankiconnect_ok flag.
         self._set_anki_connection_badge("connected" if result.ankiconnect_ok else "disconnected")
 
+        # The launch-time check found Anki closed and the user asked for Anki to
+        # be opened. A check the user started (silent is False) never opens it;
+        # the opener itself allows one launch per run.
+        if silent and not result.ankiconnect_ok and self.config.auto_open_anki:
+            self._anki_auto_opener.open()
+
         # Anki answered, so any screen still showing "could not load decks" was
         # asking a closed Anki and can now be told to ask again. Emitted on
         # every reachable sweep rather than on a down→up edge: the consumers are
@@ -2716,6 +2730,25 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         jump = getattr(self.tabs.widget(idx), "jump_to_setting", None)
         if callable(jump):
             jump(stable_id)
+
+    def _on_anki_auto_opened(self) -> None:
+        """Anki answered after Open Anki at startup: run the checks again, quietly.
+
+        Silent like the startup run it replaces, so an unrelated issue (no
+        ffmpeg) is not suddenly announced in a banner the launch suppressed.
+        """
+        if self.is_shutting_down():
+            return
+        worker = self.background_tasks.validation_worker
+        if still_running(worker):
+            # A check the user started (Refresh, Re-check) is still running and
+            # may have asked before Anki was up. Run again once it ends; marking
+            # silent now would hide that check's own answer.
+            assert worker is not None
+            worker.finished.connect(self._on_anki_auto_opened)
+            return
+        self._validation_silent = True
+        self._run_validation()
 
     def _run_validation(self) -> None:
         """Run system validation in background thread."""
