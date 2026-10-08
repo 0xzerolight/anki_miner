@@ -56,6 +56,20 @@ def _install_network_tripwire():
     _net.uninstall()
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _app_number_locale():
+    """Run every test under the number locale ``app.main`` installs before its first widget.
+
+    Without it a widget takes the runner's separators: "0,30" under a comma
+    ``LC_NUMERIC``, and no thousands comma under CI's C locale. Imported here,
+    not at module level, so collecting a non-GUI test pulls in no PyQt.
+    """
+    from anki_miner.gui.i18n import install_number_locale
+
+    install_number_locale()
+    yield
+
+
 # Defined before every other function-scoped autouse fixture so it SETS UP
 # first and TEARS DOWN last — its teardown-assert therefore runs after
 # test-local fixtures join their workers (``w.wait(3000)``) and after
