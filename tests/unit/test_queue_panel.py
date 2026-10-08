@@ -99,12 +99,23 @@ def test_update_stats_text(panel, tmp_path):
     w2.set_episode_count(2)
     panel._update_stats()
 
-    assert panel.queue_controls.counter_label.text() == "2 series · 5 episodes · 2 ready"
+    assert panel.queue_controls.counter_label.text() == "2 series · 5 episode(s) · 2 ready"
 
     w1.set_status("complete")
     w1.set_cards_created(4)
     panel._update_stats()
-    assert panel.queue_controls.counter_label.text() == "2 series · 5 episodes · 1 ready · 1 complete"
+    assert panel.queue_controls.counter_label.text() == "2 series · 5 episode(s) · 1 ready · 1 complete"
+
+
+def test_counts_use_qt_plural_forms(panel):
+    """P-B1.4: a 1-or-other split gives Russian 2-4 the wrong noun; ``%n`` lets each
+    catalog carry its own plural forms. Untranslated, Qt prints the source form."""
+    widget = _add_widget(panel, "A", "id-1")
+    widget.set_episode_count(3)
+    panel._update_stats()
+
+    assert panel.queue_controls.counter_label.text() == "1 series · 3 episode(s) · 1 ready"
+    assert widget.aside_label.text() == "3 episode(s)"
 
 
 def test_get_valid_pairs_and_incomplete_items(panel, tmp_path):
@@ -225,7 +236,7 @@ class TestImeSafeDialogs:
         assert not any(b.isDefault() or b.autoDefault() for b in buttons)
 
 
-def test_the_list_keeps_six_rows_visible(panel):
+def test_the_list_keeps_six_text_lines_visible(panel):
     from anki_miner.gui.widgets.base.sizing import metric_row_height
     from anki_miner.gui.widgets.panels.queue_panel import _VISIBLE_QUEUE_ROWS
 
@@ -237,7 +248,7 @@ class TestClearOnAnEmptyQueue:
     def test_it_says_nothing_at_all(self, panel):
         """Clearing nothing is neither a failure nor a change (D24, finding -26).
 
-        The counter above the list already reads "Queue is empty".
+        The empty-queue line in place of the list already reads "Queue is empty".
         """
         from unittest.mock import patch
 
@@ -400,3 +411,25 @@ class TestSecondarySubtitleFolder:
         panel._edit_item(widget)
 
         assert widget.secondary_folder is None
+
+
+def test_a_late_episode_count_for_a_removed_row_is_dropped(panel, monkeypatch, tmp_path):
+    """B1.4: the scan answers after the row is gone; the answer must change nothing."""
+    import anki_miner.gui.widgets.panels.queue_panel as module
+
+    answers: list = []
+    monkeypatch.setattr(module, "run_off_thread", lambda _parent, _fn, on_done, _on_error: answers.append(on_done))
+    video, subs = tmp_path / "video", tmp_path / "subs"
+    video.mkdir()
+    subs.mkdir()
+    keep = _add_widget(panel, "Keep", "id-1")
+    keep.set_episode_count(2)
+    gone = _add_widget(panel, "Gone", "id-2", video=video, subtitle=subs)
+    panel._count_episodes(gone)
+    panel._remove_item(gone)
+    counter_before = panel.queue_controls.counter_label.text()
+
+    answers[-1](12)
+
+    assert gone.get_episode_count() == 0
+    assert panel.queue_controls.counter_label.text() == counter_before

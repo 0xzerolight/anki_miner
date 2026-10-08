@@ -35,7 +35,7 @@ def backfill(test_config: AnkiMinerConfig, qtbot) -> CardBackfillTab:
     return tab
 
 
-def _result_with_notes(count: int) -> ProcessingResult:
+def _result_with_cards(count: int) -> ProcessingResult:
     return ProcessingResult(
         total_words_found=count,
         new_words_found=count,
@@ -47,29 +47,29 @@ def _result_with_notes(count: int) -> ProcessingResult:
 class TestUndoCountsCards:
     """The Undo wording counts cards (D20 item 5 reopened D46-B)."""
 
-    def test_the_button_counts_notes(self, qtbot):
-        dialog = ResultsDialog(_result_with_notes(42), undo_callback=lambda ids: len(ids))
+    def test_the_button_counts_cards(self, qtbot):
+        dialog = ResultsDialog(_result_with_cards(42), undo_callback=lambda ids: len(ids))
         qtbot.addWidget(dialog)
         assert dialog._undo_button.text() == "Undo (42 cards)"
 
-    def test_the_undone_label_counts_notes(self, qtbot):
-        dialog = ResultsDialog(_result_with_notes(3), undo_callback=lambda ids: len(ids))
+    def test_the_undone_label_counts_cards(self, qtbot):
+        dialog = ResultsDialog(_result_with_cards(3), undo_callback=lambda ids: len(ids))
         qtbot.addWidget(dialog)
         dialog._on_undo_done(3)
         assert dialog._undo_button.text() == "Undone (3 cards deleted)"
 
-    def test_a_failed_undo_restores_the_note_wording(self, qtbot, monkeypatch):
+    def test_a_failed_undo_restores_the_card_wording(self, qtbot, monkeypatch):
         monkeypatch.setattr(
             "anki_miner.gui.widgets.dialogs.results_dialog.QMessageBox.exec",
             lambda *a, **k: None,
         )
-        dialog = ResultsDialog(_result_with_notes(7), undo_callback=lambda ids: len(ids))
+        dialog = ResultsDialog(_result_with_cards(7), undo_callback=lambda ids: len(ids))
         qtbot.addWidget(dialog)
         dialog._on_undo_error("boom")
         assert dialog._undo_button.text() == "Undo (7 cards)"
 
-    def test_a_single_note_reads_in_the_singular(self, qtbot):
-        dialog = ResultsDialog(_result_with_notes(1), undo_callback=lambda ids: len(ids))
+    def test_a_single_card_reads_in_the_singular(self, qtbot):
+        dialog = ResultsDialog(_result_with_cards(1), undo_callback=lambda ids: len(ids))
         qtbot.addWidget(dialog)
         assert dialog._undo_button.text() == "Undo (1 card)"
         dialog._on_undo_done(1)
@@ -82,7 +82,7 @@ class TestUndoCountsCards:
             "anki_miner.gui.widgets.dialogs.results_dialog.QMessageBox.exec",
             lambda box: seen.append(box.detailedText()),
         )
-        dialog = ResultsDialog(_result_with_notes(2), undo_callback=lambda ids: len(ids))
+        dialog = ResultsDialog(_result_with_cards(2), undo_callback=lambda ids: len(ids))
         qtbot.addWidget(dialog)
         dialog._on_undo_error("note type 'Vocab' has no field 'Expression'")
         assert seen == ["note type 'Vocab' has no field 'Expression'"]
@@ -93,7 +93,7 @@ class TestUndoCountsCards:
             "anki_miner.gui.widgets.dialogs.results_dialog.QMessageBox.question",
             lambda *a, **k: __import__("PyQt6.QtWidgets", fromlist=["QMessageBox"]).QMessageBox.StandardButton.Yes,
         )
-        dialog = ResultsDialog(_result_with_notes(4), undo_callback=lambda ids: seen.append(list(ids)) or 4)
+        dialog = ResultsDialog(_result_with_cards(4), undo_callback=lambda ids: seen.append(list(ids)) or 4)
         qtbot.addWidget(dialog)
         dialog._on_undo_clicked()
         qtbot.waitUntil(lambda: bool(seen), timeout=3000)

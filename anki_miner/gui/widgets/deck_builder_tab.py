@@ -524,16 +524,6 @@ class DeckBuilderTab(FolderSeriesScreenBase):
     # Request building
     # ------------------------------------------------------------------
 
-    def _get_validated_folders(self) -> tuple[Path, Path] | None:
-        """The season's video/subtitle pair, or ``None`` when unset or missing on disk."""
-        video_path = self.video_folder_selector.path_or_none()
-        subtitle_path = self.subtitle_folder_selector.path_or_none()
-        if video_path is None or subtitle_path is None:
-            return None
-        if not self.video_folder_selector.is_valid() or not self.subtitle_folder_selector.is_valid():
-            return None
-        return Path(video_path), Path(subtitle_path)
-
     def _build_request(self) -> DeckBuildRequest | None:
         """Validate every input and return the run request, or ``None`` on refusal.
 
@@ -581,6 +571,11 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         ``scanning`` / ``preview_ready``: Cancel and Build shown (Build
         confirms), the selection on, Preview and the scan inputs off.
         ``building``: Cancel only.
+        A cancel in flight, in any of those: Build and Cancel off, Cancel
+        reading "Cancelling…", so nothing confirms a cancelled run into a
+        build on its way out. It is a flag rather than a state of its own:
+        ``_run_state`` keeps "building" while a confirmed build drains, which
+        :meth:`queue_snapshot` relies on.
 
         The scan inputs shaped the corpus a preview describes, so they lock
         for the whole run. The selection stays live until Build, because
@@ -589,16 +584,17 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         self._run_state = state
         idle = state == "idle"
         building = state == "building"
+        cancelling = self._cancel_requested and not idle
         # A09: Cancel is hidden at idle; while a run goes it takes the place of
         # the action it can stop. Build stays through the scan and the preview
         # gate, because Build is how a preview is confirmed.
         self.preview_button.setVisible(idle)
         self.preview_button.setEnabled(idle)
         self.build_button.setVisible(not building)
-        self.build_button.setEnabled(not building)
+        self.build_button.setEnabled(not building and not cancelling)
         self.cancel_button.setVisible(not idle)
-        self.cancel_button.setEnabled(not idle)
-        self.cancel_button.setText(self.tr("Cancel"))
+        self.cancel_button.setEnabled(not idle and not cancelling)
+        self.cancel_button.setText(self.tr("Cancelling…") if cancelling else self.tr("Cancel"))
         for control in (
             self.video_folder_selector,
             self.subtitle_folder_selector,
@@ -765,11 +761,9 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         if self.worker_thread is not None:
             # Also opens the Build gate, so a worker parked there ends now.
             self.worker_thread.cancel()
-        # Nothing may confirm a cancelled run into a build on its way out;
-        # the thread's end returns the screen to idle.
-        self.build_button.setEnabled(False)
-        self.cancel_button.setEnabled(False)
-        self.cancel_button.setText(self.tr("Cancelling…"))
+        # The run state is unchanged; re-applying it with the cancel flag set
+        # turns Build and Cancel off. The thread's end returns the screen to idle.
+        self._apply_run_state(self._run_state)
         self.progress_widget.freeze()
         self.progress_widget.set_status(self.tr("Cancelling…"))
 
@@ -813,7 +807,9 @@ class DeckBuilderTab(FolderSeriesScreenBase):
 
     def _on_item_pairs_progress(self, _item_id: str, done: int, total: int) -> None:
         """Fill the bar by episodes mined, the one count the build can prove."""
-        if self._from_superseded_worker() or total <= 0:
+        # A tick queued before Cancel lands after it: "Cancelling…" must stay,
+        # and the frozen progress widget would still take a new status line.
+        if self._from_superseded_worker() or self._cancel_requested or total <= 0:
             return
         status = tr_format(self.tr("%1 of %2 episodes mined"), done, total)
         self.progress_widget.set_composed(done, total, status)

@@ -58,8 +58,9 @@ from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
-#: Text lines the list always shows before it scrolls. Batch rows are one line
-#: each (D2), so this is also six rows.
+#: Text lines of height the list keeps before it scrolls. A Batch row is one
+#: line (D2) but pads more than a text line (``QueueRowWidget.ROW_PADDING_Y``),
+#: so this holds about four and a half rows, not six.
 _VISIBLE_QUEUE_ROWS = 6
 
 #: Row status -> filter chip, shared with the row so both print the same word.
@@ -201,7 +202,7 @@ class QueuePanel(QFrame):
         )
 
     def _update_list_min_height(self) -> None:
-        """Keep six one-line rows visible before the list scrolls (D2)."""
+        """Keep six text lines of list visible before it scrolls (see ``_VISIBLE_QUEUE_ROWS``)."""
         self.list_widget.setMinimumHeight(_VISIBLE_QUEUE_ROWS * metric_row_height(self.list_widget))
 
     # ------------------------------------------------------------------
@@ -641,8 +642,9 @@ class QueuePanel(QFrame):
         series = len(self.queue_item_widgets)
         episodes = sum(widget.get_episode_count() for widget in self.queue_item_widgets)
         parts = [
-            self.tr("1 series") if series == 1 else tr_format(self.tr("%1 series"), series),
-            self.tr("1 episode") if episodes == 1 else tr_format(self.tr("%1 episodes"), episodes),
+            # %n: each catalog carries its own plural forms (Russian has three).
+            self.tr("%n series", "", series),
+            self.tr("%n episode(s)", "", episodes),
             tr_format(self.tr("%1 ready"), buckets.count("ready")),
         ]
         failed = buckets.count("failed")

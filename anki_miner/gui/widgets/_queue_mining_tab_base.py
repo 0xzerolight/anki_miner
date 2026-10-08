@@ -930,8 +930,8 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         """Tick the backoff on the live surfaces, and log it once per attempt.
 
         The rows stay calm (D31), so the countdown goes where every other piece
-        of live detail goes: the status line and the task snapshot the
-        current-job strip renders.
+        of live detail goes: the status line and the task snapshot, whose
+        detail the pinned bar prints (D1).
         """
         super()._on_item_retrying(idx, attempt, maximum, remaining_s)
         line = self._retry_line(attempt, maximum, remaining_s)
@@ -973,9 +973,10 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         self._refresh_row(item)
 
         total = len(self._run_items)
-        # Both held for the whole item, so every within-item line keeps saying
-        # where in the queue it is and which item it is on. The rows are calm now
-        # (D31), so this is the only place naming the item actually being mined.
+        # Both held for the whole item, so every in-tab status line keeps saying
+        # where in the queue it is and which item it is on. The published detail
+        # names the item only until the first phase replaces it (D1: the pinned
+        # bar shows the stage); after that the running row's state word does.
         self._current_item_name = self._item_started_label(item)
         self._current_item_label = tr_format(
             self._queue_list_strings.mining_n_of_m, idx + 1, total, self._current_item_name
@@ -1001,10 +1002,9 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         """Report what the running item is doing. The bar is not involved.
 
         The bar counts finished items and moves only in :meth:`_on_item_finished`;
-        within-item detail goes to the status line and to the task snapshot the
-        current-job strip renders. The pinned bar prints the snapshot detail, so
-        what it is given here is the phase alone; the current-job strip states
-        the queue position (D1).
+        within-item detail goes to the status line and to the task snapshot.
+        The pinned bar prints the snapshot detail, so what it is given here is
+        the phase alone; the current-job strip states the queue position (D1).
         """
         self.progress_widget.set_status(self._compose_item_status(label))
         self._publish_task_position(label)

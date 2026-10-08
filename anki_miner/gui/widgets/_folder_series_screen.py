@@ -2,10 +2,10 @@
 
 A folder-series screen mines a season from a folder pair (video + subtitle,
 plus an optional secondary-subtitle translation folder) rather than a single
-episode. ``BatchProcessingTab`` is today's only subclass; a screen that mines
-the same folder-pair trio through a different worker pipeline (Deck Builder)
-subclasses this too, so this base holds only the parts that do not vary
-between them: the translation-folder gate/validation/offset, drag-and-drop
+episode. ``BatchProcessingTab`` and ``DeckBuilderTab`` subclass it: they mine
+the same folder-pair trio through different worker pipelines, so this base
+holds only the parts that do not vary between them: the video/subtitle pair
+check, the translation-folder gate/validation/offset, drag-and-drop
 folder routing, the per-episode progress slots (status line only — the bar
 counts whole items, not episodes within one), the curation dialog's media
 context, and the run's terminal progress line. Subclasses build their own Add
@@ -51,8 +51,7 @@ class FolderSeriesScreenBase(MiningTabBase):
     subtitle_folder_selector: FileSelector
     secondary_folder_selector: FileSelector
 
-    # Set by every subclass's ``__init__`` (``BatchProcessingTab`` today).
-    # Declared here, bare, for the same reason.
+    # Set by every subclass's ``__init__``. Declared here, bare, for the same reason.
     worker_thread: BatchQueueWorkerThread | None
 
     def _apply_secondary_gate(self) -> None:
@@ -60,6 +59,21 @@ class FolderSeriesScreenBase(MiningTabBase):
         enabled = self.config.secondary_subtitle_enabled
         self.secondary_folder_selector.setVisible(enabled)
         self.secondary_offset_row.setVisible(enabled)
+
+    def _get_validated_folders(self) -> tuple[Path, Path] | None:
+        """The video/subtitle folder pair, or ``None`` when unset or not valid.
+
+        The paths come back verbatim: the selectors validated the raw text, so
+        stripping it here would hand the matcher a different folder (a name
+        ending in a space became a missing path and a crash).
+        """
+        video_path = self.video_folder_selector.path_or_none()
+        subtitle_path = self.subtitle_folder_selector.path_or_none()
+        if video_path is None or subtitle_path is None:
+            return None
+        if not self.video_folder_selector.is_valid() or not self.subtitle_folder_selector.is_valid():
+            return None
+        return Path(video_path), Path(subtitle_path)
 
     def _validated_secondary_folder(self, subtitle_folder: Path) -> tuple[bool, Path | None]:
         """The Add Series card's translation folder as ``(ok, folder)``.

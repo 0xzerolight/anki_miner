@@ -223,6 +223,14 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
             coverage if self.whitelist_coverage is None else self.whitelist_coverage.merged(coverage)
         )
 
+    def _before_queue(self) -> None:
+        """Run-level setup a subclass needs once the stale-index gate has passed.
+
+        Called before anything else in the run is built, so a stale run sets
+        nothing up. An exception here ends the run through :meth:`run`'s
+        handler: logged, ``error``, then ``queue_finished``.
+        """
+
     def _run_queue(self, total_cards: int) -> int:
         # Schema-staleness pre-loop gate (4.0): if any enabled indexed dict slot
         # needs reimport, abort the WHOLE queue with a single actionable error
@@ -231,6 +239,7 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
         if stale_msg is not None:
             self.error.emit(stale_msg)
             return total_cards
+        self._before_queue()
 
         # Build ONE shared AnkiService for the whole run so its vocab cache
         # (get_existing_vocabulary) survives across all queue items. It is wired

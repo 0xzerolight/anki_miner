@@ -159,8 +159,9 @@ def test_a_tall_window_never_inflates_a_heading(page, qtbot):
     qtbot.waitExposed(widget)
     QApplication.processEvents()
 
-    # Hidden chrome (the run receipt, Retry Failed) keeps whatever geometry it
-    # last had, which is stale and not what anyone is looking at.
+    # Hidden chrome (the run receipt, queue controls that wait until they can
+    # act) keeps whatever geometry it last had, which is stale and not what
+    # anyone is looking at.
     headings = [
         h
         for h in (
