@@ -1695,6 +1695,17 @@ def test_sentence_tts_never_replaces_the_decks_own_audio(test_config, tmp_path):
     assert anki.last_card_data[0].media.audio_path == clip
 
 
+def test_no_sentence_audio_line_when_every_deck_card_brought_its_own(test_config, tmp_path):
+    clip = tmp_path / "line.mp3"
+    clip.write_bytes(b"ID3")
+    _, presenter = _run_deck(
+        _tts_config(test_config), [_deck_unit(0, audio_ref=clip)], fetcher=_make_sentence_fetcher()
+    )
+
+    infos = [c.args[0] for c in presenter.show_info.call_args_list]
+    assert not [line for line in infos if line.startswith("Sentence audio:")]  # no "0/0 sentences"
+
+
 def test_sentence_tts_still_voices_a_deck_card_without_audio(test_config):
     fetcher = _make_sentence_fetcher()
     anki, _ = _run_deck(_tts_config(test_config), [_deck_unit(0)], fetcher=fetcher)
