@@ -41,6 +41,7 @@ _KEY_TO_PANEL = {
     "youtube": "youtube_panel",
     "subtitles": "subtitles_panel",
     "ui": "ui_panel",
+    "utilities": "utilities_panel",
     "keyboard": "keyboard_panel",
 }
 
@@ -62,7 +63,7 @@ _GROUPS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
         (("mining_language", "Mining Language"), ("filtering", "Word Filters"), ("sentences", "Sentences")),
     ),
     ("Integrations", (("youtube", "YouTube"), ("subtitles", "Transcription & Alignment"))),
-    ("App", (("ui", "General"), ("keyboard", "Keyboard"))),
+    ("App", (("ui", "General"), ("utilities", "Utilities"), ("keyboard", "Keyboard"))),
 )
 
 

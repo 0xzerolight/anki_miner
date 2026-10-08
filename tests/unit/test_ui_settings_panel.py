@@ -358,15 +358,12 @@ def test_general_is_a_form_panel_with_themes_last(panel: UISettingsPanel, qtbot)
     def top(widget) -> int:
         return widget.mapTo(panel, QPoint(0, 0)).y()
 
-    first_utility = next(iter(panel.utility_checkboxes.values()))
     assert (
-        top(panel.language_combo)
-        < top(panel.zoom_combo)
-        < top(first_utility)
-        < top(panel.check_for_updates_checkbox)
-        < top(panel.gallery)
+        top(panel.language_combo) < top(panel.zoom_combo) < top(panel.check_for_updates_checkbox) < top(panel.gallery)
     )
     assert panel.gallery.findChildren(QScrollArea) == []
+    # The Utilities tab's tool boxes have their own page now (Settings -> Utilities).
+    assert not hasattr(panel, "utility_checkboxes")
 
 
 def test_max_parallel_workers_is_not_on_the_page(panel: UISettingsPanel) -> None:

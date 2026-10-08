@@ -711,7 +711,7 @@ class AnkiMinerConfig:
     # the source language: no translator is installed for it. Persisted via
     # gui_config.json; applied at startup (restart-to-apply). Discussion #76.
     ui_language: str = "en"
-    # Utilities tools the user took off the Utilities tab (Settings -> General),
+    # Utilities tools the user took off the Utilities tab (Settings -> Utilities),
     # by stable sub-tab key (gui/capabilities.UTILITY_SUBTABS).
     # Hidden keys only, so a tool added in a later release shows by default.
     # Read through capabilities.effective_hidden_utilities: unknown keys are

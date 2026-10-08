@@ -131,7 +131,7 @@ def test_main_tab_index_unknown_key(window):
 
 
 # ---------------------------------------------------------------------------
-# A tool hidden in Settings -> General
+# A tool hidden in Settings -> Utilities
 # ---------------------------------------------------------------------------
 
 
@@ -141,7 +141,7 @@ def test_a_hidden_utility_opens_its_settings_checkbox(window):
     window.reveal_capability(CapabilityTarget("subtitles", "retime"))
 
     assert window.tabs.currentWidget() is window._tabs["settings"]
-    window._tabs["settings"].jump_to_setting.assert_called_once_with("ui.utility_retime")
+    window._tabs["settings"].jump_to_setting.assert_called_once_with("utilities.retime")
     window._tabs["subtitles"].open_subtab.assert_not_called()
 
 

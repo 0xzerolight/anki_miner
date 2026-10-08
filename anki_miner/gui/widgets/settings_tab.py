@@ -73,6 +73,7 @@ from anki_miner.gui.widgets.panels import (
     PitchSettingsPanel,
     SentencesSettingsPanel,
     UISettingsPanel,
+    UtilitiesSettingsPanel,
     YouTubeSettingsPanel,
 )
 from anki_miner.gui.widgets.panels.chain_settings_panel_base import ChainSettingsPanelBase, MutationToken
@@ -424,6 +425,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             self.config.ui_zoom,
             self.config.ui_language,
         )
+        self.utilities_panel = UtilitiesSettingsPanel()
         self.keyboard_panel = KeyboardSettingsPanel()
 
         self._build_navigator()
@@ -496,7 +498,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.setLayout(outer)
 
     def _build_navigator(self) -> None:
-        """Fill the navigator with five headings over 13 destinations (D10).
+        """Fill the navigator with five headings over 14 destinations (D10).
 
         Populates ``self.nav_list`` and ``self.pages`` together and records the
         stable key → page index map in ``_subtab_index``, which callers
@@ -559,6 +561,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                 self.tr("App"),
                 (
                     ("ui", self.tr("General"), self.ui_panel),
+                    ("utilities", self.tr("Utilities"), self.utilities_panel),
                     ("keyboard", self.tr("Keyboard"), self.keyboard_panel),
                 ),
             ),
@@ -779,7 +782,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         # UI panel persists immediately on any change (live-preview model).
         self.ui_panel.state_changed.connect(self._on_theme_state_changed)
         self.ui_panel.zoom_changed.connect(self._on_zoom_changed)
-        self.ui_panel.hidden_utilities_changed.connect(self._on_hidden_utilities_changed)
+        self.utilities_panel.hidden_utilities_changed.connect(self._on_hidden_utilities_changed)
         self.ui_panel.language_changed.connect(self._on_language_changed)
         self.keyboard_panel.key_bindings_changed.connect(self._on_key_bindings_changed)
         # YouTube panel: manual "Update yt-dlp now" → re-emit to MainWindow
@@ -1274,6 +1277,10 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             # its value is part of this same repaint, not a separate step.
             self.ui_panel.load_from_config(self.config)
 
+            # The Utilities page commits each toggle itself (outside _save_panels),
+            # so its repaint is here. Never emits.
+            self.utilities_panel.load_from_config(self.config)
+
             # The Keyboard page is outside _save_panels too (it commits each
             # accepted key itself), so its repaint is here. Never emits.
             self.keyboard_panel.load_from_config(self.config)
@@ -1339,6 +1346,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             self.youtube_panel,
             self.subtitles_panel,
             self.ui_panel,
+            self.utilities_panel,
             self.keyboard_panel,
         )
 

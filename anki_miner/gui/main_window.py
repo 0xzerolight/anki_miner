@@ -987,15 +987,15 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         found (e.g. an optional tab was not registered) so a stale catalogue entry
         never crashes the UI.
 
-        A Utilities tool the user hid (Settings → General) has no
+        A Utilities tool the user hid (Settings → Utilities) has no
         page to land on, so its target opens that tool's checkbox instead. The
         Usage Guide, a task chosen in the status bar and any later deep link
         all arrive here.
         """
         hidden = effective_hidden_utilities(self.config.hidden_utilities)
         if target.main_tab == "subtitles" and target.subtab is not None and target.subtab in hidden:
-            # UISettingsPanel registers each box as "utility_<key>" under "ui".
-            self.reveal_setting(f"ui.utility_{target.subtab}")
+            # UtilitiesSettingsPanel registers each box as "<key>" under "utilities".
+            self.reveal_setting(f"utilities.{target.subtab}")
             return
         idx = self._main_tab_index(target.main_tab)
         if idx < 0:

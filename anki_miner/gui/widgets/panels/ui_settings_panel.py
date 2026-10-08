@@ -3,16 +3,15 @@
 The "General" Settings page (stable key ``"ui"``), a ``FormPanel`` like every
 other page since C08 (UI/UX audit 2026-09-29). Top to bottom: **Language** (UI
 language, restart-to-apply), **Appearance** (Zoom, restart-to-apply),
-**Utilities tab** (which tools it shows), **App** (Check for updates), then
-**Themes** (the gallery, with live preview, favourites, Open themes folder,
-Revert and the contrast note). The gallery has no scroll of its own; the page
-scrolls. "Max Parallel Workers" left the GUI (D15 item 5):
-``max_parallel_workers`` is config-only.
+**App** (Check for updates), then **Themes** (the gallery, with live preview,
+favourites, Open themes folder, Revert and the contrast note). The gallery has
+no scroll of its own; the page scrolls. "Max Parallel Workers" left the GUI
+(D15 item 5): ``max_parallel_workers`` is config-only. Which tools the
+Utilities tab shows is its own page, ``utilities_settings_panel``.
 
 Persistence for this panel's own fields is handled by emitting
-``state_changed`` / ``zoom_changed`` / ``language_changed`` /
-``hidden_utilities_changed`` (re-uses the ``config_changed`` convention from
-other panels). The settings tab forwards to ``MainWindow.update_config`` which
+``state_changed`` / ``zoom_changed`` / ``language_changed`` (re-uses the
+``config_changed`` convention from other panels). The settings tab forwards to ``MainWindow.update_config`` which
 writes ``gui_config.json``.
 """
 
@@ -27,7 +26,6 @@ from PyQt6.QtWidgets import (
     QApplication,
     QCheckBox,
     QComboBox,
-    QGridLayout,
     QHBoxLayout,
     QLabel,
     QWidget,
@@ -35,7 +33,6 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.config import ZOOM_PRESETS, AnkiMinerConfig
 from anki_miner.gui import restart
-from anki_miner.gui.capabilities import effective_hidden_utilities, utility_labels
 from anki_miner.gui.i18n import available_languages
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.resources.styles.theme import (
@@ -46,11 +43,9 @@ from anki_miner.gui.resources.styles.theme import (
     Theme,
     assess_theme_contrast,
 )
-from anki_miner.gui.utils.language_gate import apply_language_gate
 from anki_miner.gui.widgets.base import FormPanel, ScreenIssue, ScreenIssueHost
 from anki_miner.gui.widgets.enhanced import ModernButton, ThemeGalleryWidget
 from anki_miner.gui.widgets.enhanced.theme_preview import clear_thumbnail_cache
-from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
@@ -81,8 +76,6 @@ class UISettingsPanel(ScreenIssueHost, FormPanel):
         zoom_changed: Emitted with the new whole-UI zoom factor.
         language_changed: Emitted with the selected language code when the user
             picks a new UI language (not on programmatic ``set_language``).
-        hidden_utilities_changed: Emitted with the tuple of hidden Utilities
-            tool keys, in tab order, after the user toggles a tool.
     """
 
     ANCHOR_NAMESPACE = "ui"
@@ -91,7 +84,6 @@ class UISettingsPanel(ScreenIssueHost, FormPanel):
     favorites_changed = pyqtSignal()
     zoom_changed = pyqtSignal(float)
     language_changed = pyqtSignal(str)
-    hidden_utilities_changed = pyqtSignal(tuple)
 
     def __init__(
         self,
@@ -149,7 +141,7 @@ class UISettingsPanel(ScreenIssueHost, FormPanel):
     # ---- UI construction -------------------------------------------------
 
     def _setup_fields(self) -> None:
-        """Language, Appearance, Utilities tab, App, then Themes last (C08)."""
+        """Language, Appearance, App, then Themes last (C08)."""
         # One banner for this page, under the card title like the chain pages'.
         self.install_issue_banner(self._main_layout, 1)
 
@@ -202,34 +194,6 @@ class UISettingsPanel(ScreenIssueHost, FormPanel):
         zoom_note_row.addWidget(self.restart_later_btn)
         zoom_note_row.addStretch(1)
         self.add_widget(zoom_note)
-
-        self.add_section(self.tr("Utilities tab"))
-        # One box per tool, in tab order, checked = shown; commits at once.
-        # The last checked box is disabled so the tab always keeps a tool.
-        utilities_hint = QLabel(self.tr("Choose which tools the Utilities tab shows. At least one stays."))
-        utilities_hint.setObjectName("helper-text")
-        utilities_hint.setWordWrap(True)
-        self.add_widget(utilities_hint)
-        utilities = QWidget()
-        utilities_grid = QGridLayout(utilities)
-        utilities_grid.setContentsMargins(0, 0, 0, 0)
-        utilities_grid.setHorizontalSpacing(SPACING.md)
-        utilities_grid.setVerticalSpacing(SPACING.xs)
-        self.utility_checkboxes: dict[str, QCheckBox] = {}
-        for position, (key, label) in enumerate(utility_labels().items()):
-            box = QCheckBox(label)
-            box.setChecked(True)
-            box.toggled.connect(self._on_utility_toggled)
-            utilities_grid.addWidget(box, position // 2, position % 2)
-            self.utility_checkboxes[key] = box
-
-            def _search_text(box: QCheckBox = box) -> tuple[str, ...]:
-                return (box.text(), self.tr("Utilities tab"))
-
-            self.register_setting(f"utility_{key}", box, _search_text)
-        # Keeps the two columns left-aligned instead of spreading them apart.
-        utilities_grid.setColumnStretch(2, 1)
-        self.add_widget(utilities)
 
         self.add_section(self.tr("App"))
         self.check_for_updates_checkbox = QCheckBox(self.tr("Check for updates on startup"))
@@ -539,23 +503,6 @@ class UISettingsPanel(ScreenIssueHost, FormPanel):
         self.restart_now_btn.setVisible(visible)
         self.restart_later_btn.setVisible(visible)
 
-    def _on_utility_toggled(self, _checked: bool) -> None:
-        """Persist which Utilities tools are hidden (applies at once)."""
-        self._sync_utility_lock()
-        self.hidden_utilities_changed.emit(
-            tuple(key for key, box in self.utility_checkboxes.items() if not box.isChecked())
-        )
-
-    def _sync_utility_lock(self) -> None:
-        """Disable the only checked box, so the Utilities tab always keeps a tool.
-
-        Counts only the boxes on screen: a language-gated box (Manga OCR outside
-        Japanese) stays checked but is no tool the user can see (E17).
-        """
-        checked = sum(box.isChecked() for box in self.utility_checkboxes.values() if not box.isHidden())
-        for box in self.utility_checkboxes.values():
-            box.setEnabled(checked > 1 or not box.isChecked())
-
     def _on_restart_later(self) -> None:
         """Hide the note and its actions for now; the choice stays persisted.
 
@@ -653,24 +600,6 @@ class UISettingsPanel(ScreenIssueHost, FormPanel):
         # QApplication exists), so the backing field is the source of truth.
         self._ui_zoom = config.ui_zoom
         self._sync_zoom_combo()  # blocks signals internally
-
-        # Read through the same rule SubtitlesTab applies, so the boxes show
-        # what the tab shows: unknown keys ignored, "every tool hidden" = none.
-        hidden = effective_hidden_utilities(config.hidden_utilities)
-        for key, box in self.utility_checkboxes.items():
-            box.blockSignals(True)
-            try:
-                box.setChecked(key not in hidden)
-            finally:
-                box.blockSignals(False)
-        # E17: Manga OCR reads Japanese only; its box follows the tab's
-        # language gate (SubtitlesTab), never the stored hidden list. Gated
-        # before the lock, which counts only the boxes the user can see (P1).
-        apply_language_gate(
-            [(self.utility_checkboxes["mokuro"], "manga_ocr")],
-            get_profile(config_language(config)).capabilities,
-        )
-        self._sync_utility_lock()
 
         # The themes folder button and its tooltip must name the config's root;
         # left alone it would open (and create) the PREVIOUS config's directory.

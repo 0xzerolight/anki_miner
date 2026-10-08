@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Save the subtitle and audio tracks inside a video (Utilities → Tracks).** Pick an .mkv or another video, or a folder of them, tick the tracks, and Extract Tracks saves each one as its own file (.ass, .srt, .vtt, .sup, .m4a, .opus, .flac, .mp3 or .mka), copied without re-encoding; MP4 subtitles become .srt. The video is never changed. A single subtitle track is saved under the video's name beside it, so Video → Single and Batch pick it up like any subtitle file. In a folder, the ticked track numbers are saved from every video.
 
 ### Changed
+- **A Settings page for the Utilities tab's tools (Settings → Utilities).** The checkboxes that pick which tools the tab shows moved there from Settings → General.
 
 ### Fixed
 - **Re-import finds a downloaded Wiktionary (wty) dictionary's saved copy.** Re-import and Reimport All said no saved copy was left for a wty dictionary from the recommended downloads.
