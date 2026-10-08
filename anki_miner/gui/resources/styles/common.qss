@@ -728,9 +728,10 @@ QLabel#helper-text {
 }
 
 /* A diagnostic belonging to one row of a list, printed under that row's label.
-   Helper text in every respect except padding: its left edge is set by the
-   layout that knows how wide the columns above it came out, so padding here
-   would fight that and leave the line 8px off its own label. */
+   Small and italic, unlike helper text (caption size, upright), and with no
+   padding: its left edge is set by the layout that knows how wide the columns
+   above it came out, so padding here would fight that and leave the line off
+   its own label. */
 QLabel#row-detail {
     font-size: ${font-size-small}px;
     font-style: italic;

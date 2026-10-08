@@ -272,9 +272,9 @@ def checks_from_validation(result: ValidationResult, checked_at: datetime) -> di
     )
 
     # Frequency, pitch and audio packs are optional: an unconfigured family
-    # produces no issue AND no version string, which reads as "unknown" rather
-    # than a green tick for something that is not set up. Configured-and-healthy
-    # fills the detail with source names and counts.
+    # produces no issue AND no version string, which reads as "Not set up"
+    # rather than a green tick for something that is not configured.
+    # Configured-and-healthy fills the detail with source names and counts.
     for key, version_key in (
         ("resources.frequency", "frequency-sources"),
         ("resources.pitch", "pitch-sources"),
@@ -470,10 +470,9 @@ class _HealthRow(QFrame):
 
         column.addLayout(top)
 
-        # `row-detail`, not `helper-text`: the two are the same style except
-        # that helper text carries its own horizontal padding, which would sit
-        # on top of the indent `set_detail_indent` computes and leave the line
-        # 8px off the label it belongs to.
+        # `row-detail`, not `helper-text`: the small italic diagnostic style,
+        # with no padding of its own, so the indent `set_detail_indent`
+        # computes alone puts the line under the label it belongs to.
         self.detail_label = QLabel("")
         self.detail_label.setObjectName("row-detail")
         self.detail_label.setWordWrap(True)
@@ -709,14 +708,15 @@ class SystemHealthWindow(EnhancedDialog):
             row.set_detail_indent(detail_indent)
 
     def _on_fix_requested(self, key: str) -> None:
-        """Translate a row into the repair it names — a Settings anchor, or a tab route.
+        """Translate a row into the repair it names — a wizard page, a Settings anchor, or a tab route.
 
         The row does not learn the anchor and the window does not learn the tab:
-        the id goes to the owner, which asks Settings to reveal it (or, for a
-        ``HEALTH_FIX_ROUTES`` row, opens the tab directly). A top-level window
-        cannot use the ``reveal_settings`` duck-typing helper — its own
+        the id goes to the owner, which opens the setup wizard on that page (a
+        ``HEALTH_FIX_WIZARD`` row, checked first), asks Settings to reveal it,
+        or, for a ``HEALTH_FIX_ROUTES`` row, opens the tab directly. A top-level
+        window cannot use the ``reveal_settings`` duck-typing helper — its own
         ``window()`` is itself, not the main window — so the route out is a
-        signal either way.
+        signal every way.
         """
         page = HEALTH_FIX_WIZARD.get(key)
         if page:
