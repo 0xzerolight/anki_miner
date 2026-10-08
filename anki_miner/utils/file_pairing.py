@@ -1,12 +1,15 @@
 """Utility for pairing video and subtitle files across folders."""
 
 import logging
+import re
 import sys
 import unicodedata
-from collections.abc import Collection, Sequence
+from collections.abc import Collection, Iterable, Sequence
 from dataclasses import dataclass
+from enum import IntEnum
 from pathlib import Path
 
+from anki_miner.utils.audio_track_detector import matches_language_tag
 from anki_miner.utils.episode_matcher import EpisodeMatcher
 from anki_miner.utils.file_utils import is_junk_path
 from anki_miner.utils.logging_ext import suppressed
@@ -56,6 +59,101 @@ def _name_match_key(name: str) -> str:
     """
     key = _nfc(name)
     return key.casefold() if _CASE_INSENSITIVE_FS else key
+
+
+#: Splits a run of filename tags into tokens: ``.ja.forced`` -> ``ja``, ``forced``;
+#: ``_track3_[jpn]`` -> ``track3``, ``jpn``.
+_TAG_SPLIT = re.compile(r"[\s._\[\](){}]+")
+
+
+@dataclass(frozen=True)
+class SubtitleLanguage:
+    """The language tags a subtitle filename is read against.
+
+    ``mining`` is the mining language's ``audio_track_codes``; ``known`` is every
+    mining language's, so a token outside it (a title word, ``forced``, ``sdh``)
+    is never taken for a language. Built by
+    :func:`anki_miner.languages.registry.subtitle_language`: ``utils`` cannot
+    reach the profiles itself.
+    """
+
+    mining: frozenset[str]
+    known: frozenset[str]
+
+
+class SubtitleTag(IntEnum):
+    """What a subtitle's filename says about its language, best first."""
+
+    MINING = 0
+    UNTAGGED = 1
+    OTHER = 2
+
+
+def _strip_retimed(stem: str) -> str:
+    """*stem* without a Retime ``_retimed`` suffix, so ``ep01.ja_retimed`` still ends in its tag."""
+    return stem[: -len(RETIMED_SUFFIX)] if stem.casefold().endswith(RETIMED_SUFFIX) else stem
+
+
+def _tag_of(tokens: Iterable[str], language: SubtitleLanguage | None) -> SubtitleTag:
+    """The first language token decides; a name with none is untagged."""
+    if language is None:
+        return SubtitleTag.UNTAGGED
+    for token in tokens:
+        if matches_language_tag(token, language.known):
+            return SubtitleTag.MINING if matches_language_tag(token, language.mining) else SubtitleTag.OTHER
+    return SubtitleTag.UNTAGGED
+
+
+def _counts_as_tag(token: str, *, names_too: bool) -> bool:
+    """A lowercase code (``ja``, ``pt-BR``), or with *names_too* a spelled-out name (``English``).
+
+    Never a capitalised two- or three-letter word: ``No. 6``, ``It``, ``All.In``
+    are titles, not Norwegian, Italian or Indonesian.
+    """
+    head = token.partition("-")[0]
+    return head.islower() or (names_too and len(head) > 3)
+
+
+def subtitle_language_tag(path: Path, language: SubtitleLanguage | None) -> SubtitleTag:
+    """Read a language tag off a whole subtitle filename (``ep01.en.srt``, ``ep01.en.forced.srt``).
+
+    A name made of nothing but tags and numbers (``ja.srt``, ``English.srt``,
+    ``3_Japanese.srt``) is read whole. Otherwise only the last two
+    dot-separated parts of the stem are read, each up to a bracket
+    (``ja[cc]``): a lowercase code counts in either, a spelled-out name only in
+    the last (``Movie.2019.English``, not ``My.Big.Fat.Greek.Wedding``). Release
+    names capitalise their words, so ``All.In`` is not taken for Indonesian.
+    A Retime ``_retimed`` suffix is dropped first.
+    """
+    if language is None:
+        return SubtitleTag.UNTAGGED
+    stem = _strip_retimed(path.stem)
+    tokens = [token.strip("-") for token in _TAG_SPLIT.split(stem) if token.strip("-")]
+    if tokens and all(
+        token.isdigit() or (_counts_as_tag(token, names_too=True) and matches_language_tag(token, language.known))
+        for token in tokens
+    ):
+        return _tag_of(tokens, language)
+    parts = [re.split(r"[\[(]", part, maxsplit=1)[0] for part in stem.split(".")[1:][-2:]]
+    return _tag_of(
+        (part for i, part in enumerate(parts) if _counts_as_tag(part, names_too=i == len(parts) - 1)), language
+    )
+
+
+def _tail_tag(tail: str, language: SubtitleLanguage | None) -> SubtitleTag:
+    """Read a language tag off what follows the video's stem in a subtitle's name.
+
+    Everything there is tags (``.ja``, ``.Japanese.forced``, ``_track3_[jpn]``),
+    so every token counts, in any case. Read from the end, where tags sit, so an
+    episode title in the tail (``- Kimi no Na wa.ja``) cannot outvote them.
+    """
+    tokens = [token.strip("-") for token in _TAG_SPLIT.split(_strip_retimed(tail))]
+    return _tag_of(reversed(tokens), language)
+
+
+def _is_forced(path: Path) -> bool:
+    """Whether the name marks a forced track (``ep01.ja.forced.srt``): signs and foreign lines only."""
+    return "forced" in _TAG_SPLIT.split(_strip_retimed(path.stem).casefold())
 
 
 def output_path_identity(path: Path) -> tuple[Path, str | None]:
