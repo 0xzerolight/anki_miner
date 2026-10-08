@@ -9903,91 +9903,91 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Not mined: %1 word — search this log for a word to see why.</source>
-        <translation type="unfinished" />
+        <translation>Nicht gesammelt: %1 Wort — durchsuchen Sie dieses Protokoll nach einem Wort, um den Grund zu sehen.</translation>
     </message>
     <message>
         <source>Not mined: %1 words — search this log for a word to see why.</source>
-        <translation type="unfinished" />
+        <translation>Nicht gesammelt: %1 Wörter — durchsuchen Sie dieses Protokoll nach einem Wort, um den Grund zu sehen.</translation>
     </message>
     <message>
         <source>Name, interjection or other skipped word type — add it to your whitelist to mine it</source>
-        <translation type="unfinished" />
+        <translation>Name, Interjektion oder andere übersprungene Wortart — setzen Sie das Wort auf Ihre Whitelist, um es zu sammeln</translation>
     </message>
     <message>
         <source>Sound effect — add it to your whitelist to mine it</source>
-        <translation type="unfinished" />
+        <translation>Soundeffekt — setzen Sie das Wort auf Ihre Whitelist, um es zu sammeln</translation>
     </message>
     <message>
         <source>Kana-only word — add it to your whitelist to mine it</source>
-        <translation type="unfinished" />
+        <translation>Reines Kana-Wort — setzen Sie das Wort auf Ihre Whitelist, um es zu sammeln</translation>
     </message>
     <message>
         <source>Written partly in another script — add it to your whitelist to mine it</source>
-        <translation type="unfinished" />
+        <translation>Teilweise in einer anderen Schrift geschrieben — setzen Sie das Wort auf Ihre Whitelist, um es zu sammeln</translation>
     </message>
     <message>
         <source>Already known</source>
-        <translation type="unfinished" />
+        <translation>Bereits bekannt</translation>
     </message>
     <message>
         <source>No dictionary entry — Settings → Dictionaries</source>
-        <translation type="unfinished" />
+        <translation>Kein Wörterbucheintrag — Einstellungen → Wörterbücher</translation>
     </message>
     <message>
         <source>Not in your frequency list — Settings → Word Filters</source>
-        <translation type="unfinished" />
+        <translation>Nicht in Ihrer Häufigkeitsliste — Einstellungen → Wortfilter</translation>
     </message>
     <message>
         <source>Outside your frequency range — Settings → Word Filters</source>
-        <translation type="unfinished" />
+        <translation>Außerhalb Ihres Häufigkeitsbereichs — Einstellungen → Wortfilter</translation>
     </message>
     <message>
         <source>On your blacklist — Settings → Word Filters</source>
-        <translation type="unfinished" />
+        <translation>Auf Ihrer Blacklist — Einstellungen → Wortfilter</translation>
     </message>
     <message>
         <source>Excluded by script type — Settings → Word Filters</source>
-        <translation type="unfinished" />
+        <translation>Durch Schrifttyp ausgeschlossen — Einstellungen → Wortfilter</translation>
     </message>
     <message>
         <source>On a name list — Settings → Word Filters</source>
-        <translation type="unfinished" />
+        <translation>Auf einer Namensliste — Einstellungen → Wortfilter</translation>
     </message>
     <message>
         <source>Appears fewer times than your minimum — Settings → Word Filters</source>
-        <translation type="unfinished" />
+        <translation>Kommt seltener vor als Ihr Minimum — Einstellungen → Wortfilter</translation>
     </message>
     <message>
         <source>Another word from its sentence got the card — Settings → Sentences</source>
-        <translation type="unfinished" />
+        <translation>Ein anderes Wort aus demselben Satz hat die Karte erhalten — Einstellungen → Sätze</translation>
     </message>
     <message>
         <source>No sentence where it is the only unknown word — Settings → Sentences</source>
-        <translation type="unfinished" />
+        <translation>Kein Satz, in dem es das einzige unbekannte Wort ist — Einstellungen → Sätze</translation>
     </message>
     <message>
         <source>Sentence too long — Settings → Sentences</source>
-        <translation type="unfinished" />
+        <translation>Satz zu lang — Einstellungen → Sätze</translation>
     </message>
     <message>
         <source>Same card as another spelling in this run</source>
-        <translation type="unfinished" />
+        <translation>Dieselbe Karte wie eine andere Schreibweise in diesem Lauf</translation>
     </message>
     <message>
         <source>Media could not be extracted</source>
-        <translation type="unfinished" />
+        <translation>Medien konnten nicht extrahiert werden</translation>
     </message>
     <message>
         <source>Anki already has a card for it</source>
-        <translation type="unfinished" />
+        <translation>Anki hat bereits eine Karte dafür</translation>
     </message>
     <message>
         <source>Anki did not confirm the card</source>
-        <translation type="unfinished" />
+        <translation>Anki hat die Karte nicht bestätigt</translation>
     </message>
     <message>
         <source>%1 (%2): %3</source>
-        <translation type="unfinished" />
+        <translation>%1 (%2): %3</translation>
     </message>
 </context><context>
     <name>ResultsDialog</name>
