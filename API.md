@@ -338,7 +338,7 @@ This build implements the v7 proposal's "First" list and the next requests (Z-1 
 - Verdict runs and result files carry a `message` beside `error`, and result files carry a run-level `media_store_failures`.
 - `check` has a `resources` item for indexes that need re-importing.
 - `media_missing` covers the picture and the audio clip. Missing pronunciation audio is not reported, and media Anki failed to store is counted for the run, not per word.
-- `file` is also `null` for a run its own checks refused (`SETUP_ERROR`, `ANKI_UNREACHABLE`), and for a run a signal cancelled before it started.
+- `file` is also `null` for a run its own checks refused (`SETUP_ERROR`, `ANKI_UNREACHABLE`), for a run a signal cancelled before it started, and for a run that ended with `INTERNAL`. An `INTERNAL` run can end after notes were added: check Anki before mining its words again.
 - `line_start` is compared with the line starts as written in the subtitle file, not after the offset. The two differ only where a negative offset moves lines before 0.
 - `line_text` is also cleaned the way the subtitle lines are and ignores whitespace, and an empty `word` or `line_text` is refused.
 - Where `line_expansion` is cut to 30 seconds, lines after the chosen one are added first.
