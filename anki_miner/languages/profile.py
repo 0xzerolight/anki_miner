@@ -308,12 +308,16 @@ class CardFieldSpec:
     ``build_note`` as ``extra_raw_html_keys``. The ja/ko/zh keys are already in
     ``services/anki_note_builder.py::_RAW_HTML_FIELD_KEYS``, which is frozen —
     a later language's key is carried by this flag alone.
+    ``aliases`` are other Anki field names "Fill in automatically" also maps to
+    this key (``note_presets.auto_map_profile_fields``), for note types that
+    spell the field differently from ``placeholder``.
     """
 
     key: str
     capability: str
     placeholder: str
     raw_html: bool = False
+    aliases: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

@@ -458,7 +458,8 @@ def auto_map_profile_fields(
 ) -> dict[str, str]:
     """Map Anki field names to the card-field keys ``specs`` declares.
 
-    The profile-declared rows match on their own spec's placeholder instead of
+    The profile-declared rows match on their own spec's placeholder (or one of
+    its ``aliases``; the first field in ``field_names`` order wins) instead of
     through :data:`FIELD_KEYWORDS`: a keyword entry there is stamped into
     every language's ``anki_fields`` by the wizard's sanitizer, which would
     seed an empty Pinyin key into a Japanese mapping. So the caller passes only
@@ -482,9 +483,9 @@ def auto_map_profile_fields(
     taken = {name for name in claimed if name}
     mapping: dict[str, str] = {}
     for spec in specs:
-        placeholder = normalized_field_name(spec.placeholder)
+        spellings = {normalized_field_name(name) for name in (spec.placeholder, *spec.aliases)}
         match = next(
-            (n for n in field_names if n not in taken and normalized_field_name(n) == placeholder),
+            (n for n in field_names if n not in taken and normalized_field_name(n) in spellings),
             "",
         )
         if match:

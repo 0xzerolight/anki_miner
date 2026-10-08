@@ -179,6 +179,14 @@ def test_auto_map_sends_thai_romanization_and_reading_to_separate_keys(qtbot, te
     assert fields["reading_paiboon"] == "Romanization"
 
 
+def test_auto_map_takes_a_field_named_pos_for_hebrew_part_of_speech(qtbot, test_config):
+    """Settings shares one pos row across languages, so the alias must reach that row too."""
+    panel = _anki(qtbot, _lang(config=test_config, code="he"))
+    panel.populate_from_field_list(["Expression", "Sentence", "POS"])
+
+    assert panel.get_card_fields()["pos"] == "POS"
+
+
 def test_every_hook_field_key_has_a_row(qtbot, test_config):
     """The regression that made this file: a hook key with no row is inert.
 
