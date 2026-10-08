@@ -369,6 +369,13 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self._clip_audio: ClipAudioPlayer | None = None
         if self._page_units and any(u.audio_ref for u in self._page_units.values()) and mpv_available():
             self._clip_audio = ClipAudioPlayer()
+            # Last-resort release, the player pane's twin (_build_player_pane): a
+            # window destroyed without finishing never reaches _stop_player. The
+            # handler stays Qt-free (release is pure python-mpv) and holds the
+            # player, never the dialog. Nothing is needed for an __init__ that
+            # raises: the core is built on the first play, so it has none yet.
+            clip_audio = self._clip_audio
+            self.destroyed.connect(lambda *_: clip_audio.release())
         self._focused_unit_index: int | None = None
         self._page_cache: OrderedDict[ImageRef, tuple[QPixmap, int]] = OrderedDict()
         self._page_request_gen = 0

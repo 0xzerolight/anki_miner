@@ -9,7 +9,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QEvent, Qt
+from PyQt6.QtWidgets import QApplication
 
 from anki_miner.gui.widgets.dialogs import word_curation_dialog as wcd
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext, WordCurationDialog
@@ -216,3 +217,18 @@ def test_a_manga_page_keeps_its_page_wording(qtbot, fake_clip_player, deck_units
     _focus_word(dialog, 1)
 
     assert dialog.page_image_view.current_message == "No page image for this word"
+
+
+def test_a_window_destroyed_without_closing_releases_the_core(qtbot, fake_clip_player, deck_units):
+    """``finished`` is not the only way a curator dies: a tab destroyed outside
+    the shutdown flow deletes it without ``_stop_player`` ever running."""
+    units, _ = deck_units
+    dialog = WordCurationDialog([_make_word("猫", 0)], media_context=_context(units))
+    # Deliberately NOT qtbot.addWidget: this test destroys the dialog itself,
+    # and pytest-qt's teardown would close() the dead C++ object.
+    dialog.deleteLater()
+    QApplication.processEvents()
+    QApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    QApplication.processEvents()
+
+    assert fake_clip_player[0].released == 1
