@@ -67,6 +67,17 @@ def test_list_refresh_reports_a_missing_note_type(wired):
     assert "Lapis" in panel.anki_status.text()
 
 
+def test_a_later_list_that_has_the_note_type_clears_the_problem(wired):
+    ctrl, panel = wired
+    ctrl._on_name_notetypes_fetched(["Basic", "Other"])
+    assert "Lapis" in panel.anki_status.text()
+
+    ctrl._on_name_notetypes_fetched(["Lapis", "Basic"])
+
+    assert panel.anki_status.text() == ""
+    assert panel.anki_status.isHidden()
+
+
 def test_probing_twice_releases_the_first_deck_worker(wired, monkeypatch):
     """A second probe must not accumulate live QThreads (worker-release sweep).
 

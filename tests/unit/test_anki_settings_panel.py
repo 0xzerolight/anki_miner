@@ -320,6 +320,19 @@ def test_no_styling_buttons_or_checkbox(qtbot):
 # ---------------------------------------------------------------------------
 
 
+def test_editing_the_url_hides_the_fill_result(qtbot):
+    """The fill line described the previous address."""
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_fill_status(True, "Lapis recognised.")
+    assert not panel.fill_status.isHidden()
+
+    panel.ankiconnect_url_input.setText("http://127.0.0.1:9999")
+
+    assert panel.fill_status.isHidden()
+    assert panel.fill_status.text() == ""
+
+
 def test_fill_button_says_what_it_does_and_is_secondary(qtbot):
     """D13: one secondary "Fill in automatically", not a full-width accent bar."""
     panel = AnkiSettingsPanel()
