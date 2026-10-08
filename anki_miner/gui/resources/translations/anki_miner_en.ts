@@ -614,7 +614,7 @@
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Map data to note fields (names must match exactly). Blank = skip.</source>
+        <source>Map data to note fields. Blank = skip.</source>
         <translation type="unfinished" />
     </message>
     <message>

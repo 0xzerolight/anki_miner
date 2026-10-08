@@ -612,8 +612,8 @@
         <translation>卡片欄位對應</translation>
     </message>
     <message>
-        <source>Map data to note fields (names must match exactly). Blank = skip.</source>
-        <translation>將資料對應至筆記欄位（名稱須完全相符）。留空＝略過。</translation>
+        <source>Map data to note fields. Blank = skip.</source>
+        <translation>將資料對應至筆記欄位。留空＝略過。</translation>
     </message>
     <message>
         <source>Expression Field</source>

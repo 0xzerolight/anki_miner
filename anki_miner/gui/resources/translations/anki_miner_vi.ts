@@ -612,8 +612,8 @@
         <translation>Ánh xạ trường thẻ</translation>
     </message>
     <message>
-        <source>Map data to note fields (names must match exactly). Blank = skip.</source>
-        <translation>Ánh xạ dữ liệu vào các trường ghi chú (tên phải khớp chính xác). Để trống = bỏ qua.</translation>
+        <source>Map data to note fields. Blank = skip.</source>
+        <translation>Ánh xạ dữ liệu vào các trường ghi chú. Để trống = bỏ qua.</translation>
     </message>
     <message>
         <source>Expression Field</source>

@@ -614,8 +614,8 @@
         <translation>Mapeamentos de Campos do Cartão</translation>
     </message>
     <message>
-        <source>Map data to note fields (names must match exactly). Blank = skip.</source>
-        <translation>Mapeie os dados para os campos da nota (os nomes devem corresponder exatamente). Em branco = ignorar.</translation>
+        <source>Map data to note fields. Blank = skip.</source>
+        <translation>Mapeie os dados para os campos da nota. Em branco = ignorar.</translation>
     </message>
     <message>
         <source>Expression Field</source>

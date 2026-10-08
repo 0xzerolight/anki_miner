@@ -612,8 +612,8 @@
         <translation>Pemetaan Bidang Kartu</translation>
     </message>
     <message>
-        <source>Map data to note fields (names must match exactly). Blank = skip.</source>
-        <translation>Petakan data ke bidang catatan (nama harus sama persis). Kosong = lewati.</translation>
+        <source>Map data to note fields. Blank = skip.</source>
+        <translation>Petakan data ke bidang catatan. Kosong = lewati.</translation>
     </message>
     <message>
         <source>Expression Field</source>

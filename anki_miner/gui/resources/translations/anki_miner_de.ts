@@ -614,8 +614,8 @@
         <translation>Kartenfeld-Zuordnungen</translation>
     </message>
     <message>
-        <source>Map data to note fields (names must match exactly). Blank = skip.</source>
-        <translation>Daten den Notizfeldern zuordnen (Namen müssen exakt übereinstimmen). Leer = überspringen.</translation>
+        <source>Map data to note fields. Blank = skip.</source>
+        <translation>Daten den Notizfeldern zuordnen. Leer = überspringen.</translation>
     </message>
     <message>
         <source>Expression Field</source>

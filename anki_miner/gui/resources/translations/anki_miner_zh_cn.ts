@@ -612,8 +612,8 @@
         <translation>卡片字段映射</translation>
     </message>
     <message>
-        <source>Map data to note fields (names must match exactly). Blank = skip.</source>
-        <translation>将数据映射到笔记字段（名称必须完全匹配）。留空 = 跳过。</translation>
+        <source>Map data to note fields. Blank = skip.</source>
+        <translation>将数据映射到笔记字段。留空 = 跳过。</translation>
     </message>
     <message>
         <source>Expression Field</source>

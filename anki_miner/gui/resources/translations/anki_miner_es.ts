@@ -614,8 +614,8 @@
         <translation>Asignaciones de campos de tarjeta</translation>
     </message>
     <message>
-        <source>Map data to note fields (names must match exactly). Blank = skip.</source>
-        <translation>Asigne datos a los campos de nota (los nombres deben coincidir exactamente). En blanco = omitir.</translation>
+        <source>Map data to note fields. Blank = skip.</source>
+        <translation>Asigne datos a los campos de nota. En blanco = omitir.</translation>
     </message>
     <message>
         <source>Expression Field</source>

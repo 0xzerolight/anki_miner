@@ -614,8 +614,8 @@
         <translation>Mappages des champs de carte</translation>
     </message>
     <message>
-        <source>Map data to note fields (names must match exactly). Blank = skip.</source>
-        <translation>Mappez les données aux champs de note (les noms doivent correspondre exactement). Vide = ignorer.</translation>
+        <source>Map data to note fields. Blank = skip.</source>
+        <translation>Mappez les données aux champs de note. Vide = ignorer.</translation>
     </message>
     <message>
         <source>Expression Field</source>

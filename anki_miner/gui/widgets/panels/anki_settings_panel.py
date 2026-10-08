@@ -439,7 +439,7 @@ class AnkiSettingsPanel(FormPanel):
         self.add_widget(self.fill_status)
 
         # Helper text for card fields
-        card_fields_helper = QLabel(self.tr("Map data to note fields (names must match exactly). Blank = skip."))
+        card_fields_helper = QLabel(self.tr("Map data to note fields. Blank = skip."))
         card_fields_helper.setObjectName("helper-text")
         card_fields_helper.setWordWrap(True)
         self.add_widget(card_fields_helper)
