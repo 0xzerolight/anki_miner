@@ -2330,6 +2330,22 @@ def test_a_started_download_opens_next_and_can_be_cancelled(qtbot, wiz_config, m
     session.cancel.assert_called_once_with()
 
 
+def test_an_empty_download_status_takes_no_space(qtbot, wiz_config, monkeypatch):
+    """B2.4a: no gap under Download until there is something to say."""
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod  # noqa: PLC0415
+
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation(dictionary=False))
+    page = wiz.resources_page
+    assert not page.status_label.isVisibleTo(page)
+
+    monkeypatch.setattr(dialog_mod, "start_resource_download", lambda *a, **kw: MagicMock())
+    page._on_download_clicked()
+    assert page.status_label.isVisibleTo(page)
+    page._on_download_finished(None)  # "stopped before it finished" is still something to say
+    assert page.status_label.isVisibleTo(page)
+    qtbot.waitUntil(lambda: not page.dictionary_label.text().startswith("Checking"), timeout=5000)
+
+
 def test_download_progress_comes_from_the_task_registry(qtbot, wiz_config, monkeypatch):
     from PyQt6.QtWidgets import QWidget  # noqa: PLC0415
 

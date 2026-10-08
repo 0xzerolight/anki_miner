@@ -1524,6 +1524,7 @@ class ResourcesPage(_LiveCheckPage):
         self.status_label.setTextFormat(Qt.TextFormat.RichText)
         self.status_label.setOpenExternalLinks(False)
         self.status_label.linkActivated.connect(self.activate_link)
+        self.status_label.setVisible(False)  # written only through _set_status
         layout.addWidget(self.status_label)
 
         # Kept apart from status_label: one reports how the *download* went,
@@ -1598,8 +1599,7 @@ class ResourcesPage(_LiveCheckPage):
             # A finished run for the outgoing language describes nothing on screen now.
             self._session = None
             self._download_ending = ""
-            self.status_label.clear()
-            self.status_label.setToolTip("")
+            self._set_status("")
         specs = self.selected_specs()
         if specs:
             self.contents_label.setText(self._contents_sentence(specs))
@@ -1779,8 +1779,7 @@ class ResourcesPage(_LiveCheckPage):
 
         if self._download_running:
             return
-        self.status_label.clear()
-        self.status_label.setToolTip("")
+        self._set_status("")
         specs = self.selected_specs()
         if not specs:
             return
@@ -1828,9 +1827,15 @@ class ResourcesPage(_LiveCheckPage):
             return
         progress = self._progress_text or self.tr("Starting…")
         cancel = self.tr("Cancel")
-        self.status_label.setText(
+        self._set_status(
             _html_text(tr_format(self.tr("Downloading: %1"), progress)) + f' <a href="cancel">{_html_text(cancel)}</a>'
         )
+
+    def _set_status(self, text: str, tooltip: str = "") -> None:
+        """The download line under Download; hidden while empty, so it leaves no gap."""
+        self.status_label.setText(text)
+        self.status_label.setToolTip(tooltip)
+        self.status_label.setVisible(bool(text))
 
     def _disconnect_registry(self) -> None:
         registry = self._registry
@@ -1895,8 +1900,7 @@ class ResourcesPage(_LiveCheckPage):
         self._sync_download_button()
         if not isinstance(outcome, ResourceDownloadOutcome):
             self._download_ending = "failed"
-            self.status_label.setText(self.tr("The download stopped before it finished."))
-            self.status_label.setToolTip("")
+            self._set_status(self.tr("The download stopped before it finished."))
         else:
             summary = outcome.summary
             if summary.cancelled:
@@ -1921,8 +1925,7 @@ class ResourcesPage(_LiveCheckPage):
             else:
                 self._download_ending = ""
                 status = self.tr("Resources installed.")
-            self.status_label.setText(status)
-            self.status_label.setToolTip("\n".join(result_lines(summary)))
+            self._set_status(status, "\n".join(result_lines(summary)))
         # Re-ask rather than infer: a summary saying the dictionary imported is
         # not the same claim as the chain being able to answer with it.
         self._recheck_resources()
