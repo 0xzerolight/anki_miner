@@ -17,6 +17,8 @@ from anki_miner.gui.controllers.run_receipt import RunReceiptAccumulator
 from anki_miner.gui.utils.progress_telemetry import SUSPEND_GAP_S
 from anki_miner.models.processing import (
     CANCELLED_ERROR,
+    NotMinedReason,
+    NotMinedReport,
     ProcessingResult,
     TerminalOutcome,
     WhitelistCoverage,
@@ -321,3 +323,38 @@ class TestWhitelist:
         acc.record_whitelist(None)
 
         assert _finish(acc).whitelist is None
+
+
+class TestNotMined:
+    def test_not_mined_folds_across_items_and_a_later_mined_front_drops_out(self):
+        acc = _accumulator(2)
+        first = _result(1, ids=[1])
+        first.not_mined = NotMinedReport.from_drops({"a": NotMinedReason.I_PLUS_ONE, "b": NotMinedReason.KNOWN})
+        second = _result(1, ids=[2])
+        second.not_mined = NotMinedReport.from_drops({"c": NotMinedReason.BLACKLIST}, mined=frozenset({"a"}))
+        acc.record_result(first)
+        acc.record_result(second)
+
+        report = _finish(acc).not_mined
+
+        assert report is not None
+        assert report.words == {"b", "c"}
+        assert report.forms(NotMinedReason.I_PLUS_ONE) == frozenset()
+
+    def test_a_counts_only_run_reports_through_record_not_mined(self):
+        acc = _accumulator(1)
+        acc.record_counts(notes_added=3, failed=False)
+        acc.record_not_mined(NotMinedReport.from_drops({"a": NotMinedReason.KNOWN}))
+
+        report = _finish(acc).not_mined
+
+        assert report is not None
+        assert report.words == {"a"}
+
+    def test_no_report_and_non_reports_leave_none(self):
+        acc = _accumulator(2)
+        acc.record_result(_result(1, ids=[1]))
+        acc.record_result(SimpleNamespace(cards_created=1, card_ids=[2], errors=[], not_mined=object()))
+        acc.record_not_mined(None)
+
+        assert _finish(acc).not_mined is None

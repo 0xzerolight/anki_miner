@@ -845,8 +845,13 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         self.presenter.show_error(message)
         self._show_run_failure(message, self.tr("The deck could not be built."))
 
-    def _on_queue_finished(self, total_cards: int, whitelist: object = None) -> None:
-        """Fold the run's whitelist into the receipt and draw the terminal progress line."""
+    def _on_queue_finished(self, total_cards: int, whitelist: object = None, not_mined: object = None) -> None:
+        """Fold the run's whitelist into the receipt and draw the terminal progress line.
+
+        Builds bypass Word Filters and Sentences and pick their own words, so
+        the run's not-mined report is not shown.
+        """
+        del not_mined
         if self._from_superseded_worker():
             return
         self._record_receipt_whitelist(whitelist)

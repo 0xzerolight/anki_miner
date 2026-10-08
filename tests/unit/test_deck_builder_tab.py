@@ -356,7 +356,7 @@ class _FakeWorker(QObject):
     item_pairs_progress = pyqtSignal(str, int, int)
     item_completed = pyqtSignal(str, int)
     item_failed = pyqtSignal(str, str, int)
-    queue_finished = pyqtSignal(int, object)
+    queue_finished = pyqtSignal(int, object, object)
     error = pyqtSignal(str)
     finished = pyqtSignal()
 
@@ -397,10 +397,10 @@ class _FakeWorker(QObject):
     def wait(self, *_args):
         return True
 
-    def end(self, total_cards: int = 0, whitelist=None) -> None:
+    def end(self, total_cards: int = 0, whitelist=None, not_mined=None) -> None:
         """Finish the way the real run does: queue_finished, then finished."""
         self.running = False
-        self.queue_finished.emit(total_cards, whitelist)
+        self.queue_finished.emit(total_cards, whitelist, not_mined)
         self.finished.emit()
 
 

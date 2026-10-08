@@ -407,6 +407,11 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         if self._receipt_accumulator is not None:
             self._receipt_accumulator.record_whitelist(coverage)
 
+    def _record_receipt_not_mined(self, report: object) -> None:
+        """Fold a run-level not-mined report a counts-only worker reported."""
+        if self._receipt_accumulator is not None:
+            self._receipt_accumulator.record_not_mined(report)
+
     def _mark_receipt_failed(self) -> None:
         """Note a run-level fatal (a preflight refusal, a worker exception)."""
         if self._receipt_accumulator is not None:
