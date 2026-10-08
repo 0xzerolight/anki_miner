@@ -156,8 +156,8 @@ class TestInitialState:
         ):
             assert not hasattr(tab, attr)
 
-    def test_single_bar_visible_initially(self, tab):
-        # One whole-run bar, always present (no hidden per-volume/overall split).
+    def test_has_no_per_volume_bar(self, tab):
+        # One hidden run-state widget; the pinned bar shows the run (D1).
         assert not hasattr(tab, "current_progress_widget")
         assert not hasattr(tab, "overall_header")
 

@@ -136,7 +136,7 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
     # ------------------------------------------------------------------
 
     def _setup_ui(self) -> None:
-        """Build the tab layout: one Novel card, checkbox, progress bar, log."""
+        """Build the tab layout: one Novel card, checkbox, hidden run-state widget, log."""
         scroll_area = QScrollArea()
 
         container = QWidget()

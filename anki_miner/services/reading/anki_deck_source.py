@@ -7,7 +7,7 @@ clip and picture ride along as files in Anki's ``collection.media`` and are
 uploaded again, under content-addressed names, for the cards mined from it. The
 source deck is only ever read.
 
-Config-free and Qt-free like the other loaders: warnings are plain strings.
+Config-free and uses no Qt APIs, like the other loaders: warnings are plain strings.
 """
 
 from __future__ import annotations
