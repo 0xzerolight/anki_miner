@@ -1,4 +1,4 @@
-"""Settings -> General: which tools the Utilities tab shows.
+"""Settings -> Utilities: which tools the Utilities tab shows.
 
 The checkboxes commit at once, the last checked one cannot be unchecked, and
 every box is a jump target, which is where a hidden tool's Usage Guide entry
@@ -15,13 +15,13 @@ from PyQt6.QtWidgets import QMessageBox
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import UTILITY_SUBTABS, utility_labels
-from anki_miner.gui.widgets.panels.ui_settings_panel import UISettingsPanel
+from anki_miner.gui.widgets.panels.utilities_settings_panel import UtilitiesSettingsPanel
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 
 
 @pytest.fixture
-def panel(test_config: AnkiMinerConfig, qtbot) -> UISettingsPanel:
-    widget = UISettingsPanel(test_config.themes_root)
+def panel(qtbot) -> UtilitiesSettingsPanel:
+    widget = UtilitiesSettingsPanel()
     qtbot.addWidget(widget)
     return widget
 
@@ -94,6 +94,13 @@ class TestPanel:
         panel.load_from_config(replace(test_config, hidden_utilities=UTILITY_SUBTABS[1:]))
 
         assert not panel.utility_checkboxes[UTILITY_SUBTABS[0]].isEnabled()
+
+    def test_every_box_is_anchored_by_its_tool_key(self, panel):
+        by_id = {anchor.stable_id: anchor for anchor in panel.setting_anchors()}
+
+        assert set(by_id) == {f"utilities.{key}" for key in UTILITY_SUBTABS}
+        for key, box in panel.utility_checkboxes.items():
+            assert by_id[f"utilities.{key}"].focus_widget is box
 
 
 class TestSettingsTab:
