@@ -46,7 +46,6 @@ from PyQt6.QtWidgets import (
     QMenu,
     QSplitter,
     QStyle,
-    QStyledItemDelegate,
     QStyleOptionViewItem,
     QTableWidget,
     QTableWidgetItem,
@@ -57,7 +56,12 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import session_state
-from anki_miner.gui.utils.content_text import content_cell_font, content_phrase_wrap
+from anki_miner.gui.utils.content_text import (
+    ContentCellDelegate,
+    apply_content_direction,
+    content_cell_font,
+    content_phrase_wrap,
+)
 from anki_miner.gui.utils.fonts import make_scaled_font
 from anki_miner.gui.utils.key_bindings import display_text, resolve_bindings
 from anki_miner.gui.utils.keyboard_shortcuts import (
@@ -141,16 +145,19 @@ _FORM_ROLE = Qt.ItemDataRole.UserRole + 4
 _MAIN_SPLIT_STRETCH = (3, 2)
 
 
-class _WordFormDelegate(QStyledItemDelegate):
+class _WordFormDelegate(ContentCellDelegate):
     """Paint the text form in grey after the mined word, when they differ (D5).
 
     Only while the Form in text column is hidden: with it shown, the same
     words would be on screen twice. The cell's text, sort key and copy value
     stay the mined form; this is paint only.
+
+    Lays out like every content cell (:class:`ContentCellDelegate`): in an rtl
+    run the word takes the right edge and its form follows it to the left.
     """
 
-    def __init__(self, table: QTableWidget) -> None:
-        super().__init__(table)
+    def __init__(self, table: QTableWidget, style: Callable[[], ContentTextStyle]) -> None:
+        super().__init__(table, style)
         self._table = table
 
     def _form(self, index: QModelIndex) -> str:
@@ -184,11 +191,18 @@ class _WordFormDelegate(QStyledItemDelegate):
         selected = bool(opt.state & QStyle.StateFlag.State_Selected)
         metrics = QFontMetrics(opt.font)
         flags = int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+        rtl = opt.direction == Qt.LayoutDirection.RightToLeft
+        advance = metrics.horizontalAdvance(word + " ")
         painter.save()
+        if rtl:
+            # AlignLeft is the LEADING edge: on an rtl painter Qt mirrors it and
+            # lays each run out right to left, so the word sits on the right and
+            # its form follows it leftwards.
+            painter.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         painter.setFont(opt.font)
         painter.setPen(opt.palette.color(QPalette.ColorRole.HighlightedText if selected else QPalette.ColorRole.Text))
         painter.drawText(text_rect, flags, word)
-        rest = text_rect.adjusted(metrics.horizontalAdvance(word + " "), 0, 0, 0)
+        rest = text_rect.adjusted(0, 0, -advance, 0) if rtl else text_rect.adjusted(advance, 0, 0, 0)
         grey = QPalette.ColorRole.HighlightedText if selected else QPalette.ColorRole.PlaceholderText
         painter.setPen(opt.palette.color(grey))
         painter.drawText(rest, flags, metrics.elidedText(form, Qt.TextElideMode.ElideRight, max(0, rest.width())))
@@ -807,8 +821,16 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self.table.setSortingEnabled(True)
 
         self._apply_header_resize_modes()
+        # Mined content lays out in the mining language's direction (an Arabic
+        # sentence is a right-to-left paragraph): the columns that carry
+        # content_cell_font. Translation is the second track's language and
+        # stays as it is. The style is fixed for this window's life.
+        style = self._content_style
+        content_cells = ContentCellDelegate(self.table, lambda: style)
+        for column in (_FORM_COLUMN, 3, 4):
+            self.table.setItemDelegateForColumn(column, content_cells)
         # D5: the Word column shows the text form in grey when it differs.
-        self.table.setItemDelegateForColumn(1, _WordFormDelegate(self.table))
+        self.table.setItemDelegateForColumn(1, _WordFormDelegate(self.table, lambda: style))
         # The Translation column is meaningful only for a run with a second
         # track: forced hidden otherwise, and kept out of the header menu, so
         # an empty column never shows and cannot be "lost" by hiding it. Its
@@ -1834,6 +1856,9 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # Same surface as the word table beside it (D42). Candidates stay in
         # occurrence order, so sorting is not enabled; copy lifts the sentence.
         configure_data_view(self.sentence_list)
+        # Every row is a mined sentence: the list flips whole for an rtl
+        # language, like the subtitle viewer's line list (S21).
+        apply_content_direction(self.sentence_list, self._content_style)
         # The gutter stays reserved: candidate counts swing per focused word, and
         # a scrollbar that comes and goes changes the viewport width, re-wrapping
         # every word-wrapped row left/right on each focus change.
