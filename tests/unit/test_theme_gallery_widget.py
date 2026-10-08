@@ -13,8 +13,10 @@ from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.widgets.enhanced.theme_gallery import (
     STAR_FILLED,
     STAR_OUTLINE,
+    ThemeCard,
     ThemeGalleryWidget,
 )
+from anki_miner.gui.widgets.enhanced.theme_preview import render_theme_thumbnail
 
 
 @pytest.fixture(autouse=True)
@@ -201,6 +203,28 @@ class TestThumbnails:
         offscreen_card = gallery.card(gallery.card_keys()[-1])
         assert offscreen_card.thumbnail.pixmap() is None or offscreen_card.thumbnail.pixmap().isNull()
 
+    def test_thumbnail_renders_at_the_card_s_pixel_ratio(self, qtbot, monkeypatch):
+        """Owner report (9.png): at 125%+ scaling every preview drew at a
+        fraction of its 240x160 slot. The renderer can only fill the slot when
+        the card hands it the DPR of the screen it is on.
+
+        Spies on the call rather than reading ``thumbnail.pixmap()`` back:
+        QLabel returns its pixmap re-rendered at the label's own C++-side DPR,
+        which a Python-side ``devicePixelRatioF`` patch cannot reach.
+        """
+        gallery = _gallery(qtbot)
+        card = gallery.card("nord")
+        seen: list[object] = []
+
+        def _spy(key: str, *args, **kwargs):
+            seen.append(kwargs.get("dpr"))
+            return render_theme_thumbnail(key, *args, **kwargs)
+
+        monkeypatch.setattr(ThemeCard, "devicePixelRatioF", lambda _self: 2.0)
+        monkeypatch.setattr("anki_miner.gui.widgets.enhanced.theme_gallery.render_theme_thumbnail", _spy)
+        card._load_thumbnail()
+        assert seen == [2.0]
+
     def test_thumbnail_deleted_before_render_timer_fires_does_not_crash(self, qtbot, qapp):
         """Pin the teardown race the module docstring names.
 
@@ -251,7 +275,7 @@ class TestThumbnails:
         gallery = _gallery(qtbot)
         card = gallery.card("nord")
 
-        def _boom(_key: str):
+        def _boom(_key: str, **_kwargs):
             raise ValueError("malformed theme JSON")
 
         monkeypatch.setattr("anki_miner.gui.widgets.enhanced.theme_gallery.render_theme_thumbnail", _boom)
