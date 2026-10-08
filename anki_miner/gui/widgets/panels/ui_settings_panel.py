@@ -4,7 +4,7 @@ The "General" Settings page (stable key ``"ui"``), a ``FormPanel`` like every
 other page since C08 (UI/UX audit 2026-09-29). Top to bottom: **Language** (UI
 language, restart-to-apply), **Appearance** (Zoom, restart-to-apply),
 **App** (Check for updates), then **Themes** (the gallery, with live preview,
-favourites, Open themes folder, Revert and the contrast note). The gallery has
+favourites, Open themes folder and Revert). The gallery has
 no scroll of its own; the page scrolls. "Max Parallel Workers" left the GUI
 (D15 item 5): ``max_parallel_workers`` is config-only. Which tools the
 Utilities tab shows is its own page, ``utilities_settings_panel``.
@@ -35,14 +35,7 @@ from anki_miner.config import ZOOM_PRESETS, AnkiMinerConfig
 from anki_miner.gui import restart
 from anki_miner.gui.i18n import available_languages
 from anki_miner.gui.resources.styles import SPACING
-from anki_miner.gui.resources.styles.theme import (
-    CONTRAST_ROLE_MUTED_TEXT,
-    CONTRAST_ROLE_PRIMARY_LABEL,
-    CONTRAST_ROLE_SURFACE_EDGE,
-    ContrastIssue,
-    Theme,
-    assess_theme_contrast,
-)
+from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.widgets.base import FormPanel, ScreenIssue, ScreenIssueHost
 from anki_miner.gui.widgets.enhanced import ModernButton, ThemeGalleryWidget
 from anki_miner.gui.widgets.enhanced.theme_preview import clear_thumbnail_cache
@@ -228,14 +221,6 @@ class UISettingsPanel(ScreenIssueHost, FormPanel):
         # One logical setting; its cards are rebuilt on every profile switch.
         self.register_setting("theme", self.gallery, lambda: (intro.text(), self.open_folder_btn.text()))
 
-        # Themes render exactly as their author wrote them (D43-A); this line
-        # states the measured ratio when the live theme is hard to read.
-        self.contrast_warning = QLabel()
-        self.contrast_warning.setObjectName("helper-text")
-        self.contrast_warning.setWordWrap(True)
-        self.contrast_warning.setVisible(False)
-        self.add_widget(self.contrast_warning)
-
         buttons = QHBoxLayout()
         buttons.setSpacing(SPACING.sm)
         self.open_folder_btn = ModernButton(self.tr("Open themes folder"), variant="secondary")
@@ -275,9 +260,6 @@ class UISettingsPanel(ScreenIssueHost, FormPanel):
             return
         self._populated_state = state
         self.gallery.refresh()
-        # One call covers populate, Revert and load_from_config: the latter two
-        # both rebuild through here.
-        self._refresh_contrast_warning()
 
     # ---- Events ----------------------------------------------------------
 
@@ -312,55 +294,6 @@ class UISettingsPanel(ScreenIssueHost, FormPanel):
             # skip the rebuild that re-syncs the gallery's Active marker.
             self._populated_state = self._gallery_state()
             self.state_changed.emit(Theme.get_current_mode(), Theme.get_favorites())
-        # Outside the "already active" guard: re-selecting the live theme must
-        # still restate its measured contrast rather than leave a stale line.
-        self._refresh_contrast_warning(key)
-
-    # ---- Contrast note ---------------------------------------------------
-
-    def _refresh_contrast_warning(self, key: str | None = None) -> None:
-        """Restate the measured contrast of ``key`` (default: the live theme).
-
-        Read-only: it measures the colours the theme author wrote and says so.
-        Nothing here may change, replace or refuse a colour — see D43-A and the
-        note above ``assess_theme_contrast``.
-        """
-        colors = Theme.get_colors(key if key is not None else Theme.get_current_mode())
-        text = self._contrast_warning_text(assess_theme_contrast(colors))
-        self.contrast_warning.setText(text)
-        self.contrast_warning.setVisible(bool(text))
-
-    def _contrast_warning_text(self, issues: tuple[ContrastIssue, ...]) -> str:
-        """Render ``issues`` as one sentence; empty string when there are none."""
-        if not issues:
-            return ""
-        # (measured template, unmeasurable text) per role. Both must stay
-        # literal tr() arguments — Qt extracts them statically.
-        phrases = {
-            CONTRAST_ROLE_PRIMARY_LABEL: (
-                self.tr("button labels %1:1"),
-                self.tr("button labels could not be measured"),
-            ),
-            CONTRAST_ROLE_MUTED_TEXT: (
-                self.tr("muted text %1:1"),
-                self.tr("muted text could not be measured"),
-            ),
-            CONTRAST_ROLE_SURFACE_EDGE: (
-                self.tr("cards against the page %1:1"),
-                self.tr("cards against the page could not be measured"),
-            ),
-        }
-        details: list[str] = []
-        for issue in issues:
-            phrase = phrases.get(issue.role)
-            if phrase is None:
-                continue
-            measured, unmeasurable = phrase
-            details.append(unmeasurable if issue.ratio is None else tr_format(measured, f"{issue.ratio:.1f}"))
-        return tr_format(
-            self.tr("Low contrast, shown exactly as the theme author wrote it: %1."),
-            ", ".join(details),
-        )
 
     def _toggle_favorite(self, key: str) -> None:
         """Star/unstar `key`, refresh the affected card, notify listeners."""
