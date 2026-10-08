@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Mine Bilibili and other video sites.** Video → YouTube takes links from Bilibili and the other sites yt-dlp supports, including the text Bilibili's Share button copies. A multi-part video or a collection adds every part, like a playlist. Bilibili shows subtitles only to logged-in users, so unless a cookies source is set in Settings → YouTube, Auto transcribes the video.
 
 - **Save the subtitle and audio tracks inside a video (Utilities → Tracks).** Pick an .mkv or another video, or a folder of them, tick the tracks, and Extract Tracks saves each one as its own file (.ass, .srt, .vtt, .sup, .m4a, .opus, .flac, .mp3 or .mka), copied without re-encoding; MP4 subtitles become .srt. The video is never changed. A single subtitle track is saved under the video's name beside it, so Video → Single and Batch pick it up like any subtitle file. In a folder, the ticked track numbers are saved from every video.
+- **Open Anki when Anki Miner starts (Settings → Cards & Anki).** If Anki isn't running when Anki Miner opens, Anki Miner starts it and connects once AnkiConnect answers. Off by default. It looks for Anki where its installer puts it; if Anki is elsewhere, the option is greyed out.
 
 ### Changed
 

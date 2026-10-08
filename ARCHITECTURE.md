@@ -282,9 +282,9 @@ There is no separate folder-orchestrator class; batch mining is driven directly 
 
 ## Configuration
 
-`AnkiMinerConfig` (`config/config.py`) is a frozen (immutable) dataclass of 132 fields. Grouped by area (not every field is listed):
+`AnkiMinerConfig` (`config/config.py`) is a frozen (immutable) dataclass of 134 fields. Grouped by area (not every field is listed):
 
-- **Anki:** deck name, note type, field mappings, AnkiConnect URL
+- **Anki:** deck name, note type, field mappings, AnkiConnect URL, `auto_open_anki` (start Anki at launch when the startup check finds it closed; off by default)
 - **Media:** audio padding, screenshot offset, temp folder, subtitle offset (range ±300s), `ffmpeg_location` / `ffprobe_location` (explicit binary paths consumed by the resolver — see [ffmpeg / ffprobe](#ffmpeg--ffprobe))
 - **Filtering:** allowed POS tags, excluded subtypes, deduplication, `exclude_hiragana_only_words` / `exclude_katakana_only_words` (Japanese; other languages supply their own `ScriptFilterOption` set, such as Korean's Hangul-only and contains-hanja filters) (kana-only drops, default off), `excluded_wordsets` (active bundled JMnedict name wordsets), `reading_min_occurrence` (per-volume minimum word occurrence for the Reading tab; 1 = off)
 - **Dictionary:** `dictionary_chain` (the runtime-authoritative ordered list of providers — indexed dicts and Jisho, each toggleable), `dicts_root` (root for all installed `.sqlite` indexes; defaults to `ANKI_MINER_HOME/dicts/` via the `ANKI_MINER_HOME` constant in `config/paths.py`), Jisho URL/delay. Legacy `jmdict_path` is retained for the first-launch JMdict-XML migration only (`use_offline_dict` and the pre-v2.5 migration shims are gone; `gui_config.json` now carries a `config_schema_version` stamp).
