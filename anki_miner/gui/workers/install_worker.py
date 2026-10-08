@@ -1,4 +1,4 @@
-"""One parametrized install/download worker + the eight per-resource tasks.
+"""One parametrized install/download worker + the nine per-resource tasks.
 
 Collapses the ex-quintuplet of near-identical worker modules (alass install,
 ASR model download, CUDA pack, onnxruntime/VAD pack, Vulkan ggml model, ASR
@@ -144,6 +144,8 @@ def _progress_template(context: str) -> str:
         return QCoreApplication.translate("VulkanModelDownloadWorker", "%1 (%2%)")
     if context == "MokuroInstallWorker":
         return QCoreApplication.translate("MokuroInstallWorker", "%1 (%2%)")
+    if context == "VideoOcrInstallWorker":
+        return QCoreApplication.translate("VideoOcrInstallWorker", "%1 (%2%)")
     return QCoreApplication.translate("CudaPackDownloadWorker", "%1 (%2%)")
 
 
@@ -281,6 +283,26 @@ def onnx_pack_task(onnx_pack_root: Path) -> InstallTask:
         worker.status.emit(QCoreApplication.translate("OnnxPackDownloadWorker", "Downloading silence-removal library…"))
         install_onnx_pack(onnx_pack_root, progress=worker._on_progress, cancel_event=worker.cancel_event)
         return QCoreApplication.translate("OnnxPackDownloadWorker", "Silence-removal library installed.")
+
+    return _task
+
+
+def video_ocr_install_task(onnx_pack_root: Path, models_root: Path) -> InstallTask:
+    """Task: the onnxruntime pack when onnxruntime is not importable, then the two OCR models."""
+
+    def _task(worker: InstallWorker) -> str:
+        from anki_miner.services.asr import onnx_pack_installer
+        from anki_miner.services.video_ocr import model_installer
+
+        worker._progress_ctx = "VideoOcrInstallWorker"
+        if not onnx_pack_installer.onnxruntime_importable(onnx_pack_root):
+            worker.status.emit(QCoreApplication.translate("VideoOcrInstallWorker", "Downloading the OCR runtime…"))
+            onnx_pack_installer.install_onnx_pack(
+                onnx_pack_root, progress=worker._on_progress, cancel_event=worker.cancel_event
+            )
+        worker.status.emit(QCoreApplication.translate("VideoOcrInstallWorker", "Downloading the OCR models…"))
+        model_installer.install_models(models_root, progress=worker._on_progress, cancel_event=worker.cancel_event)
+        return QCoreApplication.translate("VideoOcrInstallWorker", "OCR engine installed.")
 
     return _task
 

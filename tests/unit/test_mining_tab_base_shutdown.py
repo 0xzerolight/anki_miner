@@ -358,6 +358,7 @@ class TestBackgroundTasksShutdownDuckTyped:
         ctrl.onnx_pack_download_worker = None
         ctrl.asr_pack_download_worker = None
         ctrl.vulkan_model_download_worker = None
+        ctrl.video_ocr_install_worker = None
         ctrl.restyle_cards_worker = None
         ctrl.resource_download_worker = None
         ctrl.prewarm_worker = None
