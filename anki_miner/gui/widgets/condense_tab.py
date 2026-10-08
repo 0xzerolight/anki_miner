@@ -70,7 +70,7 @@ from anki_miner.gui.workers.condense_worker import (
     CondenseWorker,
     plan_condense_outputs,
 )
-from anki_miner.languages.registry import config_language, get_profile
+from anki_miner.languages.registry import config_language, get_profile, subtitle_language
 from anki_miner.services.audio_condenser import EncoderUnavailableError, FilterUnavailableError
 from anki_miner.services.audio_tagger import TrackMetadata, prefill_track_metadata
 from anki_miner.utils import list_audio_streams
@@ -1025,6 +1025,8 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
     def _pair_folder_items_async(
         self, media_folder: Path, sub_folder: Path, on_items: Callable[[list[CondenseItem]], None]
     ) -> None:
+        language = subtitle_language(config_language(self.config))
+
         def _scan() -> object:
             all_media = sorted(
                 f
@@ -1036,6 +1038,7 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
                 sub_folder,
                 video_extensions=CONDENSE_MEDIA_EXTENSIONS,
                 subtitle_extensions=CONDENSE_SUBTITLE_EXTENSIONS,
+                language=language,
             )
             return all_media, file_pairs
 

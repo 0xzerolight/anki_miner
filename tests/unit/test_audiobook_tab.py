@@ -277,6 +277,16 @@ class TestAutoFill:
 
         assert tab.subtitle_selector.get_path() == ""
 
+    def test_autofill_language_tagged_subtitle(self, tab, tmp_path):
+        audio = tmp_path / "book.m4b"
+        audio.touch()
+        subtitle = tmp_path / "book.ja.srt"
+        subtitle.touch()
+
+        tab.audio_selector.set_path(str(audio))
+
+        assert tab.subtitle_selector.get_path() == str(subtitle)
+
 
 class TestRunStartup:
     """The Mine button constructs the queue worker correctly."""

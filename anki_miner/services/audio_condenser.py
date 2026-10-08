@@ -44,7 +44,7 @@ from typing import TYPE_CHECKING
 
 import pysubs2
 
-from anki_miner.languages.registry import config_language, get_profile
+from anki_miner.languages.registry import config_language, get_profile, subtitle_language
 from anki_miner.services.asr.srt_writer import segments_to_srt
 from anki_miner.services.audio_tagger import TaggingError, TrackMetadata, tag_audio_file
 from anki_miner.services.media_extractor import MediaExtractorService
@@ -1120,8 +1120,11 @@ def _resolve_subtitle_source(
     if external_sub is not None:
         return external_sub, None, None
 
-    # 2. Sibling external sub (condenser priority, incl. .vtt).
-    sibling = find_sibling_subtitle(media, priority=_CONDENSER_SUBTITLE_PRIORITY)
+    # 2. Sibling external sub (condenser priority, incl. .vtt): named for the
+    #    media, the same episode, or the only one beside it; never another language.
+    sibling = find_sibling_subtitle(
+        media, priority=_CONDENSER_SUBTITLE_PRIORITY, language=subtitle_language(config_language(config))
+    )
     if sibling is not None:
         return sibling, None, None
 
