@@ -524,16 +524,6 @@ class DeckBuilderTab(FolderSeriesScreenBase):
     # Request building
     # ------------------------------------------------------------------
 
-    def _get_validated_folders(self) -> tuple[Path, Path] | None:
-        """The season's video/subtitle pair, or ``None`` when unset or missing on disk."""
-        video_path = self.video_folder_selector.path_or_none()
-        subtitle_path = self.subtitle_folder_selector.path_or_none()
-        if video_path is None or subtitle_path is None:
-            return None
-        if not self.video_folder_selector.is_valid() or not self.subtitle_folder_selector.is_valid():
-            return None
-        return Path(video_path), Path(subtitle_path)
-
     def _build_request(self) -> DeckBuildRequest | None:
         """Validate every input and return the run request, or ``None`` on refusal.
 

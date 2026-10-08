@@ -325,23 +325,6 @@ class BatchProcessingTab(FolderSeriesScreenBase):
 
         return section
 
-    def _get_validated_folders(self) -> tuple[Path, Path] | None:
-        """Validate and return folder paths from selectors.
-
-        Returns:
-            Tuple of (video_folder, subtitle_folder) or None if invalid
-        """
-        video_path = self.video_folder_selector.path_or_none()
-        subtitle_path = self.subtitle_folder_selector.path_or_none()
-
-        if video_path is None or subtitle_path is None:
-            return None
-
-        if not self.video_folder_selector.is_valid() or not self.subtitle_folder_selector.is_valid():
-            return None
-
-        return Path(video_path), Path(subtitle_path)
-
     def _add_series_from_pickers(self) -> QueueItem | None:
         """Add the Add Series card's folders as a new queue row.
 
