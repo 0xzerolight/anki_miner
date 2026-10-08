@@ -171,6 +171,21 @@ def insert_above_first_enabled_jpod101(
     return tuple(out)
 
 
+def _valid_region(value: object) -> tuple[float, ...]:
+    """Four frame fractions (x, y, w, h) inside the frame, rounded to 4 dp; anything else is ()."""
+    if not isinstance(value, (tuple, list)) or len(value) != 4:
+        return ()
+    try:
+        x, y, w, h = (round(float(v), 4) for v in value)
+    except (TypeError, ValueError):
+        return ()
+    if not (0.0 <= x < 1.0 and 0.0 <= y < 1.0 and 0.0 < w <= 1.0 and 0.0 < h <= 1.0):
+        return ()
+    if x + w > 1.0001 or y + h > 1.0001:
+        return ()
+    return (x, y, w, h)
+
+
 @dataclass(frozen=True)
 class AnkiMinerConfig:
     """Immutable configuration for anki mining operations.
@@ -282,6 +297,11 @@ class AnkiMinerConfig:
     # "Redo already-processed volumes" box is deliberately NOT a field here
     # (overwrite-class options stay transient — test_overwrite_is_never_persisted).
     mokuro_use_gpu: bool = True
+
+    # --- Video OCR (Utilities → Video OCR) ---
+    # The subtitle region as fractions of the frame (x, y, w, h): a remembered run
+    # option, () until the user draws one. Validated by name in __post_init__.
+    video_ocr_region: tuple[float, ...] = ()
 
     # --- Inline run options remembered between launches --------------------
     # Set on a workflow screen rather than in Settings, and persisted the same
@@ -680,6 +700,9 @@ class AnkiMinerConfig:
     # stay slim. Extracted onnxruntime/ tree is added to sys.path on demand.
     # Derived from ANKI_MINER_HOME, never user-configurable directly.
     onnx_pack_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "onnx_pack")
+    # The two pinned meikiocr models for Utilities → Video OCR.
+    # Derived from ANKI_MINER_HOME, never user-configurable directly.
+    video_ocr_models_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "ocr_models")
 
     # Managed directory for in-app-downloaded executables (e.g. the alass
     # subtitle-alignment binary); derived from ANKI_MINER_HOME, never
@@ -806,6 +829,7 @@ class AnkiMinerConfig:
 
         # Clamp ui_zoom to [0.5, 2.0]
         object.__setattr__(self, "ui_zoom", max(0.5, min(2.0, float(self.ui_zoom))))
+        object.__setattr__(self, "video_ocr_region", _valid_region(self.video_ocr_region))
 
         # Clamp the Deck Builder run options to their spinbox ranges. A config
         # value outside them would otherwise be silently re-clamped by the

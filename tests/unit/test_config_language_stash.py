@@ -164,6 +164,8 @@ def test_pre_change_config_loads_every_field_unchanged(isolated_config_file):
         "key_bindings",
         "auto_update_dictionaries",
         "auto_open_anki",
+        "video_ocr_region",
+        "video_ocr_models_root",
     }
     assert loaded.script_variant == "" and loaded.reading_tone_color is False
 
