@@ -68,7 +68,9 @@ def _finished_worker() -> MagicMock:
 
 def _sync_run_off_thread(parent, work, on_done, on_error=None, **kwargs):
     try:
-        result = work()
+        # Like SingleCallWorker: with pass_cancel_check the work gets the
+        # worker's cancel predicate (never set here).
+        result = work(lambda: False) if kwargs.get("pass_cancel_check") else work()
     except Exception as exc:  # noqa: BLE001 - mirrors SingleCallWorker's error path
         if on_error is not None:
             on_error(str(exc))
@@ -81,7 +83,7 @@ def _sync_run_off_thread(parent, work, on_done, on_error=None, **kwargs):
 def deck_service(monkeypatch):
     _FakeAnkiService.decks = ["Show::Ep01", "Other"]
     monkeypatch.setattr(tab_module, "AnkiService", _FakeAnkiService)
-    monkeypatch.setattr(tab_module, "inspect_deck", lambda service, deck: _inspection())
+    monkeypatch.setattr(tab_module, "inspect_deck", lambda service, deck, **kw: _inspection())
     monkeypatch.setattr(tab_module, "run_off_thread", _sync_run_off_thread)
     return _FakeAnkiService
 
@@ -183,12 +185,62 @@ class TestDeckAndFields:
         tab.deck_combo.setCurrentIndex(2)  # inspect B supersedes it
         work_a, done_a = pending[0]
 
-        done_a(work_a())
+        done_a(work_a(lambda: False))
 
         assert tab.sentence_combo.count() == 1  # A's late answer filled nothing
 
+    def test_moving_off_a_deck_cancels_its_inspection(self, tab, monkeypatch):
+        workers: list[MagicMock] = []
+
+        def deferred(parent, work, on_done, on_error=None, **kw):
+            worker = MagicMock(name="SingleCallWorker")
+            worker.isRunning.return_value = True
+            workers.append(worker)
+            return worker
+
+        monkeypatch.setattr(tab_module, "run_off_thread", deferred)
+        tab.deck_combo.addItems(["A", "B"])
+        tab.deck_combo.setCurrentIndex(1)  # inspect A (still reading)
+        tab.deck_combo.setCurrentIndex(2)  # B supersedes it
+
+        workers[0].cancel.assert_called_once()
+        workers[1].cancel.assert_not_called()
+
+        tab.deck_combo.setCurrentIndex(0)  # back to "Select a deck…"
+        workers[1].cancel.assert_called_once()
+
+    def test_a_finished_inspection_is_left_alone(self, tab, monkeypatch):
+        finished = _finished_worker()
+        monkeypatch.setattr(tab_module, "run_off_thread", lambda *a, **kw: finished)
+        tab.deck_combo.addItems(["A", "B"])
+        tab.deck_combo.setCurrentIndex(1)
+        tab.deck_combo.setCurrentIndex(2)
+
+        finished.cancel.assert_not_called()
+
+    def test_the_inspection_reads_the_workers_cancel_check(self, tab, monkeypatch):
+        seen: dict = {}
+        cancel_check = MagicMock(name="check_cancelled", return_value=False)
+
+        def run_now(parent, work, on_done, on_error=None, **kw):
+            seen["pass_cancel_check"] = kw.get("pass_cancel_check")
+            on_done(work(cancel_check))
+            return _finished_worker()
+
+        def inspect(service, deck, *, is_cancelled=None):
+            seen["is_cancelled"] = is_cancelled
+            return _inspection()
+
+        tab.ensure_decks()  # the deck list, through the fixture's stub
+        monkeypatch.setattr(tab_module, "run_off_thread", run_now)
+        monkeypatch.setattr(tab_module, "inspect_deck", inspect)
+        tab.deck_combo.setCurrentIndex(1)
+
+        assert seen == {"pass_cancel_check": True, "is_cancelled": cancel_check}
+        assert tab.sentence_combo.currentText() == "Expression"
+
     def test_an_empty_deck_says_so(self, tab, monkeypatch):
-        monkeypatch.setattr(tab_module, "inspect_deck", lambda service, deck: _inspection(note_count=0))
+        monkeypatch.setattr(tab_module, "inspect_deck", lambda service, deck, **kw: _inspection(note_count=0))
         _pick_first_deck(tab)
         assert tab.status_label.text() != ""
         tab._on_mine_clicked()
@@ -325,7 +377,7 @@ class TestDeckFirst:
     def test_a_truly_empty_deck_is_named_not_its_missing_fields(self, tab, monkeypatch):
         """With no notes, inspect_deck finds no fields; the refusal names the real cause."""
         empty = DeckInspection(note_count=0, models=(), field_names=(), first_field_by_model={}, samples=())
-        monkeypatch.setattr(tab_module, "inspect_deck", lambda service, deck: empty)
+        monkeypatch.setattr(tab_module, "inspect_deck", lambda service, deck, **kw: empty)
         _pick_first_deck(tab)
 
         assert tab.fields_widget.isHidden()

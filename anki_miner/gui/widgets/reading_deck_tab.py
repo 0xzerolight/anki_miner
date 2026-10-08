@@ -13,7 +13,7 @@ deck is never changed.
 The deck list and the field inspection are AnkiConnect calls, so both run off
 the GUI thread (``run_off_thread``, whose global registry joins them at app
 close); the inspection carries a generation guard so a slow answer for a deck
-the user has already moved off never lands.
+the user has already moved off never lands, and moving off cancels it.
 
 The worker OWNS the item lifecycle (it sets ``status``/``cards_created``/
 ``error_message`` on the item before emitting its signals), so this tab's
@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QT_TRANSLATE_NOOP, Qt
@@ -113,6 +114,7 @@ class ReadingDeckTab(_ReadingMiningTabBase):
         # screen is a deck the user may have imported into Anki a minute ago.
         self._deck_worker: SingleCallWorker | None = None
         self._deck_fetch_failed = False
+        self._inspect_worker: SingleCallWorker | None = None
         self._inspect_generation = 0
         # None until the picked deck has been read (an empty deck reads as 0).
         self._note_count: int | None = None
@@ -367,6 +369,12 @@ class ReadingDeckTab(_ReadingMiningTabBase):
 
     def _on_deck_changed(self, _index: int) -> None:
         self._inspect_generation += 1
+        # The generation guard drops a stale answer; cancelling also stops its
+        # notesInfo reads (a big deck is many 500-note chunks).
+        if still_running(self._inspect_worker):
+            assert self._inspect_worker is not None
+            self._inspect_worker.cancel()
+        self._inspect_worker = None
         self._note_count = None
         for combo in self._field_combos():
             while combo.count() > 1:
@@ -388,19 +396,20 @@ class ReadingDeckTab(_ReadingMiningTabBase):
         contains_target_script = get_profile(config_language(self.config)).script.contains_target_script
         self.status_label.setText(self.tr("Reading the deck…"))
 
-        def work() -> tuple[DeckInspection, DeckFieldMap]:
-            inspection = inspect_deck(service, deck)
+        def work(is_cancelled: Callable[[], bool]) -> tuple[DeckInspection, DeckFieldMap]:
+            inspection = inspect_deck(service, deck, is_cancelled=is_cancelled)
             suggestion = suggest_field_map(
                 inspection.field_names, inspection.samples, contains_target_script=contains_target_script
             )
             return inspection, suggestion
 
-        run_off_thread(
+        self._inspect_worker = run_off_thread(
             self,
             work,
             lambda answer: self._on_inspected(generation, answer),
             lambda message: self._on_inspect_error(generation, message),
             error_prefix=self.tr("Couldn't read the deck: "),
+            pass_cancel_check=True,
         )
 
     def _on_inspected(self, generation: int, answer: object) -> None:
