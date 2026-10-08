@@ -99,12 +99,23 @@ def test_update_stats_text(panel, tmp_path):
     w2.set_episode_count(2)
     panel._update_stats()
 
-    assert panel.queue_controls.counter_label.text() == "2 series · 5 episodes · 2 ready"
+    assert panel.queue_controls.counter_label.text() == "2 series · 5 episode(s) · 2 ready"
 
     w1.set_status("complete")
     w1.set_cards_created(4)
     panel._update_stats()
-    assert panel.queue_controls.counter_label.text() == "2 series · 5 episodes · 1 ready · 1 complete"
+    assert panel.queue_controls.counter_label.text() == "2 series · 5 episode(s) · 1 ready · 1 complete"
+
+
+def test_counts_use_qt_plural_forms(panel):
+    """P-B1.4: a 1-or-other split gives Russian 2-4 the wrong noun; ``%n`` lets each
+    catalog carry its own plural forms. Untranslated, Qt prints the source form."""
+    widget = _add_widget(panel, "A", "id-1")
+    widget.set_episode_count(3)
+    panel._update_stats()
+
+    assert panel.queue_controls.counter_label.text() == "1 series · 3 episode(s) · 1 ready"
+    assert widget.aside_label.text() == "3 episode(s)"
 
 
 def test_get_valid_pairs_and_incomplete_items(panel, tmp_path):

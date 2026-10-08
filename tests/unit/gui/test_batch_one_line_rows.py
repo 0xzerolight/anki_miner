@@ -53,9 +53,9 @@ class TestTheRow:
         qtbot.addWidget(row)
         assert row.aside_label.text() == ""
         row.set_episode_count(1)
-        assert row.aside_label.text() == "1 episode"
+        assert row.aside_label.text() == "1 episode(s)"
         row.set_episode_count(3)
-        assert row.aside_label.text() == "3 episodes"
+        assert row.aside_label.text() == "3 episode(s)"
 
     def test_a_finished_row_shows_its_cards(self, qtbot):
         row = QueueItemWidget("Show")
@@ -110,7 +110,7 @@ class TestThePanel:
             video, subs = _season(tmp_path, name, episodes)
             panel.add_series(display_name=name, video_folder=video, subtitle_folder=subs, subtitle_offset=0.0)
         qtbot.waitUntil(lambda: sum(w.get_episode_count() for w in panel.queue_item_widgets) == 5, timeout=5000)
-        assert panel.queue_controls.counter_label.text() == "2 series · 5 episodes · 2 ready"
+        assert panel.queue_controls.counter_label.text() == "2 series · 5 episode(s) · 2 ready"
         assert not hasattr(panel, "queue_stats_label")
 
     def test_an_empty_queue_says_so(self, panel):

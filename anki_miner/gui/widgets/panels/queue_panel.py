@@ -641,8 +641,9 @@ class QueuePanel(QFrame):
         series = len(self.queue_item_widgets)
         episodes = sum(widget.get_episode_count() for widget in self.queue_item_widgets)
         parts = [
-            self.tr("1 series") if series == 1 else tr_format(self.tr("%1 series"), series),
-            self.tr("1 episode") if episodes == 1 else tr_format(self.tr("%1 episodes"), episodes),
+            # %n: each catalog carries its own plural forms (Russian has three).
+            self.tr("%n series", "", series),
+            self.tr("%n episode(s)", "", episodes),
             tr_format(self.tr("%1 ready"), buckets.count("ready")),
         ]
         failed = buckets.count("failed")
