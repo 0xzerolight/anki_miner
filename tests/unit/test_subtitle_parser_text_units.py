@@ -10,8 +10,11 @@ import dataclasses
 from collections import Counter
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.models import LineLemmas
+from anki_miner.models.processing import NotMinedReason
 from anki_miner.models.reading import ReadingUnit
 from anki_miner.services.compound_matcher import CompoundSyntheticToken
 from anki_miner.services.subtitle_parser import SubtitleParserService
@@ -357,3 +360,115 @@ class TestReadingPathDecorationStrip:
         units2 = [ReadingUnit(text="通常兵器　その他", index=0, location_label="p.0")]
         words2, _i, _c = service.parse_text_units(units2, want_line_index=False)
         assert any("　" in w.sentence for w in words2)
+
+
+def _parse_units(config, units_tokens, *, force_include=None):
+    """parse_text_units over one unit per token list; the unit text is the joined surfaces."""
+    by_text = {"".join(t.surface for t in tokens): tokens for tokens in units_tokens}
+    tagger = MagicMock(side_effect=lambda text: list(by_text.get(text, [])))
+    with patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=tagger):
+        service = SubtitleParserService(config, force_include=force_include)
+    units = [ReadingUnit(text=text, index=i, location_label=f"p.{i}") for i, text in enumerate(by_text)]
+    words, _index, _counter = service.parse_text_units(units, want_line_index=False)
+    return service, words
+
+
+class TestParseRejectReport:
+    """last_parse_rejects: the tokens every inclusion path turned away that a
+    whitelist entry could have rescued, by card front, with the gate's reason."""
+
+    def test_preference_rejects_are_named_with_their_reason(self, test_config):
+        service, _words = _parse_units(
+            test_config,
+            [
+                [_make_token("はい", "感動詞")],
+                [_make_token("田中", "名詞", pos2="固有名詞")],
+                [_make_token("ちょっと", "副詞")],
+                [_make_token("ドキドキ", "副詞")],
+                [_make_token("わかっ", "動詞", lemma="分かる", orth_base="わかる")],
+            ],
+        )
+        assert service.last_parse_rejects == {
+            "はい": NotMinedReason.WORD_TYPE,
+            "田中": NotMinedReason.WORD_TYPE,
+            "ちょっと": NotMinedReason.KANA_ONLY,
+            "ドキドキ": NotMinedReason.SOUND_EFFECT,
+            "わかる": NotMinedReason.KANA_ONLY,
+        }
+
+    def test_function_words_numbers_affixes_and_kana_auxiliaries_are_not_reported(self, test_config):
+        service, _words = _parse_units(
+            test_config,
+            [
+                [_make_token("は", "助詞", pos2="係助詞")],
+                [_make_token("三", "名詞", pos2="数詞")],
+                [_make_token("さん", "接尾辞", pos2="名詞的")],
+                [_make_token("いる", "動詞", pos2="非自立可能")],
+            ],
+        )
+        assert service.last_parse_rejects == {}
+
+    def test_a_front_outside_the_mining_script_is_not_reported(self, test_config):
+        """No whitelist entry can rescue an all-Latin front (``_rescue_script``);
+        a mixed-script one it can, so that one is listed."""
+        service, _words = _parse_units(
+            test_config, [[_make_token("OK", "名詞", pos2="一般")], [_make_token("Tシャツ", "名詞", pos2="一般")]]
+        )
+        assert service.last_parse_rejects == {"Tシャツ": NotMinedReason.SCRIPT}
+
+    def test_a_front_mined_elsewhere_in_the_parse_is_not_reported(self, test_config):
+        """Unit 1 tags テスト as an interjection (rejected); unit 2 mines it as a noun."""
+        service, words = _parse_units(
+            test_config,
+            [[_make_token("テスト", "感動詞")], [_make_token("テスト", "名詞"), _make_token("だ", "助動詞")]],
+        )
+        assert "テスト" in {w.mined_form for w in words}
+        assert "テスト" not in service.last_parse_rejects
+
+    def test_a_whitelist_rescue_is_not_reported(self, test_config):
+        service, words = _parse_units(
+            test_config,
+            [[_make_token("田中", "名詞", pos2="固有名詞")]],
+            force_include=lambda front: front == "田中",
+        )
+        assert "田中" in {w.mined_form for w in words}
+        assert service.last_parse_rejects == {}
+
+    def test_each_parse_replaces_the_report(self, test_config):
+        service, _words = _parse_units(test_config, [[_make_token("はい", "感動詞")]])
+        assert service.last_parse_rejects == {"はい": NotMinedReason.WORD_TYPE}
+        service._tagger().side_effect = lambda text: [_make_token("本", "名詞")]
+        service.parse_text_units([ReadingUnit(text="本", index=0, location_label="p.0")], want_line_index=False)
+        assert service.last_parse_rejects == {}
+
+    def test_mine_token_verdict_does_not_depend_on_the_report(self, test_config):
+        """T-38: the count loops pass no record; the verdict must be identical."""
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=MagicMock()):
+            service = SubtitleParserService(test_config)
+        for token in (_make_token("はい", "感動詞"), _make_token("本", "名詞"), _make_token("は", "助詞")):
+            text = token.surface
+            rejects: dict = {}
+            with_record = service._mine_token(token, text, 0, len(text), [token], [token], rejects=rejects)
+            without = service._mine_token(token, text, 0, len(text), [token], [token])
+            assert with_record is without
+
+    @pytest.mark.parametrize("method", ["parse_subtitle_file", "parse_subtitle_file_with_index"])
+    def test_the_subtitle_file_paths_report_too(self, test_config, tmp_path, method):
+        """with_index is phase 1's parse whenever i+1 or the word curator is on."""
+        tokens = [_make_token("はい", "感動詞")]
+        with patch(
+            "anki_miner.services.subtitle_parser.get_shared_tagger", return_value=MagicMock(return_value=tokens)
+        ):
+            service = SubtitleParserService(test_config)
+        sub_file = tmp_path / "ep.srt"
+        sub_file.write_text("placeholder", encoding="utf-8")
+        mock_line = MagicMock()
+        mock_line.text = "はい"
+        mock_line.start = 1000
+        mock_line.end = 3000
+        mock_line.is_comment = False
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
+        with patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs):
+            getattr(service, method)(sub_file)
+        assert service.last_parse_rejects == {"はい": NotMinedReason.WORD_TYPE}
