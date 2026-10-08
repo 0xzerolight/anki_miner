@@ -157,7 +157,7 @@ class _SourceChainSettingsPanel(ChainSettingsPanelBase):
                 self._restore_btn.text(),
             ),
         )
-        self.add_stretch()
+        self._add_page_filler()
 
     def set_chain(
         self,

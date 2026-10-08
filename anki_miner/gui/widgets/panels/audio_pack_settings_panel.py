@@ -309,7 +309,7 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
                 self._retry_missing_btn.text(),
             ),
         )
-        self.add_stretch()
+        self._add_page_filler()
 
     def set_retry_missing_enabled(self, enabled: bool) -> None:
         """Enable/disable the retry button while its off-thread sweep runs."""
