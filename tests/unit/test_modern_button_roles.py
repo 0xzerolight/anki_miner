@@ -432,7 +432,7 @@ ACCENT_ROLES = frozenset(
         # Checked controls.
         "QPushButton:checked, QPushButton#ghost:checked",
         "QPushButton:checked:hover, QPushButton#ghost:checked:hover",
-        "QCheckBox::indicator:checked, QRadioButton::indicator:checked",
+        "QCheckBox::indicator:checked, QRadioButton::indicator:checked, QGroupBox::indicator:checked",
         # A partly checked box is a checked control too (WB I2): some of it is on.
         "QCheckBox::indicator:indeterminate",
         # The navigation indicator. AnimatedTabBar draws the same indicator
@@ -481,7 +481,10 @@ class TestAccentMap:
         ("selector", "declaration"),
         [
             ("QLabel#stat-value", "color: ${color-text};"),
-            ("QCheckBox::indicator:hover, QRadioButton::indicator:hover", "border-color: ${color-border};"),
+            (
+                "QCheckBox::indicator:hover, QRadioButton::indicator:hover, QGroupBox::indicator:hover",
+                "border-color: ${color-border};",
+            ),
         ],
     )
     def test_metadata_and_hover_use_ordinary_colours(self, qss, selector, declaration):

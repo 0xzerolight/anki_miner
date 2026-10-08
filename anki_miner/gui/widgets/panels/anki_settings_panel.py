@@ -10,17 +10,16 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFormLayout,
-    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QVBoxLayout,
     QWidget,
 )
 
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.language_gate import apply_language_gate, field_row_widgets
 from anki_miner.gui.widgets.base import FormPanel, StatusBadge
+from anki_miner.gui.widgets.base.disclosure import make_disclosure
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages.profile import CardFieldSpec
@@ -693,13 +692,8 @@ class AnkiSettingsPanel(FormPanel):
             helper=self.tr("Which marker field gets the “x”. None leaves cards untouched."),
         )
 
-        # Collapsible marker-field-name editors. The QGroupBox checkbox toggles
-        # the inner body's visibility (Qt's checkable group only disables, not
-        # hides), so the four rows stay hidden until a power user expands them.
-        self.card_type_names_group = QGroupBox(self.tr("Customize marker field names"))
-        self.card_type_names_group.setCheckable(True)
-        self.card_type_names_group.setChecked(False)
-        group_layout = QVBoxLayout(self.card_type_names_group)
+        # Marker-field-name editors behind a disclosure, so the four rows stay
+        # hidden until a power user expands them.
         self._card_type_names_body = QWidget()
         body_form = QFormLayout(self._card_type_names_body)
         body_form.setContentsMargins(0, 0, 0, 0)
@@ -719,9 +713,9 @@ class AnkiSettingsPanel(FormPanel):
         body_form.addRow(self.tr("Sentence:"), self.card_type_sentence_input)
         body_form.addRow(self.tr("Audio:"), self.card_type_audio_input)
 
-        group_layout.addWidget(self._card_type_names_body)
-        self._card_type_names_body.setVisible(False)
-        self.card_type_names_group.toggled.connect(self._card_type_names_body.setVisible)
+        self.card_type_names_group = make_disclosure(
+            self.tr("Customize marker field names"), self._card_type_names_body
+        )
         # One logical setting: the four marker names are edited together and
         # search should land on the group, not on an individual name box.
         self.add_widget(

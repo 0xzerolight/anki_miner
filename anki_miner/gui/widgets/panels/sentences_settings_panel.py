@@ -20,14 +20,13 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
     QFormLayout,
-    QGroupBox,
     QLineEdit,
     QSpinBox,
-    QVBoxLayout,
     QWidget,
 )
 
 from anki_miner.gui.widgets.base import FormPanel
+from anki_miner.gui.widgets.base.disclosure import make_disclosure
 from anki_miner.languages.registry import config_language, get_profile
 
 #: Built-in cleanups for a language whose profile ships no pattern of its own
@@ -145,22 +144,15 @@ class SentencesSettingsPanel(FormPanel):
             )
         )
 
-        # Checkable group used as a disclosure, like Cards & Anki's marker
-        # names: Qt's checkable group only disables its children, so the body
-        # is hidden and shown instead. Opens by itself on load when a custom
-        # pattern is stored (see _open_disclosure_for_custom_pattern).
-        self.subtitle_regex_group = QGroupBox(self.tr("Edit the pattern (advanced)"))
-        self.subtitle_regex_group.setCheckable(True)
-        self.subtitle_regex_group.setChecked(False)
-        group_layout = QVBoxLayout(self.subtitle_regex_group)
+        # The raw fields sit behind a disclosure, like Cards & Anki's marker
+        # names. It opens by itself on load when a custom pattern is stored
+        # (see _open_disclosure_for_custom_pattern).
         self._subtitle_regex_body = QWidget()
         body_form = QFormLayout(self._subtitle_regex_body)
         body_form.setContentsMargins(0, 0, 0, 0)
         body_form.addRow(self.tr("Regex Filter:"), self.subtitle_regex_edit)
         body_form.addRow(self.tr("Replacement:"), self.subtitle_replacement_edit)
-        group_layout.addWidget(self._subtitle_regex_body)
-        self._subtitle_regex_body.setVisible(False)
-        self.subtitle_regex_group.toggled.connect(self._subtitle_regex_body.setVisible)
+        self.subtitle_regex_group = make_disclosure(self.tr("Edit the pattern (advanced)"), self._subtitle_regex_body)
         self.add_widget(self.subtitle_regex_group)
         # Registered by hand so the result is titled "Regex Filter" and keeps
         # its old id; a jump lands on the disclosure, which Space opens.
