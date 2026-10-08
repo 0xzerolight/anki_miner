@@ -249,6 +249,7 @@ class MiningLanguageSettingsPanel(FormPanel):
             self._language_pack_status.get(code, "") if downloading else "",
             status="info",
         )
+        self.pending_download_label.setVisible(True)
         self.download_and_switch_button.setVisible(True)
         self.download_and_switch_button.setEnabled(not downloading)
         self.pending_download_row.setVisible(True)
@@ -307,7 +308,8 @@ class MiningLanguageSettingsPanel(FormPanel):
             # under an offer that could no longer help.
             self.set_mining_language(self._live_code)
             name = offered.native_name if offered is not None else code
-            self.pending_download_label.setText("")
+            # The reason takes the row: the offer's sentence and button are moot.
+            self.pending_download_label.setVisible(False)
             self.download_and_switch_button.setVisible(False)
             self.set_status_text(
                 self.pending_download_status,

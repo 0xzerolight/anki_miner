@@ -306,6 +306,7 @@ def test_a_pack_that_leaves_the_language_unusable_repoints_the_list(
     assert panel.mining_language_combo.currentData() == "ja"
     assert not panel.pending_download_row.isHidden()
     assert panel.download_and_switch_button.isHidden()
+    assert panel.pending_download_label.isHidden()
     assert panel.pending_download_status.text() == "Deutsch still can't be mined after its download."
     assert panel.pending_download_status.property("status") == "error"
 
@@ -322,6 +323,7 @@ def test_the_next_offer_brings_its_button_back(qtbot, test_config, german_downlo
 
     assert not panel.download_and_switch_button.isHidden()
     assert panel.download_and_switch_button.isEnabled()
+    assert not panel.pending_download_label.isHidden()
     assert panel.pending_download_status.text() == ""
 
 
