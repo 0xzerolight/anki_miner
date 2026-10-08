@@ -1,21 +1,26 @@
 """Typography for surfaces that display MINED CONTENT, not interface chrome.
 
-One owner for the three operations the eight content widgets need. ``font_role
-== "japanese"`` routes into gui/utils/fonts.py unchanged, so a ja session is
-byte-identical to the pre-multilanguage app; every other role builds from the
-profile's own family list. Stage 2B consumes these three functions -- there is
-no second helper on fonts.py.
+One owner for what the mined-content surfaces need: a face, a soft-wrap and a
+direction. ``font_role == "japanese"`` routes into gui/utils/fonts.py
+unchanged, so a ja session is byte-identical to the pre-multilanguage app;
+every other role builds from the profile's own family list. Stage 2B consumes
+these functions -- there is no second helper on fonts.py.
 
-A style's ``direction`` flips the content widget (never the chrome) and its
+A style's ``direction`` flips a content widget, never the chrome
+(:func:`apply_content_direction`); a table that mixes content columns with
+chrome columns gets :class:`ContentCellDelegate` on its content columns
+instead, because flipping the view would mirror its columns. Its
 ``writing_system``/``bundled_fallback`` run through ``resolve_content_families``
-(S21/S22); both are inert for a style that sets neither.
+(S21/S22); all of it is inert for a style that sets none.
 """
 
 from __future__ import annotations
 
-from PyQt6.QtCore import Qt
+from collections.abc import Callable
+
+from PyQt6.QtCore import QModelIndex, Qt
 from PyQt6.QtGui import QFont
-from PyQt6.QtWidgets import QWidget
+from PyQt6.QtWidgets import QAbstractItemView, QStyledItemDelegate, QStyleOptionViewItem, QWidget
 
 from anki_miner.gui.resources.styles._variables import FONT_SIZES
 from anki_miner.gui.utils.fonts import (
@@ -29,7 +34,13 @@ from anki_miner.gui.utils.fonts import (
 )
 from anki_miner.languages.profile import ContentTextStyle
 
-__all__ = ["apply_content_font", "content_cell_font", "content_phrase_wrap"]
+__all__ = [
+    "ContentCellDelegate",
+    "apply_content_direction",
+    "apply_content_font",
+    "content_cell_font",
+    "content_phrase_wrap",
+]
 
 
 def _families_for(style: ContentTextStyle) -> tuple[str, ...]:
@@ -37,7 +48,7 @@ def _families_for(style: ContentTextStyle) -> tuple[str, ...]:
     return resolve_content_families(style.families, style.writing_system, style.bundled_fallback)
 
 
-def _apply_direction(widget: QWidget, style: ContentTextStyle) -> None:
+def apply_content_direction(widget: QWidget, style: ContentTextStyle) -> None:
     """Flip mined content right-to-left for an rtl language, and back (S21).
 
     Only the content widget flips, with the children it owns (a list's viewport
@@ -46,6 +57,10 @@ def _apply_direction(widget: QWidget, style: ContentTextStyle) -> None:
     back to inheriting its parent's, the exact state of a widget that was never
     flipped. A widget that never was is not touched, so the ja and ltr paths
     make no Qt call here.
+
+    Public for the lists whose every row is mined content (the curator's
+    sentence picker, Known Words): they flip whole, like the subtitle viewer's
+    line list. A table uses :class:`ContentCellDelegate` instead.
     """
     if style.direction == "rtl":
         widget.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
@@ -65,9 +80,39 @@ def content_cell_font(style: ContentTextStyle) -> QFont:
     return font
 
 
+class ContentCellDelegate(QStyledItemDelegate):
+    """Lay mined-content cells out in the mining language's direction.
+
+    The cell counterpart of :func:`apply_content_direction`, for a table whose
+    content columns sit beside chrome ones (counts, field names, timestamps):
+    install it on the columns that carry :func:`content_cell_font`. Qt's item
+    painter takes a cell's paragraph direction from the option, which the view
+    fills from its own (left-to-right) chrome direction, so an rtl sentence
+    was a left-to-right paragraph with its final punctuation at the wrong end.
+    An rtl cell here is a right-to-left paragraph on the cell's leading (right)
+    edge, and elides at its logical end, so its start stays in view.
+
+    ``style`` is read at paint time: a screen whose mining language switches
+    in-session passes ``lambda: self._content_style`` and never re-installs.
+    An ltr style leaves the option exactly as the base built it, so ja and
+    every ltr cell paint byte-identically.
+    """
+
+    def __init__(self, view: QAbstractItemView, style: Callable[[], ContentTextStyle]) -> None:
+        super().__init__(view)
+        self._style = style
+
+    def initStyleOption(  # noqa: N802 - Qt override
+        self, option: QStyleOptionViewItem | None, index: QModelIndex
+    ) -> None:
+        super().initStyleOption(option, index)
+        if option is not None and self._style().direction == "rtl":
+            option.direction = Qt.LayoutDirection.RightToLeft
+
+
 def apply_content_font(widget: QWidget, style: ContentTextStyle, *, role: str = JAPANESE_BODY) -> None:
     """Give *widget* the content face + size and mark it for the QSS rules."""
-    _apply_direction(widget, style)
+    apply_content_direction(widget, style)
     if style.font_role == "japanese":
         # A previous non-ja call pinned that language's families in a WIDGET
         # stylesheet, which outranks both the application sheet and setFont --
