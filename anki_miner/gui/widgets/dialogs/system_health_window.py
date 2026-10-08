@@ -770,8 +770,16 @@ class SystemHealthWindow(EnhancedDialog):
 
     @staticmethod
     def _sweep_clock(report: HealthReport) -> str | None:
-        """The time most rows were checked at: the sweep's own time."""
-        clocks = [check.checked_at.strftime("%H:%M") for check in report.checks.values() if check.checked_at]
+        """The time most rows were checked at: the sweep's own time.
+
+        The update row is left out: a different check answers it, and on its
+        own it would put "Last checked" over rows nothing has checked yet.
+        """
+        clocks = [
+            check.checked_at.strftime("%H:%M")
+            for key, check in report.checks.items()
+            if check.checked_at and key != "app.updates"
+        ]
         return Counter(clocks).most_common(1)[0][0] if clocks else None
 
     @staticmethod

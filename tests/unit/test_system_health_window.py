@@ -390,6 +390,18 @@ def test_a_row_checked_at_another_time_shows_its_own(health_window):
     assert health_window._rows["app.updates"].checked_label.text() == "Checked 09:05"
 
 
+def test_an_update_check_alone_is_not_a_sweep(health_window):
+    """B4.3: an update check landing before the first sweep is not "Last checked"."""
+    report = HealthReport.unknown().with_update_check(
+        state=HEALTH_OK, detail="", checked_at=datetime(2026, 7, 27, 9, 5)
+    )
+
+    health_window.show_health(report)
+
+    assert health_window.last_checked_label.text() == "Not checked yet"
+    assert health_window._rows["app.updates"].checked_label.text() == "Checked 09:05"
+
+
 def test_nothing_checked_yet_is_said_once(health_window):
     assert health_window.last_checked_label.text() == "Not checked yet"
     assert health_window._rows["app.updates"].checked_label.text() == ""
