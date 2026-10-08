@@ -170,13 +170,16 @@ class MokuroTab(RunOptionsMixin, _ToolTabBase):
         setup card lives here now. On failure the worker's message is already
         on ``mokuro_status_label`` (the caller's ``set_status`` writes it before
         this runs); a re-probe would overwrite it with "Not installed" within
-        milliseconds, so only a successful install re-runs the guard.
+        milliseconds, so only a successful install re-runs the guard. A success
+        also folds an expanded setup card (Change…) back to its one line once
+        that probe lands; a failure keeps Install on screen to retry.
         """
         self._mokuro_install_active = False
         self.install_mokuro_button.setEnabled(
             self._mokuro_supported and not still_running(self.worker_thread) and not self._scan_pending_run
         )
         if ok:
+            self._setup_expanded = False
             self._refresh_engine_state()
 
     def _apply_config_defaults(self) -> None:

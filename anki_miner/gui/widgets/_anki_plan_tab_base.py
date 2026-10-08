@@ -155,7 +155,10 @@ class _AnkiPlanTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
             self._apply_preview_height_floor()
 
     def _create_run_status(self) -> QWidget:
-        """The one-line status and thin bar that sit directly above the actions."""
+        """The run line's model: ``status_label`` and ``progress_bar`` in a strip.
+
+        The caller builds it but never shows it (D1); the pinned bar shows the line.
+        """
         strip = QWidget()
         strip_layout = QVBoxLayout(strip)
         strip_layout.setContentsMargins(SPACING.sm, 0, SPACING.sm, 0)

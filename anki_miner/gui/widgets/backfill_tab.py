@@ -25,7 +25,6 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFrame,
-    QHBoxLayout,
     QLabel,
     QMessageBox,
     QScrollArea,
@@ -185,12 +184,12 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         hint.setObjectName("helper-text")
         hint.setWordWrap(True)
         deck_layout.addWidget(hint)
-        deck_row = QHBoxLayout()
-        deck_row.addWidget(QLabel(self.tr("Deck:")))
+        # B4.5: the card's "Deck" header is the combo's caption; a "Deck:" row
+        # label under it said Deck twice. Screen readers get the name here.
         self.deck_combo = QComboBox()
+        self.deck_combo.setAccessibleName(self.tr("Deck"))
         self.deck_combo.addItem(self.tr("All decks"))
-        deck_row.addWidget(self.deck_combo, stretch=1)
-        deck_layout.addLayout(deck_row)
+        deck_layout.addWidget(self.deck_combo)
         layout.addWidget(self.deck_card)
 
         self.fields_card = QFrame()

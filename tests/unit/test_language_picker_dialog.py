@@ -165,6 +165,26 @@ class TestSearch:
         assert len(_visible_codes(dialog)) == before
 
 
+class TestStoredExpression:
+    """B4.3: a stored value the checkboxes cannot hold reopens as the expression it is."""
+
+    @pytest.mark.parametrize("stored", ["en.+", "ja|en", "live_chat", "zh-Hant-TW"])
+    def test_a_stored_regex_reopens_as_an_expression(self, qtbot: Any, stored: str) -> None:
+        dialog = _make(qtbot, stored)
+        assert dialog.search_edit.text() == stored
+        assert dialog.lang_list.isEnabled() is False
+        assert dialog.expression_hint.isVisibleTo(dialog) is True
+        assert dialog.ok_button.isEnabled() is True
+        assert dialog.selected_langs() == stored
+
+    def test_editing_the_stored_expression_into_a_word_searches_again(self, qtbot: Any) -> None:
+        dialog = _make(qtbot, "en.+")
+        dialog.search_edit.setText("japan")
+        assert dialog.lang_list.isEnabled() is True
+        assert dialog.expression_hint.isVisibleTo(dialog) is False
+        assert "ja" in _visible_codes(dialog)
+
+
 class TestFrame:
     """E12: the standard dialog frame, OK last."""
 

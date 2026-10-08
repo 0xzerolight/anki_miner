@@ -13,7 +13,8 @@ class AlassNotFoundError(SubtitleRetimeError):
     """Raised when the alass executable cannot be located.
 
     A specific subclass so callers can catch the "binary missing" case and
-    steer the user to install alass or set the path in Settings → Transcription & Alignment.
+    steer the user to Download alass in Settings → Transcription & Alignment
+    (on macOS, to set its path there).
     """
 
     pass
