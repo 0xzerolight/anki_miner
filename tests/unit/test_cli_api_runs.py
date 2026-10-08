@@ -180,6 +180,18 @@ def test_unreadable_subtitle_fails_that_run_without_a_file(services, tmp_path, v
     assert verdict["error"] == "SUBTITLE_UNREADABLE" and verdict["file"] is None
 
 
+def test_an_unreadable_secondary_subtitle_fails_that_run_without_a_file(services, tmp_path, video) -> None:
+    (tmp_path / "en.srt").write_bytes(b"\x00\xff")
+    services.processor._load_secondary_entries.side_effect = SubtitleParseError(
+        "Secondary subtitle file en.srt: No suitable formats"
+    )
+    job = _run_file(tmp_path, video, secondary_subtitle_file=str(tmp_path / "en.srt"))
+    [verdict] = runs.mine_runs(job, threading.Event())
+    assert verdict["error"] == "SUBTITLE_UNREADABLE" and verdict["file"] is None and "en.srt" in verdict["message"]
+    services.processor.process_episode.assert_not_called()
+    services.processor._load_secondary_entries.assert_called_once_with(tmp_path.resolve() / "en.srt")
+
+
 def test_card_target_failure_is_call_level(services, tmp_path, video) -> None:
     services.check_card_target.side_effect = runner.SetupFailure("Deck 'X' is not in Anki")
     with pytest.raises(ApiError) as err:

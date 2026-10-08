@@ -153,7 +153,7 @@ Before any episode runs, `mine` checks:
 - the Anki deck, note type and field mapping;
 - the offline dictionary.
 
-A failure refuses the call with `SETUP_ERROR`, or with `ANKI_UNREACHABLE` when Anki does not answer. Per episode, a video that does not open gives `VIDEO_UNREADABLE`, and a subtitle that cannot be read gives `SUBTITLE_UNREADABLE`; the other episodes still run.
+A failure refuses the call with `SETUP_ERROR`, or with `ANKI_UNREACHABLE` when Anki does not answer. Per episode, a video that does not open gives `VIDEO_UNREADABLE`, and a subtitle file that cannot be read, the secondary one included, gives `SUBTITLE_UNREADABLE`; the other episodes still run.
 
 Episodes run one at a time, and each run's `result-<n>.json` is written as it ends, before the next starts. Nothing is retried: mine the same `run_id` again with any subset of the words. The media is cut again, and a word Anki now has comes back `duplicate` (with `allow_duplicate_cards` on, a word already in the run's deck).
 
@@ -271,7 +271,7 @@ A call starts by deleting the `progress.json` and `cancel` files an earlier call
 | `SETUP_ERROR` | call, run | language pack, dictionary index, ffmpeg, deck, note type, fields or offline dictionary; for fetch, yt-dlp, ffmpeg or the speech model |
 | `ANKI_UNREACHABLE` | call, run | AnkiConnect does not answer |
 | `VIDEO_UNREADABLE` | run | the video does not open |
-| `SUBTITLE_UNREADABLE` | run | the subtitle file cannot be read |
+| `SUBTITLE_UNREADABLE` | run | the subtitle file, or the secondary one, cannot be read |
 | `MINING_FAILED` | run | the run itself failed; `message` says why |
 | `YOUTUBE_REFUSED` | run | fetch: a live stream, a video over the profile's length limit, an age-restricted video without cookies, or no captions with `captions` |
 | `FETCH_FAILED` | run | fetch: probing, downloading or transcribing failed; see `failure_is_transient` |

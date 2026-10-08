@@ -210,6 +210,9 @@ def _mine(
             entries = parser.parse_raw_entries(episode.subtitle_file, episode.subtitle_offset)
             # The same lines at the file's own times: line_start is what the caller read there.
             raw = parser.parse_raw_entries(episode.subtitle_file, 0.0)
+            # The processor's own parse of the second track (None without one), done again inside
+            # process_episode: there a file that will not parse fails the run as MINING_FAILED.
+            processor._load_secondary_entries(episode.secondary_subtitle_file)
         except SubtitleParseError as exc:
             raise ApiError(SUBTITLE_UNREADABLE, str(exc)) from exc
         fold = get_profile(config_language(config)).dedup_fold
