@@ -19,7 +19,7 @@ from __future__ import annotations
 from typing import Protocol
 
 from PyQt6.QtCore import QCoreApplication, QEvent, QModelIndex, QObject, QRect, QSize, Qt
-from PyQt6.QtGui import QFont, QFontMetrics, QKeyEvent, QPainter, QPalette
+from PyQt6.QtGui import QColor, QFont, QFontMetrics, QKeyEvent, QPainter, QPalette
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -40,7 +40,7 @@ from anki_miner.gui.capabilities import (
     CapabilityTarget,
     search,
 )
-from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.resources.styles import FONT_SIZES, SPACING, Theme
 from anki_miner.gui.widgets.base import EnhancedDialog
 
 #: Item role carrying a row's translated description (the title is DisplayRole).
@@ -68,9 +68,11 @@ def _tr(text: str) -> str:
 class _CapabilityDelegate(QStyledItemDelegate):
     """Paints a row as a bold title over its wrapped description.
 
-    Category rows have no description and paint as a bold caption. The
-    background (hover, selection) is the stylesheet's ``QListWidget::item``
-    look, drawn by the style before the text goes on top.
+    Category rows have no description and paint as a heading over their
+    features in the app's caption-heading look (``stat-label``: smaller,
+    semibold capitals, muted), so "Mining workflows" no longer reads as one
+    more feature. The background (hover, selection) is the stylesheet's
+    ``QListWidget::item`` look, drawn by the style before the text goes on top.
     """
 
     _PAD = SPACING.xs
@@ -84,17 +86,47 @@ class _CapabilityDelegate(QStyledItemDelegate):
         return max(1, option.rect.width() - 2 * self._PAD)
 
     @staticmethod
-    def _fonts(option: QStyleOptionViewItem) -> tuple[QFont, QFont]:
+    def _is_category(index: QModelIndex) -> bool:
+        """``_rebuild_rows`` stores no capability id on a category row."""
+        return index.data(Qt.ItemDataRole.UserRole) is None
+
+    @classmethod
+    def _fonts(cls, option: QStyleOptionViewItem, index: QModelIndex) -> tuple[QFont, QFont]:
+        """The row's title and description fonts, both derived from the view's font.
+
+        ``option.font`` already carries the stylesheet's font size and the text
+        scale. These are painter fonts, so no stylesheet rule overrides them.
+        """
         title = QFont(option.font)
-        title.setBold(True)
+        if cls._is_category(index):
+            scale = FONT_SIZES.caption / FONT_SIZES.body
+            if title.pixelSize() > 0:
+                title.setPixelSize(max(1, round(title.pixelSize() * scale)))
+            else:
+                title.setPointSizeF(title.pointSizeF() * scale)
+            title.setWeight(QFont.Weight.DemiBold)
+            title.setCapitalization(QFont.Capitalization.AllUppercase)
+            title.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 0.5)
+        else:
+            title.setBold(True)
         return title, QFont(option.font)
+
+    @staticmethod
+    def _category_colour(option: QStyleOptionViewItem) -> QColor:
+        """The theme's muted text colour.
+
+        Not the palette's ``PlaceholderText``: the stylesheet's ``color`` rule
+        overwrites it with the ordinary text colour.
+        """
+        colour = QColor(Theme.get_colors().get("text-muted", ""))
+        return colour if colour.isValid() else option.palette.color(QPalette.ColorRole.Text)
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:  # noqa: N802 - Qt override
         opt = QStyleOptionViewItem(option)
         self.initStyleOption(opt, index)
         title = str(index.data(Qt.ItemDataRole.DisplayRole) or "")
         description = str(index.data(_DESCRIPTION_ROLE) or "")
-        title_font, description_font = self._fonts(opt)
+        title_font, description_font = self._fonts(opt, index)
         width = self._width(opt)
         flags = int(Qt.TextFlag.TextWordWrap)
         height = QFontMetrics(title_font).boundingRect(QRect(0, 0, width, 100_000), flags, title).height()
@@ -116,13 +148,16 @@ class _CapabilityDelegate(QStyledItemDelegate):
         style = opt.widget.style() if opt.widget is not None else QApplication.style()
         if style is not None:
             style.drawControl(QStyle.ControlElement.CE_ItemViewItem, opt, painter, opt.widget)
-        selected = bool(opt.state & QStyle.StateFlag.State_Selected)
-        role = QPalette.ColorRole.HighlightedText if selected else QPalette.ColorRole.Text
-        title_font, description_font = self._fonts(opt)
+        if self._is_category(index):
+            pen = self._category_colour(opt)
+        else:
+            selected = bool(opt.state & QStyle.StateFlag.State_Selected)
+            pen = opt.palette.color(QPalette.ColorRole.HighlightedText if selected else QPalette.ColorRole.Text)
+        title_font, description_font = self._fonts(opt, index)
         rect = opt.rect.adjusted(self._PAD, self._PAD, -self._PAD, -self._PAD)
         flags = int(Qt.TextFlag.TextWordWrap)
         painter.save()
-        painter.setPen(opt.palette.color(role))
+        painter.setPen(pen)
         painter.setFont(title_font)
         title_rect = painter.boundingRect(rect, flags, title)
         painter.drawText(rect, flags, title)
