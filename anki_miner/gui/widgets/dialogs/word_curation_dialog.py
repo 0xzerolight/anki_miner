@@ -860,7 +860,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         pieces: list[str] = []
         if key := self._key_text("curator.toggle_include"):
             pieces.append(tr_format(self.tr("%1 include/exclude"), key))
-        if self._show_player and (key := self._key_text("curator.play_pause")):
+        # An Anki-deck run's key plays the focused card's own clip.
+        if (self._show_player or self._clip_audio is not None) and (key := self._key_text("curator.play_pause")):
             pieces.append(tr_format(self.tr("%1 play/pause"), key))
         if key := self._key_text("curator.mark_known"):
             pieces.append(tr_format(self.tr("%1 mark known"), key))
@@ -1258,6 +1259,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 self.play_clip_button = ModernButton(self.tr("Play card audio"), variant="ghost")
                 self.play_clip_button.setToolTip(self.tr("Play this card's own sentence audio from the deck."))
                 self.play_clip_button.setEnabled(False)
+                # A click must not take focus from the table: every key but
+                # confirm is scoped to it, so a focused button would leave them
+                # dead. The play/pause key plays the clip, and the hint line names it.
+                self.play_clip_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
                 self.play_clip_button.clicked.connect(self._play_focused_clip)
                 play_row = QHBoxLayout()
                 play_row.addWidget(self.play_clip_button)

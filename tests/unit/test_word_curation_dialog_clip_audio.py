@@ -9,6 +9,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
+from PyQt6.QtCore import Qt
 
 from anki_miner.gui.widgets.dialogs import word_curation_dialog as wcd
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext, WordCurationDialog
@@ -154,3 +155,29 @@ def test_the_pane_keeps_its_saved_layout_key(qtbot, fake_clip_player, deck_units
 
     assert dialog._side_key.split("+")[0] == "image"
     assert "image" in dialog._side_key.split("+")
+
+
+def test_clicking_play_leaves_the_keys_with_the_table(qtbot, fake_clip_player, deck_units):
+    """Every curator key but confirm is scoped to the table: a click that took
+    focus would leave include/mark-known/next-word dead until a click back."""
+    units, clip = deck_units
+    dialog = WordCurationDialog([_make_word("猫", 0)], media_context=_context(units))
+    qtbot.addWidget(dialog)
+    dialog.show()
+    qtbot.waitExposed(dialog)
+    _focus_word(dialog, 0)
+    dialog.table.setFocus()
+
+    qtbot.mouseClick(dialog.play_clip_button, Qt.MouseButton.LeftButton)
+
+    assert fake_clip_player[0].played == [clip]
+    assert dialog.focusWidget() is dialog.table
+
+
+def test_a_deck_run_names_the_play_key_on_the_hint_line(qtbot, fake_clip_player, deck_units):
+    """The button no longer takes focus, so the key that plays the clip has to be findable."""
+    units, _ = deck_units
+    dialog = WordCurationDialog([_make_word("猫", 0)], media_context=_context(units))
+    qtbot.addWidget(dialog)
+
+    assert "play/pause" in dialog.key_hint_label.text()
