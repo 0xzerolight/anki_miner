@@ -2779,6 +2779,45 @@ def test_a_focus_recheck_on_the_ready_page_keeps_finish_on(qtbot, wiz_config, mo
     assert page.isComplete() is True
 
 
+def test_the_dictionary_recheck_waits_while_the_download_runs(qtbot, wiz_config, monkeypatch):
+    """B2.3d: a focus re-check during the wizard's own download asks nothing."""
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod  # noqa: PLC0415
+
+    fake = _FakeValidation(dictionary=False)
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, fake)
+    page = wiz.resources_page
+    _run_page_check(qtbot, page, page.dictionary_label)
+    assert page._live_check is not None and page._live_check.wait(3000)
+    monkeypatch.setattr(dialog_mod, "start_resource_download", lambda *a, **kw: MagicMock())
+    page._on_download_clicked()
+    probe = page._live_check
+
+    page.recheck()
+
+    assert page._live_check is probe
+    assert fake.calls.count("dictionary") == 1
+
+
+def test_back_to_the_anki_page_restarts_the_poll(qtbot, wiz_config, monkeypatch):
+    """B2.3d: Back re-shows the page without initializePage(); on_shown restarts the poll."""
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation(ankiconnect=False))
+    wiz.show()
+    qtbot.waitExposed(wiz)
+    while wiz.currentPage() is not wiz.anki_page:
+        wiz.next()
+    qtbot.waitUntil(lambda: wiz.ankiconnect_page._has_result, timeout=5000)
+    wiz.next()
+    wiz.anki_page._on_poll()  # the first tick off the page stops it
+    assert not wiz.anki_page._poll.isActive()
+
+    wiz.back()
+
+    assert wiz.currentPage() is wiz.anki_page
+    assert wiz.anki_page._poll.isActive()
+    qtbot.waitUntil(lambda: not wiz.done_page.summary_label.text().startswith("Checking"), timeout=5000)
+    _join_workers(qtbot, wiz)
+
+
 def test_a_closing_wizard_rechecks_nothing(qtbot, wiz_config, monkeypatch):
     from PyQt6.QtWidgets import QDialog  # noqa: PLC0415
 
