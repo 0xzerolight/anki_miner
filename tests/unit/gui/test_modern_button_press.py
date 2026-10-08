@@ -26,7 +26,7 @@ from PyQt6.QtGui import QColor, QMouseEvent, QPalette
 from PyQt6.QtWidgets import QPushButton
 
 from anki_miner.gui.resources.styles import MOTION
-from anki_miner.gui.resources.styles.theme import Theme, _relative_luminance
+from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils import motion
 from anki_miner.gui.widgets.enhanced.modern_button import ModernButton, press_overlay
 
@@ -106,6 +106,16 @@ def _blend(surface: QColor, overlay: QColor) -> QColor:
         round(surface.green() * (1 - alpha) + overlay.green() * alpha),
         round(surface.blue() * (1 - alpha) + overlay.blue() * alpha),
     )
+
+
+def _relative_luminance(color: QColor) -> float:
+    """WCAG 2.x relative luminance of an opaque sRGB colour."""
+
+    def channel(value: int) -> float:
+        srgb = value / 255.0
+        return srgb / 12.92 if srgb <= 0.03928 else ((srgb + 0.055) / 1.055) ** 2.4
+
+    return 0.2126 * channel(color.red()) + 0.7152 * channel(color.green()) + 0.0722 * channel(color.blue())
 
 
 def _contrast(first: QColor, second: QColor) -> float:
