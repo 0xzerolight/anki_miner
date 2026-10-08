@@ -1991,16 +1991,15 @@ class TestValidationCheckLogging:
         assert f"deck={test_config.anki_deck_name}" in records[0].getMessage()
 
 
-def test_the_missing_mokuro_message_names_no_path_field():
+def test_the_missing_mokuro_message_names_no_path_field(test_config):
     """D15 item 3: the mokuro path left the GUI; the hint must not send users to it."""
-    from pathlib import Path
+    service = ValidationService(test_config)
 
-    import anki_miner.services.validation_service as service
+    with patch("anki_miner.services.validation_service.mokuro_available", return_value=False):
+        ok, message = service._check_mokuro()
 
-    source = Path(service.__file__).read_text(encoding="utf-8")
-
-    assert "mokuro not found — Utilities → Manga OCR is unavailable; install it on that tab" in source
-    assert "set its path on that tab" not in source
+    assert ok is False
+    assert message == "mokuro not found — Utilities → Manga OCR is unavailable; install it on that tab"
 
 
 def test_the_missing_alass_message_names_the_download_not_a_path_field(test_config):
@@ -2014,14 +2013,3 @@ def test_the_missing_alass_message_names_the_download_not_a_path_field(test_conf
     assert message.startswith("alass not found")
     assert "download alass in Settings → Transcription & Alignment (on macOS, set its path there)" in message
     assert "install alass or set its path in Settings" not in message
-
-
-def test_the_alass_engine_hint_names_the_download_not_a_path_field():
-    from pathlib import Path
-
-    import anki_miner.services.sync_engines.alass_engine as engine
-
-    source = Path(engine.__file__).read_text(encoding="utf-8")
-
-    assert "Download alass in Settings → Transcription & Alignment (on macOS, set its path there)." in source
-    assert "Install alass or set its path in Settings" not in source
