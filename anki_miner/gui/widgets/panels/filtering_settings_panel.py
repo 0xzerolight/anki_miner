@@ -365,8 +365,8 @@ class FilteringSettingsPanel(FormPanel):
 
         self._wordsets_helper = QLabel(
             self.tr(
-                "Exclude bundled lists of Japanese people and place names from "
-                "mining. Whitelisted names are still mined."
+                "Exclude bundled lists of Japanese people, place and company names "
+                "from mining. Whitelisted names are still mined."
             )
         )
         self._wordsets_helper.setObjectName("helper-text")
