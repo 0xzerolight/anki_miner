@@ -459,6 +459,22 @@ class TestErrors:
                 returncode=1,
             )
 
+    def test_bot_detection_names_the_real_cookies_control(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
+    ) -> None:
+        """B3.4b: the "Cookies file" field it named was folded into the cookies combo."""
+        with pytest.raises(BotDetectionError) as caught:
+            _run_download(
+                monkeypatch,
+                service,
+                tmp_path,
+                _opts(),
+                lines=["ERROR: Sign in to confirm you're not a bot"],
+                returncode=1,
+            )
+        assert "Cookies file" not in str(caught.value)
+        assert "From a cookies.txt file…" in str(caught.value)
+
     def test_progress_flood_does_not_evict_the_classified_error(
         self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
     ) -> None:

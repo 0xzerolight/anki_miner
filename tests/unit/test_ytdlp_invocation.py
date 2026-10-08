@@ -146,6 +146,12 @@ class TestCookieFailureMessage:
         msg = cookie_failure_message("cookie_locked", None, "", platform="win32")
         assert "Close the browser" in msg
 
+    def test_the_flatpak_hint_names_the_real_cookies_control(self) -> None:
+        """B3.4b: the "Cookies file" field it named was folded into the cookies combo."""
+        msg = cookie_failure_message("cookie_locked", "firefox", "profile not found", platform="linux")
+        assert "Cookies file" not in msg
+        assert "From a cookies.txt file…" in msg
+
     def test_linux_missing_names_flatpak(self) -> None:
         msg = cookie_failure_message("cookie_missing", "firefox", FIREFOX_DB_NOT_FOUND.lower(), platform="linux")
         assert "Flatpak or Snap" in msg
