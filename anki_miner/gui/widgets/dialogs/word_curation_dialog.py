@@ -34,10 +34,12 @@ from PyQt6.QtGui import (
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QApplication,
+    QBoxLayout,
     QDialog,
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QLayout,
     QLineEdit,
     QListWidget,
     QListWidgetItem,
@@ -480,6 +482,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             self._setup_ui()
             self._populate_table()
             self._refresh_summary()
+            # After _refresh_summary: the verbs measure with their real labels.
+            self._fit_toolbar_to_screen()
             # Connected FIRST, deliberately: MiningTabBase connects its curation
             # resolver to the same signal afterwards, and Qt runs direct connections
             # in connection order, so the mpv core / page decode / dictionary workers
@@ -614,7 +618,6 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
 
         layout.addLayout(footer_layout)
         self.setLayout(layout)
-        self._keep_the_floor_on_screen()
         # A failed Known Words write is recoverable — the user retries Confirm or
         # cancels — so it belongs in a banner, never a modal.
         self.install_issue_banner(layout)
@@ -632,8 +635,13 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         disown_default_buttons(self)
 
     def _build_toolbar_row(self) -> QHBoxLayout:
-        """Build the search field and the bulk verbs, full dialog width."""
+        """Build the search field and the bulk verbs, full dialog width.
+
+        One row wherever it fits; on a narrower screen
+        :meth:`_fit_toolbar_to_screen` moves the verbs onto a row of their own.
+        """
         controls_layout = QHBoxLayout()
+        self._toolbar_row = controls_layout
         controls_layout.setSpacing(SPACING.sm)
 
         search_label = QLabel(self.tr("Search:"))
@@ -978,21 +986,59 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         """True when the window's centre sits on a screen that exists."""
         return QApplication.screenAt(self.frameGeometry().center()) is not None
 
-    def _keep_the_floor_on_screen(self) -> None:
-        """Let the toolbar row set the width floor, but never past the screen.
+    def _fit_toolbar_to_screen(self) -> None:
+        """Keep the toolbar whole on a screen narrower than its one row (Z.5).
 
-        A locale whose row is wider than a small screen (French on 1024px)
-        would otherwise get a window wider than the desktop, Confirm button
-        included. There, and only there, the floor is the screen's width and
-        the row's right end is cut, as the flat 900px floor did everywhere (Z.5).
+        The row is this window's width floor. Where the screen has the room it
+        stays one row and the window floor follows it. Where it does not (French,
+        Indonesian, Russian or Vietnamese on 1024px) the four verbs move onto a
+        row of their own under Search; only if even that is wider than the
+        screen is the floor capped there, cutting the row's right end.
+
+        Measured after polishing: before the first show the children are
+        unstyled and the layout's cached sizes stale (655px against a real 930
+        on English), which is how the cap this replaced never fired.
         """
         screen = self.screen() or QApplication.primaryScreen()
         layout = self.layout()
         if screen is None or layout is None:
             return
         available = screen.availableGeometry().width()
-        if layout.totalMinimumSize().width() > available:
-            self.setMinimumWidth(available)
+        self.ensurePolished()
+        if self._layout_floor(layout) > available:
+            self._stack_toolbar_verbs()
+            if self._layout_floor(layout) > available:
+                self.setMinimumWidth(available)
+
+    @staticmethod
+    def _layout_floor(layout: QLayout) -> int:
+        """The layout's minimum width, re-measured rather than read from its cache.
+
+        ``invalidate`` only, never ``activate``: activating a window's layout
+        before the first show sets the window's minimum to the one-row floor and
+        grows the window to it, and stacking afterwards lowers the minimum
+        without ever shrinking the width back.
+        """
+        layout.invalidate()
+        return layout.totalMinimumSize().width()
+
+    def _stack_toolbar_verbs(self) -> None:
+        """Move the four verbs off the Search row onto a row of their own."""
+        layout = self.layout()
+        if not isinstance(layout, QBoxLayout):
+            return
+        verbs_row = QHBoxLayout()
+        verbs_row.setSpacing(SPACING.sm)
+        for button in (
+            self.select_all_button,
+            self.deselect_all_button,
+            self.include_highlighted_button,
+            self.add_known_button,
+        ):
+            self._toolbar_row.removeWidget(button)
+            verbs_row.addWidget(button)
+        verbs_row.addStretch()
+        layout.insertLayout(layout.indexOf(self._toolbar_row) + 1, verbs_row)
 
     def _apply_default_geometry(self) -> None:
         """Shrink to fit the current screen. Position is left to Qt."""
