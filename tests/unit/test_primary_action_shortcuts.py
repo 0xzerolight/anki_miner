@@ -169,7 +169,7 @@ def _isolated_primary(bar: WorkflowActionBar) -> tuple[object, list[int]]:
     """The bar's primary button, cut loose from the run it would really start.
 
     Every existing ``clicked`` receiver is dropped first. Without that, pressing
-    the button launches the screen's actual worker -- Batch's Process Queue took
+    the button launches the screen's actual worker -- Batch's Mine Queue took
     a pytest-xdist worker down with it -- and the assertion would be paid for by
     a real run rather than by observing the press.
     """

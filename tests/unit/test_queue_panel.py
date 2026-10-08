@@ -236,7 +236,7 @@ class TestImeSafeDialogs:
         assert not any(b.isDefault() or b.autoDefault() for b in buttons)
 
 
-def test_the_list_keeps_six_rows_visible(panel):
+def test_the_list_keeps_six_text_lines_visible(panel):
     from anki_miner.gui.widgets.base.sizing import metric_row_height
     from anki_miner.gui.widgets.panels.queue_panel import _VISIBLE_QUEUE_ROWS
 
@@ -248,7 +248,7 @@ class TestClearOnAnEmptyQueue:
     def test_it_says_nothing_at_all(self, panel):
         """Clearing nothing is neither a failure nor a change (D24, finding -26).
 
-        The counter above the list already reads "Queue is empty".
+        The empty-queue line in place of the list already reads "Queue is empty".
         """
         from unittest.mock import patch
 

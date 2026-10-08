@@ -6,7 +6,7 @@ chain and compares it against the order the controls are actually painted in.
 
 That is the guarantee worth having, because the failure it caught is one no
 per-screen ``setTabOrder`` call could have prevented -- it *was* a
-``setTabOrder`` call. Single Episode chained Process Episode after the offset
+``setTabOrder`` call. Single Episode chained Mine Episode after the offset
 field, which was correct until D6 reparented that button into the pinned action
 bar at the foot of the page; from then on Tab jumped from the offset field down
 to the bar and back up again. An explicit order that names a widget somebody

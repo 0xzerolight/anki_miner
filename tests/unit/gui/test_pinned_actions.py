@@ -90,7 +90,7 @@ def screen(request, qtbot, test_config: AnkiMinerConfig):
 
 def _primary(name: str, widget: QWidget):
     if name == "batch":
-        # Batch's canonical run is the queue's own Process Queue button.
+        # Batch's canonical run is the queue's own Mine Queue button.
         return widget.queue_panel.process_queue_button
     return getattr(widget, {s[0]: s[1] for s in _SCREENS}[name])
 

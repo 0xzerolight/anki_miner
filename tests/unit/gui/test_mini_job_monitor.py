@@ -73,12 +73,12 @@ class TestWindowKind:
 
 
 # ---------------------------------------------------------------------------
-# It renders exactly what the other surfaces render
+# It reads the same snapshot as the other surfaces
 # ---------------------------------------------------------------------------
 
 
 class TestItDoesNotDriftFromTheOtherSurfaces:
-    def test_it_renders_the_same_snapshot_as_the_queue_strip(self, qtbot, registry, monitor):
+    def test_it_and_the_queue_strip_read_one_snapshot(self, qtbot, registry, monitor):
         """Both read one snapshot; since D1 the strip states only its run position."""
         strip = CurrentJobStrip()
         qtbot.addWidget(strip)

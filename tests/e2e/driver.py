@@ -249,7 +249,7 @@ class EpisodeTabDriver:
         """Assert Tab reaches the tab's landmarks in the order the eye reads them.
 
         video_selector → subtitle_selector → offset_spinbox → … → process_button.
-        The gap before the last one is the point: D6 moved Process Episode out of
+        The gap before the last one is the point: D6 moved Mine Episode out of
         the form and into the pinned action bar at the foot of the page, so it is
         no longer the offset field's immediate successor — it is simply later,
         which is where the eye finishes. Only relative order is asserted.
