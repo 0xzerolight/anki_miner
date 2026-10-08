@@ -1471,7 +1471,24 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         page = self.pages.widget(self._subtab_index[entry.page_key]) if entry.page_key else None
         if isinstance(page, QScrollArea):
             page.ensureWidgetVisible(anchor.scroll_widget)
-        anchor.focus_widget.setFocus(Qt.FocusReason.ShortcutFocusReason)
+        focus: QWidget | None = anchor.focus_widget
+        if not anchor.focus_widget.isVisibleTo(self):
+            # The control an anchor names can be hidden by its own state: an
+            # empty chain shows a one-line empty state instead of its list, an
+            # installed download hides its button. Focus asked of a hidden
+            # widget lands nowhere the user can see, and Qt hands it over
+            # whenever that widget next appears. Take the first visible control
+            # in the same block instead, or move no focus when it has none (B3.5b).
+            focus = next(
+                (
+                    child
+                    for child in anchor.widget.findChildren(QWidget)
+                    if child.isVisibleTo(self) and child.isEnabled() and child.focusPolicy() & Qt.FocusPolicy.TabFocus
+                ),
+                None,
+            )
+        if focus is not None:
+            focus.setFocus(Qt.FocusReason.ShortcutFocusReason)
         flash_search_hit(anchor.highlight_widget, duration_ms=self._search_hit_ms)
 
     def trigger_reimport_all(

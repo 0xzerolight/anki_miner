@@ -21,6 +21,7 @@ and its fixtures are private to it.
 from __future__ import annotations
 
 import contextlib
+from dataclasses import replace
 
 import pytest
 from PyQt6.QtCore import Qt
@@ -223,3 +224,41 @@ class TestTheAsrProbeReindexes:
         focused = tab.focusWidget()
         assert focused is not None and focused is not tab.search_box.input
         assert focused.isVisible()
+
+
+class TestAJumpFocusesSomethingVisible:
+    """B3.5b: an anchor's own focus target can be hidden by the control's state."""
+
+    def test_an_empty_chain_jump_focuses_a_visible_chain_control(self, tab_factory, test_config, monkeypatch, qtbot):
+        tab = tab_factory(replace(test_config, dictionary_chain=()))
+        _shown(tab, monkeypatch, qtbot)
+        panel = tab.dictionary_panel
+        assert not panel._list.isVisibleTo(panel)  # the empty state hid the list
+
+        tab.jump_to_setting("dictionaries.chain")
+        qtbot.waitUntil(lambda: not tab._search_jump_timer.isActive(), timeout=2000)
+
+        assert tab.focusWidget() in (panel._download_recommended_btn, panel._add_btn)
+        assert tab.focusWidget().isVisible()
+
+    def test_a_row_with_nothing_to_focus_moves_no_focus(self, tab_factory, test_config, monkeypatch, qtbot):
+        """An installed model: the row stays (judge m6) but its Download button is hidden.
+
+        Qt parks focus asked of a hidden widget and hands it over whenever that
+        widget next appears, so a later probe offering the download again would
+        pull focus out from under the user.
+        """
+        _speech_to_text(monkeypatch, engine=True, model_on_disk=True)
+        tab = tab_factory(test_config)
+        _shown(tab, monkeypatch, qtbot)
+        _probe_settled(qtbot, tab)
+        panel = tab.subtitles_panel
+        before = tab.focusWidget()
+
+        tab.jump_to_setting("subtitles.model_download")
+        qtbot.waitUntil(lambda: not tab._search_jump_timer.isActive(), timeout=2000)
+        assert panel._model_row_widgets[-1].isVisible()
+        assert not panel.download_model_button.isVisible()
+        panel.download_model_button.show()  # a later probe offers the download again
+
+        assert tab.focusWidget() is before
