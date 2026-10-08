@@ -333,7 +333,10 @@ def cookie_failure_message(tag: str, browser: str | None, joined_lower: str, *, 
                 "system-package Firefox instead, or use the cookies.txt route."
             )
         return msg
-    msg = f"Cookie database is locked. Close {named} and retry, or set Cookies → Browser to None."
+    msg = (
+        f"Cookie database is locked. Close {named} and retry, "
+        'or in Settings → YouTube, set Cookies from browser to "None".'
+    )
     if platform.startswith("linux") and ("profile" in joined_lower and "not found" in joined_lower):
         msg += (
             " If you installed Firefox via Flatpak or Snap, use the "

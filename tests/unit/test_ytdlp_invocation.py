@@ -126,6 +126,9 @@ class TestCookieFailureMessage:
     def test_locked_says_close_the_browser(self) -> None:
         msg = cookie_failure_message("cookie_locked", "chrome", CHROME_COPY_FAILED.lower(), platform="win32")
         assert "Close chrome" in msg
+        # B3.4b: the browser choice is the "Cookies from browser" combo, whose first item is "None".
+        assert 'in Settings → YouTube, set Cookies from browser to "None".' in msg
+        assert "Cookies → Browser" not in msg
         # yt-dlp's own text and issue link must not reach the user.
         assert "Could not copy" not in msg
         assert "github.com" not in msg
