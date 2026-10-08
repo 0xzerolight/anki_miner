@@ -118,10 +118,10 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
           ANKI_MINER_TEST_PACK_SEEDS: ${{ runner.temp }}/lang_pack_seeds
-          # Declared, not inherited. Qt derives QLocale() from LANG, and its C
-          # locale sets OmitGroupSeparator -- so a number the app renders as
-          # "184,200" on a developer's en_US box comes out "184200" here. Pin it
-          # so the runner image cannot change that under us.
+          # Declared, not inherited, so the runner image cannot change
+          # locale-dependent behaviour under us. Number formatting no longer
+          # depends on it: install_number_locale (app.main and tests/conftest.py)
+          # fixes Qt's number style to "0.30" / "184,200".
           LANG: C.UTF-8
 
   wheel-assets:
