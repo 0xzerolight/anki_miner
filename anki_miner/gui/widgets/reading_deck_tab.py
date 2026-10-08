@@ -70,6 +70,17 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+#: Every picker on the Deck card is this many characters wide, whatever it
+#: holds. Sized from its items, the deck combo first showed holding only its
+#: placeholder (the list arrives after show), came out narrower than the field
+#: combos and clipped the deck name.
+_PICKER_CHARS = 24
+
+
+def _size_picker(combo: QComboBox) -> None:
+    combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+    combo.setMinimumContentsLength(_PICKER_CHARS)
+
 
 class ReadingDeckTab(_ReadingMiningTabBase):
     """Existing-Anki-deck mining sub-tab (one ephemeral item per run).
@@ -219,6 +230,8 @@ class ReadingDeckTab(_ReadingMiningTabBase):
         self.translation_combo.addItem(none)
         self.translation_combo.setToolTip(self.tr("The field with the line's translation, if the deck has one."))
         self.sentence_combo.currentIndexChanged.connect(self._recompute_buttons)
+        for combo in (self.deck_combo, *self._field_combos()):
+            _size_picker(combo)
 
         # A17: the deck comes first, on its own row, capped like every other
         # field; the note count sits right under it.

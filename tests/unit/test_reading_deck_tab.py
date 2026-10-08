@@ -392,6 +392,15 @@ class TestDeckFirst:
         texts = [label.text() for label in tab.fields_widget.findChildren(QLabel)]
         assert texts == ["Sentence from:", "Audio from:", "Picture from:", "Translation from:"]
 
+    def test_the_deck_and_field_pickers_share_one_width(self, tab):
+        # Sized from contents, the deck combo (placeholder only at first show)
+        # came out narrower than the field combos and clipped the deck name.
+        tab.deck_combo.addItem("Japanese::Anime::A Rather Long Show Name::Season 2")
+        _pick_first_deck(tab)
+
+        combos = (tab.deck_combo, *tab._field_combos())
+        assert len({combo.sizeHint().width() for combo in combos}) == 1
+
     def test_the_note_count_sits_right_under_the_deck(self, tab):
         layout = tab.status_label.parentWidget().layout()
         assert layout.indexOf(tab.fields_widget) == layout.indexOf(tab.status_label) + 1
