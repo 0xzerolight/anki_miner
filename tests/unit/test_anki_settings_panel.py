@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
@@ -9,6 +11,7 @@ pytest.importorskip("PyQt6.QtWidgets")
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QComboBox
 
+from anki_miner.gui.widgets.panels import anki_settings_panel as panel_mod
 from anki_miner.gui.widgets.panels.anki_settings_panel import AnkiSettingsPanel
 from anki_miner.services.note_presets import preset_by_id
 
@@ -68,6 +71,7 @@ def test_rows_run_deck_note_type_tags_connection_then_url(qtbot):
         < top(panel.notetype_combo)
         < top(panel.anki_tags_input)
         < top(panel.refresh_button)
+        < top(panel.auto_open_anki_checkbox)
         < top(panel.ankiconnect_url_input)
     )
 
@@ -980,3 +984,33 @@ def test_auto_map_clears_only_the_active_card_types_marker(qtbot):
     assert markers["sentence"] == "IsSentenceCard"
     assert markers["audio"] == "IsAudioCard"
     assert cleared == 1
+
+
+def test_auto_open_anki_round_trips(qtbot, test_config, monkeypatch):
+    monkeypatch.setattr(panel_mod, "anki_launch_command", lambda: ["anki"])
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+
+    panel.load_from_config(replace(test_config, auto_open_anki=True))
+    assert panel.auto_open_anki_checkbox.isChecked()
+    assert panel.contribute(test_config).auto_open_anki is True
+
+    panel.auto_open_anki_checkbox.setChecked(False)
+    assert panel.contribute(test_config).auto_open_anki is False
+
+
+def test_auto_open_disabled_when_anki_not_found(qtbot, monkeypatch):
+    monkeypatch.setattr(panel_mod, "anki_launch_command", lambda: None)
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+
+    assert not panel.auto_open_anki_checkbox.isEnabled()
+    assert panel.auto_open_anki_checkbox.toolTip()
+
+
+def test_auto_open_enabled_when_anki_found(qtbot, monkeypatch):
+    monkeypatch.setattr(panel_mod, "anki_launch_command", lambda: ["anki"])
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+
+    assert panel.auto_open_anki_checkbox.isEnabled()
