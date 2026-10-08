@@ -1372,6 +1372,15 @@ class SubtitleParserService:
             highlight_end = max(highlight_end, resolved_end)
         return highlight_end
 
+    def _card_front(self, word_token: Any, text: str, tok_start: int, tok_end: int, raw_tokens: list) -> str:
+        """The ``mined_form`` emission gives an included token: its card front.
+
+        Resolved exactly as ``_emit_word`` resolves it (the emission highlight
+        end, then the identity), so a front counted is a front mined (T-38).
+        """
+        highlight_end = self._emission_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
+        return self._resolve_word_identity(word_token, text, tok_start, highlight_end)[2]
+
     def _resolve_word_identity(
         self,
         word_token: Any,
@@ -2088,8 +2097,9 @@ class SubtitleParserService:
             ``(words, line_index, counts)``. ``words`` is mined_form-deduped
             (first-occurrence-wins across the whole call, like the subtitle
             entrypoints); ``line_index`` is the ``LineLemmas`` list when
-            ``want_line_index`` else ``None``; ``counts`` maps lemma → total
-            included occurrences (``count_lemmas`` semantics, no dedup).
+            ``want_line_index`` else ``None``; ``counts`` maps card front
+            (``mined_form``) → total included occurrences (``count_fronts``
+            semantics, no dedup).
         """
         self._require_engine()
         # Public parse_* convention: reset the per-parse memo caches so a
@@ -2135,12 +2145,12 @@ class SubtitleParserService:
             text = self._tokenizer_text(text)
 
             # Count through the SAME locator as the mining loop below (and
-            # count_lemmas): a token mining drops (find == -1) is counted
+            # count_fronts): a token mining drops (find == -1) is counted
             # nowhere it is not mined, or the preview over-promises (T-38 — see
             # _iter_token_spans for the drop-rule rationale).
             for token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
                 if self._mine_token(token, text, tok_start, tok_end, merged_tokens, raw_tokens):
-                    counts[self._extract_lemma(token)] += 1
+                    counts[self._card_front(token, text, tok_start, tok_end, raw_tokens)] += 1
 
             line_words, line_lemmas_entry = self._emit_line_words_and_index(
                 line_state, seen_mined_forms, collect_index=want_line_index
@@ -2173,8 +2183,23 @@ class SubtitleParserService:
         Raises:
             SubtitleParseError: If subtitle file cannot be parsed
         """
+        return self._count_occurrences(subtitle_file, by_front=False)
+
+    def count_fronts(self, subtitle_file: Path) -> collections.Counter[str]:
+        """:meth:`count_lemmas`, keyed by card front (``mined_form``) instead of lemma.
+
+        What the curator's Occurrences column reads: it judges a card, and UniDic
+        files kanji-variant homographs under one lemma (賭ける and 掛ける under
+        掛ける), so a lemma count credits a card with its sibling's lines (audit
+        L3-005). Deck Builder ranks and Readability scores by lemma, and keep
+        :meth:`count_lemmas`.
+        """
+        return self._count_occurrences(subtitle_file, by_front=True)
+
+    def _count_occurrences(self, subtitle_file: Path, *, by_front: bool) -> collections.Counter[str]:
+        """The one count loop behind :meth:`count_lemmas` and :meth:`count_fronts`."""
         self._require_engine()
-        # Unlike the parse_* entry points above, count_lemmas does not call
+        # Unlike the parse_* entry points above, counting does not call
         # _reset_caches() (it never touches the reading/furigana memos) — but
         # it does tokenize and probe, so it resets the perf counters directly.
         self._reset_perf_counters()
@@ -2189,7 +2214,12 @@ class SubtitleParserService:
             # inline a divergent copy here.
             for token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
                 if self._mine_token(token, text, tok_start, tok_end, merged_tokens, raw_tokens):
-                    counts[self._extract_lemma(token)] += 1
+                    key = (
+                        self._card_front(token, text, tok_start, tok_end, raw_tokens)
+                        if by_front
+                        else self._extract_lemma(token)
+                    )
+                    counts[key] += 1
         self._log_parse_probe_timing(subtitle_file)
         return counts
 
@@ -2539,8 +2569,7 @@ class SubtitleParserService:
         kana = _is_kana_candidate(word_token.surface)
         if kana and getattr(word_token.feature, "pos2", None) in _KANA_RECOVER_REJECT_POS2:
             return False
-        highlight_end = self._emission_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
-        _, _, mined, _ = self._resolve_word_identity(word_token, text, tok_start, highlight_end)
+        mined = self._card_front(word_token, text, tok_start, tok_end, raw_tokens)
         if not self._rescue_script(mined) or not self._force_include(mined):
             return False
         return not (kana and self._rejected_by_lexicalized_window(word_token, tokens))

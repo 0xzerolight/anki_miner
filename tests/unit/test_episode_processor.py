@@ -2296,6 +2296,95 @@ class TestIncludeKnownWordsFlag:
         assert result.cards_created == 1
 
 
+class TestKnownByRenderedCardFront:
+    """Audit L1-004: ko cards an all-Hanja word (學校) under KRDICT's hangul headword (학교),
+    so Anki's first field holds 학교 while mined_form stays 學校. The next run must read the
+    word as known (R2 "already in Anki"), not re-offer it for Anki to refuse as a duplicate.
+    At phase 2 no word carries a definition yet, so the front comes from an offline lookup."""
+
+    KRDICT_ROW = '<span lang="ko" style="font-weight: bold">학교</span> <span lang="en">school</span>'
+
+    @staticmethod
+    def _word(form: str) -> TokenizedWord:
+        return TokenizedWord(
+            surface=form, lemma=form, reading="", sentence=f"{form}에 갔다",
+            start_time=1.0, end_time=3.0, duration=2.0, mined_form_override=form,
+        )  # fmt: skip
+
+    def _processor(self, test_config, language: str, vocabulary: set[str], profile=None):
+        from anki_miner.languages.registry import get_profile
+
+        config = replace(test_config, language=language)
+        anki = MagicMock()
+        anki.get_existing_vocabulary.return_value = vocabulary
+        definitions = MagicMock()
+        definitions.lookup_all_offline.side_effect = lambda word, lemma=None, pos=None: (
+            [("KRDICT", self.KRDICT_ROW)] if word == "學校" else []
+        )
+        processor = build_processor(
+            config=config,
+            anki_service=anki,
+            definition_service=definitions,
+            word_filter=WordFilterService(config),
+            profile=profile if profile is not None else get_profile(language),
+        )
+        return processor, definitions
+
+    @staticmethod
+    def _unknown(processor, words, counts=None):
+        from anki_miner.orchestration.episode_processor import _Phase2Counts
+
+        kept = processor._phase2_known_words(words, counts if counts is not None else _Phase2Counts())
+        return [word.mined_form for word in kept]
+
+    def test_hanja_word_whose_rendered_front_is_in_anki_is_known(self, test_config):
+        processor, _ = self._processor(test_config, "ko", {"학교"})
+        assert self._unknown(processor, [self._word("學校")]) == []
+
+    def test_hanja_word_whose_rendered_front_is_not_in_anki_stays_unknown(self, test_config):
+        processor, _ = self._processor(test_config, "ko", set())
+        assert self._unknown(processor, [self._word("學校")]) == ["學校"]
+
+    def test_known_hits_count_the_rendered_front(self, test_config):
+        from anki_miner.orchestration.episode_processor import _Phase2Counts
+
+        processor, _ = self._processor(test_config, "ko", {"학교"})
+        counts = _Phase2Counts()
+        assert self._unknown(processor, [self._word("學校"), self._word("학생")], counts) == ["학생"]
+        assert counts.known_hits == 1
+
+    def test_only_an_all_hanja_word_is_looked_up(self, test_config):
+        processor, definitions = self._processor(test_config, "ko", {"학교"})
+        assert self._unknown(processor, [self._word("학생"), self._word("韓國사람")]) == ["학생", "韓國사람"]
+        definitions.lookup_all_offline.assert_not_called()
+
+    def test_a_language_without_a_front_hook_looks_nothing_up(self, test_config):
+        """ja, and the golden contract that drives ja phase 2, never pay for the probe."""
+        processor, definitions = self._processor(test_config, "ja", {"학교"})
+        assert self._unknown(processor, [self._word("學校")]) == ["學校"]
+        definitions.lookup_all_offline.assert_not_called()
+
+    def test_a_raising_front_hook_leaves_the_word_unknown(self, test_config, caplog):
+        """Like phase 5's hook loop: a hook bug is logged, never a failed run."""
+        from anki_miner.languages.registry import get_profile
+
+        class _Boom:
+            def field_names(self):
+                return ()
+
+            def render(self, word, *, config):
+                return {}
+
+            def card_front(self, mined, definition_html):
+                raise RuntimeError("boom")
+
+        profile = dataclasses.replace(get_profile("ko"), render_hooks=(_Boom(),))
+        processor, _ = self._processor(test_config, "ko", {"학교"}, profile=profile)
+
+        assert self._unknown(processor, [self._word("學校")]) == ["學校"]
+        assert "_Boom" in caplog.text
+
+
 class TestWordListServiceIntegration:
     """Tests for EpisodeProcessor with word_list_service."""
 
@@ -2573,7 +2662,7 @@ class TestWhitelistForceInclude:
 
         # A curation callback makes phase 1 take the with-index parse.
         mock_services["subtitle_parser"].parse_subtitle_file_with_index.return_value = ([word], [])
-        mock_services["subtitle_parser"].count_lemmas.return_value = {}
+        mock_services["subtitle_parser"].count_fronts.return_value = {}
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
 
         services = {**mock_services, "word_filter": WordFilterService(config)}
@@ -2599,7 +2688,7 @@ class TestWhitelistForceInclude:
 
         # A curation callback makes phase 1 take the with-index parse.
         mock_services["subtitle_parser"].parse_subtitle_file_with_index.return_value = ([taberu, nomu], [])
-        mock_services["subtitle_parser"].count_lemmas.return_value = {}
+        mock_services["subtitle_parser"].count_fronts.return_value = {}
         mock_services["anki_service"].get_existing_vocabulary.return_value = {nomu.mined_form}
 
         services = {**mock_services, "word_filter": WordFilterService(config)}
@@ -7379,6 +7468,195 @@ class TestAutoMergeSentenceLengthCaps:
         assert any(
             "removed by active filters" in str(c.args[0]).lower() for c in presenter.show_warning.call_args_list
         ), presenter.show_warning.call_args_list
+
+
+class TestCollapseAfterCueMerge:
+    """Audit L2-001 (P2): the within-run collapse is a lossy group selector, so the automatic
+    cue merge's per-word caps and re-dedup run before it on the episode path.
+
+    よそ見 sits on an incomplete cue that the merge stretches; 余所見 on a complete cue. The
+    offline dictionary gives both one identity. Collapsing first kept よそ見, the merge then
+    dropped it, and neither spelling was mined.
+    """
+
+    IDENTITY = ("jmdict", 1, "よそみ")
+    CAP_ENTRIES = [(10.0, 12.0, "よそ見は"), (12.5, 20.0, "飛んだ。"), (30.0, 32.0, "余所見するな。")]
+
+    @staticmethod
+    def _word(form, sentence, start, end, reading="ヨソミ"):
+        return TokenizedWord(
+            surface=form, lemma=form, reading=reading, sentence=sentence,
+            start_time=start, end_time=end, duration=end - start, pos="名詞",
+        )  # fmt: skip
+
+    def _mined(self, config, mock_services, tmp_path, words, entries, *, shared_identity=True, word_list_service=None):
+        sp = mock_services["subtitle_parser"]
+        sp.parse_subtitle_file.return_value = list(words)
+        sp.parse_subtitle_file_with_index.side_effect = lambda f, offset=None: (list(words), [])
+        sp.parse_raw_entries.return_value = list(entries)
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["anki_service"].create_cards_batch.side_effect = lambda cards, *a, **k: list(
+            range(1, len(cards) + 1)
+        )
+        ds = mock_services["definition_service"]
+        ds.has_offline_definitions.side_effect = lambda forms: dict.fromkeys(forms, True)
+        aliases = {"よそ見", "余所見"} if shared_identity else set()
+        ds.offline_term_identities.side_effect = lambda pairs: {
+            pair: {self.IDENTITY} for pair in pairs if pair[0] in aliases
+        }
+        ds.get_definitions_batch.side_effect = lambda pairs, *a, **k: ["gloss"] * len(pairs)
+        mock_services["media_extractor"].extract_media_batch.side_effect = lambda video, batch, *a, **k: [
+            (w, _make_media(w.mined_form)) for w in batch
+        ]
+        services = {**mock_services, "word_filter": WordFilterService(config)}
+        processor = build_processor(
+            config=config, presenter=NullPresenter(), word_list_service=word_list_service, **services
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        calls = mock_services["media_extractor"].extract_media_batch.call_args_list
+        return [w.mined_form for call_ in calls for w in call_.args[1]]
+
+    def test_alias_dropped_by_the_merge_cap_does_not_erase_the_surviving_alias(
+        self, test_config, mock_services, tmp_path
+    ):
+        """よそ見 passes phase 2's 5 s cap on its 2 s cue; merged to 10-20 s the cap drops it."""
+        config = replace(test_config, merge_incomplete_cues=True, max_sentence_duration_seconds=5.0)
+        words = [self._word("よそ見", "よそ見は", 10.0, 12.0), self._word("余所見", "余所見するな。", 30.0, 32.0)]
+
+        assert self._mined(config, mock_services, tmp_path, words, self.CAP_ENTRIES) == ["余所見"]
+
+    def test_control_without_a_shared_identity_the_late_alias_is_mined(self, test_config, mock_services, tmp_path):
+        config = replace(test_config, merge_incomplete_cues=True, max_sentence_duration_seconds=5.0)
+        words = [self._word("よそ見", "よそ見は", 10.0, 12.0), self._word("余所見", "余所見するな。", 30.0, 32.0)]
+
+        mined = self._mined(config, mock_services, tmp_path, words, self.CAP_ENTRIES, shared_identity=False)
+
+        assert mined == ["余所見"]
+
+    def test_alias_dropped_by_the_merge_dedup_does_not_erase_the_surviving_alias(
+        self, test_config, mock_services, tmp_path
+    ):
+        """鳥 and よそ見 merge into one sentence (鳥がよそ見して、飛んだ。); the re-dedup keeps 鳥,
+        so the identity slot must go to 余所見, not to the dropped よそ見."""
+        config = replace(test_config, merge_incomplete_cues=True, deduplicate_sentences=True)
+        entries = [
+            (10.0, 11.0, "鳥が"),
+            (11.5, 12.5, "よそ見して、"),
+            (13.0, 14.0, "飛んだ。"),
+            (30.0, 32.0, "余所見するな。"),
+        ]
+        words = [
+            self._word("鳥", "鳥が", 10.0, 11.0, reading="トリ"),
+            self._word("よそ見", "よそ見して、", 11.5, 12.5),
+            self._word("余所見", "余所見するな。", 30.0, 32.0),
+        ]
+
+        assert self._mined(config, mock_services, tmp_path, words, entries) == ["鳥", "余所見"]
+
+    def test_forced_alias_keeps_the_slot_across_the_merge(self, test_config, mock_services, tmp_path):
+        """Review Focus #3: the whitelisted 余所見 sits on an incomplete cue whose merge (30-40 s)
+        exceeds the cap; BA-053 spares it, and forced words are prepended before the collapse,
+        so it keeps the identity slot over the earlier よそ見 and the collapse still leaves one card."""
+        whitelist = tmp_path / "wl.txt"
+        whitelist.write_text("余所見\n", encoding="utf-8")
+        service = WordListService(whitelist_path=whitelist)
+        service.load()
+        config = replace(test_config, merge_incomplete_cues=True, max_sentence_duration_seconds=5.0, use_whitelist=True)
+        entries = [(10.0, 12.0, "よそ見だ。"), (30.0, 32.0, "余所見は"), (32.5, 40.0, "やめろ。")]
+        words = [self._word("よそ見", "よそ見だ。", 10.0, 12.0), self._word("余所見", "余所見は", 30.0, 32.0)]
+
+        mined = self._mined(config, mock_services, tmp_path, words, entries, word_list_service=service)
+
+        assert mined == ["余所見"]
+
+    def test_an_alias_the_collapse_drops_can_still_take_a_line_mates_merged_sentence(
+        self, test_config, mock_services, tmp_path
+    ):
+        """Characterization of the accepted trade-off (judge F8). 余所見 loses its identity slot to
+        the earlier よそ見, but the merge's re-dedup runs first: 余所見 is first on the merged
+        sentence 余所見して、鳥が飛んだ。 and drops 鳥. Phase 2 has the same order between its own
+        sentence dedup and the collapse. Before L2-001, 鳥 was mined here."""
+        config = replace(test_config, merge_incomplete_cues=True, deduplicate_sentences=True)
+        entries = [
+            (5.0, 7.0, "よそ見だ。"),
+            (10.0, 11.0, "余所見して、"),
+            (11.5, 12.5, "鳥が"),
+            (13.0, 14.0, "飛んだ。"),
+        ]
+        words = [
+            self._word("よそ見", "よそ見だ。", 5.0, 7.0),
+            self._word("余所見", "余所見して、", 10.0, 11.0),
+            self._word("鳥", "鳥が", 11.5, 12.5, reading="トリ"),
+        ]
+
+        assert self._mined(config, mock_services, tmp_path, words, entries) == ["よそ見"]
+
+
+class TestCuratorOccurrencesKeyOnCardFront:
+    """Audit L3-005: the video path's Occurrences column reads count_fronts, so a card is not
+    credited with its UniDic lemma-sibling's lines (賭ける and 掛ける share the lemma 掛ける)."""
+
+    @staticmethod
+    def _verb(front: str, start: float) -> TokenizedWord:
+        return TokenizedWord(
+            surface=front, lemma="掛ける", orth_base=front, reading="カケル", sentence=f"{front}。",
+            start_time=start, end_time=start + 1.0, duration=1.0, pos="動詞", mined_form_override=front,
+        )  # fmt: skip
+
+    @staticmethod
+    def _noun(surface: str, sentence: str, start: float) -> TokenizedWord:
+        return TokenizedWord(
+            surface=surface, lemma="余所見", reading="ヨソミ", sentence=sentence,
+            start_time=start, end_time=start + 1.0, duration=1.0, pos="名詞",
+        )  # fmt: skip
+
+    @staticmethod
+    def _curated(test_config, mock_services, tmp_path, words, *, identities=None):
+        mock_services["subtitle_parser"].parse_subtitle_file_with_index.return_value = (list(words), [])
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        ds = mock_services["definition_service"]
+        ds.has_offline_definitions.side_effect = lambda forms: dict.fromkeys(forms, True)
+        ds.offline_term_identities.side_effect = lambda pairs: identities(pairs) if identities else {}
+        services = {**mock_services, "word_filter": WordFilterService(test_config)}
+        processor = build_processor(config=test_config, presenter=NullPresenter(), **services)
+        seen: dict[str, int] = {}
+
+        def curate(curated):
+            seen.update({word.mined_form: word.occurrence_count for word in curated})
+            return None
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", curation_callback=curate)
+        return seen
+
+    def test_curator_sees_each_cards_own_count(self, test_config, mock_services, tmp_path):
+        sp = mock_services["subtitle_parser"]
+        sp.count_lemmas.return_value = {"掛ける": 6}
+        sp.count_fronts.return_value = {"賭ける": 1, "掛ける": 5}
+        words = [self._verb("賭ける", 1.0), self._verb("掛ける", 5.0)]
+
+        seen = self._curated(test_config, mock_services, tmp_path, words)
+
+        assert seen == {"賭ける": 1, "掛ける": 5}
+
+    def test_a_collapsed_alias_counts_toward_the_card_it_merged_into(self, test_config, mock_services, tmp_path):
+        """Judge F1: よそ見 and 余所見 are one dictionary word; the collapse keeps よそ見, so its
+        column shows both spellings' lines (2 + 3), as the lemma count did before L3-005."""
+        sp = mock_services["subtitle_parser"]
+        sp.count_lemmas.return_value = {"余所見": 5}
+        sp.count_fronts.return_value = {"よそ見": 2, "余所見": 3}
+        words = [self._noun("よそ見", "よそ見だ。", 1.0), self._noun("余所見", "余所見するな。", 5.0)]
+
+        seen = self._curated(
+            test_config,
+            mock_services,
+            tmp_path,
+            words,
+            identities=lambda pairs: {pair: {("jmdict", 1, "よそみ")} for pair in pairs},
+        )
+
+        assert seen == {"よそ見": 5}
 
 
 class TestSeasonMinePass:

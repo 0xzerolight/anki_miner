@@ -1075,11 +1075,18 @@ class EpisodeProcessor:
         progress_callback: ProgressCallback | None = None,
         occurrence_counts: dict[str, int] | None = None,
         min_occurrence: int = 1,
+        *,
+        collapse: bool = True,
     ) -> list[TokenizedWord]:
         """Phase 2: attach frequency data, filter against known vocab, apply optional filters.
 
         Mutates ``ctx.new_words_found`` and ``ctx.comprehension_percentage``.
         Stages difficulty stats for a successful terminal result.
+
+        ``collapse=False`` leaves the within-run duplicate collapse to the caller:
+        ``process_episode`` runs it after the automatic cue merge, whose caps and
+        re-dedup are per-word droppers that must act before this lossy selector
+        (P2, audit L2-001). The reading path and the golden contract keep it here.
         """
         counts = _Phase2Counts()
 
@@ -1216,7 +1223,12 @@ class EpisodeProcessor:
                 )
             )
 
-        unknown_words = self._phase2_collapse_duplicates(unknown_words, counts)
+        if collapse:
+            unknown_words = self._phase2_collapse_duplicates(unknown_words, counts)
+        summary = asdict(counts)
+        if not collapse:
+            # The caller collapses later and logs its own receipt for it.
+            del summary["duplicate_expression_rejects"]
 
         # Stage the pre-filter comprehension counts. ``_run_pipeline`` commits
         # them only after the body returns a successful terminal result.
@@ -1226,7 +1238,7 @@ class EpisodeProcessor:
         log_summary(
             logger,
             "Phase 2 filter",
-            **{"in": len(all_words), "out": len(unknown_words), **asdict(counts)},
+            **{"in": len(all_words), "out": len(unknown_words), **summary},
         )
         return unknown_words
 
@@ -1297,9 +1309,53 @@ class EpisodeProcessor:
             else:
                 known_words = self.anki_service.get_existing_vocabulary()
 
-            unknown_words = self.word_filter.filter_unknown(all_words, known_words | user_words)
+            known = known_words | user_words
+            unknown_words = self._drop_known_card_fronts(self.word_filter.filter_unknown(all_words, known), known)
             counts.known_hits = len(all_words) - len(unknown_words)
         return unknown_words
+
+    def _drop_known_card_fronts(self, words: list[TokenizedWord], known: set[str]) -> list[TokenizedWord]:
+        """``words`` minus those a render hook cards under a front already known (audit L1-004).
+
+        ko writes an all-Hanja word (學校) under KRDICT's hangul headword (학교),
+        so Anki's first field is not the ``mined_form`` ``filter_unknown``
+        compared. A hook offering the optional ``card_front`` (see
+        ``CardRenderHook``) names that front from an offline lookup, and asks
+        for it only for a word it can move, so a profile without one (every
+        one but ko) looks nothing up.
+
+        ``lookup_all_offline`` lists each provider's exact hit before its
+        fallback hits, and its fallback candidates come from the profile's
+        lookup strategy, which for ko yields none without an orth_base: so
+        ``hits[0]`` is the first offline provider's exact hit, the row phase 4
+        renders when that provider leads the chain.
+        """
+        probes = [
+            (type(hook).__name__, probe)
+            for hook in self.profile.render_hooks
+            if callable(probe := getattr(hook, "card_front", None))
+        ]
+        if not probes or not words:
+            return words
+        fold = self.profile.dedup_fold
+
+        def offline_definition(word: TokenizedWord) -> str:
+            hits = self.definition_service.lookup_all_offline(word.mined_form, word.lemma, word.pos)
+            return hits[0][1] if hits else ""
+
+        def front_is_known(word: TokenizedWord) -> bool:
+            for name, probe in probes:
+                try:
+                    front = probe(word.mined_form, lambda: offline_definition(word))
+                except Exception:
+                    # As in phase 5's hook loop: one bad hook must not fail the run.
+                    logger.warning("Render hook %s failed to name a card front", name, exc_info=True)
+                    continue
+                if front and (front if fold is None else fold(front)) in known:
+                    return True
+            return False
+
+        return [word for word in words if not front_is_known(word)]
 
     def _phase2_definition_viability(
         self, unknown_words: list[TokenizedWord], counts: _Phase2Counts
@@ -2573,8 +2629,18 @@ class EpisodeProcessor:
                 unknown_fronts=ctx.unknown_fronts | {w.mined_form for w in unknown_words},
             )
         # Attach per-run occurrence counts for the curator's "Occurrences"
-        # column/sort (Issue #88).
-        self.word_filter.attach_occurrence_counts(unknown_words, occurrence_counts)
+        # column/sort (Issue #88). They are per card front, and a spelling the
+        # collapse merged into another card is that card's: its count moves to
+        # the winner (moved, not copied, so the filter's fold restating cannot
+        # credit a fold-twin twice).
+        column_counts: Mapping[str, int] = occurrence_counts
+        if self.last_collapsed:
+            merged = dict(occurrence_counts)
+            for loser, winner in self.last_collapsed:
+                count = merged.pop(loser.mined_form, 0)
+                merged[winner] = merged.get(winner, 0) + count
+            column_counts = merged
+        self.word_filter.attach_occurrence_counts(unknown_words, column_counts)
         # Where each word sits in the source, for the curator's Position column
         # (Issue #129) — the same string the card's Source field will carry.
         # After the candidates, which it stamps too.
@@ -3011,7 +3077,7 @@ class EpisodeProcessor:
                 unknown_words: list[TokenizedWord] = []
             else:
                 with timed_phase("filter", logger):
-                    unknown_words = self._phase2_filter(ctx, all_words, line_index, progress_callback)
+                    unknown_words = self._phase2_filter(ctx, all_words, line_index, progress_callback, collapse=False)
                 if self.cancelled:
                     return self._cancelled_result_from_ctx(ctx)
             fixed_subset = getattr(curation_callback, "fixed_subset", None)
@@ -3042,6 +3108,21 @@ class EpisodeProcessor:
                     unknown_lemmas=ctx.unknown_lemmas,
                     unknown_fronts=ctx.unknown_fronts,
                 )
+                # The collapse keeps one word per card identity. It runs after the
+                # merge's caps and re-dedup, so an alias they drop cannot take the
+                # slot its surviving alias needed (P2, audit L2-001). Forced words
+                # are still first, so they keep winning their slot (R2). The
+                # converse is phase 2's own order between its dedup and the
+                # collapse: an alias the collapse drops can still be the first
+                # word on a merged sentence and drop a line-mate in the re-dedup.
+                collapse_counts = _Phase2Counts()
+                unknown_words = self._phase2_collapse_duplicates(unknown_words, collapse_counts)
+                log_summary(
+                    logger,
+                    "Within-run collapse",
+                    out=len(unknown_words),
+                    duplicate_expression_rejects=collapse_counts.duplicate_expression_rejects,
+                )
                 if not unknown_words:
                     self._report_no_mineable_words(ctx)
                     if not makes_words:
@@ -3051,12 +3132,12 @@ class EpisodeProcessor:
                 ctx.new_words_found = len(unknown_words)
 
             if curation_callback is not None and fixed_subset is None:
-                # count_lemmas reuses the phase-1 parse cache, so no second MeCab pass.
+                # count_fronts reuses the phase-1 parse cache, so no second MeCab pass.
                 outcome = self._run_curation(
                     ctx,
                     unknown_words,
                     line_index,
-                    self.subtitle_parser.count_lemmas(subtitle_file),
+                    self.subtitle_parser.count_fronts(subtitle_file),
                     curation_callback,
                 )
                 if isinstance(outcome, ProcessingResult):

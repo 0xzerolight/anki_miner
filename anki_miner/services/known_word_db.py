@@ -567,6 +567,11 @@ def collect_known_forms(
     deliberately not consulted. Copies ``anki_vocabulary``: AnkiService hands
     out its cached set object.
 
+    Forms only: phase 2's render-front step (``_drop_known_card_fronts``, a
+    dictionary lookup) has no counterpart here, so a ko Hanja word carded
+    under its hangul front (學校 as 학교) still reads unknown to a caller of
+    this set.
+
     Args:
         known_word_db: The active language's known-words DB, or ``None``.
         config: Supplies ``use_known_words_db``.
