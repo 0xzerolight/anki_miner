@@ -786,6 +786,20 @@ def test_item_pairs_progress_moves_the_bar_and_the_published_count(ready_tab, wo
     assert (snapshot.current, snapshot.total) == (1, 4)
 
 
+def test_a_late_episode_tick_keeps_cancelling(ready_tab, workers, registry):
+    """F3: a pair tick already queued when Cancel was pressed must not overwrite
+    "Cancelling…" with an episode count."""
+    ready_tab.bind_task_registry(registry)
+    ready_tab.build_button.click()
+    workers[0].item_pairs_progress.emit("id", 1, 4)
+    ready_tab.cancel_button.click()
+
+    workers[0].item_pairs_progress.emit("id", 2, 4)
+
+    assert ready_tab.progress_widget.status_label.text() == "Cancelling…"
+    assert registry.snapshot("run.deckbuilder").detail != "2 of 4 episodes mined"
+
+
 def test_item_failed_yields_failed_task_outcome(ready_tab, workers, registry):
     ready_tab.bind_task_registry(registry)
     ready_tab.build_button.click()

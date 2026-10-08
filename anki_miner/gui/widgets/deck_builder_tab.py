@@ -807,7 +807,9 @@ class DeckBuilderTab(FolderSeriesScreenBase):
 
     def _on_item_pairs_progress(self, _item_id: str, done: int, total: int) -> None:
         """Fill the bar by episodes mined, the one count the build can prove."""
-        if self._from_superseded_worker() or total <= 0:
+        # A tick queued before Cancel lands after it: "Cancelling…" must stay,
+        # and the frozen progress widget would still take a new status line.
+        if self._from_superseded_worker() or self._cancel_requested or total <= 0:
             return
         status = tr_format(self.tr("%1 of %2 episodes mined"), done, total)
         self.progress_widget.set_composed(done, total, status)
