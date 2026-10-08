@@ -77,9 +77,14 @@ def _owner_field(owner: CapabilityTarget) -> str:
 
 
 def _stage_field(snapshot: TaskSnapshot) -> str:
-    """Render the stage position and name as one field, empty when unset."""
+    """Render the stage position and name as one field, empty when unset.
+
+    A zero total means there is no position to state (a queue screen's word
+    review writes stage 0/0), the same rule the pinned bar and the job strip
+    already apply, so the log reads the bare name rather than "0/0".
+    """
     parts = []
-    if snapshot.stage_index is not None and snapshot.stage_total is not None:
+    if snapshot.stage_index is not None and snapshot.stage_total:
         parts.append(f"{snapshot.stage_index}/{snapshot.stage_total}")
     if snapshot.stage_name:
         parts.append(snapshot.stage_name)
