@@ -6994,8 +6994,8 @@ Continue?</source>
         <translation>仅 Papago</translation>
     </message>
     <message>
-        <source>Read aloud (manga, books)</source>
-        <translation>朗读（漫画、书籍）</translation>
+        <source>Text-to-speech</source>
+        <translation>文字转语音</translation>
     </message>
     <message>
         <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>

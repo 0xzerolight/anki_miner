@@ -7001,7 +7001,7 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Read aloud (manga, books)</source>
+        <source>Text-to-speech</source>
         <translation type="unfinished" />
     </message>
     <message>

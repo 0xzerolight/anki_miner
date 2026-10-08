@@ -7031,8 +7031,8 @@ Continuare?</translation>
         <translation>Solo Papago</translation>
     </message>
     <message>
-        <source>Read aloud (manga, books)</source>
-        <translation>Lettura ad alta voce (manga, libri)</translation>
+        <source>Text-to-speech</source>
+        <translation>Sintesi vocale</translation>
     </message>
     <message>
         <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>

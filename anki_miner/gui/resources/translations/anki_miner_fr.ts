@@ -7031,8 +7031,8 @@ Continuer ?</translation>
         <translation>Papago uniquement</translation>
     </message>
     <message>
-        <source>Read aloud (manga, books)</source>
-        <translation>Lecture à voix haute (mangas, livres)</translation>
+        <source>Text-to-speech</source>
+        <translation>Synthèse vocale</translation>
     </message>
     <message>
         <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>

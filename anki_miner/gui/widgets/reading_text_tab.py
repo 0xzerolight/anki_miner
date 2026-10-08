@@ -1,8 +1,8 @@
 """Text sub-tab of the Reading tab: pasted-text mining.
 
 Mines one pasted snippet per run — no file, no extracted audio (synthetic
-sentence TTS, if enabled in Audio settings, still applies like any
-reading-sourced card) — through the shared reading pipeline. Pasted text has no
+sentence TTS, if enabled under Settings → Card Media → Text-to-speech, still
+applies like any reading-sourced card) — through the shared reading pipeline. Pasted text has no
 page of its own, so the one optional card picture the user picks here rides on
 the ref as ``image_root`` and lands in the Picture field of every card from the
 run (``services/reading/text_source.py``). Paste text,

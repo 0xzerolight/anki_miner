@@ -7031,8 +7031,8 @@ Cierre primero el navegador de tarjetas y el editor de notas de Anki — una not
         <translation>Solo Papago</translation>
     </message>
     <message>
-        <source>Read aloud (manga, books)</source>
-        <translation>Lectura en voz alta (manga, libros)</translation>
+        <source>Text-to-speech</source>
+        <translation>Texto a voz</translation>
     </message>
     <message>
         <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>
