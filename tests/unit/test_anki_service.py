@@ -1542,6 +1542,32 @@ class TestVocabCacheMergeOnCreate:
         assert "未作成" not in service._existing_vocab_cache, "uncreated word must NOT be merged"
         assert "既知" in service._existing_vocab_cache
 
+    def test_a_rendered_card_front_is_merged_beside_the_mined_form(self, test_config, make_tokenized_word):
+        """ko cards 學校 under the hangul front 학교. A later 학교 in the same session must hit
+        the cache, not pay a media extract and then be dropped by the duplicate probe.
+        A null slot's front stays out, like its mined form (F10)."""
+        service = AnkiService(replace(test_config, language="ko"))
+        service._existing_vocab_cache = set()
+        created = CardPayload(
+            word=make_tokenized_word(surface="學校", lemma="學校"),
+            media=MediaData(),
+            definition="school",
+            extra_fields={CARD_FRONT_KEY: "학교"},
+        )
+        refused = CardPayload(
+            word=make_tokenized_word(surface="大學", lemma="大學"),
+            media=MediaData(),
+            definition="university",
+            extra_fields={CARD_FRONT_KEY: "대학"},
+        )
+        # The module's autouse stub clears the duplicate probe; addNotes refuses the second.
+        add = _mock_response(result=[100, None])
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=add):
+            service.create_cards_batch([created, refused])
+
+        assert "학교" in service._existing_vocab_cache
+        assert "대학" not in service._existing_vocab_cache
+
     def test_delete_notes_still_invalidates_cache(self, test_config, make_tokenized_word):
         """delete_notes (undo path) must still wipe the cache completely."""
         service = AnkiService(test_config)

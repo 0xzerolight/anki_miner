@@ -60,6 +60,18 @@ JITENDEX_TAGS = (
     "</li></ol></div>"
 )
 
+# Wiktionary (wty) tags a sense with data-sc-content="tag" spans inside a
+# data-sc-content="tags" div, flush against each other.
+WTY_TAGS = (
+    '<div class="yomitan-glossary"><ol data-count="1">'
+    '<li data-dictionary="wty-el-en" data-dictionary-id="wty-el-en">'
+    '<div class="gloss-sc-div" data-sc-content="tags">'
+    '<span class="gloss-sc-span" data-sc-content="tag" data-sc-category="number" title="singular">sg</span>'
+    '<span class="gloss-sc-span" data-sc-content="tag" data-sc-category="usage" title="figurative">fig</span>'
+    "</div><i>(wty-el-en)</i>"
+    "</li></ol></div>"
+)
+
 
 def blocks(document_html: str) -> list[tuple[object, str, str]]:
     """``(list indent, item marker, text)`` per block, as Qt lays the document out."""
@@ -90,6 +102,12 @@ class TestChipSeparation:
     def test_structured_content_tags_are_separated_too(self):
         adapted = adapt_entry(JITENDEX_TAGS)
         assert f"{NBSP}adjective{NBSP}</span> <span" in adapted
+
+    def test_wiktionary_tags_are_separated_too(self):
+        """wty marks its sense tags with data-sc-content="tag", not Jitendex's data-sc-class."""
+        adapted = adapt_entry(WTY_TAGS)
+        assert f"{NBSP}sg{NBSP}</span> <span" in adapted
+        assert 'data-sc-content="tags"><span' in adapted  # the wrapper div is no chip
 
     def test_the_chip_row_renders_as_separate_words(self, qapp):
         _, _, first = blocks(adapt_entry(JMDICT_ENTRY))[0]

@@ -14,6 +14,7 @@ from PyQt6.QtCore import QCoreApplication
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiConnectionError, SetupError
 from anki_miner.interfaces import ProgressCallback
+from anki_miner.languages.profile import CARD_FRONT_KEY
 from anki_miner.models import AnkiWriteState, CardPayload
 from anki_miner.services._ankiconnect import _expect_list, post_action, post_multi
 from anki_miner.services.anki_media_store import AnkiMediaStore
@@ -925,6 +926,9 @@ class AnkiService:
         # incremental cache merge in the finally. Only created words are merged —
         # see the rationale there (F10).
         created_forms: list[str] = []
+        # The rendered front of each created note that has its own (ko 學校
+        # carded as 학교): the collection holds the front, not the mined form.
+        created_fronts: list[str] = []
         created_lemmas: list[str] = []
         # "Cards silently not created" evidence: the words whose addNotes slot
         # came back null despite the duplicate probe clearing them, plus a
@@ -1041,6 +1045,11 @@ class AnkiService:
                 created_forms.extend(
                     item.word.mined_form for item, nid in zip(submit_payloads, note_ids, strict=True) if nid is not None
                 )
+                created_fronts.extend(
+                    front
+                    for item, nid in zip(submit_payloads, note_ids, strict=True)
+                    if nid is not None and (front := (item.extra_fields or {}).get(CARD_FRONT_KEY))
+                )
                 created_lemmas.extend(
                     item.word.lemma for item, nid in zip(submit_payloads, note_ids, strict=True) if nid is not None
                 )
@@ -1071,9 +1080,9 @@ class AnkiService:
             self.last_skipped_duplicates = skipped_duplicates
             self.last_media_store_failures = media_store_failures
             # Incremental merge: if the cache is already populated, union the
-            # mined_forms of cards actually CREATED this run into it so subsequent
-            # episodes (within the same batch run) get a cheap cache hit instead
-            # of a full collection re-scan.
+            # mined_forms of cards actually CREATED this run into it, plus each
+            # one's rendered front, so subsequent episodes (within the same batch
+            # run) get a cheap cache hit instead of a full collection re-scan.
             # Only created words are merged — NOT every attempted word: a null
             # addNotes slot is usually a duplicate (already in the collection, and
             # thus already in the cache from the initial scan), but it can also be
@@ -1082,7 +1091,7 @@ class AnkiService:
             # and filter them out of later batch items. When the cache is None
             # (not yet populated), leave it None so the next call scans normally.
             if self._existing_vocab_cache is not None:
-                for form in created_forms:
+                for form in (*created_forms, *created_fronts):
                     key = self._dedup_key(form)
                     if key and self._is_target_script(key):
                         self._existing_vocab_cache.add(key)

@@ -28,6 +28,7 @@ import html
 import re
 from typing import TYPE_CHECKING, Any
 
+from anki_miner.languages._spaced.fields import POS_FIELD
 from anki_miner.languages._spaced.render import PosHook
 from anki_miner.languages.he.morphology import vocalised_from_content
 from anki_miner.languages.he.pos import HE_POS_LABELS
@@ -229,15 +230,15 @@ HE_ROOT_FIELD = CardFieldSpec(key="root", capability="word_root", placeholder="R
 HE_BINYAN_FIELD = CardFieldSpec(key="binyan", capability="hebrew_binyan", placeholder="Binyan")
 HE_GENDER_FIELD = CardFieldSpec(key="noun_gender", capability="noun_gender", placeholder="Gender")
 HE_PLURAL_FIELD = CardFieldSpec(key="noun_plural", capability="noun_plural", placeholder="Plural")
-HE_POS_FIELD = CardFieldSpec(key="pos", capability="pos_tag", placeholder="PartOfSpeech")
 
+#: ``pos`` is the shared spec, not a copy: its "POS" alias is this language's old spelling.
 HE_EXTRA_CARD_FIELDS: tuple[CardFieldSpec, ...] = (
     HE_TRANSLITERATION_FIELD,
     HE_ROOT_FIELD,
     HE_BINYAN_FIELD,
     HE_GENDER_FIELD,
     HE_PLURAL_FIELD,
-    HE_POS_FIELD,
+    POS_FIELD,
 )
 
 #: ``pos`` is the shared hook reading Hebrew's own label map (``pos.HE_POS_LABELS``).

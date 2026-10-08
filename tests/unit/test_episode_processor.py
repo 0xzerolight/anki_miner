@@ -5531,6 +5531,14 @@ class TestActiveFilterNames:
 
         assert processor._active_filter_names() == ["known-db", "bypass"]
 
+    def test_include_known_words_does_not_name_the_known_words_db(self, test_config):
+        """include_known_words skips known-words subtraction entirely (_phase2_known_words),
+        so the receipt must not claim the known-words DB filtered this run."""
+        config = replace(test_config, include_known_words=True, use_known_words_db=True)
+        processor = build_processor(config=config)
+
+        assert "known-db" not in processor._active_filter_names()
+
 
 # ---------------------------------------------------------------------------
 # OVH-023 / OVH-038 — guard record_difficulty against locked stats.db
