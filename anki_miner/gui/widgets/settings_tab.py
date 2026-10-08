@@ -294,6 +294,9 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self._pending_search_jump: SettingSearchEntry | None = None
         #: Test seam — zero clears the jump mark on the next event-loop turn.
         self._search_hit_ms = SEARCH_HIT_MS
+        # One known-words clear at a time, across Known Words dialogs: a dialog
+        # reopened during a slow clear starts with Rebuild off (B3.7a).
+        self._known_words_rebuild_in_flight = False
         self._setup_ui()
         for panel in (self.dictionary_panel, self.audio_panel, self.frequency_panel, self.pitch_panel):
             panel.set_mutation_preflight(self.commit_pending_settings_for_mutation)
@@ -2511,6 +2514,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             # Anki-synced rows are rebuilt from Anki on the next run.
             return db.clear(preserve_user=True)
 
+        self._known_words_rebuild_in_flight = True
         run_off_thread(
             self,
             work,
@@ -2542,6 +2546,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
 
     def _on_rebuild_known_words_finished(self, on_finished: Callable[[], None] | None = None) -> None:
         """Tell whoever asked (the Known Words dialog) that the rebuild is over."""
+        self._known_words_rebuild_in_flight = False
         if on_finished is not None:
             on_finished()
 
@@ -2561,7 +2566,8 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                 content_style=get_profile(language).content_style,
                 excluded_decks=tuple(self.config.excluded_decks),
                 on_rebuild=lambda done: self._on_rebuild_known_words(on_finished=done),
-                rebuild_enabled=self.filtering_panel.get_use_known_words_db(),
+                rebuild_enabled=self.filtering_panel.get_use_known_words_db()
+                and not self._known_words_rebuild_in_flight,
             ).exec()
         except Exception as e:  # noqa: BLE001 — surface any DB failure to the user
             self.show_screen_issue(

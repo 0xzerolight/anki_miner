@@ -1403,6 +1403,36 @@ def test_manage_known_words_hands_the_dialog_the_rebuild(tab, monkeypatch):
     assert callable(seen["on_rebuild"])
 
 
+def test_a_known_words_dialog_opened_mid_rebuild_cannot_start_another(tab, monkeypatch):
+    """B3.7a: the guard lived on the dialog, so close-and-reopen allowed a second clear."""
+    from PyQt6.QtWidgets import QMessageBox
+
+    from anki_miner.gui.widgets import settings_tab as settings_tab_module
+    from anki_miner.gui.widgets.dialogs import known_words_dialog
+
+    offered: list[bool] = []
+
+    class _Recorder:
+        def __init__(self, *_a, **kwargs):
+            offered.append(kwargs["rebuild_enabled"])
+
+        def exec(self):
+            return 0
+
+    monkeypatch.setattr(known_words_dialog, "KnownWordsManagerDialog", _Recorder)
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
+    pending: list = []
+    monkeypatch.setattr(settings_tab_module, "run_off_thread", lambda *a, on_finished, **k: pending.append(on_finished))
+    tab.filtering_panel.use_known_words_db_checkbox.setChecked(True)
+
+    tab._on_rebuild_known_words()
+    tab._on_manage_known_words()  # reopened while the clear runs
+    pending.pop()()
+    tab._on_manage_known_words()
+
+    assert offered == [False, True]
+
+
 def test_pending_field_names_reports_a_dirty_save_panel_field(tab):
     tab.anki_panel.set_deck_name("A Different Deck")
 
