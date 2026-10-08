@@ -2406,6 +2406,14 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Thêm tệp zip từ điển định dạng Yomitan của riêng bạn làm nguồn định nghĩa.</translation>
     </message>
     <message>
+        <source>Keep dictionaries up to date</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries that publish updates (Jitendex, JMdict, Wiktionary, Jiten, …) update themselves once a week; Update Now checks right away.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Jisho.org online fallback (Japanese)</source>
         <translation>Dự phòng trực tuyến Jisho.org (tiếng Nhật)</translation>
     </message>
@@ -2650,8 +2658,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Chọn công cụ trên tab Tiện ích</translation>
     </message>
     <message>
-        <source>Hide the Utilities tools you do not use, or bring them back, under Settings → General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
-        <translation>Ẩn các công cụ Tiện ích không dùng đến, hoặc hiện lại chúng, trong Cài đặt → Chung. Công cụ bị ẩn vẫn giữ mục của nó ở đây; nút Mở của nó dẫn tới ô đánh dấu đó.</translation>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings → Utilities. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation>Ẩn các công cụ Tiện ích không dùng đến, hoặc hiện lại chúng, trong Cài đặt → Tiện ích. Công cụ bị ẩn vẫn giữ mục của nó ở đây; nút Mở của nó dẫn tới ô đánh dấu đó.</translation>
     </message>
     <message>
         <source>Search the settings</source>
@@ -4408,6 +4416,22 @@ Thao tác này sẽ sửa %n ghi chú (%1) và gắn thẻ %2 cho chúng. Tiếp
     <message>
         <source>Download recommended</source>
         <translation>Tải bộ đề xuất</translation>
+    </message>
+    <message>
+        <source>Updates</source>
+        <translation type="unfinished">Cập nhật</translation>
+    </message>
+    <message>
+        <source>Update automatically once a week</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Update Now</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries, frequency lists and pitch-accent sources whose publisher posts updates (Jitendex, JMdict, Wiktionary, Jiten, …) are downloaded again when a newer version is out. Their order and on/off state stay as they are.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Storage</source>
@@ -6544,6 +6568,10 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
         <translation>Tạo lối tắt trên màn hình nền...</translation>
     </message>
     <message>
+        <source>Update Dictionaries Now</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Download Recommended Resources...</source>
         <translation>Tải tài nguyên được đề xuất...</translation>
     </message>
@@ -6634,6 +6662,42 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
     <message>
         <source>Shortcut created.</source>
         <translation>Đã tạo lối tắt.</translation>
+    </message>
+    <message>
+        <source>Checking for dictionary updates…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not check for dictionary updates: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloading dictionary updates…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Your dictionaries changed during the check. Try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>None of your dictionaries publish updates.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries are up to date (%1 could not be checked).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries are up to date.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionary updates</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries updated: %1</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Downloaded resources were left inactive because their storage folder changed.</source>
@@ -9571,16 +9635,16 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Đang hủy…</translation>
     </message>
     <message>
+        <source>Recommended resources</source>
+        <translation>Tài nguyên đề xuất</translation>
+    </message>
+    <message>
         <source>Resource settings are busy or could not be saved. Wait for the active task and try again.</source>
         <translation>Cài đặt tài nguyên đang bận hoặc không thể lưu. Hãy đợi tác vụ đang hoạt động rồi thử lại.</translation>
     </message>
     <message>
         <source>Another task is using the indexed resources — try again when it finishes.</source>
         <translation>Một tác vụ khác đang dùng tài nguyên đã lập chỉ mục — hãy thử lại khi tác vụ đó hoàn tất.</translation>
-    </message>
-    <message>
-        <source>Recommended resources</source>
-        <translation>Tài nguyên đề xuất</translation>
     </message>
     <message>
         <source>The download stopped before it finished. Try again.</source>
@@ -10311,6 +10375,10 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <message>
         <source>General</source>
         <translation>Chung</translation>
+    </message>
+    <message>
+        <source>Utilities</source>
+        <translation>Tiện ích</translation>
     </message>
     <message>
         <source>Keyboard</source>
@@ -12129,14 +12197,6 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
         <translation>Để sau</translation>
     </message>
     <message>
-        <source>Utilities tab</source>
-        <translation>Tab Tiện ích</translation>
-    </message>
-    <message>
-        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
-        <translation>Chọn các công cụ mà tab Tiện ích hiển thị. Luôn giữ lại ít nhất một công cụ.</translation>
-    </message>
-    <message>
         <source>App</source>
         <translation>Ứng dụng</translation>
     </message>
@@ -12273,6 +12333,16 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     <message>
         <source>Download disk image</source>
         <translation>Tải ảnh đĩa</translation>
+    </message>
+</context><context>
+    <name>UtilitiesSettingsPanel</name>
+    <message>
+        <source>Utilities</source>
+        <translation>Tiện ích</translation>
+    </message>
+    <message>
+        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
+        <translation>Chọn các công cụ mà tab Tiện ích hiển thị. Luôn giữ lại ít nhất một công cụ.</translation>
     </message>
 </context><context>
     <name>VulkanModelDownloadWorker</name>

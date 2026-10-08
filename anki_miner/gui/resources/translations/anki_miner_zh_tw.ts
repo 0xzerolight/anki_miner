@@ -2406,6 +2406,14 @@ No index files are deleted.</source>
         <translation>將你自己的 Yomitan 格式字典 zip 加為釋義來源。</translation>
     </message>
     <message>
+        <source>Keep dictionaries up to date</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries that publish updates (Jitendex, JMdict, Wiktionary, Jiten, …) update themselves once a week; Update Now checks right away.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Jisho.org online fallback (Japanese)</source>
         <translation>Jisho.org 線上備援（日文）</translation>
     </message>
@@ -2650,8 +2658,8 @@ No index files are deleted.</source>
         <translation>選擇「實用工具」分頁顯示的工具</translation>
     </message>
     <message>
-        <source>Hide the Utilities tools you do not use, or bring them back, under Settings → General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
-        <translation>在「設定 → 一般」中隱藏您不使用的「實用工具」分頁工具，或將其恢復顯示。隱藏的工具在此仍保留其項目；其「開啟」按鈕會帶您前往該核取方塊。</translation>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings → Utilities. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation>在「設定 → 實用工具」中隱藏您不使用的「實用工具」分頁工具，或將其恢復顯示。隱藏的工具在此仍保留其項目；其「開啟」按鈕會帶您前往該核取方塊。</translation>
     </message>
     <message>
         <source>Search the settings</source>
@@ -4408,6 +4416,22 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     <message>
         <source>Download recommended</source>
         <translation>下載建議項目</translation>
+    </message>
+    <message>
+        <source>Updates</source>
+        <translation type="unfinished">更新</translation>
+    </message>
+    <message>
+        <source>Update automatically once a week</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Update Now</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries, frequency lists and pitch-accent sources whose publisher posts updates (Jitendex, JMdict, Wiktionary, Jiten, …) are downloaded again when a newer version is out. Their order and on/off state stay as they are.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Storage</source>
@@ -6544,6 +6568,10 @@ Words to add: %3. Continue?</source>
         <translation>建立桌面捷徑…</translation>
     </message>
     <message>
+        <source>Update Dictionaries Now</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Download Recommended Resources...</source>
         <translation>下載推薦資源…</translation>
     </message>
@@ -6634,6 +6662,42 @@ Words to add: %3. Continue?</source>
     <message>
         <source>Shortcut created.</source>
         <translation>已建立捷徑。</translation>
+    </message>
+    <message>
+        <source>Checking for dictionary updates…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not check for dictionary updates: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloading dictionary updates…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Your dictionaries changed during the check. Try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>None of your dictionaries publish updates.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries are up to date (%1 could not be checked).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries are up to date.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionary updates</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries updated: %1</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Downloaded resources were left inactive because their storage folder changed.</source>
@@ -9571,16 +9635,16 @@ No index files are deleted.</source>
         <translation>取消中……</translation>
     </message>
     <message>
+        <source>Recommended resources</source>
+        <translation>建議資源</translation>
+    </message>
+    <message>
         <source>Resource settings are busy or could not be saved. Wait for the active task and try again.</source>
         <translation>資源設定忙碌中或無法儲存。請等待進行中的工作完成後再試一次。</translation>
     </message>
     <message>
         <source>Another task is using the indexed resources — try again when it finishes.</source>
         <translation>另一項工作正在使用已索引資源 — 請稍後再試一次。</translation>
-    </message>
-    <message>
-        <source>Recommended resources</source>
-        <translation>建議資源</translation>
     </message>
     <message>
         <source>The download stopped before it finished. Try again.</source>
@@ -10311,6 +10375,10 @@ No index files are deleted.</source>
     <message>
         <source>General</source>
         <translation>一般</translation>
+    </message>
+    <message>
+        <source>Utilities</source>
+        <translation>實用工具</translation>
     </message>
     <message>
         <source>Keyboard</source>
@@ -12129,14 +12197,6 @@ Your installed resources and your theme are kept.</source>
         <translation>稍後</translation>
     </message>
     <message>
-        <source>Utilities tab</source>
-        <translation>實用工具分頁</translation>
-    </message>
-    <message>
-        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
-        <translation>選擇「實用工具」分頁要顯示哪些工具。至少會保留一項。</translation>
-    </message>
-    <message>
         <source>App</source>
         <translation>應用程式</translation>
     </message>
@@ -12273,6 +12333,16 @@ Your installed resources and your theme are kept.</source>
     <message>
         <source>Download disk image</source>
         <translation>下載磁碟映像</translation>
+    </message>
+</context><context>
+    <name>UtilitiesSettingsPanel</name>
+    <message>
+        <source>Utilities</source>
+        <translation>實用工具</translation>
+    </message>
+    <message>
+        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
+        <translation>選擇「實用工具」分頁要顯示哪些工具。至少會保留一項。</translation>
     </message>
 </context><context>
     <name>VulkanModelDownloadWorker</name>

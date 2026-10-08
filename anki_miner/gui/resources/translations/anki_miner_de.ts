@@ -2409,6 +2409,14 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Ein eigenes ZIP im Yomitan-Format als Definitionsquelle hinzufügen.</translation>
     </message>
     <message>
+        <source>Keep dictionaries up to date</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries that publish updates (Jitendex, JMdict, Wiktionary, Jiten, …) update themselves once a week; Update Now checks right away.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Jisho.org online fallback (Japanese)</source>
         <translation>Jisho.org-Online-Rückgriff (Japanisch)</translation>
     </message>
@@ -2653,8 +2661,8 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Die Werkzeuge im Werkzeuge-Tab auswählen</translation>
     </message>
     <message>
-        <source>Hide the Utilities tools you do not use, or bring them back, under Settings → General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
-        <translation>Nicht genutzte Werkzeuge im Tab Werkzeuge ausblenden oder wieder einblenden, unter Einstellungen → Allgemein. Ein ausgeblendetes Werkzeug behält hier seinen Eintrag; seine Schaltfläche „Öffnen“ führt zu diesem Kontrollkästchen.</translation>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings → Utilities. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation>Nicht genutzte Werkzeuge im Tab Werkzeuge ausblenden oder wieder einblenden, unter Einstellungen → Werkzeuge. Ein ausgeblendetes Werkzeug behält hier seinen Eintrag; seine Schaltfläche „Öffnen“ führt zu diesem Kontrollkästchen.</translation>
     </message>
     <message>
         <source>Search the settings</source>
@@ -4433,6 +4441,22 @@ Dies ändert %n Notizen (%1) und versieht sie mit dem Tag %2. Fortfahren?</numer
     <message>
         <source>Download recommended</source>
         <translation>Empfohlene herunterladen</translation>
+    </message>
+    <message>
+        <source>Updates</source>
+        <translation type="unfinished">Aktualisierungen</translation>
+    </message>
+    <message>
+        <source>Update automatically once a week</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Update Now</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries, frequency lists and pitch-accent sources whose publisher posts updates (Jitendex, JMdict, Wiktionary, Jiten, …) are downloaded again when a newer version is out. Their order and on/off state stay as they are.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Storage</source>
@@ -6581,6 +6605,10 @@ Hinzuzufügende Wörter: %3. Fortfahren?</translation>
         <translation>Desktop-Verknüpfung erstellen...</translation>
     </message>
     <message>
+        <source>Update Dictionaries Now</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Download Recommended Resources...</source>
         <translation>Empfohlene Ressourcen herunterladen...</translation>
     </message>
@@ -6671,6 +6699,42 @@ Hinzuzufügende Wörter: %3. Fortfahren?</translation>
     <message>
         <source>Shortcut created.</source>
         <translation>Verknüpfung erstellt.</translation>
+    </message>
+    <message>
+        <source>Checking for dictionary updates…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not check for dictionary updates: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloading dictionary updates…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Your dictionaries changed during the check. Try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>None of your dictionaries publish updates.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries are up to date (%1 could not be checked).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries are up to date.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionary updates</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries updated: %1</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Downloaded resources were left inactive because their storage folder changed.</source>
@@ -9610,16 +9674,16 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Wird abgebrochen…</translation>
     </message>
     <message>
+        <source>Recommended resources</source>
+        <translation>Empfohlene Ressourcen</translation>
+    </message>
+    <message>
         <source>Resource settings are busy or could not be saved. Wait for the active task and try again.</source>
         <translation>Ressourceneinstellungen sind ausgelastet oder konnten nicht gespeichert werden. Warten Sie die aktive Aufgabe ab und versuchen Sie es erneut.</translation>
     </message>
     <message>
         <source>Another task is using the indexed resources — try again when it finishes.</source>
         <translation>Eine andere Aufgabe verwendet gerade die indizierten Ressourcen — versuchen Sie es erneut, sobald sie abgeschlossen ist.</translation>
-    </message>
-    <message>
-        <source>Recommended resources</source>
-        <translation>Empfohlene Ressourcen</translation>
     </message>
     <message>
         <source>The download stopped before it finished. Try again.</source>
@@ -10350,6 +10414,10 @@ Es werden keine Indexdateien gelöscht.</translation>
     <message>
         <source>General</source>
         <translation>Allgemein</translation>
+    </message>
+    <message>
+        <source>Utilities</source>
+        <translation>Werkzeuge</translation>
     </message>
     <message>
         <source>Keyboard</source>
@@ -12170,14 +12238,6 @@ Ihre installierten Ressourcen und Ihr Design bleiben erhalten.</translation>
         <translation>Später</translation>
     </message>
     <message>
-        <source>Utilities tab</source>
-        <translation>Werkzeuge-Tab</translation>
-    </message>
-    <message>
-        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
-        <translation>Wählen Sie, welche Werkzeuge der Werkzeuge-Tab zeigt. Mindestens eines bleibt.</translation>
-    </message>
-    <message>
         <source>App</source>
         <translation>App</translation>
     </message>
@@ -12314,6 +12374,16 @@ Ihre installierten Ressourcen und Ihr Design bleiben erhalten.</translation>
     <message>
         <source>Download disk image</source>
         <translation>Image herunterladen</translation>
+    </message>
+</context><context>
+    <name>UtilitiesSettingsPanel</name>
+    <message>
+        <source>Utilities</source>
+        <translation>Werkzeuge</translation>
+    </message>
+    <message>
+        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
+        <translation>Wählen Sie, welche Werkzeuge der Werkzeuge-Tab zeigt. Mindestens eines bleibt.</translation>
     </message>
 </context><context>
     <name>VulkanModelDownloadWorker</name>

@@ -2412,6 +2412,14 @@ No index files are deleted.</source>
         <translation>Добавьте свой собственный zip-словарь формата Yomitan как источник определений.</translation>
     </message>
     <message>
+        <source>Keep dictionaries up to date</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries that publish updates (Jitendex, JMdict, Wiktionary, Jiten, …) update themselves once a week; Update Now checks right away.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Jisho.org online fallback (Japanese)</source>
         <translation>Онлайн-резерв Jisho.org (японский)</translation>
     </message>
@@ -2656,8 +2664,8 @@ No index files are deleted.</source>
         <translation>Выбрать инструменты на вкладке «Утилиты»</translation>
     </message>
     <message>
-        <source>Hide the Utilities tools you do not use, or bring them back, under Settings → General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
-        <translation>Скрывайте неиспользуемые инструменты вкладки «Утилиты» или возвращайте их в разделе Настройки → Общие. Скрытый инструмент сохраняет здесь свою запись; его кнопка «Открыть» ведёт к этому флажку.</translation>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings → Utilities. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation>Скрывайте неиспользуемые инструменты вкладки «Утилиты» или возвращайте их в разделе Настройки → Утилиты. Скрытый инструмент сохраняет здесь свою запись; его кнопка «Открыть» ведёт к этому флажку.</translation>
     </message>
     <message>
         <source>Search the settings</source>
@@ -4458,6 +4466,22 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     <message>
         <source>Download recommended</source>
         <translation>Загрузить рекомендуемые</translation>
+    </message>
+    <message>
+        <source>Updates</source>
+        <translation type="unfinished">Обновления</translation>
+    </message>
+    <message>
+        <source>Update automatically once a week</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Update Now</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries, frequency lists and pitch-accent sources whose publisher posts updates (Jitendex, JMdict, Wiktionary, Jiten, …) are downloaded again when a newer version is out. Their order and on/off state stay as they are.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Storage</source>
@@ -6618,6 +6642,10 @@ Words to add: %3. Continue?</source>
         <translation>Создать ярлык на рабочем столе...</translation>
     </message>
     <message>
+        <source>Update Dictionaries Now</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Download Recommended Resources...</source>
         <translation>Загрузить рекомендуемые ресурсы...</translation>
     </message>
@@ -6708,6 +6736,42 @@ Words to add: %3. Continue?</source>
     <message>
         <source>Shortcut created.</source>
         <translation>Ярлык создан.</translation>
+    </message>
+    <message>
+        <source>Checking for dictionary updates…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not check for dictionary updates: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloading dictionary updates…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Your dictionaries changed during the check. Try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>None of your dictionaries publish updates.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries are up to date (%1 could not be checked).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries are up to date.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionary updates</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries updated: %1</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Downloaded resources were left inactive because their storage folder changed.</source>
@@ -9649,16 +9713,16 @@ No index files are deleted.</source>
         <translation>Отмена…</translation>
     </message>
     <message>
+        <source>Recommended resources</source>
+        <translation>Рекомендуемые ресурсы</translation>
+    </message>
+    <message>
         <source>Resource settings are busy or could not be saved. Wait for the active task and try again.</source>
         <translation>Настройки ресурсов заняты или не могут быть сохранены. Дождитесь завершения активной задачи и попробуйте снова.</translation>
     </message>
     <message>
         <source>Another task is using the indexed resources — try again when it finishes.</source>
         <translation>Другая задача сейчас использует индексированные ресурсы — попробуйте снова, когда она завершится.</translation>
-    </message>
-    <message>
-        <source>Recommended resources</source>
-        <translation>Рекомендуемые ресурсы</translation>
     </message>
     <message>
         <source>The download stopped before it finished. Try again.</source>
@@ -10389,6 +10453,10 @@ No index files are deleted.</source>
     <message>
         <source>General</source>
         <translation>Общие</translation>
+    </message>
+    <message>
+        <source>Utilities</source>
+        <translation>Утилиты</translation>
     </message>
     <message>
         <source>Keyboard</source>
@@ -12211,14 +12279,6 @@ Your installed resources and your theme are kept.</source>
         <translation>Позже</translation>
     </message>
     <message>
-        <source>Utilities tab</source>
-        <translation>Вкладка «Утилиты»</translation>
-    </message>
-    <message>
-        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
-        <translation>Выберите, какие инструменты показывает вкладка «Утилиты». Хотя бы один остаётся.</translation>
-    </message>
-    <message>
         <source>App</source>
         <translation>Приложение</translation>
     </message>
@@ -12355,6 +12415,16 @@ Your installed resources and your theme are kept.</source>
     <message>
         <source>Download disk image</source>
         <translation>Скачать образ диска</translation>
+    </message>
+</context><context>
+    <name>UtilitiesSettingsPanel</name>
+    <message>
+        <source>Utilities</source>
+        <translation>Утилиты</translation>
+    </message>
+    <message>
+        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
+        <translation>Выберите, какие инструменты показывает вкладка «Утилиты». Хотя бы один остаётся.</translation>
     </message>
 </context><context>
     <name>VulkanModelDownloadWorker</name>

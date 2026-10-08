@@ -2406,6 +2406,14 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Tambahkan zip kamus berformat Yomitan Anda sendiri sebagai sumber definisi.</translation>
     </message>
     <message>
+        <source>Keep dictionaries up to date</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries that publish updates (Jitendex, JMdict, Wiktionary, Jiten, …) update themselves once a week; Update Now checks right away.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Jisho.org online fallback (Japanese)</source>
         <translation>Fallback daring Jisho.org (Jepang)</translation>
     </message>
@@ -2650,8 +2658,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Pilih alat pada tab Utilitas</translation>
     </message>
     <message>
-        <source>Hide the Utilities tools you do not use, or bring them back, under Settings → General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
-        <translation>Sembunyikan alat Utilitas yang tidak Anda gunakan, atau tampilkan kembali, di Pengaturan → Umum. Alat yang disembunyikan tetap memiliki entrinya di sini; tombol Buka-nya mengarah ke kotak centang tersebut.</translation>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings → Utilities. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation>Sembunyikan alat Utilitas yang tidak Anda gunakan, atau tampilkan kembali, di Pengaturan → Utilitas. Alat yang disembunyikan tetap memiliki entrinya di sini; tombol Buka-nya mengarah ke kotak centang tersebut.</translation>
     </message>
     <message>
         <source>Search the settings</source>
@@ -4408,6 +4416,22 @@ Ini akan mengubah %n catatan (%1) dan memberinya tag %2. Lanjutkan?</numerusform
     <message>
         <source>Download recommended</source>
         <translation>Unduh yang direkomendasikan</translation>
+    </message>
+    <message>
+        <source>Updates</source>
+        <translation type="unfinished">Pembaruan</translation>
+    </message>
+    <message>
+        <source>Update automatically once a week</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Update Now</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries, frequency lists and pitch-accent sources whose publisher posts updates (Jitendex, JMdict, Wiktionary, Jiten, …) are downloaded again when a newer version is out. Their order and on/off state stay as they are.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Storage</source>
@@ -6544,6 +6568,10 @@ Kata yang akan ditambahkan: %3. Lanjutkan?</translation>
         <translation>Buat Pintasan Desktop...</translation>
     </message>
     <message>
+        <source>Update Dictionaries Now</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Download Recommended Resources...</source>
         <translation>Unduh Sumber Daya yang Direkomendasikan...</translation>
     </message>
@@ -6634,6 +6662,42 @@ Kata yang akan ditambahkan: %3. Lanjutkan?</translation>
     <message>
         <source>Shortcut created.</source>
         <translation>Pintasan dibuat.</translation>
+    </message>
+    <message>
+        <source>Checking for dictionary updates…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not check for dictionary updates: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloading dictionary updates…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Your dictionaries changed during the check. Try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>None of your dictionaries publish updates.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries are up to date (%1 could not be checked).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries are up to date.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionary updates</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries updated: %1</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Downloaded resources were left inactive because their storage folder changed.</source>
@@ -9571,16 +9635,16 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Membatalkan…</translation>
     </message>
     <message>
+        <source>Recommended resources</source>
+        <translation>Sumber daya yang direkomendasikan</translation>
+    </message>
+    <message>
         <source>Resource settings are busy or could not be saved. Wait for the active task and try again.</source>
         <translation>Pengaturan sumber daya sedang sibuk atau tidak dapat disimpan. Tunggu tugas yang aktif dan coba lagi.</translation>
     </message>
     <message>
         <source>Another task is using the indexed resources — try again when it finishes.</source>
         <translation>Tugas lain sedang menggunakan sumber daya terindeks — coba lagi setelah selesai.</translation>
-    </message>
-    <message>
-        <source>Recommended resources</source>
-        <translation>Sumber daya yang direkomendasikan</translation>
     </message>
     <message>
         <source>The download stopped before it finished. Try again.</source>
@@ -10311,6 +10375,10 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <message>
         <source>General</source>
         <translation>Umum</translation>
+    </message>
+    <message>
+        <source>Utilities</source>
+        <translation>Utilitas</translation>
     </message>
     <message>
         <source>Keyboard</source>
@@ -12129,14 +12197,6 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
         <translation>Nanti</translation>
     </message>
     <message>
-        <source>Utilities tab</source>
-        <translation>Tab Utilitas</translation>
-    </message>
-    <message>
-        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
-        <translation>Pilih alat yang ditampilkan pada tab Utilitas. Setidaknya satu akan tetap ada.</translation>
-    </message>
-    <message>
         <source>App</source>
         <translation>Aplikasi</translation>
     </message>
@@ -12273,6 +12333,16 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
     <message>
         <source>Download disk image</source>
         <translation>Unduh disk image</translation>
+    </message>
+</context><context>
+    <name>UtilitiesSettingsPanel</name>
+    <message>
+        <source>Utilities</source>
+        <translation>Utilitas</translation>
+    </message>
+    <message>
+        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
+        <translation>Pilih alat yang ditampilkan pada tab Utilitas. Setidaknya satu akan tetap ada.</translation>
     </message>
 </context><context>
     <name>VulkanModelDownloadWorker</name>

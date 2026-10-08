@@ -2400,6 +2400,14 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Keep dictionaries up to date</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries that publish updates (Jitendex, JMdict, Wiktionary, Jiten, …) update themselves once a week; Update Now checks right away.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Jisho.org online fallback (Japanese)</source>
         <translation type="unfinished" />
     </message>
@@ -2644,7 +2652,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Hide the Utilities tools you do not use, or bring them back, under Settings → General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings → Utilities. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4420,6 +4428,22 @@ This will modify %n notes (%1) and tag them %2. Continue?</numerusform>
     </message>
     <message>
         <source>Download recommended</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Updates</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Update automatically once a week</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Update Now</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries, frequency lists and pitch-accent sources whose publisher posts updates (Jitendex, JMdict, Wiktionary, Jiten, …) are downloaded again when a newer version is out. Their order and on/off state stay as they are.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6555,6 +6579,10 @@ Words to add: %3. Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Update Dictionaries Now</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Download Recommended Resources...</source>
         <translation type="unfinished" />
     </message>
@@ -6644,6 +6672,42 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Shortcut created.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Checking for dictionary updates…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not check for dictionary updates: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloading dictionary updates…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Your dictionaries changed during the check. Try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>None of your dictionaries publish updates.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries are up to date (%1 could not be checked).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries are up to date.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionary updates</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries updated: %1</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -9573,15 +9637,15 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Recommended resources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Resource settings are busy or could not be saved. Wait for the active task and try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Another task is using the indexed resources — try again when it finishes.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Recommended resources</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -10312,6 +10376,10 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>General</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Utilities</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -12123,14 +12191,6 @@ Your installed resources and your theme are kept.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Utilities tab</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>App</source>
         <translation type="unfinished" />
     </message>
@@ -12266,6 +12326,16 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Download disk image</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>UtilitiesSettingsPanel</name>
+    <message>
+        <source>Utilities</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
