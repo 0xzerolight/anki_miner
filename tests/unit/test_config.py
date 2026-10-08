@@ -214,10 +214,7 @@ def test_dictionary_chain_default():
     config = AnkiMinerConfig()
     chain = config.dictionary_chain
     assert isinstance(chain, tuple)
-    assert chain == (
-        ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),
-        ChainEntry(kind="jisho", dict_id=None, enabled=False),
-    )
+    assert chain == (ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),)
 
 
 def test_fresh_ja_starts_with_no_note_type():
@@ -292,11 +289,11 @@ def test_dictionary_chain_replace():
     from anki_miner.config import AnkiMinerConfig, ChainEntry
 
     config = AnkiMinerConfig()
-    new_chain = (ChainEntry(kind="jisho", dict_id=None, enabled=False),)
+    new_chain = (ChainEntry(kind="indexed", dict_id="jitendex", enabled=False),)
     updated = replace(config, dictionary_chain=new_chain)
     assert updated.dictionary_chain == new_chain
     # Original is unchanged
-    assert len(config.dictionary_chain) == 2
+    assert len(config.dictionary_chain) == 1
 
 
 def test_frequency_chain_default_empty():

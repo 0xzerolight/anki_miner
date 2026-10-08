@@ -137,7 +137,7 @@ class IndexedSlotRegistry(ABC, Generic[MetaT, EntryT]):
         upgraded past without reimporting, which the chain build silently
         drops. A slot missing on disk is NOT reported — the user may have
         deleted it deliberately, and there is nothing left to rebuild from. An
-        entry of a kind with no slot (jisho, the online audio sources) cannot be
+        entry of a kind with no slot (the online audio sources) cannot be
         stale. Sorted by id for deterministic messaging.
 
         Does NOT call load(); callers control when the scan happens.

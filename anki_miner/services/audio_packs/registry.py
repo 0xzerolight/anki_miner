@@ -198,10 +198,9 @@ class AudioPackRegistry(IndexedSlotRegistry[AudioPackMeta, AudioSourceEntry]):
           warning.
         * Non-pack entries (``kind="jpod101"``, ``kind="googletts"``) are
           silently skipped here; they are composed by the service factory (T7)
-          around the list this method returns.  Unlike
-          ``DictionaryRegistry.build_provider_chain``, which
-          builds ``JishoProvider`` inline, this registry intentionally returns
-          only local pack fetchers and carries no network-fetcher knowledge.
+          around the list this method returns. This registry intentionally
+          returns only local pack fetchers and carries no network-fetcher
+          knowledge.
 
         ``load_result`` is an optional sink for the user-facing warnings (duck
         typed: anything with a ``warnings`` list). ``None`` keeps them in the

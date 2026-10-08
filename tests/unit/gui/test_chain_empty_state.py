@@ -65,7 +65,7 @@ def test_a_chain_with_rows_shows_the_list(qtbot, tmp_path):
 def test_remove_is_offered_only_for_a_selected_row(qtbot, tmp_path):
     panel = DictionarySettingsPanel(tmp_path)
     qtbot.addWidget(panel)
-    panel.set_chain((ChainEntry(kind="jisho", dict_id=None, enabled=True),))
+    panel.set_chain((ChainEntry(kind="indexed", dict_id="spare", enabled=True),))
     assert not panel._remove_btn.isEnabled()
 
     panel._list.setCurrentRow(0)

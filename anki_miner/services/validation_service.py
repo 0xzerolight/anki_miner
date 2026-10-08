@@ -319,9 +319,10 @@ class ValidationService:
         # by-product of a file existing: mining without a usable offline
         # dictionary produces cards with no definition, which is the failure the
         # first-run setup used to let people walk into by calling the dictionary
-        # optional. Still a WARNING — the chain can fall back to Jisho — but it
-        # is now emitted for "none configured" too, which the old on-disk check
-        # could not represent.
+        # optional. Still a WARNING, so startup never blocks on it (mining
+        # itself refuses to start without one: require_usable_offline_provider),
+        # but it is now emitted for "none configured" too, which the old
+        # on-disk check could not represent.
         dictionary_ok, dictionary_msg = self._check_offline_dictionary()
         if dictionary_ok:
             tool_versions["offline-dictionary"] = dictionary_msg

@@ -274,7 +274,7 @@ def test_dictionary_panel_rebuild_disables_updates(qtbot, tmp_path: Path):
     panel = DictionarySettingsPanel(dicts_root=dicts_root)
     qtbot.addWidget(panel)
     try:
-        panel.set_chain((ChainEntry(kind="jisho", dict_id=None, enabled=True),))
+        panel.set_chain((ChainEntry(kind="indexed", dict_id="spare", enabled=True),))
         update_calls: list[bool] = []
         original = panel._list.setUpdatesEnabled
 

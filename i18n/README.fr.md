@@ -163,7 +163,7 @@ Vous voulez qu'un autre thème soit ajouté ? Proposez-le dans une Issue GitHub.
 1. **Lisez les sous-titres** et découpez le texte en mots individuels.
 2. **Filtrez** pour ne garder que les mots pleins que vous ne connaissez pas déjà - en révisant éventuellement la liste vous-même dans le Curateur de mots.
 3. **Récupérez une capture d'écran et un extrait audio** de la vidéo pour chaque ligne.
-4. **Recherchez les définitions** dans vos dictionnaires hors ligne configurés, avec repli optionnel sur Jisho en ligne pour le japonais (plus lent, limité en débit).
+4. **Recherchez les définitions** dans vos dictionnaires hors ligne configurés.
 5. **Envoyez les cartes terminées à Anki.**
 
 </details>
@@ -187,7 +187,7 @@ Utilise des ensembles de noms propres regroupés dérivés de [JMnedict](https:/
 | « Paquet introuvable »         | Choisissez un paquet existant dans Paramètres -> Cartes et Anki. Les paquets ne sont pas créés automatiquement ; créez-en un dans Anki d'abord si vous en avez besoin d'un nouveau. |
 | « Type de note introuvable »    | Configurez les noms de champs de votre type de note dans Paramètres -> Cartes et Anki.               |
 | « ffmpeg introuvable »       | Installez ffmpeg et ajoutez-le au PATH.                                               |
-| Aucune définition trouvée     | Ajoutez un dictionnaire Yomitan dans Paramètres -> Dictionnaires -> Ajouter un dictionnaire… (recommandé), ou, pour le japonais, activez le repli sur Jisho (plus lent, limité en débit). |
+| Aucune définition trouvée     | Ajoutez un dictionnaire Yomitan dans Paramètres -> Dictionnaires -> Ajouter un dictionnaire… |
 | L'installateur Windows ne s'ouvre pas / avertissement SmartScreen | Consultez les [Notes de premier lancement](#notes-de-premier-lancement-versions-non-signées) : sélectionnez **Plus d'informations** -> **Exécuter quand même** ; restaurez les faux positifs de Defender depuis l'**historique de protection**. |
 | Une installation neuve n'a aucune définition | Exécutez Outils -> Assistant de configuration ou Outils -> Télécharger les ressources recommandées. Pour un import manuel, gardez l'archive ZIP Yomitan intacte (ne la décompressez pas). |
 | L'ajout de dictionnaire se bloque ou échoue | Notez la dernière étape visible et joignez les journaux (voir « Où sont les journaux ? » ci-dessous). Indiquez le nom, la source et la taille de l'archive ZIP du dictionnaire dans le rapport. |

@@ -163,7 +163,7 @@ Ingin tema lain ditambahkan? Ajukan lewat GitHub Issue.
 1. **Baca subtitel** dan pecah teksnya menjadi kata per kata.
 2. **Filter** ke kata isi yang belum Anda kenal - opsional meninjau sendiri daftarnya di Word Curator.
 3. **Ambil tangkapan layar dan klip audio** dari video untuk setiap baris.
-4. **Cari definisi** di kamus offline yang Anda konfigurasi, opsional beralih ke Jisho online untuk bahasa Jepang (lebih lambat, dibatasi laju).
+4. **Cari definisi** di kamus offline yang Anda konfigurasi.
 5. **Kirim kartu yang sudah jadi ke Anki.**
 
 </details>
@@ -187,7 +187,7 @@ Menggunakan kumpulan kata nama bawaan yang berasal dari [JMnedict](https://www.e
 | "Dek tidak ditemukan"         | Pilih dek yang sudah ada di Pengaturan -> Kartu & Anki. Dek tidak dibuat otomatis; buat dulu di Anki jika Anda perlu dek baru. |
 | "Tipe catatan tidak ditemukan"    | Konfigurasikan nama bidang tipe catatan Anda di Pengaturan -> Kartu & Anki.               |
 | "ffmpeg tidak ditemukan"       | Pasang ffmpeg dan tambahkan ke PATH.                                               |
-| Tidak ada definisi ditemukan     | Tambahkan kamus Yomitan di Pengaturan -> Kamus -> Tambahkan kamus… (disarankan), atau, untuk bahasa Jepang, aktifkan fallback Jisho (lebih lambat, dibatasi laju). |
+| Tidak ada definisi ditemukan     | Tambahkan kamus Yomitan di Pengaturan -> Kamus -> Tambahkan kamus… |
 | Installer Windows tidak mau terbuka / peringatan SmartScreen | Lihat [Catatan penjalanan pertama](#catatan-penjalanan-pertama-build-tanpa-tanda-tangan): pilih **Info lainnya** -> **Tetap jalankan**; pulihkan positif palsu Defender dari **Riwayat perlindungan**. |
 | Instalasi baru tidak punya definisi | Jalankan Alat -> Wizard Penyiapan atau Alat -> Unduh Sumber Daya yang Direkomendasikan. Untuk impor manual, biarkan ZIP Yomitan utuh (jangan diekstrak). |
 | Tambahkan kamus macet atau gagal | Catat tahap terakhir yang terlihat dan lampirkan log (lihat "Di mana letak lognya?" di bawah). Sertakan nama ZIP kamus, sumber, dan ukurannya dalam laporan. |

@@ -101,11 +101,6 @@ class TestHasUsableOfflineProvider:
 
         assert service.has_usable_offline_provider() is False
 
-    def test_jisho_only_chain_does_not_count(self, tmp_path: Path):
-        service, _registry = self._build(_config(tmp_path, ChainEntry(kind="jisho", dict_id=None, enabled=True)))
-
-        assert service.has_usable_offline_provider() is False
-
     def test_loaded_positive_entry_offline_provider_counts_without_rescan(self, tmp_path: Path):
         _seed_dict(tmp_path, "valid", "Valid")
         service, registry = self._build(_config(tmp_path, ChainEntry(kind="indexed", dict_id="valid", enabled=True)))
@@ -155,18 +150,6 @@ class TestCollectDictionaryCss:
         assert (
             collect_dictionary_css(_config(tmp_path, ChainEntry(kind="indexed", dict_id="a-dict", enabled=True))) == ""
         )
-
-    def test_skips_jisho_online_provider(self, tmp_path: Path):
-        _seed_dict(tmp_path, "a-dict", "A", styles_css="span { color: red }")
-        css = collect_dictionary_css(
-            _config(
-                tmp_path,
-                ChainEntry(kind="jisho", dict_id=None, enabled=True),
-                ChainEntry(kind="indexed", dict_id="a-dict", enabled=True),
-            )
-        )
-        assert '[data-dictionary-id="a-dict"]' in css
-        # No crash from the online provider; it simply contributes nothing.
 
     def test_distinct_titles_stay_isolated(self, tmp_path: Path):
         _seed_dict(tmp_path, "a-dict", "A", styles_css="span { color: red }")
@@ -307,12 +290,11 @@ def make_provider(name="Test", available=True, return_value=None, load_raises=No
     """Create a mock DictionaryProvider with configurable behavior.
 
     Specced to the per-word Protocol surface only (no ``lookup_many``) so the
-    batch fast-path treats these as legacy/online providers and falls back to
+    batch fast-path treats these as legacy providers and falls back to
     per-word ``lookup`` — matching the assertions in these tests.
     """
-    p = MagicMock(spec=["name", "is_online", "is_available", "lookup", "load", "close"])
+    p = MagicMock(spec=["name", "is_available", "lookup", "load", "close"])
     p.name = name
-    p.is_online = False  # default; tests override as needed
     p.is_available.return_value = available
     p.lookup.return_value = return_value
     if load_raises is not None:
@@ -352,10 +334,10 @@ class TestGetDefinition:
     def test_skips_unavailable_provider(self, test_config):
         """Providers where is_available() returns False are skipped without calling lookup()."""
         p1 = make_provider("offline", available=False, return_value="should not be returned")
-        p2 = make_provider("online", available=True, return_value="online result")
+        p2 = make_provider("second", available=True, return_value="second result")
         service = DefinitionService(test_config, providers=[p1, p2])
 
-        assert service.get_definitions_batch([("x", None)])[0] == "online result"
+        assert service.get_definitions_batch([("x", None)])[0] == "second result"
         p1.lookup.assert_not_called()
         p2.lookup.assert_called_once()
 
@@ -507,7 +489,6 @@ def make_batch_provider(name="Batch", available=True, table=None):
     table = table or {}
     p = MagicMock()
     p.name = name
-    p.is_online = False
     p.is_available.return_value = available
     p.load.return_value = True
     p.lookup.side_effect = lambda w: table.get(w)
@@ -549,10 +530,9 @@ class TestGetDefinitionsBatchFastPath:
         assert service.get_definitions_batch([("nope", None)]) == [None]
 
     def test_falls_back_to_per_word_for_provider_without_lookup_many(self, test_config):
-        # provider without lookup_many (Jisho-like)
-        legacy = MagicMock(spec=["name", "is_online", "is_available", "lookup", "load"])
+        # provider without lookup_many (legacy)
+        legacy = MagicMock(spec=["name", "is_available", "lookup", "load"])
         legacy.name = "Legacy"
-        legacy.is_online = False
         legacy.is_available.return_value = True
         legacy.load.return_value = True
         legacy.lookup.side_effect = lambda w: {"y": "legacy-y"}.get(w)
@@ -686,8 +666,7 @@ class TestGetDefinitionsBatchFastPath:
 
     def test_cancellation_stops_before_next_per_word_request(self, test_config):
         cancelled = False
-        provider = make_provider("Jisho")
-        provider.is_online = True
+        provider = make_provider("Legacy")
 
         def lookup(word):
             nonlocal cancelled
@@ -716,56 +695,28 @@ class TestConfigStored:
 
 class TestGetGlossariesBatchPerWordWalk:
     """get_glossaries_batch walk semantics via the per-word path (providers lacking
-    lookup_many): offline concatenation + online fallback + skip-unavailable. The
-    fast (lookup_many) path is covered by TestGetGlossariesBatchFastPath."""
+    lookup_many): offline concatenation + skip-unavailable. The fast (lookup_many)
+    path is covered by TestGetGlossariesBatchFastPath."""
 
     def test_concatenates_all_offline_hits(self, test_config):
         p1 = make_provider("A", return_value="<div>A</div>")
-        p1.is_online = False
         p2 = make_provider("B", return_value="<div>B</div>")
-        p2.is_online = False
         service = DefinitionService(test_config, providers=[p1, p2])
 
         assert service.get_glossaries_batch([("x", None)]) == ["<div>A</div><div>B</div>"]
         p1.lookup.assert_called_once_with("x")
         p2.lookup.assert_called_once_with("x")
 
-    def test_skips_online_when_offline_hit_exists(self, test_config):
-        offline = make_provider("Off", return_value="<div>off</div>")
-        offline.is_online = False
-        online = make_provider("Jisho", return_value="<div>online</div>")
-        online.is_online = True
-        service = DefinitionService(test_config, providers=[offline, online])
-
-        assert service.get_glossaries_batch([("x", None)]) == ["<div>off</div>"]
-        offline.lookup.assert_called_once_with("x")
-        online.lookup.assert_not_called()
-
-    def test_uses_online_when_no_offline_hits(self, test_config):
-        offline = make_provider("Off", return_value=None)
-        offline.is_online = False
-        online = make_provider("Jisho", return_value="<div>online</div>")
-        online.is_online = True
-        service = DefinitionService(test_config, providers=[offline, online])
-
-        assert service.get_glossaries_batch([("x", None)]) == ["<div>online</div>"]
-        offline.lookup.assert_called_once_with("x")
-        online.lookup.assert_called_once_with("x")
-
     def test_returns_none_when_all_miss(self, test_config):
-        offline = make_provider("Off", return_value=None)
-        offline.is_online = False
-        online = make_provider("Jisho", return_value=None)
-        online.is_online = True
-        service = DefinitionService(test_config, providers=[offline, online])
+        p1 = make_provider("A", return_value=None)
+        p2 = make_provider("B", return_value=None)
+        service = DefinitionService(test_config, providers=[p1, p2])
 
         assert service.get_glossaries_batch([("x", None)]) == [None]
 
     def test_skips_unavailable_providers(self, test_config):
         unavail = make_provider("X", available=False, return_value="<div>X</div>")
-        unavail.is_online = False
         ok = make_provider("Y", available=True, return_value="<div>Y</div>")
-        ok.is_online = False
         service = DefinitionService(test_config, providers=[unavail, ok])
 
         assert service.get_glossaries_batch([("x", None)]) == ["<div>Y</div>"]
@@ -777,7 +728,6 @@ def make_batch_offline_provider(name="BatchOff", available=True, table=None):
     table = table or {}
     p = MagicMock()
     p.name = name
-    p.is_online = False
     p.is_available.return_value = available
     p.load.return_value = True
     p.lookup.side_effect = lambda w: table.get(w)
@@ -791,7 +741,6 @@ class TestGetGlossariesBatch:
     def test_returns_glossaries_in_order(self, test_config):
         responses = {"a": "<div>a</div>", "b": None, "c": "<div>c</div>"}
         p = make_provider("M", available=True)
-        p.is_online = False
         p.lookup.side_effect = lambda w: responses.get(w)
         service = DefinitionService(test_config, providers=[p])
 
@@ -806,7 +755,6 @@ class TestGetGlossariesBatch:
     def test_progress_callback_fires(self, test_config, recording_progress):
         responses = {"a": "<div>a</div>", "b": None}
         p = make_provider("M", available=True)
-        p.is_online = False
         p.lookup.side_effect = lambda w: responses.get(w)
         service = DefinitionService(test_config, providers=[p])
 
@@ -865,19 +813,6 @@ class TestGetGlossariesBatchFastPath:
         # x hits both providers → concatenated; y hits only p2
         assert results == ["<div>X1</div><div>X2</div>", "<div>Y2</div>"]
 
-    def test_online_provider_still_falls_back_per_word(self, test_config):
-        """Online provider (no lookup_many on chain) remains per-word for misses."""
-        offline = make_batch_offline_provider("Off", table={"x": "<div>X</div>"})
-        online = make_provider("Jisho", return_value="<div>J</div>")
-        online.is_online = True
-        service = DefinitionService(test_config, providers=[offline, online])
-
-        results = service.get_glossaries_batch([("x", None), ("z", None)])
-
-        # x has offline hit → online not consulted for x
-        online.lookup.assert_called_once_with("z")
-        assert results == ["<div>X</div>", "<div>J</div>"]
-
     def test_missing_words_are_none(self, test_config):
         """Words with no provider hits produce None."""
         p = make_batch_offline_provider("Off", table={})
@@ -897,7 +832,6 @@ class TestGetGlossariesBatchFastPath:
     def test_provider_without_lookup_many_falls_back_to_per_word(self, test_config):
         """Legacy offline providers lacking lookup_many still use per-word lookup."""
         legacy = make_provider("Legacy", return_value="<div>L</div>")
-        legacy.is_online = False
         service = DefinitionService(test_config, providers=[legacy])
 
         results = service.get_glossaries_batch([("x", None)])
@@ -955,24 +889,23 @@ class TestGetGlossariesBatchFastPath:
         assert results == ["<div>hit</div>"]
         assert seen == [{"pick": "VERB"}]
 
-    def test_cancellation_stops_before_next_online_request(self, test_config):
+    def test_cancellation_stops_before_next_per_word_request(self, test_config):
         cancelled = False
-        online = make_provider("Jisho")
-        online.is_online = True
+        legacy = make_provider("Legacy")
 
         def lookup(word):
             nonlocal cancelled
             cancelled = True
             return None
 
-        online.lookup.side_effect = lookup
-        service = DefinitionService(test_config, providers=[online])
+        legacy.lookup.side_effect = lookup
+        service = DefinitionService(test_config, providers=[legacy])
 
         assert service.get_glossaries_batch(
             [("first", None), ("second", None)],
             is_cancelled=lambda: cancelled,
         ) == [None, None]
-        online.lookup.assert_called_once_with("first")
+        legacy.lookup.assert_called_once_with("first")
 
 
 class TestClose:
@@ -990,9 +923,9 @@ class TestClose:
         p2.close.assert_called_once()
 
     def test_skips_providers_without_close(self, test_config):
-        """Providers without a ``close`` attribute must not raise (Jisho case)."""
-        p1 = MagicMock(spec=["name", "is_online", "is_available", "lookup", "load"])
-        p1.name = "Jisho"
+        """Providers without a ``close`` attribute must not raise."""
+        p1 = MagicMock(spec=["name", "is_available", "lookup", "load"])
+        p1.name = "Legacy"
         p2 = make_provider("Indexed")
         service = DefinitionService(test_config, providers=[p1, p2])
 
@@ -1047,9 +980,7 @@ class TestLookupAllOffline:
     def test_returns_labeled_tuples_for_available_offline_hits(self, test_config):
         """Offline providers that return hits are included as (name, html)."""
         p1 = make_provider("Dict A", return_value="<div>A</div>")
-        p1.is_online = False
         p2 = make_provider("Dict B", return_value="<div>B</div>")
-        p2.is_online = False
         service = DefinitionService(test_config, providers=[p1, p2])
 
         result = service.lookup_all_offline("word")
@@ -1059,11 +990,8 @@ class TestLookupAllOffline:
     def test_preserves_chain_order(self, test_config):
         """Order of results matches the provider list order."""
         p1 = make_provider("First", return_value="html1")
-        p1.is_online = False
         p2 = make_provider("Second", return_value="html2")
-        p2.is_online = False
         p3 = make_provider("Third", return_value="html3")
-        p3.is_online = False
         service = DefinitionService(test_config, providers=[p1, p2, p3])
 
         result = service.lookup_all_offline("x")
@@ -1071,26 +999,10 @@ class TestLookupAllOffline:
         names = [name for name, _ in result]
         assert names == ["First", "Second", "Third"]
 
-    def test_excludes_online_provider_even_with_hit(self, test_config):
-        """Online providers are skipped even if their lookup returns a hit."""
-        offline = make_provider("Off", return_value="<div>offline</div>")
-        offline.is_online = False
-        online = make_provider("Jisho", return_value="<div>online</div>")
-        online.is_online = True
-        service = DefinitionService(test_config, providers=[offline, online])
-
-        result = service.lookup_all_offline("x")
-
-        assert result == [("Off", "<div>offline</div>")]
-        offline.lookup.assert_called_once_with("x")
-        online.lookup.assert_not_called()
-
     def test_skips_unavailable_offline_provider(self, test_config):
         """Offline providers where is_available() is False are skipped."""
         unavail = make_provider("Bad", available=False, return_value="<div>x</div>")
-        unavail.is_online = False
         ok = make_provider("Good", available=True, return_value="<div>y</div>")
-        ok.is_online = False
         service = DefinitionService(test_config, providers=[unavail, ok])
 
         result = service.lookup_all_offline("word")
@@ -1101,9 +1013,7 @@ class TestLookupAllOffline:
     def test_skips_offline_providers_returning_none(self, test_config):
         """Offline providers that return None are excluded."""
         miss = make_provider("Empty", return_value=None)
-        miss.is_online = False
         hit = make_provider("Full", return_value="<div>found</div>")
-        hit.is_online = False
         service = DefinitionService(test_config, providers=[miss, hit])
 
         result = service.lookup_all_offline("x")
@@ -1113,11 +1023,9 @@ class TestLookupAllOffline:
         hit.lookup.assert_called_once_with("x")
 
     def test_returns_empty_list_when_nothing_matches(self, test_config):
-        """Empty result list when all providers miss or are online."""
+        """Empty result list when every provider misses."""
         p1 = make_provider("Empty", return_value=None)
-        p1.is_online = False
-        p2 = make_provider("Online", return_value="<div>o</div>")
-        p2.is_online = True
+        p2 = make_provider("Also empty", return_value=None)
         service = DefinitionService(test_config, providers=[p1, p2])
 
         result = service.lookup_all_offline("x")
@@ -1135,29 +1043,25 @@ class TestLookupAllOffline:
     def test_calls_ensure_loaded(self, test_config):
         """lookup_all_offline triggers ensure_loaded() before lookups."""
         p1 = make_provider("A", return_value="hit")
-        p1.is_online = False
         service = DefinitionService(test_config, providers=[p1])
 
         service.lookup_all_offline("x")
 
         p1.load.assert_called_once()
 
-    def test_mixed_online_offline_with_multiple_hits(self, test_config):
-        """Integration: multiple offline, one online; excludes online."""
+    def test_multiple_offline_hits_in_chain_order(self, test_config):
+        """Integration: every offline hit is returned, in chain order."""
         off1 = make_provider("Off1", return_value="<div>1</div>")
-        off1.is_online = False
         off2 = make_provider("Off2", return_value="<div>2</div>")
-        off2.is_online = False
-        online = make_provider("Jisho", return_value="<div>j</div>")
-        online.is_online = True
-        service = DefinitionService(test_config, providers=[off1, online, off2])
+        off3 = make_provider("Off3", return_value="<div>3</div>")
+        service = DefinitionService(test_config, providers=[off1, off2, off3])
 
         result = service.lookup_all_offline("word")
 
-        assert result == [("Off1", "<div>1</div>"), ("Off2", "<div>2</div>")]
+        assert result == [("Off1", "<div>1</div>"), ("Off2", "<div>2</div>"), ("Off3", "<div>3</div>")]
         off1.lookup.assert_called_once_with("word")
-        online.lookup.assert_not_called()
         off2.lookup.assert_called_once_with("word")
+        off3.lookup.assert_called_once_with("word")
 
     def test_lemma_reaches_lookup_many_for_batch_capable_provider(self, test_config):
         """Rule A' pane fix: a lemma passed to lookup_all_offline threads into a
@@ -1361,20 +1265,8 @@ class TestProviderRaisesMidChain:
         result = service.get_definitions_batch([("a", None), ("b", None)])
         assert result == ["hit-a", None]
 
-    def test_get_glossaries_batch_online_skip_after_offline_miss(self, test_config):
-        """The online fallback raising is also skipped (offline missed first)."""
-        offline = make_provider("Off", return_value=None)
-        offline.is_online = False
-        online = make_provider("Jisho")
-        online.is_online = True
-        online.lookup.side_effect = RuntimeError("online boom")
-        service = DefinitionService(test_config, providers=[offline, online])
-
-        assert service.get_glossaries_batch([("x", None)]) == [None]
-
     def test_get_glossaries_batch_skip_and_continue(self, test_config):
         p = make_provider("Boom", return_value=None)
-        p.is_online = False
         p.lookup.side_effect = RuntimeError("glossaries boom")
         service = DefinitionService(test_config, providers=[p])
 
@@ -1383,7 +1275,6 @@ class TestProviderRaisesMidChain:
 
     def test_lookup_all_offline_skip_and_continue(self, test_config):
         p = make_provider("Boom")
-        p.is_online = False
         p.lookup.side_effect = RuntimeError("offline boom")
         service = DefinitionService(test_config, providers=[p])
 
@@ -1417,24 +1308,12 @@ class TestHasOfflineDefinitions:
     def test_per_word_fallback_provider(self, test_config):
         """Providers lacking lookup_many are consulted per-word."""
         p = make_provider("Legacy", return_value=None)
-        p.is_online = False
         p.lookup.side_effect = lambda w: "<div>hit</div>" if w == "x" else None
         service = DefinitionService(test_config, providers=[p])
 
         result = service.has_offline_definitions(["x", "y"])
 
         assert result == {"x": True, "y": False}
-
-    def test_online_provider_ignored_even_with_hit(self, test_config):
-        """Online providers never contribute and never get queried."""
-        online = make_provider("Jisho", return_value="<div>online</div>")
-        online.is_online = True
-        service = DefinitionService(test_config, providers=[online])
-
-        result = service.has_offline_definitions(["x"])
-
-        assert result == {"x": False}
-        online.lookup.assert_not_called()
 
     def test_offline_hit_short_circuits_remaining_providers(self, test_config):
         """A word resolved offline is not re-queried against later providers."""
@@ -1461,7 +1340,6 @@ class TestHasOfflineDefinitions:
     def test_provider_exception_degrades_to_miss(self, test_config):
         """A raising provider is treated as a miss, never aborting the probe."""
         boom = make_provider("Boom")
-        boom.is_online = False
         boom.lookup.side_effect = RuntimeError("offline boom")
         service = DefinitionService(test_config, providers=[boom])
 
@@ -1523,12 +1401,11 @@ class TestHomographScopeGateParity:
         assert service.get_definitions_batch([("しゃべる", None)]) == [None]
 
 
-def make_has_terms_provider(name="HT", table=None, available=True, online=False):
+def make_has_terms_provider(name="HT", table=None, available=True):
     """Mock offline provider exposing ``has_terms`` (compound matching)."""
     table = table or set()
-    p = MagicMock(spec=["name", "is_online", "is_available", "lookup", "load", "close", "has_terms"])
+    p = MagicMock(spec=["name", "is_available", "lookup", "load", "close", "has_terms"])
     p.name = name
-    p.is_online = online
     p.is_available.return_value = available
     p.load.return_value = True
     p.has_terms.side_effect = lambda terms: table & set(terms)
@@ -1549,12 +1426,6 @@ class TestOfflineTermsExist:
         # early-exit: p2 must only be asked about terms p1 did not attest
         p2.has_terms.assert_called_once()
         assert "走り出す" not in p2.has_terms.call_args[0][0]
-
-    def test_online_provider_skipped(self, test_config):
-        online = make_has_terms_provider("Jisho", {"走り出す"}, online=True)
-        service = DefinitionService(test_config, providers=[online])
-        assert service.offline_terms_exist(["走り出す"]) == set()
-        online.has_terms.assert_not_called()
 
     def test_unavailable_provider_skipped(self, test_config):
         p = make_has_terms_provider("A", {"走り出す"}, available=False)
@@ -1909,12 +1780,11 @@ class TestLookupAllOfflineFallback:
         assert service.lookup_all_offline("走らせた") == []
 
 
-def make_terms_readings_provider(name="TR", table=None, available=True, online=False):
+def make_terms_readings_provider(name="TR", table=None, available=True):
     """Mock offline provider exposing ``terms_readings`` (reading attestation)."""
     table = table or {}
-    p = MagicMock(spec=["name", "is_online", "is_available", "lookup", "load", "close", "terms_readings"])
+    p = MagicMock(spec=["name", "is_available", "lookup", "load", "close", "terms_readings"])
     p.name = name
-    p.is_online = online
     p.is_available.return_value = available
     p.load.return_value = True
     p.terms_readings.side_effect = lambda terms: {t: table[t] for t in terms if t in table}
@@ -1935,12 +1805,10 @@ class TestOfflineTermReadings:
         # p2 must only be asked about terms p1 did not attest.
         assert "バカ力" not in p2.terms_readings.call_args[0][0]
 
-    def test_online_and_unavailable_providers_skipped(self, test_config):
-        online = make_terms_readings_provider("Jisho", {"バカ力": ["ばかぢから"]}, online=True)
+    def test_unavailable_provider_skipped(self, test_config):
         down = make_terms_readings_provider("Down", {"バカ力": ["ばかぢから"]}, available=False)
-        service = DefinitionService(test_config, providers=[online, down])
+        service = DefinitionService(test_config, providers=[down])
         assert service.offline_term_readings(["バカ力"]) == {}
-        online.terms_readings.assert_not_called()
         down.terms_readings.assert_not_called()
 
     def test_provider_without_terms_readings_attests_nothing(self, test_config):
@@ -2079,24 +1947,6 @@ class TestOfflineTermCommonness:
         service = DefinitionService(test_config, providers=[p])
         assert service.offline_term_commonness(["有る", "有る"]) == {"有る": True}
 
-    def test_online_aware_like_provider_ignored(self, test_config, tmp_path: Path):
-        """An online provider is never consulted, even if it claimed awareness."""
-        aware = _seed_tagged_provider(
-            tmp_path,
-            "jit",
-            "Jitendex",
-            [DictRow(term="有る", reading="ある", content="<div>be</div>", tags="popular", rules="v5", sequence=1)],
-            _JITENDEX_TAGS,
-        )
-        online = MagicMock(spec=["name", "is_online", "is_available", "commonness_aware", "attest_quality", "load"])
-        online.name = "Jisho"
-        online.is_online = True
-        online.is_available.return_value = True
-        online.commonness_aware = True
-        service = DefinitionService(test_config, providers=[online, aware])
-        assert service.offline_term_commonness(["有る"]) == {"有る": True}
-        online.attest_quality.assert_not_called()
-
 
 class TestOfflineKanaAttestQuality:
     """``offline_kana_attest_quality`` — reading-arm ON; term_rules over ALL
@@ -2177,9 +2027,8 @@ class TestOfflineKanaAttestQuality:
             [DictRow(term="有る", reading="ある", content="<div>be</div>", tags="popular", rules="v5", sequence=1)],
             _JITENDEX_TAGS,
         )
-        boom = MagicMock(spec=["name", "is_online", "is_available", "commonness_aware", "attest_quality", "load"])
+        boom = MagicMock(spec=["name", "is_available", "commonness_aware", "attest_quality", "load"])
         boom.name = "Boom"
-        boom.is_online = False
         boom.is_available.return_value = True
         boom.commonness_aware = False
         boom.attest_quality.side_effect = RuntimeError("boom")
@@ -2351,9 +2200,8 @@ class TestDefinitionsBatchReceipt:
     """
 
     def _slot_provider(self, name, dict_id, db_path):
-        p = MagicMock(spec=["name", "is_online", "is_available", "lookup", "load", "close", "dict_id", "_db_path"])
+        p = MagicMock(spec=["name", "is_available", "lookup", "load", "close", "dict_id", "_db_path"])
         p.name = name
-        p.is_online = False
         p.is_available.return_value = True
         p.load.return_value = True
         p.lookup.return_value = None
@@ -2483,11 +2331,8 @@ class TestEveryProviderBoundaryNamesTheSlot:
 
     @staticmethod
     def _per_word_provider(name, *extra):
-        p = MagicMock(
-            spec=["name", "is_online", "is_available", "lookup", "load", "close", "dict_id", "_db_path", *extra]
-        )
+        p = MagicMock(spec=["name", "is_available", "lookup", "load", "close", "dict_id", "_db_path", *extra])
         p.name = name
-        p.is_online = False
         p.is_available.return_value = True
         p.load.return_value = True
         p.lookup.return_value = None
@@ -2562,21 +2407,19 @@ class TestEveryProviderBoundaryNamesTheSlot:
         [record] = self._failures(caplog, "Provider 'GlossWord' raised during lookup of 'x';")
         self._assert_names_slot(record, db, "RuntimeError: gloss word boom")
 
-    def test_glossaries_online_fallback_lookup(self, test_config, caplog):
+    def test_glossaries_per_word_lookup_without_slot(self, test_config, caplog):
         import logging
 
-        offline = make_provider("Off", return_value=None)
-        online = make_provider("Jisho")
-        online.is_online = True
-        online.lookup.side_effect = RuntimeError("online boom")
-        service = DefinitionService(test_config, providers=[offline, online])
+        legacy = make_provider("Legacy")
+        legacy.lookup.side_effect = RuntimeError("legacy boom")
+        service = DefinitionService(test_config, providers=[legacy])
 
         with caplog.at_level(logging.WARNING, logger=self._LOGGER):
             assert service.get_glossaries_batch([("x", None)]) == [None]
 
-        [record] = self._failures(caplog, "Provider 'Jisho' raised during lookup of 'x';")
+        [record] = self._failures(caplog, "Provider 'Legacy' raised during lookup of 'x';")
         message = record.getMessage()
-        assert "dict_id=- db=- RuntimeError: online boom" in message
+        assert "dict_id=- db=- RuntimeError: legacy boom" in message
         assert record.exc_info is not None
 
     def test_lookup_all_offline_exact_lookup(self, test_config, caplog, tmp_path):

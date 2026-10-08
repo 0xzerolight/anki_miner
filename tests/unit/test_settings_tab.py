@@ -973,7 +973,7 @@ class TestDictionaryRemovedPersistsNarrowly:
             youtube_cookies_file=tmp_path / "gone.txt",
             dictionary_chain=(
                 ChainEntry(kind="indexed", dict_id="dict-a", enabled=True),
-                ChainEntry(kind="jisho", dict_id=None, enabled=True),
+                ChainEntry(kind="indexed", dict_id="spare", enabled=True),
             ),
         )
         widget = SettingsTab(cfg)
@@ -987,13 +987,13 @@ class TestDictionaryRemovedPersistsNarrowly:
             widget.config_changed.connect(received.append)
 
             # Simulate the panel state AFTER a remove: dict-a gone from the chain.
-            widget.dictionary_panel.set_chain((ChainEntry(kind="jisho", dict_id=None, enabled=True),))
+            widget.dictionary_panel.set_chain((ChainEntry(kind="indexed", dict_id="spare", enabled=True),))
 
             # chain_changed is the signal that drives persist (OVH-032).
             widget.dictionary_panel.chain_changed.emit()
 
             assert received, "chain change must be persisted even though Save would have aborted"
-            assert received[-1].dictionary_chain == (ChainEntry(kind="jisho", dict_id=None, enabled=True),)
+            assert received[-1].dictionary_chain == (ChainEntry(kind="indexed", dict_id="spare", enabled=True),)
             assert warnings == [], "the narrow persist must not pop a validation warning"
         finally:
             widget.deleteLater()
@@ -1009,7 +1009,7 @@ class TestDictionaryRemovedPersistsNarrowly:
             anki_deck_name="original_deck",
             dictionary_chain=(
                 ChainEntry(kind="indexed", dict_id="dict-a", enabled=True),
-                ChainEntry(kind="jisho", dict_id=None, enabled=True),
+                ChainEntry(kind="indexed", dict_id="spare", enabled=True),
             ),
         )
         widget = SettingsTab(cfg)
@@ -1024,13 +1024,13 @@ class TestDictionaryRemovedPersistsNarrowly:
             # Unrelated pending edit the user has NOT saved.
             widget.anki_panel.set_deck_name("unsaved_deck")
 
-            widget.dictionary_panel.set_chain((ChainEntry(kind="jisho", dict_id=None, enabled=True),))
+            widget.dictionary_panel.set_chain((ChainEntry(kind="indexed", dict_id="spare", enabled=True),))
             # chain_changed is the signal that drives persist (OVH-032).
             widget.dictionary_panel.chain_changed.emit()
 
             assert received, "chain change must be persisted"
             # Only the chain changed; the unrelated edit was not committed.
-            assert received[-1].dictionary_chain == (ChainEntry(kind="jisho", dict_id=None, enabled=True),)
+            assert received[-1].dictionary_chain == (ChainEntry(kind="indexed", dict_id="spare", enabled=True),)
             assert received[-1].anki_deck_name == "original_deck"
         finally:
             widget.deleteLater()

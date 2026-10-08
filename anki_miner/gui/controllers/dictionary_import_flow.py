@@ -792,10 +792,7 @@ class DictionaryImportFlow(PanelImportFlowBase):
 
             chain = list(self._panel.get_chain())
             new_entries = [ChainEntry(kind="indexed", dict_id=m.dict_id, enabled=True) for m in orphans]
-            # Insert before the first jisho entry so the online fallback stays last.
-            # The UI only ever creates one jisho row; "first jisho wins" is fine.
-            insert_at = next((i for i, e in enumerate(chain) if e.kind == "jisho"), len(chain))
-            new_chain = tuple(chain[:insert_at] + new_entries + chain[insert_at:])
+            new_chain = tuple(chain + new_entries)
 
             self._panel.refresh_registry()
             self._panel.set_chain(new_chain)

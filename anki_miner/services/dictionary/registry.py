@@ -22,7 +22,6 @@ from anki_miner.services._sqlite_index import (
     scan_index_root,
 )
 from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
-from anki_miner.services.dictionary.providers.jisho_provider import JishoProvider
 from anki_miner.services.dictionary.storage import SCHEMA_VERSION
 from anki_miner.utils.i18n import tr_format
 
@@ -93,7 +92,7 @@ class DictionaryRegistry(IndexedSlotRegistry[DictMeta, ChainEntry]):
         return config.dictionary_chain
 
     def _slot_id(self, entry: ChainEntry) -> str | None:
-        return entry.dict_id if entry.kind == "indexed" else None
+        return entry.dict_id
 
     def _meta_id(self, meta: DictMeta) -> str:
         return meta.dict_id
@@ -115,8 +114,8 @@ class DictionaryRegistry(IndexedSlotRegistry[DictMeta, ChainEntry]):
 
         Entries with enabled=False are skipped. Indexed entries whose dict_id
         is missing on disk are dropped with a warning. Indexed entries stamped
-        for another mining language are dropped the same way. Jisho is included
-        if its ChainEntry is enabled. Providers are returned in chain order.
+        for another mining language are dropped the same way. Providers are
+        returned in chain order.
 
         ``load_result`` is an optional sink for the user-facing warnings (duck
         typed: anything with a ``warnings`` list). ``None`` keeps them in the
@@ -126,7 +125,7 @@ class DictionaryRegistry(IndexedSlotRegistry[DictMeta, ChainEntry]):
         """
         language = config_language(config)
         chain: list[DictionaryProvider] = []
-        for entry, meta in self._walk_enabled(config, language, load_result):
+        for _entry, meta in self._walk_enabled(config, language, load_result):
             if meta is not None:
                 chain.append(
                     IndexedDictProvider(
@@ -136,10 +135,8 @@ class DictionaryRegistry(IndexedSlotRegistry[DictMeta, ChainEntry]):
                         keys=get_profile(language).dict_keys,
                     )
                 )
-            elif entry.kind == "indexed":
+            else:
                 logger.warning("Skipping indexed ChainEntry with null dict_id")
-            elif entry.kind == "jisho":
-                chain.append(JishoProvider(config.jisho_api_url, config.jisho_delay))
         return chain
 
 

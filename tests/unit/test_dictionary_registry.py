@@ -8,7 +8,6 @@ from unittest.mock import patch
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
-from anki_miner.services.dictionary.providers.jisho_provider import JishoProvider
 from anki_miner.services.dictionary.registry import DictionaryRegistry
 from anki_miner.services.dictionary.storage import (
     SCHEMA_VERSION,
@@ -118,7 +117,6 @@ class TestDictionaryRegistry:
             dictionary_chain=(
                 ChainEntry(kind="indexed", dict_id="daijirin-v1", enabled=True),
                 ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),
-                ChainEntry(kind="jisho", dict_id=None, enabled=True),
             ),
         )
 
@@ -126,49 +124,39 @@ class TestDictionaryRegistry:
         registry.load()
         chain = registry.build_provider_chain(config)
 
-        assert len(chain) == 3
+        assert len(chain) == 2
         assert isinstance(chain[0], IndexedDictProvider)
         assert chain[0].dict_id == "daijirin-v1"
         assert isinstance(chain[1], IndexedDictProvider)
         assert chain[1].dict_id == "jmdict-english"
-        assert isinstance(chain[2], JishoProvider)
 
     def test_build_chain_skips_disabled_entries(self, tmp_path: Path):
         _seed_dict(tmp_path, "jmdict-english", "JMdict")
         config = AnkiMinerConfig()
         config = replace(
             config,
-            dictionary_chain=(
-                ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=False),
-                ChainEntry(kind="jisho", dict_id=None, enabled=True),
-            ),
+            dictionary_chain=(ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=False),),
         )
 
         registry = DictionaryRegistry(tmp_path)
         registry.load()
         chain = registry.build_provider_chain(config)
-        assert len(chain) == 1
-        assert isinstance(chain[0], JishoProvider)
+        assert chain == []
 
     def test_build_chain_drops_missing_dict_with_debug_log(self, tmp_path: Path, caplog):
         # No dicts on disk; config references one
         config = AnkiMinerConfig()
         config = replace(
             config,
-            dictionary_chain=(
-                ChainEntry(kind="indexed", dict_id="ghost", enabled=True),
-                ChainEntry(kind="jisho", dict_id=None, enabled=True),
-            ),
+            dictionary_chain=(ChainEntry(kind="indexed", dict_id="ghost", enabled=True),),
         )
 
         registry = DictionaryRegistry(tmp_path)
         registry.load()
-        # A missing on-disk dict is logged at DEBUG (not WARNING) and skipped;
-        # the chain continues with the remaining providers.
+        # A missing on-disk dict is logged at DEBUG (not WARNING) and skipped.
         caplog.set_level(logging.DEBUG)
         chain = registry.build_provider_chain(config)
-        assert len(chain) == 1
-        assert isinstance(chain[0], JishoProvider)
+        assert chain == []
         assert "ghost" in caplog.text or "not found" in caplog.text
 
     def test_disk_only_dict_discovered(self, tmp_path: Path):
@@ -226,10 +214,7 @@ class TestDictionaryRegistry:
         config = AnkiMinerConfig()
         config = replace(
             config,
-            dictionary_chain=(
-                ChainEntry(kind="indexed", dict_id="stale-dict", enabled=True),
-                ChainEntry(kind="jisho", dict_id=None, enabled=True),
-            ),
+            dictionary_chain=(ChainEntry(kind="indexed", dict_id="stale-dict", enabled=True),),
         )
 
         registry = DictionaryRegistry(tmp_path)
@@ -242,8 +227,7 @@ class TestDictionaryRegistry:
         # build_provider_chain excludes it with a warning
         caplog.set_level(logging.WARNING)
         chain = registry.build_provider_chain(config)
-        assert len(chain) == 1
-        assert isinstance(chain[0], JishoProvider)
+        assert chain == []
         assert "stale-dict" in caplog.text or "schema" in caplog.text.lower()
 
     # ------------------------------------------------------------------

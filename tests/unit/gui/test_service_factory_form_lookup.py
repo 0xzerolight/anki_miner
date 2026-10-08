@@ -26,11 +26,8 @@ def indexed(test_config) -> AnkiMinerConfig:
 
 
 @pytest.fixture
-def jisho_only(test_config) -> AnkiMinerConfig:
-    return dataclasses.replace(
-        test_config,
-        dictionary_chain=(ChainEntry(kind="jisho", dict_id=None, enabled=True),),
-    )
+def no_dictionary(test_config) -> AnkiMinerConfig:
+    return dataclasses.replace(test_config, dictionary_chain=())
 
 
 def test_the_builder_is_the_definition_services_row_probe(indexed):
@@ -38,8 +35,8 @@ def test_the_builder_is_the_definition_services_row_probe(indexed):
     assert services.subtitle_parser._form_lookup == services.definition_service.offline_term_rows
 
 
-def test_no_indexed_dictionary_means_no_lookup(jisho_only):
-    services = service_factory.create_services(jisho_only)
+def test_no_indexed_dictionary_means_no_lookup(no_dictionary):
+    services = service_factory.create_services(no_dictionary)
     assert services.subtitle_parser._form_lookup is None
 
 

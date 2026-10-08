@@ -40,7 +40,7 @@ def panel_factory(qtbot, monkeypatch):
         panel.set_chain(
             (
                 ChainEntry(kind="indexed", dict_id="slot", enabled=True),
-                ChainEntry(kind="jisho", dict_id=None, enabled=True),
+                ChainEntry(kind="indexed", dict_id="spare", enabled=True),
             )
         )
         panel.set_remove_chain_commit(commit)
@@ -104,13 +104,13 @@ def test_owned_remove_renames_then_persists_before_off_thread_cleanup(
         assert cleanup_started.wait(timeout=3)
         assert not canonical.exists()
         assert len(list(tmp_path.glob("slot.tomb-*"))) == 1
-        assert [entry.kind for entry in committed[0]] == ["jisho"]
+        assert [entry.dict_id for entry in committed[0]] == ["spare"]
     finally:
         allow_cleanup.set()
 
     _wait_remove(panel, qtbot)
     assert list(tmp_path.glob("slot.tomb-*")) == []
-    assert [entry.kind for entry in panel.get_chain()] == ["jisho"]
+    assert [entry.dict_id for entry in panel.get_chain()] == ["spare"]
 
 
 def test_pre_save_failure_restores_tombstone_and_reports_intact_after_rescan(
@@ -151,7 +151,7 @@ def test_post_save_refresh_failure_never_restores_and_warns_removal_is_durable(
 
     assert not canonical.exists()
     assert list(tmp_path.glob("slot.tomb-*")) == []
-    assert [entry.kind for entry in panel.get_chain()] == ["jisho"]
+    assert [entry.dict_id for entry in panel.get_chain()] == ["spare"]
     assert "removal is saved" in _issue(panel).summary.lower()
 
 
@@ -288,7 +288,7 @@ def test_tombstone_cleanup_failure_keeps_durable_remove_and_reports_residue(
 
     assert not canonical.exists()
     assert len(list(tmp_path.glob("slot.tomb-*"))) == 1
-    assert [entry.kind for entry in panel.get_chain()] == ["jisho"]
+    assert [entry.dict_id for entry in panel.get_chain()] == ["spare"]
     assert "cleanup will be retried" in _issue(panel).summary.lower()
 
 
@@ -314,5 +314,5 @@ def test_cleanup_dispatch_failure_keeps_durable_remove_and_reports_residue(
 
     assert not canonical.exists()
     assert len(list(tmp_path.glob("slot.tomb-*"))) == 1
-    assert [entry.kind for entry in panel.get_chain()] == ["jisho"]
+    assert [entry.dict_id for entry in panel.get_chain()] == ["spare"]
     assert "cleanup will be retried" in _issue(panel).summary.lower()

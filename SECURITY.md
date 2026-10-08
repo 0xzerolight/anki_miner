@@ -20,7 +20,7 @@ In scope:
 
 Out of scope:
 
-- Vulnerabilities in third-party services (Anki, yt-dlp, Jisho).
+- Vulnerabilities in third-party services (Anki, yt-dlp).
 - Issues requiring local filesystem write access already granted to the user.
 
 ## Supported versions

@@ -23,7 +23,9 @@ PRE_CHANGE_CONFIG = Path(__file__).resolve().parents[1] / "fixtures" / "config" 
 #: the per-key equality check below skips these names; a load must migrate
 #: them away rather than round-trip them, which the final set-difference
 #: assertion in test_pre_change_config_loads_every_field_unchanged confirms.
-REMOVED_FIELDS = frozenset({"use_native_file_dialogs", "use_sentence_length_filter", "ui_font_scale"})
+REMOVED_FIELDS = frozenset(
+    {"use_native_file_dialogs", "use_sentence_length_filter", "ui_font_scale", "jisho_api_url", "jisho_delay"}
+)
 
 
 @pytest.fixture
@@ -121,6 +123,11 @@ def test_pre_change_config_loads_every_field_unchanged(isolated_config_file):
         if key == "config_schema_version":  # envelope key, not a dataclass field
             continue
         if key in REMOVED_FIELDS:
+            continue
+        if key == "dictionary_chain":
+            # The fixture's disabled Jisho row is the online dictionary since
+            # removed; it migrates away and the rest keeps its order.
+            assert reserialized[key] == [entry for entry in value if entry["kind"] != "jisho"]
             continue
         if key == "anki_fields":
             # Keys added to the default mapping since the fixture are backfilled

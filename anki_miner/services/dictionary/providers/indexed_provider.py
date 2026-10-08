@@ -129,15 +129,11 @@ class IndexedDictProvider:
     def dictionary_css(self) -> str:
         """This dictionary's scoped styles.css (bare CSS, no <style> wrapper).
 
-        Empty for JMdict, online providers, and dicts imported before styles.css
-        capture. Concatenated by ``collect_dictionary_css`` into each card's
-        per-card ``<style>`` block; only valid after a successful ``load()``.
+        Empty for JMdict and dicts imported before styles.css capture.
+        Concatenated by ``collect_dictionary_css`` into each card's per-card
+        ``<style>`` block; only valid after a successful ``load()``.
         """
         return self._scoped_css
-
-    @property
-    def is_online(self) -> bool:
-        return False
 
     def is_available(self) -> bool:
         return self._conn is not None

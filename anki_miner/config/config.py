@@ -76,11 +76,10 @@ ZOOM_PRESETS: tuple[int, ...] = (75, 100, 125, 150, 175, 200)
 class ChainEntry:
     """One entry in the dictionary lookup chain.
 
-    Indexed entries reference a folder under ~/.anki_miner/dicts/<dict_id>/.
-    Jisho entries are the always-available online fallback; dict_id is None.
+    Each entry references a folder under ~/.anki_miner/dicts/<dict_id>/.
     """
 
-    kind: Literal["indexed", "jisho"]
+    kind: Literal["indexed"]
     dict_id: str | None = None
     enabled: bool = True
 
@@ -357,21 +356,16 @@ class AnkiMinerConfig:
     # the UI knows where to find the user's XML and where to write the
     # indexed DB.
     dictionary_chain: tuple["ChainEntry", ...] = field(
-        default_factory=lambda: (
-            ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=False),
-        )
+        default_factory=lambda: (ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),)
     )
     jmdict_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "JMdict_e")
     dicts_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "dicts")
-    jisho_api_url: str = "https://jisho.org/api/v1/search/words"
-    jisho_delay: float = 0.5  # Seconds between API calls. Jisho rate-limits; do NOT remove or reduce.
 
     # Expression audio settings (Issue #73). Fetches word pronunciation audio
     # from an external endpoint and writes it to the expression_audio Anki field.
     # Activation mirrors other optional fields (frequency, pitch): the feature
     # is on iff anki_fields["expression_audio"] is non-empty. Off by default
-    # because that field defaults to "". expression_audio_delay mirrors jisho_delay.
+    # because that field defaults to "".
     expression_audio_delay: float = 0.2  # Seconds between audio fetch requests.
     # Ordered list of audio sources tried in priority order.
     # The disabled googletts entry is present-but-off so the Settings UI can

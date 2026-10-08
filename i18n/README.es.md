@@ -163,7 +163,7 @@ Licencias de temas: [LICENSE-THEMES.md](../LICENSE-THEMES.md).
 1. **Lee los subtítulos** y divide el texto en palabras individuales.
 2. **Filtra** para obtener palabras de contenido que aún no conozcas, con la opción de revisar la lista tú mismo en el Word Curator.
 3. **Toma una captura de pantalla y un clip de audio** del video para cada línea.
-4. **Busca definiciones** en tus diccionarios offline configurados, con la opción de recurrir a Jisho en línea para el japonés (más lento, limitado por tasa de peticiones).
+4. **Busca definiciones** en tus diccionarios offline configurados.
 5. **Envía las tarjetas finalizadas a Anki.**
 
 </details>
@@ -187,7 +187,7 @@ Utiliza conjuntos de palabras de nombres incluidos derivados de [JMnedict](https
 | "Mazo no encontrado"         | Elige un mazo existente en Configuración -> Tarjetas y Anki. Los mazos no se crean automáticamente por ti; créalo primero en Anki si necesitas uno nuevo. |
 | "Tipo de nota no encontrado"    | Configura los nombres de los campos de tu tipo de nota en Configuración -> Tarjetas y Anki.               |
 | "No se encontró ffmpeg"       | Instala ffmpeg y añádelo al PATH.                                               |
-| No se encuentran definiciones     | Añade un diccionario de Yomitan en Configuración -> Diccionarios -> Añadir diccionario… (recomendado), o, para el japonés, activa el respaldo de Jisho (más lento, limitado por tasa de peticiones). |
+| No se encuentran definiciones     | Añade un diccionario de Yomitan en Configuración -> Diccionarios -> Añadir diccionario… |
 | El instalador de Windows no abre / advertencia de SmartScreen | Consulta las [Notas para la primera ejecución](#notas-para-la-primera-ejecución-versiones-no-firmadas): selecciona **Más información** -> **Ejecutar de todas formas**; restaura los falsos positivos de Defender desde el **Historial de protección**. |
 | Instalación limpia sin definiciones | Ejecuta Herramientas -> Asistente de configuración o Herramientas -> Descargar recursos recomendados. Para importación manual, mantén el ZIP de Yomitan intacto (no lo descomprimas). |
 | Añadir diccionario se congela o falla | Anota la última etapa visible y adjunta los registros (ver "¿Dónde están los registros?" más abajo). Incluye el nombre, el origen y el tamaño del ZIP del diccionario en el reporte. |

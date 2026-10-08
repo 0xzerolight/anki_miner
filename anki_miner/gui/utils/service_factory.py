@@ -227,8 +227,8 @@ def build_definition_service(
     Constructs the registry, loads it, assembles the provider chain, and wraps
     it in a DefinitionService. When ``config.dictionary_chain`` has any enabled
     indexed entry, the chain is eagerly loaded (``ensure_loaded``) — this is the
-    one path that touches sqlite, so it stays gated on having an indexed entry
-    to keep a Jisho-only config I/O-free.
+    one path that touches sqlite, so it stays gated on having an enabled entry:
+    a config with none stays I/O-free.
 
     Args:
         config: Mining configuration.
@@ -284,23 +284,10 @@ def build_definition_service(
                             ", ".join(failed),
                         )
                     )
-                # Key the empty-definitions outcome on OFFLINE availability:
-                # JishoProvider.is_available() is hard-True and Jisho sits in
-                # the same providers list, so `available` alone can never
-                # distinguish "Jisho only" from "nothing at all" (Issue #100:
-                # the reporter's missing-JMdict state warned "using Jisho
-                # only" while Jisho was disabled — and mined empty cards).
-                offline_available = [p for p in providers if p.is_available() and not p.is_online]
-                if not offline_available:
-                    jisho_enabled = any(e.kind == "jisho" and e.enabled for e in config.dictionary_chain)
-                    if jisho_enabled:
-                        load_result.warnings.append(
-                            QCoreApplication.translate(
-                                "ServiceFactory", "No offline dictionary — definitions will come from Jisho.org only"
-                            )
-                        )
-                    else:
-                        load_result.warnings.append(_no_dictionary_warning())
+                # Nothing in the chain can answer: mining would make cards with
+                # no definition (Issue #100), so say so.
+                if not available:
+                    load_result.warnings.append(_no_dictionary_warning())
 
     return definition_service
 
@@ -938,7 +925,7 @@ def create_services(
         # Headword-existence probe: injected iff an indexed offline dict is
         # enabled (compound matching, services/compound_matcher.py, is always on)
         # — it borrows the DefinitionService's offline_terms_exist seam, so a
-        # Jisho-only config stays I/O-free and behaves exactly as before.
+        # config with no enabled dictionary stays I/O-free.
         #
         # A caller that leaves ``subtitle_parser`` unset flows through THIS
         # fresh-parser branch, so every parse it runs over the same instance

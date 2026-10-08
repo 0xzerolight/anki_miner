@@ -487,12 +487,6 @@ class TestIndexedDictProviderHomographScope:
         assert "zero degrees" in html
 
 
-def test_indexed_provider_is_offline(tmp_path):
-    db_path = tmp_path / "dummy.sqlite"
-    provider = IndexedDictProvider(dict_id="x", db_path=db_path)
-    assert provider.is_online is False
-
-
 # ---------------------------------------------------------------------------
 # 5.1: dedup-before-cap + display-cap structural guard
 # ---------------------------------------------------------------------------

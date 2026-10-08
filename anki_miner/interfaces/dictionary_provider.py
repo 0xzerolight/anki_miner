@@ -6,23 +6,13 @@ from typing import Protocol
 class DictionaryProvider(Protocol):
     """Interface for a dictionary backend that can look up word definitions.
 
-    Any dictionary source (JMdict, Jisho API, custom dictionaries, etc.)
+    Any dictionary source (JMdict, Yomitan dictionaries, etc.)
     implements this protocol to participate in the pluggable definition system.
     """
 
     @property
     def name(self) -> str:
         """Human-readable name for this provider (e.g., 'JMdict Offline')."""
-        ...
-
-    @property
-    def is_online(self) -> bool:
-        """Whether this provider performs network I/O for lookups.
-
-        Online providers (Jisho) are used as a fallback in glossary
-        collection: skipped when at least one offline provider returns
-        a hit, to avoid per-word network latency.
-        """
         ...
 
     def is_available(self) -> bool:
@@ -52,10 +42,10 @@ class DictionaryProvider(Protocol):
         ...
 
     # NOTE: ``lookup_many`` is an OPTIONAL batch fast-path. It is intentionally
-    # NOT part of the required Protocol surface — online providers (e.g. Jisho)
-    # cannot batch and do not implement it. Consumers MUST probe for it at
-    # runtime (``callable(getattr(provider, "lookup_many", None))``) and fall
-    # back to per-word ``lookup`` when absent. An implementer's contract:
+    # NOT part of the required Protocol surface — providers predating it do not
+    # implement it. Consumers MUST probe for it at runtime
+    # (``callable(getattr(provider, "lookup_many", None))``) and fall back to
+    # per-word ``lookup`` when absent. An implementer's contract:
     #
     #     def lookup_many(
     #         self,

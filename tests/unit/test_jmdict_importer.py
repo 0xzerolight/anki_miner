@@ -243,7 +243,6 @@ class TestImportJmdictXmlEdgeCases:
 
         class LowerProvider:
             name = "lower"
-            is_online = False
 
             def load(self) -> bool:
                 return True

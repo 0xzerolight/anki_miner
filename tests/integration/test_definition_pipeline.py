@@ -8,7 +8,6 @@ import pytest
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.services.definition_service import DefinitionService
 from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
-from anki_miner.services.dictionary.providers.jisho_provider import JishoProvider
 from anki_miner.services.dictionary.storage import (
     SCHEMA_VERSION,
     DictRow,
@@ -21,13 +20,14 @@ from anki_miner.services.dictionary.storage import (
 class _StubOfflineProvider:
     """A minimal in-memory provider used to mimic an indexed offline dictionary."""
 
-    def __init__(self, entries: dict[str, str]):
+    def __init__(self, entries: dict[str, str], name: str = "StubOffline"):
         self._entries = entries
+        self._name = name
         self._loaded = False
 
     @property
     def name(self) -> str:
-        return "StubOffline"
+        return self._name
 
     def is_available(self) -> bool:
         return self._loaded
@@ -58,51 +58,52 @@ def offline_provider():
 
 
 class TestDefinitionPipeline:
-    """End-to-end tests over DefinitionService with offline + Jisho fallback."""
+    """End-to-end tests over DefinitionService's first-hit-wins chain."""
 
-    def test_offline_hit_skips_jisho(self, config, offline_provider):
-        """When the offline provider hits, Jisho is never queried."""
-        jisho = JishoProvider(delay=0)
-        service = DefinitionService(config, providers=[offline_provider, jisho])
+    @staticmethod
+    def _second() -> _StubOfflineProvider:
+        return _StubOfflineProvider({"飲む": "1. to drink"}, name="Second")
 
-        with patch.object(JishoProvider, "lookup") as mock_jisho:
+    def test_offline_hit_skips_second_provider(self, config, offline_provider):
+        """When the first provider hits, the second is never queried."""
+        second = self._second()
+        service = DefinitionService(config, providers=[offline_provider, second])
+
+        with patch.object(second, "lookup", wraps=second.lookup) as spy:
             result = service.get_definitions_batch([("食べる", None)])[0]
-        assert result is not None
-        assert "to eat" in result
-        mock_jisho.assert_not_called()
+            assert result is not None
+            assert "to eat" in result
 
-        with patch.object(JishoProvider, "lookup") as mock_jisho:
             result2 = service.get_definitions_batch([("学生", None)])[0]
-        assert result2 is not None
-        assert "student" in result2
-        mock_jisho.assert_not_called()
+            assert result2 is not None
+            assert "student" in result2
+        spy.assert_not_called()
 
-    def test_fallback_to_jisho_when_word_not_in_offline(self, config, offline_provider):
-        """When offline misses, the service queries the next provider (Jisho)."""
-        jisho = JishoProvider(delay=0)
-        service = DefinitionService(config, providers=[offline_provider, jisho])
+    def test_falls_through_to_second_provider_on_miss(self, config, offline_provider):
+        """When the first provider misses, the service queries the next one."""
+        second = self._second()
+        service = DefinitionService(config, providers=[offline_provider, second])
 
-        # "飲む" is NOT in the stub; Jisho should be queried as fallback.
-        with patch.object(JishoProvider, "lookup", return_value="1. to drink") as mock_jisho:
+        # "飲む" is NOT in the first stub; the second provider answers it.
+        with patch.object(second, "lookup", wraps=second.lookup) as spy:
             result = service.get_definitions_batch([("飲む", None)])[0]
 
-        mock_jisho.assert_called_once_with("飲む")
+        spy.assert_called_once_with("飲む")
         assert result == "1. to drink"
 
     def test_batch_mixed_results(self, config, offline_provider):
-        """Batch lookup with a mix of offline hits and Jisho fallbacks."""
-        jisho = JishoProvider(delay=0)
-        service = DefinitionService(config, providers=[offline_provider, jisho])
+        """Batch lookup with a mix of first-provider hits and fall-throughs."""
+        second = self._second()
+        service = DefinitionService(config, providers=[offline_provider, second])
 
-        # 飲む is missing, so its value comes from the Jisho fallback.
-        with patch.object(JishoProvider, "lookup", return_value="1. to drink"):
-            results = service.get_definitions_batch([("食べる", None), ("飲む", None), ("走る", None)])
+        # 飲む is missing from the first provider, so its value comes from Second.
+        results = service.get_definitions_batch([("食べる", None), ("飲む", None), ("走る", None)])
 
         assert len(results) == 3
-        assert results[0] is not None  # 食べる found in offline
+        assert results[0] is not None  # 食べる found in the first provider
         assert "to eat" in results[0]
-        assert results[1] == "1. to drink"  # 飲む via Jisho fallback
-        assert results[2] is not None  # 走る found in offline
+        assert results[1] == "1. to drink"  # 飲む via Second
+        assert results[2] is not None  # 走る found in the first provider
         assert "to run" in results[2]
 
 

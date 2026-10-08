@@ -53,10 +53,7 @@ def config(test_config, tmp_path):
         dicts_root=tmp_path / "dicts",
         freqs_root=tmp_path / "freqs",
         pitch_root=tmp_path / "pitch",
-        dictionary_chain=(
-            ChainEntry(kind="indexed", dict_id="j", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=False),
-        ),
+        dictionary_chain=(ChainEntry(kind="indexed", dict_id="j", enabled=True),),
         frequency_chain=(FreqEntry(source_id="jiten", enabled=True),),
         pitch_chain=(PitchSourceEntry(source_id="p", enabled=False),),
     )

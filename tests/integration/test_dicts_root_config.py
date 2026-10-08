@@ -52,10 +52,7 @@ def test_settings_tab_scans_custom_dicts_root(qtbot, tmp_path):
     config = replace(
         AnkiMinerConfig(),
         dicts_root=external,
-        dictionary_chain=(
-            ChainEntry(kind="indexed", dict_id="custom-dict", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=False),
-        ),
+        dictionary_chain=(ChainEntry(kind="indexed", dict_id="custom-dict", enabled=True),),
     )
 
     widget = SettingsTab(config)

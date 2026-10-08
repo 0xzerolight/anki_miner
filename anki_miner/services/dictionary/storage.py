@@ -609,7 +609,7 @@ def read_meta_cached(db_path: Path) -> dict[str, str]:
 # One hop only — targets are positive and a positive row is never a redirect.
 # A redirect whose target is absent contributes nothing, so a fully-redirect
 # result collapses to a miss and the provider chain (other dicts, deinflection
-# fallback, Jisho) gets its shot.
+# fallback) gets its shot.
 #
 # Both predicate halves are required: a foreign dictionary using negative
 # sequences for real content (no arrow) must pass through untouched.

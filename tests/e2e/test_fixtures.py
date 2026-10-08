@@ -169,8 +169,8 @@ def test_seed_offline_dict_is_discoverable(tmp_path: Path) -> None:
 def test_seeded_dict_covers_every_expected_lemma(tmp_path: Path) -> None:
     """Every expected lemma resolves to a definition through the offline chain.
 
-    Builds the indexed provider chain over the seeded dict (no Jisho) and
-    confirms each lemma's gloss surfaces — i.e. the harness can mine offline.
+    Builds the indexed provider chain over the seeded dict and confirms each
+    lemma's gloss surfaces — i.e. the harness can mine offline.
     """
     from dataclasses import replace
 

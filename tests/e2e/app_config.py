@@ -141,7 +141,7 @@ def build_app_config(e2e: E2EConfig, test_home: Path, *, bypass_known_words: boo
         stats_db_path=test_home / "stats.db",
         audio_packs_root=test_home / "audio_packs",
         themes_root=test_home / "themes",
-        # --- dictionary chain: the seeded offline dict only, no Jisho/network ---
+        # --- dictionary chain: the seeded offline dict only, no network ---
         dictionary_chain=(ChainEntry(kind="indexed", dict_id=DEFAULT_DICT_ID, enabled=True),),
         # --- known-words mode (faithful default vs. no-Anki/deterministic) ---
         use_known_words_db=True,

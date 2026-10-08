@@ -225,21 +225,21 @@ def test_build_definition_service_reuses_loaded_registry(base_config):
 
 class TestRegistryOSErrorInServiceFactory:
     """When the dicts_root scan raises OSError, build_definition_service and
-    create_services must survive and produce a working (Jisho-only) service."""
+    create_services must survive and produce a working (empty-chain) service."""
 
-    def _jisho_config(self, tmp_path: Path) -> AnkiMinerConfig:
-        """Config pointing at a non-existent dicts root with a Jisho-only chain."""
+    def _empty_chain_config(self, tmp_path: Path) -> AnkiMinerConfig:
+        """Config pointing at a non-existent dicts root with an empty chain."""
         return dataclasses.replace(
             AnkiMinerConfig(),
             dicts_root=tmp_path / "dicts",
             known_words_db_path=tmp_path / "known_words.db",
             stats_db_path=tmp_path / "stats.db",
-            dictionary_chain=(ChainEntry(kind="jisho", dict_id=None, enabled=True),),
+            dictionary_chain=(),
         )
 
     def test_build_definition_service_survives_oserror_scan(self, tmp_path: Path):
         """build_definition_service does not raise when registry.load() hits OSError."""
-        cfg = self._jisho_config(tmp_path)
+        cfg = self._empty_chain_config(tmp_path)
         load_result = service_factory.ServiceLoadResult()
 
         with patch.object(Path, "iterdir", side_effect=OSError("stale NFS")):
@@ -249,7 +249,7 @@ class TestRegistryOSErrorInServiceFactory:
 
     def test_build_definition_service_oserror_routes_warning_via_registry(self, tmp_path: Path):
         """When the OSError is caught by registry.load(), service factory stays alive."""
-        cfg = self._jisho_config(tmp_path)
+        cfg = self._empty_chain_config(tmp_path)
         # Make dicts_root exist so is_dir() passes but iterdir() raises.
         dicts_root = tmp_path / "dicts"
         dicts_root.mkdir()
@@ -258,13 +258,13 @@ class TestRegistryOSErrorInServiceFactory:
         with patch.object(Path, "iterdir", side_effect=OSError("permission denied")):
             svc = service_factory.build_definition_service(cfg, load_result)
 
-        # Service is functional (Jisho-only chain).
+        # Service is functional (empty chain).
         assert isinstance(svc, DefinitionService)
 
     def test_create_services_survives_oserror_scan(self, tmp_path: Path):
         """create_services returns a valid Services bundle even when the dicts
-        root scan raises OSError — GUI stays alive with the Jisho-only chain."""
-        cfg = self._jisho_config(tmp_path)
+        root scan raises OSError — GUI stays alive with the empty chain."""
+        cfg = self._empty_chain_config(tmp_path)
 
         with patch.object(Path, "iterdir", side_effect=OSError("permission denied")):
             services = service_factory.create_services(cfg)
@@ -580,7 +580,7 @@ class TestCompoundMatchingInjection:
     def test_not_injected_without_indexed_entry(self, base_config):
         cfg = dataclasses.replace(
             base_config,
-            dictionary_chain=(ChainEntry(kind="jisho", dict_id=None, enabled=True),),
+            dictionary_chain=(),
         )
         services = service_factory.create_services(cfg)
         assert services.subtitle_parser._compound_matcher is None
@@ -622,7 +622,7 @@ class TestReadingAttestationInjection:
     def test_not_injected_without_indexed_entry(self, base_config):
         cfg = dataclasses.replace(
             base_config,
-            dictionary_chain=(ChainEntry(kind="jisho", dict_id=None, enabled=True),),
+            dictionary_chain=(),
         )
         services = service_factory.create_services(cfg)
         assert services.subtitle_parser._reading_lookup is None

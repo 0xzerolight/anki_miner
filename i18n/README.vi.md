@@ -163,7 +163,7 @@ Muốn thêm chủ đề khác? Hãy đề xuất trong một GitHub Issue.
 1. **Đọc phụ đề** và tách văn bản thành từng từ riêng lẻ.
 2. **Lọc** xuống còn các từ mang nghĩa mà bạn chưa biết - tùy chọn tự bạn xem lại danh sách trong Word Curator.
 3. **Lấy ảnh chụp màn hình và đoạn âm thanh** từ video cho mỗi dòng.
-4. **Tra định nghĩa** trong các từ điển ngoại tuyến bạn đã cấu hình, tùy chọn dự phòng sang Jisho trực tuyến cho tiếng Nhật (chậm hơn, bị giới hạn tốc độ).
+4. **Tra định nghĩa** trong các từ điển ngoại tuyến bạn đã cấu hình.
 5. **Gửi các thẻ đã hoàn thiện sang Anki.**
 
 </details>
@@ -187,7 +187,7 @@ Sử dụng các tập từ tên riêng đi kèm được dẫn xuất từ [JMn
 | "Không tìm thấy bộ thẻ"         | Chọn một bộ thẻ đã có trong Cài đặt -> Thẻ & Anki. Bộ thẻ không được tạo sẵn cho bạn; nếu cần bộ thẻ mới, hãy tạo trong Anki trước. |
 | "Không tìm thấy loại ghi chú"    | Cấu hình tên các trường của loại ghi chú trong Cài đặt -> Thẻ & Anki.               |
 | "Không tìm thấy ffmpeg"       | Cài đặt ffmpeg và thêm nó vào PATH.                                               |
-| Không tìm thấy định nghĩa nào     | Thêm một từ điển Yomitan trong Cài đặt -> Từ điển -> Thêm từ điển… (khuyến nghị), hoặc, với tiếng Nhật, bật dự phòng Jisho (chậm hơn, bị giới hạn tốc độ). |
+| Không tìm thấy định nghĩa nào     | Thêm một từ điển Yomitan trong Cài đặt -> Từ điển -> Thêm từ điển… |
 | Trình cài đặt Windows không mở được / cảnh báo SmartScreen | Xem [Lưu ý lần chạy đầu](#lưu-ý-lần-chạy-đầu-bản-dựng-chưa-ký): chọn **More info** -> **Run anyway**; khôi phục các cảnh báo nhầm của Defender từ **Protection history**. |
 | Bản cài mới không có định nghĩa | Chạy Công cụ -> Trình hướng dẫn cài đặt hoặc Công cụ -> Tải tài nguyên được đề xuất. Nếu nhập thủ công, hãy giữ nguyên tệp ZIP Yomitan (đừng giải nén). |
 | Thêm từ điển bị treo hoặc thất bại | Ghi lại giai đoạn cuối cùng bạn nhìn thấy và đính kèm nhật ký (xem "Nhật ký nằm ở đâu?" bên dưới). Kèm theo tên, nguồn và kích thước tệp ZIP từ điển trong báo cáo. |

@@ -118,7 +118,7 @@ def test_remove_completion_rebases_on_current_chain(qtbot, monkeypatch, tmp_path
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="remove-me", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ChainEntry(kind="indexed", dict_id="spare", enabled=True),
         )
     )
     monkeypatch.setattr(panel, "_confirm_remove", lambda _display: True)
@@ -143,13 +143,13 @@ def test_remove_completion_rebases_on_current_chain(qtbot, monkeypatch, tmp_path
         (
             ChainEntry(kind="indexed", dict_id="remove-me", enabled=True),
             ChainEntry(kind="indexed", dict_id="added-during-remove", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ChainEntry(kind="indexed", dict_id="spare", enabled=True),
         )
     )
 
     remove_done((True, None))
 
-    assert [entry.dict_id for entry in panel.get_chain()] == ["added-during-remove", None]
+    assert [entry.dict_id for entry in panel.get_chain()] == ["added-during-remove", "spare"]
 
 
 def test_save_rereads_all_chains_after_mid_save_mutation(tab, monkeypatch):
@@ -161,7 +161,7 @@ def test_save_rereads_all_chains_after_mid_save_mutation(tab, monkeypatch):
     tab.dictionary_panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="before", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ChainEntry(kind="indexed", dict_id="spare", enabled=True),
         )
     )
     tab.frequency_panel.set_chain((FreqEntry(source_id="before", enabled=True),), registry_meta={})
@@ -178,7 +178,7 @@ def test_save_rereads_all_chains_after_mid_save_mutation(tab, monkeypatch):
         tab.dictionary_panel.set_chain(
             (
                 ChainEntry(kind="indexed", dict_id="after", enabled=True),
-                ChainEntry(kind="jisho", dict_id=None, enabled=True),
+                ChainEntry(kind="indexed", dict_id="spare", enabled=True),
             )
         )
         tab.frequency_panel.set_chain((FreqEntry(source_id="after", enabled=True),), registry_meta={})
@@ -276,18 +276,18 @@ def test_post_save_removal_sync_prevents_later_chain_resurrection(
         test_config,
         dictionary_chain=(
             ChainEntry(kind="indexed", dict_id="remove-me", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ChainEntry(kind="indexed", dict_id="spare", enabled=True),
         ),
     )
     widget = SettingsTab(config, commit_config=commit)
     qtbot.addWidget(widget)
     try:
-        result = widget._commit_dictionary_removal((ChainEntry(kind="jisho", dict_id=None, enabled=True),))
+        result = widget._commit_dictionary_removal((ChainEntry(kind="indexed", dict_id="spare", enabled=True),))
         widget._persist_audio_chain_change(widget.config.expression_audio_chain)
 
         assert result.persisted is True
-        assert [entry.kind for entry in widget.config.dictionary_chain] == ["jisho"]
-        assert [entry.kind for entry in persisted[-1].dictionary_chain] == ["jisho"]
+        assert [entry.dict_id for entry in widget.config.dictionary_chain] == ["spare"]
+        assert [entry.dict_id for entry in persisted[-1].dictionary_chain] == ["spare"]
     finally:
         widget.shutdown()
         for worker in widget.iter_close_workers():
@@ -358,7 +358,7 @@ def test_retained_migration_worker_refuses_every_settings_dictionary_entry_point
     tab.dictionary_panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="slot", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ChainEntry(kind="indexed", dict_id="spare", enabled=True),
         )
     )
     unexpected = MagicMock(side_effect=AssertionError("mutation continued after refused preflight"))

@@ -108,7 +108,8 @@ class PrewarmWorker(CancellableWorker):
                 # dictionary chain, then discard everything (no shared connections).
                 # Shares the factory's gated eager-load: build_definition_service
                 # only touches sqlite when an indexed entry is enabled, so a
-                # Jisho-only chain warms nothing here, same as the real mine path.
+                # chain with nothing enabled warms nothing here, same as the real
+                # mine path.
                 definition_service = build_definition_service(self._config, ServiceLoadResult())
                 warmed = True
             finally:

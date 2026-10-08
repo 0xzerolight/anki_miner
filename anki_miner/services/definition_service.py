@@ -43,8 +43,8 @@ def _log_provider_failure(
     "Definitions are missing" is unactionable without knowing WHICH dictionary
     failed and where its index lives: two slots can carry the same display name,
     and the chain silently continues past the failure. ``dict_id``/``db`` come
-    from the offline provider surface (``IndexedDictProvider``); online and stub
-    providers carry neither and render ``-``.
+    from the offline provider surface (``IndexedDictProvider``); stub providers
+    carry neither and render ``-``.
 
     A typed :class:`AnkiMinerException` is an anticipated, self-describing
     failure and gets no traceback (matching ``CancellableWorker.report_failure``);
@@ -114,10 +114,9 @@ def collect_dictionary_css_entries(config: AnkiMinerConfig) -> list[tuple[str, s
     gathers the per-dictionary scoped CSS (``IndexedDictProvider.dictionary_css``)
     in chain order. Both stable ``dict_id`` and ``display_name`` are retained:
     new envelopes match by ID, while pre-ID envelopes still match by title.
-    Entries with no usable CSS are skipped (online providers, dicts without
-    ``styles.css``), and the list is ORDERED with duplicates preserved:
-    ``display_name`` is not guaranteed unique across providers, so this is
-    deliberately not a dict.
+    Entries with no usable CSS are skipped (dicts without ``styles.css``), and
+    the list is ORDERED with duplicates preserved: ``display_name`` is not
+    guaranteed unique across providers, so this is deliberately not a dict.
 
     The result feeds each styled field's self-contained trailing ``<style>``
     block via ``card_style_block.attach_card_style_block`` at the
@@ -243,10 +242,10 @@ class DefinitionService:
     def has_usable_offline_provider(self) -> bool:
         """Whether the loaded chain has an available, non-empty offline index.
 
-        Provider availability alone is insufficient: Jisho is always available,
-        and a schema-current index with zero declared entries opens normally. The
-        registry snapshot that built this chain is therefore authoritative. No
-        disk scan or metadata read occurs here.
+        Provider availability alone is insufficient: a schema-current index with
+        zero declared entries opens normally. The registry snapshot that built
+        this chain is therefore authoritative. No disk scan or metadata read
+        occurs here.
         """
         if self._registry is None:
             return False
@@ -265,10 +264,10 @@ class DefinitionService:
 
         Needed so the GUI can release per-dict ``index.sqlite`` handles before
         deleting a dictionary folder — on Windows, an open SQLite connection
-        keeps a file lock that blocks ``rmtree`` (Issue #30). The Protocol
-        does not require ``close``; probe via ``getattr`` so providers without
-        it (e.g. Jisho) are silently skipped. Resets ``_loaded`` so a later
-        ``ensure_loaded()`` will re-open the chain cleanly.
+        keeps a file lock that blocks ``rmtree`` (Issue #30). The Protocol does
+        not require ``close``; probe via ``getattr`` so providers without it
+        are silently skipped. Resets ``_loaded`` so a later ``ensure_loaded()``
+        will re-open the chain cleanly.
         """
         for provider in self._providers:
             closer = getattr(provider, "close", None)
@@ -352,9 +351,9 @@ class DefinitionService:
         Candidates are tried in priority order (variants, then fewest-step
         deinflections); for each, offline providers are walked in chain order,
         and the first candidate with a hit ends the walk, so a deeper candidate
-        never mixes into a nearer one's hits. Online providers and providers
-        lacking ``lookup_fallback`` are skipped. Never raises: a provider that
-        throws degrades to "skip + continue". Cancellation returns the hits so far.
+        never mixes into a nearer one's hits. Providers lacking
+        ``lookup_fallback`` are skipped. Never raises: a provider that throws
+        degrades to "skip + continue". Cancellation returns the hits so far.
 
         ``pos`` is the token's part of speech (the batch's ``pos_context``), so a
         candidate's form row reads only the target rows the profile lets that
@@ -367,7 +366,7 @@ class DefinitionService:
             for provider in self._providers:
                 if is_cancelled is not None and is_cancelled():
                     return hits
-                if provider.is_online or not provider.is_available():
+                if not provider.is_available():
                     continue
                 fb = getattr(provider, "lookup_fallback", None)
                 if not callable(fb):
@@ -440,8 +439,7 @@ class DefinitionService:
         Words an earlier provider resolves are removed from the remaining set
         BEFORE the next provider is consulted, so chain semantics are
         first-hit-wins across the provider order. Providers without
-        ``lookup_many`` (e.g. the online Jisho fallback) are consulted per-word
-        for the remaining words.
+        ``lookup_many`` are consulted per-word for the remaining words.
 
         Lookup-miss fallback (plan item 5.2): ``fallback_context`` maps a lookup
         word to its ``(orth_base, cType)``. For any word STILL unresolved after
@@ -492,11 +490,11 @@ class DefinitionService:
 
         # NOTE: the two ``except Exception`` clauses below are deliberately broad,
         # not an oversight. This is the never-raises provider boundary: a provider
-        # (offline index, online Jisho, a user-imported dict) that raises an
-        # UNANTICIPATED exception type must degrade to "miss + continue to the next
-        # provider", never abort the whole mine. Narrowing to specific types would
-        # let a single buggy/edge-case provider crash a run. Words it failed to
-        # resolve fall through to the next provider, and any earlier hits are kept.
+        # (an offline index, a user-imported dict) that raises an UNANTICIPATED
+        # exception type must degrade to "miss + continue to the next provider",
+        # never abort the whole mine. Narrowing to specific types would let a
+        # single buggy/edge-case provider crash a run. Words it failed to resolve
+        # fall through to the next provider, and any earlier hits are kept.
         for provider in self._providers:
             if not remaining or cancellation_requested():
                 break
@@ -626,20 +624,11 @@ class DefinitionService:
 
         Offline-only existence probe used to drop no-definition words BEFORE
         the curation dialog (the curator must not surface words that can never
-        become cards). Mirrors the fast-path structure of get_definitions_batch
-        but excludes online providers (e.g. Jisho) so the check never blocks on
-        network I/O — matching the offline-only contract of lookup_all_offline.
+        become cards). Mirrors the fast-path structure of get_definitions_batch.
 
         A word is True iff some offline provider returns a truthy hit. The same
         never-raises provider boundary applies: a provider raising an
         unanticipated exception degrades to "miss + continue", never aborting.
-
-        Known, intentional asymmetry vs. Phase 5: the actual card-build step uses
-        get_definitions_batch over the FULL chain (online providers included). When
-        a user enables Jisho, a word whose only definition is from Jisho is dropped
-        by this probe before the curation dialog — accepted on purpose so the
-        pre-curator filter never blocks on network I/O. Do not add online providers
-        here to "close" the gap.
 
         Returns a dict keyed by the deduped input words; every input word is
         present exactly once.
@@ -653,7 +642,7 @@ class DefinitionService:
         for provider in self._providers:
             if not remaining:
                 break
-            if provider.is_online or not provider.is_available():
+            if not provider.is_available():
                 continue
             batch_fn = getattr(provider, "lookup_many", None)
             if callable(batch_fn):
@@ -715,7 +704,7 @@ class DefinitionService:
         for provider in self._providers:
             if not remaining:
                 break
-            if provider.is_online or not provider.is_available():
+            if not provider.is_available():
                 continue
             has_terms_fn = getattr(provider, "has_terms", None)
             if not callable(has_terms_fn):
@@ -739,7 +728,7 @@ class DefinitionService:
         path. This probe is deliberately stricter for non-zero deinflections:
         ``rules=''`` means a non-inflecting entry and does not wildcard-match.
         The general definition fallback keeps its legacy ruleless-dictionary
-        compatibility separately. Online/legacy providers are skipped; provider
+        compatibility separately. Legacy providers are skipped; provider
         failures degrade to misses and never abort subtitle parsing.
         """
         from anki_miner.services.deinflection import condition_flags_from_rules, conditions_match
@@ -775,10 +764,10 @@ class DefinitionService:
         enabled offline dictionary attest for this exact headword". Walks the
         chain exactly like :meth:`offline_terms_exist` — offline-only,
         ``ensure_loaded`` first, per-provider try/except so a provider failure
-        can never raise (or reach the network) from inside subtitle parsing —
-        with first-provider-wins semantics per term: once a chain member
-        attests a term's readings, later providers are not consulted for it
-        (chain order is the user's priority order).
+        can never raise from inside subtitle parsing — with first-provider-wins
+        semantics per term: once a chain member attests a term's readings,
+        later providers are not consulted for it (chain order is the user's
+        priority order).
         """
         self.ensure_loaded()
 
@@ -788,7 +777,7 @@ class DefinitionService:
         for provider in self._providers:
             if not remaining:
                 break
-            if provider.is_online or not provider.is_available():
+            if not provider.is_available():
                 continue
             terms_readings_fn = getattr(provider, "terms_readings", None)
             if not callable(terms_readings_fn):
@@ -809,8 +798,7 @@ class DefinitionService:
         The form-lookup probe a language's token post-pass reads: "what does the dictionary say
         under this exact headword". Walks the chain exactly like :meth:`offline_term_readings` --
         offline-only, ``ensure_loaded`` first, per-provider try/except so a provider failure can
-        never raise (or reach the network) from inside subtitle parsing -- with first-provider-wins
-        semantics per term.
+        never raise from inside subtitle parsing -- with first-provider-wins semantics per term.
 
         A provider that answers a term with an EMPTY row list is treated as not having answered, so
         that term stays in ``remaining`` and the next provider is asked. Without that, a chain whose
@@ -825,7 +813,7 @@ class DefinitionService:
         for provider in self._providers:
             if not remaining:
                 break
-            if provider.is_online or not provider.is_available():
+            if not provider.is_available():
                 continue
             term_rows_fn = getattr(provider, "term_rows", None)
             if not callable(term_rows_fn):
@@ -849,8 +837,8 @@ class DefinitionService:
         Identity is ``(dictionary_id, sequence, normalized_reading)``. Every
         available indexed provider is queried: short-circuiting a term after its
         first hit could hide the lower-priority dictionary that attests both
-        orthographic aliases. Providers without the optional exact probe, online
-        providers, and failures contribute nothing.
+        orthographic aliases. Providers without the optional exact probe and
+        failures contribute nothing.
         """
         self.ensure_loaded()
 
@@ -872,16 +860,16 @@ class DefinitionService:
         return found
 
     def _available_offline_providers(self) -> list[DictionaryProvider]:
-        """Available, offline providers in chain order (commonness/quality probes)."""
-        return [p for p in self._providers if not p.is_online and p.is_available()]
+        """Available providers in chain order (commonness/quality probes)."""
+        return [p for p in self._providers if p.is_available()]
 
     @staticmethod
     def _provider_commonness_aware(provider: DictionaryProvider) -> bool:
         """Whether ``provider`` exposes a truthy ``commonness_aware`` property.
 
         Optional surface (like ``lookup_many`` / ``has_terms``): a provider
-        lacking it — online Jisho, legacy dicts — is not aware. Never raises: a
-        property that throws degrades to False."""
+        lacking it (a legacy dict) is not aware. Never raises: a property that
+        throws degrades to False."""
         try:
             return bool(getattr(provider, "commonness_aware", False))
         except Exception as e:  # pragma: no cover - defensive
@@ -1023,19 +1011,16 @@ class DefinitionService:
         Fast path (OVH-050): offline providers that expose ``lookup_many`` are
         queried once per word-unique sub-batch (one IN-clause SQLite query per
         sub-batch instead of N per-word queries). Walk semantics:
-        * Every available *offline* provider is queried in chain order; each
-          provider's returned HTML is concatenated verbatim (each provider wraps
-          its hit in ``<div class="yomitan-glossary">…</div>``, so the result is
-          a sequence of those wrappers — compatible with the Senren toggle).
-        * *Online* providers (e.g. Jisho) are consulted per-word only when no
-          offline provider returned a hit for that word — they act as a fallback.
-        Providers lacking ``lookup_many`` (e.g. legacy offline or online Jisho)
-        are consulted per-word, matching the old behaviour.
+        * Every available provider is queried in chain order; each provider's
+          returned HTML is concatenated verbatim (each provider wraps its hit in
+          ``<div class="yomitan-glossary">…</div>``, so the result is a sequence
+          of those wrappers — compatible with the Senren toggle).
+        Providers lacking ``lookup_many`` are consulted per-word.
 
         ``fallback_context`` is ``get_definitions_batch``'s lookup-miss ladder:
-        a word nothing answered, offline or online, retries the candidates, and
-        every offline provider's hit for the first candidate any of them answers
-        is concatenated. Absent (``None``) ⇒ no ladder.
+        a word nothing answered retries the candidates, and every offline
+        provider's hit for the first candidate any of them answers is
+        concatenated. Absent (``None``) ⇒ no ladder.
 
         ``lemma_context`` mirrors ``get_definitions_batch``: word → token lemma,
         forwarded to batch-capable offline providers for the Rule A′ kana-front
@@ -1058,16 +1043,8 @@ class DefinitionService:
                 cancelled = True
             return cancelled
 
-        # Collect all available offline providers (batch-capable or per-word).
-        offline_providers: list[DictionaryProvider] = []
-        online_providers: list[DictionaryProvider] = []
-        for provider in self._providers:
-            if not provider.is_available():
-                continue
-            if provider.is_online:
-                online_providers.append(provider)
-            else:
-                offline_providers.append(provider)
+        # Every available provider, batch-capable or per-word.
+        providers = [p for p in self._providers if p.is_available()]
 
         # Exact duplicate pairs collapse; distinct readings stay separate.
         unique_pairs = list(dict.fromkeys(words))
@@ -1075,7 +1052,7 @@ class DefinitionService:
         # Pair-keyed accumulator: each reading keeps its provider-ranked HTML.
         offline_hits: dict[tuple[str, str | None], list[str]] = {pair: [] for pair in unique_pairs}
 
-        for provider in offline_providers:
+        for provider in providers:
             if cancellation_requested():
                 break
             batch_fn = getattr(provider, "lookup_many", None)
@@ -1106,27 +1083,6 @@ class DefinitionService:
                     if html:
                         offline_hits[pair].append(html)
 
-        # Words with no offline hits fall back to online providers (per-word).
-        online_results: dict[tuple[str, str | None], str | None] = {}
-        for pair in unique_pairs:
-            if cancellation_requested():
-                break
-            word, _reading = pair
-            if not offline_hits[pair]:
-                for provider in online_providers:
-                    if cancellation_requested():
-                        break
-                    try:
-                        html = provider.lookup(word)
-                    except Exception as e:
-                        _log_provider_failure(provider, "lookup", e, subject=word)
-                        continue
-                    if html:
-                        online_results[pair] = html
-                        break
-                else:
-                    online_results[pair] = None
-
         # Miss-only ladder, after the whole chain as in get_definitions_batch.
         if fallback_context:
             for pair in unique_pairs:
@@ -1134,7 +1090,7 @@ class DefinitionService:
                     break
                 word, _reading = pair
                 ctx = fallback_context.get(word)
-                if ctx is None or offline_hits[pair] or online_results.get(pair):
+                if ctx is None or offline_hits[pair]:
                     continue
                 orth_base, ctype = ctx
                 offline_hits[pair] = self._fallback_hits_offline(
@@ -1144,10 +1100,7 @@ class DefinitionService:
         results: list[str | None] = []
         for i, pair in enumerate(words, 1):
             word, _reading = pair
-            if offline_hits[pair]:
-                glossary: str | None = "".join(offline_hits[pair])
-            else:
-                glossary = online_results.get(pair)
+            glossary: str | None = "".join(offline_hits[pair]) or None
             results.append(glossary)
             if progress_callback and not cancelled:
                 if glossary:
@@ -1175,9 +1128,7 @@ class DefinitionService:
         """Aggregate results from all available OFFLINE providers.
 
         Returns a list of (provider_name, html) tuples for every offline
-        provider that returns a hit, in chain order. Online providers (e.g.
-        Jisho) are excluded to avoid blocking network I/O during interactive
-        in-app dictionary lookup.
+        provider that returns a hit, in chain order.
 
         Lookup-miss fallback (plan item 5.2) runs UNCONDITIONALLY here (not
         miss-only): after the exact-``word`` hit, each provider is also probed
@@ -1199,9 +1150,8 @@ class DefinitionService:
                 ``word`` hit is routed through a provider's optional
                 ``lookup_many`` (via the same getattr probe used elsewhere) so
                 the storage-side ``_homograph_keep_mask`` can prefer the
-                lemma-exact rows; a provider without ``lookup_many`` (e.g. the
-                online Jisho fallback, already excluded here, or a legacy
-                offline stub) keeps the arity-1 ``lookup(word)`` path.
+                lemma-exact rows; a provider without ``lookup_many`` (e.g. a
+                legacy offline stub) keeps the arity-1 ``lookup(word)`` path.
                 ``None``/empty skips the probe entirely, so this is
                 byte-identical to pre-A′ behavior for every existing caller.
             pos: the token's part of speech, for the profile's row rank
@@ -1221,7 +1171,7 @@ class DefinitionService:
         fallback_kwargs = {"pos": pos} if pos else {}
         out: list[tuple[str, str]] = []
         for p in self._providers:
-            if p.is_online or not p.is_available():
+            if not p.is_available():
                 continue
             seen_html: set[str] = set()
             batch_fn = getattr(p, "lookup_many", None) if token_kwargs else None
