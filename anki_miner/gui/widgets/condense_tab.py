@@ -460,7 +460,9 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
         offset_row.addWidget(QLabel(self.tr("Subtitle offset:")))
         self.offset_spinbox = QDoubleSpinBox()
         self.offset_spinbox.setRange(_OFFSET_MIN_S, _OFFSET_MAX_S)
-        self.offset_spinbox.setDecimals(2)
+        # Three decimals: config stores whole milliseconds, so a stored value
+        # round-trips instead of rounding to 10 ms on the next edit (B4.4).
+        self.offset_spinbox.setDecimals(3)
         self.offset_spinbox.setSingleStep(_OFFSET_STEP_S)
         self.offset_spinbox.setSuffix(self.tr(" seconds"))
         self.offset_spinbox.setToolTip(self.tr("Adjust subtitle timing (positive = later, negative = earlier)"))
