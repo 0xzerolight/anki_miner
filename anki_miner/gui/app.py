@@ -963,9 +963,25 @@ WINDOW_MARKER_PREFIX = "instance.window-"
 
 
 def _hold_window_marker(home: Path) -> QLockFile | None:
-    """This window's own lock file, so other Anki Miner processes can see it."""
-    marker = QLockFile(str(home / f"{WINDOW_MARKER_PREFIX}{os.getpid()}.lock"))
-    return marker if marker.tryLock(0) else None
+    """This window's own lock file, so other Anki Miner processes can see it.
+
+    Taken once, at boot, under a name holding this process's PID. A file
+    already there was left by an earlier process that had this PID; QLockFile
+    takes that PID for alive (it is this process) until the file passes its
+    stale time, so the leftover is removed and the marker taken again.
+    """
+    path = home / f"{WINDOW_MARKER_PREFIX}{os.getpid()}.lock"
+    marker = QLockFile(str(path))
+    if marker.tryLock(0):
+        return marker
+    if marker.error() == QLockFile.LockError.LockFailedError:
+        logger.warning("Window marker %s was left by an earlier process with this PID; replacing it", path)
+        if marker.removeStaleLockFile() and marker.tryLock(0):
+            return marker
+    logger.warning(
+        "Window marker %s not taken (%s): other Anki Miner processes cannot see this window", path, marker.error()
+    )
+    return None
 
 
 def _release_window_marker(app: QApplication) -> None:

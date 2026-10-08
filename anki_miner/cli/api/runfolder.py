@@ -7,7 +7,7 @@ import logging
 import re
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from pathlib import Path
 
 from anki_miner.utils.atomic_io import atomic_write_path
@@ -39,6 +39,17 @@ def next_numbered(folder: Path, stem: str) -> Path:
 
 def next_result_path(folder: Path) -> Path:
     return next_numbered(folder, "result")
+
+
+def clear_leftovers(run_dir: Path, run_ids: Iterable[str]) -> None:
+    """What an earlier call left in these runs' folders: its ``progress.json`` and an unconsumed ``cancel``.
+
+    Once per call, before its setup: a cancel the caller creates for a queued
+    run while the call works still stops that run when it starts (API.md).
+    """
+    for run_id in run_ids:
+        for name in (PROGRESS, CANCEL):
+            (run_dir / run_id / name).unlink(missing_ok=True)
 
 
 class ProgressFile:
@@ -102,7 +113,8 @@ class CancelWatcher:
     """Bridge ``<run>/cancel`` (and a SIGINT/SIGTERM) to one run's cancel event.
 
     Stops that run only. Once the run has stopped on it, the cancel file is
-    deleted. A file already present when the run starts cancels it at once.
+    deleted. A file already present when the run starts (created during the
+    call: ``clear_leftovers`` removed an earlier call's) cancels it at once.
     """
 
     def __init__(self, folder: Path, cancel_all: threading.Event, *, interval: float = 0.2) -> None:

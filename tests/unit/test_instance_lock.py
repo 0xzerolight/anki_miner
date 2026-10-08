@@ -1,5 +1,8 @@
 """Single-instance guard + KnownWordDB busy timeout (Issue #100 double launch)."""
 
+import logging
+import os
+
 from PyQt6.QtCore import QLockFile, QSysInfo
 
 from anki_miner.gui.app import _acquire_instance_lock
@@ -119,3 +122,25 @@ class TestWindowMarkersCountAsRunningInstances:
         assert lock is not None
         assert not stale.exists()
         lock.unlock()
+
+
+class TestHoldWindowMarker:
+    def test_a_marker_left_by_an_earlier_process_with_this_pid_is_reclaimed(self, tmp_path, caplog):
+        from anki_miner.gui.app import _hold_window_marker
+
+        path = tmp_path / f"instance.window-{os.getpid()}.lock"
+        holder = QLockFile(str(path))
+        assert holder.tryLock(0)
+        leftover = path.read_bytes()
+        holder.unlock()
+        # A crashed process that had this PID: QLockFile takes the PID for alive (it is
+        # this process) until the file is older than its stale time.
+        path.write_bytes(leftover)
+        with caplog.at_level(logging.WARNING, logger="anki_miner.gui.app"):
+            marker = _hold_window_marker(tmp_path)
+        try:
+            assert marker is not None and marker.isLocked()
+        finally:
+            if marker is not None:
+                marker.unlock()
+        assert any("earlier process" in record.getMessage() for record in caplog.records)

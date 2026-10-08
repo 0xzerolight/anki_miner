@@ -167,6 +167,19 @@ def test_subtitle_offset_shifts_the_lines_and_a_second_parse_keeps_the_files_tim
     assert [c.args[1] for c in parse.call_args_list] == [-1.5, 0.0]
 
 
+def test_words_sit_on_the_shifted_lines_and_line_start_is_the_files(services, tmp_path, video) -> None:
+    # The two parses differ: an entries/raw swap in _mine would lose the word or report the shifted time.
+    shifted = [(start + 2.0, end + 2.0, text) for start, end, text in ENTRIES]
+    services.processor.subtitle_parser.parse_raw_entries.side_effect = lambda _path, offset, **_kw: (
+        shifted if offset else ENTRIES
+    )
+    services.words = lambda: [_on_lines("約束", 0, 3, entries=shifted)]
+    words = [{"word": "約束", "line_start": 30.0}]
+    runs.mine_runs(_run_file(tmp_path, video, words=words, subtitle_offset=2.0), threading.Event())
+    [row] = _result_file(tmp_path)["words"]
+    assert (row["line_start"], row["start"], row["sentence"]) == (30.0, 32.0, "約束だよ")
+
+
 def test_unreadable_video_fails_that_run_only(services, tmp_path, video) -> None:
     services.duration.side_effect = [None, 1.0]
     verdicts = runs.mine_runs(_run_file(tmp_path, video, second=True), threading.Event())
@@ -178,6 +191,18 @@ def test_unreadable_subtitle_fails_that_run_without_a_file(services, tmp_path, v
     services.processor.subtitle_parser.parse_raw_entries.side_effect = SubtitleParseError("No suitable formats")
     [verdict] = runs.mine_runs(_run_file(tmp_path, video), threading.Event())
     assert verdict["error"] == "SUBTITLE_UNREADABLE" and verdict["file"] is None
+
+
+def test_an_unreadable_secondary_subtitle_fails_that_run_without_a_file(services, tmp_path, video) -> None:
+    (tmp_path / "en.srt").write_bytes(b"\x00\xff")
+    services.processor._load_secondary_entries.side_effect = SubtitleParseError(
+        "Secondary subtitle file en.srt: No suitable formats"
+    )
+    job = _run_file(tmp_path, video, secondary_subtitle_file=str(tmp_path / "en.srt"))
+    [verdict] = runs.mine_runs(job, threading.Event())
+    assert verdict["error"] == "SUBTITLE_UNREADABLE" and verdict["file"] is None and "en.srt" in verdict["message"]
+    services.processor.process_episode.assert_not_called()
+    services.processor._load_secondary_entries.assert_called_once_with(tmp_path.resolve() / "en.srt")
 
 
 def test_card_target_failure_is_call_level(services, tmp_path, video) -> None:
@@ -224,14 +249,60 @@ def _honours_cancel(services):
     return process
 
 
-def test_cancel_file_already_there_cancels_that_run(services, tmp_path, video) -> None:
-    # A Windows caller has no signals: it stops queued episodes by creating their cancel files first.
+def test_a_cancel_file_left_by_an_earlier_call_is_cleared(services, tmp_path, video) -> None:
     (tmp_path / "ep-01").mkdir()
     (tmp_path / "ep-01" / "cancel").touch()
     services.processor.process_episode.side_effect = _honours_cancel(services)
+    [verdict] = runs.mine_runs(_run_file(tmp_path, video), threading.Event())
+    assert verdict["ok"] is True and not (tmp_path / "ep-01" / "cancel").exists()
+
+
+def test_a_cancel_file_for_a_queued_run_cancels_it_when_it_starts(services, tmp_path, video) -> None:
+    # A Windows caller has no signals: it stops queued episodes by creating their cancel files.
+    def first_queues_a_cancel(*_a, **kw):
+        if services.calls == 0:
+            services.calls += 1
+            (tmp_path / "ep-02").mkdir()
+            (tmp_path / "ep-02" / "cancel").touch()
+            kw["curation_callback"](services.words())
+            return _result()
+        return _honours_cancel(services)(*_a, **kw)
+
+    services.processor.process_episode.side_effect = first_queues_a_cancel
     first, second = runs.mine_runs(_run_file(tmp_path, video, second=True), threading.Event())
-    assert first["error"] == "CANCELLED" and second["ok"] is True
+    assert first["ok"] is True and second["error"] == "CANCELLED"
+    assert not (tmp_path / "ep-02" / "cancel").exists()
+
+
+def test_an_earlier_calls_progress_file_is_gone_before_the_run(services, tmp_path, video) -> None:
+    (tmp_path / "ep-01").mkdir()
+    stale = tmp_path / "ep-01" / "progress.json"
+    stale.write_text('{"schema": 1, "run_id": "ep-01", "stage": 5, "stages": 5, "done": 3, "total": 3}', "utf-8")
+    seen: list[bool] = []
+
+    def process(*_a, **kw):
+        seen.append(stale.exists())
+        kw["curation_callback"](services.words())
+        return _result()
+
+    services.processor.process_episode.side_effect = process
+    runs.mine_runs(_run_file(tmp_path, video), threading.Event())
+    assert seen == [False]
+
+
+def test_a_cancel_after_the_last_step_leaves_the_result_and_says_so(services, tmp_path, video, caplog) -> None:
+    def finishes_then_a_cancel_lands(*_a, **kw):
+        kw["curation_callback"](services.words())
+        (tmp_path / "ep-01" / "cancel").touch()
+        assert kw["cancel_event"].wait(2)
+        return _result()
+
+    services.processor.process_episode.side_effect = finishes_then_a_cancel_lands
+    with caplog.at_level("WARNING", logger=runs.logger.name):
+        [verdict] = runs.mine_runs(_run_file(tmp_path, video), threading.Event())
+    assert verdict["ok"] is True and _result_file(tmp_path)["outcome"] == "success"
     assert not (tmp_path / "ep-01" / "cancel").exists()
+    assert any("ep-01" in r.getMessage() and "after its last step" in r.getMessage() for r in caplog.records)
 
 
 def test_signal_before_a_run_cancels_it_without_a_file(services, tmp_path, video) -> None:
