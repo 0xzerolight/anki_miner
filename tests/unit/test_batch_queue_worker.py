@@ -302,7 +302,9 @@ def test_partial_series_retry_emits_only_new_cards_after_cumulative_row_total(tm
 
     assert item.status == QueueItemStatus.ERROR
     assert item.cards_created == 3
-    assert queue.reset_failed_for_retry() == 1
+    # What the panel's Retry does (QueuePanel._retry_selected): the receipts stay.
+    item.status = QueueItemStatus.PENDING
+    item.error_message = ""
 
     retry_processor = MagicMock()
     retry_processor.process_episode.return_value = _ok_result(cards=2)
