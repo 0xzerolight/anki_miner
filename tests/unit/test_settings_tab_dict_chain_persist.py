@@ -28,12 +28,12 @@ def confirm_remove(monkeypatch):
 
 
 def _set_two_entry_chain(tab: SettingsTab) -> None:
-    """Load a deterministic 2-indexed + jisho chain into the dict panel."""
+    """Load a deterministic 3-indexed chain into the dict panel."""
     tab.dictionary_panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="alpha", enabled=True),
             ChainEntry(kind="indexed", dict_id="beta", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ChainEntry(kind="indexed", dict_id="spare", enabled=True),
         )
     )
 
@@ -113,7 +113,7 @@ class TestDictChainRemovalPersistsExactlyOnce:
         tab.dictionary_panel.set_chain(
             (
                 ChainEntry(kind="indexed", dict_id="alpha", enabled=True),
-                ChainEntry(kind="jisho", dict_id=None, enabled=True),
+                ChainEntry(kind="indexed", dict_id="spare", enabled=True),
             )
         )
 
@@ -129,12 +129,12 @@ class TestDictChainRemovalPersistsExactlyOnce:
         removal_emits = [chain for chain in persisted if len(chain) == 1]
         assert len(removal_emits) == 1, f"removal must persist exactly once; got {len(removal_emits)} removal emits"
         chain = removal_emits[0]
-        assert chain[0].kind == "jisho"
+        assert chain[0].dict_id == "spare"
         # The preflight commit (if any) must carry the pre-remove chain, never
         # a second removal.
         for other in persisted:
             if len(other) != 1:
-                assert [e.kind for e in other] == ["indexed", "jisho"]
+                assert [e.dict_id for e in other] == ["alpha", "spare"]
 
     def test_remove_waits_for_committed_config(self, tab, confirm_remove, tmp_path, qtbot):
         """After removal, tab.config remains committed until persistence succeeds."""
@@ -148,7 +148,7 @@ class TestDictChainRemovalPersistsExactlyOnce:
         tab.dictionary_panel.set_chain(
             (
                 ChainEntry(kind="indexed", dict_id="alpha", enabled=True),
-                ChainEntry(kind="jisho", dict_id=None, enabled=True),
+                ChainEntry(kind="indexed", dict_id="spare", enabled=True),
             )
         )
 
@@ -160,10 +160,10 @@ class TestDictChainRemovalPersistsExactlyOnce:
         # First emit may be the preflight settings commit (pre-remove chain);
         # the removal emit is the one whose chain dropped the indexed entry.
         qtbot.waitUntil(
-            lambda: any(cfg.dictionary_chain[0].kind == "jisho" for cfg in emitted),
+            lambda: any(cfg.dictionary_chain[0].dict_id == "spare" for cfg in emitted),
             timeout=3000,
         )
-        removal_cfg = next(cfg for cfg in emitted if cfg.dictionary_chain[0].kind == "jisho")
+        removal_cfg = next(cfg for cfg in emitted if cfg.dictionary_chain[0].dict_id == "spare")
         assert len(removal_cfg.dictionary_chain) == 1
         # Emit-only contract: the tab never self-mutates its config — updates
         # arrive only via the MainWindow.update_config round trip, absent here.

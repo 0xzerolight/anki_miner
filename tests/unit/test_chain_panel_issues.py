@@ -28,7 +28,7 @@ from anki_miner.services.pitch_accent.registry import PitchSourceMeta
 def panel(qtbot, tmp_path: Path) -> DictionarySettingsPanel:
     widget = DictionarySettingsPanel(tmp_path)
     qtbot.addWidget(widget)
-    widget.set_chain((ChainEntry(kind="jisho", dict_id=None, enabled=True),))
+    widget.set_chain((ChainEntry(kind="indexed", dict_id="spare", enabled=True),))
     return widget
 
 

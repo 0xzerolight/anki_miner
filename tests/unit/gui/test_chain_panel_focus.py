@@ -238,7 +238,7 @@ class TestFocusFollowsADisabledArrow:
     ("factory", "chain"),
     [
         (AudioPackSettingsPanel, CHAIN),
-        (DictionarySettingsPanel, (ChainEntry(kind="jisho", dict_id=None, enabled=True),)),
+        (DictionarySettingsPanel, (ChainEntry(kind="indexed", dict_id="spare", enabled=True),)),
         (FrequencySettingsPanel, (FreqEntry(source_id="jpdb", enabled=True),)),
         (PitchSettingsPanel, (PitchSourceEntry(source_id="legacy-pitch", enabled=True),)),
     ],
