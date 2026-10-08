@@ -172,6 +172,14 @@ def test_folder_caption_names_the_listed_video(qtbot, tmp_path):
     assert "EP02.mkv" in text and "EP01.mkv" not in text and "3" in text and "every video" in text
 
 
+def test_a_one_video_folder_has_no_count(qtbot, tmp_path):
+    """Not "the first of 1 videos" (Tracks final review, minor 4)."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    video = _video(tmp_path, "EP01.mkv")
+    _loaded(tab, tmp_path, _probe(tmp_path, (video,)))
+    assert tab.tracks_status_label.text() == "Tracks of EP01.mkv. Tick the ones to save."
+
+
 def test_a_folder_without_tracks_says_no_video_had_any(qtbot, tmp_path):
     tab = _make_tab(_make_config(tmp_path), qtbot)
     videos = (_video(tmp_path, "EP01.mkv"), _video(tmp_path, "EP02.mkv"))

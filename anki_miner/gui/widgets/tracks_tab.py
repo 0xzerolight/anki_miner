@@ -382,7 +382,8 @@ class TracksTab(_ToolTabBase):
                 )
             table.hide()
             return
-        if probe.source != listed:
+        # One video reads the same picked alone or alone in a folder.
+        if len(probe.videos) > 1:
             self.tracks_status_label.setText(
                 tr_format(
                     self.tr(
