@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QAction, QCursor, QFont
+from PyQt6.QtGui import QAction, QCursor, QFont, QResizeEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QMenu, QStatusBar, QToolButton, QWidget
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
@@ -21,6 +21,12 @@ if TYPE_CHECKING:
 #: text. Errors are exempt: an unresolved problem is exactly what must not
 #: quietly disappear.
 OPERATION_EXPIRY_MS = 8000
+
+#: The most of the status bar the task strip may take before its line elides.
+#: The rest belongs to the operation message, the session count and the health
+#: badges. A QToolButton never shrinks below its text, so an uncapped long title
+#: pushed the badges off the right edge at the 1024px window minimum (Z.5).
+TASK_STRIP_MAX_SHARE = 0.5
 
 
 def _health_presentation(state: bool | None, *, unknown: str, ok: str, failed: str) -> tuple[str, str]:
@@ -86,6 +92,8 @@ class StatusBarWidget(QStatusBar):
         # run_token) and nothing else. Not progress state: the numbers are
         # re-read from the registry on every repaint.
         self._displayed_run: tuple[str, int] | None = None
+        # The strip's whole line, kept so a resize can re-elide it.
+        self._task_line_text = ""
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -106,7 +114,8 @@ class StatusBarWidget(QStatusBar):
         self.task_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self.task_button.setMenu(self.task_menu)
         self.task_button.setAccessibleName(self.tr("Running tasks"))
-        self.task_button.setToolTip(self.tr("Show what is running and go to it"))
+        self._task_hint = self.tr("Show what is running and go to it")
+        self.task_button.setToolTip(self._task_hint)
         self.task_button.hide()
         self.addWidget(self.task_button)
 
@@ -202,21 +211,36 @@ class StatusBarWidget(QStatusBar):
         displayed = self._resolve_displayed(running)
         if displayed is None:
             self._displayed_run = None
+            self._task_line_text = ""
             self.task_button.hide()
             self.task_button.setText("")
+            self.task_button.setToolTip(self._task_hint)
             return
 
         self._displayed_run = (displayed.task_id, displayed.run_token)
-        self.task_button.setText(
-            " · ".join(
-                (
-                    self.tr("%n running", "", len(running)),
-                    self._task_line(displayed),
-                    tr_format(self.tr("Elapsed %1"), format_clock(displayed.elapsed_s)),
-                )
+        self._task_line_text = " · ".join(
+            (
+                self.tr("%n running", "", len(running)),
+                self._task_line(displayed),
+                tr_format(self.tr("Elapsed %1"), format_clock(displayed.elapsed_s)),
             )
         )
+        self._fit_task_text()
         self.task_button.show()
+
+    def _fit_task_text(self) -> None:
+        """Show the task line elided to the strip's share of the bar; the whole line on hover."""
+        full = self._task_line_text
+        limit = int(self.width() * TASK_STRIP_MAX_SHARE)
+        shown = self.task_button.fontMetrics().elidedText(full, Qt.TextElideMode.ElideRight, limit)
+        self.task_button.setText(shown)
+        self.task_button.setToolTip(full if shown != full else self._task_hint)
+
+    def resizeEvent(self, event: QResizeEvent | None) -> None:  # noqa: N802 - Qt override
+        """Re-fit the task line to the bar's new width."""
+        super().resizeEvent(event)
+        if self._task_line_text:
+            self._fit_task_text()
 
     def _resolve_displayed(self, running: tuple[TaskSnapshot, ...]) -> TaskSnapshot | None:
         """Pick the run to name: keep the current one while it is still that run.
