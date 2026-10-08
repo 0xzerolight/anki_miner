@@ -1,7 +1,7 @@
 """Seed a minimal offline dictionary covering the E2E subtitle's vocabulary.
 
-The harness must mine with NO network (no Jisho fallback), so every lemma the
-test subtitle yields needs a local definition. This module writes a tiny
+The harness must mine with NO network, so every lemma the test subtitle yields
+needs a local definition. This module writes a tiny
 Yomitan-style indexed dictionary at ``<dicts_root>/<dict_id>/index.sqlite`` with
 one entry per lemma in
 :data:`tests.e2e.fixtures_subtitle.EXPECTED_LEMMAS` — each carrying the lemma's

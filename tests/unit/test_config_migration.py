@@ -22,7 +22,6 @@ def test_save_then_load_preserves_chain(tmp_config: Path):
     chain = (
         ChainEntry(kind="indexed", dict_id="custom-dict", enabled=True),
         ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=False),
-        ChainEntry(kind="jisho", dict_id=None, enabled=True),
     )
     config = AnkiMinerConfig()
     config = replace(config, dictionary_chain=chain)

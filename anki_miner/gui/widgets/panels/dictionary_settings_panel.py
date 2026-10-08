@@ -26,7 +26,7 @@ from anki_miner.gui.widgets.panels.chain_settings_panel_base import (
     _ChainPanelStrings,
 )
 from anki_miner.services._sqlite_index import prove_owned_slot, resolve_managed_slot
-from anki_miner.services.dictionary.registry import DictionaryRegistry, DictMeta
+from anki_miner.services.dictionary.registry import DictionaryRegistry
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.robust_fs import RmtreeOutcome, robust_rmtree
 
@@ -307,26 +307,20 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         return registry
 
     def _row_spec(self, entry: ChainEntry, view: DictionaryRegistry | None) -> ChainRowSpec:
-        meta: DictMeta | None = None
+        meta = view.get(entry.dict_id) if (view is not None and entry.dict_id) else None
+        display = meta.source_name if meta else (entry.dict_id or "(missing)")
         warning = ""
         metadata: tuple[str, ...]
-        if entry.kind == "indexed":
-            meta = view.get(entry.dict_id) if (view is not None and entry.dict_id) else None
-            display = meta.source_name if meta else (entry.dict_id or "(missing)")
-            if meta is not None:
-                # Zero entries is a fact about an installed dictionary; unknown
-                # metadata is the absence of one, so it stays off the row.
-                metadata = (
-                    _FORMAT_LABELS.get(meta.format, meta.format),
-                    tr_format(self.tr("%1 entries"), f"{meta.entry_count:,}"),
-                )
-            else:
-                metadata = (self.tr("not installed"),)
-                warning = self.tr("⚠ missing — add again")
+        if meta is not None:
+            # Zero entries is a fact about an installed dictionary; unknown
+            # metadata is the absence of one, so it stays off the row.
+            metadata = (
+                _FORMAT_LABELS.get(meta.format, meta.format),
+                tr_format(self.tr("%1 entries"), f"{meta.entry_count:,}"),
+            )
         else:
-            display = self.tr("Jisho (online fallback)")
-            metadata = (self.tr("online"),)
-            warning = self.tr("⚠ rate-limited, slower")
+            metadata = (self.tr("not installed"),)
+            warning = self.tr("⚠ missing — add again")
         stale = meta is not None and not meta.schema_ok
         if stale:
             warning = self.tr("⚠ re-import required (app upgrade)")
@@ -348,9 +342,6 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         if not dict_id:
             return
         row.repair_button.clicked.connect(lambda _checked=False, d=dict_id: self.reimport_dict_requested.emit(d))
-
-    def _is_protected_entry(self, entry: ChainEntry) -> bool:
-        return entry.kind == "jisho"  # Jisho can be disabled but not removed
 
     def _entry_display_name(self, entry: ChainEntry) -> str:
         dict_id = entry.dict_id
@@ -420,9 +411,8 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
 
         Reuses the stale-row re-import signals so the same handler
         (`DictionaryImportFlow.reimport_dict`) drives the import flow regardless
-        of entry point. Jisho rows have no menu — the online fallback can't be
-        re-imported. The controller selects a recoverable source from the slot
-        id even when registry metadata is missing or corrupt.
+        of entry point. The controller selects a recoverable source from the
+        slot id even when registry metadata is missing or corrupt.
         """
         # While an async scan is in flight the list shows a single disabled
         # "Loading…" placeholder, not real rows. Resolving a right-click through
@@ -438,7 +428,7 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         if index < 0 or index >= len(self._chain):
             return
         entry = self._chain[index]
-        if entry.kind == "jisho" or entry.dict_id is None:
+        if entry.dict_id is None:
             return
         menu = QMenu(self._list)
         reimport_action = menu.addAction(self.tr("Re-import…"))

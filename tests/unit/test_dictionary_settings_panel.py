@@ -70,9 +70,9 @@ def test_panel_renders_default_chain(qapp, qtbot, monkeypatch, tmp_path):
     qtbot.addWidget(panel)
     panel.set_chain(AnkiMinerConfig().dictionary_chain)
     chain = panel.get_chain()
-    # Default has two entries; one indexed (missing on disk -> keeps entry), one jisho
-    assert len(chain) == 2
-    assert chain[1].kind == "jisho"
+    # The default chain is the one JMdict slot (missing on disk -> the row stays).
+    assert chain == (ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),)
+    assert panel._list.count() == 1
 
 
 def test_reorder_controls_disabled_during_scan_placeholder(qapp, qtbot, tmp_path):
@@ -112,7 +112,7 @@ def test_reorder_moves_entry_up(qapp, qtbot, monkeypatch, tmp_path):
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
             ChainEntry(kind="indexed", dict_id="b", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ChainEntry(kind="indexed", dict_id="spare", enabled=True),
         )
     )
     panel.move_up(1)  # move b up
@@ -128,7 +128,7 @@ def test_chain_changed_emits_on_reorder_remove_and_toggle(qapp, qtbot, monkeypat
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
             ChainEntry(kind="indexed", dict_id="b", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ChainEntry(kind="indexed", dict_id="spare", enabled=True),
         )
     )
 
@@ -159,7 +159,7 @@ def test_row_toggle_survives_rescan(qapp, qtbot, tmp_path):
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ChainEntry(kind="indexed", dict_id="spare", enabled=True),
         )
     )
     row = panel._row_widget(0)
@@ -174,33 +174,13 @@ def test_row_toggle_survives_rescan(qapp, qtbot, tmp_path):
     assert panel.get_chain()[0].enabled is False
 
 
-def test_jisho_remove_is_noop(qapp, qtbot, monkeypatch, tmp_path):
-    panel = DictionarySettingsPanel(tmp_path)
-    qtbot.addWidget(panel)
-    panel.set_chain(
-        (
-            ChainEntry(kind="indexed", dict_id="a", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
-        )
-    )
-
-    events: list[str] = []
-    panel.chain_changed.connect(lambda: events.append("changed"))
-
-    panel.remove(1)  # jisho row -> no-op, no signal
-    chain = panel.get_chain()
-    assert len(chain) == 2
-    assert chain[1].kind == "jisho"
-    assert events == []
-
-
 def test_edge_reorder_calls_are_noops(qapp, qtbot, monkeypatch, tmp_path):
     panel = DictionarySettingsPanel(tmp_path)
     qtbot.addWidget(panel)
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ChainEntry(kind="indexed", dict_id="spare", enabled=True),
         )
     )
 
@@ -216,7 +196,7 @@ def test_edge_reorder_calls_are_noops(qapp, qtbot, monkeypatch, tmp_path):
     assert events == []
     chain = panel.get_chain()
     assert chain[0].dict_id == "a"
-    assert chain[1].kind == "jisho"
+    assert chain[1].dict_id == "spare"
 
 
 def test_checkbox_toggle_preserved_on_reorder(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
@@ -229,7 +209,7 @@ def test_checkbox_toggle_preserved_on_reorder(qapp, qtbot, monkeypatch, tmp_path
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
             ChainEntry(kind="indexed", dict_id="b", enabled=True),
             ChainEntry(kind="indexed", dict_id="c", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ChainEntry(kind="indexed", dict_id="spare", enabled=True),
         )
     )
 
@@ -279,7 +259,7 @@ def test_remove_deletes_dict_folder_on_disk(qapp, qtbot, monkeypatch, tmp_path, 
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ChainEntry(kind="indexed", dict_id="spare", enabled=True),
         )
     )
 
@@ -288,7 +268,7 @@ def test_remove_deletes_dict_folder_on_disk(qapp, qtbot, monkeypatch, tmp_path, 
     # rmtree now runs off the GUI thread; wait for it to land.
     qtbot.waitUntil(lambda: not dict_dir.exists(), timeout=3000)
     chain = panel.get_chain()
-    assert [e.kind for e in chain] == ["jisho"]
+    assert [e.dict_id for e in chain] == ["spare"]
 
 
 def test_remove_cancelled_keeps_dict_and_chain(qapp, qtbot, monkeypatch, tmp_path):
@@ -307,7 +287,7 @@ def test_remove_cancelled_keeps_dict_and_chain(qapp, qtbot, monkeypatch, tmp_pat
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ChainEntry(kind="indexed", dict_id="spare", enabled=True),
         )
     )
 
@@ -332,14 +312,14 @@ def test_remove_tolerates_missing_dict_folder(qapp, qtbot, tmp_path, confirm_rem
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="ghost", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ChainEntry(kind="indexed", dict_id="spare", enabled=True),
         )
     )
 
     panel.remove(0)
 
     chain = panel.get_chain()
-    assert [e.kind for e in chain] == ["jisho"]
+    assert [e.dict_id for e in chain] == ["spare"]
 
 
 def test_remove_foreign_same_name_is_chain_only(qtbot, monkeypatch, tmp_path):
@@ -404,7 +384,7 @@ def test_stale_yomitan_row_shows_warning_and_reimport_button(qapp, qtbot, tmp_pa
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="stale-yomi", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ChainEntry(kind="indexed", dict_id="spare", enabled=True),
         )
     )
     # Registry scan is deferred to first showEvent (OVH-053); trigger it now so
@@ -448,7 +428,7 @@ def test_stale_jmdict_row_fires_source_first_reimport_signal(qtbot, tmp_path):
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ChainEntry(kind="indexed", dict_id="spare", enabled=True),
         )
     )
     # Registry scan is deferred to first showEvent (OVH-053).
@@ -482,7 +462,7 @@ def test_current_schema_row_has_no_stale_ui(qapp, qtbot, tmp_path):
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="fresh-yomi", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ChainEntry(kind="indexed", dict_id="spare", enabled=True),
         )
     )
     # Registry scan is deferred to first showEvent (OVH-053).
@@ -563,7 +543,7 @@ def test_right_click_non_stale_yomitan_row_emits_reimport_dict_requested(qapp, q
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="fresh-yomi", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ChainEntry(kind="indexed", dict_id="spare", enabled=True),
         )
     )
     # Registry scan is deferred to first showEvent (OVH-053); trigger it so
@@ -598,7 +578,7 @@ def test_right_click_jmdict_row_emits_source_first_reimport(qtbot, monkeypatch, 
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ChainEntry(kind="indexed", dict_id="spare", enabled=True),
         )
     )
     # Registry scan is deferred to first showEvent (OVH-053).
@@ -679,7 +659,7 @@ def test_remove_emits_chain_changed_signal(qapp, qtbot, tmp_path, confirm_remove
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ChainEntry(kind="indexed", dict_id="spare", enabled=True),
         )
     )
 
@@ -706,7 +686,7 @@ def test_remove_cancelled_does_not_emit_chain_changed(qapp, qtbot, monkeypatch, 
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ChainEntry(kind="indexed", dict_id="spare", enabled=True),
         )
     )
 
@@ -739,7 +719,7 @@ def test_remove_failed_tombstone_cleanup_keeps_durable_chain_change(qapp, qtbot,
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ChainEntry(kind="indexed", dict_id="spare", enabled=True),
         )
     )
 
@@ -750,7 +730,7 @@ def test_remove_failed_tombstone_cleanup_keeps_durable_chain_change(qapp, qtbot,
     qtbot.waitUntil(lambda: not panel.has_active_mutation(), timeout=3000)
     assert changed == [None]
     chain = panel.get_chain()
-    assert [e.kind for e in chain] == ["jisho"]
+    assert [e.dict_id for e in chain] == ["spare"]
     assert len(list(tmp_path.glob("a.tomb-*"))) == 1
 
 
@@ -783,7 +763,7 @@ def test_remove_retries_transient_oserror(qapp, qtbot, monkeypatch, tmp_path, co
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ChainEntry(kind="indexed", dict_id="spare", enabled=True),
         )
     )
 
@@ -841,7 +821,7 @@ def test_release_callback_returning_false_aborts_remove(qapp, qtbot, monkeypatch
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ChainEntry(kind="indexed", dict_id="spare", enabled=True),
         )
     )
     panel.set_release_callback(lambda: False)
@@ -886,7 +866,7 @@ def test_release_callback_runs_before_rmtree(qapp, qtbot, monkeypatch, tmp_path,
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ChainEntry(kind="indexed", dict_id="spare", enabled=True),
         )
     )
     panel.set_release_callback(_release)
@@ -910,7 +890,7 @@ def test_remove_without_release_callback_still_works(qapp, qtbot, tmp_path, conf
     panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="a", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ChainEntry(kind="indexed", dict_id="spare", enabled=True),
         )
     )
     # Intentionally do NOT call set_release_callback.
@@ -918,7 +898,7 @@ def test_remove_without_release_callback_still_works(qapp, qtbot, tmp_path, conf
     panel.remove(0)
 
     qtbot.waitUntil(lambda: not dict_dir.exists(), timeout=3000)
-    assert [e.kind for e in panel.get_chain()] == ["jisho"]
+    assert [e.dict_id for e in panel.get_chain()] == ["spare"]
 
 
 def test_robust_rmtree_wrapper_uses_shared_outcome_mode(monkeypatch, tmp_path):
@@ -936,11 +916,11 @@ def test_robust_rmtree_wrapper_uses_shared_outcome_mode(monkeypatch, tmp_path):
     assert calls == [(target, "outcome")]
 
 
-def test_right_click_jisho_row_shows_no_menu(qapp, qtbot, monkeypatch, tmp_path):
-    """Jisho is an online fallback — no zip, no re-import, no menu."""
+def test_right_click_row_without_dict_id_shows_no_menu(qapp, qtbot, monkeypatch, tmp_path):
+    """A row with no dict id names nothing to re-import or remove: no menu."""
     panel = DictionarySettingsPanel(tmp_path)
     qtbot.addWidget(panel)
-    panel.set_chain((ChainEntry(kind="jisho", dict_id=None, enabled=True),))
+    panel.set_chain((ChainEntry(kind="indexed", dict_id=None, enabled=True),))
 
     constructed = _patch_menu_exec(monkeypatch, "Re-import…")
 
@@ -951,7 +931,7 @@ def test_right_click_jisho_row_shows_no_menu(qapp, qtbot, monkeypatch, tmp_path)
     pos = panel._list.visualItemRect(item).center()
     panel._on_row_context_menu(pos)
 
-    assert constructed == [], "Jisho row must not open a context menu"
+    assert constructed == [], "a row without a dict id must not open a context menu"
     assert emitted == []
 
 
@@ -1183,7 +1163,7 @@ class TestOffThreadDiskWork:
         panel.set_chain(
             (
                 ChainEntry(kind="indexed", dict_id="a", enabled=True),
-                ChainEntry(kind="jisho", dict_id=None, enabled=True),
+                ChainEntry(kind="indexed", dict_id="spare", enabled=True),
             )
         )
 
@@ -1230,7 +1210,7 @@ class TestOffThreadDiskWork:
         panel.set_chain(
             (
                 ChainEntry(kind="indexed", dict_id="a", enabled=True),
-                ChainEntry(kind="jisho", dict_id=None, enabled=True),
+                ChainEntry(kind="indexed", dict_id="spare", enabled=True),
             )
         )
 
@@ -1277,7 +1257,7 @@ class TestRescanWhileInFlight:
         panel.set_chain(
             (
                 ChainEntry(kind="indexed", dict_id="latedict", enabled=True),
-                ChainEntry(kind="jisho", dict_id=None, enabled=True),
+                ChainEntry(kind="indexed", dict_id="spare", enabled=True),
             )
         )
 

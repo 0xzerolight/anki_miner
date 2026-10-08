@@ -13,7 +13,6 @@ from unittest.mock import MagicMock, call, patch
 import pytest
 import requests
 
-from anki_miner.config import ChainEntry
 from anki_miner.exceptions import AnkiConnectionError, SetupError, SubtitleParseError
 from anki_miner.exceptions.youtube import (
     TranscriptionFailedError,
@@ -5141,11 +5140,8 @@ class TestPreflightCardTarget:
         assert observed_states == [AnkiWriteState.NO_NOTE_WRITE]
         mock_fetcher.fetch_video.assert_not_called()
 
-    def test_jisho_only_chain_aborts_before_youtube_fetch(self, test_config, mock_services, tmp_path):
-        config = replace(
-            test_config,
-            dictionary_chain=(ChainEntry(kind="jisho", dict_id=None, enabled=True),),
-        )
+    def test_no_usable_dictionary_aborts_before_youtube_fetch(self, test_config, mock_services, tmp_path):
+        config = replace(test_config, dictionary_chain=())
         mock_services["definition_service"].has_usable_offline_provider.return_value = False
         mock_fetcher = MagicMock()
         processor = self._make_youtube_processor(config, mock_services, mock_fetcher)

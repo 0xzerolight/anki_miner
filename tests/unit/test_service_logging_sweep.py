@@ -24,7 +24,6 @@ _SWEPT_MODULES = (
     "anki_miner/services/card_backfiller.py",
     "anki_miner/services/deck_filter.py",
     "anki_miner/services/dictionary/importers/jmdict_importer.py",
-    "anki_miner/services/dictionary/providers/jisho_provider.py",
     "anki_miner/services/download_resume.py",
     "anki_miner/services/frequency/csv_parse.py",
     "anki_miner/services/frequency/multi_frequency_service.py",

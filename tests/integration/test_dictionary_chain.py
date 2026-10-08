@@ -1,8 +1,7 @@
-"""End-to-end test: chain with two indexed dicts + Jisho fallback."""
+"""End-to-end test: chain with two indexed dicts."""
 
 from dataclasses import replace
 from pathlib import Path
-from unittest.mock import patch
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.services.definition_service import DefinitionService
@@ -33,7 +32,7 @@ def _seed(root: Path, dict_id: str, entries: list[DictRow]) -> None:
     )
 
 
-def test_first_hit_wins_indexed_before_jisho(tmp_path: Path) -> None:
+def test_first_hit_wins_in_chain_order(tmp_path: Path) -> None:
     _seed(
         tmp_path,
         "high-priority",
@@ -50,7 +49,6 @@ def test_first_hit_wins_indexed_before_jisho(tmp_path: Path) -> None:
         dictionary_chain=(
             ChainEntry(kind="indexed", dict_id="high-priority", enabled=True),
             ChainEntry(kind="indexed", dict_id="low-priority", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
         ),
     )
 
@@ -59,49 +57,15 @@ def test_first_hit_wins_indexed_before_jisho(tmp_path: Path) -> None:
     chain = registry.build_provider_chain(config)
     service = DefinitionService(config, providers=chain)
 
-    with patch("requests.get") as mock_get:
-        # If Jisho is called, the test fails — high-priority should hit first
-        mock_get.side_effect = AssertionError("Jisho should not be called when indexed dict hits")
-        result = service.get_definitions_batch([("食べる", None)])[0]
-        # IndexedDictProvider wraps stored content in the Yomitan/Lapis envelope
-        # (see Task 4). The seeded content must appear inside that envelope,
-        # and the low-priority entry must not.
-        assert result is not None
-        assert "HIGH PRIORITY" in result
-        assert "LOW PRIORITY" not in result
-        assert 'data-dictionary="high-priority"' in result
-        assert 'class="yomitan-glossary"' in result
-
-
-def test_falls_through_to_jisho_when_no_indexed_hit(tmp_path: Path) -> None:
-    _seed(
-        tmp_path,
-        "only-dict",
-        [DictRow(term="食べる", reading="たべる", content="<div>eat</div>", sequence=1)],
-    )
-
-    config = replace(
-        AnkiMinerConfig(),
-        dictionary_chain=(
-            ChainEntry(kind="indexed", dict_id="only-dict", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
-        ),
-        jisho_delay=0.0,
-    )
-
-    registry = DictionaryRegistry(tmp_path)
-    registry.load()
-    chain = registry.build_provider_chain(config)
-    service = DefinitionService(config, providers=chain)
-
-    with patch("requests.get") as mock_get:
-        mock_response = mock_get.return_value
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"data": [{"senses": [{"english_definitions": ["jisho fallback"]}]}]}
-        result = service.get_definitions_batch([("聞く", None)])[0]  # not in the local dict
-        assert result is not None
-        assert "jisho fallback" in result
-        mock_get.assert_called()
+    result = service.get_definitions_batch([("食べる", None)])[0]
+    # IndexedDictProvider wraps stored content in the Yomitan/Lapis envelope
+    # (see Task 4). The seeded content must appear inside that envelope,
+    # and the low-priority entry must not.
+    assert result is not None
+    assert "HIGH PRIORITY" in result
+    assert "LOW PRIORITY" not in result
+    assert 'data-dictionary="high-priority"' in result
+    assert 'class="yomitan-glossary"' in result
 
 
 def test_glossary_concatenates_two_offline_dicts(tmp_path: Path) -> None:
@@ -136,7 +100,6 @@ def test_glossary_concatenates_two_offline_dicts(tmp_path: Path) -> None:
         dictionary_chain=(
             ChainEntry(kind="indexed", dict_id="dict-a", enabled=True),
             ChainEntry(kind="indexed", dict_id="dict-b", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
         ),
     )
 
@@ -145,13 +108,7 @@ def test_glossary_concatenates_two_offline_dicts(tmp_path: Path) -> None:
     providers = registry.build_provider_chain(config)
     service = DefinitionService(config, providers)
 
-    # Jisho must not be called when offline dicts hit. Patch the HTTP call to
-    # blow up if invoked, so any accidental online lookup fails loudly.
-    with patch(
-        "requests.get",
-        side_effect=AssertionError("Jisho should not be called when offline hits exist"),
-    ):
-        result = service.get_glossaries_batch([("食べる", None)])[0]
+    result = service.get_glossaries_batch([("食べる", None)])[0]
 
     assert result is not None
     assert result.count('<div class="yomitan-glossary">') == 2
@@ -159,49 +116,3 @@ def test_glossary_concatenates_two_offline_dicts(tmp_path: Path) -> None:
     assert 'data-dictionary="dict-b"' in result
     assert "def from A" in result
     assert "def from B" in result
-
-
-def test_glossary_falls_back_to_jisho_when_no_offline_hit(tmp_path: Path) -> None:
-    _seed(
-        tmp_path,
-        "dict-empty",
-        [
-            DictRow(
-                term="別の語",
-                reading="べつのご",
-                content='<li class="gloss-item">other</li>',
-                sequence=1,
-            )
-        ],
-    )
-
-    config = replace(
-        AnkiMinerConfig(),
-        dicts_root=tmp_path,
-        dictionary_chain=(
-            ChainEntry(kind="indexed", dict_id="dict-empty", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
-        ),
-        jisho_delay=0,
-    )
-
-    class _R:
-        status_code = 200
-
-        def json(self):
-            return {"data": [{"senses": [{"english_definitions": ["to eat"]}]}]}
-
-    registry = DictionaryRegistry(config.dicts_root)
-    registry.load()
-    providers = registry.build_provider_chain(config)
-    service = DefinitionService(config, providers)
-
-    with patch(
-        "requests.get",
-        return_value=_R(),
-    ):
-        result = service.get_glossaries_batch([("食べる", None)])[0]
-
-    assert result is not None
-    assert 'data-dictionary="Jisho API"' in result
-    assert "to eat" in result

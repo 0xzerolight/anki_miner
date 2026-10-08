@@ -57,7 +57,7 @@ def test_format_environment_lines_is_deterministic_and_expands_chains() -> None:
         ffprobe="ffprobe",
         ytdlp="yt-dlp",
         alass="alass",
-        dictionary_chain=("indexed:jmdict-english enabled", "jisho disabled"),
+        dictionary_chain=("indexed:jmdict-english enabled", "indexed:jitendex disabled"),
         frequency_chain=("indexed:jpdb enabled",),
         pitch_chain=(),
         audio_chain=("pack:nhk enabled", "jpod101 enabled"),

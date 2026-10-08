@@ -6,7 +6,7 @@ the registry-module log records (level and text, in order), and the
 ``unlisted`` / ``stale_enabled`` / ``usable_enabled`` answers — from one fixed
 set of slots that walks every gate: disabled, missing on disk, null or empty
 slot id, schema-stale, source-missing (audio), other-language, zero entries,
-and the non-slot kinds (jisho, jpod101, googletts) interleaved in chain order.
+and the non-slot kinds (jpod101, googletts) interleaved in chain order.
 
 The slots enter through each module's ``scan_index_root`` seam and the
 provider classes are swapped for call recorders, so the test reads only public
@@ -213,7 +213,7 @@ def test_pitch_registry_parity(tmp_path, monkeypatch, caplog):
 
 
 # ---------------------------------------------------------------------------
-# Dictionary: DEBUG for a missing slot, jisho interleaved, null dict_id
+# Dictionary: DEBUG for a missing slot, null dict_id
 # ---------------------------------------------------------------------------
 
 
@@ -246,17 +246,14 @@ def test_dictionary_registry_parity(tmp_path, monkeypatch, caplog):
     }
     registry = _loaded(monkeypatch, dict_reg, dict_reg.DictionaryRegistry, tmp_path, slots)
     _record_ctor(monkeypatch, dict_reg, "IndexedDictProvider")
-    _record_ctor(monkeypatch, dict_reg, "JishoProvider")
     config = dataclasses.replace(
         AnkiMinerConfig(),
         dictionary_chain=(
             ChainEntry(kind="indexed", dict_id="ok"),
             ChainEntry(kind="indexed", dict_id="gone"),
-            ChainEntry(kind="jisho"),
             ChainEntry(kind="indexed", dict_id=None),
             ChainEntry(kind="indexed", dict_id="stale"),
             ChainEntry(kind="indexed", dict_id="off", enabled=False),
-            ChainEntry(kind="jisho", enabled=False),
             ChainEntry(kind="indexed", dict_id="stale-off", enabled=False),
             ChainEntry(kind="indexed", dict_id="zh"),
             ChainEntry(kind="indexed", dict_id="stale-zh"),
@@ -279,7 +276,6 @@ def test_dictionary_registry_parity(tmp_path, monkeypatch, caplog):
 
     expected = [
         provider("ok", "OK"),
-        ("JishoProvider", (config.jisho_api_url, config.jisho_delay), {}),
         provider("empty", "EMPTY"),
     ]
     assert built == expected

@@ -1312,8 +1312,7 @@ class EpisodeProcessor:
         # OFFLINE dictionary so the curation dialog never surfaces words that
         # can never become cards (they would otherwise be silently skipped at
         # Phase 5). Offline-only by design: matches the curator's no-network
-        # def-pane and the project's offline-first default (Jisho is off by
-        # default). The probe itself is definition_viable.
+        # def-pane. The probe itself is definition_viable.
         # Runs before every lossy sentence selector so an undefined first word
         # cannot erase a definition-backed sentence-mate. An integrity gate (R2):
         # a bypass_optional_filters run skips it only while
@@ -1365,13 +1364,6 @@ class EpisodeProcessor:
         # alternates; a different-kanji UniDic lemma may be another homograph.
         # Exact misses also use the same rules-validated deinflection candidates
         # as Phase 4, so 帰れる can qualify through 帰る without trusting 返る.
-        #
-        # Known, intentional asymmetry: this probe is offline-only, but Phase 5
-        # looks definitions up over the FULL chain (get_definitions_batch, which
-        # includes Jisho when enabled). A user who turns Jisho on therefore has
-        # words with a Jisho-only definition dropped here before the curator —
-        # accepted on purpose so Phase 2 never blocks on network I/O. Do not
-        # "fix" this by calling online providers here.
         safe_alternates = [self._lookup_alternate(w) for w in words]
         probe_terms = list(
             {

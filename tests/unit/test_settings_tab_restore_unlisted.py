@@ -1,8 +1,8 @@
 """Tests for DictionaryImportFlow.restore_unlisted — recover orphaned on-disk dicts.
 
-Covers: nothing-to-restore early exit, user confirms and orphan is inserted
-before jisho, user declines (no chain mutation), and schema-mismatched dicts
-are excluded from the offer.
+Covers: nothing-to-restore early exit, user confirms and orphans are appended
+after the listed dictionaries, user declines (no chain mutation), and
+schema-mismatched dicts are excluded from the offer.
 """
 
 from __future__ import annotations
@@ -128,8 +128,8 @@ def test_restore_nothing_when_all_listed(tab_for_restore, monkeypatch):
     assert config_changed_emissions == []
 
 
-def test_restore_orphan_confirmed_inserts_before_jisho(tab_for_restore, monkeypatch):
-    """Orphan on disk + user says Yes → inserted before jisho, config_changed once."""
+def test_restore_orphan_confirmed_appends_after_listed_entries(tab_for_restore, monkeypatch):
+    """Orphan on disk + user says Yes → appended after the listed entries, config_changed once."""
     tab = tab_for_restore
     dicts_root = tab.config.dicts_root
     # jmdict-english is in the chain; orphan-dict is on disk but NOT in the chain.
@@ -138,7 +138,7 @@ def test_restore_orphan_confirmed_inserts_before_jisho(tab_for_restore, monkeypa
     tab.dictionary_panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+            ChainEntry(kind="indexed", dict_id="spare", enabled=False),
         )
     )
 
@@ -156,16 +156,9 @@ def test_restore_orphan_confirmed_inserts_before_jisho(tab_for_restore, monkeypa
     new_chain = config_changed_emissions[0].dictionary_chain
     dict_ids = [e.dict_id for e in new_chain]
 
-    # Orphan was added
-    assert "orphan-dict" in dict_ids
-
-    # Orphan appears before jisho
-    orphan_idx = dict_ids.index("orphan-dict")
-    jisho_positions = [i for i, e in enumerate(new_chain) if e.kind == "jisho"]
-    assert jisho_positions, "jisho must remain in chain"
-    assert all(
-        orphan_idx < j for j in jisho_positions
-    ), f"orphan at {orphan_idx} must precede jisho at {jisho_positions}"
+    # Orphan appended; the existing order and state are untouched.
+    assert dict_ids == ["jmdict-english", "spare", "orphan-dict"]
+    assert new_chain[1].enabled is False
 
     # Orphan entry is enabled
     orphan_entry = next(e for e in new_chain if e.dict_id == "orphan-dict")
@@ -176,14 +169,14 @@ def test_restore_orphan_confirmed_inserts_before_jisho(tab_for_restore, monkeypa
     assert len(config_changed_emissions) == 1
 
 
-def test_restore_multiple_orphans_sorted_before_jisho(tab_for_restore, monkeypatch):
-    """Several orphans are inserted as a block before jisho, ordered by dict_id."""
+def test_restore_multiple_orphans_appended_sorted(tab_for_restore, monkeypatch):
+    """Several orphans are appended as a block, ordered by dict_id."""
     tab = tab_for_restore
     dicts_root = tab.config.dicts_root
     # Seed out of alphabetical order to prove the result is sorted, not scan-order.
     _make_dict_on_disk(dicts_root, "z-dict", fmt="yomitan", source_name="Z Dict")
     _make_dict_on_disk(dicts_root, "a-dict", fmt="yomitan", source_name="A Dict")
-    tab.dictionary_panel.set_chain((ChainEntry(kind="jisho", dict_id=None, enabled=True),))
+    tab.dictionary_panel.set_chain((ChainEntry(kind="indexed", dict_id="spare", enabled=True),))
 
     monkeypatch.setattr(
         QMessageBox,
@@ -197,9 +190,8 @@ def test_restore_multiple_orphans_sorted_before_jisho(tab_for_restore, monkeypat
 
     new_chain = config_changed_emissions[0].dictionary_chain
     dict_ids = [e.dict_id for e in new_chain]
-    jisho_idx = next(i for i, e in enumerate(new_chain) if e.kind == "jisho")
-    # Both orphans added, sorted (a before z), and both ahead of jisho.
-    assert dict_ids[:jisho_idx] == ["a-dict", "z-dict"]
+    # Both orphans added after the listed entry, sorted (a before z).
+    assert dict_ids == ["spare", "a-dict", "z-dict"]
 
 
 def test_restore_orphan_declined_no_change(tab_for_restore, monkeypatch):
@@ -207,7 +199,7 @@ def test_restore_orphan_declined_no_change(tab_for_restore, monkeypatch):
     tab = tab_for_restore
     dicts_root = tab.config.dicts_root
     _make_dict_on_disk(dicts_root, "orphan-dict", fmt="yomitan", source_name="Orphan Dict")
-    tab.dictionary_panel.set_chain((ChainEntry(kind="jisho", dict_id=None, enabled=True),))
+    tab.dictionary_panel.set_chain((ChainEntry(kind="indexed", dict_id="spare", enabled=True),))
 
     monkeypatch.setattr(
         QMessageBox,

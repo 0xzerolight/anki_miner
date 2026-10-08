@@ -150,7 +150,7 @@ def _result(config, *installed, wordlist_paths=None):
 def test_apply_puts_new_dictionaries_on_top_and_appends_new_sources(test_config, tmp_path):
     config = replace(
         test_config,
-        dictionary_chain=(ChainEntry(kind="indexed", dict_id="mine"), ChainEntry(kind="jisho", enabled=False)),
+        dictionary_chain=(ChainEntry(kind="indexed", dict_id="mine"),),
         frequency_chain=(FreqEntry("a"),),
         pitch_chain=(PitchSourceEntry("p"),),
     )
@@ -167,7 +167,6 @@ def test_apply_puts_new_dictionaries_on_top_and_appends_new_sources(test_config,
     assert new.dictionary_chain == (
         ChainEntry(kind="indexed", dict_id="theirs"),
         ChainEntry(kind="indexed", dict_id="mine"),
-        ChainEntry(kind="jisho", enabled=False),
     )
     assert new.frequency_chain == (FreqEntry("a"), FreqEntry("b", enabled=False))
     assert new.pitch_chain == (PitchSourceEntry("p"), PitchSourceEntry("q"))

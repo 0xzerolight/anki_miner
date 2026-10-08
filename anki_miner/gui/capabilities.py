@@ -866,16 +866,6 @@ CAPABILITIES: tuple[Capability, ...] = (
         keywords=("update", "auto update", "latest version", "new version", "revision", "jitendex", "jmdict"),
     ),
     Capability(
-        id="jisho-fallback",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Jisho.org online fallback (Japanese)"),
-        description=QT_TRANSLATE_NOOP(
-            "Capabilities", "For Japanese, fall back to Jisho.org when your offline dictionaries have no entry."
-        ),
-        category=_CAT_SOURCES,
-        target=CapabilityTarget("settings", "dictionaries"),
-        keywords=("jisho", "online", "fallback", "internet definition", "web lookup"),
-    ),
-    Capability(
         id="frequency-chain",
         title=QT_TRANSLATE_NOOP("Capabilities", "Add frequency lists"),
         description=QT_TRANSLATE_NOOP(

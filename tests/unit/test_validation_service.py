@@ -589,10 +589,7 @@ class TestValidationService:
             test_config = replace(
                 test_config,
                 dicts_root=dicts_root,
-                dictionary_chain=(
-                    ChainEntry(kind="indexed", dict_id="test-dict", enabled=True),
-                    ChainEntry(kind="jisho", dict_id=None, enabled=True),
-                ),
+                dictionary_chain=(ChainEntry(kind="indexed", dict_id="test-dict", enabled=True),),
             )
             service = ValidationService(test_config)
 
@@ -1031,10 +1028,7 @@ class TestOptionalResourceWarnings:
         dicts_root = tmp_path / "dicts"
         self._stage_dict(dicts_root, "test-dict")
 
-        chain = (
-            ChainEntry(kind="indexed", dict_id="test-dict", enabled=True),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
-        )
+        chain = (ChainEntry(kind="indexed", dict_id="test-dict", enabled=True),)
         config = replace(test_config, dictionary_chain=chain, dicts_root=dicts_root)
         result = ValidationService(config).validate_setup()
 
@@ -1056,10 +1050,7 @@ class TestOptionalResourceWarnings:
         from anki_miner.config import ChainEntry
 
         self._patch_external_checks(monkeypatch)
-        chain = (
-            ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=False),
-            ChainEntry(kind="jisho", dict_id=None, enabled=True),
-        )
+        chain = (ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=False),)
         config = replace(test_config, dictionary_chain=chain, dicts_root=tmp_path / "dicts")
         result = ValidationService(config).validate_setup()
 
@@ -1068,11 +1059,8 @@ class TestOptionalResourceWarnings:
     def test_warns_when_no_offline_dictionary_is_configured(self, test_config, monkeypatch, tmp_path):
         from dataclasses import replace
 
-        from anki_miner.config import ChainEntry
-
         self._patch_external_checks(monkeypatch)
-        chain = (ChainEntry(kind="jisho", dict_id=None, enabled=True),)
-        config = replace(test_config, dictionary_chain=chain, dicts_root=tmp_path / "dicts")
+        config = replace(test_config, dictionary_chain=(), dicts_root=tmp_path / "dicts")
         result = ValidationService(config).validate_setup()
 
         assert self._has_warning(result, "Offline Dictionary")
@@ -1468,12 +1456,7 @@ class TestYtdlpStalenessWarning:
 
         from dataclasses import replace
 
-        from anki_miner.config import ChainEntry
-
-        config = replace(
-            test_config,
-            dictionary_chain=(ChainEntry(kind="jisho", dict_id=None, enabled=True),),
-        )
+        config = replace(test_config, dictionary_chain=())
         result = ValidationService(config).validate_setup()
 
         # Must not block startup
@@ -1527,12 +1510,7 @@ class TestYtdlpStalenessWarning:
 
         from dataclasses import replace
 
-        from anki_miner.config import ChainEntry
-
-        config = replace(
-            test_config,
-            dictionary_chain=(ChainEntry(kind="jisho", dict_id=None, enabled=True),),
-        )
+        config = replace(test_config, dictionary_chain=())
         result = ValidationService(config).validate_setup()
 
         assert result.all_passed is True

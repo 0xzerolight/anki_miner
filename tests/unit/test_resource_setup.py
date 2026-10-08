@@ -90,7 +90,6 @@ class TestApplyDownloadSummary:
             dictionary_chain=(
                 ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),
                 ChainEntry(kind="indexed", dict_id="jitendex", enabled=False),
-                ChainEntry(kind="jisho", dict_id=None, enabled=False),
             ),
         )
         summary = ResourceDownloadSummary(results=[_dict_result(dict_id="jitendex")])
@@ -101,7 +100,6 @@ class TestApplyDownloadSummary:
         assert len(jitendex_entries) == 1
         # Other entries still present.
         assert any(e.dict_id == "jmdict-english" for e in result.dictionary_chain)
-        assert any(e.kind == "jisho" for e in result.dictionary_chain)
 
     def test_dict_success_drops_swept_legacy_chain_entries(self) -> None:
         # Worker swept a date-versioned legacy dir; its chain entry must be

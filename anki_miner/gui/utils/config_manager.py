@@ -474,7 +474,7 @@ class GUIConfigManager:
         config_dict = cls._drop_non_string_key_bindings(config_dict)
 
         # Migrate legacy dictionary fields → dictionary_chain
-        config_dict = cls._migrate_dictionary_chain(config_dict)
+        config_dict = cls._migrate_dictionary_chain(config_dict, shims)
 
         # Migrate expression_audio_chain JSON dicts → AudioSourceEntry
         config_dict = cls._migrate_expression_audio_chain(config_dict)
@@ -486,7 +486,7 @@ class GUIConfigManager:
         config_dict = cls._migrate_pitch_chain(config_dict)
 
         # Rebuild chain entries parked for inactive languages.
-        config_dict = cls._rebuild_language_stash(config_dict)
+        config_dict = cls._rebuild_language_stash(config_dict, shims)
 
         # Default-ON seed for name wordsets (junk-reduction r3). A config
         # written under schema < 2 that carries no enabled wordsets predates
@@ -900,10 +900,14 @@ class GUIConfigManager:
                 del incoming[key]
 
     @staticmethod
-    def _migrate_dictionary_chain(data: dict[str, Any]) -> dict[str, Any]:
+    def _migrate_dictionary_chain(data: dict[str, Any], shims: list[str] | None = None) -> dict[str, Any]:
         """Rebuild ChainEntry instances when an existing dictionary_chain is
         loaded as list[dict] from JSON. Missing chains fall through to the
-        dataclass defaults (jmdict-english + jisho).
+        dataclass default (jmdict-english).
+
+        Every kind but ``indexed`` is dropped. A Jisho entry (the online
+        dictionary, since removed) is also named in *shims*, so the
+        ``Config migrated`` receipt says where it went.
         """
         from anki_miner.config import ChainEntry
 
@@ -919,7 +923,7 @@ class GUIConfigManager:
         for item in raw_chain:
             if isinstance(item, dict):
                 kind = item.get("kind")
-                if kind in ("indexed", "jisho"):
+                if kind == "indexed":
                     chain.append(
                         ChainEntry(
                             kind=kind,
@@ -927,6 +931,8 @@ class GUIConfigManager:
                             enabled=item.get("enabled", True),
                         )
                     )
+                elif kind == "jisho" and shims is not None and "drop_jisho" not in shims:
+                    shims.append("drop_jisho")
             elif isinstance(item, ChainEntry):
                 chain.append(item)
         data["dictionary_chain"] = tuple(chain)
@@ -1042,7 +1048,7 @@ class GUIConfigManager:
         return data
 
     @classmethod
-    def _rebuild_language_stash(cls, data: dict[str, Any]) -> dict[str, Any]:
+    def _rebuild_language_stash(cls, data: dict[str, Any], shims: list[str] | None = None) -> dict[str, Any]:
         """Rebuild chain entries parked inside ``language_stash``.
 
         JSON gives the stashed chains back as list[dict]; the four chain
@@ -1051,7 +1057,8 @@ class GUIConfigManager:
         already recurses into nested dicts and converts by field name. A
         malformed stash is dropped so ``AnkiMinerConfig(**...)`` cannot raise.
         Permanent deserializer, not a version shim (same status as the four
-        chain rebuilds).
+        chain rebuilds). *shims* collects the same receipt names the top-level
+        chain rebuild records.
         """
         raw = data.get("language_stash")
         if raw is None:
@@ -1065,7 +1072,7 @@ class GUIConfigManager:
             if not isinstance(code, str) or not isinstance(values, dict):
                 continue
             entry: dict[str, Any] = dict(values)
-            entry = cls._migrate_dictionary_chain(entry)
+            entry = cls._migrate_dictionary_chain(entry, shims)
             entry = cls._migrate_expression_audio_chain(entry)
             entry = cls._migrate_frequency_chain(entry)
             entry = cls._migrate_pitch_chain(entry)
