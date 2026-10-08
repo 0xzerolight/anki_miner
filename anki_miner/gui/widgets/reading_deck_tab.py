@@ -447,6 +447,11 @@ class ReadingDeckTab(_ReadingMiningTabBase):
             return
         # A fresh attempt supersedes the last complaint (after the reentrancy guard).
         self.clear_screen_issue()
+        if self._deck_fetch_failed and self._deck_fetch_issue is not None:
+            # The picker is off because Anki gave no deck list; that banner is
+            # the answer, and the next good fetch takes it down (same object).
+            self.show_screen_issue(self._deck_fetch_issue)
+            return
         deck = self._selected_deck()
         fields = self._picked_fields()
         # An empty deck is named before the field check: with no notes, the

@@ -310,6 +310,18 @@ class TestDeckFirst:
         assert tab.deck_combo.isEnabled()
         assert tab.issue_banner().current_issue() is None
 
+    def test_mine_while_the_deck_list_is_missing_keeps_the_fetch_banner(self, tab, deck_service):
+        deck_service.decks = []
+        tab.ensure_decks()
+        fetch_issue = tab.issue_banner().current_issue()
+
+        tab._on_mine_clicked()  # the deck picker is off; "pick a deck" would mislead
+        assert tab.issue_banner().current_issue() is fetch_issue
+
+        deck_service.decks = ["Show::Ep01"]
+        tab.ensure_decks()
+        assert tab.issue_banner().current_issue() is None
+
     def test_a_truly_empty_deck_is_named_not_its_missing_fields(self, tab, monkeypatch):
         """With no notes, inspect_deck finds no fields; the refusal names the real cause."""
         empty = DeckInspection(note_count=0, models=(), field_names=(), first_field_by_model={}, samples=())
