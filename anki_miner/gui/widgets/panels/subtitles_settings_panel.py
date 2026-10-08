@@ -160,6 +160,10 @@ class SubtitlesSettingsPanel(FormPanel):
     #: resolved by the wiring. One action fetches BOTH the ggml acoustic model
     #: and the Silero VAD.
     vulkan_model_download_requested = pyqtSignal(str)
+    #: The probe showed or hid a row settings search indexes (Model download
+    #: follows engine availability). Search resolves visibility when its index
+    #: is built, and this row moves after that, so SettingsTab re-indexes.
+    setting_rows_changed = pyqtSignal()
 
     def __init__(
         self,
@@ -1238,8 +1242,13 @@ class SubtitlesSettingsPanel(FormPanel):
         "Downloading…" status untouched. Hidden until the engine imports; after
         the one setup click it starts the model download itself (C11).
         """
+        row_shown = engine_available or self._asr_download_active
+        # [-1] is the field half of the (label, field) row.
+        row_moved = self._model_row_widgets[-1].isHidden() == row_shown
         for widget in self._model_row_widgets:
-            widget.setVisible(engine_available or self._asr_download_active)
+            widget.setVisible(row_shown)
+        if row_moved:
+            self.setting_rows_changed.emit()
         if self._asr_download_active:
             self.download_model_button.setEnabled(False)
             return

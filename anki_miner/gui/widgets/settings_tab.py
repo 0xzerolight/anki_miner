@@ -797,6 +797,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.subtitles_panel.vad_pack_download_requested.connect(self._on_vad_pack_download_clicked)
         self.subtitles_panel.asr_pack_download_requested.connect(self._on_asr_pack_download_clicked)
         self.subtitles_panel.vulkan_model_download_requested.connect(self._on_vulkan_download_clicked)
+        self.subtitles_panel.setting_rows_changed.connect(self.refresh_setting_search_index)
 
     def _start_restore_scan(
         self,
