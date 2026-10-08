@@ -22,11 +22,12 @@ import io
 import zipfile
 
 from PIL import Image
-from PyQt6.QtCore import QRect, QRectF, Qt
+from PyQt6.QtCore import QRectF, Qt
 from PyQt6.QtGui import QColor, QImage, QPainter, QPen, QPixmap
 from PyQt6.QtWidgets import QLabel, QSizePolicy, QVBoxLayout, QWidget
 
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils import image_fit
 from anki_miner.gui.utils.fonts import make_scaled_font
 from anki_miner.models.reading import ImageRef
 from anki_miner.utils.pil_limits import apply_pil_image_limits, validate_image_pixel_budget
@@ -179,35 +180,8 @@ class _PageCanvas(QWidget):
         self.message = message
         self.update()
 
-    @staticmethod
-    def fit_transform(pane_w: float, pane_h: float, img_w: float, img_h: float) -> tuple[float, float, float]:
-        """(scale, dx, dy) that fits an ``img_w x img_h`` page centered in the pane.
-
-        Pure math, factored out for direct testing. Aspect is kept; a page
-        smaller than the pane is scaled up to fit (fit-to-pane, not
-        shrink-only). Degenerate sizes yield a zero scale so callers skip
-        drawing.
-        """
-        if img_w <= 0 or img_h <= 0 or pane_w <= 0 or pane_h <= 0:
-            return 0.0, 0.0, 0.0
-        scale = min(pane_w / img_w, pane_h / img_h)
-        dx = (pane_w - img_w * scale) / 2
-        dy = (pane_h - img_h * scale) / 2
-        return scale, dx, dy
-
-    @staticmethod
-    def clamped_box(box: tuple[int, int, int, int], img_w: int, img_h: int) -> QRect:
-        """``box`` intersected with the page rect (out-of-bounds boxes exist)."""
-        xmin, ymin, xmax, ymax = box
-        if img_w <= 0 or img_h <= 0 or xmin >= xmax or ymin >= ymax:
-            return QRect()
-        left = min(max(xmin, 0), img_w)
-        top = min(max(ymin, 0), img_h)
-        right = min(max(xmax, 0), img_w)
-        bottom = min(max(ymax, 0), img_h)
-        if left >= right or top >= bottom:
-            return QRect()
-        return QRect(left, top, right - left, bottom - top)
+    fit_transform = staticmethod(image_fit.fit_transform)
+    clamped_box = staticmethod(image_fit.clamped_box)
 
     def paintEvent(self, event) -> None:  # noqa: N802 - Qt override
         painter = QPainter(self)

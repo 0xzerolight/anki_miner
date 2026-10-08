@@ -88,6 +88,13 @@ _BLOCKING_PATTERNS: tuple[str, ...] = (
     # own name because the call text callers see is this one, not is_downloaded.
     r"usable_model_installed\(",
     r"\.rglob\(",
+    # Video OCR: an ffmpeg still decode and an OCR read (the engine loads on the
+    # first call, which can take seconds).
+    r"still_at\(",
+    r"read_region_text\(",
+    # The OCR engine itself. GUI code goes through read_region_text, never here,
+    # so this pattern has no allowlist entry.
+    r"read_boxes\(",
 )
 
 #: pattern -> {relative file paths where the pattern legitimately remains}.
@@ -203,6 +210,14 @@ ALLOWLIST: dict[str, set[str]] = {
         "widgets/youtube_tab.py",
         # Audiobook Sync: same pre-run guard, same on-purpose GUI-thread call.
         "widgets/booksync_tab.py",
+    },
+    r"still_at\(": {
+        # Only inside the work callables passed to run_off_thread.
+        "widgets/dialogs/ocr_region_dialog.py",
+    },
+    r"read_region_text\(": {
+        # Only inside the work callables passed to run_off_thread.
+        "widgets/dialogs/ocr_region_dialog.py",
     },
 }
 
