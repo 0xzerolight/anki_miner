@@ -6,6 +6,7 @@ from dataclasses import replace
 from unittest.mock import MagicMock
 
 import pytest
+from PyQt6.QtCore import QObject, pyqtSignal
 
 from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard
 from anki_miner.gui.widgets.dialogs.setup_wizard import pages as wizard_pages
@@ -465,6 +466,37 @@ def test_a_failed_pack_download_offers_retry(qtbot, monkeypatch, test_config):
     tasks.language_pack_workers.clear()
     wiz.language_page.activate_link("pack")
     assert tasks.started == ["de", "de"]
+
+
+class _SignallingInstallWorker(QObject):
+    """A running InstallWorker as _start_pack_download sees it: two signals and isRunning."""
+
+    status = pyqtSignal(str)
+    result_ready = pyqtSignal(bool, str)
+
+    def isRunning(self) -> bool:  # noqa: N802 - mirrors QThread
+        return True
+
+
+def test_next_joins_a_pack_download_settings_already_started(qtbot, monkeypatch, test_config):
+    """X.4d: no second download; the running one's status and result drive the Ready line."""
+    _choices_with_a_download(monkeypatch)
+    monkeypatch.setattr(wizard_pages, "ensure_language_packs_on_syspath", lambda: None)
+    wiz, tasks = _wizard_with_tasks(qtbot, monkeypatch, test_config)
+    running = _SignallingInstallWorker()
+    tasks.language_pack_workers["de"] = running
+    page = wiz.language_page
+    _pick(page, "de")
+
+    assert page.validatePage() is True
+    assert tasks.started == []
+    running.status.emit("Deutsch pack (1/2): downloading")
+    assert "Deutsch pack (1/2): downloading" in page.ready_page_pack_line()
+    assert page.pack_ready() is False
+
+    running.result_ready.emit(True, "Deutsch pack installed.")
+
+    assert page.pack_ready() is True
 
 
 def _with_settings_tab(wiz):
