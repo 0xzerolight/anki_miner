@@ -115,6 +115,9 @@ class _ToolTabStrings:
     #: condensed."): "Some files…" about a single file reads as a miscount (E13).
     #: Empty falls back to ``run_problem``.
     run_problem_single: str = ""
+    #: The Output value once a folder is chosen: ``%1`` = the folder. Empty
+    #: shows the bare path; Retime keeps its naming rule beside it.
+    output_custom_template: str = ""
 
 
 class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
@@ -349,7 +352,8 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
             if folder:
                 session_state.remember_accepted_path(self.OUTPUT_HISTORY_KEY, folder, file_mode=False)
                 self._custom_output_dir = Path(folder)
-                self.output_location_label.setText(folder)
+                template = self._strings.output_custom_template
+                self.output_location_label.setText(tr_format(template, folder) if template else folder)
                 self.clear_output_button.show()
 
         file_dialogs.pick_directory(

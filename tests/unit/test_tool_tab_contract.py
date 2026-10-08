@@ -336,7 +336,7 @@ def test_choose_folder_then_reset(spec, qtbot, tmp_path):
         tab.choose_output_button.click()
 
     assert tab._custom_output_dir == out
-    assert tab.output_location_label.text() == str(out)
+    assert tab.output_location_label.text().startswith(str(out))
     assert not tab.clear_output_button.isHidden()
 
     tab.clear_output_button.click()
@@ -410,6 +410,18 @@ def test_retime_says_where_and_how_it_writes_in_the_output_value(qtbot, tmp_path
 
     assert tab.output_location_label.text() == "Next to source video, as name_retimed.srt"
     assert not hasattr(tab, "engine_notice_label")
+
+
+def test_retime_keeps_its_naming_rule_with_a_custom_folder(qtbot, tmp_path):
+    """B4.4: a chosen folder still says how Retime names the file."""
+    tab = _make_tab(_RETIME, qtbot, tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+
+    with patch(_PICK_DIRECTORY, side_effect=lambda *a, on_done, **k: on_done(str(out))):
+        tab.choose_output_button.click()
+
+    assert tab.output_location_label.text() == f"{out}, as name_retimed.srt"
 
 
 @pytest.mark.parametrize(

@@ -136,6 +136,7 @@ class SubtitleRetimeTab(_ToolTabBase):
             ),
             select_output_folder=self.tr("Select Output Folder"),
             output_default=self.tr("Next to source video, as name_retimed.srt"),
+            output_custom_template=self.tr("%1, as name_retimed.srt"),
             task_title=self.tr("Subtitle retiming"),
         )
 
