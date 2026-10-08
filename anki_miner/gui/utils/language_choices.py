@@ -7,21 +7,38 @@ sealed because ``profile.py`` imports ``services.resource_catalog`` at module
 level. A code is only offerable once ``get_profile`` builds, and a tokenizer
 extra can be absent from any build, so the selector resolves every code and
 drops what does not resolve rather than assuming. The list shows each
-language by its native name alone, sorted by English name with Japanese first
-(C18);
-:func:`mining_language_choices` adds the languages a pack download would
-unlock (D12).
+language by its native name alone, sorted by that name: Latin scripts first,
+accents and case ignored, then Greek, Cyrillic, Hebrew, Arabic, Thai, Han and
+Hangul (D2, 2026-10-08). :func:`mining_language_choices` adds the languages a
+pack download would unlock (D12).
 """
 
 from __future__ import annotations
 
 import logging
+import unicodedata
 from dataclasses import dataclass
 
 from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages.registry import get_profile, language_display_name
 
 logger = logging.getLogger(__name__)
+
+#: Script groups in list order, named the way ``unicodedata.name`` starts for
+#: that script's letters. A script not named here sorts last.
+_SCRIPT_ORDER = ("LATIN", "GREEK", "CYRILLIC", "HEBREW", "ARABIC", "THAI", "CJK", "HANGUL")
+
+
+def _sort_key(name: str) -> tuple[int, str]:
+    """Where *name* sorts: its script's group, then A-Z ignoring accents and case.
+
+    The group has to come first: NFKD splits 한 into Jamo (U+1112), which by
+    code point would sort 한국어 before every Han name.
+    """
+    script = unicodedata.name(name[0], "").split(" ", 1)[0]
+    group = _SCRIPT_ORDER.index(script) if script in _SCRIPT_ORDER else len(_SCRIPT_ORDER)
+    folded = "".join(ch for ch in unicodedata.normalize("NFKD", name) if not unicodedata.combining(ch))
+    return group, folded.casefold()
 
 
 @dataclass(frozen=True)
@@ -66,7 +83,7 @@ def _pack_download_mb(code: str) -> int | None:
 def mining_language_choices() -> tuple[MiningLanguageChoice, ...]:
     """Every language this build can mine now or after one pack download (C18, D12).
 
-    Sorted by English name with Japanese, the reference language, first.
+    Sorted by native name, Latin scripts first (D2).
     """
     choices: list[MiningLanguageChoice] = []
     for code in AVAILABLE_LANGUAGES:
@@ -91,7 +108,7 @@ def mining_language_choices() -> tuple[MiningLanguageChoice, ...]:
             logger.info("Mining language %r is not available here: %s", code, reason)
             continue
         choices.append(MiningLanguageChoice(profile.code, native, english, True, download_mb))
-    choices.sort(key=lambda choice: (choice.code != "ja", choice.english_name.casefold()))
+    choices.sort(key=lambda choice: _sort_key(choice.native_name))
     return tuple(choices)
 
 

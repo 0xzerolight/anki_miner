@@ -5,14 +5,17 @@ from __future__ import annotations
 import dataclasses
 
 from anki_miner.gui.utils import language_choices
+from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages.registry import get_profile
 
 
-def _only(monkeypatch, codes, *, unavailable=(), downloadable=None):
+def _only(monkeypatch, codes, *, unavailable=(), downloadable=None, names=None):
     monkeypatch.setattr(language_choices, "AVAILABLE_LANGUAGES", codes)
 
     def fake_profile(code):
         profile = get_profile(code)
+        if names and code in names:
+            profile = dataclasses.replace(profile, display_name=names[code])
         if code in unavailable:
             return dataclasses.replace(profile, unavailable_reason=lambda: "missing engine")
         return dataclasses.replace(profile, unavailable_reason=None)
@@ -29,10 +32,56 @@ def test_labels_show_only_the_native_name(monkeypatch):
     assert labels["en"] == "English"
 
 
-def test_japanese_first_then_sorted_by_english_name(monkeypatch):
-    _only(monkeypatch, ("zh", "de", "ja", "ar", "en"))
-    codes = [code for code, _label in language_choices.available_mining_languages()]
-    assert codes == ["ja", "ar", "zh", "en", "de"]
+#: D2 (2026-10-08): the list in the order it shows. Latin first, A-Z ignoring
+#: accents and case; then Greek, Cyrillic, Hebrew, Arabic, Thai, Han, Hangul.
+_EVERY_LANGUAGE_IN_ORDER = [
+    "Bahasa Indonesia",
+    "Català",
+    "Dansk",
+    "Deutsch",
+    "English",
+    "Español",
+    "Français",
+    "Hrvatski",
+    "Italiano",
+    "Lietuvių",
+    "Magyar",
+    "Nederlands",
+    "Norsk bokmål",
+    "Polski",
+    "Português",
+    "Română",
+    "Slovenščina",
+    "Suomi",
+    "Svenska",
+    "Tiếng Việt",
+    "Türkçe",
+    "Ελληνικά",
+    "Русский",
+    "Українська",
+    "עברית",
+    "العربية",
+    "فارسی",
+    "ไทย",
+    "中文",
+    "廣東話",
+    "日本語",
+    "한국어",
+]
+
+
+def test_every_language_sorts_by_its_native_name_latin_scripts_first(monkeypatch):
+    _only(monkeypatch, AVAILABLE_LANGUAGES)
+    names = [name for _code, name in language_choices.available_mining_languages()]
+    assert names == _EVERY_LANGUAGE_IN_ORDER
+
+
+def test_accents_and_case_do_not_move_a_latin_name(monkeypatch):
+    # Names a later language could carry. By code point both would land after
+    # every unaccented capital, "Tiếng Việt" included.
+    _only(monkeypatch, ("it", "en", "tr", "vi"), names={"en": "isiZulu", "tr": "Íslenska"})
+    codes = [code for code, _name in language_choices.available_mining_languages()]
+    assert codes == ["en", "tr", "it", "vi"]
 
 
 def test_a_language_needing_its_pack_is_offered_for_download(monkeypatch):
