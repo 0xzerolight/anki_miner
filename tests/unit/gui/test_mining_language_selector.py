@@ -59,7 +59,7 @@ def _panel(qtbot, config: AnkiMinerConfig) -> MiningLanguageSettingsPanel:
 
 def test_a_declared_but_unbuildable_language_is_not_offered(monkeypatch):
     monkeypatch.setattr(language_choices, "AVAILABLE_LANGUAGES", ("ja", "zh", "xx"))
-    assert [code for code, _name in language_choices.available_mining_languages()] == ["ja", "zh"]
+    assert [code for code, _name in language_choices.available_mining_languages()] == ["zh", "ja"]
 
 
 def test_a_language_whose_stack_is_missing_is_not_offered(monkeypatch):
@@ -79,7 +79,7 @@ def test_a_language_whose_stack_is_missing_is_not_offered(monkeypatch):
 
     monkeypatch.setattr(language_choices, "get_profile", fake_get_profile)
 
-    assert [code for code, _name in language_choices.available_mining_languages()] == ["ja", "he", "id"]
+    assert [code for code, _name in language_choices.available_mining_languages()] == ["id", "he", "ja"]
 
 
 def test_a_missing_optional_package_keeps_the_language_offered(monkeypatch):
@@ -90,24 +90,24 @@ def test_a_missing_optional_package_keeps_the_language_offered(monkeypatch):
     """
     monkeypatch.setattr(availability, "module_importable", lambda name: name != "opencc")
 
-    assert [code for code, _name in language_choices.available_mining_languages()] == ["ja", "zh", "he", "id"]
+    assert [code for code, _name in language_choices.available_mining_languages()] == ["id", "he", "zh", "ja"]
 
 
 def test_a_missing_required_package_drops_the_language(monkeypatch):
     monkeypatch.setattr(availability, "module_importable", lambda name: name != "jieba")
 
-    assert [code for code, _name in language_choices.available_mining_languages()] == ["ja", "he", "id"]
+    assert [code for code, _name in language_choices.available_mining_languages()] == ["id", "he", "ja"]
 
 
-def test_offered_languages_carry_native_and_english_names():
+def test_offered_languages_carry_only_their_native_names():
     names = dict(language_choices.available_mining_languages())
-    assert names["ja"] == "日本語 — Japanese"
-    assert names["zh"] == "中文 — Chinese"
+    assert names["ja"] == "日本語"
+    assert names["zh"] == "中文"
 
 
 def test_the_panel_builds_and_lists_only_buildable_languages(qtbot, test_config):
     combo = _panel(qtbot, test_config).mining_language_combo
-    assert [combo.itemData(i) for i in range(combo.count())] == ["ja", "zh", "he", "id"]
+    assert [combo.itemData(i) for i in range(combo.count())] == ["id", "he", "zh", "ja"]
     assert combo.currentData() == "ja"
 
 
@@ -116,7 +116,7 @@ def test_changing_the_combo_only_requests_a_switch(qtbot, test_config):
     requested: list[str] = []
     panel.mining_language_requested.connect(requested.append)
 
-    panel.mining_language_combo.setCurrentIndex(1)
+    panel.mining_language_combo.setCurrentIndex(panel.mining_language_combo.findData("zh"))
 
     assert requested == ["zh"]
 
@@ -204,7 +204,7 @@ def test_a_language_needing_a_download_is_listed_with_a_suffix(qtbot, test_confi
     combo = _panel(qtbot, test_config).mining_language_combo
     index = combo.findData("de")
     assert index >= 0
-    assert combo.itemText(index) == "Deutsch — German (download)"
+    assert combo.itemText(index) == "Deutsch (download)"
 
 
 def test_picking_it_offers_the_download_instead_of_switching(qtbot, test_config, german_downloadable):
