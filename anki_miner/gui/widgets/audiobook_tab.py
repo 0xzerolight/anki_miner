@@ -72,9 +72,11 @@ from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, accepts_
 from anki_miner.gui.widgets.queue_controls_bar import QueueControlsBar
 from anki_miner.gui.workers.audiobook_queue_worker import AudiobookQueueWorker
 from anki_miner.interfaces.presenter import PresenterProtocol
+from anki_miner.languages.registry import config_language, subtitle_language
 from anki_miner.models.audiobook_queue import AudiobookQueue, AudiobookQueueItem
 from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.orchestration import EpisodeProcessor
+from anki_miner.utils.file_pairing import find_sibling_subtitle
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
 
@@ -305,7 +307,7 @@ class AudiobookTab(_ListQueueMiningTabBase):
     # ------------------------------------------------------------------
 
     def _on_audio_path_changed(self, text: str) -> None:
-        """Auto-fill the subtitle picker with the same-stem subtitle next to the audio file.
+        """Auto-fill the subtitle picker with the subtitle that belongs to the audio file (`find_sibling_subtitle`).
 
         Replaces this tab's prior auto-fill when the audio changes. A
         user-chosen subtitle is never overwritten.
@@ -324,14 +326,13 @@ class AudiobookTab(_ListQueueMiningTabBase):
             if owns_subtitle:
                 self.subtitle_selector.clear()
             return
-        for ext in _SUBTITLE_EXTS:
-            candidate = audio.with_suffix(ext)
-            if candidate.is_file():
-                subtitle_path = str(candidate)
-                self._last_auto_filled_subtitle = subtitle_path
-                self.subtitle_selector.set_path(subtitle_path)
-                return
-        if owns_subtitle:
+        sibling = find_sibling_subtitle(
+            audio, priority=_SUBTITLE_EXTS, language=subtitle_language(config_language(self.config))
+        )
+        if sibling is not None:
+            self._last_auto_filled_subtitle = str(sibling)
+            self.subtitle_selector.set_path(str(sibling))
+        elif owns_subtitle:
             self.subtitle_selector.clear()
 
     def _on_add_clicked(self) -> None:
