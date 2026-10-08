@@ -2,9 +2,9 @@
 
 Mines subtitle files (``.srt``/``.ass``/``.ssa``/``.vtt``) as text — no video,
 so no screenshots and no extracted sentence audio (synthetic sentence TTS, if
-enabled in Audio settings, still applies like any reading-sourced card) —
-through the shared reading pipeline. Add files via the multi-select picker (or
-drop several); **Mine** runs them sequentially as one job (one
+enabled under Settings → Card Media → Text-to-speech, still applies like any
+reading-sourced card) — through the shared reading pipeline. Add files via the
+multi-select picker (or drop several); **Mine** runs them sequentially as one job (one
 :class:`ReadingQueueItem` per file, retained on its list row) through the shared
 :class:`~anki_miner.gui.widgets._reading_mining_base._ReadingMiningTabBase`
 lifecycle, composing per-file progress into one whole-run bar like the manga

@@ -167,6 +167,13 @@ class TestMatching:
 
         assert "media.reading_tts" in results
 
+    def test_old_read_aloud_name_finds_the_sentence_tts_combo(self, entries):
+        """The row was "Read aloud (manga, books)" until it was renamed Text-to-speech;
+        anchor_text keeps the old name so a remembered search still lands on it."""
+        results = _ids(search(entries, "Read aloud"))
+
+        assert "media.reading_tts" in results
+
     def test_fps_finds_the_animated_size_combo(self, entries):
         """Small/Balanced/High never say "fps"; only a still-custom entry's
         label would, and only once a non-preset triple is loaded."""

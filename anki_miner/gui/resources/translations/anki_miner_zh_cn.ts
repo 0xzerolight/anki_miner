@@ -612,8 +612,8 @@
         <translation>卡片字段映射</translation>
     </message>
     <message>
-        <source>Map data to note fields (names must match exactly). Blank = skip.</source>
-        <translation>将数据映射到笔记字段（名称必须完全匹配）。留空 = 跳过。</translation>
+        <source>Map data to note fields. Blank = skip.</source>
+        <translation>将数据映射到笔记字段。留空 = 跳过。</translation>
     </message>
     <message>
         <source>Expression Field</source>
@@ -6022,8 +6022,8 @@ No index files are deleted.</source>
         <translation>快捷键</translation>
     </message>
     <message>
-        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
-        <translation>点击按键框，然后按下新的按键。更改会立即生效。已经打开的单词整理器窗口会保留原有的按键，直到下次打开时才更新。上下键始终用于在单词间移动，左右键用于在列间移动，%1 始终用于确认。</translation>
+        <source>Click a box and press the new key. Changes apply at once. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
+        <translation>点击按键框，然后按下新的按键。更改会立即生效。上下键始终用于在单词间移动，左右键用于在列间移动，%1 始终用于确认。</translation>
     </message>
     <message>
         <source>Word Curator</source>
@@ -6994,8 +6994,8 @@ Continue?</source>
         <translation>仅 Papago</translation>
     </message>
     <message>
-        <source>Read aloud (manga, books)</source>
-        <translation>朗读（漫画、书籍）</translation>
+        <source>Text-to-speech</source>
+        <translation>文字转语音</translation>
     </message>
     <message>
         <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>

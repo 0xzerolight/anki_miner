@@ -614,8 +614,8 @@
         <translation>Mappature dei campi della carta</translation>
     </message>
     <message>
-        <source>Map data to note fields (names must match exactly). Blank = skip.</source>
-        <translation>Mappa i dati sui campi della nota (i nomi devono corrispondere esattamente). Vuoto = salta.</translation>
+        <source>Map data to note fields. Blank = skip.</source>
+        <translation>Mappa i dati sui campi della nota. Vuoto = salta.</translation>
     </message>
     <message>
         <source>Expression Field</source>
@@ -6058,8 +6058,8 @@ Nessun file indice viene eliminato.</translation>
         <translation>Scorciatoie da tastiera</translation>
     </message>
     <message>
-        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
-        <translation>Fai clic su una casella e premi il nuovo tasto. Le modifiche si applicano subito. Una finestra del Curatore di parole già aperta mantiene i propri tasti fino alla prossima apertura. I tasti Su e Giù permettono sempre di spostarsi tra le parole, Sinistra e Destra tra le colonne, e %1 conferma sempre.</translation>
+        <source>Click a box and press the new key. Changes apply at once. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
+        <translation>Fai clic su una casella e premi il nuovo tasto. Le modifiche si applicano subito. I tasti Su e Giù permettono sempre di spostarsi tra le parole, Sinistra e Destra tra le colonne, e %1 conferma sempre.</translation>
     </message>
     <message>
         <source>Word Curator</source>
@@ -7031,8 +7031,8 @@ Continuare?</translation>
         <translation>Solo Papago</translation>
     </message>
     <message>
-        <source>Read aloud (manga, books)</source>
-        <translation>Lettura ad alta voce (manga, libri)</translation>
+        <source>Text-to-speech</source>
+        <translation>Sintesi vocale</translation>
     </message>
     <message>
         <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>

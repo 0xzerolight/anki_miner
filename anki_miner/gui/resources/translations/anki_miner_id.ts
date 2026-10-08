@@ -612,8 +612,8 @@
         <translation>Pemetaan Bidang Kartu</translation>
     </message>
     <message>
-        <source>Map data to note fields (names must match exactly). Blank = skip.</source>
-        <translation>Petakan data ke bidang catatan (nama harus sama persis). Kosong = lewati.</translation>
+        <source>Map data to note fields. Blank = skip.</source>
+        <translation>Petakan data ke bidang catatan. Kosong = lewati.</translation>
     </message>
     <message>
         <source>Expression Field</source>
@@ -6022,8 +6022,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Pintasan Keyboard</translation>
     </message>
     <message>
-        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
-        <translation>Klik kotak, lalu tekan tombol baru. Perubahan langsung berlaku. Jendela Word Curator yang sudah terbuka tetap memakai tombol lamanya hingga dibuka lagi. Atas dan Bawah selalu berpindah antar kata, Kiri dan Kanan berpindah antar kolom, dan %1 selalu mengonfirmasi.</translation>
+        <source>Click a box and press the new key. Changes apply at once. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
+        <translation>Klik kotak, lalu tekan tombol baru. Perubahan langsung berlaku. Atas dan Bawah selalu berpindah antar kata, Kiri dan Kanan berpindah antar kolom, dan %1 selalu mengonfirmasi.</translation>
     </message>
     <message>
         <source>Word Curator</source>
@@ -6994,8 +6994,8 @@ Lanjutkan?</translation>
         <translation>Hanya Papago</translation>
     </message>
     <message>
-        <source>Read aloud (manga, books)</source>
-        <translation>Dibacakan (manga, buku)</translation>
+        <source>Text-to-speech</source>
+        <translation>Text-to-speech</translation>
     </message>
     <message>
         <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>

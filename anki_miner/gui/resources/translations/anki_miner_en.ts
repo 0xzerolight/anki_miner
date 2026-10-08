@@ -614,7 +614,7 @@
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Map data to note fields (names must match exactly). Blank = skip.</source>
+        <source>Map data to note fields. Blank = skip.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6037,7 +6037,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
+        <source>Click a box and press the new key. Changes apply at once. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -7001,7 +7001,7 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Read aloud (manga, books)</source>
+        <source>Text-to-speech</source>
         <translation type="unfinished" />
     </message>
     <message>

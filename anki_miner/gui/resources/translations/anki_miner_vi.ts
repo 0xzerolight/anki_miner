@@ -612,8 +612,8 @@
         <translation>Ánh xạ trường thẻ</translation>
     </message>
     <message>
-        <source>Map data to note fields (names must match exactly). Blank = skip.</source>
-        <translation>Ánh xạ dữ liệu vào các trường ghi chú (tên phải khớp chính xác). Để trống = bỏ qua.</translation>
+        <source>Map data to note fields. Blank = skip.</source>
+        <translation>Ánh xạ dữ liệu vào các trường ghi chú. Để trống = bỏ qua.</translation>
     </message>
     <message>
         <source>Expression Field</source>
@@ -6022,8 +6022,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Phím tắt</translation>
     </message>
     <message>
-        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
-        <translation>Nhấp vào một ô rồi nhấn phím mới. Thay đổi áp dụng ngay lập tức. Cửa sổ Word Curator đang mở sẽ giữ nguyên các phím cũ cho đến lần mở kế tiếp. Lên và Xuống luôn di chuyển giữa các từ, Trái và Phải di chuyển giữa các cột, và %1 luôn xác nhận.</translation>
+        <source>Click a box and press the new key. Changes apply at once. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
+        <translation>Nhấp vào một ô rồi nhấn phím mới. Thay đổi áp dụng ngay lập tức. Lên và Xuống luôn di chuyển giữa các từ, Trái và Phải di chuyển giữa các cột, và %1 luôn xác nhận.</translation>
     </message>
     <message>
         <source>Word Curator</source>
@@ -6994,8 +6994,8 @@ Tiếp tục?</translation>
         <translation>Chỉ Papago</translation>
     </message>
     <message>
-        <source>Read aloud (manga, books)</source>
-        <translation>Đọc to (manga, sách)</translation>
+        <source>Text-to-speech</source>
+        <translation>Chuyển văn bản thành giọng nói</translation>
     </message>
     <message>
         <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>

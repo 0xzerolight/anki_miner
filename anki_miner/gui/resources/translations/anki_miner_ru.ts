@@ -616,8 +616,8 @@
         <translation>Сопоставление полей карточки</translation>
     </message>
     <message>
-        <source>Map data to note fields (names must match exactly). Blank = skip.</source>
-        <translation>Сопоставьте данные с полями заметки (названия должны точно совпадать). Пусто = пропустить.</translation>
+        <source>Map data to note fields. Blank = skip.</source>
+        <translation>Сопоставьте данные с полями заметки. Пусто = пропустить.</translation>
     </message>
     <message>
         <source>Expression Field</source>
@@ -6094,8 +6094,8 @@ No index files are deleted.</source>
         <translation>Сочетания клавиш</translation>
     </message>
     <message>
-        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
-        <translation>Щёлкните по полю и нажмите нужную клавишу. Изменения применяются сразу же. Уже открытое окно Куратора слов сохраняет свои сочетания клавиш до следующего открытия. Стрелки вверх и вниз всегда служат для перехода между словами, стрелки влево и вправо — для перехода между столбцами, а %1 всегда подтверждает выбор.</translation>
+        <source>Click a box and press the new key. Changes apply at once. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
+        <translation>Щёлкните по полю и нажмите нужную клавишу. Изменения применяются сразу же. Стрелки вверх и вниз всегда служат для перехода между словами, стрелки влево и вправо — для перехода между столбцами, а %1 всегда подтверждает выбор.</translation>
     </message>
     <message>
         <source>Word Curator</source>
@@ -7068,8 +7068,8 @@ Continue?</source>
         <translation>Только Papago</translation>
     </message>
     <message>
-        <source>Read aloud (manga, books)</source>
-        <translation>Озвучка (манга, книги)</translation>
+        <source>Text-to-speech</source>
+        <translation>Синтез речи</translation>
     </message>
     <message>
         <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>

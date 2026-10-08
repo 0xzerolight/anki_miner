@@ -153,10 +153,6 @@ def test_esc_cancels_a_recording_and_keeps_the_binding(panel, qtbot):
     panel.hide()
 
 
-def test_the_page_says_an_open_curator_keeps_its_keys(panel):
-    assert "already open" in panel.helper_label.text()
-
-
 def test_the_helper_text_states_the_true_arrow_key_split(panel):
     """Up/Down move between words; Left/Right move between columns -- not "the arrow keys"."""
     text = panel.helper_label.text()

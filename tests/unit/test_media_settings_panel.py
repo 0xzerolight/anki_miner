@@ -309,13 +309,13 @@ class TestReadingTtsCombo:
         assert panel._tts_touched is False
 
 
-def test_read_aloud_row_uses_the_short_label(qtbot):
-    """C02: the outlier label that pushed the Card Media input column right."""
+def test_sentence_tts_row_is_labelled_text_to_speech(qtbot):
+    """C02 + D3: a short label named for what the row does; the manga/books scope lives in its helper."""
     from PyQt6.QtWidgets import QLabel
 
     panel = MediaSettingsPanel()
     qtbot.addWidget(panel)
     texts = [label.text() for label in panel.findChildren(QLabel)]
 
-    assert "Read aloud (manga, books):" in texts
+    assert "Text-to-speech:" in texts
     assert not any("Spoken sentences for manga" in text for text in texts)

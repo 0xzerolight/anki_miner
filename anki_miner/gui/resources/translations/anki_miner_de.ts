@@ -614,8 +614,8 @@
         <translation>Kartenfeld-Zuordnungen</translation>
     </message>
     <message>
-        <source>Map data to note fields (names must match exactly). Blank = skip.</source>
-        <translation>Daten den Notizfeldern zuordnen (Namen müssen exakt übereinstimmen). Leer = überspringen.</translation>
+        <source>Map data to note fields. Blank = skip.</source>
+        <translation>Daten den Notizfeldern zuordnen. Leer = überspringen.</translation>
     </message>
     <message>
         <source>Expression Field</source>
@@ -6058,8 +6058,8 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Tastenkürzel</translation>
     </message>
     <message>
-        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
-        <translation>Klicken Sie auf ein Feld und drücken Sie die neue Taste. Änderungen wirken sofort. Ein bereits geöffnetes Wort-Kurator-Fenster behält seine Tasten, bis es das nächste Mal geöffnet wird. Mit Oben und Unten wechseln Sie immer zwischen den Wörtern, mit Links und Rechts zwischen den Spalten, und %1 bestätigt immer.</translation>
+        <source>Click a box and press the new key. Changes apply at once. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
+        <translation>Klicken Sie auf ein Feld und drücken Sie die neue Taste. Änderungen wirken sofort. Mit Oben und Unten wechseln Sie immer zwischen den Wörtern, mit Links und Rechts zwischen den Spalten, und %1 bestätigt immer.</translation>
     </message>
     <message>
         <source>Word Curator</source>
@@ -7031,8 +7031,8 @@ Fortfahren?</translation>
         <translation>Nur Papago</translation>
     </message>
     <message>
-        <source>Read aloud (manga, books)</source>
-        <translation>Vorlesen (Manga, Bücher)</translation>
+        <source>Text-to-speech</source>
+        <translation>Sprachsynthese</translation>
     </message>
     <message>
         <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>

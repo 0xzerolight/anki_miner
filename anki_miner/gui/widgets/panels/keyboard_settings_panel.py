@@ -130,9 +130,8 @@ class KeyboardSettingsPanel(FormPanel):
         self.helper_label = QLabel(
             tr_format(
                 self.tr(
-                    "Click a box and press the new key. Changes apply at once. A Word Curator window that is "
-                    "already open keeps its keys until it next opens. Up and Down always move between words, "
-                    "Left and Right move between columns, and %1 always confirms."
+                    "Click a box and press the new key. Changes apply at once. Up and Down always move between "
+                    "words, Left and Right move between columns, and %1 always confirms."
                 ),
                 primary_action_display(),
             )

@@ -614,8 +614,8 @@
         <translation>Mapeamentos de Campos do Cartão</translation>
     </message>
     <message>
-        <source>Map data to note fields (names must match exactly). Blank = skip.</source>
-        <translation>Mapeie os dados para os campos da nota (os nomes devem corresponder exatamente). Em branco = ignorar.</translation>
+        <source>Map data to note fields. Blank = skip.</source>
+        <translation>Mapeie os dados para os campos da nota. Em branco = ignorar.</translation>
     </message>
     <message>
         <source>Expression Field</source>
@@ -6058,8 +6058,8 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Atalhos de Teclado</translation>
     </message>
     <message>
-        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
-        <translation>Clique em uma caixa e pressione a nova tecla. As alterações são aplicadas imediatamente. Uma janela do Curador de Palavras já aberta mantém suas teclas até a próxima abertura. As setas para cima e para baixo sempre navegam entre as palavras, as setas para a esquerda e para a direita navegam entre as colunas, e %1 sempre confirma.</translation>
+        <source>Click a box and press the new key. Changes apply at once. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
+        <translation>Clique em uma caixa e pressione a nova tecla. As alterações são aplicadas imediatamente. As setas para cima e para baixo sempre navegam entre as palavras, as setas para a esquerda e para a direita navegam entre as colunas, e %1 sempre confirma.</translation>
     </message>
     <message>
         <source>Word Curator</source>
@@ -7031,8 +7031,8 @@ Continuar?</translation>
         <translation>Somente Papago</translation>
     </message>
     <message>
-        <source>Read aloud (manga, books)</source>
-        <translation>Leitura em voz alta (mangás, livros)</translation>
+        <source>Text-to-speech</source>
+        <translation>Texto-para-fala</translation>
     </message>
     <message>
         <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>
