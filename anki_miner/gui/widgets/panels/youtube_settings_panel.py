@@ -5,6 +5,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, Qt, pyqtSignal
+from PyQt6.QtGui import QKeyEvent, QWheelEvent
 from PyQt6.QtWidgets import QCheckBox, QComboBox, QHBoxLayout, QLabel, QSpinBox, QWidget
 
 from anki_miner.gui.utils import file_dialogs
@@ -39,6 +40,34 @@ _PICK_ITEM = "__pick_cookies_file__"
 _YTDLP_VERDICT = re.compile(r"^(?P<version>\d[\w.+-]*) \[(?P<origin>[^\]]+)\]$")
 
 
+class _CookiesCombo(QComboBox):
+    """The cookies choice; knows whether a change came from stepping through it (B3.4a).
+
+    Qt emits ``activated`` for Up/Down, Home/End, a wheel step and type-ahead on
+    the closed combo too, so stepping past Safari opened the file picker. Those
+    all arrive through ``keyPressEvent``/``wheelEvent``; a pick from the open
+    list does not.
+    """
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.stepping = False
+
+    def keyPressEvent(self, e: QKeyEvent | None) -> None:  # noqa: N802 - Qt override
+        self.stepping = True
+        try:
+            super().keyPressEvent(e)
+        finally:
+            self.stepping = False
+
+    def wheelEvent(self, e: QWheelEvent | None) -> None:  # noqa: N802 - Qt override
+        self.stepping = True
+        try:
+            super().wheelEvent(e)
+        finally:
+            self.stepping = False
+
+
 class YouTubeSettingsPanel(FormPanel):
     """Panel for YouTube mining settings.
 
@@ -70,7 +99,7 @@ class YouTubeSettingsPanel(FormPanel):
         # Both config fields stay; a file wins, exactly as it did before.
         self._cookies_file = ""
         self._last_cookie_index = 0
-        self.cookies_browser_combo = QComboBox()
+        self.cookies_browser_combo = _CookiesCombo()
         for label, _value in _COOKIE_BROWSER_OPTIONS:
             self.cookies_browser_combo.addItem(QCoreApplication.translate("YouTubeSettingsPanel", label))
         self.cookies_browser_combo.addItem(self.tr("From a cookies.txt file…"), _PICK_ITEM)
@@ -262,6 +291,10 @@ class YouTubeSettingsPanel(FormPanel):
         if data == _PICK_ITEM:
             # Never leave the action itself selected while the picker is open.
             combo.setCurrentIndex(self._last_cookie_index)
+            if combo.stepping:
+                # Stepping onto the action is moving through the list, not asking
+                # for a file: the open list (Space or Alt+Down) is how to pick it.
+                return
             file_dialogs.pick_open_file(
                 self,
                 self.tr("Choose a cookies.txt file"),

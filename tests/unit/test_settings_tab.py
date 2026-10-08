@@ -242,6 +242,52 @@ class TestYouTubePanelValueHelpers:
         assert panel.get_cookies_file() == str(cookies)
         assert combo.currentText() == "cookies.txt (file)"
 
+    @pytest.mark.parametrize("key", ["Key_Down", "Key_End"])
+    def test_stepping_onto_the_file_action_does_not_open_the_picker(self, key, qtbot, monkeypatch):
+        """B3.4a: Qt emits ``activated`` for key navigation on the closed combo too."""
+        from PyQt6.QtCore import Qt
+
+        from anki_miner.gui.widgets.panels import youtube_settings_panel as module
+
+        picks: list[tuple] = []
+        monkeypatch.setattr(module.file_dialogs, "pick_open_file", lambda *a, **k: picks.append(a))
+        panel = YouTubeSettingsPanel()
+        qtbot.addWidget(panel)
+        panel.set_cookies_from_browser("safari")
+
+        qtbot.keyClick(panel.cookies_browser_combo, getattr(Qt.Key, key))
+
+        assert picks == []
+        assert panel.get_cookies_from_browser() == "safari"
+
+    def test_a_wheel_step_onto_the_file_action_does_not_open_the_picker(self, qtbot, monkeypatch):
+        from PyQt6.QtCore import QPoint, QPointF, Qt
+        from PyQt6.QtGui import QWheelEvent
+        from PyQt6.QtWidgets import QApplication
+
+        from anki_miner.gui.widgets.panels import youtube_settings_panel as module
+
+        picks: list[tuple] = []
+        monkeypatch.setattr(module.file_dialogs, "pick_open_file", lambda *a, **k: picks.append(a))
+        panel = YouTubeSettingsPanel()
+        qtbot.addWidget(panel)
+        panel.set_cookies_from_browser("safari")
+        down = QWheelEvent(
+            QPointF(4, 4),
+            QPointF(4, 4),
+            QPoint(0, 0),
+            QPoint(0, -120),
+            Qt.MouseButton.NoButton,
+            Qt.KeyboardModifier.NoModifier,
+            Qt.ScrollPhase.NoScrollPhase,
+            False,
+        )
+
+        QApplication.sendEvent(panel.cookies_browser_combo, down)
+
+        assert picks == []
+        assert panel.get_cookies_from_browser() == "safari"
+
     def test_a_cancelled_picker_keeps_the_previous_choice(self, qtbot, monkeypatch):
         from anki_miner.gui.widgets.panels import youtube_settings_panel as module
 
