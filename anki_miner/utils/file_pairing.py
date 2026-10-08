@@ -280,20 +280,37 @@ def find_sibling_subtitle(video_path: Path, priority: Sequence[str] | None = Non
     return None
 
 
-def _sort_subtitles(subtitles: list[Path], prefer_retimed: bool) -> None:
+def _rank_key(
+    path: Path, tag: SubtitleTag, exts: Sequence[str], prefer_retimed: bool
+) -> tuple[bool, bool, int, bool, int]:
+    """How good *path* is as its video's subtitle; smallest first.
+
+    Another language sorts last, below even the retime of one. Then a retime
+    beats the original it was made from (mining the off-timed file would undo
+    it), a mining-language tag beats none, a full track beats a forced one,
+    and the format priority settles the rest.
+    """
+    suffix = path.suffix.lower()
+    return (
+        tag is SubtitleTag.OTHER,
+        not (prefer_retimed and _is_retimed(path)),
+        int(tag),
+        _is_forced(path),
+        exts.index(suffix) if suffix in exts else len(exts),
+    )
+
+
+def _sort_subtitles(subtitles: list[Path], prefer_retimed: bool, language: SubtitleLanguage | None = None) -> None:
     """Order subtitle candidates in place, best-match-first for episode pairing.
 
     Pure ordering, no I/O: the caller owns the scan and its one warning. Applied
-    to the mining track and to the secondary-language track (F7) alike, so both
-    get the same format priority and the same retimed preference.
+    to the mining track and to the secondary-language track (F7) alike; only the
+    mining track passes *language*, since a translation folder holds another
+    language on purpose.
     """
-    subtitle_priority = {suffix: index for index, suffix in enumerate(DEFAULT_SUBTITLE_PRIORITY)}
     subtitles.sort(
         key=lambda subtitle: (
-            # Ahead of the format priority: a retimed .srt is a better match
-            # for its video than the original .ass it was made from.
-            not (prefer_retimed and _is_retimed(subtitle)),
-            subtitle_priority.get(subtitle.suffix.lower(), len(DEFAULT_SUBTITLE_PRIORITY)),
+            *_rank_key(subtitle, subtitle_language_tag(subtitle, language), DEFAULT_SUBTITLE_PRIORITY, prefer_retimed),
             subtitle.suffix.lower(),
             _nfc(subtitle.name),
             # NFC collapses canonically equivalent spellings to one key; the
@@ -382,9 +399,7 @@ class FilePair:
 
 
 class FilePairMatcher:
-    """Matches video and subtitle files by base name, with deterministic
-    format priority when multiple subtitle variants exist for one video.
-    """
+    """Pairs a folder of videos with a folder of subtitles by episode number."""
 
     VIDEO_EXTENSIONS: frozenset[str] = frozenset({".mp4", ".mkv", ".avi", ".m4v", ".mov"})
     SUBTITLE_EXTENSIONS: frozenset[str] = frozenset(DEFAULT_SUBTITLE_PRIORITY)
@@ -398,6 +413,7 @@ class FilePairMatcher:
         prefer_retimed: bool = True,
         *,
         secondary_folder: Path | None = None,
+        language: SubtitleLanguage | None = None,
     ) -> list[FilePair]:
         """Find matching pairs by episode number instead of exact name.
 
@@ -435,6 +451,10 @@ class FilePairMatcher:
                 folder of its own — a subtitle is consumed once, so two tracks
                 for one episode cannot both be matched out of one folder — and
                 an episode with no match there keeps ``secondary=None``.
+            language: Mining language's tags (``registry.subtitle_language``).
+                When two subtitles share an episode, a mining-language tag
+                beats an untagged file, which beats another language's.
+                Ranking only: nothing is dropped. ``None`` keeps name order.
 
         Returns:
             List of FilePair objects matched by episode number
@@ -467,7 +487,7 @@ class FilePairMatcher:
         # while the subtitle side is fully sorted — a shuffle that silently pairs
         # episode N's subtitle with episode M's video.
         videos.sort(key=lambda video: (_nfc(video.name), video.name))
-        _sort_subtitles(subtitles, prefer_retimed)
+        _sort_subtitles(subtitles, prefer_retimed, language)
 
         # Match by episode number
         matched_pairs = EpisodeMatcher.match_by_episode_number(videos, subtitles)

@@ -756,3 +756,40 @@ def test_subtitle_language_tag(name, tag):
 
 def test_subtitle_language_tag_without_language_is_untagged():
     assert subtitle_language_tag(Path("ep01.en.srt"), None) is SubtitleTag.UNTAGGED
+
+
+class TestBatchLanguageRanking:
+    """Two subtitles for one episode: the mining language's wins, nothing is dropped."""
+
+    @staticmethod
+    def _subtitles_for(tmp_path: Path, *names: str, language=JA) -> list[str]:
+        for name in ("Show - 01.mkv", *names):
+            (tmp_path / name).touch()
+        pairs = FilePairMatcher.find_pairs_by_episode_number(tmp_path, tmp_path, language=language)
+        return [p.subtitle.name for p in pairs]
+
+    def test_mining_language_tag_wins_the_episode(self, tmp_path):
+        assert self._subtitles_for(tmp_path, "Show - 01.en.srt", "Show - 01.ja.srt") == ["Show - 01.ja.srt"]
+
+    def test_mining_tag_beats_a_richer_untagged_format(self, tmp_path):
+        assert self._subtitles_for(tmp_path, "Show - 01.ass", "Show - 01.ja.srt") == ["Show - 01.ja.srt"]
+
+    def test_other_language_alone_still_pairs(self, tmp_path):
+        """Ranking only: an episode whose one subtitle is English still counts."""
+        assert self._subtitles_for(tmp_path, "Show - 01.en.srt") == ["Show - 01.en.srt"]
+
+    def test_full_track_beats_forced(self, tmp_path):
+        names = ("Show - 01.ja.forced.srt", "Show - 01.ja.srt")
+        assert self._subtitles_for(tmp_path, *names) == ["Show - 01.ja.srt"]
+
+    def test_forced_loses_without_a_language_too(self, tmp_path):
+        names = ("Show - 01.ja.forced.srt", "Show - 01.ja.srt")
+        assert self._subtitles_for(tmp_path, *names, language=None) == ["Show - 01.ja.srt"]
+
+    def test_retime_of_the_mining_track_still_wins(self, tmp_path):
+        names = ("Show - 01.ja.ass", "Show - 01.ja_retimed.srt", "Show - 01.en.srt")
+        assert self._subtitles_for(tmp_path, *names) == ["Show - 01.ja_retimed.srt"]
+
+    def test_retime_of_another_language_loses_to_the_mining_track(self, tmp_path):
+        names = ("Show - 01.en_retimed.srt", "Show - 01.ja.ass")
+        assert self._subtitles_for(tmp_path, *names) == ["Show - 01.ja.ass"]
