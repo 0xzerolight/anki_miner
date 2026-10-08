@@ -29,6 +29,8 @@ from anki_miner.models import (
     AnkiWriteState,
     CardPayload,
     MediaData,
+    NotMinedReason,
+    NotMinedReport,
     ProcessingResult,
     TokenizedWord,
     WhitelistCoverage,
@@ -252,6 +254,36 @@ def _build_lemma_context(words: list[TokenizedWord]) -> dict[str, str]:
     return context
 
 
+def _note_dropped(
+    drops: dict[str, NotMinedReason] | None,
+    reason: NotMinedReason | Callable[[TokenizedWord], NotMinedReason],
+    before: list[TokenizedWord],
+    after: list[TokenizedWord],
+) -> None:
+    """Record, under ``reason``, every word ``before`` held that a filter's ``after`` lost.
+
+    Compared by card front, never identity: i+1 and the cue merge hand back
+    re-made words for the ones they keep, and phase 1 made fronts unique. The
+    first reason a front gets stands. A stand-in filter (a test double) that
+    returns no list records nothing rather than a wrong answer.
+    """
+    if drops is None or not isinstance(before, list) or not isinstance(after, list):
+        return
+    kept = {word.mined_form for word in after}
+    for word in before:
+        if word.mined_form not in kept:
+            drops.setdefault(word.mined_form, reason if isinstance(reason, NotMinedReason) else reason(word))
+
+
+#: ``last_word_drops`` / ``AnkiService.last_not_created`` states as not-mined reasons.
+_WORD_DROP_REASONS = {"media_failed": NotMinedReason.MEDIA_FAILED, "no_definition": NotMinedReason.NO_DEFINITION}
+_NOT_CREATED_REASONS = {
+    "duplicate": NotMinedReason.ANKI_DUPLICATE,
+    "refused": NotMinedReason.ANKI_FAILED,
+    "uncertain": NotMinedReason.ANKI_FAILED,
+}
+
+
 def _build_pos_context(words: list[TokenizedWord]) -> dict[str, str]:
     """Map each word's ``mined_form`` to its token's part of speech for the
     definition / glossary batches' row rank (``DictKeyFolding.sense_rank``).
@@ -327,6 +359,9 @@ class _EpisodeContext:
     # (_stamp_whitelist_coverage), not here - a cancelled result never comes
     # through build_result.
     whitelist_coverage: WhitelistCoverage | None = None
+    #: Why each word this item saw made no card, filled in pipeline order (first
+    #: reason wins); phases 3-5 are read at the run's exit by _stamp_not_mined.
+    not_mined: dict[str, NotMinedReason] = field(default_factory=dict)
 
     def build_result(self, **overrides: Any) -> ProcessingResult:
         """Construct a ProcessingResult from accumulated state.
@@ -908,6 +943,11 @@ class EpisodeProcessor:
             )
         return kept
 
+    def _parse_rejects(self) -> dict[str, NotMinedReason]:
+        """The parse just run's turned-away fronts (a copy: the curator re-parses)."""
+        rejects = getattr(self.subtitle_parser, "last_parse_rejects", None)
+        return dict(rejects) if isinstance(rejects, dict) else {}
+
     def _report_ambiguous_readings(self) -> None:
         """Emit one per-parse receipt for real-token reading mismatches."""
         count = getattr(self.subtitle_parser, "ambiguous_reading_count", 0)
@@ -954,6 +994,7 @@ class EpisodeProcessor:
             all_words, line_index = self.subtitle_parser.parse_subtitle_file_with_index(subtitle_file, subtitle_offset)
         else:
             all_words = self.subtitle_parser.parse_subtitle_file(subtitle_file, subtitle_offset)
+        ctx.not_mined.update(self._parse_rejects())
         self._report_ambiguous_readings()
         self.presenter.show_success(
             QCoreApplication.translate("EpisodeProcessor", "Found %n unique word(s)", "", len(all_words))
@@ -1105,6 +1146,7 @@ class EpisodeProcessor:
             QCoreApplication.translate("EpisodeProcessor", "Filtering against known vocabulary"),
         )
         unknown_words = self._phase2_known_words(all_words, counts)
+        _note_dropped(ctx.not_mined, NotMinedReason.KNOWN, all_words, unknown_words)
         self.presenter.show_success(
             QCoreApplication.translate("EpisodeProcessor", "%n new word(s) to mine", "", len(unknown_words))
         )
@@ -1170,7 +1212,9 @@ class EpisodeProcessor:
         ctx.unknown_lemmas = all_unknown_lemmas
         ctx.unknown_fronts = all_unknown_fronts
 
-        unknown_words = self._phase2_definition_viability(unknown_words, counts)
+        viable = self._phase2_definition_viability(unknown_words, counts)
+        _note_dropped(ctx.not_mined, NotMinedReason.NO_DEFINITION, unknown_words, viable)
+        unknown_words = viable
 
         # Whitelist force-include (partition-then-merge). A whitelisted lemma is
         # a true force-include: it bypasses every optional COVERAGE filter below
@@ -1195,6 +1239,7 @@ class EpisodeProcessor:
             occurrence_counts,
             min_occurrence,
             counts,
+            drops=ctx.not_mined,
         )
 
         # Merge force-included whitelist words back in before within-run
@@ -1216,7 +1261,9 @@ class EpisodeProcessor:
                 )
             )
 
-        unknown_words = self._phase2_collapse_duplicates(unknown_words, counts)
+        collapsed = self._phase2_collapse_duplicates(unknown_words, counts)
+        _note_dropped(ctx.not_mined, NotMinedReason.SAME_CARD, unknown_words, collapsed)
+        unknown_words = collapsed
 
         # Stage the pre-filter comprehension counts. ``_run_pipeline`` commits
         # them only after the body returns a successful terminal result.
@@ -1418,6 +1465,8 @@ class EpisodeProcessor:
         occurrence_counts: dict[str, int] | None,
         min_occurrence: int,
         counts: _Phase2Counts,
+        *,
+        drops: dict[str, NotMinedReason] | None = None,
     ) -> list[TokenizedWord]:
         """Phase 2: run the coverage filters in order; return the words they keep.
 
@@ -1444,11 +1493,18 @@ class EpisodeProcessor:
             and not self.config.bypass_optional_filters
         ):
             before = len(unknown_words)
+            previous = unknown_words
             unknown_words = self.word_filter.filter_by_frequency(
                 unknown_words,
                 freq_high,
                 min_rank=freq_low,
                 keep_unranked=self.config.frequency_keep_unranked,
+            )
+            _note_dropped(
+                drops,
+                lambda word: NotMinedReason.UNRANKED if word.frequency_rank is None else NotMinedReason.FREQUENCY,
+                previous,
+                unknown_words,
             )
             filtered_out = before - len(unknown_words)
             counts.frequency_rejects = filtered_out
@@ -1481,7 +1537,9 @@ class EpisodeProcessor:
         # Word list (blacklist/whitelist) filter.
         if self.word_list_service and self.word_list_service.is_available() and not self.config.bypass_optional_filters:
             before = len(unknown_words)
+            previous = unknown_words
             unknown_words = self.word_filter.filter_by_word_lists(unknown_words, self.word_list_service)
+            _note_dropped(drops, NotMinedReason.BLACKLIST, previous, unknown_words)
             filtered_out = before - len(unknown_words)
             counts.word_list_rejects = filtered_out
             if filtered_out > 0:
@@ -1502,12 +1560,14 @@ class EpisodeProcessor:
         script_options = enabled_script_options(self.profile.script, self.config)
         if script_options and not self.config.bypass_optional_filters:
             before = len(unknown_words)
+            previous = unknown_words
             unknown_words = self.word_filter.filter_by_script_type(
                 unknown_words,
                 exclude_hiragana_only=self.config.exclude_hiragana_only_words,
                 exclude_katakana_only=self.config.exclude_katakana_only_words,
                 **script_options_kwarg(script_options, self.config.language),
             )
+            _note_dropped(drops, NotMinedReason.SCRIPT_FILTER, previous, unknown_words)
             removed = before - len(unknown_words)
             counts.script_rejects = removed
             if removed > 0:
@@ -1531,7 +1591,9 @@ class EpisodeProcessor:
         # (bypass_optional_filters) stays in parity.
         if self.wordset_service and self.wordset_service.is_available() and not self.config.bypass_optional_filters:
             before = len(unknown_words)
+            previous = unknown_words
             unknown_words = self.word_filter.filter_by_wordsets(unknown_words, self.wordset_service)
+            _note_dropped(drops, NotMinedReason.NAME_LIST, previous, unknown_words)
             filtered_out = before - len(unknown_words)
             counts.wordset_rejects = filtered_out
             if filtered_out > 0:
@@ -1550,7 +1612,9 @@ class EpisodeProcessor:
         # this coverage filter. Gated on bypass like every other coverage filter.
         if occurrence_counts is not None and not self.config.bypass_optional_filters:
             before = len(unknown_words)
+            previous = unknown_words
             unknown_words = self.word_filter.filter_by_episode_count(unknown_words, occurrence_counts, min_occurrence)
+            _note_dropped(drops, NotMinedReason.OCCURRENCE, previous, unknown_words)
             counts.episode_rejects += before - len(unknown_words)
 
         # Sentence deduplication. i+1 filter does its own sentence picking;
@@ -1561,7 +1625,9 @@ class EpisodeProcessor:
             and not self.config.bypass_optional_filters
         ):
             before = len(unknown_words)
+            previous = unknown_words
             unknown_words = self.word_filter.deduplicate_by_sentence(unknown_words)
+            _note_dropped(drops, NotMinedReason.ONE_PER_SENTENCE, previous, unknown_words)
             deduped = before - len(unknown_words)
             counts.duplicate_sentence_rejects = deduped
             if deduped > 0:
@@ -1581,12 +1647,14 @@ class EpisodeProcessor:
         # i+1 coverage.
         if self.config.use_i_plus_one_filter and not self.config.bypass_optional_filters:
             before = len(unknown_words)
+            previous = unknown_words
             unknown_words = self.word_filter.filter_i_plus_one(
                 unknown_words,
                 line_index or [],
                 all_unknown_lemmas=all_unknown_lemmas,
                 all_unknown_fronts=all_unknown_fronts,
             )
+            _note_dropped(drops, NotMinedReason.I_PLUS_ONE, previous, unknown_words)
             kept = len(unknown_words)
             counts.i_plus_one_rejects = before - kept
             pct = (kept / before * 100.0) if before else 0.0
@@ -1608,11 +1676,13 @@ class EpisodeProcessor:
             self.config.max_sentence_duration_seconds > 0.0 or self.config.max_sentence_chars > 0
         ):
             before = len(unknown_words)
+            previous = unknown_words
             unknown_words = self.word_filter.filter_by_sentence_length(
                 unknown_words,
                 max_duration=self.config.max_sentence_duration_seconds,
                 max_chars=self.config.max_sentence_chars,
             )
+            _note_dropped(drops, NotMinedReason.SENTENCE_LENGTH, previous, unknown_words)
             filtered_out = before - len(unknown_words)
             counts.sentence_length_rejects = filtered_out
             self._report_sentence_length_rejects(filtered_out)
@@ -2360,12 +2430,13 @@ class EpisodeProcessor:
         """Clear Anki write provenance before any preflight for a new run."""
         self.anki_service.last_created_note_ids = []
         self.anki_service.anki_write_state = AnkiWriteState.NO_NOTE_WRITE
-        # The whitelist stamp at the run's funnel reads these. On a shared
-        # Batch AnkiService an item that never reaches phase 5 (cancelled, zero
-        # mineable words) would otherwise inherit the previous item's confirmed
-        # forms and report them as mined here.
+        # The whitelist and not-mined stamps at the run's funnel read these. On
+        # a shared Batch AnkiService an item that never reaches phase 5
+        # (cancelled, zero mineable words) would otherwise inherit the previous
+        # item's confirmed forms and refusals and report them here.
         self.anki_service.last_created_mined_forms = []
         self.anki_service.last_created_lemmas = []
+        self.anki_service.last_not_created = {}
 
     def _run_pipeline(
         self,
@@ -2489,7 +2560,7 @@ class EpisodeProcessor:
             result = body(run_temp_folder)
             if result.success:
                 self._record_difficulty(ctx)
-            return self._stamp_whitelist_coverage(ctx, self._stamp_write_provenance(result))
+            return self._stamp_not_mined(ctx, self._stamp_whitelist_coverage(ctx, self._stamp_write_provenance(result)))
         except AnkiMinerException as e:
             # No traceback: a typed AnkiMinerException is a diagnosed, expected
             # terminal outcome (bad field mapping, unreachable AnkiConnect), and
@@ -2507,8 +2578,11 @@ class EpisodeProcessor:
             ctx.errors.append(str(e))
             partial_ids = list(self.anki_service.last_created_note_ids)
             self.presenter.show_error(tr_format(QCoreApplication.translate("EpisodeProcessor", "%1"), str(e)))
-            return self._stamp_whitelist_coverage(
-                ctx, self._stamp_write_provenance(self._partial_failure_result(ctx, partial_ids), failure=e)
+            return self._stamp_not_mined(
+                ctx,
+                self._stamp_whitelist_coverage(
+                    ctx, self._stamp_write_provenance(self._partial_failure_result(ctx, partial_ids), failure=e)
+                ),
             )
         except MemoryError:
             raise
@@ -2614,6 +2688,7 @@ class EpisodeProcessor:
         line_index: list[LineLemmas] | None = None,
         unknown_lemmas: set[str] | None = None,
         unknown_fronts: set[str] | None = None,
+        drops: dict[str, NotMinedReason] | None = None,
     ) -> list[TokenizedWord]:
         """Stamp the automatic cue merge onto words still at ``(0, 0)``.
 
@@ -2720,6 +2795,7 @@ class EpisodeProcessor:
         candidates = [word for word in stamped if id(word) not in forced_ids]
         if dedup:
             kept = self.word_filter.deduplicate_by_sentence(candidates, lambda word: card_sentence(word)[1])
+            _note_dropped(drops, NotMinedReason.ONE_PER_SENTENCE, candidates, kept)
             if len(kept) != len(candidates):
                 logger.info(
                     "automatic cue merge: %d word(s) dropped as duplicate sentences", len(candidates) - len(kept)
@@ -2732,6 +2808,7 @@ class EpisodeProcessor:
                 max_chars=self.config.max_sentence_chars,
                 measure=card_sentence,
             )
+            _note_dropped(drops, NotMinedReason.SENTENCE_LENGTH, candidates, kept)
             removed = len(candidates) - len(kept)
             if removed:
                 logger.info("automatic cue merge: %d word(s) dropped by the sentence-length caps", removed)
@@ -3020,6 +3097,9 @@ class EpisodeProcessor:
                 # (and an empty phase 2) do not override them. Only the known
                 # check (T3) applies, on this pass's own snapshot: an earlier
                 # episode's mine pass may have just carded one of them.
+                # The pre-pass already reported this file's parse and filter drops;
+                # this pass's own phase 2 picked nothing (the season curator did).
+                ctx.not_mined.clear()
                 unknown_words = self._season_subset_still_unknown(ctx, fixed_subset)
                 if not unknown_words:
                     return ctx.build_result(new_words_found=0)
@@ -3040,6 +3120,7 @@ class EpisodeProcessor:
                     line_index=line_index,
                     unknown_lemmas=ctx.unknown_lemmas,
                     unknown_fronts=ctx.unknown_fronts,
+                    drops=ctx.not_mined,
                 )
                 if not unknown_words:
                     self._report_no_mineable_words(ctx)
@@ -3146,6 +3227,31 @@ class EpisodeProcessor:
         result.failure_is_transient = failure is not None and is_transient_anki_transport_error(failure)
         return result
 
+    def _stamp_not_mined(self, ctx: _EpisodeContext, result: ProcessingResult) -> ProcessingResult:
+        """Attach why this item's words made no card to whatever result leaves the pipeline.
+
+        Same funnel and reasoning as :meth:`_stamp_whitelist_coverage`. Parse and
+        phase-2 reasons come from ``ctx``; phases 3 and 4 from
+        ``last_word_drops`` and Anki's refusals from ``last_not_created`` (the
+        channels ``--api`` reads), overwriting: a word that reached phase 3
+        passed every gate before it. Mined is Anki's own confirmation list. A
+        stub service contributes nothing.
+        """
+        drops = dict(ctx.not_mined)
+        for front, state in self.last_word_drops.items():
+            if state in _WORD_DROP_REASONS:
+                drops[front] = _WORD_DROP_REASONS[state]
+        not_created = getattr(self.anki_service, "last_not_created", None)
+        if isinstance(not_created, dict):
+            for front, state in not_created.items():
+                if state in _NOT_CREATED_REASONS:
+                    drops[front] = _NOT_CREATED_REASONS[state]
+        forms = getattr(self.anki_service, "last_created_mined_forms", None)
+        result.not_mined = NotMinedReport.from_drops(
+            drops, mined=frozenset(forms) if isinstance(forms, list) else frozenset()
+        )
+        return result
+
     def _stamp_whitelist_coverage(self, ctx: _EpisodeContext, result: ProcessingResult) -> ProcessingResult:
         """Attach the run's whitelist coverage to whatever result leaves the pipeline.
 
@@ -3195,8 +3301,11 @@ class EpisodeProcessor:
         self.presenter.show_error(
             tr_format(QCoreApplication.translate("EpisodeProcessor", "Unexpected error: %1"), str(e))
         )
-        return self._stamp_whitelist_coverage(
-            ctx, self._stamp_write_provenance(self._partial_failure_result(ctx, partial_ids), failure=e)
+        return self._stamp_not_mined(
+            ctx,
+            self._stamp_whitelist_coverage(
+                ctx, self._stamp_write_provenance(self._partial_failure_result(ctx, partial_ids), failure=e)
+            ),
         )
 
     def _partial_failure_result(self, ctx: _EpisodeContext, partial_ids: list[int]) -> ProcessingResult:
@@ -3545,6 +3654,7 @@ class EpisodeProcessor:
                     tokens=sum(counts.values()),
                     unique=len(all_words),
                 )
+            ctx.not_mined.update(self._parse_rejects())
             self._report_ambiguous_readings()
             self.presenter.show_success(
                 QCoreApplication.translate("EpisodeProcessor", "Found %n unique word(s)", "", len(all_words))
