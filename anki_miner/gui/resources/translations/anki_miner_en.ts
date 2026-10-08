@@ -8273,8 +8273,9 @@ No index files are deleted.</source>
     </message>
     <message numerus="yes">
         <source>%n episode(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n episode</numerusform>
+            <numerusform>%n episodes</numerusform>
         </translation>
     </message>
     <message>
@@ -8391,14 +8392,16 @@ No index files are deleted.</source>
     </message>
     <message numerus="yes">
         <source>%n series</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n series</numerusform>
+            <numerusform>%n series</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%n episode(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n episode</numerusform>
+            <numerusform>%n episodes</numerusform>
         </translation>
     </message>
     <message>
@@ -12112,8 +12115,9 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message numerus="yes">
         <source>Tracks of %1, one of %n videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Tracks of %1, one of %n video. The ticked tracks are saved from every video in the folder; a video without one is skipped.</numerusform>
+            <numerusform>Tracks of %1, one of %n videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</numerusform>
         </translation>
     </message>
     <message>

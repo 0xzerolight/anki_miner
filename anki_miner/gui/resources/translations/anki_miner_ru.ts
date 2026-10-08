@@ -199,7 +199,7 @@
     </message>
     <message>
         <source>In Anki choose Tools → Add-ons → Get Add-ons…, paste the code %1, and click OK.</source>
-        <translation>В Anki выберите Инструменты → Дополнения → Получить дополнения… (Tools → Add-ons → Get Add-ons…), вставьте код %1 и нажмите OK.</translation>
+        <translation>В Anki выберите Инструменты → Дополнения → Загрузить дополнения…, вставьте код %1 и нажмите OK.</translation>
     </message>
     <message>
         <source>Restart Anki.</source>
@@ -597,15 +597,15 @@
     </message>
     <message>
         <source>Open Anki when Anki Miner starts</source>
-        <translation type="unfinished" />
+        <translation>Открывать Anki при запуске Anki Miner</translation>
     </message>
     <message>
         <source>Starts Anki if it isn't running when Anki Miner opens.</source>
-        <translation type="unfinished" />
+        <translation>Запускает Anki при открытии Anki Miner, если Anki ещё не запущен.</translation>
     </message>
     <message>
         <source>Anki Miner can't find Anki where its installer puts it, so it can't open it.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner не может найти Anki там, куда его помещает установщик, поэтому не может его открыть.</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
@@ -2109,7 +2109,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Deck Builder always skips per-episode filters and checks for duplicates only in the deck it builds; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
-        <translation type="unfinished" />
+        <translation>Конструктор колод всегда пропускает поэпизодные фильтры и ищет дубликаты только в той колоде, которую собирает; выбирайте все слова, первые N или целевой охват, и при желании пропускайте известные слова.</translation>
     </message>
     <message>
         <source>Mine from YouTube</source>
@@ -2325,7 +2325,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Drop words written without kanji; “Skip all kana-only words (including mixed)” leaves a kanji-only deck.</source>
-        <translation type="unfinished" />
+        <translation>Отбрасывайте слова, записанные без кандзи; «Пропускать все слова только из каны (включая смешанные)» оставляет колоду только со словами с кандзи.</translation>
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -2425,11 +2425,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Keep dictionaries up to date</source>
-        <translation type="unfinished" />
+        <translation>Поддерживать словари в актуальном состоянии</translation>
     </message>
     <message>
         <source>Dictionaries that publish updates (Jitendex, JMdict, Wiktionary, Jiten, …) update themselves once a week; Update Now checks right away.</source>
-        <translation type="unfinished" />
+        <translation>Словари, которые публикуют обновления (Jitendex, JMdict, Wiktionary, Jiten, …), обновляются сами раз в неделю; «Обновить сейчас» проверяет обновления немедленно.</translation>
     </message>
     <message>
         <source>Add frequency lists</source>
@@ -2629,7 +2629,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku and Senren (Japanese only) and Anki Miner Note are recognised and filled completely.</source>
-        <translation type="unfinished" />
+        <translation>«Заполнить автоматически» читает поля вашего типа заметки и заполняет все сопоставления. Lapis, Kiku и Senren (только для японского), а также Anki Miner Note распознаются и заполняются полностью.</translation>
     </message>
     <message>
         <source>Bold the mined word in the sentence</source>
@@ -4165,7 +4165,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Anki doesn't have a deck called “%1” yet. In Anki, click Create Deck at the bottom of the main window and name it %1, or pick one of your decks above. This page updates when you come back.</source>
-        <translation>В Anki пока нет колоды «%1». В Anki нажмите «Создать колоду» (Create Deck) внизу главного окна и назовите её %1 или выберите одну из своих колод выше. Эта страница обновится, когда вы вернётесь.</translation>
+        <translation>В Anki пока нет колоды «%1». В Anki нажмите «Создать колоду» внизу главного окна и назовите её %1 или выберите одну из своих колод выше. Эта страница обновится, когда вы вернётесь.</translation>
     </message>
 </context><context>
     <name>DefinitionService</name>
@@ -4469,19 +4469,19 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Updates</source>
-        <translation type="unfinished">Обновления</translation>
+        <translation>Обновления</translation>
     </message>
     <message>
         <source>Update automatically once a week</source>
-        <translation type="unfinished" />
+        <translation>Обновлять автоматически раз в неделю</translation>
     </message>
     <message>
         <source>Update Now</source>
-        <translation type="unfinished" />
+        <translation>Обновить сейчас</translation>
     </message>
     <message>
         <source>Dictionaries, frequency lists and pitch-accent sources whose publisher posts updates (Jitendex, JMdict, Wiktionary, Jiten, …) are downloaded again when a newer version is out. Their order and on/off state stay as they are.</source>
-        <translation type="unfinished" />
+        <translation>Словари, списки частотности и источники тонального ударения, издатель которых публикует обновления (Jitendex, JMdict, Wiktionary, Jiten, …), загружаются заново, когда выходит новая версия. Их порядок и то, включены ли они, остаются без изменений.</translation>
     </message>
     <message>
         <source>Storage</source>
@@ -5527,7 +5527,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Text file with one word per line to skip. Whitelisted words are still mined. Leave empty to skip nothing.</source>
-        <translation type="unfinished" />
+        <translation>Текстовый файл со словами, по одному в строке, которые нужно пропускать. Слова из белого списка при этом всё равно майнятся. Оставьте пустым, чтобы ничего не пропускать.</translation>
     </message>
     <message>
         <source>Select whitelist file...</source>
@@ -5547,7 +5547,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Exclude bundled lists of Japanese people, place and company names from mining. Whitelisted names are still mined.</source>
-        <translation type="unfinished" />
+        <translation>Исключает из майнинга встроенные списки японских имён людей, топонимов и названий компаний. Имена из белого списка при этом всё равно майнятся.</translation>
     </message>
     <message>
         <source>Skip names of people, places and companies</source>
@@ -6631,7 +6631,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Update Dictionaries Now</source>
-        <translation type="unfinished" />
+        <translation>Обновить словари сейчас</translation>
     </message>
     <message>
         <source>Download Recommended Resources...</source>
@@ -6727,39 +6727,39 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Checking for dictionary updates…</source>
-        <translation type="unfinished" />
+        <translation>Проверка обновлений словарей…</translation>
     </message>
     <message>
         <source>Could not check for dictionary updates: %1</source>
-        <translation type="unfinished" />
+        <translation>Не удалось проверить обновления словарей: %1</translation>
     </message>
     <message>
         <source>Downloading dictionary updates…</source>
-        <translation type="unfinished" />
+        <translation>Загрузка обновлений словарей…</translation>
     </message>
     <message>
         <source>Your dictionaries changed during the check. Try again.</source>
-        <translation type="unfinished" />
+        <translation>Ваши словари изменились во время проверки. Попробуйте снова.</translation>
     </message>
     <message>
         <source>None of your dictionaries publish updates.</source>
-        <translation type="unfinished" />
+        <translation>Ни один из ваших словарей не публикует обновления.</translation>
     </message>
     <message>
         <source>Dictionaries are up to date (%1 could not be checked).</source>
-        <translation type="unfinished" />
+        <translation>Словари актуальны (не удалось проверить: %1).</translation>
     </message>
     <message>
         <source>Dictionaries are up to date.</source>
-        <translation type="unfinished" />
+        <translation>Словари актуальны.</translation>
     </message>
     <message>
         <source>Dictionary updates</source>
-        <translation type="unfinished" />
+        <translation>Обновления словарей</translation>
     </message>
     <message>
         <source>Dictionaries updated: %1</source>
-        <translation type="unfinished" />
+        <translation>Словари обновлены: %1</translation>
     </message>
     <message>
         <source>Downloaded resources were left inactive because their storage folder changed.</source>
@@ -7181,7 +7181,7 @@ Continue?</source>
     </message>
     <message>
         <source>%1 language pack: download failed. %2</source>
-        <translation type="unfinished" />
+        <translation>Языковой пакет %1: загрузка не удалась. %2</translation>
     </message>
     <message>
         <source>%1 language pack: download failed.</source>
@@ -7271,7 +7271,7 @@ Continue?</source>
     </message>
     <message>
         <source>%1 still can't be mined after its download.</source>
-        <translation type="unfinished" />
+        <translation>Язык %1 по-прежнему недоступен для майнинга после загрузки.</translation>
     </message>
 </context><context>
     <name>MiningTabBase</name>
@@ -7597,7 +7597,7 @@ Continue?</source>
     </message>
     <message>
         <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>Подойдёт любой тип заметки, если сопоставить его поля. Выберите один из своих типов заметок: Anki Miner помещает слово в его первое поле и заполняет поля, которые распознаёт по названию, например Word, Sentence, Reading, Definition, Picture и аудио. После настройки можно изменить, что попадает в каждое поле, в Настройки → Карточки и Anki. Ещё нет типа заметки для майнинга? &lt;a href="%2"&gt;Скачайте Anki Miner Note&lt;/a&gt; (бесплатно, подходит для любого языка), затем в Anki выберите Файл → Импорт (File → Import) и укажите файл. Эта страница обновится, когда вы вернётесь. &lt;a href="%1"&gt;Какие поля может заполнять Anki Miner?&lt;/a&gt;</translation>
+        <translation>Подойдёт любой тип заметки, если сопоставить его поля. Выберите один из своих типов заметок: Anki Miner помещает слово в его первое поле и заполняет поля, которые распознаёт по названию, например Word, Sentence, Reading, Definition, Picture и аудио. После настройки можно изменить, что попадает в каждое поле, в Настройки → Карточки и Anki. Ещё нет типа заметки для майнинга? &lt;a href="%2"&gt;Скачайте Anki Miner Note&lt;/a&gt; (бесплатно, подходит для любого языка), затем в Anki выберите Файл → Импортировать и укажите файл. Эта страница обновится, когда вы вернётесь. &lt;a href="%1"&gt;Какие поля может заполнять Anki Miner?&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>
@@ -8345,8 +8345,10 @@ No index files are deleted.</source>
     </message>
     <message numerus="yes">
         <source>%n episode(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n эпизод</numerusform>
+            <numerusform>%n эпизода</numerusform>
+            <numerusform>%n эпизодов</numerusform>
         </translation>
     </message>
     <message>
@@ -8463,14 +8465,18 @@ No index files are deleted.</source>
     </message>
     <message numerus="yes">
         <source>%n series</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n сериал</numerusform>
+            <numerusform>%n сериала</numerusform>
+            <numerusform>%n сериалов</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%n episode(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n эпизод</numerusform>
+            <numerusform>%n эпизода</numerusform>
+            <numerusform>%n эпизодов</numerusform>
         </translation>
     </message>
     <message>
@@ -8687,7 +8693,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Reading your Anki cards and known words…</source>
-        <translation type="unfinished" />
+        <translation>Чтение ваших карточек Anki и известных слов…</translation>
     </message>
     <message>
         <source>Checking file %1 of %2</source>
@@ -8901,7 +8907,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>That file or folder no longer exists.</source>
-        <translation type="unfinished">Этот файл или папка больше не существует.</translation>
+        <translation>Этот файл или папка больше не существует.</translation>
     </message>
     <message>
         <source>Choose a .mokuro, .cbz or .zip volume, or a manga folder.</source>
@@ -9015,7 +9021,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>That file or folder no longer exists.</source>
-        <translation type="unfinished">Этот файл или папка больше не существует.</translation>
+        <translation>Этот файл или папка больше не существует.</translation>
     </message>
     <message>
         <source>Choose an .epub or .txt book, or a folder of books.</source>
@@ -9207,7 +9213,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Anki Miner can't mine this folder.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner не может майнить эту папку.</translation>
     </message>
     <message>
         <source>Anki Miner can't mine this file.</source>
@@ -9692,7 +9698,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Installing %1 of %2 · %3</source>
-        <translation type="unfinished" />
+        <translation>Установка %1 из %2 · %3</translation>
     </message>
     <message>
         <source>Recommended Resources</source>
@@ -9771,22 +9777,22 @@ No index files are deleted.</source>
     <message>
         <source>%1 (%2)</source>
         <extracomment>%1 is one or more resource names, %2 what they are: "JMdict (dictionary)".</extracomment>
-        <translation type="unfinished">%1 (%2)</translation>
+        <translation>%1 (%2)</translation>
     </message>
     <message>
         <source>Downloads %1.</source>
         <extracomment>%1 lists "name (kind)" groups: "Downloads JMdict (dictionary) and Kanjium (pitch accent)."</extracomment>
-        <translation type="unfinished">Будет загружено: %1.</translation>
+        <translation>Будет загружено: %1.</translation>
     </message>
     <message>
         <source>%1, %2</source>
         <extracomment>Joins list items before the last one: "JMdict, JPDB and Jiten". Use your language's list comma.</extracomment>
-        <translation type="unfinished" />
+        <translation>%1, %2</translation>
     </message>
     <message>
         <source>%1 and %2</source>
         <extracomment>Joins the last item to the rest of a list: "JMdict, JPDB and Jiten".</extracomment>
-        <translation type="unfinished">%1 и %2</translation>
+        <translation>%1 и %2</translation>
     </message>
     <message>
         <source>Checking for an offline dictionary...</source>
@@ -10192,7 +10198,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Removes (notes), [sound effects], ♪ music and dialogue dashes from each subtitle line before mining, and speaker labels where the script marks them. Half-checked means your own pattern is in use: click to add every built-in cleanup to it.</source>
-        <translation type="unfinished" />
+        <translation>Удаляет (пометки), [звуковые эффекты], ♪ музыку и тире диалогов из каждой строки субтитров перед майнингом, а также имена говорящих, если письменность языка их обозначает. Частичная отметка означает, что используется ваш собственный шаблон: щёлкните, чтобы добавить в него все встроенные правила очистки.</translation>
     </message>
     <message>
         <source>Python regex matched in subtitle text and removed (or replaced) before mining. Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. Combine alternatives with |. Test patterns at https://regex101.com.</source>
@@ -10240,7 +10246,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped. Whitelisted words are still mined.</source>
-        <translation type="unfinished" />
+        <translation>Майнит не более одного слова на каждый пример предложения — первое найденное в этом предложении. Все остальные слова из него пропускаются. Слова из белого списка при этом всё равно майнятся.</translation>
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
@@ -10248,7 +10254,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication. Whitelisted words are still mined.</source>
-        <translation type="unfinished" />
+        <translation>Майнить только слова из предложений ровно с одним незнакомым словом (i+1); отменяет дедупликацию предложений. Слова из белого списка при этом всё равно майнятся.</translation>
     </message>
     <message>
         <source>Sentence Rule</source>
@@ -11280,7 +11286,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>%1, as name_retimed.srt</source>
-        <translation type="unfinished" />
+        <translation>%1, как name_retimed.srt</translation>
     </message>
     <message>
         <source>Subtitle retiming</source>
@@ -11618,7 +11624,7 @@ Your installed resources and your theme are kept.</source>
     <name>SubtitlesSettingsPanel</name>
     <message>
         <source>Auto (GPU if available)</source>
-        <translation type="unfinished" />
+        <translation>Авто (GPU, если доступен)</translation>
     </message>
     <message>
         <source>Transcription &amp; Alignment</source>
@@ -12192,7 +12198,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>No subtitle or audio tracks were found in any video in that folder.</source>
-        <translation type="unfinished" />
+        <translation>Ни в одном видео в этой папке не найдено ни дорожек субтитров, ни аудиодорожек.</translation>
     </message>
     <message>
         <source>No subtitle or audio tracks were found in %1.</source>
@@ -12200,8 +12206,10 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message numerus="yes">
         <source>Tracks of %1, one of %n videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Дорожки %1 — одного из %n видео. Отмеченные дорожки сохраняются из каждого видео в папке; видео без такой дорожки пропускается.</numerusform>
+            <numerusform>Дорожки %1 — одного из %n видео. Отмеченные дорожки сохраняются из каждого видео в папке; видео без такой дорожки пропускается.</numerusform>
+            <numerusform>Дорожки %1 — одного из %n видео. Отмеченные дорожки сохраняются из каждого видео в папке; видео без такой дорожки пропускается.</numerusform>
         </translation>
     </message>
     <message>
@@ -12680,7 +12688,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>This card has no picture</source>
-        <translation type="unfinished" />
+        <translation>У этой карточки нет изображения</translation>
     </message>
     <message>
         <source>No page image for this word</source>
@@ -12688,7 +12696,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>Could not load this card's picture</source>
-        <translation type="unfinished" />
+        <translation>Не удалось загрузить изображение этой карточки</translation>
     </message>
     <message>
         <source>Could not load page image</source>
@@ -12822,7 +12830,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     <name>YouTubeSettingsPanel</name>
     <message>
         <source>None</source>
-        <translation type="unfinished">Ничего</translation>
+        <translation>Нет</translation>
     </message>
     <message>
         <source>YouTube</source>

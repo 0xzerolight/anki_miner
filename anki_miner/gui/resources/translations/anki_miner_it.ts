@@ -595,15 +595,15 @@
     </message>
     <message>
         <source>Open Anki when Anki Miner starts</source>
-        <translation type="unfinished" />
+        <translation>Apri Anki all'avvio di Anki Miner</translation>
     </message>
     <message>
         <source>Starts Anki if it isn't running when Anki Miner opens.</source>
-        <translation type="unfinished" />
+        <translation>Avvia Anki se non è in esecuzione quando si apre Anki Miner.</translation>
     </message>
     <message>
         <source>Anki Miner can't find Anki where its installer puts it, so it can't open it.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner non trova Anki nel percorso in cui lo installa il suo programma di installazione, quindi non può aprirlo.</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
@@ -2106,7 +2106,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Deck Builder always skips per-episode filters and checks for duplicates only in the deck it builds; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
-        <translation type="unfinished" />
+        <translation>Il Costruttore di mazzi ignora sempre i filtri per episodio e controlla i duplicati solo nel mazzo che crea; scegli tutte le parole, le prime N o un obiettivo di copertura, e facoltativamente escludi le parole conosciute.</translation>
     </message>
     <message>
         <source>Mine from YouTube</source>
@@ -2322,7 +2322,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Drop words written without kanji; “Skip all kana-only words (including mixed)” leaves a kanji-only deck.</source>
-        <translation type="unfinished" />
+        <translation>Scarta le parole scritte senza kanji; «Salta tutte le parole solo in kana (anche miste)» lascia un mazzo di soli kanji.</translation>
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -2422,11 +2422,11 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Keep dictionaries up to date</source>
-        <translation type="unfinished" />
+        <translation>Mantieni aggiornati i dizionari</translation>
     </message>
     <message>
         <source>Dictionaries that publish updates (Jitendex, JMdict, Wiktionary, Jiten, …) update themselves once a week; Update Now checks right away.</source>
-        <translation type="unfinished" />
+        <translation>I dizionari che pubblicano aggiornamenti (Jitendex, JMdict, Wiktionary, Jiten, …) si aggiornano da soli una volta alla settimana; Aggiorna ora controlla subito.</translation>
     </message>
     <message>
         <source>Add frequency lists</source>
@@ -2626,7 +2626,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku and Senren (Japanese only) and Anki Miner Note are recognised and filled completely.</source>
-        <translation type="unfinished" />
+        <translation>Compila automaticamente legge i campi del tipo di nota e compila ogni mappatura. Lapis, Kiku e Senren (solo giapponese) e Anki Miner Note vengono riconosciuti e compilati completamente.</translation>
     </message>
     <message>
         <source>Bold the mined word in the sentence</source>
@@ -4444,19 +4444,19 @@ Verranno modificate %n note (%1) e verrà loro assegnato il tag %2. Continuare?<
     </message>
     <message>
         <source>Updates</source>
-        <translation type="unfinished">Aggiornamenti</translation>
+        <translation>Aggiornamenti</translation>
     </message>
     <message>
         <source>Update automatically once a week</source>
-        <translation type="unfinished" />
+        <translation>Aggiorna automaticamente una volta alla settimana</translation>
     </message>
     <message>
         <source>Update Now</source>
-        <translation type="unfinished" />
+        <translation>Aggiorna ora</translation>
     </message>
     <message>
         <source>Dictionaries, frequency lists and pitch-accent sources whose publisher posts updates (Jitendex, JMdict, Wiktionary, Jiten, …) are downloaded again when a newer version is out. Their order and on/off state stay as they are.</source>
-        <translation type="unfinished" />
+        <translation>I dizionari, gli elenchi di frequenza e le fonti di accento tonale il cui editore pubblica aggiornamenti (Jitendex, JMdict, Wiktionary, Jiten, …) vengono riscaricati quando esce una versione più recente. Il loro ordine e il loro stato di attivazione restano invariati.</translation>
     </message>
     <message>
         <source>Storage</source>
@@ -5491,7 +5491,7 @@ Nessun file sul disco viene eliminato.</translation>
     </message>
     <message>
         <source>Text file with one word per line to skip. Whitelisted words are still mined. Leave empty to skip nothing.</source>
-        <translation type="unfinished" />
+        <translation>File di testo con una parola per riga da saltare. Le parole in whitelist vengono comunque estratte. Lasciare vuoto per non saltare nulla.</translation>
     </message>
     <message>
         <source>Select whitelist file...</source>
@@ -5511,7 +5511,7 @@ Nessun file sul disco viene eliminato.</translation>
     </message>
     <message>
         <source>Exclude bundled lists of Japanese people, place and company names from mining. Whitelisted names are still mined.</source>
-        <translation type="unfinished" />
+        <translation>Esclude dal mining gli elenchi inclusi di nomi di persone, luoghi e aziende giapponesi. I nomi in whitelist vengono comunque estratti.</translation>
     </message>
     <message>
         <source>Skip names of people, places and companies</source>
@@ -6594,7 +6594,7 @@ Parole da aggiungere: %3. Continuare?</translation>
     </message>
     <message>
         <source>Update Dictionaries Now</source>
-        <translation type="unfinished" />
+        <translation>Aggiorna dizionari ora</translation>
     </message>
     <message>
         <source>Download Recommended Resources...</source>
@@ -6690,39 +6690,39 @@ Parole da aggiungere: %3. Continuare?</translation>
     </message>
     <message>
         <source>Checking for dictionary updates…</source>
-        <translation type="unfinished" />
+        <translation>Controllo degli aggiornamenti dei dizionari…</translation>
     </message>
     <message>
         <source>Could not check for dictionary updates: %1</source>
-        <translation type="unfinished" />
+        <translation>Impossibile controllare gli aggiornamenti dei dizionari: %1</translation>
     </message>
     <message>
         <source>Downloading dictionary updates…</source>
-        <translation type="unfinished" />
+        <translation>Download degli aggiornamenti dei dizionari…</translation>
     </message>
     <message>
         <source>Your dictionaries changed during the check. Try again.</source>
-        <translation type="unfinished" />
+        <translation>I dizionari sono cambiati durante il controllo. Riprovare.</translation>
     </message>
     <message>
         <source>None of your dictionaries publish updates.</source>
-        <translation type="unfinished" />
+        <translation>Nessuno dei dizionari pubblica aggiornamenti.</translation>
     </message>
     <message>
         <source>Dictionaries are up to date (%1 could not be checked).</source>
-        <translation type="unfinished" />
+        <translation>I dizionari sono aggiornati (non è stato possibile controllarne %1).</translation>
     </message>
     <message>
         <source>Dictionaries are up to date.</source>
-        <translation type="unfinished" />
+        <translation>I dizionari sono aggiornati.</translation>
     </message>
     <message>
         <source>Dictionary updates</source>
-        <translation type="unfinished" />
+        <translation>Aggiornamenti dei dizionari</translation>
     </message>
     <message>
         <source>Dictionaries updated: %1</source>
-        <translation type="unfinished" />
+        <translation>Dizionari aggiornati: %1</translation>
     </message>
     <message>
         <source>Downloaded resources were left inactive because their storage folder changed.</source>
@@ -7144,7 +7144,7 @@ Continuare?</translation>
     </message>
     <message>
         <source>%1 language pack: download failed. %2</source>
-        <translation type="unfinished" />
+        <translation>Pacchetto lingua %1: download non riuscito. %2</translation>
     </message>
     <message>
         <source>%1 language pack: download failed.</source>
@@ -7234,7 +7234,7 @@ Continuare?</translation>
     </message>
     <message>
         <source>%1 still can't be mined after its download.</source>
-        <translation type="unfinished" />
+        <translation>%1 non è ancora utilizzabile per il mining dopo il download.</translation>
     </message>
 </context><context>
     <name>MiningTabBase</name>
@@ -8308,8 +8308,9 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message numerus="yes">
         <source>%n episode(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n episodio</numerusform>
+            <numerusform>%n episodi</numerusform>
         </translation>
     </message>
     <message>
@@ -8426,14 +8427,16 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message numerus="yes">
         <source>%n series</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n serie</numerusform>
+            <numerusform>%n serie</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%n episode(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n episodio</numerusform>
+            <numerusform>%n episodi</numerusform>
         </translation>
     </message>
     <message>
@@ -8650,7 +8653,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Reading your Anki cards and known words…</source>
-        <translation type="unfinished" />
+        <translation>Lettura delle carte Anki e delle parole conosciute…</translation>
     </message>
     <message>
         <source>Checking file %1 of %2</source>
@@ -8863,7 +8866,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>That file or folder no longer exists.</source>
-        <translation type="unfinished">Quel file o quella cartella non esiste più.</translation>
+        <translation>Quel file o quella cartella non esiste più.</translation>
     </message>
     <message>
         <source>Choose a .mokuro, .cbz or .zip volume, or a manga folder.</source>
@@ -8977,7 +8980,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>That file or folder no longer exists.</source>
-        <translation type="unfinished">Quel file o quella cartella non esiste più.</translation>
+        <translation>Quel file o quella cartella non esiste più.</translation>
     </message>
     <message>
         <source>Choose an .epub or .txt book, or a folder of books.</source>
@@ -9169,7 +9172,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Anki Miner can't mine this folder.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner non può estrarre questa cartella.</translation>
     </message>
     <message>
         <source>Anki Miner can't mine this file.</source>
@@ -9653,7 +9656,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Installing %1 of %2 · %3</source>
-        <translation type="unfinished" />
+        <translation>Installazione %1 di %2 · %3</translation>
     </message>
     <message>
         <source>Recommended Resources</source>
@@ -9732,22 +9735,22 @@ Nessun file indice viene eliminato.</translation>
     <message>
         <source>%1 (%2)</source>
         <extracomment>%1 is one or more resource names, %2 what they are: "JMdict (dictionary)".</extracomment>
-        <translation type="unfinished">%1 (%2)</translation>
+        <translation>%1 (%2)</translation>
     </message>
     <message>
         <source>Downloads %1.</source>
         <extracomment>%1 lists "name (kind)" groups: "Downloads JMdict (dictionary) and Kanjium (pitch accent)."</extracomment>
-        <translation type="unfinished">Scarica %1.</translation>
+        <translation>Scarica %1.</translation>
     </message>
     <message>
         <source>%1, %2</source>
         <extracomment>Joins list items before the last one: "JMdict, JPDB and Jiten". Use your language's list comma.</extracomment>
-        <translation type="unfinished" />
+        <translation>%1, %2</translation>
     </message>
     <message>
         <source>%1 and %2</source>
         <extracomment>Joins the last item to the rest of a list: "JMdict, JPDB and Jiten".</extracomment>
-        <translation type="unfinished">%1 e %2</translation>
+        <translation>%1 e %2</translation>
     </message>
     <message>
         <source>Checking for an offline dictionary...</source>
@@ -10153,7 +10156,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Removes (notes), [sound effects], ♪ music and dialogue dashes from each subtitle line before mining, and speaker labels where the script marks them. Half-checked means your own pattern is in use: click to add every built-in cleanup to it.</source>
-        <translation type="unfinished" />
+        <translation>Rimuove (note), [effetti sonori], ♪ musica e trattini di dialogo da ogni riga dei sottotitoli prima del mining, oltre alle etichette dei parlanti dove la scrittura le contrassegna. Una spunta parziale indica che è in uso un pattern personalizzato: fare clic per aggiungervi tutte le pulizie integrate.</translation>
     </message>
     <message>
         <source>Python regex matched in subtitle text and removed (or replaced) before mining. Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. Combine alternatives with |. Test patterns at https://regex101.com.</source>
@@ -10201,7 +10204,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped. Whitelisted words are still mined.</source>
-        <translation type="unfinished" />
+        <translation>Estrae al massimo una parola per frase di esempio — la prima trovata in quella frase. Ogni altra parola della stessa frase viene saltata. Le parole in whitelist vengono comunque estratte.</translation>
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
@@ -10209,7 +10212,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication. Whitelisted words are still mined.</source>
-        <translation type="unfinished" />
+        <translation>Estrai solo le parole in frasi con esattamente una parola sconosciuta (i+1); ha la precedenza sulla deduplicazione delle frasi. Le parole in whitelist vengono comunque estratte.</translation>
     </message>
     <message>
         <source>Sentence Rule</source>
@@ -11239,7 +11242,7 @@ Le tue risorse installate e il tuo tema vengono mantenuti.</translation>
     </message>
     <message>
         <source>%1, as name_retimed.srt</source>
-        <translation type="unfinished" />
+        <translation>%1, come name_retimed.srt</translation>
     </message>
     <message>
         <source>Subtitle retiming</source>
@@ -11577,7 +11580,7 @@ Le tue risorse installate e il tuo tema vengono mantenuti.</translation>
     <name>SubtitlesSettingsPanel</name>
     <message>
         <source>Auto (GPU if available)</source>
-        <translation type="unfinished" />
+        <translation>Automatico (GPU se disponibile)</translation>
     </message>
     <message>
         <source>Transcription &amp; Alignment</source>
@@ -12151,7 +12154,7 @@ Le tue risorse installate e il tuo tema vengono mantenuti.</translation>
     </message>
     <message>
         <source>No subtitle or audio tracks were found in any video in that folder.</source>
-        <translation type="unfinished" />
+        <translation>Nessuna traccia di sottotitoli o audio trovata nei video di quella cartella.</translation>
     </message>
     <message>
         <source>No subtitle or audio tracks were found in %1.</source>
@@ -12159,8 +12162,9 @@ Le tue risorse installate e il tuo tema vengono mantenuti.</translation>
     </message>
     <message numerus="yes">
         <source>Tracks of %1, one of %n videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Tracce di %1, uno dei %n video. Le tracce selezionate vengono salvate da ogni video della cartella; un video che ne è privo viene saltato.</numerusform>
+            <numerusform>Tracce di %1, uno dei %n video. Le tracce selezionate vengono salvate da ogni video della cartella; un video che ne è privo viene saltato.</numerusform>
         </translation>
     </message>
     <message>
@@ -12639,7 +12643,7 @@ Ordina in base a questa colonna per affrontare in ordine una registrazione lunga
     </message>
     <message>
         <source>This card has no picture</source>
-        <translation type="unfinished" />
+        <translation>Questa carta non ha un'immagine</translation>
     </message>
     <message>
         <source>No page image for this word</source>
@@ -12647,7 +12651,7 @@ Ordina in base a questa colonna per affrontare in ordine una registrazione lunga
     </message>
     <message>
         <source>Could not load this card's picture</source>
-        <translation type="unfinished" />
+        <translation>Impossibile caricare l'immagine di questa carta</translation>
     </message>
     <message>
         <source>Could not load page image</source>
@@ -12781,7 +12785,7 @@ Ordina in base a questa colonna per affrontare in ordine una registrazione lunga
     <name>YouTubeSettingsPanel</name>
     <message>
         <source>None</source>
-        <translation type="unfinished">Nessuno</translation>
+        <translation>Nessuno</translation>
     </message>
     <message>
         <source>YouTube</source>

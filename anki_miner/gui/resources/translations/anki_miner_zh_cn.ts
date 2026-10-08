@@ -593,15 +593,15 @@
     </message>
     <message>
         <source>Open Anki when Anki Miner starts</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner 启动时打开 Anki</translation>
     </message>
     <message>
         <source>Starts Anki if it isn't running when Anki Miner opens.</source>
-        <translation type="unfinished" />
+        <translation>如果 Anki 未运行，则在 Anki Miner 打开时启动 Anki。</translation>
     </message>
     <message>
         <source>Anki Miner can't find Anki where its installer puts it, so it can't open it.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner 在 Anki 安装程序的默认安装位置找不到 Anki，因此无法打开它。</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
@@ -2103,7 +2103,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Deck Builder always skips per-episode filters and checks for duplicates only in the deck it builds; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
-        <translation type="unfinished" />
+        <translation>牌组构建器始终跳过按集过滤，并且只在其构建的牌组内检查重复；可选择挖取全部单词、前 N 个，或达到目标覆盖率，并可选择跳过已知单词。</translation>
     </message>
     <message>
         <source>Mine from YouTube</source>
@@ -2319,7 +2319,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Drop words written without kanji; “Skip all kana-only words (including mixed)” leaves a kanji-only deck.</source>
-        <translation type="unfinished" />
+        <translation>去掉不含汉字的单词；“跳过所有纯假名单词（包括混合）”会得到一个只含汉字词的牌组。</translation>
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -2419,11 +2419,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Keep dictionaries up to date</source>
-        <translation type="unfinished" />
+        <translation>保持词典为最新</translation>
     </message>
     <message>
         <source>Dictionaries that publish updates (Jitendex, JMdict, Wiktionary, Jiten, …) update themselves once a week; Update Now checks right away.</source>
-        <translation type="unfinished" />
+        <translation>会发布更新的词典（Jitendex、JMdict、Wiktionary、Jiten 等）每周自动更新一次；点击“立即更新”可马上检查。</translation>
     </message>
     <message>
         <source>Add frequency lists</source>
@@ -2623,7 +2623,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku and Senren (Japanese only) and Anki Miner Note are recognised and filled completely.</source>
-        <translation type="unfinished" />
+        <translation>“自动填写”会读取笔记类型的字段并填写全部映射。可识别 Lapis、Kiku 和 Senren（仅限日语）以及 Anki Miner Note，并完整填写。</translation>
     </message>
     <message>
         <source>Bold the mined word in the sentence</source>
@@ -4419,19 +4419,19 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Updates</source>
-        <translation type="unfinished">更新</translation>
+        <translation>更新</translation>
     </message>
     <message>
         <source>Update automatically once a week</source>
-        <translation type="unfinished" />
+        <translation>每周自动更新一次</translation>
     </message>
     <message>
         <source>Update Now</source>
-        <translation type="unfinished" />
+        <translation>立即更新</translation>
     </message>
     <message>
         <source>Dictionaries, frequency lists and pitch-accent sources whose publisher posts updates (Jitendex, JMdict, Wiktionary, Jiten, …) are downloaded again when a newer version is out. Their order and on/off state stay as they are.</source>
-        <translation type="unfinished" />
+        <translation>对于发布者会提供更新的词典、词频列表和音调来源（Jitendex、JMdict、Wiktionary、Jiten 等），有新版本时会重新下载。它们的顺序和启用状态保持不变。</translation>
     </message>
     <message>
         <source>Storage</source>
@@ -5455,7 +5455,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Text file with one word per line to skip. Whitelisted words are still mined. Leave empty to skip nothing.</source>
-        <translation type="unfinished" />
+        <translation>每行一个单词的文本文件，其中的单词会被跳过。已加入白名单的单词仍会被挖取。留空则不跳过任何单词。</translation>
     </message>
     <message>
         <source>Select whitelist file...</source>
@@ -5475,7 +5475,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Exclude bundled lists of Japanese people, place and company names from mining. Whitelisted names are still mined.</source>
-        <translation type="unfinished" />
+        <translation>挖词时排除内置的日本人名、地名和公司名列表。已加入白名单的名称仍会被挖取。</translation>
     </message>
     <message>
         <source>Skip names of people, places and companies</source>
@@ -6557,7 +6557,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Update Dictionaries Now</source>
-        <translation type="unfinished" />
+        <translation>立即更新词典</translation>
     </message>
     <message>
         <source>Download Recommended Resources...</source>
@@ -6653,39 +6653,39 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Checking for dictionary updates…</source>
-        <translation type="unfinished" />
+        <translation>正在检查词典更新…</translation>
     </message>
     <message>
         <source>Could not check for dictionary updates: %1</source>
-        <translation type="unfinished" />
+        <translation>无法检查词典更新：%1</translation>
     </message>
     <message>
         <source>Downloading dictionary updates…</source>
-        <translation type="unfinished" />
+        <translation>正在下载词典更新…</translation>
     </message>
     <message>
         <source>Your dictionaries changed during the check. Try again.</source>
-        <translation type="unfinished" />
+        <translation>检查期间你的词典发生了变化。请重试。</translation>
     </message>
     <message>
         <source>None of your dictionaries publish updates.</source>
-        <translation type="unfinished" />
+        <translation>你的词典都不发布更新。</translation>
     </message>
     <message>
         <source>Dictionaries are up to date (%1 could not be checked).</source>
-        <translation type="unfinished" />
+        <translation>词典已是最新（%1 个无法检查）。</translation>
     </message>
     <message>
         <source>Dictionaries are up to date.</source>
-        <translation type="unfinished" />
+        <translation>词典已是最新。</translation>
     </message>
     <message>
         <source>Dictionary updates</source>
-        <translation type="unfinished" />
+        <translation>词典更新</translation>
     </message>
     <message>
         <source>Dictionaries updated: %1</source>
-        <translation type="unfinished" />
+        <translation>已更新词典：%1</translation>
     </message>
     <message>
         <source>Downloaded resources were left inactive because their storage folder changed.</source>
@@ -7107,7 +7107,7 @@ Continue?</source>
     </message>
     <message>
         <source>%1 language pack: download failed. %2</source>
-        <translation type="unfinished" />
+        <translation>%1 语言包：下载失败。%2</translation>
     </message>
     <message>
         <source>%1 language pack: download failed.</source>
@@ -7197,7 +7197,7 @@ Continue?</source>
     </message>
     <message>
         <source>%1 still can't be mined after its download.</source>
-        <translation type="unfinished" />
+        <translation>%1 下载完成后仍无法用于挖词。</translation>
     </message>
 </context><context>
     <name>MiningTabBase</name>
@@ -8271,8 +8271,8 @@ No index files are deleted.</source>
     </message>
     <message numerus="yes">
         <source>%n episode(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n 集</numerusform>
         </translation>
     </message>
     <message>
@@ -8389,14 +8389,14 @@ No index files are deleted.</source>
     </message>
     <message numerus="yes">
         <source>%n series</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n 个系列</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%n episode(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n 集</numerusform>
         </translation>
     </message>
     <message>
@@ -8613,7 +8613,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Reading your Anki cards and known words…</source>
-        <translation type="unfinished" />
+        <translation>正在读取你的 Anki 卡片和已知单词…</translation>
     </message>
     <message>
         <source>Checking file %1 of %2</source>
@@ -8825,7 +8825,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>That file or folder no longer exists.</source>
-        <translation type="unfinished">该文件或文件夹已不存在。</translation>
+        <translation>该文件或文件夹已不存在。</translation>
     </message>
     <message>
         <source>Choose a .mokuro, .cbz or .zip volume, or a manga folder.</source>
@@ -8939,7 +8939,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>That file or folder no longer exists.</source>
-        <translation type="unfinished">该文件或文件夹已不存在。</translation>
+        <translation>该文件或文件夹已不存在。</translation>
     </message>
     <message>
         <source>Choose an .epub or .txt book, or a folder of books.</source>
@@ -9131,7 +9131,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Anki Miner can't mine this folder.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner 无法对此文件夹挖词。</translation>
     </message>
     <message>
         <source>Anki Miner can't mine this file.</source>
@@ -9614,7 +9614,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Installing %1 of %2 · %3</source>
-        <translation type="unfinished" />
+        <translation>正在安装第 %1 项，共 %2 项 · %3</translation>
     </message>
     <message>
         <source>Recommended Resources</source>
@@ -9693,22 +9693,22 @@ No index files are deleted.</source>
     <message>
         <source>%1 (%2)</source>
         <extracomment>%1 is one or more resource names, %2 what they are: "JMdict (dictionary)".</extracomment>
-        <translation type="unfinished">%1 （%2）</translation>
+        <translation>%1（%2）</translation>
     </message>
     <message>
         <source>Downloads %1.</source>
         <extracomment>%1 lists "name (kind)" groups: "Downloads JMdict (dictionary) and Kanjium (pitch accent)."</extracomment>
-        <translation type="unfinished">将下载 %1。</translation>
+        <translation>将下载 %1。</translation>
     </message>
     <message>
         <source>%1, %2</source>
         <extracomment>Joins list items before the last one: "JMdict, JPDB and Jiten". Use your language's list comma.</extracomment>
-        <translation type="unfinished" />
+        <translation>%1、%2</translation>
     </message>
     <message>
         <source>%1 and %2</source>
         <extracomment>Joins the last item to the rest of a list: "JMdict, JPDB and Jiten".</extracomment>
-        <translation type="unfinished">%1 和 %2</translation>
+        <translation>%1 和 %2</translation>
     </message>
     <message>
         <source>Checking for an offline dictionary...</source>
@@ -10114,7 +10114,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Removes (notes), [sound effects], ♪ music and dialogue dashes from each subtitle line before mining, and speaker labels where the script marks them. Half-checked means your own pattern is in use: click to add every built-in cleanup to it.</source>
-        <translation type="unfinished" />
+        <translation>挖词前，从每行字幕中移除（注释）、[音效]、♪ 音乐和对话破折号；若该文字类型会标出说话人标签，也会将其移除。半选状态表示正在使用你自己的规则：点击可将所有内置清理规则加入其中。</translation>
     </message>
     <message>
         <source>Python regex matched in subtitle text and removed (or replaced) before mining. Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. Combine alternatives with |. Test patterns at https://regex101.com.</source>
@@ -10162,7 +10162,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped. Whitelisted words are still mined.</source>
-        <translation type="unfinished" />
+        <translation>每个例句最多挖取一个单词——该句中最先找到的那个。共用该句的其他单词都会被跳过。已加入白名单的单词仍会被挖取。</translation>
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
@@ -10170,7 +10170,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication. Whitelisted words are still mined.</source>
-        <translation type="unfinished" />
+        <translation>仅挖取恰好含有一个生词的句子中的单词（i+1）；此设置会覆盖句子去重规则。已加入白名单的单词仍会被挖取。</translation>
     </message>
     <message>
         <source>Sentence Rule</source>
@@ -11198,7 +11198,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>%1, as name_retimed.srt</source>
-        <translation type="unfinished" />
+        <translation>%1，命名为 name_retimed.srt</translation>
     </message>
     <message>
         <source>Subtitle retiming</source>
@@ -11536,7 +11536,7 @@ Your installed resources and your theme are kept.</source>
     <name>SubtitlesSettingsPanel</name>
     <message>
         <source>Auto (GPU if available)</source>
-        <translation type="unfinished" />
+        <translation>自动（可用时使用 GPU）</translation>
     </message>
     <message>
         <source>Transcription &amp; Alignment</source>
@@ -12110,7 +12110,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>No subtitle or audio tracks were found in any video in that folder.</source>
-        <translation type="unfinished" />
+        <translation>该文件夹内的所有视频中均未找到字幕或音频轨道。</translation>
     </message>
     <message>
         <source>No subtitle or audio tracks were found in %1.</source>
@@ -12118,8 +12118,8 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message numerus="yes">
         <source>Tracks of %1, one of %n videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%1 的轨道（共 %n 个视频中的一个）。将从文件夹中的每个视频保存已勾选的轨道；缺少这些轨道的视频会被跳过。</numerusform>
         </translation>
     </message>
     <message>
@@ -12598,7 +12598,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>This card has no picture</source>
-        <translation type="unfinished" />
+        <translation>此卡片没有图片</translation>
     </message>
     <message>
         <source>No page image for this word</source>
@@ -12606,7 +12606,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>Could not load this card's picture</source>
-        <translation type="unfinished" />
+        <translation>无法加载此卡片的图片</translation>
     </message>
     <message>
         <source>Could not load page image</source>
@@ -12740,7 +12740,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     <name>YouTubeSettingsPanel</name>
     <message>
         <source>None</source>
-        <translation type="unfinished">无</translation>
+        <translation>无</translation>
     </message>
     <message>
         <source>YouTube</source>
