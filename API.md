@@ -258,7 +258,7 @@ While a run works, `progress.json` holds `{"schema": 1, "run_id": …, "stage": 
 
 To stop a run, create an empty file named `cancel` in its folder. The run stops at its next step, reports `CANCELLED`, and Anki Miner deletes the file. Only that run stops; a call with several runs moves on to the next.
 
-A `cancel` file already there when a run starts cancels it at once, and its result lists every word as `not_attempted`. On Linux and macOS, SIGINT or SIGTERM stops the current run and every later run in the call. Notes already added to Anki stay.
+A call starts by deleting the `progress.json` and `cancel` files an earlier call left in its runs' folders. A `cancel` file created after that for a run still waiting its turn cancels it as soon as it starts, and its result lists every word as `not_attempted`. On Linux and macOS, SIGINT or SIGTERM stops the current run and every later run in the call. Notes already added to Anki stay.
 
 ## Error codes
 

@@ -39,7 +39,14 @@ from anki_miner.cli.api.contract import (
 from anki_miner.cli.api.files import Episode, RunFile
 from anki_miner.cli.api.lines import Fates, LineWords, WordSelection, line_merges, named_word
 from anki_miner.cli.api.render import Rendered, RenderService
-from anki_miner.cli.api.runfolder import MEDIA, CancelWatcher, ProgressFile, next_numbered, write_json
+from anki_miner.cli.api.runfolder import (
+    MEDIA,
+    CancelWatcher,
+    ProgressFile,
+    clear_leftovers,
+    next_numbered,
+    write_json,
+)
 from anki_miner.cli.runner import SetupFailure, check_card_target, check_environment
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiConnectionError, SetupError, SubtitleParseError
@@ -335,6 +342,7 @@ def mine_runs(run_file: RunFile, cancel_all: threading.Event, kind: Kind = Kind.
 
     Each run that got as far as mining writes its result-<n>.json (a render, its render-<n>.json).
     """
+    clear_leftovers(run_file.run_dir, (episode.run_id for episode in run_file.episodes))
     config = settings.resolve_run_config(run_file.profile, run_file.language, run_file.overlay)
     with _services(config, kind) as shared:
         return [
