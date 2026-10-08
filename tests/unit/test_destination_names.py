@@ -158,6 +158,15 @@ def test_the_keyboard_panel_matches_its_navigator_entry(qtbot):
     assert panel._title_label.text() == "Keyboard"
 
 
+def test_the_utilities_panel_matches_its_navigator_entry(qtbot):
+    """The panel title and the navigator label must be the same words."""
+    from anki_miner.gui.widgets.panels import UtilitiesSettingsPanel
+
+    panel = UtilitiesSettingsPanel()
+    qtbot.addWidget(panel)
+    assert panel._title_label.text() == "Utilities"
+
+
 def test_condense_destination_reserves_fixed_suffix_bytes(tmp_path):
     media = tmp_path / ("界" * 81 + ".mkv")
     outputs = condense_worker.plan_condense_outputs([CondenseItem(media)], None, "mp3")

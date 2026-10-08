@@ -13,6 +13,7 @@ from .queue_panel import QueuePanel
 from .sentences_settings_panel import SentencesSettingsPanel
 from .subtitles_settings_panel import SubtitlesSettingsPanel
 from .ui_settings_panel import UISettingsPanel
+from .utilities_settings_panel import UtilitiesSettingsPanel
 from .youtube_settings_panel import YouTubeSettingsPanel
 
 __all__ = [
@@ -29,5 +30,6 @@ __all__ = [
     "SentencesSettingsPanel",
     "SubtitlesSettingsPanel",
     "UISettingsPanel",
+    "UtilitiesSettingsPanel",
     "YouTubeSettingsPanel",
 ]

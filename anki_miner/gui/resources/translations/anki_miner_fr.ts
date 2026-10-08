@@ -2409,6 +2409,14 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Ajoutez votre propre archive zip de dictionnaire au format Yomitan comme source de définitions.</translation>
     </message>
     <message>
+        <source>Keep dictionaries up to date</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries that publish updates (Jitendex, JMdict, Wiktionary, Jiten, …) update themselves once a week; Update Now checks right away.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Jisho.org online fallback (Japanese)</source>
         <translation>Recours en ligne à Jisho.org (japonais)</translation>
     </message>
@@ -2653,8 +2661,8 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Choisir les outils de l'onglet Utilitaires</translation>
     </message>
     <message>
-        <source>Hide the Utilities tools you do not use, or bring them back, under Settings → General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
-        <translation>Masquez les outils de l'onglet Utilitaires que vous n'utilisez pas, ou faites-les réapparaître, dans Paramètres → Général. Un outil masqué conserve son entrée ici ; son bouton Ouvrir mène à cette case à cocher.</translation>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings → Utilities. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation>Masquez les outils de l'onglet Utilitaires que vous n'utilisez pas, ou faites-les réapparaître, dans Paramètres → Utilitaires. Un outil masqué conserve son entrée ici ; son bouton Ouvrir mène à cette case à cocher.</translation>
     </message>
     <message>
         <source>Search the settings</source>
@@ -4433,6 +4441,22 @@ Cela modifiera %n notes (%1) et leur ajoutera l'étiquette %2. Continuer ?</nume
     <message>
         <source>Download recommended</source>
         <translation>Télécharger les recommandés</translation>
+    </message>
+    <message>
+        <source>Updates</source>
+        <translation type="unfinished">Mises à jour</translation>
+    </message>
+    <message>
+        <source>Update automatically once a week</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Update Now</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries, frequency lists and pitch-accent sources whose publisher posts updates (Jitendex, JMdict, Wiktionary, Jiten, …) are downloaded again when a newer version is out. Their order and on/off state stay as they are.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Storage</source>
@@ -6581,6 +6605,10 @@ Mots à ajouter : %3. Continuer ?</translation>
         <translation>Créer un raccourci sur le bureau...</translation>
     </message>
     <message>
+        <source>Update Dictionaries Now</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Download Recommended Resources...</source>
         <translation>Télécharger les ressources recommandées...</translation>
     </message>
@@ -6671,6 +6699,42 @@ Mots à ajouter : %3. Continuer ?</translation>
     <message>
         <source>Shortcut created.</source>
         <translation>Raccourci créé.</translation>
+    </message>
+    <message>
+        <source>Checking for dictionary updates…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not check for dictionary updates: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloading dictionary updates…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Your dictionaries changed during the check. Try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>None of your dictionaries publish updates.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries are up to date (%1 could not be checked).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries are up to date.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionary updates</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries updated: %1</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Downloaded resources were left inactive because their storage folder changed.</source>
@@ -9610,16 +9674,16 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Annulation…</translation>
     </message>
     <message>
+        <source>Recommended resources</source>
+        <translation>Ressources recommandées</translation>
+    </message>
+    <message>
         <source>Resource settings are busy or could not be saved. Wait for the active task and try again.</source>
         <translation>Les paramètres de ressources sont occupés ou n'ont pas pu être enregistrés. Attendez la fin de la tâche active et réessayez.</translation>
     </message>
     <message>
         <source>Another task is using the indexed resources — try again when it finishes.</source>
         <translation>Une autre tâche utilise les ressources indexées — réessayez une fois qu'elle est terminée.</translation>
-    </message>
-    <message>
-        <source>Recommended resources</source>
-        <translation>Ressources recommandées</translation>
     </message>
     <message>
         <source>The download stopped before it finished. Try again.</source>
@@ -10350,6 +10414,10 @@ Aucun fichier d'index n'est supprimé.</translation>
     <message>
         <source>General</source>
         <translation>Général</translation>
+    </message>
+    <message>
+        <source>Utilities</source>
+        <translation>Utilitaires</translation>
     </message>
     <message>
         <source>Keyboard</source>
@@ -12170,14 +12238,6 @@ Vos ressources installées et votre thème sont conservés.</translation>
         <translation>Plus tard</translation>
     </message>
     <message>
-        <source>Utilities tab</source>
-        <translation>Onglet Utilitaires</translation>
-    </message>
-    <message>
-        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
-        <translation>Choisissez les outils que l'onglet Utilitaires affiche. Il en reste toujours au moins un.</translation>
-    </message>
-    <message>
         <source>App</source>
         <translation>Application</translation>
     </message>
@@ -12314,6 +12374,16 @@ Vos ressources installées et votre thème sont conservés.</translation>
     <message>
         <source>Download disk image</source>
         <translation>Télécharger l’image disque</translation>
+    </message>
+</context><context>
+    <name>UtilitiesSettingsPanel</name>
+    <message>
+        <source>Utilities</source>
+        <translation>Utilitaires</translation>
+    </message>
+    <message>
+        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
+        <translation>Choisissez les outils que l'onglet Utilitaires affiche. Il en reste toujours au moins un.</translation>
     </message>
 </context><context>
     <name>VulkanModelDownloadWorker</name>

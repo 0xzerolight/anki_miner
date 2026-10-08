@@ -403,7 +403,7 @@ def test_gated_setting_entry_is_hidden_from_japanese(cap_id: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# The Utilities tools (Settings -> General hides them)
+# The Utilities tools (Settings -> Utilities hides them)
 # ---------------------------------------------------------------------------
 
 
@@ -436,7 +436,7 @@ def test_hiding_all_but_one_is_honoured() -> None:
 def test_the_visibility_setting_has_a_guide_entry() -> None:
     entry = _entry("utilities-visibility")
 
-    assert entry.target == CapabilityTarget("settings", "ui")
+    assert entry.target == CapabilityTarget("settings", "utilities")
     assert "tools" in " ".join(entry.keywords)
 
 

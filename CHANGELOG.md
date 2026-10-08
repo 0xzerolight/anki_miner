@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Open Anki when Anki Miner starts (Settings → Cards & Anki).** If Anki isn't running when Anki Miner opens, Anki Miner starts it and connects once AnkiConnect answers. Off by default. It looks for Anki where its installer puts it; if Anki is elsewhere, the option is greyed out.
 
 ### Changed
+- **A Settings page for the Utilities tab's tools (Settings → Utilities).** The checkboxes that pick which tools the tab shows moved there from Settings → General.
 
 ### Fixed
 - **Re-import finds a downloaded Wiktionary (wty) dictionary's saved copy.** Re-import and Reimport All said no saved copy was left for a wty dictionary from the recommended downloads.

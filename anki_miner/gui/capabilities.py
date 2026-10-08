@@ -60,11 +60,12 @@ SETTINGS_SUBTABS: frozenset[str] = frozenset(
         "youtube",
         "subtitles",
         "ui",
+        "utilities",
         "keyboard",
     }
 )
 # The Utilities tab's tools, in tab-bar order. SubtitlesTab builds its inner
-# tabs in this order and Settings -> General shows one checkbox per key, so
+# tabs in this order and Settings -> Utilities shows one checkbox per key, so
 # this tuple and SUBTAB_KEYS["subtitles"] are the same set.
 UTILITY_SUBTABS: tuple[str, ...] = (
     "generate",
@@ -1220,11 +1221,11 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Choose the tools on the Utilities tab"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Hide the Utilities tools you do not use, or bring them back, under Settings → General. "
+            "Hide the Utilities tools you do not use, or bring them back, under Settings → Utilities. "
             "A hidden tool keeps its entry here; its Open button leads to that checkbox.",
         ),
         category=_CAT_APPEARANCE,
-        target=CapabilityTarget("settings", "ui"),
+        target=CapabilityTarget("settings", "utilities"),
         keywords=("hide tools", "show tools", "utilities", "tools tab", "declutter", "customize tabs"),
     ),
     Capability(

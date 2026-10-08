@@ -1,4 +1,4 @@
-"""Settings -> General: which tools the Utilities tab shows.
+"""Settings -> Utilities: which tools the Utilities tab shows.
 
 The checkboxes commit at once, the last checked one cannot be unchecked, and
 every box is a jump target, which is where a hidden tool's Usage Guide entry
@@ -15,13 +15,13 @@ from PyQt6.QtWidgets import QMessageBox
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import UTILITY_SUBTABS, utility_labels
-from anki_miner.gui.widgets.panels.ui_settings_panel import UISettingsPanel
+from anki_miner.gui.widgets.panels.utilities_settings_panel import UtilitiesSettingsPanel
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 
 
 @pytest.fixture
-def panel(test_config: AnkiMinerConfig, qtbot) -> UISettingsPanel:
-    widget = UISettingsPanel(test_config.themes_root)
+def panel(qtbot) -> UtilitiesSettingsPanel:
+    widget = UtilitiesSettingsPanel()
     qtbot.addWidget(widget)
     return widget
 
@@ -95,13 +95,20 @@ class TestPanel:
 
         assert not panel.utility_checkboxes[UTILITY_SUBTABS[0]].isEnabled()
 
+    def test_every_box_is_anchored_by_its_tool_key(self, panel):
+        by_id = {anchor.stable_id: anchor for anchor in panel.setting_anchors()}
+
+        assert set(by_id) == {f"utilities.{key}" for key in UTILITY_SUBTABS}
+        for key, box in panel.utility_checkboxes.items():
+            assert by_id[f"utilities.{key}"].focus_widget is box
+
 
 class TestSettingsTab:
     def test_a_toggle_commits_immediately(self, tab):
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
-        tab.ui_panel.utility_checkboxes["retime"].setChecked(False)
+        tab.utilities_panel.utility_checkboxes["retime"].setChecked(False)
 
         assert [config.hidden_utilities for config in received] == [("retime",)]
         assert not tab._debounce_timer.isActive()
@@ -110,7 +117,7 @@ class TestSettingsTab:
         tab.config_changed.connect(tab.update_config)
         tab.anki_panel.anki_tags_input.setText("pending-tag")
 
-        tab.ui_panel.utility_checkboxes["retime"].setChecked(False)
+        tab.utilities_panel.utility_checkboxes["retime"].setChecked(False)
 
         assert tab.anki_panel.get_anki_tags() == "pending-tag"
         assert tab.config.hidden_utilities == ("retime",)
@@ -119,22 +126,39 @@ class TestSettingsTab:
         """Not in _EXTERNAL_ONLY_FIELDS: a profile switch or import must reach the boxes."""
         tab.update_config(replace(tab.config, hidden_utilities=("download",)))
 
-        assert not tab.ui_panel.utility_checkboxes["download"].isChecked()
+        assert not tab.utilities_panel.utility_checkboxes["download"].isChecked()
 
-    def test_every_box_is_anchored_under_ui(self, tab):
+    def test_every_box_is_anchored_under_utilities(self, tab):
         by_id = {anchor.stable_id: anchor for anchor in tab.setting_anchors()}
 
-        for key, box in tab.ui_panel.utility_checkboxes.items():
-            assert by_id[f"ui.utility_{key}"].focus_widget is box
+        for key, box in tab.utilities_panel.utility_checkboxes.items():
+            assert by_id[f"utilities.{key}"].focus_widget is box
+        assert not any(stable_id.startswith("ui.utility_") for stable_id in by_id)
+
+    def test_search_finds_a_tool_on_the_utilities_page(self, tab):
+        from anki_miner.gui.widgets.settings_search import search
+
+        hits = search(tab.setting_search_entries(), "Retime")
+
+        assert "utilities.retime" in [entry.anchor.stable_id for entry in hits]
+        assert all(entry.page_key != "ui" for entry in hits)
+
+    def test_search_still_answers_to_the_old_section_name(self, tab):
+        """The boxes sat under a "Utilities tab" heading on General; that phrase still finds them."""
+        from anki_miner.gui.widgets.settings_search import search
+
+        hits = search(tab.setting_search_entries(), "utilities tab")
+
+        assert {f"utilities.{key}" for key in UTILITY_SUBTABS} <= {entry.anchor.stable_id for entry in hits}
 
     def test_jumping_to_a_box_focuses_it(self, tab, qtbot):
-        box = tab.ui_panel.utility_checkboxes["retime"]
+        box = tab.utilities_panel.utility_checkboxes["retime"]
         tab.open_subtab("anki")
 
-        tab.jump_to_setting("ui.utility_retime")
+        tab.jump_to_setting("utilities.retime")
 
         qtbot.waitUntil(lambda: tab.focusWidget() is box, timeout=2000)
-        assert tab.current_subtab_key() == "ui"
+        assert tab.current_subtab_key() == "utilities"
 
 
 def test_reset_to_defaults_restores_the_new_install_tool_set(test_config, qtbot, monkeypatch):
@@ -151,7 +175,7 @@ def test_reset_to_defaults_restores_the_new_install_tool_set(test_config, qtbot,
     tab._on_reset_to_defaults_clicked()
 
     assert received[-1].hidden_utilities == ("deckfilter", "download")
-    assert tab.ui_panel.utility_checkboxes["retime"].isChecked()
+    assert tab.utilities_panel.utility_checkboxes["retime"].isChecked()
 
 
 class TestMangaOcrLanguageGate:

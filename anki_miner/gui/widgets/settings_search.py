@@ -65,6 +65,8 @@ LEGACY_DESTINATION_TERMS: dict[str, tuple[str, ...]] = {
     "sentences": ("filtering",),
     "subtitles": ("subtitles", "asr"),
     "ui": ("ui", "appearance"),
+    # The tool boxes were a "Utilities tab" section of General before they got this page.
+    "utilities": ("utilities tab",),
 }
 
 #: Result rows visible before the list scrolls.

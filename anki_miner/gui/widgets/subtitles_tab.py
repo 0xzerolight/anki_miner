@@ -13,7 +13,7 @@ Wraps :class:`~anki_miner.gui.widgets.subtitle_creation_tab.SubtitleCreationTab`
 and :class:`~anki_miner.gui.widgets.tracks_tab.TracksTab` (Tracks)
 inside a single top-level tab so the main tab bar stays uncluttered.
 
-Settings → General can hide any of the ten but not all of them
+Settings → Utilities can hide any of the ten but not all of them
 (``config.hidden_utilities``, :meth:`SubtitlesTab.apply_hidden`).
 
 Close contract:
@@ -131,7 +131,7 @@ class SubtitlesTab(QWidget):
         ``"retime"``, ``"condense"``, ``"backfill"``, ``"deckfilter"``,
         ``"download"``, ``"mokuro"``, ``"booksync"``, ``"readability"``). Unknown keys are
         ignored so a stale caller can't crash the UI. A tool hidden in
-        Settings → General is refused the same way, so a deep
+        Settings → Utilities is refused the same way, so a deep
         link or a restored route never lands on a page the tab bar does not
         show.
         """

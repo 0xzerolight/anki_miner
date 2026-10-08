@@ -2406,6 +2406,14 @@ No index files are deleted.</source>
         <translation>Yomitan 形式の辞書 zip を語義の参照元として追加します。</translation>
     </message>
     <message>
+        <source>Keep dictionaries up to date</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries that publish updates (Jitendex, JMdict, Wiktionary, Jiten, …) update themselves once a week; Update Now checks right away.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Jisho.org online fallback (Japanese)</source>
         <translation>Jisho.org のオンラインフォールバック（日本語）</translation>
     </message>
@@ -2650,8 +2658,8 @@ No index files are deleted.</source>
         <translation>「ユーティリティ」タブのツールを選択</translation>
     </message>
     <message>
-        <source>Hide the Utilities tools you do not use, or bring them back, under Settings → General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
-        <translation>使わないユーティリティのツールを「設定 → 一般」で非表示にしたり、再表示したりできます。非表示にしたツールもここに項目が残り、その「開く」ボタンから該当のチェックボックスに移動できます。</translation>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings → Utilities. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation>使わないユーティリティのツールを「設定 → ユーティリティ」で非表示にしたり、再表示したりできます。非表示にしたツールもここに項目が残り、その「開く」ボタンから該当のチェックボックスに移動できます。</translation>
     </message>
     <message>
         <source>Search the settings</source>
@@ -4408,6 +4416,22 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     <message>
         <source>Download recommended</source>
         <translation>おすすめをダウンロード</translation>
+    </message>
+    <message>
+        <source>Updates</source>
+        <translation type="unfinished">更新</translation>
+    </message>
+    <message>
+        <source>Update automatically once a week</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Update Now</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries, frequency lists and pitch-accent sources whose publisher posts updates (Jitendex, JMdict, Wiktionary, Jiten, …) are downloaded again when a newer version is out. Their order and on/off state stay as they are.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Storage</source>
@@ -6544,6 +6568,10 @@ Words to add: %3. Continue?</source>
         <translation>デスクトップショートカットを作成...</translation>
     </message>
     <message>
+        <source>Update Dictionaries Now</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Download Recommended Resources...</source>
         <translation>推奨リソースをダウンロード...</translation>
     </message>
@@ -6634,6 +6662,42 @@ Words to add: %3. Continue?</source>
     <message>
         <source>Shortcut created.</source>
         <translation>ショートカットを作成しました。</translation>
+    </message>
+    <message>
+        <source>Checking for dictionary updates…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not check for dictionary updates: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloading dictionary updates…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Your dictionaries changed during the check. Try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>None of your dictionaries publish updates.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries are up to date (%1 could not be checked).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries are up to date.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionary updates</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries updated: %1</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Downloaded resources were left inactive because their storage folder changed.</source>
@@ -9571,16 +9635,16 @@ No index files are deleted.</source>
         <translation>キャンセル中…</translation>
     </message>
     <message>
+        <source>Recommended resources</source>
+        <translation>推奨リソース</translation>
+    </message>
+    <message>
         <source>Resource settings are busy or could not be saved. Wait for the active task and try again.</source>
         <translation>リソース設定がビジー状態か、保存できませんでした。実行中のタスクの完了を待ってから再試行してください。</translation>
     </message>
     <message>
         <source>Another task is using the indexed resources — try again when it finishes.</source>
         <translation>別のタスクがインデックス済みリソースを使用しています — 完了後に再試行してください。</translation>
-    </message>
-    <message>
-        <source>Recommended resources</source>
-        <translation>推奨リソース</translation>
     </message>
     <message>
         <source>The download stopped before it finished. Try again.</source>
@@ -10311,6 +10375,10 @@ No index files are deleted.</source>
     <message>
         <source>General</source>
         <translation>一般</translation>
+    </message>
+    <message>
+        <source>Utilities</source>
+        <translation>ユーティリティ</translation>
     </message>
     <message>
         <source>Keyboard</source>
@@ -12129,14 +12197,6 @@ Your installed resources and your theme are kept.</source>
         <translation>後で</translation>
     </message>
     <message>
-        <source>Utilities tab</source>
-        <translation>ユーティリティタブ</translation>
-    </message>
-    <message>
-        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
-        <translation>「ユーティリティ」タブに表示するツールを選択します。少なくとも1つは残ります。</translation>
-    </message>
-    <message>
         <source>App</source>
         <translation>アプリ</translation>
     </message>
@@ -12273,6 +12333,16 @@ Your installed resources and your theme are kept.</source>
     <message>
         <source>Download disk image</source>
         <translation>ディスクイメージをダウンロード</translation>
+    </message>
+</context><context>
+    <name>UtilitiesSettingsPanel</name>
+    <message>
+        <source>Utilities</source>
+        <translation>ユーティリティ</translation>
+    </message>
+    <message>
+        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
+        <translation>「ユーティリティ」タブに表示するツールを選択します。少なくとも1つは残ります。</translation>
     </message>
 </context><context>
     <name>VulkanModelDownloadWorker</name>
