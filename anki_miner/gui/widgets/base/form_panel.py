@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.focus_ring import KEYBOARD_FOCUS_PROPERTY
 from anki_miner.gui.widgets.base.setting_anchor import SettingAnchorHost, SettingTextProvider
 from anki_miner.gui.widgets.base.sizing import configure_card_layout, form_row_cap, make_label_fit_text
 
@@ -406,6 +407,21 @@ class FormPanel(SettingAnchorHost, QFrame):
             if style := label.style():
                 style.unpolish(label)
                 style.polish(label)
+
+    @staticmethod
+    def hand_off_focus(leaving: QWidget, target: QWidget) -> None:
+        """Move focus from ``leaving`` to ``target`` when the caller is about to hide or disable ``leaving``.
+
+        Hiding or disabling the focus widget makes Qt focus the next control in
+        the tab chain, often in another row or section, so a Reset or Remove
+        that goes away once pressed threw a keyboard user out of the place they
+        were working. A keyboard press keeps its ring on ``target``; a mouse
+        click does not earn one (the chain panels' arrow hand-off does the same).
+        """
+        if not leaving.hasFocus():
+            return
+        by_keyboard = bool(leaving.property(KEYBOARD_FOCUS_PROPERTY))
+        target.setFocus(Qt.FocusReason.TabFocusReason if by_keyboard else Qt.FocusReason.OtherFocusReason)
 
     @property
     def main_layout(self) -> QVBoxLayout:

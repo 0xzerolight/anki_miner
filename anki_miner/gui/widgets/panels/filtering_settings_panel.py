@@ -565,10 +565,15 @@ class FilteringSettingsPanel(FormPanel):
     def _sync_excluded_decks(self, *_args) -> None:
         """Empty: one line and Add only. Otherwise the list, and Remove for a selection (C09)."""
         empty = self.excluded_decks_list.count() == 0
+        selected = bool(self.excluded_decks_list.selectedItems())
+        if empty or not selected:
+            # Removing the last deck clears the selection and then the list, so
+            # Remove is disabled and hidden while it holds focus; Add is what is left.
+            self.hand_off_focus(self.remove_deck_button, self.add_deck_button)
         self.excluded_decks_list.setVisible(not empty)
         self.excluded_decks_empty_label.setVisible(empty)
         self.remove_deck_button.setVisible(not empty)
-        self.remove_deck_button.setEnabled(bool(self.excluded_decks_list.selectedItems()))
+        self.remove_deck_button.setEnabled(selected)
 
     def _on_remove_deck_clicked(self) -> None:
         """Remove the currently selected excluded deck."""
