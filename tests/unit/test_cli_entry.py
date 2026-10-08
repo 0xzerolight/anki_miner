@@ -235,6 +235,31 @@ def test_stray_output_does_not_reach_stdout(booted, monkeypatch, capfd, tmp_path
         assert noise in captured.err
 
 
+def test_windows_std_output_handle_follows_fd_1(monkeypatch, capfd) -> None:
+    """os.dup2 moves only the C runtime's fd 1. In the GUI-subsystem exe, Windows' own
+    STD_OUTPUT_HANDLE would keep naming the handle dup2 closed, and a child spawned
+    without an explicit stdout inherits that one."""
+    import ctypes
+    import types
+
+    calls: list[tuple[int, int | None]] = []
+
+    class _Kernel32:
+        def SetStdHandle(self, which, handle):  # noqa: N802 — the Win32 name
+            calls.append((which, handle.value))
+            return 1
+
+    # The inode stands in for the OS handle: each fd's "handle" names the file it points at.
+    monkeypatch.setitem(sys.modules, "msvcrt", types.SimpleNamespace(get_osfhandle=lambda fd: os.fstat(fd).st_ino))
+    monkeypatch.setattr(ctypes, "WinDLL", lambda name, **kw: _Kernel32(), raising=False)
+    stdout, stderr = os.fstat(1).st_ino, os.fstat(2).st_ino
+    assert stdout != stderr  # capfd: two capture files
+    monkeypatch.setattr(sys, "platform", "win32")
+    with entry._private_stdout():
+        assert calls == [(-11, stderr)]
+    assert calls == [(-11, stderr), (-11, stdout)]
+
+
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX fd numbering: dup() takes the lowest free fd")
 def test_closed_stderr_does_not_route_noise_into_the_event_stream() -> None:
     # A caller that closed fd 2 (``2>&-``, a daemon): dup(1) would land on fd 2,
