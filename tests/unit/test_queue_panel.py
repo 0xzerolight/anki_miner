@@ -411,3 +411,25 @@ class TestSecondarySubtitleFolder:
         panel._edit_item(widget)
 
         assert widget.secondary_folder is None
+
+
+def test_a_late_episode_count_for_a_removed_row_is_dropped(panel, monkeypatch, tmp_path):
+    """B1.4: the scan answers after the row is gone; the answer must change nothing."""
+    import anki_miner.gui.widgets.panels.queue_panel as module
+
+    answers: list = []
+    monkeypatch.setattr(module, "run_off_thread", lambda _parent, _fn, on_done, _on_error: answers.append(on_done))
+    video, subs = tmp_path / "video", tmp_path / "subs"
+    video.mkdir()
+    subs.mkdir()
+    keep = _add_widget(panel, "Keep", "id-1")
+    keep.set_episode_count(2)
+    gone = _add_widget(panel, "Gone", "id-2", video=video, subtitle=subs)
+    panel._count_episodes(gone)
+    panel._remove_item(gone)
+    counter_before = panel.queue_controls.counter_label.text()
+
+    answers[-1](12)
+
+    assert gone.get_episode_count() == 0
+    assert panel.queue_controls.counter_label.text() == counter_before
