@@ -233,6 +233,11 @@ class TestAJumpFocusesSomethingVisible:
         tab = tab_factory(replace(test_config, dictionary_chain=()))
         _shown(tab, monkeypatch, qtbot)
         panel = tab.dictionary_panel
+        # The page's first show starts an off-thread registry scan that holds the
+        # mutation lock, which disables Download recommended and Add until it ends.
+        # Let it finish so the jump meets the settled page, not a race with the scan.
+        tab.open_subtab("dictionaries")
+        qtbot.waitUntil(lambda: panel._scanned and not panel.has_active_mutation(), timeout=5000)
         assert not panel._list.isVisibleTo(panel)  # the empty state hid the list
 
         tab.jump_to_setting("dictionaries.chain")
