@@ -161,7 +161,7 @@ Want another theme added? Suggest in a GitHub Issue.
 1. **Read the subtitles** and split the text into individual words.
 2. **Filter** to content words you don't already know - optionally reviewing the list yourself in the Word Curator.
 3. **Grab a screenshot and audio clip** from the video for each line.
-4. **Look up definitions** in your configured offline dictionaries, optionally falling back to Jisho online for Japanese (slower, rate-limited).
+4. **Look up definitions** in your configured offline dictionaries.
 5. **Send the finished cards to Anki.**
 
 </details>
@@ -185,7 +185,7 @@ Uses bundled name wordsets derived from [JMnedict](https://www.edrdg.org/enamdic
 | "Deck not found"         | Pick an existing deck in Settings -> Cards & Anki. Decks are not created for you; make it in Anki first if you need a new one. |
 | "Note type not found"    | Configure your note type's field names in Settings -> Cards & Anki.               |
 | "ffmpeg not found"       | Install ffmpeg and add it to PATH.                                               |
-| No definitions found     | Add a Yomitan dictionary in Settings -> Dictionaries -> Add dictionary… (recommended), or, for Japanese, enable the Jisho fallback (slower, rate-limited). |
+| No definitions found     | Add a Yomitan dictionary in Settings -> Dictionaries -> Add dictionary… |
 | Windows installer will not open / SmartScreen warning | See [First-run notes](#first-run-notes-unsigned-builds): select **More info** -> **Run anyway**; restore Defender false positives from **Protection history**. |
 | Fresh install has no definitions | Run Tools -> Setup Wizard or Tools -> Download Recommended Resources. For manual import, keep the Yomitan ZIP intact (do not unzip it). |
 | Add Dictionary stalls or fails | Note the last visible stage and attach logs (see "Where are the logs?" below). Include the dictionary ZIP name, source, and size in the report. |

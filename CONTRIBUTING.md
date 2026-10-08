@@ -107,7 +107,6 @@ Patch at the smallest boundary that still exercises your code:
 
 - **AnkiConnect** — `anki_miner.services._ankiconnect.requests.post`, the actual HTTP call site.
 - **ffmpeg** — `anki_miner.services.media_extractor.subprocess.Popen` for extraction and `subprocess.run` for probes, returning canned output.
-- **Jisho** — `requests.get`, with payloads stored as JSON fixtures where practical.
 - **yt-dlp** — the subprocess boundary, leaving `YouTubeFetcherService` as the unit under test.
 
 New code should add tests where reasonable; refactors should not regress existing coverage by a meaningful amount.

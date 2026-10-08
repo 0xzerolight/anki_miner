@@ -163,7 +163,7 @@ Möchtest du ein weiteres Theme vorschlagen? Reiche einen Vorschlag als GitHub I
 1. **Untertitel einlesen** und den Text in einzelne Wörter zerlegen.
 2. **Filtern** auf Inhaltswörter, die du noch nicht kennst - optional selbst im Word Curator prüfen.
 3. **Screenshot und Audioclip** für jede Zeile aus dem Video holen.
-4. **Definitionen nachschlagen** in deinen konfigurierten Offline-Wörterbüchern, optional mit Rückgriff auf Jisho online für Japanisch (langsamer, ratenbegrenzt).
+4. **Definitionen nachschlagen** in deinen konfigurierten Offline-Wörterbüchern.
 5. **Fertige Karten an Anki senden.**
 
 </details>
@@ -187,7 +187,7 @@ Verwendet mitgelieferte Namens-Wortgruppen, abgeleitet von [JMnedict](https://ww
 | „Stapel nicht gefunden“         | Einen vorhandenen Stapel in Einstellungen -> Karten & Anki auswählen. Stapel werden nicht automatisch erstellt; lege ihn bei Bedarf zuerst in Anki an. |
 | „Notiztyp nicht gefunden“    | Die Feldnamen deines Notiztyps in Einstellungen -> Karten & Anki konfigurieren. |
 | „ffmpeg nicht gefunden“       | ffmpeg installieren und zum PATH hinzufügen.                                     |
-| Keine Definitionen gefunden     | Ein Yomitan-Wörterbuch unter Einstellungen -> Wörterbücher -> Wörterbuch hinzufügen… ergänzen (empfohlen) oder, für Japanisch, den Jisho-Rückgriff aktivieren (langsamer, ratenbegrenzt). |
+| Keine Definitionen gefunden     | Ein Yomitan-Wörterbuch unter Einstellungen -> Wörterbücher -> Wörterbuch hinzufügen… ergänzen. |
 | Windows-Installer öffnet nicht / SmartScreen-Warnung | Siehe [Hinweise zum ersten Start](#hinweise-zum-ersten-start-unsignierte-builds): **Weitere Informationen** -> **Trotzdem ausführen** wählen; Defender-Fehlalarme aus dem **Schutzverlauf** wiederherstellen. |
 | Frische Installation hat keine Definitionen | Extras -> Einrichtungsassistent oder Extras -> Empfohlene Ressourcen herunterladen ausführen. Für den manuellen Import die Yomitan-ZIP unverändert lassen (nicht entpacken). |
 | Wörterbuch hinzufügen bleibt hängen oder schlägt fehl | Die zuletzt sichtbare Phase notieren und Logs anhängen (siehe „Wo sind die Logs?“ unten). Name, Quelle und Größe der Wörterbuch-ZIP in der Meldung angeben. |

@@ -163,7 +163,7 @@ Quer sugerir outro tema? Abra uma GitHub Issue.
 1. **Leia as legendas** e divida o texto em palavras individuais.
 2. **Filtre** as palavras do conteúdo que você ainda não conhece - opcionalmente revisando a lista você mesmo no Seletor de Palavras.
 3. **Pegue uma captura de tela e um clipe de áudio** do vídeo para cada linha.
-4. **Encontre definições** nos seus dicionários offline configurados, recorrendo opcionalmente ao Jisho online para japonês (mais lento, com limite de transferência).
+4. **Encontre definições** nos seus dicionários offline configurados.
 5. **Envie os cartões finalizados para o Anki.**
 
 </details>
@@ -187,7 +187,7 @@ Usa conjuntos de nomes derivados do [JMnedict](https://www.edrdg.org/enamdict/en
 | "Baralho não encontrado"         | Escolha um baralho existente em Configurações -> Cartões e Anki. Baralhos não são criados automaticamente; crie um no Anki primeiro, se precisar de um novo. |
 | "Tipo de nota não encontrado"    | Configure os nomes de campo do seu tipo de nota em Configurações -> Cartões e Anki.               |
 | "ffmpeg não encontrado"       | Instale o ffmpeg e adicione-o ao PATH.                                               |
-| Nenhuma definição encontrada     | Adicione um dicionário Yomitan em Configurações -> Dicionários -> Adicionar dicionário… (recomendado), ou, para japonês, ative o fallback do Jisho (mais lento, com limite de transferência). |
+| Nenhuma definição encontrada     | Adicione um dicionário Yomitan em Configurações -> Dicionários -> Adicionar dicionário… |
 | O instalador do Windows não abre / aviso do SmartScreen | Veja [Notas de primeira execução](#notas-de-primeira-execução-compilações-não-assinadas): selecione **Mais informações** -> **Executar assim mesmo**; restaure falsos positivos do Defender pelo **Histórico de proteção**. |
 | Instalação nova não tem definições | Execute Ferramentas -> Assistente de Configuração ou Ferramentas -> Baixar Recursos Recomendados. Para importação manual, mantenha o ZIP do Yomitan intacto (não o descompacte). |
 | Adicionar dicionário trava ou falha | Anote o último estágio visível e anexe os registros (veja "Onde estão os registros?" abaixo). Inclua o nome do ZIP do dicionário, a fonte e o tamanho no relatório. |

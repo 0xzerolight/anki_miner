@@ -163,7 +163,7 @@ Vuoi che venga aggiunto un altro tema? Proponilo in una Issue di GitHub.
 1. **Leggi i sottotitoli** e suddividi il testo in singole parole.
 2. **Filtra** per ottenere le parole di contenuto che non conosci già - rivedendo facoltativamente l'elenco tu stesso nel Curatore di parole.
 3. **Cattura una schermata e una clip audio** dal video per ogni riga.
-4. **Cerca le definizioni** nei tuoi dizionari offline configurati, ricadendo facoltativamente su Jisho online per il giapponese (più lento, con limite di velocità).
+4. **Cerca le definizioni** nei tuoi dizionari offline configurati.
 5. **Invia le carte finite ad Anki.**
 
 </details>
@@ -187,7 +187,7 @@ Utilizza insiemi di nomi in bundle derivati da [JMnedict](https://www.edrdg.org/
 | "Mazzo non trovato"         | Scegli un mazzo esistente in Impostazioni -> Carte e Anki. I mazzi non vengono creati automaticamente; creane uno in Anki prima se te ne serve uno nuovo. |
 | "Tipo di nota non trovato"    | Configura i nomi dei campi del tuo tipo di nota in Impostazioni -> Carte e Anki.               |
 | "ffmpeg non trovato"       | Installa ffmpeg e aggiungilo al PATH.                                               |
-| Nessuna definizione trovata     | Aggiungi un dizionario Yomitan in Impostazioni -> Dizionari -> Aggiungi dizionario… (consigliato), oppure, per il giapponese, abilita il fallback su Jisho (più lento, con limite di velocità). |
+| Nessuna definizione trovata     | Aggiungi un dizionario Yomitan in Impostazioni -> Dizionari -> Aggiungi dizionario… |
 | L'installer di Windows non si apre / avviso SmartScreen | Consulta [Note sul primo avvio](#note-sul-primo-avvio-build-non-firmate): seleziona **Ulteriori informazioni** -> **Esegui comunque**; ripristina i falsi positivi di Defender da **Cronologia protezione**. |
 | Un'installazione pulita non ha definizioni | Esegui Strumenti -> Procedura guidata di configurazione oppure Strumenti -> Scarica risorse consigliate. Per l'importazione manuale, mantieni intatto lo ZIP Yomitan (non estrarlo). |
 | Aggiungi dizionario si blocca o fallisce | Annota l'ultima fase visibile e allega i log (vedi "Dove si trovano i log?" più sotto). Includi nella segnalazione il nome, la fonte e la dimensione dello ZIP del dizionario. |
