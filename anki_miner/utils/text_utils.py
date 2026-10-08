@@ -4,7 +4,7 @@ import html
 import re
 import unicodedata
 from collections.abc import Callable, Iterable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from anki_miner.utils.furigana_distribute import distribute_furigana
 from anki_miner.utils.ja_normalize import (
@@ -12,6 +12,10 @@ from anki_miner.utils.ja_normalize import (
     normalize_for_tokenization,
     standardize_kanji_variants,
 )
+
+if TYPE_CHECKING:
+    # Type-only: anki_miner.languages imports this module.
+    from anki_miner.languages.profile import ReadingSupport
 
 
 def strip_subtitle_markup(text: str) -> str:
@@ -628,6 +632,25 @@ def generate_reading(text: str, tagger) -> str:
         Plain hiragana reading, e.g. ``"おうこくです。"`` for ``"王国です。"``.
     """
     return generate_reading_from_tokens(tagger(text))
+
+
+def front_reading(expression: str, tagger: Any, reading_support: "ReadingSupport | None") -> str:
+    """The reading mining writes for a card front, from the tagger alone.
+
+    Each token reads through the mining language's ``ReadingSupport`` (ja kana,
+    zh pinyin, yue jyutping); a language with no support (es, de, ko, ...)
+    writes none. For ja the result equals
+    ``katakana_to_hiragana(generate_reading(expression, tagger))`` exactly:
+    ``JaReadingSupport`` answers a token's kana or, without one, its surface,
+    the same rung ``generate_reading_from_tokens`` takes.
+
+    No dictionary attestation reaches this path, so a reconciling support (zh)
+    is not asked to reconcile: with nothing attested it would hand the engine's
+    reading back unchanged.
+    """
+    if reading_support is None:
+        return ""
+    return katakana_to_hiragana("".join(reading_support.word_reading(token) for token in tagger(expression)))
 
 
 def wrap_target_plain(sentence: str, start: int, end: int) -> str:

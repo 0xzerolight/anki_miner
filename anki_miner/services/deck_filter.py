@@ -57,7 +57,7 @@ from anki_miner.services.morphology import extract_lemma
 from anki_miner.services.subtitle_parser import _differs_by_okurigana_only
 from anki_miner.services.word_filter import enabled_script_options
 from anki_miner.utils.logging_ext import log_summary
-from anki_miner.utils.text_utils import generate_reading, katakana_to_hiragana
+from anki_miner.utils.text_utils import front_reading, katakana_to_hiragana
 
 if TYPE_CHECKING:
     from anki_miner.config import AnkiMinerConfig
@@ -207,6 +207,8 @@ def _synthesize_word(
     options: DeckFilterOptions,
     tagger: Any,
     failures: TaggerFailures | None = None,
+    *,
+    reading_support: Any,
 ) -> TokenizedWord:
     """Build the TokenizedWord the filters run on.
 
@@ -214,9 +216,11 @@ def _synthesize_word(
     verbatim (``select_mined_form``) — the card keeps the spelling it has.
     Reading ladder (the ``card_backfiller._resolve_context`` recipe minus the
     furigana rung — a foreign note type has no known furigana field): picked
-    reading field, else a context-free tokenizer reading (lookup-only). Lemma
-    only from a single-token tagger parse; a multi-token expression keeps
-    ``lemma == expression`` so the kana-variant fold cannot misfire.
+    reading field, else a context-free tokenizer reading (lookup-only) through
+    the mining language's ``reading_support`` (``front_reading``: none for a
+    language without one). Lemma only from a single-token tagger parse; a
+    multi-token expression keeps ``lemma == expression`` so the kana-variant
+    fold cannot misfire.
     """
     reading = ""
     stored = _field_value(fields, options.reading_field)
@@ -224,7 +228,7 @@ def _synthesize_word(
         reading = katakana_to_hiragana(_strip_for_dedup(stored))
     if not reading and tagger is not None:
         try:
-            reading = katakana_to_hiragana(generate_reading(expression, tagger))
+            reading = front_reading(expression, tagger, reading_support)
         except Exception as exc:  # noqa: BLE001 - bucket A: counted, reported once at scan end
             reading = ""
             if failures is not None:
@@ -314,7 +318,8 @@ def scan_deck_filter(
     scanned = 0
     tagger = getattr(services, "tagger", None)
     tagger_failures = TaggerFailures()
-    script = get_profile(config_language(config)).script
+    profile = get_profile(config_language(config))
+    script = profile.script
 
     for chunk in _chunks(note_ids, _NOTES_CHUNK):
         if is_cancelled and is_cancelled():
@@ -345,7 +350,9 @@ def scan_deck_filter(
                 drops["duplicate_in_source"] += 1
                 continue
             seen_expressions.add(expression)
-            word = _synthesize_word(expression, fields, options, tagger, tagger_failures)
+            word = _synthesize_word(
+                expression, fields, options, tagger, tagger_failures, reading_support=profile.reading
+            )
             words.append(word)
             candidates[id(word)] = _Candidate(
                 note_id=note_id,

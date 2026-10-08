@@ -5,11 +5,14 @@ from unittest.mock import MagicMock, PropertyMock
 
 import pytest
 
+from anki_miner.languages.registry import get_profile
+from anki_miner.languages.tagger_provider import get_tagger
 from anki_miner.utils.text_utils import (
     _format_furigana,
     _is_kanji,
     clean_subtitle_text,
     fold_no_break_spaces,
+    front_reading,
     generate_furigana,
     generate_furigana_from_tokens,
     generate_reading,
@@ -561,6 +564,20 @@ class TestGenerateReading:
         token = _make_mock_token("真竹", kana="マダケ")
         tagger = MagicMock(return_value=[token])
         assert generate_reading("真竹", tagger) == "まだけ"
+
+
+class TestFrontReading:
+    """front_reading: the reading mining writes for a card front, from the tagger alone."""
+
+    @pytest.mark.parametrize("expr", ["頷く", "気がする", "ガンダム", "東京", "食べ物"])
+    def test_ja_front_reading_is_generate_reading_verbatim(self, expr):
+        tagger = get_tagger("ja")
+        expected = katakana_to_hiragana(generate_reading(expr, tagger))
+        assert front_reading(expr, tagger, get_profile("ja").reading) == expected
+
+    def test_a_language_with_no_reading_support_reads_nothing(self):
+        tagger = MagicMock(return_value=[_make_mock_token("casa")])
+        assert front_reading("casa", tagger, None) == ""
 
 
 class TestIsHiraganaOnly:

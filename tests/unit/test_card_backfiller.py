@@ -1798,6 +1798,28 @@ class TestScanProfileCardFields:
         )
         assert ctx.reading == "きがする"
 
+    def test_a_support_without_reconcile_reads_the_front_through_the_profile(self):
+        """yue reads jyutping but does not reconcile, so the fallback tier is its reading, not the hanzi."""
+
+        class _Jyutping:
+            def word_reading(self, token):
+                return {"銀行": "ngan4 hong4"}[token.surface]
+
+        def tagger(text):
+            return [SimpleNamespace(surface=text, feature=SimpleNamespace(kana="", lemma=text))]
+
+        ctx = _resolve_context(
+            1,
+            {"word": "銀行"},
+            "銀行",
+            {"word": "word"},
+            tagger,
+            None,
+            reading_support=_Jyutping(),
+        )
+        assert ctx.reading == "ngan4 hong4"
+        assert ctx.reading_guessed is True
+
     def test_a_multi_token_chinese_front_is_never_painted_as_its_own_hanzi(self, zh_backfill_config):
         """The same gate on the zh side, where the fallback under it is not a reading.
 

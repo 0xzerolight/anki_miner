@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from anki_miner.languages.registry import get_profile
 from anki_miner.services.deck_filter import (
     DECKFILTER_TAG,
     DeckFilterOptions,
@@ -13,6 +14,7 @@ from anki_miner.services.deck_filter import (
     scan_deck_filter,
 )
 from anki_miner.services.word_filter import WordFilterService
+from tests.unit.languages.stub_registry import register_stub_profile
 
 # ---------------------------------------------------------------------------
 # Fakes
@@ -386,6 +388,53 @@ class TestScanFrequency:
         assert [(kept.expression, kept.forced) for kept in plan.kept] == [("彷徨う", True)]
         assert plan.forced_count == 1
         assert _drops(plan) == {"unranked": 1}
+
+
+class _Tok:
+    """A LanguageToken-shaped duck: no kana, lemma = surface."""
+
+    def __init__(self, surface, kana=""):
+        self.surface = surface
+        self.feature = SimpleNamespace(kana=kana, lemma=surface)
+
+
+class _Pinyin:
+    """A zh-shaped ReadingSupport with no ``reconcile`` and no pypinyin."""
+
+    def word_reading(self, token):
+        return {"银行": "yín háng", "行": "xíng"}[token.surface]
+
+
+def _one_token_tagger(text):
+    return [_Tok(text)]
+
+
+class TestScanReadingSupport:
+    """The front's reading comes from the mining language's ReadingSupport, as mining reads it."""
+
+    def test_a_profile_reading_support_reads_the_front_like_mining(self, test_config, monkeypatch):
+        register_stub_profile(monkeypatch, "zh", reading=_Pinyin())
+        config = replace(test_config, language="zh")
+        anki = FakeAnkiService(notes={1: _note(1, "Core", {"Expression": "银行"})})
+        plan = scan_deck_filter(anki, config, _services(config, tagger=_one_token_tagger), _options())
+        assert plan.kept[0].reading == "yín háng"
+
+    def test_the_frequency_rank_is_keyed_on_the_profile_reading(self, test_config, monkeypatch):
+        register_stub_profile(monkeypatch, "zh", reading=_Pinyin())
+        config = replace(test_config, language="zh")
+        anki = FakeAnkiService(notes={1: _note(1, "Core", {"Expression": "行"})})
+        freq = FakeFrequencyService(table={("行", "xíng"): [("SUBTLEX", 120, None)]})
+        services = _services(config, tagger=_one_token_tagger, frequency_service=freq)
+        plan = scan_deck_filter(anki, config, services, _options())
+        assert plan.kept[0].frequency_rank == 120
+
+    def test_a_language_without_reading_support_writes_no_reading(self, test_config):
+        config = replace(test_config, language="es")
+        assert get_profile("es").reading is None
+        anki = FakeAnkiService(notes={1: _note(1, "Core", {"Expression": "casa"})})
+        plan = scan_deck_filter(anki, config, _services(config, tagger=_one_token_tagger), _options())
+        assert [kept.expression for kept in plan.kept] == ["casa"]
+        assert plan.kept[0].reading == ""
 
 
 class TestScanCancel:

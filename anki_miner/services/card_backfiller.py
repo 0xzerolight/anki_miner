@@ -77,6 +77,7 @@ from anki_miner.services.tagger import get_shared_tagger
 from anki_miner.utils.logging_ext import log_summary
 from anki_miner.utils.text_utils import (
     _format_furigana,
+    front_reading,
     generate_reading,
     katakana_to_hiragana,
 )
@@ -807,9 +808,9 @@ def _resolve_context(
     become durable data).
 
     ``reading_support`` is the active profile's, and ``attested`` that front's
-    dictionary readings; both only reach tier (c), and only for a profile whose
-    support reconciles. A reconciled tier (c) is the reading the mine itself
-    would write, so it is the one the ``reading_guessed`` flag clears.
+    dictionary readings; both only reach tier (c), and ``attested`` only for a
+    profile whose support reconciles. A reconciled tier (c) is the reading the
+    mine itself would write, so it is the one the ``reading_guessed`` flag clears.
     """
     reading = ""
     reading_source = "tokenizer"
@@ -827,22 +828,28 @@ def _resolve_context(
                 reading = parsed
                 reading_source = "furigana"
     if not reading:
-        # A support that reconciles derives the front's reading itself: for zh
-        # ``generate_reading`` hands the hanzi straight back, and that "reading"
-        # then keys the expression-audio filename and the Pinyin field away from
-        # what the mine wrote for the same word. Gated on the capability, NOT on
-        # "the profile has reading support" — ja has one, and it answers a
-        # multi-token front (気がする) with its FIRST token's reading. A front
-        # the tagger does not read as one token is not a mined form anyway; what
-        # the fallback returns for one is flagged a guess, because zh's is the
-        # front's own hanzi and may key a lookup and nothing more.
+        # A support that reconciles derives the front's reading itself, settled
+        # against the dictionary's attestation: the reading the mine writes, so
+        # the expression-audio filename and the Pinyin field key where the
+        # mine's did. Gated on the capability, NOT on "the profile has reading
+        # support": this tier reads ONE token, and ja has a support that would
+        # answer a multi-token front (気がする) with its FIRST token's reading.
+        # A front the tagger does not read as one token is not a mined form
+        # anyway. The fallback reads every token through the profile's support
+        # (front_reading: ja kana, so 気がする stays きがする; zh pinyin; yue
+        # jyutping), or through generate_reading for a profile with none. Either
+        # is a context-free guess with no attestation behind it, so it is
+        # flagged one and may key a lookup and nothing more.
         reconcile = getattr(reading_support, "reconcile", None)
         try:
             front_tokens = list(tagger(mined_form)) if reconcile is not None else []
             if reconcile is not None and len(front_tokens) == 1:
                 reading = reconcile(mined_form, reading_support.word_reading(front_tokens[0]), attested)
             else:
-                reading = katakana_to_hiragana(generate_reading(mined_form, tagger))
+                if reading_support is not None:
+                    reading = front_reading(mined_form, tagger, reading_support)
+                else:
+                    reading = katakana_to_hiragana(generate_reading(mined_form, tagger))
                 reading_guessed = True
         except Exception as exc:  # noqa: BLE001 - bucket A: counted, reported once at scan end
             reading = ""

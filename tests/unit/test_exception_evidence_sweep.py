@@ -121,12 +121,12 @@ def _note(note_id: int, expression: str) -> dict:
 
 class TestTaggerFailureAccounting:
     def test_fifty_failing_notes_produce_exactly_one_record(self, test_config, caplog, monkeypatch):
-        # generate_reading is the first tagger call; make it raise for every note.
+        # front_reading is the first tagger call; make it raise for every note.
         tagger = _ExplodingTagger()
         monkeypatch.setattr(
             deck_filter,
-            "generate_reading",
-            lambda text, tag: (_ for _ in ()).throw(RuntimeError("no dictionary at /nope/unidic")),
+            "front_reading",
+            lambda text, tag, support: (_ for _ in ()).throw(RuntimeError("no dictionary at /nope/unidic")),
         )
         expressions = [f"猫{index}犬" for index in range(50)]
         anki = _FakeAnkiService({index: _note(index, word) for index, word in enumerate(expressions)})
