@@ -2296,6 +2296,95 @@ class TestIncludeKnownWordsFlag:
         assert result.cards_created == 1
 
 
+class TestKnownByRenderedCardFront:
+    """Audit L1-004: ko cards an all-Hanja word (學校) under KRDICT's hangul headword (학교),
+    so Anki's first field holds 학교 while mined_form stays 學校. The next run must read the
+    word as known (R2 "already in Anki"), not re-offer it for Anki to refuse as a duplicate.
+    At phase 2 no word carries a definition yet, so the front comes from an offline lookup."""
+
+    KRDICT_ROW = '<span lang="ko" style="font-weight: bold">학교</span> <span lang="en">school</span>'
+
+    @staticmethod
+    def _word(form: str) -> TokenizedWord:
+        return TokenizedWord(
+            surface=form, lemma=form, reading="", sentence=f"{form}에 갔다",
+            start_time=1.0, end_time=3.0, duration=2.0, mined_form_override=form,
+        )  # fmt: skip
+
+    def _processor(self, test_config, language: str, vocabulary: set[str], profile=None):
+        from anki_miner.languages.registry import get_profile
+
+        config = replace(test_config, language=language)
+        anki = MagicMock()
+        anki.get_existing_vocabulary.return_value = vocabulary
+        definitions = MagicMock()
+        definitions.lookup_all_offline.side_effect = lambda word, lemma=None, pos=None: (
+            [("KRDICT", self.KRDICT_ROW)] if word == "學校" else []
+        )
+        processor = build_processor(
+            config=config,
+            anki_service=anki,
+            definition_service=definitions,
+            word_filter=WordFilterService(config),
+            profile=profile if profile is not None else get_profile(language),
+        )
+        return processor, definitions
+
+    @staticmethod
+    def _unknown(processor, words, counts=None):
+        from anki_miner.orchestration.episode_processor import _Phase2Counts
+
+        kept = processor._phase2_known_words(words, counts if counts is not None else _Phase2Counts())
+        return [word.mined_form for word in kept]
+
+    def test_hanja_word_whose_rendered_front_is_in_anki_is_known(self, test_config):
+        processor, _ = self._processor(test_config, "ko", {"학교"})
+        assert self._unknown(processor, [self._word("學校")]) == []
+
+    def test_hanja_word_whose_rendered_front_is_not_in_anki_stays_unknown(self, test_config):
+        processor, _ = self._processor(test_config, "ko", set())
+        assert self._unknown(processor, [self._word("學校")]) == ["學校"]
+
+    def test_known_hits_count_the_rendered_front(self, test_config):
+        from anki_miner.orchestration.episode_processor import _Phase2Counts
+
+        processor, _ = self._processor(test_config, "ko", {"학교"})
+        counts = _Phase2Counts()
+        assert self._unknown(processor, [self._word("學校"), self._word("학생")], counts) == ["학생"]
+        assert counts.known_hits == 1
+
+    def test_only_an_all_hanja_word_is_looked_up(self, test_config):
+        processor, definitions = self._processor(test_config, "ko", {"학교"})
+        assert self._unknown(processor, [self._word("학생"), self._word("韓國사람")]) == ["학생", "韓國사람"]
+        definitions.lookup_all_offline.assert_not_called()
+
+    def test_a_language_without_a_front_hook_looks_nothing_up(self, test_config):
+        """ja, and the golden contract that drives ja phase 2, never pay for the probe."""
+        processor, definitions = self._processor(test_config, "ja", {"학교"})
+        assert self._unknown(processor, [self._word("學校")]) == ["學校"]
+        definitions.lookup_all_offline.assert_not_called()
+
+    def test_a_raising_front_hook_leaves_the_word_unknown(self, test_config, caplog):
+        """Like phase 5's hook loop: a hook bug is logged, never a failed run."""
+        from anki_miner.languages.registry import get_profile
+
+        class _Boom:
+            def field_names(self):
+                return ()
+
+            def render(self, word, *, config):
+                return {}
+
+            def card_front(self, mined, definition_html):
+                raise RuntimeError("boom")
+
+        profile = dataclasses.replace(get_profile("ko"), render_hooks=(_Boom(),))
+        processor, _ = self._processor(test_config, "ko", {"학교"}, profile=profile)
+
+        assert self._unknown(processor, [self._word("學校")]) == ["學校"]
+        assert "_Boom" in caplog.text
+
+
 class TestWordListServiceIntegration:
     """Tests for EpisodeProcessor with word_list_service."""
 

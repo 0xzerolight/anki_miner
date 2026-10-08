@@ -1297,9 +1297,53 @@ class EpisodeProcessor:
             else:
                 known_words = self.anki_service.get_existing_vocabulary()
 
-            unknown_words = self.word_filter.filter_unknown(all_words, known_words | user_words)
+            known = known_words | user_words
+            unknown_words = self._drop_known_card_fronts(self.word_filter.filter_unknown(all_words, known), known)
             counts.known_hits = len(all_words) - len(unknown_words)
         return unknown_words
+
+    def _drop_known_card_fronts(self, words: list[TokenizedWord], known: set[str]) -> list[TokenizedWord]:
+        """``words`` minus those a render hook cards under a front already known (audit L1-004).
+
+        ko writes an all-Hanja word (學校) under KRDICT's hangul headword (학교),
+        so Anki's first field is not the ``mined_form`` ``filter_unknown``
+        compared. A hook offering the optional ``card_front`` (see
+        ``CardRenderHook``) names that front from an offline lookup, and asks
+        for it only for a word it can move, so a profile without one (every
+        one but ko) looks nothing up.
+
+        ``lookup_all_offline`` lists each provider's exact hit before its
+        fallback hits, and its fallback candidates come from the profile's
+        lookup strategy, which for ko yields none without an orth_base: so
+        ``hits[0]`` is the first offline provider's exact hit, the row phase 4
+        renders when that provider leads the chain.
+        """
+        probes = [
+            (type(hook).__name__, probe)
+            for hook in self.profile.render_hooks
+            if callable(probe := getattr(hook, "card_front", None))
+        ]
+        if not probes or not words:
+            return words
+        fold = self.profile.dedup_fold
+
+        def offline_definition(word: TokenizedWord) -> str:
+            hits = self.definition_service.lookup_all_offline(word.mined_form, word.lemma, word.pos)
+            return hits[0][1] if hits else ""
+
+        def front_is_known(word: TokenizedWord) -> bool:
+            for name, probe in probes:
+                try:
+                    front = probe(word.mined_form, lambda: offline_definition(word))
+                except Exception:
+                    # As in phase 5's hook loop: one bad hook must not fail the run.
+                    logger.warning("Render hook %s failed to name a card front", name, exc_info=True)
+                    continue
+                if front and (front if fold is None else fold(front)) in known:
+                    return True
+            return False
+
+        return [word for word in words if not front_is_known(word)]
 
     def _phase2_definition_viability(
         self, unknown_words: list[TokenizedWord], counts: _Phase2Counts

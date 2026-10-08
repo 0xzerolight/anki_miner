@@ -154,6 +154,14 @@ class CardRenderHook(Protocol):
     ``field_names()`` key and replaces the card front for this note only.
     ``mined_form`` (lookups, known words) is unchanged. Card Backfill keeps
     only ``field_names()`` keys, so it never rewrites a front.
+
+    A hook that moves the front also offers the OPTIONAL
+    ``card_front(mined, definition_html) -> str``, probed with ``getattr``:
+    the front ``render`` writes for *mined* under that definition, or ``""``
+    when it stays ``mined_form``. Anki then holds the moved front, so phase 2's
+    known gate reads it there (``EpisodeProcessor._drop_known_card_fronts``).
+    ``definition_html`` is a thunk, called only for a word whose front can
+    move. ko: ``KoHanjaHook``.
     """
 
     def field_names(self) -> tuple[str, ...]: ...
