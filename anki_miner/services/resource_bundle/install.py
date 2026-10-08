@@ -268,8 +268,11 @@ def apply_install_to_config(config: AnkiMinerConfig, result: BundleInstallResult
     placement); new frequency and pitch sources are appended in bundle order
     (``SourceChainImportFlow``'s). Each keeps the sender's enabled flag. A
     dangling entry for the same id is replaced, never duplicated; every other
-    entry keeps its place. A landed word list becomes the active one, with the
-    sender's on/off state.
+    entry keeps its place. A landed word list the sender had on becomes the
+    active one. One the sender had off stays unchained: Word Lists has no off
+    state (D15 item 1, the file is the switch), so a path written with its
+    switch off would load as an empty field and be dropped on the next save.
+    The file is still in the word-list folder, and choosing it turns it on.
 
     Raises:
         ValueError: A slot was installed under a root the config no longer
@@ -304,8 +307,8 @@ def apply_install_to_config(config: AnkiMinerConfig, result: BundleInstallResult
         ),
     )
     enabled = {i.kind: i.enabled for i in result.installed}
-    if "blacklist" in result.wordlist_paths:
-        config = replace(config, blacklist_path=result.wordlist_paths["blacklist"], use_blacklist=enabled["blacklist"])
-    if "whitelist" in result.wordlist_paths:
-        config = replace(config, whitelist_path=result.wordlist_paths["whitelist"], use_whitelist=enabled["whitelist"])
+    if "blacklist" in result.wordlist_paths and enabled["blacklist"]:
+        config = replace(config, blacklist_path=result.wordlist_paths["blacklist"], use_blacklist=True)
+    if "whitelist" in result.wordlist_paths and enabled["whitelist"]:
+        config = replace(config, whitelist_path=result.wordlist_paths["whitelist"], use_whitelist=True)
     return config
