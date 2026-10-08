@@ -185,6 +185,31 @@ def test_measured_rows_fill_table_and_totals(qtbot, tmp_path):
     assert not tab.report_card.isHidden()
 
 
+def test_totals_never_revisit_earlier_files(qtbot, tmp_path, monkeypatch):
+    """Per-row work must not grow with the folder (Readability review, minor 4: 500+ episodes)."""
+    from anki_miner.gui.widgets import readability_tab
+    from anki_miner.services.readability import combine
+
+    sizes: list[int] = []
+
+    def spy(stats):
+        stats = list(stats)
+        sizes.append(len(stats))
+        return combine(stats)
+
+    monkeypatch.setattr(readability_tab, "combine", spy)
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    _worker, measured, _errors, _finished = _start(tab, _subtitle(tmp_path))
+    tab._run_files = [tmp_path / f"{i}.srt" for i in range(5)]
+
+    for idx in range(5):
+        measured[0](idx, _stats(10, idx, {f"w{idx}", "犬"}, (1, 0, 0)))
+
+    assert max(sizes) <= 2
+    assert tab.new_words_card.value_label.text() == "6"  # w0..w4 and 犬 once
+    assert tab.known_card.value_label.text() == "80.0%"  # 40 of 50 occurrences
+
+
 def test_sorted_insert_keeps_cells_together(qtbot, tmp_path):
     tab = _make_tab(_make_config(tmp_path), qtbot)
     _worker, measured, _errors, _finished = _start(tab, _subtitle(tmp_path))
