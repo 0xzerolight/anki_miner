@@ -25,7 +25,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Protocol
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QInputDialog,
@@ -187,8 +187,22 @@ class ProfileManagerDialog(ScreenIssueHost, EnhancedDialog):
         self.add_content(self._settings_row)
 
         self.add_close_button()
+        # A clean Import or Reset confirms here (P-B3.7a): the Settings row that
+        # flashes it otherwise is behind this modal dialog. Left of Close, so it
+        # never widens a button row; the objectName gives it the tab flash's style.
+        self.status_label = QLabel("")
+        self.status_label.setObjectName("settings-save-status")
+        self.footer_layout.insertWidget(0, self.status_label)
+        self._status_timer = QTimer(self)
+        self._status_timer.setSingleShot(True)
+        self._status_timer.timeout.connect(lambda: self.status_label.setText(""))
         self.install_issue_banner(self._main_layout, 1)
         self._fit_minimum_width()
+
+    def flash_status(self, text: str) -> None:
+        """Show a short confirmation beside Close, for as long as the Settings flash shows."""
+        self.status_label.setText(text)
+        self._status_timer.start(2500)
 
     def _run_settings_action(self, which: str) -> None:
         actions = self._settings_actions

@@ -142,6 +142,13 @@ class _SavePathPanel(Protocol):
     def contribute(self, config: AnkiMinerConfig) -> AnkiMinerConfig: ...
 
 
+@runtime_checkable
+class _ConfirmationSurface(Protocol):
+    """A whole-profile action's surface that shows its own clean-finish flash (the Profile Manager)."""
+
+    def flash_status(self, text: str) -> None: ...
+
+
 class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     """Settings tab with category organization.
 
@@ -2093,7 +2100,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                 box.setDetailedText(", ".join(import_result.invalid_fields))
             box.exec()
         else:
-            self._flash_save_status(self.tr("✓ Imported"))
+            self._flash_save_status(self.tr("✓ Imported"), surface)
 
     def _on_reset_to_defaults_clicked(self, surface: QWidget | None = None) -> None:
         """Reset settings to defaults after an explicit confirm (Issue #99).
@@ -2144,14 +2151,19 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self._load_config()  # repaint the reset panels (under the _loading guard)
         self._settings_dirty = False
         self.config_changed.emit(self.config)  # persist via MainWindow.update_config
-        self._flash_save_status(self.tr("✓ Reset to defaults"))
+        self._flash_save_status(self.tr("✓ Reset to defaults"), surface)
 
-    def _flash_save_status(self, text: str) -> None:
+    def _flash_save_status(self, text: str, surface: QWidget | None = None) -> None:
         """Show a transient, non-modal confirmation at the end of the search row.
 
         Restarts the auto-clear timer on each call so repeated saves keep the
-        message visible for the full duration.
+        message visible for the full duration. A whole-profile action run from
+        the Profile Manager confirms there instead: this row is behind that
+        modal dialog.
         """
+        if isinstance(surface, _ConfirmationSurface):
+            surface.flash_status(text)
+            return
         self.save_status_label.setText(text)
         self._save_status_timer.stop()
         self._save_status_timer.start(2500)

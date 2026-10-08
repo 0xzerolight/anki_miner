@@ -614,7 +614,7 @@ class TestImportResultFeedback:
             lambda box: shown.append((box.windowTitle(), box.text(), box.detailedText())),
         )
         flashes: list[str] = []
-        monkeypatch.setattr(tab, "_flash_save_status", flashes.append)
+        monkeypatch.setattr(tab, "_flash_save_status", lambda text, surface=None: flashes.append(text))
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
@@ -654,7 +654,7 @@ class TestImportResultFeedback:
 
         monkeypatch.setattr(QMessageBox, "information", fail_information)
         flashes: list[str] = []
-        monkeypatch.setattr(tab, "_flash_save_status", flashes.append)
+        monkeypatch.setattr(tab, "_flash_save_status", lambda text, surface=None: flashes.append(text))
 
         tab._on_import_settings()
 
