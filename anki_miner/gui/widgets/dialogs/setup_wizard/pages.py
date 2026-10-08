@@ -633,6 +633,9 @@ class AnkiConnectPage(_WizardSection):
             self.result_label.setToolTip("")
             self.steps.setVisible(False)
             self.address_link.setVisible(False)
+            # The field itself, not the link to it: with the steps hidden there
+            # is nothing else on the page to type the address into.
+            self.url_row.setVisible(True)
             self.completeChanged.emit()
             self.reachability_changed.emit(False)
             return

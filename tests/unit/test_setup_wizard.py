@@ -847,6 +847,21 @@ def test_ankiconnect_page_blank_url_does_not_probe_previous_endpoint(qtbot, wiz_
     assert page.isComplete() is False
 
 
+def test_a_blank_url_on_entry_shows_the_address_field(qtbot, wiz_config):
+    """B2.3b: with no URL the steps and the link hide, so the field itself must show."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(replace(wiz_config, ankiconnect_url=""))
+    qtbot.addWidget(wiz)
+    page = wiz.ankiconnect_page
+
+    page.initializePage()
+
+    assert page.result_label.text() == "Enter an AnkiConnect URL."
+    assert page.url_row.isVisibleTo(page)
+    assert not page.address_link.isVisibleTo(page)
+
+
 def test_ankiconnect_page_writes_url_to_working_config(qtbot, wiz_config):
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 
