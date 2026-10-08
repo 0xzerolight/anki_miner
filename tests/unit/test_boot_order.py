@@ -12,6 +12,9 @@ The invariants, and why each is load-bearing:
   widget is measured against the face it is drawn with (D44-B).
 * Translators install before the first widget, because widgets capture their
   ``tr()`` strings at construction and language is restart-to-apply.
+* The number locale is set before ``QApplication``: a widget copies the
+  default locale when it is built, so one made earlier would keep the system's
+  decimal comma ("0,30").
 * The single-instance lock is taken before any window is composed and released
   only after ``app.exec()`` returns, so a relaunched child never meets the
   parent's lock or shares a live sqlite handle with it (D39b).
@@ -40,6 +43,7 @@ import pytest
 MAIN_BOOT_STEPS = (
     "install_process_log_hooks()",
     "install_qt_message_handler()",
+    "install_number_locale()",
     "QApplication(sys.argv)",
     "initialize_application_fonts(app)",
     "install_translators(app",

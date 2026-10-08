@@ -4,6 +4,7 @@ Installs a QTranslator for the app's own strings plus Qt's bundled
 ``qtbase_<lang>.qm`` (standard dialog buttons, file picker) at startup, before
 any widget is constructed. "en" is the source language: it installs only the
 app catalogue, which carries nothing but the English plural forms (E14).
+It also fixes the number style the UI shows and reads (install_number_locale).
 """
 
 from __future__ import annotations
@@ -79,3 +80,19 @@ def install_translators(app: QApplication, language: str) -> list[QTranslator]:
         installed.append(qt_translator)
 
     return installed
+
+
+def install_number_locale() -> None:
+    """Make every widget show and read numbers as "0.30" and "184,200".
+
+    Without a default, a widget copies Qt's system locale, whose separators follow
+    the host's number format (``LC_NUMERIC`` on Linux, Regional settings on
+    Windows and macOS) even where its language does not: an English UI on a host
+    with Spanish number formats showed "0,30 seconds". Numbers keep one style
+    whatever the UI language. US English rather than ``QLocale.c()``, which drops
+    the thousands comma ("184200").
+
+    Call before the first widget is built: a widget copies the default locale
+    when it is constructed and never looks again.
+    """
+    QLocale.setDefault(QLocale(QLocale.Language.English, QLocale.Country.UnitedStates))

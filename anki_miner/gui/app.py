@@ -56,7 +56,7 @@ from anki_miner.gui import restart
 from anki_miner.gui.controllers import recovery_controller
 from anki_miner.gui.controllers.mining_marker import MiningMarker, mining_task_ids
 from anki_miner.gui.controllers.recovery_controller import RecoveryController
-from anki_miner.gui.i18n import install_translators
+from anki_miner.gui.i18n import install_number_locale, install_translators
 from anki_miner.gui.launch import _LOG_DATE_FORMAT, _LOG_FORMAT
 from anki_miner.gui.launch import get_effective_log_path as _get_effective_log_path
 from anki_miner.gui.main_window import MainWindow, open_log_folder
@@ -2391,6 +2391,11 @@ def main():
     _apply_ui_zoom(_early_config)
 
     _configure_qt_application_policy()
+
+    # Numbers read "0.30" and "184,200" whatever the system's number format.
+    # Before QApplication, so no widget can exist yet to keep the system's
+    # separators (see install_number_locale).
+    install_number_locale()
 
     # Create application
     app = QApplication(sys.argv)
