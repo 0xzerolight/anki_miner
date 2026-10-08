@@ -150,6 +150,14 @@ def test_fuller_word_audio_still_loses_to_sentence_audio():
     assert fmap.audio == "SentenceAudio"
 
 
+def test_a_sentence_field_that_carries_the_clip_is_still_the_sentence():
+    # The line and its [sound:] in one field: it is the audio pick AND the
+    # sentence (field_text drops the sound ref from the line).
+    samples = [{"Sentence": "猫だ[sound:a.mp3]", "Meaning": "It's a cat"}] * 5
+    fmap = suggest_field_map(["Sentence", "Meaning"], samples, contains_target_script=_JA)
+    assert (fmap.sentence, fmap.audio, fmap.translation) == ("Sentence", "Sentence", "Meaning")
+
+
 def test_a_field_filled_on_under_half_the_notes_is_not_suggested():
     samples = [{"Line": "猫だ", "Audio": "[sound:a.mp3]" if i < 2 else ""} for i in range(5)]
     fmap = suggest_field_map(["Line", "Audio"], samples, contains_target_script=_JA)

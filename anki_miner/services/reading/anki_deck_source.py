@@ -138,9 +138,11 @@ def suggest_field_map(
         text = field_text(value)
         return bool(text) and contains_target_script(text)
 
+    # The audio pick stays a sentence candidate: a field may carry the line and
+    # its clip together, and field_text drops the [sound:] ref from the line.
     ranked = [
         (_hint_rank(n, _SENTENCE_HINTS), -share, i, n)
-        for i, n in enumerate(rest)
+        for i, n in enumerate(n for n in field_names if n != picture)
         if (share := _share(n, samples, is_line)) >= SAMPLE_SHARE
     ]
     sentence = min(ranked)[3] if ranked else ""
