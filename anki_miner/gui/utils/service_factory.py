@@ -44,6 +44,7 @@ from anki_miner.services.pitch_accent.multi_pitch_service import MultiPitchAccen
 from anki_miner.services.pitch_accent.registry import PitchSourceRegistry
 from anki_miner.services.sentence_tts_fetcher import (
     ChainedSentenceAudioFetcher,
+    EdgeSentenceTtsFetcher,
     GoogleSentenceTtsFetcher,
     PapagoSentenceTtsFetcher,
 )
@@ -692,8 +693,8 @@ def create_expression_audio_fetcher(
 def _build_sentence_audio_fetcher(config: AnkiMinerConfig) -> SentenceAudioFetcher:
     """Build the sentence-TTS chain for reading sources.
 
-    Fixed provider order (Google first, Papago fallback); the two config bools
-    only select membership. I/O neutrality: with the master flag off the chain
+    Fixed provider order (the web voice first, Papago fallback); the two config
+    bools only select membership. I/O neutrality: with the master flag off the chain
     is returned empty immediately — no ``requests.Session`` (Papago) is ever
     constructed for a disabled feature, so a default config is byte-for-byte
     pre-feature. Constructors touch no disk or network (Session only); the
@@ -706,15 +707,27 @@ def _build_sentence_audio_fetcher(config: AnkiMinerConfig) -> SentenceAudioFetch
     cache_dir = ANKI_MINER_HOME / "audio_cache" / "sentence_tts"
     fetchers: list[SentenceAudioFetcher] = []
     gtts_lang = audio.resolved_gtts_lang(config)
-    if config.reading_tts_google_enabled and gtts_lang:
-        fetchers.append(
-            GoogleSentenceTtsFetcher(
-                cache_dir=cache_dir,
-                delay=config.expression_audio_delay,
-                gtts_lang=gtts_lang,
-                cache_stem_prefix=audio.sentence_cache_stem_prefix,
+    if config.reading_tts_google_enabled:
+        # reading_tts_google_enabled is the web-voice leg: Google, or the
+        # profile's Edge voice for a language Google has no voice for (fa, sl).
+        if gtts_lang:
+            fetchers.append(
+                GoogleSentenceTtsFetcher(
+                    cache_dir=cache_dir,
+                    delay=config.expression_audio_delay,
+                    gtts_lang=gtts_lang,
+                    cache_stem_prefix=audio.sentence_cache_stem_prefix,
+                )
             )
-        )
+        elif audio.edge_voice:
+            fetchers.append(
+                EdgeSentenceTtsFetcher(
+                    cache_dir=cache_dir,
+                    delay=config.expression_audio_delay,
+                    voice=audio.edge_voice,
+                    cache_stem_prefix=audio.sentence_cache_stem_prefix,
+                )
+            )
     # Papago speaks Japanese and Korean only, so membership follows the
     # profile's own speaker rather than the config bool alone. Coercing a
     # missing speaker to the JA voice would read a Chinese sentence in

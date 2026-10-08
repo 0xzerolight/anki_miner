@@ -12,10 +12,12 @@ from dataclasses import replace
 from functools import partial
 from unittest.mock import MagicMock
 
+from anki_miner.languages.switching import switch_language
 from anki_miner.models import TokenizedWord
-from anki_miner.orchestration.audio_stage import AudioStage, _audio_failure_diagnosis
+from anki_miner.orchestration.audio_stage import AudioStage, _audio_failure_diagnosis, _sentence_chain_labels
 from anki_miner.orchestration.episode_processor import _EpisodeContext
 from anki_miner.presenters import NullPresenter
+from anki_miner.services.sentence_tts_fetcher import ChainedSentenceAudioFetcher
 from tests.conftest import build_processor
 from tests.unit._processor_fixtures import make_media as _make_media
 from tests.unit._processor_fixtures import make_word
@@ -1076,6 +1078,43 @@ class TestAudioChainIdentityLogging:
         assert "id=packA" in line
         assert f"dir={pack_dir.resolve()}" in line
         assert "entries=1" in line
+
+
+class TestSentenceAudioLanguageVoices:
+    """The sentence stage reports the providers the mining language really has."""
+
+    def test_a_chain_with_no_providers_keeps_the_stage_inactive(self, test_config, caplog):
+        config = replace(
+            test_config,
+            reading_tts_enabled=True,
+            reading_tts_google_enabled=True,
+            reading_tts_papago_enabled=True,
+        )
+        stage = AudioStage(
+            config=config,
+            presenter=NullPresenter(),
+            cancelled=lambda: False,
+            expression_audio_fetcher=None,
+            sentence_audio_fetcher=ChainedSentenceAudioFetcher([]),
+        )
+
+        assert stage.reading_tts_active is False
+        with caplog.at_level(logging.DEBUG, logger="anki_miner.orchestration.audio_stage"):
+            stage.fetch_sentence_audio([(_make_word(), _make_media())], None)
+        gate = next(msg for msg in caplog.messages if msg.startswith("Sentence audio gate:"))
+        assert "reason=chain_empty" in gate
+        assert not any(msg.startswith("Audio stage:") for msg in caplog.messages)
+
+    def test_labels_follow_the_language_voices(self, test_config):
+        config = replace(test_config, reading_tts_google_enabled=True, reading_tts_papago_enabled=True)
+
+        assert _sentence_chain_labels(switch_language(config, "fa")) == (["edge"], 1)
+        assert _sentence_chain_labels(switch_language(config, "es")) == (["google"], 1)
+
+    def test_japanese_labels_are_unchanged(self, test_config):
+        config = replace(test_config, reading_tts_google_enabled=True, reading_tts_papago_enabled=True)
+
+        assert _sentence_chain_labels(config) == (["google", "papago"], 2)
 
 
 def _probe_word(mined="食べる", reading="たべる"):

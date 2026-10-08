@@ -209,6 +209,95 @@ def _classify_failure(exc: Exception) -> tuple[str, str, int | None]:
     return "connection", "transport", None
 
 
+def _synthesize(voice: str, text: str) -> bytes:
+    """One connection, one text: the mp3 bytes the service streamed back."""
+    url = (
+        f"{EDGE_TTS_ENDPOINT}?TrustedClientToken={EDGE_CLIENT.trusted_client_token}"
+        f"&ConnectionId={uuid.uuid4().hex}"
+        f"&Sec-MS-GEC={sec_ms_gec(time.time())}"
+        f"&Sec-MS-GEC-Version=1-{EDGE_CLIENT.chromium_version}"
+    )
+    with _ws_connect(
+        url,
+        origin=_ORIGIN,
+        user_agent_header=_user_agent(),
+        open_timeout=_TIMEOUT_SECONDS,
+        close_timeout=_TIMEOUT_SECONDS,
+    ) as connection:
+        connection.send(_config_message())
+        connection.send(_ssml_message(voice, text))
+        return _read_audio(connection)
+
+
+def synthesize_edge_to_cache(
+    mp3_path: Path,
+    *,
+    voice: str,
+    text: str,
+    delay: float,
+    failure_counts: dict[str, int],
+    cancelled_check: Callable[[], bool] | None,
+    source: str = "edgetts",
+    word: str,
+    reading: str = "",
+) -> Path | None:
+    """Speak *text* with *voice* and atomically cache it at *mp3_path*.
+
+    Shared synthesis leaf for the word and sentence Edge fetchers, the
+    ``_synthesize_gtts_to_cache`` pattern: mkdir, cache-hit check, politeness
+    sleep, synthesis, body validation and the atomic write. Never raises
+    (``MemoryError`` excepted): a failure tallies into *failure_counts* and
+    returns None. *word* and *reading* are the log subject; a sentence fetcher
+    passes its cache stem, which identifies the item without copying the
+    reader's text into the log.
+    """
+    try:
+        mp3_path.parent.mkdir(parents=True, exist_ok=True)
+        if mp3_path.exists() and mp3_path.stat().st_size > 0:
+            return mp3_path
+        if cancelled_check is not None and cancelled_check():
+            return None
+        time.sleep(delay)
+        if cancelled_check is not None and cancelled_check():
+            return None
+        body = _synthesize(voice, text)
+        if not body:
+            failure_counts["non_audio"] += 1
+            log_fetch_outcome(logger, source, word, reading, EDGE_TTS_ENDPOINT, bytes_=0, reason="empty_body")
+            return None
+        if not is_mp3(body):
+            failure_counts["non_audio"] += 1
+            log_fetch_outcome(logger, source, word, reading, EDGE_TTS_ENDPOINT, bytes_=len(body), reason="not_mp3")
+            return None
+        with atomic_write_path(mp3_path) as staged:
+            staged.write_bytes(body)
+        return mp3_path
+    # MemoryError is not part of the never-raises contract (the rule
+    # service_factory applies to optional sources): a starved interpreter
+    # must abort the run, not keep writing cards.
+    except MemoryError:
+        raise
+    # Broad on purpose: websockets, ssl and the socket layer raise many
+    # types, and the Phase-3 loop has no try/except by design.
+    except Exception as exc:
+        bucket, reason, status = _classify_failure(exc)
+        failure_counts[bucket] += 1
+        if isinstance(exc, _MalformedStream):
+            log_fetch_outcome(logger, source, word, reading, EDGE_TTS_ENDPOINT, reason=reason)
+        else:
+            log_fetch_outcome(
+                logger,
+                source,
+                word,
+                reading,
+                EDGE_TTS_ENDPOINT,
+                status=status,
+                reason=reason,
+                error=f"{type(exc).__name__}: {scrub_url_secrets(str(exc), EDGE_TTS_ENDPOINT, source)}",
+            )
+        return None
+
+
 class EdgeTtsAudioFetcher:
     """Synthesizes word pronunciation audio with a Microsoft Edge read-aloud voice.
 
@@ -269,75 +358,16 @@ class EdgeTtsAudioFetcher:
             return None
         if cancelled_check is not None and cancelled_check():
             return None
-        mp3_path = self._cache_path(mined_form, reading)
-        try:
-            self._cache_dir.mkdir(parents=True, exist_ok=True)
-            if mp3_path.exists() and mp3_path.stat().st_size > 0:
-                return mp3_path
-            if cancelled_check is not None and cancelled_check():
-                return None
-            time.sleep(self._delay)
-            if cancelled_check is not None and cancelled_check():
-                return None
-            body = self._synthesize(text)
-            if not body:
-                self._failure_counts["non_audio"] += 1
-                log_fetch_outcome(
-                    logger, "edgetts", mined_form, reading, EDGE_TTS_ENDPOINT, bytes_=0, reason="empty_body"
-                )
-                return None
-            if not is_mp3(body):
-                self._failure_counts["non_audio"] += 1
-                log_fetch_outcome(
-                    logger, "edgetts", mined_form, reading, EDGE_TTS_ENDPOINT, bytes_=len(body), reason="not_mp3"
-                )
-                return None
-            with atomic_write_path(mp3_path) as staged:
-                staged.write_bytes(body)
-            return mp3_path
-        # MemoryError is not part of the never-raises contract (the rule
-        # service_factory applies to optional sources): a starved interpreter
-        # must abort the run, not keep writing cards.
-        except MemoryError:
-            raise
-        # Broad on purpose: websockets, ssl and the socket layer raise many
-        # types, and the Phase-3 loop has no try/except by design.
-        except Exception as exc:
-            bucket, reason, status = _classify_failure(exc)
-            self._failure_counts[bucket] += 1
-            if isinstance(exc, _MalformedStream):
-                log_fetch_outcome(logger, "edgetts", mined_form, reading, EDGE_TTS_ENDPOINT, reason=reason)
-            else:
-                log_fetch_outcome(
-                    logger,
-                    "edgetts",
-                    mined_form,
-                    reading,
-                    EDGE_TTS_ENDPOINT,
-                    status=status,
-                    reason=reason,
-                    error=f"{type(exc).__name__}: {scrub_url_secrets(str(exc), EDGE_TTS_ENDPOINT, 'edgetts')}",
-                )
-            return None
-
-    def _synthesize(self, text: str) -> bytes:
-        """One connection, one word: the mp3 bytes the service streamed back."""
-        url = (
-            f"{EDGE_TTS_ENDPOINT}?TrustedClientToken={EDGE_CLIENT.trusted_client_token}"
-            f"&ConnectionId={uuid.uuid4().hex}"
-            f"&Sec-MS-GEC={sec_ms_gec(time.time())}"
-            f"&Sec-MS-GEC-Version=1-{EDGE_CLIENT.chromium_version}"
+        return synthesize_edge_to_cache(
+            self._cache_path(mined_form, reading),
+            voice=self._voice,
+            text=text,
+            delay=self._delay,
+            failure_counts=self._failure_counts,
+            cancelled_check=cancelled_check,
+            word=mined_form,
+            reading=reading,
         )
-        with _ws_connect(
-            url,
-            origin=_ORIGIN,
-            user_agent_header=_user_agent(),
-            open_timeout=_TIMEOUT_SECONDS,
-            close_timeout=_TIMEOUT_SECONDS,
-        ) as connection:
-            connection.send(_config_message())
-            connection.send(_ssml_message(self._voice, text))
-            return _read_audio(connection)
 
     def fetch_candidates(
         self,

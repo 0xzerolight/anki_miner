@@ -1,21 +1,25 @@
 """Tests for sentence-level TTS fetchers (reading sources)."""
 
+import hashlib
 import logging
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from anki_miner.services import edge_tts_audio_fetcher as edge
 from anki_miner.services.audio_fetch_common import reset_fetch_outcome_rate_limit
 from anki_miner.services.expression_audio_fetcher import FAILURE_KEYS
 from anki_miner.services.sentence_tts_fetcher import (
     MAX_TTS_SENTENCE_CHARS,
     PAPAGO_MAKE_ID_URL,
     ChainedSentenceAudioFetcher,
+    EdgeSentenceTtsFetcher,
     GoogleSentenceTtsFetcher,
     PapagoSentenceTtsFetcher,
     _sentence_stem,
 )
+from tests.unit.test_edge_tts_audio_fetcher import Connector, good_stream
 
 # The shared gtts synthesis leaf lives in the word-fetcher module; the
 # sentence Google fetcher delegates to it, so gTTS is patched there.
@@ -156,6 +160,97 @@ class TestGoogleSentenceTtsFetcher:
 
     def test_nan_delay_clamped(self, tmp_path):
         assert GoogleSentenceTtsFetcher(cache_dir=tmp_path, delay=float("nan"))._delay == 0.0
+
+
+_EDGE_MP3 = b"\xff\xf3\x64\xc4" + b"\0" * 1500
+_FA_VOICE = "fa-IR-DilaraNeural"
+_FA_SENTENCE = "امروز هوا خوب است."
+
+
+def _edge_fetcher(tmp_path: Path) -> EdgeSentenceTtsFetcher:
+    return EdgeSentenceTtsFetcher(cache_dir=tmp_path, delay=0, voice=_FA_VOICE, cache_stem_prefix="sentencetts_fa")
+
+
+def _synth_raising(exc: BaseException):
+    def synth(voice: str, text: str) -> bytes:
+        raise exc
+
+    return synth
+
+
+class TestEdgeSentenceTtsFetcher:
+    """The web-voice leg for a language Google has no voice for (fa, sl)."""
+
+    def test_fetch_caches_under_the_prefixed_edge_stem(self, tmp_path, monkeypatch):
+        calls: list[tuple[str, str]] = []
+        monkeypatch.setattr(edge, "_synthesize", lambda voice, text: calls.append((voice, text)) or _EDGE_MP3)
+
+        result = _edge_fetcher(tmp_path).fetch(_FA_SENTENCE)
+
+        digest = hashlib.sha1(_FA_SENTENCE.encode("utf-8")).hexdigest()[:16]
+        assert result == tmp_path / f"sentencetts_fa_edge_{digest}.mp3"
+        assert result.read_bytes() == _EDGE_MP3
+        assert calls == [(_FA_VOICE, _FA_SENTENCE)]
+
+    def test_second_fetch_is_a_cache_hit(self, tmp_path, monkeypatch):
+        fetcher = _edge_fetcher(tmp_path)
+        monkeypatch.setattr(edge, "_synthesize", lambda voice, text: _EDGE_MP3)
+        first = fetcher.fetch(_FA_SENTENCE)
+
+        monkeypatch.setattr(edge, "_synthesize", _synth_raising(AssertionError("synth re-run")))
+        assert fetcher.fetch(_FA_SENTENCE) == first
+        assert fetcher.stats() == dict.fromkeys(FAILURE_KEYS, 0)
+
+    @pytest.mark.parametrize(
+        "sentence", ["", "   \n", "ب" * (MAX_TTS_SENTENCE_CHARS + 1)], ids=["empty", "blank", "over_cap"]
+    )
+    def test_empty_or_over_cap_input_is_skipped_uncounted(self, tmp_path, monkeypatch, sentence):
+        monkeypatch.setattr(edge, "_synthesize", _synth_raising(AssertionError("synth on rejected input")))
+        fetcher = _edge_fetcher(tmp_path)
+
+        assert fetcher.fetch(sentence) is None
+        assert fetcher.stats() == dict.fromkeys(FAILURE_KEYS, 0)
+        assert not list(tmp_path.glob("*"))
+
+    def test_non_mp3_body_counts_non_audio(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(edge, "_synthesize", lambda voice, text: b"<html>throttled</html>")
+        fetcher = _edge_fetcher(tmp_path)
+
+        assert fetcher.fetch(_FA_SENTENCE) is None
+        assert fetcher.stats()["non_audio"] == 1
+        assert not list(tmp_path.glob("*.mp3"))
+
+    def test_connection_error_counts_connection_and_never_raises(self, tmp_path, monkeypatch, caplog):
+        monkeypatch.setattr(edge, "_synthesize", _synth_raising(ConnectionError("reset by peer")))
+        fetcher = _edge_fetcher(tmp_path)
+
+        with caplog.at_level(logging.DEBUG, logger="anki_miner.services.edge_tts_audio_fetcher"):
+            assert fetcher.fetch(_FA_SENTENCE) is None
+
+        assert fetcher.stats()["connection"] == 1
+        message = caplog.records[-1].getMessage()
+        assert "source=edgetts_sentence" in message
+        # The stem names the item; the reader's text stays out of the log.
+        assert _sentence_stem("edge", _FA_SENTENCE, prefix="sentencetts_fa") in message
+        assert _FA_SENTENCE not in message
+
+    def test_cancelled_fetch_returns_none_before_synthesis(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(edge, "_synthesize", _synth_raising(AssertionError("synth after cancel")))
+        fetcher = _edge_fetcher(tmp_path)
+
+        assert fetcher.fetch(_FA_SENTENCE, cancelled_check=lambda: True) is None
+        assert fetcher.stats() == dict.fromkeys(FAILURE_KEYS, 0)
+
+    def test_the_ssml_names_the_profile_voice(self, tmp_path, monkeypatch):
+        fake = Connector(good_stream())
+        monkeypatch.setattr(edge, "_ws_connect", fake)
+        fetcher = _edge_fetcher(tmp_path)
+
+        assert fetcher.fetch(_FA_SENTENCE) is not None
+
+        ssml = fake.connections[0].sent[1]
+        assert f"<voice name='{_FA_VOICE}'>{_FA_SENTENCE}</voice>" in ssml
+        fetcher.close()
 
 
 _DEFAULT_JSON = object()
@@ -390,6 +485,10 @@ class TestChainedSentenceAudioFetcher:
 
     def test_empty_chain_returns_none(self):
         assert ChainedSentenceAudioFetcher([]).fetch(_SENTENCE) is None
+
+    def test_has_providers_reports_membership(self):
+        assert ChainedSentenceAudioFetcher([]).has_providers is False
+        assert ChainedSentenceAudioFetcher([_StubFetcher(None)]).has_providers is True
 
     def test_cancelled_between_members_stops_walk(self, tmp_path):
         hit = tmp_path / "c.mp3"

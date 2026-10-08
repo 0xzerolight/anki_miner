@@ -12,6 +12,7 @@ import pytest
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.config.config import AudioSourceEntry
 from anki_miner.gui.utils import service_factory
+from anki_miner.languages.registry import get_profile
 from anki_miner.languages.switching import switch_language
 from anki_miner.services.audio_packs.importer import import_audio_pack
 from anki_miner.services.custom_audio_fetcher import CustomAudioFetcher, custom_audio_slug
@@ -24,6 +25,7 @@ from anki_miner.services.google_translate_audio_fetcher import (
 )
 from anki_miner.services.sentence_tts_fetcher import (
     ChainedSentenceAudioFetcher,
+    EdgeSentenceTtsFetcher,
     GoogleSentenceTtsFetcher,
     PapagoSentenceTtsFetcher,
 )
@@ -733,3 +735,41 @@ class TestBuildSentenceAudioFetcher:
         services = service_factory.create_services(base_config)
         assert isinstance(services.sentence_audio_fetcher, ChainedSentenceAudioFetcher)
         assert services.sentence_audio_fetcher._fetchers == []  # default config: inert
+
+    @pytest.mark.parametrize("code", ["fa", "sl"])
+    def test_a_language_google_cannot_speak_reads_with_its_edge_voice(self, base_config, code):
+        cfg = dataclasses.replace(switch_language(base_config, code), reading_tts_enabled=True)
+        fetcher = service_factory._build_sentence_audio_fetcher(cfg)
+
+        assert [type(member) for member in fetcher._fetchers] == [EdgeSentenceTtsFetcher]
+        member = fetcher._fetchers[0]
+        assert member._voice == get_profile(code).audio.edge_voice
+        assert member._cache_stem_prefix == f"sentencetts_{code}"
+        assert fetcher.has_providers is True
+
+    def test_the_web_voice_flag_also_gates_the_edge_leg(self, base_config):
+        cfg = dataclasses.replace(
+            switch_language(base_config, "fa"),
+            reading_tts_enabled=True,
+            reading_tts_google_enabled=False,
+        )
+        assert service_factory._build_sentence_audio_fetcher(cfg)._fetchers == []
+
+    def test_papago_alone_for_a_language_without_a_papago_voice_has_no_providers(self, base_config):
+        cfg = dataclasses.replace(
+            switch_language(base_config, "es"),
+            reading_tts_enabled=True,
+            reading_tts_google_enabled=False,
+            reading_tts_papago_enabled=True,
+        )
+        fetcher = service_factory._build_sentence_audio_fetcher(cfg)
+
+        assert fetcher._fetchers == []
+        assert fetcher.has_providers is False
+
+    def test_a_language_with_both_voices_keeps_google(self, base_config):
+        """yue names an Edge voice for word audio, but Google speaks it: Google only."""
+        cfg = dataclasses.replace(switch_language(base_config, "yue"), reading_tts_enabled=True)
+        fetcher = service_factory._build_sentence_audio_fetcher(cfg)
+
+        assert [type(member) for member in fetcher._fetchers] == [GoogleSentenceTtsFetcher]

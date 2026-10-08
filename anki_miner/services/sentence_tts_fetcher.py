@@ -1,7 +1,8 @@
 """Sentence-level TTS fetchers for reading sources (manga/novels).
 
 Reading-sourced cards have no source audio, so sentence audio is synthesized:
-Google Translate TTS (gtts) first, Naver Papago as fallback, walked by
+Google Translate TTS (gtts) first — or the profile's Microsoft Edge voice for a
+language Google has no voice for — and Naver Papago as fallback, walked by
 :class:`ChainedSentenceAudioFetcher`. All fetchers implement the
 :class:`~anki_miner.interfaces.SentenceAudioFetcher` protocol structurally.
 
@@ -54,6 +55,7 @@ from anki_miner.services.audio_fetch_common import (
 from anki_miner.services.audio_fetch_common import (
     new_failure_counts as _new_failure_counts,
 )
+from anki_miner.services.edge_tts_audio_fetcher import synthesize_edge_to_cache
 from anki_miner.services.google_translate_audio_fetcher import _synthesize_gtts_to_cache
 
 if TYPE_CHECKING:
@@ -160,6 +162,70 @@ class GoogleSentenceTtsFetcher:
     def close(self) -> None:
         """No-op: gtts opens a per-call connection, no persistent handle."""
         pass
+
+
+class EdgeSentenceTtsFetcher:
+    """Synthesizes sentence audio with the profile's Microsoft Edge read-aloud voice.
+
+    The web-voice leg for a language Google Translate has no voice for (fa,
+    sl); the synthesis leaf is the word fetcher's, so it shares its protocol
+    client and failure buckets.
+    """
+
+    def __init__(
+        self,
+        cache_dir: Path,
+        delay: float = 0.2,
+        *,
+        voice: str,
+        cache_stem_prefix: str = "sentencetts",
+    ):
+        """Initialize with cache directory, politeness delay and voice.
+
+        Args:
+            cache_dir: Directory for cached mp3s (``audio_cache/sentence_tts/``).
+            delay: Seconds to wait before each synthesis request.
+            voice: Short Edge voice name (``AudioDefaults.edge_voice``).
+            cache_stem_prefix: Stem prefix
+                (``AudioDefaults.sentence_cache_stem_prefix``).
+        """
+        self._cache_dir = cache_dir
+        # NaN clamp, same as the gtts fetchers.
+        self._delay = delay if delay >= 0.0 else 0.0
+        self._voice = voice
+        self._cache_stem_prefix = cache_stem_prefix
+        self._failure_counts = _new_failure_counts()
+
+    def fetch(
+        self,
+        sentence: str,
+        cancelled_check: Callable[[], bool] | None = None,
+    ) -> Path | None:
+        """Synthesize audio for *sentence*. Never raises."""
+        if _reject_input(sentence):
+            return None
+
+        if cancelled_check is not None and cancelled_check():
+            return None
+
+        stem = _sentence_stem("edge", sentence, prefix=self._cache_stem_prefix)
+        return synthesize_edge_to_cache(
+            self._cache_dir / f"{stem}.mp3",
+            voice=self._voice,
+            text=sentence,
+            delay=self._delay,
+            failure_counts=self._failure_counts,
+            cancelled_check=cancelled_check,
+            source="edgetts_sentence",
+            word=stem,
+        )
+
+    def stats(self) -> dict[str, int]:
+        """Return a copy of this run's failure-cause counts (see FAILURE_KEYS)."""
+        return dict(self._failure_counts)
+
+    def close(self) -> None:
+        """No-op: every sentence opens and closes its own connection."""
 
 
 class PapagoSentenceTtsFetcher:
@@ -325,6 +391,11 @@ class ChainedSentenceAudioFetcher:
 
     def __init__(self, fetchers: "Sequence[SentenceAudioFetcher]") -> None:
         self._fetchers: list[SentenceAudioFetcher] = list(fetchers)
+
+    @property
+    def has_providers(self) -> bool:
+        """False for an empty chain: the flags asked for providers the language has none of."""
+        return bool(self._fetchers)
 
     def fetch(
         self,
