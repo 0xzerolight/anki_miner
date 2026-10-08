@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from PyQt6.QtCore import QEvent, Qt
-from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QAbstractButton,
     QFormLayout,
@@ -15,7 +14,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.widgets.base.setting_anchor import SettingAnchorHost, SettingTextProvider
 from anki_miner.gui.widgets.base.sizing import configure_card_layout, form_row_cap, make_label_fit_text
 
@@ -69,11 +68,10 @@ class FormPanel(SettingAnchorHost, QFrame):
         header_layout.setSpacing(SPACING.xs)
 
         self._title_label = QLabel(self._title)
-        self._title_label.setObjectName("heading3")
-        title_font = QFont()
-        title_font.setPixelSize(FONT_SIZES.h3)
-        title_font.setWeight(QFont.Weight.Bold)
-        self._title_label.setFont(title_font)
+        # Top of the Settings type ladder: page title 20, section heading 16,
+        # body 14. Sized by the stylesheet alone: its QWidget font rule beats
+        # setFont().
+        self._title_label.setObjectName("heading2")
 
         header_layout.addWidget(self._title_label)
         header_layout.addStretch()
@@ -322,10 +320,8 @@ class FormPanel(SettingAnchorHost, QFrame):
         self._main_layout.addSpacing(SPACING.xxs)
 
         section_label = QLabel(title)
-        section_font = QFont()
-        section_font.setPixelSize(FONT_SIZES.body_sm)
-        section_font.setWeight(QFont.Weight.DemiBold)
-        section_label.setFont(section_font)
+        # One step above body text, at body weight (QLabel#settings-subheading).
+        section_label.setObjectName("settings-subheading")
 
         if trailing is None:
             self._main_layout.addWidget(section_label)
