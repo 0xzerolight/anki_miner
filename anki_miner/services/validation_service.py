@@ -248,9 +248,13 @@ class ValidationService:
                 )
 
         # Check mokuro (optional — Utilities → Manga OCR only; absent is non-fatal).
+        # Manga OCR exists only for a language with the "manga_ocr" capability, so
+        # elsewhere a missing mokuro is no issue; the version still records.
+        from anki_miner.languages.registry import config_language, get_profile
+
         mokuro_ok, mokuro_msg = self._check_mokuro()
         tool_versions["mokuro"] = mokuro_msg if mokuro_ok else ""
-        if not mokuro_ok:
+        if not mokuro_ok and "manga_ocr" in get_profile(config_language(self.config)).capabilities:
             issues.append(ValidationIssue(component="mokuro", severity="WARNING", message=mokuro_msg))
 
         # Check deck exists (only if AnkiConnect is working)

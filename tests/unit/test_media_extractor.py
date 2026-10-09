@@ -1124,6 +1124,18 @@ class TestExtractAudio:
         warnings = [r for r in caplog.records if "using first audio stream" in r.message]
         assert len(warnings) == 2
 
+    @pytest.mark.parametrize(("language", "name"), [("ja", "Japanese"), ("es", "Spanish")])
+    def test_first_stream_fallback_warning_names_the_mining_language(
+        self, test_config, video_file, caplog, language, name
+    ):
+        with patch(f"{MODULE}.ensure_directory"):
+            svc = MediaExtractorService(dataclasses.replace(test_config, language=language))
+        with caplog.at_level("WARNING", logger=MODULE):
+            svc._warn_no_japanese_audio_once(video_file)
+        assert [r.getMessage() for r in caplog.records] == [
+            f"No {name} audio found in {video_file}, using first audio stream"
+        ]
+
     def test_returns_false_on_nonzero_exit(self, service, video_file, tmp_path):
         """Should return False when ffmpeg exits with non-zero code."""
         output_path = tmp_path / "output.mp3"

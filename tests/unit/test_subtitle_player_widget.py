@@ -293,6 +293,15 @@ class TestAudioTrackSelection:
         widget._on_file_loaded()
         assert fake_mpv["player"].aid == 2  # the jpn track's mpv id
 
+    def test_tag_match_logs_the_matched_tag_not_japanese(self, qtbot, fake_mpv, caplog):
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        fake_mpv["player"].track_list = self._tracks()
+        with caplog.at_level("INFO", logger=MODULE):
+            widget._on_file_loaded()
+        assert "Selected audio track 1 (language: jpn) via mpv track metadata" in caplog.text
+        assert "Selected Japanese" not in caplog.text
+
     def test_no_jp_anywhere_leaves_mpv_default(self, qtbot, fake_mpv):
         widget = _widget(qtbot)
         widget.set_source(VIDEO, ENTRIES)

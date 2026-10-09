@@ -68,6 +68,7 @@ from anki_miner.gui.workers.download_probe_worker import (
     DownloadTracksProbeWorker,
 )
 from anki_miner.gui.workers.download_worker import DownloadWorker
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.audio_fetch_common import redact_url_for_log
 from anki_miner.services.media_downloader import (
     FORMAT_PRESETS,
@@ -294,9 +295,11 @@ class DownloadTab(RunOptionsMixin, YtdlpAvailabilityMixin, _ToolTabBase):
         The single definition of the empty-selection fallback, which used to be
         duplicated across the diff, the persist slot and the options builder.
         ``--sub-langs ""`` is not a valid invocation, so an empty selection
-        cannot reach yt-dlp.
+        cannot reach yt-dlp; it falls back to the mining language's own default.
         """
-        return self._sub_langs.strip() or "ja"
+        return self._sub_langs.strip() or str(
+            get_profile(config_language(self.config)).scoped_defaults["downloader_subtitle_langs"]
+        )
 
     def _selected_audio_lang(self) -> str:
         return str(self.audio_lang_combo.currentData() or "")

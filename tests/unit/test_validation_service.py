@@ -1260,6 +1260,26 @@ class TestCheckMokuro:
         assert not any(i.component == "mokuro" for i in result.issues)
         assert result.tool_versions["mokuro"] == "mokuro [app-managed]"
 
+    def test_missing_mokuro_is_no_issue_without_manga_ocr(self, test_config, monkeypatch):
+        """Manga OCR is ja-only: an es install has nothing to warn about, but the version still records."""
+        service = ValidationService(replace(test_config, language="es"))
+        for name, verdict in (
+            ("_check_ankiconnect", (True, "ok")),
+            ("_check_ffmpeg", (True, "ok")),
+            ("_check_ffprobe", (True, "ok")),
+            ("_check_alass", (True, "ok")),
+            ("_check_ytdlp", (True, "2026.08.01 [venv]")),
+            ("_check_deck_exists", (True, "ok")),
+            ("_check_note_type_exists", (True, "ok")),
+            ("_check_field_names_exist", (True, "ok")),
+            ("_check_offline_dictionary", (True, "ok")),
+            ("_check_mokuro", (False, "mokuro not found")),
+        ):
+            monkeypatch.setattr(service, name, lambda v=verdict: v)
+        result = service.validate_setup()
+        assert not any(i.component == "mokuro" for i in result.issues)
+        assert result.tool_versions["mokuro"] == ""
+
 
 class TestCheckYtdlp:
     """yt-dlp is optional (YouTube tab only), so absence is a WARNING."""

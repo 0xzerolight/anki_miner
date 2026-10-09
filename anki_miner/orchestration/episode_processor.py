@@ -18,7 +18,7 @@ from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from PyQt6.QtCore import QCoreApplication
+from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiMinerException, SetupError, SubtitleParseError
@@ -82,6 +82,16 @@ logger = logging.getLogger(__name__)
 #: position knowable in advance -- their relative durations are not, which is
 #: why no stage weight lives anywhere in this module any more.
 PIPELINE_STAGE_COUNT = 5
+
+#: The "Script-type filter" summary's kind name per ScriptFilterOption id, so
+#: each language's own options read in the sentence (ko: hangul-only, not
+#: hiragana-only). An id missing here falls back to the option's label.
+_SCRIPT_FILTER_KINDS = {
+    "hiragana_only": QT_TRANSLATE_NOOP("EpisodeProcessor", "hiragana-only"),
+    "katakana_only": QT_TRANSLATE_NOOP("EpisodeProcessor", "katakana-only"),
+    "hangul_only": QT_TRANSLATE_NOOP("EpisodeProcessor", "hangul-only"),
+    "hanja_containing": QT_TRANSLATE_NOOP("EpisodeProcessor", "hanja-containing"),
+}
 
 
 def _log_reading_image_failure(ref: ImageRef, exc: BaseException) -> None:
@@ -1511,11 +1521,11 @@ class EpisodeProcessor:
             removed = before - len(unknown_words)
             counts.script_rejects = removed
             if removed > 0:
-                kinds = []
-                if self.config.exclude_hiragana_only_words:
-                    kinds.append(QCoreApplication.translate("EpisodeProcessor", "hiragana-only"))
-                if self.config.exclude_katakana_only_words:
-                    kinds.append(QCoreApplication.translate("EpisodeProcessor", "katakana-only"))
+                kinds = [
+                    QCoreApplication.translate("EpisodeProcessor", _SCRIPT_FILTER_KINDS.get(o.option_id, o.label))
+                    for o in self.profile.script.filter_options()
+                    if o.config_field and getattr(self.config, o.config_field, False)
+                ]
                 self.presenter.show_info(
                     tr_format(
                         QCoreApplication.translate("EpisodeProcessor", "Script-type filter: removed %1 %2 words"),

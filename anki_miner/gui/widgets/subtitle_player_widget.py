@@ -779,7 +779,7 @@ class SubtitlePlayerWidget(QWidget):
             lang = (track.get("lang") or "").lower()
             if matches_language_tag(lang, self.audio_track_codes):
                 self.player.aid = track.get("id", position + 1)
-                logger.info("Selected Japanese audio track %d via mpv track metadata", position)
+                logger.info("Selected audio track %d (language: %s) via mpv track metadata", position, lang)
                 return
         # No JP tag anywhere — leave mpv's default selection.
 

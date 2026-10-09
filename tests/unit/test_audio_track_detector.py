@@ -196,6 +196,20 @@ class TestFindJapaneseAudioStream:
         assert args[args.index("-select_streams") + 1] == "a"
         assert str(video_file) in args
 
+    def test_log_lines_name_the_wanted_codes_not_japanese(self, video_file, caplog):
+        """A non-ja run's probe logs the codes it looked for, never "Japanese"."""
+        codes = frozenset({"spa", "es"})
+        miss = _ffprobe_json([{"index": 0, "language": "eng"}])
+        hit = _ffprobe_json([{"index": 0, "language": "spa"}])
+        with caplog.at_level(logging.INFO, logger=MODULE):
+            with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=miss)):
+                assert find_japanese_audio_stream(video_file, codes=codes) is None
+            with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=hit)):
+                assert find_japanese_audio_stream(video_file, codes=codes) is not None
+        messages = [r.getMessage() for r in caplog.records if r.levelno >= logging.INFO]
+        assert f"No audio tagged ['es', 'spa'] found in {video_file}. Available languages: ['eng']" in messages
+        assert not any("Japanese" in m for m in messages)
+
 
 class TestListAudioStreams:
     def test_empty_streams_returns_empty_list(self, video_file):

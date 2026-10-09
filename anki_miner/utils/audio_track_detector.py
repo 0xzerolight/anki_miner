@@ -352,7 +352,7 @@ def find_japanese_audio_stream(
     if japanese_streams:
         stream = next((candidate for candidate in japanese_streams if candidate.is_default), japanese_streams[0])
         logger.info(
-            "Found Japanese audio: global stream %d, audio track %d (language: %s)",
+            "Found matching audio: global stream %d, audio track %d (language: %s)",
             stream.global_index,
             stream.audio_index,
             stream.language_tag,
@@ -360,7 +360,9 @@ def find_japanese_audio_stream(
         return stream
 
     available_langs = [s.language_tag or "unknown" for s in streams]
-    logger.warning("No Japanese audio found in %s. Available languages: %s", video_file, available_langs)
+    logger.warning(
+        "No audio tagged %s found in %s. Available languages: %s", sorted(wanted), video_file, available_langs
+    )
     return None
 
 

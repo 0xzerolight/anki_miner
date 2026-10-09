@@ -5425,6 +5425,29 @@ class TestPhase2FilterOrdering:
         # Only word1 (survivor) reached media extraction.
         assert mock_services["media_extractor"].extract_media_batch.call_args[0][1] == [word1]
 
+    def test_script_type_filter_summary_names_the_profile_kinds(self, test_config, mock_services, tmp_path):
+        """A ko run names ko's own option (hangul-only), not ja's kana kinds."""
+        config = replace(test_config, language="ko", exclude_hiragana_only_words=True)
+        word1 = _make_word("먹다")
+        word2 = _make_word("사과", pos="名詞", start_time=5.0)
+        media = _make_media()
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1, word2]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word1, word2]
+        mock_services["word_filter"].filter_by_script_type.side_effect = None
+        mock_services["word_filter"].filter_by_script_type.return_value = [word1]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word1, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
+
+        presenter = MagicMock()
+        processor = build_processor(config=config, presenter=presenter, **mock_services)
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        infos = [str(c.args[0]) for c in presenter.show_info.call_args_list]
+        assert "Script-type filter: removed 1 hangul-only words" in infos
+
     def test_script_type_filter_bypassed_by_optional_filters_flag(self, test_config, mock_services, tmp_path):
         """bypass_optional_filters=True must skip the script-type filter."""
         config = replace(

@@ -290,6 +290,15 @@ class TestConfigLoopAndRefusal:
         assert tab._normalized_sub_langs() == "ja"
         assert tab._options_differ_from_widgets() is False
 
+    @pytest.mark.parametrize(("language", "expected"), [("ja", "ja"), ("nb", "no,nb"), ("es", "es")])
+    def test_empty_langs_fall_back_to_the_mining_language(
+        self, qtbot, tmp_path: Path, language: str, expected: str
+    ) -> None:
+        """An empty pick commits the mining language's own default, not a hardcoded ja."""
+        tab = _make_tab(_make_config(tmp_path, language=language), qtbot)
+        tab._set_sub_langs("  ")
+        assert tab._normalized_sub_langs() == expected
+
     def test_downloader_only_config_change_skips_probe(self, qtbot, tmp_path: Path, monkeypatch) -> None:
         tab = _make_tab(_make_config(tmp_path), qtbot)
         calls: list[int] = []

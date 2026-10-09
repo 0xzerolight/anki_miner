@@ -1461,7 +1461,10 @@ class MediaExtractorService:
             if video_file in self._no_jp_audio_warned:
                 return
             self._no_jp_audio_warned.add(video_file)
-        logger.warning("No Japanese audio found in %s, using first audio stream", video_file)
+        from anki_miner.languages.registry import config_language, get_profile
+
+        language = get_profile(config_language(self.config)).english_name
+        logger.warning("No %s audio found in %s, using first audio stream", language, video_file)
 
     def _list_audio_streams_cached(self, video_file: Path) -> list[AudioStream]:
         """Return full audio stream list for *video_file*, probing once and caching.

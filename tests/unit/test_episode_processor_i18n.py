@@ -79,7 +79,7 @@ def test_i_plus_one_three_arg_renders(qapp):
 
 
 def test_script_filter_kind_names_are_translated():
-    """The two kind names must be translatable, not English spliced mid-sentence.
+    """Every profile's kind names must be translatable, not English spliced mid-sentence.
 
     ``Script-type filter: removed %1 %2 words`` is a translated sentence whose
     %2 is assembled from the enabled kinds, so a bare literal there leaves every
@@ -92,5 +92,5 @@ def test_script_filter_kind_names_are_translated():
     import anki_miner.orchestration.episode_processor as module
 
     source = Path(module.__file__).read_text(encoding="utf-8")
-    for kind in ("hiragana-only", "katakana-only"):
-        assert f'QCoreApplication.translate("EpisodeProcessor", "{kind}")' in source
+    for kind in ("hiragana-only", "katakana-only", "hangul-only", "hanja-containing"):
+        assert f'QT_TRANSLATE_NOOP("EpisodeProcessor", "{kind}")' in source
