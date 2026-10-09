@@ -1586,6 +1586,16 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Terputus saat Anki Miner ditutup</translation>
     </message>
 </context><context>
+    <name>BackgroundTaskController</name>
+    <message>
+        <source>Wait for the OCR engine download to finish, then try again.</source>
+        <translation>Tunggu hingga unduhan mesin OCR selesai, lalu coba lagi.</translation>
+    </message>
+    <message>
+        <source>Wait for the silence-removal download to finish, then try again.</source>
+        <translation>Tunggu hingga unduhan penghapusan keheningan selesai, lalu coba lagi.</translation>
+    </message>
+</context><context>
     <name>BatchProcessingTab</name>
     <message>
         <source>That translation subtitle folder no longer exists.</source>
@@ -2696,6 +2706,14 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <message>
         <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
         <translation>Jalankan OCR bahasa Jepang mokuro pada folder volume atau seluruh seri agar dapat di-mining di Bacaan → Manga. Pasang mokuro dari kartu penyiapannya di Utilitas → Manga OCR.</translation>
+    </message>
+    <message>
+        <source>Read burned-in subtitles from a video into an .srt</source>
+        <translation>Baca subtitel yang tercetak di video menjadi .srt</translation>
+    </message>
+    <message>
+        <source>Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt that Video → Single can mine. Made for game longplays without commentary. Download the OCR engine from the setup card on Utilities → Video OCR.</source>
+        <translation>Buat kotak di tempat dialog video muncul di layar, lalu Anki Miner membacanya menjadi .srt dengan penanda waktu yang dapat di-mining di Video → Tunggal. Ditujukan untuk video longplay game tanpa komentar. Unduh mesin OCR dari kartu penyiapan di Utilitas → Video OCR.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -6504,6 +6522,10 @@ Kata yang akan ditambahkan: %3. Lanjutkan?</translation>
         <translation>Trek</translation>
     </message>
     <message>
+        <source>Video OCR</source>
+        <translation>Video OCR</translation>
+    </message>
+    <message>
         <source>Anki Miner updated</source>
         <translation>Anki Miner diperbarui</translation>
     </message>
@@ -7540,6 +7562,44 @@ Lanjutkan?</translation>
     <message>
         <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
         <translation>Kata masuk ke bidang pertama tipe catatan, “%1”, tetapi kata dipetakan ke “%2”. Ubah urutan bidang di Anki, atau pilih tipe catatan lain.</translation>
+    </message>
+</context><context>
+    <name>OcrRegionDialog</name>
+    <message>
+        <source>Set subtitle region</source>
+        <translation>Atur area subtitel</translation>
+    </message>
+    <message>
+        <source>Move the slider to a moment with dialogue on screen, then drag a box around the subtitles.</source>
+        <translation>Pindahkan penggeser ke saat ada dialog di layar, lalu seret untuk membuat kotak di sekeliling subtitel.</translation>
+    </message>
+    <message>
+        <source>Loading a frame…</source>
+        <translation>Memuat bingkai…</translation>
+    </message>
+    <message>
+        <source>Test this frame</source>
+        <translation>Uji bingkai ini</translation>
+    </message>
+    <message>
+        <source>This frame could not be read. Try another point in the video.</source>
+        <translation>Bingkai ini tidak dapat dibaca. Coba bagian lain dari video.</translation>
+    </message>
+    <message>
+        <source>Download the OCR engine first, from the setup card on the Video OCR screen.</source>
+        <translation>Unduh mesin OCR terlebih dahulu dari kartu penyiapan di layar Video OCR.</translation>
+    </message>
+    <message>
+        <source>Reading…</source>
+        <translation>Membaca…</translation>
+    </message>
+    <message>
+        <source>No text found in the box.</source>
+        <translation>Tidak ada teks yang ditemukan di dalam kotak.</translation>
+    </message>
+    <message>
+        <source>The OCR engine could not start. The log has the details.</source>
+        <translation>Mesin OCR tidak dapat dijalankan. Detailnya ada di log.</translation>
     </message>
 </context><context>
     <name>OnnxPackDownloadWorker</name>
@@ -12431,6 +12491,296 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
     <message>
         <source>Choose which tools the Utilities tab shows. At least one stays.</source>
         <translation>Pilih alat yang ditampilkan pada tab Utilitas. Setidaknya satu akan tetap ada.</translation>
+    </message>
+</context><context>
+    <name>VideoOcrInstallWorker</name>
+    <message>
+        <source>%1 (%2%)</source>
+        <translation>%1 (%2%)</translation>
+    </message>
+    <message>
+        <source>Downloading the OCR runtime…</source>
+        <translation>Mengunduh runtime OCR…</translation>
+    </message>
+    <message>
+        <source>Downloading the OCR models…</source>
+        <translation>Mengunduh model OCR…</translation>
+    </message>
+    <message>
+        <source>OCR engine installed.</source>
+        <translation>Mesin OCR terpasang.</translation>
+    </message>
+</context><context>
+    <name>VideoOcrTab</name>
+    <message>
+        <source>Progress</source>
+        <translation>Kemajuan</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Selesai</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>Selesai: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>Dilewati</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>Dilewati: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Batal</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Membatalkan…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Dibatalkan</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>Gagal — lihat log</translation>
+    </message>
+    <message>
+        <source>Finished with errors — see log</source>
+        <translation>Selesai dengan kesalahan — lihat log</translation>
+    </message>
+    <message>
+        <source>Some videos could not be read.</source>
+        <translation>Beberapa video tidak dapat dibaca.</translation>
+    </message>
+    <message>
+        <source>This video could not be read.</source>
+        <translation>Video ini tidak dapat dibaca.</translation>
+    </message>
+    <message>
+        <source>Complete — %1 files processed</source>
+        <translation>Selesai — %1 berkas diproses</translation>
+    </message>
+    <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>Selesai — %1 diproses, %2 dilewati</translation>
+    </message>
+    <message>
+        <source>No subtitles saved — all %1 skipped; see log.</source>
+        <translation>Tidak ada subtitel yang disimpan — semua %1 dilewati; lihat log.</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>Pilih Folder Keluaran</translation>
+    </message>
+    <message>
+        <source>Next to each video</source>
+        <translation>Di sebelah setiap video</translation>
+    </message>
+    <message>
+        <source>Video OCR</source>
+        <translation>Video OCR</translation>
+    </message>
+    <message>
+        <source>Reading subtitles in file %1 of %2</source>
+        <translation>Membaca subtitel berkas %1 dari %2</translation>
+    </message>
+    <message>
+        <source>The OCR engine could not start on this computer. The details say why.</source>
+        <translation>Mesin OCR tidak dapat dijalankan di komputer ini. Lihat Detail untuk penyebabnya.</translation>
+    </message>
+    <message>
+        <source>Input</source>
+        <translation>Masukan</translation>
+    </message>
+    <message>
+        <source>The OCR engine is not installed yet. Download it from the setup card below.</source>
+        <translation>Mesin OCR belum terpasang. Unduh dari kartu penyiapan di bawah.</translation>
+    </message>
+    <message>
+        <source>Mode:</source>
+        <translation>Mode:</translation>
+    </message>
+    <message>
+        <source>Single File</source>
+        <translation>Berkas Tunggal</translation>
+    </message>
+    <message>
+        <source>Folder</source>
+        <translation>Folder</translation>
+    </message>
+    <message>
+        <source>Read one video.</source>
+        <translation>Baca satu video.</translation>
+    </message>
+    <message>
+        <source>Read every video in a folder with the same region.</source>
+        <translation>Baca setiap video dalam folder dengan area yang sama.</translation>
+    </message>
+    <message>
+        <source>Video File:</source>
+        <translation>Berkas Video:</translation>
+    </message>
+    <message>
+        <source>This field takes a video file.</source>
+        <translation>Bidang ini menerima berkas video.</translation>
+    </message>
+    <message>
+        <source>Video Folder:</source>
+        <translation>Folder Video:</translation>
+    </message>
+    <message>
+        <source>Subtitle region</source>
+        <translation>Area subtitel</translation>
+    </message>
+    <message>
+        <source>Set region…</source>
+        <translation>Atur area…</translation>
+    </message>
+    <message>
+        <source>Draw a box around where the dialogue appears. One region is used for every video in a folder.</source>
+        <translation>Buat kotak di sekeliling tempat dialog muncul. Satu area dipakai untuk setiap video dalam folder.</translation>
+    </message>
+    <message>
+        <source>OCR engine</source>
+        <translation>Mesin OCR</translation>
+    </message>
+    <message>
+        <source>Download OCR engine</source>
+        <translation>Unduh mesin OCR</translation>
+    </message>
+    <message>
+        <source>Output</source>
+        <translation>Keluaran</translation>
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation>Keluaran:</translation>
+    </message>
+    <message>
+        <source>Choose Folder…</source>
+        <translation>Pilih Folder…</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>Setel Ulang</translation>
+    </message>
+    <message>
+        <source>Each .srt is saved next to its video unless you choose a folder.</source>
+        <translation>Setiap .srt disimpan di sebelah videonya kecuali Anda memilih folder.</translation>
+    </message>
+    <message>
+        <source>Overwrite existing SRT files</source>
+        <translation>Timpa berkas SRT yang ada</translation>
+    </message>
+    <message>
+        <source>When unchecked, videos that already have an .srt file are skipped, not overwritten.</source>
+        <translation>Jika tidak dicentang, video yang sudah memiliki berkas .srt akan dilewati, bukan ditimpa.</translation>
+    </message>
+    <message>
+        <source>Read Subtitles</source>
+        <translation>Baca Subtitel</translation>
+    </message>
+    <message>
+        <source>No region set yet.</source>
+        <translation>Area belum diatur.</translation>
+    </message>
+    <message>
+        <source>%1% from the left, %2% from the top, %3% wide, %4% tall</source>
+        <translation>%1% dari kiri, %2% dari atas, lebar %3%, tinggi %4%</translation>
+    </message>
+    <message>
+        <source>Choose a folder of videos first, then set the region on one of them.</source>
+        <translation>Pilih folder video terlebih dahulu, lalu atur area pada salah satu videonya.</translation>
+    </message>
+    <message>
+        <source>No videos were found in that folder.</source>
+        <translation>Tidak ada video yang ditemukan di folder tersebut.</translation>
+    </message>
+    <message>
+        <source>That folder could not be scanned.</source>
+        <translation>Folder itu tidak dapat dipindai.</translation>
+    </message>
+    <message>
+        <source>Choose a video first, then set the region on one of its frames.</source>
+        <translation>Pilih video terlebih dahulu, lalu atur area pada salah satu bingkainya.</translation>
+    </message>
+    <message>
+        <source>Download OCR models</source>
+        <translation>Unduh model OCR</translation>
+    </message>
+    <message>
+        <source>Downloads the two OCR models (about 33 MB) into Anki Miner's folder.</source>
+        <translation>Mengunduh dua model OCR (sekitar 33 MB) ke folder Anki Miner.</translation>
+    </message>
+    <message>
+        <source>Downloads the OCR runtime and its two models (about 50 MB) into Anki Miner's folder.</source>
+        <translation>Mengunduh runtime OCR beserta dua modelnya (sekitar 50 MB) ke folder Anki Miner.</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>Tidak terpasang</translation>
+    </message>
+    <message>
+        <source>Not available on this platform. With a pip install of Anki Miner, run: pip install "anki-miner[ocr]"</source>
+        <translation>Tidak tersedia di platform ini. Jika Anki Miner dipasang lewat pip, jalankan: pip install "anki-miner[ocr]"</translation>
+    </message>
+    <message>
+        <source>Installing…</source>
+        <translation>Memasang…</translation>
+    </message>
+    <message>
+        <source>Set the subtitle region before reading subtitles.</source>
+        <translation>Atur area subtitel sebelum membaca subtitel.</translation>
+    </message>
+    <message>
+        <source>Output folder is not writable.</source>
+        <translation>Folder keluaran tidak dapat ditulisi.</translation>
+    </message>
+    <message>
+        <source>Choose a video before reading subtitles.</source>
+        <translation>Pilih video sebelum membaca subtitel.</translation>
+    </message>
+    <message>
+        <source>That video file no longer exists.</source>
+        <translation>Berkas video tersebut sudah tidak ada.</translation>
+    </message>
+    <message>
+        <source>Choose a folder before reading subtitles.</source>
+        <translation>Pilih folder sebelum membaca subtitel.</translation>
+    </message>
+    <message>
+        <source>That folder no longer exists.</source>
+        <translation>Folder tersebut sudah tidak ada.</translation>
+    </message>
+</context><context>
+    <name>VideoOcrWorker</name>
+    <message>
+        <source>Skipped, exists</source>
+        <translation>Dilewati, sudah ada</translation>
+    </message>
+    <message>
+        <source>Reading subtitles: %1 / %2</source>
+        <translation>Membaca subtitel: %1 / %2</translation>
+    </message>
+    <message>
+        <source>Reading subtitles: %1</source>
+        <translation>Membaca subtitel: %1</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Selesai</translation>
+    </message>
+    <message>
+        <source>No subtitles found in the region</source>
+        <translation>Tidak ada subtitel yang ditemukan di dalam area</translation>
+    </message>
+    <message>
+        <source>Could not read the video %1</source>
+        <translation>Tidak dapat membaca video %1</translation>
     </message>
 </context><context>
     <name>VulkanModelDownloadWorker</name>

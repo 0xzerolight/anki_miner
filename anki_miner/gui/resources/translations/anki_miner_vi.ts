@@ -1586,6 +1586,16 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Đã ngắt khi Anki Miner đóng</translation>
     </message>
 </context><context>
+    <name>BackgroundTaskController</name>
+    <message>
+        <source>Wait for the OCR engine download to finish, then try again.</source>
+        <translation>Hãy đợi quá trình tải công cụ OCR hoàn tất, rồi thử lại.</translation>
+    </message>
+    <message>
+        <source>Wait for the silence-removal download to finish, then try again.</source>
+        <translation>Hãy đợi quá trình tải thư viện loại bỏ khoảng lặng hoàn tất, rồi thử lại.</translation>
+    </message>
+</context><context>
     <name>BatchProcessingTab</name>
     <message>
         <source>That translation subtitle folder no longer exists.</source>
@@ -2696,6 +2706,14 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <message>
         <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
         <translation>Chạy OCR tiếng Nhật của mokuro trên thư mục của một tập hoặc cả một bộ truyện để Đọc → Manga có thể khai thác. Cài đặt mokuro từ mục thiết lập của nó trong Tiện ích → Manga OCR.</translation>
+    </message>
+    <message>
+        <source>Read burned-in subtitles from a video into an .srt</source>
+        <translation>Đọc phụ đề cứng trong video thành tệp .srt</translation>
+    </message>
+    <message>
+        <source>Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt that Video → Single can mine. Made for game longplays without commentary. Download the OCR engine from the setup card on Utilities → Video OCR.</source>
+        <translation>Vẽ một khung tại vị trí lời thoại hiện trên màn hình của video, rồi Anki Miner sẽ đọc lời thoại đó thành tệp .srt có mốc thời gian để Video → Đơn lẻ có thể khai thác. Dành cho video longplay game không bình luận. Tải công cụ OCR từ mục thiết lập trong Tiện ích → Video OCR.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -6504,6 +6522,10 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
         <translation>Rãnh</translation>
     </message>
     <message>
+        <source>Video OCR</source>
+        <translation>Video OCR</translation>
+    </message>
+    <message>
         <source>Anki Miner updated</source>
         <translation>Anki Miner đã cập nhật</translation>
     </message>
@@ -7540,6 +7562,44 @@ Tiếp tục?</translation>
     <message>
         <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
         <translation>Từ được đặt vào trường đầu tiên của loại ghi chú, “%1”, nhưng từ đang được ánh xạ tới “%2”. Hãy đổi thứ tự các trường trong Anki, hoặc chọn loại ghi chú khác.</translation>
+    </message>
+</context><context>
+    <name>OcrRegionDialog</name>
+    <message>
+        <source>Set subtitle region</source>
+        <translation>Đặt vùng phụ đề</translation>
+    </message>
+    <message>
+        <source>Move the slider to a moment with dialogue on screen, then drag a box around the subtitles.</source>
+        <translation>Di chuyển thanh trượt đến lúc có lời thoại trên màn hình, rồi kéo một khung bao quanh phụ đề.</translation>
+    </message>
+    <message>
+        <source>Loading a frame…</source>
+        <translation>Đang tải khung hình…</translation>
+    </message>
+    <message>
+        <source>Test this frame</source>
+        <translation>Thử khung hình này</translation>
+    </message>
+    <message>
+        <source>This frame could not be read. Try another point in the video.</source>
+        <translation>Không thể đọc khung hình này. Hãy thử một thời điểm khác trong video.</translation>
+    </message>
+    <message>
+        <source>Download the OCR engine first, from the setup card on the Video OCR screen.</source>
+        <translation>Hãy tải công cụ OCR trước, từ mục thiết lập trên màn hình Video OCR.</translation>
+    </message>
+    <message>
+        <source>Reading…</source>
+        <translation>Đang đọc…</translation>
+    </message>
+    <message>
+        <source>No text found in the box.</source>
+        <translation>Không tìm thấy văn bản nào trong khung.</translation>
+    </message>
+    <message>
+        <source>The OCR engine could not start. The log has the details.</source>
+        <translation>Không thể khởi động công cụ OCR. Xem chi tiết trong nhật ký.</translation>
     </message>
 </context><context>
     <name>OnnxPackDownloadWorker</name>
@@ -12431,6 +12491,296 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     <message>
         <source>Choose which tools the Utilities tab shows. At least one stays.</source>
         <translation>Chọn các công cụ mà tab Tiện ích hiển thị. Luôn giữ lại ít nhất một công cụ.</translation>
+    </message>
+</context><context>
+    <name>VideoOcrInstallWorker</name>
+    <message>
+        <source>%1 (%2%)</source>
+        <translation>%1 (%2%)</translation>
+    </message>
+    <message>
+        <source>Downloading the OCR runtime…</source>
+        <translation>Đang tải môi trường thực thi OCR…</translation>
+    </message>
+    <message>
+        <source>Downloading the OCR models…</source>
+        <translation>Đang tải các mô hình OCR…</translation>
+    </message>
+    <message>
+        <source>OCR engine installed.</source>
+        <translation>Đã cài đặt công cụ OCR.</translation>
+    </message>
+</context><context>
+    <name>VideoOcrTab</name>
+    <message>
+        <source>Progress</source>
+        <translation>Tiến trình</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Xong</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>Xong: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>Đã bỏ qua</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>Đã bỏ qua: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Hủy</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Đang hủy…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Đã hủy</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>Thất bại — xem nhật ký</translation>
+    </message>
+    <message>
+        <source>Finished with errors — see log</source>
+        <translation>Hoàn tất với lỗi — xem nhật ký</translation>
+    </message>
+    <message>
+        <source>Some videos could not be read.</source>
+        <translation>Không thể đọc một số video.</translation>
+    </message>
+    <message>
+        <source>This video could not be read.</source>
+        <translation>Không thể đọc video này.</translation>
+    </message>
+    <message>
+        <source>Complete — %1 files processed</source>
+        <translation>Hoàn tất — đã xử lý %1 tệp</translation>
+    </message>
+    <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>Hoàn tất — đã xử lý %1, đã bỏ qua %2</translation>
+    </message>
+    <message>
+        <source>No subtitles saved — all %1 skipped; see log.</source>
+        <translation>Không có phụ đề nào được lưu — tất cả %1 đã bị bỏ qua; xem nhật ký.</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>Chọn thư mục đầu ra</translation>
+    </message>
+    <message>
+        <source>Next to each video</source>
+        <translation>Cạnh mỗi video</translation>
+    </message>
+    <message>
+        <source>Video OCR</source>
+        <translation>Video OCR</translation>
+    </message>
+    <message>
+        <source>Reading subtitles in file %1 of %2</source>
+        <translation>Đang đọc phụ đề trong tệp %1 trên %2</translation>
+    </message>
+    <message>
+        <source>The OCR engine could not start on this computer. The details say why.</source>
+        <translation>Không thể khởi động công cụ OCR trên máy tính này. Phần Chi tiết cho biết lý do.</translation>
+    </message>
+    <message>
+        <source>Input</source>
+        <translation>Đầu vào</translation>
+    </message>
+    <message>
+        <source>The OCR engine is not installed yet. Download it from the setup card below.</source>
+        <translation>Chưa cài đặt công cụ OCR. Hãy tải về từ mục thiết lập bên dưới.</translation>
+    </message>
+    <message>
+        <source>Mode:</source>
+        <translation>Chế độ:</translation>
+    </message>
+    <message>
+        <source>Single File</source>
+        <translation>Một tệp</translation>
+    </message>
+    <message>
+        <source>Folder</source>
+        <translation>Thư mục</translation>
+    </message>
+    <message>
+        <source>Read one video.</source>
+        <translation>Đọc một video.</translation>
+    </message>
+    <message>
+        <source>Read every video in a folder with the same region.</source>
+        <translation>Đọc mọi video trong một thư mục với cùng một vùng.</translation>
+    </message>
+    <message>
+        <source>Video File:</source>
+        <translation>Tệp video:</translation>
+    </message>
+    <message>
+        <source>This field takes a video file.</source>
+        <translation>Trường này nhận tệp video.</translation>
+    </message>
+    <message>
+        <source>Video Folder:</source>
+        <translation>Thư mục video:</translation>
+    </message>
+    <message>
+        <source>Subtitle region</source>
+        <translation>Vùng phụ đề</translation>
+    </message>
+    <message>
+        <source>Set region…</source>
+        <translation>Đặt vùng…</translation>
+    </message>
+    <message>
+        <source>Draw a box around where the dialogue appears. One region is used for every video in a folder.</source>
+        <translation>Vẽ một khung quanh vị trí lời thoại xuất hiện. Mọi video trong một thư mục dùng chung một vùng.</translation>
+    </message>
+    <message>
+        <source>OCR engine</source>
+        <translation>Công cụ OCR</translation>
+    </message>
+    <message>
+        <source>Download OCR engine</source>
+        <translation>Tải công cụ OCR</translation>
+    </message>
+    <message>
+        <source>Output</source>
+        <translation>Đầu ra</translation>
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation>Đầu ra:</translation>
+    </message>
+    <message>
+        <source>Choose Folder…</source>
+        <translation>Chọn thư mục…</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>Đặt lại</translation>
+    </message>
+    <message>
+        <source>Each .srt is saved next to its video unless you choose a folder.</source>
+        <translation>Mỗi tệp .srt được lưu cạnh video của nó trừ khi bạn chọn một thư mục.</translation>
+    </message>
+    <message>
+        <source>Overwrite existing SRT files</source>
+        <translation>Ghi đè các tệp SRT hiện có</translation>
+    </message>
+    <message>
+        <source>When unchecked, videos that already have an .srt file are skipped, not overwritten.</source>
+        <translation>Khi bỏ chọn, các video đã có tệp .srt sẽ bị bỏ qua, không bị ghi đè.</translation>
+    </message>
+    <message>
+        <source>Read Subtitles</source>
+        <translation>Đọc phụ đề</translation>
+    </message>
+    <message>
+        <source>No region set yet.</source>
+        <translation>Chưa đặt vùng.</translation>
+    </message>
+    <message>
+        <source>%1% from the left, %2% from the top, %3% wide, %4% tall</source>
+        <translation>Cách mép trái %1%, cách mép trên %2%, rộng %3%, cao %4%</translation>
+    </message>
+    <message>
+        <source>Choose a folder of videos first, then set the region on one of them.</source>
+        <translation>Hãy chọn thư mục video trước, rồi đặt vùng trên một video trong đó.</translation>
+    </message>
+    <message>
+        <source>No videos were found in that folder.</source>
+        <translation>Không tìm thấy video nào trong thư mục đó.</translation>
+    </message>
+    <message>
+        <source>That folder could not be scanned.</source>
+        <translation>Không thể quét thư mục đó.</translation>
+    </message>
+    <message>
+        <source>Choose a video first, then set the region on one of its frames.</source>
+        <translation>Hãy chọn video trước, rồi đặt vùng trên một khung hình của video đó.</translation>
+    </message>
+    <message>
+        <source>Download OCR models</source>
+        <translation>Tải mô hình OCR</translation>
+    </message>
+    <message>
+        <source>Downloads the two OCR models (about 33 MB) into Anki Miner's folder.</source>
+        <translation>Tải hai mô hình OCR (khoảng 33 MB) vào thư mục của Anki Miner.</translation>
+    </message>
+    <message>
+        <source>Downloads the OCR runtime and its two models (about 50 MB) into Anki Miner's folder.</source>
+        <translation>Tải môi trường thực thi OCR và hai mô hình của nó (khoảng 50 MB) vào thư mục của Anki Miner.</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>Chưa cài đặt</translation>
+    </message>
+    <message>
+        <source>Not available on this platform. With a pip install of Anki Miner, run: pip install "anki-miner[ocr]"</source>
+        <translation>Không khả dụng trên nền tảng này. Nếu cài Anki Miner bằng pip, hãy chạy: pip install "anki-miner[ocr]"</translation>
+    </message>
+    <message>
+        <source>Installing…</source>
+        <translation>Đang cài đặt…</translation>
+    </message>
+    <message>
+        <source>Set the subtitle region before reading subtitles.</source>
+        <translation>Hãy đặt vùng phụ đề trước khi đọc phụ đề.</translation>
+    </message>
+    <message>
+        <source>Output folder is not writable.</source>
+        <translation>Không ghi được vào thư mục đầu ra.</translation>
+    </message>
+    <message>
+        <source>Choose a video before reading subtitles.</source>
+        <translation>Hãy chọn một video trước khi đọc phụ đề.</translation>
+    </message>
+    <message>
+        <source>That video file no longer exists.</source>
+        <translation>Tệp video đó không còn tồn tại.</translation>
+    </message>
+    <message>
+        <source>Choose a folder before reading subtitles.</source>
+        <translation>Hãy chọn thư mục trước khi đọc phụ đề.</translation>
+    </message>
+    <message>
+        <source>That folder no longer exists.</source>
+        <translation>Thư mục đó không còn tồn tại.</translation>
+    </message>
+</context><context>
+    <name>VideoOcrWorker</name>
+    <message>
+        <source>Skipped, exists</source>
+        <translation>Đã bỏ qua, đã tồn tại</translation>
+    </message>
+    <message>
+        <source>Reading subtitles: %1 / %2</source>
+        <translation>Đang đọc phụ đề: %1 / %2</translation>
+    </message>
+    <message>
+        <source>Reading subtitles: %1</source>
+        <translation>Đang đọc phụ đề: %1</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Xong</translation>
+    </message>
+    <message>
+        <source>No subtitles found in the region</source>
+        <translation>Không tìm thấy phụ đề nào trong vùng</translation>
+    </message>
+    <message>
+        <source>Could not read the video %1</source>
+        <translation>Không thể đọc video %1</translation>
     </message>
 </context><context>
     <name>VulkanModelDownloadWorker</name>

@@ -1586,6 +1586,16 @@ No index files are deleted.</source>
         <translation>Anki Miner 关闭时中断</translation>
     </message>
 </context><context>
+    <name>BackgroundTaskController</name>
+    <message>
+        <source>Wait for the OCR engine download to finish, then try again.</source>
+        <translation>请等待 OCR 引擎下载完成后再试。</translation>
+    </message>
+    <message>
+        <source>Wait for the silence-removal download to finish, then try again.</source>
+        <translation>请等待静音移除库下载完成后再试。</translation>
+    </message>
+</context><context>
     <name>BatchProcessingTab</name>
     <message>
         <source>That translation subtitle folder no longer exists.</source>
@@ -2696,6 +2706,14 @@ No index files are deleted.</source>
     <message>
         <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
         <translation>对单卷文件夹或整个系列运行 mokuro 的日语 OCR，以便在“阅读 → 漫画”中挖词。请在“实用工具 → 漫画 OCR”的设置卡片中安装 mokuro。</translation>
+    </message>
+    <message>
+        <source>Read burned-in subtitles from a video into an .srt</source>
+        <translation>将视频中的硬字幕识别为 .srt 文件</translation>
+    </message>
+    <message>
+        <source>Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt that Video → Single can mine. Made for game longplays without commentary. Download the OCR engine from the setup card on Utilities → Video OCR.</source>
+        <translation>在视频画面中出现对白的位置框出一个区域，Anki Miner 会将其识别为带时间轴的 .srt 文件，供“视频 → 单个”挖词。专为无解说的游戏全流程视频设计。请在“实用工具 → 视频 OCR”的设置卡片中下载 OCR 引擎。</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -6504,6 +6522,10 @@ Words to add: %3. Continue?</source>
         <translation>轨道</translation>
     </message>
     <message>
+        <source>Video OCR</source>
+        <translation>视频 OCR</translation>
+    </message>
+    <message>
         <source>Anki Miner updated</source>
         <translation>Anki Miner 已更新</translation>
     </message>
@@ -7540,6 +7562,44 @@ Continue?</source>
     <message>
         <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
         <translation>单词会放入笔记类型的第一个字段“%1”，但它被映射到了“%2”。请在 Anki 中调整字段顺序，或选择其他笔记类型。</translation>
+    </message>
+</context><context>
+    <name>OcrRegionDialog</name>
+    <message>
+        <source>Set subtitle region</source>
+        <translation>设置字幕区域</translation>
+    </message>
+    <message>
+        <source>Move the slider to a moment with dialogue on screen, then drag a box around the subtitles.</source>
+        <translation>将滑块移到画面中出现对白的时刻，然后拖动鼠标框选字幕。</translation>
+    </message>
+    <message>
+        <source>Loading a frame…</source>
+        <translation>正在加载帧…</translation>
+    </message>
+    <message>
+        <source>Test this frame</source>
+        <translation>测试此帧</translation>
+    </message>
+    <message>
+        <source>This frame could not be read. Try another point in the video.</source>
+        <translation>无法读取此帧。请尝试视频中的其他位置。</translation>
+    </message>
+    <message>
+        <source>Download the OCR engine first, from the setup card on the Video OCR screen.</source>
+        <translation>请先在“视频 OCR”页面的设置卡片中下载 OCR 引擎。</translation>
+    </message>
+    <message>
+        <source>Reading…</source>
+        <translation>正在识别…</translation>
+    </message>
+    <message>
+        <source>No text found in the box.</source>
+        <translation>选框内未找到文字。</translation>
+    </message>
+    <message>
+        <source>The OCR engine could not start. The log has the details.</source>
+        <translation>OCR 引擎无法启动。详细信息请查看日志。</translation>
     </message>
 </context><context>
     <name>OnnxPackDownloadWorker</name>
@@ -12431,6 +12491,296 @@ Your installed resources and your theme are kept.</source>
     <message>
         <source>Choose which tools the Utilities tab shows. At least one stays.</source>
         <translation>选择“实用工具”标签页显示哪些工具。至少保留一个。</translation>
+    </message>
+</context><context>
+    <name>VideoOcrInstallWorker</name>
+    <message>
+        <source>%1 (%2%)</source>
+        <translation>%1（%2%）</translation>
+    </message>
+    <message>
+        <source>Downloading the OCR runtime…</source>
+        <translation>正在下载 OCR 运行时…</translation>
+    </message>
+    <message>
+        <source>Downloading the OCR models…</source>
+        <translation>正在下载 OCR 模型…</translation>
+    </message>
+    <message>
+        <source>OCR engine installed.</source>
+        <translation>OCR 引擎已安装。</translation>
+    </message>
+</context><context>
+    <name>VideoOcrTab</name>
+    <message>
+        <source>Progress</source>
+        <translation>进度</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>完成</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>完成：</translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>已跳过</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>已跳过：</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>已取消</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>失败——请查看日志</translation>
+    </message>
+    <message>
+        <source>Finished with errors — see log</source>
+        <translation>完成但有错误 — 请查看日志</translation>
+    </message>
+    <message>
+        <source>Some videos could not be read.</source>
+        <translation>无法识别部分视频。</translation>
+    </message>
+    <message>
+        <source>This video could not be read.</source>
+        <translation>无法识别此视频。</translation>
+    </message>
+    <message>
+        <source>Complete — %1 files processed</source>
+        <translation>完成——已处理 %1 个文件</translation>
+    </message>
+    <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>完成——已处理 %1 个，已跳过 %2 个</translation>
+    </message>
+    <message>
+        <source>No subtitles saved — all %1 skipped; see log.</source>
+        <translation>未保存任何字幕——全部 %1 个已跳过；请查看日志。</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>选择输出文件夹</translation>
+    </message>
+    <message>
+        <source>Next to each video</source>
+        <translation>各视频旁</translation>
+    </message>
+    <message>
+        <source>Video OCR</source>
+        <translation>视频 OCR</translation>
+    </message>
+    <message>
+        <source>Reading subtitles in file %1 of %2</source>
+        <translation>正在识别第 %1 个文件的字幕，共 %2 个</translation>
+    </message>
+    <message>
+        <source>The OCR engine could not start on this computer. The details say why.</source>
+        <translation>OCR 引擎无法在此电脑上启动。原因请查看详情。</translation>
+    </message>
+    <message>
+        <source>Input</source>
+        <translation>输入</translation>
+    </message>
+    <message>
+        <source>The OCR engine is not installed yet. Download it from the setup card below.</source>
+        <translation>尚未安装 OCR 引擎。请在下方的设置卡片中下载。</translation>
+    </message>
+    <message>
+        <source>Mode:</source>
+        <translation>模式：</translation>
+    </message>
+    <message>
+        <source>Single File</source>
+        <translation>单个文件</translation>
+    </message>
+    <message>
+        <source>Folder</source>
+        <translation>文件夹</translation>
+    </message>
+    <message>
+        <source>Read one video.</source>
+        <translation>识别一个视频。</translation>
+    </message>
+    <message>
+        <source>Read every video in a folder with the same region.</source>
+        <translation>使用同一区域识别文件夹中的每个视频。</translation>
+    </message>
+    <message>
+        <source>Video File:</source>
+        <translation>视频文件：</translation>
+    </message>
+    <message>
+        <source>This field takes a video file.</source>
+        <translation>此字段需要视频文件。</translation>
+    </message>
+    <message>
+        <source>Video Folder:</source>
+        <translation>视频文件夹：</translation>
+    </message>
+    <message>
+        <source>Subtitle region</source>
+        <translation>字幕区域</translation>
+    </message>
+    <message>
+        <source>Set region…</source>
+        <translation>设置区域…</translation>
+    </message>
+    <message>
+        <source>Draw a box around where the dialogue appears. One region is used for every video in a folder.</source>
+        <translation>框出对白出现的区域。文件夹中的每个视频都使用同一个区域。</translation>
+    </message>
+    <message>
+        <source>OCR engine</source>
+        <translation>OCR 引擎</translation>
+    </message>
+    <message>
+        <source>Download OCR engine</source>
+        <translation>下载 OCR 引擎</translation>
+    </message>
+    <message>
+        <source>Output</source>
+        <translation>输出</translation>
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation>输出：</translation>
+    </message>
+    <message>
+        <source>Choose Folder…</source>
+        <translation>选择文件夹…</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>重置</translation>
+    </message>
+    <message>
+        <source>Each .srt is saved next to its video unless you choose a folder.</source>
+        <translation>除非你另选文件夹，否则每个 .srt 文件都会保存在其视频旁边。</translation>
+    </message>
+    <message>
+        <source>Overwrite existing SRT files</source>
+        <translation>覆盖已有的 SRT 文件</translation>
+    </message>
+    <message>
+        <source>When unchecked, videos that already have an .srt file are skipped, not overwritten.</source>
+        <translation>未勾选时，已存在 .srt 文件的视频将被跳过，而不会被覆盖。</translation>
+    </message>
+    <message>
+        <source>Read Subtitles</source>
+        <translation>识别字幕</translation>
+    </message>
+    <message>
+        <source>No region set yet.</source>
+        <translation>尚未设置区域。</translation>
+    </message>
+    <message>
+        <source>%1% from the left, %2% from the top, %3% wide, %4% tall</source>
+        <translation>距左侧 %1%，距顶部 %2%，宽 %3%，高 %4%</translation>
+    </message>
+    <message>
+        <source>Choose a folder of videos first, then set the region on one of them.</source>
+        <translation>请先选择一个视频文件夹，然后在其中一个视频上设置区域。</translation>
+    </message>
+    <message>
+        <source>No videos were found in that folder.</source>
+        <translation>该文件夹中未找到视频。</translation>
+    </message>
+    <message>
+        <source>That folder could not be scanned.</source>
+        <translation>无法扫描该文件夹。</translation>
+    </message>
+    <message>
+        <source>Choose a video first, then set the region on one of its frames.</source>
+        <translation>请先选择一个视频，然后在它的某一帧上设置区域。</translation>
+    </message>
+    <message>
+        <source>Download OCR models</source>
+        <translation>下载 OCR 模型</translation>
+    </message>
+    <message>
+        <source>Downloads the two OCR models (about 33 MB) into Anki Miner's folder.</source>
+        <translation>将两个 OCR 模型（约 33 MB）下载到 Anki Miner 的文件夹中。</translation>
+    </message>
+    <message>
+        <source>Downloads the OCR runtime and its two models (about 50 MB) into Anki Miner's folder.</source>
+        <translation>将 OCR 运行时及其两个模型（约 50 MB）下载到 Anki Miner 的文件夹中。</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>未安装</translation>
+    </message>
+    <message>
+        <source>Not available on this platform. With a pip install of Anki Miner, run: pip install "anki-miner[ocr]"</source>
+        <translation>此平台不可用。如果你通过 pip 安装了 Anki Miner，请运行：pip install "anki-miner[ocr]"</translation>
+    </message>
+    <message>
+        <source>Installing…</source>
+        <translation>正在安装…</translation>
+    </message>
+    <message>
+        <source>Set the subtitle region before reading subtitles.</source>
+        <translation>识别字幕前请先设置字幕区域。</translation>
+    </message>
+    <message>
+        <source>Output folder is not writable.</source>
+        <translation>输出文件夹不可写。</translation>
+    </message>
+    <message>
+        <source>Choose a video before reading subtitles.</source>
+        <translation>识别字幕前请先选择一个视频。</translation>
+    </message>
+    <message>
+        <source>That video file no longer exists.</source>
+        <translation>该视频文件已不存在。</translation>
+    </message>
+    <message>
+        <source>Choose a folder before reading subtitles.</source>
+        <translation>识别字幕前请先选择一个文件夹。</translation>
+    </message>
+    <message>
+        <source>That folder no longer exists.</source>
+        <translation>该文件夹已不存在。</translation>
+    </message>
+</context><context>
+    <name>VideoOcrWorker</name>
+    <message>
+        <source>Skipped, exists</source>
+        <translation>已跳过，已存在</translation>
+    </message>
+    <message>
+        <source>Reading subtitles: %1 / %2</source>
+        <translation>正在识别字幕：%1 / %2</translation>
+    </message>
+    <message>
+        <source>Reading subtitles: %1</source>
+        <translation>正在识别字幕：%1</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>完成</translation>
+    </message>
+    <message>
+        <source>No subtitles found in the region</source>
+        <translation>该区域中未找到字幕</translation>
+    </message>
+    <message>
+        <source>Could not read the video %1</source>
+        <translation>无法读取视频 %1</translation>
     </message>
 </context><context>
     <name>VulkanModelDownloadWorker</name>

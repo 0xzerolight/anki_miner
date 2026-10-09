@@ -1588,6 +1588,16 @@ Nessun file indice viene eliminato.</translation>
         <translation>Interrotto alla chiusura di Anki Miner</translation>
     </message>
 </context><context>
+    <name>BackgroundTaskController</name>
+    <message>
+        <source>Wait for the OCR engine download to finish, then try again.</source>
+        <translation>Attendere il completamento del download del motore OCR, poi riprovare.</translation>
+    </message>
+    <message>
+        <source>Wait for the silence-removal download to finish, then try again.</source>
+        <translation>Attendere il completamento del download per la rimozione del silenzio, poi riprovare.</translation>
+    </message>
+</context><context>
     <name>BatchProcessingTab</name>
     <message>
         <source>That translation subtitle folder no longer exists.</source>
@@ -2699,6 +2709,14 @@ Nessun file indice viene eliminato.</translation>
     <message>
         <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
         <translation>Esegui l'OCR giapponese di mokuro su una cartella di volume o su un'intera serie, così da poterne estrarre le parole in Lettura → Manga. Installa mokuro dal suo riquadro di configurazione in Utilità → OCR manga.</translation>
+    </message>
+    <message>
+        <source>Read burned-in subtitles from a video into an .srt</source>
+        <translation>Leggi i sottotitoli impressi in un video e salvali in un .srt</translation>
+    </message>
+    <message>
+        <source>Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt that Video → Single can mine. Made for game longplays without commentary. Download the OCR engine from the setup card on Utilities → Video OCR.</source>
+        <translation>Disegna un rettangolo dove compaiono i dialoghi a schermo di un video e Anki Miner li legge e li salva in un .srt temporizzato da cui estrarre le parole in Video → Singolo. Pensato per i longplay di videogiochi senza commento. Scarica il motore OCR dal riquadro di configurazione in Utilità → OCR video.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -6541,6 +6559,10 @@ Parole da aggiungere: %3. Continuare?</translation>
         <translation>Tracce</translation>
     </message>
     <message>
+        <source>Video OCR</source>
+        <translation>OCR video</translation>
+    </message>
+    <message>
         <source>Anki Miner updated</source>
         <translation>Anki Miner aggiornato</translation>
     </message>
@@ -7577,6 +7599,44 @@ Continuare?</translation>
     <message>
         <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
         <translation>La parola va nel primo campo del tipo di nota, «%1», ma è mappata su «%2». Cambiare l'ordine dei campi in Anki o scegliere un altro tipo di nota.</translation>
+    </message>
+</context><context>
+    <name>OcrRegionDialog</name>
+    <message>
+        <source>Set subtitle region</source>
+        <translation>Imposta l'area dei sottotitoli</translation>
+    </message>
+    <message>
+        <source>Move the slider to a moment with dialogue on screen, then drag a box around the subtitles.</source>
+        <translation>Spostare il cursore su un momento con dialoghi a schermo, poi trascinare un rettangolo attorno ai sottotitoli.</translation>
+    </message>
+    <message>
+        <source>Loading a frame…</source>
+        <translation>Caricamento di un fotogramma…</translation>
+    </message>
+    <message>
+        <source>Test this frame</source>
+        <translation>Prova questo fotogramma</translation>
+    </message>
+    <message>
+        <source>This frame could not be read. Try another point in the video.</source>
+        <translation>Impossibile leggere questo fotogramma. Provare un altro punto del video.</translation>
+    </message>
+    <message>
+        <source>Download the OCR engine first, from the setup card on the Video OCR screen.</source>
+        <translation>Scaricare prima il motore OCR dal riquadro di configurazione della schermata OCR video.</translation>
+    </message>
+    <message>
+        <source>Reading…</source>
+        <translation>Lettura in corso…</translation>
+    </message>
+    <message>
+        <source>No text found in the box.</source>
+        <translation>Nessun testo trovato nel rettangolo.</translation>
+    </message>
+    <message>
+        <source>The OCR engine could not start. The log has the details.</source>
+        <translation>Impossibile avviare il motore OCR. I dettagli sono nel registro.</translation>
     </message>
 </context><context>
     <name>OnnxPackDownloadWorker</name>
@@ -12476,6 +12536,296 @@ Le tue risorse installate e il tuo tema vengono mantenuti.</translation>
     <message>
         <source>Choose which tools the Utilities tab shows. At least one stays.</source>
         <translation>Scegli quali strumenti mostra la scheda Utilità. Ne resta sempre almeno uno.</translation>
+    </message>
+</context><context>
+    <name>VideoOcrInstallWorker</name>
+    <message>
+        <source>%1 (%2%)</source>
+        <translation>%1 (%2%)</translation>
+    </message>
+    <message>
+        <source>Downloading the OCR runtime…</source>
+        <translation>Download del runtime OCR in corso…</translation>
+    </message>
+    <message>
+        <source>Downloading the OCR models…</source>
+        <translation>Download dei modelli OCR in corso…</translation>
+    </message>
+    <message>
+        <source>OCR engine installed.</source>
+        <translation>Motore OCR installato.</translation>
+    </message>
+</context><context>
+    <name>VideoOcrTab</name>
+    <message>
+        <source>Progress</source>
+        <translation>Avanzamento</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Completato</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>Completato: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>Saltato</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>Saltato: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Annulla</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Annullamento…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Annullato</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>Non riuscito — vedi il registro</translation>
+    </message>
+    <message>
+        <source>Finished with errors — see log</source>
+        <translation>Terminato con errori — vedere il registro</translation>
+    </message>
+    <message>
+        <source>Some videos could not be read.</source>
+        <translation>Impossibile leggere alcuni video.</translation>
+    </message>
+    <message>
+        <source>This video could not be read.</source>
+        <translation>Impossibile leggere questo video.</translation>
+    </message>
+    <message>
+        <source>Complete — %1 files processed</source>
+        <translation>Completato — %1 file elaborati</translation>
+    </message>
+    <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>Completato — %1 elaborati, %2 saltati</translation>
+    </message>
+    <message>
+        <source>No subtitles saved — all %1 skipped; see log.</source>
+        <translation>Nessun sottotitolo salvato — tutti i %1 saltati; vedere il registro.</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>Seleziona cartella di uscita</translation>
+    </message>
+    <message>
+        <source>Next to each video</source>
+        <translation>Accanto a ciascun video</translation>
+    </message>
+    <message>
+        <source>Video OCR</source>
+        <translation>OCR video</translation>
+    </message>
+    <message>
+        <source>Reading subtitles in file %1 of %2</source>
+        <translation>Lettura dei sottotitoli nel file %1 di %2</translation>
+    </message>
+    <message>
+        <source>The OCR engine could not start on this computer. The details say why.</source>
+        <translation>Impossibile avviare il motore OCR su questo computer. I dettagli spiegano il motivo.</translation>
+    </message>
+    <message>
+        <source>Input</source>
+        <translation>Ingresso</translation>
+    </message>
+    <message>
+        <source>The OCR engine is not installed yet. Download it from the setup card below.</source>
+        <translation>Il motore OCR non è ancora installato. Scaricarlo dal riquadro di configurazione qui sotto.</translation>
+    </message>
+    <message>
+        <source>Mode:</source>
+        <translation>Modalità:</translation>
+    </message>
+    <message>
+        <source>Single File</source>
+        <translation>File singolo</translation>
+    </message>
+    <message>
+        <source>Folder</source>
+        <translation>Cartella</translation>
+    </message>
+    <message>
+        <source>Read one video.</source>
+        <translation>Leggi un video.</translation>
+    </message>
+    <message>
+        <source>Read every video in a folder with the same region.</source>
+        <translation>Leggi ogni video di una cartella con la stessa area.</translation>
+    </message>
+    <message>
+        <source>Video File:</source>
+        <translation>File video:</translation>
+    </message>
+    <message>
+        <source>This field takes a video file.</source>
+        <translation>Questo campo accetta un file video.</translation>
+    </message>
+    <message>
+        <source>Video Folder:</source>
+        <translation>Cartella video:</translation>
+    </message>
+    <message>
+        <source>Subtitle region</source>
+        <translation>Area dei sottotitoli</translation>
+    </message>
+    <message>
+        <source>Set region…</source>
+        <translation>Imposta area…</translation>
+    </message>
+    <message>
+        <source>Draw a box around where the dialogue appears. One region is used for every video in a folder.</source>
+        <translation>Disegna un rettangolo attorno al punto in cui compaiono i dialoghi. Per tutti i video di una cartella si usa un'unica area.</translation>
+    </message>
+    <message>
+        <source>OCR engine</source>
+        <translation>Motore OCR</translation>
+    </message>
+    <message>
+        <source>Download OCR engine</source>
+        <translation>Scarica motore OCR</translation>
+    </message>
+    <message>
+        <source>Output</source>
+        <translation>Uscita</translation>
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation>Uscita:</translation>
+    </message>
+    <message>
+        <source>Choose Folder…</source>
+        <translation>Scegli cartella…</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>Reimposta</translation>
+    </message>
+    <message>
+        <source>Each .srt is saved next to its video unless you choose a folder.</source>
+        <translation>Ogni .srt viene salvato accanto al proprio video, a meno che non si scelga una cartella.</translation>
+    </message>
+    <message>
+        <source>Overwrite existing SRT files</source>
+        <translation>Sovrascrivi i file SRT esistenti</translation>
+    </message>
+    <message>
+        <source>When unchecked, videos that already have an .srt file are skipped, not overwritten.</source>
+        <translation>Se deselezionato, i video che hanno già un file .srt vengono saltati, non sovrascritti.</translation>
+    </message>
+    <message>
+        <source>Read Subtitles</source>
+        <translation>Leggi sottotitoli</translation>
+    </message>
+    <message>
+        <source>No region set yet.</source>
+        <translation>Ancora nessuna area impostata.</translation>
+    </message>
+    <message>
+        <source>%1% from the left, %2% from the top, %3% wide, %4% tall</source>
+        <translation>%1% da sinistra, %2% dall'alto, larghezza %3%, altezza %4%</translation>
+    </message>
+    <message>
+        <source>Choose a folder of videos first, then set the region on one of them.</source>
+        <translation>Scegliere prima una cartella di video, poi impostare l'area su uno di essi.</translation>
+    </message>
+    <message>
+        <source>No videos were found in that folder.</source>
+        <translation>Nessun video trovato in quella cartella.</translation>
+    </message>
+    <message>
+        <source>That folder could not be scanned.</source>
+        <translation>Impossibile analizzare quella cartella.</translation>
+    </message>
+    <message>
+        <source>Choose a video first, then set the region on one of its frames.</source>
+        <translation>Scegliere prima un video, poi impostare l'area su uno dei suoi fotogrammi.</translation>
+    </message>
+    <message>
+        <source>Download OCR models</source>
+        <translation>Scarica modelli OCR</translation>
+    </message>
+    <message>
+        <source>Downloads the two OCR models (about 33 MB) into Anki Miner's folder.</source>
+        <translation>Scarica i due modelli OCR (circa 33 MB) nella cartella di Anki Miner.</translation>
+    </message>
+    <message>
+        <source>Downloads the OCR runtime and its two models (about 50 MB) into Anki Miner's folder.</source>
+        <translation>Scarica il runtime OCR e i suoi due modelli (circa 50 MB) nella cartella di Anki Miner.</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>Non installato</translation>
+    </message>
+    <message>
+        <source>Not available on this platform. With a pip install of Anki Miner, run: pip install "anki-miner[ocr]"</source>
+        <translation>Non disponibile su questa piattaforma. Con un'installazione di Anki Miner tramite pip, eseguire: pip install "anki-miner[ocr]"</translation>
+    </message>
+    <message>
+        <source>Installing…</source>
+        <translation>Installazione in corso…</translation>
+    </message>
+    <message>
+        <source>Set the subtitle region before reading subtitles.</source>
+        <translation>Impostare l'area dei sottotitoli prima di leggerli.</translation>
+    </message>
+    <message>
+        <source>Output folder is not writable.</source>
+        <translation>La cartella di output non è scrivibile.</translation>
+    </message>
+    <message>
+        <source>Choose a video before reading subtitles.</source>
+        <translation>Scegliere un video prima di leggere i sottotitoli.</translation>
+    </message>
+    <message>
+        <source>That video file no longer exists.</source>
+        <translation>Quel file video non esiste più.</translation>
+    </message>
+    <message>
+        <source>Choose a folder before reading subtitles.</source>
+        <translation>Scegliere una cartella prima di leggere i sottotitoli.</translation>
+    </message>
+    <message>
+        <source>That folder no longer exists.</source>
+        <translation>Quella cartella non esiste più.</translation>
+    </message>
+</context><context>
+    <name>VideoOcrWorker</name>
+    <message>
+        <source>Skipped, exists</source>
+        <translation>Saltato, esistente</translation>
+    </message>
+    <message>
+        <source>Reading subtitles: %1 / %2</source>
+        <translation>Lettura dei sottotitoli: %1 / %2</translation>
+    </message>
+    <message>
+        <source>Reading subtitles: %1</source>
+        <translation>Lettura dei sottotitoli: %1</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Completato</translation>
+    </message>
+    <message>
+        <source>No subtitles found in the region</source>
+        <translation>Nessun sottotitolo trovato nell'area</translation>
+    </message>
+    <message>
+        <source>Could not read the video %1</source>
+        <translation>Impossibile leggere il video %1</translation>
     </message>
 </context><context>
     <name>VulkanModelDownloadWorker</name>

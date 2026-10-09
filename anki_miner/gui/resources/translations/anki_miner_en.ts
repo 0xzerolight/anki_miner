@@ -1579,6 +1579,16 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>BackgroundTaskController</name>
+    <message>
+        <source>Wait for the OCR engine download to finish, then try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Wait for the silence-removal download to finish, then try again.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>BatchProcessingTab</name>
     <message>
         <source>That translation subtitle folder no longer exists.</source>
@@ -2689,6 +2699,14 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Read burned-in subtitles from a video into an .srt</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt that Video → Single can mine. Made for game longplays without commentary. Download the OCR engine from the setup card on Utilities → Video OCR.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6515,6 +6533,10 @@ Words to add: %3. Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Video OCR</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Anki Miner updated</source>
         <translation type="unfinished" />
     </message>
@@ -7546,6 +7568,44 @@ Continue?</source>
     </message>
     <message>
         <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>OcrRegionDialog</name>
+    <message>
+        <source>Set subtitle region</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Move the slider to a moment with dialogue on screen, then drag a box around the subtitles.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Loading a frame…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Test this frame</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This frame could not be read. Try another point in the video.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download the OCR engine first, from the setup card on the Video OCR screen.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reading…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No text found in the box.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The OCR engine could not start. The log has the details.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -12428,6 +12488,296 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Choose which tools the Utilities tab shows. At least one stays.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>VideoOcrInstallWorker</name>
+    <message>
+        <source>%1 (%2%)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloading the OCR runtime…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloading the OCR models…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>OCR engine installed.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>VideoOcrTab</name>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Finished with errors — see log</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Some videos could not be read.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This video could not be read.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 files processed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No subtitles saved — all %1 skipped; see log.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Next to each video</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Video OCR</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reading subtitles in file %1 of %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The OCR engine could not start on this computer. The details say why.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Input</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The OCR engine is not installed yet. Download it from the setup card below.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mode:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Single File</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Folder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Read one video.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Read every video in a folder with the same region.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Video File:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This field takes a video file.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Video Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle region</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Set region…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Draw a box around where the dialogue appears. One region is used for every video in a folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>OCR engine</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download OCR engine</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Output</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose Folder…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Each .srt is saved next to its video unless you choose a folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Overwrite existing SRT files</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>When unchecked, videos that already have an .srt file are skipped, not overwritten.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Read Subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No region set yet.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1% from the left, %2% from the top, %3% wide, %4% tall</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose a folder of videos first, then set the region on one of them.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No videos were found in that folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That folder could not be scanned.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose a video first, then set the region on one of its frames.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download OCR models</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloads the two OCR models (about 33 MB) into Anki Miner's folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloads the OCR runtime and its two models (about 50 MB) into Anki Miner's folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Not available on this platform. With a pip install of Anki Miner, run: pip install "anki-miner[ocr]"</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Installing…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Set the subtitle region before reading subtitles.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Output folder is not writable.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose a video before reading subtitles.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That video file no longer exists.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose a folder before reading subtitles.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That folder no longer exists.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>VideoOcrWorker</name>
+    <message>
+        <source>Skipped, exists</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reading subtitles: %1 / %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reading subtitles: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No subtitles found in the region</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not read the video %1</source>
         <translation type="unfinished" />
     </message>
 </context><context>
