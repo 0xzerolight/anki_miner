@@ -159,10 +159,11 @@ asr-vulkan = [
     "faster-whisper>=1.1.0",
     "pywhispercpp>=1.5.0",
 ]
-# Utilities -> Video OCR. onnxruntime publishes no Intel-mac wheel at the pinned
-# versions, so the tool reports itself unavailable there.
+# Utilities -> Video OCR. No platform marker: 1.23.2 is the last onnxruntime with
+# Intel-mac wheels (cp310-313) and no release has an sdist, so pip settles on it
+# there. The in-app onnxruntime pack, not this extra, is unavailable on Intel macs.
 ocr = [
-    "onnxruntime>=1.23.2; not (sys_platform == 'darwin' and platform_machine == 'x86_64')",
+    "onnxruntime>=1.23.2",
 ]
 # Chinese mining engine. jieba (pure Python, sdist-only on PyPI) and pypinyin
 # are hard requirements of the zh code paths; OpenCC ships a native extension, so
