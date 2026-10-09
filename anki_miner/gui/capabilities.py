@@ -1308,7 +1308,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
             "Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt "
-            "that Video → Single can mine. Made for game longplays without voice-over. Download the OCR engine "
+            "that Video → Single can mine. Made for game longplays without commentary. Download the OCR engine "
             "from the setup card on Utilities → Video OCR.",
         ),
         category=_CAT_TOOLS,
