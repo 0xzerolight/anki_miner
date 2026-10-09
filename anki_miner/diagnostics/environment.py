@@ -92,6 +92,7 @@ _QT_ENV_VARS = (
 #: Reported in ``packages``. The distribution names whose absence or version
 #: has actually explained a bug report: the GUI toolkit, the mining engine, the
 #: subtitle/HTTP stack, the ASR pair, the zh/ko engines and the imaging deps.
+#: The mining language's own engine follows, read off its pack manifest.
 _PACKAGE_NAMES = (
     "PyQt6",
     "yt-dlp",
@@ -249,19 +250,65 @@ def _libmpv_source() -> str:
     return " ".join(parts)
 
 
-def _package_versions() -> str:
-    """Render ``name=version`` for every name in :data:`_PACKAGE_NAMES`.
+def _language_packages(config: Any) -> dict[str, str]:
+    """Map the mining language's engine packages to the pack code that ships each.
+
+    Read off the pack manifest, which is pure data: no engine is imported or loaded.
+    Empty for a language with no pack (ja, whose engine is bundled). A spaCy
+    language reports the runtime by its one import name, not its dependencies.
+    """
+    from anki_miner.languages._spaced.availability import (  # noqa: PLC0415
+        SPACY_IMPORT_NAME,
+        SPACY_RUNTIME_PACK,
+    )
+    from anki_miner.languages.registry import config_language  # noqa: PLC0415
+    from anki_miner.services.language_pack_installer import load_pack  # noqa: PLC0415
+
+    code = config_language(config)
+    pack = load_pack(code)
+    if pack is None:
+        return {}
+    names: dict[str, str] = {}
+    if SPACY_RUNTIME_PACK in pack.requires:
+        names[SPACY_IMPORT_NAME] = SPACY_RUNTIME_PACK
+    names.update((comp.import_name, code) for comp in pack.components if comp.required)
+    return names
+
+
+def _package_version(name: str, pack_code: str | None) -> str:
+    try:
+        return metadata.version(name)
+    except metadata.PackageNotFoundError:
+        if pack_code is None:
+            return "<absent>"
+    # A manifest lists import names, and a few ship under another distribution
+    # name (ru's dawg_python is DAWG2-Python).
+    for dist in metadata.packages_distributions().get(name, ()):
+        try:
+            return metadata.version(dist)
+        except metadata.PackageNotFoundError:
+            continue
+    # A pack extracts no .dist-info, and a data pack (ar calima_msa, fa hazm_data)
+    # is no distribution at all: only the pack on disk can say it is there.
+    from anki_miner.services.language_pack_installer import component_path  # noqa: PLC0415
+
+    return "pack" if component_path(pack_code, name) is not None else "<absent>"
+
+
+def _package_versions(config: Any) -> str:
+    """Render ``name=version`` for :data:`_PACKAGE_NAMES`, then the mining language's engine.
 
     A name that is not installed renders ``<absent>`` — the interesting value in
-    a frozen bundle, where a missing dependency is the whole bug. Metadata is
-    read per name so one unreadable dist-info cannot blank the rest.
+    a frozen bundle, where a missing dependency is the whole bug — and one the
+    language pack provides renders ``pack``. Metadata is read per name so one
+    unreadable dist-info cannot blank the rest.
     """
+    language = _language_packages(config)
+    names = (*_PACKAGE_NAMES, *(name for name in language if name not in _PACKAGE_NAMES))
     parts: list[str] = []
-    for name in _PACKAGE_NAMES:
+    for name in names:
         try:
-            value = metadata.version(name)
-        except metadata.PackageNotFoundError:
-            value = "<absent>"
+            value = _package_version(name, language.get(name))
         except Exception as exc:
             value = _unavailable(exc)
         parts.append(f"{name}={value}")
@@ -357,7 +404,7 @@ def collect_environment(config, *, platform_name: str = "") -> EnvironmentSnapsh
         bundled_cxx_runtime=_safe_string(_bundled_cxx_runtime),
         libmpv_source=_safe_string(_libmpv_source),
         video_preview=_safe_string(_video_preview_state),
-        packages=_safe_string(_package_versions),
+        packages=_safe_string(lambda: _package_versions(config)),
         ffmpeg_version=_safe_string(lambda: _tool_version(ffmpeg, "-version")),
         ffprobe_version=_safe_string(lambda: _tool_version(ffprobe, "-version")),
         ytdlp_version=_safe_string(lambda: _tool_version(ytdlp, "--version")),

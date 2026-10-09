@@ -267,5 +267,102 @@ class TestVersionFields:
         assert {"packages", "ffmpeg_version", "ffprobe_version", "ytdlp_version", "alass_version"} <= rendered
 
 
+class TestMiningLanguagePackages:
+    """``packages`` names the active mining language's engine, read off its pack manifest.
+
+    Before this, the field listed only the ja/zh/ko engines, so a broken spaCy or
+    pythainlp install was invisible in a support bundle.
+    """
+
+    @staticmethod
+    def _packages(language: str) -> str:
+        from dataclasses import replace
+
+        return collect_environment(replace(create_default_config(), language=language)).packages
+
+    def test_thai_reports_pythainlp(self):
+        assert "pythainlp=" in self._packages("th")
+
+    def test_spacy_language_reports_the_runtime_and_its_model(self):
+        packages = self._packages("es")
+        assert "spacy=" in packages
+        assert "es_core_news_sm=" in packages
+        assert packages.index("spacy=") < packages.index("es_core_news_sm=")
+
+    def test_japanese_output_is_unchanged(self, monkeypatch):
+        from anki_miner.diagnostics import environment as env_module
+
+        monkeypatch.setattr(env_module.metadata, "version", lambda name: "1.0")
+        assert self._packages("ja") == " ".join(f"{name}=1.0" for name in env_module._PACKAGE_NAMES)
+
+    def test_base_names_are_never_repeated(self):
+        packages = self._packages("ko")
+        assert packages.count("kiwipiepy=") == 1
+        assert "kiwipiepy_model=" in packages
+
+    def test_pack_installed_component_renders_pack(self, monkeypatch, tmp_path):
+        """A pack extracts no ``.dist-info`` and a data pack (ar calima_msa) is no
+        distribution at all, so metadata cannot see it; the pack on disk can."""
+        from importlib.metadata import PackageNotFoundError
+
+        from anki_miner.diagnostics import environment as env_module
+        from anki_miner.services import language_pack_installer
+
+        monkeypatch.setattr(env_module.metadata, "version", _raising(PackageNotFoundError("nope")))
+        on_disk = {("ar", "calima_msa"), ("_spacy", "spacy"), ("es", "es_core_news_sm")}
+        monkeypatch.setattr(
+            language_pack_installer,
+            "component_path",
+            lambda code, name: tmp_path if (code, name) in on_disk else None,
+        )
+
+        assert "calima_msa=pack" in self._packages("ar")
+        es = self._packages("es")
+        assert "spacy=pack" in es
+        assert "es_core_news_sm=pack" in es
+        assert "PyQt6=<absent>" in es
+
+    def test_import_name_resolves_to_its_distribution(self, monkeypatch):
+        """Manifests list import names; ru's ``dawg_python`` ships as ``DAWG2-Python``."""
+        from importlib.metadata import PackageNotFoundError
+
+        from anki_miner.diagnostics import environment as env_module
+
+        def version(name):
+            if name == "DAWG2-Python":
+                return "0.9"
+            raise PackageNotFoundError(name)
+
+        monkeypatch.setattr(env_module.metadata, "version", version)
+        monkeypatch.setattr(env_module.metadata, "packages_distributions", lambda: {"dawg_python": ["DAWG2-Python"]})
+        assert "dawg_python=0.9" in self._packages("ru")
+
+    def test_missing_pack_component_renders_absent(self, monkeypatch):
+        from importlib.metadata import PackageNotFoundError
+
+        from anki_miner.diagnostics import environment as env_module
+
+        monkeypatch.setattr(env_module.metadata, "version", _raising(PackageNotFoundError("nope")))
+        assert "hazm_data=<absent>" in self._packages("fa")
+
+    def test_pack_probe_failure_stays_on_its_own_name(self, monkeypatch):
+        from importlib.metadata import PackageNotFoundError
+
+        from anki_miner.diagnostics import environment as env_module
+        from anki_miner.services import language_pack_installer
+
+        monkeypatch.setattr(env_module.metadata, "version", _raising(PackageNotFoundError("nope")))
+        monkeypatch.setattr(language_pack_installer, "component_path", _raising(PermissionError("denied")))
+        packages = self._packages("th")
+        assert "pythainlp=<unavailable: PermissionError>" in packages
+        assert "PyQt6=<absent>" in packages
+
+    def test_manifest_failure_never_fails_the_snapshot(self, monkeypatch):
+        from anki_miner.services import language_pack_installer
+
+        monkeypatch.setattr(language_pack_installer, "load_pack", _raising(RuntimeError("bad manifest")))
+        assert self._packages("th").startswith("<unavailable:")
+
+
 def _boom():
     raise RuntimeError("probe failed")
