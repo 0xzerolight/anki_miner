@@ -103,7 +103,10 @@ _SEVERITY: dict[str, int] = {
 HEALTH_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("destination", ("anki.connect", "anki.deck", "anki.note_type", "anki.fields")),
     ("media", ("tools.ffmpeg", "tools.ffprobe")),
-    ("language", ("resources.dictionary", "resources.frequency", "resources.pitch", "resources.audio")),
+    (
+        "language",
+        ("language.engine", "resources.dictionary", "resources.frequency", "resources.pitch", "resources.audio"),
+    ),
     ("optional", ("tools.ytdlp", "tools.alass", "tools.mokuro")),
     ("updates", ("app.updates",)),
 )
@@ -124,6 +127,7 @@ HEALTH_FIX_ANCHORS: dict[str, str] = {
     "anki.deck": "anki.deck_name",
     "anki.note_type": "anki.note_type",
     "anki.fields": "anki.expression_field_input",
+    "language.engine": "mining_language.mining_language_combo",
     "resources.dictionary": "dictionaries.chain",
     "resources.frequency": "frequency.chain",
     "resources.pitch": "pitch.chain",
@@ -160,6 +164,7 @@ _COMPONENT_KEYS: dict[str, str] = {
     "Field Mapping": "anki.fields",
     "ffmpeg": "tools.ffmpeg",
     "ffprobe": "tools.ffprobe",
+    "Language Engine": "language.engine",
     "Offline Dictionary": "resources.dictionary",
     "Frequency Sources": "resources.frequency",
     "Pitch Sources": "resources.pitch",
@@ -263,6 +268,13 @@ def checks_from_validation(result: ValidationResult, checked_at: datetime) -> di
 
     alass_state, alass_detail = _optional_tool_state("tools.alass")
     checks["tools.alass"] = _record("tools.alass", alass_state, alass_detail)
+
+    # Required, unlike the families below: healthy names the language, broken
+    # carries the profile's own reason (the pack to download).
+    engine_state, engine_detail = _issue_state("language.engine")
+    checks["language.engine"] = _record(
+        "language.engine", engine_state, engine_detail or versions.get("language-engine", "")
+    )
 
     dictionary_state, dictionary_detail = _issue_state("resources.dictionary")
     checks["resources.dictionary"] = _record(
@@ -813,6 +825,7 @@ class SystemHealthWindow(EnhancedDialog):
             "anki.note_type": self.tr("Note type"),
             "anki.fields": self.tr("Field mapping"),
             "tools.ffmpeg": self.tr("ffmpeg (video tools)"),
+            "language.engine": self.tr("Language engine"),
             "resources.dictionary": self.tr("Offline dictionary"),
             "resources.frequency": self.tr("Frequency lists"),
             "resources.pitch": self.tr("Pitch accent"),

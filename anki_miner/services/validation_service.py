@@ -257,6 +257,13 @@ class ValidationService:
         if not mokuro_ok and "manga_ocr" in get_profile(config_language(self.config)).capabilities:
             issues.append(ValidationIssue(component="mokuro", severity="WARNING", message=mokuro_msg))
 
+        # The mining language's engine (spaCy model, jieba, ...). Without it no
+        # word parses, so it is an ERROR; the version slot names the language.
+        engine_ok, engine_msg = self._check_language_engine()
+        tool_versions["language-engine"] = engine_msg if engine_ok else ""
+        if not engine_ok:
+            issues.append(ValidationIssue(component="Language Engine", severity="ERROR", message=engine_msg))
+
         # Check deck exists (only if AnkiConnect is working)
         deck_ok = False
         if ankiconnect_ok:
@@ -660,6 +667,20 @@ class ValidationService:
             )
         resolved = resolve_mokuro(self.config)
         return _record("mokuro", True, f"mokuro {_classify_resolved('mokuro', resolved)}", path=resolved)
+
+    def _check_language_engine(self) -> tuple[bool, str]:
+        """Can the active mining language mine here? The profile's own probe answers.
+
+        The same ``unavailable_reason`` the boot banner, the language switch and
+        the CLI read: ``find_spec`` and a pack stat, nothing imported.
+        """
+        from anki_miner.languages.registry import config_language, get_profile
+
+        profile = get_profile(config_language(self.config))
+        reason = profile.unavailable_reason() if profile.unavailable_reason is not None else None
+        if reason:
+            return _record("language-engine", False, reason, language=profile.code)
+        return _record("language-engine", True, f"{profile.english_name} ({profile.code})", language=profile.code)
 
     def _ytdlp_staleness_warning(self, version_message: str) -> str | None:
         """Nudge opted-out users whose yt-dlp has aged out, else None.

@@ -28,6 +28,7 @@ from anki_miner.gui.widgets.dialogs.system_health_window import (
     HEALTH_FIX_ANCHORS,
     HEALTH_FIX_ROUTES,
     HEALTH_FIX_WIZARD,
+    HEALTH_GROUPS,
     HEALTH_KEYS,
     HEALTH_NOT_INSTALLED,
     HEALTH_NOT_SET_UP,
@@ -231,6 +232,36 @@ def test_mokuro_present_fills_detail_from_tool_versions():
     assert checks["tools.mokuro"].detail == "mokuro [app-managed]"
 
 
+def test_the_language_engine_leads_the_language_group():
+    """A missing spaCy model used to leave the whole screen green: no row asked."""
+    assert dict(HEALTH_GROUPS)["language"] == (
+        "language.engine",
+        "resources.dictionary",
+        "resources.frequency",
+        "resources.pitch",
+        "resources.audio",
+    )
+    assert HEALTH_FIX_ANCHORS["language.engine"] == "mining_language.mining_language_combo"
+
+
+def test_a_missing_language_engine_fails_with_the_profiles_reason():
+    result = _result(
+        issues=[ValidationIssue(component="Language Engine", severity="ERROR", message="Thai needs its language pack")]
+    )
+
+    checks = checks_from_validation(result, CHECKED_AT)
+
+    assert checks["language.engine"].state == HEALTH_FAIL
+    assert checks["language.engine"].detail == "Thai needs its language pack"
+
+
+def test_a_ready_language_engine_names_the_language():
+    checks = checks_from_validation(_result(versions={"language-engine": "Japanese (ja)"}), CHECKED_AT)
+
+    assert checks["language.engine"].state == HEALTH_OK
+    assert checks["language.engine"].detail == "Japanese (ja)"
+
+
 # ---------------------------------------------------------------------------
 # Report
 # ---------------------------------------------------------------------------
@@ -397,6 +428,39 @@ def test_nothing_checked_yet_is_said_once(health_window):
 
 def test_mokuro_row_label_names_the_tool(health_window):
     assert "mokuro" in health_window._rows["tools.mokuro"].label.text()
+
+
+def test_the_language_engine_row_is_labelled(health_window):
+    assert health_window._rows["language.engine"].label.text() == "Language engine"
+
+
+def test_a_missing_language_engine_shows_its_reason_and_a_fix(health_window, qtbot):
+    result = _result(
+        issues=[ValidationIssue(component="Language Engine", severity="ERROR", message="Thai needs its language pack")]
+    )
+    health_window.show()
+
+    health_window.show_health(HealthReport.unknown().with_validation(result, CHECKED_AT))
+
+    row = health_window._rows["language.engine"]
+    assert row.badge.text() == "Not working"
+    assert row.detail_label.text() == "Thai needs its language pack"
+    assert row.fix_button.isVisible()
+    with qtbot.waitSignal(health_window.fix_requested) as blocker:
+        row.fix_button.click()
+    assert blocker.args == ["mining_language.mining_language_combo"]
+
+
+def test_a_ready_language_engine_shows_the_language_name(health_window):
+    result = _result(versions={"language-engine": "Japanese (ja)"})
+    health_window.show()
+
+    health_window.show_health(HealthReport.unknown().with_validation(result, CHECKED_AT))
+
+    row = health_window._rows["language.engine"]
+    assert row.badge.text() == "Ready"
+    assert row.detail_label.text() == "Japanese (ja)"
+    assert not row.fix_button.isVisible()
 
 
 def test_sweep_error_is_shown_and_then_cleared(health_window):
