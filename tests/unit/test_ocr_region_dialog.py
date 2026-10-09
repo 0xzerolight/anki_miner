@@ -88,3 +88,26 @@ def test_test_this_frame_shows_the_scans_reading(dialog, qtbot):
     with patch.object(mod, "read_region_text", return_value="「行くぞ」"):
         dialog.test_button.click()
         qtbot.waitUntil(lambda: dialog.test_result.text() == "「行くぞ」", timeout=3000)
+
+
+def test_a_new_frame_clears_the_reading_and_drops_a_late_one(dialog, qtbot):
+    dialog._on_region_drawn(Region(0.1, 0.8, 0.8, 0.15))
+    with patch.object(mod, "read_region_text", return_value="「行くぞ」"):
+        dialog.test_button.click()
+        qtbot.waitUntil(lambda: dialog.test_result.text() == "「行くぞ」", timeout=3000)
+    old_test_gen = dialog._test_gen
+    dialog._on_still(dialog._gen, np.full((500, 1000, 3), 30, dtype=np.uint8))
+    assert dialog.test_result.text() == ""
+    dialog._on_test_done(old_test_gen, "x")  # a read of the frame no longer shown
+    assert dialog.test_result.text() == ""
+
+
+def test_a_failed_frame_retires_the_old_one(dialog):
+    dialog._on_region_drawn(Region(0.1, 0.8, 0.8, 0.15))
+    assert dialog.test_button.isEnabled()
+    old_test_gen = dialog._test_gen
+    dialog._on_still_failed(dialog._gen, "boom")
+    assert not dialog.test_button.isEnabled()
+    assert dialog.region_thumbnail() is None
+    dialog._on_test_done(old_test_gen, "x")  # a read of the frame no longer shown
+    assert dialog.test_result.text() == ""

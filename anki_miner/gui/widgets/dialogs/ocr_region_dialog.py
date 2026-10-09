@@ -289,6 +289,7 @@ class OcrRegionDialog(QDialog):
         if gen == self._gen and isinstance(frame, np.ndarray):
             self._frame = frame
             self.canvas.set_pixmap(_to_pixmap(frame))
+            self._retire_reading()
             self.test_button.setEnabled(self._region is not None)
         self._drain()
 
@@ -298,8 +299,17 @@ class OcrRegionDialog(QDialog):
         self._inflight = False
         logger.warning("Video OCR region dialog: frame failed: %s", message)
         if gen == self._gen:
+            # The old frame is off screen now: Test and the thumbnail must not use it.
+            self._frame = None
+            self._retire_reading()
+            self.test_button.setEnabled(False)
             self.canvas.set_message(self.tr("This frame could not be read. Try another point in the video."))
         self._drain()
+
+    def _retire_reading(self) -> None:
+        """A reading describes the frame it was taken from: drop the shown one and any in flight."""
+        self._test_gen += 1
+        self.test_result.setText("")
 
     def _drain(self) -> None:
         if self._pending and not self._closing:
