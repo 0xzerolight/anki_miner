@@ -20,7 +20,7 @@ from datetime import datetime
 
 import pytest
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor, QImage
+from PyQt6.QtGui import QColor, QImage, QPalette
 from PyQt6.QtWidgets import QLabel
 
 from anki_miner.gui.resources.styles import Theme
@@ -478,18 +478,47 @@ def test_a_ready_language_engine_shows_the_language_name(health_window):
     assert not row.fix_button.isVisible()
 
 
+_PROBE_BACKGROUND = QColor("#ffffff")
+_PROBE_TEXT = QColor("#000000")
+
+
 def _ink_span(text: str, qtbot) -> tuple[int, int]:
-    """Leftmost and rightmost dark pixel of ``text`` in a 400 px plain-text label."""
+    """Leftmost and rightmost ink pixel of ``text`` in a 400 px plain-text label.
+
+    The label brings its own colours, font size and box: ``render`` paints the
+    palette's Window colour, so a dark application palette another file left
+    on this xdist worker counted the whole label as ink (x = 0..399). Ink is
+    whatever differs from the label's own background.
+    """
     label = QLabel(text)
     qtbot.addWidget(label)
     label.setWordWrap(True)
     label.setTextFormat(Qt.TextFormat.PlainText)
+    palette = QPalette(label.palette())
+    palette.setColor(QPalette.ColorRole.Window, _PROBE_BACKGROUND)
+    palette.setColor(QPalette.ColorRole.WindowText, _PROBE_TEXT)
+    label.setPalette(palette)
+    label.setStyleSheet(
+        "QLabel { background: #ffffff; color: #000000; border: none; padding: 0; margin: 0; font-size: 13px; }"
+    )
     label.resize(400, 30)
     image = QImage(400, 30, QImage.Format.Format_ARGB32)
-    image.fill(QColor("white"))
+    image.fill(_PROBE_BACKGROUND)
     label.render(image)
-    xs = [x for x in range(400) for y in range(30) if image.pixelColor(x, y).lightness() < 128]
-    return (min(xs), max(xs)) if xs else (-1, -1)
+
+    def is_ink(x: int, y: int) -> bool:
+        pixel = image.pixelColor(x, y)
+        return (
+            abs(pixel.red() - _PROBE_BACKGROUND.red())
+            + abs(pixel.green() - _PROBE_BACKGROUND.green())
+            + abs(pixel.blue() - _PROBE_BACKGROUND.blue())
+            > 192
+        )
+
+    assert not is_ink(399, 0), "the probe label did not paint its own background"
+    xs = [x for x in range(400) for y in range(30) if is_ink(x, y)]
+    assert xs, f"no ink found for {text!r}"
+    return min(xs), max(xs)
 
 
 def _engine_detail(health_window, code: str) -> str:
@@ -506,7 +535,7 @@ def test_a_right_to_left_language_name_is_isolated_in_its_row(health_window, cod
     # bare "العربية (ar)" laid out right to left: right-aligned, code first.
     name = get_profile(code).display_name
 
-    assert _engine_detail(health_window, code) == f"⁨{name}⁩ ({code})"
+    assert _engine_detail(health_window, code) == f"\u2068{name}\u2069 ({code})"
 
 
 @pytest.mark.parametrize("code", ["ja", "es"])
@@ -517,10 +546,11 @@ def test_a_left_to_right_language_name_row_is_unchanged(health_window, code):
 
 
 def test_an_arabic_engine_row_paints_from_the_left_like_japanese(health_window, qtbot):
-    ja_left, _ = _ink_span(_engine_detail(health_window, "ja"), qtbot)
+    ja_left, ja_right = _ink_span(_engine_detail(health_window, "ja"), qtbot)
     ar_left, ar_right = _ink_span(_engine_detail(health_window, "ar"), qtbot)
 
     assert ja_left < 10
+    assert ja_right < 200
     assert ar_left < 10
     assert ar_right < 200
 
