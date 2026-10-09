@@ -30,6 +30,7 @@ from anki_miner.gui.utils.image_fit import fit_transform, widget_to_image
 from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.enhanced import ModernButton
+from anki_miner.services.video_ocr import model_installer, runtime
 from anki_miner.services.video_ocr.frame_source import Region, crop_frame, still_at
 from anki_miner.services.video_ocr.scanner import read_region_text
 from anki_miner.utils.audio_track_detector import get_media_duration_seconds
@@ -328,6 +329,15 @@ class OcrRegionDialog(QDialog):
             return
         self._test_gen += 1
         gen, config = self._test_gen, self._config
+        # Cheap probes (a find_spec and two file stats): without the engine the
+        # read would fail, and its message must not blame the frame.
+        if not (
+            runtime.runtime_ready(config.onnx_pack_root) and model_installer.is_installed(config.video_ocr_models_root)
+        ):
+            self.test_result.setText(
+                self.tr("Download the OCR engine first, from the setup card on the Video OCR screen.")
+            )
+            return
         crop = crop_frame(self._frame, self._region)
         self.test_result.setText(self.tr("Reading…"))
         run_off_thread(
@@ -346,4 +356,4 @@ class OcrRegionDialog(QDialog):
         if self._closing or gen != self._test_gen:
             return
         logger.warning("Video OCR region dialog: test read failed: %s", message)
-        self.test_result.setText(self.tr("The OCR engine could not read this frame."))
+        self.test_result.setText(self.tr("The OCR engine could not start. The log has the details."))

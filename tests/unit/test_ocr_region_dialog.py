@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from unittest.mock import patch
 
 import numpy as np
@@ -14,6 +16,16 @@ from anki_miner.gui.widgets.dialogs.ocr_region_dialog import OcrRegionDialog, _R
 from anki_miner.services.video_ocr.frame_source import Region
 
 _FRAME = np.full((500, 1000, 3), 90, dtype=np.uint8)
+
+
+@contextmanager
+def _engine(ready: bool) -> Iterator[None]:
+    """The dialog's two engine probes (onnxruntime importable, models on disk) answer ``ready``."""
+    with (
+        patch.object(mod.runtime, "runtime_ready", return_value=ready),
+        patch.object(mod.model_installer, "is_installed", return_value=ready),
+    ):
+        yield
 
 
 def test_fit_helpers_moved_without_changing_page_image_view():
@@ -85,14 +97,32 @@ def test_a_frame_landing_after_close_is_ignored(dialog):
 
 def test_test_this_frame_shows_the_scans_reading(dialog, qtbot):
     dialog._on_region_drawn(Region(0.1, 0.8, 0.8, 0.15))
-    with patch.object(mod, "read_region_text", return_value="「行くぞ」"):
+    with _engine(True), patch.object(mod, "read_region_text", return_value="「行くぞ」"):
         dialog.test_button.click()
         qtbot.waitUntil(lambda: dialog.test_result.text() == "「行くぞ」", timeout=3000)
 
 
+def test_test_without_the_engine_asks_for_the_download_and_reads_nothing(dialog):
+    dialog._on_region_drawn(Region(0.1, 0.8, 0.8, 0.15))
+    with (
+        _engine(False),
+        patch.object(mod, "run_off_thread") as dispatch,
+        patch.object(mod, "read_region_text") as read,
+    ):
+        dialog.test_button.click()
+    assert dialog.test_result.text() == "Download the OCR engine first, from the setup card on the Video OCR screen."
+    dispatch.assert_not_called()
+    read.assert_not_called()
+
+
+def test_a_failed_test_read_names_the_engine_not_the_frame(dialog):
+    dialog._on_test_failed(dialog._test_gen, "boom")
+    assert dialog.test_result.text() == "The OCR engine could not start. The log has the details."
+
+
 def test_a_new_frame_clears_the_reading_and_drops_a_late_one(dialog, qtbot):
     dialog._on_region_drawn(Region(0.1, 0.8, 0.8, 0.15))
-    with patch.object(mod, "read_region_text", return_value="「行くぞ」"):
+    with _engine(True), patch.object(mod, "read_region_text", return_value="「行くぞ」"):
         dialog.test_button.click()
         qtbot.waitUntil(lambda: dialog.test_result.text() == "「行くぞ」", timeout=3000)
     old_test_gen = dialog._test_gen
