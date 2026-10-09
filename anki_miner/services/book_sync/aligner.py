@@ -64,13 +64,16 @@ MIN_SENTENCE_MATCH_SHARE = 0.3
 MIN_CUE_SECONDS = 0.3
 
 #: Equal share two unrelated passages of the same book already reach depends on
-#: the alphabet (kana ~0.26; Latin/Cyrillic ~0.40-0.53), so the off-track floor
-#: is the book's own null share plus a margin, never below MIN_WINDOW_MATCH.
-#: Measured on all 32 mining languages: unrelated windows reach at most 0.083
-#: above the null, noisy related reads stay at least 0.28 above it, and the
-#: kana floor stays MIN_WINDOW_MATCH for margins up to 0.092. Probe scores:
-#: unrelated at most 6.5 above the null, related at least 18.4 above it. With
-#: 5 samples the null estimate is too noisy for that narrow kana window.
+#: the alphabet, so the off-track floor is the book's own null share plus a
+#: margin, never below MIN_WINDOW_MATCH. Measured with this estimate on books
+#: built from the 32 mining languages' fixture words: null kana 0.25-0.27,
+#: es/de/ru 0.41-0.51, Latin/Cyrillic 0.38-0.54; unrelated windows reached
+#: at most 0.083 above the null (real mixed-script text reached ~0.11 above;
+#: the fixed floor sat under the Latin null itself) and noisy related reads
+#: stayed at least 0.28 above it. The kana test fixture's floor stays
+#: MIN_WINDOW_MATCH (null + margin 0.004 under it); other kana books can sit
+#: up to ~0.02 above it. Probe scores: unrelated at most 6.5 above the null,
+#: related at least 18.4 above it. With 5 samples the estimate is too noisy.
 NULL_MARGIN = 0.09
 REANCHOR_NULL_MARGIN = 12.0
 NULL_SAMPLES = 8
