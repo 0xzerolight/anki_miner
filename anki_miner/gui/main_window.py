@@ -1667,9 +1667,10 @@ class MainWindow(ScreenIssueHost, QMainWindow):
     def _clear_validation_issue(self) -> None:
         """Clear only an issue a validation sweep raised: its failure or its error.
 
-        A passing sweep proves AnkiConnect, ffmpeg, the deck, the note type and
-        the fields; it says nothing about a missing language pack, a restyle
-        that was not confirmed or a failed export, so those banners stay.
+        A passing sweep proves AnkiConnect, ffmpeg, the deck, the note type, the
+        fields and the mining language's engine. Banners it did not raise stay:
+        the boot-time language-pack notice, a restyle that was not confirmed, a
+        failed export.
         """
         banner = self.issue_banner()
         if banner is not None:

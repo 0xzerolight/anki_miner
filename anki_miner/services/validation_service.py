@@ -382,6 +382,7 @@ class ValidationService:
             field_mapping_ok=fields_ok,
             issues=issues,
             tool_versions=tool_versions,
+            language_engine_ok=engine_ok,
         )
 
     def check_ankiconnect(self) -> tuple[bool, str]:
@@ -680,7 +681,7 @@ class ValidationService:
         reason = profile.unavailable_reason() if profile.unavailable_reason is not None else None
         if reason:
             return _record("language-engine", False, reason, language=profile.code)
-        return _record("language-engine", True, f"{profile.english_name} ({profile.code})", language=profile.code)
+        return _record("language-engine", True, f"{profile.display_name} ({profile.code})", language=profile.code)
 
     def _ytdlp_staleness_warning(self, version_message: str) -> str | None:
         """Nudge opted-out users whose yt-dlp has aged out, else None.

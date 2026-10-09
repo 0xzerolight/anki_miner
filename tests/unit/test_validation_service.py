@@ -1314,15 +1314,31 @@ class TestCheckLanguageEngine:
         ]
         assert result.tool_versions["language-engine"] == ""
 
+    def test_a_missing_engine_fails_the_sweep(self, test_config, monkeypatch):
+        """Every other check passes, so only the engine can stop "All system checks passed"."""
+        from tests.unit.languages.stub_registry import register_stub_profile
+
+        register_stub_profile(monkeypatch, "th", unavailable_reason=lambda: "Thai needs its language pack")
+        service = ValidationService(replace(test_config, language="th"))
+        self._stub_other_checks(service, monkeypatch)
+
+        result = service.validate_setup()
+
+        assert result.language_engine_ok is False
+        assert not result.all_passed
+        assert str(result).startswith("ValidationResult(FAILED")
+
     def test_japanese_mines_here_and_names_its_engine(self, test_config, monkeypatch):
-        """ja pin: no issue, and the row's detail names the language."""
+        """ja pin: no issue, the sweep passes, and the row's detail names the language natively."""
         service = ValidationService(test_config)
         self._stub_other_checks(service, monkeypatch)
 
         result = service.validate_setup()
 
         assert not any(i.component == "Language Engine" for i in result.issues)
-        assert result.tool_versions["language-engine"] == "Japanese (ja)"
+        assert result.language_engine_ok is True
+        assert result.all_passed
+        assert result.tool_versions["language-engine"] == "日本語 (ja)"
 
 
 class TestCheckYtdlp:

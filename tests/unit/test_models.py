@@ -549,6 +549,17 @@ class TestValidationResult:
         )
         assert result.all_passed is False
 
+    def test_all_passed_false_language_engine(self):
+        result = ValidationResult(
+            ankiconnect_ok=True,
+            ffmpeg_ok=True,
+            deck_exists=True,
+            note_type_exists=True,
+            field_mapping_ok=True,
+            language_engine_ok=False,
+        )
+        assert result.all_passed is False
+
     def test_ffprobe_defaults_true(self):
         result = ValidationResult(
             ankiconnect_ok=True,

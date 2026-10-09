@@ -242,6 +242,9 @@ class ValidationResult:
     #: to show them had to re-run a `--version` subprocess, on the GUI thread.
     #: Defaulted so existing constructions keep working.
     tool_versions: dict[str, str] = field(default_factory=dict)
+    #: The mining language's engine (the profile's ``unavailable_reason``).
+    #: Defaulted like ``ffprobe_ok``, so existing constructions keep working.
+    language_engine_ok: bool = True
 
     @property
     def all_passed(self) -> bool:
@@ -254,6 +257,7 @@ class ValidationResult:
                 self.deck_exists,
                 self.note_type_exists,
                 self.field_mapping_ok,
+                self.language_engine_ok,
             ]
         )
 

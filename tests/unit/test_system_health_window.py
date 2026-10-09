@@ -256,10 +256,10 @@ def test_a_missing_language_engine_fails_with_the_profiles_reason():
 
 
 def test_a_ready_language_engine_names_the_language():
-    checks = checks_from_validation(_result(versions={"language-engine": "Japanese (ja)"}), CHECKED_AT)
+    checks = checks_from_validation(_result(versions={"language-engine": "日本語 (ja)"}), CHECKED_AT)
 
     assert checks["language.engine"].state == HEALTH_OK
-    assert checks["language.engine"].detail == "Japanese (ja)"
+    assert checks["language.engine"].detail == "日本語 (ja)"
 
 
 # ---------------------------------------------------------------------------
@@ -452,14 +452,14 @@ def test_a_missing_language_engine_shows_its_reason_and_a_fix(health_window, qtb
 
 
 def test_a_ready_language_engine_shows_the_language_name(health_window):
-    result = _result(versions={"language-engine": "Japanese (ja)"})
+    result = _result(versions={"language-engine": "日本語 (ja)"})
     health_window.show()
 
     health_window.show_health(HealthReport.unknown().with_validation(result, CHECKED_AT))
 
     row = health_window._rows["language.engine"]
     assert row.badge.text() == "Ready"
-    assert row.detail_label.text() == "Japanese (ja)"
+    assert row.detail_label.text() == "日本語 (ja)"
     assert not row.fix_button.isVisible()
 
 
