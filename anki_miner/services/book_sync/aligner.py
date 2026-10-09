@@ -70,8 +70,9 @@ MIN_CUE_SECONDS = 0.3
 #: es/de/ru 0.41-0.51, Latin/Cyrillic 0.38-0.54; unrelated windows reached
 #: at most 0.083 above the null (real mixed-script text reached ~0.11 above;
 #: the fixed floor sat under the Latin null itself) and noisy related reads
-#: stayed at least 0.28 above it. The kana test fixture's floor stays
-#: MIN_WINDOW_MATCH (null + margin 0.004 under it); other kana books can sit
+#: (10% of words dropped and 10% replaced) stayed at least 0.28 above it, ~0.19
+#: at 20%/20%. The kana test fixture's floor stays MIN_WINDOW_MATCH (null +
+#: margin 0.004 under it); Japanese books (real mixed kanji/kana text) can sit
 #: up to ~0.02 above it. Probe scores: unrelated at most 6.5 above the null,
 #: related at least 18.4 above it. With 5 samples the estimate is too noisy.
 NULL_MARGIN = 0.09
