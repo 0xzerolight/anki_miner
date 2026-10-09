@@ -455,7 +455,7 @@ class VideoOcrTab(RunOptionsMixin, _ToolTabBase):
         else:
             self.install_button.setText(self.tr("Download OCR engine"))
             self.install_button.setToolTip(
-                self.tr("Downloads the OCR runtime and its two models (under 100 MB) into Anki Miner's folder.")
+                self.tr("Downloads the OCR runtime and its two models (about 50 MB) into Anki Miner's folder.")
             )
         self.set_install_status(
             self.tr("Not installed")
