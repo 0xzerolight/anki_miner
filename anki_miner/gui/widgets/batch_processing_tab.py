@@ -872,7 +872,7 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         self.overall_progress_widget.set_composed(self._items_done, self._items_total)
         self._publish_task_count(current=self._items_done, total=self._items_total or None, detail="")
 
-    def _on_queue_finished(self, total_cards: int, whitelist: object = None) -> None:
+    def _on_queue_finished(self, total_cards: int, whitelist: object = None, not_mined: object = None) -> None:
         """Called when entire queue finishes.
 
         The run's summary is no longer a modal box raised from here. It is the
@@ -886,8 +886,11 @@ class BatchProcessingTab(FolderSeriesScreenBase):
                 pair it processed, or None when no whitelist was in effect.
                 This queue's worker reports counts rather than results, so the
                 run's coverage arrives here instead of per item.
+            not_mined: The worker's ``NotMinedReport`` folded the same way,
+                or None when no pair reported one.
         """
         self._record_receipt_whitelist(whitelist)
+        self._record_receipt_not_mined(not_mined)
         self._restore_buttons()
 
         self._show_terminal_progress(self.overall_progress_widget, total_cards)

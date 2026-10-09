@@ -9888,6 +9888,94 @@ No index files are deleted.</source>
         <source>Already known: %1.</source>
         <translation>既知単語: %1。</translation>
     </message>
+    <message>
+        <source>Not mined: %1 word — search this log for a word to see why.</source>
+        <translation>マイニングされなかった単語: %1 語 — 理由を確認するには、このログで単語を検索してください。</translation>
+    </message>
+    <message>
+        <source>Not mined: %1 words — search this log for a word to see why.</source>
+        <translation>マイニングされなかった単語: %1 語 — 理由を確認するには、このログで単語を検索してください。</translation>
+    </message>
+    <message>
+        <source>Name, interjection or other skipped word type — add it to your whitelist to mine it</source>
+        <translation>固有名詞・感動詞などスキップ対象の品詞 — マイニングするにはホワイトリストに追加してください</translation>
+    </message>
+    <message>
+        <source>Sound effect — add it to your whitelist to mine it</source>
+        <translation>オノマトペ — マイニングするにはホワイトリストに追加してください</translation>
+    </message>
+    <message>
+        <source>Kana-only word — add it to your whitelist to mine it</source>
+        <translation>かなのみの単語 — マイニングするにはホワイトリストに追加してください</translation>
+    </message>
+    <message>
+        <source>Written partly in another script — add it to your whitelist to mine it</source>
+        <translation>別の文字体系が混在する単語 — マイニングするにはホワイトリストに追加してください</translation>
+    </message>
+    <message>
+        <source>Already known</source>
+        <translation>既知単語</translation>
+    </message>
+    <message>
+        <source>No dictionary entry — Settings → Dictionaries</source>
+        <translation>辞書に項目なし — 設定 → 辞書</translation>
+    </message>
+    <message>
+        <source>Not in your frequency list — Settings → Word Filters</source>
+        <translation>頻度リストにない単語 — 設定 → 単語フィルター</translation>
+    </message>
+    <message>
+        <source>Outside your frequency range — Settings → Word Filters</source>
+        <translation>頻度ランクの範囲外 — 設定 → 単語フィルター</translation>
+    </message>
+    <message>
+        <source>On your blacklist — Settings → Word Filters</source>
+        <translation>ブラックリストに登録済み — 設定 → 単語フィルター</translation>
+    </message>
+    <message>
+        <source>Excluded by script type — Settings → Word Filters</source>
+        <translation>文字種で除外 — 設定 → 単語フィルター</translation>
+    </message>
+    <message>
+        <source>On a name list — Settings → Word Filters</source>
+        <translation>名前リストに登録済み — 設定 → 単語フィルター</translation>
+    </message>
+    <message>
+        <source>Appears fewer times than your minimum — Settings → Word Filters</source>
+        <translation>出現回数が最小値未満 — 設定 → 単語フィルター</translation>
+    </message>
+    <message>
+        <source>Another word from its sentence got the card — Settings → Sentences</source>
+        <translation>同じ文の別の単語でカード作成済み — 設定 → 文</translation>
+    </message>
+    <message>
+        <source>No sentence where it is the only unknown word — Settings → Sentences</source>
+        <translation>この単語だけが未知語の文がない — 設定 → 文</translation>
+    </message>
+    <message>
+        <source>Sentence too long — Settings → Sentences</source>
+        <translation>文が長すぎる — 設定 → 文</translation>
+    </message>
+    <message>
+        <source>Same card as another spelling in this run</source>
+        <translation>今回の実行で別表記と同じカードに統合</translation>
+    </message>
+    <message>
+        <source>Media could not be extracted</source>
+        <translation>メディアの抽出に失敗</translation>
+    </message>
+    <message>
+        <source>Anki already has a card for it</source>
+        <translation>Anki に既存のカードあり</translation>
+    </message>
+    <message>
+        <source>Anki did not confirm the card</source>
+        <translation>Anki がカードの作成を確認せず</translation>
+    </message>
+    <message>
+        <source>%1 (%2): %3</source>
+        <translation>%1（%2）：%3</translation>
+    </message>
 </context><context>
     <name>ResultsDialog</name>
     <message>

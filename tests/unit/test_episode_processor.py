@@ -18,7 +18,15 @@ from anki_miner.exceptions.youtube import (
     TranscriptionFailedError,
     TranscriptionProducedNothingError,
 )
-from anki_miner.models import AnkiWriteState, CardPayload, LineLemmas, MediaData, SentenceEdit, TokenizedWord
+from anki_miner.models import (
+    AnkiWriteState,
+    CardPayload,
+    LineLemmas,
+    MediaData,
+    NotMinedReason,
+    SentenceEdit,
+    TokenizedWord,
+)
 from anki_miner.models.processing import CANCELLED_ERROR
 from anki_miner.models.reading import ReadingDocument
 from anki_miner.models.youtube import FetchedMedia
@@ -7425,6 +7433,17 @@ class TestAutoMergeSentenceLengthCaps:
         whitelist.is_whitelisted.side_effect = lambda key: key == "鳥"
         out = self._stamp(config, tmp_path, word_list_service=whitelist)
         assert [w.line_expansion for w in out] == [(0, 1)]
+
+    def test_a_merge_dropped_word_is_reported_as_too_long(self, test_config, tmp_path):
+        config = replace(test_config, merge_incomplete_cues=True, max_sentence_duration_seconds=5.0)
+        parser = MagicMock()
+        parser.parse_raw_entries.return_value = list(self.ENTRIES)
+        proc = build_processor(config=config, subtitle_parser=parser, word_filter=WordFilterService(config))
+        drops: dict = {}
+
+        proc._auto_stamp_line_expansions([self._word("鳥", "鳥は", 10.0, 12.0)], tmp_path / "ep01.srt", drops=drops)
+
+        assert drops == {"鳥": NotMinedReason.SENTENCE_LENGTH}
 
     def test_new_words_found_counts_what_the_merge_keeps(self, test_config, mock_services, tmp_path):
         """P3 (audit L2-005): with no curator, a partial drop by the merge's caps must

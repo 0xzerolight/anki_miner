@@ -9972,6 +9972,94 @@ No index files are deleted.</source>
         <source>Already known: %1.</source>
         <translation>Уже известно: %1.</translation>
     </message>
+    <message>
+        <source>Not mined: %1 word — search this log for a word to see why.</source>
+        <translation>Не намайнено %1 слово — найдите слово в этом журнале, чтобы узнать причину.</translation>
+    </message>
+    <message>
+        <source>Not mined: %1 words — search this log for a word to see why.</source>
+        <translation>Не намайнено слов: %1 — найдите слово в этом журнале, чтобы узнать причину.</translation>
+    </message>
+    <message>
+        <source>Name, interjection or other skipped word type — add it to your whitelist to mine it</source>
+        <translation>Имя, междометие или другой пропускаемый тип слова — добавьте слово в белый список, чтобы майнить его</translation>
+    </message>
+    <message>
+        <source>Sound effect — add it to your whitelist to mine it</source>
+        <translation>Звукоподражание — добавьте слово в белый список, чтобы майнить его</translation>
+    </message>
+    <message>
+        <source>Kana-only word — add it to your whitelist to mine it</source>
+        <translation>Слово только из каны — добавьте слово в белый список, чтобы майнить его</translation>
+    </message>
+    <message>
+        <source>Written partly in another script — add it to your whitelist to mine it</source>
+        <translation>Частично записано другой письменностью — добавьте слово в белый список, чтобы майнить его</translation>
+    </message>
+    <message>
+        <source>Already known</source>
+        <translation>Уже известно</translation>
+    </message>
+    <message>
+        <source>No dictionary entry — Settings → Dictionaries</source>
+        <translation>Нет словарной статьи — Настройки → Словари</translation>
+    </message>
+    <message>
+        <source>Not in your frequency list — Settings → Word Filters</source>
+        <translation>Отсутствует в вашем списке частотности — Настройки → Фильтры слов</translation>
+    </message>
+    <message>
+        <source>Outside your frequency range — Settings → Word Filters</source>
+        <translation>Вне вашего диапазона частотности — Настройки → Фильтры слов</translation>
+    </message>
+    <message>
+        <source>On your blacklist — Settings → Word Filters</source>
+        <translation>В вашем чёрном списке — Настройки → Фильтры слов</translation>
+    </message>
+    <message>
+        <source>Excluded by script type — Settings → Word Filters</source>
+        <translation>Исключено по типу письменности — Настройки → Фильтры слов</translation>
+    </message>
+    <message>
+        <source>On a name list — Settings → Word Filters</source>
+        <translation>В наборе имён — Настройки → Фильтры слов</translation>
+    </message>
+    <message>
+        <source>Appears fewer times than your minimum — Settings → Word Filters</source>
+        <translation>Встречается реже заданного минимума — Настройки → Фильтры слов</translation>
+    </message>
+    <message>
+        <source>Another word from its sentence got the card — Settings → Sentences</source>
+        <translation>Карточку получило другое слово из того же предложения — Настройки → Предложения</translation>
+    </message>
+    <message>
+        <source>No sentence where it is the only unknown word — Settings → Sentences</source>
+        <translation>Нет предложения, в котором это единственное неизвестное слово — Настройки → Предложения</translation>
+    </message>
+    <message>
+        <source>Sentence too long — Settings → Sentences</source>
+        <translation>Предложение слишком длинное — Настройки → Предложения</translation>
+    </message>
+    <message>
+        <source>Same card as another spelling in this run</source>
+        <translation>Та же карточка, что и у другого написания в этом запуске</translation>
+    </message>
+    <message>
+        <source>Media could not be extracted</source>
+        <translation>Не удалось извлечь медиафайлы</translation>
+    </message>
+    <message>
+        <source>Anki already has a card for it</source>
+        <translation>В Anki уже есть карточка для этого слова</translation>
+    </message>
+    <message>
+        <source>Anki did not confirm the card</source>
+        <translation>Anki не подтвердил создание карточки</translation>
+    </message>
+    <message>
+        <source>%1 (%2): %3</source>
+        <translation>%1 (%2): %3</translation>
+    </message>
 </context><context>
     <name>ResultsDialog</name>
     <message>

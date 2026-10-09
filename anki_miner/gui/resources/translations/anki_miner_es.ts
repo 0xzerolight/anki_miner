@@ -9930,6 +9930,94 @@ No se elimina ningún archivo de índice.</translation>
         <source>Already known: %1.</source>
         <translation>Ya conocidas: %1.</translation>
     </message>
+    <message>
+        <source>Not mined: %1 word — search this log for a word to see why.</source>
+        <translation>No minada: %1 palabra — busque una palabra en este registro para ver el motivo.</translation>
+    </message>
+    <message>
+        <source>Not mined: %1 words — search this log for a word to see why.</source>
+        <translation>No minadas: %1 palabras — busque una palabra en este registro para ver el motivo.</translation>
+    </message>
+    <message>
+        <source>Name, interjection or other skipped word type — add it to your whitelist to mine it</source>
+        <translation>Nombre, interjección u otra clase de palabra omitida — añádala a su lista blanca para minarla</translation>
+    </message>
+    <message>
+        <source>Sound effect — add it to your whitelist to mine it</source>
+        <translation>Onomatopeya — añádala a su lista blanca para minarla</translation>
+    </message>
+    <message>
+        <source>Kana-only word — add it to your whitelist to mine it</source>
+        <translation>Palabra solo en kana — añádala a su lista blanca para minarla</translation>
+    </message>
+    <message>
+        <source>Written partly in another script — add it to your whitelist to mine it</source>
+        <translation>Escrita en parte en otra escritura — añádala a su lista blanca para minarla</translation>
+    </message>
+    <message>
+        <source>Already known</source>
+        <translation>Ya conocidas</translation>
+    </message>
+    <message>
+        <source>No dictionary entry — Settings → Dictionaries</source>
+        <translation>Sin entrada en el diccionario — Ajustes → Diccionarios</translation>
+    </message>
+    <message>
+        <source>Not in your frequency list — Settings → Word Filters</source>
+        <translation>No figura en su lista de frecuencia — Ajustes → Filtros de palabras</translation>
+    </message>
+    <message>
+        <source>Outside your frequency range — Settings → Word Filters</source>
+        <translation>Fuera de su rango de frecuencia — Ajustes → Filtros de palabras</translation>
+    </message>
+    <message>
+        <source>On your blacklist — Settings → Word Filters</source>
+        <translation>En su lista negra — Ajustes → Filtros de palabras</translation>
+    </message>
+    <message>
+        <source>Excluded by script type — Settings → Word Filters</source>
+        <translation>Excluida por tipo de escritura — Ajustes → Filtros de palabras</translation>
+    </message>
+    <message>
+        <source>On a name list — Settings → Word Filters</source>
+        <translation>En una lista de nombres — Ajustes → Filtros de palabras</translation>
+    </message>
+    <message>
+        <source>Appears fewer times than your minimum — Settings → Word Filters</source>
+        <translation>Aparece menos veces que su mínimo — Ajustes → Filtros de palabras</translation>
+    </message>
+    <message>
+        <source>Another word from its sentence got the card — Settings → Sentences</source>
+        <translation>Otra palabra de la misma oración obtuvo la tarjeta — Ajustes → Frases</translation>
+    </message>
+    <message>
+        <source>No sentence where it is the only unknown word — Settings → Sentences</source>
+        <translation>Ninguna oración en la que sea la única palabra desconocida — Ajustes → Frases</translation>
+    </message>
+    <message>
+        <source>Sentence too long — Settings → Sentences</source>
+        <translation>Oración demasiado larga — Ajustes → Frases</translation>
+    </message>
+    <message>
+        <source>Same card as another spelling in this run</source>
+        <translation>Misma tarjeta que otra grafía en esta ejecución</translation>
+    </message>
+    <message>
+        <source>Media could not be extracted</source>
+        <translation>No se pudieron extraer los medios</translation>
+    </message>
+    <message>
+        <source>Anki already has a card for it</source>
+        <translation>Anki ya tiene una tarjeta para esta palabra</translation>
+    </message>
+    <message>
+        <source>Anki did not confirm the card</source>
+        <translation>Anki no confirmó la tarjeta</translation>
+    </message>
+    <message>
+        <source>%1 (%2): %3</source>
+        <translation>%1 (%2): %3</translation>
+    </message>
 </context><context>
     <name>ResultsDialog</name>
     <message>

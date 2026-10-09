@@ -21,6 +21,8 @@ from anki_miner.gui.controllers.run_receipt import RunReceiptAccumulator
 from anki_miner.gui.controllers.task_registry import TaskOutcome, TaskRegistry
 from anki_miner.models.processing import (
     CANCELLED_ERROR,
+    NotMinedReason,
+    NotMinedReport,
     ProcessingResult,
     TerminalOutcome,
     WhitelistCoverage,
@@ -145,6 +147,33 @@ class TestListQueueReceipt:
             "Mining complete — 1 card added in 00m 05s · Whitelist: 1 of 2 mined"
         )
         assert "Whitelist: 1 of 2 mined. Not mined: 走る." in youtube_tab.log_widget.full_text()
+
+    def test_the_not_mined_block_lands_in_the_screen_log(self, youtube_tab, clock):
+        ready_youtube_item(youtube_tab, "aaa")
+        youtube_tab._on_mine_clicked()
+        result = _result(1)
+        result.not_mined = NotMinedReport.from_drops(
+            {"食べる": NotMinedReason.KNOWN, "欠": NotMinedReason.NO_DEFINITION}
+        )
+
+        youtube_tab._on_item_finished(0, result, None, 1)
+        youtube_tab._after_run_cleanup()
+
+        text = youtube_tab.log_widget.full_text()
+        assert "[INFO] Not mined: 2 words — search this log for a word to see why." in text
+        assert "[INFO] Already known (1): 食べる" in text
+        assert "[WARNING] No dictionary entry — Settings → Dictionaries (1): 欠" in text
+
+    def test_a_run_with_nothing_unmined_writes_no_block(self, youtube_tab, clock):
+        ready_youtube_item(youtube_tab, "aaa")
+        youtube_tab._on_mine_clicked()
+        result = _result(1)
+        result.not_mined = NotMinedReport.from_drops({}, mined=frozenset({"食べる"}))
+
+        youtube_tab._on_item_finished(0, result, None, 1)
+        youtube_tab._after_run_cleanup()
+
+        assert "Not mined:" not in youtube_tab.log_widget.full_text()
 
     def test_view_details_forwards_the_whole_run(self, youtube_tab, clock):
         ready_youtube_item(youtube_tab, "aaa")
@@ -393,6 +422,20 @@ class TestBatchReceipt:
         line = "Whitelist: 1 of 2 mined. Not mined: 走る."
         assert line in batch_tab.log_widget.full_text()
         # Sealed once: a second terminal signal must not log the line again.
+        batch_tab._on_run_thread_finished()
+        assert batch_tab.log_widget.full_text().count(line) == 1
+
+    def test_the_queue_path_writes_the_worker_not_mined_report_once(self, batch_tab, clock, tmp_path):
+        batch_tab.batch_queue.add_item(tmp_path, tmp_path, "Show A", 0.0)
+        report = NotMinedReport.from_drops({"走る": NotMinedReason.I_PLUS_ONE})
+        with patch("anki_miner.gui.workers.batch_queue_worker.BatchQueueWorkerThread", MagicMock()):
+            batch_tab._start_queue_worker()
+        batch_tab._on_item_completed(batch_tab.batch_queue.get_all_items()[0].id, 40)
+        batch_tab._on_queue_finished(40, None, report)
+        batch_tab._on_run_thread_finished()
+
+        line = "No sentence where it is the only unknown word — Settings → Sentences (1): 走る"
+        assert line in batch_tab.log_widget.full_text()
         batch_tab._on_run_thread_finished()
         assert batch_tab.log_widget.full_text().count(line) == 1
 

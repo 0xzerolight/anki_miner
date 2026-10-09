@@ -9888,6 +9888,94 @@ No index files are deleted.</source>
         <source>Already known: %1.</source>
         <translation>已知：%1。</translation>
     </message>
+    <message>
+        <source>Not mined: %1 word — search this log for a word to see why.</source>
+        <translation>未採集：%1 個單字——在此日誌中搜尋某個單字即可查看原因。</translation>
+    </message>
+    <message>
+        <source>Not mined: %1 words — search this log for a word to see why.</source>
+        <translation>未採集：%1 個單字——在此日誌中搜尋某個單字即可查看原因。</translation>
+    </message>
+    <message>
+        <source>Name, interjection or other skipped word type — add it to your whitelist to mine it</source>
+        <translation>專有名詞、感嘆詞或其他略過的詞類——加入白名單即可採集</translation>
+    </message>
+    <message>
+        <source>Sound effect — add it to your whitelist to mine it</source>
+        <translation>狀聲詞——加入白名單即可採集</translation>
+    </message>
+    <message>
+        <source>Kana-only word — add it to your whitelist to mine it</source>
+        <translation>純假名單字——加入白名單即可採集</translation>
+    </message>
+    <message>
+        <source>Written partly in another script — add it to your whitelist to mine it</source>
+        <translation>部分以其他文字書寫——加入白名單即可採集</translation>
+    </message>
+    <message>
+        <source>Already known</source>
+        <translation>已知</translation>
+    </message>
+    <message>
+        <source>No dictionary entry — Settings → Dictionaries</source>
+        <translation>無字典條目——「設定」→「字典」</translation>
+    </message>
+    <message>
+        <source>Not in your frequency list — Settings → Word Filters</source>
+        <translation>不在您的頻率清單中——「設定」→「單字篩選」</translation>
+    </message>
+    <message>
+        <source>Outside your frequency range — Settings → Word Filters</source>
+        <translation>超出您的頻率範圍——「設定」→「單字篩選」</translation>
+    </message>
+    <message>
+        <source>On your blacklist — Settings → Word Filters</source>
+        <translation>在您的黑名單中——「設定」→「單字篩選」</translation>
+    </message>
+    <message>
+        <source>Excluded by script type — Settings → Word Filters</source>
+        <translation>因文字類型而排除——「設定」→「單字篩選」</translation>
+    </message>
+    <message>
+        <source>On a name list — Settings → Word Filters</source>
+        <translation>在名稱清單中——「設定」→「單字篩選」</translation>
+    </message>
+    <message>
+        <source>Appears fewer times than your minimum — Settings → Word Filters</source>
+        <translation>出現次數少於您設定的下限——「設定」→「單字篩選」</translation>
+    </message>
+    <message>
+        <source>Another word from its sentence got the card — Settings → Sentences</source>
+        <translation>同一句子中的另一個單字已建立卡片——「設定」→「句子」</translation>
+    </message>
+    <message>
+        <source>No sentence where it is the only unknown word — Settings → Sentences</source>
+        <translation>找不到它是唯一未知單字的句子——「設定」→「句子」</translation>
+    </message>
+    <message>
+        <source>Sentence too long — Settings → Sentences</source>
+        <translation>句子過長——「設定」→「句子」</translation>
+    </message>
+    <message>
+        <source>Same card as another spelling in this run</source>
+        <translation>與本次執行中的另一種拼寫為同一張卡片</translation>
+    </message>
+    <message>
+        <source>Media could not be extracted</source>
+        <translation>無法擷取媒體</translation>
+    </message>
+    <message>
+        <source>Anki already has a card for it</source>
+        <translation>Anki 中已有此單字的卡片</translation>
+    </message>
+    <message>
+        <source>Anki did not confirm the card</source>
+        <translation>Anki 未確認此卡片</translation>
+    </message>
+    <message>
+        <source>%1 (%2): %3</source>
+        <translation>%1（%2）：%3</translation>
+    </message>
 </context><context>
     <name>ResultsDialog</name>
     <message>

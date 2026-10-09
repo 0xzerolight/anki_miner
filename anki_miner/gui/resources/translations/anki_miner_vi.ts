@@ -9888,6 +9888,94 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <source>Already known: %1.</source>
         <translation>Đã biết: %1.</translation>
     </message>
+    <message>
+        <source>Not mined: %1 word — search this log for a word to see why.</source>
+        <translation>Chưa khai thác: %1 từ — tìm một từ trong nhật ký này để xem lý do.</translation>
+    </message>
+    <message>
+        <source>Not mined: %1 words — search this log for a word to see why.</source>
+        <translation>Chưa khai thác: %1 từ — tìm một từ trong nhật ký này để xem lý do.</translation>
+    </message>
+    <message>
+        <source>Name, interjection or other skipped word type — add it to your whitelist to mine it</source>
+        <translation>Tên riêng, thán từ hoặc loại từ khác bị bỏ qua — thêm vào danh sách trắng để khai thác</translation>
+    </message>
+    <message>
+        <source>Sound effect — add it to your whitelist to mine it</source>
+        <translation>Từ tượng thanh — thêm vào danh sách trắng để khai thác</translation>
+    </message>
+    <message>
+        <source>Kana-only word — add it to your whitelist to mine it</source>
+        <translation>Từ chỉ có kana — thêm vào danh sách trắng để khai thác</translation>
+    </message>
+    <message>
+        <source>Written partly in another script — add it to your whitelist to mine it</source>
+        <translation>Một phần viết bằng loại chữ viết khác — thêm vào danh sách trắng để khai thác</translation>
+    </message>
+    <message>
+        <source>Already known</source>
+        <translation>Đã biết</translation>
+    </message>
+    <message>
+        <source>No dictionary entry — Settings → Dictionaries</source>
+        <translation>Không có trong từ điển — Cài đặt → Từ điển</translation>
+    </message>
+    <message>
+        <source>Not in your frequency list — Settings → Word Filters</source>
+        <translation>Không có trong danh sách tần suất — Cài đặt → Bộ lọc từ</translation>
+    </message>
+    <message>
+        <source>Outside your frequency range — Settings → Word Filters</source>
+        <translation>Ngoài dải tần suất đã chọn — Cài đặt → Bộ lọc từ</translation>
+    </message>
+    <message>
+        <source>On your blacklist — Settings → Word Filters</source>
+        <translation>Nằm trong danh sách đen — Cài đặt → Bộ lọc từ</translation>
+    </message>
+    <message>
+        <source>Excluded by script type — Settings → Word Filters</source>
+        <translation>Bị loại trừ theo loại chữ viết — Cài đặt → Bộ lọc từ</translation>
+    </message>
+    <message>
+        <source>On a name list — Settings → Word Filters</source>
+        <translation>Nằm trong tập từ tên riêng — Cài đặt → Bộ lọc từ</translation>
+    </message>
+    <message>
+        <source>Appears fewer times than your minimum — Settings → Word Filters</source>
+        <translation>Xuất hiện ít hơn số lần tối thiểu — Cài đặt → Bộ lọc từ</translation>
+    </message>
+    <message>
+        <source>Another word from its sentence got the card — Settings → Sentences</source>
+        <translation>Một từ khác trong cùng câu đã được tạo thẻ — Cài đặt → Câu</translation>
+    </message>
+    <message>
+        <source>No sentence where it is the only unknown word — Settings → Sentences</source>
+        <translation>Không có câu nào mà từ này là từ chưa biết duy nhất — Cài đặt → Câu</translation>
+    </message>
+    <message>
+        <source>Sentence too long — Settings → Sentences</source>
+        <translation>Câu quá dài — Cài đặt → Câu</translation>
+    </message>
+    <message>
+        <source>Same card as another spelling in this run</source>
+        <translation>Chung thẻ với một cách viết khác trong lần chạy này</translation>
+    </message>
+    <message>
+        <source>Media could not be extracted</source>
+        <translation>Không thể trích xuất phương tiện</translation>
+    </message>
+    <message>
+        <source>Anki already has a card for it</source>
+        <translation>Anki đã có thẻ cho từ này</translation>
+    </message>
+    <message>
+        <source>Anki did not confirm the card</source>
+        <translation>Anki không xác nhận thẻ</translation>
+    </message>
+    <message>
+        <source>%1 (%2): %3</source>
+        <translation>%1 (%2): %3</translation>
+    </message>
 </context><context>
     <name>ResultsDialog</name>
     <message>

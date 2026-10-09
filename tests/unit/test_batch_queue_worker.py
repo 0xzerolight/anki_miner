@@ -10,7 +10,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SetupError
 from anki_miner.gui.workers.batch_queue_worker import BatchQueueWorkerThread
 from anki_miner.models.batch_queue import BatchQueue, QueueItem, QueueItemStatus
-from anki_miner.models.processing import ProcessingResult, WhitelistCoverage
+from anki_miner.models.processing import NotMinedReason, NotMinedReport, ProcessingResult, WhitelistCoverage
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.definition_service import DefinitionService
 
@@ -1689,6 +1689,73 @@ def test_queue_finished_carries_the_whitelist_folded_over_every_pair(tmp_path):
     assert coverage.mined == {"a", "b"}
     assert coverage.known == frozenset()
     assert coverage.missing == {"c"}
+
+
+def test_queue_finished_carries_the_not_mined_report_folded_over_every_pair(tmp_path):
+    pair1 = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"), secondary=None)
+    pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"), secondary=None)
+    queue = BatchQueue()
+    queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
+    first = _ok_result(cards=2)
+    first.not_mined = NotMinedReport.from_drops({"a": NotMinedReason.I_PLUS_ONE, "b": NotMinedReason.KNOWN})
+    second = _ok_result(cards=3)
+    second.not_mined = NotMinedReport.from_drops({}, mined=frozenset({"a"}))
+    proc = MagicMock()
+    proc.process_episode.side_effect = [first, second]
+
+    worker = _make_worker_with_queue(queue)
+    finished: list = []
+    worker.queue_finished.connect(lambda total, coverage, report: finished.append((total, report)))
+
+    with (
+        patch("anki_miner.gui.workers.batch_queue_worker.create_episode_processor", return_value=proc),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number", return_value=[pair1, pair2]
+        ),
+    ):
+        worker.run()
+
+    ((total, report),) = finished
+    assert total == 5
+    assert report.words == {"b"}
+
+
+def test_queue_finished_carries_the_season_pre_pass_not_mined_report(tmp_path):
+    """The season mine pass clears its own parse and filter drops, so the
+    pre-pass fold (the second _fold_not_mined call site) is where they reach the run."""
+    pair = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass", secondary=None)
+    proc = MagicMock()
+
+    def fake_process(video, subtitle, progress_callback=None, curation_callback=None, **kwargs):
+        curated = [] if curation_callback is None else curation_callback([_make_curation_word()])
+        result = ProcessingResult(
+            total_words_found=1, new_words_found=len(curated or []), cards_created=len(curated or [])
+        )
+        if getattr(curation_callback, "fixed_subset", None) is None:  # the pre-pass
+            result.not_mined = NotMinedReport.from_drops({"ちょっと": NotMinedReason.KANA_ONLY})
+        else:  # the mine pass
+            result.not_mined = NotMinedReport.from_drops({}, mined=frozenset({"食べる"}))
+        return result
+
+    proc.process_episode.side_effect = fake_process
+    item = QueueItem(video_folder=tmp_path / "video", subtitle_folder=tmp_path / "subs", display_name="Show", id="i1")
+    queue = MagicMock()
+    queue.get_all_items.return_value = [item]
+    worker = BatchQueueWorkerThread(
+        queue, AnkiMinerConfig(), MagicMock(), None, curation_callback=lambda pool: list(pool)
+    )
+    finished: list = []
+    worker.queue_finished.connect(lambda total, coverage, report: finished.append(report))
+
+    with (
+        patch("anki_miner.gui.workers.batch_queue_worker.create_episode_processor", return_value=proc),
+        patch("anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number", return_value=[pair]),
+    ):
+        worker.run()
+
+    (report,) = finished
+    assert report.forms(NotMinedReason.KANA_ONLY) == {"ちょっと"}
+    assert "食べる" not in report.words
 
 
 def _translation_worker(tmp_path, proc, pairs, *, config=None, **item_kwargs):

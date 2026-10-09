@@ -324,6 +324,16 @@ class WordFilterService:
 
         return [word for word in all_words if not _is_known(word)]
 
+    def known_forms(self, forms: Iterable[str], existing_vocabulary: set[str]) -> set[str]:
+        """Which bare card fronts ``existing_vocabulary`` holds, probed as :meth:`filter_unknown` probes.
+
+        For fronts with no ``TokenizedWord`` behind them (the parse's turned-away
+        tokens, named in the not-mined report), so there is no lemma and no
+        kana-variant fold - only the front's own folded key.
+        """
+        fold = self._dedup_fold
+        return {form for form in forms if (form if fold is None else fold(form)) in existing_vocabulary}
+
     def filter_by_frequency(
         self,
         words: list[TokenizedWord],

@@ -6,6 +6,8 @@ import pytest
 
 from anki_miner.models.media import MediaData
 from anki_miner.models.processing import (
+    NotMinedReason,
+    NotMinedReport,
     ProcessingResult,
     ValidationIssue,
     ValidationResult,
@@ -640,3 +642,65 @@ class TestWhitelistCoverage:
 
     def test_a_processing_result_defaults_to_no_coverage(self):
         assert ProcessingResult(total_words_found=0, new_words_found=0, cards_created=0).whitelist_coverage is None
+
+
+class TestNotMinedReport:
+    def test_from_drops_groups_fronts_by_reason(self):
+        report = NotMinedReport.from_drops(
+            {"a": NotMinedReason.KNOWN, "b": NotMinedReason.KNOWN, "c": NotMinedReason.I_PLUS_ONE}
+        )
+        assert report.reasons == {NotMinedReason.KNOWN: {"a", "b"}, NotMinedReason.I_PLUS_ONE: {"c"}}
+
+    def test_forms_never_name_a_mined_front(self):
+        report = NotMinedReport.from_drops(
+            {"a": NotMinedReason.I_PLUS_ONE, "b": NotMinedReason.I_PLUS_ONE}, mined=frozenset({"a"})
+        )
+        assert report.forms(NotMinedReason.I_PLUS_ONE) == {"b"}
+        assert report.words == {"b"}
+
+    def test_known_outranks_every_other_reason(self):
+        merged = NotMinedReport.from_drops({"a": NotMinedReason.KNOWN}).merged(
+            NotMinedReport.from_drops({"a": NotMinedReason.SENTENCE_LENGTH})
+        )
+        assert merged.forms(NotMinedReason.KNOWN) == {"a"}
+        assert merged.forms(NotMinedReason.SENTENCE_LENGTH) == frozenset()
+        assert merged.words == {"a"}
+
+    def test_merged_unions_reasons_and_a_later_mined_front_disappears(self):
+        first = NotMinedReport.from_drops({"a": NotMinedReason.I_PLUS_ONE, "b": NotMinedReason.BLACKLIST})
+        second = NotMinedReport.from_drops({"a": NotMinedReason.SENTENCE_LENGTH}, mined=frozenset({"b"}))
+        merged = first.merged(second)
+        assert merged.forms(NotMinedReason.I_PLUS_ONE) == {"a"}
+        assert merged.forms(NotMinedReason.SENTENCE_LENGTH) == {"a"}
+        assert merged.forms(NotMinedReason.BLACKLIST) == frozenset()
+        assert merged.words == {"a"}
+
+    def test_an_empty_report_has_no_words(self):
+        assert NotMinedReport().words == frozenset()
+
+    def test_reasons_iterate_in_pipeline_order(self):
+        """The Activity Log writes one line per reason in this order."""
+        assert [reason.value for reason in NotMinedReason] == [
+            "word_type",
+            "sound_effect",
+            "kana_only",
+            "script",
+            "known",
+            "no_definition",
+            "unranked",
+            "frequency",
+            "blacklist",
+            "script_filter",
+            "name_list",
+            "occurrence",
+            "one_per_sentence",
+            "i_plus_one",
+            "sentence_length",
+            "same_card",
+            "media_failed",
+            "anki_duplicate",
+            "anki_failed",
+        ]
+
+    def test_processing_result_carries_no_report_by_default(self):
+        assert ProcessingResult(total_words_found=0, new_words_found=0, cards_created=0).not_mined is None

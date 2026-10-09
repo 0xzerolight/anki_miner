@@ -29,7 +29,7 @@ from anki_miner.gui.widgets import deck_builder_tab
 from anki_miner.gui.widgets.base import ScreenIssue
 from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.models.deck_build import DeckCorpus, DeckSelectionMode
-from anki_miner.models.processing import TerminalOutcome
+from anki_miner.models.processing import NotMinedReason, NotMinedReport, TerminalOutcome
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -356,7 +356,7 @@ class _FakeWorker(QObject):
     item_pairs_progress = pyqtSignal(str, int, int)
     item_completed = pyqtSignal(str, int)
     item_failed = pyqtSignal(str, str, int)
-    queue_finished = pyqtSignal(int, object)
+    queue_finished = pyqtSignal(int, object, object)
     error = pyqtSignal(str)
     finished = pyqtSignal()
 
@@ -397,10 +397,10 @@ class _FakeWorker(QObject):
     def wait(self, *_args):
         return True
 
-    def end(self, total_cards: int = 0, whitelist=None) -> None:
+    def end(self, total_cards: int = 0, whitelist=None, not_mined=None) -> None:
         """Finish the way the real run does: queue_finished, then finished."""
         self.running = False
-        self.queue_finished.emit(total_cards, whitelist)
+        self.queue_finished.emit(total_cards, whitelist, not_mined)
         self.finished.emit()
 
 
@@ -772,6 +772,23 @@ def test_cancelled_build_with_no_cards_logs_nothing_extra(ready_tab, workers):
     worker.end(total_cards=0)
 
     ready_tab.presenter.show_info.assert_not_called()
+
+
+def test_a_build_writes_no_not_mined_block(ready_tab, workers):
+    """Builds bypass Word Filters and Sentences, so a report would list a
+    corpus's known words and none of the real reasons."""
+    ready_tab.preview_button.click()
+    worker = workers[0]
+    worker.preview_ready.emit(_corpus())
+    _select(ready_tab, DeckSelectionMode.TOP_N)
+    ready_tab.top_n_spinbox.setValue(2)
+    ready_tab.build_button.click()
+
+    worker.item_completed.emit("id", 2)
+    worker.end(total_cards=2, not_mined=NotMinedReport.from_drops({"a": NotMinedReason.KNOWN}))
+
+    assert ready_tab._receipt_widget.receipt.not_mined is None
+    assert "Not mined:" not in ready_tab.log_widget.full_text()
 
 
 def test_item_pairs_progress_moves_the_bar_and_the_published_count(ready_tab, workers, registry):

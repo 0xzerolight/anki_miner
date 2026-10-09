@@ -9888,6 +9888,94 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <source>Already known: %1.</source>
         <translation>Sudah dikenal: %1.</translation>
     </message>
+    <message>
+        <source>Not mined: %1 word — search this log for a word to see why.</source>
+        <translation>Tidak di-mining: %1 kata — cari kata di log ini untuk melihat alasannya.</translation>
+    </message>
+    <message>
+        <source>Not mined: %1 words — search this log for a word to see why.</source>
+        <translation>Tidak di-mining: %1 kata — cari kata di log ini untuk melihat alasannya.</translation>
+    </message>
+    <message>
+        <source>Name, interjection or other skipped word type — add it to your whitelist to mine it</source>
+        <translation>Nama, kata seru, atau jenis kata lain yang dilewati — tambahkan ke daftar putih Anda agar di-mining</translation>
+    </message>
+    <message>
+        <source>Sound effect — add it to your whitelist to mine it</source>
+        <translation>Efek suara — tambahkan ke daftar putih Anda agar di-mining</translation>
+    </message>
+    <message>
+        <source>Kana-only word — add it to your whitelist to mine it</source>
+        <translation>Kata khusus kana — tambahkan ke daftar putih Anda agar di-mining</translation>
+    </message>
+    <message>
+        <source>Written partly in another script — add it to your whitelist to mine it</source>
+        <translation>Sebagian ditulis dengan aksara lain — tambahkan ke daftar putih Anda agar di-mining</translation>
+    </message>
+    <message>
+        <source>Already known</source>
+        <translation>Sudah dikenal</translation>
+    </message>
+    <message>
+        <source>No dictionary entry — Settings → Dictionaries</source>
+        <translation>Tidak ada entri kamus — Pengaturan → Kamus</translation>
+    </message>
+    <message>
+        <source>Not in your frequency list — Settings → Word Filters</source>
+        <translation>Tidak ada dalam daftar frekuensi Anda — Pengaturan → Filter Kata</translation>
+    </message>
+    <message>
+        <source>Outside your frequency range — Settings → Word Filters</source>
+        <translation>Di luar rentang frekuensi Anda — Pengaturan → Filter Kata</translation>
+    </message>
+    <message>
+        <source>On your blacklist — Settings → Word Filters</source>
+        <translation>Ada dalam daftar hitam Anda — Pengaturan → Filter Kata</translation>
+    </message>
+    <message>
+        <source>Excluded by script type — Settings → Word Filters</source>
+        <translation>Dikecualikan berdasarkan tipe aksara — Pengaturan → Filter Kata</translation>
+    </message>
+    <message>
+        <source>On a name list — Settings → Word Filters</source>
+        <translation>Ada dalam daftar nama — Pengaturan → Filter Kata</translation>
+    </message>
+    <message>
+        <source>Appears fewer times than your minimum — Settings → Word Filters</source>
+        <translation>Muncul lebih sedikit dari batas minimum Anda — Pengaturan → Filter Kata</translation>
+    </message>
+    <message>
+        <source>Another word from its sentence got the card — Settings → Sentences</source>
+        <translation>Kata lain dalam kalimat yang sama mendapatkan kartu — Pengaturan → Kalimat</translation>
+    </message>
+    <message>
+        <source>No sentence where it is the only unknown word — Settings → Sentences</source>
+        <translation>Tidak ada kalimat dengan kata ini sebagai satu-satunya kata yang tidak dikenal — Pengaturan → Kalimat</translation>
+    </message>
+    <message>
+        <source>Sentence too long — Settings → Sentences</source>
+        <translation>Kalimat terlalu panjang — Pengaturan → Kalimat</translation>
+    </message>
+    <message>
+        <source>Same card as another spelling in this run</source>
+        <translation>Kartu yang sama dengan ejaan lain pada proses ini</translation>
+    </message>
+    <message>
+        <source>Media could not be extracted</source>
+        <translation>Media tidak dapat diekstrak</translation>
+    </message>
+    <message>
+        <source>Anki already has a card for it</source>
+        <translation>Anki sudah memiliki kartu untuk kata ini</translation>
+    </message>
+    <message>
+        <source>Anki did not confirm the card</source>
+        <translation>Anki tidak mengonfirmasi kartu</translation>
+    </message>
+    <message>
+        <source>%1 (%2): %3</source>
+        <translation>%1 (%2): %3</translation>
+    </message>
 </context><context>
     <name>ResultsDialog</name>
     <message>

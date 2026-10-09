@@ -26,6 +26,7 @@ from dataclasses import dataclass
 from anki_miner.gui.utils.progress_telemetry import ActiveDuration, active_duration
 from anki_miner.models.processing import (
     MiningOutcome,
+    NotMinedReport,
     ProcessingResult,
     TerminalOutcome,
     WhitelistCoverage,
@@ -60,6 +61,9 @@ class RunReceipt:
     #: What the run's whitelist reached, folded over every item that reported
     #: one; None when no whitelist was in effect.
     whitelist: WhitelistCoverage | None = None
+    #: Which words the run saw and made no card for, and why, folded over
+    #: every item that reported one; None when nothing reported one.
+    not_mined: NotMinedReport | None = None
 
     @property
     def has_details(self) -> bool:
@@ -130,6 +134,7 @@ class RunReceiptAccumulator:
         self._note_ids: list[int] = []
         self._results: list[ProcessingResult] = []
         self._whitelist: WhitelistCoverage | None = None
+        self._not_mined: NotMinedReport | None = None
         self._cancel_requested = False
         self._fatal = False
 
@@ -143,6 +148,7 @@ class RunReceiptAccumulator:
         cancellation marker inside an otherwise ordinary result.
         """
         self.record_whitelist(getattr(result, "whitelist_coverage", None))
+        self.record_not_mined(getattr(result, "not_mined", None))
         outcome = MiningOutcome.FAILED if error is not None else classify_result(result)
         processing_result = result if isinstance(result, ProcessingResult) else None
         if processing_result is not None:
@@ -193,6 +199,15 @@ class RunReceiptAccumulator:
             return
         self._whitelist = coverage if self._whitelist is None else self._whitelist.merged(coverage)
 
+    def record_not_mined(self, report: object) -> None:
+        """Fold one item's not-mined report, or a counts-only worker's whole run's.
+
+        Anything that is not a NotMinedReport (a mock, a duck-typed result) is ignored.
+        """
+        if not isinstance(report, NotMinedReport):
+            return
+        self._not_mined = report if self._not_mined is None else self._not_mined.merged(report)
+
     def mark_cancel_requested(self) -> None:
         """Note that the user asked to stop. Outranks every other outcome."""
         self._cancel_requested = True
@@ -228,4 +243,5 @@ class RunReceiptAccumulator:
             ),
             results=tuple(self._results),
             whitelist=self._whitelist,
+            not_mined=self._not_mined,
         )
