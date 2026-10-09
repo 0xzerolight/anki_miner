@@ -133,15 +133,19 @@ def _every_language_tag() -> frozenset[str]:
     return frozenset().union(*(get_profile(code).audio_track_codes for code in available_languages()))
 
 
-def subtitle_language(code: str) -> SubtitleLanguage:
+def subtitle_language(code: str, *, with_caption_codes: bool = False) -> SubtitleLanguage:
     """How subtitle filenames read for mining language *code*: ``ep01.ja.srt`` is its own, ``ep01.en.srt`` another's.
 
-    Its own tags are its audio-track codes plus the caption codes fetched for it
-    (yue's ``zh-HK`` / ``zh-Hant``), lowercased: ``matches_language_tag`` folds
-    the tag, not the codes.
+    *with_caption_codes* also counts the caption codes fetched for it as its own
+    (yue's ``zh-HK`` / ``zh-Hant`` fallbacks), lowercased: ``matches_language_tag``
+    folds the tag, not the codes. Only a filter that tolerates ties takes them
+    (Readability's folder scan). Pairing must not: a fallback would tie with
+    ``ep01.yue.srt``, and pairing refuses a tie.
     """
     profile = get_profile(code)
-    mining = profile.audio_track_codes | {caption.lower() for caption in profile.captions.codes}
+    mining = profile.audio_track_codes
+    if with_caption_codes:
+        mining |= {caption.lower() for caption in profile.captions.codes}
     return SubtitleLanguage(mining=mining, known=_every_language_tag() | mining)
 
 

@@ -371,7 +371,9 @@ class ReadabilityTab(_ToolTabBase):
             # A folder often holds the same episodes in other languages too
             # (ep01.en.srt beside ep01.es.srt); scoring those would skew the
             # totals, and a Latin-script mining language cannot tell them apart.
-            language = subtitle_language(config_language(self.config))
+            # The caption codes fetched for the language count as its own here
+            # (yue's ep01.zh-HK.srt): a filter keeps ties, unlike pairing.
+            language = subtitle_language(config_language(self.config), with_caption_codes=True)
             # Natural order (1, 2, 10): the rows read as the season does.
             self._scan_folder_async(
                 path,

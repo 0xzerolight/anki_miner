@@ -95,9 +95,9 @@ _TRAILING_GROUP = re.compile(r"[\[(]([^\[\]()]+)[\])]\s*$")
 class SubtitleLanguage:
     """The language tags a subtitle filename is read against.
 
-    ``mining`` is the mining language's ``audio_track_codes`` and caption codes;
-    ``known`` is every mining language's, so a token outside it (a title word,
-    ``forced``, ``sdh``) is never taken for a language. Built by
+    ``mining`` is the mining language's ``audio_track_codes``; ``known`` is every
+    mining language's, so a token outside it (a title word, ``forced``, ``sdh``)
+    is never taken for a language. Built by
     :func:`anki_miner.languages.registry.subtitle_language`: ``utils`` cannot
     reach the profiles itself.
     """
