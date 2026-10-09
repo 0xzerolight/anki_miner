@@ -2516,8 +2516,8 @@ No index files are deleted.</source>
         <translation>Аудио предложений для чтения (TTS)</translation>
     </message>
     <message>
-        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text. Not available for Persian or Slovenian.</source>
-        <translation>Синтезируйте озвученные предложения для карточек, намайненных из книг, манги и вставленного текста. Недоступно для персидского и словенского.</translation>
+        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text.</source>
+        <translation>Синтезируйте озвученные предложения для карточек, намайненных из книг, манги и вставленного текста.</translation>
     </message>
     <message>
         <source>Add a custom word-audio source</source>

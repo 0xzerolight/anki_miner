@@ -344,8 +344,14 @@ def test_portuguese_variety_entry_states_what_the_variety_changes() -> None:
     assert "card front" not in description
 
 
-def test_sentence_tts_names_the_languages_without_a_voice() -> None:
-    assert "Persian or Slovenian" in _entry("sentence-tts").description
+def test_sentence_tts_no_longer_excludes_persian_or_slovenian() -> None:
+    # fa and sl read sentence TTS with their Microsoft Edge voice
+    # (AudioDefaults.sentence_web_voice), so every mining language has one.
+    description = _entry("sentence-tts").description
+
+    assert "Persian" not in description
+    assert "Slovenian" not in description
+    assert "Not available" not in description
 
 
 def test_regional_variety_targets_the_mining_language_page() -> None:

@@ -2504,7 +2504,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text. Not available for Persian or Slovenian.</source>
+        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text.</source>
         <translation type="unfinished" />
     </message>
     <message>

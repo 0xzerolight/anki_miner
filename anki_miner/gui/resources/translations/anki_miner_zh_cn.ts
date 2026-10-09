@@ -2510,8 +2510,8 @@ No index files are deleted.</source>
         <translation>阅读材料的句子音频（TTS）</translation>
     </message>
     <message>
-        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text. Not available for Persian or Slovenian.</source>
-        <translation>为从书籍、漫画和粘贴文本中挖取的卡片合成语音句子音频。波斯语和斯洛文尼亚语不可用。</translation>
+        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text.</source>
+        <translation>为从书籍、漫画和粘贴文本中挖取的卡片合成语音句子音频。</translation>
     </message>
     <message>
         <source>Add a custom word-audio source</source>

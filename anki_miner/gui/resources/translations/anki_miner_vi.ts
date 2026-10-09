@@ -2510,8 +2510,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Âm thanh câu cho tài liệu đọc (TTS)</translation>
     </message>
     <message>
-        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text. Not available for Persian or Slovenian.</source>
-        <translation>Tổng hợp âm thanh câu nói cho thẻ khai thác từ sách, manga và văn bản dán vào. Không khả dụng cho tiếng Ba Tư và tiếng Slovenia.</translation>
+        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text.</source>
+        <translation>Tổng hợp âm thanh câu nói cho thẻ khai thác từ sách, manga và văn bản dán vào.</translation>
     </message>
     <message>
         <source>Add a custom word-audio source</source>

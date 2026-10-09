@@ -2510,8 +2510,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Audio kalimat untuk bacaan (TTS)</translation>
     </message>
     <message>
-        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text. Not available for Persian or Slovenian.</source>
-        <translation>Sintesis audio kalimat lisan untuk kartu hasil mining dari buku, manga, dan teks yang ditempel. Tidak tersedia untuk bahasa Persia atau Slovenia.</translation>
+        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text.</source>
+        <translation>Sintesis audio kalimat lisan untuk kartu hasil mining dari buku, manga, dan teks yang ditempel.</translation>
     </message>
     <message>
         <source>Add a custom word-audio source</source>

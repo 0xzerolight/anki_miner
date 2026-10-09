@@ -1026,8 +1026,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Sentence audio for reading (TTS)"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Synthesize spoken sentence audio for cards mined from books, manga and pasted text. "
-            "Not available for Persian or Slovenian.",
+            "Synthesize spoken sentence audio for cards mined from books, manga and pasted text.",
         ),
         category=_CAT_AUDIO,
         target=CapabilityTarget("settings", "media"),

@@ -2513,8 +2513,8 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Satz-Audio für Lesematerial (TTS)</translation>
     </message>
     <message>
-        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text. Not available for Persian or Slovenian.</source>
-        <translation>Gesprochenes Satz-Audio für Karten synthetisieren, die aus Büchern, Manga und eingefügtem Text gesammelt wurden. Für Persisch und Slowenisch nicht verfügbar.</translation>
+        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text.</source>
+        <translation>Gesprochenes Satz-Audio für Karten synthetisieren, die aus Büchern, Manga und eingefügtem Text gesammelt wurden.</translation>
     </message>
     <message>
         <source>Add a custom word-audio source</source>

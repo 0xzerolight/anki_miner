@@ -2513,8 +2513,8 @@ Nessun file indice viene eliminato.</translation>
         <translation>Audio delle frasi per la lettura (TTS)</translation>
     </message>
     <message>
-        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text. Not available for Persian or Slovenian.</source>
-        <translation>Sintetizza l'audio parlato delle frasi per le carte estratte da libri, manga e testo incollato. Non disponibile per persiano e sloveno.</translation>
+        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text.</source>
+        <translation>Sintetizza l'audio parlato delle frasi per le carte estratte da libri, manga e testo incollato.</translation>
     </message>
     <message>
         <source>Add a custom word-audio source</source>
