@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import pytest
 
+from tests.unit._tool_tab_harness import FakeToolWorker
+
 
 @pytest.fixture
 def wired(monkeypatch, patch_heavy_init, test_config, qtbot):
@@ -68,3 +70,24 @@ class TestVadPackDownloadWiring:
 
         assert settings_tab.subtitles_panel.vad_status_label.text() == "Silence-removal library installed."
         assert calls == [_window.get_config().onnx_pack_root]
+
+    def test_a_refusal_during_the_video_ocr_install_keeps_its_text(self, monkeypatch, wired):
+        """No re-probe while the OCR install runs: its own finish refreshes this row afterwards."""
+        window, settings_tab, captured = wired
+        ocr_install = FakeToolWorker()
+        ocr_install.start()  # a stand-in with cancel()/wait(), so the window's close joins it cleanly
+        monkeypatch.setattr(window.background_tasks, "video_ocr_install_worker", ocr_install)
+        settings_tab.vad_pack_download_requested.emit()
+
+        calls: list = []
+        monkeypatch.setattr(
+            settings_tab.subtitles_panel,
+            "notify_vad_pack_download_finished",
+            lambda root: calls.append(root),
+        )
+
+        refusal = "Wait for the OCR engine download to finish, then try again."
+        captured["on_finished"](False, refusal)
+
+        assert settings_tab.subtitles_panel.vad_status_label.text() == refusal
+        assert calls == []

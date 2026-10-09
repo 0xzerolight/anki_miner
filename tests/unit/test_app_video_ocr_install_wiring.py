@@ -1,11 +1,12 @@
 """Tests for app.py wiring Video OCR's setup card to its install worker.
 
 The install may lay down the onnxruntime pack that Settings' silence-removal
-(VAD) row also reads, so a success refreshes that row. A failure or a refusal
-must leave it alone: the refusal is sent while the row's own download runs,
-and refreshing it then would clear that download's in-flight guard. The
-production wiring lives in ``anki_miner.gui.app._connect_video_ocr_install``;
-these tests call that real helper against fakes.
+(VAD) row also reads, even when it then fails on the models, so every finish
+refreshes that row while the row's own download is idle. A refusal must leave
+it alone: the refusal is sent while that download runs, and refreshing the row
+then would clear its in-flight guard. The production wiring lives in
+``anki_miner.gui.app._connect_video_ocr_install``; these tests call that real
+helper against fakes.
 """
 
 from __future__ import annotations
@@ -58,9 +59,11 @@ def _wire(tmp_path, *, refuse: bool = False):
             # As BackgroundTaskController does while the VAD pack download runs.
             on_finished(False, _REFUSAL)
 
+    # The controller refuses only while the VAD pack download runs.
+    vad_download = SimpleNamespace(isRunning=lambda: True) if refuse else None
     window = SimpleNamespace(
         get_config=lambda: config,
-        background_tasks=SimpleNamespace(start_video_ocr_install=_start),
+        background_tasks=SimpleNamespace(start_video_ocr_install=_start, onnx_pack_download_worker=vad_download),
     )
     tab = _FakeVideoOcrTab()
     panel = _FakeSubtitlesPanel()
@@ -93,14 +96,15 @@ class TestVideoOcrInstallWiring:
         assert panel.vad_refreshes == [config.onnx_pack_root]
         assert tab.statuses[-1] == "Video OCR is ready."
 
-    def test_failure_notifies_the_tab_and_leaves_the_vad_row_alone(self, wired):
-        _config, captured, tab, panel = wired
+    def test_failure_notifies_the_tab_and_refreshes_the_idle_vad_row(self, wired):
+        """The onnxruntime pack may have landed before the models failed."""
+        config, captured, tab, panel = wired
         tab.video_ocr_install_requested.emit()
 
         captured["on_finished"](False, "boom")
 
         assert tab.notified == [False]
-        assert panel.vad_refreshes == []
+        assert panel.vad_refreshes == [config.onnx_pack_root]
         assert tab.statuses[-1] == "boom"
 
     def test_a_refusal_leaves_the_vad_rows_in_flight_guard_alone(self, tmp_path):
