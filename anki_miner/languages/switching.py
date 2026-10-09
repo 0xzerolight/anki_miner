@@ -59,15 +59,20 @@ LANGUAGE_SCOPED_FIELDS: tuple[str, ...] = (
     # Global before; see _FORMERLY_GLOBAL_FIELDS.
     "pitch_category_format",
     "card_type_marker_fields",
+    # The sentence character cap: a character count is a script property, so a
+    # cap tuned to Japanese (30 characters is a whole line) drops most German
+    # sentences. The duration cap stays global: a second of audio is a second
+    # in every language. Global before; see _FORMERLY_GLOBAL_FIELDS.
+    "max_sentence_chars",
 )
 
 #: Scoped names that were global config fields: the regex trio before Stage S,
 #: the frequency band after it, then the note type's pitch format and card-type
-#: markers. Snapshots parked before a name was scoped carry no key for it; at
-#: the first switch after the upgrade the live value is the one every language
-#: shared, so switch_language completes those snapshots with it once
-#: (otherwise a filter the user set would silently become the profile default).
-#: A first visit still gets the profile default.
+#: markers, then the sentence character cap. Snapshots parked before a name was
+#: scoped carry no key for it; at the first switch after the upgrade the live
+#: value is the one every language shared, so switch_language completes those
+#: snapshots with it once (otherwise a filter the user set would silently
+#: become the profile default). A first visit still gets the profile default.
 _FORMERLY_GLOBAL_FIELDS: tuple[str, ...] = (
     "use_subtitle_regex_filter",
     "subtitle_regex_filter",
@@ -77,6 +82,7 @@ _FORMERLY_GLOBAL_FIELDS: tuple[str, ...] = (
     "frequency_keep_unranked",
     "pitch_category_format",
     "card_type_marker_fields",
+    "max_sentence_chars",
 )
 
 #: Scoped names whose type-blank is not a value the field can hold: a pitch
@@ -91,8 +97,8 @@ def blank_scoped_defaults() -> dict[str, object]:
 
     Shared by every language's own ``_scoped_defaults()``: tuple fields blank
     to ``()``, bool fields to ``False``, int fields to ``0`` (an open frequency
-    band), str fields to ``""``, and everything else (``anki_fields``,
-    ``blacklist_path``, ``whitelist_path`` today) to ``None`` —
+    band, no character cap), str fields to ``""``, and everything else
+    (``anki_fields``, ``blacklist_path``, ``whitelist_path`` today) to ``None`` —
     ``anki_fields`` is always overridden by the caller, and
     ``blacklist_path``/``whitelist_path`` are already ``None`` on a blank
     ``AnkiMinerConfig()``. The ``_CONFIG_DEFAULT_FIELDS`` have no legal blank

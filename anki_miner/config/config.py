@@ -548,7 +548,9 @@ class AnkiMinerConfig:
     # (each ``0``/``0.0`` means "no limit" for that dimension). Runs AFTER i+1
     # because filter_i_plus_one swaps each word's sentence/duration to its
     # chosen i+1 line — applying the cap before that swap would be silently
-    # bypassed by the swap.
+    # bypassed by the swap. The character cap is in LANGUAGE_SCOPED_FIELDS
+    # (a character count depends on the script, so a cap tuned to Japanese
+    # drops most German sentences); the duration cap stays global.
     max_sentence_duration_seconds: float = 0.0  # 0 = no duration cap
     max_sentence_chars: int = 0  # 0 = no character cap
 

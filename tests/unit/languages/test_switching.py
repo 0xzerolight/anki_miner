@@ -335,3 +335,19 @@ def test_the_first_switch_after_the_markers_became_scoped_gives_old_snapshots_th
     assert (on_fr.pitch_category_format, dict(on_fr.card_type_marker_fields)) == ("romaji", senren)
     back_on_ja = switch_language(on_fr, "ja")
     assert (back_on_ja.pitch_category_format, dict(back_on_ja.card_type_marker_fields)) == ("romaji", senren)
+
+
+def test_a_first_visit_lifts_the_character_cap_and_ja_gets_it_back():
+    """A ja cap of 30 characters is a whole Japanese line but a German fragment, so it never
+    reaches a first de visit; it is parked with ja and restored on the way back."""
+    on_de = switch_language(dataclasses.replace(AnkiMinerConfig(), max_sentence_chars=30), "de")
+    assert on_de.max_sentence_chars == 0
+    assert switch_language(on_de, "ja").max_sentence_chars == 30
+
+
+def test_the_first_switch_after_the_cap_became_scoped_gives_old_snapshots_the_shared_cap():
+    """Snapshots parked while the cap was global carry no key for it, so the first switch
+    completes them with the cap every language shared."""
+    old = {n: getattr(AnkiMinerConfig(), n) for n in LANGUAGE_SCOPED_FIELDS if n != "max_sentence_chars"}
+    on_ja = dataclasses.replace(AnkiMinerConfig(), max_sentence_chars=30, language_stash={"de": old})
+    assert switch_language(on_ja, "de").max_sentence_chars == 30
