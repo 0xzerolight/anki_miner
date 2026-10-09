@@ -94,7 +94,7 @@ def build_profile() -> LanguageProfile:
         # chi, zho, zh and cmn are NOT claimed: zh owns them and on the web they
         # are overwhelmingly Mandarin, so a chi-tagged Cantonese track stays
         # hand-selectable instead of being auto-selected.
-        audio_track_codes=frozenset({"yue", "yue-HK", "zh-yue", "cantonese"}),
+        audio_track_codes=frozenset({"yue", "yue-hk", "zh-yue", "cantonese"}),
         # gb18030 BEFORE big5hkscs: big5hkscs decodes simplified gb18030 bytes
         # without raising (PUA share 0.0, measured), so a Big5-first ladder would
         # silently mis-decode a Mandarin file. big5hkscs rather than big5 because

@@ -131,6 +131,16 @@ def test_folder_scans_subtitles_in_natural_order(qtbot, tmp_path):
             {"ep01.ja.srt", "ep02.srt", "Show.All.In.srt"},  # "In" is a title word, not Indonesian
         ),
         ("es", ("ep01.es.srt", "ep01.en.srt", "ep01.pt-BR.srt", "ep01.spa.srt"), {"ep01.es.srt", "ep01.spa.srt"}),
+        (
+            "yue",
+            ("ep01.yue.srt", "ep01.zh-HK.srt", "ep01.zh-Hant.srt", "ep01.zh.srt", "ep01.zh-TW.srt", "ep01.en.srt"),
+            {"ep01.yue.srt", "ep01.zh-HK.srt", "ep01.zh-Hant.srt"},  # yue's caption codes, not zh's
+        ),
+        (
+            "zh",
+            ("ep01.zh.srt", "ep01.zh-TW.srt", "ep01.zh-Hant.srt", "ep01.zh-HK.srt", "ep01.yue.srt", "ep01.ja.srt"),
+            {"ep01.zh.srt", "ep01.zh-TW.srt", "ep01.zh-Hant.srt", "ep01.zh-HK.srt"},
+        ),
     ],
 )
 def test_folder_leaves_out_subtitles_tagged_for_another_language(language, names, kept, qtbot, tmp_path):

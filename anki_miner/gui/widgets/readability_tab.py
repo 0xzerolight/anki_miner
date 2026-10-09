@@ -68,6 +68,14 @@ def _language_codes() -> frozenset[str]:
     return frozenset().union(*(get_profile(code).audio_track_codes for code in AVAILABLE_LANGUAGES))
 
 
+def _mining_codes(config: AnkiMinerConfig) -> frozenset[str]:
+    """Tags naming the mining language: its audio-track codes plus the caption codes
+    fetched for it (yue's zh-HK / zh-Hant). Lowercased: matches_language_tag folds
+    the tag, not the codes."""
+    profile = get_profile(config_language(config))
+    return frozenset(code.lower() for code in (*profile.audio_track_codes, *profile.captions.codes))
+
+
 def _tagged_for_another_language(path: Path, mining_codes: frozenset[str]) -> bool:
     """Whether the name ends in a language tag for another language (``ep01.en.srt``, ``ep01.en.forced.srt``).
 
@@ -383,7 +391,7 @@ class ReadabilityTab(_ToolTabBase):
             # A folder often holds the same episodes in other languages too
             # (ep01.en.srt beside ep01.es.srt); scoring those would skew the
             # totals, and a Latin-script mining language cannot tell them apart.
-            mining_codes = get_profile(config_language(self.config)).audio_track_codes
+            mining_codes = _mining_codes(self.config)
             # Natural order (1, 2, 10): the rows read as the season does.
             self._scan_folder_async(
                 path,

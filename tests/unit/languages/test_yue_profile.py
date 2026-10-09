@@ -56,7 +56,7 @@ def test_the_encoding_ladder_puts_gb18030_before_big5hkscs(profile):
 
 
 def test_the_audio_track_codes_leave_the_mandarin_codes_to_zh(profile):
-    assert profile.audio_track_codes == frozenset({"yue", "yue-HK", "zh-yue", "cantonese"})
+    assert profile.audio_track_codes == frozenset({"yue", "yue-hk", "zh-yue", "cantonese"})
     assert profile.audio_track_codes.isdisjoint(get_profile("zh").audio_track_codes)
 
 

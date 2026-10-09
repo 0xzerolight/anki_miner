@@ -3,9 +3,9 @@
 A PIN, not TDD: the profile fields it checks already exist, so there was no
 honest red-first state. It is a regression net against a future edit to
 ``audio_track_codes``, ``captions.codes`` or ``captions.audio_pattern``, written
-against recorded ffprobe output rather than against the profile it tests. It was
-proven able to fail before being committed, by removing ``"yue-HK"`` from
-``audio_track_codes`` and watching the first case go red.
+against recorded ffprobe output rather than against the profile it tests. It is
+proven able to fail by removing ``"yue"`` from ``audio_track_codes`` and watching
+the first case go red (``yue-HK`` still matches through ``yue-hk``).
 """
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ import re
 from pathlib import Path
 
 from anki_miner.languages.registry import get_profile
+from anki_miner.utils.audio_track_detector import matches_language_tag
 
 PROBE = json.loads((Path(__file__).parents[2] / "fixtures" / "yue" / "dual_audio_ffprobe.json").read_text("utf-8"))
 
@@ -25,7 +26,8 @@ def audio_streams():
 
 def test_the_cantonese_track_is_the_one_yue_claims():
     codes = get_profile("yue").audio_track_codes
-    claimed = [stream["index"] for stream in audio_streams() if stream["tags"]["language"] in codes]
+    # matches_language_tag is how find_japanese_audio_stream claims a track.
+    claimed = [stream["index"] for stream in audio_streams() if matches_language_tag(stream["tags"]["language"], codes)]
     assert claimed == [1, 2]  # both HK spellings, and nothing else
 
 
