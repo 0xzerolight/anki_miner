@@ -181,6 +181,27 @@ def test_a_probe_landing_mid_region_listing_leaves_read_subtitles_armed(qtbot, t
     assert tab.ocr_button.isEnabled()
 
 
+def test_a_region_lost_during_the_run_listing_asks_for_one(qtbot, test_config, tmp_path):
+    tab = _make(qtbot, test_config)
+    (tmp_path / "part1.mp4").write_bytes(b"x")
+    tab._set_region(Region(0.1, 0.8, 0.8, 0.15))
+    tab.folder_mode_button.click()
+    tab.folder_selector.set_path(str(tmp_path))
+    held: list[tuple] = []
+    with patch(_BASE_RUN_OFF_THREAD, side_effect=lambda *args, **kwargs: held.append(args)):
+        tab.ocr_button.click()
+    _, scan, apply, _on_error = held[0]
+
+    tab.update_config(replace(tab.config, video_ocr_region=()))  # a profile switch lands mid-listing
+    with patch.object(mod, "VideoOcrWorker", FakeToolWorker), patch(OS_ACCESS, return_value=True):
+        apply(scan())
+
+    assert tab.worker_thread is None
+    issue = tab.issue_banner().current_issue()
+    assert issue is not None and issue.action_id == "tools.videoocr.region"
+    assert tab.ocr_button.isEnabled()
+
+
 @pytest.mark.parametrize("outcome", ["videos", "empty", "error"])
 def test_set_region_is_held_for_the_listing_and_released_on_every_outcome(qtbot, test_config, tmp_path, outcome):
     tab = _make(qtbot, test_config)

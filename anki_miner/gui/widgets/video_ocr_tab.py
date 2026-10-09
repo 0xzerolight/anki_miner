@@ -497,14 +497,7 @@ class VideoOcrTab(RunOptionsMixin, _ToolTabBase):
             return
         self.clear_screen_issue()
         if self._region is None:
-            self.show_screen_issue(
-                ScreenIssue(
-                    summary=self.tr("Set the subtitle region before reading subtitles."),
-                    action_id="tools.videoocr.region",
-                    action_text=self.tr("Set region…"),
-                ),
-                action=self._on_set_region,
-            )
+            self._ask_for_region()
             return
         if not self.file_selector.isHidden():
             files = self._collect_single_video_file()
@@ -522,20 +515,34 @@ class VideoOcrTab(RunOptionsMixin, _ToolTabBase):
 
         self._collect_folder_video_files_async(_on_files)
 
+    def _ask_for_region(self) -> None:
+        self.show_screen_issue(
+            ScreenIssue(
+                summary=self.tr("Set the subtitle region before reading subtitles."),
+                action_id="tools.videoocr.region",
+                action_text=self.tr("Set region…"),
+            ),
+            action=self._on_set_region,
+        )
+
     def _continue(self, files: list[Path]) -> None:
+        region = self._region
+        if region is None:  # a profile switch during the folder listing cleared it
+            self._ask_for_region()
+            self.ocr_button.setEnabled(True)
+            return
         out_dir = self._custom_output_dir
         # None writes each .srt next to its video, so check the first video's folder.
         check_dir = out_dir if out_dir is not None else files[0].parent
         if not self._output_dir_writable(check_dir, self.tr("Output folder is not writable.")):
             self.ocr_button.setEnabled(True)
             return
-        assert self._region is not None
         self._begin_tool_run(len(files))
         self._total_files = len(files)
         self.log_widget.clear_log()
         self.progress_widget.reset()
         worker = VideoOcrWorker(
-            self.config, files, self._region, output_dir=out_dir, overwrite=self.overwrite_checkbox.isChecked()
+            self.config, files, region, output_dir=out_dir, overwrite=self.overwrite_checkbox.isChecked()
         )
         self._start_queue_worker(worker)
 
