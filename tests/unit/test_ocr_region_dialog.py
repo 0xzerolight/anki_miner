@@ -15,6 +15,9 @@ from anki_miner.gui.widgets.dialogs import ocr_region_dialog as mod
 from anki_miner.gui.widgets.dialogs.ocr_region_dialog import OcrRegionDialog, _RegionCanvas
 from anki_miner.services.video_ocr.frame_source import Region
 
+# numpy-backed (the gate in test_asr_marker_gating.py)
+pytestmark = pytest.mark.asr
+
 _FRAME = np.full((500, 1000, 3), 90, dtype=np.uint8)
 
 

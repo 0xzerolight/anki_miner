@@ -5,9 +5,13 @@ from __future__ import annotations
 import random
 
 import numpy as np
+import pytest
 
 from anki_miner.services.video_ocr import segmenter
 from anki_miner.services.video_ocr.segmenter import MIN_CUE, Cue, segment
+
+# numpy-backed (the gate in test_asr_marker_gating.py)
+pytestmark = pytest.mark.asr
 
 STEP = 0.1
 

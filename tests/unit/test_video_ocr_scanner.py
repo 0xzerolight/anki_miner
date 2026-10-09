@@ -17,9 +17,13 @@ from anki_miner.services.video_ocr.meiki_engine import OcrBox
 from anki_miner.services.video_ocr.scanner import VideoOcrStatus, scan_video
 from tests.unit._video_ocr_clips import render_line, solid, write_clip
 
-pytestmark = pytest.mark.skipif(
-    shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None, reason="needs ffmpeg and ffprobe on PATH"
-)
+# numpy-backed (the gate in test_asr_marker_gating.py)
+pytestmark = [
+    pytest.mark.asr,
+    pytest.mark.skipif(
+        shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None, reason="needs ffmpeg and ffprobe on PATH"
+    ),
+]
 
 _LINES = {200: "一つ目の台詞", 150: "二つ目", 100: "三つ目です"}
 _REGION = Region(0.0, 0.0, 1.0, 1.0)

@@ -15,6 +15,9 @@ import pytest
 from anki_miner.services.video_ocr import meiki_engine
 from anki_miner.services.video_ocr.meiki_engine import MeikiEngine, OcrBox
 
+# numpy-backed (the gate in test_asr_marker_gating.py)
+pytestmark = pytest.mark.asr
+
 
 class _FakeDet:
     def __init__(self, boxes: list[list[float]], scores: list[float]) -> None:

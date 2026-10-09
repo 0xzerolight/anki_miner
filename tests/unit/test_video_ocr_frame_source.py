@@ -22,6 +22,9 @@ from anki_miner.services.video_ocr.frame_source import (
 )
 from tests.unit._video_ocr_clips import color_clip, solid, write_clip
 
+# numpy-backed (the gate in test_asr_marker_gating.py)
+pytestmark = pytest.mark.asr
+
 _needs_ffmpeg = pytest.mark.skipif(
     shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None, reason="needs ffmpeg and ffprobe on PATH"
 )
