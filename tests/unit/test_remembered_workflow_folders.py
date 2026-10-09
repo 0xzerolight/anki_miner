@@ -41,6 +41,7 @@ _INPUT_KEYS = frozenset(
         "tools.booksync.inputs",
         "tools.readability.inputs",
         "tools.tracks.inputs",
+        "tools.videoocr.inputs",
     }
 )
 _OUTPUT_KEYS = frozenset(
@@ -51,6 +52,7 @@ _OUTPUT_KEYS = frozenset(
         "tools.download.output",
         "tools.booksync.output",
         "tools.tracks.output",
+        "tools.videoocr.output",
     }
 )
 _ALL_KEYS = _INPUT_KEYS | _OUTPUT_KEYS
@@ -161,7 +163,7 @@ def test_dropping_subtitle_files_records_nothing(reading_subtitles_tab, tmp_path
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture(params=["generate", "retime", "condense", "download", "booksync", "tracks"])
+@pytest.fixture(params=["generate", "retime", "condense", "download", "booksync", "tracks", "videoocr"])
 def tool_tab(request, qtbot, test_config: AnkiMinerConfig):
     from anki_miner.gui.widgets.booksync_tab import BookSyncTab
     from anki_miner.gui.widgets.condense_tab import CondenseTab
@@ -169,6 +171,7 @@ def tool_tab(request, qtbot, test_config: AnkiMinerConfig):
     from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
     from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
     from anki_miner.gui.widgets.tracks_tab import TracksTab
+    from anki_miner.gui.widgets.video_ocr_tab import VideoOcrTab
 
     cls = {
         "generate": SubtitleCreationTab,
@@ -177,6 +180,7 @@ def tool_tab(request, qtbot, test_config: AnkiMinerConfig):
         "download": DownloadTab,
         "booksync": BookSyncTab,
         "tracks": TracksTab,
+        "videoocr": VideoOcrTab,
     }[request.param]
     tab = cls(test_config, suppress_optional_startup=True)
     qtbot.addWidget(tab)

@@ -43,7 +43,7 @@ def test_identity(profile):
     assert profile.display_name == "日本語"
     assert profile.asr_language == "ja"
     assert profile.capabilities == frozenset(
-        {"pitch", "furigana", "kana_filters", "name_wordsets", "deinflection", "note_presets", "manga_ocr"}
+        {"pitch", "furigana", "kana_filters", "name_wordsets", "deinflection", "note_presets", "manga_ocr", "video_ocr"}
     )
 
 

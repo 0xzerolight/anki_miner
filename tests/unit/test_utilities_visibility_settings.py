@@ -198,3 +198,25 @@ class TestMangaOcrLanguageGate:
         panel.load_from_config(replace(test_config, language="zh", hidden_utilities=hidden))
 
         assert not panel.utility_checkboxes["generate"].isEnabled()
+
+
+class TestVideoOcrLanguageGate:
+    """The Video OCR box shows only for a language that can use the tool."""
+
+    def test_hidden_for_another_language(self, panel, test_config):
+        panel.load_from_config(replace(test_config, language="zh"))
+
+        assert panel.utility_checkboxes["videoocr"].isHidden()
+        assert not panel.utility_checkboxes["generate"].isHidden()
+
+    def test_shown_for_japanese(self, panel, test_config):
+        panel.load_from_config(replace(test_config, language="zh"))
+        panel.load_from_config(replace(test_config, language="ja"))
+
+        assert not panel.utility_checkboxes["videoocr"].isHidden()
+
+    def test_the_last_visible_tool_stays_locked(self, panel, test_config):
+        hidden = tuple(k for k in panel.utility_checkboxes if k not in ("generate", "videoocr"))
+        panel.load_from_config(replace(test_config, language="zh", hidden_utilities=hidden))
+
+        assert not panel.utility_checkboxes["generate"].isEnabled()

@@ -78,6 +78,7 @@ UTILITY_SUBTABS: tuple[str, ...] = (
     "booksync",
     "readability",
     "tracks",
+    "videoocr",
 )
 # Valid sub-tab keys per container main tab (resolved by the container's
 # duck-typed ``open_subtab``). Main tabs absent here have no sub-tabs.
@@ -108,6 +109,7 @@ def utility_labels() -> dict[str, str]:
         "booksync": QCoreApplication.translate("MainWindow", "Audiobook Sync"),
         "readability": QCoreApplication.translate("MainWindow", "Readability"),
         "tracks": QCoreApplication.translate("MainWindow", "Tracks"),
+        "videoocr": QCoreApplication.translate("MainWindow", "Video OCR"),
     }
 
 
@@ -1275,6 +1277,20 @@ CAPABILITIES: tuple[Capability, ...] = (
         target=CapabilityTarget("subtitles", "mokuro"),
         keywords=("mokuro", "manga", "ocr", "cbz", "page images", "text detection", "manga-ocr"),
         requires="manga_ocr",
+    ),
+    Capability(
+        id="video-ocr",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Read burned-in subtitles from a video into an .srt"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt "
+            "that Video → Single can mine. Made for game longplays without voice-over. Download the OCR engine "
+            "from the setup card on Utilities → Video OCR.",
+        ),
+        category=_CAT_TOOLS,
+        target=CapabilityTarget("subtitles", "videoocr"),
+        keywords=("ocr", "hardsub", "burned-in", "hardcoded subtitles", "longplay", "game", "meikiocr", "srt"),
+        requires="video_ocr",
     ),
     Capability(
         id="audiobook-sync",

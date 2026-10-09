@@ -22,6 +22,7 @@ warnings in between.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -39,6 +40,7 @@ from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
 from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
 from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
 from anki_miner.gui.widgets.tracks_tab import TracksTab
+from anki_miner.gui.widgets.video_ocr_tab import VideoOcrTab
 
 _FFMPEG_AVAILABLE = "anki_miner.gui.widgets.condense_tab.CondenseTab._compute_ffmpeg_available"
 _ALASS_AVAILABLE = "anki_miner.gui.widgets.subtitle_retime_tab.SubtitleRetimeTab._compute_alass_available"
@@ -160,6 +162,19 @@ def tracks_tab(qapp, qtbot, test_config):
     return tab
 
 
+@pytest.fixture
+def video_ocr_tab(qapp, qtbot, test_config):
+    # A region on file, so _on_ocr gets past "set the region" to its input check.
+    config = replace(test_config, video_ocr_region=(0.1, 0.8, 0.8, 0.15))
+    with patch("anki_miner.gui.widgets.video_ocr_tab.VideoOcrTab._compute_engine_available", return_value=True):
+        tab = VideoOcrTab(config)
+        qtbot.addWidget(tab)
+        assert tab._availability_worker is not None
+        assert tab._availability_worker.wait(3000)
+        qtbot.waitUntil(tab.ocr_button.isEnabled, timeout=3000)
+    return tab
+
+
 def _surviving_summary(tab) -> str | None:
     issue = tab.issue_banner().current_issue()
     return None if issue is None else issue.summary
@@ -187,6 +202,7 @@ RUN_ENTRY_POINTS = [
     ("booksync: sync", "booksync_tab", "_on_sync", lambda t: t, "_collect_book", None),
     ("readability: check", "readability_tab", "_on_check", lambda t: t.input_selector, "path_or_none", None),
     ("tracks: extract", "tracks_tab", "_on_extract", lambda t: t.input_selector, "path_or_none", None),
+    ("videoocr: read", "video_ocr_tab", "_on_ocr", lambda t: t.file_selector, "path_or_none", None),
 ]
 
 #: The same shape as ``RUN_ENTRY_POINTS``, but for the probe entry points --

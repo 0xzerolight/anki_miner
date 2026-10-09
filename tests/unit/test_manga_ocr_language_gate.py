@@ -46,6 +46,7 @@ def test_the_gate_never_empties_the_tab(qtbot, tmp_path):
         "booksync",
         "readability",
         "tracks",
+        "videoocr",
     )
     tab = _make_tab(replace(_make_config(tmp_path), language="zh", hidden_utilities=others), qtbot)
 

@@ -22,6 +22,7 @@ from anki_miner.gui.widgets.readability_tab import ReadabilityTab
 from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
 from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
 from anki_miner.gui.widgets.tracks_tab import TracksTab
+from anki_miner.gui.widgets.video_ocr_tab import VideoOcrTab
 from anki_miner.services.card_backfiller import BackfillOptions, BackfillPlan, FieldChange, NotePlan
 
 _TOOLS = {
@@ -33,6 +34,7 @@ _TOOLS = {
     "booksync": (BookSyncTab, "sync_button"),
     "readability": (ReadabilityTab, "check_button"),
     "tracks": (TracksTab, "extract_button"),
+    "videoocr": (VideoOcrTab, "ocr_button"),
 }
 
 

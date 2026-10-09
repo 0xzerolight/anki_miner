@@ -37,6 +37,7 @@ from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
 from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
 from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
 from anki_miner.gui.widgets.tracks_tab import TracksTab
+from anki_miner.gui.widgets.video_ocr_tab import VideoOcrTab
 
 #: Every screen W1-T6 left unpublished, with the id and owner it now declares.
 PUBLISHING_SCREENS = [
@@ -58,6 +59,7 @@ PUBLISHING_SCREENS = [
     (BookSyncTab, "tools.booksync", ("subtitles", "booksync")),
     (ReadabilityTab, "tools.readability", ("subtitles", "readability")),
     (TracksTab, "tools.tracks", ("subtitles", "tracks")),
+    (VideoOcrTab, "tools.videoocr", ("subtitles", "videoocr")),
 ]
 
 

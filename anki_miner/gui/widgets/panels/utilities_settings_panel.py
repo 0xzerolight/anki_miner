@@ -60,8 +60,8 @@ class UtilitiesSettingsPanel(FormPanel):
     def _sync_utility_lock(self) -> None:
         """Disable the only checked box, so the Utilities tab always keeps a tool.
 
-        Counts only the boxes on screen: a language-gated box (Manga OCR outside
-        Japanese) stays checked but is no tool the user can see (E17).
+        Counts only the boxes on screen: a language-gated box (Manga OCR or Video
+        OCR outside Japanese) stays checked but is no tool the user can see (E17).
         """
         checked = sum(box.isChecked() for box in self.utility_checkboxes.values() if not box.isHidden())
         for box in self.utility_checkboxes.values():
@@ -78,11 +78,11 @@ class UtilitiesSettingsPanel(FormPanel):
                 box.setChecked(key not in hidden)
             finally:
                 box.blockSignals(False)
-        # E17: Manga OCR reads Japanese only; its box follows the tab's
-        # language gate (SubtitlesTab), never the stored hidden list. Gated
-        # before the lock, which counts only the boxes the user can see (P1).
+        # E17: Manga OCR and Video OCR read Japanese only; their boxes follow
+        # the tab's language gate (SubtitlesTab), never the stored hidden list.
+        # Gated before the lock, which counts only the boxes the user can see (P1).
         apply_language_gate(
-            [(self.utility_checkboxes["mokuro"], "manga_ocr")],
+            [(self.utility_checkboxes["mokuro"], "manga_ocr"), (self.utility_checkboxes["videoocr"], "video_ocr")],
             get_profile(config_language(config)).capabilities,
         )
         self._sync_utility_lock()

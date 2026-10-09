@@ -260,6 +260,7 @@ class TestCardsShareOneDensity:
         "BookSyncTab",
         "ReadabilityTab",
         "TracksTab",
+        "VideoOcrTab",
         "AnalyticsTab",
         "SettingsTab",
     )

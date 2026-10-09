@@ -91,6 +91,7 @@ def test_unchecking_the_open_tool_hides_it_live(wired_window, qtbot):
         utilities.booksync_tab,
         utilities.readability_tab,
         utilities.tracks_tab,
+        utilities.video_ocr_tab,
     ):
         assert child._availability_worker.wait(3000)
     qtbot.wait(10)

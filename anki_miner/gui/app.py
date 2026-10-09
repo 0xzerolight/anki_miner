@@ -1434,6 +1434,33 @@ def _connect_mokuro_install(window: MainWindow, subtitles_tab: SubtitlesTab) -> 
     )
 
 
+def _connect_video_ocr_install(window: MainWindow, subtitles_tab: SubtitlesTab, settings_tab: SettingsTab) -> None:
+    """Wire Video OCR's setup card to its install worker.
+
+    A successful task may have installed the onnxruntime pack, which Settings'
+    silence-removal row also reads, so that row is refreshed. Only on success: a
+    refusal (sent while that row's own download runs) must not clear its in-flight guard.
+    """
+
+    def _tail(request_arg: object, ok: bool, message: str) -> None:
+        subtitles_tab.video_ocr_tab.notify_install_finished(ok)
+        if ok:
+            settings_tab.subtitles_panel.notify_vad_pack_download_finished(window.get_config().onnx_pack_root)
+
+    def _start(request_arg: object, on_status: Callable[[str], None], on_finished: Callable[[bool, str], None]) -> None:
+        config = window.get_config()
+        window.background_tasks.start_video_ocr_install(
+            config.onnx_pack_root, config.video_ocr_models_root, on_status, on_finished
+        )
+
+    _connect_download(
+        subtitles_tab.video_ocr_tab.video_ocr_install_requested,
+        set_status=subtitles_tab.video_ocr_tab.set_install_status,
+        start=_start,
+        on_finished_tail=_tail,
+    )
+
+
 def _connect_ytdlp_download(window: MainWindow, video_tab: VideoTab, subtitles_tab: SubtitlesTab) -> None:
     """Wire the two screens that need yt-dlp to the one updater.
 
@@ -1904,6 +1931,8 @@ def compose_main_window(
         _connect(window, settings_tab)
     # mokuro install lives on the Manga OCR tab itself (see _connect_mokuro_install).
     _connect_mokuro_install(window, subtitles_tab)
+    # So does the Video OCR engine download, on its own setup card.
+    _connect_video_ocr_install(window, subtitles_tab, settings_tab)
     # Utilities -> Download and Video -> YouTube offer the same repair when
     # yt-dlp is missing; both route to the updater the Settings button uses.
     _connect_ytdlp_download(window, video_tab, subtitles_tab)
@@ -1974,6 +2003,7 @@ def compose_main_window(
         subtitles_tab.booksync_tab,
         subtitles_tab.readability_tab,
         subtitles_tab.tracks_tab,
+        subtitles_tab.video_ocr_tab,
     )
     for screen in published:
         screen.bind_task_registry(window.task_registry)

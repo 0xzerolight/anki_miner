@@ -267,6 +267,7 @@ _TRANSIENT_OVERWRITE_SCREENS = (
     "CardBackfillTab",
     "BookSyncTab",
     "TracksTab",
+    "VideoOcrTab",
 )
 
 
