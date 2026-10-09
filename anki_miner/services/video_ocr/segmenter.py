@@ -1,7 +1,7 @@
 """Turn a stream of region samples into timed cues. Pure: numpy only, no ffmpeg, no OCR engine.
 
-The constants are initial values, tuned once on real longplay footage (plan Task 8).
-They are not settings.
+The constants are initial values, not settings. CHANGED_FRACTION is tuned on synthetic
+game-style footage; tuning on real longplay footage is still owed.
 """
 
 from __future__ import annotations
@@ -14,7 +14,11 @@ import numpy as np
 SAMPLE_FPS = 10
 GATE_WIDTH = 240  # the gate compares a strided copy at most this wide
 PIXEL_DELTA = 40  # grayscale change that counts a pixel as changed
-CHANGED_FRACTION = 0.03  # share of changed pixels that closes a span
+# Share of changed gate pixels that closes a span: about 5 pixels of the view, low enough for a
+# one-glyph line in a 1280-wide region (a thin 「！」 can still fall between the strided samples).
+# Tuned on synthetic game-style footage (text on a semi-transparent box over motion, x264);
+# real-footage tuning is still owed.
+CHANGED_FRACTION = 0.0006
 MIN_OCR_SPAN = 0.5  # shorter spans coalesce with the next: at most ~2 OCR calls per second
 MIN_CUE = 0.3
 TYPEWRITER_PIECE_MAX = 1.0  # prefix merges only follow a piece this short (a held line is a real line)

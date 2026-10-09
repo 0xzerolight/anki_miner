@@ -85,14 +85,39 @@ def test_a_slow_fade_out_closes_the_span_instead_of_swallowing_the_line():
     assert 1.0 <= cues[0].end <= 1.7
 
 
+WIDE = (172, 1024)  # a 1024x172 subtitle region: the gate view is 205x35
+
+
+@pytest.mark.parametrize(
+    ("block", "share"),
+    [((22, 40), 0.005), ((22, 20), 0.0025)],
+    ids=["two-glyph", "one-glyph"],
+)
+def test_a_short_line_in_a_wide_region_becomes_a_cue(block, share):
+    # A short line in a wide region changes only a small block of the pixels.
+    def frame(lit: bool) -> np.ndarray:
+        out = np.full((*WIDE, 3), 90, dtype=np.uint8)
+        if lit:
+            out[: block[0], : block[1]] = 200  # top-left, so it is also the fake reader's code pixel
+        return out
+
+    assert block[0] * block[1] / (WIDE[0] * WIDE[1]) == pytest.approx(share, rel=0.02)
+    samples = [(round(i * STEP, 6), frame(10 <= i < 30)) for i in range(40)]
+    assert approx(segment(samples, reader({200: "はい"}))) == [(1.0, 3.0, "はい")]
+
+
 def test_busy_background_under_the_threshold_is_one_span():
+    # A semi-transparent box over motion: the box damps the scene, so every pixel moves on every
+    # sample (a scrolling wave plus compression jitter) yet none strays PIXEL_DELTA from the anchor,
+    # bar one stray sparkle per sample.
     rng = np.random.default_rng(1)
+    x = np.arange(200, dtype=np.float32)
     samples = []
     for i in range(30):
-        frame = np.full((40, 200, 3), 200, dtype=np.uint8)
-        noise = rng.random((40, 200)) < 0.01  # 1 % flips per sample: ~2 % differ from the anchor, under 3 %
-        frame[noise] = 0
-        frame[0, 0] = 200  # the fake reader's code pixel is never noise
+        luma = 200 + 12 * np.sin(x / 7 + i) + rng.uniform(-7, 7, size=(40, 200))
+        frame = np.repeat(luma.astype(np.uint8)[:, :, None], 3, axis=2)
+        frame[rng.integers(40), rng.integers(200)] = 0
+        frame[0, 0] = 200  # the fake reader's code pixel
         samples.append((round(i * STEP, 6), frame))
     calls: list[int] = []
     cues = segment(samples, reader({200: "台詞"}, calls))
