@@ -16,8 +16,12 @@ The cursor advances only on EQUAL characters: unit-cost Levenshtein will
 "replace" an unbooked transcript stretch against unread book text whenever
 that is cheaper than deleting it, and a cursor moved by those replacements
 would skip real sentences for good. A committed window whose equal share is
-under ``MIN_WINDOW_MATCH`` means the two sides are not looking at the same
-passage. Two probes, one attempt each: the book window's first
+under the window floor means the two sides are not looking at the same
+passage. Two unrelated passages already share a fraction of their characters
+that depends on the alphabet, so both floors come from the book itself
+(:func:`_null_floors`): its own null share plus a margin, never below
+``MIN_WINDOW_MATCH`` / ``REANCHOR_MIN_SCORE``. Two probes, one attempt each,
+each needing the re-anchor floor: the book window's first
 ``REANCHOR_PROBE_CHARS`` searched inside the transcript window (an unbooked
 transcript prefix — narrator intro, chapter announcement — is dropped and the
 window redone from the first booked character), then the transcript window's
@@ -38,6 +42,7 @@ is seconds, and nothing the size of the book is ever allocated at once.
 from __future__ import annotations
 
 import math
+import statistics
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
@@ -57,6 +62,18 @@ REANCHOR_MIN_SCORE = 60.0
 MIN_SENTENCE_MATCH = 3
 MIN_SENTENCE_MATCH_SHARE = 0.3
 MIN_CUE_SECONDS = 0.3
+
+#: Equal share two unrelated passages of the same book already reach depends on
+#: the alphabet (kana ~0.26; Latin/Cyrillic ~0.40-0.53), so the off-track floor
+#: is the book's own null share plus a margin, never below MIN_WINDOW_MATCH.
+#: Measured on all 32 mining languages: unrelated windows reach at most 0.083
+#: above the null, noisy related reads stay at least 0.28 above it, and the
+#: kana floor stays MIN_WINDOW_MATCH for margins up to 0.092. Probe scores:
+#: unrelated at most 6.5 above the null, related at least 18.4 above it. With
+#: 5 samples the null estimate is too noisy for that narrow kana window.
+NULL_MARGIN = 0.09
+REANCHOR_NULL_MARGIN = 12.0
+NULL_SAMPLES = 8
 
 
 @dataclass(frozen=True)
@@ -123,6 +140,50 @@ def _book_stream(book: BookText, first: int, min_chars: int) -> _Stream:
     return _Stream(book.keys[first:last], first)
 
 
+def _null_floors(book: BookText) -> tuple[float, float]:
+    """(window floor, re-anchor floor) calibrated on ``book``.
+
+    The null is what two passages of the book that are NOT the same text
+    score: ``NULL_SAMPLES`` pairs, each a ``TRANSCRIPT_WINDOW_CHARS`` window
+    standing in for the transcript and the book window that follows it (the
+    gate's geometry), spread evenly over the book. The mean equal share and
+    the mean prefix-probe score, plus their margins, are the floors, never
+    below the constants. A book too short for one pair returns the constants.
+    """
+    window_chars = TRANSCRIPT_WINDOW_CHARS
+    book_chars = int(window_chars * BOOK_WINDOW_SLACK) + BOOK_WINDOW_EXTRA
+    commit = int(window_chars * COMMIT_FRACTION)
+    last, tail = len(book.keys), 0  # last sentence a whole pair can start from
+    while last > 0 and tail < window_chars + book_chars:
+        last -= 1
+        tail += len(book.keys[last])
+    if tail < window_chars + book_chars:
+        return MIN_WINDOW_MATCH, REANCHOR_MIN_SCORE
+    shares: list[float] = []
+    scores: list[float] = []
+    for k in range(NULL_SAMPLES):
+        first = k * last // (NULL_SAMPLES - 1)
+        stand_in = _book_stream(book, first, window_chars)
+        window = stand_in.chars[:window_chars]
+        following = _book_stream(book, first + len(stand_in.lengths), book_chars).chars[:book_chars]
+        if not following:
+            continue  # one sentence holds the rest of the book
+        equal = sum(
+            min(op.src_end, commit) - op.src_start
+            for op in Levenshtein.opcodes(window, following)
+            if op.tag == "equal" and op.src_start < commit
+        )
+        shares.append(equal / commit)
+        probe = fuzz.partial_ratio_alignment(following[:REANCHOR_PROBE_CHARS], window)
+        scores.append(probe.score if probe is not None else 0.0)
+    if not shares:
+        return MIN_WINDOW_MATCH, REANCHOR_MIN_SCORE
+    return (
+        max(MIN_WINDOW_MATCH, statistics.fmean(shares) + NULL_MARGIN),
+        max(REANCHOR_MIN_SCORE, statistics.fmean(scores) + REANCHOR_NULL_MARGIN),
+    )
+
+
 def _char_time(segments: Sequence[TimedText], stream: _Stream, i: int, *, after: bool = False) -> float:
     seg = segments[stream.owner[i]]
     length = max(1, stream.lengths[stream.owner[i]])
@@ -142,6 +203,7 @@ def align_to_book(
     transcript = _Stream([normalize_for_alignment(s.text) for s in segments])
     if not transcript.chars or cursor.sentence >= len(book.keys):
         return []
+    window_floor, reanchor_floor = _null_floors(book)
 
     hits: dict[int, int] = {}
     first_char: dict[int, int] = {}
@@ -186,7 +248,7 @@ def align_to_book(
                 local_first.setdefault(sentence, t_index)
                 local_last[sentence] = t_index
 
-        if matched / commit >= MIN_WINDOW_MATCH:
+        if matched / commit >= window_floor:
             for s, c in local_hits.items():
                 hits[s] = hits.get(s, 0) + c
                 first_char.setdefault(s, local_first[s])
@@ -214,14 +276,14 @@ def align_to_book(
             tried_prefix = True
             if len(window) > REANCHOR_PROBE_CHARS:
                 hit = fuzz.partial_ratio_alignment(book_win.chars[:REANCHOR_PROBE_CHARS], window)
-                if hit is not None and hit.score >= REANCHOR_MIN_SCORE and hit.dest_start > 0:
+                if hit is not None and hit.score >= reanchor_floor and hit.dest_start > 0:
                     if log is not None:
                         log(f"Skipped {hit.dest_start} transcript characters with no match in the book")
                     i += hit.dest_start
                     continue  # redo from the first booked character
         if not tried_jump:
             tried_jump = True
-            target = _find_ahead(window[:REANCHOR_PROBE_CHARS], book, cursor.sentence)
+            target = _find_ahead(window[:REANCHOR_PROBE_CHARS], book, cursor.sentence, reanchor_floor)
             if target is not None:
                 jumped_from = cursor.sentence
                 cursor.sentence = target
@@ -242,7 +304,7 @@ def align_to_book(
     return _emit(segments, transcript, book, cursor, hits, first_char, last_char)
 
 
-def _find_ahead(probe: str, book: BookText, first: int) -> int | None:
+def _find_ahead(probe: str, book: BookText, first: int, min_score: float) -> int | None:
     """Sentence where ``probe`` starts in the book at or after ``first``, or None.
 
     Searches ``REANCHOR_SPAN_CHARS`` at a time, nearest span first, so a hit
@@ -255,7 +317,7 @@ def _find_ahead(probe: str, book: BookText, first: int) -> int | None:
         if len(search.chars) <= len(probe):
             return None
         hit = fuzz.partial_ratio_alignment(probe, search.chars)
-        if hit is not None and hit.score >= REANCHOR_MIN_SCORE:
+        if hit is not None and hit.score >= min_score:
             return search.owner[min(hit.dest_start, len(search.owner) - 1)]
         if start + len(search.lengths) >= len(book.keys):
             return None  # this span reached the end of the book
