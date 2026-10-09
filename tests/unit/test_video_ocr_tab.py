@@ -8,6 +8,7 @@ import sys
 from dataclasses import replace
 from unittest.mock import patch
 
+import pytest
 from PyQt6.QtGui import QPixmap
 
 from anki_miner.gui.capabilities import CapabilityTarget
@@ -123,3 +124,49 @@ def test_install_click_requests_and_a_failure_keeps_its_message(qtbot, test_conf
     tab.notify_install_finished(False)
     assert tab.install_button.isEnabled()
     assert tab.install_status_label.text() == "Download failed: boom"
+
+
+_BASE_RUN_OFF_THREAD = "anki_miner.gui.widgets._tool_tab_base.run_off_thread"
+
+
+def _hold_region_listing(tab, folder):
+    """Click Set region… in folder mode with the listing held; return run_off_thread's args."""
+    tab.folder_mode_button.click()
+    tab.folder_selector.set_path(str(folder))
+    held: list[tuple] = []
+    with patch(_BASE_RUN_OFF_THREAD, side_effect=lambda *args, **kwargs: held.append(args)):
+        tab.set_region_button.click()
+    assert len(held) == 1  # the listing is still in flight
+    return held[0]
+
+
+def test_a_probe_landing_mid_region_listing_leaves_read_subtitles_armed(qtbot, test_config, tmp_path):
+    # Built with no verdict yet: the startup probe is still in flight.
+    tab = VideoOcrTab(test_config, suppress_optional_startup=True)
+    qtbot.addWidget(tab)
+    (tmp_path / "part1.mp4").write_bytes(b"x")
+    _, scan, apply, _on_error = _hold_region_listing(tab, tmp_path)
+
+    tab._apply_probe_result(_EngineState(True, True))  # the probe lands mid-listing
+    with patch.object(VideoOcrTab, "_open_region_dialog") as open_dialog:
+        apply(scan())
+
+    open_dialog.assert_called_once_with(tmp_path / "part1.mp4")
+    assert tab.ocr_button.isEnabled()
+
+
+@pytest.mark.parametrize("outcome", ["videos", "empty", "error"])
+def test_set_region_is_held_for_the_listing_and_released_on_every_outcome(qtbot, test_config, tmp_path, outcome):
+    tab = _make(qtbot, test_config)
+    if outcome == "videos":
+        (tmp_path / "part1.mp4").write_bytes(b"x")
+    _, scan, apply, on_error = _hold_region_listing(tab, tmp_path)
+    assert not tab.set_region_button.isEnabled()
+
+    with patch.object(VideoOcrTab, "_open_region_dialog"):
+        if outcome == "error":
+            on_error("boom")
+        else:
+            apply(scan())
+
+    assert tab.set_region_button.isEnabled()

@@ -394,16 +394,23 @@ class VideoOcrTab(RunOptionsMixin, _ToolTabBase):
                 )
                 return
 
+            # Held for the listing, so a slow share cannot stack two listings and two dialogs.
+            self.set_region_button.setEnabled(False)
+
             def _on_files(files: list[Path]) -> None:
+                # Called on every outcome: videos, an empty folder, a failed listing.
+                self.set_region_button.setEnabled(True)
                 if files:
                     self._open_region_dialog(files[0])
 
+            # Not a run's listing: it must not hold or release Read Subtitles' scan guard.
             self._scan_folder_async(
                 Path(folder),
                 _is_video,
                 _on_files,
                 empty_summary=self.tr("No videos were found in that folder."),
                 failed_summary=self.tr("That folder could not be scanned."),
+                guards_primary=False,
             )
             return
         path = self.file_selector.path_or_none()
