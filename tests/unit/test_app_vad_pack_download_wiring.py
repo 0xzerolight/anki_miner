@@ -71,8 +71,8 @@ class TestVadPackDownloadWiring:
         assert settings_tab.subtitles_panel.vad_status_label.text() == "Silence-removal library installed."
         assert calls == [_window.get_config().onnx_pack_root]
 
-    def test_a_refusal_during_the_video_ocr_install_keeps_its_text(self, monkeypatch, wired):
-        """No re-probe while the OCR install runs: its own finish refreshes this row afterwards."""
+    def test_a_refusal_during_the_video_ocr_install_still_settles_the_row(self, monkeypatch, wired):
+        """The row's own finish always clears its guard; one left for the OCR install could strand the button."""
         window, settings_tab, captured = wired
         ocr_install = FakeToolWorker()
         ocr_install.start()  # a stand-in with cancel()/wait(), so the window's close joins it cleanly
@@ -89,5 +89,4 @@ class TestVadPackDownloadWiring:
         refusal = "Wait for the OCR engine download to finish, then try again."
         captured["on_finished"](False, refusal)
 
-        assert settings_tab.subtitles_panel.vad_status_label.text() == refusal
-        assert calls == []
+        assert calls == [window.get_config().onnx_pack_root]

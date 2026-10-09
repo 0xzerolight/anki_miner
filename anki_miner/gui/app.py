@@ -1490,8 +1490,7 @@ def _connect_video_ocr_install(window: MainWindow, subtitles_tab: SubtitlesTab, 
     The task may have installed the onnxruntime pack, which Settings' silence-removal
     row also reads, even when it then failed on the models, so that row is refreshed.
     Not while that row's own download runs (the only time the task is refused): a
-    refresh then would clear its in-flight guard. This refresh also releases a VAD
-    click refused during the task (see _connect_vad_pack_download).
+    refresh then would clear its in-flight guard.
     """
 
     def _tail(request_arg: object, ok: bool, message: str) -> None:
@@ -1587,14 +1586,11 @@ def _connect_vad_pack_download(window: MainWindow, settings_tab: SettingsTab) ->
 
     Status flows back to the panel; on finish the panel's in-flight guard is
     cleared and its installed-state label refreshed via
-    ``notify_vad_pack_download_finished``. Not while the Video OCR install runs
-    (the only time this download is refused): a re-probe would replace the
-    refusal with "Not installed", and the install's own finish refreshes the row.
+    ``notify_vad_pack_download_finished``.
     """
 
     def _tail(request_arg: object, ok: bool, message: str) -> None:
-        if not still_running(window.background_tasks.video_ocr_install_worker):
-            settings_tab.subtitles_panel.notify_vad_pack_download_finished(window.get_config().onnx_pack_root)
+        settings_tab.subtitles_panel.notify_vad_pack_download_finished(window.get_config().onnx_pack_root)
 
     def _start(request_arg: object, on_status: Callable[[str], None], on_finished: Callable[[bool, str], None]) -> None:
         window.background_tasks.start_vad_pack_download(window.get_config().onnx_pack_root, on_status, on_finished)
