@@ -68,7 +68,11 @@ def scan_video(
     cancel_event: threading.Event | None = None,
     reader: TextReader | None = None,
 ) -> VideoOcrResult:
-    """Read ``region`` of ``video`` into ``out_srt``. Raises only ``EngineLoadError`` (fatal for a queue)."""
+    """Read ``region`` of ``video`` into ``out_srt``.
+
+    ``EngineLoadError`` is the one error meant to stop a queue. Others (writing the .srt, a
+    runtime failure mid-scan) propagate too, and the queue worker records them as that file's failure.
+    """
     started = time.monotonic()
     duration = get_media_duration_seconds(video, resolve_ffprobe(config))
     text_reader = _reader(config, reader)
