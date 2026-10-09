@@ -84,6 +84,21 @@ def test_a_config_region_is_adopted_when_idle(qtbot, test_config):
     assert tab._region == Region(0.2, 0.7, 0.6, 0.2)
 
 
+def test_a_config_region_is_adopted_during_a_run(qtbot, test_config, tmp_path):
+    # A profile switch mid-run: the worker scans its own copy, the next run must scan the new region.
+    tab = _make(qtbot, test_config)
+    video = tmp_path / "v.mp4"
+    video.write_bytes(b"x")
+    tab.file_selector.set_path(str(video))
+    tab._set_region(Region(0.1, 0.8, 0.8, 0.15))
+    with patch.object(mod, "VideoOcrWorker", FakeToolWorker), patch(OS_ACCESS, return_value=True):
+        tab.ocr_button.click()
+    assert tab.worker_thread.isRunning()
+    tab.update_config(replace(tab.config, video_ocr_region=(0.2, 0.7, 0.6, 0.2)))
+    assert tab._region == Region(0.2, 0.7, 0.6, 0.2)
+    assert tab.worker_thread.args[2] == Region(0.1, 0.8, 0.8, 0.15)
+
+
 def test_only_a_non_region_change_re_probes_the_engine(qtbot, test_config):
     tab = _make(qtbot, test_config)
     # MainWindow.update_config bumps config_version on every update, the region's own included.

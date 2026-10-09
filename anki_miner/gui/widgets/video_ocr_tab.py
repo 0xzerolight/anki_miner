@@ -172,11 +172,11 @@ class VideoOcrTab(RunOptionsMixin, _ToolTabBase):
     def update_config(self, config: AnkiMinerConfig) -> None:
         """Adopt a new config; re-probe only when something other than the region changed."""
         old, self.config = self.config, config
-        if not still_running(self.worker_thread):
-            region = Region.from_config(config.video_ocr_region)
-            if region != self._region:
-                self._region = region
-                self._show_region(None)
+        # Adopted mid-run too: the worker scans its own copy, and the next run needs this one.
+        region = Region.from_config(config.video_ocr_region)
+        if region != self._region:
+            self._region = region
+            self._show_region(None)
         # MainWindow bumps config_version on every update, so it never counts as a change.
         masked = dataclasses.replace(
             old, video_ocr_region=config.video_ocr_region, config_version=config.config_version
