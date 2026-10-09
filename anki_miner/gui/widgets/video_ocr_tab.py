@@ -177,7 +177,11 @@ class VideoOcrTab(RunOptionsMixin, _ToolTabBase):
             if region != self._region:
                 self._region = region
                 self._show_region(None)
-        if dataclasses.replace(old, video_ocr_region=config.video_ocr_region) != config:
+        # MainWindow bumps config_version on every update, so it never counts as a change.
+        masked = dataclasses.replace(
+            old, video_ocr_region=config.video_ocr_region, config_version=config.config_version
+        )
+        if masked != config:
             self._refresh_engine_state()
 
     # ------------------------------------------------------------------

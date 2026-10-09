@@ -84,6 +84,17 @@ def test_a_config_region_is_adopted_when_idle(qtbot, test_config):
     assert tab._region == Region(0.2, 0.7, 0.6, 0.2)
 
 
+def test_only_a_non_region_change_re_probes_the_engine(qtbot, test_config):
+    tab = _make(qtbot, test_config)
+    # MainWindow.update_config bumps config_version on every update, the region's own included.
+    bumped = test_config.config_version + 1
+    with patch.object(tab, "_refresh_engine_state") as probe:
+        tab.update_config(replace(test_config, video_ocr_region=(0.2, 0.7, 0.6, 0.2), config_version=bumped))
+        probe.assert_not_called()
+        tab.update_config(replace(tab.config, video_ocr_models_root=test_config.video_ocr_models_root / "moved"))
+        probe.assert_called_once()
+
+
 def test_the_thumbnail_survives_the_config_round_trip(qtbot, test_config):
     tab = _make(qtbot, test_config)
     tab._set_region(Region(0.123456, 0.8, 0.75, 0.1), QPixmap(10, 10))
