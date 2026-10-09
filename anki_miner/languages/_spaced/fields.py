@@ -8,7 +8,9 @@ from types import MappingProxyType
 from anki_miner.languages._spaced.script import LATIN_SUBTITLE_REGEX
 from anki_miner.languages.profile import AudioDefaults, CardFieldSpec
 
-POS_FIELD = CardFieldSpec(key="pos", capability="pos_tag", placeholder="PartOfSpeech")
+#: "POS" is what he named this field before the Anki Miner Note rename. One spec
+#: for every language: Settings shows a single pos row built from the first one.
+POS_FIELD = CardFieldSpec(key="pos", capability="pos_tag", placeholder="PartOfSpeech", aliases=("POS",))
 NOUN_GENDER_FIELD = CardFieldSpec(key="noun_gender", capability="noun_gender", placeholder="Gender")
 NOUN_ARTICLE_FIELD = CardFieldSpec(key="noun_article", capability="noun_article", placeholder="Article")
 NOUN_PLURAL_FIELD = CardFieldSpec(key="noun_plural", capability="noun_plural", placeholder="Plural")

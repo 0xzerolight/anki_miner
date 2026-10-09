@@ -37,7 +37,7 @@ def test_complete_zero_card_row_never_says_ready(qapp, qtbot):
     widget.set_cards_created(0)
 
     assert widget.state_label.text() == "Complete"
-    assert widget.aside_label.text() == "2 episodes"
+    assert widget.aside_label.text() == "2 episode(s)"
     assert widget.result_label.text() == "Cards: 0"
 
 

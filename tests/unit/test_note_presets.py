@@ -255,6 +255,13 @@ def test_hebrew_pos_maps_to_part_of_speech():
     assert extra["pos"] == "PartOfSpeech"
 
 
+def test_a_hebrew_field_named_pos_maps_as_an_alias_of_part_of_speech():
+    """he spelled its placeholder "POS" until the Anki Miner Note rename; such note types keep mapping."""
+    fields = ["Expression", "Sentence", "POS"]
+    specs = get_profile("he").extra_card_fields
+    assert auto_map_profile_fields(fields, specs, auto_map_fields(fields).values())["pos"] == "POS"
+
+
 def test_thai_paiboon_maps_to_romanization():
     specs = get_profile("th").extra_card_fields
     extra = auto_map_profile_fields(AMN_FIELDS, specs, auto_map_fields(AMN_FIELDS).values())

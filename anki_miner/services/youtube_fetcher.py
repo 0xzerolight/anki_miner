@@ -1100,7 +1100,8 @@ def classify_probe_result(
         # _cookie_args() honors both --cookies-from-browser and --cookies <file>.
         return (
             False,
-            "Age-restricted video. Set Cookies (Browser or File) in Settings and retry.",
+            "Age-restricted video. In Settings → YouTube, set Cookies from browser to your browser, "
+            'or to "From a cookies.txt file…" for an exported cookies.txt, then retry.',
             None,
         )
     if source == "transcribe":

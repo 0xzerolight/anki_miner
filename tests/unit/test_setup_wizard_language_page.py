@@ -6,6 +6,7 @@ from dataclasses import replace
 from unittest.mock import MagicMock
 
 import pytest
+from PyQt6.QtCore import QObject, pyqtSignal
 
 from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard
 from anki_miner.gui.widgets.dialogs.setup_wizard import pages as wizard_pages
@@ -465,6 +466,80 @@ def test_a_failed_pack_download_offers_retry(qtbot, monkeypatch, test_config):
     tasks.language_pack_workers.clear()
     wiz.language_page.activate_link("pack")
     assert tasks.started == ["de", "de"]
+
+
+class _SignallingInstallWorker(QObject):
+    """A running InstallWorker as _start_pack_download sees it: two signals and isRunning."""
+
+    status = pyqtSignal(str)
+    result_ready = pyqtSignal(bool, str)
+
+    def isRunning(self) -> bool:  # noqa: N802 - mirrors QThread
+        return True
+
+
+def test_next_joins_a_pack_download_settings_already_started(qtbot, monkeypatch, test_config):
+    """X.4d: no second download; the running one's status and result drive the Ready line."""
+    _choices_with_a_download(monkeypatch)
+    monkeypatch.setattr(wizard_pages, "ensure_language_packs_on_syspath", lambda: None)
+    wiz, tasks = _wizard_with_tasks(qtbot, monkeypatch, test_config)
+    running = _SignallingInstallWorker()
+    tasks.language_pack_workers["de"] = running
+    page = wiz.language_page
+    _pick(page, "de")
+
+    assert page.validatePage() is True
+    assert tasks.started == []
+    running.status.emit("Deutsch pack (1/2): downloading")
+    assert "Deutsch pack (1/2): downloading" in page.ready_page_pack_line()
+    assert page.pack_ready() is False
+
+    running.result_ready.emit(True, "Deutsch pack installed.")
+
+    assert page.pack_ready() is True
+
+
+def _with_settings_tab(wiz):
+    """Give the wizard's parent the MainWindow seams _on_pack_finished looks for."""
+    from types import SimpleNamespace
+
+    notified: list[str] = []
+    settings = SimpleNamespace(notify_language_pack_download_finished=notified.append)
+    parent = wiz.parent()
+    parent._settings_tab_index = lambda: 0  # type: ignore[attr-defined]
+    parent.tabs = SimpleNamespace(widget=lambda index: settings)  # type: ignore[attr-defined]
+    return notified
+
+
+@pytest.mark.parametrize("ok", [True, False])
+def test_the_pack_outcome_reaches_settings_either_way(qtbot, monkeypatch, test_config, ok):
+    """X.4b: a Settings "Download and switch" that joined this run must not stay disabled on failure."""
+    _choices_with_a_download(monkeypatch)
+    synced: list[bool] = []
+    monkeypatch.setattr(wizard_pages, "ensure_language_packs_on_syspath", lambda: synced.append(True))
+    wiz, tasks = _wizard_with_tasks(qtbot, monkeypatch, test_config)
+    notified = _with_settings_tab(wiz)
+    _pick(wiz.language_page, "de")
+    wiz.language_page.validatePage()
+
+    tasks.on_finished(ok, "done" if ok else "network down")
+
+    assert notified == ["de"]
+    assert synced == ([True] if ok else [])
+
+
+def test_a_failed_pack_line_says_why(qtbot, monkeypatch, test_config):
+    """X.4c: the worker's message is the only explanation the user gets."""
+    _choices_with_a_download(monkeypatch)
+    wiz, tasks = _wizard_with_tasks(qtbot, monkeypatch, test_config)
+    _pick(wiz.language_page, "de")
+    wiz.language_page.validatePage()
+
+    tasks.on_finished(False, "Cannot reach the download server.")
+
+    line = wiz.language_page.ready_page_pack_line()
+    assert line.startswith("⁨Deutsch⁩ language pack: download failed. Cannot reach the download server.")
+    assert 'href="pack"' in line
 
 
 def test_without_a_downloader_the_pick_is_refused_with_a_reason(qtbot, monkeypatch, test_config):

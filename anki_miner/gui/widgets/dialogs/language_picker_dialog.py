@@ -16,7 +16,8 @@ Three tiers, in the order a user reaches for them:
   (``en.*``), exclusions (``-live_chat``), comma lists and ``all``; none of those
   can be a checkbox. Search text shaped like one (see :func:`is_expression`) is
   taken as the raw ``--sub-langs`` value: the list is disabled and a one-line
-  hint says so. The separate Advanced field is gone (D19).
+  hint says so. A stored value the checkboxes cannot hold reopens the same
+  way. The separate Advanced field is gone (D19).
 """
 
 from __future__ import annotations
@@ -69,6 +70,10 @@ class LanguagePickerDialog(EnhancedDialog):
         seeded = parse_lang_list(selection)
         # None means the value is an expression the checkboxes cannot express.
         expression = "" if seeded is not None else selection.strip()
+        #: The stored value the checkboxes could not hold. While the search box
+        #: holds exactly this text it stays an expression, even with none of
+        #: is_expression's markers ("en.+", "ja|en").
+        self._stored_expression = expression
         checked = set(seeded or ())
 
         self.search_edit = QLineEdit()
@@ -159,9 +164,14 @@ class LanguagePickerDialog(EnhancedDialog):
     # Interaction
     # ------------------------------------------------------------------
 
+    def _is_expression(self, text: str) -> bool:
+        """``is_expression``, or the stored value this dialog opened on."""
+        value = text.strip()
+        return is_expression(value) or (bool(self._stored_expression) and value == self._stored_expression)
+
     def _apply_search(self, text: str) -> None:
         """Filter by *text*, or take it as a raw expression when it is one (D19)."""
-        expression = is_expression(text)
+        expression = self._is_expression(text)
         self.lang_list.setEnabled(not expression)
         self.expression_hint.setVisible(expression)
         needle = "" if expression else text.strip().lower()
@@ -197,7 +207,7 @@ class LanguagePickerDialog(EnhancedDialog):
     def selected_langs(self) -> str:
         """Return the ``--sub-langs`` value this dialog represents."""
         text = self.search_edit.text()
-        if is_expression(text):
+        if self._is_expression(text):
             return text.strip()
         return format_lang_list(self._checked_codes())
 

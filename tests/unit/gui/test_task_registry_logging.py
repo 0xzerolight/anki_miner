@@ -74,6 +74,18 @@ class TestLifecycleLines:
         assert "total=40" in lines[0]
         assert 'stage="3/5 Extracting media"' in lines[0]
 
+    def test_a_stage_without_a_position_logs_the_name_alone(self, registry, caplog):
+        """A queue screen's review writes stage 0/0; the log must not read "0/0 Waiting…"."""
+        handle = registry.start(_spec(), now=0.0)
+        handle.stage(index=0, total=0, name="Waiting for your word review", now=1.0)
+
+        with caplog.at_level(logging.INFO, logger=LOGGER_NAME):
+            handle.finish(TaskOutcome.SUCCEEDED, now=2.0)
+
+        (line,) = _messages(caplog, "Task end:")
+        assert 'stage="Waiting for your word review"' in line
+        assert "0/0" not in line
+
     def test_cancelling_is_recorded_when_the_owner_reports_back(self, registry, caplog):
         handle = registry.start(_spec(), now=0.0)
 

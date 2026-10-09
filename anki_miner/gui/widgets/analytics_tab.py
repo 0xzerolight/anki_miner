@@ -141,6 +141,9 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         # Guard against overlapping off-thread refreshes stacking up (a fast
         # tab switch fires showEvent repeatedly). Cleared in on_done/on_error.
         self._refresh_in_flight: bool = False
+        # A run finished while a read was in flight: that read may predate the
+        # run's rows, so _on_refresh_done reads again instead of ticking the TTL.
+        self._stale_pending: bool = False
         # Reset and refresh are strictly serialised against each other: a refresh
         # that read the tables before the delete landed would otherwise render its
         # pre-delete snapshot *after* the reset finished, leaving the tab showing
@@ -447,9 +450,13 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         """A run just finished, so these numbers are out of date (E09).
 
         Re-read at once when the page is on screen; otherwise the freshness
-        clock is cleared, so the next visit's ``showEvent`` re-reads it.
+        clock is cleared, so the next visit's ``showEvent`` re-reads it. A read
+        already in flight may predate the run, so it re-runs when it lands.
         """
         self._last_refresh = None
+        if self._refresh_in_flight:
+            self._stale_pending = True
+            return
         if self.isVisible():
             self.refresh_data(force=True)
 
@@ -466,7 +473,11 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
             if not isinstance(bundle, _AnalyticsBundle):  # defensive; never expected
                 return
             self._apply_bundle(bundle)
-            self._last_refresh = time.monotonic()
+            if self._stale_pending:
+                self._stale_pending = False
+                self.mark_stale()
+            else:
+                self._last_refresh = time.monotonic()
 
     def _on_refresh_error(self, msg: str) -> None:
         """GUI thread: clear the in-flight flag, log, and say so on screen.
@@ -477,6 +488,8 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         and Retry is a ``refresh_data`` call the guard would otherwise swallow.
         """
         self._refresh_in_flight = False
+        # The clock is still clear, so the next visit or Retry reads anyway.
+        self._stale_pending = False
         logging.getLogger(__name__).error("Failed to refresh analytics data: %s", msg)
         if self._teardown_generation:
             return

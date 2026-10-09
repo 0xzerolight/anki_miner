@@ -9,7 +9,14 @@ from pathlib import Path
 import pytest
 
 from anki_miner.utils import file_pairing
-from anki_miner.utils.file_pairing import FilePair, FilePairMatcher, resolve_output_path
+from anki_miner.utils.file_pairing import (
+    FilePair,
+    FilePairMatcher,
+    SubtitleLanguage,
+    SubtitleTag,
+    resolve_output_path,
+    subtitle_language_tag,
+)
 
 # A name with a dakuten kana that genuinely decomposes under NFD. Common kana
 # (ねこ, 東京, ファ) are byte-identical in NFC vs NFD and would NOT exercise the
@@ -706,3 +713,103 @@ class TestAppleDoubleSidecars:
             tmp_path / "v", tmp_path / "s", secondary_folder=tmp_path / "t"
         )
         assert [p.secondary.name for p in pairs] == ["EP01.en.srt"]
+
+
+#: Japanese mining, read against a small universe that includes the
+#: two-letter codes most likely to collide with title words ("in", "it", "no").
+JA = SubtitleLanguage(
+    mining=frozenset({"ja", "jpn", "japanese", "jp"}),
+    known=frozenset(
+        {"ja", "jpn", "japanese", "jp", "en", "eng", "english", "in", "id", "ind", "indonesian", "es", "spa", "pt"}
+        | {"no", "nor", "norwegian", "it", "ita", "italian"}
+    ),
+)
+
+
+@pytest.mark.parametrize(
+    ("name", "tag"),
+    [
+        ("ep01.ja.srt", SubtitleTag.MINING),
+        ("ep01.jpn.ass", SubtitleTag.MINING),
+        ("ep01.ja-JP.srt", SubtitleTag.MINING),
+        ("ep01.ja_retimed.srt", SubtitleTag.MINING),  # Retime output of ep01.ja.srt
+        ("Show.S01E01.WEBRip.Netflix.ja[cc].srt", SubtitleTag.MINING),  # Kitsunekko naming
+        ("ja.srt", SubtitleTag.MINING),  # a name made only of tags reads in any case
+        ("3_Japanese.srt", SubtitleTag.MINING),  # Subs/<episode>/ rip layout
+        ("ep01.en.srt", SubtitleTag.OTHER),
+        ("ep01.en.forced.srt", SubtitleTag.OTHER),
+        ("Title [abc123].en-US.vtt", SubtitleTag.OTHER),  # yt-dlp
+        ("ep01.pt-BR.srt", SubtitleTag.OTHER),
+        ("English.srt", SubtitleTag.OTHER),
+        ("2_English.srt", SubtitleTag.OTHER),
+        ("ep01.srt", SubtitleTag.UNTAGGED),
+        ("Show.All.In.srt", SubtitleTag.UNTAGGED),  # capitalised title words are not tags
+        ("Show - 01.srt", SubtitleTag.UNTAGGED),
+        ("No. 6 - 01.srt", SubtitleTag.UNTAGGED),  # "No" is a title, not Norwegian
+        ("It.2017.srt", SubtitleTag.UNTAGGED),  # "It" is a title, not Italian
+        ("Movie.2019.English.srt", SubtitleTag.OTHER),  # a spelled-out name in the last part counts
+    ],
+)
+def test_subtitle_language_tag(name, tag):
+    assert subtitle_language_tag(Path(name), JA) is tag
+
+
+def test_subtitle_language_tag_without_language_is_untagged():
+    assert subtitle_language_tag(Path("ep01.en.srt"), None) is SubtitleTag.UNTAGGED
+
+
+@pytest.mark.parametrize(
+    ("name", "tag"),
+    [
+        ("Show - 01.ENG.srt", SubtitleTag.OTHER),  # all-caps three-letter code
+        ("Show - 01.JPN.srt", SubtitleTag.MINING),
+        ("Movie.en.sdh.forced.srt", SubtitleTag.OTHER),  # Plex: flags after the tag
+        ("Show - 01.en.default.forced.srt", SubtitleTag.OTHER),  # Jellyfin
+        ("Movie.English (SDH).srt", SubtitleTag.OTHER),
+        ("EP01_track4_[eng].ass", SubtitleTag.OTHER),  # mkvextract / gMKVExtractGUI
+        ("Show - 01 [jpn].srt", SubtitleTag.MINING),
+    ],
+)
+def test_subtitle_language_tag_reads_tool_and_library_names(name, tag):
+    """Final review, Important 1: these read as untagged, so another language was auto-filled."""
+    assert subtitle_language_tag(Path(name), JA) is tag
+
+
+class TestBatchLanguageRanking:
+    """Two subtitles for one episode: the mining language's wins, nothing is dropped."""
+
+    @staticmethod
+    def _subtitles_for(tmp_path: Path, *names: str, language=JA) -> list[str]:
+        for name in ("Show - 01.mkv", *names):
+            (tmp_path / name).touch()
+        pairs = FilePairMatcher.find_pairs_by_episode_number(tmp_path, tmp_path, language=language)
+        return [p.subtitle.name for p in pairs]
+
+    def test_mining_language_tag_wins_the_episode(self, tmp_path):
+        assert self._subtitles_for(tmp_path, "Show - 01.en.srt", "Show - 01.ja.srt") == ["Show - 01.ja.srt"]
+
+    def test_mining_tag_beats_a_richer_untagged_format(self, tmp_path):
+        assert self._subtitles_for(tmp_path, "Show - 01.ass", "Show - 01.ja.srt") == ["Show - 01.ja.srt"]
+
+    def test_other_language_alone_still_pairs(self, tmp_path):
+        """Ranking only: an episode whose one subtitle is English still counts."""
+        assert self._subtitles_for(tmp_path, "Show - 01.en.srt") == ["Show - 01.en.srt"]
+
+    def test_full_track_beats_forced(self, tmp_path):
+        names = ("Show - 01.ja.forced.srt", "Show - 01.ja.srt")
+        assert self._subtitles_for(tmp_path, *names) == ["Show - 01.ja.srt"]
+
+    def test_forced_loses_without_a_language_too(self, tmp_path):
+        names = ("Show - 01.ja.forced.srt", "Show - 01.ja.srt")
+        assert self._subtitles_for(tmp_path, *names, language=None) == ["Show - 01.ja.srt"]
+
+    def test_retime_of_the_mining_track_still_wins(self, tmp_path):
+        names = ("Show - 01.ja.ass", "Show - 01.ja_retimed.srt", "Show - 01.en.srt")
+        assert self._subtitles_for(tmp_path, *names) == ["Show - 01.ja_retimed.srt"]
+
+    def test_retime_of_another_language_loses_to_the_mining_track(self, tmp_path):
+        names = ("Show - 01.en_retimed.srt", "Show - 01.ja.ass")
+        assert self._subtitles_for(tmp_path, *names) == ["Show - 01.ja.ass"]
+
+    def test_uppercase_codes_rank_too(self, tmp_path):
+        assert self._subtitles_for(tmp_path, "Show - 01.ENG.srt", "Show - 01.JPN.srt") == ["Show - 01.JPN.srt"]

@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
+import dataclasses
+
 from PyQt6.QtCore import QByteArray
 from PyQt6.QtWidgets import QHeaderView
 
 from anki_miner.gui.utils import session_state
 from anki_miner.gui.utils.config_manager import GUIConfigManager
-from anki_miner.gui.widgets.dialogs.word_curation_dialog import AUDIO_COLUMN, TRANSLATION_COLUMN, WordCurationDialog
+from anki_miner.gui.widgets.dialogs.word_curation_dialog import (
+    _DEFAULT_HIDDEN_COLUMNS,
+    AUDIO_COLUMN,
+    TRANSLATION_COLUMN,
+    WordCurationDialog,
+)
 from anki_miner.models import TokenizedWord
 
 _READING_COL = 3
@@ -50,18 +57,41 @@ def test_the_include_column_is_never_hideable(qtbot):
     assert 0 not in dlg._column_menu_actions()
 
 
-def test_reset_unhides_every_column_and_restores_the_order(qtbot):
+def test_reset_restores_the_first_run_arrangement(qtbot):
+    """Reset is the way back to the first-run (D5) view: logical order, the
+    default hides, and every other column shown."""
     dlg = WordCurationDialog([_word()])
     qtbot.addWidget(dlg)
     header = dlg.table.horizontalHeader()
     dlg.table.setColumnHidden(_READING_COL, True)
+    for column in _DEFAULT_HIDDEN_COLUMNS:
+        dlg.table.setColumnHidden(column, False)
     header.moveSection(header.visualIndex(1), 4)
 
     dlg._reset_columns()
 
     assert not dlg.table.isColumnHidden(_READING_COL)
+    assert all(dlg.table.isColumnHidden(column) for column in _DEFAULT_HIDDEN_COLUMNS)
     assert [header.logicalIndex(v) for v in range(dlg.table.columnCount())] == list(range(dlg.table.columnCount()))
     assert header.sectionResizeMode(4) == QHeaderView.ResizeMode.Stretch
+
+
+def test_reset_then_close_saves_the_first_run_arrangement(qtbot, tmp_path, monkeypatch):
+    """The save in done() writes what Reset showed, not a leftover "all shown"."""
+    monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", tmp_path / "gui_config.json")
+    first = WordCurationDialog([_word()])
+    qtbot.addWidget(first)
+    for column in _DEFAULT_HIDDEN_COLUMNS:
+        first.table.setColumnHidden(column, False)
+    first._reset_columns()
+    first.reject()
+
+    # Every signal column has data here, so no empty-column gate hides one.
+    signals = dataclasses.replace(_word(), frequency_rank=10, line_unknown_count=1)
+    second = WordCurationDialog([signals])
+    qtbot.addWidget(second)
+
+    assert all(second.table.isColumnHidden(column) for column in _DEFAULT_HIDDEN_COLUMNS)
 
 
 def test_the_arrangement_is_saved_on_close_and_restored_next_time(qtbot, tmp_path, monkeypatch):

@@ -170,6 +170,14 @@ def test_a_second_request_for_the_same_word_is_duplicate() -> None:
     )
 
 
+def test_a_second_request_reaching_the_same_word_by_its_dictionary_form_is_duplicate() -> None:
+    selection = _selection([R("言う"), R("いう")])  # 言う names いう by its dictionary form; いう by its front
+    assert len(selection([_word("いう", 1, lemma="言う")])) == 1
+    first, second = selection.report(lines.Fates(created={"いう": 7}))
+    assert (first["mined_form"], first["status"], first["note_id"]) == ("いう", "created", 7)
+    assert (second["mined_form"], second["status"], second["note_id"]) == ("いう", "duplicate", None)
+
+
 def test_explicit_expansion_stops_at_the_file_ends_and_the_budget() -> None:
     wide = _selection([R("今日", line_expansion=(5, 5))])
     assert wide([_word("今日", 1)])[0].line_expansion == (1, 2)  # all four lines: 12.48..32.0 fits 30 s

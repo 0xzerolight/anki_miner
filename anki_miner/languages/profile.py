@@ -47,6 +47,7 @@ class SubtitleParser(Protocol):
     def parse_subtitle_file_with_index(self, *args: Any, **kwargs: Any) -> Any: ...
     def parse_text_units(self, *args: Any, **kwargs: Any) -> Any: ...
     def count_lemmas(self, *args: Any, **kwargs: Any) -> Any: ...
+    def count_fronts(self, *args: Any, **kwargs: Any) -> Any: ...
 
 
 class MinedFormPolicy(Protocol):
@@ -154,6 +155,14 @@ class CardRenderHook(Protocol):
     ``field_names()`` key and replaces the card front for this note only.
     ``mined_form`` (lookups, known words) is unchanged. Card Backfill keeps
     only ``field_names()`` keys, so it never rewrites a front.
+
+    A hook that moves the front also offers the OPTIONAL
+    ``card_front(mined, definition_html) -> str``, probed with ``getattr``:
+    the front ``render`` writes for *mined* under that definition, or ``""``
+    when it stays ``mined_form``. Anki then holds the moved front, so phase 2's
+    known gate reads it there (``EpisodeProcessor._drop_known_card_fronts``).
+    ``definition_html`` is a thunk, called only for a word whose front can
+    move. ko: ``KoHanjaHook``.
     """
 
     def field_names(self) -> tuple[str, ...]: ...
@@ -317,12 +326,16 @@ class CardFieldSpec:
     ``build_note`` as ``extra_raw_html_keys``. The ja/ko/zh keys are already in
     ``services/anki_note_builder.py::_RAW_HTML_FIELD_KEYS``, which is frozen —
     a later language's key is carried by this flag alone.
+    ``aliases`` are other Anki field names "Fill in automatically" also maps to
+    this key (``note_presets.auto_map_profile_fields``), for note types that
+    spell the field differently from ``placeholder``.
     """
 
     key: str
     capability: str
     placeholder: str
     raw_html: bool = False
+    aliases: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

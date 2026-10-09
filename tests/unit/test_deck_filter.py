@@ -329,6 +329,55 @@ class TestScanDrops:
         assert _drops(plan) == {"blacklist": 1, "script_type": 1, "name_wordset": 1}
 
 
+class TestScanFoldAndNormalize:
+    """The scan keys each note the way the mining path keys a parsed card front."""
+
+    def test_in_source_duplicate_uses_known_fold(self, test_config):
+        """L3-006: the in-source duplicate gate judges identity on the known gate's fold."""
+        config = replace(test_config, language="de")
+        profile = get_profile("de")
+        word_filter = WordFilterService(
+            config, mined_form=profile.mined_form, script=profile.script, dedup_fold=profile.dedup_fold
+        )
+        notes = {
+            1: _note(1, "Basic", {"Expression": "essen"}),
+            2: _note(2, "Basic", {"Expression": "das Essen"}),
+        }
+        # Control: the known gate treats the pair as one word.
+        known_twin = scan_deck_filter(
+            FakeAnkiService(notes={2: notes[2]}, vocab={profile.dedup_fold("essen")}),
+            config,
+            _services(config, word_filter=word_filter),
+            _options(),
+        )
+        assert _drops(known_twin) == {"known": 1}
+
+        plan = scan_deck_filter(
+            FakeAnkiService(notes=notes), config, _services(config, word_filter=word_filter), _options()
+        )
+
+        assert [kept.expression for kept in plan.kept] == ["essen"]
+        assert _drops(plan) == {"duplicate_in_source": 1}
+
+    def test_list_probe_is_normalized_like_the_list_entries(self, test_config, tmp_path):
+        """G1: entries are normalized at load (F3), so the deck's own spelling must be too."""
+        from anki_miner.services.word_list_service import WordListService
+
+        profile = get_profile("ja")
+        blacklist = tmp_path / "blacklist.txt"
+        blacklist.write_text("叱る\n", encoding="utf-8")
+        lists = WordListService(blacklist_path=blacklist, dedup_fold=profile.dedup_fold, normalize=profile.normalize)
+        lists.load()
+        anki = FakeAnkiService(
+            notes={1: _note(1, "Core", {"Expression": "𠮟る"}), 2: _note(2, "Core", {"Expression": "頷く"})}
+        )
+
+        plan = scan_deck_filter(anki, test_config, _services(test_config, word_list_service=lists), _options())
+
+        assert [kept.expression for kept in plan.kept] == ["頷く"]
+        assert _drops(plan) == {"blacklist": 1}
+
+
 class TestScanFrequency:
     def test_band_drops_and_unranked_counted_separately(self, test_config):
         anki = FakeAnkiService(

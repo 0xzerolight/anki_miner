@@ -740,7 +740,7 @@ class BackgroundTaskController(QObject):
 
         Workers are parented to the controller (window lifetime), so without
         this they accumulate as live QObjects across repeated runs — newly
-        reachable for validation since T-53 wired Test Connection to it. Clear
+        reachable for validation since T-53 wired the Anki panel's Refresh to it. Clear
         the handle only when it still points at *worker* (a fresh run may have
         already replaced it) and schedule the QThread for deletion.
         """

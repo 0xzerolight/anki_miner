@@ -213,7 +213,12 @@ class KeyboardSettingsPanel(FormPanel):
 
     def _sync_reset_button(self, action_id: str) -> None:
         """Offer Reset only where it would change something (C07)."""
-        self._reset_buttons[action_id].setVisible(self._keys[action_id] != default_sequence(action_id))
+        reset_button = self._reset_buttons[action_id]
+        changed = self._keys[action_id] != default_sequence(action_id)
+        if not changed:
+            # A pressed Reset hides itself; keep focus on the row it reset.
+            self.hand_off_focus(reset_button, self._editors[action_id])
+        reset_button.setVisible(changed)
 
     def _on_editing_finished(self, action_id: str) -> None:
         editor = self._editors[action_id]

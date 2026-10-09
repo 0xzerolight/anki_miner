@@ -1,5 +1,6 @@
 """Data models for processing results and validation."""
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -158,6 +159,90 @@ class WhitelistCoverage:
         )
 
 
+class NotMinedReason(Enum):
+    """Why a word a run saw did not become a card.
+
+    Member order is pipeline order; the Activity Log writes one line per reason
+    in this order. Values are stable keys. The first four are the parse stage's
+    preference gates (``TokenInclusionRule.rejection``), reported only for a
+    token a whitelist entry could rescue; the rest are phases 2-5.
+    """
+
+    WORD_TYPE = "word_type"
+    SOUND_EFFECT = "sound_effect"
+    KANA_ONLY = "kana_only"
+    SCRIPT = "script"
+    KNOWN = "known"
+    NO_DEFINITION = "no_definition"
+    UNRANKED = "unranked"
+    FREQUENCY = "frequency"
+    BLACKLIST = "blacklist"
+    SCRIPT_FILTER = "script_filter"
+    NAME_LIST = "name_list"
+    OCCURRENCE = "occurrence"
+    ONE_PER_SENTENCE = "one_per_sentence"
+    I_PLUS_ONE = "i_plus_one"
+    SENTENCE_LENGTH = "sentence_length"
+    SAME_CARD = "same_card"
+    MEDIA_FAILED = "media_failed"
+    ANKI_DUPLICATE = "anki_duplicate"
+    ANKI_FAILED = "anki_failed"
+
+
+#: Failures rather than the user's own settings: the Activity Log writes them as warnings.
+NOT_MINED_FAILURES: frozenset[NotMinedReason] = frozenset(
+    {NotMinedReason.NO_DEFINITION, NotMinedReason.MEDIA_FAILED, NotMinedReason.ANKI_FAILED}
+)
+
+
+@dataclass(frozen=True)
+class NotMinedReport:
+    """Which words a run saw and made no card for, and why (the Activity Log's "Not mined" block).
+
+    Folds like :class:`WhitelistCoverage`: a word any item mined is never
+    reported. Once items fold, a front can sit under two reasons (i+1 in one
+    episode, the length cap in another) - each is true of some item - except
+    that known outranks the rest. Deliberately absent: the user's own choices
+    (curator deselection, Mark known, sentence edits), words a cancel or
+    failure never reached, and tokens no whitelist could rescue (function
+    words, numbers, affixes, fragment guards). ``reasons`` is never mutated
+    after construction.
+    """
+
+    reasons: Mapping[NotMinedReason, frozenset[str]] = field(default_factory=dict)
+    mined: frozenset[str] = frozenset()
+
+    @classmethod
+    def from_drops(
+        cls, drops: Mapping[str, NotMinedReason], *, mined: frozenset[str] = frozenset()
+    ) -> "NotMinedReport":
+        """Group one item's ``{front: reason}`` record by reason."""
+        grouped: dict[NotMinedReason, set[str]] = {}
+        for front, reason in drops.items():
+            grouped.setdefault(reason, set()).add(front)
+        return cls({reason: frozenset(fronts) for reason, fronts in grouped.items()}, mined)
+
+    def forms(self, reason: NotMinedReason) -> frozenset[str]:
+        """The fronts to list under ``reason``: never a mined one; known outranks the rest."""
+        forms = self.reasons.get(reason, frozenset()) - self.mined
+        if reason is not NotMinedReason.KNOWN:
+            forms -= self.reasons.get(NotMinedReason.KNOWN, frozenset())
+        return forms
+
+    @property
+    def words(self) -> frozenset[str]:
+        """Every front the report names, once."""
+        return frozenset(front for fronts in self.reasons.values() for front in fronts) - self.mined
+
+    def merged(self, other: "NotMinedReport") -> "NotMinedReport":
+        """Fold another item's report in: reasons union per key, mined unions."""
+        keys = self.reasons.keys() | other.reasons.keys()
+        return NotMinedReport(
+            {key: self.reasons.get(key, frozenset()) | other.reasons.get(key, frozenset()) for key in keys},
+            self.mined | other.mined,
+        )
+
+
 @dataclass
 class ProcessingResult:
     """Result of processing an episode or folder."""
@@ -189,6 +274,11 @@ class ProcessingResult:
     #: in effect; None otherwise. Stamped by ``EpisodeProcessor`` on every
     #: result it returns and folded over a run by ``RunReceiptAccumulator``.
     whitelist_coverage: WhitelistCoverage | None = None
+    #: Which words this item saw and made no card for, and why (the Activity
+    #: Log's "Not mined" block). Stamped by ``EpisodeProcessor`` on every result
+    #: it returns and folded over a run by ``RunReceiptAccumulator``; None from
+    #: anything that never ran the pipeline.
+    not_mined: NotMinedReport | None = None
 
     @property
     def success(self) -> bool:

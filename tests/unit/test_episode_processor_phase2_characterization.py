@@ -565,3 +565,44 @@ def test_phase2_filter_output_is_pinned(scenario, test_config, tmp_path, caplog)
     assert observed["presenter"] == _EXPECTED[scenario]["presenter"]
     assert observed["log"] == _EXPECTED[scenario]["log"]
     assert observed["ctx"] == _EXPECTED[scenario]["ctx"]
+
+
+_EXPECTED_NOT_MINED = {
+    "full": {
+        **dict.fromkeys(("既知", "無視", "同期", "既知W"), "known"),
+        **{f"欠{i}": "no_definition" for i in range(11)},
+        "頻出": "frequency",
+        "珍": "frequency",
+        "無順": "unranked",
+        "黒": "blacklist",
+        "ひらがな": "script_filter",
+        "カタカナ": "script_filter",
+        "田中": "name_list",
+        "稀": "occurrence",
+        "文乙": "one_per_sentence",
+        "長文": "sentence_length",
+        "長尺": "sentence_length",
+        "出でる": "same_card",
+    },
+    "i_plus_one": {
+        "既知": "known",
+        "空": "no_definition",
+        "黒": "blacklist",
+        "孤": "i_plus_one",
+        "長": "sentence_length",
+    },
+    "include_known": {},
+    "db_failure": {"既知": "known", "既知二": "known"},
+    "bypass": {"既知": "known"},
+}
+
+
+@pytest.mark.parametrize("scenario", list(_SCENARIOS))
+def test_phase2_not_mined_is_pinned(scenario, test_config, tmp_path):
+    """Every word phase 2 drops is recorded once, under the filter that dropped it."""
+    processor, words, line_index, occurrences, min_occurrence = _SCENARIOS[scenario](test_config, tmp_path)
+    ctx = _EpisodeContext(0.0, "", "", "episode", "series", "")
+
+    processor._phase2_filter(ctx, words, line_index, RecordingProgress(), occurrences, min_occurrence)
+
+    assert {front: reason.value for front, reason in ctx.not_mined.items()} == _EXPECTED_NOT_MINED[scenario]

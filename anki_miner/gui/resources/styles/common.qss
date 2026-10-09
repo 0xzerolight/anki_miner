@@ -728,9 +728,10 @@ QLabel#helper-text {
 }
 
 /* A diagnostic belonging to one row of a list, printed under that row's label.
-   Helper text in every respect except padding: its left edge is set by the
-   layout that knows how wide the columns above it came out, so padding here
-   would fight that and leave the line 8px off its own label. */
+   Small and italic, unlike helper text (caption size, upright), and with no
+   padding: its left edge is set by the layout that knows how wide the columns
+   above it came out, so padding here would fight that and leave the line off
+   its own label. */
 QLabel#row-detail {
     font-size: ${font-size-small}px;
     font-style: italic;
@@ -923,7 +924,9 @@ QPushButton#ghost:checked:hover {
    text. The two filled roles (and Qt's dialog default, which renders as one)
    keep a grey fill: an outline-only primary would read as an enabled
    secondary button. Order matters: these tie with the role rules above on
-   specificity and win by coming later. */
+   specificity and win by coming later. A variant's own `:disabled` rule
+   carries an id, which outranks two pseudo-states, so a default built as
+   secondary, ghost or danger needs its id in the grey-fill rule too. */
 QPushButton:disabled,
 QPushButton#secondary:disabled,
 QPushButton#danger:disabled {
@@ -940,7 +943,10 @@ QPushButton#ghost:disabled {
 
 QPushButton#primary:disabled,
 QPushButton#critical:disabled,
-QPushButton:default:disabled {
+QPushButton:default:disabled,
+QPushButton#secondary:default:disabled,
+QPushButton#ghost:default:disabled,
+QPushButton#danger:default:disabled {
     background-color: ${color-disabled};
     color: ${color-text-on-primary};
     border-color: ${color-disabled};

@@ -10,13 +10,14 @@ runs its volumes sequentially in one job (one ephemeral
 lifecycle. Words are inspected during Mine via the "Review words before
 mining" curation popup.
 
-One composed whole-run bar: the overall bar (vol N of M) status appears only
-for a run of more than one volume.
+The pinned bar shows the run (D1); a hidden run-state widget holds its state.
+Its status names the volume ("Volume N/M: ...") only for a run of more than one
+volume.
 
 The worker OWNS the item lifecycle (it sets ``status``/``cards_created``/
 ``error_message`` on each item, on the worker thread, before emitting its
 signals), so this tab's signal slots are READ-ONLY on item state: they update
-the progress bars and log outcomes, never write status/cards/error.
+the run-state widget and log outcomes, never write status/cards/error.
 
 Drag-drop routes through the tab, not the file selector: the first dropped
 volume or folder fills the field; a novel or subtitle drop earns a hint naming
@@ -325,6 +326,10 @@ class ReadingMangaTab(_ReadingMiningTabBase):
             self._report_refusal(self.tr("Choose a manga volume or folder first."))
             return
         path = Path(raw)
+        if not path.exists():
+            # A stale history entry: say it is gone, not that it is the wrong kind.
+            self._report_refusal(self.tr("That file or folder no longer exists."), details=raw)
+            return
         if path.is_dir() or (path.is_file() and path.suffix.lower() in _MANGA_EXTS):
             self._detect_and_launch(path)
             return
@@ -388,7 +393,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         folder a picked archive sits in.
         """
         if path is None or _NO_OCR_MARKER not in message.lower():
-            self._report_unmineable(message)
+            self._report_unmineable(message, path)
             return
         self.log_widget.append_error(message)
         folder = path if path.is_dir() else path.parent
@@ -446,7 +451,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
             self._recompute_buttons()
 
     def _begin_progress(self, total: int) -> None:
-        """Reset the whole-run bar and seed the composition counters."""
+        """Reset the hidden run-state widget and seed the composition counters."""
         self._items_total = total
         self._current_item_title = ""
         self.overall_progress_widget.reset()
@@ -514,7 +519,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
     # ------------------------------------------------------------------
 
     def _on_item_started(self, idx: int) -> None:
-        """Seed the per-volume bar with the started volume's title.
+        """Name the started volume in the run status.
 
         READ-ONLY: the worker has already set ``status`` to PROCESSING before
         emitting this signal, so this only reflects current state — never write
@@ -529,7 +534,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
             self._current_item_title = tr_format(self.tr("Volume %1/%2: %3"), idx + 1, total, item.title)
         else:
             self._current_item_title = item.title
-        # Status only — the composed whole-run bar never resets between volumes.
+        # Status only — the run-state widget never resets between volumes.
         self.overall_progress_widget.set_status(self._current_item_title)
         self._publish_reading_status(self._current_item_title)
 
@@ -548,7 +553,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
             self._publish_reading_status(status)
 
     def _on_item_finished(self, idx: int, result: object, error: object, attempts: int) -> None:
-        """Log the outcome and advance the overall bar (series runs only).
+        """Log the outcome and advance the run-state widget.
 
         READ-ONLY: the worker has already recorded ``status``/``cards_created``/
         ``error_message`` on the item before emitting this signal, so this slot
@@ -604,9 +609,9 @@ class ReadingMangaTab(_ReadingMiningTabBase):
     def _after_run_cleanup(self) -> None:
         """Per-tab UI recovery after a run ends (called from the base cleanup slot).
 
-        Restores the Cancel button, resets + hides the overall bar and resets the
-        per-volume bar, and recomputes button state. Runs on every run-exit path
-        (success, cancel, exception).
+        Restores the Cancel button, sets the run-state widget's terminal state,
+        and recomputes button state. Runs on every run-exit path (success,
+        cancel, exception).
         """
         self.cancel_button.setText(self.tr("Cancel"))
         self.cancel_button.setEnabled(True)

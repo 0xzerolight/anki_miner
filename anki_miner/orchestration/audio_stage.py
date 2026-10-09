@@ -677,7 +677,9 @@ class AudioStage:
             QCoreApplication.translate("EpisodeProcessor", "Sentence audio: %1"),
             _per_item,
         )
-        if not completed:
+        # Nothing synthesized (every card brought its own clip, or no line had
+        # text): a "0/0 sentences" line would say nothing.
+        if not completed or not attempts:
             return
         self.presenter.show_info(
             tr_format(

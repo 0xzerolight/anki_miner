@@ -70,7 +70,7 @@ from anki_miner.gui.workers.condense_worker import (
     CondenseWorker,
     plan_condense_outputs,
 )
-from anki_miner.languages.registry import config_language, get_profile
+from anki_miner.languages.registry import config_language, get_profile, subtitle_language
 from anki_miner.services.audio_condenser import EncoderUnavailableError, FilterUnavailableError
 from anki_miner.services.audio_tagger import TrackMetadata, prefill_track_metadata
 from anki_miner.utils import list_audio_streams
@@ -460,7 +460,9 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
         offset_row.addWidget(QLabel(self.tr("Subtitle offset:")))
         self.offset_spinbox = QDoubleSpinBox()
         self.offset_spinbox.setRange(_OFFSET_MIN_S, _OFFSET_MAX_S)
-        self.offset_spinbox.setDecimals(2)
+        # Three decimals: config stores whole milliseconds, so a stored value
+        # round-trips instead of rounding to 10 ms on the next edit (B4.4).
+        self.offset_spinbox.setDecimals(3)
         self.offset_spinbox.setSingleStep(_OFFSET_STEP_S)
         self.offset_spinbox.setSuffix(self.tr(" seconds"))
         self.offset_spinbox.setToolTip(self.tr("Adjust subtitle timing (positive = later, negative = earlier)"))
@@ -1025,6 +1027,8 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
     def _pair_folder_items_async(
         self, media_folder: Path, sub_folder: Path, on_items: Callable[[list[CondenseItem]], None]
     ) -> None:
+        language = subtitle_language(config_language(self.config))
+
         def _scan() -> object:
             all_media = sorted(
                 f
@@ -1036,6 +1040,7 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
                 sub_folder,
                 video_extensions=CONDENSE_MEDIA_EXTENSIONS,
                 subtitle_extensions=CONDENSE_SUBTITLE_EXTENSIONS,
+                language=language,
             )
             return all_media, file_pairs
 

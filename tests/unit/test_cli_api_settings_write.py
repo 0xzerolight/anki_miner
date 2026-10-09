@@ -183,3 +183,30 @@ def test_save_profile_keeps_the_active_marker(two_profiles) -> None:
     assert settings_write.save_profile("caller", replace(two_profiles, anki_deck_name="C")) == "caller"
     assert ProfileStore.read_profile("caller").anki_deck_name == "C"
     assert [p.name for p in ProfileStore.list_profiles()] == ["Caller", "Default"]
+
+
+def _from_a_newer_app() -> tuple[bytes, Path]:
+    """gui_config.json as a newer Anki Miner left it, and where the window's load would archive it."""
+    path = GUIConfigManager.CONFIG_FILE
+    schema = GUIConfigManager.CONFIG_SCHEMA_VERSION + 1
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["config_schema_version"] = schema
+    path.write_text(json.dumps(data), encoding="utf-8")
+    return path.read_bytes(), path.with_name(f"gui_config.from-schema-{schema}.json")
+
+
+def test_a_newer_apps_settings_file_is_archived_before_name_saves_over_it(live, tmp_path) -> None:
+    original, archive = _from_a_newer_app()
+    _import(_file(tmp_path), name="Caller")  # no profile yet: the live settings are saved as "default"
+    assert archive.read_bytes() == original
+
+
+def test_a_newer_apps_settings_file_is_archived_before_the_active_profile_is_saved(live) -> None:
+    original, archive = _from_a_newer_app()
+    settings_write.save_profile(None, live)  # setup's write to the active profile
+    assert archive.read_bytes() == original
+
+
+def test_a_current_settings_file_is_not_archived(live, tmp_path) -> None:
+    _import(_file(tmp_path), name="Caller")
+    assert list(GUIConfigManager.CONFIG_FILE.parent.glob("gui_config.from-schema-*")) == []

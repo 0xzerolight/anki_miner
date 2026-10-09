@@ -120,7 +120,7 @@ class KeptNote:
     model_name: str
     fields: dict[str, str]  # raw scan-time values incl. media refs
     tags: tuple[str, ...]
-    expression: str  # dedup-normalized
+    expression: str  # dedup-stripped, then normalized like a parsed card front
     reading: str
     frequency_rank: int | None
     forced: bool  # whitelist force-include
@@ -320,6 +320,9 @@ def scan_deck_filter(
     tagger_failures = TaggerFailures()
     profile = get_profile(config_language(config))
     script = profile.script
+    # The known gate's fold (the word filter is built with this dedup_fold):
+    # "das Essen" and "essen" are one word there, so they are one word here.
+    fold = profile.dedup_fold
 
     for chunk in _chunks(note_ids, _NOTES_CHUNK):
         if is_cancelled and is_cancelled():
@@ -337,7 +340,11 @@ def scan_deck_filter(
                 # says the first field is the expression.
                 first_field = next(iter(fields))
                 raw = _field_value(fields, first_field) or ""
-            expression = _strip_for_dedup(raw)
+            # Normalized the way the parser normalizes subtitle text before a
+            # card front exists: the word lists normalize their entries on that
+            # promise (WordListService), so a deck spelling 𠮟る must probe as
+            # 叱る, and every later gate sees what the mining path would.
+            expression = profile.normalize(_strip_for_dedup(raw))
             if not expression:
                 drops["no_expression"] += 1
                 continue
@@ -346,10 +353,11 @@ def scan_deck_filter(
                 # tests/unit/test_deck_filter.py — never renamed.
                 drops["not_japanese"] += 1
                 continue
-            if expression in seen_expressions:
+            key = expression if fold is None else fold(expression)
+            if key in seen_expressions:
                 drops["duplicate_in_source"] += 1
                 continue
-            seen_expressions.add(expression)
+            seen_expressions.add(key)
             word = _synthesize_word(
                 expression, fields, options, tagger, tagger_failures, reading_support=profile.reading
             )

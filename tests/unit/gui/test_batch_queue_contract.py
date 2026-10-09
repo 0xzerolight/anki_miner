@@ -288,7 +288,7 @@ def test_an_unselected_complete_row_is_left_alone(panel, tmp_path):
     done_item.committed_pair_keys.add((tmp_path / "ep1.mkv", tmp_path / "ep1.ass"))
     widget.set_status("complete")
 
-    # No selection: Process Queue still means "mine what is not done yet".
+    # No selection: Mine Queue still means "mine what is not done yet".
     assert panel.runnable_items() == [panel._items[id(pending)]]
     assert done_item.status is QueueItemStatus.COMPLETED
     assert done_item.committed_pair_keys

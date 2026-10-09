@@ -199,7 +199,7 @@
     </message>
     <message>
         <source>In Anki choose Tools → Add-ons → Get Add-ons…, paste the code %1, and click OK.</source>
-        <translation>Trong Anki, chọn Công cụ → Tiện ích bổ sung → Tải tiện ích bổ sung… (Tools → Add-ons → Get Add-ons…), dán mã %1 rồi nhấn OK.</translation>
+        <translation>Trong Anki, chọn Công cụ → Tiện ích → Lấy Tiện ích…, dán mã %1 rồi nhấn OK.</translation>
     </message>
     <message>
         <source>Restart Anki.</source>
@@ -2102,8 +2102,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Các chế độ Trình dựng bộ thẻ (tất cả / top N / % bao phủ)</translation>
     </message>
     <message>
-        <source>Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
-        <translation>Trình dựng bộ thẻ luôn bỏ qua các bộ lọc theo từng tập và kiểm tra trùng lặp; chọn mọi từ, top N, hoặc mục tiêu độ bao phủ, và tùy chọn bỏ qua từ đã biết.</translation>
+        <source>Deck Builder always skips per-episode filters and checks for duplicates only in the deck it builds; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
+        <translation>Trình dựng bộ thẻ luôn bỏ qua các bộ lọc theo từng tập và chỉ kiểm tra trùng lặp trong bộ thẻ mà nó dựng; chọn mọi từ, top N, hoặc mục tiêu độ bao phủ, và tùy chọn bỏ qua từ đã biết.</translation>
     </message>
     <message>
         <source>Mine from YouTube</source>
@@ -2318,8 +2318,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Loại trừ từ chỉ có kana</translation>
     </message>
     <message>
-        <source>Drop words written without kanji; “Skip all kana-only words” leaves a kanji-only deck.</source>
-        <translation>Loại bỏ các từ viết không có kanji; “Bỏ qua mọi từ chỉ có kana” để lại bộ thẻ chỉ gồm từ có kanji.</translation>
+        <source>Drop words written without kanji; “Skip all kana-only words (including mixed)” leaves a kanji-only deck.</source>
+        <translation>Loại bỏ các từ viết không có kanji; “Bỏ qua mọi từ chỉ có kana (kể cả từ trộn)” để lại bộ thẻ chỉ gồm từ có kanji.</translation>
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -2622,8 +2622,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Tự động điền ánh xạ trường</translation>
     </message>
     <message>
-        <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku, Senren and Anki Miner Note are recognised and filled completely.</source>
-        <translation>Tự động điền đọc các trường của loại ghi chú và điền mọi ánh xạ. Lapis, Kiku, Senren và Anki Miner Note được nhận ra và điền đầy đủ.</translation>
+        <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku and Senren (Japanese only) and Anki Miner Note are recognised and filled completely.</source>
+        <translation>Tự động điền đọc các trường của loại ghi chú và điền mọi ánh xạ. Lapis, Kiku và Senren (chỉ tiếng Nhật) cùng Anki Miner Note được nhận ra và điền đầy đủ.</translation>
     </message>
     <message>
         <source>Bold the mined word in the sentence</source>
@@ -2882,10 +2882,6 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <message>
         <source>Deck</source>
         <translation>Bộ thẻ</translation>
-    </message>
-    <message>
-        <source>Deck:</source>
-        <translation>Bộ thẻ:</translation>
     </message>
     <message>
         <source>All decks</source>
@@ -3792,16 +3788,16 @@ Thao tác này sẽ sửa %n ghi chú (%1) và gắn thẻ %2 cho chúng. Tiếp
         <translation>Hãy nhập tên bộ thẻ trước khi khai thác.</translation>
     </message>
     <message>
+        <source>Cancelling…</source>
+        <translation>Đang hủy…</translation>
+    </message>
+    <message>
         <source>No video/subtitle pairs found. Check the folders.</source>
         <translation>Không tìm thấy cặp video/phụ đề nào. Hãy kiểm tra lại các thư mục.</translation>
     </message>
     <message>
         <source>Deck Builder</source>
         <translation>Trình dựng bộ thẻ</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Đang hủy…</translation>
     </message>
     <message>
         <source>Preview ready. Press Build Deck to create the cards.</source>
@@ -4123,7 +4119,7 @@ Thao tác này sẽ sửa %n ghi chú (%1) và gắn thẻ %2 cho chúng. Tiếp
     </message>
     <message>
         <source>Anki doesn't have a deck called “%1” yet. In Anki, click Create Deck at the bottom of the main window and name it %1, or pick one of your decks above. This page updates when you come back.</source>
-        <translation>Anki chưa có bộ thẻ tên “%1”. Trong Anki, nhấn Tạo bộ thẻ (Create Deck) ở cuối cửa sổ chính và đặt tên là %1, hoặc chọn một bộ thẻ của bạn ở trên. Trang này sẽ cập nhật khi bạn quay lại.</translation>
+        <translation>Anki chưa có bộ thẻ tên “%1”. Trong Anki, nhấn Tạo Bộ thẻ ở cuối cửa sổ chính và đặt tên là %1, hoặc chọn một bộ thẻ của bạn ở trên. Trang này sẽ cập nhật khi bạn quay lại.</translation>
     </message>
 </context><context>
     <name>DefinitionService</name>
@@ -5470,8 +5466,8 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
         <translation>Tệp danh sách đen</translation>
     </message>
     <message>
-        <source>Text file with one word per line to always skip. Leave empty to skip nothing.</source>
-        <translation>Tệp văn bản, mỗi dòng một từ, luôn bị bỏ qua. Để trống để không bỏ qua gì.</translation>
+        <source>Text file with one word per line to skip. Whitelisted words are still mined. Leave empty to skip nothing.</source>
+        <translation>Tệp văn bản, mỗi dòng một từ cần bỏ qua. Từ trong danh sách trắng vẫn được khai thác. Để trống để không bỏ qua gì.</translation>
     </message>
     <message>
         <source>Select whitelist file...</source>
@@ -5490,8 +5486,8 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
         <translation>Tập từ tên riêng</translation>
     </message>
     <message>
-        <source>Exclude bundled lists of Japanese people and place names from mining. Whitelisted names are still mined.</source>
-        <translation>Loại trừ các danh sách tên người và địa danh Nhật Bản đi kèm khỏi khai thác. Tên trong danh sách trắng vẫn được khai thác.</translation>
+        <source>Exclude bundled lists of Japanese people, place and company names from mining. Whitelisted names are still mined.</source>
+        <translation>Loại trừ các danh sách tên người, địa danh và tên công ty Nhật Bản đi kèm khỏi khai thác. Tên trong danh sách trắng vẫn được khai thác.</translation>
     </message>
     <message>
         <source>Skip names of people, places and companies</source>
@@ -7130,6 +7126,10 @@ Tiếp tục?</translation>
         <translation>Không thể bắt đầu tải ngôn ngữ này từ phần thiết lập. Hãy chọn nó trong Cài đặt → Ngôn ngữ khai thác sau khi thiết lập xong.</translation>
     </message>
     <message>
+        <source>%1 language pack: download failed. %2</source>
+        <translation>Gói ngôn ngữ %1: tải thất bại. %2</translation>
+    </message>
+    <message>
         <source>%1 language pack: download failed.</source>
         <translation>Gói ngôn ngữ %1: tải thất bại.</translation>
     </message>
@@ -7214,6 +7214,10 @@ Tiếp tục?</translation>
     <message>
         <source>%1 needs a one-time download of about %2 MB.</source>
         <translation>%1 cần tải một lần khoảng %2 MB.</translation>
+    </message>
+    <message>
+        <source>%1 still can't be mined after its download.</source>
+        <translation>Vẫn chưa thể khai thác %1 sau khi tải về.</translation>
     </message>
 </context><context>
     <name>MiningTabBase</name>
@@ -7539,7 +7543,7 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>Loại ghi chú nào cũng dùng được khi đã ánh xạ các trường. Hãy chọn một loại ghi chú của bạn: Anki Miner đặt từ vào trường đầu tiên và điền các trường nó nhận ra theo tên, như Word, Sentence, Reading, Definition, Picture và âm thanh. Sau khi cài đặt, bạn có thể đổi nội dung của từng trường trong Cài đặt → Thẻ &amp; Anki. Chưa có loại ghi chú để khai thác? &lt;a href="%2"&gt;Tải Anki Miner Note&lt;/a&gt; (miễn phí, dùng được cho mọi ngôn ngữ), rồi trong Anki chọn Tệp → Nhập (File → Import) và chọn tệp đó. Trang này sẽ cập nhật khi bạn quay lại. &lt;a href="%1"&gt;Anki Miner điền được những trường nào?&lt;/a&gt;</translation>
+        <translation>Loại ghi chú nào cũng dùng được khi đã ánh xạ các trường. Hãy chọn một loại ghi chú của bạn: Anki Miner đặt từ vào trường đầu tiên và điền các trường nó nhận ra theo tên, như Word, Sentence, Reading, Definition, Picture và âm thanh. Sau khi cài đặt, bạn có thể đổi nội dung của từng trường trong Cài đặt → Thẻ &amp; Anki. Chưa có loại ghi chú để khai thác? &lt;a href="%2"&gt;Tải Anki Miner Note&lt;/a&gt; (miễn phí, dùng được cho mọi ngôn ngữ), rồi trong Anki chọn Tập tin → Nhập và chọn tệp đó. Trang này sẽ cập nhật khi bạn quay lại. &lt;a href="%1"&gt;Anki Miner điền được những trường nào?&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>
@@ -8285,13 +8289,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <source>Cards: %1</source>
         <translation>Thẻ: %1</translation>
     </message>
-    <message>
-        <source>1 episode</source>
-        <translation>1 tập</translation>
-    </message>
-    <message>
-        <source>%1 episodes</source>
-        <translation>%1 tập</translation>
+    <message numerus="yes">
+        <source>%n episode(s)</source>
+        <translation>
+            <numerusform>%n tập</numerusform>
+        </translation>
     </message>
     <message>
         <source>Video folder: %1</source>
@@ -8405,21 +8407,17 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <source>Remove all %1 series from the queue?</source>
         <translation>Xóa tất cả %1 series khỏi hàng đợi?</translation>
     </message>
-    <message>
-        <source>1 series</source>
-        <translation>1 loạt phim</translation>
+    <message numerus="yes">
+        <source>%n series</source>
+        <translation>
+            <numerusform>%n loạt phim</numerusform>
+        </translation>
     </message>
-    <message>
-        <source>%1 series</source>
-        <translation>%1 loạt phim</translation>
-    </message>
-    <message>
-        <source>1 episode</source>
-        <translation>1 tập</translation>
-    </message>
-    <message>
-        <source>%1 episodes</source>
-        <translation>%1 tập</translation>
+    <message numerus="yes">
+        <source>%n episode(s)</source>
+        <translation>
+            <numerusform>%n tập</numerusform>
+        </translation>
     </message>
     <message>
         <source>%1 ready</source>
@@ -8634,6 +8632,10 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Hãy chọn một tệp phụ đề (.ass, .srt, .ssa, .vtt hoặc .smi).</translation>
     </message>
     <message>
+        <source>Reading your Anki cards and known words…</source>
+        <translation>Đang đọc thẻ Anki và từ đã biết…</translation>
+    </message>
+    <message>
         <source>Checking file %1 of %2</source>
         <translation>Đang kiểm tra tệp %1 trên %2</translation>
     </message>
@@ -8842,6 +8844,10 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Hãy chọn một tập manga hoặc thư mục trước.</translation>
     </message>
     <message>
+        <source>That file or folder no longer exists.</source>
+        <translation>Tệp hoặc thư mục đó không còn tồn tại.</translation>
+    </message>
+    <message>
         <source>Choose a .mokuro, .cbz or .zip volume, or a manga folder.</source>
         <translation>Hãy chọn một tập .mokuro, .cbz hoặc .zip, hoặc một thư mục manga.</translation>
     </message>
@@ -8950,6 +8956,10 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <message>
         <source>Choose a book or a folder of books first.</source>
         <translation>Hãy chọn một cuốn sách hoặc thư mục sách trước.</translation>
+    </message>
+    <message>
+        <source>That file or folder no longer exists.</source>
+        <translation>Tệp hoặc thư mục đó không còn tồn tại.</translation>
     </message>
     <message>
         <source>Choose an .epub or .txt book, or a folder of books.</source>
@@ -9138,6 +9148,10 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <message>
         <source>Cancelling…</source>
         <translation>Đang hủy…</translation>
+    </message>
+    <message>
+        <source>Anki Miner can't mine this folder.</source>
+        <translation>Anki Miner không thể khai thác thư mục này.</translation>
     </message>
     <message>
         <source>Anki Miner can't mine this file.</source>
@@ -9619,6 +9633,10 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Đang tải %1/%2 · %3</translation>
     </message>
     <message>
+        <source>Installing %1 of %2 · %3</source>
+        <translation>Đang cài đặt %1/%2 · %3</translation>
+    </message>
+    <message>
         <source>Recommended Resources</source>
         <translation>Tài nguyên được đề xuất</translation>
     </message>
@@ -9694,14 +9712,22 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>%1 (%2)</source>
+        <extracomment>%1 is one or more resource names, %2 what they are: "JMdict (dictionary)".</extracomment>
         <translation>%1 (%2)</translation>
     </message>
     <message>
         <source>Downloads %1.</source>
+        <extracomment>%1 lists "name (kind)" groups: "Downloads JMdict (dictionary) and Kanjium (pitch accent)."</extracomment>
         <translation>Sẽ tải %1.</translation>
     </message>
     <message>
+        <source>%1, %2</source>
+        <extracomment>Joins list items before the last one: "JMdict, JPDB and Jiten". Use your language's list comma.</extracomment>
+        <translation>%1, %2</translation>
+    </message>
+    <message>
         <source>%1 and %2</source>
+        <extracomment>Joins the last item to the rest of a list: "JMdict, JPDB and Jiten".</extracomment>
         <translation>%1 và %2</translation>
     </message>
     <message>
@@ -9881,6 +9907,94 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <message>
         <source>Already known: %1.</source>
         <translation>Đã biết: %1.</translation>
+    </message>
+    <message>
+        <source>Not mined: %1 word — search this log for a word to see why.</source>
+        <translation>Chưa khai thác: %1 từ — tìm một từ trong nhật ký này để xem lý do.</translation>
+    </message>
+    <message>
+        <source>Not mined: %1 words — search this log for a word to see why.</source>
+        <translation>Chưa khai thác: %1 từ — tìm một từ trong nhật ký này để xem lý do.</translation>
+    </message>
+    <message>
+        <source>Name, interjection or other skipped word type — add it to your whitelist to mine it</source>
+        <translation>Tên riêng, thán từ hoặc loại từ khác bị bỏ qua — thêm vào danh sách trắng để khai thác</translation>
+    </message>
+    <message>
+        <source>Sound effect — add it to your whitelist to mine it</source>
+        <translation>Từ tượng thanh — thêm vào danh sách trắng để khai thác</translation>
+    </message>
+    <message>
+        <source>Kana-only word — add it to your whitelist to mine it</source>
+        <translation>Từ chỉ có kana — thêm vào danh sách trắng để khai thác</translation>
+    </message>
+    <message>
+        <source>Written partly in another script — add it to your whitelist to mine it</source>
+        <translation>Một phần viết bằng loại chữ viết khác — thêm vào danh sách trắng để khai thác</translation>
+    </message>
+    <message>
+        <source>Already known</source>
+        <translation>Đã biết</translation>
+    </message>
+    <message>
+        <source>No dictionary entry — Settings → Dictionaries</source>
+        <translation>Không có trong từ điển — Cài đặt → Từ điển</translation>
+    </message>
+    <message>
+        <source>Not in your frequency list — Settings → Word Filters</source>
+        <translation>Không có trong danh sách tần suất — Cài đặt → Bộ lọc từ</translation>
+    </message>
+    <message>
+        <source>Outside your frequency range — Settings → Word Filters</source>
+        <translation>Ngoài dải tần suất đã chọn — Cài đặt → Bộ lọc từ</translation>
+    </message>
+    <message>
+        <source>On your blacklist — Settings → Word Filters</source>
+        <translation>Nằm trong danh sách đen — Cài đặt → Bộ lọc từ</translation>
+    </message>
+    <message>
+        <source>Excluded by script type — Settings → Word Filters</source>
+        <translation>Bị loại trừ theo loại chữ viết — Cài đặt → Bộ lọc từ</translation>
+    </message>
+    <message>
+        <source>On a name list — Settings → Word Filters</source>
+        <translation>Nằm trong tập từ tên riêng — Cài đặt → Bộ lọc từ</translation>
+    </message>
+    <message>
+        <source>Appears fewer times than your minimum — Settings → Word Filters</source>
+        <translation>Xuất hiện ít hơn số lần tối thiểu — Cài đặt → Bộ lọc từ</translation>
+    </message>
+    <message>
+        <source>Another word from its sentence got the card — Settings → Sentences</source>
+        <translation>Một từ khác trong cùng câu đã được tạo thẻ — Cài đặt → Câu</translation>
+    </message>
+    <message>
+        <source>No sentence where it is the only unknown word — Settings → Sentences</source>
+        <translation>Không có câu nào mà từ này là từ chưa biết duy nhất — Cài đặt → Câu</translation>
+    </message>
+    <message>
+        <source>Sentence too long — Settings → Sentences</source>
+        <translation>Câu quá dài — Cài đặt → Câu</translation>
+    </message>
+    <message>
+        <source>Same card as another spelling in this run</source>
+        <translation>Chung thẻ với một cách viết khác trong lần chạy này</translation>
+    </message>
+    <message>
+        <source>Media could not be extracted</source>
+        <translation>Không thể trích xuất phương tiện</translation>
+    </message>
+    <message>
+        <source>Anki already has a card for it</source>
+        <translation>Anki đã có thẻ cho từ này</translation>
+    </message>
+    <message>
+        <source>Anki did not confirm the card</source>
+        <translation>Anki không xác nhận thẻ</translation>
+    </message>
+    <message>
+        <source>%1 (%2): %3</source>
+        <translation>%1 (%2): %3</translation>
     </message>
 </context><context>
     <name>ResultsDialog</name>
@@ -10107,8 +10221,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Gỡ tên người nói, hiệu ứng âm thanh và ký hiệu nhạc</translation>
     </message>
     <message>
-        <source>Removes (notes), [sound effects], ♪ music, speaker labels and dialogue dashes from each subtitle line before mining. Half-checked means your own pattern is in use: click to add every built-in cleanup to it.</source>
-        <translation>Gỡ (ghi chú), [hiệu ứng âm thanh], ♪ nhạc, nhãn người nói và gạch đầu dòng hội thoại khỏi mỗi dòng phụ đề trước khi khai thác. Đánh dấu một nửa nghĩa là mẫu của riêng bạn đang được dùng: nhấp để thêm mọi quy tắc làm sạch có sẵn vào mẫu đó.</translation>
+        <source>Removes (notes), [sound effects], ♪ music and dialogue dashes from each subtitle line before mining, and speaker labels where the script marks them. Half-checked means your own pattern is in use: click to add every built-in cleanup to it.</source>
+        <translation>Gỡ (ghi chú), [hiệu ứng âm thanh], ♪ nhạc và gạch đầu dòng hội thoại khỏi mỗi dòng phụ đề trước khi khai thác, cùng nhãn người nói ở những hệ chữ viết có đánh dấu nhãn này. Đánh dấu một nửa nghĩa là mẫu của riêng bạn đang được dùng: nhấp để thêm mọi quy tắc làm sạch có sẵn vào mẫu đó.</translation>
     </message>
     <message>
         <source>Python regex matched in subtitle text and removed (or replaced) before mining. Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. Combine alternatives with |. Test patterns at https://regex101.com.</source>
@@ -10155,16 +10269,16 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Mỗi câu một thẻ</translation>
     </message>
     <message>
-        <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped.</source>
-        <translation>Khai thác nhiều nhất một từ cho mỗi câu ví dụ — từ đầu tiên tìm thấy trong câu đó. Mọi từ khác dùng chung câu đó đều bị bỏ qua.</translation>
+        <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped. Whitelisted words are still mined.</source>
+        <translation>Khai thác nhiều nhất một từ cho mỗi câu ví dụ — từ đầu tiên tìm thấy trong câu đó. Mọi từ khác dùng chung câu đó đều bị bỏ qua. Từ trong danh sách trắng vẫn được khai thác.</translation>
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
         <translation>Chỉ câu i+1 (đúng một từ chưa biết)</translation>
     </message>
     <message>
-        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication.</source>
-        <translation>Chỉ khai thác các từ trong câu có đúng một từ chưa biết (i+1); ghi đè lên việc loại bỏ câu trùng lặp.</translation>
+        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication. Whitelisted words are still mined.</source>
+        <translation>Chỉ khai thác các từ trong câu có đúng một từ chưa biết (i+1); ghi đè lên việc loại bỏ câu trùng lặp. Từ trong danh sách trắng vẫn được khai thác.</translation>
     </message>
     <message>
         <source>Sentence Rule</source>
@@ -11179,6 +11293,10 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
         <translation>Cạnh video nguồn, với tên name_retimed.srt</translation>
     </message>
     <message>
+        <source>%1, as name_retimed.srt</source>
+        <translation>%1, với tên name_retimed.srt</translation>
+    </message>
+    <message>
         <source>Subtitle retiming</source>
         <translation>Chỉnh lại thời gian phụ đề</translation>
     </message>
@@ -11512,6 +11630,10 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     </message>
 </context><context>
     <name>SubtitlesSettingsPanel</name>
+    <message>
+        <source>Auto (GPU if available)</source>
+        <translation>Tự động (GPU nếu có sẵn)</translation>
+    </message>
     <message>
         <source>Transcription &amp; Alignment</source>
         <translation>Phiên âm &amp; Căn chỉnh</translation>
@@ -12087,12 +12209,18 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
         <translation>Không tìm thấy video nào trong thư mục đó.</translation>
     </message>
     <message>
+        <source>No subtitle or audio tracks were found in any video in that folder.</source>
+        <translation>Không tìm thấy rãnh phụ đề hoặc âm thanh nào trong các video của thư mục đó.</translation>
+    </message>
+    <message>
         <source>No subtitle or audio tracks were found in %1.</source>
         <translation>Không tìm thấy rãnh phụ đề hoặc âm thanh nào trong %1.</translation>
     </message>
-    <message>
-        <source>Tracks of %1, the first of %2 videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
-        <translation>Các rãnh của %1, video đầu tiên trong %2 video. Các rãnh đã đánh dấu sẽ được lưu từ mọi video trong thư mục; video không có rãnh đó sẽ bị bỏ qua.</translation>
+    <message numerus="yes">
+        <source>Tracks of %1, one of %n videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
+        <translation>
+            <numerusform>Các rãnh của %1, một trong %n video. Các rãnh đã đánh dấu sẽ được lưu từ mọi video trong thư mục; video không có rãnh đó sẽ bị bỏ qua.</numerusform>
+        </translation>
     </message>
     <message>
         <source>Tracks of %1. Tick the ones to save.</source>
@@ -12569,8 +12697,16 @@ Sắp xếp theo cột này để duyệt hết một bản thu dài theo thứ 
         <translation>Câu (%1)</translation>
     </message>
     <message>
+        <source>This card has no picture</source>
+        <translation>Thẻ này không có hình ảnh</translation>
+    </message>
+    <message>
         <source>No page image for this word</source>
         <translation>Không có ảnh trang cho từ này</translation>
+    </message>
+    <message>
+        <source>Could not load this card's picture</source>
+        <translation>Không thể tải hình ảnh của thẻ này</translation>
     </message>
     <message>
         <source>Could not load page image</source>
@@ -12702,6 +12838,10 @@ Sắp xếp theo cột này để duyệt hết một bản thu dài theo thứ 
     </message>
 </context><context>
     <name>YouTubeSettingsPanel</name>
+    <message>
+        <source>None</source>
+        <translation>Không dùng</translation>
+    </message>
     <message>
         <source>YouTube</source>
         <translation>YouTube</translation>

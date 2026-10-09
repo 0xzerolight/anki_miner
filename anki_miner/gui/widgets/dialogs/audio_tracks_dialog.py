@@ -6,7 +6,7 @@ from anki_miner.gui.widgets.dialogs._track_picker_dialog import _TrackPickerDial
 from anki_miner.utils.audio_track_detector import AudioStream
 
 
-def _format_channels(channels: int | None) -> str:
+def format_channels(channels: int | None) -> str:
     """Return a human-readable channel-layout string, or '' if channels is None."""
     if channels is None:
         return ""
@@ -17,7 +17,7 @@ def _format_channels(channels: int | None) -> str:
 def _format_track_label(stream: AudioStream) -> str:
     language = stream.language_tag or "und"
     codec = (stream.codec or "?").upper()
-    ch_layout = _format_channels(stream.channels)
+    ch_layout = format_channels(stream.channels)
     parts = f"Track {stream.audio_index + 1} — {language} · {codec}"
     if ch_layout:
         parts += f" {ch_layout}"

@@ -164,3 +164,48 @@ class TestImportButton:
         issue = tab.issue_banner().current_issue()
         assert issue is not None and issue.summary == "Settings could not be imported."
         assert received == []
+
+
+class TestConfirmationsFromTheProfileManager:
+    """P-B3.7a: the tab's flash row sits behind the modal manager, so a clean finish there went unseen."""
+
+    @staticmethod
+    def _manager(tab, qtbot):
+        from anki_miner.gui.widgets.dialogs.profile_manager_dialog import ProfileManagerDialog
+
+        class _Controller:
+            def switch_to(self, profile_id):
+                raise AssertionError("not under test")
+
+            def create_from_current(self, name):
+                raise AssertionError("not under test")
+
+        dialog = ProfileManagerDialog(_Controller(), lambda: None, settings_actions=tab)
+        qtbot.addWidget(dialog)
+        return dialog
+
+    def test_a_clean_import_is_confirmed_in_the_manager(
+        self, tab, test_config, tmp_path, monkeypatch, messageboxes, qtbot
+    ):
+        path = tmp_path / "incoming.json"
+        GUIConfigManager.export_config(replace(test_config, anki_deck_name="ImportedDeck"), path)
+        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **k: on_done(str(path)))
+        dialog = self._manager(tab, qtbot)
+
+        dialog.import_settings_button.click()
+
+        assert dialog.status_label.text() == "✓ Imported"
+        assert tab.save_status_label.text() == ""
+
+    def test_a_reset_is_confirmed_in_the_manager(self, tab, messageboxes, qtbot):
+        dialog = self._manager(tab, qtbot)
+
+        dialog.reset_settings_button.click()
+
+        assert dialog.status_label.text() == "✓ Reset to defaults"
+        assert tab.save_status_label.text() == ""
+
+    def test_a_reset_without_a_surface_still_flashes_the_tab(self, tab, messageboxes):
+        tab.reset_settings()
+
+        assert tab.save_status_label.text() == "✓ Reset to defaults"

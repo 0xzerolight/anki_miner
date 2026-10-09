@@ -263,9 +263,11 @@ class TestRedMeansDestruction:
 
         assert Rendered(critical).fill == _opaque(colors["error"])
 
-    def test_a_disabled_quiet_button_is_an_outline_only(self, host, colors):
+    @pytest.mark.parametrize("marked", [True, False], ids=["secondary", "unmarked"])
+    def test_a_disabled_quiet_button_is_an_outline_only(self, host, colors, marked):
         """D17: a disabled control weighs less than the enabled ones around it."""
-        button = ModernButton("Cancel", variant="secondary")
+        button = ModernButton("Cancel", variant="secondary") if marked else QPushButton("Cancel")
+        button.setAutoDefault(False)
         button.setEnabled(False)
         host(button)
         rendered = Rendered(button)
@@ -291,11 +293,23 @@ class TestRedMeansDestruction:
         assert rendered.border == TRANSPARENT
         assert rendered.fill != _opaque(colors["disabled"])
 
-    def test_a_disabled_primary_keeps_a_grey_fill(self, host, colors):
-        """An outline-only primary would read as an enabled secondary button."""
-        button = ModernButton("Mine", variant="primary")
+    @pytest.mark.parametrize("variant", ["primary", "critical"])
+    def test_a_disabled_filled_button_keeps_a_grey_fill(self, host, colors, variant):
+        """An outline-only primary would read as an enabled secondary button,
+        and an outline-only critical as a reversible danger one."""
+        button = ModernButton("Delete", variant=variant)
         button.setEnabled(False)
         host(button)
+
+        assert Rendered(button).fill == _opaque(colors["disabled"])
+
+    @pytest.mark.parametrize("variant", ["secondary", "ghost", "danger"])
+    def test_a_disabled_qt_default_keeps_a_grey_fill(self, host, colors, variant):
+        """Enter's target renders primary, so disabled it greys like a primary."""
+        button = ModernButton("Close", variant=variant)
+        host(button)
+        button.setDefault(True)
+        button.setEnabled(False)
 
         assert Rendered(button).fill == _opaque(colors["disabled"])
 

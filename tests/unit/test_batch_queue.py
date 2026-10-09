@@ -135,10 +135,6 @@ class TestRetryFeature:
         item = QueueItem(video_folder=tmp_path, subtitle_folder=tmp_path, display_name="Test")
         assert item.retry_count == 0
 
-    def test_max_retries_default(self, tmp_path):
-        item = QueueItem(video_folder=tmp_path, subtitle_folder=tmp_path, display_name="Test")
-        assert item.max_retries == 2
-
     def test_failed_count(self, tmp_path):
         queue = BatchQueue()
         item1 = queue.add_item(tmp_path / "a1", tmp_path / "s1", "A")
@@ -148,66 +144,6 @@ class TestRetryFeature:
         item2.status = QueueItemStatus.COMPLETED
         item3.status = QueueItemStatus.ERROR
         assert queue.failed_count == 2
-
-    def test_reset_failed_for_retry(self, tmp_path):
-        queue = BatchQueue()
-        item1 = queue.add_item(tmp_path / "a1", tmp_path / "s1", "A")
-        item2 = queue.add_item(tmp_path / "a2", tmp_path / "s2", "B")
-        item1.status = QueueItemStatus.ERROR
-        item1.error_message = "Some error"
-        item2.status = QueueItemStatus.COMPLETED
-
-        reset = queue.reset_failed_for_retry()
-
-        assert reset == 1
-        assert item1.status == QueueItemStatus.PENDING
-        assert item1.retry_count == 1
-        assert item1.error_message == ""
-        assert item2.status == QueueItemStatus.COMPLETED  # unchanged
-
-    def test_reset_failed_respects_max_retries(self, tmp_path):
-        queue = BatchQueue()
-        item = queue.add_item(tmp_path / "a", tmp_path / "s", "Test")
-        item.status = QueueItemStatus.ERROR
-        item.retry_count = 2  # Already at max (max_retries=2)
-
-        reset = queue.reset_failed_for_retry()
-
-        assert reset == 0
-        assert item.status == QueueItemStatus.ERROR  # not reset
-
-    def test_retry_increments_count(self, tmp_path):
-        queue = BatchQueue()
-        item = queue.add_item(tmp_path / "a", tmp_path / "s", "Test")
-        item.status = QueueItemStatus.ERROR
-        item.retry_count = 1
-
-        reset = queue.reset_failed_for_retry()
-
-        assert reset == 1
-        assert item.retry_count == 2
-
-    def test_retry_after_max_retries_not_allowed(self, tmp_path):
-        """After reaching max_retries, reset should not happen."""
-        queue = BatchQueue()
-        item = queue.add_item(tmp_path / "a", tmp_path / "s", "Test")
-        item.status = QueueItemStatus.ERROR
-        item.retry_count = 0
-
-        # First retry
-        queue.reset_failed_for_retry()
-        assert item.retry_count == 1
-        item.status = QueueItemStatus.ERROR
-
-        # Second retry
-        queue.reset_failed_for_retry()
-        assert item.retry_count == 2
-        item.status = QueueItemStatus.ERROR
-
-        # Third attempt should fail
-        reset = queue.reset_failed_for_retry()
-        assert reset == 0
-        assert item.status == QueueItemStatus.ERROR
 
 
 class TestResetRunHistory:

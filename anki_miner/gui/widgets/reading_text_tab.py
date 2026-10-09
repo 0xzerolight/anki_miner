@@ -169,9 +169,8 @@ class ReadingTextTab(_ReadingMiningTabBase):
     Owns, via the base, at most one running
     :class:`~anki_miner.gui.workers.reading_queue_worker.ReadingQueueWorker`
     mining the pasted text. Button state is purely derived from the worker
-    handle and the edit content by :meth:`_recompute_buttons`: idle shows
-    Mine (enabled only when non-blank text is present), a run swaps it for
-    Cancel.
+    handle by :meth:`_recompute_buttons`: idle shows Mine, always enabled
+    (blank text is refused in the banner, A04); a run swaps it for Cancel.
 
     Text curation has no media context but shows the definition pane: the
     base's ``_build_curation_context`` returns ``(None, lookup_fn)`` from the

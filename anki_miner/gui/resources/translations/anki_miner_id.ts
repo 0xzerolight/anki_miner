@@ -2102,8 +2102,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Mode Pembuat Dek (semua / N teratas / cakupan %)</translation>
     </message>
     <message>
-        <source>Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
-        <translation>Pembuat Dek selalu melewati filter per-episode dan pemeriksaan duplikat; pilih semua kata, N teratas, atau target cakupan, dan opsional lewati kata yang dikenal.</translation>
+        <source>Deck Builder always skips per-episode filters and checks for duplicates only in the deck it builds; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
+        <translation>Pembuat Dek selalu melewati filter per-episode dan hanya memeriksa duplikat di dalam dek yang dibangunnya; pilih semua kata, N teratas, atau target cakupan, dan opsional lewati kata yang dikenal.</translation>
     </message>
     <message>
         <source>Mine from YouTube</source>
@@ -2318,8 +2318,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Kecualikan kata kana saja</translation>
     </message>
     <message>
-        <source>Drop words written without kanji; “Skip all kana-only words” leaves a kanji-only deck.</source>
-        <translation>Buang kata yang ditulis tanpa kanji; “Lewati semua kata khusus kana” menyisakan dek khusus kanji.</translation>
+        <source>Drop words written without kanji; “Skip all kana-only words (including mixed)” leaves a kanji-only deck.</source>
+        <translation>Buang kata yang ditulis tanpa kanji; “Lewati semua kata khusus kana (termasuk campuran)” menyisakan dek khusus kanji.</translation>
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -2622,8 +2622,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Isi pemetaan bidang secara otomatis</translation>
     </message>
     <message>
-        <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku, Senren and Anki Miner Note are recognised and filled completely.</source>
-        <translation>Isi otomatis membaca bidang tipe catatan Anda dan mengisi setiap pemetaan. Lapis, Kiku, Senren, dan Anki Miner Note dikenali dan diisi sepenuhnya.</translation>
+        <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku and Senren (Japanese only) and Anki Miner Note are recognised and filled completely.</source>
+        <translation>Isi otomatis membaca bidang tipe catatan Anda dan mengisi setiap pemetaan. Lapis, Kiku, dan Senren (khusus bahasa Jepang) serta Anki Miner Note dikenali dan diisi sepenuhnya.</translation>
     </message>
     <message>
         <source>Bold the mined word in the sentence</source>
@@ -2882,10 +2882,6 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <message>
         <source>Deck</source>
         <translation>Dek</translation>
-    </message>
-    <message>
-        <source>Deck:</source>
-        <translation>Dek:</translation>
     </message>
     <message>
         <source>All decks</source>
@@ -3792,16 +3788,16 @@ Ini akan mengubah %n catatan (%1) dan memberinya tag %2. Lanjutkan?</numerusform
         <translation>Masukkan nama dek sebelum mining.</translation>
     </message>
     <message>
+        <source>Cancelling…</source>
+        <translation>Membatalkan…</translation>
+    </message>
+    <message>
         <source>No video/subtitle pairs found. Check the folders.</source>
         <translation>Tidak ada pasangan video/subtitel yang ditemukan. Periksa foldernya.</translation>
     </message>
     <message>
         <source>Deck Builder</source>
         <translation>Pembuat Dek</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Membatalkan…</translation>
     </message>
     <message>
         <source>Preview ready. Press Build Deck to create the cards.</source>
@@ -5470,8 +5466,8 @@ Tidak ada berkas di disk yang dihapus.</translation>
         <translation>Berkas Daftar Hitam</translation>
     </message>
     <message>
-        <source>Text file with one word per line to always skip. Leave empty to skip nothing.</source>
-        <translation>Berkas teks berisi satu kata per baris yang selalu dilewati. Biarkan kosong agar tidak ada yang dilewati.</translation>
+        <source>Text file with one word per line to skip. Whitelisted words are still mined. Leave empty to skip nothing.</source>
+        <translation>Berkas teks berisi satu kata per baris yang akan dilewati. Kata pada daftar putih tetap di-mining. Biarkan kosong agar tidak ada yang dilewati.</translation>
     </message>
     <message>
         <source>Select whitelist file...</source>
@@ -5490,8 +5486,8 @@ Tidak ada berkas di disk yang dihapus.</translation>
         <translation>Kumpulan Kata Nama</translation>
     </message>
     <message>
-        <source>Exclude bundled lists of Japanese people and place names from mining. Whitelisted names are still mined.</source>
-        <translation>Kecualikan daftar bawaan nama orang dan tempat Jepang dari mining. Nama pada daftar putih tetap di-mining.</translation>
+        <source>Exclude bundled lists of Japanese people, place and company names from mining. Whitelisted names are still mined.</source>
+        <translation>Kecualikan daftar bawaan nama orang, tempat, dan perusahaan Jepang dari mining. Nama pada daftar putih tetap di-mining.</translation>
     </message>
     <message>
         <source>Skip names of people, places and companies</source>
@@ -7130,6 +7126,10 @@ Lanjutkan?</translation>
         <translation>Unduhan bahasa ini tidak dapat dimulai dari penyiapan. Pilih bahasa ini di Pengaturan → Bahasa Mining setelah penyiapan.</translation>
     </message>
     <message>
+        <source>%1 language pack: download failed. %2</source>
+        <translation>Paket bahasa %1: unduhan gagal. %2</translation>
+    </message>
+    <message>
         <source>%1 language pack: download failed.</source>
         <translation>Paket bahasa %1: unduhan gagal.</translation>
     </message>
@@ -7214,6 +7214,10 @@ Lanjutkan?</translation>
     <message>
         <source>%1 needs a one-time download of about %2 MB.</source>
         <translation>%1 memerlukan unduhan satu kali sekitar %2 MB.</translation>
+    </message>
+    <message>
+        <source>%1 still can't be mined after its download.</source>
+        <translation>%1 masih belum dapat di-mining setelah diunduh.</translation>
     </message>
 </context><context>
     <name>MiningTabBase</name>
@@ -8285,13 +8289,11 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <source>Cards: %1</source>
         <translation>Kartu: %1</translation>
     </message>
-    <message>
-        <source>1 episode</source>
-        <translation>1 episode</translation>
-    </message>
-    <message>
-        <source>%1 episodes</source>
-        <translation>%1 episode</translation>
+    <message numerus="yes">
+        <source>%n episode(s)</source>
+        <translation>
+            <numerusform>%n episode</numerusform>
+        </translation>
     </message>
     <message>
         <source>Video folder: %1</source>
@@ -8405,21 +8407,17 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <source>Remove all %1 series from the queue?</source>
         <translation>Hapus semua %1 seri dari antrean?</translation>
     </message>
-    <message>
-        <source>1 series</source>
-        <translation>1 seri</translation>
+    <message numerus="yes">
+        <source>%n series</source>
+        <translation>
+            <numerusform>%n seri</numerusform>
+        </translation>
     </message>
-    <message>
-        <source>%1 series</source>
-        <translation>%1 seri</translation>
-    </message>
-    <message>
-        <source>1 episode</source>
-        <translation>1 episode</translation>
-    </message>
-    <message>
-        <source>%1 episodes</source>
-        <translation>%1 episode</translation>
+    <message numerus="yes">
+        <source>%n episode(s)</source>
+        <translation>
+            <numerusform>%n episode</numerusform>
+        </translation>
     </message>
     <message>
         <source>%1 ready</source>
@@ -8634,6 +8632,10 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Pilih berkas subtitel (.ass, .srt, .ssa, .vtt atau .smi).</translation>
     </message>
     <message>
+        <source>Reading your Anki cards and known words…</source>
+        <translation>Membaca kartu Anki dan kata yang dikenal milik Anda…</translation>
+    </message>
+    <message>
         <source>Checking file %1 of %2</source>
         <translation>Memeriksa berkas %1 dari %2</translation>
     </message>
@@ -8842,6 +8844,10 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Pilih volume atau folder manga terlebih dahulu.</translation>
     </message>
     <message>
+        <source>That file or folder no longer exists.</source>
+        <translation>Berkas atau folder tersebut sudah tidak ada.</translation>
+    </message>
+    <message>
         <source>Choose a .mokuro, .cbz or .zip volume, or a manga folder.</source>
         <translation>Pilih volume .mokuro, .cbz, atau .zip, atau folder manga.</translation>
     </message>
@@ -8950,6 +8956,10 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <message>
         <source>Choose a book or a folder of books first.</source>
         <translation>Pilih buku atau folder buku terlebih dahulu.</translation>
+    </message>
+    <message>
+        <source>That file or folder no longer exists.</source>
+        <translation>Berkas atau folder tersebut sudah tidak ada.</translation>
     </message>
     <message>
         <source>Choose an .epub or .txt book, or a folder of books.</source>
@@ -9138,6 +9148,10 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <message>
         <source>Cancelling…</source>
         <translation>Membatalkan…</translation>
+    </message>
+    <message>
+        <source>Anki Miner can't mine this folder.</source>
+        <translation>Anki Miner tidak dapat melakukan mining pada folder ini.</translation>
     </message>
     <message>
         <source>Anki Miner can't mine this file.</source>
@@ -9619,6 +9633,10 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Mengunduh %1 dari %2 · %3</translation>
     </message>
     <message>
+        <source>Installing %1 of %2 · %3</source>
+        <translation>Memasang %1 dari %2 · %3</translation>
+    </message>
+    <message>
         <source>Recommended Resources</source>
         <translation>Sumber Daya yang Direkomendasikan</translation>
     </message>
@@ -9694,14 +9712,22 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>%1 (%2)</source>
+        <extracomment>%1 is one or more resource names, %2 what they are: "JMdict (dictionary)".</extracomment>
         <translation>%1 (%2)</translation>
     </message>
     <message>
         <source>Downloads %1.</source>
+        <extracomment>%1 lists "name (kind)" groups: "Downloads JMdict (dictionary) and Kanjium (pitch accent)."</extracomment>
         <translation>Yang diunduh: %1.</translation>
     </message>
     <message>
+        <source>%1, %2</source>
+        <extracomment>Joins list items before the last one: "JMdict, JPDB and Jiten". Use your language's list comma.</extracomment>
+        <translation>%1, %2</translation>
+    </message>
+    <message>
         <source>%1 and %2</source>
+        <extracomment>Joins the last item to the rest of a list: "JMdict, JPDB and Jiten".</extracomment>
         <translation>%1 dan %2</translation>
     </message>
     <message>
@@ -9881,6 +9907,94 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <message>
         <source>Already known: %1.</source>
         <translation>Sudah dikenal: %1.</translation>
+    </message>
+    <message>
+        <source>Not mined: %1 word — search this log for a word to see why.</source>
+        <translation>Tidak di-mining: %1 kata — cari kata di log ini untuk melihat alasannya.</translation>
+    </message>
+    <message>
+        <source>Not mined: %1 words — search this log for a word to see why.</source>
+        <translation>Tidak di-mining: %1 kata — cari kata di log ini untuk melihat alasannya.</translation>
+    </message>
+    <message>
+        <source>Name, interjection or other skipped word type — add it to your whitelist to mine it</source>
+        <translation>Nama, kata seru, atau jenis kata lain yang dilewati — tambahkan ke daftar putih Anda agar di-mining</translation>
+    </message>
+    <message>
+        <source>Sound effect — add it to your whitelist to mine it</source>
+        <translation>Efek suara — tambahkan ke daftar putih Anda agar di-mining</translation>
+    </message>
+    <message>
+        <source>Kana-only word — add it to your whitelist to mine it</source>
+        <translation>Kata khusus kana — tambahkan ke daftar putih Anda agar di-mining</translation>
+    </message>
+    <message>
+        <source>Written partly in another script — add it to your whitelist to mine it</source>
+        <translation>Sebagian ditulis dengan aksara lain — tambahkan ke daftar putih Anda agar di-mining</translation>
+    </message>
+    <message>
+        <source>Already known</source>
+        <translation>Sudah dikenal</translation>
+    </message>
+    <message>
+        <source>No dictionary entry — Settings → Dictionaries</source>
+        <translation>Tidak ada entri kamus — Pengaturan → Kamus</translation>
+    </message>
+    <message>
+        <source>Not in your frequency list — Settings → Word Filters</source>
+        <translation>Tidak ada dalam daftar frekuensi Anda — Pengaturan → Filter Kata</translation>
+    </message>
+    <message>
+        <source>Outside your frequency range — Settings → Word Filters</source>
+        <translation>Di luar rentang frekuensi Anda — Pengaturan → Filter Kata</translation>
+    </message>
+    <message>
+        <source>On your blacklist — Settings → Word Filters</source>
+        <translation>Ada dalam daftar hitam Anda — Pengaturan → Filter Kata</translation>
+    </message>
+    <message>
+        <source>Excluded by script type — Settings → Word Filters</source>
+        <translation>Dikecualikan berdasarkan tipe aksara — Pengaturan → Filter Kata</translation>
+    </message>
+    <message>
+        <source>On a name list — Settings → Word Filters</source>
+        <translation>Ada dalam daftar nama — Pengaturan → Filter Kata</translation>
+    </message>
+    <message>
+        <source>Appears fewer times than your minimum — Settings → Word Filters</source>
+        <translation>Muncul lebih sedikit dari batas minimum Anda — Pengaturan → Filter Kata</translation>
+    </message>
+    <message>
+        <source>Another word from its sentence got the card — Settings → Sentences</source>
+        <translation>Kata lain dalam kalimat yang sama mendapatkan kartu — Pengaturan → Kalimat</translation>
+    </message>
+    <message>
+        <source>No sentence where it is the only unknown word — Settings → Sentences</source>
+        <translation>Tidak ada kalimat dengan kata ini sebagai satu-satunya kata yang tidak dikenal — Pengaturan → Kalimat</translation>
+    </message>
+    <message>
+        <source>Sentence too long — Settings → Sentences</source>
+        <translation>Kalimat terlalu panjang — Pengaturan → Kalimat</translation>
+    </message>
+    <message>
+        <source>Same card as another spelling in this run</source>
+        <translation>Kartu yang sama dengan ejaan lain pada proses ini</translation>
+    </message>
+    <message>
+        <source>Media could not be extracted</source>
+        <translation>Media tidak dapat diekstrak</translation>
+    </message>
+    <message>
+        <source>Anki already has a card for it</source>
+        <translation>Anki sudah memiliki kartu untuk kata ini</translation>
+    </message>
+    <message>
+        <source>Anki did not confirm the card</source>
+        <translation>Anki tidak mengonfirmasi kartu</translation>
+    </message>
+    <message>
+        <source>%1 (%2): %3</source>
+        <translation>%1 (%2): %3</translation>
     </message>
 </context><context>
     <name>ResultsDialog</name>
@@ -10107,8 +10221,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Hapus nama pembicara, efek suara, dan simbol musik</translation>
     </message>
     <message>
-        <source>Removes (notes), [sound effects], ♪ music, speaker labels and dialogue dashes from each subtitle line before mining. Half-checked means your own pattern is in use: click to add every built-in cleanup to it.</source>
-        <translation>Menghapus (catatan), [efek suara], ♪ musik, label pembicara, dan tanda pisah dialog dari setiap baris subtitel sebelum mining. Setengah dicentang berarti pola Anda sendiri sedang digunakan: klik untuk menambahkan setiap pembersihan bawaan ke dalamnya.</translation>
+        <source>Removes (notes), [sound effects], ♪ music and dialogue dashes from each subtitle line before mining, and speaker labels where the script marks them. Half-checked means your own pattern is in use: click to add every built-in cleanup to it.</source>
+        <translation>Menghapus (catatan), [efek suara], ♪ musik, dan tanda pisah dialog dari setiap baris subtitel sebelum mining, serta label pembicara pada aksara yang menandainya. Setengah dicentang berarti pola Anda sendiri sedang digunakan: klik untuk menambahkan setiap pembersihan bawaan ke dalamnya.</translation>
     </message>
     <message>
         <source>Python regex matched in subtitle text and removed (or replaced) before mining. Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. Combine alternatives with |. Test patterns at https://regex101.com.</source>
@@ -10155,16 +10269,16 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Satu kartu per kalimat</translation>
     </message>
     <message>
-        <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped.</source>
-        <translation>Mining paling banyak satu kata per kalimat contoh — kata pertama yang ditemukan dalam kalimat itu. Setiap kata lain yang berbagi kalimat tersebut dilewati.</translation>
+        <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped. Whitelisted words are still mined.</source>
+        <translation>Mining paling banyak satu kata per kalimat contoh — kata pertama yang ditemukan dalam kalimat itu. Setiap kata lain yang berbagi kalimat tersebut dilewati. Kata pada daftar putih tetap di-mining.</translation>
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
         <translation>Hanya kalimat i+1 (tepat satu kata tidak diketahui)</translation>
     </message>
     <message>
-        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication.</source>
-        <translation>Hanya mining kata dalam kalimat yang memiliki tepat satu kata tidak diketahui (i+1); mengesampingkan deduplikasi kalimat.</translation>
+        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication. Whitelisted words are still mined.</source>
+        <translation>Hanya mining kata dalam kalimat yang memiliki tepat satu kata tidak diketahui (i+1); mengesampingkan deduplikasi kalimat. Kata pada daftar putih tetap di-mining.</translation>
     </message>
     <message>
         <source>Sentence Rule</source>
@@ -11179,6 +11293,10 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
         <translation>Di sebelah video sumber, sebagai name_retimed.srt</translation>
     </message>
     <message>
+        <source>%1, as name_retimed.srt</source>
+        <translation>%1, sebagai name_retimed.srt</translation>
+    </message>
+    <message>
         <source>Subtitle retiming</source>
         <translation>Penyelarasan ulang waktu subtitel</translation>
     </message>
@@ -11512,6 +11630,10 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
     </message>
 </context><context>
     <name>SubtitlesSettingsPanel</name>
+    <message>
+        <source>Auto (GPU if available)</source>
+        <translation>Otomatis (GPU jika tersedia)</translation>
+    </message>
     <message>
         <source>Transcription &amp; Alignment</source>
         <translation>Transkripsi &amp; Penyelarasan</translation>
@@ -12087,12 +12209,18 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
         <translation>Tidak ada video yang ditemukan di folder tersebut.</translation>
     </message>
     <message>
+        <source>No subtitle or audio tracks were found in any video in that folder.</source>
+        <translation>Tidak ada trek subtitel atau audio yang ditemukan dalam video mana pun di folder tersebut.</translation>
+    </message>
+    <message>
         <source>No subtitle or audio tracks were found in %1.</source>
         <translation>Tidak ada trek subtitel atau audio yang ditemukan dalam %1.</translation>
     </message>
-    <message>
-        <source>Tracks of %1, the first of %2 videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
-        <translation>Trek dari %1, video pertama dari %2 video. Trek yang dicentang disimpan dari setiap video dalam folder; video yang tidak memilikinya dilewati.</translation>
+    <message numerus="yes">
+        <source>Tracks of %1, one of %n videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
+        <translation>
+            <numerusform>Trek dari %1, salah satu dari %n video. Trek yang dicentang disimpan dari setiap video dalam folder; video yang tidak memilikinya dilewati.</numerusform>
+        </translation>
     </message>
     <message>
         <source>Tracks of %1. Tick the ones to save.</source>
@@ -12569,8 +12697,16 @@ Urutkan berdasarkan kolom ini untuk menelusuri rekaman panjang secara berurutan 
         <translation>Kalimat (%1)</translation>
     </message>
     <message>
+        <source>This card has no picture</source>
+        <translation>Kartu ini tidak memiliki gambar</translation>
+    </message>
+    <message>
         <source>No page image for this word</source>
         <translation>Tidak ada gambar halaman untuk kata ini</translation>
+    </message>
+    <message>
+        <source>Could not load this card's picture</source>
+        <translation>Tidak dapat memuat gambar kartu ini</translation>
     </message>
     <message>
         <source>Could not load page image</source>
@@ -12702,6 +12838,10 @@ Urutkan berdasarkan kolom ini untuk menelusuri rekaman panjang secara berurutan 
     </message>
 </context><context>
     <name>YouTubeSettingsPanel</name>
+    <message>
+        <source>None</source>
+        <translation>Tidak Ada</translation>
+    </message>
     <message>
         <source>YouTube</source>
         <translation>YouTube</translation>

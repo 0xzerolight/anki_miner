@@ -269,7 +269,7 @@ class TestFolderRun:
         assert queue_cls.call_count == 0
         assert "No .epub or .txt books found" in tab.log_widget.text_edit.toPlainText()
         issue = tab.issue_banner().current_issue()
-        assert issue.summary == "Anki Miner can't mine this file."
+        assert issue.summary == "Anki Miner can't mine this folder."  # a folder was picked
         assert issue.details == "No .epub or .txt books found in 'x'."
 
     def test_folder_run_swaps_mine_for_cancel(self, tmp_path, tab):
@@ -404,12 +404,13 @@ class TestInvalidPath:
 
     def test_nonexistent_file_warns_no_run(self, tab):
         queue_cls = tab._queue_worker_cls
-        tab.book_selector.set_path("/no/such/book.epub")
+        tab.book_selector.set_path("/no/such/book.epub")  # a stale history entry
         tab._on_mine_clicked()
         assert queue_cls.call_count == 0
-        wrong_kind = "Choose an .epub or .txt book, or a folder of books."
-        assert wrong_kind in tab.log_widget.text_edit.toPlainText()
-        assert tab.issue_banner().current_issue().summary == wrong_kind
+        # Named as gone, not refused as the wrong kind of file.
+        gone = "That file or folder no longer exists."
+        assert gone in tab.log_widget.text_edit.toPlainText()
+        assert tab.issue_banner().current_issue().summary == gone
 
     def test_wrong_suffix_warns_no_run(self, tmp_path, tab):
         queue_cls = tab._queue_worker_cls

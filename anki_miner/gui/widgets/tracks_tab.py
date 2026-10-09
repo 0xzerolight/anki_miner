@@ -19,6 +19,7 @@ Guard contract:
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 from typing import cast
 
@@ -39,7 +40,7 @@ from anki_miner.gui.utils.qt_helpers import (
 from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout, field_label_width
-from anki_miner.gui.widgets.dialogs.audio_tracks_dialog import _format_channels
+from anki_miner.gui.widgets.dialogs.audio_tracks_dialog import format_channels
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.workers.track_extract_worker import TrackExtractWorker
 from anki_miner.languages.registry import config_language, get_profile
@@ -49,6 +50,7 @@ from anki_miner.services.track_extractor import (
     InputProbe,
     TrackRef,
     is_track_input,
+    preferred_refs,
     probe_input,
     track_format,
 )
@@ -149,9 +151,18 @@ class TracksTab(_ToolTabBase):
         return self._total_files
 
     def update_config(self, config: AnkiMinerConfig) -> None:
-        """Adopt a new config; a run in flight keeps the one it captured."""
+        """Adopt a new config; a run in flight keeps the one it captured.
+
+        A mining-language switch re-ticks the listed tracks: the old ticks
+        picked the old language's subtitle, which would pair into the new
+        language's mining under the video's name. Otherwise the ticks stay.
+        """
+        language_changed = config_language(config) != config_language(self.config)
         self.config = config
         self._refresh_engine_state()
+        if language_changed and self._probe is not None:
+            codes = get_profile(config_language(config)).audio_track_codes
+            self._apply_input_probe(replace(self._probe, preselected=preferred_refs(self._probe.tracks, codes)))
 
     # ------------------------------------------------------------------
     # UI construction
@@ -370,26 +381,33 @@ class TracksTab(_ToolTabBase):
             self.tracks_status_label.setText(self.tr("No videos were found in that folder."))
             table.hide()
             return
-        first = probe.videos[0]
+        listed = probe.videos[probe.listed_index]
         if probe.tracks.is_empty:
-            self.tracks_status_label.setText(
-                tr_format(self.tr("No subtitle or audio tracks were found in %1."), first.name)
-            )
+            if probe.source != listed:
+                self.tracks_status_label.setText(
+                    self.tr("No subtitle or audio tracks were found in any video in that folder.")
+                )
+            else:
+                self.tracks_status_label.setText(
+                    tr_format(self.tr("No subtitle or audio tracks were found in %1."), listed.name)
+                )
             table.hide()
             return
-        if probe.source != first:
+        # One video reads the same picked alone or alone in a folder.
+        if len(probe.videos) > 1:
             self.tracks_status_label.setText(
                 tr_format(
                     self.tr(
-                        "Tracks of %1, the first of %2 videos. The ticked tracks are saved from every video "
-                        "in the folder; a video without one is skipped."
+                        "Tracks of %1, one of %n videos. The ticked tracks are saved from every video "
+                        "in the folder; a video without one is skipped.",
+                        "",
+                        len(probe.videos),
                     ),
-                    first.name,
-                    len(probe.videos),
+                    listed.name,
                 )
             )
         else:
-            self.tracks_status_label.setText(tr_format(self.tr("Tracks of %1. Tick the ones to save."), first.name))
+            self.tracks_status_label.setText(tr_format(self.tr("Tracks of %1. Tick the ones to save."), listed.name))
         ticked = set(probe.preselected)
         for sub in probe.tracks.subtitles:
             self._add_subtitle_row(sub, ticked)
@@ -419,7 +437,7 @@ class TracksTab(_ToolTabBase):
 
     def _add_audio_row(self, stream: AudioStream, ticked: set[TrackRef]) -> None:
         ref = TrackRef("audio", stream.audio_index)
-        codec = " ".join(part for part in (_codec_label(stream.codec), _format_channels(stream.channels)) if part)
+        codec = " ".join(part for part in (_codec_label(stream.codec), format_channels(stream.channels)) if part)
         self._add_row(
             ref,
             tr_format(self.tr("Audio %1"), stream.audio_index + 1),

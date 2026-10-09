@@ -236,15 +236,9 @@ def test_stale_dictionaries_skip_ensure_deck(anki_calls):
     proc = _FakeProcessor(_words())
     worker.confirm(DeckSelectionMode.ALL, 0)
 
-    with (
-        patch(
-            "anki_miner.gui.workers.deck_builder_worker.stale_resource_reimport_error",
-            return_value="Reimport the dictionary.",
-        ),
-        patch(
-            "anki_miner.gui.workers.batch_queue_worker.stale_resource_reimport_error",
-            return_value="Reimport the dictionary.",
-        ),
+    with patch(
+        "anki_miner.gui.workers.batch_queue_worker.stale_resource_reimport_error",
+        return_value="Reimport the dictionary.",
     ):
         seen = _run(worker, proc)
 
@@ -252,6 +246,27 @@ def test_stale_dictionaries_skip_ensure_deck(anki_calls):
     assert seen["errors"] == ["Reimport the dictionary."]
     proc.process_episode.assert_not_called()
     assert seen["previews"] == []
+
+
+def test_the_stale_index_gate_runs_once_per_build(monkeypatch):
+    """F4: the override checked staleness itself, then the base checked it again."""
+    import anki_miner.gui.workers.batch_queue_worker as queue_worker
+    import anki_miner.gui.workers.deck_builder_worker as builder_worker
+
+    calls: list[object] = []
+
+    def _fresh(config, **_kwargs):
+        calls.append(config)
+        return None
+
+    monkeypatch.setattr(queue_worker, "stale_resource_reimport_error", _fresh)
+    monkeypatch.setattr(builder_worker, "stale_resource_reimport_error", _fresh, raising=False)
+    worker = _worker()
+    worker.confirm(DeckSelectionMode.ALL, 0)
+
+    _run(worker, _FakeProcessor(_words()))
+
+    assert len(calls) == 1
 
 
 def test_ensure_deck_failure_emits_error_and_mines_nothing(monkeypatch, anki_calls):

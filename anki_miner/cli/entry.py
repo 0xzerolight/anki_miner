@@ -240,9 +240,8 @@ def _private_stdout() -> Iterator[Callable[[bytes], None]]:
     child process inheriting stdout would each corrupt the stream the calling
     tool parses. During the run fd 1 and ``sys.stdout`` point at stderr (devnull
     when there is none — a console=False Windows exe launched without one);
-    events go to the saved descriptor. On Windows a child spawned without an
-    explicit stdout still inherits the original handle, but every spawn site in
-    the app captures stdout. Both are restored on exit.
+    events go to the saved descriptor. On Windows the process's standard output
+    handle moves with fd 1 (``_follow_fd1``). Both are restored on exit.
     """
     # Text already buffered in the original stdout objects (an import-time print
     # while stdout is a block-buffered pipe, or a library holding a cached
@@ -268,6 +267,7 @@ def _private_stdout() -> Iterator[Callable[[bytes], None]]:
             null_fd = os.open(os.devnull, os.O_WRONLY)
             os.dup2(null_fd, 1)
             os.close(null_fd)
+        _follow_fd1()
     python_target: IO[str] | None = sys.stderr if stderr_ok else None
     devnull: IO[str] | None = None
     if python_target is None:
@@ -280,8 +280,28 @@ def _private_stdout() -> Iterator[Callable[[bytes], None]]:
         if event_fd is not None:
             os.dup2(event_fd, 1)
             os.close(event_fd)
+            _follow_fd1()
         if devnull is not None:
             devnull.close()
+
+
+_STD_OUTPUT_HANDLE = -11  # winbase.h
+
+
+def _follow_fd1() -> None:
+    """On Windows, point the process's standard output handle at what fd 1 holds now.
+
+    os.dup2 moves only the C runtime's fd 1. In a GUI-subsystem exe (the
+    installers' AnkiMiner.exe) STD_OUTPUT_HANDLE keeps naming the handle dup2
+    closed, which a child spawned without an explicit stdout, or a native
+    library writing to it, would then use.
+    """
+    if sys.platform != "win32":
+        return
+    import ctypes
+    import msvcrt
+
+    ctypes.WinDLL("kernel32").SetStdHandle(_STD_OUTPUT_HANDLE, ctypes.c_void_p(msvcrt.get_osfhandle(1)))
 
 
 def _private_copy(fd: int) -> int:

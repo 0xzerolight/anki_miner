@@ -18,8 +18,8 @@ Guard contract:
 
 from __future__ import annotations
 
-import functools
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 
 from PyQt6.QtCore import Qt
@@ -45,13 +45,11 @@ from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout, field_label_width
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, StatCard
 from anki_miner.gui.workers.readability_worker import ReadabilityWorker
-from anki_miner.languages import AVAILABLE_LANGUAGES
-from anki_miner.languages.registry import config_language, get_profile
+from anki_miner.languages.registry import config_language, get_profile, subtitle_language
 from anki_miner.models.readability import I_PLUS_0, I_PLUS_1, I_PLUS_2_OR_MORE, ReadabilityStats
 from anki_miner.services.readability import combine
 from anki_miner.services.reading._util import natural_sort_key
-from anki_miner.utils.audio_track_detector import matches_language_tag
-from anki_miner.utils.file_pairing import FilePairMatcher
+from anki_miner.utils.file_pairing import FilePairMatcher, SubtitleTag, subtitle_language_tag
 from anki_miner.utils.i18n import tr_format
 
 _SUBTITLE_EXTENSIONS = FilePairMatcher.SUBTITLE_EXTENSIONS
@@ -60,33 +58,8 @@ _NUMBER_COLUMNS = (1, 2, 3, 4, 5)
 #: Rows the table shows before it scrolls (a floor in rows, not pixels).
 _MIN_VISIBLE_ROWS = 8
 _NO_VALUE = "—"
-
-
-@functools.cache
-def _language_codes() -> frozenset[str]:
-    """Every code a mining language answers to (ja, jpn, en, eng, pt, ...)."""
-    return frozenset().union(*(get_profile(code).audio_track_codes for code in AVAILABLE_LANGUAGES))
-
-
-def _mining_codes(config: AnkiMinerConfig) -> frozenset[str]:
-    """Tags naming the mining language: its audio-track codes plus the caption codes
-    fetched for it (yue's zh-HK / zh-Hant). Lowercased: matches_language_tag folds
-    the tag, not the codes."""
-    profile = get_profile(config_language(config))
-    return frozenset(code.lower() for code in (*profile.audio_track_codes, *profile.captions.codes))
-
-
-def _tagged_for_another_language(path: Path, mining_codes: frozenset[str]) -> bool:
-    """Whether the name ends in a language tag for another language (``ep01.en.srt``, ``ep01.en.forced.srt``).
-
-    Only the last two dot-separated parts of the stem are read, and only a
-    lowercase one counts: release names capitalise their words, so a title word
-    such as ``All.In`` is not taken for Indonesian.
-    """
-    for token in path.stem.split(".")[1:][-2:]:
-        if token.partition("-")[0].islower() and matches_language_tag(token, _language_codes()):
-            return not matches_language_tag(token, mining_codes)
-    return False
+#: The run total before any file is measured.
+_NO_TOTAL = ReadabilityStats(0, 0, frozenset(), (0, 0, 0))
 
 
 def _pct(value: float | None, decimals: int) -> str:
@@ -134,7 +107,11 @@ class ReadabilityTab(_ToolTabBase):
         self._engine_is_available: bool = False
         self._total_files: int = 0
         self._run_files: list[Path] = []
-        self._measured: list[ReadabilityStats] = []
+        #: Counts of the files measured so far, summed as each lands. Its own
+        #: new_words stays empty: they collect in ``_new_words``, one growing
+        #: set, so a row never re-reads the files before it.
+        self._total = _NO_TOTAL
+        self._new_words: set[str] = set()
         # Built here (not in the base) so each literal stays in this tab's
         # tr-context — see _ToolTabBase for the rationale.
         self._strings = _ToolTabStrings(
@@ -370,6 +347,9 @@ class ReadabilityTab(_ToolTabBase):
 
         # A fresh attempt supersedes the complaint about the last one (D24).
         self.clear_screen_issue()
+        # And the last report: a refusal must not leave it under its banner.
+        # A cancelled run keeps what it measured until the next attempt.
+        self._clear_report()
 
         path_str = self.input_selector.path_or_none()
         if path_str is None:
@@ -391,12 +371,12 @@ class ReadabilityTab(_ToolTabBase):
             # A folder often holds the same episodes in other languages too
             # (ep01.en.srt beside ep01.es.srt); scoring those would skew the
             # totals, and a Latin-script mining language cannot tell them apart.
-            mining_codes = _mining_codes(self.config)
+            language = subtitle_language(config_language(self.config))
             # Natural order (1, 2, 10): the rows read as the season does.
             self._scan_folder_async(
                 path,
                 lambda f: f.suffix.lower() in _SUBTITLE_EXTENSIONS
-                and not _tagged_for_another_language(f, mining_codes),
+                and subtitle_language_tag(f, language) is not SubtitleTag.OTHER,
                 _on_files,
                 sort_key=lambda f: natural_sort_key(f.name),
                 empty_summary=self.tr("No subtitle files were found in that folder."),
@@ -419,14 +399,16 @@ class ReadabilityTab(_ToolTabBase):
     def _start_run(self, files: list[Path]) -> None:
         self._total_files = len(files)
         self._run_files = list(files)
-        # Every run starts empty; a cancelled run keeps what it measured.
-        self._clear_report()
         self._begin_tool_run(len(files))
         self.log_widget.clear_log()
         self.progress_widget.reset()
+        # Dictionaries and the Anki vocabulary load before the first file; on a
+        # large collection that takes seconds. The pinned bar is the readout (D1).
+        self._show_status(self.tr("Reading your Anki cards and known words…"))
 
         worker = ReadabilityWorker(self.config, files)
         worker.file_measured.connect(self._on_file_measured)
+        worker.load_warning.connect(self.log_widget.append_warning)
         self._start_queue_worker(worker)
 
     # ------------------------------------------------------------------
@@ -434,13 +416,17 @@ class ReadabilityTab(_ToolTabBase):
     # ------------------------------------------------------------------
 
     def _on_file_started(self, idx: int) -> None:
-        self.progress_widget.set_status(tr_format(self.tr("Checking file %1 of %2"), idx + 1, self._total_files))
+        # Replaces the loading line in the bar, which would otherwise outlast it.
+        self._show_status(tr_format(self.tr("Checking file %1 of %2"), idx + 1, self._total_files))
+
+    def _show_status(self, status: str) -> None:
+        self.progress_widget.set_status(status)
+        self._publish_task_detail(status)
 
     def _on_file_measured(self, idx: int, stats: object) -> None:
         assert isinstance(stats, ReadabilityStats)
-        self._measured.append(stats)
         self._append_row(idx, self._run_files[idx], stats)
-        self._refresh_totals()
+        self._add_to_totals(stats)
         self.report_card.show()
 
     def _append_row(self, idx: int, path: Path, stats: ReadabilityStats) -> None:
@@ -467,15 +453,18 @@ class ReadabilityTab(_ToolTabBase):
             table.setSortingEnabled(sorting)
         hold_numeric_columns(table, _NUMBER_COLUMNS)
 
-    def _refresh_totals(self) -> None:
-        total = combine(self._measured)
+    def _add_to_totals(self, stats: ReadabilityStats) -> None:
+        self._new_words |= stats.new_words
+        self._total = combine((self._total, replace(stats, new_words=frozenset())))
+        total = self._total
         self.known_card.set_value(_pct(total.known_pct, 1))
-        self.new_words_card.set_value(f"{len(total.new_words):,}")
+        self.new_words_card.set_value(f"{len(self._new_words):,}")
         self.i0_card.set_value(_pct(total.line_pct(I_PLUS_0), 0))
         self.i1_card.set_value(_pct(total.line_pct(I_PLUS_1), 0))
 
     def _clear_report(self) -> None:
-        self._measured = []
+        self._total = _NO_TOTAL
+        self._new_words = set()
         self.files_table.setRowCount(0)
         for card in (self.known_card, self.new_words_card, self.i0_card, self.i1_card):
             card.set_value(_NO_VALUE)

@@ -419,6 +419,23 @@ class TestFrame:
         margins = widget._main_layout.contentsMargins()
         assert widget.minimumWidth() >= widget._actions_row.sizeHint().width() + margins.left() + margins.right()
 
+    def test_a_hidden_settings_row_does_not_widen_the_minimum(self, dialog):
+        widget = dialog()  # no settings_actions: the "This profile" row is hidden
+        margins = widget._main_layout.contentsMargins()
+        # The hidden row must be the wider one, or this proves nothing.
+        assert widget._settings_row.sizeHint().width() > widget._actions_row.sizeHint().width()
+
+        assert widget.minimumWidth() == max(
+            480, widget._actions_row.sizeHint().width() + margins.left() + margins.right()
+        )
+
+    def test_a_shown_settings_row_sets_the_minimum(self, qtbot, controller):
+        widget = ProfileManagerDialog(controller, lambda: None, settings_actions=_FakeSettingsActions())
+        qtbot.addWidget(widget)
+        margins = widget._main_layout.contentsMargins()
+
+        assert widget.minimumWidth() >= widget._settings_row.sizeHint().width() + margins.left() + margins.right()
+
 
 class _FakeSettingsActions:
     def __init__(self) -> None:

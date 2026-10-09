@@ -69,6 +69,17 @@ def test_import_token_survives_refresh_rebuild(tab, qtbot, flow_name, panel_name
     assert all(row.down_button.isEnabled() for row in rows[:-1])
 
 
+def test_download_recommended_is_locked_while_a_mutation_is_held(tab):
+    """B3.5a: an import into an empty chain must not race a recommended download."""
+    panel = tab.dictionary_panel
+    token = panel.hold_mutation("import")
+    assert not panel._download_recommended_btn.isEnabled()
+
+    panel.release(token)
+
+    assert panel._download_recommended_btn.isEnabled()
+
+
 def test_named_tokens_are_ref_counted_and_release_is_idempotent(tab):
     panel = tab.dictionary_panel
 

@@ -308,8 +308,12 @@ class TestResults:
         def _factory(cmd: list[str], **kwargs: Any) -> _FakePopen:
             raise FileNotFoundError("alass: No such file or directory")
 
-        with pytest.raises(AlassNotFoundError):
+        with pytest.raises(AlassNotFoundError) as excinfo:
             _run(cfg, video, in_sub, out_sub, _factory)
+        # D15 item 4: the fix is "Download alass"; the path field is macOS-only.
+        message = str(excinfo.value)
+        assert "Download alass in Settings → Transcription & Alignment (on macOS, set its path there)." in message
+        assert "Install alass or set its path in Settings" not in message
 
     def test_timeout_reported_with_timeout_arg(self, video, in_sub, out_sub, cfg):
         captured: dict[str, Any] = {}

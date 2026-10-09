@@ -8,6 +8,11 @@
 Approximation kept for the occurrence share: counts arrive per lemma, so when
 one lemma has two card fronts and only one is known, all of that lemma's
 occurrences count as unknown.
+
+The other direction: two tokens can share a card front but not a lemma (kana
+かける read as 掛ける on one line and 欠ける on another). The parser keeps the
+first token per front, so only that lemma joins the unknown set, and the
+second lemma's occurrences count as known. Mining's i+1 basis does the same.
 """
 
 from __future__ import annotations

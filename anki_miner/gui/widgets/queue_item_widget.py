@@ -145,12 +145,14 @@ class QueueItemWidget(QueueRowWidget):
         )
 
     def _episodes_text(self) -> str:
-        """The aside: "3 episodes", "1 episode", or nothing before the count is known."""
+        """The aside: "3 episodes", "1 episode", or nothing before the count is known.
+
+        ``%n``, not a 1-or-other split: each catalog carries its own plural forms
+        (Russian has three).
+        """
         if self._episode_count <= 0:
             return ""
-        if self._episode_count == 1:
-            return self.tr("1 episode")
-        return tr_format(self.tr("%1 episodes"), self._episode_count)
+        return self.tr("%n episode(s)", "", self._episode_count)
 
     def _tooltip_text(self) -> str:
         """Everything that no longer fits on the row: folders, offset, how to edit."""

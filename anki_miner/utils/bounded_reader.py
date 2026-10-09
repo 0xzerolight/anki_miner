@@ -26,7 +26,10 @@ def file_within_limit(path: Path, max_bytes: int, label: str) -> bool:
 
 
 def read_text_bounded(path: Path, max_bytes: int, default: _T, label: str) -> str | _T:
-    """Read UTF-8 text without ever reading more than ``max_bytes``."""
+    """Read UTF-8 text without ever reading more than ``max_bytes``.
+
+    A leading BOM (Windows Notepad saves one) is skipped: it is never content.
+    """
     if not file_within_limit(path, max_bytes, label):
         return default
     try:
@@ -35,7 +38,7 @@ def read_text_bounded(path: Path, max_bytes: int, default: _T, label: str) -> st
         if len(raw) > max_bytes:
             logger.warning("Skipping oversized %s %s (> %d bytes)", label, path, max_bytes)
             return default
-        return raw.decode("utf-8")
+        return raw.decode("utf-8-sig")
     except (OSError, UnicodeDecodeError) as exc:
         logger.warning("Could not decode %s %s: %s", label, path, exc)
         return default

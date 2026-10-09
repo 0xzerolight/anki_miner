@@ -18,7 +18,7 @@ from typing import Any, Iterator
 
 from anki_miner.languages.token import LanguageToken
 from anki_miner.utils.ja_normalize import is_cjk_ideograph
-from anki_miner.utils.text_utils import hiragana_to_katakana, katakana_to_hiragana
+from anki_miner.utils.text_utils import hiragana_to_katakana, is_kana_only, katakana_to_hiragana
 
 # Batch attested-readings probe (DefinitionService.offline_term_readings):
 # term -> readings, best-first, hiragana-folded. See attest_merged_readings.
@@ -1069,6 +1069,14 @@ def _has_repeated_kana_run(surface: str) -> bool:
 #: rescued by a whitelist entry (R1).
 _JA_FUNCTION_POS = frozenset({"助詞", "助動詞", "記号", "補助記号"})
 
+#: Which check of :class:`TokenInclusionRule` turned a token away (``rejection``).
+#: STRUCTURE is the floor no setting or whitelist entry lowers; the rest are preferences.
+REJECT_STRUCTURE = "structure"
+REJECT_WORD_TYPE = "word_type"  # interjection/filler, pos1 not allowed, excluded pos2
+REJECT_SOUND_EFFECT = "sound_effect"  # the katakana onomatopoeia rejections
+REJECT_KANA_ONLY = "kana_only"  # final script decision on a kana-only surface
+REJECT_SCRIPT = "script"  # final script decision on any other surface
+
 
 @dataclass(frozen=True)
 class TokenInclusionRule:
@@ -1160,10 +1168,19 @@ class TokenInclusionRule:
         Returns:
             True if the token clears every non-script content check.
         """
+        return self.content_gate_rejection(word_token) is None
+
+    def content_gate_rejection(self, word_token) -> str | None:
+        """Which non-script content check turns ``word_token`` away, or None when all pass.
+
+        The single body behind :meth:`content_gate_ok` and :meth:`rejection`:
+        every check of the gate in its order, naming the gate instead of
+        returning False. Pure and I/O-free.
+        """
         # Structure first (empty, repeated kana, no POS/lemma, function classes);
         # the checks below are the preferences a whitelist entry may override.
         if not self.structural_ok(word_token):
-            return False
+            return REJECT_STRUCTURE
         surface = word_token.surface
 
         # Get part-of-speech tags
@@ -1172,19 +1189,19 @@ class TokenInclusionRule:
             pos2 = word_token.feature.pos2  # Sub POS
         except AttributeError:
             _guard("content_gate_ok#1")
-            return False
+            return REJECT_STRUCTURE
 
         # Skip interjections and fillers
         if pos1 in ["感動詞", "フィラー"]:
-            return False
+            return REJECT_WORD_TYPE
 
         # Check if it's a content word (noun, verb, adjective, adverb)
         if pos1 not in self.allowed_pos:
-            return False
+            return REJECT_WORD_TYPE
 
         # Check for excluded subtypes
         if pos2 and pos2 in self.excluded_subtypes:
-            return False
+            return REJECT_WORD_TYPE
 
         # Katakana-onomatopoeia REJECTIONS (the ≥2-char katakana ACCEPTANCE is a
         # script decision applied by should_include, not here). has_kanji uses
@@ -1200,12 +1217,12 @@ class TokenInclusionRule:
             # 2-char katakana NOUNS (ビル, バス, ドア) are loanwords and must
             # fall through to should_include's ≥2-char acceptance floor.
             if pos1 == "副詞" and len(unique_chars) <= 2 and len(surface) <= 4:
-                return False
+                return REJECT_SOUND_EFFECT
             # Short katakana ending in small tsu → likely sound effect.
             if surface.endswith("ッ") and len(surface) <= 3:
-                return False
+                return REJECT_SOUND_EFFECT
 
-        return True
+        return None
 
     def should_include(self, word_token) -> bool:
         """Whether a token is a mineable content word.
@@ -1223,25 +1240,35 @@ class TokenInclusionRule:
         Returns:
             True if word should be included, False otherwise
         """
-        # Every non-script content check lives in content_gate_ok (single source
-        # of truth, reused by the kana-recovery seam); this method layers only
-        # the script gate on top — no check is duplicated here.
-        if not self.content_gate_ok(word_token):
-            return False
+        return self.rejection(word_token) is None
 
-        if self.script_gate is not None:
-            return self.script_gate(word_token.surface)
+    def rejection(self, word_token) -> str | None:
+        """Which check :meth:`should_include` fails on, or None when it includes the token.
+
+        :meth:`content_gate_rejection` plus the final script decision. The
+        parser's ``_mine_token`` calls this directly, so naming the gate costs
+        the hot path nothing over :meth:`should_include`.
+        """
+        # Every non-script content check lives in content_gate_rejection (single
+        # source of truth, reused by the kana-recovery seam); this method layers
+        # only the script gate on top — no check is duplicated here.
+        reason = self.content_gate_rejection(word_token)
+        if reason is not None:
+            return reason
 
         surface = word_token.surface
+        if self.script_gate is not None:
+            return None if self.script_gate(surface) else REJECT_SCRIPT
+
         feature = word_token.feature
         pos1 = feature.pos1
         has_kanji = any(is_cjk_ideograph(c) for c in surface)
         is_katakana = all("\u30a0" <= c <= "\u30ff" or c in "ー・" for c in surface if c.strip())
 
-        # Katakana-only words: onomatopoeia already rejected by content_gate_ok,
+        # Katakana-only words: onomatopoeia already rejected by the content gate,
         # so accept any remaining ≥2-char loanword (ビル, コンピューター).
         if is_katakana and not has_kanji:
-            return len(surface) >= 2
+            return None if len(surface) >= 2 else REJECT_KANA_ONLY
 
         # Mixed katakana+hiragana loanword verbs/adjectives (サボる, ググる,
         # ディスる, ヤバい): has_kanji is False and is_katakana is False because
@@ -1253,8 +1280,10 @@ class TokenInclusionRule:
             orth_base = getattr(feature, "orthBase", None)
             dict_form = orth_base if isinstance(orth_base, str) and orth_base else feature.lemma
             if any("゠" <= c <= "ヿ" for c in dict_form):
-                return True
+                return None
 
         # Words with kanji are included; pure hiragana (no kanji, not katakana)
         # is rejected — the pre-existing script gate.
-        return has_kanji
+        if has_kanji:
+            return None
+        return REJECT_KANA_ONLY if is_kana_only(surface) else REJECT_SCRIPT

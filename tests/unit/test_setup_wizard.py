@@ -847,6 +847,21 @@ def test_ankiconnect_page_blank_url_does_not_probe_previous_endpoint(qtbot, wiz_
     assert page.isComplete() is False
 
 
+def test_a_blank_url_on_entry_shows_the_address_field(qtbot, wiz_config):
+    """B2.3b: with no URL the steps and the link hide, so the field itself must show."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(replace(wiz_config, ankiconnect_url=""))
+    qtbot.addWidget(wiz)
+    page = wiz.ankiconnect_page
+
+    page.initializePage()
+
+    assert page.result_label.text() == "Enter an AnkiConnect URL."
+    assert page.url_row.isVisibleTo(page)
+    assert not page.address_link.isVisibleTo(page)
+
+
 def test_ankiconnect_page_writes_url_to_working_config(qtbot, wiz_config):
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 
@@ -977,6 +992,27 @@ def test_an_installed_anki_makes_step_one_a_button(qtbot, wiz_config, monkeypatc
     assert launched == [["/usr/bin/anki"]]
     assert not page.open_anki_button.isEnabled()
     assert page.open_anki_button.text() == "Starting Anki…"
+
+
+def test_open_anki_comes_back_when_anki_never_answers(qtbot, wiz_config, monkeypatch):
+    """B2.3a: Anki started but AnkiConnect is missing; the button must not stay "Starting Anki…"."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import pages as pages_mod  # noqa: PLC0415
+
+    monkeypatch.setattr(pages_mod, "anki_launch_command", lambda: ["/usr/bin/anki"])
+    monkeypatch.setattr(pages_mod, "launch_anki", lambda command: True)
+    monkeypatch.setattr(pages_mod, "_ANKI_START_GRACE_MS", 10)
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    page = wiz.ankiconnect_page
+    page._on_recheck_result((False, "down"))
+
+    page.open_anki_button.click()
+    assert page.open_anki_button.text() == "Starting Anki…"
+    page._on_recheck_result((False, "still down"))
+
+    qtbot.waitUntil(page.open_anki_button.isEnabled, timeout=2000)
+    assert page.open_anki_button.text() == "Open Anki"
 
 
 def test_an_anki_that_does_not_start_falls_back_to_text(qtbot, wiz_config, monkeypatch):
@@ -1262,7 +1298,7 @@ def test_the_first_field_fallback_never_takes_a_field_already_mapped(qtbot, wiz_
 
 
 def test_notetype_page_fetch_stages_fields(qtbot, wiz_config):
-    """Auto-Map must stage the mapped anki_fields (plain dict) into the working config."""
+    """Filling the fields on fetch stages the mapped anki_fields (plain dict) into the working config."""
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 
     wiz = SetupWizard(wiz_config)
@@ -1551,7 +1587,7 @@ def test_auto_map_uses_sanitized_base_and_preserves_valid_manual_fields(qtbot, w
 
 
 def _auto_map(qtbot, config, field_names):
-    """Run Auto-Map on a note type with ``field_names`` and return (config, page)."""
+    """Fetch ``field_names`` for a note type, which fills its fields; return (config, page)."""
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 
     wiz = SetupWizard(replace(config, anki_note_type="Mining"))
@@ -1646,7 +1682,7 @@ def test_a_deck_anki_lacks_is_listed_and_explained(qtbot, wiz_config):
     ("language", "note_type"),
     [
         pytest.param("ja", "", id="ja-nothing-chosen"),
-        pytest.param("zh", "", id="zh-nothing-chosen"),
+        # zh nothing-chosen is test_other_languages_get_the_any_note_type_guidance.
         # An upgrade keeps a saved Lapis that this Anki lacks: the same help.
         pytest.param("ja", "Lapis", id="ja-missing-lapis"),
     ],
@@ -1688,9 +1724,13 @@ def test_other_languages_get_the_any_note_type_guidance(qtbot, wiz_config):
     page._on_notetypes_fetched(["Basic"])
 
     assert page.current_note_type() == ""
+    assert page.isComplete() is False
     text = page.guidance_label.text()
     assert page.guidance_label.isVisibleTo(page)
     assert "Any note type works once its fields are mapped" in text
+    assert f'href="{pages_mod.ANKI_MINER_NOTE_RELEASES_URL}"' in text
+    assert "File → Import" in text
+    assert "Lapis" not in text
     # The keyword pass is the wizard's only mapper: say what it recognises and
     # the manual route for any other naming, without telling the user to build
     # or rename a note type (owner's D10 note).
@@ -2262,6 +2302,17 @@ def test_the_dictionary_page_names_what_it_downloads_without_a_checklist(qtbot, 
     assert page.selected_specs() == list(RECOMMENDED_DEFAULT_SET)
 
 
+def test_the_downloads_sentence_takes_every_joiner_from_the_catalogue(qtbot, wiz_config, monkeypatch):
+    """P-B2.4: a CJK catalogue can join with 、 and 和; no Latin comma is hard-coded."""
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
+    page = wiz.resources_page
+    zh = {"%1, %2": "%1、%2", "%1 and %2": "%1和%2", "%1 (%2)": "%1（%2）", "Downloads %1.": "下载%1。"}
+    monkeypatch.setattr(page, "tr", lambda text, *args: zh.get(text, text))
+
+    assert page._and_list(["A", "B", "C", "D"]) == "A、B、C和D"
+    assert ", " not in page._contents_sentence(page.selected_specs())
+
+
 def test_download_fetches_the_whole_catalogue_without_a_window(qtbot, wiz_config, monkeypatch):
     wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
     seen: dict[str, object] = {}
@@ -2292,6 +2343,22 @@ def test_a_started_download_opens_next_and_can_be_cancelled(qtbot, wiz_config, m
     assert 'href="cancel"' in page.status_label.text()
     page.activate_link("cancel")
     session.cancel.assert_called_once_with()
+
+
+def test_an_empty_download_status_takes_no_space(qtbot, wiz_config, monkeypatch):
+    """B2.4a: no gap under Download until there is something to say."""
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod  # noqa: PLC0415
+
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation(dictionary=False))
+    page = wiz.resources_page
+    assert not page.status_label.isVisibleTo(page)
+
+    monkeypatch.setattr(dialog_mod, "start_resource_download", lambda *a, **kw: MagicMock())
+    page._on_download_clicked()
+    assert page.status_label.isVisibleTo(page)
+    page._on_download_finished(None)  # "stopped before it finished" is still something to say
+    assert page.status_label.isVisibleTo(page)
+    qtbot.waitUntil(lambda: not page.dictionary_label.text().startswith("Checking"), timeout=5000)
 
 
 def test_download_progress_comes_from_the_task_registry(qtbot, wiz_config, monkeypatch):
@@ -2327,6 +2394,80 @@ def test_download_progress_comes_from_the_task_registry(qtbot, wiz_config, monke
     assert "JMdict (1 of 4)" in page.ready_page_dictionary_line()
     handle.finish(TaskOutcome.SUCCEEDED)
     registry.shutdown()
+
+
+def test_another_tasks_progress_never_reaches_the_download_line(qtbot, wiz_config, monkeypatch):
+    """B2.4b: the registry broadcasts every task; only this run's lines are drawn."""
+    from PyQt6.QtWidgets import QWidget  # noqa: PLC0415
+
+    from anki_miner.gui.capabilities import CapabilityTarget  # noqa: PLC0415
+    from anki_miner.gui.controllers.task_registry import TaskOutcome, TaskRegistry, TaskSpec  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    registry = TaskRegistry()
+    parent = QWidget()
+    qtbot.addWidget(parent)
+    parent.task_registry = registry  # type: ignore[attr-defined]
+    monkeypatch.setattr(SetupWizard, "validation_service", lambda self: _FakeValidation(dictionary=False))
+    wiz = SetupWizard(wiz_config, parent)
+    session = MagicMock()
+    session.task_id = "resource-download"
+    monkeypatch.setattr(dialog_mod, "start_resource_download", lambda *a, **kw: session)
+    page = wiz.resources_page
+    page._on_download_clicked()
+    starting = page.status_label.text()
+    broadcast: list[str] = []
+    registry.snapshot_changed.connect(broadcast.append)
+
+    other = registry.start(TaskSpec(task_id="queue.video", title="Video", owner=CapabilityTarget("video", "local")))
+    other.stage(index=1, total=3, name="Episode 01")
+    qtbot.waitUntil(lambda: "queue.video" in broadcast, timeout=3000)
+
+    assert starting.startswith("Downloading: Starting…")
+    assert page.status_label.text() == starting
+    assert "Episode 01" not in page.ready_page_dictionary_line()
+
+    own = registry.start(
+        TaskSpec(task_id="resource-download", title="Recommended resources", owner=CapabilityTarget("settings", "x"))
+    )
+    own.stage(index=1, total=4, name="JMdict")
+    qtbot.waitUntil(lambda: "JMdict (1 of 4)" in page.status_label.text(), timeout=3000)
+    other.finish(TaskOutcome.SUCCEEDED)
+    own.finish(TaskOutcome.SUCCEEDED)
+    registry.shutdown()
+
+
+def test_a_language_change_drops_the_finished_runs_line(qtbot, wiz_config, monkeypatch):
+    """B2.4b: a finished run for the outgoing language describes nothing on screen now."""
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.resource_download_dialog import ResourceDownloadOutcome  # noqa: PLC0415
+    from anki_miner.gui.workers.resource_download_worker import (  # noqa: PLC0415
+        ResourceDownloadResult,
+        ResourceDownloadSummary,
+    )
+    from anki_miner.languages.switching import switch_language  # noqa: PLC0415
+
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation(dictionary=False))
+    page = wiz.resources_page
+    monkeypatch.setattr(dialog_mod, "start_resource_download", lambda *a, **kw: MagicMock())
+    page._on_download_clicked()
+    failure = ResourceDownloadResult("dict", "dict", "Dictionary", "u", False, "network failed")
+    page._on_download_finished(
+        ResourceDownloadOutcome(config=wiz_config, summary=ResourceDownloadSummary(results=[failure]))
+    )
+    assert page.status_label.text() == "No resources were installed."
+    assert page.ready_page_dictionary_line().startswith("Dictionary: download failed.")
+    qtbot.waitUntil(lambda: not page.dictionary_label.text().startswith("Checking"), timeout=5000)
+
+    wiz.update_working_config(switch_language(wiz.working_config(), "zh"))
+    page.initializePage()
+
+    assert page.status_label.text() == ""
+    assert page.status_label.toolTip() == ""
+    assert page._session is None
+    assert page.ready_page_dictionary_line().startswith("Dictionary: not downloaded yet")
+    qtbot.waitUntil(lambda: not page.dictionary_label.text().startswith("Checking"), timeout=5000)
 
 
 def test_a_fresh_install_reads_not_downloaded_yet(qtbot, wiz_config, monkeypatch):
@@ -2697,6 +2838,89 @@ def test_coming_back_to_the_wizard_rechecks_the_current_page(qtbot, wiz_config, 
 
     qtbot.waitUntil(lambda: calls == ["recheck"], timeout=2000)
     assert staged == [True]
+
+
+def test_a_focus_recheck_while_ready_never_turns_next_off(qtbot, wiz_config, monkeypatch):
+    """B2.3c: re-checking keeps the last readiness until the new answer lands."""
+    fake = _FakeValidation()
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, fake)
+    page = wiz.resources_page
+    _run_page_check(qtbot, page, page.dictionary_label)
+    assert page._live_check is not None and page._live_check.wait(3000)
+    assert page.isComplete() is True
+    states: list[bool] = []
+    page.completeChanged.connect(lambda: states.append(page.isComplete()))
+    label = page.dictionary_label.text()
+
+    page.recheck()
+    assert page.dictionary_label.text() == label  # no "Checking…" flash either
+    qtbot.waitUntil(lambda: fake.calls.count("dictionary") == 2, timeout=5000)
+    assert page._live_check is not None and page._live_check.wait(3000)
+    qtbot.waitUntil(lambda: bool(states), timeout=3000)
+
+    assert False not in states
+    assert page.isComplete() is True
+
+
+def test_a_focus_recheck_on_the_ready_page_keeps_finish_on(qtbot, wiz_config, monkeypatch):
+    """B2.3c (Ready page): the sweep re-runs behind the last verdict."""
+    fake = _FakeValidation()
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, fake)
+    page = wiz.done_page
+    _run_page_check(qtbot, page, page.summary_label)
+    assert page._live_check is not None and page._live_check.wait(3000)
+    assert page.isComplete() is True
+    states: list[bool] = []
+    page.completeChanged.connect(lambda: states.append(page.isComplete()))
+    fake.calls.clear()
+
+    page.recheck()
+    assert page.summary_label.text().startswith("You're ready.")
+    qtbot.waitUntil(lambda: "fields" in fake.calls, timeout=5000)
+    assert page._live_check is not None and page._live_check.wait(3000)
+    qtbot.waitUntil(lambda: bool(states), timeout=3000)
+
+    assert False not in states
+    assert page.isComplete() is True
+
+
+def test_the_dictionary_recheck_waits_while_the_download_runs(qtbot, wiz_config, monkeypatch):
+    """B2.3d: a focus re-check during the wizard's own download asks nothing."""
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod  # noqa: PLC0415
+
+    fake = _FakeValidation(dictionary=False)
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, fake)
+    page = wiz.resources_page
+    _run_page_check(qtbot, page, page.dictionary_label)
+    assert page._live_check is not None and page._live_check.wait(3000)
+    monkeypatch.setattr(dialog_mod, "start_resource_download", lambda *a, **kw: MagicMock())
+    page._on_download_clicked()
+    probe = page._live_check
+
+    page.recheck()
+
+    assert page._live_check is probe
+    assert fake.calls.count("dictionary") == 1
+
+
+def test_back_to_the_anki_page_restarts_the_poll(qtbot, wiz_config, monkeypatch):
+    """B2.3d: Back re-shows the page without initializePage(); on_shown restarts the poll."""
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation(ankiconnect=False))
+    wiz.show()
+    qtbot.waitExposed(wiz)
+    while wiz.currentPage() is not wiz.anki_page:
+        wiz.next()
+    qtbot.waitUntil(lambda: wiz.ankiconnect_page._has_result, timeout=5000)
+    wiz.next()
+    wiz.anki_page._on_poll()  # the first tick off the page stops it
+    assert not wiz.anki_page._poll.isActive()
+
+    wiz.back()
+
+    assert wiz.currentPage() is wiz.anki_page
+    assert wiz.anki_page._poll.isActive()
+    qtbot.waitUntil(lambda: not wiz.done_page.summary_label.text().startswith("Checking"), timeout=5000)
+    _join_workers(qtbot, wiz)
 
 
 def test_a_closing_wizard_rechecks_nothing(qtbot, wiz_config, monkeypatch):

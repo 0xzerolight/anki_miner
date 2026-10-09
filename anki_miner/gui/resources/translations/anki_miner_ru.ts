@@ -199,7 +199,7 @@
     </message>
     <message>
         <source>In Anki choose Tools → Add-ons → Get Add-ons…, paste the code %1, and click OK.</source>
-        <translation>В Anki выберите Инструменты → Дополнения → Получить дополнения… (Tools → Add-ons → Get Add-ons…), вставьте код %1 и нажмите OK.</translation>
+        <translation>В Anki выберите Инструменты → Дополнения → Загрузить дополнения…, вставьте код %1 и нажмите OK.</translation>
     </message>
     <message>
         <source>Restart Anki.</source>
@@ -2108,8 +2108,8 @@ No index files are deleted.</source>
         <translation>Режимы Конструктора колод (все / первые N / % покрытия)</translation>
     </message>
     <message>
-        <source>Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
-        <translation>Конструктор колод всегда пропускает пофрагментные фильтры и проверки на дубликаты; выбирайте все слова, первые N или целевой охват, и при желании пропускайте известные слова.</translation>
+        <source>Deck Builder always skips per-episode filters and checks for duplicates only in the deck it builds; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
+        <translation>Конструктор колод всегда пропускает поэпизодные фильтры и ищет дубликаты только в той колоде, которую собирает; выбирайте все слова, первые N или целевой охват, и при желании пропускайте известные слова.</translation>
     </message>
     <message>
         <source>Mine from YouTube</source>
@@ -2324,8 +2324,8 @@ No index files are deleted.</source>
         <translation>Исключить слова только из каны</translation>
     </message>
     <message>
-        <source>Drop words written without kanji; “Skip all kana-only words” leaves a kanji-only deck.</source>
-        <translation>Отбрасывайте слова, записанные без кандзи; «Пропускать все слова только из каны» оставляет колоду только со словами с кандзи.</translation>
+        <source>Drop words written without kanji; “Skip all kana-only words (including mixed)” leaves a kanji-only deck.</source>
+        <translation>Отбрасывайте слова, записанные без кандзи; «Пропускать все слова только из каны (включая смешанные)» оставляет колоду только со словами с кандзи.</translation>
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -2628,8 +2628,8 @@ No index files are deleted.</source>
         <translation>Автоматическое заполнение сопоставлений полей</translation>
     </message>
     <message>
-        <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku, Senren and Anki Miner Note are recognised and filled completely.</source>
-        <translation>«Заполнить автоматически» читает поля вашего типа заметки и заполняет все сопоставления. Lapis, Kiku, Senren и Anki Miner Note распознаются и заполняются полностью.</translation>
+        <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku and Senren (Japanese only) and Anki Miner Note are recognised and filled completely.</source>
+        <translation>«Заполнить автоматически» читает поля вашего типа заметки и заполняет все сопоставления. Lapis, Kiku и Senren (только для японского), а также Anki Miner Note распознаются и заполняются полностью.</translation>
     </message>
     <message>
         <source>Bold the mined word in the sentence</source>
@@ -2888,10 +2888,6 @@ No index files are deleted.</source>
     <message>
         <source>Deck</source>
         <translation>Колода</translation>
-    </message>
-    <message>
-        <source>Deck:</source>
-        <translation>Колода:</translation>
     </message>
     <message>
         <source>All decks</source>
@@ -3826,16 +3822,16 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
         <translation>Введите название колоды перед майнингом.</translation>
     </message>
     <message>
+        <source>Cancelling…</source>
+        <translation>Отмена…</translation>
+    </message>
+    <message>
         <source>No video/subtitle pairs found. Check the folders.</source>
         <translation>Пары видео/субтитры не найдены. Проверьте папки.</translation>
     </message>
     <message>
         <source>Deck Builder</source>
         <translation>Конструктор колод</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Отмена…</translation>
     </message>
     <message>
         <source>Preview ready. Press Build Deck to create the cards.</source>
@@ -4173,7 +4169,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Anki doesn't have a deck called “%1” yet. In Anki, click Create Deck at the bottom of the main window and name it %1, or pick one of your decks above. This page updates when you come back.</source>
-        <translation>В Anki пока нет колоды «%1». В Anki нажмите «Создать колоду» (Create Deck) внизу главного окна и назовите её %1 или выберите одну из своих колод выше. Эта страница обновится, когда вы вернётесь.</translation>
+        <translation>В Anki пока нет колоды «%1». В Anki нажмите «Создать колоду» внизу главного окна и назовите её %1 или выберите одну из своих колод выше. Эта страница обновится, когда вы вернётесь.</translation>
     </message>
 </context><context>
     <name>DefinitionService</name>
@@ -5542,8 +5538,8 @@ No files on disk are deleted.</source>
         <translation>Файл чёрного списка</translation>
     </message>
     <message>
-        <source>Text file with one word per line to always skip. Leave empty to skip nothing.</source>
-        <translation>Текстовый файл со словами, по одному в строке, которые всегда пропускаются. Оставьте пустым, чтобы ничего не пропускать.</translation>
+        <source>Text file with one word per line to skip. Whitelisted words are still mined. Leave empty to skip nothing.</source>
+        <translation>Текстовый файл со словами, по одному в строке, которые нужно пропускать. Слова из белого списка при этом всё равно майнятся. Оставьте пустым, чтобы ничего не пропускать.</translation>
     </message>
     <message>
         <source>Select whitelist file...</source>
@@ -5562,8 +5558,8 @@ No files on disk are deleted.</source>
         <translation>Наборы имён</translation>
     </message>
     <message>
-        <source>Exclude bundled lists of Japanese people and place names from mining. Whitelisted names are still mined.</source>
-        <translation>Исключает из майнинга встроенные списки японских имён людей и топонимов. Имена из белого списка при этом всё равно майнятся.</translation>
+        <source>Exclude bundled lists of Japanese people, place and company names from mining. Whitelisted names are still mined.</source>
+        <translation>Исключает из майнинга встроенные списки японских имён людей, топонимов и названий компаний. Имена из белого списка при этом всё равно майнятся.</translation>
     </message>
     <message>
         <source>Skip names of people, places and companies</source>
@@ -7204,6 +7200,10 @@ Continue?</source>
         <translation>Загрузку этого языка нельзя начать из мастера. Выберите его в Настройки → Язык майнинга после настройки.</translation>
     </message>
     <message>
+        <source>%1 language pack: download failed. %2</source>
+        <translation>Языковой пакет %1: загрузка не удалась. %2</translation>
+    </message>
+    <message>
         <source>%1 language pack: download failed.</source>
         <translation>Языковой пакет %1: загрузка не удалась.</translation>
     </message>
@@ -7288,6 +7288,10 @@ Continue?</source>
     <message>
         <source>%1 needs a one-time download of about %2 MB.</source>
         <translation>Для %1 нужна однократная загрузка примерно %2 МБ.</translation>
+    </message>
+    <message>
+        <source>%1 still can't be mined after its download.</source>
+        <translation>Язык %1 по-прежнему недоступен для майнинга после загрузки.</translation>
     </message>
 </context><context>
     <name>MiningTabBase</name>
@@ -7613,7 +7617,7 @@ Continue?</source>
     </message>
     <message>
         <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>Подойдёт любой тип заметки, если сопоставить его поля. Выберите один из своих типов заметок: Anki Miner помещает слово в его первое поле и заполняет поля, которые распознаёт по названию, например Word, Sentence, Reading, Definition, Picture и аудио. После настройки можно изменить, что попадает в каждое поле, в Настройки → Карточки и Anki. Ещё нет типа заметки для майнинга? &lt;a href="%2"&gt;Скачайте Anki Miner Note&lt;/a&gt; (бесплатно, подходит для любого языка), затем в Anki выберите Файл → Импорт (File → Import) и укажите файл. Эта страница обновится, когда вы вернётесь. &lt;a href="%1"&gt;Какие поля может заполнять Anki Miner?&lt;/a&gt;</translation>
+        <translation>Подойдёт любой тип заметки, если сопоставить его поля. Выберите один из своих типов заметок: Anki Miner помещает слово в его первое поле и заполняет поля, которые распознаёт по названию, например Word, Sentence, Reading, Definition, Picture и аудио. После настройки можно изменить, что попадает в каждое поле, в Настройки → Карточки и Anki. Ещё нет типа заметки для майнинга? &lt;a href="%2"&gt;Скачайте Anki Miner Note&lt;/a&gt; (бесплатно, подходит для любого языка), затем в Anki выберите Файл → Импортировать и укажите файл. Эта страница обновится, когда вы вернётесь. &lt;a href="%1"&gt;Какие поля может заполнять Anki Miner?&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>
@@ -8359,13 +8363,13 @@ No index files are deleted.</source>
         <source>Cards: %1</source>
         <translation>Карточки: %1</translation>
     </message>
-    <message>
-        <source>1 episode</source>
-        <translation>1 эпизод</translation>
-    </message>
-    <message>
-        <source>%1 episodes</source>
-        <translation>Эпизодов: %1</translation>
+    <message numerus="yes">
+        <source>%n episode(s)</source>
+        <translation>
+            <numerusform>%n эпизод</numerusform>
+            <numerusform>%n эпизода</numerusform>
+            <numerusform>%n эпизодов</numerusform>
+        </translation>
     </message>
     <message>
         <source>Video folder: %1</source>
@@ -8479,21 +8483,21 @@ No index files are deleted.</source>
         <source>Remove all %1 series from the queue?</source>
         <translation>Удалить все сериалы (%1) из очереди?</translation>
     </message>
-    <message>
-        <source>1 series</source>
-        <translation>1 сериал</translation>
+    <message numerus="yes">
+        <source>%n series</source>
+        <translation>
+            <numerusform>%n сериал</numerusform>
+            <numerusform>%n сериала</numerusform>
+            <numerusform>%n сериалов</numerusform>
+        </translation>
     </message>
-    <message>
-        <source>%1 series</source>
-        <translation>Сериалов: %1</translation>
-    </message>
-    <message>
-        <source>1 episode</source>
-        <translation>1 эпизод</translation>
-    </message>
-    <message>
-        <source>%1 episodes</source>
-        <translation>Эпизодов: %1</translation>
+    <message numerus="yes">
+        <source>%n episode(s)</source>
+        <translation>
+            <numerusform>%n эпизод</numerusform>
+            <numerusform>%n эпизода</numerusform>
+            <numerusform>%n эпизодов</numerusform>
+        </translation>
     </message>
     <message>
         <source>%1 ready</source>
@@ -8708,6 +8712,10 @@ No index files are deleted.</source>
         <translation>Выберите файл субтитров (.ass, .srt, .ssa, .vtt или .smi).</translation>
     </message>
     <message>
+        <source>Reading your Anki cards and known words…</source>
+        <translation>Чтение ваших карточек Anki и известных слов…</translation>
+    </message>
+    <message>
         <source>Checking file %1 of %2</source>
         <translation>Проверка файла %1 из %2</translation>
     </message>
@@ -8918,6 +8926,10 @@ No index files are deleted.</source>
         <translation>Сначала выберите том манги или папку.</translation>
     </message>
     <message>
+        <source>That file or folder no longer exists.</source>
+        <translation>Этот файл или папка больше не существует.</translation>
+    </message>
+    <message>
         <source>Choose a .mokuro, .cbz or .zip volume, or a manga folder.</source>
         <translation>Выберите том .mokuro, .cbz или .zip либо папку с мангой.</translation>
     </message>
@@ -9026,6 +9038,10 @@ No index files are deleted.</source>
     <message>
         <source>Choose a book or a folder of books first.</source>
         <translation>Сначала выберите книгу или папку с книгами.</translation>
+    </message>
+    <message>
+        <source>That file or folder no longer exists.</source>
+        <translation>Этот файл или папка больше не существует.</translation>
     </message>
     <message>
         <source>Choose an .epub or .txt book, or a folder of books.</source>
@@ -9214,6 +9230,10 @@ No index files are deleted.</source>
     <message>
         <source>Cancelling…</source>
         <translation>Отмена…</translation>
+    </message>
+    <message>
+        <source>Anki Miner can't mine this folder.</source>
+        <translation>Anki Miner не может майнить эту папку.</translation>
     </message>
     <message>
         <source>Anki Miner can't mine this file.</source>
@@ -9697,6 +9717,10 @@ No index files are deleted.</source>
         <translation>Загрузка %1 из %2 · %3</translation>
     </message>
     <message>
+        <source>Installing %1 of %2 · %3</source>
+        <translation>Установка %1 из %2 · %3</translation>
+    </message>
+    <message>
         <source>Recommended Resources</source>
         <translation>Рекомендуемые ресурсы</translation>
     </message>
@@ -9772,14 +9796,22 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 (%2)</source>
+        <extracomment>%1 is one or more resource names, %2 what they are: "JMdict (dictionary)".</extracomment>
         <translation>%1 (%2)</translation>
     </message>
     <message>
         <source>Downloads %1.</source>
+        <extracomment>%1 lists "name (kind)" groups: "Downloads JMdict (dictionary) and Kanjium (pitch accent)."</extracomment>
         <translation>Будет загружено: %1.</translation>
     </message>
     <message>
+        <source>%1, %2</source>
+        <extracomment>Joins list items before the last one: "JMdict, JPDB and Jiten". Use your language's list comma.</extracomment>
+        <translation>%1, %2</translation>
+    </message>
+    <message>
         <source>%1 and %2</source>
+        <extracomment>Joins the last item to the rest of a list: "JMdict, JPDB and Jiten".</extracomment>
         <translation>%1 и %2</translation>
     </message>
     <message>
@@ -9959,6 +9991,94 @@ No index files are deleted.</source>
     <message>
         <source>Already known: %1.</source>
         <translation>Уже известно: %1.</translation>
+    </message>
+    <message>
+        <source>Not mined: %1 word — search this log for a word to see why.</source>
+        <translation>Не намайнено %1 слово — найдите слово в этом журнале, чтобы узнать причину.</translation>
+    </message>
+    <message>
+        <source>Not mined: %1 words — search this log for a word to see why.</source>
+        <translation>Не намайнено слов: %1 — найдите слово в этом журнале, чтобы узнать причину.</translation>
+    </message>
+    <message>
+        <source>Name, interjection or other skipped word type — add it to your whitelist to mine it</source>
+        <translation>Имя, междометие или другой пропускаемый тип слова — добавьте слово в белый список, чтобы майнить его</translation>
+    </message>
+    <message>
+        <source>Sound effect — add it to your whitelist to mine it</source>
+        <translation>Звукоподражание — добавьте слово в белый список, чтобы майнить его</translation>
+    </message>
+    <message>
+        <source>Kana-only word — add it to your whitelist to mine it</source>
+        <translation>Слово только из каны — добавьте слово в белый список, чтобы майнить его</translation>
+    </message>
+    <message>
+        <source>Written partly in another script — add it to your whitelist to mine it</source>
+        <translation>Частично записано другой письменностью — добавьте слово в белый список, чтобы майнить его</translation>
+    </message>
+    <message>
+        <source>Already known</source>
+        <translation>Уже известно</translation>
+    </message>
+    <message>
+        <source>No dictionary entry — Settings → Dictionaries</source>
+        <translation>Нет словарной статьи — Настройки → Словари</translation>
+    </message>
+    <message>
+        <source>Not in your frequency list — Settings → Word Filters</source>
+        <translation>Отсутствует в вашем списке частотности — Настройки → Фильтры слов</translation>
+    </message>
+    <message>
+        <source>Outside your frequency range — Settings → Word Filters</source>
+        <translation>Вне вашего диапазона частотности — Настройки → Фильтры слов</translation>
+    </message>
+    <message>
+        <source>On your blacklist — Settings → Word Filters</source>
+        <translation>В вашем чёрном списке — Настройки → Фильтры слов</translation>
+    </message>
+    <message>
+        <source>Excluded by script type — Settings → Word Filters</source>
+        <translation>Исключено по типу письменности — Настройки → Фильтры слов</translation>
+    </message>
+    <message>
+        <source>On a name list — Settings → Word Filters</source>
+        <translation>В наборе имён — Настройки → Фильтры слов</translation>
+    </message>
+    <message>
+        <source>Appears fewer times than your minimum — Settings → Word Filters</source>
+        <translation>Встречается реже заданного минимума — Настройки → Фильтры слов</translation>
+    </message>
+    <message>
+        <source>Another word from its sentence got the card — Settings → Sentences</source>
+        <translation>Карточку получило другое слово из того же предложения — Настройки → Предложения</translation>
+    </message>
+    <message>
+        <source>No sentence where it is the only unknown word — Settings → Sentences</source>
+        <translation>Нет предложения, в котором это единственное неизвестное слово — Настройки → Предложения</translation>
+    </message>
+    <message>
+        <source>Sentence too long — Settings → Sentences</source>
+        <translation>Предложение слишком длинное — Настройки → Предложения</translation>
+    </message>
+    <message>
+        <source>Same card as another spelling in this run</source>
+        <translation>Та же карточка, что и у другого написания в этом запуске</translation>
+    </message>
+    <message>
+        <source>Media could not be extracted</source>
+        <translation>Не удалось извлечь медиафайлы</translation>
+    </message>
+    <message>
+        <source>Anki already has a card for it</source>
+        <translation>В Anki уже есть карточка для этого слова</translation>
+    </message>
+    <message>
+        <source>Anki did not confirm the card</source>
+        <translation>Anki не подтвердил создание карточки</translation>
+    </message>
+    <message>
+        <source>%1 (%2): %3</source>
+        <translation>%1 (%2): %3</translation>
     </message>
 </context><context>
     <name>ResultsDialog</name>
@@ -10185,8 +10305,8 @@ No index files are deleted.</source>
         <translation>Удалять имена говорящих, звуковые эффекты и ноты</translation>
     </message>
     <message>
-        <source>Removes (notes), [sound effects], ♪ music, speaker labels and dialogue dashes from each subtitle line before mining. Half-checked means your own pattern is in use: click to add every built-in cleanup to it.</source>
-        <translation>Удаляет (пометки), [звуковые эффекты], ♪ музыку, имена говорящих и тире диалогов из каждой строки субтитров перед майнингом. Частичная отметка означает, что используется ваш собственный шаблон: щёлкните, чтобы добавить в него все встроенные правила очистки.</translation>
+        <source>Removes (notes), [sound effects], ♪ music and dialogue dashes from each subtitle line before mining, and speaker labels where the script marks them. Half-checked means your own pattern is in use: click to add every built-in cleanup to it.</source>
+        <translation>Удаляет (пометки), [звуковые эффекты], ♪ музыку и тире диалогов из каждой строки субтитров перед майнингом, а также имена говорящих, если письменность языка их обозначает. Частичная отметка означает, что используется ваш собственный шаблон: щёлкните, чтобы добавить в него все встроенные правила очистки.</translation>
     </message>
     <message>
         <source>Python regex matched in subtitle text and removed (or replaced) before mining. Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. Combine alternatives with |. Test patterns at https://regex101.com.</source>
@@ -10233,16 +10353,16 @@ No index files are deleted.</source>
         <translation>Одна карточка на предложение</translation>
     </message>
     <message>
-        <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped.</source>
-        <translation>Майнит не более одного слова на каждый пример предложения — первое найденное в этом предложении. Все остальные слова из него пропускаются.</translation>
+        <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped. Whitelisted words are still mined.</source>
+        <translation>Майнит не более одного слова на каждый пример предложения — первое найденное в этом предложении. Все остальные слова из него пропускаются. Слова из белого списка при этом всё равно майнятся.</translation>
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
         <translation>Только предложения i+1 (ровно одно незнакомое слово)</translation>
     </message>
     <message>
-        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication.</source>
-        <translation>Майнить только слова из предложений ровно с одним незнакомым словом (i+1); отменяет дедупликацию предложений.</translation>
+        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication. Whitelisted words are still mined.</source>
+        <translation>Майнить только слова из предложений ровно с одним незнакомым словом (i+1); отменяет дедупликацию предложений. Слова из белого списка при этом всё равно майнятся.</translation>
     </message>
     <message>
         <source>Sentence Rule</source>
@@ -11261,6 +11381,10 @@ Your installed resources and your theme are kept.</source>
         <translation>Рядом с исходным видео, как name_retimed.srt</translation>
     </message>
     <message>
+        <source>%1, as name_retimed.srt</source>
+        <translation>%1, как name_retimed.srt</translation>
+    </message>
+    <message>
         <source>Subtitle retiming</source>
         <translation>Переназначение тайминга субтитров</translation>
     </message>
@@ -11594,6 +11718,10 @@ Your installed resources and your theme are kept.</source>
     </message>
 </context><context>
     <name>SubtitlesSettingsPanel</name>
+    <message>
+        <source>Auto (GPU if available)</source>
+        <translation>Авто (GPU, если доступен)</translation>
+    </message>
     <message>
         <source>Transcription &amp; Alignment</source>
         <translation>Транскрипция и выравнивание</translation>
@@ -12169,12 +12297,20 @@ Your installed resources and your theme are kept.</source>
         <translation>В этой папке не найдено видео.</translation>
     </message>
     <message>
+        <source>No subtitle or audio tracks were found in any video in that folder.</source>
+        <translation>Ни в одном видео в этой папке не найдено ни дорожек субтитров, ни аудиодорожек.</translation>
+    </message>
+    <message>
         <source>No subtitle or audio tracks were found in %1.</source>
         <translation>В %1 не найдено ни дорожек субтитров, ни аудиодорожек.</translation>
     </message>
-    <message>
-        <source>Tracks of %1, the first of %2 videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
-        <translation>Дорожки %1 — первого из %2 видео. Отмеченные дорожки сохраняются из каждого видео в папке; видео без такой дорожки пропускается.</translation>
+    <message numerus="yes">
+        <source>Tracks of %1, one of %n videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
+        <translation>
+            <numerusform>Дорожки %1 — одного из %n видео. Отмеченные дорожки сохраняются из каждого видео в папке; видео без такой дорожки пропускается.</numerusform>
+            <numerusform>Дорожки %1 — одного из %n видео. Отмеченные дорожки сохраняются из каждого видео в папке; видео без такой дорожки пропускается.</numerusform>
+            <numerusform>Дорожки %1 — одного из %n видео. Отмеченные дорожки сохраняются из каждого видео в папке; видео без такой дорожки пропускается.</numerusform>
+        </translation>
     </message>
     <message>
         <source>Tracks of %1. Tick the ones to save.</source>
@@ -12651,8 +12787,16 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>Предложения (%1)</translation>
     </message>
     <message>
+        <source>This card has no picture</source>
+        <translation>У этой карточки нет изображения</translation>
+    </message>
+    <message>
         <source>No page image for this word</source>
         <translation>Нет изображения страницы для этого слова</translation>
+    </message>
+    <message>
+        <source>Could not load this card's picture</source>
+        <translation>Не удалось загрузить изображение этой карточки</translation>
     </message>
     <message>
         <source>Could not load page image</source>
@@ -12784,6 +12928,10 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
 </context><context>
     <name>YouTubeSettingsPanel</name>
+    <message>
+        <source>None</source>
+        <translation>Нет</translation>
+    </message>
     <message>
         <source>YouTube</source>
         <translation>YouTube</translation>

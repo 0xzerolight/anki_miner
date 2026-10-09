@@ -7,6 +7,7 @@ lifecycle is tested once in test_tool_tab_contract.py.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
@@ -120,6 +121,27 @@ def test_preselected_track_is_ticked_and_ticks_follow_the_checkboxes(qtbot, tmp_
     assert tab.ticked_refs() == (TrackRef("audio", 0),)
 
 
+def test_a_language_switch_reticks_for_the_new_language(qtbot, tmp_path):
+    """The jpn subtitle ticked for ja would pair into es mining as EP01.ass (Tracks final review, minor 5)."""
+    config = _make_config(tmp_path)
+    tab = _make_tab(config, qtbot)
+    _loaded(tab, _video(tmp_path))
+    assert tab.ticked_refs() == (ASS_REF,)
+    tab.update_config(replace(config, language="es"))
+    assert tab.ticked_refs() == ()
+    tab.update_config(config)
+    assert tab.ticked_refs() == (ASS_REF,)
+
+
+def test_a_config_update_in_the_same_language_keeps_the_ticks(qtbot, tmp_path):
+    config = _make_config(tmp_path)
+    tab = _make_tab(config, qtbot)
+    _loaded(tab, _video(tmp_path))
+    tab.tracks_table.item(2, 0).setCheckState(Qt.CheckState.Checked)
+    tab.update_config(replace(config, use_whitelist=not config.use_whitelist))
+    assert tab.ticked_refs() == (ASS_REF, TrackRef("audio", 0))
+
+
 def test_a_new_path_drops_the_listing(qtbot, tmp_path):
     tab = _make_tab(_make_config(tmp_path), qtbot)
     _loaded(tab, _video(tmp_path))
@@ -160,6 +182,32 @@ def test_folder_caption_names_the_first_video_and_the_rule(qtbot, tmp_path):
     _loaded(tab, tmp_path, _probe(tmp_path, videos))
     text = tab.tracks_status_label.text()
     assert "EP01.mkv" in text and "2" in text and "every video" in text
+
+
+def test_folder_caption_names_the_listed_video(qtbot, tmp_path):
+    """EP01 unreadable: the listing and its caption are EP02's (Tracks final review, minor 1)."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    videos = (_video(tmp_path, "EP01.mkv"), _video(tmp_path, "EP02.mkv"), _video(tmp_path, "EP03.mkv"))
+    probe = _probe(tmp_path, videos)
+    _loaded(tab, tmp_path, InputProbe(probe.source, probe.videos, probe.tracks, probe.preselected, listed_index=1))
+    text = tab.tracks_status_label.text()
+    assert "EP02.mkv" in text and "EP01.mkv" not in text and "3" in text and "every video" in text
+
+
+def test_a_one_video_folder_has_no_count(qtbot, tmp_path):
+    """Not "the first of 1 videos" (Tracks final review, minor 4)."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    video = _video(tmp_path, "EP01.mkv")
+    _loaded(tab, tmp_path, _probe(tmp_path, (video,)))
+    assert tab.tracks_status_label.text() == "Tracks of EP01.mkv. Tick the ones to save."
+
+
+def test_a_folder_without_tracks_says_no_video_had_any(qtbot, tmp_path):
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    videos = (_video(tmp_path, "EP01.mkv"), _video(tmp_path, "EP02.mkv"))
+    _loaded(tab, tmp_path, InputProbe(tmp_path, videos, MediaTracks(), ()))
+    assert tab.tracks_table.isHidden()
+    assert "EP01.mkv" not in tab.tracks_status_label.text()
 
 
 @pytest.mark.parametrize(

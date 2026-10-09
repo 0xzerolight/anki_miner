@@ -39,7 +39,14 @@ from anki_miner.cli.api.contract import (
 from anki_miner.cli.api.files import Episode, RunFile
 from anki_miner.cli.api.lines import Fates, LineWords, WordSelection, line_merges, named_word
 from anki_miner.cli.api.render import Rendered, RenderService
-from anki_miner.cli.api.runfolder import MEDIA, CancelWatcher, ProgressFile, next_numbered, write_json
+from anki_miner.cli.api.runfolder import (
+    MEDIA,
+    CancelWatcher,
+    ProgressFile,
+    clear_leftovers,
+    next_numbered,
+    write_json,
+)
 from anki_miner.cli.runner import SetupFailure, check_card_target, check_environment
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiConnectionError, SetupError, SubtitleParseError
@@ -203,6 +210,9 @@ def _mine(
             entries = parser.parse_raw_entries(episode.subtitle_file, episode.subtitle_offset)
             # The same lines at the file's own times: line_start is what the caller read there.
             raw = parser.parse_raw_entries(episode.subtitle_file, 0.0)
+            # The processor's own parse of the second track (None without one), done again inside
+            # process_episode: there a file that will not parse fails the run as MINING_FAILED.
+            processor._load_secondary_entries(episode.secondary_subtitle_file)
         except SubtitleParseError as exc:
             raise ApiError(SUBTITLE_UNREADABLE, str(exc)) from exc
         fold = get_profile(config_language(config)).dedup_fold
@@ -245,6 +255,9 @@ def _mine(
                 if cancel.is_set():  # the check was cut short: the run stopped there, as one cancelled mid-run
                     result = replace(result, errors=[*result.errors, CANCELLED_ERROR])
                     succeeded, made = False, {}
+        if cancel.is_set() and classify_result(result) is not MiningOutcome.CANCELLED:
+            # A run stops at its next step (API.md); this one had none left, so its result stands.
+            logger.warning("API run %s: a cancel arrived after its last step; its result stands", episode.run_id)
         rendered: dict[str, Rendered] = {}
         if render is not None:  # a stopped render still reports the notes it wrote: their files are in *out*
             rendered = dict(render.rendered)
@@ -335,6 +348,7 @@ def mine_runs(run_file: RunFile, cancel_all: threading.Event, kind: Kind = Kind.
 
     Each run that got as far as mining writes its result-<n>.json (a render, its render-<n>.json).
     """
+    clear_leftovers(run_file.run_dir, (episode.run_id for episode in run_file.episodes))
     config = settings.resolve_run_config(run_file.profile, run_file.language, run_file.overlay)
     with _services(config, kind) as shared:
         return [

@@ -121,9 +121,8 @@ _NO_BREAK_SPACE_FOLD = str.maketrans(dict.fromkeys(_NO_BREAK_SPACES, " "))
 
 
 def _collapse_run_keeping_no_break(match: re.Match[str]) -> str:
-    """A run holding a no-break space keeps only those; any other run becomes one space."""
-    kept = "".join(char for char in match.group() if char in _NO_BREAK_SPACES)
-    return kept or " "
+    """A whitespace run becomes one character: its first no-break space, else a plain space."""
+    return next((char for char in match.group() if char in _NO_BREAK_SPACES), " ")
 
 
 def collapse_whitespace(text: str, *, keep_no_break: bool) -> str:
@@ -132,12 +131,14 @@ def collapse_whitespace(text: str, *, keep_no_break: bool) -> str:
     ``keep_no_break=False`` is the Japanese collapse, byte-identical to
     ``" ".join(text.split())``. Every other language keeps U+00A0 and U+202F
     inside the line: French puts one before ``: ; ? !`` and ``»`` so the card
-    never starts a line with them. A run mixing one with ordinary whitespace
-    (``Oui [rire]`` + NBSP + ``!`` once the filter drops ``[rire]``) keeps only
-    the no-break space, never a visible double space. The parser tokenizes the
-    line through :func:`fold_no_break_spaces`; both characters fold one for
-    one, so token offsets index the stored line unchanged. Edge whitespace,
-    no-break included, still strips: an ``&nbsp;`` placeholder cue stays empty.
+    never starts a line with them. A run holding one still becomes one
+    character, its first no-break space: ``Oui [rire]`` + NBSP + ``!`` once
+    the filter drops ``[rire]`` shows no double gap, and a doubled NBSP before
+    ``:`` folds to the one space a speaker-label filter allows. The parser
+    tokenizes the line through :func:`fold_no_break_spaces`; both characters
+    fold one for one, so token offsets index the stored line unchanged. Edge
+    whitespace, no-break included, still strips: an ``&nbsp;`` placeholder cue
+    stays empty.
     """
     if not keep_no_break:
         return " ".join(text.split())

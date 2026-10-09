@@ -64,6 +64,7 @@ from anki_miner.gui.workers.expression_audio_prefetch import (
     run_expression_audio_prefetch,
 )
 from anki_miner.languages.registry import config_language, get_profile
+from anki_miner.models.processing import NOT_MINED_FAILURES
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
@@ -77,7 +78,7 @@ if TYPE_CHECKING:
     from anki_miner.gui.controllers.task_registry import TaskRegistry
     from anki_miner.gui.workers.base_worker import SingleCallWorker
     from anki_miner.models import TokenizedWord
-    from anki_miner.models.processing import WhitelistCoverage
+    from anki_miner.models.processing import NotMinedReport, WhitelistCoverage
     from anki_miner.orchestration.episode_processor import EpisodeProcessor
 
 logger = logging.getLogger(__name__)
@@ -407,6 +408,11 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         if self._receipt_accumulator is not None:
             self._receipt_accumulator.record_whitelist(coverage)
 
+    def _record_receipt_not_mined(self, report: object) -> None:
+        """Fold a run-level not-mined report a counts-only worker reported."""
+        if self._receipt_accumulator is not None:
+            self._receipt_accumulator.record_not_mined(report)
+
     def _mark_receipt_failed(self) -> None:
         """Note a run-level fatal (a preflight refusal, a worker exception)."""
         if self._receipt_accumulator is not None:
@@ -477,6 +483,8 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         widget.show_receipt(receipt, item_noun=self._receipt_noun)
         if receipt.whitelist is not None:
             self._log_whitelist_report(receipt.whitelist)
+        if receipt.not_mined is not None:
+            self._log_not_mined_report(receipt.not_mined)
 
     def _log_whitelist_report(self, coverage: WhitelistCoverage) -> None:
         """Put the run-level whitelist line in this screen's Activity Log, once.
@@ -497,6 +505,24 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
             return
         append = log_widget.append_warning if coverage.missing else log_widget.append_info
         append(result_copy.whitelist_report(coverage))
+
+    def _log_not_mined_report(self, report: NotMinedReport) -> None:
+        """Put the run-level "Not mined" block in this screen's Activity Log, once.
+
+        Every word named, one line per reason: the log's search box is the lookup
+        ("why wasn't this word mined?"). Folded over the run and written to
+        log_widget directly, for the same reasons as the whitelist line. Failures
+        (no dictionary entry, media, Anki) are warnings; the user's own settings
+        are info.
+        """
+        log_widget = getattr(self, "log_widget", None)
+        words = report.words
+        if log_widget is None or not words:
+            return
+        log_widget.append_info(result_copy.not_mined_header(len(words)))
+        for reason, line in result_copy.not_mined_lines(report):
+            append = log_widget.append_warning if reason in NOT_MINED_FAILURES else log_widget.append_info
+            append(line)
 
     def _open_run_details(self) -> None:
         """Open the finished run's details, because the user clicked for them.

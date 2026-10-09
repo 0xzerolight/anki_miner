@@ -4,8 +4,11 @@ from .card_payload import CardPayload
 from .media import MediaData
 from .processing import (
     CANCELLED_ERROR,
+    NOT_MINED_FAILURES,
     AnkiWriteState,
     MiningOutcome,
+    NotMinedReason,
+    NotMinedReport,
     ProcessingResult,
     TerminalOutcome,
     ValidationIssue,
@@ -35,6 +38,9 @@ __all__ = [
     "ValidationResult",
     "ValidationIssue",
     "WhitelistCoverage",
+    "NotMinedReason",
+    "NotMinedReport",
+    "NOT_MINED_FAILURES",
     "MiningSession",
     "OverallStats",
     "DifficultyEntry",

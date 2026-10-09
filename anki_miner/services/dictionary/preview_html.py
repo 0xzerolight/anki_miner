@@ -119,14 +119,16 @@ a.gloss-sc-a { color: #6f9dff; }
 # * ``data-sc-class="tag"`` — structured-content tags a dictionary authors inside its
 #   own senses (Jitendex writes ``adjective``/``kana`` this way). Same run-together
 #   failure, same fix; matched on the attribute because the class attribute is the
-#   generic ``gloss-sc-span``.
+#   generic ``gloss-sc-span``. Wiktionary (wty) dictionaries write the same tag as
+#   ``data-sc-content="tag"``, inside a ``data-sc-content="tags"`` div that the
+#   closing quote keeps out.
 _CHIP_RE = re.compile(
-    r'(<span (?:class="gloss-tag"|[^>]*?\bdata-sc-class="tag")[^>]*>)(.*?)(</span>)',
+    r'(<span (?:class="gloss-tag"|[^>]*?\bdata-sc-(?:class|content)="tag")[^>]*>)(.*?)(</span>)',
     re.DOTALL,
 )
 
 # Chips of either form sitting flush against each other.
-_CHIP_SEAM_RE = re.compile(r'(</span>)(<span (?:class="gloss-tag"|[^>]*?\bdata-sc-class="tag"))')
+_CHIP_SEAM_RE = re.compile(r'(</span>)(<span (?:class="gloss-tag"|[^>]*?\bdata-sc-(?:class|content)="tag"))')
 
 # A reference label ("See also") butts straight against the term it introduces.
 _REFERENCE_LABEL_RE = re.compile(r'(<span[^>]*\bdata-sc-content="reference-label"[^>]*>)(.*?)(</span>)', re.DOTALL)
