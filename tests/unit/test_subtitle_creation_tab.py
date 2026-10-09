@@ -88,10 +88,10 @@ def test_update_config_adopts_new_asr_model(qtbot, tmp_path):
     assert tab.config.asr_model == "small"
 
 
-def test_language_label_shows_japanese(qtbot, tmp_path):
-    """Read-only Language: Japanese label must be present."""
+def test_language_label_shows_the_native_name(qtbot, tmp_path):
+    """The read-only Language label names the mining language natively."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
-    assert "Japanese" in tab.language_label.text()
+    assert tab.language_label.text() == "日本語"
 
 
 # ---------------------------------------------------------------------------

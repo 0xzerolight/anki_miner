@@ -1027,6 +1027,16 @@ class TestSubtitleStrip:
         block = widget.subtitle_strip.document().firstBlock()
         assert block.blockFormat().lineHeight() == TYPOGRAPHY.japanese_leading_percent
 
+    def test_another_language_keeps_the_default_leading(self, qtbot, fake_mpv):
+        from anki_miner.languages.registry import get_profile
+
+        widget = SubtitlePlayerWidget(content_style=get_profile("zh").content_style)
+        qtbot.addWidget(widget)
+        widget.subtitle_entries = [(1.0, 2.0, "你好")]
+        widget._update_subtitle(1.5)
+        block = widget.subtitle_strip.document().firstBlock()
+        assert block.blockFormat().lineHeight() == 0.0
+
 
 class TestSecondaryStrip:
     """F7: a second, always-allocated strip under the primary (D45-B rules apply)."""

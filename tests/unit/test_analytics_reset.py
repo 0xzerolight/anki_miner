@@ -149,6 +149,15 @@ class TestConfirmation:
         assert "cannot be undone" in body
         assert "known words" in body
 
+    @pytest.mark.parametrize(("language", "native"), [("de", "Deutsch"), ("ja", "日本語")])
+    def test_the_prompt_names_the_mining_language_it_wipes(self, tab, message_boxes, language, native):
+        tab.stats_service.language = language
+        tab._on_reset_clicked()
+        _title, body = message_boxes["questions"][0]
+
+        assert native in body
+        assert "other mining languages" in body
+
 
 class TestReset:
     def test_accepting_wipes_and_re_reads(self, tab, message_boxes):

@@ -781,7 +781,7 @@ class SubtitlePlayerWidget(QWidget):
                 self.player.aid = track.get("id", position + 1)
                 logger.info("Selected audio track %d (language: %s) via mpv track metadata", position, lang)
                 return
-        # No JP tag anywhere — leave mpv's default selection.
+        # No matching tag anywhere — leave mpv's default selection.
 
     def _on_time_pos(self, value: object) -> None:
         """Playback position observer (seconds float; None while idle)."""
@@ -923,7 +923,7 @@ class SubtitlePlayerWidget(QWidget):
         self.secondary_strip.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
     def _set_cue_text(self, text: str) -> None:
-        """Put one cue in the strip, plain text, with the Japanese leading.
+        """Put one cue in the strip, plain text, with the Japanese leading for ja.
 
         ``_update_subtitle`` runs on every position tick, so an unchanged cue
         returns immediately: rebuilding the document several times a second for
@@ -936,7 +936,8 @@ class SubtitlePlayerWidget(QWidget):
         if self.subtitle_strip.toPlainText() == text:
             return
         self.subtitle_strip.setPlainText(text)
-        apply_japanese_block_format(self.subtitle_strip.document())
+        if self._content_style.font_role == "japanese":
+            apply_japanese_block_format(self.subtitle_strip.document())
         self.subtitle_strip.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
     @staticmethod

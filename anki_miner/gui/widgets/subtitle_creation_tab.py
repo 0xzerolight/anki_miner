@@ -41,7 +41,7 @@ from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
 from anki_miner.gui.workers.subtitle_gen_worker import SubtitleGenWorker
-from anki_miner.languages.registry import get_profile
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.asr import _engine
 from anki_miner.services.asr.model_availability import usable_model_installed
 from anki_miner.utils.file_pairing import FilePairMatcher
@@ -145,21 +145,8 @@ class SubtitleCreationTab(_ToolTabBase):
     # ------------------------------------------------------------------
 
     def _language_display(self) -> str:
-        """English name of the active mining language for the read-only label.
-
-        ja returns the literal "Japanese": tests/unit/test_subtitle_creation_tab.py
-        ::test_language_label_shows_japanese asserts that exact word and pre-existing
-        tests are never edited. Native display names live on the profile and are
-        used only for a language this table does not know.
-        """
-        code = self.config.language
-        if code == "ja":
-            return self.tr("Japanese")
-        if code == "ko":
-            return self.tr("Korean")
-        if code == "zh":
-            return self.tr("Chinese")
-        return get_profile(code).display_name
+        """Native name of the active mining language for the read-only label."""
+        return get_profile(config_language(self.config)).display_name
 
     def _setup_ui(self) -> None:
         scroll_area = QScrollArea()

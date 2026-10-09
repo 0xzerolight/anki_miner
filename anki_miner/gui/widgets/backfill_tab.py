@@ -176,15 +176,12 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         deck_layout = QVBoxLayout(self.deck_card)
         configure_card_layout(deck_layout)
         deck_layout.addWidget(SectionHeader(self.tr("Deck")))
-        hint = QLabel(
-            self.tr(
-                "Fill missing fields on notes you mined earlier, using the currently "
-                "installed dictionaries, frequency sources and pitch data."
-            )
-        )
-        hint.setObjectName("helper-text")
-        hint.setWordWrap(True)
-        deck_layout.addWidget(hint)
+        # Text set by _refresh_checkbox_gates: pitch is named only where the
+        # mining language has it.
+        self.deck_hint = QLabel()
+        self.deck_hint.setObjectName("helper-text")
+        self.deck_hint.setWordWrap(True)
+        deck_layout.addWidget(self.deck_hint)
         deck_row = QHBoxLayout()
         deck_row.addWidget(QLabel(self.tr("Deck:")))
         self.deck_combo = QComboBox()
@@ -387,6 +384,20 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
             # The gate is two-way and owns these boxes' whole visibility, so a
             # switch away from Japanese and back re-offers them.
             capabilities = get_profile(config_language(self.config)).capabilities
+            if "pitch" in capabilities:
+                self.deck_hint.setText(
+                    self.tr(
+                        "Fill missing fields on notes you mined earlier, using the currently "
+                        "installed dictionaries, frequency sources and pitch data."
+                    )
+                )
+            else:
+                self.deck_hint.setText(
+                    self.tr(
+                        "Fill missing fields on notes you mined earlier, using the currently "
+                        "installed dictionaries and frequency sources."
+                    )
+                )
             apply_language_gate(self._language_gate_pairs, capabilities)
             for group, capability in self._group_capabilities.items():
                 if capability not in capabilities:

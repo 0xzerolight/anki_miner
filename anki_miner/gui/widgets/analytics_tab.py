@@ -42,7 +42,7 @@ from anki_miner.gui.widgets.base import (
 )
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader, StatCard
 from anki_miner.languages.profile import ContentTextStyle
-from anki_miner.languages.registry import get_profile
+from anki_miner.languages.registry import get_profile, language_display_name
 from anki_miner.models.stats import (
     DifficultyEntry,
     Milestone,
@@ -497,10 +497,13 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         confirm = QMessageBox.question(
             self,
             self.tr("Reset Statistics"),
-            self.tr(
-                "Delete every recorded mining session and series difficulty score? "
-                "This cannot be undone. Your Anki cards, known words, and settings "
-                "are not affected."
+            tr_format(
+                self.tr(
+                    "Delete every mining session and series difficulty score recorded for %1? "
+                    "This cannot be undone. Statistics for your other mining languages, "
+                    "your Anki cards, known words, and settings are not affected."
+                ),
+                language_display_name(str(self.stats_service.language)),
             ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,

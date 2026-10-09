@@ -131,3 +131,18 @@ def test_a_ticked_profile_group_reaches_the_scan(qtbot, mapped_config):
     tab.field_checkboxes["expression_pinyin"].setChecked(True)
 
     assert tab._selected_field_keys() == frozenset({"expression_pinyin"})
+
+
+def test_the_deck_hint_mentions_pitch_only_for_a_language_with_it(qtbot, mapped_config):
+    tab = CardBackfillTab(mapped_config)
+    qtbot.addWidget(tab)
+    assert tab.deck_hint.text() == (
+        "Fill missing fields on notes you mined earlier, using the currently "
+        "installed dictionaries, frequency sources and pitch data."
+    )
+
+    tab.update_config(_switched(mapped_config, "zh"))
+    assert "pitch" not in tab.deck_hint.text()
+
+    tab.update_config(mapped_config)
+    assert "pitch" in tab.deck_hint.text()
