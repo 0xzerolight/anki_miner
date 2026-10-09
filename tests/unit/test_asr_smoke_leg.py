@@ -125,6 +125,10 @@ def _fake_dist(tmp_path: Path) -> Path:
         "  asr-absent)\n"
         '    test ! -e "$ANKI_MINER_HOME/asr_pack"\n'
         "    echo BUNDLED_SMOKE_PASS ;;\n"
+        "  videoocr)\n"
+        '    test -f "$ANKI_MINER_HOME/onnx_pack/onnxruntime/__init__.py"\n'
+        '    test -f "$ANKI_MINER_HOME/ocr_models/meiki.text.rec.v0.960x32.onnx"\n'
+        "    echo BUNDLED_SMOKE_PASS ;;\n"
         "  youtube|whispercpp) echo BUNDLED_SMOKE_PASS ;;\n"
         "  *)\n"
         '    if [ "${ANKI_MINER_ASR_VULKAN_PROBE:-}" = 1 ]; then echo 0\n'
