@@ -63,12 +63,16 @@ def _strip_speaker(rows: list[str]) -> list[str]:
     for i, ch in enumerate(first):
         if ch in "：:":
             rest = first[i + 1 :].lstrip()
-            if _is_name(first[:i]) and rest and not rest[0].isdigit():  # 10:00 is a time
+            if _is_name(first[:i]) and not rest:  # mid-reveal: the name is up, its line is not
+                return rows[1:]
+            if _is_name(first[:i]) and not rest[0].isdigit():  # 10:00 is a time
                 return [rest, *rows[1:]]
             return rows
         if ch in "「『":
-            closes = "\n".join(rows).rstrip().endswith(_OPEN_TO_CLOSE[ch])
-            if i > 0 and _is_name(first[:i]) and closes:
+            # Closed at the end, or not closed yet (a typewriter reveal mid-line); a bracket that
+            # closes before the end is a quote inside narration.
+            tail, close = "\n".join(rows)[i:].rstrip(), _OPEN_TO_CLOSE[ch]
+            if i > 0 and _is_name(first[:i]) and (tail.endswith(close) or close not in tail):
                 return [first[i:], *rows[1:]]
             return rows
     return rows

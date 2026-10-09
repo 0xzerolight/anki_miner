@@ -8,7 +8,9 @@ import numpy as np
 import pytest
 
 from anki_miner.services.video_ocr import segmenter
+from anki_miner.services.video_ocr.meiki_engine import OcrBox
 from anki_miner.services.video_ocr.segmenter import MIN_CUE, Cue, segment
+from anki_miner.services.video_ocr.text_cleanup import clean
 
 # numpy-backed (the gate in test_asr_marker_gating.py)
 pytestmark = pytest.mark.asr
@@ -44,6 +46,18 @@ def test_typewriter_reveal_becomes_one_cue_from_the_first_glyph():
     values = [50] * 5 + [100] * 5 + [150] * 5 + [200] * 20
     texts = {50: "こん", 100: "こんにち", 150: "こんにちは、", 200: "こんにちは、元気？"}
     assert approx(segment(stream(values), reader(texts))) == [(0.0, 3.5, "こんにちは、元気？")]
+
+
+def test_a_typewriter_reveal_after_an_inline_speaker_name_becomes_one_cue():
+    # Through the real clean(): the name is stripped on every read, not only once the bracket closes.
+    values = [50] * 5 + [100] * 5 + [200] * 20
+    texts = {50: "アキラ「行く", 100: "アキラ「行くぞ、みん", 200: "アキラ「行くぞ、みんな！」"}
+
+    def read(frame: np.ndarray) -> str:
+        text = texts.get(int(frame[0, 0, 0]), "")
+        return clean([OcrBox(text, (0, 0, 600, 40), 0.9)] if text else [])
+
+    assert approx(segment(stream(values), read)) == [(0.0, 3.0, "「行くぞ、みんな！」")]
 
 
 def test_a_half_drawn_last_glyph_still_merges():

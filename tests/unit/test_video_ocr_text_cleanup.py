@@ -55,6 +55,9 @@ def test_a_punctuation_row_above_a_quote_is_not_a_name_plate():
         ("午前10:00に出発", "午前10:00に出発"),
         ("兵士A:止まれ", "止まれ"),
         ("……「そうか」", "……「そうか」"),
+        ("アキラ「行くぞ、みん", "「行くぞ、みん"),  # mid-reveal: the bracket has not closed yet
+        ("アキラ：", ""),  # mid-reveal: no dialogue after the name yet
+        ("アキラ:", ""),
     ],
 )
 def test_inline_speaker_names(raw, expected):
