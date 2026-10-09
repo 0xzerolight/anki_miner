@@ -11,12 +11,14 @@ from __future__ import annotations
 
 import threading
 import wave
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
 import pytest
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.exceptions import SetupError
 from anki_miner.services.asr import long_audio
 from anki_miner.services.asr.long_audio import LongAudioStatus, pick_cut_sample, transcribe_media
 
@@ -139,6 +141,56 @@ def test_unknown_duration_falls_back_to_whole_file(tmp_path, monkeypatch):
     result = transcribe_media(_make_config(tmp_path), extractor, tmp_path / "x.mp3", probe_duration=lambda p: None)
     assert result.status is LongAudioStatus.OK
     assert extractor.full_calls and not extractor.window_calls
+
+
+def test_cantonese_on_small_is_refused_before_probe_and_extraction(tmp_path, monkeypatch):
+    record: list = []
+    _patch_transcribe(monkeypatch, record=record)
+    probed: list = []
+    extractor = _FakeExtractor(total_s=20.0)
+    config = replace(_make_config(tmp_path), asr_model="small")
+
+    with pytest.raises(SetupError, match="large-v3"):
+        transcribe_media(
+            config, extractor, tmp_path / "ep.mkv", language="yue", probe_duration=lambda p: probed.append(p) or 20.0
+        )
+
+    assert probed == []
+    assert extractor.full_calls == []
+    assert extractor.window_calls == []
+    assert record == []
+
+
+@pytest.mark.parametrize(
+    ("model", "language", "forwarded"),
+    [
+        ("small", "ja", None),  # ja pin: the historical call shape, no language kwarg
+        ("large-v3", "ja", None),
+        ("large-v3", "yue", "yue"),  # large-v3 has <|yue|>: Cantonese decodes as itself
+        ("small", "zh", "zh"),
+    ],
+)
+def test_supported_language_reaches_the_transcriber_unchanged(tmp_path, monkeypatch, model, language, forwarded):
+    import anki_miner.services.asr.transcriber as t
+
+    seen: list = []
+
+    def fake(audio, **kwargs):
+        seen.append(kwargs)
+        return [(0.0, 1.0, "a")]
+
+    monkeypatch.setattr(t, "transcribe", fake)
+    config = replace(_make_config(tmp_path), asr_model=model)
+    result = transcribe_media(
+        config, _FakeExtractor(total_s=5.0), tmp_path / "ep.mkv", language=language, probe_duration=lambda p: 5.0
+    )
+
+    assert result.status is LongAudioStatus.OK
+    assert len(seen) == 1
+    if forwarded is None:
+        assert "language" not in seen[0]
+    else:
+        assert seen[0]["language"] == forwarded
 
 
 def test_long_track_is_windowed_cut_at_silence_and_offset(tmp_path, monkeypatch):

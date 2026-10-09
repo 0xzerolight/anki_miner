@@ -27,6 +27,7 @@ from enum import Enum, auto
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from anki_miner.services.asr import model_manager
 from anki_miner.utils.audio_track_detector import get_media_duration_seconds
 from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
 from anki_miner.utils.logging_ext import log_summary
@@ -116,7 +117,11 @@ def transcribe_media(
     to ffprobe through the app's resolver; ``None`` from it means "unknown"
     and selects the whole-file path. ``on_extract_start`` / ``on_transcribe_start``
     each fire once, before the first window's extraction / decode.
+    Raises ``SetupError`` before any probe or extraction when ``config.asr_model``
+    has no token for *language* (Cantonese on ``small``).
     """
+    language = model_manager.decode_language(config.asr_model, language)
+
     from anki_miner.services.asr import transcriber
     from anki_miner.services.media_extractor import wav_to_float32
 

@@ -11,8 +11,15 @@ from pathlib import Path
 
 import pytest
 
+from anki_miner.exceptions import SetupError
 from anki_miner.services.asr import model_manager
-from anki_miner.services.asr.model_manager import DEFAULT_MODEL, KNOWN_MODELS, download, is_downloaded
+from anki_miner.services.asr.model_manager import (
+    DEFAULT_MODEL,
+    KNOWN_MODELS,
+    decode_language,
+    download,
+    is_downloaded,
+)
 
 # ---------------------------------------------------------------------------
 # KNOWN_MODELS / DEFAULT_MODEL constants
@@ -34,6 +41,26 @@ def test_default_model_is_large_v3():
 
 def test_default_model_in_known_models():
     assert DEFAULT_MODEL in KNOWN_MODELS
+
+
+# ---------------------------------------------------------------------------
+# decode_language — Whisper language tokens per model
+# ---------------------------------------------------------------------------
+
+
+def test_decode_language_large_v3_keeps_cantonese():
+    assert decode_language("large-v3", "yue") == "yue"
+
+
+@pytest.mark.parametrize("language", ["ja", "zh"])
+@pytest.mark.parametrize("model_name", ["small", "large-v3"])
+def test_decode_language_passes_shared_tokens_through(model_name, language):
+    assert decode_language(model_name, language) == language
+
+
+def test_decode_language_small_refuses_cantonese_pointing_to_large_v3():
+    with pytest.raises(SetupError, match="large-v3"):
+        decode_language("small", "yue")
 
 
 # ---------------------------------------------------------------------------

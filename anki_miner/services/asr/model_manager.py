@@ -11,6 +11,7 @@ import shutil
 import tempfile
 from pathlib import Path
 
+from anki_miner.exceptions import SetupError
 from anki_miner.services._install_common import sweep_stale
 from anki_miner.services.asr import _engine
 from anki_miner.utils.atomic_io import atomic_replace_dir, reconcile_backups_in
@@ -20,6 +21,25 @@ logger = logging.getLogger(__name__)
 
 KNOWN_MODELS: frozenset[str] = frozenset({"large-v3", "small"})
 DEFAULT_MODEL: str = "large-v3"
+
+#: Whisper language tokens only large-v3's vocabulary has (it added <|yue|>);
+#: `small` stops at 99 languages. Value: the code such a model decodes the
+#: language with instead, or None to refuse (owner ruling 2026-10-08).
+_LARGE_V3_ONLY_LANGUAGES: dict[str, str | None] = {"yue": None}
+
+
+def decode_language(model_name: str, language: str) -> str:
+    """The Whisper code *model_name* transcribes *language* with. Raises SetupError when it cannot."""
+    if model_name == DEFAULT_MODEL or language not in _LARGE_V3_ONLY_LANGUAGES:
+        return language
+    substitute = _LARGE_V3_ONLY_LANGUAGES[language]
+    if substitute is None:
+        raise SetupError(
+            f"The {model_name} speech model cannot transcribe this language ({language}). "
+            "Choose large-v3 in Settings → Transcription & Alignment."
+        )
+    return substitute
+
 
 #: Files faster-whisper / ctranslate2 require alongside ``model.bin`` for a
 #: model to actually load. We require at least ``config.json`` so a download
