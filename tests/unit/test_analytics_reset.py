@@ -115,6 +115,13 @@ class TestArming:
 
         assert widget.reset_button.isEnabled() is True
 
+    def test_the_tooltip_scopes_the_wipe_to_the_mining_language(self, tab):
+        """The reset only deletes the active mining language's statistics."""
+        tooltip = tab.reset_button.toolTip()
+
+        assert "current mining language" in tooltip
+        assert "every" not in tooltip
+
     def test_a_failed_refresh_leaves_it_disabled(self, qtbot, monkeypatch):
         """After a failed read the tab's contents are unknown; do not offer a wipe."""
         monkeypatch.setattr(analytics_tab_module, "run_off_thread", _sync_run_off_thread)

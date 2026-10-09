@@ -222,7 +222,10 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         button_layout = QHBoxLayout()
         self.reset_button = ModernButton(self.tr("Reset Statistics…"), variant="critical")
         self.reset_button.setToolTip(
-            self.tr("Delete every recorded mining session and difficulty score. This cannot be undone.")
+            self.tr(
+                "Delete the mining sessions and difficulty scores recorded for the current "
+                "mining language. This cannot be undone."
+            )
         )
         # Armed only once a refresh proves there is something to delete, so an
         # empty database never raises a confirmation with nothing behind it.
