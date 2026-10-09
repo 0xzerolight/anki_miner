@@ -64,8 +64,8 @@
         <translation>Réinitialiser les statistiques…</translation>
     </message>
     <message>
-        <source>Delete every recorded mining session and difficulty score. This cannot be undone.</source>
-        <translation>Supprimer toutes les sessions d’extraction enregistrées et tous les scores de difficulté. Cette action est irréversible.</translation>
+        <source>Delete the mining sessions and difficulty scores recorded for the current mining language. This cannot be undone.</source>
+        <translation>Supprimer les sessions d’extraction et les scores de difficulté enregistrés pour la langue d’extraction actuelle. Cette action est irréversible.</translation>
     </message>
     <message>
         <source>Analytics Tab</source>
@@ -168,8 +168,8 @@
         <translation>Réinitialiser les statistiques</translation>
     </message>
     <message>
-        <source>Delete every recorded mining session and series difficulty score? This cannot be undone. Your Anki cards, known words, and settings are not affected.</source>
-        <translation>Supprimer toutes les sessions d’extraction enregistrées et tous les scores de difficulté des séries ? Cette action est irréversible. Vos cartes Anki, mots connus et paramètres ne sont pas affectés.</translation>
+        <source>Delete every mining session and series difficulty score recorded for %1? This cannot be undone. Statistics for your other mining languages, your Anki cards, known words, and settings are not affected.</source>
+        <translation>Supprimer toutes les sessions d’extraction et tous les scores de difficulté des séries enregistrés pour %1 ? Cette action est irréversible. Les statistiques de vos autres langues d’extraction, vos cartes Anki, mots connus et paramètres ne sont pas affectés.</translation>
     </message>
     <message>
         <source>Statistics could not be reset.</source>
@@ -595,15 +595,15 @@
     </message>
     <message>
         <source>Open Anki when Anki Miner starts</source>
-        <translation type="unfinished" />
+        <translation>Ouvrir Anki au démarrage d'Anki Miner</translation>
     </message>
     <message>
         <source>Starts Anki if it isn't running when Anki Miner opens.</source>
-        <translation type="unfinished" />
+        <translation>Démarre Anki s'il n'est pas lancé à l'ouverture d'Anki Miner.</translation>
     </message>
     <message>
         <source>Anki Miner can't find Anki where its installer puts it, so it can't open it.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner ne trouve pas Anki là où son installateur le place, et ne peut donc pas l'ouvrir.</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
@@ -2129,8 +2129,8 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Extraire depuis un manga</translation>
     </message>
     <message>
-        <source>Mine vocabulary from Japanese manga volumes processed with mokuro.</source>
-        <translation>Extrayez du vocabulaire à partir de volumes de manga japonais traités avec mokuro.</translation>
+        <source>Mine vocabulary from manga volumes processed with mokuro.</source>
+        <translation>Extrayez du vocabulaire à partir de volumes de manga traités avec mokuro.</translation>
     </message>
     <message>
         <source>Mine from novels</source>
@@ -2422,11 +2422,11 @@ Aucun fichier d'index n'est supprimé.</translation>
     </message>
     <message>
         <source>Keep dictionaries up to date</source>
-        <translation type="unfinished" />
+        <translation>Maintenir les dictionnaires à jour</translation>
     </message>
     <message>
         <source>Dictionaries that publish updates (Jitendex, JMdict, Wiktionary, Jiten, …) update themselves once a week; Update Now checks right away.</source>
-        <translation type="unfinished" />
+        <translation>Les dictionnaires qui publient des mises à jour (Jitendex, JMdict, Wiktionary, Jiten, …) se mettent à jour d'eux-mêmes une fois par semaine ; le bouton Mettre à jour maintenant vérifie immédiatement.</translation>
     </message>
     <message>
         <source>Add frequency lists</source>
@@ -2887,10 +2887,6 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Paquet</translation>
     </message>
     <message>
-        <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries, frequency sources and pitch data.</source>
-        <translation>Complétez les champs manquants des notes que vous avez extraites précédemment, à l'aide des dictionnaires, sources de fréquence et données d'accent de hauteur actuellement installés.</translation>
-    </message>
-    <message>
         <source>Deck:</source>
         <translation>Paquet :</translation>
     </message>
@@ -2989,6 +2985,14 @@ Aucun fichier d'index n'est supprimé.</translation>
     <message>
         <source>Map this field in Settings → Cards &amp; Anki</source>
         <translation>Mappez ce champ dans Paramètres → Cartes et Anki</translation>
+    </message>
+    <message>
+        <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries, frequency sources and pitch data.</source>
+        <translation>Complétez les champs manquants des notes que vous avez extraites précédemment, à l'aide des dictionnaires, sources de fréquence et données d'accent de hauteur actuellement installés.</translation>
+    </message>
+    <message>
+        <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries and frequency sources.</source>
+        <translation>Complétez les champs manquants des notes que vous avez extraites précédemment, à l'aide des dictionnaires et sources de fréquence actuellement installés.</translation>
     </message>
     <message>
         <source>Select at least one field group to fill.</source>
@@ -4448,19 +4452,19 @@ Cela modifiera %n notes (%1) et leur ajoutera l'étiquette %2. Continuer ?</nume
     </message>
     <message>
         <source>Updates</source>
-        <translation type="unfinished">Mises à jour</translation>
+        <translation>Mises à jour</translation>
     </message>
     <message>
         <source>Update automatically once a week</source>
-        <translation type="unfinished" />
+        <translation>Mettre à jour automatiquement une fois par semaine</translation>
     </message>
     <message>
         <source>Update Now</source>
-        <translation type="unfinished" />
+        <translation>Mettre à jour maintenant</translation>
     </message>
     <message>
         <source>Dictionaries, frequency lists and pitch-accent sources whose publisher posts updates (Jitendex, JMdict, Wiktionary, Jiten, …) are downloaded again when a newer version is out. Their order and on/off state stay as they are.</source>
-        <translation type="unfinished" />
+        <translation>Les dictionnaires, listes de fréquence et sources d'accent de hauteur dont l'éditeur publie des mises à jour (Jitendex, JMdict, Wiktionary, Jiten, …) sont téléchargés à nouveau lorsqu'une version plus récente est disponible. Leur ordre et leur état activé/désactivé restent inchangés.</translation>
     </message>
     <message>
         <source>Storage</source>
@@ -4961,6 +4965,22 @@ Aucun fichier sur le disque n'est supprimé.</translation>
         <translation>Audio de phrase : %1/%2 phrases</translation>
     </message>
     <message>
+        <source>hiragana-only</source>
+        <translation>uniquement en hiragana</translation>
+    </message>
+    <message>
+        <source>katakana-only</source>
+        <translation>uniquement en katakana</translation>
+    </message>
+    <message>
+        <source>hangul-only</source>
+        <translation>uniquement en hangul</translation>
+    </message>
+    <message>
+        <source>hanja-containing</source>
+        <translation>contenant des hanja</translation>
+    </message>
+    <message>
         <source>This document contains no %1 text</source>
         <translation>Ce document ne contient aucun texte %1</translation>
     </message>
@@ -5062,14 +5082,6 @@ Aucun fichier sur le disque n'est supprimé.</translation>
     <message>
         <source>Word list filter: removed %1 words</source>
         <translation>Filtre de liste de mots : %1 mots supprimés</translation>
-    </message>
-    <message>
-        <source>hiragana-only</source>
-        <translation>uniquement en hiragana</translation>
-    </message>
-    <message>
-        <source>katakana-only</source>
-        <translation>uniquement en katakana</translation>
     </message>
     <message>
         <source>Script-type filter: removed %1 %2 words</source>
@@ -6598,7 +6610,7 @@ Mots à ajouter : %3. Continuer ?</translation>
     </message>
     <message>
         <source>Update Dictionaries Now</source>
-        <translation type="unfinished" />
+        <translation>Mettre à jour les dictionnaires maintenant</translation>
     </message>
     <message>
         <source>Download Recommended Resources...</source>
@@ -6694,39 +6706,39 @@ Mots à ajouter : %3. Continuer ?</translation>
     </message>
     <message>
         <source>Checking for dictionary updates…</source>
-        <translation type="unfinished" />
+        <translation>Recherche de mises à jour des dictionnaires…</translation>
     </message>
     <message>
         <source>Could not check for dictionary updates: %1</source>
-        <translation type="unfinished" />
+        <translation>Impossible de rechercher les mises à jour des dictionnaires : %1</translation>
     </message>
     <message>
         <source>Downloading dictionary updates…</source>
-        <translation type="unfinished" />
+        <translation>Téléchargement des mises à jour des dictionnaires…</translation>
     </message>
     <message>
         <source>Your dictionaries changed during the check. Try again.</source>
-        <translation type="unfinished" />
+        <translation>Vos dictionnaires ont changé pendant la vérification. Réessayez.</translation>
     </message>
     <message>
         <source>None of your dictionaries publish updates.</source>
-        <translation type="unfinished" />
+        <translation>Aucun de vos dictionnaires ne publie de mises à jour.</translation>
     </message>
     <message>
         <source>Dictionaries are up to date (%1 could not be checked).</source>
-        <translation type="unfinished" />
+        <translation>Les dictionnaires sont à jour (impossible d'en vérifier %1).</translation>
     </message>
     <message>
         <source>Dictionaries are up to date.</source>
-        <translation type="unfinished" />
+        <translation>Les dictionnaires sont à jour.</translation>
     </message>
     <message>
         <source>Dictionary updates</source>
-        <translation type="unfinished" />
+        <translation>Mises à jour des dictionnaires</translation>
     </message>
     <message>
         <source>Dictionaries updated: %1</source>
-        <translation type="unfinished" />
+        <translation>Dictionnaires mis à jour : %1</translation>
     </message>
     <message>
         <source>Downloaded resources were left inactive because their storage folder changed.</source>
@@ -7007,22 +7019,6 @@ Continuer ?</translation>
         <translation>Temps supplémentaire avant et après le sous-titre.</translation>
     </message>
     <message>
-        <source>Off</source>
-        <translation>Désactivé</translation>
-    </message>
-    <message>
-        <source>Google, then Papago</source>
-        <translation>Google, puis Papago</translation>
-    </message>
-    <message>
-        <source>Google only</source>
-        <translation>Google uniquement</translation>
-    </message>
-    <message>
-        <source>Papago only</source>
-        <translation>Papago uniquement</translation>
-    </message>
-    <message>
         <source>Text-to-speech</source>
         <translation>Synthèse vocale</translation>
     </message>
@@ -7093,6 +7089,30 @@ Continuer ?</translation>
     <message>
         <source>Custom (%1 fps · %2 px · quality %3)</source>
         <translation>Personnalisée (%1 fps · %2 px · qualité %3)</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>Désactivé</translation>
+    </message>
+    <message>
+        <source>Google, then Papago</source>
+        <translation>Google, puis Papago</translation>
+    </message>
+    <message>
+        <source>Google only</source>
+        <translation>Google uniquement</translation>
+    </message>
+    <message>
+        <source>Papago only</source>
+        <translation>Papago uniquement</translation>
+    </message>
+    <message>
+        <source>Google</source>
+        <translation>Google</translation>
+    </message>
+    <message>
+        <source>Microsoft Edge</source>
+        <translation>Microsoft Edge</translation>
     </message>
 </context><context>
     <name>MiniJobMonitor</name>
@@ -10946,18 +10966,6 @@ Vos ressources installées et votre thème sont conservés.</translation>
         <translation>Génération de sous-titres</translation>
     </message>
     <message>
-        <source>Japanese</source>
-        <translation>Japonais</translation>
-    </message>
-    <message>
-        <source>Korean</source>
-        <translation>Coréen</translation>
-    </message>
-    <message>
-        <source>Chinese</source>
-        <translation>Chinois</translation>
-    </message>
-    <message>
         <source>Input</source>
         <translation>Entrée</translation>
     </message>
@@ -11802,6 +11810,10 @@ Vos ressources installées et votre thème sont conservés.</translation>
     <message>
         <source>ffmpeg (video tools)</source>
         <translation>ffmpeg (outils vidéo)</translation>
+    </message>
+    <message>
+        <source>Language engine</source>
+        <translation>Moteur de langue</translation>
     </message>
     <message>
         <source>Offline dictionary</source>

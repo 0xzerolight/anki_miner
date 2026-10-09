@@ -64,8 +64,8 @@
         <translation>Сбросить статистику…</translation>
     </message>
     <message>
-        <source>Delete every recorded mining session and difficulty score. This cannot be undone.</source>
-        <translation>Удалить все записанные сеансы майнинга и оценки сложности. Это действие нельзя отменить.</translation>
+        <source>Delete the mining sessions and difficulty scores recorded for the current mining language. This cannot be undone.</source>
+        <translation>Удалить сеансы майнинга и оценки сложности, записанные для текущего языка майнинга. Это действие нельзя отменить.</translation>
     </message>
     <message>
         <source>Analytics Tab</source>
@@ -168,8 +168,8 @@
         <translation>Сбросить статистику</translation>
     </message>
     <message>
-        <source>Delete every recorded mining session and series difficulty score? This cannot be undone. Your Anki cards, known words, and settings are not affected.</source>
-        <translation>Удалить все записанные сеансы майнинга и оценки сложности серий? Это действие нельзя отменить. Ваши карточки Anki, известные слова и настройки не будут затронуты.</translation>
+        <source>Delete every mining session and series difficulty score recorded for %1? This cannot be undone. Statistics for your other mining languages, your Anki cards, known words, and settings are not affected.</source>
+        <translation>Удалить все сеансы майнинга и оценки сложности серий, записанные для языка %1? Это действие нельзя отменить. Статистика других ваших языков майнинга, ваши карточки Anki, известные слова и настройки не будут затронуты.</translation>
     </message>
     <message>
         <source>Statistics could not be reset.</source>
@@ -597,15 +597,15 @@
     </message>
     <message>
         <source>Open Anki when Anki Miner starts</source>
-        <translation type="unfinished" />
+        <translation>Открывать Anki при запуске Anki Miner</translation>
     </message>
     <message>
         <source>Starts Anki if it isn't running when Anki Miner opens.</source>
-        <translation type="unfinished" />
+        <translation>Запускает Anki при открытии Anki Miner, если Anki ещё не запущен.</translation>
     </message>
     <message>
         <source>Anki Miner can't find Anki where its installer puts it, so it can't open it.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner не может найти Anki там, куда его помещает установщик, поэтому не может его открыть.</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
@@ -2132,8 +2132,8 @@ No index files are deleted.</source>
         <translation>Майнить из манги</translation>
     </message>
     <message>
-        <source>Mine vocabulary from Japanese manga volumes processed with mokuro.</source>
-        <translation>Майнить лексику из томов японской манги, обработанных через mokuro.</translation>
+        <source>Mine vocabulary from manga volumes processed with mokuro.</source>
+        <translation>Майнить лексику из томов манги, обработанных через mokuro.</translation>
     </message>
     <message>
         <source>Mine from novels</source>
@@ -2425,11 +2425,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Keep dictionaries up to date</source>
-        <translation type="unfinished" />
+        <translation>Поддерживать словари в актуальном состоянии</translation>
     </message>
     <message>
         <source>Dictionaries that publish updates (Jitendex, JMdict, Wiktionary, Jiten, …) update themselves once a week; Update Now checks right away.</source>
-        <translation type="unfinished" />
+        <translation>Словари, которые публикуют обновления (Jitendex, JMdict, Wiktionary, Jiten, …), обновляются сами раз в неделю; «Обновить сейчас» проверяет обновления немедленно.</translation>
     </message>
     <message>
         <source>Add frequency lists</source>
@@ -2890,10 +2890,6 @@ No index files are deleted.</source>
         <translation>Колода</translation>
     </message>
     <message>
-        <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries, frequency sources and pitch data.</source>
-        <translation>Заполните недостающие поля в заметках, намайненных ранее, используя текущие установленные словари, источники частотности и данные тонального ударения.</translation>
-    </message>
-    <message>
         <source>Deck:</source>
         <translation>Колода:</translation>
     </message>
@@ -2992,6 +2988,14 @@ No index files are deleted.</source>
     <message>
         <source>Map this field in Settings → Cards &amp; Anki</source>
         <translation>Сопоставьте это поле в разделе Настройки → Карточки и Anki</translation>
+    </message>
+    <message>
+        <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries, frequency sources and pitch data.</source>
+        <translation>Заполните недостающие поля в заметках, намайненных ранее, используя текущие установленные словари, источники частотности и данные тонального ударения.</translation>
+    </message>
+    <message>
+        <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries and frequency sources.</source>
+        <translation>Заполните недостающие поля в заметках, намайненных ранее, используя текущие установленные словари и источники частотности.</translation>
     </message>
     <message>
         <source>Select at least one field group to fill.</source>
@@ -4473,19 +4477,19 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Updates</source>
-        <translation type="unfinished">Обновления</translation>
+        <translation>Обновления</translation>
     </message>
     <message>
         <source>Update automatically once a week</source>
-        <translation type="unfinished" />
+        <translation>Обновлять автоматически раз в неделю</translation>
     </message>
     <message>
         <source>Update Now</source>
-        <translation type="unfinished" />
+        <translation>Обновить сейчас</translation>
     </message>
     <message>
         <source>Dictionaries, frequency lists and pitch-accent sources whose publisher posts updates (Jitendex, JMdict, Wiktionary, Jiten, …) are downloaded again when a newer version is out. Their order and on/off state stay as they are.</source>
-        <translation type="unfinished" />
+        <translation>Словари, списки частотности и источники тонального ударения, издатель которых публикует обновления (Jitendex, JMdict, Wiktionary, Jiten, …), загружаются заново, когда выходит новая версия. Их порядок и то, включены ли они, остаются без изменений.</translation>
     </message>
     <message>
         <source>Storage</source>
@@ -4986,6 +4990,22 @@ No files on disk are deleted.</source>
         <translation>Аудио предложений: %1/%2 предложений</translation>
     </message>
     <message>
+        <source>hiragana-only</source>
+        <translation>только хирагана</translation>
+    </message>
+    <message>
+        <source>katakana-only</source>
+        <translation>только катакана</translation>
+    </message>
+    <message>
+        <source>hangul-only</source>
+        <translation>только хангыль</translation>
+    </message>
+    <message>
+        <source>hanja-containing</source>
+        <translation>с ханчей</translation>
+    </message>
+    <message>
         <source>This document contains no %1 text</source>
         <translation>В этом документе нет текста на %1</translation>
     </message>
@@ -5092,14 +5112,6 @@ No files on disk are deleted.</source>
     <message>
         <source>Word list filter: removed %1 words</source>
         <translation>Фильтр по списку слов: удалено %1 слов</translation>
-    </message>
-    <message>
-        <source>hiragana-only</source>
-        <translation>только хирагана</translation>
-    </message>
-    <message>
-        <source>katakana-only</source>
-        <translation>только катакана</translation>
     </message>
     <message>
         <source>Script-type filter: removed %1 %2 words</source>
@@ -6635,7 +6647,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Update Dictionaries Now</source>
-        <translation type="unfinished" />
+        <translation>Обновить словари сейчас</translation>
     </message>
     <message>
         <source>Download Recommended Resources...</source>
@@ -6731,39 +6743,39 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Checking for dictionary updates…</source>
-        <translation type="unfinished" />
+        <translation>Проверка обновлений словарей…</translation>
     </message>
     <message>
         <source>Could not check for dictionary updates: %1</source>
-        <translation type="unfinished" />
+        <translation>Не удалось проверить обновления словарей: %1</translation>
     </message>
     <message>
         <source>Downloading dictionary updates…</source>
-        <translation type="unfinished" />
+        <translation>Загрузка обновлений словарей…</translation>
     </message>
     <message>
         <source>Your dictionaries changed during the check. Try again.</source>
-        <translation type="unfinished" />
+        <translation>Ваши словари изменились во время проверки. Попробуйте снова.</translation>
     </message>
     <message>
         <source>None of your dictionaries publish updates.</source>
-        <translation type="unfinished" />
+        <translation>Ни один из ваших словарей не публикует обновления.</translation>
     </message>
     <message>
         <source>Dictionaries are up to date (%1 could not be checked).</source>
-        <translation type="unfinished" />
+        <translation>Словари актуальны (не удалось проверить: %1).</translation>
     </message>
     <message>
         <source>Dictionaries are up to date.</source>
-        <translation type="unfinished" />
+        <translation>Словари актуальны.</translation>
     </message>
     <message>
         <source>Dictionary updates</source>
-        <translation type="unfinished" />
+        <translation>Обновления словарей</translation>
     </message>
     <message>
         <source>Dictionaries updated: %1</source>
-        <translation type="unfinished" />
+        <translation>Словари обновлены: %1</translation>
     </message>
     <message>
         <source>Downloaded resources were left inactive because their storage folder changed.</source>
@@ -7044,22 +7056,6 @@ Continue?</source>
         <translation>Дополнительное время до и после субтитров.</translation>
     </message>
     <message>
-        <source>Off</source>
-        <translation>Выкл.</translation>
-    </message>
-    <message>
-        <source>Google, then Papago</source>
-        <translation>Сначала Google, затем Papago</translation>
-    </message>
-    <message>
-        <source>Google only</source>
-        <translation>Только Google</translation>
-    </message>
-    <message>
-        <source>Papago only</source>
-        <translation>Только Papago</translation>
-    </message>
-    <message>
         <source>Text-to-speech</source>
         <translation>Синтез речи</translation>
     </message>
@@ -7130,6 +7126,30 @@ Continue?</source>
     <message>
         <source>Custom (%1 fps · %2 px · quality %3)</source>
         <translation>Свой (%1 fps · %2 px · качество %3)</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>Выкл.</translation>
+    </message>
+    <message>
+        <source>Google, then Papago</source>
+        <translation>Сначала Google, затем Papago</translation>
+    </message>
+    <message>
+        <source>Google only</source>
+        <translation>Только Google</translation>
+    </message>
+    <message>
+        <source>Papago only</source>
+        <translation>Только Papago</translation>
+    </message>
+    <message>
+        <source>Google</source>
+        <translation>Google</translation>
+    </message>
+    <message>
+        <source>Microsoft Edge</source>
+        <translation>Microsoft Edge</translation>
     </message>
 </context><context>
     <name>MiniJobMonitor</name>
@@ -10987,18 +11007,6 @@ Your installed resources and your theme are kept.</source>
         <translation>Генерация субтитров</translation>
     </message>
     <message>
-        <source>Japanese</source>
-        <translation>Японский</translation>
-    </message>
-    <message>
-        <source>Korean</source>
-        <translation>Корейский</translation>
-    </message>
-    <message>
-        <source>Chinese</source>
-        <translation>Китайский</translation>
-    </message>
-    <message>
         <source>Input</source>
         <translation>Ввод</translation>
     </message>
@@ -11843,6 +11851,10 @@ Your installed resources and your theme are kept.</source>
     <message>
         <source>ffmpeg (video tools)</source>
         <translation>ffmpeg (инструменты для видео)</translation>
+    </message>
+    <message>
+        <source>Language engine</source>
+        <translation>Языковой движок</translation>
     </message>
     <message>
         <source>Offline dictionary</source>

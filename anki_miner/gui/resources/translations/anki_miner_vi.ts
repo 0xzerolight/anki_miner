@@ -64,8 +64,8 @@
         <translation>Đặt lại thống kê…</translation>
     </message>
     <message>
-        <source>Delete every recorded mining session and difficulty score. This cannot be undone.</source>
-        <translation>Xóa mọi phiên khai thác và điểm độ khó đã ghi. Không thể hoàn tác thao tác này.</translation>
+        <source>Delete the mining sessions and difficulty scores recorded for the current mining language. This cannot be undone.</source>
+        <translation>Xóa các phiên khai thác và điểm độ khó đã ghi cho ngôn ngữ khai thác hiện tại. Không thể hoàn tác thao tác này.</translation>
     </message>
     <message>
         <source>Analytics Tab</source>
@@ -168,8 +168,8 @@
         <translation>Đặt lại thống kê</translation>
     </message>
     <message>
-        <source>Delete every recorded mining session and series difficulty score? This cannot be undone. Your Anki cards, known words, and settings are not affected.</source>
-        <translation>Xóa mọi phiên khai thác và mọi điểm độ khó loạt phim đã ghi? Không thể hoàn tác thao tác này. Thẻ Anki, từ đã biết và cài đặt không bị ảnh hưởng.</translation>
+        <source>Delete every mining session and series difficulty score recorded for %1? This cannot be undone. Statistics for your other mining languages, your Anki cards, known words, and settings are not affected.</source>
+        <translation>Xóa mọi phiên khai thác và mọi điểm độ khó loạt phim đã ghi cho %1? Không thể hoàn tác thao tác này. Thống kê của các ngôn ngữ khai thác khác, thẻ Anki, từ đã biết và cài đặt không bị ảnh hưởng.</translation>
     </message>
     <message>
         <source>Statistics could not be reset.</source>
@@ -593,15 +593,15 @@
     </message>
     <message>
         <source>Open Anki when Anki Miner starts</source>
-        <translation type="unfinished" />
+        <translation>Mở Anki khi Anki Miner khởi động</translation>
     </message>
     <message>
         <source>Starts Anki if it isn't running when Anki Miner opens.</source>
-        <translation type="unfinished" />
+        <translation>Khởi động Anki khi mở Anki Miner nếu Anki chưa chạy.</translation>
     </message>
     <message>
         <source>Anki Miner can't find Anki where its installer puts it, so it can't open it.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner không tìm thấy Anki tại vị trí mà trình cài đặt của Anki cài vào, nên không thể mở Anki.</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
@@ -2126,8 +2126,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Khai thác từ manga</translation>
     </message>
     <message>
-        <source>Mine vocabulary from Japanese manga volumes processed with mokuro.</source>
-        <translation>Khai thác từ vựng từ các tập manga tiếng Nhật đã xử lý bằng mokuro.</translation>
+        <source>Mine vocabulary from manga volumes processed with mokuro.</source>
+        <translation>Khai thác từ vựng từ các tập manga đã xử lý bằng mokuro.</translation>
     </message>
     <message>
         <source>Mine from novels</source>
@@ -2419,11 +2419,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Keep dictionaries up to date</source>
-        <translation type="unfinished" />
+        <translation>Giữ từ điển luôn ở bản mới nhất</translation>
     </message>
     <message>
         <source>Dictionaries that publish updates (Jitendex, JMdict, Wiktionary, Jiten, …) update themselves once a week; Update Now checks right away.</source>
-        <translation type="unfinished" />
+        <translation>Các từ điển có phát hành bản cập nhật (Jitendex, JMdict, Wiktionary, Jiten, …) tự cập nhật mỗi tuần một lần; Cập nhật ngay sẽ kiểm tra tức thì.</translation>
     </message>
     <message>
         <source>Add frequency lists</source>
@@ -2884,10 +2884,6 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Bộ thẻ</translation>
     </message>
     <message>
-        <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries, frequency sources and pitch data.</source>
-        <translation>Điền các trường còn thiếu trên ghi chú bạn đã khai thác trước đó, dùng từ điển, nguồn tần suất và dữ liệu trọng âm cao độ hiện đã cài đặt.</translation>
-    </message>
-    <message>
         <source>Deck:</source>
         <translation>Bộ thẻ:</translation>
     </message>
@@ -2986,6 +2982,14 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <message>
         <source>Map this field in Settings → Cards &amp; Anki</source>
         <translation>Ánh xạ trường này trong Cài đặt → Thẻ &amp; Anki</translation>
+    </message>
+    <message>
+        <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries, frequency sources and pitch data.</source>
+        <translation>Điền các trường còn thiếu trên ghi chú bạn đã khai thác trước đó, dùng từ điển, nguồn tần suất và dữ liệu trọng âm cao độ hiện đã cài đặt.</translation>
+    </message>
+    <message>
+        <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries and frequency sources.</source>
+        <translation>Điền các trường còn thiếu trên ghi chú bạn đã khai thác trước đó, dùng từ điển và nguồn tần suất hiện đã cài đặt.</translation>
     </message>
     <message>
         <source>Select at least one field group to fill.</source>
@@ -4423,19 +4427,19 @@ Thao tác này sẽ sửa %n ghi chú (%1) và gắn thẻ %2 cho chúng. Tiếp
     </message>
     <message>
         <source>Updates</source>
-        <translation type="unfinished">Cập nhật</translation>
+        <translation>Cập nhật</translation>
     </message>
     <message>
         <source>Update automatically once a week</source>
-        <translation type="unfinished" />
+        <translation>Tự động cập nhật mỗi tuần một lần</translation>
     </message>
     <message>
         <source>Update Now</source>
-        <translation type="unfinished" />
+        <translation>Cập nhật ngay</translation>
     </message>
     <message>
         <source>Dictionaries, frequency lists and pitch-accent sources whose publisher posts updates (Jitendex, JMdict, Wiktionary, Jiten, …) are downloaded again when a newer version is out. Their order and on/off state stay as they are.</source>
-        <translation type="unfinished" />
+        <translation>Các từ điển, danh sách tần suất và nguồn trọng âm cao độ có nhà phát hành đăng bản cập nhật (Jitendex, JMdict, Wiktionary, Jiten, …) sẽ được tải lại khi có phiên bản mới hơn. Thứ tự và trạng thái bật/tắt của chúng được giữ nguyên.</translation>
     </message>
     <message>
         <source>Storage</source>
@@ -4936,6 +4940,22 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
         <translation>Âm thanh câu: %1/%2 câu</translation>
     </message>
     <message>
+        <source>hiragana-only</source>
+        <translation>chỉ có hiragana</translation>
+    </message>
+    <message>
+        <source>katakana-only</source>
+        <translation>chỉ có katakana</translation>
+    </message>
+    <message>
+        <source>hangul-only</source>
+        <translation>chỉ có hangul</translation>
+    </message>
+    <message>
+        <source>hanja-containing</source>
+        <translation>có chứa hanja</translation>
+    </message>
+    <message>
         <source>This document contains no %1 text</source>
         <translation>Tài liệu này không chứa văn bản %1 nào</translation>
     </message>
@@ -5032,14 +5052,6 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     <message>
         <source>Word list filter: removed %1 words</source>
         <translation>Bộ lọc danh sách từ: đã loại bỏ %1 từ</translation>
-    </message>
-    <message>
-        <source>hiragana-only</source>
-        <translation>chỉ có hiragana</translation>
-    </message>
-    <message>
-        <source>katakana-only</source>
-        <translation>chỉ có katakana</translation>
     </message>
     <message>
         <source>Script-type filter: removed %1 %2 words</source>
@@ -6561,7 +6573,7 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
     </message>
     <message>
         <source>Update Dictionaries Now</source>
-        <translation type="unfinished" />
+        <translation>Cập nhật từ điển ngay</translation>
     </message>
     <message>
         <source>Download Recommended Resources...</source>
@@ -6657,39 +6669,39 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
     </message>
     <message>
         <source>Checking for dictionary updates…</source>
-        <translation type="unfinished" />
+        <translation>Đang kiểm tra bản cập nhật từ điển…</translation>
     </message>
     <message>
         <source>Could not check for dictionary updates: %1</source>
-        <translation type="unfinished" />
+        <translation>Không thể kiểm tra bản cập nhật từ điển: %1</translation>
     </message>
     <message>
         <source>Downloading dictionary updates…</source>
-        <translation type="unfinished" />
+        <translation>Đang tải bản cập nhật từ điển…</translation>
     </message>
     <message>
         <source>Your dictionaries changed during the check. Try again.</source>
-        <translation type="unfinished" />
+        <translation>Các từ điển đã thay đổi trong lúc kiểm tra. Hãy thử lại.</translation>
     </message>
     <message>
         <source>None of your dictionaries publish updates.</source>
-        <translation type="unfinished" />
+        <translation>Không có từ điển nào phát hành bản cập nhật.</translation>
     </message>
     <message>
         <source>Dictionaries are up to date (%1 could not be checked).</source>
-        <translation type="unfinished" />
+        <translation>Các từ điển đã là bản mới nhất (không thể kiểm tra %1 từ điển).</translation>
     </message>
     <message>
         <source>Dictionaries are up to date.</source>
-        <translation type="unfinished" />
+        <translation>Các từ điển đã là bản mới nhất.</translation>
     </message>
     <message>
         <source>Dictionary updates</source>
-        <translation type="unfinished" />
+        <translation>Cập nhật từ điển</translation>
     </message>
     <message>
         <source>Dictionaries updated: %1</source>
-        <translation type="unfinished" />
+        <translation>Đã cập nhật từ điển: %1</translation>
     </message>
     <message>
         <source>Downloaded resources were left inactive because their storage folder changed.</source>
@@ -6970,22 +6982,6 @@ Tiếp tục?</translation>
         <translation>Thời gian thêm trước và sau phụ đề.</translation>
     </message>
     <message>
-        <source>Off</source>
-        <translation>Tắt</translation>
-    </message>
-    <message>
-        <source>Google, then Papago</source>
-        <translation>Google, sau đó Papago</translation>
-    </message>
-    <message>
-        <source>Google only</source>
-        <translation>Chỉ Google</translation>
-    </message>
-    <message>
-        <source>Papago only</source>
-        <translation>Chỉ Papago</translation>
-    </message>
-    <message>
         <source>Text-to-speech</source>
         <translation>Chuyển văn bản thành giọng nói</translation>
     </message>
@@ -7056,6 +7052,30 @@ Tiếp tục?</translation>
     <message>
         <source>Custom (%1 fps · %2 px · quality %3)</source>
         <translation>Tùy chỉnh (%1 fps · %2 px · chất lượng %3)</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>Tắt</translation>
+    </message>
+    <message>
+        <source>Google, then Papago</source>
+        <translation>Google, sau đó Papago</translation>
+    </message>
+    <message>
+        <source>Google only</source>
+        <translation>Chỉ Google</translation>
+    </message>
+    <message>
+        <source>Papago only</source>
+        <translation>Chỉ Papago</translation>
+    </message>
+    <message>
+        <source>Google</source>
+        <translation>Google</translation>
+    </message>
+    <message>
+        <source>Microsoft Edge</source>
+        <translation>Microsoft Edge</translation>
     </message>
 </context><context>
     <name>MiniJobMonitor</name>
@@ -10905,18 +10925,6 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
         <translation>Tạo phụ đề</translation>
     </message>
     <message>
-        <source>Japanese</source>
-        <translation>Tiếng Nhật</translation>
-    </message>
-    <message>
-        <source>Korean</source>
-        <translation>Tiếng Hàn</translation>
-    </message>
-    <message>
-        <source>Chinese</source>
-        <translation>Tiếng Trung</translation>
-    </message>
-    <message>
         <source>Input</source>
         <translation>Đầu vào</translation>
     </message>
@@ -11761,6 +11769,10 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     <message>
         <source>ffmpeg (video tools)</source>
         <translation>ffmpeg (công cụ video)</translation>
+    </message>
+    <message>
+        <source>Language engine</source>
+        <translation>Công cụ ngôn ngữ</translation>
     </message>
     <message>
         <source>Offline dictionary</source>

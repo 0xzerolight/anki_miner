@@ -64,8 +64,8 @@
         <translation>Setel Ulang Statistik…</translation>
     </message>
     <message>
-        <source>Delete every recorded mining session and difficulty score. This cannot be undone.</source>
-        <translation>Hapus setiap sesi mining dan skor kesulitan yang tercatat. Tindakan ini tidak dapat dibatalkan.</translation>
+        <source>Delete the mining sessions and difficulty scores recorded for the current mining language. This cannot be undone.</source>
+        <translation>Hapus sesi mining dan skor kesulitan yang tercatat untuk bahasa mining saat ini. Tindakan ini tidak dapat dibatalkan.</translation>
     </message>
     <message>
         <source>Analytics Tab</source>
@@ -168,8 +168,8 @@
         <translation>Setel Ulang Statistik</translation>
     </message>
     <message>
-        <source>Delete every recorded mining session and series difficulty score? This cannot be undone. Your Anki cards, known words, and settings are not affected.</source>
-        <translation>Hapus setiap sesi mining dan skor kesulitan seri yang tercatat? Tindakan ini tidak dapat dibatalkan. Kartu Anki, kata yang dikenal, dan pengaturan Anda tidak akan terpengaruh.</translation>
+        <source>Delete every mining session and series difficulty score recorded for %1? This cannot be undone. Statistics for your other mining languages, your Anki cards, known words, and settings are not affected.</source>
+        <translation>Hapus setiap sesi mining dan skor kesulitan seri yang tercatat untuk %1? Tindakan ini tidak dapat dibatalkan. Statistik bahasa mining Anda yang lain, kartu Anki, kata yang dikenal, dan pengaturan Anda tidak akan terpengaruh.</translation>
     </message>
     <message>
         <source>Statistics could not be reset.</source>
@@ -593,15 +593,15 @@
     </message>
     <message>
         <source>Open Anki when Anki Miner starts</source>
-        <translation type="unfinished" />
+        <translation>Buka Anki saat Anki Miner dimulai</translation>
     </message>
     <message>
         <source>Starts Anki if it isn't running when Anki Miner opens.</source>
-        <translation type="unfinished" />
+        <translation>Memulai Anki jika belum berjalan saat Anki Miner dibuka.</translation>
     </message>
     <message>
         <source>Anki Miner can't find Anki where its installer puts it, so it can't open it.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner tidak dapat menemukan Anki di lokasi yang digunakan pemasangnya, sehingga tidak dapat membukanya.</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
@@ -2126,8 +2126,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Mining dari manga</translation>
     </message>
     <message>
-        <source>Mine vocabulary from Japanese manga volumes processed with mokuro.</source>
-        <translation>Mining kosakata dari volume manga Jepang yang diproses dengan mokuro.</translation>
+        <source>Mine vocabulary from manga volumes processed with mokuro.</source>
+        <translation>Mining kosakata dari volume manga yang diproses dengan mokuro.</translation>
     </message>
     <message>
         <source>Mine from novels</source>
@@ -2419,11 +2419,11 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Keep dictionaries up to date</source>
-        <translation type="unfinished" />
+        <translation>Jaga kamus tetap mutakhir</translation>
     </message>
     <message>
         <source>Dictionaries that publish updates (Jitendex, JMdict, Wiktionary, Jiten, …) update themselves once a week; Update Now checks right away.</source>
-        <translation type="unfinished" />
+        <translation>Kamus yang menerbitkan pembaruan (Jitendex, JMdict, Wiktionary, Jiten, …) diperbarui otomatis seminggu sekali; Perbarui Sekarang langsung memeriksa pembaruan.</translation>
     </message>
     <message>
         <source>Add frequency lists</source>
@@ -2884,10 +2884,6 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Dek</translation>
     </message>
     <message>
-        <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries, frequency sources and pitch data.</source>
-        <translation>Isi bidang yang hilang pada catatan yang sudah Anda mining sebelumnya, menggunakan kamus, sumber frekuensi, dan data aksen nada yang terpasang saat ini.</translation>
-    </message>
-    <message>
         <source>Deck:</source>
         <translation>Dek:</translation>
     </message>
@@ -2986,6 +2982,14 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <message>
         <source>Map this field in Settings → Cards &amp; Anki</source>
         <translation>Petakan bidang ini di Pengaturan → Kartu &amp; Anki</translation>
+    </message>
+    <message>
+        <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries, frequency sources and pitch data.</source>
+        <translation>Isi bidang yang hilang pada catatan yang sudah Anda mining sebelumnya, menggunakan kamus, sumber frekuensi, dan data aksen nada yang terpasang saat ini.</translation>
+    </message>
+    <message>
+        <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries and frequency sources.</source>
+        <translation>Isi bidang yang hilang pada catatan yang sudah Anda mining sebelumnya, menggunakan kamus dan sumber frekuensi yang terpasang saat ini.</translation>
     </message>
     <message>
         <source>Select at least one field group to fill.</source>
@@ -4423,19 +4427,19 @@ Ini akan mengubah %n catatan (%1) dan memberinya tag %2. Lanjutkan?</numerusform
     </message>
     <message>
         <source>Updates</source>
-        <translation type="unfinished">Pembaruan</translation>
+        <translation>Pembaruan</translation>
     </message>
     <message>
         <source>Update automatically once a week</source>
-        <translation type="unfinished" />
+        <translation>Perbarui otomatis seminggu sekali</translation>
     </message>
     <message>
         <source>Update Now</source>
-        <translation type="unfinished" />
+        <translation>Perbarui Sekarang</translation>
     </message>
     <message>
         <source>Dictionaries, frequency lists and pitch-accent sources whose publisher posts updates (Jitendex, JMdict, Wiktionary, Jiten, …) are downloaded again when a newer version is out. Their order and on/off state stay as they are.</source>
-        <translation type="unfinished" />
+        <translation>Kamus, daftar frekuensi, dan sumber aksen nada yang penerbitnya merilis pembaruan (Jitendex, JMdict, Wiktionary, Jiten, …) diunduh ulang saat ada versi yang lebih baru. Urutan dan status aktif/nonaktifnya tetap seperti semula.</translation>
     </message>
     <message>
         <source>Storage</source>
@@ -4936,6 +4940,22 @@ Tidak ada berkas di disk yang dihapus.</translation>
         <translation>Audio kalimat: %1/%2 kalimat</translation>
     </message>
     <message>
+        <source>hiragana-only</source>
+        <translation>hiragana saja</translation>
+    </message>
+    <message>
+        <source>katakana-only</source>
+        <translation>katakana saja</translation>
+    </message>
+    <message>
+        <source>hangul-only</source>
+        <translation>hangul saja</translation>
+    </message>
+    <message>
+        <source>hanja-containing</source>
+        <translation>mengandung hanja</translation>
+    </message>
+    <message>
         <source>This document contains no %1 text</source>
         <translation>Dokumen ini tidak berisi teks %1</translation>
     </message>
@@ -5032,14 +5052,6 @@ Tidak ada berkas di disk yang dihapus.</translation>
     <message>
         <source>Word list filter: removed %1 words</source>
         <translation>Filter daftar kata: menghapus %1 kata</translation>
-    </message>
-    <message>
-        <source>hiragana-only</source>
-        <translation>hiragana saja</translation>
-    </message>
-    <message>
-        <source>katakana-only</source>
-        <translation>katakana saja</translation>
     </message>
     <message>
         <source>Script-type filter: removed %1 %2 words</source>
@@ -6561,7 +6573,7 @@ Kata yang akan ditambahkan: %3. Lanjutkan?</translation>
     </message>
     <message>
         <source>Update Dictionaries Now</source>
-        <translation type="unfinished" />
+        <translation>Perbarui Kamus Sekarang</translation>
     </message>
     <message>
         <source>Download Recommended Resources...</source>
@@ -6657,39 +6669,39 @@ Kata yang akan ditambahkan: %3. Lanjutkan?</translation>
     </message>
     <message>
         <source>Checking for dictionary updates…</source>
-        <translation type="unfinished" />
+        <translation>Memeriksa pembaruan kamus…</translation>
     </message>
     <message>
         <source>Could not check for dictionary updates: %1</source>
-        <translation type="unfinished" />
+        <translation>Tidak dapat memeriksa pembaruan kamus: %1</translation>
     </message>
     <message>
         <source>Downloading dictionary updates…</source>
-        <translation type="unfinished" />
+        <translation>Mengunduh pembaruan kamus…</translation>
     </message>
     <message>
         <source>Your dictionaries changed during the check. Try again.</source>
-        <translation type="unfinished" />
+        <translation>Kamus Anda berubah selama pemeriksaan. Coba lagi.</translation>
     </message>
     <message>
         <source>None of your dictionaries publish updates.</source>
-        <translation type="unfinished" />
+        <translation>Tidak satu pun kamus Anda menerbitkan pembaruan.</translation>
     </message>
     <message>
         <source>Dictionaries are up to date (%1 could not be checked).</source>
-        <translation type="unfinished" />
+        <translation>Kamus sudah mutakhir (%1 kamus tidak dapat diperiksa).</translation>
     </message>
     <message>
         <source>Dictionaries are up to date.</source>
-        <translation type="unfinished" />
+        <translation>Kamus sudah mutakhir.</translation>
     </message>
     <message>
         <source>Dictionary updates</source>
-        <translation type="unfinished" />
+        <translation>Pembaruan kamus</translation>
     </message>
     <message>
         <source>Dictionaries updated: %1</source>
-        <translation type="unfinished" />
+        <translation>Kamus diperbarui: %1</translation>
     </message>
     <message>
         <source>Downloaded resources were left inactive because their storage folder changed.</source>
@@ -6970,22 +6982,6 @@ Lanjutkan?</translation>
         <translation>Waktu tambahan sebelum dan sesudah subtitel.</translation>
     </message>
     <message>
-        <source>Off</source>
-        <translation>Mati</translation>
-    </message>
-    <message>
-        <source>Google, then Papago</source>
-        <translation>Google, lalu Papago</translation>
-    </message>
-    <message>
-        <source>Google only</source>
-        <translation>Hanya Google</translation>
-    </message>
-    <message>
-        <source>Papago only</source>
-        <translation>Hanya Papago</translation>
-    </message>
-    <message>
         <source>Text-to-speech</source>
         <translation>Text-to-speech</translation>
     </message>
@@ -7056,6 +7052,30 @@ Lanjutkan?</translation>
     <message>
         <source>Custom (%1 fps · %2 px · quality %3)</source>
         <translation>Kustom (%1 fps · %2 px · kualitas %3)</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>Mati</translation>
+    </message>
+    <message>
+        <source>Google, then Papago</source>
+        <translation>Google, lalu Papago</translation>
+    </message>
+    <message>
+        <source>Google only</source>
+        <translation>Hanya Google</translation>
+    </message>
+    <message>
+        <source>Papago only</source>
+        <translation>Hanya Papago</translation>
+    </message>
+    <message>
+        <source>Google</source>
+        <translation>Google</translation>
+    </message>
+    <message>
+        <source>Microsoft Edge</source>
+        <translation>Microsoft Edge</translation>
     </message>
 </context><context>
     <name>MiniJobMonitor</name>
@@ -10905,18 +10925,6 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
         <translation>Pembuatan subtitel</translation>
     </message>
     <message>
-        <source>Japanese</source>
-        <translation>Jepang</translation>
-    </message>
-    <message>
-        <source>Korean</source>
-        <translation>Korea</translation>
-    </message>
-    <message>
-        <source>Chinese</source>
-        <translation>Mandarin</translation>
-    </message>
-    <message>
         <source>Input</source>
         <translation>Masukan</translation>
     </message>
@@ -11761,6 +11769,10 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
     <message>
         <source>ffmpeg (video tools)</source>
         <translation>ffmpeg (alat video)</translation>
+    </message>
+    <message>
+        <source>Language engine</source>
+        <translation>Mesin bahasa</translation>
     </message>
     <message>
         <source>Offline dictionary</source>

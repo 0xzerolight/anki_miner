@@ -64,8 +64,8 @@
         <translation>重設統計資料…</translation>
     </message>
     <message>
-        <source>Delete every recorded mining session and difficulty score. This cannot be undone.</source>
-        <translation>刪除所有記錄的採集工作階段與難度分數。此操作無法復原。</translation>
+        <source>Delete the mining sessions and difficulty scores recorded for the current mining language. This cannot be undone.</source>
+        <translation>刪除為目前採集語言記錄的採集工作階段與難度分數。此操作無法復原。</translation>
     </message>
     <message>
         <source>Analytics Tab</source>
@@ -168,8 +168,8 @@
         <translation>重設統計資料</translation>
     </message>
     <message>
-        <source>Delete every recorded mining session and series difficulty score? This cannot be undone. Your Anki cards, known words, and settings are not affected.</source>
-        <translation>要刪除所有記錄的採集工作階段與系列難度分數嗎？此操作無法復原。Anki 卡片、已知單字及設定不會受到影響。</translation>
+        <source>Delete every mining session and series difficulty score recorded for %1? This cannot be undone. Statistics for your other mining languages, your Anki cards, known words, and settings are not affected.</source>
+        <translation>要刪除為 %1 記錄的所有採集工作階段與系列難度分數嗎？此操作無法復原。其他採集語言的統計、Anki 卡片、已知單字及設定不會受到影響。</translation>
     </message>
     <message>
         <source>Statistics could not be reset.</source>
@@ -593,15 +593,15 @@
     </message>
     <message>
         <source>Open Anki when Anki Miner starts</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner 啟動時開啟 Anki</translation>
     </message>
     <message>
         <source>Starts Anki if it isn't running when Anki Miner opens.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner 開啟時，若 Anki 尚未執行，會自動啟動 Anki。</translation>
     </message>
     <message>
         <source>Anki Miner can't find Anki where its installer puts it, so it can't open it.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner 在 Anki 安裝程式的預設安裝位置找不到 Anki，因此無法開啟它。</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
@@ -2126,8 +2126,8 @@ No index files are deleted.</source>
         <translation>從漫畫採集</translation>
     </message>
     <message>
-        <source>Mine vocabulary from Japanese manga volumes processed with mokuro.</source>
-        <translation>從以 mokuro 處理的日文漫畫卷採集詞彙。</translation>
+        <source>Mine vocabulary from manga volumes processed with mokuro.</source>
+        <translation>從以 mokuro 處理的漫畫卷採集詞彙。</translation>
     </message>
     <message>
         <source>Mine from novels</source>
@@ -2419,11 +2419,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Keep dictionaries up to date</source>
-        <translation type="unfinished" />
+        <translation>保持字典為最新版本</translation>
     </message>
     <message>
         <source>Dictionaries that publish updates (Jitendex, JMdict, Wiktionary, Jiten, …) update themselves once a week; Update Now checks right away.</source>
-        <translation type="unfinished" />
+        <translation>會發布更新的字典（Jitendex、JMdict、Wiktionary、Jiten…）每週會自動更新一次；按「立即更新」可立即檢查。</translation>
     </message>
     <message>
         <source>Add frequency lists</source>
@@ -2884,10 +2884,6 @@ No index files are deleted.</source>
         <translation>牌組</translation>
     </message>
     <message>
-        <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries, frequency sources and pitch data.</source>
-        <translation>使用目前已安裝的字典、頻率來源與高低音調資料，補齊您先前採集的筆記中缺少的欄位。</translation>
-    </message>
-    <message>
         <source>Deck:</source>
         <translation>牌組：</translation>
     </message>
@@ -2986,6 +2982,14 @@ No index files are deleted.</source>
     <message>
         <source>Map this field in Settings → Cards &amp; Anki</source>
         <translation>請在「設定」→「卡片與 Anki」中對應此欄位</translation>
+    </message>
+    <message>
+        <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries, frequency sources and pitch data.</source>
+        <translation>使用目前已安裝的字典、頻率來源與高低音調資料，補齊您先前採集的筆記中缺少的欄位。</translation>
+    </message>
+    <message>
+        <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries and frequency sources.</source>
+        <translation>使用目前已安裝的字典與頻率來源，補齊您先前採集的筆記中缺少的欄位。</translation>
     </message>
     <message>
         <source>Select at least one field group to fill.</source>
@@ -4423,19 +4427,19 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Updates</source>
-        <translation type="unfinished">更新</translation>
+        <translation>更新</translation>
     </message>
     <message>
         <source>Update automatically once a week</source>
-        <translation type="unfinished" />
+        <translation>每週自動更新一次</translation>
     </message>
     <message>
         <source>Update Now</source>
-        <translation type="unfinished" />
+        <translation>立即更新</translation>
     </message>
     <message>
         <source>Dictionaries, frequency lists and pitch-accent sources whose publisher posts updates (Jitendex, JMdict, Wiktionary, Jiten, …) are downloaded again when a newer version is out. Their order and on/off state stay as they are.</source>
-        <translation type="unfinished" />
+        <translation>發布者會推出更新的字典、頻率清單與高低音調來源（Jitendex、JMdict、Wiktionary、Jiten…），會在有新版本時重新下載。其順序與啟用／停用狀態維持不變。</translation>
     </message>
     <message>
         <source>Storage</source>
@@ -4936,6 +4940,22 @@ No files on disk are deleted.</source>
         <translation>句子音訊：%1/%2 個句子</translation>
     </message>
     <message>
+        <source>hiragana-only</source>
+        <translation>純平假名</translation>
+    </message>
+    <message>
+        <source>katakana-only</source>
+        <translation>純片假名</translation>
+    </message>
+    <message>
+        <source>hangul-only</source>
+        <translation>純諺文</translation>
+    </message>
+    <message>
+        <source>hanja-containing</source>
+        <translation>含韓文漢字</translation>
+    </message>
+    <message>
         <source>This document contains no %1 text</source>
         <translation>此文件不含任何 %1 文字</translation>
     </message>
@@ -5032,14 +5052,6 @@ No files on disk are deleted.</source>
     <message>
         <source>Word list filter: removed %1 words</source>
         <translation>單字清單篩選器：已移除 %1 個單字</translation>
-    </message>
-    <message>
-        <source>hiragana-only</source>
-        <translation>純平假名</translation>
-    </message>
-    <message>
-        <source>katakana-only</source>
-        <translation>純片假名</translation>
     </message>
     <message>
         <source>Script-type filter: removed %1 %2 words</source>
@@ -6561,7 +6573,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Update Dictionaries Now</source>
-        <translation type="unfinished" />
+        <translation>立即更新字典</translation>
     </message>
     <message>
         <source>Download Recommended Resources...</source>
@@ -6657,39 +6669,39 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Checking for dictionary updates…</source>
-        <translation type="unfinished" />
+        <translation>正在檢查字典更新…</translation>
     </message>
     <message>
         <source>Could not check for dictionary updates: %1</source>
-        <translation type="unfinished" />
+        <translation>無法檢查字典更新：%1</translation>
     </message>
     <message>
         <source>Downloading dictionary updates…</source>
-        <translation type="unfinished" />
+        <translation>正在下載字典更新…</translation>
     </message>
     <message>
         <source>Your dictionaries changed during the check. Try again.</source>
-        <translation type="unfinished" />
+        <translation>檢查期間您的字典已變更。請再試一次。</translation>
     </message>
     <message>
         <source>None of your dictionaries publish updates.</source>
-        <translation type="unfinished" />
+        <translation>您的字典都沒有發布更新。</translation>
     </message>
     <message>
         <source>Dictionaries are up to date (%1 could not be checked).</source>
-        <translation type="unfinished" />
+        <translation>字典皆已是最新版本（有 %1 個無法檢查）。</translation>
     </message>
     <message>
         <source>Dictionaries are up to date.</source>
-        <translation type="unfinished" />
+        <translation>字典皆已是最新版本。</translation>
     </message>
     <message>
         <source>Dictionary updates</source>
-        <translation type="unfinished" />
+        <translation>字典更新</translation>
     </message>
     <message>
         <source>Dictionaries updated: %1</source>
-        <translation type="unfinished" />
+        <translation>已更新字典：%1</translation>
     </message>
     <message>
         <source>Downloaded resources were left inactive because their storage folder changed.</source>
@@ -6970,22 +6982,6 @@ Continue?</source>
         <translation>字幕前後額外保留的時間。</translation>
     </message>
     <message>
-        <source>Off</source>
-        <translation>關閉</translation>
-    </message>
-    <message>
-        <source>Google, then Papago</source>
-        <translation>先 Google，再 Papago</translation>
-    </message>
-    <message>
-        <source>Google only</source>
-        <translation>僅 Google</translation>
-    </message>
-    <message>
-        <source>Papago only</source>
-        <translation>僅 Papago</translation>
-    </message>
-    <message>
         <source>Text-to-speech</source>
         <translation>文字轉語音</translation>
     </message>
@@ -7056,6 +7052,30 @@ Continue?</source>
     <message>
         <source>Custom (%1 fps · %2 px · quality %3)</source>
         <translation>自訂（%1 fps · %2 px · 畫質 %3）</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>關閉</translation>
+    </message>
+    <message>
+        <source>Google, then Papago</source>
+        <translation>先 Google，再 Papago</translation>
+    </message>
+    <message>
+        <source>Google only</source>
+        <translation>僅 Google</translation>
+    </message>
+    <message>
+        <source>Papago only</source>
+        <translation>僅 Papago</translation>
+    </message>
+    <message>
+        <source>Google</source>
+        <translation>Google</translation>
+    </message>
+    <message>
+        <source>Microsoft Edge</source>
+        <translation>Microsoft Edge</translation>
     </message>
 </context><context>
     <name>MiniJobMonitor</name>
@@ -10905,18 +10925,6 @@ Your installed resources and your theme are kept.</source>
         <translation>字幕產生</translation>
     </message>
     <message>
-        <source>Japanese</source>
-        <translation>日文</translation>
-    </message>
-    <message>
-        <source>Korean</source>
-        <translation>韓文</translation>
-    </message>
-    <message>
-        <source>Chinese</source>
-        <translation>中文</translation>
-    </message>
-    <message>
         <source>Input</source>
         <translation>輸入</translation>
     </message>
@@ -11761,6 +11769,10 @@ Your installed resources and your theme are kept.</source>
     <message>
         <source>ffmpeg (video tools)</source>
         <translation>ffmpeg（影片工具）</translation>
+    </message>
+    <message>
+        <source>Language engine</source>
+        <translation>語言引擎</translation>
     </message>
     <message>
         <source>Offline dictionary</source>

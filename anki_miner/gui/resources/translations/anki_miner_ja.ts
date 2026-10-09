@@ -64,8 +64,8 @@
         <translation>統計をリセット…</translation>
     </message>
     <message>
-        <source>Delete every recorded mining session and difficulty score. This cannot be undone.</source>
-        <translation>記録されたすべてのマイニングセッションと難易度スコアを削除します。この操作は元に戻せません。</translation>
+        <source>Delete the mining sessions and difficulty scores recorded for the current mining language. This cannot be undone.</source>
+        <translation>現在のマイニング言語の記録済みマイニングセッションと難易度スコアを削除します。この操作は元に戻せません。</translation>
     </message>
     <message>
         <source>Analytics Tab</source>
@@ -168,8 +168,8 @@
         <translation>統計をリセット</translation>
     </message>
     <message>
-        <source>Delete every recorded mining session and series difficulty score? This cannot be undone. Your Anki cards, known words, and settings are not affected.</source>
-        <translation>記録されたすべてのマイニングセッションとシリーズの難易度スコアを削除しますか？この操作は元に戻せません。Anki カード、既知単語、設定には影響しません。</translation>
+        <source>Delete every mining session and series difficulty score recorded for %1? This cannot be undone. Statistics for your other mining languages, your Anki cards, known words, and settings are not affected.</source>
+        <translation>%1 の記録済みマイニングセッションとシリーズの難易度スコアをすべて削除しますか？この操作は元に戻せません。ほかのマイニング言語の統計、Anki カード、既知単語、設定には影響しません。</translation>
     </message>
     <message>
         <source>Statistics could not be reset.</source>
@@ -593,15 +593,15 @@
     </message>
     <message>
         <source>Open Anki when Anki Miner starts</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner の起動時に Anki を開く</translation>
     </message>
     <message>
         <source>Starts Anki if it isn't running when Anki Miner opens.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner を開いたときに Anki が起動していなければ、Anki を起動します。</translation>
     </message>
     <message>
         <source>Anki Miner can't find Anki where its installer puts it, so it can't open it.</source>
-        <translation type="unfinished" />
+        <translation>Anki のインストーラーが配置する場所に Anki が見つからないため、Anki Miner は Anki を開けません。</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
@@ -2126,8 +2126,8 @@ No index files are deleted.</source>
         <translation>マンガからマイニング</translation>
     </message>
     <message>
-        <source>Mine vocabulary from Japanese manga volumes processed with mokuro.</source>
-        <translation>mokuro で処理した日本語マンガの巻から語彙をマイニングします。</translation>
+        <source>Mine vocabulary from manga volumes processed with mokuro.</source>
+        <translation>mokuro で処理したマンガの巻から語彙をマイニングします。</translation>
     </message>
     <message>
         <source>Mine from novels</source>
@@ -2419,11 +2419,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Keep dictionaries up to date</source>
-        <translation type="unfinished" />
+        <translation>辞書を最新の状態に保つ</translation>
     </message>
     <message>
         <source>Dictionaries that publish updates (Jitendex, JMdict, Wiktionary, Jiten, …) update themselves once a week; Update Now checks right away.</source>
-        <translation type="unfinished" />
+        <translation>更新が公開されている辞書（Jitendex、JMdict、Wiktionary、Jiten など）は週に 1 回自動で更新されます。「今すぐ更新」を押すとすぐに確認します。</translation>
     </message>
     <message>
         <source>Add frequency lists</source>
@@ -2884,10 +2884,6 @@ No index files are deleted.</source>
         <translation>デッキ</translation>
     </message>
     <message>
-        <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries, frequency sources and pitch data.</source>
-        <translation>現在インストールされている辞書・頻度ソース・ピッチデータを使って、以前マイニングしたノートの未入力フィールドを埋めます。</translation>
-    </message>
-    <message>
         <source>Deck:</source>
         <translation>デッキ：</translation>
     </message>
@@ -2986,6 +2982,14 @@ No index files are deleted.</source>
     <message>
         <source>Map this field in Settings → Cards &amp; Anki</source>
         <translation>このフィールドは設定 → カードと Anki でマッピングしてください</translation>
+    </message>
+    <message>
+        <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries, frequency sources and pitch data.</source>
+        <translation>現在インストールされている辞書・頻度ソース・ピッチデータを使って、以前マイニングしたノートの未入力フィールドを埋めます。</translation>
+    </message>
+    <message>
+        <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries and frequency sources.</source>
+        <translation>現在インストールされている辞書・頻度ソースを使って、以前マイニングしたノートの未入力フィールドを埋めます。</translation>
     </message>
     <message>
         <source>Select at least one field group to fill.</source>
@@ -4423,19 +4427,19 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Updates</source>
-        <translation type="unfinished">更新</translation>
+        <translation>更新</translation>
     </message>
     <message>
         <source>Update automatically once a week</source>
-        <translation type="unfinished" />
+        <translation>週に 1 回自動で更新する</translation>
     </message>
     <message>
         <source>Update Now</source>
-        <translation type="unfinished" />
+        <translation>今すぐ更新</translation>
     </message>
     <message>
         <source>Dictionaries, frequency lists and pitch-accent sources whose publisher posts updates (Jitendex, JMdict, Wiktionary, Jiten, …) are downloaded again when a newer version is out. Their order and on/off state stay as they are.</source>
-        <translation type="unfinished" />
+        <translation>提供元が更新を公開している辞書、頻度リスト、ピッチアクセントのソース（Jitendex、JMdict、Wiktionary、Jiten など）は、新しいバージョンが出ると再ダウンロードされます。並び順とオン/オフの状態はそのまま維持されます。</translation>
     </message>
     <message>
         <source>Storage</source>
@@ -4936,6 +4940,22 @@ No files on disk are deleted.</source>
         <translation>文章音声: %1/%2 文</translation>
     </message>
     <message>
+        <source>hiragana-only</source>
+        <translation>ひらがなのみ</translation>
+    </message>
+    <message>
+        <source>katakana-only</source>
+        <translation>カタカナのみ</translation>
+    </message>
+    <message>
+        <source>hangul-only</source>
+        <translation>ハングルのみ</translation>
+    </message>
+    <message>
+        <source>hanja-containing</source>
+        <translation>韓国漢字入り</translation>
+    </message>
+    <message>
         <source>This document contains no %1 text</source>
         <translation>この文書には %1 のテキストが含まれていません</translation>
     </message>
@@ -5032,14 +5052,6 @@ No files on disk are deleted.</source>
     <message>
         <source>Word list filter: removed %1 words</source>
         <translation>単語リストフィルター: %1 単語を除去</translation>
-    </message>
-    <message>
-        <source>hiragana-only</source>
-        <translation>ひらがなのみ</translation>
-    </message>
-    <message>
-        <source>katakana-only</source>
-        <translation>カタカナのみ</translation>
     </message>
     <message>
         <source>Script-type filter: removed %1 %2 words</source>
@@ -6561,7 +6573,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Update Dictionaries Now</source>
-        <translation type="unfinished" />
+        <translation>今すぐ辞書を更新</translation>
     </message>
     <message>
         <source>Download Recommended Resources...</source>
@@ -6657,39 +6669,39 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Checking for dictionary updates…</source>
-        <translation type="unfinished" />
+        <translation>辞書の更新を確認しています…</translation>
     </message>
     <message>
         <source>Could not check for dictionary updates: %1</source>
-        <translation type="unfinished" />
+        <translation>辞書の更新を確認できませんでした: %1</translation>
     </message>
     <message>
         <source>Downloading dictionary updates…</source>
-        <translation type="unfinished" />
+        <translation>辞書の更新をダウンロードしています…</translation>
     </message>
     <message>
         <source>Your dictionaries changed during the check. Try again.</source>
-        <translation type="unfinished" />
+        <translation>確認中に辞書が変更されました。再試行してください。</translation>
     </message>
     <message>
         <source>None of your dictionaries publish updates.</source>
-        <translation type="unfinished" />
+        <translation>更新を公開している辞書はありません。</translation>
     </message>
     <message>
         <source>Dictionaries are up to date (%1 could not be checked).</source>
-        <translation type="unfinished" />
+        <translation>辞書は最新です（%1 件は確認できませんでした）。</translation>
     </message>
     <message>
         <source>Dictionaries are up to date.</source>
-        <translation type="unfinished" />
+        <translation>辞書は最新です。</translation>
     </message>
     <message>
         <source>Dictionary updates</source>
-        <translation type="unfinished" />
+        <translation>辞書の更新</translation>
     </message>
     <message>
         <source>Dictionaries updated: %1</source>
-        <translation type="unfinished" />
+        <translation>辞書を更新しました: %1</translation>
     </message>
     <message>
         <source>Downloaded resources were left inactive because their storage folder changed.</source>
@@ -6970,22 +6982,6 @@ Continue?</source>
         <translation>字幕の前後に追加する時間。</translation>
     </message>
     <message>
-        <source>Off</source>
-        <translation>オフ</translation>
-    </message>
-    <message>
-        <source>Google, then Papago</source>
-        <translation>Google、次に Papago</translation>
-    </message>
-    <message>
-        <source>Google only</source>
-        <translation>Google のみ</translation>
-    </message>
-    <message>
-        <source>Papago only</source>
-        <translation>Papago のみ</translation>
-    </message>
-    <message>
         <source>Text-to-speech</source>
         <translation>音声合成</translation>
     </message>
@@ -7056,6 +7052,30 @@ Continue?</source>
     <message>
         <source>Custom (%1 fps · %2 px · quality %3)</source>
         <translation>カスタム（%1 fps · %2 px · 品質 %3）</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>オフ</translation>
+    </message>
+    <message>
+        <source>Google, then Papago</source>
+        <translation>Google、次に Papago</translation>
+    </message>
+    <message>
+        <source>Google only</source>
+        <translation>Google のみ</translation>
+    </message>
+    <message>
+        <source>Papago only</source>
+        <translation>Papago のみ</translation>
+    </message>
+    <message>
+        <source>Google</source>
+        <translation>Google</translation>
+    </message>
+    <message>
+        <source>Microsoft Edge</source>
+        <translation>Microsoft Edge</translation>
     </message>
 </context><context>
     <name>MiniJobMonitor</name>
@@ -10905,18 +10925,6 @@ Your installed resources and your theme are kept.</source>
         <translation>字幕生成</translation>
     </message>
     <message>
-        <source>Japanese</source>
-        <translation>日本語</translation>
-    </message>
-    <message>
-        <source>Korean</source>
-        <translation>韓国語</translation>
-    </message>
-    <message>
-        <source>Chinese</source>
-        <translation>中国語</translation>
-    </message>
-    <message>
         <source>Input</source>
         <translation>入力</translation>
     </message>
@@ -11761,6 +11769,10 @@ Your installed resources and your theme are kept.</source>
     <message>
         <source>ffmpeg (video tools)</source>
         <translation>ffmpeg（動画ツール）</translation>
+    </message>
+    <message>
+        <source>Language engine</source>
+        <translation>言語エンジン</translation>
     </message>
     <message>
         <source>Offline dictionary</source>

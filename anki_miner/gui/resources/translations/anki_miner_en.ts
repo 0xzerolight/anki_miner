@@ -64,7 +64,7 @@
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Delete every recorded mining session and difficulty score. This cannot be undone.</source>
+        <source>Delete the mining sessions and difficulty scores recorded for the current mining language. This cannot be undone.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -168,7 +168,7 @@
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Delete every recorded mining session and series difficulty score? This cannot be undone. Your Anki cards, known words, and settings are not affected.</source>
+        <source>Delete every mining session and series difficulty score recorded for %1? This cannot be undone. Statistics for your other mining languages, your Anki cards, known words, and settings are not affected.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2120,7 +2120,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Mine vocabulary from Japanese manga volumes processed with mokuro.</source>
+        <source>Mine vocabulary from manga volumes processed with mokuro.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2878,10 +2878,6 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries, frequency sources and pitch data.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Deck:</source>
         <translation type="unfinished" />
     </message>
@@ -2979,6 +2975,14 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Map this field in Settings → Cards &amp; Anki</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries, frequency sources and pitch data.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries and frequency sources.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4945,6 +4949,22 @@ No files on disk are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>hiragana-only</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>katakana-only</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>hangul-only</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>hanja-containing</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>This document contains no %1 text</source>
         <translation type="unfinished" />
     </message>
@@ -5045,14 +5065,6 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Word list filter: removed %1 words</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>hiragana-only</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>katakana-only</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6977,22 +6989,6 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Off</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Google, then Papago</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Google only</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Papago only</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Text-to-speech</source>
         <translation type="unfinished" />
     </message>
@@ -7062,6 +7058,30 @@ Continue?</source>
     </message>
     <message>
         <source>Custom (%1 fps · %2 px · quality %3)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Off</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Google, then Papago</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Google only</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Papago only</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Google</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Microsoft Edge</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -10899,18 +10919,6 @@ Your installed resources and your theme are kept.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Japanese</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Korean</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Chinese</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Input</source>
         <translation type="unfinished" />
     </message>
@@ -11754,6 +11762,10 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>ffmpeg (video tools)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Language engine</source>
         <translation type="unfinished" />
     </message>
     <message>
