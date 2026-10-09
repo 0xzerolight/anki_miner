@@ -44,6 +44,7 @@ subprocess: anki_miner/services/audio_condenser.py
 subprocess: anki_miner/services/media_extractor.py
 subprocess: anki_miner/services/shortcut_service.py
 subprocess: anki_miner/services/validation_service.py
+subprocess: anki_miner/services/video_ocr/frame_source.py
 subprocess: anki_miner/services/ytdlp_invocation.py
 subprocess: anki_miner/services/ytdlp_updater.py
 subprocess: anki_miner/utils/audio_track_detector.py

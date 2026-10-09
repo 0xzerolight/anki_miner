@@ -221,6 +221,7 @@ class TestShutdownJoinsOffThreadWorkers:
             "onnx_pack_download_worker",
             "asr_pack_download_worker",
             "vulkan_model_download_worker",
+            "video_ocr_install_worker",
             "restyle_cards_worker",
             "resource_download_worker",
             "prewarm_worker",
@@ -738,6 +739,107 @@ class TestStartMokuroInstall:
 
         assert controller.mokuro_install_worker is None
         worker.deleteLater.assert_called_once()
+
+
+class TestStartVideoOcrInstall:
+    """start_video_ocr_install: guard, routing, release, and the onnx-pack mutual exclusion."""
+
+    def test_starts_and_routes_status(self, controller, qtbot, monkeypatch, tmp_path):
+        worker = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker)
+
+        status_received: list[str] = []
+        controller.start_video_ocr_install(
+            tmp_path / "pack", tmp_path / "models", status_received.append, lambda ok, msg: None
+        )
+
+        assert controller.video_ocr_install_worker is worker
+
+        worker.status.emit("Downloading the OCR models…")
+        assert status_received == ["Downloading the OCR models…"]
+
+    def test_routes_result(self, controller, qtbot, monkeypatch, tmp_path):
+        worker = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker)
+
+        finished_calls: list[tuple] = []
+        controller.start_video_ocr_install(
+            tmp_path / "pack",
+            tmp_path / "models",
+            lambda msg: None,
+            lambda ok, msg: finished_calls.append((ok, msg)),
+        )
+
+        worker.emit_result(True, "OCR engine installed.")
+        assert finished_calls == [(True, "OCR engine installed.")]
+
+    def test_refused_while_running(self, controller, qtbot, monkeypatch, tmp_path):
+        worker_a = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker_a)
+        controller.start_video_ocr_install(tmp_path / "pack", tmp_path / "models", lambda m: None, lambda ok, m: None)
+        assert controller.video_ocr_install_worker is worker_a
+
+        worker_b = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker_b)
+        controller.start_video_ocr_install(tmp_path / "pack", tmp_path / "models", lambda m: None, lambda ok, m: None)
+        assert controller.video_ocr_install_worker is worker_a
+
+    def test_handle_released_on_finished(self, controller, qtbot, monkeypatch, tmp_path):
+        worker = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker)
+        controller.start_video_ocr_install(tmp_path / "pack", tmp_path / "models", lambda m: None, lambda ok, m: None)
+
+        worker.emit_finished()
+
+        assert controller.video_ocr_install_worker is None
+        worker.deleteLater.assert_called_once()
+
+    def test_refused_while_the_vad_pack_downloads(self, controller, qtbot, monkeypatch, tmp_path):
+        """Both write into onnx_pack_root: a running VAD pack download refuses the OCR setup."""
+        built: list[object] = []
+        monkeypatch.setattr(
+            "anki_miner.gui.workers.install_worker.InstallWorker",
+            lambda task, parent=None: built.append(task),
+        )
+        vad = MagicMock()
+        vad.isRunning.return_value = True
+        controller.onnx_pack_download_worker = vad
+
+        finished_calls: list[tuple] = []
+        controller.start_video_ocr_install(
+            tmp_path / "pack",
+            tmp_path / "models",
+            lambda msg: None,
+            lambda ok, msg: finished_calls.append((ok, msg)),
+        )
+
+        assert len(finished_calls) == 1
+        ok, message = finished_calls[0]
+        assert ok is False and message
+        assert built == []
+        assert controller.video_ocr_install_worker is None
+
+    def test_vad_pack_download_refused_while_the_ocr_setup_runs(self, controller, qtbot, monkeypatch, tmp_path):
+        """Mirror image: a running OCR setup refuses the VAD pack download."""
+        built: list[object] = []
+        monkeypatch.setattr(
+            "anki_miner.gui.workers.install_worker.InstallWorker",
+            lambda task, parent=None: built.append(task),
+        )
+        ocr = MagicMock()
+        ocr.isRunning.return_value = True
+        controller.video_ocr_install_worker = ocr
+
+        finished_calls: list[tuple] = []
+        controller.start_vad_pack_download(
+            tmp_path / "pack", lambda msg: None, lambda ok, msg: finished_calls.append((ok, msg))
+        )
+
+        assert len(finished_calls) == 1
+        ok, message = finished_calls[0]
+        assert ok is False and message
+        assert built == []
+        assert controller.onnx_pack_download_worker is None
 
 
 class TestStartAsrModelDownload:

@@ -84,6 +84,8 @@ CAPABILITY_VOCABULARY = frozenset(
         # Manga OCR (mokuro's manga-ocr model reads Japanese only): gates the
         # Utilities tool, its System Health row and its Usage Guide entry (E17).
         "manga_ocr",
+        # Video OCR (meikiocr reads Japanese game text only): gates the Utilities tool and its Usage Guide entry.
+        "video_ocr",
         "hangul_filters",
         "hanja",
         "pinyin",

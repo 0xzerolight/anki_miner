@@ -215,12 +215,38 @@ class TestMangaOcrLanguageGate:
 
         panel.utility_checkboxes["retime"].click()
 
-        assert seen[-1] == ("retime",)
+        # Video OCR, gated too, keeps the user's own "hidden" the same way.
+        assert seen[-1] == ("retime", "videoocr")
+
+
+class TestVideoOcrLanguageGate:
+    """The Video OCR box shows only for a language that can use the tool."""
+
+    def test_hidden_for_another_language(self, panel, test_config):
+        panel.load_from_config(replace(test_config, language="zh"))
+
+        assert panel.utility_checkboxes["videoocr"].isHidden()
+        assert not panel.utility_checkboxes["generate"].isHidden()
+
+    def test_shown_for_japanese(self, panel, test_config):
+        panel.load_from_config(replace(test_config, language="zh"))
+        panel.load_from_config(replace(test_config, language="ja"))
+
+        assert not panel.utility_checkboxes["videoocr"].isHidden()
+
+    def test_the_last_visible_tool_stays_locked(self, panel, test_config):
+        hidden = tuple(k for k in panel.utility_checkboxes if k not in ("generate", "videoocr"))
+        panel.load_from_config(replace(test_config, language="zh", hidden_utilities=hidden))
+
+        assert not panel.utility_checkboxes["generate"].isEnabled()
 
 
 def test_the_tab_rule_falls_back_to_the_language_gate_alone():
-    everything_but_ocr = [k for k in UTILITY_SUBTABS if k != "mokuro"]
-    assert hidden_utilities_on_tab(everything_but_ocr, frozenset()) == frozenset({"mokuro"})
-    assert hidden_utilities_on_tab(["retime"], frozenset()) == frozenset({"retime", "mokuro"})
-    assert hidden_utilities_on_tab(["retime"], frozenset({"manga_ocr"})) == frozenset({"retime"})
-    assert hidden_utilities_on_tab(UTILITY_SUBTABS, frozenset({"manga_ocr"})) == frozenset()
+    ocr = frozenset({"mokuro", "videoocr"})
+    japanese = frozenset({"manga_ocr", "video_ocr"})
+    everything_but_ocr = [k for k in UTILITY_SUBTABS if k not in ocr]
+    assert hidden_utilities_on_tab(everything_but_ocr, frozenset()) == ocr
+    assert hidden_utilities_on_tab(["retime"], frozenset()) == frozenset({"retime"}) | ocr
+    assert hidden_utilities_on_tab(["retime"], frozenset({"manga_ocr"})) == frozenset({"retime", "videoocr"})
+    assert hidden_utilities_on_tab(["retime"], japanese) == frozenset({"retime"})
+    assert hidden_utilities_on_tab(UTILITY_SUBTABS, japanese) == frozenset()

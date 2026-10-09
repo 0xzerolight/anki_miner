@@ -2,8 +2,8 @@
 
 Hidden ``ANKI_MINER_SMOKE`` modes:
 
-* ``youtube``, ``asr``, ``whispercpp`` and ``ja``/``ko``/``zh`` validate frozen
-  dependencies before Qt starts.
+* ``youtube``, ``asr``, ``whispercpp``, ``videoocr`` and ``ja``/``ko``/``zh``
+  validate frozen dependencies before Qt starts.
 * ``asr-absent`` asserts the opposite of ``asr``: the bare bundle reports every
   ASR pack package absent.
 * ``installer`` runs full GUI composition while suppressing optional startup
@@ -323,6 +323,40 @@ def _run_asr_pack_absent_bundled_smoke() -> int:
         print("BUNDLED_SMOKE_FAIL: _engine.available() is True in the bare bundle", file=sys.stderr)
         return 1
     print("BUNDLED_SMOKE_PASS: asr pack packages absent from the bare bundle")
+    return 0
+
+
+#: The line the videoocr smoke renders and must read back exactly.
+_VIDEO_OCR_SMOKE_TEXT = "こんにちは"
+
+
+def _run_video_ocr_bundled_smoke() -> int:
+    """ANKI_MINER_SMOKE=videoocr: the seeded onnxruntime pack and OCR models read real text in the frozen app.
+
+    bundle_smoke.sh copies the seed into $ANKI_MINER_HOME/{onnx_pack,ocr_models}, the
+    default config's paths. A line rendered with the bundled Japanese font goes through
+    the whole read path (detect, recognise, cleanup) and must come back exactly, so no
+    copyrighted crop is committed. Exits before Qt init.
+    """
+    try:
+        import numpy as np
+        from PIL import Image, ImageDraw, ImageFont
+
+        from anki_miner.services.video_ocr.scanner import read_region_text
+
+        font = ImageFont.truetype(str(get_resource_dir() / "fonts" / "NotoSansJP-Regular.otf"), 40)
+        image = Image.new("RGB", (640, 120), (90, 90, 90))
+        ImageDraw.Draw(image).text(
+            (40, 30), _VIDEO_OCR_SMOKE_TEXT, font=font, fill=(255, 255, 255), stroke_width=3, stroke_fill=(0, 0, 0)
+        )
+        text = read_region_text(AnkiMinerConfig(), np.ascontiguousarray(np.asarray(image)[:, :, ::-1]))
+    except Exception as exc:  # noqa: BLE001 — bucket C: pre-Qt smoke reports terminal failure to stderr.
+        print(f"BUNDLED_SMOKE_FAIL: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return 1
+    if text != _VIDEO_OCR_SMOKE_TEXT:
+        print(f"BUNDLED_SMOKE_FAIL: videoocr read {text!r}, expected {_VIDEO_OCR_SMOKE_TEXT!r}", file=sys.stderr)
+        return 1
+    print("BUNDLED_SMOKE_PASS: videoocr read a rendered line through the onnxruntime pack and meikiocr models")
     return 0
 
 
@@ -1450,6 +1484,34 @@ def _connect_mokuro_install(window: MainWindow, subtitles_tab: SubtitlesTab) -> 
     )
 
 
+def _connect_video_ocr_install(window: MainWindow, subtitles_tab: SubtitlesTab, settings_tab: SettingsTab) -> None:
+    """Wire Video OCR's setup card to its install worker.
+
+    The task may have installed the onnxruntime pack, which Settings' silence-removal
+    row also reads, even when it then failed on the models, so that row is refreshed.
+    Not while that row's own download runs (the only time the task is refused): a
+    refresh then would clear its in-flight guard.
+    """
+
+    def _tail(request_arg: object, ok: bool, message: str) -> None:
+        subtitles_tab.video_ocr_tab.notify_install_finished(ok)
+        if not still_running(window.background_tasks.onnx_pack_download_worker):
+            settings_tab.subtitles_panel.notify_vad_pack_download_finished(window.get_config().onnx_pack_root)
+
+    def _start(request_arg: object, on_status: Callable[[str], None], on_finished: Callable[[bool, str], None]) -> None:
+        config = window.get_config()
+        window.background_tasks.start_video_ocr_install(
+            config.onnx_pack_root, config.video_ocr_models_root, on_status, on_finished
+        )
+
+    _connect_download(
+        subtitles_tab.video_ocr_tab.video_ocr_install_requested,
+        set_status=subtitles_tab.video_ocr_tab.set_install_status,
+        start=_start,
+        on_finished_tail=_tail,
+    )
+
+
 def _connect_ytdlp_download(window: MainWindow, video_tab: VideoTab, subtitles_tab: SubtitlesTab) -> None:
     """Wire the two screens that need yt-dlp to the one updater.
 
@@ -1920,6 +1982,8 @@ def compose_main_window(
         _connect(window, settings_tab)
     # mokuro install lives on the Manga OCR tab itself (see _connect_mokuro_install).
     _connect_mokuro_install(window, subtitles_tab)
+    # So does the Video OCR engine download, on its own setup card.
+    _connect_video_ocr_install(window, subtitles_tab, settings_tab)
     # Utilities -> Download and Video -> YouTube offer the same repair when
     # yt-dlp is missing; both route to the updater the Settings button uses.
     _connect_ytdlp_download(window, video_tab, subtitles_tab)
@@ -1990,6 +2054,7 @@ def compose_main_window(
         subtitles_tab.booksync_tab,
         subtitles_tab.readability_tab,
         subtitles_tab.tracks_tab,
+        subtitles_tab.video_ocr_tab,
     )
     for screen in published:
         screen.bind_task_registry(window.task_registry)
@@ -2320,6 +2385,9 @@ def main():
 
     if os.environ.get("ANKI_MINER_SMOKE") == "whispercpp":
         sys.exit(_run_whispercpp_bundled_smoke())
+
+    if os.environ.get("ANKI_MINER_SMOKE") == "videoocr":
+        sys.exit(_run_video_ocr_bundled_smoke())
 
     smoke_language = os.environ.get("ANKI_MINER_SMOKE")
     if smoke_language in AVAILABLE_LANGUAGES:

@@ -1,9 +1,9 @@
 """Tests for SubtitlesTab container.
 
 Covers:
-- Inner QTabWidget has exactly ten tabs: Generate (0), Retime (1), Condense (2), Card Backfill (3),
+- Inner QTabWidget has exactly eleven tabs: Generate (0), Retime (1), Condense (2), Card Backfill (3),
   Deck Filter (4), Download (5), Manga OCR (6), Audiobook Sync (7), Readability (8),
-  Tracks (9).
+  Tracks (9), Video OCR (10).
 - update_config fans out to all child tabs.
 - iter_close_workers yields workers from all children.
 - SubtitlesTab has no worker_thread attribute (or it is None-safe via getattr).
@@ -49,6 +49,8 @@ _MOKURO_COMPUTE_AVAILABLE = "anki_miner.gui.widgets.mokuro_tab.MokuroTab._comput
 _READABILITY_COMPUTE_AVAILABLE = "anki_miner.gui.widgets.readability_tab.ReadabilityTab._compute_engine_available"
 # Same rationale for the Tracks sub-tab's ffmpeg + ffprobe probe.
 _TRACKS_COMPUTE_AVAILABLE = "anki_miner.gui.widgets.tracks_tab.TracksTab._compute_ffmpeg_available"
+# Same rationale for the Video OCR sub-tab's onnxruntime + models probe.
+_VIDEO_OCR_COMPUTE_AVAILABLE = "anki_miner.gui.widgets.video_ocr_tab.VideoOcrTab._compute_engine_available"
 
 
 def _make_config(tmp_path: Path) -> AnkiMinerConfig:
@@ -69,6 +71,7 @@ def _make_tab(config: AnkiMinerConfig, qtbot) -> SubtitlesTab:
         patch(_MOKURO_COMPUTE_AVAILABLE, return_value=True),
         patch(_READABILITY_COMPUTE_AVAILABLE, return_value=True),
         patch(_TRACKS_COMPUTE_AVAILABLE, return_value=True),
+        patch(_VIDEO_OCR_COMPUTE_AVAILABLE, return_value=True),
         patch("pathlib.Path.exists", return_value=True),
     ):
         tab = SubtitlesTab(config)
@@ -82,6 +85,7 @@ def _make_tab(config: AnkiMinerConfig, qtbot) -> SubtitlesTab:
             tab.booksync_tab,
             tab.readability_tab,
             tab.tracks_tab,
+            tab.video_ocr_tab,
         ):
             assert child._availability_worker.wait(3000)
         qtbot.waitUntil(tab.generate_tab.generate_button.isEnabled, timeout=3000)
@@ -93,6 +97,7 @@ def _make_tab(config: AnkiMinerConfig, qtbot) -> SubtitlesTab:
         qtbot.waitUntil(tab.booksync_tab.sync_button.isEnabled, timeout=3000)
         qtbot.waitUntil(tab.readability_tab.check_button.isEnabled, timeout=3000)
         qtbot.waitUntil(tab.tracks_tab.extract_button.isEnabled, timeout=3000)
+        qtbot.waitUntil(tab.video_ocr_tab.ocr_button.isEnabled, timeout=3000)
     return tab
 
 
@@ -102,9 +107,9 @@ def _make_tab(config: AnkiMinerConfig, qtbot) -> SubtitlesTab:
 
 
 def test_inner_tab_count(qtbot, tmp_path):
-    """Inner QTabWidget must have exactly ten tabs."""
+    """Inner QTabWidget must have exactly eleven tabs."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
-    assert tab._inner_tabs.count() == 10
+    assert tab._inner_tabs.count() == 11
 
 
 def test_inner_tab_labels(qtbot, tmp_path):
@@ -120,6 +125,7 @@ def test_inner_tab_labels(qtbot, tmp_path):
     assert tab._inner_tabs.tabText(7) == "Audiobook Sync"
     assert tab._inner_tabs.tabText(8) == "Readability"
     assert tab._inner_tabs.tabText(9) == "Tracks"
+    assert tab._inner_tabs.tabText(10) == "Video OCR"
 
 
 def test_generate_tab_is_first(qtbot, tmp_path):
@@ -182,6 +188,12 @@ def test_tracks_tab_is_tenth(qtbot, tmp_path):
     assert tab._inner_tabs.widget(9) is tab.tracks_tab
 
 
+def test_video_ocr_tab_is_eleventh(qtbot, tmp_path):
+    """video_ocr_tab is the widget at index 10."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    assert tab._inner_tabs.widget(10) is tab.video_ocr_tab
+
+
 def test_the_sub_tab_underline_slides(qtbot, tmp_path):
     """Sub-tabs are navigation too -- see tests/unit/gui/test_animated_tab_bar.py."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
@@ -205,6 +217,7 @@ def test_the_sub_tab_underline_slides(qtbot, tmp_path):
         ("booksync", 7),
         ("readability", 8),
         ("tracks", 9),
+        ("videoocr", 10),
     ],
 )
 def test_open_subtab_switches_inner_tab(qtbot, tmp_path, key, expected_index):
@@ -243,6 +256,7 @@ def test_open_subtab_unknown_key_is_ignored(qtbot, tmp_path):
         "booksync",
         "readability",
         "tracks",
+        "videoocr",
     ],
 )
 def test_current_subtab_key_round_trips_with_open_subtab(qtbot, tmp_path, key):
@@ -281,6 +295,7 @@ def test_update_config_propagates_to_generate_tab(qtbot, tmp_path):
     tab.booksync_tab.update_config = MagicMock()
     tab.readability_tab.update_config = MagicMock()
     tab.tracks_tab.update_config = MagicMock()
+    tab.video_ocr_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
@@ -304,6 +319,7 @@ def test_update_config_propagates_to_retime_tab(qtbot, tmp_path):
     tab.booksync_tab.update_config = MagicMock()
     tab.readability_tab.update_config = MagicMock()
     tab.tracks_tab.update_config = MagicMock()
+    tab.video_ocr_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
@@ -327,6 +343,7 @@ def test_update_config_propagates_to_condense_tab(qtbot, tmp_path):
     tab.booksync_tab.update_config = MagicMock()
     tab.readability_tab.update_config = MagicMock()
     tab.tracks_tab.update_config = MagicMock()
+    tab.video_ocr_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
@@ -350,6 +367,7 @@ def test_update_config_propagates_to_backfill_tab(qtbot, tmp_path):
     tab.booksync_tab.update_config = MagicMock()
     tab.readability_tab.update_config = MagicMock()
     tab.tracks_tab.update_config = MagicMock()
+    tab.video_ocr_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
@@ -373,6 +391,7 @@ def test_update_config_propagates_to_download_tab(qtbot, tmp_path):
     tab.booksync_tab.update_config = MagicMock()
     tab.readability_tab.update_config = MagicMock()
     tab.tracks_tab.update_config = MagicMock()
+    tab.video_ocr_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
@@ -396,6 +415,7 @@ def test_update_config_propagates_to_mokuro_tab(qtbot, tmp_path):
     tab.booksync_tab.update_config = MagicMock()
     tab.readability_tab.update_config = MagicMock()
     tab.tracks_tab.update_config = MagicMock()
+    tab.video_ocr_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
@@ -419,6 +439,7 @@ def test_update_config_propagates_to_booksync_tab(qtbot, tmp_path):
     tab.booksync_tab.update_config = MagicMock()
     tab.readability_tab.update_config = MagicMock()
     tab.tracks_tab.update_config = MagicMock()
+    tab.video_ocr_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
@@ -443,6 +464,7 @@ def test_update_config_propagates_to_readability_tab(qtbot, tmp_path):
         tab.booksync_tab,
         tab.readability_tab,
         tab.tracks_tab,
+        tab.video_ocr_tab,
     ):
         child.update_config = MagicMock()
 
@@ -469,12 +491,40 @@ def test_update_config_propagates_to_tracks_tab(qtbot, tmp_path):
         tab.booksync_tab,
         tab.readability_tab,
         tab.tracks_tab,
+        tab.video_ocr_tab,
     ):
         child.update_config = MagicMock()
 
     tab.update_config(new_config)
 
     tab.tracks_tab.update_config.assert_called_once_with(new_config)
+
+
+def test_update_config_propagates_to_video_ocr_tab(qtbot, tmp_path):
+    """update_config must call video_ocr_tab.update_config with the new config."""
+    import dataclasses
+
+    config = _make_config(tmp_path)
+    tab = _make_tab(config, qtbot)
+
+    new_config = dataclasses.replace(config, asr_model="small")
+    for child in (
+        tab.generate_tab,
+        tab.retime_tab,
+        tab.condense_tab,
+        tab.backfill_tab,
+        tab.download_tab,
+        tab.mokuro_tab,
+        tab.booksync_tab,
+        tab.readability_tab,
+        tab.tracks_tab,
+        tab.video_ocr_tab,
+    ):
+        child.update_config = MagicMock()
+
+    tab.update_config(new_config)
+
+    tab.video_ocr_tab.update_config.assert_called_once_with(new_config)
 
 
 def test_update_config_stores_config(qtbot, tmp_path):
@@ -519,6 +569,7 @@ def test_iter_close_workers_yields_generate_worker(qtbot, tmp_path):
     tab.booksync_tab.iter_close_workers = MagicMock(return_value=iter([]))
     tab.readability_tab.iter_close_workers = MagicMock(return_value=iter([]))
     tab.tracks_tab.iter_close_workers = MagicMock(return_value=iter([]))
+    tab.video_ocr_tab.iter_close_workers = MagicMock(return_value=iter([]))
 
     workers = list(tab.iter_close_workers())
     assert fake_gen_worker in workers
@@ -538,6 +589,7 @@ def test_iter_close_workers_yields_retime_worker(qtbot, tmp_path):
     tab.booksync_tab.iter_close_workers = MagicMock(return_value=iter([]))
     tab.readability_tab.iter_close_workers = MagicMock(return_value=iter([]))
     tab.tracks_tab.iter_close_workers = MagicMock(return_value=iter([]))
+    tab.video_ocr_tab.iter_close_workers = MagicMock(return_value=iter([]))
 
     workers = list(tab.iter_close_workers())
     assert fake_retime_worker in workers
@@ -557,6 +609,7 @@ def test_iter_close_workers_yields_condense_worker(qtbot, tmp_path):
     tab.booksync_tab.iter_close_workers = MagicMock(return_value=iter([]))
     tab.readability_tab.iter_close_workers = MagicMock(return_value=iter([]))
     tab.tracks_tab.iter_close_workers = MagicMock(return_value=iter([]))
+    tab.video_ocr_tab.iter_close_workers = MagicMock(return_value=iter([]))
 
     workers = list(tab.iter_close_workers())
     assert fake_condense_worker in workers
@@ -575,6 +628,7 @@ def test_iter_close_workers_yields_all_when_all_active(qtbot, tmp_path):
     fake_booksync_worker = MagicMock(name="booksync_worker")
     fake_readability_worker = MagicMock(name="readability_worker")
     fake_tracks_worker = MagicMock(name="tracks_worker")
+    fake_video_ocr_worker = MagicMock(name="video_ocr_worker")
     tab.generate_tab.iter_close_workers = MagicMock(return_value=iter([fake_gen_worker]))
     tab.retime_tab.iter_close_workers = MagicMock(return_value=iter([fake_retime_worker]))
     tab.condense_tab.iter_close_workers = MagicMock(return_value=iter([fake_condense_worker]))
@@ -584,6 +638,7 @@ def test_iter_close_workers_yields_all_when_all_active(qtbot, tmp_path):
     tab.booksync_tab.iter_close_workers = MagicMock(return_value=iter([fake_booksync_worker]))
     tab.readability_tab.iter_close_workers = MagicMock(return_value=iter([fake_readability_worker]))
     tab.tracks_tab.iter_close_workers = MagicMock(return_value=iter([fake_tracks_worker]))
+    tab.video_ocr_tab.iter_close_workers = MagicMock(return_value=iter([fake_video_ocr_worker]))
 
     workers = list(tab.iter_close_workers())
     assert fake_gen_worker in workers
@@ -595,7 +650,8 @@ def test_iter_close_workers_yields_all_when_all_active(qtbot, tmp_path):
     assert fake_booksync_worker in workers
     assert fake_readability_worker in workers
     assert fake_tracks_worker in workers
-    assert len(workers) == 9
+    assert fake_video_ocr_worker in workers
+    assert len(workers) == 10
 
 
 # ---------------------------------------------------------------------------
@@ -689,6 +745,7 @@ def _refresh(tab: SubtitlesTab, config: AnkiMinerConfig, qtbot) -> None:
         patch(_MOKURO_COMPUTE_AVAILABLE, return_value=True),
         patch(_READABILITY_COMPUTE_AVAILABLE, return_value=True),
         patch(_TRACKS_COMPUTE_AVAILABLE, return_value=True),
+        patch(_VIDEO_OCR_COMPUTE_AVAILABLE, return_value=True),
     ):
         tab.update_config(config)
         for child in (
@@ -700,6 +757,7 @@ def _refresh(tab: SubtitlesTab, config: AnkiMinerConfig, qtbot) -> None:
             tab.booksync_tab,
             tab.readability_tab,
             tab.tracks_tab,
+            tab.video_ocr_tab,
         ):
             assert child._availability_worker.wait(3000)
     qtbot.wait(10)
@@ -717,6 +775,7 @@ def test_a_hidden_tool_is_off_the_tab_from_construction(qtbot, tmp_path):
         "booksync",
         "readability",
         "tracks",
+        "videoocr",
     ]
 
 

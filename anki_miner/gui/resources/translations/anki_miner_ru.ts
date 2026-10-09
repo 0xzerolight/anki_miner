@@ -1590,6 +1590,16 @@ No index files are deleted.</source>
         <translation>Прервано при закрытии Anki Miner</translation>
     </message>
 </context><context>
+    <name>BackgroundTaskController</name>
+    <message>
+        <source>Wait for the OCR engine download to finish, then try again.</source>
+        <translation>Дождитесь завершения загрузки движка OCR и попробуйте снова.</translation>
+    </message>
+    <message>
+        <source>Wait for the silence-removal download to finish, then try again.</source>
+        <translation>Дождитесь завершения загрузки библиотеки удаления тишины и попробуйте снова.</translation>
+    </message>
+</context><context>
     <name>BatchProcessingTab</name>
     <message>
         <source>That translation subtitle folder no longer exists.</source>
@@ -2702,6 +2712,14 @@ No index files are deleted.</source>
     <message>
         <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
         <translation>Запустите OCR mokuro для японского текста в папке тома или целой серии, чтобы майнить результат в разделе Чтение → Манга. Установите mokuro из блока установки в разделе Утилиты → OCR манги.</translation>
+    </message>
+    <message>
+        <source>Read burned-in subtitles from a video into an .srt</source>
+        <translation>Распознать вшитые субтитры видео и сохранить в .srt</translation>
+    </message>
+    <message>
+        <source>Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt that Video → Single can mine. Made for game longplays without commentary. Download the OCR engine from the setup card on Utilities → Video OCR.</source>
+        <translation>Обведите рамкой место, где на экране видео появляются диалоги, и Anki Miner распознает их и сохранит в .srt с таймкодами, который можно майнить в разделе Видео → Один. Создано для полных прохождений игр без комментариев. Загрузите движок OCR из блока установки в разделе Утилиты → OCR видео.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -6590,6 +6608,10 @@ Words to add: %3. Continue?</source>
         <translation>Дорожки</translation>
     </message>
     <message>
+        <source>Video OCR</source>
+        <translation>OCR видео</translation>
+    </message>
+    <message>
         <source>Anki Miner updated</source>
         <translation>Anki Miner обновлён</translation>
     </message>
@@ -7634,6 +7656,44 @@ Continue?</source>
     <message>
         <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
         <translation>Слово попадает в первое поле типа заметки, «%1», но оно сопоставлено с «%2». Измените порядок полей в Anki или выберите другой тип заметки.</translation>
+    </message>
+</context><context>
+    <name>OcrRegionDialog</name>
+    <message>
+        <source>Set subtitle region</source>
+        <translation>Задать область субтитров</translation>
+    </message>
+    <message>
+        <source>Move the slider to a moment with dialogue on screen, then drag a box around the subtitles.</source>
+        <translation>Переместите ползунок на момент, когда на экране виден диалог, затем растяните рамку вокруг субтитров.</translation>
+    </message>
+    <message>
+        <source>Loading a frame…</source>
+        <translation>Загрузка кадра…</translation>
+    </message>
+    <message>
+        <source>Test this frame</source>
+        <translation>Проверить этот кадр</translation>
+    </message>
+    <message>
+        <source>This frame could not be read. Try another point in the video.</source>
+        <translation>Не удалось прочитать этот кадр. Попробуйте другой момент видео.</translation>
+    </message>
+    <message>
+        <source>Download the OCR engine first, from the setup card on the Video OCR screen.</source>
+        <translation>Сначала загрузите движок OCR из блока установки на экране «OCR видео».</translation>
+    </message>
+    <message>
+        <source>Reading…</source>
+        <translation>Распознавание…</translation>
+    </message>
+    <message>
+        <source>No text found in the box.</source>
+        <translation>Текст в рамке не найден.</translation>
+    </message>
+    <message>
+        <source>The OCR engine could not start. The log has the details.</source>
+        <translation>Не удалось запустить движок OCR. Подробности — в журнале.</translation>
     </message>
 </context><context>
     <name>OnnxPackDownloadWorker</name>
@@ -12533,6 +12593,296 @@ Your installed resources and your theme are kept.</source>
     <message>
         <source>Choose which tools the Utilities tab shows. At least one stays.</source>
         <translation>Выберите, какие инструменты показывает вкладка «Утилиты». Хотя бы один остаётся.</translation>
+    </message>
+</context><context>
+    <name>VideoOcrInstallWorker</name>
+    <message>
+        <source>%1 (%2%)</source>
+        <translation>%1 (%2%)</translation>
+    </message>
+    <message>
+        <source>Downloading the OCR runtime…</source>
+        <translation>Загрузка среды выполнения OCR…</translation>
+    </message>
+    <message>
+        <source>Downloading the OCR models…</source>
+        <translation>Загрузка моделей OCR…</translation>
+    </message>
+    <message>
+        <source>OCR engine installed.</source>
+        <translation>Движок OCR установлен.</translation>
+    </message>
+</context><context>
+    <name>VideoOcrTab</name>
+    <message>
+        <source>Progress</source>
+        <translation>Прогресс</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Готово</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>Готово: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>Пропущено</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>Пропущено: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Отмена</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Отмена…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Отменено</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>Ошибка — см. журнал</translation>
+    </message>
+    <message>
+        <source>Finished with errors — see log</source>
+        <translation>Завершено с ошибками — см. журнал</translation>
+    </message>
+    <message>
+        <source>Some videos could not be read.</source>
+        <translation>Не удалось прочитать некоторые видео.</translation>
+    </message>
+    <message>
+        <source>This video could not be read.</source>
+        <translation>Не удалось прочитать это видео.</translation>
+    </message>
+    <message>
+        <source>Complete — %1 files processed</source>
+        <translation>Завершено — обработано файлов: %1</translation>
+    </message>
+    <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>Завершено — обработано файлов: %1, пропущено файлов: %2</translation>
+    </message>
+    <message>
+        <source>No subtitles saved — all %1 skipped; see log.</source>
+        <translation>Субтитры не сохранены — все %1 пропущены; см. журнал.</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>Выбрать папку для вывода</translation>
+    </message>
+    <message>
+        <source>Next to each video</source>
+        <translation>Рядом с каждым видео</translation>
+    </message>
+    <message>
+        <source>Video OCR</source>
+        <translation>OCR видео</translation>
+    </message>
+    <message>
+        <source>Reading subtitles in file %1 of %2</source>
+        <translation>Распознавание субтитров в файле %1 из %2</translation>
+    </message>
+    <message>
+        <source>The OCR engine could not start on this computer. The details say why.</source>
+        <translation>Не удалось запустить движок OCR на этом компьютере. Причина указана в подробностях.</translation>
+    </message>
+    <message>
+        <source>Input</source>
+        <translation>Ввод</translation>
+    </message>
+    <message>
+        <source>The OCR engine is not installed yet. Download it from the setup card below.</source>
+        <translation>Движок OCR ещё не установлен. Загрузите его из блока установки ниже.</translation>
+    </message>
+    <message>
+        <source>Mode:</source>
+        <translation>Режим:</translation>
+    </message>
+    <message>
+        <source>Single File</source>
+        <translation>Один файл</translation>
+    </message>
+    <message>
+        <source>Folder</source>
+        <translation>Папка</translation>
+    </message>
+    <message>
+        <source>Read one video.</source>
+        <translation>Распознать одно видео.</translation>
+    </message>
+    <message>
+        <source>Read every video in a folder with the same region.</source>
+        <translation>Распознать все видео в папке, используя одну и ту же область.</translation>
+    </message>
+    <message>
+        <source>Video File:</source>
+        <translation>Видеофайл:</translation>
+    </message>
+    <message>
+        <source>This field takes a video file.</source>
+        <translation>Это поле принимает видеофайл.</translation>
+    </message>
+    <message>
+        <source>Video Folder:</source>
+        <translation>Папка с видео:</translation>
+    </message>
+    <message>
+        <source>Subtitle region</source>
+        <translation>Область субтитров</translation>
+    </message>
+    <message>
+        <source>Set region…</source>
+        <translation>Задать область…</translation>
+    </message>
+    <message>
+        <source>Draw a box around where the dialogue appears. One region is used for every video in a folder.</source>
+        <translation>Обведите рамкой место, где появляются диалоги. Для всех видео в папке используется одна область.</translation>
+    </message>
+    <message>
+        <source>OCR engine</source>
+        <translation>Движок OCR</translation>
+    </message>
+    <message>
+        <source>Download OCR engine</source>
+        <translation>Загрузить движок OCR</translation>
+    </message>
+    <message>
+        <source>Output</source>
+        <translation>Вывод</translation>
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation>Вывод:</translation>
+    </message>
+    <message>
+        <source>Choose Folder…</source>
+        <translation>Выбрать папку…</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>Сбросить</translation>
+    </message>
+    <message>
+        <source>Each .srt is saved next to its video unless you choose a folder.</source>
+        <translation>Каждый файл .srt сохраняется рядом со своим видео, если вы не выберете папку.</translation>
+    </message>
+    <message>
+        <source>Overwrite existing SRT files</source>
+        <translation>Перезаписывать существующие файлы SRT</translation>
+    </message>
+    <message>
+        <source>When unchecked, videos that already have an .srt file are skipped, not overwritten.</source>
+        <translation>Если флажок снят, видео, у которых уже есть файл .srt, пропускаются, а не перезаписываются.</translation>
+    </message>
+    <message>
+        <source>Read Subtitles</source>
+        <translation>Распознать субтитры</translation>
+    </message>
+    <message>
+        <source>No region set yet.</source>
+        <translation>Область ещё не задана.</translation>
+    </message>
+    <message>
+        <source>%1% from the left, %2% from the top, %3% wide, %4% tall</source>
+        <translation>Слева %1%, сверху %2%, ширина %3%, высота %4%</translation>
+    </message>
+    <message>
+        <source>Choose a folder of videos first, then set the region on one of them.</source>
+        <translation>Сначала выберите папку с видео, затем задайте область на одном из них.</translation>
+    </message>
+    <message>
+        <source>No videos were found in that folder.</source>
+        <translation>В этой папке не найдено видео.</translation>
+    </message>
+    <message>
+        <source>That folder could not be scanned.</source>
+        <translation>Не удалось просканировать эту папку.</translation>
+    </message>
+    <message>
+        <source>Choose a video first, then set the region on one of its frames.</source>
+        <translation>Сначала выберите видео, затем задайте область на одном из его кадров.</translation>
+    </message>
+    <message>
+        <source>Download OCR models</source>
+        <translation>Загрузить модели OCR</translation>
+    </message>
+    <message>
+        <source>Downloads the two OCR models (about 33 MB) into Anki Miner's folder.</source>
+        <translation>Загружает две модели OCR (около 33 МБ) в папку Anki Miner.</translation>
+    </message>
+    <message>
+        <source>Downloads the OCR runtime and its two models (about 50 MB) into Anki Miner's folder.</source>
+        <translation>Загружает среду выполнения OCR и две её модели (около 50 МБ) в папку Anki Miner.</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>Не установлено</translation>
+    </message>
+    <message>
+        <source>Not available on this platform. With a pip install of Anki Miner, run: pip install "anki-miner[ocr]"</source>
+        <translation>Недоступно на этой платформе. Если Anki Miner установлен через pip, выполните: pip install "anki-miner[ocr]"</translation>
+    </message>
+    <message>
+        <source>Installing…</source>
+        <translation>Установка…</translation>
+    </message>
+    <message>
+        <source>Set the subtitle region before reading subtitles.</source>
+        <translation>Задайте область субтитров перед распознаванием.</translation>
+    </message>
+    <message>
+        <source>Output folder is not writable.</source>
+        <translation>В папку вывода нельзя записывать.</translation>
+    </message>
+    <message>
+        <source>Choose a video before reading subtitles.</source>
+        <translation>Выберите видео перед распознаванием субтитров.</translation>
+    </message>
+    <message>
+        <source>That video file no longer exists.</source>
+        <translation>Этот видеофайл больше не существует.</translation>
+    </message>
+    <message>
+        <source>Choose a folder before reading subtitles.</source>
+        <translation>Выберите папку перед распознаванием субтитров.</translation>
+    </message>
+    <message>
+        <source>That folder no longer exists.</source>
+        <translation>Эта папка больше не существует.</translation>
+    </message>
+</context><context>
+    <name>VideoOcrWorker</name>
+    <message>
+        <source>Skipped, exists</source>
+        <translation>Пропущено, уже существует</translation>
+    </message>
+    <message>
+        <source>Reading subtitles: %1 / %2</source>
+        <translation>Распознавание субтитров: %1 / %2</translation>
+    </message>
+    <message>
+        <source>Reading subtitles: %1</source>
+        <translation>Распознавание субтитров: %1</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Готово</translation>
+    </message>
+    <message>
+        <source>No subtitles found in the region</source>
+        <translation>В области не найдено субтитров</translation>
+    </message>
+    <message>
+        <source>Could not read the video %1</source>
+        <translation>Не удалось прочитать видео %1</translation>
     </message>
 </context><context>
     <name>VulkanModelDownloadWorker</name>

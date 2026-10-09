@@ -20,6 +20,8 @@ from anki_miner.gui.utils.run_options import RunOptionsMixin
 from anki_miner.gui.widgets.condense_tab import CondenseTab
 from anki_miner.gui.widgets.download_tab import CUSTOM_FORMAT_ITEM, DownloadTab
 from anki_miner.gui.widgets.mokuro_tab import MokuroTab
+from anki_miner.gui.widgets.video_ocr_tab import VideoOcrTab
+from anki_miner.services.video_ocr.region import Region
 
 
 class _Screen(RunOptionsMixin, QWidget):
@@ -150,6 +152,14 @@ def _read_mokuro(tab) -> tuple:
     return (tab.gpu_checkbox.isChecked(),)
 
 
+def _edit_video_ocr(tab, tmp_path: Path) -> None:
+    tab._set_region(Region(0.1, 0.8, 0.8, 0.15))
+
+
+def _read_video_ocr(tab) -> tuple:
+    return (tab._region.as_config(),)
+
+
 #: name -> (tab class, edit, read, the exact JSON keys/values a saved file carries)
 _TOOL_TAB_CASES = {
     "condense": (
@@ -185,6 +195,12 @@ _TOOL_TAB_CASES = {
         _read_mokuro,
         lambda tmp: {"mokuro_use_gpu": False},
     ),
+    "videoocr": (
+        VideoOcrTab,
+        _edit_video_ocr,
+        _read_video_ocr,
+        lambda tmp: {"video_ocr_region": [0.1, 0.8, 0.8, 0.15]},
+    ),
 }
 
 
@@ -214,11 +230,11 @@ def test_a_tool_tabs_saved_run_options_reopen_unchanged(case, qtbot, tmp_path):
 
 
 def test_the_tool_tabs_are_discovered_and_wired_once(wired_window):
-    """app.py wires these three only through its run_options_changed discovery
+    """app.py wires these four only through its run_options_changed discovery
     loop, so each must be a child of the window (hidden Utilities sub-tabs
     included) with exactly one receiver."""
     window, _titles, _tabs = wired_window
-    for tab_cls in (CondenseTab, DownloadTab, MokuroTab):
+    for tab_cls in (CondenseTab, DownloadTab, MokuroTab, VideoOcrTab):
         found = [w for w in window.findChildren(QWidget) if type(w) is tab_cls]
         assert len(found) == 1, tab_cls.__name__
         assert found[0].receivers(found[0].run_options_changed) == 1, tab_cls.__name__

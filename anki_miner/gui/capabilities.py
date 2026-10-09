@@ -78,6 +78,7 @@ UTILITY_SUBTABS: tuple[str, ...] = (
     "booksync",
     "readability",
     "tracks",
+    "videoocr",
 )
 # Valid sub-tab keys per container main tab (resolved by the container's
 # duck-typed ``open_subtab``). Main tabs absent here have no sub-tabs.
@@ -108,6 +109,7 @@ def utility_labels() -> dict[str, str]:
         "booksync": QCoreApplication.translate("MainWindow", "Audiobook Sync"),
         "readability": QCoreApplication.translate("MainWindow", "Readability"),
         "tracks": QCoreApplication.translate("MainWindow", "Tracks"),
+        "videoocr": QCoreApplication.translate("MainWindow", "Video OCR"),
     }
 
 
@@ -123,9 +125,13 @@ def effective_hidden_utilities(stored: Iterable[str]) -> frozenset[str]:
     return frozenset() if len(hidden) == len(UTILITY_SUBTABS) else hidden
 
 
+#: Tool key -> the profile capability it needs (E17). A language without it hides the tool.
+_GATED_TOOLS: dict[str, str] = {"mokuro": "manga_ocr", "videoocr": "video_ocr"}
+
+
 def language_gated_utilities(capabilities: frozenset[str]) -> frozenset[str]:
-    """The Utilities tools a mining language with ``capabilities`` cannot use (E17: Manga OCR reads Japanese)."""
-    return frozenset() if "manga_ocr" in capabilities else frozenset({"mokuro"})
+    """The Utilities tools a mining language with ``capabilities`` cannot use (E17: Manga OCR and Video OCR read Japanese)."""
+    return frozenset(key for key, needed in _GATED_TOOLS.items() if needed not in capabilities)
 
 
 def hidden_utilities_on_tab(stored: Iterable[str], capabilities: frozenset[str]) -> frozenset[str]:
@@ -1292,6 +1298,20 @@ CAPABILITIES: tuple[Capability, ...] = (
         target=CapabilityTarget("subtitles", "mokuro"),
         keywords=("mokuro", "manga", "ocr", "cbz", "page images", "text detection", "manga-ocr"),
         requires="manga_ocr",
+    ),
+    Capability(
+        id="video-ocr",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Read burned-in subtitles from a video into an .srt"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt "
+            "that Video → Single can mine. Made for game longplays without commentary. Download the OCR engine "
+            "from the setup card on Utilities → Video OCR.",
+        ),
+        category=_CAT_TOOLS,
+        target=CapabilityTarget("subtitles", "videoocr"),
+        keywords=("ocr", "hardsub", "burned-in", "hardcoded subtitles", "longplay", "game", "meikiocr", "srt"),
+        requires="video_ocr",
     ),
     Capability(
         id="audiobook-sync",

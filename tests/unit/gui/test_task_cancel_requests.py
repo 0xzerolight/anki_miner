@@ -138,6 +138,7 @@ def _publishing_screens():
     from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
     from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
     from anki_miner.gui.widgets.tracks_tab import TracksTab
+    from anki_miner.gui.widgets.video_ocr_tab import VideoOcrTab
     from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 
     return (
@@ -161,6 +162,7 @@ def _publishing_screens():
         BookSyncTab,
         ReadabilityTab,
         TracksTab,
+        VideoOcrTab,
     )
 
 

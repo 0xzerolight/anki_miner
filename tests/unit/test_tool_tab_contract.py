@@ -8,7 +8,9 @@ tab's own ``_strings``, never a wording. Readability and Manga OCR have neither
 an Output row nor a mode toggle, so they join only the run-lifecycle and probe
 tests (``_RUN_TABS``, ``_PROBED_TABS``); Manga OCR's run starts behind an
 off-thread volume scan, which ``_start_single_run`` waits out. Tracks has an
-Output row but no mode toggle, so it joins ``_ALL_TABS`` beside Download.
+Output row but no mode toggle, so it joins ``_ALL_TABS`` beside Download. Video
+OCR has both and joins ``_MODE_TABS``; its single-file fill also sets the region,
+without which Read Subtitles stops at a screen issue.
 """
 
 from __future__ import annotations
@@ -33,8 +35,10 @@ from anki_miner.gui.widgets.readability_tab import ReadabilityTab
 from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
 from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
 from anki_miner.gui.widgets.tracks_tab import TracksTab
+from anki_miner.gui.widgets.video_ocr_tab import VideoOcrTab
 from anki_miner.models import TerminalOutcome
 from anki_miner.services.track_extractor import InputProbe, MediaTracks, TrackRef
+from anki_miner.services.video_ocr.region import Region
 from anki_miner.utils.audio_track_detector import SubtitleStream
 from anki_miner.utils.i18n import tr_format
 from tests.unit._tool_tab_harness import OS_ACCESS, FakeToolWorker, capture_slots, make_config
@@ -89,6 +93,13 @@ def _fill_tracks(tab, tmp_path: Path) -> None:
             preselected=(TrackRef("subtitle", 0),),
         )
     )
+
+
+def _fill_video_ocr(tab, tmp_path: Path) -> None:
+    video = tmp_path / "episode.mp4"
+    video.write_bytes(b"fake")
+    tab.file_selector.set_path(str(video))
+    tab._set_region(Region(0.1, 0.8, 0.8, 0.15))
 
 
 def _fill_readability(tab, tmp_path: Path) -> None:
@@ -195,6 +206,16 @@ _TRACKS = _Spec(
     run_patches=(),
     fill_single=_fill_tracks,
 )
+_VIDEO_OCR = _Spec(
+    tab_cls=VideoOcrTab,
+    primary="ocr_button",
+    worker_cls="anki_miner.gui.widgets.video_ocr_tab.VideoOcrWorker",
+    construct_patches=(("anki_miner.gui.widgets.video_ocr_tab.VideoOcrTab._compute_engine_available", True),),
+    run_patches=(),
+    fill_single=_fill_video_ocr,
+    single_widgets=("file_selector",),
+    folder_widgets=("folder_selector",),
+)
 _MOKURO = _Spec(
     tab_cls=MokuroTab,
     primary="run_button",
@@ -205,13 +226,13 @@ _MOKURO = _Spec(
 )
 
 #: Tabs with a Single File / Folder toggle and an Overwrite box.
-_MODE_TABS = [_CREATION, _RETIME, _CONDENSE, _BOOKSYNC]
+_MODE_TABS = [_CREATION, _RETIME, _CONDENSE, _BOOKSYNC, _VIDEO_OCR]
 #: Tabs with an Output row whose run is one queue worker started from the primary.
 _ALL_TABS = [*_MODE_TABS, _DOWNLOAD, _TRACKS]
 #: Tabs whose run is one queue worker started from the primary, Output row or not.
 _RUN_TABS = [*_ALL_TABS, _READABILITY, _MOKURO]
 #: Tabs whose engine probe is the base template (Retime keeps its own).
-_PROBED_TABS = [_CREATION, _CONDENSE, _BOOKSYNC, _DOWNLOAD, _READABILITY, _TRACKS, _MOKURO]
+_PROBED_TABS = [_CREATION, _CONDENSE, _BOOKSYNC, _DOWNLOAD, _READABILITY, _TRACKS, _VIDEO_OCR, _MOKURO]
 
 
 def _spec_id(spec: _Spec) -> str:

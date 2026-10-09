@@ -8,18 +8,16 @@ bodies, but this skeleton must be importable without either package installed.
 from __future__ import annotations
 
 import glob
-import importlib.util
 import itertools
 import logging
 import math
 import os
-import sys
 import types
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
-from anki_miner.services.asr import _engine, ggml_model_installer
+from anki_miner.services.asr import _engine, ggml_model_installer, onnx_pack_installer
 from anki_miner.utils.logging_ext import log_summary
 from anki_miner.utils.timing import timed_phase
 
@@ -101,36 +99,6 @@ _CPP_INTRA_UTTERANCE_GAP_S = 1.5
 # dense-BGM / quiet-VO before trusting on other genres).
 
 
-def _ensure_onnx_pack_on_syspath(onnx_pack_root: Path | None) -> None:
-    """Add a downloaded onnxruntime pack dir to ``sys.path`` so VAD can import it.
-
-    The in-app VAD pack extracts the full ``onnxruntime/`` package tree into
-    ``onnx_pack_root``. The PyInstaller bundle excludes onnxruntime, so making
-    that extracted copy importable means putting its parent dir on ``sys.path``
-    before ``faster_whisper.vad`` does its lazy ``import onnxruntime``.
-
-    Idempotent and best-effort: only acts when the dir actually holds an
-    ``onnxruntime/`` package and is not already on the path. Never raises.
-    """
-    if onnx_pack_root is None:
-        return
-    try:
-        if not (onnx_pack_root / "onnxruntime" / "__init__.py").exists():
-            return
-        root = str(onnx_pack_root)
-        if root not in sys.path:
-            # Append (not insert-at-0): the pack dir holds only the onnxruntime
-            # tree, so it never needs to win priority, and appending means it
-            # cannot shadow any same-named module already on the path.
-            sys.path.append(root)
-            importlib.invalidate_caches()
-    except MemoryError:
-        raise  # never degrade a real allocation failure to "no speech mask" (service_factory.py policy)
-    except Exception as exc:  # noqa: BLE001  (best-effort; a path problem must not abort)
-        # Bucket B: an unusable optional VAD pack falls back to no speech mask.
-        logger.debug("ASR VAD pack probe: available=false exc=%s: %s", type(exc).__name__, exc)
-
-
 def vad_available(onnx_pack_root: Path | None = None) -> bool:
     """Return True when Silero VAD can run, i.e. onnxruntime is importable.
 
@@ -140,10 +108,7 @@ def vad_available(onnx_pack_root: Path | None = None) -> bool:
     *onnx_pack_root* this injects it onto ``sys.path`` first. ``find_spec`` is used
     so no actual import (or onnxruntime init) happens here.
     """
-    if importlib.util.find_spec("onnxruntime") is not None:
-        return True
-    _ensure_onnx_pack_on_syspath(onnx_pack_root)
-    return importlib.util.find_spec("onnxruntime") is not None
+    return onnx_pack_installer.onnxruntime_importable(onnx_pack_root)
 
 
 def _is_junk_segment(seg) -> bool:

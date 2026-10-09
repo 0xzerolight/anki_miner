@@ -57,8 +57,13 @@ def test_track_extraction_is_findable_the_way_its_users_ask(query) -> None:
     assert any(cap.id == "extract-tracks" for cap in search(query))
 
 
-def test_tracks_is_the_last_utility_tool() -> None:
-    assert list(utility_labels().items())[-1] == ("tracks", "Tracks")
+@pytest.mark.parametrize("query", ["hardsub", "burned-in", "meikiocr"])
+def test_video_ocr_is_findable_the_way_its_users_ask(query) -> None:
+    assert any(cap.id == "video-ocr" for cap in search(query))
+
+
+def test_video_ocr_is_the_last_utility_tool() -> None:
+    assert list(utility_labels().items())[-1] == ("videoocr", "Video OCR")
 
 
 def test_registry_is_non_trivial() -> None:

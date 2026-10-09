@@ -514,6 +514,7 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         empty_summary: str,
         failed_summary: str,
         sort_key: Callable[[Path], Any] | None = None,
+        guards_primary: bool = True,
     ) -> None:
         """List *folder* off the GUI thread; hand the accepted files to *on_files*.
 
@@ -533,6 +534,10 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
             failed_summary: The screen issue when the listing raised.
             sort_key: Order other than plain path order (Audiobook Sync reads a
                 book in natural file-name order).
+            guards_primary: Whether this listing is a run's, holding the primary
+                disabled through ``_folder_scan_pending`` until it lands. False
+                for a listing that starts no run (Video OCR's region pick): it
+                must neither hold nor release the run's guard.
         """
 
         def _scan() -> object:
@@ -540,7 +545,8 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
             return sorted(files) if sort_key is None else sorted(files, key=sort_key)
 
         def _apply(result: object) -> None:
-            self._folder_scan_pending = False
+            if guards_primary:
+                self._folder_scan_pending = False
             files = cast("list[Path]", result)
             if not files:
                 self.show_screen_issue(ScreenIssue(summary=empty_summary))
@@ -549,11 +555,13 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
             on_files(files)
 
         def _on_error(msg: str) -> None:
-            self._folder_scan_pending = False
+            if guards_primary:
+                self._folder_scan_pending = False
             self.show_screen_issue(ScreenIssue(summary=failed_summary, details=msg))
             on_files([])
 
-        self._folder_scan_pending = True
+        if guards_primary:
+            self._folder_scan_pending = True
         run_off_thread(self, _scan, _apply, _on_error)
 
     def _output_dir_writable(self, check_dir: Path, summary: str) -> bool:

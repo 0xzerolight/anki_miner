@@ -302,6 +302,40 @@ assert_asr_ran "windows-latest"
 assert_asr_ran "macos-latest"
 assert_asr_ran "macos-15-intel"
 
+# Same executed-not-skipped defense for the Video OCR leg: it is the only proof that
+# the frozen app imports onnxruntime from the in-app pack and runs the OCR models.
+# Not asserted on macos-15-intel: onnxruntime ships no Intel-mac wheel, so the seeder
+# skips there and the leg prints "SKIP videoocr" by design.
+assert_videoocr_ran() { # $1 = os label present in the leg's job name
+  local os="$1"
+  local job_id
+  job_id="$(echo "$JOBS_JSON" | jq -r --arg os "$os" \
+    'first(.jobs[] | select((.name | startswith("build")) and (.name | contains($os))) | .databaseId) // empty')"
+  if [ -z "$job_id" ]; then
+    return 0 # leg not in this selection; nothing to assert
+  fi
+  local jlog="$LOG_DIR/job-$job_id.log"
+  for _ in $(seq 1 30); do
+    gh run view "$RUN_ID" --job "$job_id" --log >"$jlog" 2>/dev/null || true
+    if grep -qE "BUNDLED_VIDEO_OCR_PASS|SKIP videoocr" "$jlog" 2>/dev/null; then
+      break
+    fi
+    sleep 6
+  done
+  if grep -q "SKIP videoocr" "$jlog" 2>/dev/null; then
+    echo "ERROR: seeded videoocr smoke was SKIPPED on the '$os' leg (seed fetch fell open)." >&2
+    exit 1
+  fi
+  if ! grep -q "BUNDLED_VIDEO_OCR_PASS" "$jlog" 2>/dev/null; then
+    echo "ERROR: videoocr smoke pass-marker absent for the '$os' leg (smoke may not have executed)." >&2
+    exit 1
+  fi
+  echo "    videoocr smoke executed+passed on '$os'."
+}
+assert_videoocr_ran "ubuntu-22.04"
+assert_videoocr_ran "windows-latest"
+assert_videoocr_ran "macos-latest"
+
 count_log_matches() { # $1 = ERE, $2 = log path
   local pattern="$1"
   local log_path="$2"

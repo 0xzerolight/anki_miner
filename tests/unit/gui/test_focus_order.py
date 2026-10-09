@@ -42,6 +42,7 @@ from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
 from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
 from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
 from anki_miner.gui.widgets.tracks_tab import TracksTab
+from anki_miner.gui.widgets.video_ocr_tab import VideoOcrTab
 from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 
 #: Rows within this many pixels count as the same line, so a label and the
@@ -88,6 +89,8 @@ def _build(name: str, config: AnkiMinerConfig) -> QWidget:
         return ReadabilityTab(config, suppress_optional_startup=True)
     if name == "tracks":
         return TracksTab(config, suppress_optional_startup=True)
+    if name == "videoocr":
+        return VideoOcrTab(config, suppress_optional_startup=True)
     if name in {"condense", "generate", "retime"}:
         return {"condense": CondenseTab, "generate": SubtitleCreationTab, "retime": SubtitleRetimeTab}[name](config)
     return {
@@ -118,6 +121,7 @@ SCREENS = [
     "booksync",
     "readability",
     "tracks",
+    "videoocr",
 ]
 
 

@@ -114,9 +114,19 @@ def build_profile() -> LanguageProfile:
         # "note_presets": Lapis, Kiku and Senren are Japanese note types, so the
         # preset row belongs to this language alone. "manga_ocr": mokuro's
         # manga-ocr model reads Japanese only, so Utilities -> Manga OCR is offered
-        # to this language alone (E17).
+        # to this language alone (E17). "video_ocr": meikiocr reads Japanese game
+        # text only, so Utilities -> Video OCR is offered to this language alone.
         capabilities=frozenset(
-            {"pitch", "furigana", "kana_filters", "name_wordsets", "deinflection", "note_presets", "manga_ocr"}
+            {
+                "pitch",
+                "furigana",
+                "kana_filters",
+                "name_wordsets",
+                "deinflection",
+                "note_presets",
+                "manga_ocr",
+                "video_ocr",
+            }
         ),
         card_field_defaults=dict(base.anki_fields),
         render_hooks=(),

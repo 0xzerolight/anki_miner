@@ -1586,6 +1586,16 @@ No index files are deleted.</source>
         <translation>Anki Miner の終了により中断されました</translation>
     </message>
 </context><context>
+    <name>BackgroundTaskController</name>
+    <message>
+        <source>Wait for the OCR engine download to finish, then try again.</source>
+        <translation>OCR エンジンのダウンロードが完了するのを待ってから、再試行してください。</translation>
+    </message>
+    <message>
+        <source>Wait for the silence-removal download to finish, then try again.</source>
+        <translation>無音除去のダウンロードが完了するのを待ってから、再試行してください。</translation>
+    </message>
+</context><context>
     <name>BatchProcessingTab</name>
     <message>
         <source>That translation subtitle folder no longer exists.</source>
@@ -2696,6 +2706,14 @@ No index files are deleted.</source>
     <message>
         <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
         <translation>巻フォルダまたはシリーズ全体に対して mokuro の日本語 OCR を実行すると、「リーディング → マンガ」でマイニングできるようになります。mokuro は「ユーティリティ → マンガ OCR」のセットアップカードからインストールしてください。</translation>
+    </message>
+    <message>
+        <source>Read burned-in subtitles from a video into an .srt</source>
+        <translation>動画に焼き付けられた字幕を読み取って .srt に変換</translation>
+    </message>
+    <message>
+        <source>Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt that Video → Single can mine. Made for game longplays without commentary. Download the OCR engine from the setup card on Utilities → Video OCR.</source>
+        <translation>動画の画面上にセリフが表示される位置を枠で囲むと、Anki Miner がそれを読み取り、「動画 → 単一」でマイニングできるタイムコード付きの .srt に変換します。実況なしのゲーム通しプレイ動画向けです。OCR エンジンは「ユーティリティ → 動画 OCR」のセットアップカードからダウンロードしてください。</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -6516,6 +6534,10 @@ Words to add: %3. Continue?</source>
         <translation>トラック</translation>
     </message>
     <message>
+        <source>Video OCR</source>
+        <translation>動画 OCR</translation>
+    </message>
+    <message>
         <source>Anki Miner updated</source>
         <translation>Anki Miner が更新されました</translation>
     </message>
@@ -7560,6 +7582,44 @@ Continue?</source>
     <message>
         <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
         <translation>単語はノートタイプの最初のフィールド「%1」に入りますが、そのフィールドは「%2」に対応付けられています。Anki でフィールドの順序を変えるか、別のノートタイプを選んでください。</translation>
+    </message>
+</context><context>
+    <name>OcrRegionDialog</name>
+    <message>
+        <source>Set subtitle region</source>
+        <translation>字幕の範囲を設定</translation>
+    </message>
+    <message>
+        <source>Move the slider to a moment with dialogue on screen, then drag a box around the subtitles.</source>
+        <translation>スライダーを動かしてセリフが画面に表示されている場面に合わせ、字幕を囲むように枠をドラッグしてください。</translation>
+    </message>
+    <message>
+        <source>Loading a frame…</source>
+        <translation>フレームを読み込んでいます…</translation>
+    </message>
+    <message>
+        <source>Test this frame</source>
+        <translation>このフレームでテスト</translation>
+    </message>
+    <message>
+        <source>This frame could not be read. Try another point in the video.</source>
+        <translation>このフレームを読み取れませんでした。動画の別の位置を試してください。</translation>
+    </message>
+    <message>
+        <source>Download the OCR engine first, from the setup card on the Video OCR screen.</source>
+        <translation>先に「動画 OCR」画面のセットアップカードから OCR エンジンをダウンロードしてください。</translation>
+    </message>
+    <message>
+        <source>Reading…</source>
+        <translation>読み取り中…</translation>
+    </message>
+    <message>
+        <source>No text found in the box.</source>
+        <translation>枠内にテキストが見つかりませんでした。</translation>
+    </message>
+    <message>
+        <source>The OCR engine could not start. The log has the details.</source>
+        <translation>OCR エンジンを起動できませんでした。詳細はログを確認してください。</translation>
     </message>
 </context><context>
     <name>OnnxPackDownloadWorker</name>
@@ -12443,6 +12503,296 @@ Your installed resources and your theme are kept.</source>
     <message>
         <source>Choose which tools the Utilities tab shows. At least one stays.</source>
         <translation>「ユーティリティ」タブに表示するツールを選択します。少なくとも1つは残ります。</translation>
+    </message>
+</context><context>
+    <name>VideoOcrInstallWorker</name>
+    <message>
+        <source>%1 (%2%)</source>
+        <translation>%1 (%2%)</translation>
+    </message>
+    <message>
+        <source>Downloading the OCR runtime…</source>
+        <translation>OCR ランタイムをダウンロード中…</translation>
+    </message>
+    <message>
+        <source>Downloading the OCR models…</source>
+        <translation>OCR モデルをダウンロード中…</translation>
+    </message>
+    <message>
+        <source>OCR engine installed.</source>
+        <translation>OCR エンジンをインストールしました。</translation>
+    </message>
+</context><context>
+    <name>VideoOcrTab</name>
+    <message>
+        <source>Progress</source>
+        <translation>進捗</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>完了</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>完了: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>スキップ</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>スキップ: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>キャンセル</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>キャンセル中…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>キャンセルされました</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>失敗しました — ログを確認してください</translation>
+    </message>
+    <message>
+        <source>Finished with errors — see log</source>
+        <translation>エラーが発生して完了しました — ログを確認してください</translation>
+    </message>
+    <message>
+        <source>Some videos could not be read.</source>
+        <translation>一部の動画を読み取れませんでした。</translation>
+    </message>
+    <message>
+        <source>This video could not be read.</source>
+        <translation>この動画を読み取れませんでした。</translation>
+    </message>
+    <message>
+        <source>Complete — %1 files processed</source>
+        <translation>完了 — %1 個のファイルを処理しました</translation>
+    </message>
+    <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>完了 — %1 個を処理、%2 個をスキップしました</translation>
+    </message>
+    <message>
+        <source>No subtitles saved — all %1 skipped; see log.</source>
+        <translation>字幕は保存されませんでした — %1 件すべてスキップされました。ログを確認してください。</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>出力フォルダを選択</translation>
+    </message>
+    <message>
+        <source>Next to each video</source>
+        <translation>各動画の隣</translation>
+    </message>
+    <message>
+        <source>Video OCR</source>
+        <translation>動画 OCR</translation>
+    </message>
+    <message>
+        <source>Reading subtitles in file %1 of %2</source>
+        <translation>%2 件中 %1 件目のファイルの字幕を読み取り中</translation>
+    </message>
+    <message>
+        <source>The OCR engine could not start on this computer. The details say why.</source>
+        <translation>このPCでは OCR エンジンを起動できませんでした。理由は「詳細」で確認できます。</translation>
+    </message>
+    <message>
+        <source>Input</source>
+        <translation>入力</translation>
+    </message>
+    <message>
+        <source>The OCR engine is not installed yet. Download it from the setup card below.</source>
+        <translation>OCR エンジンはまだインストールされていません。下のセットアップカードからダウンロードしてください。</translation>
+    </message>
+    <message>
+        <source>Mode:</source>
+        <translation>モード:</translation>
+    </message>
+    <message>
+        <source>Single File</source>
+        <translation>単一ファイル</translation>
+    </message>
+    <message>
+        <source>Folder</source>
+        <translation>フォルダ</translation>
+    </message>
+    <message>
+        <source>Read one video.</source>
+        <translation>1 本の動画を読み取ります。</translation>
+    </message>
+    <message>
+        <source>Read every video in a folder with the same region.</source>
+        <translation>フォルダ内のすべての動画を同じ範囲で読み取ります。</translation>
+    </message>
+    <message>
+        <source>Video File:</source>
+        <translation>動画ファイル:</translation>
+    </message>
+    <message>
+        <source>This field takes a video file.</source>
+        <translation>このフィールドには動画ファイルを指定します。</translation>
+    </message>
+    <message>
+        <source>Video Folder:</source>
+        <translation>動画フォルダ:</translation>
+    </message>
+    <message>
+        <source>Subtitle region</source>
+        <translation>字幕の範囲</translation>
+    </message>
+    <message>
+        <source>Set region…</source>
+        <translation>範囲を設定…</translation>
+    </message>
+    <message>
+        <source>Draw a box around where the dialogue appears. One region is used for every video in a folder.</source>
+        <translation>セリフが表示される位置を枠で囲んでください。フォルダ内のすべての動画に同じ範囲が使われます。</translation>
+    </message>
+    <message>
+        <source>OCR engine</source>
+        <translation>OCR エンジン</translation>
+    </message>
+    <message>
+        <source>Download OCR engine</source>
+        <translation>OCR エンジンをダウンロード</translation>
+    </message>
+    <message>
+        <source>Output</source>
+        <translation>出力</translation>
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation>出力:</translation>
+    </message>
+    <message>
+        <source>Choose Folder…</source>
+        <translation>フォルダを選択…</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>リセット</translation>
+    </message>
+    <message>
+        <source>Each .srt is saved next to its video unless you choose a folder.</source>
+        <translation>フォルダを選択しない限り、各 .srt は動画の隣に保存されます。</translation>
+    </message>
+    <message>
+        <source>Overwrite existing SRT files</source>
+        <translation>既存の SRT ファイルを上書きする</translation>
+    </message>
+    <message>
+        <source>When unchecked, videos that already have an .srt file are skipped, not overwritten.</source>
+        <translation>チェックを外すと、既に .srt ファイルが存在する動画は上書きされずにスキップされます。</translation>
+    </message>
+    <message>
+        <source>Read Subtitles</source>
+        <translation>字幕を読み取る</translation>
+    </message>
+    <message>
+        <source>No region set yet.</source>
+        <translation>範囲はまだ設定されていません。</translation>
+    </message>
+    <message>
+        <source>%1% from the left, %2% from the top, %3% wide, %4% tall</source>
+        <translation>左から %1%、上から %2%、幅 %3%、高さ %4%</translation>
+    </message>
+    <message>
+        <source>Choose a folder of videos first, then set the region on one of them.</source>
+        <translation>先に動画のフォルダを選択してから、そのうちの 1 本で範囲を設定してください。</translation>
+    </message>
+    <message>
+        <source>No videos were found in that folder.</source>
+        <translation>そのフォルダに動画が見つかりませんでした。</translation>
+    </message>
+    <message>
+        <source>That folder could not be scanned.</source>
+        <translation>そのフォルダをスキャンできませんでした。</translation>
+    </message>
+    <message>
+        <source>Choose a video first, then set the region on one of its frames.</source>
+        <translation>先に動画を選択してから、そのフレームのいずれかで範囲を設定してください。</translation>
+    </message>
+    <message>
+        <source>Download OCR models</source>
+        <translation>OCR モデルをダウンロード</translation>
+    </message>
+    <message>
+        <source>Downloads the two OCR models (about 33 MB) into Anki Miner's folder.</source>
+        <translation>2 つの OCR モデル（約 33 MB）を Anki Miner のフォルダにダウンロードします。</translation>
+    </message>
+    <message>
+        <source>Downloads the OCR runtime and its two models (about 50 MB) into Anki Miner's folder.</source>
+        <translation>OCR ランタイムと 2 つのモデル（約 50 MB）を Anki Miner のフォルダにダウンロードします。</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>未インストール</translation>
+    </message>
+    <message>
+        <source>Not available on this platform. With a pip install of Anki Miner, run: pip install "anki-miner[ocr]"</source>
+        <translation>このプラットフォームでは非対応です。pip でインストールした Anki Miner では、次を実行してください: pip install "anki-miner[ocr]"</translation>
+    </message>
+    <message>
+        <source>Installing…</source>
+        <translation>インストール中…</translation>
+    </message>
+    <message>
+        <source>Set the subtitle region before reading subtitles.</source>
+        <translation>字幕を読み取る前に字幕の範囲を設定してください。</translation>
+    </message>
+    <message>
+        <source>Output folder is not writable.</source>
+        <translation>出力フォルダに書き込めません。</translation>
+    </message>
+    <message>
+        <source>Choose a video before reading subtitles.</source>
+        <translation>字幕を読み取る前に動画を選択してください。</translation>
+    </message>
+    <message>
+        <source>That video file no longer exists.</source>
+        <translation>その動画ファイルは存在しなくなっています。</translation>
+    </message>
+    <message>
+        <source>Choose a folder before reading subtitles.</source>
+        <translation>字幕を読み取る前にフォルダを選択してください。</translation>
+    </message>
+    <message>
+        <source>That folder no longer exists.</source>
+        <translation>そのフォルダは存在しなくなっています。</translation>
+    </message>
+</context><context>
+    <name>VideoOcrWorker</name>
+    <message>
+        <source>Skipped, exists</source>
+        <translation>スキップしました（既に存在）</translation>
+    </message>
+    <message>
+        <source>Reading subtitles: %1 / %2</source>
+        <translation>字幕を読み取り中: %1 / %2</translation>
+    </message>
+    <message>
+        <source>Reading subtitles: %1</source>
+        <translation>字幕を読み取り中: %1</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>完了</translation>
+    </message>
+    <message>
+        <source>No subtitles found in the region</source>
+        <translation>範囲内に字幕が見つかりませんでした</translation>
+    </message>
+    <message>
+        <source>Could not read the video %1</source>
+        <translation>動画 %1 を読み取れませんでした</translation>
     </message>
 </context><context>
     <name>VulkanModelDownloadWorker</name>

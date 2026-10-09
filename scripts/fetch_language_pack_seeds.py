@@ -9,7 +9,9 @@ own installer against the same pinned manifests -- no URL, checksum or extractio
 rule is duplicated in the workflow, which is what the two hand-written
 curl-and-tar steps this replaces got wrong once per platform. The ASR engine
 pack is seeded the same way under ``<dest_dir>/asr/`` when ``asr`` is among the
-codes (``anki_miner/services/asr/asr_pack_installer.py``).
+codes (``anki_miner/services/asr/asr_pack_installer.py``), and ``videoocr`` seeds
+the Video OCR engine -- the onnxruntime pack and the two pinned OCR models --
+under ``<dest_dir>/videoocr/{onnx_pack,ocr_models}``.
 
 ``scripts/bundle_smoke.sh`` copies each seeded directory into its isolated
 ``ANKI_MINER_HOME`` before running that pack's leg.
@@ -21,8 +23,8 @@ Failure policy, and the whole reason this script exists rather than a shell one:
   is not an HTTP 4xx) -- warns loudly, skips that pack, and leaves the exit code
   0. The bundle is correct; the fetch is not, and a release must not go red over
   someone else's outage. The smoke then reports ``SKIP language-<code>`` (or
-  ``SKIP asr``), and ``scripts/release_dryrun.sh`` refuses a release whose asr
-  leg skipped.
+  ``SKIP asr`` / ``SKIP videoocr``), and ``scripts/release_dryrun.sh`` refuses a
+  release whose asr or videoocr leg skipped.
 * A ``DownloadFailed`` caused by an HTTP 4xx is a deterministically WRONG PIN (a
   404 on a moved wheel) and exits 1: falling open there would let every leg skip
   and a release ship with zero proof.
@@ -31,8 +33,8 @@ Failure policy, and the whole reason this script exists rather than a shell one:
   say the bytes or the pins are wrong, and smoking against them proves nothing.
 
 Usage:
-    python scripts/fetch_language_pack_seeds.py <dest_dir> <code|asr>...
-    python scripts/fetch_language_pack_seeds.py <dest_dir> <code|asr>... --print-manifest
+    python scripts/fetch_language_pack_seeds.py <dest_dir> <code|asr|videoocr>...
+    python scripts/fetch_language_pack_seeds.py <dest_dir> <code|asr|videoocr>... --print-manifest
 """
 
 from __future__ import annotations
@@ -56,13 +58,14 @@ import requests  # noqa: E402
 
 from anki_miner.exceptions import DownloadFailed, SetupError  # noqa: E402
 from anki_miner.languages.pack_spec import PackComponent  # noqa: E402
-from anki_miner.services.asr import asr_pack_installer  # noqa: E402
+from anki_miner.services.asr import asr_pack_installer, onnx_pack_installer  # noqa: E402
 from anki_miner.services.language_pack_installer import (  # noqa: E402
     install_language_pack,
     load_pack,
     pack_supported,
 )
 from anki_miner.services.pack_installer import artifact_for  # noqa: E402
+from anki_miner.services.video_ocr import model_installer  # noqa: E402
 
 # artifact_for is the installer core's own platform/ABI resolution, imported
 # rather than reimplemented: --print-manifest exists to answer "what would this
@@ -81,6 +84,7 @@ def _component_manifest(comp: PackComponent) -> dict[str, Any]:
 
 
 _ASR = "asr"
+_VIDEO_OCR = "videoocr"
 
 
 def _is_client_error(exc: BaseException) -> bool:
@@ -94,7 +98,11 @@ def _is_client_error(exc: BaseException) -> bool:
 
 
 def _noun(code: str) -> str:
-    return "ASR engine pack" if code == _ASR else "language pack"
+    if code == _ASR:
+        return "ASR engine pack"
+    if code == _VIDEO_OCR:
+        return "Video OCR engine"
+    return "language pack"
 
 
 def _pack_manifest(code: str, root: Path) -> dict[str, Any]:
@@ -107,6 +115,15 @@ def _pack_manifest(code: str, root: Path) -> dict[str, Any]:
             "supported": asr_pack_installer.asr_pack_supported(),
             "approx_download_mb": pack.approx_download_mb,
             "components": [_component_manifest(comp) for comp in pack.components],
+        }
+    if code == _VIDEO_OCR:
+        return {
+            "code": code,
+            "dest": str(root),
+            "supported": onnx_pack_installer.onnx_pack_supported(),
+            # onnxruntime wheel (16-60 MB by platform) + the two pinned models (33 MB).
+            "approx_download_mb": 93,
+            "components": [],
         }
     language_pack = load_pack(code)
     if language_pack is None:
@@ -128,8 +145,15 @@ def _pack_manifest(code: str, root: Path) -> dict[str, Any]:
 def _install(code: str, root: Path) -> None:
     if code == _ASR:
         asr_pack_installer.install_asr_pack(root)
-    else:
-        install_language_pack(code, root)
+        return
+    if code == _VIDEO_OCR:
+        if not onnx_pack_installer.onnx_pack_supported():
+            print("::notice::no onnxruntime pack for this platform; the videoocr smoke leg will skip", flush=True)
+            return
+        onnx_pack_installer.install_onnx_pack(root / "onnx_pack")
+        model_installer.install_models(root / "ocr_models")
+        return
+    install_language_pack(code, root)
 
 
 def resolved_manifest(codes: Sequence[str], dest: Path) -> dict[str, Any]:
@@ -181,7 +205,10 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Seed the dependency packs for the release bundle smokes.")
     parser.add_argument("dest_dir", help="Directory to fill with one <code>/ subdirectory per pack")
     parser.add_argument(
-        "codes", nargs="+", metavar="code", help="Mining language codes, or asr for the ASR engine pack, e.g. zh ko asr"
+        "codes",
+        nargs="+",
+        metavar="code",
+        help="Mining language codes, asr for the ASR engine pack, or videoocr for the Video OCR engine, e.g. zh ko asr",
     )
     parser.add_argument(
         "--print-manifest",

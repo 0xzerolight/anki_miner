@@ -9,8 +9,8 @@ on demand so bundled-installer users can enable VAD without a rebundle. A pip
 Unlike the cuDNN/cuBLAS pack (``cuda_pack_installer``), which extracts a few
 shared libs and ``dlopen``s them, onnxruntime is a *Python package*: the whole
 ``onnxruntime/`` tree is extracted (structure preserved) into
-``onnx_pack_root/onnxruntime/``, and ``transcriber._ensure_onnx_pack_on_syspath``
-adds ``onnx_pack_root`` to ``sys.path`` so ``import onnxruntime`` resolves.
+``onnx_pack_root/onnxruntime/``, and :func:`ensure_on_syspath` adds
+``onnx_pack_root`` to ``sys.path`` so ``import onnxruntime`` resolves.
 
 The wheels are Python-ABI + platform + (on macOS) OS-version specific. The
 release bundle ships CPython 3.12, so only ``cp312`` wheels are pinned;
@@ -29,6 +29,7 @@ Placement mirrors the atomic-staging idiom in ``cuda_pack_installer`` and
 
 from __future__ import annotations
 
+import importlib.util
 import logging
 import platform
 import shutil
@@ -53,6 +54,8 @@ __all__ = [
     "onnx_pack_supported",
     "is_installed",
     "install_onnx_pack",
+    "ensure_on_syspath",
+    "onnxruntime_importable",
 ]
 
 #: onnxruntime wheels are ~16-60 MB; cap generously below resource_downloader's
@@ -170,6 +173,35 @@ def onnx_pack_supported() -> bool:
     macOS, and an Apple Silicon Mac below the pinned wheel's macOS floor).
     """
     return _current_spec() is not None
+
+
+def ensure_on_syspath(onnx_pack_root: Path | None) -> None:
+    """Append an installed onnxruntime pack dir to ``sys.path`` (VAD and Video OCR).
+
+    Append, not insert: the pack dir holds only the onnxruntime tree, so it never
+    needs to win priority and cannot shadow a same-named module already on the path.
+    """
+    if onnx_pack_root is None:
+        return
+    try:
+        if not (onnx_pack_root / "onnxruntime" / "__init__.py").exists():
+            return
+        root = str(onnx_pack_root)
+        if root not in sys.path:
+            sys.path.append(root)
+            importlib.invalidate_caches()
+    except MemoryError:
+        raise
+    except Exception as exc:  # noqa: BLE001 — best-effort; a path problem must not abort
+        logger.debug("onnxruntime pack probe: available=false exc=%s: %s", type(exc).__name__, exc)
+
+
+def onnxruntime_importable(onnx_pack_root: Path | None) -> bool:
+    """True when ``import onnxruntime`` would succeed (pip install, or the in-app pack)."""
+    if importlib.util.find_spec("onnxruntime") is not None:
+        return True
+    ensure_on_syspath(onnx_pack_root)
+    return importlib.util.find_spec("onnxruntime") is not None
 
 
 def is_installed(onnx_pack_root: Path) -> bool:

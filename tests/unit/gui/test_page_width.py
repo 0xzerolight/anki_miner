@@ -60,6 +60,7 @@ from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
 from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
 from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
 from anki_miner.gui.widgets.tracks_tab import TracksTab
+from anki_miner.gui.widgets.video_ocr_tab import VideoOcrTab
 from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 
 #: The declared minimum window plus the two monitor widths the complaint named.
@@ -89,6 +90,7 @@ PAGES = (
     BookSyncTab,
     ReadabilityTab,
     TracksTab,
+    VideoOcrTab,
 )
 
 PAGE_NAMES = sorted(cls.__name__ for cls in PAGES)
@@ -119,6 +121,7 @@ def _build_page(name: str, config):
         "BookSyncTab": lambda: BookSyncTab(config, suppress_optional_startup=True),
         "ReadabilityTab": lambda: ReadabilityTab(config, suppress_optional_startup=True),
         "TracksTab": lambda: TracksTab(config, suppress_optional_startup=True),
+        "VideoOcrTab": lambda: VideoOcrTab(config, suppress_optional_startup=True),
     }
     return builders[name]()
 

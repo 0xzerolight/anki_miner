@@ -17,6 +17,9 @@
 #                 needs the pack seed under BUNDLE_SMOKE_PACK_SEEDS/asr (the
 #                 engine is an in-app download, not bundle content); without one
 #                 the leg skips.
+#   2g. videoocr ANKI_MINER_SMOKE=videoocr                 -> BUNDLED_SMOKE_PASS
+#                 needs the onnxruntime pack + OCR models under
+#                 BUNDLE_SMOKE_PACK_SEEDS/videoocr; without them the leg skips.
 #   2e. cli      "$APP" version (stdout captured)            -> "status": "success"
 #                 proves the windowed exe writes JSON to a caller's pipe (fd 1)
 #   2c. mpv      ANKI_MINER_MPV_PROBE=1                     -> MPV_PROBE_OK
@@ -176,6 +179,36 @@ else
     echo "::warning::no asr seed under BUNDLE_SMOKE_PACK_SEEDS — the ASR engine pack was not fetched, so the seeded asr leg cannot run"
     echo "SKIP asr"
   fi
+fi
+echo
+
+# --- 2g. Video OCR seeded smoke: onnxruntime from the pack reads real text -----
+echo "=== smoke: videoocr ==="
+# Seeded like asr: the onnxruntime pack + the two OCR models, run in-process by the
+# frozen app. No seed = SKIP (fail-open), so a seedless run keeps its app-invocation count.
+OCR_SEED="${BUNDLE_SMOKE_PACK_SEEDS:-}"
+OCR_SEED="${OCR_SEED//\\//}/videoocr"
+# Guarded on the FILES, not the directories: both installers mkdir their root before
+# the first byte, so a transport failure mid-seed leaves empty dirs (same trap as yt-dlp above).
+if [ -n "${BUNDLE_SMOKE_PACK_SEEDS:-}" ] \
+  && [ -f "$OCR_SEED/onnx_pack/onnxruntime/__init__.py" ] \
+  && [ -f "$OCR_SEED/ocr_models/meiki.text.detect.v0.1.960x544.onnx" ] \
+  && [ -f "$OCR_SEED/ocr_models/meiki.text.rec.v0.960x32.onnx" ]; then
+  echo "Seeding the Video OCR engine from $OCR_SEED"
+  cp -R "$OCR_SEED/onnx_pack" "$ANKI_MINER_HOME/onnx_pack"
+  cp -R "$OCR_SEED/ocr_models" "$ANKI_MINER_HOME/ocr_models"
+  if ANKI_MINER_SMOKE=videoocr QT_QPA_PLATFORM=offscreen "$APP" 2>&1 | tee smoke_videoocr.log \
+    && grep -q "BUNDLED_SMOKE_PASS" smoke_videoocr.log; then
+    # Marker read by scripts/release_dryrun.sh: printed ONLY on the ran-and-passed path.
+    echo "BUNDLED_VIDEO_OCR_PASS"
+    echo "PASS videoocr"
+  else
+    echo "FAIL videoocr"
+    FAILED+=("videoocr")
+  fi
+else
+  echo "::warning::no videoocr seed under BUNDLE_SMOKE_PACK_SEEDS — the Video OCR leg cannot run"
+  echo "SKIP videoocr"
 fi
 echo
 

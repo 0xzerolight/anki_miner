@@ -1,5 +1,5 @@
 """Utilities container tab — nests Generate, Retime, Condense, Card Backfill, Deck Filter, Download,
-Manga OCR, Audiobook Sync, Readability, Tracks.
+Manga OCR, Audiobook Sync, Readability, Tracks, Video OCR.
 
 Wraps :class:`~anki_miner.gui.widgets.subtitle_creation_tab.SubtitleCreationTab`
 (Generate), :class:`~anki_miner.gui.widgets.subtitle_retime_tab.SubtitleRetimeTab`
@@ -9,11 +9,12 @@ Wraps :class:`~anki_miner.gui.widgets.subtitle_creation_tab.SubtitleCreationTab`
 :class:`~anki_miner.gui.widgets.download_tab.DownloadTab` (Download),
 :class:`~anki_miner.gui.widgets.mokuro_tab.MokuroTab` (Manga OCR),
 :class:`~anki_miner.gui.widgets.booksync_tab.BookSyncTab` (Audiobook Sync),
-:class:`~anki_miner.gui.widgets.readability_tab.ReadabilityTab` (Readability)
-and :class:`~anki_miner.gui.widgets.tracks_tab.TracksTab` (Tracks)
+:class:`~anki_miner.gui.widgets.readability_tab.ReadabilityTab` (Readability),
+:class:`~anki_miner.gui.widgets.tracks_tab.TracksTab` (Tracks)
+and :class:`~anki_miner.gui.widgets.video_ocr_tab.VideoOcrTab` (Video OCR)
 inside a single top-level tab so the main tab bar stays uncluttered.
 
-Settings → Utilities can hide any of the ten but not all of them
+Settings → Utilities can hide any of the eleven but not all of them
 (``config.hidden_utilities``, :meth:`SubtitlesTab.apply_hidden`).
 
 Close contract:
@@ -50,6 +51,7 @@ from anki_miner.gui.widgets.readability_tab import ReadabilityTab
 from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
 from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
 from anki_miner.gui.widgets.tracks_tab import TracksTab
+from anki_miner.gui.widgets.video_ocr_tab import VideoOcrTab
 from anki_miner.gui.workers.backfill_worker import BackfillScanWorker
 from anki_miner.gui.workers.deck_filter_worker import DeckFilterScanWorker
 from anki_miner.languages.registry import config_language, get_profile
@@ -61,7 +63,7 @@ logger = logging.getLogger(__name__)
 
 
 class SubtitlesTab(QWidget):
-    """Container tab holding the ten Utilities inner tabs (see the module docstring).
+    """Container tab holding the eleven Utilities inner tabs (see the module docstring).
 
     Args:
         config: Frozen application configuration.
@@ -91,6 +93,7 @@ class SubtitlesTab(QWidget):
         self.booksync_tab = BookSyncTab(config, suppress_optional_startup=suppress_optional_startup)
         self.readability_tab = ReadabilityTab(config, suppress_optional_startup=suppress_optional_startup)
         self.tracks_tab = TracksTab(config, suppress_optional_startup=suppress_optional_startup)
+        self.video_ocr_tab = VideoOcrTab(config, suppress_optional_startup=suppress_optional_startup)
 
         tools: dict[str, QWidget] = {
             "generate": self.generate_tab,
@@ -103,6 +106,7 @@ class SubtitlesTab(QWidget):
             "booksync": self.booksync_tab,
             "readability": self.readability_tab,
             "tracks": self.tracks_tab,
+            "videoocr": self.video_ocr_tab,
         }
         labels = utility_labels()
         # Stable sub-tab keys for reveal_capability (see capabilities.SUBTAB_KEYS).
@@ -129,10 +133,9 @@ class SubtitlesTab(QWidget):
         ``key`` is a stable identifier from
         :data:`anki_miner.gui.capabilities.SUBTAB_KEYS` (``"generate"``,
         ``"retime"``, ``"condense"``, ``"backfill"``, ``"deckfilter"``,
-        ``"download"``, ``"mokuro"``, ``"booksync"``, ``"readability"``,
-        ``"tracks"``). Unknown keys are
-        ignored so a stale caller can't crash the UI. A tool hidden in
-        Settings → Utilities is refused the same way, so a deep
+        ``"download"``, ``"mokuro"``, ``"booksync"``, ``"readability"``, ``"tracks"``,
+        ``"videoocr"``). Unknown keys are ignored so a stale caller can't crash
+        the UI. A tool hidden in Settings → Utilities is refused the same way, so a deep
         link or a restored route never lands on a page the tab bar does not
         show.
         """
@@ -177,15 +180,16 @@ class SubtitlesTab(QWidget):
         ``stored`` is ``config.hidden_utilities``; the rule is
         :func:`~anki_miner.gui.capabilities.hidden_utilities_on_tab`, shared
         with Settings → Utilities. An unknown key is ignored and a list naming
-        every tool hides none. The language gate (E17) hides Manga OCR for a
-        mining language without the ``manga_ocr`` capability; it never writes
-        ``hidden_utilities``, so the user's own choice survives a switch back to
-        Japanese. If the two together would hide every tool, only the language
-        gate applies. A hidden tool stays built and keeps its index: a run it
-        started keeps going, and showing it again puts it back in its place.
-        Hiding the tool on show moves the tab to the next visible one — Qt does
-        that inside ``setTabVisible``, and the underline follows
-        ``currentChanged``.
+        every tool hides none. The language gate (E17) hides a tool whose
+        capability the mining language lacks
+        (:func:`~anki_miner.gui.capabilities.language_gated_utilities`: Manga
+        OCR and Video OCR); it never writes ``hidden_utilities``, so the user's
+        own choice survives a switch back to Japanese. If the two together would
+        hide every tool, only the language gate applies. A hidden tool stays
+        built and keeps its index: a run it started keeps going, and showing it
+        again puts it back in its place. Hiding the tool on show moves the tab
+        to the next visible one — Qt does that inside ``setTabVisible``, and the
+        underline follows ``currentChanged``.
         """
         hidden = hidden_utilities_on_tab(stored, get_profile(config_language(self.config)).capabilities)
         for key, index in self._subtab_index.items():
@@ -209,6 +213,7 @@ class SubtitlesTab(QWidget):
         self.booksync_tab.update_config(config)
         self.readability_tab.update_config(config)
         self.tracks_tab.update_config(config)
+        self.video_ocr_tab.update_config(config)
 
     def release_dictionary_resources(self) -> bool:
         """Refuse resource mutation while a backfill or deck-filter scan, or a readability check, uses providers."""
@@ -237,3 +242,4 @@ class SubtitlesTab(QWidget):
         yield from self.booksync_tab.iter_close_workers()
         yield from self.readability_tab.iter_close_workers()
         yield from self.tracks_tab.iter_close_workers()
+        yield from self.video_ocr_tab.iter_close_workers()

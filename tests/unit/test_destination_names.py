@@ -142,6 +142,7 @@ def test_stable_keys_did_not_move_with_the_labels():
             "booksync",
             "readability",
             "tracks",
+            "videoocr",
         }
     )
     assert "audio" in SETTINGS_SUBTABS

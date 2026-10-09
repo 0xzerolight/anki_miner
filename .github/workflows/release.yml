@@ -987,7 +987,8 @@ jobs:
       # handed one or the leg cannot run at all. Every platform needs them —
       # BUNDLE_SMOKE_LANGS carries every seeded language on all legs and the asr leg runs on
       # all four. en also seeds _spacy beside it: the seeder installs what a
-      # pack requires. A new language's code goes before asr.
+      # pack requires. A new language's code goes before asr. videoocr seeds
+      # the onnxruntime pack + the OCR models for the Video OCR smoke.
       #
       # One step for every OS (shell: bash), driving the app's OWN installers
       # against the manifests in anki_miner/languages/<code>/pack.py and
@@ -1000,7 +1001,7 @@ jobs:
       # the step closed.
       - name: Seed the language packs and the ASR pack for the smokes
         shell: bash
-        run: python scripts/fetch_language_pack_seeds.py "$RUNNER_TEMP/lang_pack_seeds" zh ko en ca de pt fr es it nl nb ro el fi hu hr sv pl lt da tr ru ar th fa sl uk vi yue asr
+        run: python scripts/fetch_language_pack_seeds.py "$RUNNER_TEMP/lang_pack_seeds" zh ko en ca de pt fr es it nl nb ro el fi hu hr sv pl lt da tr ru ar th fa sl uk vi yue videoocr asr
 
       # Pack-less mining languages (ruling R-PACKLESS-SMOKE): nothing to fetch, but
       # bundle_smoke.sh runs a language leg only when BUNDLE_SMOKE_PACK_SEEDS/<code> exists.

@@ -136,6 +136,13 @@ def _check_language_pack_args(window, args, kwargs):
     assert args[1] == language_pack_root("ko")
 
 
+def _check_video_ocr_roots(window, args, kwargs):
+    # app.py's _connect_video_ocr_install._start: the onnxruntime pack root,
+    # shared with the silence-removal download, then the models root.
+    assert args[0] == window.get_config().onnx_pack_root
+    assert args[1] == window.get_config().video_ocr_models_root
+
+
 def _check_ytdlp_force_true(window, args, kwargs):
     # Every ytdlp update call site passes force=True (bypasses the 24h
     # throttle), which is what makes a first install work from a click.
@@ -169,6 +176,14 @@ def _check_ytdlp_force_true(window, args, kwargs):
         ("Utilities", "download_tab", "ytdlp_download_requested", (), "start_ytdlp_update", _check_ytdlp_force_true),
         ("Video", "youtube_tab", "ytdlp_download_requested", (), "start_ytdlp_update", _check_ytdlp_force_true),
         ("Utilities", "mokuro_tab", "mokuro_install_requested", (), "start_mokuro_install", _no_extra_checks),
+        (
+            "Utilities",
+            "video_ocr_tab",
+            "video_ocr_install_requested",
+            (),
+            "start_video_ocr_install",
+            _check_video_ocr_roots,
+        ),
         # The Settings "Update yt-dlp now" button (the actual Manga-OCR-incident
         # seam this test class regression-tests): wired inline in
         # compose_main_window, not through a _connect_* helper.
@@ -185,6 +200,7 @@ def _check_ytdlp_force_true(window, args, kwargs):
         "utilities.download_tab-ytdlp_download_requested",
         "video.youtube_tab-ytdlp_download_requested",
         "utilities.mokuro_tab-mokuro_install_requested",
+        "utilities.video_ocr_tab-video_ocr_install_requested",
         "settings-ytdlp_update_requested",
     ],
 )
