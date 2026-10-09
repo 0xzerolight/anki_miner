@@ -126,3 +126,15 @@ def mining_language_display_name(code: str) -> str:
     exists to unlock — so the name has to resolve without the probe.
     """
     return language_display_name(code)
+
+
+def bidi_isolated(name: str) -> str:
+    """Wrap a right-to-left ``name`` in Unicode isolates (FSI … PDI).
+
+    Qt picks a plain label's direction from its first strong character, so an
+    Arabic or Persian name leading an English sentence laid the whole line out
+    right to left. A left-to-right name is returned unchanged.
+    """
+    if any(unicodedata.bidirectional(char) in ("R", "AL") for char in name):
+        return f"⁨{name}⁩"
+    return name

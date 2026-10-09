@@ -36,6 +36,7 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QScrollArea, QVBoxLayou
 
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.ankiconnect_help import ankiconnect_install_help
+from anki_miner.gui.utils.language_choices import bidi_isolated
 from anki_miner.gui.utils.language_gate import apply_language_gate
 from anki_miner.gui.widgets.base import EnhancedDialog, StatusBadge
 from anki_miner.models import ValidationResult
@@ -306,6 +307,18 @@ def checks_from_validation(result: ValidationResult, checked_at: datetime) -> di
     checks["tools.mokuro"] = _record("tools.mokuro", mokuro_state, mokuro_detail or versions.get("mokuro", ""))
 
     return checks
+
+
+def _isolated_language_name(detail: str) -> str:
+    """Isolate the name in a ready engine row's ``"<name> (<code>)"`` for painting.
+
+    A plain label takes its direction from its first strong character, so a
+    bare "العربية (ar)" was right-aligned with the code first. Only the painted
+    row changes: the report, and the diagnostics export built from it, keep
+    the plain text.
+    """
+    name, separator, code = detail.rpartition(" (")
+    return f"{bidi_isolated(name)}{separator}{code}" if separator else detail
 
 
 def _merged_check(key: str, parts: list[tuple[str, HealthCheck]]) -> HealthCheck:
@@ -768,6 +781,8 @@ class SystemHealthWindow(EnhancedDialog):
             check = (
                 _merged_check(key, [(self._probe_name(k), report.get(k)) for k in parts]) if parts else report.get(key)
             )
+            if key == "language.engine" and check.state == HEALTH_OK:
+                check = replace(check, detail=_isolated_language_name(check.detail))
             clock = check.checked_at.strftime("%H:%M") if check.checked_at is not None else None
             row.apply_check(
                 check,

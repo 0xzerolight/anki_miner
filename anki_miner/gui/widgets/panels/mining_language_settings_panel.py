@@ -17,31 +17,18 @@ config, so arming the autosave debounce on that combo would save the
 pre-switch panel state on top of it.
 """
 
-import unicodedata
 from dataclasses import replace
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QWidget
 
 from anki_miner.gui.resources.styles import SPACING
-from anki_miner.gui.utils.language_choices import MiningLanguageChoice, mining_language_choices
+from anki_miner.gui.utils.language_choices import MiningLanguageChoice, bidi_isolated, mining_language_choices
 from anki_miner.gui.utils.language_gate import apply_language_gate, field_row_widgets
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.utils.i18n import tr_format
-
-
-def _bidi_isolated(name: str) -> str:
-    """Wrap a right-to-left ``name`` in Unicode isolates (FSI … PDI).
-
-    Qt picks a plain label's direction from its first strong character, so an
-    Arabic or Persian name leading an English sentence laid the whole line out
-    right to left. A left-to-right name is returned unchanged.
-    """
-    if any(unicodedata.bidirectional(char) in ("R", "AL") for char in name):
-        return f"⁨{name}⁩"
-    return name
 
 
 class MiningLanguageSettingsPanel(FormPanel):
@@ -239,7 +226,7 @@ class MiningLanguageSettingsPanel(FormPanel):
         self.pending_download_label.setText(
             tr_format(
                 self.tr("%1 needs a one-time download of about %2 MB."),
-                _bidi_isolated(choice.native_name),
+                bidi_isolated(choice.native_name),
                 str(choice.download_mb),
             )
         )
@@ -313,7 +300,7 @@ class MiningLanguageSettingsPanel(FormPanel):
             self.download_and_switch_button.setVisible(False)
             self.set_status_text(
                 self.pending_download_status,
-                tr_format(self.tr("%1 still can't be mined after its download."), _bidi_isolated(name)),
+                tr_format(self.tr("%1 still can't be mined after its download."), bidi_isolated(name)),
                 status="error",
             )
             self.pending_download_row.setVisible(True)

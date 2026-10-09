@@ -19,6 +19,8 @@ from __future__ import annotations
 from datetime import datetime
 
 import pytest
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QColor, QImage
 from PyQt6.QtWidgets import QLabel
 
 from anki_miner.gui.resources.styles import Theme
@@ -39,6 +41,7 @@ from anki_miner.gui.widgets.dialogs.system_health_window import (
     SystemHealthWindow,
     checks_from_validation,
 )
+from anki_miner.languages.registry import get_profile
 from anki_miner.models import ValidationIssue, ValidationResult
 
 CHECKED_AT = datetime(2026, 7, 27, 14, 32)
@@ -473,6 +476,61 @@ def test_a_ready_language_engine_shows_the_language_name(health_window):
     assert row.badge.text() == "Ready"
     assert row.detail_label.text() == "日本語 (ja)"
     assert not row.fix_button.isVisible()
+
+
+def _ink_span(text: str, qtbot) -> tuple[int, int]:
+    """Leftmost and rightmost dark pixel of ``text`` in a 400 px plain-text label."""
+    label = QLabel(text)
+    qtbot.addWidget(label)
+    label.setWordWrap(True)
+    label.setTextFormat(Qt.TextFormat.PlainText)
+    label.resize(400, 30)
+    image = QImage(400, 30, QImage.Format.Format_ARGB32)
+    image.fill(QColor("white"))
+    label.render(image)
+    xs = [x for x in range(400) for y in range(30) if image.pixelColor(x, y).lightness() < 128]
+    return (min(xs), max(xs)) if xs else (-1, -1)
+
+
+def _engine_detail(health_window, code: str) -> str:
+    # The ready row's text exactly as ValidationService formats it for `code`.
+    profile = get_profile(code)
+    result = _result(versions={"language-engine": f"{profile.display_name} ({profile.code})"})
+    health_window.show_health(HealthReport.unknown().with_validation(result, CHECKED_AT))
+    return health_window._rows["language.engine"].detail_label.text()
+
+
+@pytest.mark.parametrize("code", ["ar", "fa", "he"])
+def test_a_right_to_left_language_name_is_isolated_in_its_row(health_window, code):
+    # A plain label takes its direction from its first strong character, so a
+    # bare "العربية (ar)" laid out right to left: right-aligned, code first.
+    name = get_profile(code).display_name
+
+    assert _engine_detail(health_window, code) == f"⁨{name}⁩ ({code})"
+
+
+@pytest.mark.parametrize("code", ["ja", "es"])
+def test_a_left_to_right_language_name_row_is_unchanged(health_window, code):
+    profile = get_profile(code)
+
+    assert _engine_detail(health_window, code) == f"{profile.display_name} ({code})"
+
+
+def test_an_arabic_engine_row_paints_from_the_left_like_japanese(health_window, qtbot):
+    ja_left, _ = _ink_span(_engine_detail(health_window, "ja"), qtbot)
+    ar_left, ar_right = _ink_span(_engine_detail(health_window, "ar"), qtbot)
+
+    assert ja_left < 10
+    assert ar_left < 10
+    assert ar_right < 200
+
+
+def test_the_report_keeps_the_plain_language_name(health_window):
+    # The diagnostics export reads the report, not the label: no isolates there.
+    report = HealthReport.unknown().with_validation(_result(versions={"language-engine": "العربية (ar)"}), CHECKED_AT)
+    health_window.show_health(report)
+
+    assert report.get("language.engine").detail == "العربية (ar)"
 
 
 def test_sweep_error_is_shown_and_then_cleared(health_window):
