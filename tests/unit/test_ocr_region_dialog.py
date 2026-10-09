@@ -102,6 +102,14 @@ def test_a_new_frame_clears_the_reading_and_drops_a_late_one(dialog, qtbot):
     assert dialog.test_result.text() == ""
 
 
+def test_redrawing_the_box_drops_a_late_reading(dialog):
+    dialog._on_region_drawn(Region(0.1, 0.8, 0.8, 0.15))
+    old_test_gen = dialog._test_gen
+    dialog._on_region_drawn(Region(0.2, 0.7, 0.6, 0.2))
+    dialog._on_test_done(old_test_gen, "x")  # a read of the box no longer drawn
+    assert dialog.test_result.text() == ""
+
+
 def test_a_failed_frame_retires_the_old_one(dialog):
     dialog._on_region_drawn(Region(0.1, 0.8, 0.8, 0.15))
     assert dialog.test_button.isEnabled()

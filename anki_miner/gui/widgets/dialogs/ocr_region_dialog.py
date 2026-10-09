@@ -321,7 +321,7 @@ class OcrRegionDialog(QDialog):
             self._region = region
             self.ok_button.setEnabled(True)
             self.test_button.setEnabled(self._frame is not None)
-            self.test_result.setText("")
+            self._retire_reading()
 
     def _on_test(self) -> None:
         if self._frame is None or self._region is None:
