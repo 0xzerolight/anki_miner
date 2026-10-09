@@ -212,6 +212,12 @@ class OcrRegionDialog(QDialog):
         assert ok_button is not None  # the box was built with Ok
         self.ok_button = ok_button
         self.ok_button.setEnabled(region is not None)
+        # OK starts disabled, so Cancel takes the first focus; as an auto-default it would then
+        # take Enter too and drop a freshly drawn box. Enter belongs to OK.
+        self.ok_button.setDefault(True)
+        cancel_button = buttons.button(QDialogButtonBox.StandardButton.Cancel)
+        assert cancel_button is not None  # the box was built with Cancel
+        cancel_button.setAutoDefault(False)
         layout.addWidget(buttons)
 
         self._debounce = QTimer(self)

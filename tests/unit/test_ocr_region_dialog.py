@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 from PyQt6.QtCore import QPoint, Qt
 from PyQt6.QtGui import QPixmap
+from PyQt6.QtWidgets import QDialog, QDialogButtonBox
 
 from anki_miner.gui.widgets.dialogs import ocr_region_dialog as mod
 from anki_miner.gui.widgets.dialogs.ocr_region_dialog import OcrRegionDialog, _RegionCanvas
@@ -89,6 +90,23 @@ def test_ok_waits_for_a_region(dialog):
     assert dialog.ok_button.isEnabled()
     assert dialog.region() == Region(0.1, 0.8, 0.8, 0.15)
     assert dialog.region_thumbnail() is not None
+
+
+def test_enter_does_nothing_before_a_region_and_accepts_after_one(dialog, qtbot):
+    cancel = dialog.findChild(QDialogButtonBox).button(QDialogButtonBox.StandardButton.Cancel)
+    with qtbot.waitActive(dialog):
+        dialog.show()
+        dialog.activateWindow()
+    # The app opens the dialog before the duration arrives: the slider is still disabled, so
+    # Cancel is the first enabled widget and takes the focus (the canvas never takes it).
+    cancel.setFocus()
+    assert not cancel.isDefault()
+    qtbot.keyClick(cancel, Qt.Key.Key_Return)
+    assert dialog.isVisible()
+    dialog._on_region_drawn(Region(0.1, 0.8, 0.8, 0.15))
+    qtbot.keyClick(cancel, Qt.Key.Key_Return)
+    assert not dialog.isVisible()
+    assert dialog.result() == QDialog.DialogCode.Accepted
 
 
 def test_a_frame_landing_after_close_is_ignored(dialog):
