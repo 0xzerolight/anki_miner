@@ -107,6 +107,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - **`run_id`s that Windows can't use as folder names are refused** (`CON`, `NUL`, `COM1` and the rest), as are two run_ids in one file that differ only in letter case.
   - **`settings-import` and `setup` keep a settings file written by a newer Anki Miner.** They archive it before saving over it, as the window does at startup.
   - **`media` cuts its lines in parallel**, as many at once as a mining run does.
+  - **A run in a language other than the one the profile was saved in uses that language's Max Sentence Characters**, or no cap for a language visited for the first time, as the window's language switch does.
 
 ### Removed
 - **The Jisho online dictionary (Settings → Dictionaries).** Definitions come only from installed dictionaries. A saved Jisho entry is dropped from the dictionary list when settings load.
