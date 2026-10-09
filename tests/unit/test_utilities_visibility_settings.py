@@ -14,7 +14,7 @@ import pytest
 from PyQt6.QtWidgets import QMessageBox
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.gui.capabilities import UTILITY_SUBTABS, utility_labels
+from anki_miner.gui.capabilities import UTILITY_SUBTABS, hidden_utilities_on_tab, utility_labels
 from anki_miner.gui.widgets.panels.utilities_settings_panel import UtilitiesSettingsPanel
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 
@@ -199,6 +199,25 @@ class TestMangaOcrLanguageGate:
 
         assert not panel.utility_checkboxes["generate"].isEnabled()
 
+    def test_the_boxes_show_the_tabs_fallback(self, panel, test_config):
+        """X.2d: Manga OCR kept alone in Japanese; outside Japanese the tab shows every other tool."""
+        hidden = tuple(k for k in UTILITY_SUBTABS if k != "mokuro")
+        panel.load_from_config(replace(test_config, language="zh", hidden_utilities=hidden))
+
+        visible = [box for box in panel.utility_checkboxes.values() if not box.isHidden()]
+        assert visible and all(box.isChecked() and box.isEnabled() for box in visible)
+
+    def test_a_toggle_in_the_fallback_never_hides_manga_ocr(self, panel, test_config):
+        """The gate never writes hidden_utilities: back in Japanese, Manga OCR is still shown."""
+        hidden = tuple(k for k in UTILITY_SUBTABS if k != "mokuro")
+        panel.load_from_config(replace(test_config, language="zh", hidden_utilities=hidden))
+        seen = _emitted(panel.hidden_utilities_changed)
+
+        panel.utility_checkboxes["retime"].click()
+
+        # Video OCR, gated too, keeps the user's own "hidden" the same way.
+        assert seen[-1] == ("retime", "videoocr")
+
 
 class TestVideoOcrLanguageGate:
     """The Video OCR box shows only for a language that can use the tool."""
@@ -220,3 +239,14 @@ class TestVideoOcrLanguageGate:
         panel.load_from_config(replace(test_config, language="zh", hidden_utilities=hidden))
 
         assert not panel.utility_checkboxes["generate"].isEnabled()
+
+
+def test_the_tab_rule_falls_back_to_the_language_gate_alone():
+    ocr = frozenset({"mokuro", "videoocr"})
+    japanese = frozenset({"manga_ocr", "video_ocr"})
+    everything_but_ocr = [k for k in UTILITY_SUBTABS if k not in ocr]
+    assert hidden_utilities_on_tab(everything_but_ocr, frozenset()) == ocr
+    assert hidden_utilities_on_tab(["retime"], frozenset()) == frozenset({"retime"}) | ocr
+    assert hidden_utilities_on_tab(["retime"], frozenset({"manga_ocr"})) == frozenset({"retime", "videoocr"})
+    assert hidden_utilities_on_tab(["retime"], japanese) == frozenset({"retime"})
+    assert hidden_utilities_on_tab(UTILITY_SUBTABS, japanese) == frozenset()

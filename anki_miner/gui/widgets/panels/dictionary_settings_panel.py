@@ -144,7 +144,11 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         """Show "Reset to default" only while the folder differs from the default."""
         raw = self.dicts_root_selector.get_path()
         default = ANKI_MINER_HOME / "dicts"
-        self._reset_dicts_root_btn.setVisible(bool(raw) and Path(raw) != default)
+        offered = bool(raw) and Path(raw) != default
+        if not offered:
+            # A pressed Reset hides itself; keep focus on the folder it reset.
+            self.hand_off_focus(self._reset_dicts_root_btn, self.dicts_root_selector.input)
+        self._reset_dicts_root_btn.setVisible(offered)
 
     def set_per_row_reimport_enabled(self, enabled: bool) -> None:
         """Toggle every stale-row Re-import button.

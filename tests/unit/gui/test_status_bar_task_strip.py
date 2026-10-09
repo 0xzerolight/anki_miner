@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import pytest
 from PyQt6.QtCore import QThread
+from PyQt6.QtWidgets import QApplication, QMainWindow
 
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.controllers.task_registry import (
@@ -311,6 +312,46 @@ class TestExistingBehaviourSurvives:
         width_of_one_ellipsis = bar.operation_label.fontMetrics().horizontalAdvance("…")
         assert bar.operation_label.minimumSizeHint().width() <= width_of_one_ellipsis
         assert bar.operation_label.full_text == message
+
+    def test_a_long_task_line_elides_instead_of_pushing_the_badges(self, qtbot, registry):
+        """Z.5 residual: the strip is a QToolButton that never shrinks below its
+        text, so a long title at the 1024px minimum pushed the health badges off
+        the right edge. The line now elides, and the full text moves to the tooltip."""
+        window = QMainWindow()
+        qtbot.addWidget(window)
+        bar = StatusBarWidget()
+        window.setStatusBar(bar)
+        bar.bind_task_registry(registry)
+        title = "Mining " + "Shingeki no Kyojin The Final Season Part 2 " * 3
+        handle = registry.start(_spec("single", title), now=0.0)
+        handle.stage(index=2, total=5, name="Waiting for your word review", now=1.0)
+        bar.set_system_status(True, True)
+        window.resize(1024, 768)
+        window.show()
+        qtbot.waitExposed(window)
+        QApplication.processEvents()
+
+        # Before the fix the strip's full text width set the window's minimum, far past 1024.
+        assert window.minimumSizeHint().width() <= 1024
+        assert window.width() == 1024
+        assert bar.system_status_widget.geometry().right() < bar.width()
+        assert bar.task_button.text().endswith("…")
+        assert title.strip() in bar.task_button.toolTip()
+
+    def test_a_short_task_line_stays_whole_and_keeps_its_hint(self, qtbot, registry):
+        window = QMainWindow()
+        qtbot.addWidget(window)
+        bar = StatusBarWidget()
+        window.setStatusBar(bar)
+        bar.bind_task_registry(registry)
+        registry.start(_spec(), now=0.0)
+        window.resize(1024, 768)
+        window.show()
+        qtbot.waitExposed(window)
+
+        assert not bar.task_button.text().endswith("…")
+        assert "Downloading JMdict" in bar.task_button.text()
+        assert bar.task_button.toolTip() == "Show what is running and go to it"
 
     def test_an_unbound_strip_is_inert(self, qtbot):
         """MainWindow constructs the bar before it binds a registry."""

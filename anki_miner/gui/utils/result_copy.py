@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from PyQt6.QtCore import QCoreApplication
 
-from anki_miner.models.processing import TerminalOutcome, WhitelistCoverage
+from anki_miner.models.processing import NotMinedReason, NotMinedReport, TerminalOutcome, WhitelistCoverage
 from anki_miner.utils.i18n import tr_format
 
 
@@ -200,3 +200,91 @@ def whitelist_report(coverage: WhitelistCoverage) -> str:
 def whitelist_unmined_text(coverage: WhitelistCoverage) -> str:
     """The clipboard payload: one unmined entry per line, ready to be the next whitelist file."""
     return "\n".join(sorted(coverage.missing))
+
+
+def not_mined_header(count: int) -> str:
+    """The first line of the run-end "Not mined" block."""
+    if count == 1:
+        return tr_format(
+            QCoreApplication.translate("ResultCopy", "Not mined: %1 word — search this log for a word to see why."),
+            count,
+        )
+    return tr_format(
+        QCoreApplication.translate("ResultCopy", "Not mined: %1 words — search this log for a word to see why."),
+        count,
+    )
+
+
+def not_mined_label(reason: NotMinedReason) -> str:
+    """What one "Not mined" line says about its words, with the change that would mine them.
+
+    Built per call so the active translator applies (deck_filter_tab's
+    DROP_REASONS pattern).
+    """
+    labels = {
+        NotMinedReason.WORD_TYPE: QCoreApplication.translate(
+            "ResultCopy", "Name, interjection or other skipped word type — add it to your whitelist to mine it"
+        ),
+        NotMinedReason.SOUND_EFFECT: QCoreApplication.translate(
+            "ResultCopy", "Sound effect — add it to your whitelist to mine it"
+        ),
+        NotMinedReason.KANA_ONLY: QCoreApplication.translate(
+            "ResultCopy", "Kana-only word — add it to your whitelist to mine it"
+        ),
+        NotMinedReason.SCRIPT: QCoreApplication.translate(
+            "ResultCopy", "Written partly in another script — add it to your whitelist to mine it"
+        ),
+        NotMinedReason.KNOWN: QCoreApplication.translate("ResultCopy", "Already known"),
+        NotMinedReason.NO_DEFINITION: QCoreApplication.translate(
+            "ResultCopy", "No dictionary entry — Settings → Dictionaries"
+        ),
+        NotMinedReason.UNRANKED: QCoreApplication.translate(
+            "ResultCopy", "Not in your frequency list — Settings → Word Filters"
+        ),
+        NotMinedReason.FREQUENCY: QCoreApplication.translate(
+            "ResultCopy", "Outside your frequency range — Settings → Word Filters"
+        ),
+        NotMinedReason.BLACKLIST: QCoreApplication.translate(
+            "ResultCopy", "On your blacklist — Settings → Word Filters"
+        ),
+        NotMinedReason.SCRIPT_FILTER: QCoreApplication.translate(
+            "ResultCopy", "Excluded by script type — Settings → Word Filters"
+        ),
+        NotMinedReason.NAME_LIST: QCoreApplication.translate("ResultCopy", "On a name list — Settings → Word Filters"),
+        NotMinedReason.OCCURRENCE: QCoreApplication.translate(
+            "ResultCopy", "Appears fewer times than your minimum — Settings → Word Filters"
+        ),
+        NotMinedReason.ONE_PER_SENTENCE: QCoreApplication.translate(
+            "ResultCopy", "Another word from its sentence got the card — Settings → Sentences"
+        ),
+        NotMinedReason.I_PLUS_ONE: QCoreApplication.translate(
+            "ResultCopy", "No sentence where it is the only unknown word — Settings → Sentences"
+        ),
+        NotMinedReason.SENTENCE_LENGTH: QCoreApplication.translate(
+            "ResultCopy", "Sentence too long — Settings → Sentences"
+        ),
+        NotMinedReason.SAME_CARD: QCoreApplication.translate("ResultCopy", "Same card as another spelling in this run"),
+        NotMinedReason.MEDIA_FAILED: QCoreApplication.translate("ResultCopy", "Media could not be extracted"),
+        NotMinedReason.ANKI_DUPLICATE: QCoreApplication.translate("ResultCopy", "Anki already has a card for it"),
+        NotMinedReason.ANKI_FAILED: QCoreApplication.translate("ResultCopy", "Anki did not confirm the card"),
+    }
+    return labels[reason]
+
+
+def not_mined_lines(report: NotMinedReport) -> list[tuple[NotMinedReason, str]]:
+    """One line per reason that names a word, in pipeline order, every word listed.
+
+    No cap on purpose: the Activity Log's search box is the lookup.
+    """
+    lines: list[tuple[NotMinedReason, str]] = []
+    for reason in NotMinedReason:
+        forms = report.forms(reason)
+        if forms:
+            text = tr_format(
+                QCoreApplication.translate("ResultCopy", "%1 (%2): %3"),
+                not_mined_label(reason),
+                len(forms),
+                ", ".join(sorted(forms)),
+            )
+            lines.append((reason, text))
+    return lines

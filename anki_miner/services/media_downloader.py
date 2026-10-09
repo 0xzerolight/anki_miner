@@ -668,8 +668,8 @@ class MediaDownloaderService:
 
         if classification == "bot":
             raise BotDetectionError(
-                "The site requires login. In Settings → YouTube, set Cookies from "
-                "browser, or point Cookies file at an exported cookies.txt, then retry."
+                "The site requires login. In Settings → YouTube, set Cookies from browser "
+                'to your browser, or to "From a cookies.txt file…" for an exported cookies.txt, then retry.'
             )
 
         if classification in ytdlp_invocation.COOKIE_TAGS:

@@ -156,8 +156,8 @@ class TestInitialState:
         ):
             assert not hasattr(tab, attr)
 
-    def test_single_bar_visible_initially(self, tab):
-        # One whole-run bar, always present (no hidden per-volume/overall split).
+    def test_has_no_per_volume_bar(self, tab):
+        # One hidden run-state widget; the pinned bar shows the run (D1).
         assert not hasattr(tab, "current_progress_widget")
         assert not hasattr(tab, "overall_header")
 
@@ -478,6 +478,16 @@ class TestInvalidPath:
         detect.assert_not_called()
         assert queue_cls.call_count == 0
         assert not tab._detection_pending
+        assert tab.issue_banner().current_issue().summary == "That file or folder no longer exists."
+
+    def test_a_vanished_volume_is_named_as_gone(self, tmp_path, tab):
+        queue_cls = tab._queue_worker_cls
+        tab.volume_file_selector.set_path(str(tmp_path / "Vol1.cbz"))  # a stale history entry
+        with patch(_DETECT) as detect:
+            tab._on_mine_clicked()
+        detect.assert_not_called()
+        assert queue_cls.call_count == 0
+        assert tab.issue_banner().current_issue().summary == "That file or folder no longer exists."
 
     def test_detect_error_surfaced_no_run(self, tmp_path, tab):
         queue_cls = tab._queue_worker_cls

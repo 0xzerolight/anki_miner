@@ -20,7 +20,7 @@ import requests
 from PIL import Image, UnidentifiedImageError
 
 from anki_miner.exceptions import AnkiConnectionError, AnkiMinerException, SetupError
-from anki_miner.models import AnkiWriteState, LineLemmas, SentenceEdit, TokenizedWord
+from anki_miner.models import AnkiWriteState, LineLemmas, NotMinedReason, SentenceEdit, TokenizedWord
 from anki_miner.models.reading import ImageRef, ReadingDocument, ReadingUnit
 from anki_miner.orchestration.episode_processor import EpisodeProcessor, _EpisodeContext, _format_timestamp
 from anki_miner.presenters import NullPresenter
@@ -1695,9 +1695,31 @@ def test_sentence_tts_never_replaces_the_decks_own_audio(test_config, tmp_path):
     assert anki.last_card_data[0].media.audio_path == clip
 
 
+def test_no_sentence_audio_line_when_every_deck_card_brought_its_own(test_config, tmp_path):
+    clip = tmp_path / "line.mp3"
+    clip.write_bytes(b"ID3")
+    _, presenter = _run_deck(
+        _tts_config(test_config), [_deck_unit(0, audio_ref=clip)], fetcher=_make_sentence_fetcher()
+    )
+
+    infos = [c.args[0] for c in presenter.show_info.call_args_list]
+    assert not [line for line in infos if line.startswith("Sentence audio:")]  # no "0/0 sentences"
+
+
 def test_sentence_tts_still_voices_a_deck_card_without_audio(test_config):
     fetcher = _make_sentence_fetcher()
     anki, _ = _run_deck(_tts_config(test_config), [_deck_unit(0)], fetcher=fetcher)
 
     fetcher.fetch.assert_called_once()
     assert anki.last_card_data[0].media.audio_filename == "sentencetts_google_abc.mp3"
+
+
+def test_a_reading_run_reports_its_parse_rejects(test_config):
+    parser = MagicMock(name="SubtitleParser")
+    parser.parse_text_units.side_effect = _parse_returning([_word("犬", 0)], None, collections.Counter({"犬": 1}))
+    parser.last_parse_rejects = {"ちょっと": NotMinedReason.KANA_ONLY}
+
+    result = _make_processor(test_config, subtitle_parser=parser).process_reading(_document([_unit(0)]))
+
+    assert result.not_mined is not None
+    assert result.not_mined.forms(NotMinedReason.KANA_ONLY) == {"ちょっと"}

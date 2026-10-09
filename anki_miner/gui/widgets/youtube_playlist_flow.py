@@ -34,11 +34,12 @@ from __future__ import annotations
 import contextlib
 import logging
 import re
+import weakref
 from collections import deque
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Literal
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 from PyQt6.QtCore import QCoreApplication
 from PyQt6.QtWidgets import QMessageBox, QWidget
@@ -164,6 +165,37 @@ def split_url_lines(text: str) -> tuple[list[str], list[str]]:
     return accepted, rejected
 
 
+# A Bilibili list link that opens one of its videos, what a video opened from a
+# favourites list shows: bilibili.com/list/<id>?bvid=BV… (or the older
+# /medialist/play/<id>). Hosts and paths are those yt-dlp's BilibiliPlaylist
+# extractor takes.
+_BILIBILI_HOSTS = frozenset({"bilibili.com", "www.bilibili.com"})
+_BILIBILI_LIST_PATH_RE = re.compile(r"^/(?:list|medialist/play)/\w+")
+
+
+def _probed_playlist_url_info(url: str) -> YouTubeUrlInfo:
+    """How to offer the playlist another site's pasted link probed as.
+
+    Most such links name only the list (a multi-part video, a collection), so
+    :func:`classify_youtube_url` says "unknown" and the list expands with no
+    question under the cap. A Bilibili list link that also names one video is
+    video-in-playlist: yt-dlp takes the whole list unless told
+    ``--no-playlist``, as for YouTube's ``watch?v=…&list=…``, so the user is
+    asked first.
+    """
+    try:
+        parts = urlparse(url)
+    except ValueError:
+        return classify_youtube_url(url)
+    if (
+        (parts.hostname or "").lower() in _BILIBILI_HOSTS
+        and _BILIBILI_LIST_PATH_RE.match(parts.path)
+        and parse_qs(parts.query).get("bvid")
+    ):
+        return YouTubeUrlInfo(kind="video_in_playlist", video_id=None, playlist_id=None)
+    return classify_youtube_url(url)
+
+
 @dataclass(frozen=True)
 class PlaylistAddCallbacks:
     """Tab-side seams the add-flow controller calls back into.
@@ -245,6 +277,11 @@ class PlaylistAddController:
         self._probe_workers: list[YouTubeProbeWorker] = []
         # Videos waiting for a free probe slot (_MAX_PARALLEL_PROBES).
         self._probe_backlog: deque[YouTubeQueueItem] = deque()
+        # Rows that stand for one video: a playlist's entries and a "Just this
+        # video" pick. Their probes keep --no-playlist (probe_metadata), so a
+        # retried entry that is itself a multi-part video re-checks that entry
+        # instead of expanding its parts. Weak: a removed row is not kept alive.
+        self._one_video_rows: weakref.WeakSet[YouTubeQueueItem] = weakref.WeakSet()
 
         # Playlist expansion state (Issue #70). At most one playlist may be
         # resolving or probing at a time; later ones wait in _playlist_backlog.
@@ -413,8 +450,12 @@ class PlaylistAddController:
             keys.add(item.url)
         return keys
 
-    def _add_videos(self, urls: Sequence[str]) -> None:
-        """Queue each video in *urls* that is not already queued or repeated."""
+    def _add_videos(self, urls: Sequence[str], *, one_video: bool = False) -> None:
+        """Queue each video in *urls* that is not already queued or repeated.
+
+        *one_video* marks the rows as one video each (a "Just this video" pick):
+        their probes keep ``--no-playlist``, see ``_one_video_rows``.
+        """
         queued = self._queued_keys()
         skipped = 0
         for url in urls:
@@ -423,7 +464,7 @@ class PlaylistAddController:
                 skipped += 1
                 continue
             queued.add(key)
-            self._add_single_url(url)
+            self._add_single_url(url, one_video=one_video)
         if skipped:
             self._callbacks.log_warning(
                 tr_format(
@@ -432,9 +473,11 @@ class PlaylistAddController:
                 )
             )
 
-    def _add_single_url(self, url: str) -> None:
+    def _add_single_url(self, url: str, *, one_video: bool = False) -> None:
         """Queue *url* as a single video and probe it."""
         item = self._callbacks.enqueue(url)
+        if one_video:
+            self._one_video_rows.add(item)
         self._callbacks.render_new_item(item)
         self._start_probe(item)
 
@@ -469,7 +512,9 @@ class PlaylistAddController:
 
     def _spawn_probe(self, item: YouTubeQueueItem) -> None:
         """Spawn a metadata probe worker for *item*."""
-        probe = YouTubeProbeWorker(self._fetcher, item.url, parent=self._parent)
+        probe = YouTubeProbeWorker(
+            self._fetcher, item.url, parent=self._parent, single_video=item in self._one_video_rows
+        )
         probe.probe_done.connect(lambda info, it=item: self._on_probe_done(it, info))
         probe.probe_error.connect(lambda msg, it=item: self._on_probe_error(it, msg))
         probe.finished.connect(lambda pw=probe: self._on_probe_finished(pw))
@@ -523,7 +568,7 @@ class PlaylistAddController:
         # Order matters. The backlog entry keeps is_busy true *before* the row
         # goes, so a Mine waiting on its links (_start_pending_run_when_checked,
         # run on every recompute) cannot start in the gap and leave the parts out.
-        self._playlist_backlog.append((item.url, classify_youtube_url(item.url), pl))
+        self._playlist_backlog.append((item.url, _probed_playlist_url_info(item.url), pl))
         self._callbacks.remove_item(item)
         self._start_next_playlist()
         self._callbacks.recompute_buttons()
@@ -701,7 +746,7 @@ class PlaylistAddController:
         try:
             choice = self._ask_playlist_choice(url_info, pl, cap, over_cap)
             if choice == "single":
-                self._add_videos([original_url])
+                self._add_videos([original_url], one_video=True)
             elif choice == "playlist":
                 self._expand_playlist(entries, pl.title)
             else:
@@ -726,8 +771,9 @@ class PlaylistAddController:
         playlists (truncation needs consent).
         """
         # A pasted YouTube playlist, or another site's link that probed as one
-        # (classify_youtube_url says "unknown"): the user asked for the list,
-        # so under the cap there is nothing to ask.
+        # ("unknown"): the user asked for the list, so under the cap there is
+        # nothing to ask. A Bilibili list link that names one video arrives as
+        # video_in_playlist instead (_probed_playlist_url_info) and is asked.
         if url_info.kind in ("playlist", "unknown") and not over_cap:
             return "playlist"
 
@@ -825,6 +871,7 @@ class PlaylistAddController:
             item.video_id = entry.video_id
             item.display_title = entry.title
             item.status = YouTubeItemStatus.PROBING
+            self._one_video_rows.add(item)
             self._callbacks.render_new_item(item)
             kept_items.append(item)
 

@@ -169,12 +169,14 @@ def _strip_for_dedup(value: str) -> str:
     Mirrors Anki deliberately: it strips HTML/media but NOT ``[reading]``
     furigana brackets, so ``食べる[たべる]`` stays distinct from ``食べる`` here too.
 
-    Goes deliberately STRICTER than Anki in exactly one place: zero-width format
-    characters (Cf) are removed. Anki's checksum cannot see them, so a card
-    whose Expression is ``\\u202a寮`` — the shape Yomitan/asbplayer mines out of
-    Netflix subtitles, which carry U+202A LEFT-TO-RIGHT EMBEDDING — is invisible
-    to Anki's own duplicate check AND, before this strip, to the known-words
-    filter. Both gates going blind at once is how a second, clean ``寮`` card got
+    Goes STRICTER than Anki's strip in three places: NFC, whitespace runs
+    collapsed to one space, and zero-width format characters (Cf) removed. The
+    first two fold spellings that look identical (a decomposed accent, a doubled
+    space). The Cf strip is the deliberate one: Anki's checksum cannot see those
+    characters, so a card whose Expression is ``\\u202a寮`` — the shape
+    Yomitan/asbplayer mines out of Netflix subtitles, which carry U+202A
+    LEFT-TO-RIGHT EMBEDDING — is invisible to Anki's own duplicate check AND,
+    before this strip, to the known-words filter. Both gates going blind at once is how a second, clean ``寮`` card got
     created. This filter is the only layer that can catch it, so it must.
     Stripping can only make the filter match more, and two strings differing
     only by zero-width characters are the same word on screen.
@@ -371,8 +373,11 @@ def build_note(
         # spelling: a mined sentence keeps the file's own script whatever the
         # language's own script setting says, and the escaped/bolded form would
         # carry markup no script rule can read.
-        language_tag = card_lang(word.sentence, config)
-        sentence_field = _lang_wrap(sentence_field, language_tag)
+        # "" tags no sentence; the card still has a language, so Language
+        # falls back to the profile code.
+        sentence_tag = card_lang(word.sentence, config)
+        sentence_field = _lang_wrap(sentence_field, sentence_tag)
+        language_tag = sentence_tag or content_lang
 
     # Build fields, skipping any with empty config mapping
     field_data = {

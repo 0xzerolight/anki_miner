@@ -319,8 +319,8 @@ class TestAppWiring:
         assert settings_tab.mining_language_panel.pending_download_status.text() == "한국어 pack installed."
 
     def test_the_finish_rebuilds_the_search_index(self, wired, monkeypatch) -> None:
-        """The row is hidden at index time and revealed by the download, so the
-        index built during construction still calls it invisible."""
+        """The finished download changes the language list, which feeds the
+        selector's search text, and the index is built once."""
         _window, settings_tab, captured = wired
         settings_tab.language_pack_download_requested.emit("ko")
         rebuilt: list[bool] = []

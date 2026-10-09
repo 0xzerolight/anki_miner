@@ -6,7 +6,7 @@ chain and compares it against the order the controls are actually painted in.
 
 That is the guarantee worth having, because the failure it caught is one no
 per-screen ``setTabOrder`` call could have prevented -- it *was* a
-``setTabOrder`` call. Single Episode chained Process Episode after the offset
+``setTabOrder`` call. Single Episode chained Mine Episode after the offset
 field, which was correct until D6 reparented that button into the pinned action
 bar at the foot of the page; from then on Tab jumped from the offset field down
 to the bar and back up again. An explicit order that names a widget somebody
@@ -223,3 +223,23 @@ def test_the_primary_action_is_reached_last(screen):
 
     chain = _chain_order(widget)
     assert chain[-1] is primary, f"{name} does not finish on its primary action, but on {_describe(chain[-1])}"
+
+
+def test_single_with_a_picked_video_tabs_in_reading_order(qtbot, test_config: AnkiMinerConfig, tmp_path):
+    """Idle Single hides Card Source and "Audio track…"; a picked video shows both,
+    so the chain through them is measured too (B1.5)."""
+    video = tmp_path / "ep01.mkv"
+    video.touch()
+    with patch("anki_miner.gui.utils.service_factory.create_episode_processor", MagicMock()):
+        widget = _build("single", test_config)
+        qtbot.addWidget(widget)
+        widget.video_selector.set_path(str(video))
+        widget.resize(1000, 800)
+        widget.show()
+        qtbot.waitExposed(widget)
+        chain = _chain_order(widget)
+
+    assert widget.card_source_edit in chain
+    assert widget.tracks_button in chain
+    reading = sorted(chain, key=lambda w: _reading_key(w, widget))
+    assert [_describe(w) for w in chain] == [_describe(w) for w in reading], "single tabs out of reading order"

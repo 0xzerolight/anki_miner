@@ -29,7 +29,7 @@ from anki_miner.gui.widgets import deck_builder_tab
 from anki_miner.gui.widgets.base import ScreenIssue
 from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.models.deck_build import DeckCorpus, DeckSelectionMode
-from anki_miner.models.processing import TerminalOutcome
+from anki_miner.models.processing import NotMinedReason, NotMinedReport, TerminalOutcome
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -356,7 +356,7 @@ class _FakeWorker(QObject):
     item_pairs_progress = pyqtSignal(str, int, int)
     item_completed = pyqtSignal(str, int)
     item_failed = pyqtSignal(str, str, int)
-    queue_finished = pyqtSignal(int, object)
+    queue_finished = pyqtSignal(int, object, object)
     error = pyqtSignal(str)
     finished = pyqtSignal()
 
@@ -397,10 +397,10 @@ class _FakeWorker(QObject):
     def wait(self, *_args):
         return True
 
-    def end(self, total_cards: int = 0, whitelist=None) -> None:
+    def end(self, total_cards: int = 0, whitelist=None, not_mined=None) -> None:
         """Finish the way the real run does: queue_finished, then finished."""
         self.running = False
-        self.queue_finished.emit(total_cards, whitelist)
+        self.queue_finished.emit(total_cards, whitelist, not_mined)
         self.finished.emit()
 
 
@@ -614,6 +614,21 @@ def test_cancel_sets_cancel_requested_and_marks_receipt_cancelled(ready_tab, wor
     assert ready_tab.preview_button.isEnabled()
 
 
+@pytest.mark.parametrize(("button", "state"), [("preview", "scanning"), ("build", "building")])
+def test_reapplying_the_run_state_during_a_cancel_keeps_cancelling(ready_tab, workers, button, state):
+    """F2: Cancel's enables come from _apply_run_state, so nothing that re-applies
+    the state while the cancel drains can turn Build or Cancel back on."""
+    getattr(ready_tab, f"{button}_button").click()
+    ready_tab.cancel_button.click()
+
+    ready_tab._apply_run_state(ready_tab._run_state)
+
+    assert ready_tab._run_state == state
+    assert not ready_tab.build_button.isEnabled()
+    assert not ready_tab.cancel_button.isEnabled()
+    assert ready_tab.cancel_button.text() == "Cancelling…"
+
+
 def test_late_preview_from_a_cancelled_worker_is_ignored(ready_tab, workers):
     ready_tab.preview_button.click()
     ready_tab.cancel_button.click()
@@ -759,6 +774,23 @@ def test_cancelled_build_with_no_cards_logs_nothing_extra(ready_tab, workers):
     ready_tab.presenter.show_info.assert_not_called()
 
 
+def test_a_build_writes_no_not_mined_block(ready_tab, workers):
+    """Builds bypass Word Filters and Sentences, so a report would list a
+    corpus's known words and none of the real reasons."""
+    ready_tab.preview_button.click()
+    worker = workers[0]
+    worker.preview_ready.emit(_corpus())
+    _select(ready_tab, DeckSelectionMode.TOP_N)
+    ready_tab.top_n_spinbox.setValue(2)
+    ready_tab.build_button.click()
+
+    worker.item_completed.emit("id", 2)
+    worker.end(total_cards=2, not_mined=NotMinedReport.from_drops({"a": NotMinedReason.KNOWN}))
+
+    assert ready_tab._receipt_widget.receipt.not_mined is None
+    assert "Not mined:" not in ready_tab.log_widget.full_text()
+
+
 def test_item_pairs_progress_moves_the_bar_and_the_published_count(ready_tab, workers, registry):
     ready_tab.bind_task_registry(registry)
     ready_tab.build_button.click()
@@ -769,6 +801,20 @@ def test_item_pairs_progress_moves_the_bar_and_the_published_count(ready_tab, wo
     assert ready_tab.progress_widget.status_label.text() == "1 of 4 episodes mined"
     snapshot = registry.snapshot("run.deckbuilder")
     assert (snapshot.current, snapshot.total) == (1, 4)
+
+
+def test_a_late_episode_tick_keeps_cancelling(ready_tab, workers, registry):
+    """F3: a pair tick already queued when Cancel was pressed must not overwrite
+    "Cancelling…" with an episode count."""
+    ready_tab.bind_task_registry(registry)
+    ready_tab.build_button.click()
+    workers[0].item_pairs_progress.emit("id", 1, 4)
+    ready_tab.cancel_button.click()
+
+    workers[0].item_pairs_progress.emit("id", 2, 4)
+
+    assert ready_tab.progress_widget.status_label.text() == "Cancelling…"
+    assert registry.snapshot("run.deckbuilder").detail != "2 of 4 episodes mined"
 
 
 def test_item_failed_yields_failed_task_outcome(ready_tab, workers, registry):

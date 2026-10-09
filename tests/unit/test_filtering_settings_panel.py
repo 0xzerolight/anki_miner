@@ -233,7 +233,9 @@ def test_kana_variant_row_lives_in_the_known_words_section(qtbot):
     # FormPanel opens a new QFormLayout per section and after every add_widget /
     # add_layout block (C01), so the row may sit in a later form than the
     # checkbox; what proves it moved is that no other section heading lies
-    # between the Known Words heading and the row.
+    # between the Known Words heading and the row. A section heading is the
+    # add_section label (#settings-subheading); a helper or status label that
+    # sits between two rows is not one.
     from PyQt6.QtWidgets import QFormLayout, QLabel
 
     panel = FilteringSettingsPanel()
@@ -248,7 +250,11 @@ def test_kana_variant_row_lives_in_the_known_words_section(qtbot):
             if isinstance(item.layout(), QFormLayout) and item.layout().indexOf(widget) >= 0
         )
 
-    headings = {i: item.widget().text() for i, item in enumerate(items) if isinstance(item.widget(), QLabel)}
+    headings = {
+        i: item.widget().text()
+        for i, item in enumerate(items)
+        if isinstance(item.widget(), QLabel) and item.widget().objectName() == "settings-subheading"
+    }
     checkbox_at = index_of_form_holding(panel.use_known_words_db_checkbox)
     kana_at = index_of_form_holding(panel.match_kana_variants_checkbox)
     section_of_checkbox = max(i for i in headings if i < checkbox_at)

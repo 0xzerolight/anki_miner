@@ -126,6 +126,9 @@ class TestCookieFailureMessage:
     def test_locked_says_close_the_browser(self) -> None:
         msg = cookie_failure_message("cookie_locked", "chrome", CHROME_COPY_FAILED.lower(), platform="win32")
         assert "Close chrome" in msg
+        # B3.4b: the browser choice is the "Cookies from browser" combo, whose first item is "None".
+        assert 'in Settings → YouTube, set Cookies from browser to "None".' in msg
+        assert "Cookies → Browser" not in msg
         # yt-dlp's own text and issue link must not reach the user.
         assert "Could not copy" not in msg
         assert "github.com" not in msg
@@ -145,6 +148,12 @@ class TestCookieFailureMessage:
     def test_unset_browser_reads_as_a_sentence(self) -> None:
         msg = cookie_failure_message("cookie_locked", None, "", platform="win32")
         assert "Close the browser" in msg
+
+    def test_the_flatpak_hint_names_the_real_cookies_control(self) -> None:
+        """B3.4b: the "Cookies file" field it named was folded into the cookies combo."""
+        msg = cookie_failure_message("cookie_locked", "firefox", "profile not found", platform="linux")
+        assert "Cookies file" not in msg
+        assert "From a cookies.txt file…" in msg
 
     def test_linux_missing_names_flatpak(self) -> None:
         msg = cookie_failure_message("cookie_missing", "firefox", FIREFOX_DB_NOT_FOUND.lower(), platform="linux")

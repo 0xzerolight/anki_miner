@@ -142,6 +142,13 @@ class _SavePathPanel(Protocol):
     def contribute(self, config: AnkiMinerConfig) -> AnkiMinerConfig: ...
 
 
+@runtime_checkable
+class _ConfirmationSurface(Protocol):
+    """A whole-profile action's surface that shows its own clean-finish flash (the Profile Manager)."""
+
+    def flash_status(self, text: str) -> None: ...
+
+
 class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     """Settings tab with category organization.
 
@@ -287,6 +294,9 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self._pending_search_jump: SettingSearchEntry | None = None
         #: Test seam — zero clears the jump mark on the next event-loop turn.
         self._search_hit_ms = SEARCH_HIT_MS
+        # One known-words clear at a time, across Known Words dialogs: a dialog
+        # reopened during a slow clear starts with Rebuild off (B3.7a).
+        self._known_words_rebuild_in_flight = False
         self._setup_ui()
         for panel in (self.dictionary_panel, self.audio_panel, self.frequency_panel, self.pitch_panel):
             panel.set_mutation_preflight(self.commit_pending_settings_for_mutation)
@@ -797,6 +807,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.subtitles_panel.vad_pack_download_requested.connect(self._on_vad_pack_download_clicked)
         self.subtitles_panel.asr_pack_download_requested.connect(self._on_asr_pack_download_clicked)
         self.subtitles_panel.vulkan_model_download_requested.connect(self._on_vulkan_download_clicked)
+        self.subtitles_panel.setting_rows_changed.connect(self.refresh_setting_search_index)
 
     def _start_restore_scan(
         self,
@@ -1470,7 +1481,24 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         page = self.pages.widget(self._subtab_index[entry.page_key]) if entry.page_key else None
         if isinstance(page, QScrollArea):
             page.ensureWidgetVisible(anchor.scroll_widget)
-        anchor.focus_widget.setFocus(Qt.FocusReason.ShortcutFocusReason)
+        focus: QWidget | None = anchor.focus_widget
+        if not anchor.focus_widget.isVisibleTo(self):
+            # The control an anchor names can be hidden by its own state: an
+            # empty chain shows a one-line empty state instead of its list, an
+            # installed download hides its button. Focus asked of a hidden
+            # widget lands nowhere the user can see, and Qt hands it over
+            # whenever that widget next appears. Take the first visible control
+            # in the same block instead, or move no focus when it has none (B3.5b).
+            focus = next(
+                (
+                    child
+                    for child in anchor.widget.findChildren(QWidget)
+                    if child.isVisibleTo(self) and child.isEnabled() and child.focusPolicy() & Qt.FocusPolicy.TabFocus
+                ),
+                None,
+            )
+        if focus is not None:
+            focus.setFocus(Qt.FocusReason.ShortcutFocusReason)
         flash_search_hit(anchor.highlight_widget, duration_ms=self._search_hit_ms)
 
     def trigger_reimport_all(
@@ -2075,7 +2103,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                 box.setDetailedText(", ".join(import_result.invalid_fields))
             box.exec()
         else:
-            self._flash_save_status(self.tr("✓ Imported"))
+            self._flash_save_status(self.tr("✓ Imported"), surface)
 
     def _on_reset_to_defaults_clicked(self, surface: QWidget | None = None) -> None:
         """Reset settings to defaults after an explicit confirm (Issue #99).
@@ -2126,14 +2154,19 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self._load_config()  # repaint the reset panels (under the _loading guard)
         self._settings_dirty = False
         self.config_changed.emit(self.config)  # persist via MainWindow.update_config
-        self._flash_save_status(self.tr("✓ Reset to defaults"))
+        self._flash_save_status(self.tr("✓ Reset to defaults"), surface)
 
-    def _flash_save_status(self, text: str) -> None:
+    def _flash_save_status(self, text: str, surface: QWidget | None = None) -> None:
         """Show a transient, non-modal confirmation at the end of the search row.
 
         Restarts the auto-clear timer on each call so repeated saves keep the
-        message visible for the full duration.
+        message visible for the full duration. A whole-profile action run from
+        the Profile Manager confirms there instead: this row is behind that
+        modal dialog.
         """
+        if isinstance(surface, _ConfirmationSurface):
+            surface.flash_status(text)
+            return
         self.save_status_label.setText(text)
         self._save_status_timer.stop()
         self._save_status_timer.start(2500)
@@ -2430,7 +2463,9 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
 
     # === Known words handlers (Issues #38 / #42) ===
 
-    def _on_rebuild_known_words(self, on_finished: Callable[[], None] | None = None) -> None:
+    def _on_rebuild_known_words(
+        self, on_finished: Callable[[], None] | None = None, surface: QWidget | None = None
+    ) -> None:
         """Clear the local known-words cache after user confirmation.
 
         The cache is additive (see :class:`KnownWordDB`), so removing a deck's
@@ -2440,12 +2475,16 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         ``on_finished`` runs exactly once when this attempt is over (declined,
         failed to start, or the off-thread clear ended); the Known Words dialog
         uses it to re-enable its button and refresh its counts (C13).
+
+        ``surface`` is the Known Words dialog the rebuild was started from: the
+        confirm, a failure and the result show there while it is open, not on
+        this tab behind it (B3.7b).
         """
         from anki_miner.gui.utils.service_factory import resolve_known_words_db_path
         from anki_miner.languages.registry import config_language
 
         confirm = QMessageBox.question(
-            self,
+            self._known_words_surface(surface)[0],
             self.tr("Rebuild Known Words DB"),
             self.tr(
                 "Clear the local known-words cache? It will re-sync from Anki on the "
@@ -2470,7 +2509,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         try:
             db = KnownWordDB(resolve_known_words_db_path(self.config), language=config_language(self.config))
         except Exception as error:  # noqa: BLE001 - preserve the existing constructor boundary
-            self._on_rebuild_known_words_error(str(error))
+            self._on_rebuild_known_words_error(str(error), surface)
             if on_finished is not None:
                 on_finished()
             return
@@ -2481,29 +2520,43 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             # Anki-synced rows are rebuilt from Anki on the next run.
             return db.clear(preserve_user=True)
 
+        self._known_words_rebuild_in_flight = True
         run_off_thread(
             self,
             work,
             lambda removed: self._on_rebuild_known_words_succeeded(
-                lambda: QMessageBox.information(
-                    self,
+                lambda parent: QMessageBox.information(
+                    parent,
                     self.tr("Rebuild Known Words DB"),
                     tr_format(
                         self.tr("Cached words cleared: %1. The cache rebuilds on the next run."),
                         removed,
                     ),
-                )
+                ),
+                surface,
             ),
-            self._on_rebuild_known_words_error,
+            lambda message: self._on_rebuild_known_words_error(message, surface),
             on_finished=lambda: self._on_rebuild_known_words_finished(on_finished),
         )
 
-    def _on_rebuild_known_words_succeeded(self, notify: Callable[[], object]) -> None:
-        self.clear_screen_issue()
-        notify()
+    def _known_words_surface(self, surface: QWidget | None) -> tuple[QWidget, ScreenIssueHost]:
+        """The Known Words dialog while it is open, else this tab (B3.7b).
 
-    def _on_rebuild_known_words_error(self, message: str) -> None:
-        self.show_screen_issue(
+        Resolved when each message is shown, not when the rebuild starts: a slow
+        clear can outlive the dialog, and a closed dialog's banner is never seen.
+        """
+        return self._surface(surface if surface is not None and surface.isVisible() else None)
+
+    def _on_rebuild_known_words_succeeded(
+        self, notify: Callable[[QWidget], object], surface: QWidget | None = None
+    ) -> None:
+        parent, issues = self._known_words_surface(surface)
+        issues.clear_screen_issue()
+        notify(parent)
+
+    def _on_rebuild_known_words_error(self, message: str, surface: QWidget | None = None) -> None:
+        _parent, issues = self._known_words_surface(surface)
+        issues.show_screen_issue(
             ScreenIssue(
                 summary=self.tr("The known-words cache could not be cleared."),
                 details=message,
@@ -2512,6 +2565,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
 
     def _on_rebuild_known_words_finished(self, on_finished: Callable[[], None] | None = None) -> None:
         """Tell whoever asked (the Known Words dialog) that the rebuild is over."""
+        self._known_words_rebuild_in_flight = False
         if on_finished is not None:
             on_finished()
 
@@ -2524,15 +2578,19 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         try:
             db = KnownWordDB(resolve_known_words_db_path(self.config), language=config_language(self.config))
             language = config_language(self.config)
-            KnownWordsManagerDialog(
+            dialog = KnownWordsManagerDialog(
                 db,
                 self,
                 language=language,
                 content_style=get_profile(language).content_style,
                 excluded_decks=tuple(self.config.excluded_decks),
-                on_rebuild=lambda done: self._on_rebuild_known_words(on_finished=done),
-                rebuild_enabled=self.filtering_panel.get_use_known_words_db(),
-            ).exec()
+                # The dialog is the rebuild's surface (B3.7b); the name is bound
+                # by the time its button can be clicked.
+                on_rebuild=lambda done: self._on_rebuild_known_words(on_finished=done, surface=dialog),
+                rebuild_enabled=self.filtering_panel.get_use_known_words_db()
+                and not self._known_words_rebuild_in_flight,
+            )
+            dialog.exec()
         except Exception as e:  # noqa: BLE001 — surface any DB failure to the user
             self.show_screen_issue(
                 ScreenIssue(

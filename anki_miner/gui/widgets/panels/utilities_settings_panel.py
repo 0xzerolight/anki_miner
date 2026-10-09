@@ -12,8 +12,12 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QCheckBox, QLabel, QWidget
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.gui.capabilities import effective_hidden_utilities, utility_labels
-from anki_miner.gui.utils.language_gate import apply_language_gate
+from anki_miner.gui.capabilities import (
+    effective_hidden_utilities,
+    hidden_utilities_on_tab,
+    language_gated_utilities,
+    utility_labels,
+)
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.languages.registry import config_language, get_profile
 
@@ -69,20 +73,22 @@ class UtilitiesSettingsPanel(FormPanel):
 
     def load_from_config(self, config: AnkiMinerConfig) -> None:
         """Repaint every box from ``config`` without emitting (SettingsTab._load_config)."""
-        # Read through the same rule SubtitlesTab applies, so the boxes show
-        # what the tab shows: unknown keys ignored, "every tool hidden" = none.
-        hidden = effective_hidden_utilities(config.hidden_utilities)
+        # The rule SubtitlesTab applies, so the boxes show what the tab shows:
+        # unknown keys ignored, and when the user's hidden tools plus the
+        # language-gated ones would hide everything, every usable tool is shown.
+        capabilities = get_profile(config_language(config)).capabilities
+        gated = language_gated_utilities(capabilities)
+        on_tab = hidden_utilities_on_tab(config.hidden_utilities, capabilities)
+        stored = effective_hidden_utilities(config.hidden_utilities)
         for key, box in self.utility_checkboxes.items():
             box.blockSignals(True)
             try:
-                box.setChecked(key not in hidden)
+                # A gated box (E17: Manga OCR or Video OCR outside Japanese) is
+                # off screen and keeps the user's own choice: the gate never
+                # writes hidden_utilities, so a switch back finds it unchanged.
+                box.setChecked(key not in (stored if key in gated else on_tab))
             finally:
                 box.blockSignals(False)
-        # E17: Manga OCR and Video OCR read Japanese only; their boxes follow
-        # the tab's language gate (SubtitlesTab), never the stored hidden list.
-        # Gated before the lock, which counts only the boxes the user can see (P1).
-        apply_language_gate(
-            [(self.utility_checkboxes["mokuro"], "manga_ocr"), (self.utility_checkboxes["videoocr"], "video_ocr")],
-            get_profile(config_language(config)).capabilities,
-        )
+            # Before the lock, which counts only the boxes the user can see (P1).
+            box.setHidden(key in gated)
         self._sync_utility_lock()

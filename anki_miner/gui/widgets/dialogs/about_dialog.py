@@ -13,7 +13,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from PyQt6.QtCore import QT_TRANSLATE_NOOP, Qt, QUrl
-from PyQt6.QtGui import QDesktopServices, QIcon
+from PyQt6.QtGui import QDesktopServices, QIcon, QShowEvent
 from PyQt6.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from anki_miner.gui.resources import get_resource_dir
@@ -117,6 +117,18 @@ class AboutDialog(EnhancedDialog):
         layout.addLayout(grid)
 
         return section
+
+    def showEvent(self, event: QShowEvent | None) -> None:  # noqa: N802 - Qt override
+        """Floor the height at what the content needs at the minimum width.
+
+        A window's layout minimum ignores height-for-width, and the blurb wraps:
+        at the minimum width it takes a line the minimum never counted, so
+        shrinking the dialog squeezed the shortcut rows and cut their descenders
+        (Z.5). Measured here, after polish, so the stylesheet's fonts and the
+        text scale are in it.
+        """
+        self.setMinimumHeight(max(self.minimumHeight(), self.heightForWidth(self.minimumWidth())))
+        super().showEvent(event)
 
     def _open_github(self) -> None:
         QDesktopServices.openUrl(QUrl(GITHUB_URL))

@@ -125,6 +125,28 @@ def effective_hidden_utilities(stored: Iterable[str]) -> frozenset[str]:
     return frozenset() if len(hidden) == len(UTILITY_SUBTABS) else hidden
 
 
+#: Tool key -> the profile capability it needs (E17). A language without it hides the tool.
+_GATED_TOOLS: dict[str, str] = {"mokuro": "manga_ocr", "videoocr": "video_ocr"}
+
+
+def language_gated_utilities(capabilities: frozenset[str]) -> frozenset[str]:
+    """The Utilities tools a mining language with ``capabilities`` cannot use (E17: Manga OCR and Video OCR read Japanese)."""
+    return frozenset(key for key, needed in _GATED_TOOLS.items() if needed not in capabilities)
+
+
+def hidden_utilities_on_tab(stored: Iterable[str], capabilities: frozenset[str]) -> frozenset[str]:
+    """The tools the Utilities tab leaves off: the user's hidden ones plus the language-gated ones.
+
+    ``stored`` is ``config.hidden_utilities``, read through
+    :func:`effective_hidden_utilities`. If the two together would hide every
+    tool, only the language gate applies, so the tab always shows a tool.
+    Settings → Utilities reads the same rule, so its boxes say what the tab shows.
+    """
+    gated = language_gated_utilities(capabilities)
+    hidden = effective_hidden_utilities(stored) | gated
+    return gated if hidden >= frozenset(UTILITY_SUBTABS) else hidden
+
+
 # Display categories (deduped; translated at display time).
 _CAT_WORKFLOWS = QT_TRANSLATE_NOOP("Capabilities", "Mining workflows")
 _CAT_FILTERING = QT_TRANSLATE_NOOP("Capabilities", "Filtering: what gets mined")
@@ -265,7 +287,8 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Deck Builder modes (all / top N / coverage %)"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.",
+            "Deck Builder always skips per-episode filters and checks for duplicates only in the deck it builds; "
+            "pick every word, the top N, or a coverage target, and optionally skip known words.",
         ),
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("video", "deckbuilder"),
@@ -704,7 +727,8 @@ CAPABILITIES: tuple[Capability, ...] = (
         id="kana-only-exclude",
         title=QT_TRANSLATE_NOOP("Capabilities", "Exclude kana-only words"),
         description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Drop words written without kanji; “Skip all kana-only words” leaves a kanji-only deck."
+            "Capabilities",
+            "Drop words written without kanji; “Skip all kana-only words (including mixed)” leaves a kanji-only deck.",
         ),
         category=_CAT_FILTERING,
         target=CapabilityTarget("settings", "filtering"),
@@ -1153,7 +1177,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
             "Fill in automatically reads your note type's fields and fills every mapping. "
-            "Lapis, Kiku, Senren and Anki Miner Note are recognised and filled completely.",
+            "Lapis, Kiku and Senren (Japanese only) and Anki Miner Note are recognised and filled completely.",
         ),
         category=_CAT_CARDS,
         target=CapabilityTarget("settings", "anki"),

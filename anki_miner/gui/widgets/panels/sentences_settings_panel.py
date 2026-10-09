@@ -117,9 +117,9 @@ class SentencesSettingsPanel(FormPanel):
             "",
             self.use_subtitle_regex_checkbox,
             helper=self.tr(
-                "Removes (notes), [sound effects], ♪ music, speaker labels and dialogue dashes from each "
-                "subtitle line before mining. Half-checked means your own pattern is in use: click to add "
-                "every built-in cleanup to it."
+                "Removes (notes), [sound effects], ♪ music and dialogue dashes from each subtitle line "
+                "before mining, and speaker labels where the script marks them. Half-checked means your "
+                "own pattern is in use: click to add every built-in cleanup to it."
             ),
             anchor_text=lambda: ("Enable Subtitle Regex Filter", "clean subtitles", "speaker labels"),
         )
@@ -187,7 +187,7 @@ class SentencesSettingsPanel(FormPanel):
             1,
             self.tr(
                 "Mines at most one word per example sentence — the first one found in that sentence. "
-                "Every other word sharing it is skipped."
+                "Every other word sharing it is skipped. Whitelisted words are still mined."
             ),
             Qt.ItemDataRole.ToolTipRole,
         )
@@ -195,7 +195,8 @@ class SentencesSettingsPanel(FormPanel):
         self.sentence_rule_combo.setItemData(
             2,
             self.tr(
-                "Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication."
+                "Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence "
+                "deduplication. Whitelisted words are still mined."
             ),
             Qt.ItemDataRole.ToolTipRole,
         )

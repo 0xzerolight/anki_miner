@@ -115,6 +115,9 @@ class _ToolTabStrings:
     #: condensed."): "Some files…" about a single file reads as a miscount (E13).
     #: Empty falls back to ``run_problem``.
     run_problem_single: str = ""
+    #: The Output value once a folder is chosen: ``%1`` = the folder. Empty
+    #: shows the bare path; Retime keeps its naming rule beside it.
+    output_custom_template: str = ""
 
 
 class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
@@ -349,7 +352,8 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
             if folder:
                 session_state.remember_accepted_path(self.OUTPUT_HISTORY_KEY, folder, file_mode=False)
                 self._custom_output_dir = Path(folder)
-                self.output_location_label.setText(folder)
+                template = self._strings.output_custom_template
+                self.output_location_label.setText(tr_format(template, folder) if template else folder)
                 self.clear_output_button.show()
 
         file_dialogs.pick_directory(
@@ -638,12 +642,13 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         self.cancel_button.setText(self._strings.cancel)
         self.cancel_button.setEnabled(True)
         if self._cancelled or outcome is TerminalOutcome.CANCELLED:
-            # No reset(): the frozen bar still says how many files got done
-            # before the user stopped it.
+            # The pinned bar's line is the plain "Cancelled", with no count
+            # (D1-A); the hidden in-page card is left as it stood.
             line = self._strings.cancelled
             self.progress_widget.set_status(line)
         elif outcome is TerminalOutcome.PARTIAL:
-            # No reset(): some items got through (A8-27).
+            # Some items got through (A8-27); the pinned bar's line names no
+            # count either (D1-A).
             line = self._strings.partial
             self.progress_widget.set_status(line)
         elif outcome is TerminalOutcome.FAILED:

@@ -31,7 +31,14 @@ from anki_miner.cli.api.contract import (
     run_verdict,
 )
 from anki_miner.cli.api.files import FetchEpisode, FetchFile
-from anki_miner.cli.api.runfolder import MEDIA, CancelWatcher, ProgressFile, next_numbered, write_json
+from anki_miner.cli.api.runfolder import (
+    MEDIA,
+    CancelWatcher,
+    ProgressFile,
+    clear_leftovers,
+    next_numbered,
+    write_json,
+)
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions.youtube import (
     BotDetectionError,
@@ -84,6 +91,7 @@ def _failure(exc: YouTubeFetchError) -> _RunFailed:
 
 def fetch_runs(job: FetchFile, cancel_all: threading.Event) -> list[dict[str, object]]:
     """Every episode of *job* fetched in turn; a fetch-<n>.json for each that succeeds."""
+    clear_leftovers(job.run_dir, (episode.run_id for episode in job.episodes))
     config = settings.with_language(settings.load_profile_config(job.profile), job.language, code=BAD_RUN_FILE)
     if not ytdlp_available(config):
         raise ApiError(SETUP_ERROR, NO_YTDLP)

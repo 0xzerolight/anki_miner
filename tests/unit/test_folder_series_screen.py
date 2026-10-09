@@ -176,3 +176,17 @@ def test_lifted_strings_translate_on_any_subclass(qapp, qtbot, test_config, tmp_
             assert shown[0].summary == "Dieser Übersetzungs-Untertitelordner existiert nicht mehr.", name
     finally:
         qapp.removeTranslator(translator)
+
+
+def test_validated_folders_come_from_the_base(qtbot, test_config, tmp_path):
+    """F1: Batch and Deck Builder share one folder-pair check, verbatim paths included."""
+    tab = _build_host(qtbot, test_config)
+    _point(tab.video_folder_selector, tmp_path / "Season 02 ")
+    _point(tab.subtitle_folder_selector, tmp_path / "subs")
+    assert tab._get_validated_folders() == (tmp_path / "Season 02 ", tmp_path / "subs")
+
+    _point(tab.subtitle_folder_selector, tmp_path / "gone", valid=False)
+    assert tab._get_validated_folders() is None
+
+    tab.video_folder_selector.path_or_none = MagicMock(return_value=None)
+    assert tab._get_validated_folders() is None

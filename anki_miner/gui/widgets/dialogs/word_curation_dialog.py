@@ -34,17 +34,18 @@ from PyQt6.QtGui import (
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QApplication,
+    QBoxLayout,
     QDialog,
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QLayout,
     QLineEdit,
     QListWidget,
     QListWidgetItem,
     QMenu,
     QSplitter,
     QStyle,
-    QStyledItemDelegate,
     QStyleOptionViewItem,
     QTableWidget,
     QTableWidgetItem,
@@ -55,7 +56,12 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import session_state
-from anki_miner.gui.utils.content_text import content_cell_font, content_phrase_wrap
+from anki_miner.gui.utils.content_text import (
+    ContentCellDelegate,
+    apply_content_direction,
+    content_cell_font,
+    content_phrase_wrap,
+)
 from anki_miner.gui.utils.fonts import make_scaled_font
 from anki_miner.gui.utils.key_bindings import display_text, resolve_bindings
 from anki_miner.gui.utils.keyboard_shortcuts import (
@@ -139,16 +145,19 @@ _FORM_ROLE = Qt.ItemDataRole.UserRole + 4
 _MAIN_SPLIT_STRETCH = (3, 2)
 
 
-class _WordFormDelegate(QStyledItemDelegate):
+class _WordFormDelegate(ContentCellDelegate):
     """Paint the text form in grey after the mined word, when they differ (D5).
 
     Only while the Form in text column is hidden: with it shown, the same
     words would be on screen twice. The cell's text, sort key and copy value
     stay the mined form; this is paint only.
+
+    Lays out like every content cell (:class:`ContentCellDelegate`): in an rtl
+    run the word takes the right edge and its form follows it to the left.
     """
 
-    def __init__(self, table: QTableWidget) -> None:
-        super().__init__(table)
+    def __init__(self, table: QTableWidget, style: Callable[[], ContentTextStyle]) -> None:
+        super().__init__(table, style)
         self._table = table
 
     def _form(self, index: QModelIndex) -> str:
@@ -182,11 +191,18 @@ class _WordFormDelegate(QStyledItemDelegate):
         selected = bool(opt.state & QStyle.StateFlag.State_Selected)
         metrics = QFontMetrics(opt.font)
         flags = int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+        rtl = opt.direction == Qt.LayoutDirection.RightToLeft
+        advance = metrics.horizontalAdvance(word + " ")
         painter.save()
+        if rtl:
+            # AlignLeft is the LEADING edge: on an rtl painter Qt mirrors it and
+            # lays each run out right to left, so the word sits on the right and
+            # its form follows it leftwards.
+            painter.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         painter.setFont(opt.font)
         painter.setPen(opt.palette.color(QPalette.ColorRole.HighlightedText if selected else QPalette.ColorRole.Text))
         painter.drawText(text_rect, flags, word)
-        rest = text_rect.adjusted(metrics.horizontalAdvance(word + " "), 0, 0, 0)
+        rest = text_rect.adjusted(0, 0, -advance, 0) if rtl else text_rect.adjusted(advance, 0, 0, 0)
         grey = QPalette.ColorRole.HighlightedText if selected else QPalette.ColorRole.PlaceholderText
         painter.setPen(opt.palette.color(grey))
         painter.drawText(rest, flags, metrics.elidedText(form, Qt.TextElideMode.ElideRight, max(0, rest.width())))
@@ -260,6 +276,10 @@ class CurationMediaContext:
     #: calls it off the GUI thread. ``None`` (every single-episode caller)
     #: keeps the player pinned to ``video_file``.
     context_resolver: Callable[[Path], CurationMediaContext | None] | None = None
+    #: Reading → Anki Deck: ``page_units`` are the deck's cards, each with its
+    #: own picture, not a volume's pages, so the picture pane's notices speak
+    #: of a card. Set by the one construction site that knows the run's source.
+    page_units_are_cards: bool = False
 
 
 class WordCurationDialog(ScreenIssueHost, QDialog):
@@ -358,12 +378,20 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # _closing blocks any dispatch once teardown has run (see _stop_player).
         self._page_units = ctx.page_units if ctx is not None else None
         self._show_image = bool(self._page_units)
+        self._units_are_cards = ctx is not None and ctx.page_units_are_cards
         # Anki-deck runs: units carry their card's own clip, played from a
         # button under the picture (the player pane seeks one source by time,
         # which a clip-per-card deck does not have).
         self._clip_audio: ClipAudioPlayer | None = None
         if self._page_units and any(u.audio_ref for u in self._page_units.values()) and mpv_available():
             self._clip_audio = ClipAudioPlayer()
+            # Last-resort release, the player pane's twin (_build_player_pane): a
+            # window destroyed without finishing never reaches _stop_player. The
+            # handler stays Qt-free (release is pure python-mpv) and holds the
+            # player, never the dialog. Nothing is needed for an __init__ that
+            # raises: the core is built on the first play, so it has none yet.
+            clip_audio = self._clip_audio
+            self.destroyed.connect(lambda *_: clip_audio.release())
         self._focused_unit_index: int | None = None
         self._page_cache: OrderedDict[ImageRef, tuple[QPixmap, int]] = OrderedDict()
         self._page_request_gen = 0
@@ -468,6 +496,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             self._setup_ui()
             self._populate_table()
             self._refresh_summary()
+            # After _refresh_summary: the verbs measure with their real labels.
+            self._fit_toolbar_to_screen()
             # Connected FIRST, deliberately: MiningTabBase connects its curation
             # resolver to the same signal afterwards, and Qt runs direct connections
             # in connection order, so the mpv core / page decode / dictionary workers
@@ -602,7 +632,6 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
 
         layout.addLayout(footer_layout)
         self.setLayout(layout)
-        self._keep_the_floor_on_screen()
         # A failed Known Words write is recoverable — the user retries Confirm or
         # cancels — so it belongs in a banner, never a modal.
         self.install_issue_banner(layout)
@@ -620,8 +649,13 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         disown_default_buttons(self)
 
     def _build_toolbar_row(self) -> QHBoxLayout:
-        """Build the search field and the bulk verbs, full dialog width."""
+        """Build the search field and the bulk verbs, full dialog width.
+
+        One row wherever it fits; on a narrower screen
+        :meth:`_fit_toolbar_to_screen` moves the verbs onto a row of their own.
+        """
         controls_layout = QHBoxLayout()
+        self._toolbar_row = controls_layout
         controls_layout.setSpacing(SPACING.sm)
 
         search_label = QLabel(self.tr("Search:"))
@@ -787,8 +821,16 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self.table.setSortingEnabled(True)
 
         self._apply_header_resize_modes()
+        # Mined content lays out in the mining language's direction (an Arabic
+        # sentence is a right-to-left paragraph): the columns that carry
+        # content_cell_font. Translation is the second track's language and
+        # stays as it is. The style is fixed for this window's life.
+        style = self._content_style
+        content_cells = ContentCellDelegate(self.table, lambda: style)
+        for column in (_FORM_COLUMN, 3, 4):
+            self.table.setItemDelegateForColumn(column, content_cells)
         # D5: the Word column shows the text form in grey when it differs.
-        self.table.setItemDelegateForColumn(1, _WordFormDelegate(self.table))
+        self.table.setItemDelegateForColumn(1, _WordFormDelegate(self.table, lambda: style))
         # The Translation column is meaningful only for a run with a second
         # track: forced hidden otherwise, and kept out of the header menu, so
         # an empty column never shows and cannot be "lost" by hiding it. Its
@@ -860,7 +902,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         pieces: list[str] = []
         if key := self._key_text("curator.toggle_include"):
             pieces.append(tr_format(self.tr("%1 include/exclude"), key))
-        if self._show_player and (key := self._key_text("curator.play_pause")):
+        # An Anki-deck run's key plays the focused card's own clip.
+        if (self._show_player or self._clip_audio is not None) and (key := self._key_text("curator.play_pause")):
             pieces.append(tr_format(self.tr("%1 play/pause"), key))
         if key := self._key_text("curator.mark_known"):
             pieces.append(tr_format(self.tr("%1 mark known"), key))
@@ -965,21 +1008,59 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         """True when the window's centre sits on a screen that exists."""
         return QApplication.screenAt(self.frameGeometry().center()) is not None
 
-    def _keep_the_floor_on_screen(self) -> None:
-        """Let the toolbar row set the width floor, but never past the screen.
+    def _fit_toolbar_to_screen(self) -> None:
+        """Keep the toolbar whole on a screen narrower than its one row (Z.5).
 
-        A locale whose row is wider than a small screen (French on 1024px)
-        would otherwise get a window wider than the desktop, Confirm button
-        included. There, and only there, the floor is the screen's width and
-        the row's right end is cut, as the flat 900px floor did everywhere (Z.5).
+        The row is this window's width floor. Where the screen has the room it
+        stays one row and the window floor follows it. Where it does not (French,
+        Indonesian, Russian or Vietnamese on 1024px) the four verbs move onto a
+        row of their own under Search; only if even that is wider than the
+        screen is the floor capped there, cutting the row's right end.
+
+        Measured after polishing: before the first show the children are
+        unstyled and the layout's cached sizes stale (655px against a real 930
+        on English), which is how the cap this replaced never fired.
         """
         screen = self.screen() or QApplication.primaryScreen()
         layout = self.layout()
         if screen is None or layout is None:
             return
         available = screen.availableGeometry().width()
-        if layout.totalMinimumSize().width() > available:
-            self.setMinimumWidth(available)
+        self.ensurePolished()
+        if self._layout_floor(layout) > available:
+            self._stack_toolbar_verbs()
+            if self._layout_floor(layout) > available:
+                self.setMinimumWidth(available)
+
+    @staticmethod
+    def _layout_floor(layout: QLayout) -> int:
+        """The layout's minimum width, re-measured rather than read from its cache.
+
+        ``invalidate`` only, never ``activate``: activating a window's layout
+        before the first show sets the window's minimum to the one-row floor and
+        grows the window to it, and stacking afterwards lowers the minimum
+        without ever shrinking the width back.
+        """
+        layout.invalidate()
+        return layout.totalMinimumSize().width()
+
+    def _stack_toolbar_verbs(self) -> None:
+        """Move the four verbs off the Search row onto a row of their own."""
+        layout = self.layout()
+        if not isinstance(layout, QBoxLayout):
+            return
+        verbs_row = QHBoxLayout()
+        verbs_row.setSpacing(SPACING.sm)
+        for button in (
+            self.select_all_button,
+            self.deselect_all_button,
+            self.include_highlighted_button,
+            self.add_known_button,
+        ):
+            self._toolbar_row.removeWidget(button)
+            verbs_row.addWidget(button)
+        verbs_row.addStretch()
+        layout.insertLayout(layout.indexOf(self._toolbar_row) + 1, verbs_row)
 
     def _apply_default_geometry(self) -> None:
         """Shrink to fit the current screen. Position is left to Qt."""
@@ -1146,17 +1227,20 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         menu.exec(header_view.mapToGlobal(pos))
 
     def _reset_columns(self) -> None:
-        """Unhide every column and put them back in logical order.
+        """Put the columns back to the first-run arrangement (D5).
 
-        The recovery path for an arrangement the user cannot undo by hand: a
-        hidden column has no header section left to right-click.
+        Logical order, every column shown but the D5 defaults, then this run's
+        gates. The recovery path for an arrangement the user cannot undo by
+        hand: a hidden column has no header section left to right-click.
         """
         header_view = self.table.horizontalHeader()
         for column in range(self.table.columnCount()):
-            self.table.setColumnHidden(column, False)
+            self.table.setColumnHidden(column, column in _DEFAULT_HIDDEN_COLUMNS)
             if header_view:
                 header_view.moveSection(header_view.visualIndex(column), column)
-        self._pre_gate_hidden = dict.fromkeys(self._empty_columns, False)
+        # The intent _restore_layout_state records for a first run, so the save
+        # in done() writes the D5 default rather than this run's gate.
+        self._pre_gate_hidden = {column: column in _DEFAULT_HIDDEN_COLUMNS for column in self._empty_columns}
         self._apply_header_resize_modes()
         self._apply_translation_column_gate()
         self._apply_audio_column_gate()
@@ -1255,6 +1339,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 self.play_clip_button = ModernButton(self.tr("Play card audio"), variant="ghost")
                 self.play_clip_button.setToolTip(self.tr("Play this card's own sentence audio from the deck."))
                 self.play_clip_button.setEnabled(False)
+                # A click must not take focus from the table: every key but
+                # confirm is scoped to it, so a focused button would leave them
+                # dead. The play/pause key plays the clip, and the hint line names it.
+                self.play_clip_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
                 self.play_clip_button.clicked.connect(self._play_focused_clip)
                 play_row = QHBoxLayout()
                 play_row.addWidget(self.play_clip_button)
@@ -1768,6 +1856,9 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # Same surface as the word table beside it (D42). Candidates stay in
         # occurrence order, so sorting is not enabled; copy lifts the sentence.
         configure_data_view(self.sentence_list)
+        # Every row is a mined sentence: the list flips whole for an rtl
+        # language, like the subtitle viewer's line list (S21).
+        apply_content_direction(self.sentence_list, self._content_style)
         # The gutter stays reserved: candidate counts swing per focused word, and
         # a scrollbar that comes and goes changes the viewport width, re-wrapping
         # every word-wrapped row left/right on each focus change.
@@ -3083,7 +3174,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         unit = self._page_units.get(unit_index)
         if unit is None or unit.image_ref is None:
             caption = unit.location_label if unit is not None else ""
-            self.page_image_view.show_message(self.tr("No page image for this word"), caption)
+            missing = (
+                self.tr("This card has no picture") if self._units_are_cards else self.tr("No page image for this word")
+            )
+            self.page_image_view.show_message(missing, caption)
             return
         ref = unit.image_ref
         box = unit.block_box
@@ -3116,7 +3210,12 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             if gen != self._page_request_gen:
                 return
             logger.warning("page image load failed for %s: %s", ref, message)
-            self.page_image_view.show_message(self.tr("Could not load page image"), caption)
+            failed = (
+                self.tr("Could not load this card's picture")
+                if self._units_are_cards
+                else self.tr("Could not load page image")
+            )
+            self.page_image_view.show_message(failed, caption)
 
         # QImage decodes off-thread (thread-safe); QPixmap conversion happens
         # in on_done on the GUI thread (QPixmap is GUI-thread-only).

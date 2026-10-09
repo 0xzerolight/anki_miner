@@ -64,6 +64,31 @@ def test_panel_constructs(qtbot):
     assert panel is not None
 
 
+def test_the_auto_device_item_is_translated(qtbot):
+    """Z5b: the label reached the combo as raw module data, so no catalogue ever held it."""
+    from PyQt6.QtCore import QTranslator
+    from PyQt6.QtWidgets import QApplication
+
+    class _Stub(QTranslator):
+        def translate(self, context, source, disambiguation=None, n=-1):  # noqa: N802
+            return {("SubtitlesSettingsPanel", "Auto (GPU if available)"): "Auto (GPU si disponible)"}.get(
+                (context, source), source
+            )
+
+    app = QApplication.instance()
+    assert app is not None
+    stub = _Stub()
+    app.installTranslator(stub)
+    try:
+        panel = SubtitlesSettingsPanel()
+        qtbot.addWidget(panel)
+    finally:
+        app.removeTranslator(stub)
+
+    assert panel.device_combo.itemText(0) == "Auto (GPU si disponible)"
+    assert panel.get_device() == "auto"
+
+
 def test_panel_has_alass_selector(qtbot, monkeypatch):
     monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: False)
     panel = SubtitlesSettingsPanel()
@@ -1772,6 +1797,27 @@ def test_a_failed_engine_download_does_not_chain_the_model(qtbot, tmp_path, monk
 
     assert models == []
     assert not panel._model_after_engine
+
+
+def test_the_chained_model_is_the_one_selected_when_the_engine_lands(qtbot, tmp_path, monkeypatch):
+    """Edge3: the flag was read from the cache of the model selected at click time."""
+    _patch_engine_pack(monkeypatch, available=False, supported=True, frozen=True)
+    monkeypatch.setattr(f"{_PANEL_MOD}.model_manager.is_downloaded", lambda name, root: name == "large-v3")
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_model="large-v3", asr_models_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+    models: list[str] = []
+    panel.asr_download_requested.connect(models.append)
+
+    panel.download_engine_button.click()  # large-v3 is on disk: nothing to chain yet
+    panel.set_model("small")  # ...but the model picked during the download is not
+    _wait_state_settled(qtbot, panel)
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.available", lambda: True)
+    panel.notify_asr_pack_download_finished(True)
+    _wait_state_settled(qtbot, panel)
+
+    assert models == ["small"]
 
 
 def test_picking_another_model_re_probes_its_install_state(qtbot, tmp_path, monkeypatch):

@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from dataclasses import replace
 
+import pytest
 from PyQt6.QtCore import QObject, Qt
 
 from anki_miner.gui.controllers import language_switch
@@ -120,6 +121,94 @@ def test_anki_unreachable_falls_back_to_the_config_decks(qtbot, monkeypatch, tes
     language_switch.offer_first_visit_setup(window, previous)
 
     assert window.config.excluded_decks == ("Japanese Mining",)
+
+
+def test_a_findnotes_failure_keeps_the_fetched_deck_names(qtbot, monkeypatch, test_config):
+    """B2.1a: deckNames answered and findNotes failed: list the decks, emptiness unknown (None)."""
+    from anki_miner.exceptions import AnkiConnectionError
+
+    previous = replace(test_config, anki_deck_name="Japanese Mining")
+    window = _QtWindow(replace(previous, language="zh", excluded_decks=(), anki_deck_name="Anki Miner"))
+
+    class FakeService:
+        def __init__(self, config):
+            pass
+
+        def get_deck_names(self):
+            return ["English Vocab", "Anki Miner"]
+
+        def find_notes(self, query):
+            raise AnkiConnectionError("Anki sent an unusable reply.")
+
+    def run_inline(parent, work, on_done, on_error=None, **kwargs):
+        try:
+            result = work()
+        except Exception as exc:  # the real run_off_thread routes a raise to on_error
+            on_error(str(exc))
+        else:
+            on_done(result)
+
+    seen: dict[str, object] = {}
+
+    def fake_choice(parent, display_name, decks, ticked, offer_setup):
+        seen.update(decks=decks)
+        return language_switch.FIRST_VISIT_NONE, ()
+
+    monkeypatch.setattr(language_switch, "AnkiService", FakeService)
+    monkeypatch.setattr(language_switch, "run_off_thread", run_inline)
+    monkeypatch.setattr(language_switch, "_first_visit_choice", fake_choice)
+
+    assert language_switch._deck_names_with_note_presence(window.config) == (["English Vocab", "Anki Miner"], None)
+    language_switch.offer_first_visit_setup(window, previous)
+
+    assert seen["decks"] == ("English Vocab", "Anki Miner", "Japanese Mining")
+
+
+def test_an_empty_collection_found_by_the_work_function_skips_the_dialog(qtbot, monkeypatch, test_config):
+    """B2.1c: findNotes [] gives (names, False) through the real work function, so no dialog."""
+    previous = replace(test_config, anki_deck_name="Japanese Mining")
+    window = _QtWindow(replace(previous, language="zh", excluded_decks=(), anki_deck_name="Anki Miner"))
+    assert window.config.dictionary_chain  # nothing to set up, so only the deck question could open it
+
+    class FakeService:
+        def __init__(self, config):
+            pass
+
+        def get_deck_names(self):
+            return ["Default", "Anki Miner"]
+
+        def find_notes(self, query):
+            return []
+
+    monkeypatch.setattr(language_switch, "AnkiService", FakeService)
+    monkeypatch.setattr(
+        language_switch, "run_off_thread", lambda parent, work, on_done, on_error=None, **kw: on_done(work())
+    )
+    monkeypatch.setattr(
+        language_switch, "_first_visit_choice", lambda *a, **k: (_ for _ in ()).throw(AssertionError("asked"))
+    )
+
+    language_switch.offer_first_visit_setup(window, previous)
+
+    assert window.config.excluded_decks == ()
+
+
+@pytest.mark.parametrize("result", [None, "garbage", (["A"],), ("not a list", True)])
+def test_a_malformed_fetch_result_falls_back_to_the_config_decks(qtbot, monkeypatch, test_config, result):
+    """B2.1c: _offer_with_fetch never raises on a result it cannot unpack."""
+    previous = replace(test_config, anki_deck_name="Japanese Mining")
+    window = _QtWindow(replace(previous, language="zh", excluded_decks=(), anki_deck_name="Chinese Mining"))
+    seen: list[tuple] = []
+    monkeypatch.setattr(
+        language_switch, "run_off_thread", lambda parent, work, on_done, on_error=None, **kw: on_done(result)
+    )
+    monkeypatch.setattr(
+        language_switch, "_first_visit_choice", lambda *a: seen.append(a) or (language_switch.FIRST_VISIT_NONE, ())
+    )
+
+    language_switch.offer_first_visit_setup(window, previous)
+
+    assert len(seen) == 1 and seen[0][2] == ("Japanese Mining",)
 
 
 def test_a_switch_during_the_fetch_drops_the_result(qtbot, monkeypatch, test_config, caplog):

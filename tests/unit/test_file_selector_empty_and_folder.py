@@ -40,6 +40,12 @@ class TestFileOrFolder:
         assert selector.folder_button is None
         assert selector.browse_button.text() == "Browse..."
 
+    def test_a_folder_picker_cannot_also_take_folders(self, qtbot):
+        """allow_folder adds a Folder… button beside a FILE picker; on a folder
+        picker "File…" would open a second folder picker (B1.1)."""
+        with pytest.raises(ValueError, match="allow_folder"):
+            FileSelector(label="Folder:", file_mode=False, allow_folder=True)
+
     def test_file_or_folder_mode_offers_both_buttons(self, qtbot):
         selector = _selector(qtbot, allow_folder=True)
         assert selector.browse_button.text() == "File…"

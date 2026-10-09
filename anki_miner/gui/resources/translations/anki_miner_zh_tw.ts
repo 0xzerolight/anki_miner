@@ -593,15 +593,15 @@
     </message>
     <message>
         <source>Open Anki when Anki Miner starts</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner 啟動時開啟 Anki</translation>
     </message>
     <message>
         <source>Starts Anki if it isn't running when Anki Miner opens.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner 開啟時，若 Anki 尚未執行，會自動啟動 Anki。</translation>
     </message>
     <message>
         <source>Anki Miner can't find Anki where its installer puts it, so it can't open it.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner 在 Anki 安裝程式的預設安裝位置找不到 Anki，因此無法開啟它。</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
@@ -2102,8 +2102,8 @@ No index files are deleted.</source>
         <translation>牌組建立器模式（全部／前 N 個／涵蓋率 %）</translation>
     </message>
     <message>
-        <source>Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
-        <translation>牌組建立器一律略過逐集篩選與重複檢查；可選擇全部單字、前 N 個，或設定涵蓋率目標，並可選擇略過已知單字。</translation>
+        <source>Deck Builder always skips per-episode filters and checks for duplicates only in the deck it builds; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
+        <translation>牌組建立器一律略過逐集篩選，且只在其建立的牌組中檢查重複；可選擇全部單字、前 N 個，或設定涵蓋率目標，並可選擇略過已知單字。</translation>
     </message>
     <message>
         <source>Mine from YouTube</source>
@@ -2318,8 +2318,8 @@ No index files are deleted.</source>
         <translation>排除純假名單字</translation>
     </message>
     <message>
-        <source>Drop words written without kanji; “Skip all kana-only words” leaves a kanji-only deck.</source>
-        <translation>排除不含漢字的單字；「略過所有純假名單字」會得到只含漢字詞的牌組。</translation>
+        <source>Drop words written without kanji; “Skip all kana-only words (including mixed)” leaves a kanji-only deck.</source>
+        <translation>排除不含漢字的單字；「略過所有純假名單字（包含混合）」會得到只含漢字詞的牌組。</translation>
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -2419,11 +2419,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Keep dictionaries up to date</source>
-        <translation type="unfinished" />
+        <translation>保持字典為最新版本</translation>
     </message>
     <message>
         <source>Dictionaries that publish updates (Jitendex, JMdict, Wiktionary, Jiten, …) update themselves once a week; Update Now checks right away.</source>
-        <translation type="unfinished" />
+        <translation>會發布更新的字典（Jitendex、JMdict、Wiktionary、Jiten…）每週會自動更新一次；按「立即更新」可立即檢查。</translation>
     </message>
     <message>
         <source>Add frequency lists</source>
@@ -2622,8 +2622,8 @@ No index files are deleted.</source>
         <translation>自動填入欄位對應</translation>
     </message>
     <message>
-        <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku, Senren and Anki Miner Note are recognised and filled completely.</source>
-        <translation>「自動填入」會讀取筆記類型的欄位並填入所有對應。可辨識 Lapis、Kiku、Senren 與 Anki Miner Note 並完整填入。</translation>
+        <source>Fill in automatically reads your note type's fields and fills every mapping. Lapis, Kiku and Senren (Japanese only) and Anki Miner Note are recognised and filled completely.</source>
+        <translation>「自動填入」會讀取筆記類型的欄位並填入所有對應。可辨識 Lapis、Kiku 與 Senren（僅限日文），以及 Anki Miner Note，並完整填入。</translation>
     </message>
     <message>
         <source>Bold the mined word in the sentence</source>
@@ -2886,10 +2886,6 @@ No index files are deleted.</source>
     <message>
         <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries, frequency sources and pitch data.</source>
         <translation>使用目前已安裝的字典、頻率來源與高低音調資料，補齊您先前採集的筆記中缺少的欄位。</translation>
-    </message>
-    <message>
-        <source>Deck:</source>
-        <translation>牌組：</translation>
     </message>
     <message>
         <source>All decks</source>
@@ -3788,16 +3784,16 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
         <translation>採集前請先輸入牌組名稱。</translation>
     </message>
     <message>
+        <source>Cancelling…</source>
+        <translation>取消中……</translation>
+    </message>
+    <message>
         <source>No video/subtitle pairs found. Check the folders.</source>
         <translation>找不到影片／字幕配對。請檢查資料夾。</translation>
     </message>
     <message>
         <source>Deck Builder</source>
         <translation>牌組建立器</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>取消中……</translation>
     </message>
     <message>
         <source>Preview ready. Press Build Deck to create the cards.</source>
@@ -4423,19 +4419,19 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Updates</source>
-        <translation type="unfinished">更新</translation>
+        <translation>更新</translation>
     </message>
     <message>
         <source>Update automatically once a week</source>
-        <translation type="unfinished" />
+        <translation>每週自動更新一次</translation>
     </message>
     <message>
         <source>Update Now</source>
-        <translation type="unfinished" />
+        <translation>立即更新</translation>
     </message>
     <message>
         <source>Dictionaries, frequency lists and pitch-accent sources whose publisher posts updates (Jitendex, JMdict, Wiktionary, Jiten, …) are downloaded again when a newer version is out. Their order and on/off state stay as they are.</source>
-        <translation type="unfinished" />
+        <translation>發布者會推出更新的字典、頻率清單與高低音調來源（Jitendex、JMdict、Wiktionary、Jiten…），會在有新版本時重新下載。其順序與啟用／停用狀態維持不變。</translation>
     </message>
     <message>
         <source>Storage</source>
@@ -5458,8 +5454,8 @@ No files on disk are deleted.</source>
         <translation>黑名單檔案</translation>
     </message>
     <message>
-        <source>Text file with one word per line to always skip. Leave empty to skip nothing.</source>
-        <translation>每行一個單字的文字檔，其中的單字一律略過。留白則不略過任何單字。</translation>
+        <source>Text file with one word per line to skip. Whitelisted words are still mined. Leave empty to skip nothing.</source>
+        <translation>每行一個單字的文字檔，其中的單字會被略過。已列入白名單的單字仍會被採集。留白則不略過任何單字。</translation>
     </message>
     <message>
         <source>Select whitelist file...</source>
@@ -5478,8 +5474,8 @@ No files on disk are deleted.</source>
         <translation>名稱單字集</translation>
     </message>
     <message>
-        <source>Exclude bundled lists of Japanese people and place names from mining. Whitelisted names are still mined.</source>
-        <translation>從採集中排除內建的日本人名與地名清單。已列入白名單的名稱仍會被採集。</translation>
+        <source>Exclude bundled lists of Japanese people, place and company names from mining. Whitelisted names are still mined.</source>
+        <translation>從採集中排除內建的日本人名、地名與公司名稱清單。已列入白名單的名稱仍會被採集。</translation>
     </message>
     <message>
         <source>Skip names of people, places and companies</source>
@@ -6561,7 +6557,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Update Dictionaries Now</source>
-        <translation type="unfinished" />
+        <translation>立即更新字典</translation>
     </message>
     <message>
         <source>Download Recommended Resources...</source>
@@ -6657,39 +6653,39 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Checking for dictionary updates…</source>
-        <translation type="unfinished" />
+        <translation>正在檢查字典更新…</translation>
     </message>
     <message>
         <source>Could not check for dictionary updates: %1</source>
-        <translation type="unfinished" />
+        <translation>無法檢查字典更新：%1</translation>
     </message>
     <message>
         <source>Downloading dictionary updates…</source>
-        <translation type="unfinished" />
+        <translation>正在下載字典更新…</translation>
     </message>
     <message>
         <source>Your dictionaries changed during the check. Try again.</source>
-        <translation type="unfinished" />
+        <translation>檢查期間您的字典已變更。請再試一次。</translation>
     </message>
     <message>
         <source>None of your dictionaries publish updates.</source>
-        <translation type="unfinished" />
+        <translation>您的字典都沒有發布更新。</translation>
     </message>
     <message>
         <source>Dictionaries are up to date (%1 could not be checked).</source>
-        <translation type="unfinished" />
+        <translation>字典皆已是最新版本（有 %1 個無法檢查）。</translation>
     </message>
     <message>
         <source>Dictionaries are up to date.</source>
-        <translation type="unfinished" />
+        <translation>字典皆已是最新版本。</translation>
     </message>
     <message>
         <source>Dictionary updates</source>
-        <translation type="unfinished" />
+        <translation>字典更新</translation>
     </message>
     <message>
         <source>Dictionaries updated: %1</source>
-        <translation type="unfinished" />
+        <translation>已更新字典：%1</translation>
     </message>
     <message>
         <source>Downloaded resources were left inactive because their storage folder changed.</source>
@@ -7110,6 +7106,10 @@ Continue?</source>
         <translation>無法在設定精靈中開始下載此語言。請在設定完成後於「設定 → 採集語言」中選擇它。</translation>
     </message>
     <message>
+        <source>%1 language pack: download failed. %2</source>
+        <translation>%1 語言套件：下載失敗。%2</translation>
+    </message>
+    <message>
         <source>%1 language pack: download failed.</source>
         <translation>%1 語言套件：下載失敗。</translation>
     </message>
@@ -7194,6 +7194,10 @@ Continue?</source>
     <message>
         <source>%1 needs a one-time download of about %2 MB.</source>
         <translation>%1 需要一次性下載約 %2 MB。</translation>
+    </message>
+    <message>
+        <source>%1 still can't be mined after its download.</source>
+        <translation>%1 的語言套件已下載，但仍無法採集。</translation>
     </message>
 </context><context>
     <name>MiningTabBase</name>
@@ -8265,13 +8269,11 @@ No index files are deleted.</source>
         <source>Cards: %1</source>
         <translation>卡片：%1</translation>
     </message>
-    <message>
-        <source>1 episode</source>
-        <translation>1 集</translation>
-    </message>
-    <message>
-        <source>%1 episodes</source>
-        <translation>%1 集</translation>
+    <message numerus="yes">
+        <source>%n episode(s)</source>
+        <translation>
+            <numerusform>%n 集</numerusform>
+        </translation>
     </message>
     <message>
         <source>Video folder: %1</source>
@@ -8385,21 +8387,17 @@ No index files are deleted.</source>
         <source>Remove all %1 series from the queue?</source>
         <translation>要從佇列移除全部 %1 個系列嗎？</translation>
     </message>
-    <message>
-        <source>1 series</source>
-        <translation>1 個系列</translation>
+    <message numerus="yes">
+        <source>%n series</source>
+        <translation>
+            <numerusform>%n 個系列</numerusform>
+        </translation>
     </message>
-    <message>
-        <source>%1 series</source>
-        <translation>%1 個系列</translation>
-    </message>
-    <message>
-        <source>1 episode</source>
-        <translation>1 集</translation>
-    </message>
-    <message>
-        <source>%1 episodes</source>
-        <translation>%1 集</translation>
+    <message numerus="yes">
+        <source>%n episode(s)</source>
+        <translation>
+            <numerusform>%n 集</numerusform>
+        </translation>
     </message>
     <message>
         <source>%1 ready</source>
@@ -8614,6 +8612,10 @@ No index files are deleted.</source>
         <translation>請選擇字幕檔案（.ass、.srt、.ssa、.vtt 或 .smi）。</translation>
     </message>
     <message>
+        <source>Reading your Anki cards and known words…</source>
+        <translation>正在讀取您的 Anki 卡片與已知單字…</translation>
+    </message>
+    <message>
         <source>Checking file %1 of %2</source>
         <translation>正在檢查第 %1 個檔案，共 %2 個</translation>
     </message>
@@ -8822,6 +8824,10 @@ No index files are deleted.</source>
         <translation>請先選擇一卷漫畫或一個資料夾。</translation>
     </message>
     <message>
+        <source>That file or folder no longer exists.</source>
+        <translation>該檔案或資料夾已不存在。</translation>
+    </message>
+    <message>
         <source>Choose a .mokuro, .cbz or .zip volume, or a manga folder.</source>
         <translation>請選擇 .mokuro、.cbz 或 .zip 卷，或一個漫畫資料夾。</translation>
     </message>
@@ -8930,6 +8936,10 @@ No index files are deleted.</source>
     <message>
         <source>Choose a book or a folder of books first.</source>
         <translation>請先選擇一本書或一個書籍資料夾。</translation>
+    </message>
+    <message>
+        <source>That file or folder no longer exists.</source>
+        <translation>該檔案或資料夾已不存在。</translation>
     </message>
     <message>
         <source>Choose an .epub or .txt book, or a folder of books.</source>
@@ -9118,6 +9128,10 @@ No index files are deleted.</source>
     <message>
         <source>Cancelling…</source>
         <translation>取消中……</translation>
+    </message>
+    <message>
+        <source>Anki Miner can't mine this folder.</source>
+        <translation>Anki Miner 無法採集此資料夾。</translation>
     </message>
     <message>
         <source>Anki Miner can't mine this file.</source>
@@ -9599,6 +9613,10 @@ No index files are deleted.</source>
         <translation>正在下載第 %1／%2 個 · %3</translation>
     </message>
     <message>
+        <source>Installing %1 of %2 · %3</source>
+        <translation>正在安裝第 %1／%2 個 · %3</translation>
+    </message>
+    <message>
         <source>Recommended Resources</source>
         <translation>建議資源</translation>
     </message>
@@ -9674,14 +9692,22 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 (%2)</source>
+        <extracomment>%1 is one or more resource names, %2 what they are: "JMdict (dictionary)".</extracomment>
         <translation>%1（%2）</translation>
     </message>
     <message>
         <source>Downloads %1.</source>
+        <extracomment>%1 lists "name (kind)" groups: "Downloads JMdict (dictionary) and Kanjium (pitch accent)."</extracomment>
         <translation>將下載 %1。</translation>
     </message>
     <message>
+        <source>%1, %2</source>
+        <extracomment>Joins list items before the last one: "JMdict, JPDB and Jiten". Use your language's list comma.</extracomment>
+        <translation>%1、%2</translation>
+    </message>
+    <message>
         <source>%1 and %2</source>
+        <extracomment>Joins the last item to the rest of a list: "JMdict, JPDB and Jiten".</extracomment>
         <translation>%1 與 %2</translation>
     </message>
     <message>
@@ -9861,6 +9887,94 @@ No index files are deleted.</source>
     <message>
         <source>Already known: %1.</source>
         <translation>已知：%1。</translation>
+    </message>
+    <message>
+        <source>Not mined: %1 word — search this log for a word to see why.</source>
+        <translation>未採集：%1 個單字——在此日誌中搜尋某個單字即可查看原因。</translation>
+    </message>
+    <message>
+        <source>Not mined: %1 words — search this log for a word to see why.</source>
+        <translation>未採集：%1 個單字——在此日誌中搜尋某個單字即可查看原因。</translation>
+    </message>
+    <message>
+        <source>Name, interjection or other skipped word type — add it to your whitelist to mine it</source>
+        <translation>專有名詞、感嘆詞或其他略過的詞類——加入白名單即可採集</translation>
+    </message>
+    <message>
+        <source>Sound effect — add it to your whitelist to mine it</source>
+        <translation>狀聲詞——加入白名單即可採集</translation>
+    </message>
+    <message>
+        <source>Kana-only word — add it to your whitelist to mine it</source>
+        <translation>純假名單字——加入白名單即可採集</translation>
+    </message>
+    <message>
+        <source>Written partly in another script — add it to your whitelist to mine it</source>
+        <translation>部分以其他文字書寫——加入白名單即可採集</translation>
+    </message>
+    <message>
+        <source>Already known</source>
+        <translation>已知</translation>
+    </message>
+    <message>
+        <source>No dictionary entry — Settings → Dictionaries</source>
+        <translation>無字典條目——「設定」→「字典」</translation>
+    </message>
+    <message>
+        <source>Not in your frequency list — Settings → Word Filters</source>
+        <translation>不在您的頻率清單中——「設定」→「單字篩選」</translation>
+    </message>
+    <message>
+        <source>Outside your frequency range — Settings → Word Filters</source>
+        <translation>超出您的頻率範圍——「設定」→「單字篩選」</translation>
+    </message>
+    <message>
+        <source>On your blacklist — Settings → Word Filters</source>
+        <translation>在您的黑名單中——「設定」→「單字篩選」</translation>
+    </message>
+    <message>
+        <source>Excluded by script type — Settings → Word Filters</source>
+        <translation>因文字類型而排除——「設定」→「單字篩選」</translation>
+    </message>
+    <message>
+        <source>On a name list — Settings → Word Filters</source>
+        <translation>在名稱清單中——「設定」→「單字篩選」</translation>
+    </message>
+    <message>
+        <source>Appears fewer times than your minimum — Settings → Word Filters</source>
+        <translation>出現次數少於您設定的下限——「設定」→「單字篩選」</translation>
+    </message>
+    <message>
+        <source>Another word from its sentence got the card — Settings → Sentences</source>
+        <translation>同一句子中的另一個單字已建立卡片——「設定」→「句子」</translation>
+    </message>
+    <message>
+        <source>No sentence where it is the only unknown word — Settings → Sentences</source>
+        <translation>找不到它是唯一未知單字的句子——「設定」→「句子」</translation>
+    </message>
+    <message>
+        <source>Sentence too long — Settings → Sentences</source>
+        <translation>句子過長——「設定」→「句子」</translation>
+    </message>
+    <message>
+        <source>Same card as another spelling in this run</source>
+        <translation>與本次執行中的另一種拼寫為同一張卡片</translation>
+    </message>
+    <message>
+        <source>Media could not be extracted</source>
+        <translation>無法擷取媒體</translation>
+    </message>
+    <message>
+        <source>Anki already has a card for it</source>
+        <translation>Anki 中已有此單字的卡片</translation>
+    </message>
+    <message>
+        <source>Anki did not confirm the card</source>
+        <translation>Anki 未確認此卡片</translation>
+    </message>
+    <message>
+        <source>%1 (%2): %3</source>
+        <translation>%1（%2）：%3</translation>
     </message>
 </context><context>
     <name>ResultsDialog</name>
@@ -10087,8 +10201,8 @@ No index files are deleted.</source>
         <translation>移除說話者名稱、音效與音樂符號</translation>
     </message>
     <message>
-        <source>Removes (notes), [sound effects], ♪ music, speaker labels and dialogue dashes from each subtitle line before mining. Half-checked means your own pattern is in use: click to add every built-in cleanup to it.</source>
-        <translation>採集前，從每行字幕中移除（註解）、[音效]、♪ 音樂、說話者標籤與對話破折號。半勾選狀態表示正在使用您自己的規則：按一下即可將所有內建清理規則加入其中。</translation>
+        <source>Removes (notes), [sound effects], ♪ music and dialogue dashes from each subtitle line before mining, and speaker labels where the script marks them. Half-checked means your own pattern is in use: click to add every built-in cleanup to it.</source>
+        <translation>採集前，從每行字幕中移除（註解）、[音效]、♪ 音樂與對話破折號；若該文字系統有標示說話者的方式，也會移除說話者標籤。半勾選狀態表示正在使用您自己的規則：按一下即可將所有內建清理規則加入其中。</translation>
     </message>
     <message>
         <source>Python regex matched in subtitle text and removed (or replaced) before mining. Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. Combine alternatives with |. Test patterns at https://regex101.com.</source>
@@ -10135,16 +10249,16 @@ No index files are deleted.</source>
         <translation>每個句子一張卡片</translation>
     </message>
     <message>
-        <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped.</source>
-        <translation>每個例句最多採集一個單字 — 也就是該句中最先找到的那一個。其他共用該句的單字都會略過。</translation>
+        <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped. Whitelisted words are still mined.</source>
+        <translation>每個例句最多採集一個單字 — 也就是該句中最先找到的那一個。其他共用該句的單字都會略過。已列入白名單的單字仍會被採集。</translation>
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
         <translation>僅限 i+1 句子（恰好一個未知單字）</translation>
     </message>
     <message>
-        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication.</source>
-        <translation>僅採集句子中恰好包含一個未知單字（i+1）的單字；此設定會覆蓋句子去重。</translation>
+        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication. Whitelisted words are still mined.</source>
+        <translation>僅採集句子中恰好包含一個未知單字（i+1）的單字；此設定會覆蓋句子去重。已列入白名單的單字仍會被採集。</translation>
     </message>
     <message>
         <source>Sentence Rule</source>
@@ -11171,6 +11285,10 @@ Your installed resources and your theme are kept.</source>
         <translation>放在來源影片旁，命名為 name_retimed.srt</translation>
     </message>
     <message>
+        <source>%1, as name_retimed.srt</source>
+        <translation>%1，命名為 name_retimed.srt</translation>
+    </message>
+    <message>
         <source>Subtitle retiming</source>
         <translation>字幕重新校時</translation>
     </message>
@@ -11504,6 +11622,10 @@ Your installed resources and your theme are kept.</source>
     </message>
 </context><context>
     <name>SubtitlesSettingsPanel</name>
+    <message>
+        <source>Auto (GPU if available)</source>
+        <translation>自動（有 GPU 時使用 GPU）</translation>
+    </message>
     <message>
         <source>Transcription &amp; Alignment</source>
         <translation>轉錄與對齊</translation>
@@ -12075,12 +12197,18 @@ Your installed resources and your theme are kept.</source>
         <translation>該資料夾中找不到任何影片。</translation>
     </message>
     <message>
+        <source>No subtitle or audio tracks were found in any video in that folder.</source>
+        <translation>在該資料夾的任何影片中都找不到字幕軌或音軌。</translation>
+    </message>
+    <message>
         <source>No subtitle or audio tracks were found in %1.</source>
         <translation>在 %1 中找不到字幕軌或音軌。</translation>
     </message>
-    <message>
-        <source>Tracks of %1, the first of %2 videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
-        <translation>%1 的軌道（%2 部影片中的第一部）。會從資料夾中的每部影片儲存已勾選的軌道；沒有該軌道的影片會被略過。</translation>
+    <message numerus="yes">
+        <source>Tracks of %1, one of %n videos. The ticked tracks are saved from every video in the folder; a video without one is skipped.</source>
+        <translation>
+            <numerusform>%1 的軌道（%n 部影片中的一部）。會從資料夾中的每部影片儲存已勾選的軌道；沒有該軌道的影片會被略過。</numerusform>
+        </translation>
     </message>
     <message>
         <source>Tracks of %1. Tick the ones to save.</source>
@@ -12557,8 +12685,16 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>句子（%1）</translation>
     </message>
     <message>
+        <source>This card has no picture</source>
+        <translation>此卡片沒有圖片</translation>
+    </message>
+    <message>
         <source>No page image for this word</source>
         <translation>此單字沒有頁面影像</translation>
+    </message>
+    <message>
+        <source>Could not load this card's picture</source>
+        <translation>無法載入此卡片的圖片</translation>
     </message>
     <message>
         <source>Could not load page image</source>
@@ -12690,6 +12826,10 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
 </context><context>
     <name>YouTubeSettingsPanel</name>
+    <message>
+        <source>None</source>
+        <translation>無</translation>
+    </message>
     <message>
         <source>YouTube</source>
         <translation>YouTube</translation>

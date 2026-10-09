@@ -183,6 +183,36 @@ class TestSetupCard:
         assert not tab.setup_row.isHidden()
         assert tab.install_mokuro_button.text() == "Reinstall mokuro"
 
+    def _installed_tab(self, qtbot, tmp_path) -> MokuroTab:
+        tab = MokuroTab(_config(tmp_path))
+        qtbot.addWidget(tab)
+        assert tab._availability_worker.wait(3000)
+        qtbot.waitUntil(lambda: not tab.installed_row.isHidden(), timeout=3000)
+        return tab
+
+    def test_a_successful_reinstall_collapses_the_card_again(self, qtbot, tmp_path):
+        """B4.4: Change… then a good Reinstall returns to the one-line card."""
+        with patch(_COMPUTE_AVAILABLE, return_value=True), patch(_INSTALL_SUPPORTED, return_value=True):
+            tab = self._installed_tab(qtbot, tmp_path)
+            tab.change_setup_button.click()
+            tab.install_mokuro_button.click()
+            tab.notify_install_finished(True)
+            assert tab._availability_worker.wait(3000)
+            qtbot.waitUntil(lambda: not tab.installed_row.isHidden(), timeout=3000)
+
+        assert tab.setup_row.isHidden()
+
+    def test_a_failed_reinstall_keeps_the_card_open(self, qtbot, tmp_path):
+        """A failed Reinstall leaves Install on screen to retry."""
+        with patch(_COMPUTE_AVAILABLE, return_value=True), patch(_INSTALL_SUPPORTED, return_value=True):
+            tab = self._installed_tab(qtbot, tmp_path)
+            tab.change_setup_button.click()
+            tab.install_mokuro_button.click()
+            tab.notify_install_finished(False)
+
+        assert not tab.setup_row.isHidden()
+        assert tab.installed_row.isHidden()
+
     def test_there_is_no_path_override(self, qtbot, tmp_path):
         """D15 item 3: a self-built mokuro is set in gui_config.json (mokuro_location)."""
         tab = _make_tab(_config(tmp_path), qtbot)

@@ -41,7 +41,7 @@ from anki_miner.diagnostics.environment import (
     format_environment_lines,
     format_health_lines,
 )
-from anki_miner.gui.capabilities import MAIN_TAB_ORDER, effective_hidden_utilities
+from anki_miner.gui.capabilities import MAIN_TAB_ORDER, hidden_utilities_on_tab
 from anki_miner.gui.constants import (
     WINDOW_DEFAULT_HEIGHT,
     WINDOW_DEFAULT_WIDTH,
@@ -995,12 +995,17 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         found (e.g. an optional tab was not registered) so a stale catalogue entry
         never crashes the UI.
 
-        A Utilities tool the user hid (Settings → Utilities) has no
-        page to land on, so its target opens that tool's checkbox instead. The
-        Usage Guide, a task chosen in the status bar and any later deep link
-        all arrive here.
+        A Utilities tool the tab does not show (the user hid it in Settings →
+        Utilities) has no page to land on, so its target opens that tool's
+        checkbox instead. "Does not show" is the tab's own rule,
+        ``hidden_utilities_on_tab``: when the hidden tools plus the language
+        gate would hide everything, the tab shows every usable tool, and so
+        must this. The Usage Guide, a task chosen in the status bar and any
+        later deep link all arrive here.
         """
-        hidden = effective_hidden_utilities(self.config.hidden_utilities)
+        hidden = hidden_utilities_on_tab(
+            self.config.hidden_utilities, get_profile(config_language(self.config)).capabilities
+        )
         if target.main_tab == "subtitles" and target.subtab is not None and target.subtab in hidden:
             # UtilitiesSettingsPanel registers each box as "<key>" under "utilities".
             self.reveal_setting(f"utilities.{target.subtab}")
@@ -1138,8 +1143,6 @@ class MainWindow(ScreenIssueHost, QMainWindow):
 
         It also hands the dialog the Settings tab's whole-profile actions (D14).
         """
-        from typing import cast
-
         from anki_miner.gui.widgets.dialogs.profile_manager_dialog import ProfileManagerDialog, SettingsFileActions
 
         # D14: the live settings' Export / Import / Reset run from the manager.
@@ -2149,10 +2152,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # the repo's GUI-thread tripwire forbids).
         self._set_ytdlp_status_from_validation(result)
 
-        # Drive the Settings → Anki connection badge so Test Connection (the
-        # only button still routed through validation — the deck/note-type
-        # refresh buttons now reload the dropdowns instead) produces visible
-        # feedback (T-53). The badge otherwise sticks at
+        # Drive the Settings → Anki connection badge so the Anki panel's Refresh
+        # (which also reloads the deck and note-type lists) produces visible
+        # feedback (T-53, C03). The badge otherwise sticks at
         # "Checking connection..." forever — set_connection_status had no
         # callers. Use the authoritative result.ankiconnect_ok flag.
         self._set_anki_connection_badge("connected" if result.ankiconnect_ok else "disconnected")

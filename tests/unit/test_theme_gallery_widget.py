@@ -229,16 +229,16 @@ class TestThumbnails:
         """Pin the teardown race the module docstring names.
 
         A card's paintEvent starts a zero-interval, single-shot timer that
-        loads the thumbnail on the next event-loop turn. If a host (the setup
-        wizard, in production) tears the card's widget tree down in that
+        loads the thumbnail on the next event-loop turn. If the host (Settings →
+        General, in production) tears the card's widget tree down in that
         window, the `thumbnail` QLabel can be destroyed before the timer
         fires -- even though the timer is a child of the card and dies with
         it, the timer is NOT what gets destroyed here, its sibling is. Without
         the `sip.isdeleted` guard in `ThemeCard._load_thumbnail`, the pending
         timeout calls `self.thumbnail.setPixmap(...)` on a dead C++ object and
         raises `RuntimeError: wrapped C/C++ object of type QLabel has been
-        deleted` from inside the Qt event loop -- exactly the crash seen in
-        the setup wizard's flaky teardown tests.
+        deleted` from inside the Qt event loop -- exactly the crash the setup
+        wizard's teardown tests hit while the wizard still hosted a gallery.
         """
         gallery = _gallery(qtbot)
         card = gallery.card(gallery.card_keys()[0])

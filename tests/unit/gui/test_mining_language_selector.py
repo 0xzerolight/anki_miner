@@ -289,6 +289,60 @@ def test_a_failed_download_keeps_the_offer_and_its_message(qtbot, test_config, g
     assert panel.pending_download_status.objectName() == "validation-status"
 
 
+def test_a_pack_that_leaves_the_language_unusable_repoints_the_list(
+    qtbot, test_config, german_downloadable, monkeypatch
+):
+    """B3.6a: de left the list (installed, probe still failing); the combo must not fall to item 0."""
+    panel = _panel(qtbot, test_config)
+    panel.mining_language_combo.setCurrentIndex(panel.mining_language_combo.findData("de"))
+    panel.download_and_switch_button.click()
+    panel.set_language_pack_status("de", "Deutsch pack installed.")
+    # Installed, so no longer a download; the probe still fails, so not minable either.
+    monkeypatch.setattr(language_choices, "_pack_download_mb", lambda _code: None)
+
+    panel.notify_language_pack_download_finished("de")
+
+    assert panel.mining_language_combo.findData("de") < 0
+    assert panel.mining_language_combo.currentData() == "ja"
+    assert not panel.pending_download_row.isHidden()
+    assert panel.download_and_switch_button.isHidden()
+    assert panel.pending_download_label.isHidden()
+    assert panel.pending_download_status.text() == "Deutsch still can't be mined after its download."
+    assert panel.pending_download_status.property("status") == "error"
+
+
+def test_the_next_offer_brings_its_button_back(qtbot, test_config, german_downloadable, monkeypatch):
+    panel = _panel(qtbot, test_config)
+    combo = panel.mining_language_combo
+    combo.setCurrentIndex(combo.findData("de"))
+    panel.download_and_switch_button.click()
+    monkeypatch.setattr(language_choices, "_pack_download_mb", lambda code: 41 if code == "ar" else None)
+    panel.notify_language_pack_download_finished("de")
+
+    combo.setCurrentIndex(combo.findData("ar"))
+
+    assert not panel.download_and_switch_button.isHidden()
+    assert panel.download_and_switch_button.isEnabled()
+    assert not panel.pending_download_label.isHidden()
+    assert panel.pending_download_status.text() == ""
+
+
+def test_re_picking_a_downloading_language_keeps_its_progress_line(qtbot, test_config, german_downloadable):
+    """B3.6e: the re-pick showed a blank line until the worker's next tick."""
+    panel = _panel(qtbot, test_config)
+    combo = panel.mining_language_combo
+    combo.setCurrentIndex(combo.findData("de"))
+    panel.download_and_switch_button.click()
+    panel.set_language_pack_status("de", "Deutsch pack (1/1): downloading (40%)")
+    combo.setCurrentIndex(combo.findData("zh"))  # drops the offer; the download carries on
+    panel.set_language_pack_status("de", "Deutsch pack (1/1): downloading (60%)")
+
+    combo.setCurrentIndex(combo.findData("de"))
+
+    assert panel.pending_download_status.text() == "Deutsch pack (1/1): downloading (60%)"
+    assert not panel.download_and_switch_button.isEnabled()
+
+
 def test_a_right_to_left_name_does_not_turn_the_offer_around(qtbot, test_config, monkeypatch):
     """An Arabic name leading the line made Qt lay the whole English sentence out right to left."""
     monkeypatch.setattr(language_choices, "_pack_download_mb", lambda code: 41 if code == "ar" else None)

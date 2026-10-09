@@ -162,8 +162,8 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         self.overall_progress_widget = ProgressWidget()
         self.overall_progress_widget.hide()
         layout.addWidget(self.overall_progress_widget)
-        # The durable end state of this same card (D20). The noun ("series")
-        # is set per run at _begin_receipt.
+        # The run's durable end state, under the inputs (D20). The noun
+        # ("series") is set per run at _begin_receipt.
         self._install_receipt(layout, self.overall_progress_widget)
 
         # Log widget; install_workflow_shell moves it into the Activity drawer (D6).
@@ -324,23 +324,6 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         section.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         return section
-
-    def _get_validated_folders(self) -> tuple[Path, Path] | None:
-        """Validate and return folder paths from selectors.
-
-        Returns:
-            Tuple of (video_folder, subtitle_folder) or None if invalid
-        """
-        video_path = self.video_folder_selector.path_or_none()
-        subtitle_path = self.subtitle_folder_selector.path_or_none()
-
-        if video_path is None or subtitle_path is None:
-            return None
-
-        if not self.video_folder_selector.is_valid() or not self.subtitle_folder_selector.is_valid():
-            return None
-
-        return Path(video_path), Path(subtitle_path)
 
     def _add_series_from_pickers(self) -> QueueItem | None:
         """Add the Add Series card's folders as a new queue row.
@@ -889,7 +872,7 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         self.overall_progress_widget.set_composed(self._items_done, self._items_total)
         self._publish_task_count(current=self._items_done, total=self._items_total or None, detail="")
 
-    def _on_queue_finished(self, total_cards: int, whitelist: object = None) -> None:
+    def _on_queue_finished(self, total_cards: int, whitelist: object = None, not_mined: object = None) -> None:
         """Called when entire queue finishes.
 
         The run's summary is no longer a modal box raised from here. It is the
@@ -903,8 +886,11 @@ class BatchProcessingTab(FolderSeriesScreenBase):
                 pair it processed, or None when no whitelist was in effect.
                 This queue's worker reports counts rather than results, so the
                 run's coverage arrives here instead of per item.
+            not_mined: The worker's ``NotMinedReport`` folded the same way,
+                or None when no pair reported one.
         """
         self._record_receipt_whitelist(whitelist)
+        self._record_receipt_not_mined(not_mined)
         self._restore_buttons()
 
         self._show_terminal_progress(self.overall_progress_widget, total_cards)

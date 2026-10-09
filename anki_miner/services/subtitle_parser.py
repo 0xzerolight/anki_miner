@@ -13,7 +13,7 @@ import pysubs2
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SetupError, SubtitleParseError
 from anki_miner.languages.tagger_provider import get_tagger
-from anki_miner.models import LineLemmas, TokenizedWord
+from anki_miner.models import LineLemmas, NotMinedReason, TokenizedWord
 from anki_miner.models.reading import ReadingUnit
 from anki_miner.models.word import resolve_pronoun_fold_reading, select_mined_form
 from anki_miner.services.compound_matcher import (
@@ -32,6 +32,10 @@ from anki_miner.services.deinflection import (
 )
 from anki_miner.services.masu_stem_nominalizer import MasuStemNominalizer
 from anki_miner.services.morphology import (
+    REJECT_KANA_ONLY,
+    REJECT_SCRIPT,
+    REJECT_SOUND_EFFECT,
+    REJECT_WORD_TYPE,
     AttestLookup,
     FormLookup,
     ReadingLookup,
@@ -165,6 +169,20 @@ _KANA_RECOVER_POS1: frozenset[str] = frozenset({"動詞", "形容詞", "形状�
 #   should_include and never reach this path.
 _KANA_RECOVER_REJECT_POS2: frozenset[str] = frozenset({"助動詞語幹", "非自立可能"})
 
+#: The not-mined reason each preference gate reports. REJECT_STRUCTURE is absent
+#: on purpose: particles, auxiliaries, symbols and debris are never a word the user seeks.
+_PARSE_NOT_MINED: dict[str, NotMinedReason] = {
+    REJECT_WORD_TYPE: NotMinedReason.WORD_TYPE,
+    REJECT_SOUND_EFFECT: NotMinedReason.SOUND_EFFECT,
+    REJECT_KANA_ONLY: NotMinedReason.KANA_ONLY,
+    REJECT_SCRIPT: NotMinedReason.SCRIPT,
+}
+
+
+def _unmined_rejects(rejects: dict[str, NotMinedReason], seen_mined_forms: set[str]) -> dict[str, NotMinedReason]:
+    """A parse's turned-away fronts minus every front the same parse mined elsewhere."""
+    return {front: reason for front, reason in rejects.items() if front not in seen_mined_forms}
+
 
 def _is_kana_candidate(surface: object) -> bool:
     """Pure hiragana once prolonged-sound marks are set aside (すげー).
@@ -289,6 +307,34 @@ def compile_subtitle_regex_filter(pattern: str, replacement: str) -> re.Pattern[
     # stdlib re has no wall-clock timeout. Size limits plus the nested-repeat and
     # overlapping-alternation rejects cover common stalls, but cannot prove safety.
     return compiled
+
+
+def _expand_unfolded(match: re.Match[str], template: str, text: str) -> str:
+    """``match.expand(template)`` with every group read from ``text``, the line ``match`` ran on unfolded.
+
+    The subtitle filter matches a line with its no-break spaces folded, one
+    character for one, so a group's span cuts ``text`` at the same offsets.
+    ``re`` itself expands the template (escapes, numbered and named references,
+    ``\\g<0>``) against a stand-in match whose groups are single private-use
+    characters absent from the template; each is then swapped for its group's
+    text on ``text``, an unmatched group for ``""`` as ``re`` expands it.
+    """
+    if text[match.start() : match.end()] == match.group():
+        return match.expand(template)
+    pattern = match.re
+    markers = [char for char in map(chr, range(0xE000, 0xF900)) if char not in template][: pattern.groups + 1]
+    names = {index: name for name, index in pattern.groupindex.items()}
+    groups = "".join(
+        f"(?P<{names[index]}>{markers[index]})" if index in names else f"({markers[index]})"
+        for index in range(1, pattern.groups + 1)
+    )
+    stand_in = re.match(f"{markers[0]}(?={groups})", "".join(markers))
+    assert stand_in is not None  # the stand-in pattern reads its own markers by construction
+    captured = {
+        ord(markers[index]): text[match.start(index) : match.end(index)] if match.start(index) >= 0 else ""
+        for index in range(pattern.groups + 1)
+    }
+    return stand_in.expand(template).translate(captured)
 
 
 def _is_katakana_surface_char(ch: str) -> bool:
@@ -778,6 +824,10 @@ class SubtitleParserService:
         self._unique_reading_cache: dict[str, str | None] = {}
         self._attested_readings_cache: dict[str, list[str]] = {}
         self._ambiguous_readings: set[str] = set()
+        # Why this parse turned tokens away, by card front (the "Not mined" report).
+        # Replaced by every parse_* call, including the curator's one-sentence
+        # parses, so EpisodeProcessor reads it straight after phase 1.
+        self.last_parse_rejects: dict[str, NotMinedReason] = {}
         self._reset_perf_counters()
 
     def _reset_perf_counters(self) -> None:
@@ -1022,7 +1072,8 @@ class SubtitleParserService:
         character for one, so each match's span cuts the unfolded line and the
         text between matches keeps its no-break spaces. ``finditer`` +
         ``Match.expand`` is ``re.sub`` spelled out: same empty-match rule, same
-        replacement template (backreferences expand from the folded match).
+        replacement template, but a backreference brings back the text it
+        captured on the unfolded line (:func:`_expand_unfolded`).
         """
         if self._filter_pattern is None:
             return text
@@ -1032,7 +1083,7 @@ class SubtitleParserService:
         parts: list[str] = []
         last = 0
         for match in self._filter_pattern.finditer(fold_no_break_spaces(text)):
-            parts += (text[last : match.start()], match.expand(replacement))
+            parts += (text[last : match.start()], _expand_unfolded(match, replacement, text))
             last = match.end()
         parts.append(text[last:])
         return collapse_whitespace("".join(parts), keep_no_break=True)
@@ -1343,6 +1394,15 @@ class SubtitleParserService:
             highlight_end = max(highlight_end, resolved_end)
         return highlight_end
 
+    def _card_front(self, word_token: Any, text: str, tok_start: int, tok_end: int, raw_tokens: list) -> str:
+        """The ``mined_form`` emission gives an included token: its card front.
+
+        Resolved exactly as ``_emit_word`` resolves it (the emission highlight
+        end, then the identity), so a front counted is a front mined (T-38).
+        """
+        highlight_end = self._emission_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
+        return self._resolve_word_identity(word_token, text, tok_start, highlight_end)[2]
+
     def _resolve_word_identity(
         self,
         word_token: Any,
@@ -1355,26 +1415,38 @@ class SubtitleParserService:
         orth_base = self._mining_base(word_token)
         resolved_front = self._resolve_front(word_token, orth_base, text, tok_start, highlight_end)
         front_overridden = resolved_front != orth_base
+        mined = self._front_for(word_token, resolved_front, lemma)
+        return lemma, resolved_front, mined, front_overridden
+
+    def _front_for(self, word_token: Any, front: str, lemma: str) -> str:
+        """The card front the mined-form policy picks for ``word_token`` given its dictionary form."""
         pronunciation = getattr(word_token.feature, "pron", "")
         if not isinstance(pronunciation, str):
             pronunciation = ""
         if self._mined_form_policy is None:
-            mined = select_mined_form(
+            return select_mined_form(
                 word_token.feature.pos1,
-                resolved_front,
+                front,
                 lemma,
                 word_token.surface,
                 pronunciation=pronunciation,
             )
-        else:
-            mined = self._mined_form_policy.mined_form(
-                word_token.feature.pos1,
-                resolved_front,
-                lemma,
-                word_token.surface,
-                pronunciation,
-            )
-        return lemma, resolved_front, mined, front_overridden
+        return self._mined_form_policy.mined_form(
+            word_token.feature.pos1,
+            front,
+            lemma,
+            word_token.surface,
+            pronunciation,
+        )
+
+    def _rejected_front(self, word_token: Any) -> str:
+        """What the not-mined report names a turned-away token by.
+
+        Its card front without the dictionary front resolver, which probes the
+        offline dictionary (``mining_base`` is that resolver's own input), so a
+        rejection costs no I/O.
+        """
+        return self._front_for(word_token, self._mining_base(word_token), self._extract_lemma(word_token))
 
     def _apply_single_token_sentence_attestation(
         self,
@@ -1703,7 +1775,10 @@ class SubtitleParserService:
             sentence_furigana_bolded = ""
 
         return TokenizedWord(
-            surface=surface,
+            # The stored line's own slice: the token's surface, except that a
+            # no-break space the tagger read folded is kept (fa کار<NBSP>می‌کنم),
+            # so sentence[surface_start:surface_end] == surface holds.
+            surface=sentence[tok_start:tok_end],
             lemma=lemma,
             orth_base=orth_base,
             reading=reading,
@@ -1734,6 +1809,7 @@ class SubtitleParserService:
         seen_mined_forms: set[str],
         *,
         collect_index: bool,
+        rejects: dict[str, NotMinedReason] | None = None,
     ) -> tuple[list[TokenizedWord], LineLemmas | None]:
         """Emit one line's deduped words plus its optional per-line lemma index.
 
@@ -1766,7 +1842,7 @@ class SubtitleParserService:
         # Spans come from the shared locator — same offset and drop rule as
         # parse_subtitle_file (Issue #20 / T-38, see _iter_token_spans).
         for word_token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
-            if not self._mine_token(word_token, text, tok_start, tok_end, merged_tokens, raw_tokens):
+            if not self._mine_token(word_token, text, tok_start, tok_end, merged_tokens, raw_tokens, rejects=rejects):
                 continue
             lemma_here = self._extract_lemma(word_token)
             line_lemmas.add(lemma_here)
@@ -1776,7 +1852,10 @@ class SubtitleParserService:
             highlight_end = self._emission_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
             included_spans.append((tok_start, tok_end, highlight_end))
             if collect_index:
-                lemma_first_span.setdefault(lemma_here, (word_token.surface, tok_start, tok_end, highlight_end))
+                # Surfaces are slices of the stored line, as _emit_word's are.
+                lemma_first_span.setdefault(
+                    lemma_here, (sentence[tok_start:tok_end], tok_start, tok_end, highlight_end)
+                )
 
         # A line with zero content words can never be i+1 — skip it from the
         # index entirely. (Word emission is also skipped trivially.)
@@ -1834,7 +1913,7 @@ class SubtitleParserService:
                     _, _, front, _ = self._resolve_word_identity(word_token, text, tok_start, highlight_end)
                 else:
                     front = prefetched
-                front_first_span.setdefault(front, (word_token.surface, tok_start, tok_end, highlight_end))
+                front_first_span.setdefault(front, (sentence[tok_start:tok_end], tok_start, tok_end, highlight_end))
             line_lemmas_entry = LineLemmas(
                 line_text=sentence,
                 lemmas=frozenset(line_lemmas),
@@ -1939,15 +2018,18 @@ class SubtitleParserService:
 
         all_words: list[TokenizedWord] = []
         seen_mined_forms: set[str] = set()  # Track unique words by card-front mined_form.
+        rejects: dict[str, NotMinedReason] = {}
 
         for line_state in self._iter_parsed_lines(subtitle_file, subtitle_offset):
             line_words, _ = self._emit_line_words_and_index(
                 line_state,
                 seen_mined_forms,
                 collect_index=False,
+                rejects=rejects,
             )
             all_words.extend(line_words)
 
+        self.last_parse_rejects = _unmined_rejects(rejects, seen_mined_forms)
         self._log_parse_probe_timing(subtitle_file)
         self._warn_if_nothing_mined(subtitle_file, all_words, subtitle_offset)
         return all_words
@@ -1988,15 +2070,17 @@ class SubtitleParserService:
         all_words: list[TokenizedWord] = []
         line_index: list[LineLemmas] = []
         seen_mined_forms: set[str] = set()
+        rejects: dict[str, NotMinedReason] = {}
 
         for line_state in self._iter_parsed_lines(subtitle_file, subtitle_offset):
             line_words, line_lemmas_entry = self._emit_line_words_and_index(
-                line_state, seen_mined_forms, collect_index=True
+                line_state, seen_mined_forms, collect_index=True, rejects=rejects
             )
             if line_lemmas_entry is not None:
                 line_index.append(line_lemmas_entry)
             all_words.extend(line_words)
 
+        self.last_parse_rejects = _unmined_rejects(rejects, seen_mined_forms)
         self._log_parse_probe_timing(subtitle_file)
         self._warn_if_nothing_mined(subtitle_file, all_words, subtitle_offset)
         return all_words, line_index
@@ -2053,8 +2137,9 @@ class SubtitleParserService:
             ``(words, line_index, counts)``. ``words`` is mined_form-deduped
             (first-occurrence-wins across the whole call, like the subtitle
             entrypoints); ``line_index`` is the ``LineLemmas`` list when
-            ``want_line_index`` else ``None``; ``counts`` maps lemma → total
-            included occurrences (``count_lemmas`` semantics, no dedup).
+            ``want_line_index`` else ``None``; ``counts`` maps card front
+            (``mined_form``) → total included occurrences (``count_fronts``
+            semantics, no dedup).
         """
         self._require_engine()
         # Public parse_* convention: reset the per-parse memo caches so a
@@ -2066,6 +2151,7 @@ class SubtitleParserService:
         line_index: list[LineLemmas] = []
         seen_mined_forms: set[str] = set()
         counts: collections.Counter[str] = collections.Counter()
+        rejects: dict[str, NotMinedReason] = {}
 
         for unit in units:
             # Reading/OCR text needs the same pre-tokenization JP normalization
@@ -2100,20 +2186,21 @@ class SubtitleParserService:
             text = self._tokenizer_text(text)
 
             # Count through the SAME locator as the mining loop below (and
-            # count_lemmas): a token mining drops (find == -1) is counted
+            # count_fronts): a token mining drops (find == -1) is counted
             # nowhere it is not mined, or the preview over-promises (T-38 — see
             # _iter_token_spans for the drop-rule rationale).
             for token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
                 if self._mine_token(token, text, tok_start, tok_end, merged_tokens, raw_tokens):
-                    counts[self._extract_lemma(token)] += 1
+                    counts[self._card_front(token, text, tok_start, tok_end, raw_tokens)] += 1
 
             line_words, line_lemmas_entry = self._emit_line_words_and_index(
-                line_state, seen_mined_forms, collect_index=want_line_index
+                line_state, seen_mined_forms, collect_index=want_line_index, rejects=rejects
             )
             all_words.extend(line_words)
             if line_lemmas_entry is not None:
                 line_index.append(line_lemmas_entry)
 
+        self.last_parse_rejects = _unmined_rejects(rejects, seen_mined_forms)
         self._log_parse_probe_timing()
         return all_words, (line_index if want_line_index else None), counts
 
@@ -2138,8 +2225,23 @@ class SubtitleParserService:
         Raises:
             SubtitleParseError: If subtitle file cannot be parsed
         """
+        return self._count_occurrences(subtitle_file, by_front=False)
+
+    def count_fronts(self, subtitle_file: Path) -> collections.Counter[str]:
+        """:meth:`count_lemmas`, keyed by card front (``mined_form``) instead of lemma.
+
+        What the curator's Occurrences column reads: it judges a card, and UniDic
+        files kanji-variant homographs under one lemma (賭ける and 掛ける under
+        掛ける), so a lemma count credits a card with its sibling's lines (audit
+        L3-005). Deck Builder ranks and Readability scores by lemma, and keep
+        :meth:`count_lemmas`.
+        """
+        return self._count_occurrences(subtitle_file, by_front=True)
+
+    def _count_occurrences(self, subtitle_file: Path, *, by_front: bool) -> collections.Counter[str]:
+        """The one count loop behind :meth:`count_lemmas` and :meth:`count_fronts`."""
         self._require_engine()
-        # Unlike the parse_* entry points above, count_lemmas does not call
+        # Unlike the parse_* entry points above, counting does not call
         # _reset_caches() (it never touches the reading/furigana memos) — but
         # it does tokenize and probe, so it resets the perf counters directly.
         self._reset_perf_counters()
@@ -2154,7 +2256,12 @@ class SubtitleParserService:
             # inline a divergent copy here.
             for token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
                 if self._mine_token(token, text, tok_start, tok_end, merged_tokens, raw_tokens):
-                    counts[self._extract_lemma(token)] += 1
+                    key = (
+                        self._card_front(token, text, tok_start, tok_end, raw_tokens)
+                        if by_front
+                        else self._extract_lemma(token)
+                    )
+                    counts[key] += 1
         self._log_parse_probe_timing(subtitle_file)
         return counts
 
@@ -2439,7 +2546,17 @@ class SubtitleParserService:
             return True
         return self._recover_kana_content_word(word_token)
 
-    def _mine_token(self, word_token, text: str, tok_start: int, tok_end: int, tokens: list, raw_tokens: list) -> bool:
+    def _mine_token(
+        self,
+        word_token,
+        text: str,
+        tok_start: int,
+        tok_end: int,
+        tokens: list,
+        raw_tokens: list,
+        *,
+        rejects: dict[str, NotMinedReason] | None = None,
+    ) -> bool:
         """Context-aware mining acceptance: inclusion, minus fragment reject layers.
 
         The SINGLE acceptance seam every token-span call site routes through —
@@ -2473,8 +2590,14 @@ class SubtitleParserService:
         ``_should_include_word`` stays the token-only, span-free gate that unit
         tests use directly; it reproduces the first two paths in order. The
         rescue needs the line, so only this method runs it.
+
+        ``rejects`` is the mining pass's not-mined record: a token turned away
+        by a preference gate and rescued by nothing is noted there by card
+        front. The count loops pass none, and it never changes the verdict
+        (T-38). Fragment guards and window rejects record nothing.
         """
-        if self._inclusion_rule.should_include(word_token):
+        rejection = self._inclusion_rule.rejection(word_token)
+        if rejection is None:
             if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end):
                 return False
             return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
@@ -2483,10 +2606,41 @@ class SubtitleParserService:
                 return False
             return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
         if not self._whitelist_rescues(word_token, text, tok_start, tok_end, tokens, raw_tokens):
+            if rejects is not None:
+                self._note_parse_reject(rejects, word_token, rejection)
             return False
         if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end):
             return False
         return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
+
+    def _rescue_eligible(self, word_token) -> bool:
+        """Whether any whitelist entry could rescue this token: ``_whitelist_rescues``' token-only checks.
+
+        A tag the profile rescues (its content-class allowlist), minus the kana
+        auxiliary-capable forms recovery also refuses. The not-mined report keys
+        on it: a token no whitelist can reach is a function word, number or affix.
+        """
+        if not self._inclusion_rule.rescuable(word_token):
+            return False
+        return not (
+            _is_kana_candidate(word_token.surface)
+            and getattr(word_token.feature, "pos2", None) in _KANA_RECOVER_REJECT_POS2
+        )
+
+    def _note_parse_reject(self, rejects: dict[str, NotMinedReason], word_token, rejection: str) -> None:
+        """Record why a token every inclusion path turned away was not mined; first reason per front wins.
+
+        Only what a whitelist entry could rescue: ``_rescue_eligible`` plus the
+        front's own script check (``_whitelist_rescues`` refuses a front outside
+        the mining language's script, so an all-Latin ``OK`` in Japanese, or an
+        English name in Korean subtitles, is never listed).
+        """
+        reason = _PARSE_NOT_MINED.get(rejection)
+        if reason is None or not self._rescue_eligible(word_token):
+            return
+        front = self._rejected_front(word_token)
+        if front and self._rescue_script(front):
+            rejects.setdefault(front, reason)
 
     def _whitelist_rescues(
         self, word_token, text: str, tok_start: int, tok_end: int, tokens: list, raw_tokens: list
@@ -2494,18 +2648,15 @@ class SubtitleParserService:
         """Whether the run's whitelist rescues a token every inclusion path rejected (R1).
 
         Cheap checks first: no whitelist, a tag the profile never rescues, or a
-        kana surface in the recovery's aux reject (いる/ある in ている). Then the
-        card front, resolved exactly as emission resolves it, must be on the
-        list. The lexicalized-window probe (I/O) runs last, for whitelisted
-        tokens only.
+        kana surface in the recovery's aux reject (いる/ある in ている)
+        (``_rescue_eligible``). Then the card front, resolved exactly as
+        emission resolves it, must be on the list. The lexicalized-window probe
+        (I/O) runs last, for whitelisted tokens only.
         """
-        if self._force_include is None or not self._inclusion_rule.rescuable(word_token):
+        if self._force_include is None or not self._rescue_eligible(word_token):
             return False
         kana = _is_kana_candidate(word_token.surface)
-        if kana and getattr(word_token.feature, "pos2", None) in _KANA_RECOVER_REJECT_POS2:
-            return False
-        highlight_end = self._emission_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
-        _, _, mined, _ = self._resolve_word_identity(word_token, text, tok_start, highlight_end)
+        mined = self._card_front(word_token, text, tok_start, tok_end, raw_tokens)
         if not self._rescue_script(mined) or not self._force_include(mined):
             return False
         return not (kana and self._rejected_by_lexicalized_window(word_token, tokens))

@@ -465,16 +465,35 @@ def test_clicking_a_partial_names_box_arms_the_autosave(tab, test_config):
     assert tab._settings_dirty
 
 
-def test_a_hand_set_worker_count_survives_a_commit(tab, test_config, no_modals):
-    """D15 item 5: nothing on screen writes max_parallel_workers any more."""
-    from dataclasses import replace
+def test_clicking_a_partial_cleanup_box_arms_the_autosave(tab, test_config):
+    """Partly checked -> checked emits no toggled(); the pieces the click adds reach textChanged."""
+    from PyQt6.QtCore import Qt  # noqa: PLC0415
 
+    tab.update_config(replace(test_config, use_subtitle_regex_filter=True, subtitle_regex_filter=r"\(x\)"))
+    box = tab.sentences_panel.use_subtitle_regex_checkbox
+    assert box.checkState() == Qt.CheckState.PartiallyChecked
+    tab._debounce_timer.stop()
+    tab._settings_dirty = False
+
+    box.click()
+
+    assert tab._settings_dirty
+    assert tab._debounce_timer.isActive()
+
+
+def test_a_hand_set_worker_count_survives_a_commit(tab, test_config, no_modals):
+    """D15 item 5: nothing on screen writes max_parallel_workers any more.
+
+    The value changes after the panels loaded it, so a control that wrote back
+    what it loaded (11) would overwrite the 7 and fail here.
+    """
     tab.update_config(replace(test_config, max_parallel_workers=11))
+    tab.config = replace(tab.config, max_parallel_workers=7)
     received: list[AnkiMinerConfig] = []
     tab.config_changed.connect(received.append)
     tab.anki_panel.anki_tags_input.setText("t")
     tab.commit_settings()
-    assert received[-1].max_parallel_workers == 11
+    assert received[-1].max_parallel_workers == 7
 
 
 class TestAutoUpdateDictionaries:

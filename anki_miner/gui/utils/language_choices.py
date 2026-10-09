@@ -121,21 +121,8 @@ def mining_language_display_name(code: str) -> str:
     """The native name of *code*, or the bare code where no profile builds.
 
     Separate from :func:`available_mining_languages`, which answers about what
-    can be MINED: the pack rows and the download worker name a language the
-    profile's own probe has ruled unavailable — that is precisely the language
-    the pack exists to unlock — so the name has to resolve without the probe.
+    can be MINED: the pack download worker names a language the profile's own
+    probe has ruled unavailable — that is precisely the language the pack
+    exists to unlock — so the name has to resolve without the probe.
     """
     return language_display_name(code)
-
-
-def mining_language_english_name(code: str) -> str:
-    """The English name of *code*, or the bare code where no profile builds.
-
-    For surfaces that must be findable without typing the native script: the
-    pack rows render 한국어 / 中文 in every string they own, so settings search
-    matched neither "Korean" nor "Chinese" until this fed the search index.
-    """
-    try:
-        return get_profile(code).english_name or code.upper()
-    except (LookupError, ValueError, ImportError):
-        return code.upper()

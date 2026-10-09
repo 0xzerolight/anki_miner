@@ -125,9 +125,11 @@ class InputProbe:
 
     source: Path
     videos: tuple[Path, ...]
-    #: Tracks of ``videos[0]``; empty when there is no video or it is unreadable.
+    #: Tracks of ``videos[listed_index]``; empty when no video lists any track.
     tracks: MediaTracks
     preselected: tuple[TrackRef, ...]
+    #: The first video, in run order, whose probe lists a track (0 when none does).
+    listed_index: int = 0
 
 
 @dataclass(frozen=True)
@@ -215,12 +217,18 @@ def preferred_refs(tracks: MediaTracks, codes: frozenset[str]) -> tuple[TrackRef
 
 
 def probe_input(source: Path, ffprobe_cmd: str, codes: frozenset[str]) -> InputProbe:
-    """List *source*'s videos and the first one's tracks. Blocking: call off the GUI thread."""
+    """List *source*'s videos and the tracks of the first one that has any. Blocking: call off the GUI thread.
+
+    A broken or trackless first video (a half download) would otherwise hide
+    the folder's layout. There is no trailer heuristic: a trailer that has
+    tracks and sorts first is the one listed.
+    """
     videos = tuple(list_videos(source)) if source.is_dir() else (source,)
-    if not videos:
-        return InputProbe(source, (), MediaTracks(), ())
-    tracks = probe_tracks(videos[0], ffprobe_cmd)
-    return InputProbe(source, videos, tracks, preferred_refs(tracks, codes))
+    for index, video in enumerate(videos):
+        tracks = probe_tracks(video, ffprobe_cmd)
+        if not tracks.is_empty:
+            return InputProbe(source, videos, tracks, preferred_refs(tracks, codes), index)
+    return InputProbe(source, videos, MediaTracks(), ())
 
 
 def output_name(

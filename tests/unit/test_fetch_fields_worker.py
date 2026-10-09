@@ -99,7 +99,7 @@ class TestSettingsTabFetchFieldsWiring:
 
         worker_cls.assert_not_called()
         populate.assert_not_called()
-        # Friendly status on the note-type line.
+        # Friendly status on the fill line.
         assert "Select a note type" in tab.anki_panel.fill_status.text()
 
     def test_click_routes_fetched_fields_into_populate(self, test_config: AnkiMinerConfig, monkeypatch, qtbot):

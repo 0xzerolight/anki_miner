@@ -289,7 +289,10 @@ class TestBatch:
         # Nothing pending: a run started now would find no work.
         assert batch.batch_queue.get_next_pending() is None
         # Only the user's Retry turns it back into work.
-        assert batch.batch_queue.reset_failed_for_retry() == 1
+        panel = batch.queue_panel
+        (row,) = panel.queue_item_widgets
+        panel._list_items[id(row)].setSelected(True)
+        panel._retry_selected()
         assert batch.batch_queue.get_next_pending() is restored
 
     def test_live_anki_write_provenance_is_not_duplicated_into_the_snapshot(self, _home, batch, tmp_path):

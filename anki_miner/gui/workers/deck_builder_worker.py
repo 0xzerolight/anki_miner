@@ -35,7 +35,6 @@ from anki_miner.models.word import TokenizedWord
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.corpus_aggregator import aggregate, rank_select, row_lemmas
-from anki_miner.services.resource_staleness import stale_resource_reimport_error
 from anki_miner.services.stats_service import StatsService
 from anki_miner.services.word_pool import CaptureCurationCallback, MinePassStats
 from anki_miner.utils.file_pairing import FilePair
@@ -141,17 +140,14 @@ class DeckBuilderWorker(BatchQueueWorkerThread):
         super().cancel()
         self._confirm_event.set()
 
-    def _run_queue(self, total_cards: int) -> int:
+    def _before_queue(self) -> None:
         # The deck must exist before the card-target preflight and each
-        # episode's own preflight. A stale-index run is refused by super()
-        # without creating anything.
-        if stale_resource_reimport_error(self.config) is None:
-            try:
-                AnkiService(self.config).ensure_deck(self.request.deck_name)
-            except Exception as e:  # noqa: BLE001 - surfaced once, the run never starts
-                logger.exception("DeckBuilderWorker could not create deck %s", self.request.deck_name)
-                self.error.emit(str(e))
-                return total_cards
+        # episode's own preflight. Called only once the base's stale-index
+        # gate has passed, so a stale run creates nothing; a failure here ends
+        # the run in run()'s handler (logged, error, then queue_finished).
+        AnkiService(self.config).ensure_deck(self.request.deck_name)
+
+    def _run_queue(self, total_cards: int) -> int:
         try:
             return super()._run_queue(total_cards)
         finally:

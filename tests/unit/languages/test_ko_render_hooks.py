@@ -167,3 +167,34 @@ def test_no_vocabulary_grade_field_ships() -> None:
     profile = get_profile("ko")
     assert "vocab_grade" not in profile.card_field_defaults
     assert "vocab_grade" not in OPTIONAL_FIELD_KEYS
+
+
+@pytest.mark.parametrize(
+    ("mined", "definition"),
+    [
+        ("學校", KRDICT_HAKGYO),
+        ("樂", KRDICT_NAK),
+        ("學校", ""),
+        ("學校", KRDICT_MUL_AFFIX),
+        ("韓國사람", KRDICT_HAKGYO),
+        ("학생", KRDICT_HAKGYO),
+    ],
+    ids=["hakgyo", "nak", "no-definition", "affix-headword", "mixed-script", "hangul"],
+)
+def test_card_front_is_the_front_render_writes(mined: str, definition: str) -> None:
+    """Phase 2's known gate keys on card_front, Anki on render's front: one answer (audit L1-004)."""
+    hook = KoHanjaHook()
+    rendered = hook.render(_word(mined, definition), config=CONFIG)
+    assert hook.card_front(mined, lambda: definition) == rendered.get(CARD_FRONT_KEY, "")
+
+
+def test_card_front_reads_the_definition_only_for_an_all_hanja_word() -> None:
+    """Phase 2 asks about every word; only the ones whose front can move cost a lookup."""
+
+    def no_lookup() -> str:
+        raise AssertionError("looked up a word whose front cannot move")
+
+    hook = KoHanjaHook()
+    assert hook.card_front("학생", no_lookup) == ""
+    assert hook.card_front("韓國사람", no_lookup) == ""
+    assert hook.card_front("", no_lookup) == ""

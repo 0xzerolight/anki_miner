@@ -239,12 +239,14 @@ def sources_text(specs: Sequence[ResourceSpec]) -> str:
 
 
 def activity_headline(event: ResourceProgress, specs: Sequence[ResourceSpec]) -> str:
-    """Where the run is and what this item is: "Downloading 1 of 4 · JMdict (dictionary)" (B10).
+    """Where the run is, what it is doing and what this item is: "Downloading 1 of 4 · JMdict (dictionary)" (B10).
 
     The window used to headline the bare resource name, so a four-item run gave
     no sense of how far along it was. The position comes from the run's own
     spec list; an id outside that list (never expected) counts as the first
-    and is named without a kind.
+    and is named without a kind. Past the bytes the verb is "Installing":
+    unpacking and indexing are both installing to the reader, and the detail
+    line under the headline says which.
     """
     index = next((i for i, spec in enumerate(specs, 1) if spec.id == event.spec_id), 1)
     kind = next((spec.kind for spec in specs if spec.id == event.spec_id), "")
@@ -258,12 +260,11 @@ def activity_headline(event: ResourceProgress, specs: Sequence[ResourceSpec]) ->
         name = tr_format(QCoreApplication.translate("ResourceDownloadDialog", "%1 (pitch accent)"), event.display_name)
     else:
         name = event.display_name
-    return tr_format(
-        QCoreApplication.translate("ResourceDownloadDialog", "Downloading %1 of %2 · %3"),
-        index,
-        len(specs),
-        name,
-    )
+    if event.phase is ResourcePhase.DOWNLOADING:
+        template = QCoreApplication.translate("ResourceDownloadDialog", "Downloading %1 of %2 · %3")
+    else:
+        template = QCoreApplication.translate("ResourceDownloadDialog", "Installing %1 of %2 · %3")
+    return tr_format(template, index, len(specs), name)
 
 
 # ---------------------------------------------------------------------------

@@ -374,6 +374,31 @@ def test_a_hidden_row_does_not_widen_the_label_column(qapp, qtbot):
     assert visible_label.minimumWidth() < hidden_label.sizeHint().width()
 
 
+def test_the_label_column_follows_a_row_toggled_on_a_visible_page(qapp, qtbot):
+    """B3.1b: the language gate hides rows while the page is on screen, not only before a show."""
+    panel = FormPanel("Test")
+    qtbot.addWidget(panel)
+    short_input = QLineEdit()
+    panel.add_field("Short", short_input)
+    long_input = QLineEdit()
+    panel.add_field("An extremely long label that a language gate hides", long_input)
+    form = panel._active_form_layout
+    short_label = form.labelForField(short_input)
+    long_label = form.labelForField(long_input)
+    panel.resize(900, 400)
+    panel.show()
+    qtbot.waitExposed(panel)
+    assert short_label.minimumWidth() >= long_label.sizeHint().width()
+
+    long_label.setVisible(False)
+    long_input.setVisible(False)
+    assert short_label.minimumWidth() < long_label.sizeHint().width()
+
+    long_label.setVisible(True)
+    long_input.setVisible(True)
+    assert short_label.minimumWidth() >= long_label.sizeHint().width()
+
+
 def test_a_section_can_carry_a_button_in_its_heading(qapp, qtbot):
     from PyQt6.QtCore import QPoint
     from PyQt6.QtWidgets import QPushButton

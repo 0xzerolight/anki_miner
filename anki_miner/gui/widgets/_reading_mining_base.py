@@ -189,7 +189,8 @@ class _ReadingMiningTabBase(_QueueMiningTabBase):
 
         Shared by the reading sub-tabs (manga folder / novel file / book
         folder): either way the screen banner says "Anki Miner can't mine this
-        file." and the reason goes under Details and into Activity (A04).
+        file." (or "this folder.") and the reason goes under Details and into
+        Activity (A04).
         Returns the detected refs on success, or ``None`` when detection failed
         (the caller then aborts the Mine without starting a run).
 
@@ -202,12 +203,13 @@ class _ReadingMiningTabBase(_QueueMiningTabBase):
         try:
             return (detect_fn or detector.detect)(path)
         except SetupError as exc:
-            self._report_unmineable(str(exc))
+            self._report_unmineable(str(exc), path)
             return None
         except Exception as exc:  # noqa: BLE001 - surface any classify failure to the screen
             logger.exception("Reading source detect failed for %s", path)
             self._report_unmineable(
-                tr_format(QCoreApplication.translate("ReadingTab", "Could not process %1: %2"), path.name, exc)
+                tr_format(QCoreApplication.translate("ReadingTab", "Could not process %1: %2"), path.name, exc),
+                path,
             )
             return None
 
@@ -278,15 +280,17 @@ class _ReadingMiningTabBase(_QueueMiningTabBase):
         self.log_widget.append_warning(summary)
         self.show_screen_issue(ScreenIssue(summary=summary, details=details))
 
-    def _report_unmineable(self, details: str) -> None:
-        """The detector refused the pick: one plain sentence, its reason under Details (A04)."""
+    def _report_unmineable(self, details: str, path: Path | None = None) -> None:
+        """The detector refused the pick: one plain sentence, its reason under Details (A04).
+
+        A picked folder (a Novels folder with no books, say) is called a folder.
+        """
         self.log_widget.append_error(details)
-        self.show_screen_issue(
-            ScreenIssue(
-                summary=QCoreApplication.translate("ReadingTab", "Anki Miner can't mine this file."),
-                details=details,
-            )
-        )
+        if path is not None and path.is_dir():
+            summary = QCoreApplication.translate("ReadingTab", "Anki Miner can't mine this folder.")
+        else:
+            summary = QCoreApplication.translate("ReadingTab", "Anki Miner can't mine this file.")
+        self.show_screen_issue(ScreenIssue(summary=summary, details=details))
 
     def _publish_reading_status(self, status: str) -> None:
         """Mirror the run's status line into the pinned bar (D1).

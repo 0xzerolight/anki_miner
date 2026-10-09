@@ -1210,9 +1210,9 @@ class AnkiSettingsPanel(FormPanel):
         deck this collection does not have — ``set_deck_name`` inserts it as a
         phantom, and ``_on_deck_selection_changed`` deliberately stays silent
         for exactly that case (it only clears when the new item has no
-        phantom tooltip) — so a green "5 decks loaded" would sit above a
-        combo showing a deck that will fail the run. The refresh owns writing
-        a message; nothing here invents one.
+        phantom tooltip) — so the previous selection's problem line would sit
+        above a combo showing a deck it says nothing about. The refresh owns
+        writing a message; nothing here invents one.
         """
         self._clear_status_parts("deck", "notetype")
         self.set_fill_status(None, "")

@@ -8,6 +8,7 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
+from anki_miner.exceptions import SetupError
 from anki_miner.gui.controllers.task_registry import TaskRegistry
 from anki_miner.gui.widgets.reading_deck_tab import ReadingDeckTab
 from anki_miner.gui.widgets.reading_manga_tab import ReadingMangaTab
@@ -87,6 +88,17 @@ def test_an_unrecognised_file_is_a_plain_sentence(tab, tmp_path):
     issue = tab.issue_banner().current_issue()
     assert issue.summary == "Anki Miner can't mine this file."
     assert "not a recognized reading source" in issue.details
+
+
+def test_an_unmineable_folder_is_called_a_folder(tab, tmp_path):
+    folder = tmp_path / "books"
+    folder.mkdir()
+
+    assert tab._detect_or_report(folder, detect_fn=MagicMock(side_effect=SetupError("No books in it."))) is None
+
+    issue = tab.issue_banner().current_issue()
+    assert issue.summary == "Anki Miner can't mine this folder."
+    assert issue.details == "No books in it."
 
 
 def test_the_status_line_reaches_the_pinned_bar(tab, registry):

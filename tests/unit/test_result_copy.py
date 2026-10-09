@@ -14,7 +14,7 @@ pytest.importorskip("PyQt6.QtCore")
 
 
 from anki_miner.gui.utils import result_copy
-from anki_miner.models.processing import TerminalOutcome, WhitelistCoverage
+from anki_miner.models.processing import NotMinedReason, NotMinedReport, TerminalOutcome, WhitelistCoverage
 
 
 class TestCreatedCards:
@@ -217,3 +217,57 @@ class TestWhitelistCopy:
     def test_unmined_text_is_one_entry_per_line_sorted(self):
         coverage = WhitelistCoverage(frozenset({"走る", "食べる", "飲む"}), mined=frozenset({"食べる"}))
         assert result_copy.whitelist_unmined_text(coverage) == "走る\n飲む"
+
+
+class TestNotMinedCopy:
+    """The run-end "Not mined" block: a header, then one line per reason naming every word."""
+
+    def test_the_header_counts_words_singular_and_plural(self):
+        assert result_copy.not_mined_header(1) == "Not mined: 1 word — search this log for a word to see why."
+        assert result_copy.not_mined_header(418) == "Not mined: 418 words — search this log for a word to see why."
+
+    def test_lines_follow_pipeline_order_with_sorted_words(self):
+        report = NotMinedReport.from_drops(
+            {"飲む": NotMinedReason.KNOWN, "ちょっと": NotMinedReason.KANA_ONLY, "見る": NotMinedReason.KNOWN}
+        )
+        assert result_copy.not_mined_lines(report) == [
+            (NotMinedReason.KANA_ONLY, "Kana-only word — add it to your whitelist to mine it (1): ちょっと"),
+            (NotMinedReason.KNOWN, "Already known (2): 見る, 飲む"),
+        ]
+
+    def test_mined_and_known_fronts_are_left_out(self):
+        report = NotMinedReport.from_drops(
+            {"a": NotMinedReason.KNOWN, "b": NotMinedReason.BLACKLIST}, mined=frozenset({"b"})
+        ).merged(NotMinedReport.from_drops({"a": NotMinedReason.I_PLUS_ONE}))
+        assert result_copy.not_mined_lines(report) == [(NotMinedReason.KNOWN, "Already known (1): a")]
+
+    @pytest.mark.parametrize("reason", list(NotMinedReason))
+    def test_every_reason_has_a_label_without_a_trailing_stop(self, reason):
+        label = result_copy.not_mined_label(reason)
+        assert label and not label.endswith(".")
+
+    @pytest.mark.parametrize(
+        "reason",
+        [NotMinedReason.WORD_TYPE, NotMinedReason.SOUND_EFFECT, NotMinedReason.KANA_ONLY, NotMinedReason.SCRIPT],
+    )
+    def test_whitelist_rescuable_reasons_say_so(self, reason):
+        """Every parse-stage reason is reported only when a whitelist entry could rescue it."""
+        assert "whitelist" in result_copy.not_mined_label(reason)
+
+    @pytest.mark.parametrize(
+        ("reason", "page"),
+        [
+            (NotMinedReason.FREQUENCY, "Settings → Word Filters"),
+            (NotMinedReason.UNRANKED, "Settings → Word Filters"),
+            (NotMinedReason.BLACKLIST, "Settings → Word Filters"),
+            (NotMinedReason.SCRIPT_FILTER, "Settings → Word Filters"),
+            (NotMinedReason.NAME_LIST, "Settings → Word Filters"),
+            (NotMinedReason.OCCURRENCE, "Settings → Word Filters"),
+            (NotMinedReason.ONE_PER_SENTENCE, "Settings → Sentences"),
+            (NotMinedReason.I_PLUS_ONE, "Settings → Sentences"),
+            (NotMinedReason.SENTENCE_LENGTH, "Settings → Sentences"),
+            (NotMinedReason.NO_DEFINITION, "Settings → Dictionaries"),
+        ],
+    )
+    def test_setting_driven_reasons_name_their_page(self, reason, page):
+        assert result_copy.not_mined_label(reason).endswith(page)

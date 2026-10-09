@@ -95,6 +95,10 @@ def test_age_restricted_videos_are_refused_for_every_source(source: str, test_co
     mineable, error, mode = _classify_probe_result(_info(is_age_restricted=True), config, source)
     assert (mineable, mode) == (False, None)
     assert "Age-restricted" in (error or "")
+    # B3.4b: one "Cookies from browser" combo, with the cookies.txt route as its entry.
+    assert "Cookies from browser" in (error or "")
+    assert '"From a cookies.txt file…"' in (error or "")
+    assert "Settings → YouTube" in (error or "")
 
 
 def test_captions_only_names_the_login_a_site_wants(test_config: AnkiMinerConfig) -> None:

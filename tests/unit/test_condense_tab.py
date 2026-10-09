@@ -204,14 +204,30 @@ def test_the_subtitle_hint_is_now_a_placeholder(qtbot, tmp_path):
 
 
 def test_the_offset_is_seconds_like_the_mining_screens(qtbot, tmp_path):
-    """E15: "Subtitle offset", two decimals, the mining screens' sign tooltip; stored in ms."""
+    """E15: "Subtitle offset", the mining screens' sign tooltip; stored in ms.
+
+    Three decimals, not the mining screens' two: config stores whole
+    milliseconds, so a stored value has to round-trip (B4.4).
+    """
     tab = _make_tab(_make_config(tmp_path), qtbot)
 
-    assert tab.offset_spinbox.decimals() == 2
+    assert tab.offset_spinbox.decimals() == 3
     assert tab.offset_spinbox.suffix() == " seconds"
     assert tab.offset_spinbox.toolTip() == "Adjust subtitle timing (positive = later, negative = earlier)"
     tab.offset_spinbox.setValue(-1.25)
     assert tab.config.condenser_offset_ms == -1250
+
+
+def test_a_millisecond_offset_survives_an_unrelated_edit(qtbot, tmp_path):
+    """B4.4: a stored -321 ms stays -321 when another option is edited."""
+    tab = _make_tab(replace(_make_config(tmp_path), condenser_offset_ms=-321), qtbot)
+
+    assert tab._offset_ms() == -321
+    assert tab._options_differ_from_widgets() is False
+
+    tab.padding_spinbox.setValue(tab.padding_spinbox.value() + 50)
+
+    assert tab.config.condenser_offset_ms == -321
 
 
 # ---------------------------------------------------------------------------
@@ -811,7 +827,7 @@ def test_update_config_refreshes_defaults_when_idle(qtbot, tmp_path):
         tab.update_config(_config_with_defaults(tmp_path))
 
     assert tab.padding_spinbox.value() == 1234
-    assert tab.offset_spinbox.value() == pytest.approx(-0.32)
+    assert tab.offset_spinbox.value() == pytest.approx(-0.321)
     assert tab.format_combo.currentData() == "flac"
     assert tab.write_subs_checkbox.isChecked() is True
     assert tab.tag_outputs_checkbox.isChecked() is True

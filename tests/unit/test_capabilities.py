@@ -502,27 +502,40 @@ def test_system_health_names_its_tools_menu_item() -> None:
     assert "Tools → System Health…" in _entry("system-health").description
 
 
-def _cap(cap_id: str) -> Capability:
-    return next(cap for cap in CAPABILITIES if cap.id == cap_id)
+def test_deck_builder_says_it_still_checks_its_own_deck_for_duplicates() -> None:
+    """L5-010: a build re-cards words other decks hold, but never twice in its own deck."""
+    description = _entry("deck-builder-modes").description
+
+    assert "duplicate checks" not in description
+    assert "only in the deck it builds" in description
+
+
+def test_the_preset_guide_limits_lapis_kiku_and_senren_to_japanese() -> None:
+    """X.3: the entry shows in every language; only Anki Miner Note applies in all of them."""
+    assert "Lapis, Kiku and Senren (Japanese only) and Anki Miner Note" in _entry("note-type-preset").description
+
+
+def test_the_kana_filter_quotes_its_combo_item_in_full() -> None:
+    assert "“Skip all kana-only words (including mixed)”" in _entry("kana-only-exclude").description
 
 
 def test_sentence_rules_open_the_sentences_page() -> None:
     """C13 moved Sentence Rule and Sentence Length to Settings -> Sentences."""
     for cap_id in ("i-plus-one", "sentence-length", "dedup"):
-        target = _cap(cap_id).target
+        target = _entry(cap_id).target
         assert target is not None and (target.main_tab, target.subtab) == ("settings", "sentences"), cap_id
 
 
 def test_removed_controls_are_not_advertised() -> None:
     """D15 item 5: Max Parallel Workers left the GUI; D15 item 3: the yt-dlp path too."""
     assert all(cap.id != "parallel-workers" for cap in CAPABILITIES)
-    assert "custom binary" not in _cap("ytdlp-maintenance").keywords
+    assert "custom binary" not in _entry("ytdlp-maintenance").keywords
 
 
 def test_whole_profile_actions_point_at_where_they_live_now() -> None:
     """D14: the Settings footer is gone."""
     for cap_id in ("settings-resource-bundle", "settings-profiles", "settings-export-import"):
-        cap = _cap(cap_id)
+        cap = _entry(cap_id)
         assert cap.target is None, cap_id
         assert cap.category == "Tools & maintenance", cap_id
         assert "footer" not in cap.description, cap_id

@@ -19,9 +19,10 @@ from pathlib import Path
 from anki_miner.cli.api import settings
 from anki_miner.cli.api.contract import BAD_ARGUMENTS, PROFILE_UNREADABLE, ApiError
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.gui.utils.config_manager import GUIConfigManager
+from anki_miner.gui.utils.config_manager import _CONFIG_MAX_BYTES, GUIConfigManager
 from anki_miner.gui.utils.profile_store import MAX_PROFILES, Profile, ProfileStore
 from anki_miner.services.subtitle_parser import compile_subtitle_regex_filter
+from anki_miner.utils.bounded_reader import read_json_bounded
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,22 @@ def _active_marker(profile_id: str | None) -> Iterator[None]:
         GUIConfigManager.ACTIVE_PROFILE_ID = previous
 
 
+def _save_live(config: AnkiMinerConfig, marker: str | None) -> None:
+    """gui_config.json saved the way the window saves it, *marker* stamped as the active profile.
+
+    The window's load archives a gui_config.json a newer Anki Miner wrote before
+    anything can save over it (``_parse_and_migrate``); this process read it
+    without archiving (settings._live_config), so the archive is made here.
+    """
+    path = GUIConfigManager.CONFIG_FILE
+    raw = read_json_bounded(path, _CONFIG_MAX_BYTES, None, "config") if path.exists() else None
+    schema = raw.get("config_schema_version") if isinstance(raw, dict) else None
+    if isinstance(schema, int) and not isinstance(schema, bool) and schema > GUIConfigManager.CONFIG_SCHEMA_VERSION:
+        GUIConfigManager._archive_future_schema_config(path, schema)
+    with _active_marker(marker):
+        GUIConfigManager.save_config(config)
+
+
 def save_profile(profile_id: str | None, config: AnkiMinerConfig) -> str | None:
     """Write *config* as *profile_id*'s settings (None: the active profile's); return the id written.
 
@@ -53,8 +70,7 @@ def save_profile(profile_id: str | None, config: AnkiMinerConfig) -> str | None:
     """
     active = settings.active_profile_id()
     if profile_id is None or profile_id == active:
-        with _active_marker(GUIConfigManager.read_active_profile_id()):
-            GUIConfigManager.save_config(config)
+        _save_live(config, GUIConfigManager.read_active_profile_id())
         return active
     name = next((p.name for p in ProfileStore.list_profiles() if p.id == profile_id), profile_id)
     ProfileStore.write_profile(profile_id, config, name=name)
@@ -71,8 +87,7 @@ def adopt_default(live: AnkiMinerConfig) -> None:
     default.json leaves no profiles, which the window's boot adopts cleanly.
     """
     default = settings.IMPLICIT_PROFILE
-    with _active_marker(default.id):
-        GUIConfigManager.save_config(live)
+    _save_live(live, default.id)
     ProfileStore.write_profile(default.id, live, name=default.name)
 
 

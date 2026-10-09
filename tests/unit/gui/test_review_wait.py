@@ -115,3 +115,63 @@ def test_a_queue_screen_without_a_stage_shows_the_bare_words(audiobook_tab, regi
     snapshot = registry.snapshot(audiobook_tab.TASK_ID)
     assert snapshot is not None
     assert snapshot.stage_name == ""
+
+
+def test_a_second_review_reuses_the_button_and_restores_again(single_tab, registry):
+    """B1.2: the same screen reviews twice; the one Show review button comes back once."""
+    first = _open_review(single_tab, registry)
+    button = single_tab._show_review_button
+    first.reject()
+
+    with patch(f"{MODULE}.WordCurationDialog", _FakeCurator):
+        single_tab._show_curation_dialog(["w2"], None, None, None)
+    second = single_tab._active_curation_dialog
+    assert second is not None
+    assert second is not first
+
+    assert single_tab._show_review_button is button
+    assert single_tab.action_bar.current_secondary().count(button) == 1
+    assert not button.isHidden()
+    snapshot = registry.snapshot(single_tab.TASK_ID)
+    assert snapshot is not None
+    assert snapshot.stage_name == "Waiting for your word review"
+
+    second.reject()
+
+    snapshot = registry.snapshot(single_tab.TASK_ID)
+    assert snapshot is not None
+    assert snapshot.stage_name == "Filtering against known vocabulary"
+    assert snapshot.stage_index == 2
+    assert button.isHidden()
+    assert button not in single_tab.action_bar.current_secondary()
+
+
+def test_a_curator_that_fails_after_opening_undoes_the_review(single_tab, registry):
+    """B1.2: the except path in _show_curation_dialog leaves no Show review button
+    for a window that never reached the user, restores the stage and releases the run."""
+    tab = single_tab
+    tab.bind_task_registry(registry)
+    tab._publish_task_start("Single episode")
+    tab._publish_task_stage(2, 5, "Filtering against known vocabulary")
+
+    def _fail_after_open(_logger, event, /, **_fields):
+        if event == "Curator shown":
+            raise RuntimeError("boom")
+
+    with (
+        patch(f"{MODULE}.WordCurationDialog", _FakeCurator),
+        patch(f"{MODULE}.log_summary", side_effect=_fail_after_open),
+        pytest.raises(RuntimeError, match="boom"),
+    ):
+        tab._show_curation_dialog(["w1"], None, None, None)
+
+    button = tab._show_review_button
+    assert button is not None
+    assert button.isHidden()
+    assert button not in tab.action_bar.current_secondary()
+    snapshot = registry.snapshot(tab.TASK_ID)
+    assert snapshot is not None
+    assert snapshot.stage_name == "Filtering against known vocabulary"
+    assert tab._active_curation_dialog is None
+    assert tab._curation_result is None
+    assert tab._curation_event.is_set()

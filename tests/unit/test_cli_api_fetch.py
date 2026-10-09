@@ -261,12 +261,23 @@ def test_alignment_follows_the_episode_over_the_profile(monkeypatch, tmp_path) -
 
 
 def test_a_cancel_file_cancels_the_run_and_is_removed(monkeypatch, tmp_path) -> None:
-    _use(monkeypatch, _Fetcher(wait_for_cancel=5.0))
-    (tmp_path / "yt-1").mkdir()
-    (tmp_path / "yt-1" / "cancel").write_text("", encoding="utf-8")
+    class _Cancelled(_Fetcher):
+        def fetch_video(self, url, video_id, workspace, sub_mode, progress_cb=None, cancel_event=None, **kw):
+            (tmp_path / "yt-1" / "cancel").write_text("", encoding="utf-8")  # the caller stops it mid-download
+            return super().fetch_video(url, video_id, workspace, sub_mode, progress_cb, cancel_event, **kw)
+
+    _use(monkeypatch, _Cancelled(wait_for_cancel=5.0))
     verdict = _run(tmp_path)
     assert verdict["error"] == "CANCELLED" and not (tmp_path / "yt-1" / "cancel").exists()
     assert not (tmp_path / "yt-1" / "fetch-1").exists()
+
+
+def test_a_cancel_file_left_by_an_earlier_call_is_cleared(monkeypatch, tmp_path) -> None:
+    _use(monkeypatch, _Fetcher(wait_for_cancel=0.5))
+    (tmp_path / "yt-1").mkdir()
+    (tmp_path / "yt-1" / "cancel").write_text("", encoding="utf-8")
+    assert _run(tmp_path)["ok"] is True
+    assert not (tmp_path / "yt-1" / "cancel").exists()
 
 
 def test_no_yt_dlp_refuses_the_call(monkeypatch, tmp_path) -> None:

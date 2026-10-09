@@ -10,10 +10,12 @@ from __future__ import annotations
 from unittest.mock import Mock
 
 import pytest
-from PyQt6.QtCore import QCoreApplication, QEvent, Qt, QTranslator
-from PyQt6.QtGui import QKeyEvent
+from PyQt6.QtCore import QCoreApplication, QEvent, QRect, Qt, QTranslator
+from PyQt6.QtGui import QColor, QFontMetrics, QImage, QKeyEvent, QPainter
+from PyQt6.QtWidgets import QStyleOptionViewItem
 
 from anki_miner.gui.capabilities import CAPABILITIES, CapabilityTarget
+from anki_miner.gui.resources.styles import Theme
 from anki_miner.gui.widgets.dialogs.capability_browser import CapabilityBrowser, run_capability_browser
 from anki_miner.languages.registry import get_profile
 
@@ -142,6 +144,41 @@ def test_category_rows_cannot_be_selected(dialog):
 
     assert header.data(Qt.ItemDataRole.UserRole) is None
     assert not header.flags() & Qt.ItemFlag.ItemIsSelectable
+
+
+def _paint_option(dialog) -> QStyleOptionViewItem:
+    option = QStyleOptionViewItem()
+    option.initFrom(dialog.list)
+    option.rect = QRect(0, 0, 400, 60)
+    option.widget = dialog.list
+    return option
+
+
+def test_a_category_row_is_set_smaller_than_a_feature_title(dialog):
+    """B4.3: "Mining workflows" in the feature titles' bold face read as one more feature."""
+    delegate = dialog.list.itemDelegate()
+    option = _paint_option(dialog)
+    model = dialog.list.model()
+
+    category_font, _ = delegate._fonts(option, model.index(0, 0))
+    title_font, _ = delegate._fonts(option, model.index(1, 0))
+
+    assert QFontMetrics(category_font).height() < QFontMetrics(title_font).height()
+
+
+def test_a_category_row_is_painted_in_the_muted_text_colour(dialog):
+    delegate = dialog.list.itemDelegate()
+    option = _paint_option(dialog)
+    image = QImage(option.rect.size(), QImage.Format.Format_ARGB32)
+    image.fill(QColor("white"))
+    painter = QPainter(image)
+    try:
+        delegate.paint(painter, option, dialog.list.model().index(0, 0))
+    finally:
+        painter.end()
+
+    painted = {image.pixelColor(x, y).name() for x in range(image.width()) for y in range(image.height())}
+    assert QColor(Theme.get_colors()["text-muted"]).name() in painted
 
 
 def test_the_open_button_opens_the_selected_row(dialog, qtbot):

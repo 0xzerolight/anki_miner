@@ -19,6 +19,7 @@ pytest.importorskip("PyQt6.QtWidgets")
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiConnectionError, SubtitleParseError
+from anki_miner.gui.utils.service_factory import ServiceLoadResult
 from anki_miner.gui.workers.readability_worker import ReadabilityWorker
 from anki_miner.models import LineLemmas, TerminalOutcome, TokenizedWord
 from anki_miner.models.readability import ReadabilityStats
@@ -69,6 +70,7 @@ def _services(config: AnkiMinerConfig, parser: _FakeParser, *, vocabulary=frozen
         anki_service=MagicMock(get_existing_vocabulary=MagicMock(return_value=set(vocabulary))),
         expression_audio_fetcher=MagicMock(),
         sentence_audio_fetcher=MagicMock(),
+        load_result=ServiceLoadResult(),
     )
 
 
@@ -105,6 +107,39 @@ def test_services_are_built_without_the_whitelist(qapp, tmp_path):
 
     built_with = create.call_args.args[0]
     assert built_with.use_whitelist is False
+
+
+def test_services_are_built_without_initializing_the_known_words_db(qapp, tmp_path):
+    """initialize() writes (CREATE TABLE, migration); the report only reads (Readability review, minor 2)."""
+    config = AnkiMinerConfig(use_known_words_db=True)
+    db = MagicMock()
+    db.is_available.return_value = True
+    db.get_words_by_source.return_value = set()
+    db.get_known_words.return_value = {"犬"}
+    services = _services(config, _FakeParser({"a.srt": _parsed(("猫", "犬"))}), db=db)
+    worker = ReadabilityWorker(config, _files(tmp_path, "a.srt"))
+    cap = _capture(worker)
+    with patch(_SHARED, return_value=MagicMock()), patch(_SERVICES, return_value=services) as create:
+        worker.run()
+
+    assert create.call_args.args[0].use_known_words_db is False
+    assert cap["measured"][0][1].unknown_count == 0  # the DB's words still count: the user's setting is on
+
+
+def test_load_warnings_reach_the_tool(qapp, tmp_path):
+    """A dictionary or word list that failed to load changes the counts; say so (Readability review, minor 2)."""
+    config = AnkiMinerConfig()
+    services = _services(config, _FakeParser({"a.srt": _parsed(("猫",))}))
+    services.load_result.warnings.append("Couldn't load name wordsets: boom")
+    shared = MagicMock()
+    shared.load_result = ServiceLoadResult(warnings=["Couldn't load frequency data: gone"])
+    worker = ReadabilityWorker(config, _files(tmp_path, "a.srt"))
+    warnings: list[str] = []
+    worker.load_warning.connect(warnings.append)
+    with patch(_SHARED, return_value=shared), patch(_SERVICES, return_value=services):
+        worker.run()
+
+    assert warnings == ["Couldn't load frequency data: gone", "Couldn't load name wordsets: boom"]
 
 
 def test_measures_each_file_in_order(qapp, tmp_path):

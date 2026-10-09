@@ -8,8 +8,10 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+from PyQt6.QtWidgets import QWidget
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
+from anki_miner.gui.widgets.base import ScreenIssueHost
 from anki_miner.gui.widgets.panels.youtube_settings_panel import YouTubeSettingsPanel
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 
@@ -98,6 +100,28 @@ class TestYouTubePanelValueHelpers:
             assert panel.get_cookies_from_browser() == value
         finally:
             panel.deleteLater()
+
+    def test_the_none_cookies_item_is_translated(self, qtbot):
+        """Z5b: the label reached the combo as raw module data, so no catalogue ever held it."""
+        from PyQt6.QtCore import QTranslator
+        from PyQt6.QtWidgets import QApplication
+
+        class _Stub(QTranslator):
+            def translate(self, context, source, disambiguation=None, n=-1):  # noqa: N802
+                return {("YouTubeSettingsPanel", "None"): "Aucun"}.get((context, source), source)
+
+        app = QApplication.instance()
+        assert app is not None
+        stub = _Stub()
+        app.installTranslator(stub)
+        try:
+            panel = YouTubeSettingsPanel()
+            qtbot.addWidget(panel)
+        finally:
+            app.removeTranslator(stub)
+
+        assert panel.cookies_browser_combo.itemText(0) == "Aucun"
+        assert panel.get_cookies_from_browser() is None
 
     def test_unknown_cookie_value_falls_back_to_none(self, qtbot):
         panel = YouTubeSettingsPanel()
@@ -219,6 +243,52 @@ class TestYouTubePanelValueHelpers:
             combo.activated.emit(combo.findData("__pick_cookies_file__"))
         assert panel.get_cookies_file() == str(cookies)
         assert combo.currentText() == "cookies.txt (file)"
+
+    @pytest.mark.parametrize("key", ["Key_Down", "Key_End"])
+    def test_stepping_onto_the_file_action_does_not_open_the_picker(self, key, qtbot, monkeypatch):
+        """B3.4a: Qt emits ``activated`` for key navigation on the closed combo too."""
+        from PyQt6.QtCore import Qt
+
+        from anki_miner.gui.widgets.panels import youtube_settings_panel as module
+
+        picks: list[tuple] = []
+        monkeypatch.setattr(module.file_dialogs, "pick_open_file", lambda *a, **k: picks.append(a))
+        panel = YouTubeSettingsPanel()
+        qtbot.addWidget(panel)
+        panel.set_cookies_from_browser("safari")
+
+        qtbot.keyClick(panel.cookies_browser_combo, getattr(Qt.Key, key))
+
+        assert picks == []
+        assert panel.get_cookies_from_browser() == "safari"
+
+    def test_a_wheel_step_onto_the_file_action_does_not_open_the_picker(self, qtbot, monkeypatch):
+        from PyQt6.QtCore import QPoint, QPointF, Qt
+        from PyQt6.QtGui import QWheelEvent
+        from PyQt6.QtWidgets import QApplication
+
+        from anki_miner.gui.widgets.panels import youtube_settings_panel as module
+
+        picks: list[tuple] = []
+        monkeypatch.setattr(module.file_dialogs, "pick_open_file", lambda *a, **k: picks.append(a))
+        panel = YouTubeSettingsPanel()
+        qtbot.addWidget(panel)
+        panel.set_cookies_from_browser("safari")
+        down = QWheelEvent(
+            QPointF(4, 4),
+            QPointF(4, 4),
+            QPoint(0, 0),
+            QPoint(0, -120),
+            Qt.MouseButton.NoButton,
+            Qt.KeyboardModifier.NoModifier,
+            Qt.ScrollPhase.NoScrollPhase,
+            False,
+        )
+
+        QApplication.sendEvent(panel.cookies_browser_combo, down)
+
+        assert picks == []
+        assert panel.get_cookies_from_browser() == "safari"
 
     def test_a_cancelled_picker_keeps_the_previous_choice(self, qtbot, monkeypatch):
         from anki_miner.gui.widgets.panels import youtube_settings_panel as module
@@ -546,7 +616,7 @@ class TestImportResultFeedback:
             lambda box: shown.append((box.windowTitle(), box.text(), box.detailedText())),
         )
         flashes: list[str] = []
-        monkeypatch.setattr(tab, "_flash_save_status", flashes.append)
+        monkeypatch.setattr(tab, "_flash_save_status", lambda text, surface=None: flashes.append(text))
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
@@ -586,7 +656,7 @@ class TestImportResultFeedback:
 
         monkeypatch.setattr(QMessageBox, "information", fail_information)
         flashes: list[str] = []
-        monkeypatch.setattr(tab, "_flash_save_status", flashes.append)
+        monkeypatch.setattr(tab, "_flash_save_status", lambda text, surface=None: flashes.append(text))
 
         tab._on_import_settings()
 
@@ -1333,6 +1403,142 @@ def test_manage_known_words_hands_the_dialog_the_rebuild(tab, monkeypatch):
 
     assert seen["rebuild_enabled"] is True
     assert callable(seen["on_rebuild"])
+
+
+def test_a_known_words_dialog_opened_mid_rebuild_cannot_start_another(tab, monkeypatch):
+    """B3.7a: the guard lived on the dialog, so close-and-reopen allowed a second clear."""
+    from PyQt6.QtWidgets import QMessageBox
+
+    from anki_miner.gui.widgets import settings_tab as settings_tab_module
+    from anki_miner.gui.widgets.dialogs import known_words_dialog
+
+    offered: list[bool] = []
+
+    class _Recorder:
+        def __init__(self, *_a, **kwargs):
+            offered.append(kwargs["rebuild_enabled"])
+
+        def exec(self):
+            return 0
+
+    monkeypatch.setattr(known_words_dialog, "KnownWordsManagerDialog", _Recorder)
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
+    pending: list = []
+    monkeypatch.setattr(settings_tab_module, "run_off_thread", lambda *a, on_finished, **k: pending.append(on_finished))
+    tab.filtering_panel.use_known_words_db_checkbox.setChecked(True)
+
+    tab._on_rebuild_known_words()
+    tab._on_manage_known_words()  # reopened while the clear runs
+    pending.pop()()
+    tab._on_manage_known_words()
+
+    assert offered == [False, True]
+
+
+class _IssueSurface(ScreenIssueHost, QWidget):
+    """Stands in for the open Known Words dialog: records what reaches its banner."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.issues: list[object] = []
+
+    def show_screen_issue(self, issue, *, action=None) -> None:
+        self.issues.append(issue)
+
+    def clear_screen_issue(self) -> None:
+        pass
+
+
+def test_the_known_words_dialog_hosts_its_own_rebuild(tab, monkeypatch):
+    """B3.7b: the confirm and any failure sat behind the modal Known Words dialog."""
+    from anki_miner.gui.widgets.dialogs import known_words_dialog
+
+    surfaces: list[object] = []
+
+    class _Recorder:
+        def __init__(self, *_a, **kwargs):
+            self._on_rebuild = kwargs["on_rebuild"]
+
+        def exec(self):
+            self._on_rebuild(lambda: None)
+            return 0
+
+    monkeypatch.setattr(known_words_dialog, "KnownWordsManagerDialog", _Recorder)
+    monkeypatch.setattr(tab, "_on_rebuild_known_words", lambda on_finished=None, surface=None: surfaces.append(surface))
+
+    tab._on_manage_known_words()
+
+    assert len(surfaces) == 1 and isinstance(surfaces[0], _Recorder)
+
+
+def test_a_rebuild_from_the_open_dialog_asks_and_reports_there(tab, monkeypatch, qtbot):
+    from PyQt6.QtWidgets import QMessageBox
+
+    surface = _IssueSurface()
+    qtbot.addWidget(surface)
+    surface.show()
+    parents: list[object] = []
+    monkeypatch.setattr(
+        QMessageBox, "question", lambda parent, *a, **k: parents.append(parent) or QMessageBox.StandardButton.Yes
+    )
+
+    class _Broken:
+        def __init__(self, *_a, **_kw):
+            raise OSError("database is locked")
+
+    monkeypatch.setattr("anki_miner.gui.widgets.settings_tab.KnownWordDB", _Broken)
+
+    tab._on_rebuild_known_words(surface=surface)
+
+    assert parents == [surface]
+    assert len(surface.issues) == 1
+    assert tab.issue_banner() is None or tab.issue_banner().current_issue() is None
+
+
+def test_a_rebuild_result_lands_on_the_dialog_while_it_is_open(tab, monkeypatch, qtbot):
+    from PyQt6.QtWidgets import QMessageBox
+
+    from anki_miner.gui.widgets import settings_tab as settings_tab_module
+
+    surface = _IssueSurface()
+    qtbot.addWidget(surface)
+    surface.show()
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
+    shown_on: list[object] = []
+    monkeypatch.setattr(QMessageBox, "information", lambda parent, *a, **k: shown_on.append(parent))
+    callbacks: list = []
+    monkeypatch.setattr(
+        settings_tab_module, "run_off_thread", lambda _owner, _work, ok, err, **k: callbacks.append((ok, err))
+    )
+
+    tab._on_rebuild_known_words(surface=surface)
+    on_done, on_error = callbacks[0]
+    on_done(3)
+    on_error("disk I/O error")
+
+    assert shown_on == [surface]
+    assert len(surface.issues) == 1
+
+
+def test_a_rebuild_error_after_the_dialog_closed_lands_on_the_tab(tab, monkeypatch, qtbot):
+    """A slow clear can outlive the dialog; a closed dialog's banner is never seen."""
+    from PyQt6.QtWidgets import QMessageBox
+
+    from anki_miner.gui.widgets import settings_tab as settings_tab_module
+
+    surface = _IssueSurface()
+    qtbot.addWidget(surface)
+    surface.show()
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
+    errors: list = []
+    monkeypatch.setattr(settings_tab_module, "run_off_thread", lambda _owner, _work, _ok, err, **k: errors.append(err))
+
+    tab._on_rebuild_known_words(surface=surface)
+    surface.hide()  # the user closed the dialog while the clear ran
+    errors[0]("disk I/O error")
+
+    assert surface.issues == []
+    assert tab.issue_banner().current_issue() is not None
 
 
 def test_pending_field_names_reports_a_dirty_save_panel_field(tab):

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import threading
 from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
@@ -47,7 +48,8 @@ def _file(tmp_path: Path, lines: list[dict], **top) -> files.MediaFile:
 
 
 def _cut(video_file, word, temp_folder=None, **_kw) -> MediaData:
-    picture, audio = temp_folder / "cut.jpg", temp_folder / "cut.mp3"
+    # A name per line, as the real extractor gives one per cut: the lines are cut side by side.
+    picture, audio = temp_folder / f"cut-{word.surface}.jpg", temp_folder / f"cut-{word.surface}.mp3"
     picture.write_bytes(b"p")
     audio.write_bytes(b"a")
     return MediaData(
@@ -83,6 +85,46 @@ def test_media_cuts_each_named_line_and_lists_it(episode, test_config) -> None:
     assert (second["text"], second["end"]) == ("約束したでしょう 今日こそは言うよ", 17.6)
     assert (episode / "ep-01" / "media-1" / "2.jpg").read_bytes() == b"p"
     assert cut.call_count == 2
+
+
+def test_media_cuts_its_lines_side_by_side(episode, test_config) -> None:
+    together = threading.Barrier(2, timeout=5)
+
+    def cut(video_file, word, temp_folder=None, **kw) -> MediaData:
+        together.wait()  # one line at a time never gets past this
+        return _cut(video_file, word, temp_folder, **kw)
+
+    with (
+        patch.object(media.settings, "resolve_run_config", return_value=replace(test_config, max_parallel_workers=2)),
+        patch.object(media, "require_ffmpeg"),
+        patch.object(media, "check_video"),
+        patch.object(MediaExtractorService, "extract_media", side_effect=cut),
+    ):
+        [verdict] = media.media_runs(_file(episode, [{"line_start": 12.48}, {"line_start": 15.0}]))
+    assert verdict["ok"] is True
+    lines = json.loads((episode / "ep-01" / "media-1.json").read_text(encoding="utf-8"))["lines"]
+    assert [(line["line_start"], line["picture"]) for line in lines] == [
+        (12.48, "media-1/1.jpg"),
+        (15.02, "media-1/2.jpg"),
+    ]
+
+
+def test_a_line_whose_picture_failed_keeps_its_audio(episode, test_config) -> None:
+    # extract_media_batch keeps only the lines whose picture was cut: media keeps whichever cut worked.
+    def audio_only(video_file, word, temp_folder=None, **_kw) -> MediaData:
+        audio = temp_folder / f"cut-{word.surface}.mp3"
+        audio.write_bytes(b"a")
+        return MediaData(audio_path=audio, audio_filename=audio.name)
+
+    with (
+        patch.object(media.settings, "resolve_run_config", return_value=test_config),
+        patch.object(media, "require_ffmpeg"),
+        patch.object(media, "check_video"),
+        patch.object(MediaExtractorService, "extract_media", side_effect=audio_only),
+    ):
+        media.media_runs(_file(episode, [{"line_start": 15.0}]))
+    [line] = json.loads((episode / "ep-01" / "media-1.json").read_text(encoding="utf-8"))["lines"]
+    assert (line["picture"], line["audio"]) == (None, "media-1/1.mp3")
 
 
 def test_media_never_loads_a_tokenizer_or_a_dictionary(episode, test_config) -> None:

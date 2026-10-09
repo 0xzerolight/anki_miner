@@ -62,7 +62,7 @@ A dry run, `render` and `media` take no lock.
 
 ## The run folder
 
-`run_dir` must exist. Each episode uses `<run_dir>/<run_id>/`; a `run_id` is 1 to 64 letters, digits, `-` and `_`. Files are UTF-8 without a BOM and are replaced atomically.
+`run_dir` must exist. Each episode uses `<run_dir>/<run_id>/`; a `run_id` is 1 to 64 letters, digits, `-` and `_`, other than a Windows device name (`CON`, `PRN`, `AUX`, `NUL`, `COM1` to `COM9`, `LPT1` to `LPT9`, in any letter case). The run_ids of one file must differ in more than letter case. Files Anki Miner writes are UTF-8 without a BOM and are replaced atomically; the run, media, fetch and settings files it reads may start with one.
 
 | File | Written by | Content |
 |---|---|---|
@@ -153,7 +153,7 @@ Before any episode runs, `mine` checks:
 - the Anki deck, note type and field mapping;
 - the offline dictionary.
 
-A failure refuses the call with `SETUP_ERROR`, or with `ANKI_UNREACHABLE` when Anki does not answer. Per episode, a video that does not open gives `VIDEO_UNREADABLE`, and a subtitle that cannot be read gives `SUBTITLE_UNREADABLE`; the other episodes still run.
+A failure refuses the call with `SETUP_ERROR`, or with `ANKI_UNREACHABLE` when Anki does not answer. Per episode, a video that does not open gives `VIDEO_UNREADABLE`, and a subtitle file that cannot be read, the secondary one included, gives `SUBTITLE_UNREADABLE`; the other episodes still run.
 
 Episodes run one at a time, and each run's `result-<n>.json` is written as it ends, before the next starts. Nothing is retried: mine the same `run_id` again with any subset of the words. The media is cut again, and a word Anki now has comes back `duplicate` (with `allow_duplicate_cards` on, a word already in the run's deck).
 
@@ -256,9 +256,9 @@ Per episode it probes the video, downloads it with its subtitle into `fetch-<n>/
 
 While a run works, `progress.json` holds `{"schema": 1, "run_id": …, "stage": 3, "stages": 5, "done": 12, "total": 26}`. The stages are parsing, filtering, media, definitions and cards.
 
-To stop a run, create an empty file named `cancel` in its folder. The run stops at its next step, reports `CANCELLED`, and Anki Miner deletes the file. Only that run stops; a call with several runs moves on to the next.
+To stop a run, create an empty file named `cancel` in its folder. The run stops at its next step, reports `CANCELLED`, and Anki Miner deletes the file. Only that run stops; a call with several runs moves on to the next. A `cancel` that arrives after the run's last step leaves its result as it is; the file is still deleted.
 
-A `cancel` file already there when a run starts cancels it at once, and its result lists every word as `not_attempted`. On Linux and macOS, SIGINT or SIGTERM stops the current run and every later run in the call. Notes already added to Anki stay.
+A call starts by deleting the `progress.json` and `cancel` files an earlier call left in its runs' folders. A `cancel` file created after that for a run still waiting its turn cancels it as soon as it starts, and its result lists every word as `not_attempted`. On Linux and macOS, SIGINT or SIGTERM stops the current run and every later run in the call. Notes already added to Anki stay.
 
 ## Error codes
 
@@ -271,7 +271,7 @@ A `cancel` file already there when a run starts cancels it at once, and its resu
 | `SETUP_ERROR` | call, run | language pack, dictionary index, ffmpeg, deck, note type, fields or offline dictionary; for fetch, yt-dlp, ffmpeg or the speech model |
 | `ANKI_UNREACHABLE` | call, run | AnkiConnect does not answer |
 | `VIDEO_UNREADABLE` | run | the video does not open |
-| `SUBTITLE_UNREADABLE` | run | the subtitle file cannot be read |
+| `SUBTITLE_UNREADABLE` | run | the subtitle file, or the secondary one, cannot be read |
 | `MINING_FAILED` | run | the run itself failed; `message` says why |
 | `YOUTUBE_REFUSED` | run | fetch: a live stream, a video over the profile's length limit, an age-restricted video without cookies, or no captions with `captions` |
 | `FETCH_FAILED` | run | fetch: probing, downloading or transcribing failed; see `failure_is_transient` |
@@ -338,7 +338,7 @@ This build implements the v7 proposal's "First" list and the next requests (Z-1 
 - Verdict runs and result files carry a `message` beside `error`, and result files carry a run-level `media_store_failures`.
 - `check` has a `resources` item for indexes that need re-importing.
 - `media_missing` covers the picture and the audio clip. Missing pronunciation audio is not reported, and media Anki failed to store is counted for the run, not per word.
-- `file` is also `null` for a run its own checks refused (`SETUP_ERROR`, `ANKI_UNREACHABLE`), and for a run a signal cancelled before it started.
+- `file` is also `null` for a run its own checks refused (`SETUP_ERROR`, `ANKI_UNREACHABLE`), for a run a signal cancelled before it started, and for a run that ended with `INTERNAL`. An `INTERNAL` run can end after notes were added: check Anki before mining its words again.
 - `line_start` is compared with the line starts as written in the subtitle file, not after the offset. The two differ only where a negative offset moves lines before 0.
 - `line_text` is also cleaned the way the subtitle lines are and ignores whitespace, and an empty `word` or `line_text` is refused.
 - Where `line_expansion` is cut to 30 seconds, lines after the chosen one are added first.

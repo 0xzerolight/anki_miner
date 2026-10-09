@@ -24,7 +24,7 @@ class FakeToolWorker:
 
     Signals are per-instance MagicMocks, so ``connect()`` on two instances stays
     independent. ``file_note`` covers Retime and Condense, ``file_measured``
-    Readability; the three probe signals let the same fake stand in for
+    and ``load_warning`` Readability; the three probe signals let the same fake stand in for
     Download's probe workers.
     """
 
@@ -36,6 +36,7 @@ class FakeToolWorker:
         self.file_finished = MagicMock()
         self.file_note = MagicMock()
         self.file_measured = MagicMock()
+        self.load_warning = MagicMock()
         self.file_skipped = MagicMock()
         self.queue_finished = MagicMock()
         self.error = MagicMock()

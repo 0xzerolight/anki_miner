@@ -54,6 +54,7 @@ from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_l
 from anki_miner.gui.widgets.dialogs import RetimeReferenceDialog, build_reference_choices
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
 from anki_miner.gui.workers.subtitle_retime_worker import SubtitleRetimeWorker
+from anki_miner.languages.registry import config_language, subtitle_language
 from anki_miner.services.retime_reference import list_reference_subtitle_streams
 from anki_miner.utils import list_audio_streams
 from anki_miner.utils.alass_resolver import resolve_alass
@@ -136,6 +137,7 @@ class SubtitleRetimeTab(_ToolTabBase):
             ),
             select_output_folder=self.tr("Select Output Folder"),
             output_default=self.tr("Next to source video, as name_retimed.srt"),
+            output_custom_template=self.tr("%1, as name_retimed.srt"),
             task_title=self.tr("Subtitle retiming"),
         )
 
@@ -333,13 +335,18 @@ class SubtitleRetimeTab(_ToolTabBase):
 
         video_folder = Path(video_folder_str)
         sub_folder = Path(sub_folder_str)
+        language = subtitle_language(config_language(self.config))
 
         def _scan() -> object:
             # prefer_retimed=False: mining wants the retimed subtitle, this tab
             # wants the one it was made from. Without it a second run over the
             # same folder would retime its own output.
             pairs = FilePairMatcher.find_pairs_by_episode_number(
-                video_folder, sub_folder, subtitle_extensions=RETIME_SUBTITLE_EXTENSIONS, prefer_retimed=False
+                video_folder,
+                sub_folder,
+                subtitle_extensions=RETIME_SUBTITLE_EXTENSIONS,
+                prefer_retimed=False,
+                language=language,
             )
             try:
                 unmatched = sorted(
@@ -766,6 +773,8 @@ class SubtitleRetimeTab(_ToolTabBase):
             on_pairs([])
             return
 
+        language = subtitle_language(config_language(self.config))
+
         def _scan() -> object:
             all_videos = sorted(
                 f
@@ -774,7 +783,11 @@ class SubtitleRetimeTab(_ToolTabBase):
             )
             # Same pairing as the preview above: no SAMI, prefer_retimed=False.
             file_pairs = FilePairMatcher.find_pairs_by_episode_number(
-                video_folder, sub_folder, subtitle_extensions=RETIME_SUBTITLE_EXTENSIONS, prefer_retimed=False
+                video_folder,
+                sub_folder,
+                subtitle_extensions=RETIME_SUBTITLE_EXTENSIONS,
+                prefer_retimed=False,
+                language=language,
             )
             return all_videos, file_pairs
 

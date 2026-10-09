@@ -25,7 +25,6 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFrame,
-    QHBoxLayout,
     QLabel,
     QMessageBox,
     QScrollArea,
@@ -37,7 +36,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import SPACING
-from anki_miner.gui.utils.content_text import content_cell_font
+from anki_miner.gui.utils.content_text import ContentCellDelegate, content_cell_font
 from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
 from anki_miner.gui.utils.language_gate import apply_language_gate
 from anki_miner.gui.utils.qt_helpers import (
@@ -185,12 +184,12 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         hint.setObjectName("helper-text")
         hint.setWordWrap(True)
         deck_layout.addWidget(hint)
-        deck_row = QHBoxLayout()
-        deck_row.addWidget(QLabel(self.tr("Deck:")))
+        # B4.5: the card's "Deck" header is the combo's caption; a "Deck:" row
+        # label under it said Deck twice. Screen readers get the name here.
         self.deck_combo = QComboBox()
+        self.deck_combo.setAccessibleName(self.tr("Deck"))
         self.deck_combo.addItem(self.tr("All decks"))
-        deck_row.addWidget(self.deck_combo, stretch=1)
-        deck_layout.addLayout(deck_row)
+        deck_layout.addWidget(self.deck_combo)
         layout.addWidget(self.deck_card)
 
         self.fields_card = QFrame()
@@ -286,6 +285,12 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         # field's changes together.
         self.preview_table.setSortingEnabled(True)
         configure_data_view(self.preview_table)
+        # The Expression cells are mined content: an rtl language lays them out
+        # right to left. The style is read at paint time, so update_config's
+        # language switch needs nothing more.
+        self.preview_table.setItemDelegateForColumn(
+            0, ContentCellDelegate(self.preview_table, lambda: self._content_style)
+        )
         install_copy_rows(self.preview_table)
         header = self.preview_table.horizontalHeader()
         if header is not None:
