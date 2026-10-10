@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:0855baf31c6b43b0 -->
+<!-- i18n-source: README.md sha256:adafd2209030998b -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -196,26 +196,6 @@ Usa conjuntos de nomes derivados do [JMnedict](https://www.edrdg.org/enamdict/en
 | Mais registros de diagnóstico | Defina `ANKI_MINER_LOG_LEVEL=DEBUG` antes de iniciar o Anki Miner para capturar detalhes de terceiros do yt-dlp, urllib3 e fugashi. O padrão é `WARNING`; os registros do Anki Miner permanecem em DEBUG. |
 | O áudio está no idioma errado  | A ferramenta escolhe a faixa de áudio do idioma de mineração ou, se não houver, a primeira. Escolha você mesmo em Faixa de áudio… (Vídeo -> Único).      |
 | Legendas fora de sincronia    | Use o controle de deslocamento de legenda na interface (faixa de ±300 segundos).                 |
-
-## Roteiro
-
-Lista de ideias para futuras versões do Anki Miner. Não estão em ordem de prioridade. Pedidos de recursos têm prioridade.
-- Sugira um recurso - [Abra uma issue](https://github.com/0xzerolight/anki_miner/issues).
-- Discuta o roteiro - [Discussões](https://github.com/0xzerolight/anki_miner/discussions).
-
-- **Recursos**:
-  - [x] Seleção de idioma da interface.
-  - [x] Aba de criação local de legendas: aba opcional para gerar legendas localmente.
-  - [x] Aba de Leitura: minere mangás e livros.
-  - [x] Ferramenta de preenchimento retroativo.
-  - [ ] Biblioteca de mídia: expandir a aba de Análises para exibir a biblioteca de mídia local em todos os formatos de mídia.
-  - [ ] Download automático de legendas.
-
-- **Longo prazo**:
-  - [x] Porte para Android - https://github.com/0xzerolight/anki_miner_android
-  - [x] Além do Japonês: mais trinta e um idiomas de mineração.
-  - [ ] Extensão de navegador Anki Miner.
-
 
 ## Contribuindo
 

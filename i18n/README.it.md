@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:0855baf31c6b43b0 -->
+<!-- i18n-source: README.md sha256:adafd2209030998b -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -196,26 +196,6 @@ Utilizza insiemi di nomi in bundle derivati da [JMnedict](https://www.edrdg.org/
 | Più log diagnostici | Imposta `ANKI_MINER_LOG_LEVEL=DEBUG` prima di avviare Anki Miner per acquisire i dettagli di terze parti di yt-dlp, urllib3 e fugashi. Il valore predefinito è `WARNING`; i log di Anki Miner restano a DEBUG. |
 | L'audio è nella lingua sbagliata  | Lo strumento sceglie la traccia audio nella lingua di mining, altrimenti la prima. Sceglila tu con Traccia audio… (Video -> Singolo).      |
 | Sottotitoli non sincronizzati    | Usa il controllo di offset dei sottotitoli nell'interfaccia grafica (intervallo ±300 secondi).                 |
-
-## Roadmap
-
-Elenco di idee per le versioni future di Anki Miner. Non in ordine di priorità. Le richieste di funzionalità hanno la precedenza.
-- Suggerisci una funzionalità - [Apri una issue](https://github.com/0xzerolight/anki_miner/issues).
-- Discuti della roadmap - [Discussioni](https://github.com/0xzerolight/anki_miner/discussions).
-
-- **Funzionalità**:
-  - [x] Selezione della lingua dell'interfaccia.
-  - [x] Scheda di creazione sottotitoli locale: scheda opzionale per generare sottotitoli localmente.
-  - [x] Scheda Lettura: estrai da manga e libri.
-  - [x] Strumento di completamento delle carte.
-  - [ ] Libreria multimediale: espandere la scheda Analisi per mostrare la libreria multimediale locale su tutti i formati.
-  - [ ] Download automatico dei sottotitoli.
-
-- **Lungo termine**:
-  - [x] Port per Android - https://github.com/0xzerolight/anki_miner_android
-  - [x] Oltre il giapponese: altre trentuno lingue di mining.
-  - [ ] Estensione per browser di Anki Miner.
-
 
 ## Come contribuire
 

@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:0855baf31c6b43b0 -->
+<!-- i18n-source: README.md sha256:adafd2209030998b -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -196,26 +196,6 @@ Menggunakan kumpulan kata nama bawaan yang berasal dari [JMnedict](https://www.e
 | Logging diagnostik lebih rinci | Atur `ANKI_MINER_LOG_LEVEL=DEBUG` sebelum menjalankan Anki Miner untuk menangkap detail yt-dlp, urllib3, dan fugashi pihak ketiga. Default-nya `WARNING`; log Anki Miner tetap di DEBUG. |
 | Audio bahasanya salah  | Alat ini memilih trek audio bahasa mining, atau trek pertama jika tidak ada. Pilih sendiri lewat Trek Audio… (Video -> Tunggal).      |
 | Subtitel tidak sinkron    | Gunakan kontrol offset subtitel di GUI (rentang ±300 detik).                 |
-
-## Peta Jalan
-
-Daftar ide untuk versi mendatang Anki Miner. Bukan dalam urutan prioritas. Permintaan fitur diutamakan.
-- Usulkan fitur - [Buka issue](https://github.com/0xzerolight/anki_miner/issues).
-- Diskusikan peta jalan - [Discussions](https://github.com/0xzerolight/anki_miner/discussions).
-
-- **Fitur**:
-  - [x] Pemilihan bahasa UI.
-  - [x] Tab pembuatan subtitel lokal: Tab opsional untuk membuat subtitel secara lokal.
-  - [x] Tab Bacaan: Mining manga dan buku.
-  - [x] Alat pengisian ulang (backfill).
-  - [ ] Pustaka media: Perluas tab Analitik untuk menampilkan pustaka media lokal di semua bentuk media.
-  - [ ] Pengunduhan subtitel otomatis.
-
-- **Jangka panjang**:
-  - [x] Port Android - https://github.com/0xzerolight/anki_miner_android
-  - [x] Di luar bahasa Jepang: tiga puluh satu bahasa mining lainnya.
-  - [ ] Ekstensi peramban Anki Miner.
-
 
 ## Berkontribusi
 

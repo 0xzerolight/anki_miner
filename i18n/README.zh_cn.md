@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:0855baf31c6b43b0 -->
+<!-- i18n-source: README.md sha256:adafd2209030998b -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -196,26 +196,6 @@ anki_miner_gui
 | 更详细的诊断日志 | 启动 Anki Miner 前设置 `ANKI_MINER_LOG_LEVEL=DEBUG`，即可记录第三方 yt-dlp、urllib3 和 fugashi 的详细信息。默认为 `WARNING`；Anki Miner 自身的日志仍为 DEBUG。 |
 | 音频语言不对  | 本工具会选择挖词语言的音轨，没有则用第一条音轨。可用 音轨…（视频 -> 单个）自行选择。      |
 | 字幕不同步    | 使用 GUI 中的字幕偏移控件（范围 ±300 秒）。                 |
-
-## 路线图
-
-Anki Miner 未来版本的想法清单。排列顺序不代表优先级。功能请求优先。
-- 建议新功能 - [提交 issue](https://github.com/0xzerolight/anki_miner/issues)。
-- 讨论路线图 - [Discussions](https://github.com/0xzerolight/anki_miner/discussions)。
-
-- **功能**：
-  - [x] 界面语言选择。
-  - [x] 本地字幕生成标签页：可选启用的本地字幕生成标签页。
-  - [x] 阅读标签页：挖词漫画和书籍。
-  - [x] 回填工具。
-  - [ ] 媒体库：扩展分析标签页，展示涵盖所有媒体形式的本地媒体库。
-  - [ ] 自动下载字幕。
-
-- **长期**：
-  - [x] Android 移植 - https://github.com/0xzerolight/anki_miner_android
-  - [x] 超越日语：另外三十一种挖词语言。
-  - [ ] Anki Miner 浏览器扩展。
-
 
 ## 参与贡献
 

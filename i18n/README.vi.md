@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:0855baf31c6b43b0 -->
+<!-- i18n-source: README.md sha256:adafd2209030998b -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -196,26 +196,6 @@ Sử dụng các tập từ tên riêng đi kèm được dẫn xuất từ [JMn
 | Nhật ký chẩn đoán chi tiết hơn | Đặt `ANKI_MINER_LOG_LEVEL=DEBUG` trước khi khởi động Anki Miner để ghi lại chi tiết của yt-dlp, urllib3 và fugashi bên thứ ba. Mặc định là `WARNING`; nhật ký của Anki Miner vẫn ở mức DEBUG. |
 | Âm thanh sai ngôn ngữ  | Công cụ chọn bản âm thanh của ngôn ngữ khai thác, nếu không có thì chọn bản đầu tiên. Tự chọn bằng Bản âm thanh… (Video -> Đơn lẻ).      |
 | Phụ đề không khớp tiếng    | Dùng điều khiển bù thời gian phụ đề trong giao diện (khoảng ±300 giây).                 |
-
-## Lộ trình
-
-Danh sách ý tưởng cho các phiên bản Anki Miner trong tương lai. Không theo thứ tự ưu tiên. Các yêu cầu tính năng được ưu tiên trước.
-- Đề xuất một tính năng - [Mở một issue](https://github.com/0xzerolight/anki_miner/issues).
-- Thảo luận về lộ trình - [Discussions](https://github.com/0xzerolight/anki_miner/discussions).
-
-- **Tính năng**:
-  - [x] Chọn ngôn ngữ giao diện.
-  - [x] Tab tạo phụ đề cục bộ: tab tùy chọn để tạo phụ đề ngay trên máy.
-  - [x] Tab Cách đọc: khai thác manga và sách.
-  - [x] Công cụ điền bổ sung.
-  - [ ] Thư viện media: mở rộng tab Phân tích để hiển thị thư viện media cục bộ trên mọi dạng media.
-  - [ ] Tự động tải phụ đề.
-
-- **Dài hạn**:
-  - [x] Bản chuyển sang Android - https://github.com/0xzerolight/anki_miner_android
-  - [x] Vượt ra ngoài tiếng Nhật: thêm ba mươi mốt ngôn ngữ khai thác.
-  - [ ] Tiện ích mở rộng trình duyệt cho Anki Miner.
-
 
 ## Đóng góp
 

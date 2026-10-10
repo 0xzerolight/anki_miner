@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:0855baf31c6b43b0 -->
+<!-- i18n-source: README.md sha256:adafd2209030998b -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -196,26 +196,6 @@ Utiliza conjuntos de palabras de nombres incluidos derivados de [JMnedict](https
 | Más registro de diagnóstico | Define `ANKI_MINER_LOG_LEVEL=DEBUG` antes de iniciar Anki Miner para capturar detalles de terceros de yt-dlp, urllib3 y fugashi. El valor predeterminado es `WARNING`; los registros de Anki Miner permanecen en DEBUG. |
 | El audio está en el idioma incorrecto  | La herramienta elige la pista de audio del idioma de minería o, si no la hay, la primera. Elígela tú con Pista de audio… (Video -> Único).      |
 | Subtítulos desincronizados    | Usa el control de desplazamiento de subtítulos en la GUI (rango ±300 segundos).                 |
-
-## Hoja de Ruta
-
-Lista de ideas para futuras versiones de Anki Miner. No están en orden de prioridad. Las solicitudes de funciones tienen prioridad.
-- Sugiere una función - [Abre un issue](https://github.com/0xzerolight/anki_miner/issues).
-- Discute la hoja de ruta - [Discussions](https://github.com/0xzerolight/anki_miner/discussions).
-
-- **Funciones**:
-  - [x] Selección de idioma de la interfaz de usuario.
-  - [x] Pestaña de creación de subtítulos locales: pestaña opcional para generar subtítulos localmente.
-  - [x] Pestaña de Lectura: minera manga y libros.
-  - [x] Herramienta de completar tarjetas (Backfill).
-  - [ ] Biblioteca de medios: expandir la pestaña Analíticas para mostrar la biblioteca de medios local en todos los formatos de medios.
-  - [ ] Descarga automática de subtítulos.
-
-- **Largo plazo**:
-  - [x] Puerto a Android - https://github.com/0xzerolight/anki_miner_android
-  - [x] Más allá del japonés: treinta y un idiomas de minería más.
-  - [ ] Extensión de navegador para Anki Miner.
-
 
 ## Contribuciones
 

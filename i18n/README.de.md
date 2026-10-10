@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:0855baf31c6b43b0 -->
+<!-- i18n-source: README.md sha256:adafd2209030998b -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -196,26 +196,6 @@ Verwendet mitgelieferte Namens-Wortgruppen, abgeleitet von [JMnedict](https://ww
 | Mehr Diagnoseprotokollierung | `ANKI_MINER_LOG_LEVEL=DEBUG` vor dem Start von Anki Miner setzen, um Details von yt-dlp, urllib3 und fugashi (Drittanbieter) zu erfassen. Standard ist `WARNING`; Anki-Miner-Logs bleiben bei DEBUG. |
 | Audio ist in falscher Sprache  | Das Tool wählt die Audiospur in der Mining-Sprache, sonst die erste. Mit Audiospur… (Video -> Einzeln) selbst wählen. |
 | Untertitel sind nicht synchron    | Die Untertitel-Offset-Steuerung in der GUI verwenden (Bereich ±300 Sekunden).      |
-
-## Roadmap
-
-Liste von Ideen für künftige Versionen von Anki Miner. Nicht nach Priorität geordnet. Feature-Wünsche haben Vorrang.
-- Ein Feature vorschlagen - [Issue eröffnen](https://github.com/0xzerolight/anki_miner/issues).
-- Über die Roadmap diskutieren - [Discussions](https://github.com/0xzerolight/anki_miner/discussions).
-
-- **Features**:
-  - [x] Auswahl der UI-Sprache.
-  - [x] Tab zur lokalen Untertitelerstellung: Opt-in-Tab zum lokalen Erzeugen von Untertiteln.
-  - [x] Reading-Tab: Manga und Bücher mining.
-  - [x] Backfill-Werkzeug.
-  - [ ] Medienbibliothek: Analytics-Tab erweitern, um die lokale Medienbibliothek über alle Medienformen hinweg anzuzeigen.
-  - [ ] Automatischer Untertitel-Download.
-
-- **Langfristig**:
-  - [x] Android-Portierung - https://github.com/0xzerolight/anki_miner_android
-  - [x] Über Japanisch hinaus: einunddreißig weitere Mining-Sprachen.
-  - [ ] Anki-Miner-Browsererweiterung.
-
 
 ## Mitwirken
 

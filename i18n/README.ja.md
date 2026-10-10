@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:0855baf31c6b43b0 -->
+<!-- i18n-source: README.md sha256:adafd2209030998b -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -196,26 +196,6 @@ anki_miner_gui
 | 診断ログを増やしたい | Anki Miner を起動する前に `ANKI_MINER_LOG_LEVEL=DEBUG` を設定すると、サードパーティの yt-dlp、urllib3、fugashi の詳細を記録できます。既定は `WARNING` で、Anki Miner 自身のログは DEBUG のままです。 |
 | 音声の言語が違う         | マイニング言語の音声トラックを選び、なければ最初のトラックを使います。音声トラック…（動画 -> 単一）で自分で選べます。      |
 | 字幕がずれている         | GUI の字幕オフセット調整を使ってください（範囲は ±300 秒）。                     |
-
-## ロードマップ
-
-Anki Miner の今後のバージョンに向けたアイデアの一覧です。優先順ではありません。機能リクエストが優先されます。
-- 機能を提案する - [Issue を作成](https://github.com/0xzerolight/anki_miner/issues)。
-- ロードマップについて議論する - [Discussions](https://github.com/0xzerolight/anki_miner/discussions)。
-
-- **機能**:
-  - [x] UI の言語選択。
-  - [x] ローカル字幕作成タブ: ローカルで字幕を生成するオプトインのタブ。
-  - [x] 読みタブ: 漫画と書籍のマイニング。
-  - [x] 補完ツール。
-  - [ ] メディアライブラリ: 分析タブを拡張し、あらゆる形式のローカルメディアライブラリを表示する。
-  - [ ] 字幕の自動ダウンロード。
-
-- **長期**:
-  - [x] Android への移植 - https://github.com/0xzerolight/anki_miner_android
-  - [x] 日本語の先へ: ほかに31のマイニング言語。
-  - [ ] Anki Miner のブラウザ拡張機能。
-
 
 ## 貢献
 

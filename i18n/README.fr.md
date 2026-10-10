@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:0855baf31c6b43b0 -->
+<!-- i18n-source: README.md sha256:adafd2209030998b -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -196,26 +196,6 @@ Utilise des ensembles de noms propres regroupés dérivés de [JMnedict](https:/
 | Journalisation de diagnostic supplémentaire | Définissez `ANKI_MINER_LOG_LEVEL=DEBUG` avant de démarrer Anki Miner pour capturer les détails tiers de yt-dlp, urllib3 et fugashi. La valeur par défaut est `WARNING` ; les journaux d'Anki Miner restent en DEBUG. |
 | L'audio est dans la mauvaise langue  | L'outil choisit la piste audio de la langue d'extraction, sinon la première. Choisissez-la vous-même avec Piste audio… (Vidéo -> Unique).      |
 | Sous-titres désynchronisés    | Utilisez le réglage de décalage des sous-titres dans l'interface (plage ±300 secondes).                 |
-
-## Feuille de route
-
-Liste d'idées pour les futures versions d'Anki Miner. Sans ordre de priorité. Les demandes de fonctionnalités sont prioritaires.
-- Suggérer une fonctionnalité - [Ouvrez une issue](https://github.com/0xzerolight/anki_miner/issues).
-- Discuter de la feuille de route - [Discussions](https://github.com/0xzerolight/anki_miner/discussions).
-
-- **Fonctionnalités** :
-  - [x] Sélection de la langue de l'interface.
-  - [x] Onglet de création locale de sous-titres : onglet facultatif pour générer des sous-titres localement.
-  - [x] Onglet Lecture : extraire des mangas et des livres.
-  - [x] Outil de complétion.
-  - [ ] Bibliothèque multimédia : étendre l'onglet Statistiques pour afficher la bibliothèque multimédia locale pour tous les types de médias.
-  - [ ] Téléchargement automatique de sous-titres.
-
-- **Long terme** :
-  - [x] Portage Android - https://github.com/0xzerolight/anki_miner_android
-  - [x] Au-delà du japonais : trente et une autres langues d'extraction.
-  - [ ] Extension de navigateur Anki Miner.
-
 
 ## Contribuer
 
