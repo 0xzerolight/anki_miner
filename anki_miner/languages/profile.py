@@ -436,3 +436,8 @@ class LanguageProfile:
     #: whose dictionaries answer the same word with different senses and no
     #: chain order serves every word. ``False`` is first hit wins.
     stacked_definition: bool = False
+    #: The PP-OCR recogniser (a ``services.ocr.recognizers.RECOGNIZERS`` key) Manga OCR and
+    #: Video OCR read this language with. "" means the tool's own engine (mokuro's
+    #: manga-ocr, meikiocr), which reads Japanese only. Offering a tool stays the
+    #: ``manga_ocr`` / ``video_ocr`` capability's job.
+    ocr_recognizer: str = ""

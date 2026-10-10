@@ -40,6 +40,7 @@ EXPECTED_FIELDS = (
     "wiktionary_code",
     "dedup_fold",
     "stacked_definition",
+    "ocr_recognizer",
 )
 
 

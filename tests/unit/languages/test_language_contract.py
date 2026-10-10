@@ -23,6 +23,7 @@ from anki_miner.languages.profile import LanguageProfile, ScriptFilterOption
 from anki_miner.languages.registry import available_languages, get_profile
 from anki_miner.languages.switching import LANGUAGE_SCOPED_FIELDS, switch_language
 from anki_miner.services.anki_note_builder import OPTIONAL_FIELD_KEYS, REQUIRED_FIELD_KEYS
+from anki_miner.services.ocr.recognizers import RECOGNIZERS
 from anki_miner.services.resource_catalog import RESOURCE_KINDS
 
 CODES = sorted(available_languages())
@@ -81,10 +82,12 @@ CAPABILITY_VOCABULARY = frozenset(
         "deinflection",
         # The Lapis / Kiku / Senren note-type presets, which are all Japanese.
         "note_presets",
-        # Manga OCR (mokuro's manga-ocr model reads Japanese only): gates the
-        # Utilities tool, its System Health row and its Usage Guide entry (E17).
+        # Manga OCR (native engine mokuro's manga-ocr: Japanese only; others via
+        # ocr_recognizer): gates the Utilities tool, its System Health row and
+        # its Usage Guide entry (E17).
         "manga_ocr",
-        # Video OCR (meikiocr reads Japanese game text only): gates the Utilities tool and its Usage Guide entry.
+        # Video OCR (native engine meikiocr: Japanese only; others via ocr_recognizer):
+        # gates the Utilities tool and its Usage Guide entry.
         "video_ocr",
         "hangul_filters",
         "hanja",
@@ -449,3 +452,23 @@ def test_rescuable_tags_never_name_a_function_or_stopword_tag(code):
     assert not tags & _JA_FUNCTION_TAGS
     if "ADJ" in tags:  # a UPOS tagset; zh c/p stay content words by zh's own ruling (zh/pos.py)
         assert not tags & _UPOS_FUNCTION_TAGS
+
+
+_OCR_TOOLS = frozenset({"manga_ocr", "video_ocr"})
+
+
+@pytest.mark.parametrize("code", CODES)
+def test_ocr_recognizer_is_pinned_or_empty(code):
+    recognizer = get_profile(code).ocr_recognizer
+    assert recognizer == "" or recognizer in RECOGNIZERS
+
+
+@pytest.mark.parametrize("code", CODES)
+def test_ocr_capabilities_agree_with_the_engine(code):
+    profile = get_profile(code)
+    tools = _OCR_TOOLS & profile.capabilities
+    if profile.ocr_recognizer:
+        assert tools, f"{code}: a recogniser no OCR tool offers"
+    else:
+        # The tools' built-in engines (manga-ocr, meikiocr) read Japanese only.
+        assert not tools or code == "ja", f"{code}: an OCR tool with no recogniser"

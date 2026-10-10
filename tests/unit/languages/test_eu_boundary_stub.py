@@ -127,6 +127,7 @@ FIELD_CHECKS: dict[str, Callable[[object], bool]] = {
     and (v == "" or (v.isascii() and v.isalpha() and v.islower() and 2 <= len(v) <= 3)),
     "dedup_fold": _optional(callable),
     "stacked_definition": lambda v: isinstance(v, bool),
+    "ocr_recognizer": lambda v: isinstance(v, str),
 }
 
 
