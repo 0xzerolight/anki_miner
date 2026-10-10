@@ -71,6 +71,13 @@ def test_a_spaced_rtl_language_joins_right_to_left_with_spaces(monkeypatch, test
     assert runtime.get_reader(replace(test_config, language="ar")).read_text(None) == "مرحبا عالم"
 
 
+def test_japanese_keeps_its_cleanup(monkeypatch, test_config):
+    """Japanese (no recogniser) still strips the speaker name and restores ！, which join_rows would keep raw."""
+    engine = SimpleNamespace(read_boxes=lambda bgr: [_box("ルカ：行くぞ!", 0)])
+    monkeypatch.setattr(runtime, "_engine", lambda *a: engine)
+    assert runtime.get_reader(replace(test_config, language="ja")).read_text(None) == "行くぞ！"
+
+
 def test_required_models_are_meikis_pair_for_japanese_and_detector_plus_recogniser_otherwise():
     from anki_miner.languages.registry import get_profile
     from anki_miner.services.ocr.model_installer import MEIKI_SPECS
