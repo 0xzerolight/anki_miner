@@ -182,27 +182,27 @@ class TestMangaOcrLanguageGate:
     """E17: the Manga OCR box shows only for a language that can use the tool."""
 
     def test_hidden_for_another_language(self, panel, test_config):
-        panel.load_from_config(replace(test_config, language="zh"))
+        panel.load_from_config(replace(test_config, language="he"))
 
         assert panel.utility_checkboxes["mokuro"].isHidden()
         assert not panel.utility_checkboxes["generate"].isHidden()
 
     def test_shown_for_japanese(self, panel, test_config):
-        panel.load_from_config(replace(test_config, language="zh"))
+        panel.load_from_config(replace(test_config, language="he"))
         panel.load_from_config(replace(test_config, language="ja"))
 
         assert not panel.utility_checkboxes["mokuro"].isHidden()
 
     def test_the_last_visible_tool_stays_locked(self, panel, test_config):
         hidden = tuple(k for k in panel.utility_checkboxes if k not in ("generate", "mokuro"))
-        panel.load_from_config(replace(test_config, language="zh", hidden_utilities=hidden))
+        panel.load_from_config(replace(test_config, language="he", hidden_utilities=hidden))
 
         assert not panel.utility_checkboxes["generate"].isEnabled()
 
     def test_the_boxes_show_the_tabs_fallback(self, panel, test_config):
-        """X.2d: Manga OCR kept alone in Japanese; outside Japanese the tab shows every other tool."""
+        """X.2d: Manga OCR kept alone in Japanese; in a language without it the tab shows every other tool."""
         hidden = tuple(k for k in UTILITY_SUBTABS if k != "mokuro")
-        panel.load_from_config(replace(test_config, language="zh", hidden_utilities=hidden))
+        panel.load_from_config(replace(test_config, language="he", hidden_utilities=hidden))
 
         visible = [box for box in panel.utility_checkboxes.values() if not box.isHidden()]
         assert visible and all(box.isChecked() and box.isEnabled() for box in visible)
@@ -210,7 +210,7 @@ class TestMangaOcrLanguageGate:
     def test_a_toggle_in_the_fallback_never_hides_manga_ocr(self, panel, test_config):
         """The gate never writes hidden_utilities: back in Japanese, Manga OCR is still shown."""
         hidden = tuple(k for k in UTILITY_SUBTABS if k != "mokuro")
-        panel.load_from_config(replace(test_config, language="zh", hidden_utilities=hidden))
+        panel.load_from_config(replace(test_config, language="he", hidden_utilities=hidden))
         seen = _emitted(panel.hidden_utilities_changed)
 
         panel.utility_checkboxes["retime"].click()
@@ -223,20 +223,20 @@ class TestVideoOcrLanguageGate:
     """The Video OCR box shows only for a language that can use the tool."""
 
     def test_hidden_for_another_language(self, panel, test_config):
-        panel.load_from_config(replace(test_config, language="zh"))
+        panel.load_from_config(replace(test_config, language="he"))
 
         assert panel.utility_checkboxes["videoocr"].isHidden()
         assert not panel.utility_checkboxes["generate"].isHidden()
 
     def test_shown_for_japanese(self, panel, test_config):
-        panel.load_from_config(replace(test_config, language="zh"))
+        panel.load_from_config(replace(test_config, language="he"))
         panel.load_from_config(replace(test_config, language="ja"))
 
         assert not panel.utility_checkboxes["videoocr"].isHidden()
 
     def test_the_last_visible_tool_stays_locked(self, panel, test_config):
         hidden = tuple(k for k in panel.utility_checkboxes if k not in ("generate", "videoocr"))
-        panel.load_from_config(replace(test_config, language="zh", hidden_utilities=hidden))
+        panel.load_from_config(replace(test_config, language="he", hidden_utilities=hidden))
 
         assert not panel.utility_checkboxes["generate"].isEnabled()
 

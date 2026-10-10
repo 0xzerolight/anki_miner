@@ -46,7 +46,9 @@ def test_the_profile_is_built_from_the_shared_substrate():
     assert profile.asr_language == "es" and profile.wiktionary_code == ""
     assert profile.captions.primary == "es" and profile.captions.orig_codes == ("es-orig",)
     assert profile.captions.codes == ("es", "es-419", "es-ES", "es-US")
-    assert profile.capabilities == frozenset({"pos_tag", "noun_gender", "lemmatised_frequency"})
+    assert profile.capabilities == frozenset(
+        {"pos_tag", "noun_gender", "lemmatised_frequency", "manga_ocr", "video_ocr"}
+    )
     assert profile.extra_card_fields == (POS_FIELD, NOUN_GENDER_FIELD)
     assert [type(hook) for hook in profile.render_hooks] == [PosHook, GrammarTagHook]
     assert profile.render_hooks[1].field_names() == ("noun_gender",)

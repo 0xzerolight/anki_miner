@@ -52,7 +52,9 @@ def test_the_profile_wiring():
         ("id-orig",),
     )
     assert profile.captions.audio_pattern == "^id(-|$)" and profile.captions.bare_fallback is True
-    assert profile.capabilities == frozenset({"word_root", "indonesian_affixes", "indonesian_register"})
+    assert profile.capabilities == frozenset(
+        {"word_root", "indonesian_affixes", "indonesian_register", "manga_ocr", "video_ocr"}
+    )
     assert "lemmatised_frequency" not in profile.capabilities and "wiktionary_audio" not in profile.capabilities
     assert profile.extra_card_fields == (ROOT_FIELD, AFFIXES_FIELD, FORMAL_FORM_FIELD)
     assert ROOT_FIELD.capability == "word_root" and ROOT_FIELD.placeholder == "Root"  # ruling R-ROOT

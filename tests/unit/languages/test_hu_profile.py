@@ -56,7 +56,7 @@ def test_the_profile_is_built_from_the_shared_substrate():
     captions = profile.captions
     assert (captions.primary, captions.codes, captions.orig_codes) == ("hu", ("hu",), ("hu-orig",))
     assert captions.audio_pattern == "^hu(-|$)" and captions.bare_fallback is True
-    assert profile.capabilities == frozenset({"pos_tag", "lemmatised_frequency"})
+    assert profile.capabilities == frozenset({"pos_tag", "lemmatised_frequency", "manga_ocr", "video_ocr"})
     assert profile.extra_card_fields == (POS_FIELD,)
     assert [type(hook) for hook in profile.render_hooks] == [PosHook]
     assert profile.pos_defaults.excluded_subtypes == ()

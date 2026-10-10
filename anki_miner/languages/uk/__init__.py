@@ -98,7 +98,10 @@ def build_profile() -> LanguageProfile:
             rescuable_tags=UPOS_RESCUABLE,
         ),
         catalog=UK_CATALOG,
-        capabilities=frozenset({"pos_tag", "noun_gender", "aspect_pairs", "stress_marks", "lemmatised_frequency"}),
+        capabilities=frozenset(
+            {"pos_tag", "noun_gender", "aspect_pairs", "stress_marks", "lemmatised_frequency", "manga_ocr", "video_ocr"}
+        ),
+        ocr_recognizer="eslav",
         card_field_defaults=UK_CARD_FIELDS,
         render_hooks=(
             PosHook(),

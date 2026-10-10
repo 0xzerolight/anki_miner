@@ -46,7 +46,9 @@ def test_the_profile_is_built_from_the_shared_substrate():
     assert profile.import_encodings == ("utf-8-sig", "cp1252")
     assert profile.normalize is sv_normalize and profile.wiktionary_code == ""
     # No noun_plural: 45 of wty-sv-en's 38,241 noun lemma rows name a plural, so the field was empty on every card.
-    assert profile.capabilities == frozenset({"pos_tag", "noun_article", "lemmatised_frequency"})
+    assert profile.capabilities == frozenset(
+        {"pos_tag", "noun_article", "lemmatised_frequency", "manga_ocr", "video_ocr"}
+    )
     assert profile.extra_card_fields == (POS_FIELD, NOUN_ARTICLE_FIELD)
     hooks = profile.render_hooks
     assert isinstance(hooks[0], PosHook) and isinstance(hooks[1], GrammarTagHook)

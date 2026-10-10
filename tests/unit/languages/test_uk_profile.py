@@ -59,9 +59,9 @@ def test_the_profile_is_built_from_the_shared_substrate():
     assert profile.smoke_sentence == "Студент учора прочитав цікаву книжку."
 
 
-def test_the_capabilities_are_the_five_the_engine_and_the_dictionary_support():
+def test_the_capabilities_are_the_engine_and_dictionary_five_plus_the_ocr_tools():
     assert get_profile("uk").capabilities == frozenset(
-        {"pos_tag", "noun_gender", "aspect_pairs", "stress_marks", "lemmatised_frequency"}
+        {"pos_tag", "noun_gender", "aspect_pairs", "stress_marks", "lemmatised_frequency", "manga_ocr", "video_ocr"}
     )
 
 

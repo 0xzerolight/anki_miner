@@ -98,7 +98,10 @@ def build_profile() -> LanguageProfile:
             rescuable_tags=UPOS_RESCUABLE,
         ),
         catalog=EL_CATALOG,
-        capabilities=frozenset({"pos_tag", "noun_gender", "aspect_pairs", "lemmatised_frequency"}),
+        capabilities=frozenset(
+            {"pos_tag", "noun_gender", "aspect_pairs", "lemmatised_frequency", "manga_ocr", "video_ocr"}
+        ),
+        ocr_recognizer="el",
         card_field_defaults=EL_CARD_FIELDS,
         render_hooks=(PosHook(), GrammarTagHook(("noun_gender", "aspect_pair"), gender_labels=EL_GENDER_LABELS)),
         content_style=SPACED_CONTENT_STYLE,

@@ -125,8 +125,17 @@ def build_profile() -> LanguageProfile:
         # card-field rows, and "lemmatised_frequency" is R21 — the catalogue's
         # frequency list is imported as surfaces and lemmatised in-app.
         capabilities=frozenset(
-            {"persian_romanization", "persian_register", "persian_stems", "rtl", "lemmatised_frequency"}
+            {
+                "persian_romanization",
+                "persian_register",
+                "persian_stems",
+                "rtl",
+                "lemmatised_frequency",
+                "manga_ocr",
+                "video_ocr",
+            }
         ),
+        ocr_recognizer="arabic",
         card_field_defaults=FA_CARD_FIELDS,
         render_hooks=FA_RENDER_HOOKS,
         content_style=FA_CONTENT_STYLE,

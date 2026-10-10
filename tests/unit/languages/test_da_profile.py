@@ -50,7 +50,9 @@ def test_the_profile_is_built_from_the_shared_substrate():
     captions = profile.captions
     assert (captions.primary, captions.codes, captions.orig_codes) == ("da", ("da",), ("da-orig",))
     assert captions.audio_pattern == "^da(-|$)" and captions.bare_fallback is True
-    assert profile.capabilities == frozenset({"pos_tag", "noun_article", "noun_gender", "lemmatised_frequency"})
+    assert profile.capabilities == frozenset(
+        {"pos_tag", "noun_article", "noun_gender", "lemmatised_frequency", "manga_ocr", "video_ocr"}
+    )
     assert profile.extra_card_fields == (POS_FIELD, NOUN_ARTICLE_FIELD, NOUN_GENDER_FIELD)
     assert [type(hook) for hook in profile.render_hooks] == [PosHook, GrammarTagHook]
     grammar = profile.render_hooks[1]

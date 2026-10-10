@@ -53,7 +53,9 @@ def test_the_profile_is_built_from_the_shared_substrate():
     assert profile.audio_track_codes == frozenset({"hrv", "scr", "hr", "croatian"})
     assert profile.captions.primary == "hr" and profile.captions.codes == ("hr",)
     assert profile.captions.orig_codes == ("hr-orig",) and profile.captions.audio_pattern == "^hr(-|$)"
-    assert profile.capabilities == frozenset({"pos_tag", "noun_gender", "aspect_pairs", "lemmatised_frequency"})
+    assert profile.capabilities == frozenset(
+        {"pos_tag", "noun_gender", "aspect_pairs", "lemmatised_frequency", "manga_ocr", "video_ocr"}
+    )
     assert "wiktionary_audio" not in profile.capabilities  # Stage W is not built (DECIDED 6)
     assert profile.extra_card_fields == (POS_FIELD, NOUN_GENDER_FIELD, ASPECT_PAIR_FIELD)
     assert profile.unavailable_reason is not None and profile.unavailable_reason() is None

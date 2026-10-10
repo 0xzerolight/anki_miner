@@ -30,7 +30,9 @@ def test_zh_is_registered():
 def test_zh_profile_identity_and_capabilities():
     profile = get_profile("zh")
     assert (profile.code, profile.display_name) == ("zh", "中文")
-    assert profile.capabilities == frozenset({"pinyin", "tone_color", "script_variants", "measure_word"})
+    assert profile.capabilities == frozenset(
+        {"pinyin", "tone_color", "script_variants", "measure_word", "manga_ocr", "video_ocr"}
+    )
     assert profile.sentence_annotator is None
     assert profile.asr_language == "zh"
     assert profile.audio_track_codes == frozenset({"chi", "zho", "zh", "chinese", "cmn"})

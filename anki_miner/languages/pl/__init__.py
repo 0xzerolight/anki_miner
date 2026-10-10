@@ -98,7 +98,10 @@ def build_profile() -> LanguageProfile:
             rescuable_tags=PL_RESCUABLE_TAGS,
         ),
         catalog=PL_CATALOG,
-        capabilities=frozenset({"pos_tag", "noun_gender", "aspect_pairs", "lemmatised_frequency"}),
+        capabilities=frozenset(
+            {"pos_tag", "noun_gender", "aspect_pairs", "lemmatised_frequency", "manga_ocr", "video_ocr"}
+        ),
+        ocr_recognizer="ppocrv6-small",
         card_field_defaults=PL_CARD_FIELDS,
         render_hooks=(
             PosHook(),

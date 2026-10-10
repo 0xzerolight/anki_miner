@@ -148,7 +148,8 @@ def build_profile() -> LanguageProfile:
             rescuable_tags=ko_morphology.KO_RESCUABLE_TAGS,
         ),
         catalog=KO_CATALOG,  # the KRDICT dict; ko/catalog.py documents the manual frequency import
-        capabilities=frozenset({"hangul_filters", "hanja"}),
+        capabilities=frozenset({"hangul_filters", "hanja", "manga_ocr", "video_ocr"}),
+        ocr_recognizer="korean",
         card_field_defaults=KO_CARD_FIELDS,
         render_hooks=KO_RENDER_HOOKS,
         content_style=ContentTextStyle(font_role="ko", families=KO_FONT_FAMILIES, wrap=ko_space_wrap),

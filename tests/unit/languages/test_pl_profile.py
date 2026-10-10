@@ -54,7 +54,9 @@ def test_the_profile_is_built_from_the_shared_substrate():
         ("pl-orig",),
     )
     assert profile.captions.audio_pattern == "^pl(-|$)" and profile.captions.bare_fallback is True
-    assert profile.capabilities == frozenset({"pos_tag", "noun_gender", "aspect_pairs", "lemmatised_frequency"})
+    assert profile.capabilities == frozenset(
+        {"pos_tag", "noun_gender", "aspect_pairs", "lemmatised_frequency", "manga_ocr", "video_ocr"}
+    )
     assert "wiktionary_audio" not in profile.capabilities  # Stage W is not built (DECIDED 6)
     assert profile.extra_card_fields == (POS_FIELD, NOUN_GENDER_FIELD, ASPECT_PAIR_FIELD)
     assert [type(hook) for hook in profile.render_hooks] == [PosHook, GrammarTagHook]

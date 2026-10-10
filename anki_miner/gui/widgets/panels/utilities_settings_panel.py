@@ -65,7 +65,8 @@ class UtilitiesSettingsPanel(FormPanel):
         """Disable the only checked box, so the Utilities tab always keeps a tool.
 
         Counts only the boxes on screen: a language-gated box (Manga OCR or Video
-        OCR outside Japanese) stays checked but is no tool the user can see (E17).
+        OCR in a language no OCR engine reads) stays checked but is no tool the
+        user can see (E17).
         """
         checked = sum(box.isChecked() for box in self.utility_checkboxes.values() if not box.isHidden())
         for box in self.utility_checkboxes.values():
@@ -83,7 +84,7 @@ class UtilitiesSettingsPanel(FormPanel):
         for key, box in self.utility_checkboxes.items():
             box.blockSignals(True)
             try:
-                # A gated box (E17: Manga OCR or Video OCR outside Japanese) is
+                # A gated box (E17: Manga OCR or Video OCR without an engine) is
                 # off screen and keeps the user's own choice: the gate never
                 # writes hidden_utilities, so a switch back finds it unchanged.
                 box.setChecked(key not in (stored if key in gated else on_tab))

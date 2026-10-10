@@ -66,7 +66,7 @@ def test_the_profile_is_built_from_the_shared_substrate():
     assert profile.asr_language == "en" and profile.wiktionary_code == ""
     assert profile.captions.primary == "en" and profile.captions.orig_codes == ("en-orig",)
     assert profile.captions.codes == ("en", "en-US", "en-GB", "en-CA", "en-AU")
-    assert profile.capabilities == frozenset({"pos_tag", "lemmatised_frequency"})
+    assert profile.capabilities == frozenset({"pos_tag", "lemmatised_frequency", "manga_ocr", "video_ocr"})
     assert profile.extra_card_fields == (POS_FIELD,)
     assert [type(hook) for hook in profile.render_hooks] == [PosHook]
     assert profile.unavailable_reason is not None and profile.unavailable_reason() is None

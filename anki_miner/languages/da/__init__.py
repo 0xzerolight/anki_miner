@@ -102,7 +102,10 @@ def build_profile() -> LanguageProfile:
             rescuable_tags=UPOS_RESCUABLE,
         ),
         catalog=DA_CATALOG,
-        capabilities=frozenset({"pos_tag", "noun_article", "noun_gender", "lemmatised_frequency"}),
+        capabilities=frozenset(
+            {"pos_tag", "noun_article", "noun_gender", "lemmatised_frequency", "manga_ocr", "video_ocr"}
+        ),
+        ocr_recognizer="ppocrv6-small",
         card_field_defaults=DA_CARD_FIELDS,
         render_hooks=(
             PosHook(),

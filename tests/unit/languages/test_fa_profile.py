@@ -121,7 +121,15 @@ def test_the_smoke_sentence_carries_its_zwnj_as_the_named_constant():
 def test_the_capabilities_gate_the_three_card_fields_and_the_rtl_layout():
     profile = get_profile("fa")
     assert profile.capabilities == frozenset(
-        {"persian_romanization", "persian_register", "persian_stems", "rtl", "lemmatised_frequency"}
+        {
+            "persian_romanization",
+            "persian_register",
+            "persian_stems",
+            "rtl",
+            "lemmatised_frequency",
+            "manga_ocr",
+            "video_ocr",
+        }
     )
     # Every extra field's gate is a capability this profile actually declares,
     # or the row can never be shown.

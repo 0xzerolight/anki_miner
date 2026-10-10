@@ -184,12 +184,12 @@ class SubtitlesTab(QWidget):
         capability the mining language lacks
         (:func:`~anki_miner.gui.capabilities.language_gated_utilities`: Manga
         OCR and Video OCR); it never writes ``hidden_utilities``, so the user's
-        own choice survives a switch back to Japanese. If the two together would
-        hide every tool, only the language gate applies. A hidden tool stays
-        built and keeps its index: a run it started keeps going, and showing it
-        again puts it back in its place. Hiding the tool on show moves the tab
-        to the next visible one — Qt does that inside ``setTabVisible``, and the
-        underline follows ``currentChanged``.
+        own choice survives a switch back to a language that has the tool. If
+        the two together would hide every tool, only the language gate applies.
+        A hidden tool stays built and keeps its index: a run it started keeps
+        going, and showing it again puts it back in its place. Hiding the tool
+        on show moves the tab to the next visible one — Qt does that inside
+        ``setTabVisible``, and the underline follows ``currentChanged``.
         """
         hidden = hidden_utilities_on_tab(stored, get_profile(config_language(self.config)).capabilities)
         for key, index in self._subtab_index.items():

@@ -56,7 +56,7 @@ def test_the_profile_is_built_from_the_shared_substrate():
     )
     assert profile.captions.audio_pattern == "^ru(-|$)" and profile.captions.bare_fallback is True
     assert profile.capabilities == frozenset(
-        {"pos_tag", "noun_gender", "aspect_pairs", "stress_marks", "lemmatised_frequency"}
+        {"pos_tag", "noun_gender", "aspect_pairs", "stress_marks", "lemmatised_frequency", "manga_ocr", "video_ocr"}
     )
     assert "wiktionary_audio" not in profile.capabilities  # DECIDED 1: no Stage W
     assert profile.extra_card_fields == (POS_FIELD, NOUN_GENDER_FIELD, ASPECT_PAIR_FIELD)

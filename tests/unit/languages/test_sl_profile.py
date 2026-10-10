@@ -32,7 +32,9 @@ def test_the_identity_fields(profile):
 
 
 def test_the_capabilities(profile):
-    assert profile.capabilities == frozenset({"pos_tag", "noun_gender", "aspect_pairs", "lemmatised_frequency"})
+    assert profile.capabilities == frozenset(
+        {"pos_tag", "noun_gender", "aspect_pairs", "lemmatised_frequency", "manga_ocr", "video_ocr"}
+    )
 
 
 def test_the_card_fields_have_no_plural_field(profile):

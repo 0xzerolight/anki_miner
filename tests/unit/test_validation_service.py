@@ -1261,8 +1261,8 @@ class TestCheckMokuro:
         assert result.tool_versions["mokuro"] == "mokuro [app-managed]"
 
     def test_missing_mokuro_is_no_issue_without_manga_ocr(self, test_config, monkeypatch):
-        """Manga OCR is ja-only: an es install has nothing to warn about, but the version still records."""
-        service = ValidationService(replace(test_config, language="es"))
+        """Hebrew has no Manga OCR: a he install has nothing to warn about, but the version still records."""
+        service = ValidationService(replace(test_config, language="he"))
         for name, verdict in (
             ("_check_ankiconnect", (True, "ok")),
             ("_check_ffmpeg", (True, "ok")),

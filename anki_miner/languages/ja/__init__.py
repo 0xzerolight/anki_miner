@@ -112,10 +112,10 @@ def build_profile() -> LanguageProfile:
         ),
         catalog=RECOMMENDED_DEFAULT_SET,
         # "note_presets": Lapis, Kiku and Senren are Japanese note types, so the
-        # preset row belongs to this language alone. "manga_ocr": mokuro's
-        # manga-ocr model reads Japanese only, so Utilities -> Manga OCR is offered
-        # to this language alone (E17). "video_ocr": meikiocr reads Japanese game
-        # text only, so Utilities -> Video OCR is offered to this language alone.
+        # preset row belongs to this language alone. "manga_ocr" and "video_ocr"
+        # run the native engines: manga-ocr and meikiocr read Japanese only;
+        # other languages name a PP-OCR recogniser (``ocr_recognizer``), which
+        # this profile leaves empty.
         capabilities=frozenset(
             {
                 "pitch",

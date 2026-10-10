@@ -95,7 +95,10 @@ def build_profile() -> LanguageProfile:
             rescuable_tags=UPOS_RESCUABLE,
         ),
         catalog=IT_CATALOG,
-        capabilities=frozenset({"pos_tag", "noun_gender", "noun_article", "lemmatised_frequency"}),
+        capabilities=frozenset(
+            {"pos_tag", "noun_gender", "noun_article", "lemmatised_frequency", "manga_ocr", "video_ocr"}
+        ),
+        ocr_recognizer="ppocrv6-small",
         card_field_defaults=IT_CARD_FIELDS,
         render_hooks=(PosHook(), GrammarTagHook(("noun_gender", "noun_article"), article_rule=italian_article)),
         content_style=SPACED_CONTENT_STYLE,

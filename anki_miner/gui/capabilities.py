@@ -130,7 +130,7 @@ _GATED_TOOLS: dict[str, str] = {"mokuro": "manga_ocr", "videoocr": "video_ocr"}
 
 
 def language_gated_utilities(capabilities: frozenset[str]) -> frozenset[str]:
-    """The Utilities tools a mining language with ``capabilities`` cannot use (E17: Manga OCR and Video OCR read Japanese)."""
+    """The Utilities tools a mining language with ``capabilities`` cannot use (E17: Manga OCR and Video OCR need an engine that reads it)."""
     return frozenset(key for key, needed in _GATED_TOOLS.items() if needed not in capabilities)
 
 
@@ -1291,7 +1291,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Create .mokuro files from manga images"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Run mokuro's Japanese OCR on a volume folder or a whole series so Reading → Manga can mine it. "
+            "Run mokuro's OCR on a volume folder or a whole series so Reading → Manga can mine it. "
             "Install mokuro from its setup card on Utilities → Manga OCR.",
         ),
         category=_CAT_TOOLS,

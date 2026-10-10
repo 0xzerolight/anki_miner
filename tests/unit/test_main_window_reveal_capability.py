@@ -156,9 +156,9 @@ def test_a_shown_utility_opens_as_before(window):
 
 
 def test_a_tool_the_fallback_shows_opens_on_the_tab(window):
-    """X.2d: a ja user kept only Manga OCR, then mines zh; the tab shows every other tool."""
+    """X.2d: a ja user kept only Manga OCR, then mines he; the tab shows every other tool."""
     only_ocr = tuple(k for k in UTILITY_SUBTABS if k != "mokuro")
-    window.config = replace(window.config, language="zh", hidden_utilities=only_ocr)
+    window.config = replace(window.config, language="he", hidden_utilities=only_ocr)
 
     window.reveal_capability(CapabilityTarget("subtitles", "retime"))
 

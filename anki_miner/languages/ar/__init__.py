@@ -109,7 +109,10 @@ def build_profile() -> LanguageProfile:
             rescuable_tags=(*AR_ALLOWED_POS, "noun_prop"),
         ),
         catalog=AR_CATALOG,
-        capabilities=frozenset({"word_root", "arabic_grammar", "arabic_clitics", "lemmatised_frequency", "rtl"}),
+        capabilities=frozenset(
+            {"word_root", "arabic_grammar", "arabic_clitics", "lemmatised_frequency", "rtl", "manga_ocr", "video_ocr"}
+        ),
+        ocr_recognizer="arabic",
         card_field_defaults=AR_CARD_FIELDS,
         render_hooks=(ArabicCardHook(),),
         content_style=ContentTextStyle(
