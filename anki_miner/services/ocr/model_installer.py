@@ -1,8 +1,10 @@
-"""In-app installer for the two pinned meikiocr models (Utilities → Video OCR).
+"""In-app installer for the pinned OCR models both OCR tools read (meikiocr's pair for
+Japanese Video OCR, PP-OCR recognisers for the other languages).
 
 Stateless, GUI-free. Each model is one .onnx file: downloaded to a ``.part`` in
 ``models_root``, sha256-verified, then ``os.replace``d onto its final name (same
 filesystem, atomic), so no partial file is ever visible to :func:`is_installed`.
+Both functions take the spec set to act on; ``None`` means :data:`MEIKI_SPECS`.
 This deliberately copies the ggml installer's skeleton instead of sharing it:
 each sibling installer owns its download path and its tests patch it by module.
 Bumping a model means updating url, sha256 and size together.
@@ -12,6 +14,7 @@ from __future__ import annotations
 
 import logging
 import os
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -23,25 +26,25 @@ from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["DET_MODEL_NAME", "REC_MODEL_NAME", "MODEL_SPECS", "is_installed", "install_models"]
+__all__ = ["DET_MODEL_NAME", "REC_MODEL_NAME", "MEIKI_SPECS", "ModelSpec", "is_installed", "install_models"]
 
 DET_MODEL_NAME = "meiki.text.detect.v0.1.960x544.onnx"
 REC_MODEL_NAME = "meiki.text.rec.v0.960x32.onnx"
 
-#: Both files are under 20 MB; the cap fails fast on a wrong or runaway response.
+#: Every pinned file is under 25 MB; the cap fails fast on a wrong or runaway response.
 _MAX_BYTES = 64 * 1024 * 1024
 
 
 @dataclass(frozen=True)
-class _ModelSpec:
+class ModelSpec:
     filename: str
     url: str
     sha256: str
     size_bytes: int
 
 
-MODEL_SPECS: tuple[_ModelSpec, ...] = (
-    _ModelSpec(
+MEIKI_SPECS: tuple[ModelSpec, ModelSpec] = (
+    ModelSpec(
         filename=DET_MODEL_NAME,
         url=(
             "https://huggingface.co/rtr46/meiki.text.detect.v0/resolve/"
@@ -50,7 +53,7 @@ MODEL_SPECS: tuple[_ModelSpec, ...] = (
         sha256="40b6a016667745cae7d3055929ae3b8b1e7716aac795f5904cd3c2c7c3b8404b",
         size_bytes=14503825,
     ),
-    _ModelSpec(
+    ModelSpec(
         filename=REC_MODEL_NAME,
         url=(
             "https://huggingface.co/rtr46/meiki.txt.recognition.v0/resolve/"
@@ -69,29 +72,32 @@ def _present(path: Path, size_bytes: int) -> bool:
         return False
 
 
-def is_installed(models_root: Path) -> bool:
-    """True when both pinned models are on disk at their exact size (no import, no hashing)."""
-    return all(_present(models_root / spec.filename, spec.size_bytes) for spec in MODEL_SPECS)
+def is_installed(models_root: Path, specs: Sequence[ModelSpec] | None = None) -> bool:
+    """True when every spec is on disk at its exact size (no import, no hashing)."""
+    specs = MEIKI_SPECS if specs is None else specs
+    return all(_present(models_root / spec.filename, spec.size_bytes) for spec in specs)
 
 
 def install_models(
     models_root: Path,
+    specs: Sequence[ModelSpec] | None = None,
     *,
     progress: DownloadProgressFn | None = None,
     cancel_event=None,
 ) -> Path:
-    """Download, verify and install every missing model. Raises ``SetupError`` (incl. cancel)."""
-    for spec in MODEL_SPECS:
+    """Download, verify and install every missing spec. Raises ``SetupError`` (incl. cancel)."""
+    specs = MEIKI_SPECS if specs is None else specs
+    for spec in specs:
         _install_one(spec, models_root, progress=progress, cancel_event=cancel_event)
     return models_root
 
 
-def _raise_if_cancelled(cancel_event, spec: _ModelSpec) -> None:
+def _raise_if_cancelled(cancel_event, spec: ModelSpec) -> None:
     if cancel_event is not None and cancel_event.is_set():
         raise OperationCancelled(f"OCR model installation cancelled ({spec.filename})")
 
 
-def _install_one(spec: _ModelSpec, models_root: Path, *, progress, cancel_event) -> None:
+def _install_one(spec: ModelSpec, models_root: Path, *, progress, cancel_event) -> None:
     target = models_root / spec.filename
     if _present(target, spec.size_bytes):
         return

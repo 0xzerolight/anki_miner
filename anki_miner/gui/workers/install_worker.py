@@ -292,7 +292,7 @@ def video_ocr_install_task(onnx_pack_root: Path, models_root: Path) -> InstallTa
 
     def _task(worker: InstallWorker) -> str:
         from anki_miner.services.asr import onnx_pack_installer
-        from anki_miner.services.video_ocr import model_installer
+        from anki_miner.services.ocr import model_installer
 
         worker._progress_ctx = "VideoOcrInstallWorker"
         if not onnx_pack_installer.onnxruntime_importable(onnx_pack_root):

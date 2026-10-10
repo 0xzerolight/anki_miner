@@ -30,7 +30,8 @@ from anki_miner.gui.utils.image_fit import fit_transform, widget_to_image
 from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.enhanced import ModernButton
-from anki_miner.services.video_ocr import model_installer, runtime
+from anki_miner.services.ocr import model_installer
+from anki_miner.services.video_ocr import runtime
 from anki_miner.services.video_ocr.frame_source import Region, crop_frame, still_at
 from anki_miner.services.video_ocr.scanner import read_region_text
 from anki_miner.utils.audio_track_detector import get_media_duration_seconds

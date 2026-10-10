@@ -64,8 +64,8 @@ from anki_miner.services.language_pack_installer import (  # noqa: E402
     load_pack,
     pack_supported,
 )
+from anki_miner.services.ocr import model_installer  # noqa: E402
 from anki_miner.services.pack_installer import artifact_for  # noqa: E402
-from anki_miner.services.video_ocr import model_installer  # noqa: E402
 
 # artifact_for is the installer core's own platform/ABI resolution, imported
 # rather than reimplemented: --print-manifest exists to answer "what would this

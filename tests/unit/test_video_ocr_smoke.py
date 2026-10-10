@@ -11,8 +11,8 @@ from unittest.mock import patch
 import pytest
 
 from anki_miner.gui import app
+from anki_miner.services.ocr.model_installer import DET_MODEL_NAME, REC_MODEL_NAME
 from anki_miner.services.video_ocr.errors import EngineLoadError
-from anki_miner.services.video_ocr.model_installer import DET_MODEL_NAME, REC_MODEL_NAME
 from tests.unit.test_asr_smoke_leg import _fake_dist, _run_smoke, _seed_asr
 
 _ROOT = Path(__file__).resolve().parents[2]
@@ -104,7 +104,7 @@ def test_the_seeder_installs_the_pack_and_models_for_videoocr(tmp_path):
     with (
         patch("anki_miner.services.asr.onnx_pack_installer.onnx_pack_supported", return_value=True),
         patch("anki_miner.services.asr.onnx_pack_installer.install_onnx_pack", side_effect=calls.append),
-        patch("anki_miner.services.video_ocr.model_installer.install_models", side_effect=calls.append),
+        patch("anki_miner.services.ocr.model_installer.install_models", side_effect=calls.append),
     ):
         seeder._install("videoocr", tmp_path / "videoocr")
     assert calls == [tmp_path / "videoocr" / "onnx_pack", tmp_path / "videoocr" / "ocr_models"]

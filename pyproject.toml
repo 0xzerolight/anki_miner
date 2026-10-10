@@ -62,6 +62,10 @@ license-files = [
     # meikiocr (Apache-2.0): the Video OCR engine is a modified copy inside the wheel.
     "licenses/meikiocr/LICENSE",
     "licenses/meikiocr/README.md",
+    # PaddleOCR (Apache-2.0): the recognition models OCR downloads for other languages,
+    # and the reference for services/ocr/paddle_rec.py.
+    "licenses/paddleocr/LICENSE",
+    "licenses/paddleocr/README.md",
 ]
 authors = [
     {name = "Anki Miner Contributors"}

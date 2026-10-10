@@ -31,7 +31,8 @@ from anki_miner.gui.widgets.base import FormPanel, PageWidth, ScreenIssue, confi
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
 from anki_miner.gui.workers.video_ocr_worker import VideoOcrWorker
 from anki_miner.services.asr import onnx_pack_installer
-from anki_miner.services.video_ocr import model_installer, runtime
+from anki_miner.services.ocr import model_installer
+from anki_miner.services.video_ocr import runtime
 from anki_miner.services.video_ocr.errors import EngineLoadError
 from anki_miner.services.video_ocr.region import Region
 from anki_miner.utils.file_pairing import FilePairMatcher

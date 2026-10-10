@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 from anki_miner.gui.workers import install_worker
 from anki_miner.services.asr import onnx_pack_installer
-from anki_miner.services.video_ocr import model_installer
+from anki_miner.services.ocr import model_installer
 
 
 class _FakeWorker:

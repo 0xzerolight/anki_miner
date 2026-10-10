@@ -11,7 +11,7 @@ import pytest
 
 from anki_miner.exceptions import SetupError
 from anki_miner.services.asr import onnx_pack_installer
-from anki_miner.services.video_ocr import model_installer as mi
+from anki_miner.services.ocr import model_installer as mi
 from anki_miner.services.video_ocr import runtime
 from tests.unit._resume_key_assert import assert_stable_resume_key
 
@@ -22,9 +22,9 @@ _PAYLOAD = b"onnx-fake-model"
 def fake_specs(monkeypatch):
     specs = tuple(
         dataclasses.replace(s, sha256=hashlib.sha256(_PAYLOAD).hexdigest(), size_bytes=len(_PAYLOAD))
-        for s in mi.MODEL_SPECS
+        for s in mi.MEIKI_SPECS
     )
-    monkeypatch.setattr(mi, "MODEL_SPECS", specs)
+    monkeypatch.setattr(mi, "MEIKI_SPECS", specs)
     return specs
 
 
@@ -46,7 +46,7 @@ def _patch_download(monkeypatch, payload=_PAYLOAD, on_call=None):
 
 
 def test_specs_pin_hugging_face_commits():
-    for spec in mi.MODEL_SPECS:
+    for spec in mi.MEIKI_SPECS:
         assert "/resolve/main/" not in spec.url
         assert spec.url.endswith("/" + spec.filename)
         assert len(spec.sha256) == 64

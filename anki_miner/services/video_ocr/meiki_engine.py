@@ -25,8 +25,8 @@ from typing import Any
 import numpy as np
 from PIL import Image
 
+from anki_miner.services.ocr.model_installer import DET_MODEL_NAME, REC_MODEL_NAME
 from anki_miner.services.video_ocr.errors import EngineLoadError
-from anki_miner.services.video_ocr.model_installer import DET_MODEL_NAME, REC_MODEL_NAME
 
 logger = logging.getLogger(__name__)
 
