@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **Manga OCR and Video OCR read every mining language except Hebrew, Vietnamese and Cantonese (Utilities → Manga OCR, Video OCR).** No free recogniser reads those three well enough. Japanese keeps its own OCR engines. Other languages download a small text-recognition model from the tool's setup card on first use, and Manga OCR adds onnxruntime to its mokuro install.
 
 ### Changed
 
