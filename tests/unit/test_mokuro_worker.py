@@ -12,6 +12,7 @@ pytest.importorskip("PyQt6.QtCore")
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions.mokuro import MokuroError, MokuroNotFoundError
+from anki_miner.gui.workers.file_queue_worker import UNMEASURED
 from anki_miner.gui.workers.mokuro_worker import MokuroWorker
 from anki_miner.models.processing import TerminalOutcome
 from anki_miner.services.mokuro_runner import MokuroOptions, MokuroResult, MokuroStatus
@@ -137,5 +138,5 @@ def test_progress_mapping_and_cancel_event(tmp_path):
     rec = _Recorder(worker)
     worker.run()
     assert (0, 12, "Page 3 of 25") in rec.of("file_progress")
-    assert (0, 0, "Loading models (cpu)") in rec.of("file_progress")
+    assert (0, UNMEASURED, "Loading models (cpu)") in rec.of("file_progress")
     assert service.process_volume.call_args.kwargs["cancel_event"] is worker._cancel_event

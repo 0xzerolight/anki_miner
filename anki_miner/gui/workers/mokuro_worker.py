@@ -14,7 +14,7 @@ import logging
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions.base import AnkiMinerException
 from anki_miner.exceptions.mokuro import MokuroNotFoundError
-from anki_miner.gui.workers.file_queue_worker import FileQueueWorker
+from anki_miner.gui.workers.file_queue_worker import UNMEASURED, FileQueueWorker
 from anki_miner.services.mokuro_runner import MokuroOptions, MokuroRunnerService, MokuroStatus
 from anki_miner.services.mokuro_volumes import MokuroVolume
 
@@ -61,7 +61,7 @@ class MokuroWorker(FileQueueWorker):
                 # which IS the percentage — D18 asks for the count, not both.
                 self.file_progress.emit(idx, int(frac * 100), message)
             else:
-                self.file_progress.emit(idx, 0, message)
+                self.file_progress.emit(idx, UNMEASURED, message)
 
         try:
             result = self._service.process_volume(

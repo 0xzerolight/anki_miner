@@ -13,7 +13,7 @@ from pathlib import Path
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions.base import AnkiMinerException
 from anki_miner.exceptions.youtube import YtdlpNotFoundError
-from anki_miner.gui.workers.file_queue_worker import FileQueueWorker
+from anki_miner.gui.workers.file_queue_worker import UNMEASURED, FileQueueWorker
 from anki_miner.services.audio_fetch_common import redact_url_for_log
 from anki_miner.services.media_downloader import (
     DownloadOptions,
@@ -63,11 +63,13 @@ class DownloadWorker(FileQueueWorker):
         self._dest_dir.mkdir(parents=True, exist_ok=True)
 
         def _progress(message: str, frac: float | None) -> None:
+            # yt-dlp fetches the video and audio streams one after the other, each
+            # from 0%, so the fraction is no position in the item: it stays in words.
             if frac is not None:
                 pct = int(frac * 100)
-                self.file_progress.emit(idx, pct, tr_format(self.tr("%1: %2%"), message, pct))
+                self.file_progress.emit(idx, UNMEASURED, tr_format(self.tr("%1: %2%"), message, pct))
             else:
-                self.file_progress.emit(idx, 0, message)
+                self.file_progress.emit(idx, UNMEASURED, message)
 
         try:
             result = self._service.download(

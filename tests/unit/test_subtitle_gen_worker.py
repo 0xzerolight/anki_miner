@@ -12,6 +12,7 @@ import pytest
 pytest.importorskip("PyQt6.QtCore")
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.workers.file_queue_worker import UNMEASURED
 from anki_miner.gui.workers.subtitle_gen_worker import SubtitleGenWorker
 
 # A dakuten kana stem that genuinely decomposes under NFD (common kana are
@@ -217,6 +218,9 @@ def test_happy_path_two_files_signal_sequence(qapp, tmp_path, monkeypatch):
         messages = [p[2] for p in progresses_per_file[idx]]
         assert messages[0].startswith("Extracting audio: ")
         assert messages[1] == "Transcribing: 0%"
+        # Extraction has no denominator; transcription starts measuring at 0.
+        assert progresses_per_file[idx][0][1] == UNMEASURED
+        assert progresses_per_file[idx][1][1] == 0
 
     # SRT written for both files.
     assert len(srt_calls) == 2

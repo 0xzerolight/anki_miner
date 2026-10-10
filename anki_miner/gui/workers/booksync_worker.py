@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from anki_miner.gui.utils.service_factory import import_decode_ladder
-from anki_miner.gui.workers.file_queue_worker import FileQueueWorker
+from anki_miner.gui.workers.file_queue_worker import UNMEASURED, FileQueueWorker
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.book_sync.aligner import BookCursor, BookText
 from anki_miner.services.book_sync.pipeline import BookSyncResult, BookSyncStatus, load_book, sync_one
@@ -102,7 +102,7 @@ class BookSyncWorker(FileQueueWorker):
         assert self._book is not None  # loaded in _process_queue
 
         def _on_extract_start() -> None:
-            self.file_progress.emit(idx, 0, tr_format(self.tr("Extracting audio: %1"), audio_path.name))
+            self.file_progress.emit(idx, UNMEASURED, tr_format(self.tr("Extracting audio: %1"), audio_path.name))
 
         def _on_transcribe_start() -> None:
             self.file_progress.emit(idx, 0, tr_format(self.tr("Transcribing: %1%"), 0))
@@ -112,12 +112,12 @@ class BookSyncWorker(FileQueueWorker):
             self.file_progress.emit(idx, pct, tr_format(self.tr("Transcribing: %1%"), pct))
 
         def _on_align_start() -> None:
-            self.file_progress.emit(idx, 100, self.tr("Aligning to the book…"))
+            self.file_progress.emit(idx, UNMEASURED, self.tr("Aligning to the book…"))
 
         def _log(line: str) -> None:
             # The aligner's re-anchor / skip notes: diagnostics in the
             # service's own words, surfaced like Generate's service lines.
-            self.file_progress.emit(idx, 100, line)
+            self.file_progress.emit(idx, UNMEASURED, line)
 
         try:
             result = sync_one(

@@ -14,7 +14,7 @@ from pathlib import Path
 
 from PyQt6.QtCore import pyqtSignal
 
-from anki_miner.gui.workers.file_queue_worker import FileQueueWorker
+from anki_miner.gui.workers.file_queue_worker import UNMEASURED, FileQueueWorker
 from anki_miner.services.retime_reference import ReferenceOverride
 from anki_miner.utils.file_pairing import RETIMED_SUFFIX, resolve_output_path
 from anki_miner.utils.file_utils import bounded_output_name
@@ -140,9 +140,9 @@ class SubtitleRetimeWorker(FileQueueWorker):
         """
         try:
             # log_cb forwards pipeline decision/progress lines via
-            # file_progress. There is no percentage — emit pct=0.
+            # file_progress. There is no percentage — emit UNMEASURED.
             def _log_cb(line: str) -> None:
-                self.file_progress.emit(idx, 0, line)
+                self.file_progress.emit(idx, UNMEASURED, line)
 
             outcome = self._retimer(
                 self._config,

@@ -18,6 +18,7 @@ pytest.importorskip("PyQt6.QtWidgets")
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SetupError
 from anki_miner.gui.workers.booksync_worker import BookSyncWorker
+from anki_miner.gui.workers.file_queue_worker import UNMEASURED
 from anki_miner.models import TerminalOutcome
 from anki_miner.services.book_sync.aligner import BookText
 from anki_miner.services.book_sync.pipeline import BookSyncResult, BookSyncStatus
@@ -203,3 +204,8 @@ def test_progress_callbacks_reach_file_progress(qapp, tmp_path):
     assert any("50%" in m for m in messages)
     assert any("Aligning" in m for m in messages)
     assert any("Re-anchored" in m for m in messages)
+    # Only transcription has a denominator; a one-file run's bar holds through the rest.
+    pct_by_message = {msg: pct for _idx, pct, msg in cap["progress"]}
+    assert pct_by_message["Transcribing: 50%"] == 50
+    for unmeasured in ("Extracting audio: ch01.mp3", "Aligning to the book…", "Re-anchored at sentence 7"):
+        assert pct_by_message[unmeasured] == UNMEASURED

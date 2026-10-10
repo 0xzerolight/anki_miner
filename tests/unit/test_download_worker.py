@@ -18,6 +18,7 @@ pytest.importorskip("PyQt6.QtCore")
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions.youtube import YtdlpNotFoundError
 from anki_miner.gui.workers.download_worker import DownloadWorker
+from anki_miner.gui.workers.file_queue_worker import UNMEASURED
 from anki_miner.models.processing import TerminalOutcome
 from anki_miner.services.media_downloader import (
     DownloadOptions,
@@ -187,8 +188,8 @@ def test_progress_fraction_mapping(tmp_path: Path) -> None:
     worker.run()
 
     progress = rec.of("progress")
-    assert (0, 25, "Downloading: 25%") in progress
-    assert (0, 0, "Downloading") in progress
+    assert (0, UNMEASURED, "Downloading: 25%") in progress
+    assert (0, UNMEASURED, "Downloading") in progress
 
 
 def test_progress_message_carries_percent(tmp_path: Path) -> None:
@@ -206,7 +207,7 @@ def test_progress_message_carries_percent(tmp_path: Path) -> None:
 
     idx, pct, message = rec.of("progress")[0]
     assert idx == 0
-    assert pct == 42
+    assert pct == UNMEASURED
     assert "42" in message
 
 

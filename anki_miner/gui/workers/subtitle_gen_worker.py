@@ -17,7 +17,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from anki_miner.gui.workers.file_queue_worker import FileQueueWorker
+from anki_miner.gui.workers.file_queue_worker import UNMEASURED, FileQueueWorker
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.asr.subtitle_generation import (
     SubtitleGenResult,
@@ -125,7 +125,7 @@ class SubtitleGenWorker(FileQueueWorker):
         """Run :func:`generate_subtitle_one` for one file; never raises (errors forwarded)."""
 
         def _on_extract_start() -> None:
-            self.file_progress.emit(idx, 0, tr_format(self.tr("Extracting audio: %1"), video_path.name))
+            self.file_progress.emit(idx, UNMEASURED, tr_format(self.tr("Extracting audio: %1"), video_path.name))
 
         def _on_transcribe_start() -> None:
             # Extraction and the WAV load are done here; the silence mask, model

@@ -13,6 +13,7 @@ pytest.importorskip("PyQt6.QtCore")
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions.subtitle import AlassNotFoundError
+from anki_miner.gui.workers.file_queue_worker import UNMEASURED
 from anki_miner.gui.workers.subtitle_retime_worker import SubtitleRetimeWorker
 from anki_miner.services.retime_reference import ReferenceOverride
 from anki_miner.services.subtitle_retimer import RetimeOutcome
@@ -640,13 +641,13 @@ def test_log_cb_forwarded_as_file_progress(qapp, tmp_path):
     cap = _capture(worker)
     worker.run()
 
-    in_progress_msgs = [p[2] for p in cap["progress"] if p[0] == 0 and p[1] == 0]
+    in_progress_msgs = [p[2] for p in cap["progress"] if p[0] == 0 and p[1] == UNMEASURED]
     assert "progress: 42%" in in_progress_msgs
     assert "progress: 84%" in in_progress_msgs
 
 
-def test_log_cb_pct_is_zero_for_alass_lines(qapp, tmp_path):
-    """Alass log lines are forwarded with pct=0 (indeterminate)."""
+def test_log_cb_pct_is_unmeasured_for_alass_lines(qapp, tmp_path):
+    """Alass log lines carry no position: pct is UNMEASURED."""
     v = tmp_path / "ep01.mkv"
     s = tmp_path / "ep01_orig.srt"
     v.write_bytes(b"")
@@ -663,7 +664,7 @@ def test_log_cb_pct_is_zero_for_alass_lines(qapp, tmp_path):
 
     alass_progress = [p for p in cap["progress"] if p[0] == 0 and p[2] == "some alass output"]
     assert len(alass_progress) == 1
-    assert alass_progress[0][1] == 0
+    assert alass_progress[0][1] == UNMEASURED
 
 
 # ---------------------------------------------------------------------------
