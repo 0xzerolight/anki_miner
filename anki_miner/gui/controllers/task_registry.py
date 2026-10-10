@@ -20,7 +20,9 @@ previously re-invented and got a different answer:
 * ``fraction`` is ``None`` unless a real denominator exists. There is no synthetic
   overall percentage — a blended bar that races through short items and then sits
   on a long one is the "frozen progress bar" complaint, and its cause is the
-  averaging rather than any stall.
+  averaging rather than any stall. The one finer figure is a producer's
+  measured position in a run of exactly one item: there the item's position
+  is the run's position, so nothing is averaged.
 * The elapsed clock is driven by ``tick`` rather than by producer updates, so it
   keeps moving through a silent phase. ``no_update_age_s`` states the silence that
   was actually observed. Neither asserts the worker is alive: a ticking clock
@@ -139,13 +141,38 @@ class TaskSnapshot:
     #: How long the cancel has been waiting. Views use it to decide when the
     #: wait has gone on long enough to be worth naming.
     cancelling_age_s: float
+    #: The producer's measured position (0-100) within the run's only item, e.g.
+    #: video seconds read. Honoured only while ``total == 1``: across several
+    #: items it would be the blended percentage D18 rules out.
+    measured_percent: int | None = None
+
+    @property
+    def _one_item_percent(self) -> int | None:
+        return self.measured_percent if self.total == 1 else None
 
     @property
     def fraction(self) -> float | None:
         """Completed fraction, or None when there is no honest denominator."""
+        measured = self._one_item_percent
+        if measured is not None:
+            return measured / 100
         if not self.total:
             return None
         return min(1.0, self.current / self.total)
+
+    @property
+    def percent(self) -> int | None:
+        """``fraction`` as a whole percent, in integer arithmetic.
+
+        ``int(0.29 * 100)`` is 28, so a percentage printed from ``fraction``
+        could disagree with the "29%" the producer's own detail line says.
+        """
+        measured = self._one_item_percent
+        if measured is not None:
+            return measured
+        if not self.total:
+            return None
+        return min(100, self.current * 100 // self.total)
 
 
 class TaskHandle:
@@ -165,9 +192,24 @@ class TaskHandle:
         """Report the real stage position, e.g. 3 of 5 'Extracting media'."""
         self._registry._write(self, now, stage_index=index, stage_total=total, stage_name=name, moved=True)
 
-    def count(self, *, current: int, total: int | None, detail: str, now: float | None = None) -> None:
-        """Report real counts. ``total`` stays None when none genuinely exists."""
-        self._registry._write(self, now, current=current, total=total, detail=detail, moved=True)
+    def count(
+        self,
+        *,
+        current: int,
+        total: int | None,
+        detail: str,
+        percent: int | None = None,
+        now: float | None = None,
+    ) -> None:
+        """Report real counts. ``total`` stays None when none genuinely exists.
+
+        ``percent`` is the measured position within a one-item run's item; a
+        write without it clears the previous one.
+        """
+        measured = None if percent is None else max(0, min(100, percent))
+        self._registry._write(
+            self, now, current=current, total=total, detail=detail, measured_percent=measured, moved=True
+        )
 
     def cancelling(self, now: float | None = None) -> None:
         """Record that Cancel was pressed and the run has not stopped yet.
@@ -261,6 +303,7 @@ class TaskRegistry(QObject):
             elapsed_s=0.0,
             no_update_age_s=0.0,
             cancelling_age_s=0.0,
+            measured_percent=None,
         )
         # Before the clocks are re-based: the silence being cleared belongs to
         # the run this start supersedes, and is only measurable against its
@@ -419,7 +462,7 @@ class TaskRegistry(QObject):
     #: Position fields dropped once a cancel is in flight. Everything else --
     #: notably ``detail`` and ``stage_name`` -- keeps flowing, because words
     #: about what the run is waiting on are not a claim about how far it will get.
-    _FROZEN_ON_CANCEL = ("current", "total", "stage_index", "stage_total")
+    _FROZEN_ON_CANCEL = ("current", "total", "stage_index", "stage_total", "measured_percent")
 
     def _begin_cancelling(self, handle: TaskHandle, now: float | None) -> None:
         snap = self._snapshots.get(handle.task_id)

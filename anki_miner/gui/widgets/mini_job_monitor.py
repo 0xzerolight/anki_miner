@@ -182,15 +182,15 @@ class MiniJobMonitor(QWidget):
         self.title_label.setVisible(self.picker.isHidden())
         self.line_label.setText(format_task_line(snapshot))
 
-        fraction = snapshot.fraction
-        if snapshot.cancelling or fraction is None:
+        percent = snapshot.percent
+        if snapshot.cancelling or percent is None:
             # No honest denominator, or a run whose remaining position it has
             # stopped vouching for. Either way a percentage would be a number
             # the application cannot back, so the bar states motion instead.
             self.progress_bar.setRange(0, 0)
         else:
             self.progress_bar.setRange(0, 100)
-            self.progress_bar.setValue(int(fraction * 100))
+            self.progress_bar.setValue(percent)
         self.progress_bar.show()
 
         # A cancel already asked for is not asked for twice: the wait is the

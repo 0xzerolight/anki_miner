@@ -8,7 +8,7 @@ Hoists the byte-identical 5-signal contract and the per-file queue loop shared b
 Signal contract (inherited by every subclass — PyQt6 propagates base-class
 signals, so the per-worker declarations were removed):
     ``file_started(int)``                  — start of each item (idx)
-    ``file_progress(int, int, str)``       — (idx, pct 0-100, message)
+    ``file_progress(int, int, str)``       — (idx, pct 0-100 or UNMEASURED, message)
     ``file_finished(int, object, object)`` — (idx, out_path|None, error_str|None)
     ``file_skipped(int, object, str)``     — (idx, out_path, reason) when output exists and overwrite is False
     ``queue_finished()``                   — emitted once after the last item
@@ -34,6 +34,11 @@ from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
+#: ``file_progress`` pct for an emit with no measured position (a phase with no
+#: denominator, or a fraction that restarts mid-item). A one-file run shows its
+#: item's pct as the run's position, so a placeholder 0 or 100 would be a claim.
+UNMEASURED = -1
+
 
 class FileQueueWorker(CancellableWorker):
     """Process an ordered list of items, emitting per-item progress signals.
@@ -48,7 +53,8 @@ class FileQueueWorker(CancellableWorker):
 
     #: Emitted at the start of each item; argument is the 0-based item index.
     file_started = pyqtSignal(int)
-    #: (idx, pct 0-100, message) — progress within a single item.
+    #: (idx, pct, message) — progress within a single item. pct is a measured
+    #: position 0-100, or :data:`UNMEASURED`.
     file_progress = pyqtSignal(int, int, str)
     #: (idx, out_path|None, error_str|None) — outcome for each item.
     file_finished = pyqtSignal(int, object, object)

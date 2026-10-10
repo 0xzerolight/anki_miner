@@ -144,6 +144,64 @@ class TestStagesAndCounts:
         assert snap is not None
         assert snap.fraction == pytest.approx(7 / 24)
 
+    def test_percent_of_a_count_is_whole_and_never_drifts(self, registry):
+        """``int(0.29 * 100)`` is 28; the integer path reads 29."""
+        handle = registry.start(_spec(), now=0.0)
+        handle.count(current=29, total=100, detail="", now=1.0)
+
+        snap = registry.snapshot("t1")
+        assert snap is not None
+        assert snap.percent == 29
+
+
+class TestMeasuredPosition:
+    """A one-item run may report its item's measured position (D18's real denominator)."""
+
+    def _snap(self, registry, **count):
+        handle = registry.start(_spec(), now=0.0)
+        handle.count(now=1.0, **count)
+        return handle, registry.snapshot("t1")
+
+    def test_a_one_item_run_reads_its_measured_position(self, registry):
+        _, snap = self._snap(registry, current=0, total=1, detail="", percent=19)
+        assert snap.percent == 19
+        assert snap.fraction == pytest.approx(0.19)
+
+    def test_the_printed_percent_matches_the_producers(self, registry):
+        _, snap = self._snap(registry, current=0, total=1, detail="", percent=29)
+        assert snap.percent == 29
+
+    def test_a_write_without_a_position_clears_it(self, registry):
+        handle, _ = self._snap(registry, current=0, total=1, detail="", percent=40)
+        handle.count(current=0, total=1, detail="", now=2.0)
+
+        snap = registry.snapshot("t1")
+        assert snap.measured_percent is None
+        assert snap.percent == 0
+
+    def test_several_items_ignore_it_so_nothing_is_blended(self, registry):
+        _, snap = self._snap(registry, current=0, total=2, detail="", percent=50)
+        assert snap.percent == 0
+        assert snap.fraction == 0.0
+
+    @pytest.mark.parametrize(("given", "stored"), [(150, 100), (-5, 0)])
+    def test_out_of_range_values_clamp(self, registry, given, stored):
+        _, snap = self._snap(registry, current=0, total=1, detail="", percent=given)
+        assert snap.percent == stored
+
+    def test_cancelling_freezes_it(self, registry):
+        handle, _ = self._snap(registry, current=0, total=1, detail="", percent=30)
+        handle.cancelling(now=2.0)
+        handle.count(current=0, total=1, detail="", percent=80, now=3.0)
+
+        assert registry.snapshot("t1").percent == 30
+
+    def test_finishing_keeps_it_for_the_receipt(self, registry):
+        handle, _ = self._snap(registry, current=0, total=1, detail="", percent=30)
+        handle.finish(TaskOutcome.CANCELLED, now=2.0)
+
+        assert registry.snapshot("t1").percent == 30
+
 
 class TestSilenceAndElapsed:
     def test_elapsed_advances_without_any_producer_update(self, registry):

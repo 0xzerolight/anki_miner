@@ -148,9 +148,9 @@ def format_task_summary(snapshot: TaskSnapshot) -> str:
         # "Cancelling…".
         cancelling = QCoreApplication.translate("StatusBarWidget", "Cancelling…")
         return f"{snapshot.title} · {cancelling}"
-    fraction = snapshot.fraction
-    if fraction is not None:
-        return f"{snapshot.title} {int(fraction * 100)}%"
+    percent = snapshot.percent
+    if percent is not None:
+        return f"{snapshot.title} {percent}%"
     for phase in (snapshot.stage_name, snapshot.detail):
         if phase:
             return f"{snapshot.title} · {phase}"

@@ -385,14 +385,14 @@ class WorkflowActionBar(QWidget):
         self.elapsed_label.setText(format_clock(snapshot.elapsed_s))
         self.elapsed_label.show()
 
-        fraction = snapshot.fraction
-        if fraction is None:
+        percent = snapshot.percent
+        if percent is None:
             # No denominator the run can prove. An indeterminate bar says "still
             # going" without claiming a position it does not have (D18).
             self.progress_bar.setRange(0, 0)
         else:
             self.progress_bar.setRange(0, 100)
-            self.progress_bar.setValue(int(fraction * 100))
+            self.progress_bar.setValue(percent)
         self.progress_bar.show()
 
     def _stage_text(self, snapshot: TaskSnapshot) -> str:

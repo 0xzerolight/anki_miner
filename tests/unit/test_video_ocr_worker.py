@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
+from anki_miner.gui.workers.file_queue_worker import UNMEASURED
 from anki_miner.gui.workers.video_ocr_worker import VideoOcrWorker
 from anki_miner.services.video_ocr.errors import EngineLoadError
 from anki_miner.services.video_ocr.region import Region
@@ -78,6 +79,8 @@ def test_progress_text_with_and_without_a_duration(qtbot, test_config, video):
     assert len(messages) == 2
     assert "1:05" in messages[0] and "1:00:00" in messages[0]
     assert "1:10" in messages[1] and "/" not in messages[1]
+    # Without a duration there is no position to claim: a one-file run's bar holds instead.
+    assert [pct for _, pct, _ in seen["progress"]] == [1, UNMEASURED]
 
 
 def test_an_engine_load_error_stops_the_queue(qtbot, test_config, video, tmp_path):

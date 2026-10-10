@@ -118,11 +118,14 @@ class TaskPublisherMixin:
         if handle is not None:
             handle.stage(index=index, total=total, name=name)
 
-    def _publish_task_count(self, current: int, total: int | None, detail: str) -> None:
-        """Report real counts and what the run is currently doing."""
+    def _publish_task_count(self, current: int, total: int | None, detail: str, percent: int | None = None) -> None:
+        """Report real counts and what the run is currently doing.
+
+        ``percent`` is the measured position within a one-item run's item.
+        """
         handle = self._task_handle
         if handle is not None:
-            handle.count(current=current, total=total, detail=detail)
+            handle.count(current=current, total=total, detail=detail, percent=percent)
 
     def _publish_task_detail(self, detail: str) -> None:
         """Restate what the run is doing without claiming a new position."""
@@ -133,7 +136,8 @@ class TaskPublisherMixin:
         snapshot = registry.snapshot(handle.task_id) if registry is not None else None
         current = snapshot.current if snapshot is not None else 0
         total = snapshot.total if snapshot is not None else None
-        handle.count(current=current, total=total, detail=detail)
+        percent = snapshot.measured_percent if snapshot is not None else None
+        handle.count(current=current, total=total, detail=detail, percent=percent)
 
     def _publish_task_cancelling(self) -> None:
         """Record that Cancel was pressed and the run has not stopped yet.

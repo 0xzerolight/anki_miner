@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 ### Fixed
+- **A one-file Utilities run shows how far through the file it is.** Video OCR, Generate, Audiobook Sync, Condense, Manga OCR and Tracks used to read 0% in the status bar and on the pinned bar until the file was done, because the bar counted finished files. A two-hour video therefore looked stuck for the whole scan. They now show the file's measured position. A run of several files still counts finished files.
 
 ### Removed
 

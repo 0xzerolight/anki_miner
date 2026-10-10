@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from anki_miner.gui.workers.file_queue_worker import FileQueueWorker
+from anki_miner.gui.workers.file_queue_worker import UNMEASURED, FileQueueWorker
 from anki_miner.services.video_ocr.errors import EngineLoadError
 from anki_miner.services.video_ocr.region import Region
 from anki_miner.utils.file_pairing import resolve_output_path
@@ -72,7 +72,7 @@ class VideoOcrWorker(FileQueueWorker):
                 pct = min(99, int(t * 100 / duration))
                 message = tr_format(self.tr("Reading subtitles: %1 / %2"), _clock(t), _clock(duration))
             else:
-                pct = 0
+                pct = UNMEASURED
                 message = tr_format(self.tr("Reading subtitles: %1"), _clock(t))
             self.file_progress.emit(idx, pct, message)
 

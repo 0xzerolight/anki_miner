@@ -38,6 +38,7 @@ from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
 from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
 from anki_miner.gui.widgets.tracks_tab import TracksTab
 from anki_miner.gui.widgets.video_ocr_tab import VideoOcrTab
+from anki_miner.gui.workers.file_queue_worker import UNMEASURED
 
 #: Every screen W1-T6 left unpublished, with the id and owner it now declares.
 PUBLISHING_SCREENS = [
@@ -141,6 +142,9 @@ def test_tool_run_publishes_progress_and_a_successful_finish(qtbot, test_config,
     assert snapshot.current == 0
     assert snapshot.total == 2
     assert snapshot.detail == "Extracting"
+    # Several files: the bar counts finished files, never a blend of their percentages (D18).
+    assert snapshot.measured_percent is None
+    assert snapshot.fraction == 0.0
 
     tab._on_file_finished(0, "/tmp/out.mka", None)
     assert registry.snapshot("tools.condense").current == 1
@@ -182,6 +186,86 @@ def test_binding_also_points_the_pinned_bar_at_the_same_task(qtbot, test_config,
     assert tab.action_bar._task_id == "tools.condense"
 
     tab.deleteLater()
+
+
+@pytest.fixture
+def one_video_run(qtbot, test_config, registry):
+    """A Video OCR run over one file, bound to the registry and started."""
+    tab = VideoOcrTab(test_config, suppress_optional_startup=True)
+    qtbot.addWidget(tab)
+    tab.bind_task_registry(registry)
+    tab._total_files = 1
+    tab._begin_tool_run(1)
+    yield tab
+    tab.deleteLater()
+
+
+def test_one_file_run_shows_the_files_measured_position(one_video_run, registry):
+    """A user's two-hour scan read "Video OCR 0%" for its whole run: 0 of 1 files done.
+
+    In a one-item run the item's measured position is the run's position, so
+    nothing is blended (D18's "bar for that stage where a real denominator
+    exists"). The detailed line still states the true file count.
+    """
+    from anki_miner.gui.utils.task_lines import format_task_line, format_task_summary
+
+    one_video_run._on_file_progress(0, 29, "Reading subtitles: 22:49 / 1:58:05")
+
+    snapshot = registry.snapshot("tools.videoocr")
+    assert format_task_summary(snapshot) == "Video OCR 29%"
+    assert "0 / 1" in format_task_line(snapshot)
+
+
+def test_one_file_run_holds_its_position_through_an_unmeasured_emit(one_video_run, registry):
+    """Book sync's align phase has no denominator: the bar keeps what was measured."""
+    one_video_run._on_file_progress(0, 29, "Transcribing: 29%")
+    one_video_run._on_file_progress(0, UNMEASURED, "Aligning to the book…")
+
+    snapshot = registry.snapshot("tools.videoocr")
+    assert snapshot.percent == 29
+    assert snapshot.detail == "Aligning to the book…"
+
+
+def test_one_file_run_reads_100_only_once_the_file_finishes(one_video_run, registry):
+    """Workers emit "Done" at 100 before file_finished; the run is not over yet."""
+    one_video_run._on_file_progress(0, 100, "Done")
+    assert registry.snapshot("tools.videoocr").percent == 99
+
+    one_video_run._on_file_finished(0, "/tmp/out.srt", None)
+    assert registry.snapshot("tools.videoocr").fraction == 1.0
+
+
+def test_one_file_run_follows_a_measured_step_back(one_video_run, registry):
+    """A whisper.cpp window re-decoded on CPU restarts that window: show what is measured."""
+    one_video_run._on_file_progress(0, 40, "Transcribing: 40%")
+    one_video_run._on_file_progress(0, 10, "Transcribing: 10%")
+
+    assert registry.snapshot("tools.videoocr").percent == 10
+
+
+def test_a_new_run_starts_from_zero_not_the_last_runs_position(one_video_run, registry):
+    from anki_miner.models import TerminalOutcome
+
+    one_video_run._on_file_progress(0, 50, "Reading subtitles: 1:00 / 2:00")
+    one_video_run._on_file_finished(0, "/tmp/out.srt", None)
+    one_video_run._on_queue_finished(TerminalOutcome.SUCCESS)
+
+    one_video_run._begin_tool_run(1)
+    one_video_run._on_file_progress(0, UNMEASURED, "Reading subtitles: 0:01")
+
+    assert registry.snapshot("tools.videoocr").percent == 0
+
+
+def test_cancel_freezes_a_one_file_runs_position(one_video_run, registry):
+    from anki_miner.gui.utils.task_lines import format_task_summary
+
+    one_video_run._on_file_progress(0, 30, "Reading subtitles: 0:30 / 1:40")
+    one_video_run._on_cancel()
+    one_video_run._on_file_progress(0, 90, "Reading subtitles: 1:30 / 1:40")
+
+    snapshot = registry.snapshot("tools.videoocr")
+    assert snapshot.percent == 30
+    assert "Cancelling" in format_task_summary(snapshot)
 
 
 def test_unbound_screen_runs_exactly_as_before(qtbot, test_config):

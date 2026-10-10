@@ -145,6 +145,9 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
     #: here rather than read back from the worker so the completion line never
     #: races the worker thread's teardown.
     _run_skipped: int = 0
+    #: The last measured position (0-99) of a one-file run's file, held through
+    #: emits that carry no measurement. Reset when the run starts.
+    _run_measured_pct: int | None = None
 
     #: Stable session key for this tool's remembered OUTPUT folder (D7), e.g.
     #: ``"tools.condense.output"``. Left empty by a subclass that does not want
@@ -478,6 +481,7 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         """
         self._cancelled = False
         self._run_skipped = 0
+        self._run_measured_pct = None
         self._publish_task_start(self._strings.task_title, total=total)
 
     def _start_queue_worker(self, worker: FileQueueWorker) -> None:
@@ -585,11 +589,21 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
     # ------------------------------------------------------------------
 
     def _on_file_progress(self, idx: int, pct: int, message: str) -> None:
-        # The bar counts finished files; the intra-file percentage a tool
-        # reports is shown in the message instead of being folded into the bar,
-        # where it made a long file look like a stalled run.
-        self.progress_widget.set_composed(idx, self._item_total(), message)
-        self._publish_task_count(current=idx, total=self._item_total(), detail=message)
+        # Across several files the bar counts finished files: folding each
+        # file's percentage in made a long file look like a stalled run (D18).
+        # A one-file run is the exception D18 allows ("a bar for that stage
+        # where a real denominator exists"): the file's measured position is
+        # the run's, so a two-hour video no longer reads 0% until it ends.
+        # Capped at 99 so 100% waits for file_finished; an UNMEASURED emit
+        # (negative) holds the last measured value.
+        total = self._item_total()
+        self.progress_widget.set_composed(idx, total, message)
+        percent = None
+        if total == 1:
+            if pct >= 0:
+                self._run_measured_pct = min(pct, 99)
+            percent = self._run_measured_pct
+        self._publish_task_count(current=idx, total=total, detail=message, percent=percent)
 
     def _on_file_finished(self, idx: int, out_path: object, error_str: object) -> None:
         # Whole-file advance in the same percent unit system as set_composed
