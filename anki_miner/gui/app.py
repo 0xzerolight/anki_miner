@@ -338,6 +338,13 @@ def _run_video_ocr_bundled_smoke() -> int:
     the whole read path (detect, recognise, cleanup) and must come back exactly, so no
     copyrighted crop is committed. Exits before Qt init.
     """
+    from anki_miner.services.ocr import MOKURO_DRIVER
+
+    # The managed mokuro Python runs these two from disk for Manga OCR in recogniser
+    # languages, so the spec ships them as data files; only a frozen build can lose them.
+    if not (MOKURO_DRIVER.is_file() and MOKURO_DRIVER.with_name("paddle_rec.py").is_file()):
+        print("BUNDLED_SMOKE_FAIL: mokuro driver files missing", file=sys.stderr)
+        return 1
     try:
         import numpy as np
         from PIL import Image, ImageDraw, ImageFont

@@ -627,6 +627,18 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
             os.path.join(project_root, "anki_miner", "languages", "yue", "data"),
             os.path.join("anki_miner", "languages", "yue", "data"),
         ),
+        # Manga OCR's mokuro driver and its PP-OCR recogniser: run from disk by
+        # the managed mokuro Python, so they must exist as files next to the
+        # package (services/ocr MOKURO_DRIVER). The videoocr bundle smoke fails
+        # without them.
+        (
+            os.path.join(project_root, "anki_miner", "services", "ocr", "mokuro_driver.py"),
+            os.path.join("anki_miner", "services", "ocr"),
+        ),
+        (
+            os.path.join(project_root, "anki_miner", "services", "ocr", "paddle_rec.py"),
+            os.path.join("anki_miner", "services", "ocr"),
+        ),
         # unidic-lite dictionary data (required by fugashi/MeCab)
         (unidic_data, "unidic_lite"),
         # BudouX phrase-segmentation data (curator sentence wrapping)

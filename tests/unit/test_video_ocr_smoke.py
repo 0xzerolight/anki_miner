@@ -50,6 +50,18 @@ def test_smoke_fails_loudly_when_the_engine_cannot_load(capsys):
     assert "BUNDLED_SMOKE_FAIL" in capsys.readouterr().err
 
 
+@pytest.mark.parametrize("present", [(), ("mokuro_driver.py",), ("paddle_rec.py",)])
+def test_smoke_fails_when_a_mokuro_driver_file_is_missing(tmp_path, monkeypatch, capsys, present):
+    # The managed mokuro Python runs both files from disk, so a frozen build must ship them as data.
+    for name in present:
+        (tmp_path / name).write_text("", encoding="utf-8")
+    monkeypatch.setattr("anki_miner.services.ocr.MOKURO_DRIVER", tmp_path / "mokuro_driver.py")
+    with patch(_READ, return_value=app._VIDEO_OCR_SMOKE_TEXT) as read:
+        assert app._run_video_ocr_bundled_smoke() == 1
+    read.assert_not_called()
+    assert "BUNDLED_SMOKE_FAIL: mokuro driver files missing" in capsys.readouterr().err
+
+
 @pytest.mark.skipif(not _MODELS, reason="set ANKI_MINER_TEST_OCR_MODELS to a dir holding the two pinned models")
 def test_smoke_reads_its_line_with_the_real_models():
     from anki_miner.services.video_ocr import runtime
