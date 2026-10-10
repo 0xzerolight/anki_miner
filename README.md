@@ -195,26 +195,6 @@ Uses bundled name wordsets derived from [JMnedict](https://www.edrdg.org/enamdic
 | Audio is wrong language  | The tool picks the mining language's audio track, else the first one. Choose it yourself with Audio track… (Video -> Single). |
 | Subtitles out of sync    | Use the subtitle offset control in the GUI (range ±300 seconds).                 |
 
-## Roadmap
-
-List of ideas for future versions of Anki Miner. Not in priority order. Feature requests take precedence.
-- Suggest a feature - [Open an issue](https://github.com/0xzerolight/anki_miner/issues).
-- Discuss the roadmap - [Discussions](https://github.com/0xzerolight/anki_miner/discussions).
-
-- **Features**:
-  - [x] UI language selection.
-  - [x] Local subtitle creation tab: Opt-in tab to locally generate subtitles.
-  - [x] Reading tab: Mine manga and books.
-  - [x] Backfill tool.
-  - [ ] Media library: Expand Analytics tab to display local media library across all media forms.
-  - [ ] Automatic subtitle downloading.
-
-- **Long-term**:
-  - [x] Android port - https://github.com/0xzerolight/anki_miner_android
-  - [x] Beyond Japanese: thirty-one more mining languages.
-  - [ ] Anki Miner browser extension.
-
-
 ## Contributing
 
 Contributions of any kind are welcome.
