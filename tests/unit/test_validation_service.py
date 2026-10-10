@@ -1280,6 +1280,63 @@ class TestCheckMokuro:
         assert not any(i.component == "mokuro" for i in result.issues)
         assert result.tool_versions["mokuro"] == ""
 
+    @staticmethod
+    def _ko_service(test_config, monkeypatch, state, mokuro_verdict):
+        """ko with Manga OCR through a recogniser; ``manga_ocr_state`` stubbed to *state*."""
+        from anki_miner.languages import registry
+        from anki_miner.services.mokuro_installer import MangaOcrState
+
+        real = registry.get_profile
+        ko = replace(real("ko"), capabilities=real("ko").capabilities | {"manga_ocr"}, ocr_recognizer="korean")
+        # Imported lazily inside validate_setup, so patched at its source.
+        monkeypatch.setattr(registry, "get_profile", lambda code: ko if code == "ko" else real(code))
+        monkeypatch.setattr(validation_service, "manga_ocr_state", lambda config: MangaOcrState(*state))
+        service = ValidationService(replace(test_config, language="ko"))
+        for name, verdict in (
+            ("_check_ankiconnect", (True, "ok")),
+            ("_check_ffmpeg", (True, "ok")),
+            ("_check_ffprobe", (True, "ok")),
+            ("_check_alass", (True, "ok")),
+            ("_check_ytdlp", (True, "2026.08.01 [venv]")),
+            ("_check_deck_exists", (True, "ok")),
+            ("_check_note_type_exists", (True, "ok")),
+            ("_check_field_names_exist", (True, "ok")),
+            ("_check_offline_dictionary", (True, "ok")),
+            ("_check_language_engine", (True, "ok")),
+            ("_check_mokuro", mokuro_verdict),
+        ):
+            monkeypatch.setattr(service, name, lambda v=verdict: v)
+        return service
+
+    def test_a_recogniser_language_without_its_model_reports_the_model(self, test_config, monkeypatch):
+        """The in-app mokuro is there (so _check_mokuro is OK), but the language's parts are not."""
+        service = self._ko_service(test_config, monkeypatch, (False, True), (True, "mokuro [app-managed]"))
+
+        result = service.validate_setup()
+
+        issues = [i for i in result.issues if i.component == "mokuro"]
+        assert len(issues) == 1 and issues[0].severity == "WARNING"
+        assert issues[0].message.startswith("Manga OCR model not downloaded")
+        assert result.tool_versions["mokuro"] == "mokuro [app-managed]"
+
+    def test_a_recogniser_language_with_only_a_path_mokuro_reports_mokuro_missing(self, test_config, monkeypatch):
+        """Review Focus 2: a PATH mokuro would run manga-ocr on Korean pages, so it does not count."""
+        service = self._ko_service(test_config, monkeypatch, (False, False), (True, "mokuro [PATH]"))
+
+        result = service.validate_setup()
+
+        issues = [i for i in result.issues if i.component == "mokuro"]
+        assert len(issues) == 1
+        assert issues[0].message == validation_service.MOKURO_NOT_FOUND_MESSAGE
+        assert issues[0].message.startswith("mokuro not found")
+
+    def test_a_ready_recogniser_language_has_no_issue(self, test_config, monkeypatch):
+        service = self._ko_service(test_config, monkeypatch, (True, True), (True, "mokuro [app-managed]"))
+
+        result = service.validate_setup()
+
+        assert not any(i.component == "mokuro" for i in result.issues)
+
 
 class TestCheckLanguageEngine:
     """The mining language's engine, answered by the profile's own unavailable_reason."""

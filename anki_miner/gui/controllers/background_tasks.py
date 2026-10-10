@@ -52,6 +52,7 @@ if TYPE_CHECKING:
     from anki_miner.services.anki_service import AnkiService
     from anki_miner.services.card_restyler import RestyleResult
     from anki_miner.services.ocr.model_installer import ModelSpec
+    from anki_miner.services.ocr.recognizers import RecognizerSpec
     from anki_miner.services.update_checker import UpdateInfo
 
 logger = logging.getLogger(__name__)
@@ -172,6 +173,9 @@ class BackgroundTaskController(QObject):
         self.asr_model_download_worker: InstallWorker | None = None
         self.alass_install_worker: InstallWorker | None = None
         self.mokuro_install_worker: InstallWorker | None = None
+        #: The running mokuro install fetches a recogniser into the OCR model
+        #: store, which the Video OCR setup also writes (start_video_ocr_install).
+        self._mokuro_install_writes_models = False
         self.cuda_pack_download_worker: InstallWorker | None = None
         self.onnx_pack_download_worker: InstallWorker | None = None
         self.asr_pack_download_worker: InstallWorker | None = None
@@ -400,29 +404,46 @@ class BackgroundTaskController(QObject):
         self,
         bin_root: Path,
         uv_root: Path,
+        models_root: Path,
+        recognizer: RecognizerSpec | None,
+        reinstall: bool,
         on_status: Callable[[str], None],
         on_finished: Callable[[bool, str], None],
     ) -> None:
         """Start a mokuro install worker unless one is already running.
+
+        A recogniser language's install also writes ``models_root``, the store the
+        Video OCR setup writes too (its .part sweep and sha-keyed resume), so the
+        two refuse each other; a Japanese install never touches it.
 
         Args:
             bin_root: Directory the pinned uv binary is downloaded into;
                 typically ``config.bin_root``.
             uv_root: Directory the uv-managed mokuro environment is created in;
                 typically ``config.uv_root``.
+            models_root: The shared OCR model store; ``config.video_ocr_models_root``.
+            recognizer: The mining language's PP-OCR recogniser, or None for
+                manga-ocr's own language.
+            reinstall: Run the full uv install even over a managed mokuro.
             on_status: Slot for ``status(str)`` — typically
                 ``MokuroTab.set_mokuro_status`` (the Manga OCR tab's setup card).
             on_finished: Slot for ``result_ready(bool, str)`` — called with
                 ``(ok, message)`` when the install completes or fails.
         """
+        if recognizer is not None and still_running(self.video_ocr_install_worker):
+            on_finished(False, self.tr("Wait for the Video OCR setup to finish, then try again."))
+            return
         from anki_miner.gui.workers.install_worker import InstallWorker, mokuro_install_task
 
-        self._start_install(
-            "mokuro_install_worker",
-            lambda: InstallWorker(mokuro_install_task(bin_root, uv_root), parent=self),
-            on_status,
-            on_finished,
-        )
+        def _build() -> InstallWorker:
+            # Only once the start is accepted: a refused second click must not
+            # overwrite the running install's flag.
+            self._mokuro_install_writes_models = recognizer is not None
+            return InstallWorker(
+                mokuro_install_task(bin_root, uv_root, models_root, recognizer, reinstall=reinstall), parent=self
+            )
+
+        self._start_install("mokuro_install_worker", _build, on_status, on_finished)
 
     def start_cuda_pack_download(
         self,
@@ -588,10 +609,14 @@ class BackgroundTaskController(QObject):
 
         ``specs`` is the mining language's model set (``runtime.required_models``).
         Refuses while the silence-removal (VAD) pack download runs: both install
-        into ``onnx_pack_root`` and share its .part sweep and resume key.
+        into ``onnx_pack_root`` and share its .part sweep and resume key. Refuses
+        too while a recogniser language's mokuro install writes ``models_root``.
         """
         if still_running(self.onnx_pack_download_worker):
             on_finished(False, self.tr("Wait for the silence-removal download to finish, then try again."))
+            return
+        if still_running(self.mokuro_install_worker) and self._mokuro_install_writes_models:
+            on_finished(False, self.tr("Wait for the Manga OCR setup to finish, then try again."))
             return
         from anki_miner.gui.workers.install_worker import InstallWorker, video_ocr_install_task
 

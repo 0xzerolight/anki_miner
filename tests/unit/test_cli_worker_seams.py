@@ -94,6 +94,20 @@ def test_load_reading_source_gates_a_mokuro_volume_by_the_mining_language(test_c
     assert load.call_args.kwargs["has_target_script"] == get_profile("es").script.contains_target_script
 
 
+def test_a_non_native_ocr_language_keeps_its_own_block_gate(monkeypatch, test_config, tmp_path) -> None:
+    """Review Focus 5: granting manga_ocr to ko must not switch its volumes to the Japanese gate."""
+    ko = replace(
+        get_profile("ko"), capabilities=get_profile("ko").capabilities | {"manga_ocr"}, ocr_recognizer="korean"
+    )
+    monkeypatch.setattr(reading_queue_worker, "get_profile", lambda code: ko)
+    config = replace(test_config, language="ko")
+    processor = SimpleNamespace(subtitle_parser=None)
+    ref = ReadingSourceRef(kind="mokuro", path=tmp_path / "v.mokuro")
+    with patch.object(reading_queue_worker.detector, "load", return_value="DOC") as load:
+        reading_queue_worker.load_reading_source(processor, config, ref, cancel_check=lambda: False)
+    assert load.call_args.kwargs["has_target_script"] == ko.script.contains_target_script
+
+
 def test_load_reading_source_leaves_a_japanese_mokuro_volume_to_its_own_gate(test_config, tmp_path) -> None:
     processor = SimpleNamespace(subtitle_parser=None)
     ref = ReadingSourceRef(kind="mokuro", path=tmp_path / "v.mokuro")

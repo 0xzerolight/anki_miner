@@ -692,6 +692,12 @@ class TestStartAlassDownload:
         worker.deleteLater.assert_called_once()
 
 
+def _start_mokuro(controller, tmp_path, on_status=lambda m: None, on_finished=lambda ok, m: None, *, recognizer=None):
+    controller.start_mokuro_install(
+        tmp_path / "bin", tmp_path / "uv", tmp_path / "models", recognizer, False, on_status, on_finished
+    )
+
+
 class TestStartMokuroInstall:
     """start_mokuro_install: guard, status/finished routing, handle release."""
 
@@ -700,24 +706,34 @@ class TestStartMokuroInstall:
         _patch_install_worker(monkeypatch, worker)
 
         status_received: list[str] = []
-        controller.start_mokuro_install(tmp_path / "bin", tmp_path / "uv", status_received.append, lambda ok, msg: None)
+        _start_mokuro(controller, tmp_path, status_received.append)
 
         assert controller.mokuro_install_worker is worker
 
         worker.status.emit("Resolved 46 packages")
         assert status_received == ["Resolved 46 packages"]
 
+    def test_threads_the_roots_recogniser_and_reinstall_into_the_task(self, controller, qtbot, monkeypatch, tmp_path):
+        built: list[tuple] = []
+        monkeypatch.setattr(
+            "anki_miner.gui.workers.install_worker.mokuro_install_task",
+            lambda *args, **kwargs: built.append((args, kwargs)),
+        )
+        _patch_install_worker(monkeypatch, _FakeInstallWorker())
+        spec = RECOGNIZERS["korean"]
+
+        controller.start_mokuro_install(
+            tmp_path / "bin", tmp_path / "uv", tmp_path / "models", spec, True, lambda m: None, lambda ok, m: None
+        )
+
+        assert built == [((tmp_path / "bin", tmp_path / "uv", tmp_path / "models", spec), {"reinstall": True})]
+
     def test_routes_result(self, controller, qtbot, monkeypatch, tmp_path):
         worker = _FakeInstallWorker()
         _patch_install_worker(monkeypatch, worker)
 
         finished_calls: list[tuple] = []
-        controller.start_mokuro_install(
-            tmp_path / "bin",
-            tmp_path / "uv",
-            lambda msg: None,
-            lambda ok, msg: finished_calls.append((ok, msg)),
-        )
+        _start_mokuro(controller, tmp_path, on_finished=lambda ok, msg: finished_calls.append((ok, msg)))
 
         worker.emit_result(True, "mokuro installed.")
         assert finished_calls == [(True, "mokuro installed.")]
@@ -725,23 +741,116 @@ class TestStartMokuroInstall:
     def test_refused_while_running(self, controller, qtbot, monkeypatch, tmp_path):
         worker_a = _FakeInstallWorker()
         _patch_install_worker(monkeypatch, worker_a)
-        controller.start_mokuro_install(tmp_path / "bin", tmp_path / "uv", lambda m: None, lambda ok, m: None)
+        _start_mokuro(controller, tmp_path)
         assert controller.mokuro_install_worker is worker_a
 
         worker_b = _FakeInstallWorker()
         _patch_install_worker(monkeypatch, worker_b)
-        controller.start_mokuro_install(tmp_path / "bin", tmp_path / "uv", lambda m: None, lambda ok, m: None)
+        _start_mokuro(controller, tmp_path)
         assert controller.mokuro_install_worker is worker_a
 
     def test_handle_released_on_finished(self, controller, qtbot, monkeypatch, tmp_path):
         worker = _FakeInstallWorker()
         _patch_install_worker(monkeypatch, worker)
-        controller.start_mokuro_install(tmp_path / "bin", tmp_path / "uv", lambda m: None, lambda ok, m: None)
+        _start_mokuro(controller, tmp_path)
 
         worker.emit_finished()
 
         assert controller.mokuro_install_worker is None
         worker.deleteLater.assert_called_once()
+
+
+class TestSharedModelStoreGuard:
+    """A recogniser mokuro install and the Video OCR setup both write ocr_models/ (.part sweep, sha-keyed resume)."""
+
+    @staticmethod
+    def _running() -> MagicMock:
+        worker = MagicMock()
+        worker.isRunning.return_value = True
+        return worker
+
+    @staticmethod
+    def _record_builds(monkeypatch) -> list[object]:
+        built: list[object] = []
+
+        def _build(task, parent=None):
+            built.append(task)
+            return _FakeInstallWorker()
+
+        monkeypatch.setattr("anki_miner.gui.workers.install_worker.InstallWorker", _build)
+        return built
+
+    def test_a_recogniser_install_is_refused_while_the_video_ocr_setup_runs(
+        self, controller, qtbot, monkeypatch, tmp_path
+    ):
+        built = self._record_builds(monkeypatch)
+        controller.video_ocr_install_worker = self._running()
+
+        finished_calls: list[tuple] = []
+        _start_mokuro(
+            controller,
+            tmp_path,
+            on_finished=lambda ok, msg: finished_calls.append((ok, msg)),
+            recognizer=RECOGNIZERS["korean"],
+        )
+
+        assert len(finished_calls) == 1
+        ok, message = finished_calls[0]
+        assert ok is False and message.startswith("Wait for ") and message.endswith(", then try again.")
+        assert built == []
+        assert controller.mokuro_install_worker is None
+
+    def test_the_video_ocr_setup_is_refused_while_a_recogniser_install_runs(
+        self, controller, qtbot, monkeypatch, tmp_path
+    ):
+        _patch_install_worker(monkeypatch, _FakeInstallWorker())
+        _start_mokuro(controller, tmp_path, recognizer=RECOGNIZERS["korean"])
+        assert controller.mokuro_install_worker.isRunning()
+        built = self._record_builds(monkeypatch)
+
+        finished_calls: list[tuple] = []
+        controller.start_video_ocr_install(
+            tmp_path / "pack",
+            tmp_path / "models",
+            MEIKI_SPECS,
+            lambda msg: None,
+            lambda ok, msg: finished_calls.append((ok, msg)),
+        )
+
+        assert len(finished_calls) == 1
+        ok, message = finished_calls[0]
+        assert ok is False and message.startswith("Wait for ") and message.endswith(", then try again.")
+        assert built == []
+        assert controller.video_ocr_install_worker is None
+
+    def test_a_japanese_install_starts_while_the_video_ocr_setup_runs(self, controller, qtbot, monkeypatch, tmp_path):
+        built = self._record_builds(monkeypatch)
+        controller.video_ocr_install_worker = self._running()
+
+        finished_calls: list[tuple] = []
+        _start_mokuro(controller, tmp_path, on_finished=lambda ok, msg: finished_calls.append((ok, msg)))
+
+        assert finished_calls == []
+        assert len(built) == 1
+
+    def test_the_video_ocr_setup_starts_while_a_japanese_install_runs(self, controller, qtbot, monkeypatch, tmp_path):
+        """A Japanese install is hours of torch; it never touches ocr_models/."""
+        _patch_install_worker(monkeypatch, _FakeInstallWorker())
+        _start_mokuro(controller, tmp_path)
+        assert controller.mokuro_install_worker.isRunning()
+        built = self._record_builds(monkeypatch)
+
+        finished_calls: list[tuple] = []
+        controller.start_video_ocr_install(
+            tmp_path / "pack",
+            tmp_path / "models",
+            MEIKI_SPECS,
+            lambda msg: None,
+            lambda ok, msg: finished_calls.append((ok, msg)),
+        )
+
+        assert finished_calls == []
+        assert len(built) == 1
 
 
 class TestStartVideoOcrInstall:

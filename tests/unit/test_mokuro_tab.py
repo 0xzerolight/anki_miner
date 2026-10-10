@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -10,11 +11,15 @@ import pytest
 pytest.importorskip("PyQt6.QtWidgets")
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.widgets import mokuro_tab as mokuro_tab_module
 from anki_miner.gui.widgets.mokuro_tab import MokuroTab
+from anki_miner.services.mokuro_installer import MangaOcrState
 from anki_miner.services.mokuro_volumes import MokuroVolume
+from tests.unit._ocr_profiles import with_recognizer
 
 _AVAILABLE = "anki_miner.gui.widgets.mokuro_tab.MokuroTab._mokuro_ready"
 _COMPUTE_AVAILABLE = "anki_miner.gui.widgets.mokuro_tab.MokuroTab._compute_mokuro_available"
+_STATE = "anki_miner.gui.widgets.mokuro_tab.manga_ocr_state"
 _OS_ACCESS = "anki_miner.gui.widgets.mokuro_tab.os.access"
 _WORKER_CLS = "anki_miner.gui.widgets.mokuro_tab.MokuroWorker"
 _RUN_OFF_THREAD = "anki_miner.gui.widgets.mokuro_tab.run_off_thread"
@@ -230,6 +235,125 @@ class TestSetupCard:
 
         tab.set_mokuro_status("Installed")
         assert tab.mokuro_status_label.property("status") == "success"
+
+
+_JA_NOTICE = "mokuro is not installed. Install it in the Manga OCR setup section below."
+_MODEL_MISSING = "This language needs its OCR model."
+_OWN_MOKURO = "This language needs Anki Miner's own mokuro. Install it below."
+
+
+class TestLanguageStates:
+    """The setup card and notice read the mining language's MangaOcrState (Review Focus 1, 2)."""
+
+    @staticmethod
+    def _tab(qtbot, tmp_path, monkeypatch, state, *, language: str = "ko") -> MokuroTab:
+        if language != "ja":
+            with_recognizer(monkeypatch, mokuro_tab_module, language, "korean")
+        config = replace(_config(tmp_path), language=language)
+        with patch(_STATE, return_value=state), patch(_INSTALL_SUPPORTED, return_value=True):
+            tab = MokuroTab(config)
+            qtbot.addWidget(tab)
+            assert tab._availability_worker.wait(3000)
+            qtbot.waitUntil(lambda: tab.mokuro_status_label.text() != "", timeout=3000)
+        return tab
+
+    @staticmethod
+    def _emitted(tab: MokuroTab) -> list[bool]:
+        fired: list[bool] = []
+        tab.mokuro_install_requested.connect(fired.append)
+        tab.install_mokuro_button.click()
+        return fired
+
+    def test_japanese_missing_reads_as_today(self, qtbot, tmp_path, monkeypatch):
+        tab = self._tab(qtbot, tmp_path, monkeypatch, MangaOcrState(False, False), language="ja")
+
+        assert tab.engine_notice_label.text() == _JA_NOTICE
+        assert not tab.engine_notice_label.isHidden()
+        assert tab.install_mokuro_button.text() == "Install mokuro"
+        assert tab.mokuro_status_label.text() == "Not installed"
+        assert not tab.run_button.isEnabled()
+        assert self._emitted(tab) == [False]
+
+    def test_japanese_found_reads_as_today(self, qtbot, tmp_path, monkeypatch):
+        tab = self._tab(qtbot, tmp_path, monkeypatch, MangaOcrState(True, True), language="ja")
+
+        assert not tab.installed_row.isHidden() and tab.setup_row.isHidden()
+        assert tab.engine_notice_label.isHidden()
+        assert tab.run_button.isEnabled()
+        tab.change_setup_button.click()
+        assert tab.install_mokuro_button.text() == "Reinstall mokuro"
+        assert self._emitted(tab) == [True]
+
+    def test_a_managed_mokuro_without_the_language_parts_offers_the_model(self, qtbot, tmp_path, monkeypatch):
+        """Review Focus 1: a managed (Japanese) venv in ko downloads only the model, never torch."""
+        tab = self._tab(qtbot, tmp_path, monkeypatch, MangaOcrState(False, True))
+
+        assert not tab.setup_row.isHidden() and tab.installed_row.isHidden()
+        assert tab.install_mokuro_button.text() == "Download OCR model"
+        assert "13 MB" in tab.install_mokuro_button.toolTip()
+        assert tab.mokuro_status_label.text() == _MODEL_MISSING
+        assert tab.engine_notice_label.text() == _MODEL_MISSING
+        assert not tab.engine_notice_label.isHidden()
+        assert not tab.run_button.isEnabled()
+        assert self._emitted(tab) == [False]
+
+    def test_a_path_mokuro_in_a_recogniser_language_asks_for_the_in_app_one(self, qtbot, tmp_path, monkeypatch):
+        """Review Focus 2: a PATH or override mokuro cannot run the recogniser."""
+        tab = self._tab(qtbot, tmp_path, monkeypatch, MangaOcrState(False, False))
+
+        assert tab.install_mokuro_button.text() == "Install mokuro"
+        assert "1 GB" in tab.install_mokuro_button.toolTip()
+        assert tab.mokuro_status_label.text() == "Not installed"
+        assert tab.engine_notice_label.text() == _OWN_MOKURO
+        assert not tab.engine_notice_label.isHidden()
+        assert self._emitted(tab) == [False]
+
+    def test_everything_present_is_the_one_line_card_and_change_reinstalls(self, qtbot, tmp_path, monkeypatch):
+        tab = self._tab(qtbot, tmp_path, monkeypatch, MangaOcrState(True, True))
+
+        assert not tab.installed_row.isHidden() and tab.setup_row.isHidden()
+        assert tab.engine_notice_label.isHidden()
+        assert tab.run_button.isEnabled()
+        tab.change_setup_button.click()
+        assert tab.install_mokuro_button.text() == "Reinstall mokuro"
+        assert "1 GB" in tab.install_mokuro_button.toolTip()
+        assert self._emitted(tab) == [True]
+
+    def test_a_refresh_reapplies_the_stored_state_not_a_bare_bool(self, qtbot, tmp_path, monkeypatch):
+        """Run start/end refreshes must keep "Download OCR model", not fall back to "Install mokuro"."""
+        tab = self._tab(qtbot, tmp_path, monkeypatch, MangaOcrState(False, True))
+
+        tab._scan_pending_run = True
+        tab._refresh_mokuro_setup_state()
+        assert not tab.install_mokuro_button.isEnabled()
+
+        tab._scan_pending_run = False
+        tab._refresh_mokuro_setup_state()
+        assert tab.install_mokuro_button.isEnabled()
+        assert tab.install_mokuro_button.text() == "Download OCR model"
+        assert tab.mokuro_status_label.text() == _MODEL_MISSING
+
+    def test_change_reapplies_the_stored_state(self, qtbot, tmp_path, monkeypatch):
+        tab = self._tab(qtbot, tmp_path, monkeypatch, MangaOcrState(True, True))
+        tab._mokuro_is_available = False  # a stale bool must not decide the card
+
+        tab.change_setup_button.click()
+
+        assert tab.install_mokuro_button.text() == "Reinstall mokuro"
+        assert tab.mokuro_status_label.text() == "Installed"
+
+    def test_a_failed_probe_reads_not_installed(self, qtbot, tmp_path, monkeypatch):
+        """The base class answers a raising probe with _apply_probe_result(False)."""
+        with patch(_STATE, side_effect=RuntimeError("boom")), patch(_INSTALL_SUPPORTED, return_value=True):
+            tab = MokuroTab(_config(tmp_path))
+            qtbot.addWidget(tab)
+            assert tab._availability_worker.wait(3000)
+            qtbot.waitUntil(lambda: tab.mokuro_status_label.text() == "Not installed", timeout=3000)
+
+        assert tab._mokuro_state == MangaOcrState(False, False)
+        assert not tab.run_button.isEnabled()
+        assert not tab.engine_notice_label.isHidden()
+        assert tab.install_mokuro_button.text() == "Install mokuro"
 
 
 class TestRun:

@@ -175,7 +175,7 @@ def _check_ytdlp_force_true(window, args, kwargs):
         ),
         ("Utilities", "download_tab", "ytdlp_download_requested", (), "start_ytdlp_update", _check_ytdlp_force_true),
         ("Video", "youtube_tab", "ytdlp_download_requested", (), "start_ytdlp_update", _check_ytdlp_force_true),
-        ("Utilities", "mokuro_tab", "mokuro_install_requested", (), "start_mokuro_install", _no_extra_checks),
+        ("Utilities", "mokuro_tab", "mokuro_install_requested", (False,), "start_mokuro_install", _no_extra_checks),
         (
             "Utilities",
             "video_ocr_tab",

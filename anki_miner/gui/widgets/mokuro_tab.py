@@ -12,7 +12,8 @@ availability probe, worker lifecycle); the folder scan runs off-thread like
 Condense's folder mode.
 
 Guard contract:
-- mokuro not found → Run OCR disabled, notice visible (the setup card below installs it).
+- mokuro not found, or a recogniser language's parts missing → Run OCR disabled,
+  notice visible (the setup card below installs them).
 - Folder missing / empty / not writable → Run aborts with a screen issue.
 
 Worker contract:
@@ -42,11 +43,13 @@ from anki_miner.gui.widgets.base import FormPanel, PageWidth, ScreenIssue, confi
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.workers.base_worker import SingleCallWorker
 from anki_miner.gui.workers.mokuro_worker import MokuroWorker
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services import mokuro_installer
+from anki_miner.services.mokuro_installer import MangaOcrState, manga_ocr_state
 from anki_miner.services.mokuro_runner import MokuroOptions
 from anki_miner.services.mokuro_volumes import MokuroVolume, scan_volumes
+from anki_miner.services.ocr.recognizers import RECOGNIZERS, RecognizerSpec
 from anki_miner.utils.i18n import tr_format
-from anki_miner.utils.mokuro_resolver import mokuro_available
 
 if TYPE_CHECKING:
     from anki_miner.gui.workers.base_worker import CancellableWorker
@@ -67,10 +70,12 @@ class MokuroTab(RunOptionsMixin, _ToolTabBase):
             A self-built mokuro is ``mokuro_location`` in gui_config.json; the
             GUI no longer edits it (D15 item 3). The Redo box is transient on
             purpose (an overwrite-class option).
-        mokuro_install_requested: Emitted when the user clicks "Install
-            mokuro" / "Reinstall mokuro" on the setup card. The managed
-            install targets (``config.bin_root`` for uv, ``config.uv_root``
-            for the environment) are resolved by the wiring, not this tab.
+        mokuro_install_requested: Emitted with ``reinstall`` when the user
+            clicks "Install mokuro" / "Download OCR model" (False) or
+            "Reinstall mokuro" (True) on the setup card. The managed install
+            targets (``config.bin_root`` for uv, ``config.uv_root`` for the
+            environment, the language's recogniser) are resolved by the
+            wiring, not this tab.
     """
 
     PAGE_WIDTH = PageWidth.PAGE
@@ -82,7 +87,7 @@ class MokuroTab(RunOptionsMixin, _ToolTabBase):
     _PROBE_NAME = "mokuro"
 
     run_options_changed = pyqtSignal(object)  # Emits AnkiMinerConfig
-    mokuro_install_requested = pyqtSignal()
+    mokuro_install_requested = pyqtSignal(bool)  # reinstall
 
     def __init__(
         self,
@@ -100,6 +105,8 @@ class MokuroTab(RunOptionsMixin, _ToolTabBase):
         self._total_volumes = 0
         self._run_volumes: list[MokuroVolume] = []
         self._mokuro_is_available = False
+        #: The last probe's verdict; the setup card and its Install click read it.
+        self._mokuro_state = MangaOcrState(False, False)
         self._mokuro_supported = False if suppress_optional_startup else mokuro_installer.mokuro_install_supported()
         #: True between an Install click and its landing, so a probe running
         #: concurrently (an unrelated config change) cannot re-enable the
@@ -290,12 +297,12 @@ class MokuroTab(RunOptionsMixin, _ToolTabBase):
         # Unlike alass, the button exists on every platform: an unsupported
         # platform disables it and says so.
         self.install_mokuro_button = ModernButton(self.tr("Install mokuro"), variant="secondary")
-        self.install_mokuro_button.setToolTip(
-            self.tr(
-                "Downloads mokuro and its OCR engine into Anki Miner's folder "
-                "— about 1 GB, up to 4 GB with NVIDIA GPU support."
-            )
+        #: Install/Reinstall's tooltip; "Download OCR model" swaps in its own.
+        self._install_tooltip = self.tr(
+            "Downloads mokuro and its OCR engine into Anki Miner's folder "
+            "— about 1 GB, up to 4 GB with NVIDIA GPU support."
         )
+        self.install_mokuro_button.setToolTip(self._install_tooltip)
         self.install_mokuro_button.setEnabled(self._mokuro_supported)
         self.install_mokuro_button.clicked.connect(self._on_mokuro_install_clicked)
 
@@ -358,44 +365,63 @@ class MokuroTab(RunOptionsMixin, _ToolTabBase):
         return lambda: self._compute_mokuro_available(config)
 
     def _apply_probe_result(self, result: object) -> None:
+        # A bare bool still arrives from the base class's error path
+        # (_apply_probe_result(False)); it means "nothing found".
+        state = result if isinstance(result, MangaOcrState) else MangaOcrState(bool(result), bool(result))
+        self._mokuro_state = state
+        self._mokuro_is_available = state.available
+        self.engine_notice_label.setText(self._engine_notice_text(state))
+        self.engine_notice_label.setVisible(not self._mokuro_is_available)
         # A probe scheduled before a run started can land after it did. The run
         # owns the button for its whole duration — including the folder scan
         # that precedes the worker, when worker_thread is still None.
-        self._mokuro_is_available = bool(result)
-        self.engine_notice_label.setVisible(not self._mokuro_is_available)
         self.run_button.setEnabled(
             self._mokuro_is_available and not still_running(self.worker_thread) and not self._scan_pending_run
         )
-        self._apply_mokuro_setup_state(self._mokuro_is_available)
+        self._apply_mokuro_setup_state(state)
 
     def _mokuro_ready(self) -> bool:
         return self._mokuro_is_available
 
     @staticmethod
-    def _compute_mokuro_available(config: AnkiMinerConfig) -> bool:
-        """Resolver-only probe (never spawns mokuro: its import costs seconds)."""
-        return mokuro_available(config.mokuro_location, config.uv_root)
+    def _compute_mokuro_available(config: AnkiMinerConfig) -> MangaOcrState:
+        """File probes only (never spawns mokuro: its import costs seconds)."""
+        return manga_ocr_state(config)
+
+    def _recognizer(self) -> RecognizerSpec | None:
+        """The mining language's PP-OCR recogniser; None for manga-ocr's own language."""
+        return RECOGNIZERS.get(get_profile(config_language(self.config)).ocr_recognizer)
+
+    def _engine_notice_text(self, state: MangaOcrState) -> str:
+        """Why Run OCR is off. A recogniser language cannot use a PATH or override mokuro."""
+        if self._recognizer() is None:
+            return self.tr("mokuro is not installed. Install it in the Manga OCR setup section below.")
+        if state.mokuro:
+            return self.tr("This language needs its OCR model.")
+        return self.tr("This language needs Anki Miner's own mokuro. Install it below.")
 
     # ------------------------------------------------------------------
     # Setup card: in-app install (E08: one line once mokuro is found)
     # ------------------------------------------------------------------
 
-    def _apply_mokuro_setup_state(self, installed: bool) -> None:
-        """Reflect whether mokuro is reachable on the setup card; re-enable Install.
+    def _apply_mokuro_setup_state(self, state: MangaOcrState) -> None:
+        """Reflect whether Manga OCR can run on the setup card; re-enable Install.
 
         Ported 1:1 from the retired Settings-panel ``_apply_mokuro_state``:
-        "installed" covers the managed uv environment, an explicit path
-        override, and the user's own pip/pipx mokuro on PATH — the same chain
-        :meth:`_compute_mokuro_available` resolves, so the two can never
-        disagree. Install stays disabled while: an install is already in
-        flight; the platform is unsupported (the construction-time "Not
-        available on this platform" status is the only reason on screen for
-        that then, and must not be overwritten with "Not installed"); or an
-        OCR run/folder scan is in flight — reinstalling mid-run could pull the
-        executable out from under the running worker.
+        for manga-ocr's own language "installed" covers the managed uv
+        environment, an explicit path override, and the user's own pip/pipx
+        mokuro on PATH — the same chain :meth:`_compute_mokuro_available`
+        resolves, so the two can never disagree. A recogniser language with
+        the in-app mokuro but not its parts offers "Download OCR model".
+        Install stays disabled while: an install is already in flight; the
+        platform is unsupported (the construction-time "Not available on this
+        platform" status is the only reason on screen for that then, and must
+        not be overwritten with "Not installed"); or an OCR run/folder scan is
+        in flight — reinstalling mid-run could pull the executable out from
+        under the running worker.
         """
-        self.installed_row.setVisible(installed and not self._setup_expanded)
-        self.setup_row.setVisible(not installed or self._setup_expanded)
+        self.installed_row.setVisible(state.available and not self._setup_expanded)
+        self.setup_row.setVisible(not state.available or self._setup_expanded)
         if (
             self._mokuro_install_active
             or not self._mokuro_supported
@@ -405,8 +431,26 @@ class MokuroTab(RunOptionsMixin, _ToolTabBase):
             self.install_mokuro_button.setEnabled(False)
             return
         self.install_mokuro_button.setEnabled(True)
-        self.install_mokuro_button.setText(self.tr("Reinstall mokuro") if installed else self.tr("Install mokuro"))
-        self.set_mokuro_status(self.tr("Installed") if installed else self.tr("Not installed"))
+        recognizer = self._recognizer()
+        if state.mokuro and not state.available and recognizer is not None:
+            mb = round(recognizer.model.size_bytes / 1_000_000)
+            self.install_mokuro_button.setText(self.tr("Download OCR model"))
+            self.install_mokuro_button.setToolTip(
+                tr_format(
+                    self.tr(
+                        "Downloads the text-recognition model for your mining language (about %1 MB) "
+                        "into Anki Miner's folder."
+                    ),
+                    mb,
+                )
+            )
+            self.set_mokuro_status(self.tr("This language needs its OCR model."))
+            return
+        self.install_mokuro_button.setToolTip(self._install_tooltip)
+        self.install_mokuro_button.setText(
+            self.tr("Reinstall mokuro") if state.available else self.tr("Install mokuro")
+        )
+        self.set_mokuro_status(self.tr("Installed") if state.available else self.tr("Not installed"))
 
     def _refresh_mokuro_setup_state(self) -> None:
         """Re-apply the setup card's Install gating after a run/scan state change.
@@ -416,19 +460,23 @@ class MokuroTab(RunOptionsMixin, _ToolTabBase):
         Install disables for the run's duration and re-enables the moment it
         is over.
         """
-        self._apply_mokuro_setup_state(self._mokuro_is_available)
+        self._apply_mokuro_setup_state(self._mokuro_state)
 
     def _on_change_setup_clicked(self) -> None:
         """Show Install/Reinstall on an installed mokuro (E08)."""
         self._setup_expanded = True
-        self._apply_mokuro_setup_state(self._mokuro_is_available)
+        self._apply_mokuro_setup_state(self._mokuro_state)
 
     def _on_mokuro_install_clicked(self) -> None:
-        """Disable Install in flight, show a pending status, and request the install."""
+        """Disable Install in flight, show a pending status, and request the install.
+
+        Everything present leaves Change… → "Reinstall mokuro" as the only
+        reachable button, so a ready state means a reinstall.
+        """
         self._mokuro_install_active = True
         self.install_mokuro_button.setEnabled(False)
         self.set_mokuro_status(self.tr("Installing…"))
-        self.mokuro_install_requested.emit()
+        self.mokuro_install_requested.emit(bool(self._mokuro_state))
 
     def set_mokuro_status(self, text: str) -> None:
         """Set the mokuro status label text (shown beside the Install button).

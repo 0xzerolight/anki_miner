@@ -11,16 +11,20 @@ these tests call that real helper against a fake Manga OCR tab.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from types import SimpleNamespace
 
 import pytest
 from PyQt6.QtCore import QObject, pyqtSignal
 
+from anki_miner.services.ocr.recognizers import RECOGNIZERS
+from tests.unit._ocr_profiles import with_recognizer
+
 
 class _FakeMokuroTab(QObject):
     """Records each status/notify call and the resolver cache seen at that moment."""
 
-    mokuro_install_requested = pyqtSignal()
+    mokuro_install_requested = pyqtSignal(bool)
 
     def __init__(self) -> None:
         super().__init__()
@@ -55,9 +59,12 @@ def wired(monkeypatch, patch_heavy_init, test_config, qtbot):
 
     captured: dict = {}
 
-    def _fake_start(bin_root, uv_root, status_cb, on_finished):
+    def _fake_start(bin_root, uv_root, models_root, recognizer, reinstall, status_cb, on_finished):
         captured["bin_root"] = bin_root
         captured["uv_root"] = uv_root
+        captured["models_root"] = models_root
+        captured["recognizer"] = recognizer
+        captured["reinstall"] = reinstall
         captured["on_finished"] = on_finished
 
     monkeypatch.setattr(window.background_tasks, "start_mokuro_install", _fake_start)
@@ -71,17 +78,40 @@ def wired(monkeypatch, patch_heavy_init, test_config, qtbot):
 class TestMokuroInstallWiring:
     def test_request_starts_install_with_config_roots(self, wired):
         window, captured, mokuro_tab = wired
-        mokuro_tab.mokuro_install_requested.emit()
+        mokuro_tab.mokuro_install_requested.emit(False)
 
         assert "on_finished" in captured  # button → background install requested
         assert captured["bin_root"] == window.get_config().bin_root
         assert captured["uv_root"] == window.get_config().uv_root
+        assert captured["models_root"] == window.get_config().video_ocr_models_root
+        # Japanese: manga-ocr's own model, no recogniser to fetch.
+        assert captured["recognizer"] is None
+        assert captured["reinstall"] is False
+
+    def test_a_reinstall_request_is_forwarded(self, wired):
+        _window, captured, mokuro_tab = wired
+        mokuro_tab.mokuro_install_requested.emit(True)
+
+        assert captured["reinstall"] is True
+
+    def test_a_recogniser_language_forwards_its_spec(self, wired, monkeypatch):
+        from anki_miner.gui import app as app_module
+
+        window, captured, mokuro_tab = wired
+        with_recognizer(monkeypatch, app_module, "ko", "korean")
+        config = replace(window.get_config(), language="ko")
+        monkeypatch.setattr(window, "get_config", lambda: config)
+
+        mokuro_tab.mokuro_install_requested.emit(True)
+
+        assert captured["recognizer"] == RECOGNIZERS["korean"]
+        assert captured["reinstall"] is True
 
     def test_successful_install_clears_cache_then_notifies_the_tab(self, wired):
         from anki_miner.utils import mokuro_resolver
 
         _window, captured, mokuro_tab = wired
-        mokuro_tab.mokuro_install_requested.emit()
+        mokuro_tab.mokuro_install_requested.emit(False)
 
         mokuro_resolver._CACHE[(None, None)] = "mokuro"
         captured["on_finished"](True, "ok")
@@ -96,7 +126,7 @@ class TestMokuroInstallWiring:
         from anki_miner.utils import mokuro_resolver
 
         _window, captured, mokuro_tab = wired
-        mokuro_tab.mokuro_install_requested.emit()
+        mokuro_tab.mokuro_install_requested.emit(False)
 
         mokuro_resolver._CACHE[(None, None)] = "mokuro"
         captured["on_finished"](False, "boom")
@@ -114,7 +144,7 @@ class TestMokuroInstallWiring:
         from anki_miner.utils import mokuro_resolver
 
         _window, captured, mokuro_tab = wired
-        mokuro_tab.mokuro_install_requested.emit()
+        mokuro_tab.mokuro_install_requested.emit(False)
 
         mokuro_resolver._CACHE[(None, None)] = "mokuro"
         captured["on_finished"](True, "ok")
@@ -125,7 +155,7 @@ class TestMokuroInstallWiring:
         """The shared ``_connect_download`` skeleton always forwards the
         worker's final message to the tab's own status setter."""
         _window, captured, mokuro_tab = wired
-        mokuro_tab.mokuro_install_requested.emit()
+        mokuro_tab.mokuro_install_requested.emit(False)
 
         captured["on_finished"](False, "boom")
 

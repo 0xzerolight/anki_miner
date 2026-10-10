@@ -1370,7 +1370,8 @@ def _start_stats_load(window: QWidget, stats_service: StatsService, analytics_ta
 # owns everything shared. The named ``_connect_*_download`` builders survive as
 # the unit-test seam (``test_app_*_download_wiring``) and the main() loop entries.
 
-# request arg: model name for ASR/Vulkan, None for the 0-arg pack buttons.
+# request arg: model name for ASR/Vulkan, the reinstall flag for mokuro, None
+# for the 0-arg pack buttons.
 _DownloadStart = Callable[[object, Callable[[str], None], Callable[[bool, str], None]], None]
 _DownloadTail = Callable[[object, bool, str], None]
 
@@ -1384,8 +1385,8 @@ def _connect_download(
 ) -> None:
     """Wire one resource download button (see the ARC-010 note above).
 
-    ``requested`` may be 0-arg (pack buttons) or 1-arg (ASR/Vulkan model name);
-    the model name, when present, flows into both ``start`` and
+    ``requested`` may be 0-arg (pack buttons) or 1-arg (ASR/Vulkan model name,
+    mokuro's reinstall flag); the argument, when present, flows into both ``start`` and
     ``on_finished_tail``. ``set_status`` receives every status line and the
     final message; ``on_finished_tail`` runs after it on completion.
     """
@@ -1473,8 +1474,20 @@ def _connect_mokuro_install(window: MainWindow, subtitles_tab: SubtitlesTab) -> 
         subtitles_tab.mokuro_tab.notify_install_finished(ok)
 
     def _start(request_arg: object, on_status: Callable[[str], None], on_finished: Callable[[bool, str], None]) -> None:
+        from anki_miner.services.ocr.recognizers import RECOGNIZERS
+
         config = window.get_config()
-        window.background_tasks.start_mokuro_install(config.bin_root, config.uv_root, on_status, on_finished)
+        # The tab emits reinstall: True only from Change… on a ready Manga OCR.
+        recognizer = RECOGNIZERS.get(get_profile(config_language(config)).ocr_recognizer)
+        window.background_tasks.start_mokuro_install(
+            config.bin_root,
+            config.uv_root,
+            config.video_ocr_models_root,
+            recognizer,
+            bool(request_arg),
+            on_status,
+            on_finished,
+        )
 
     _connect_download(
         subtitles_tab.mokuro_tab.mokuro_install_requested,
@@ -1489,8 +1502,8 @@ def _connect_video_ocr_install(window: MainWindow, subtitles_tab: SubtitlesTab, 
 
     The task may have installed the onnxruntime pack, which Settings' silence-removal
     row also reads, even when it then failed on the models, so that row is refreshed.
-    Not while that row's own download runs (the only time the task is refused): a
-    refresh then would clear its in-flight guard.
+    Not while that row's own download runs (the task is refused then): a refresh
+    then would clear its in-flight guard.
     """
 
     def _tail(request_arg: object, ok: bool, message: str) -> None:

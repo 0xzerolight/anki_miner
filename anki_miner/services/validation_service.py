@@ -21,6 +21,7 @@ from anki_miner.services.anki_note_builder import (
     field_target_collision_message,
     no_note_type_message,
 )
+from anki_miner.services.mokuro_installer import manga_ocr_state
 from anki_miner.services.resource_staleness import format_stale_family_message
 from anki_miner.utils import ensure_directory
 from anki_miner.utils.alass_resolver import resolve_alass
@@ -49,6 +50,13 @@ _YTDLP_STALE_AFTER_DAYS = 120
 #: a healthy install as busy. 10s rides over those and is still nothing against the
 #: 3h transfer this refuses to park behind.
 _YTDLP_LOCK_WAIT_SECONDS = 10.0
+
+#: Manga OCR's absence, for manga-ocr's language and for a recogniser language
+#: with no in-app mokuro (a PATH one cannot run the recogniser). System Health
+#: reads both texts below as "Not installed" by their prefixes.
+MOKURO_NOT_FOUND_MESSAGE = "mokuro not found — Utilities → Manga OCR is unavailable; install it on that tab"
+#: A recogniser language with the in-app mokuro but not onnxruntime or its model.
+_MODEL_MISSING = "Manga OCR model not downloaded — Utilities → Manga OCR downloads the model for this language"
 
 
 @dataclass(frozen=True)
@@ -249,13 +257,23 @@ class ValidationService:
 
         # Check mokuro (optional — Utilities → Manga OCR only; absent is non-fatal).
         # Manga OCR exists only for a language with the "manga_ocr" capability, so
-        # elsewhere a missing mokuro is no issue; the version still records.
+        # elsewhere a missing mokuro is no issue; the version still records. A
+        # recogniser language needs the in-app mokuro plus its parts, which
+        # manga_ocr_state (the tab's own probe) decides.
         from anki_miner.languages.registry import config_language, get_profile
 
         mokuro_ok, mokuro_msg = self._check_mokuro()
         tool_versions["mokuro"] = mokuro_msg if mokuro_ok else ""
-        if not mokuro_ok and "manga_ocr" in get_profile(config_language(self.config)).capabilities:
-            issues.append(ValidationIssue(component="mokuro", severity="WARNING", message=mokuro_msg))
+        profile = get_profile(config_language(self.config))
+        if "manga_ocr" in profile.capabilities:
+            if not profile.ocr_recognizer:
+                if not mokuro_ok:
+                    issues.append(ValidationIssue(component="mokuro", severity="WARNING", message=mokuro_msg))
+            else:
+                state = manga_ocr_state(self.config)
+                if not state:
+                    message = _MODEL_MISSING if state.mokuro else MOKURO_NOT_FOUND_MESSAGE
+                    issues.append(ValidationIssue(component="mokuro", severity="WARNING", message=message))
 
         # The mining language's engine (spaCy model, jieba, ...). Without it no
         # word parses, so it is an ERROR; the version slot names the language.
@@ -661,11 +679,7 @@ class ValidationService:
         sweep would pay; the resolver's executable check is the whole probe.
         """
         if not mokuro_available(self.config.mokuro_location, self.config.uv_root):
-            return _record(
-                "mokuro",
-                False,
-                "mokuro not found — Utilities → Manga OCR is unavailable; install it on that tab",
-            )
+            return _record("mokuro", False, MOKURO_NOT_FOUND_MESSAGE)
         resolved = resolve_mokuro(self.config)
         return _record("mokuro", True, f"mokuro {_classify_resolved('mokuro', resolved)}", path=resolved)
 

@@ -970,10 +970,26 @@ def test_the_not_installed_prefixes_match_the_validation_service():
     from pathlib import Path
 
     import anki_miner.services.validation_service as service
+    from anki_miner.gui.widgets.dialogs.system_health_window import _ABSENT_PREFIXES
 
     source = Path(service.__file__).read_text(encoding="utf-8")
-    for prefix in ("yt-dlp not found", "alass not found", "mokuro not found"):
+    prefixes = [prefix for group in _ABSENT_PREFIXES.values() for prefix in group]
+    assert "Manga OCR model not downloaded" in prefixes
+    for prefix in prefixes:
         assert prefix in source
+
+
+def test_a_missing_manga_ocr_model_reads_not_installed(health_window):
+    """A recogniser language's model is absence too, not breakage."""
+    message = "Manga OCR model not downloaded — x"
+    result = _result(issues=[ValidationIssue(component="mokuro", severity="WARNING", message=message)])
+    health_window.show()
+
+    health_window.show_health(HealthReport.unknown().with_validation(result, CHECKED_AT))
+
+    row = health_window._rows["tools.mokuro"]
+    assert row.badge.text() == "Not installed"
+    assert row.fix_button.text() == "Install…"
 
 
 def test_not_installed_offers_install_not_fix(health_window):

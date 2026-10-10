@@ -80,9 +80,13 @@ def load_reading_source(
     if source.kind == "mokuro":
         # Gate each block on the mining language's script, even where the
         # parser keeps every line, so a translated volume's untouched SFX
-        # (ドドド) stays out. The OCR-native language keeps the loader's own
-        # manga-ocr gate (None).
-        has_target_script = None if "manga_ocr" in profile.capabilities else profile.script.contains_target_script
+        # (ドドド) stays out. manga-ocr's own language keeps the loader's gate
+        # (None); a recogniser language gates on its script.
+        has_target_script = (
+            None
+            if "manga_ocr" in profile.capabilities and not profile.ocr_recognizer
+            else profile.script.contains_target_script
+        )
     # One bundle: omitted keywords keep detector.load's pre-seam call shape.
     loader_kwargs: dict[str, Any] = {**script_check_kwarg(ladder, profile.script)}
     if normalize is not None:

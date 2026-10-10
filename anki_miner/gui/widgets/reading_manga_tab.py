@@ -84,9 +84,10 @@ _NOVEL_EXTS = (".epub", ".txt")
 # ("Manga") is tr()'d at call time; only the literal extension glob lives here.
 _MANGA_FILTER_GLOB = "*.mokuro *.cbz *.zip"
 
-#: The mining-language capability that offers Utilities → Manga OCR. WS4's E17
-#: adds it to the Japanese profile (mokuro's OCR model is Japanese-only), so
-#: the hand-off is offered exactly where the tool is.
+#: The mining-language capability that offers Utilities → Manga OCR. Japanese
+#: has it through manga-ocr, other languages through a PP-OCR recogniser
+#: (``LanguageProfile.ocr_recognizer``), so the hand-off is offered exactly
+#: where the tool is.
 _MANGA_OCR_CAPABILITY = "manga_ocr"
 
 #: Lower-cased text both "no OCR data" refusals of ``detector`` contain: the

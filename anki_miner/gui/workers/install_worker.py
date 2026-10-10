@@ -44,6 +44,7 @@ from anki_miner.utils.logging_ext import log_summary
 
 if TYPE_CHECKING:
     from anki_miner.services.ocr.model_installer import ModelSpec
+    from anki_miner.services.ocr.recognizers import RecognizerSpec
 
 logger = logging.getLogger(__name__)
 
@@ -184,15 +185,24 @@ def _mokuro_status_translations() -> dict[str, str]:
     }
 
 
-def mokuro_install_task(bin_root: Path, uv_root: Path) -> InstallTask:
-    """Task: uv download (byte progress) + uv venv + uv pip install (status lines).
+def mokuro_install_task(
+    bin_root: Path, uv_root: Path, models_root: Path, recognizer: RecognizerSpec | None, *, reinstall: bool
+) -> InstallTask:
+    """Task: whatever this language's Manga OCR is missing.
+
+    A reinstall or a missing in-app mokuro runs the full uv install (unchanged, Japanese's
+    path); a recogniser language then adds onnxruntime to the venv if it lacks it (a fresh,
+    cleared or older venv) and fetches its model. A managed Japanese venv switching
+    language therefore downloads ~15 MB + the model, never torch again.
 
     The installer is Qt-free and reports its phases as fixed strings; they are
     swapped for translations here. uv's own lines pass through verbatim.
     """
 
     def _task(worker: InstallWorker) -> str:
-        from anki_miner.services.mokuro_installer import install_mokuro
+        from anki_miner.services import mokuro_installer as mi
+        from anki_miner.services.ocr import model_installer
+        from anki_miner.utils.mokuro_resolver import managed_mokuro_installed
 
         worker._progress_ctx = "MokuroInstallWorker"
         translated = _mokuro_status_translations()
@@ -200,14 +210,18 @@ def mokuro_install_task(bin_root: Path, uv_root: Path) -> InstallTask:
         def _status(line: str) -> None:
             worker.status.emit(translated.get(line, line))
 
-        worker.status.emit(QCoreApplication.translate("MokuroInstallWorker", "Installing mokuro…"))
-        install_mokuro(
-            bin_root,
-            uv_root,
-            status=_status,
-            progress=worker._on_progress,
-            cancel_event=worker.cancel_event,
-        )
+        progress, cancel_event = worker._on_progress, worker.cancel_event
+        if reinstall or not managed_mokuro_installed(uv_root):
+            worker.status.emit(QCoreApplication.translate("MokuroInstallWorker", "Installing mokuro…"))
+            mi.install_mokuro(bin_root, uv_root, status=_status, progress=progress, cancel_event=cancel_event)
+        if recognizer is not None and not mi.onnxruntime_installed(uv_root):
+            worker.status.emit(QCoreApplication.translate("MokuroInstallWorker", "Adding the OCR runtime…"))
+            mi.add_onnxruntime(bin_root, uv_root, status=_status, progress=progress, cancel_event=cancel_event)
+        if recognizer is not None:
+            worker.status.emit(QCoreApplication.translate("MokuroInstallWorker", "Downloading the OCR model…"))
+            model_installer.install_models(
+                models_root, (recognizer.model,), progress=progress, cancel_event=cancel_event
+            )
         return QCoreApplication.translate("MokuroInstallWorker", "mokuro installed.")
 
     return _task

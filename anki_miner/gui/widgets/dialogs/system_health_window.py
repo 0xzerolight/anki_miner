@@ -76,11 +76,12 @@ HEALTH_NOT_INSTALLED = "not_installed"
 #: How the validation service words an absent optional tool
 #: (services/validation_service.py, the ``missing_message`` of each check). A
 #: warning that starts this way is absence, not breakage. Pinned by
-#: test_the_not_installed_prefixes_match_the_validation_service.
-_ABSENT_PREFIXES: dict[str, str] = {
-    "tools.ytdlp": "yt-dlp not found",
-    "tools.alass": "alass not found",
-    "tools.mokuro": "mokuro not found",
+#: test_the_not_installed_prefixes_match_the_validation_service. A recogniser
+#: language's missing Manga OCR model is absence too.
+_ABSENT_PREFIXES: dict[str, tuple[str, ...]] = {
+    "tools.ytdlp": ("yt-dlp not found",),
+    "tools.alass": ("alass not found",),
+    "tools.mokuro": ("mokuro not found", "Manga OCR model not downloaded"),
 }
 
 #: Report keys the window folds into another row (E10): ffmpeg and ffprobe are
