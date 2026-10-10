@@ -70,6 +70,20 @@ def test_half_width_punctuation_from_the_recogniser_is_restored(raw, expected):
     assert clean([box(raw, 0, 0, 400, 40)]) == expected
 
 
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("そうか…….", "そうか……"),
+        ("おお….客人たちよ", "おお…客人たちよ"),
+        ("そうか……", "そうか……"),
+        ("Lv.5になった", "Lv.5になった"),  # a period not after an ellipsis is kept
+    ],
+)
+def test_a_stray_dot_after_an_ellipsis_is_dropped(raw, expected):
+    # The recogniser reads the ellipsis's last dot a second time on some frames only.
+    assert clean([box(raw, 0, 0, 400, 40)]) == expected
+
+
 def test_no_boxes_or_blank_boxes_mean_no_dialogue():
     assert clean([]) == ""
     assert clean([box("  ", 0, 0, 100, 40)]) == ""

@@ -80,6 +80,17 @@ def test_a_held_line_over_a_changing_background_stays_separate():
     assert approx(segment(stream(values), reader(texts))) == [(0.0, 2.4, "そうだな"), (2.4, 4.4, "そうだね、行こう")]
 
 
+def test_a_held_ellipsis_line_with_a_flickering_stray_dot_is_one_cue():
+    # Through the real clean(): the recogniser adds a stray "." after "……" on some groups only.
+    values = ([100] * 6 + [40] * 6) * 2
+    texts = {100: "そうか……", 40: "そうか……."}
+
+    def read(frame: np.ndarray) -> str:
+        return clean([OcrBox(texts[int(frame[0, 0, 0])], (0, 0, 600, 40), 0.9)])
+
+    assert approx(segment(stream(values), read)) == [(0.0, 2.4, "そうか……")]
+
+
 def test_equal_text_across_a_gap_stays_two_cues():
     values = [200] * 10 + [0] * 10 + [200] * 10
     assert len(segment(stream(values), reader({200: "はい"}))) == 2

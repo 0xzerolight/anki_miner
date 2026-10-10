@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 
 from anki_miner.services.video_ocr.meiki_engine import OcrBox
@@ -15,6 +16,9 @@ _NAME_MAX = 10
 _NOT_IN_NAME = set("「」『』（）()：:。、！？!?")
 # The recogniser's labels are NFKC-folded, so Japanese ！？〜 come back as ASCII; restore them.
 _FULL_WIDTH = str.maketrans({"!": "！", "?": "？", "~": "〜"})
+# On some frames only, the recogniser reads an ellipsis's last dot a second time as a faint "." just past the
+# "…" (too little overlap for the decoder to suppress it), so one held line reads "……" then "……." and splits.
+_STRAY_DOT = re.compile(r"(?<=…)\.+")
 
 
 def _height(b: OcrBox) -> int:
@@ -89,4 +93,4 @@ def clean(boxes: Sequence[OcrBox]) -> str:
     rows = [r for r in rows if r]
     if not rows:
         return ""
-    return "\n".join(_strip_speaker(rows)).translate(_FULL_WIDTH)
+    return _STRAY_DOT.sub("", "\n".join(_strip_speaker(rows))).translate(_FULL_WIDTH)
