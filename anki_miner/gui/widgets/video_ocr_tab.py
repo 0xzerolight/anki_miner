@@ -30,6 +30,7 @@ from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import FormPanel, PageWidth, ScreenIssue, configure_card_layout
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
 from anki_miner.gui.workers.video_ocr_worker import VideoOcrWorker
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.asr import onnx_pack_installer
 from anki_miner.services.ocr import model_installer
 from anki_miner.services.video_ocr import runtime
@@ -43,6 +44,8 @@ if TYPE_CHECKING:
 
 _VIDEO_EXTENSIONS = FilePairMatcher.VIDEO_EXTENSIONS
 _VIDEO_FILTER = "Video Files (" + " ".join(f"*{e}" for e in sorted(_VIDEO_EXTENSIONS)) + ");;All Files (*)"
+#: The onnxruntime pack; 50 MB with meikiocr's 33 MB, the figure this tooltip showed before.
+_RUNTIME_MB = 17
 
 
 @dataclass(frozen=True)
@@ -151,9 +154,10 @@ class VideoOcrTab(RunOptionsMixin, _ToolTabBase):
 
     @staticmethod
     def _compute_engine_available(config: AnkiMinerConfig) -> _EngineState:
-        """Cheap probe: onnxruntime importable + both models on disk. Never loads a model."""
+        """Cheap probe: onnxruntime importable + this language's models on disk. Never loads a model."""
         ready = runtime.runtime_ready(config.onnx_pack_root)
-        return _EngineState(ready and model_installer.is_installed(config.video_ocr_models_root), ready)
+        specs = runtime.required_models(get_profile(config_language(config)))
+        return _EngineState(ready and model_installer.is_installed(config.video_ocr_models_root, specs), ready)
 
     def _apply_probe_result(self, result: object) -> None:
         super()._apply_probe_result(result)
@@ -290,7 +294,7 @@ class VideoOcrTab(RunOptionsMixin, _ToolTabBase):
         return group
 
     def _create_setup_section(self) -> QFrame:
-        """The in-app engine download; hidden once the probe finds the runtime and both models."""
+        """The in-app engine download; hidden once the probe finds the runtime and the language's models."""
         self.setup_card = QFrame()
         self.setup_card.setObjectName("card")
         layout = QVBoxLayout()
@@ -452,15 +456,20 @@ class VideoOcrTab(RunOptionsMixin, _ToolTabBase):
         offerable = self._runtime_ready or onnx_pack_installer.onnx_pack_supported()
         self.install_button.setVisible(offerable)
         self.install_button.setEnabled(offerable and not still_running(self.worker_thread))
+        specs = runtime.required_models(get_profile(config_language(self.config)))
+        mb = round(sum(s.size_bytes for s in specs) / 1_000_000)
         if self._runtime_ready:
             self.install_button.setText(self.tr("Download OCR models"))
             self.install_button.setToolTip(
-                self.tr("Downloads the two OCR models (about 33 MB) into Anki Miner's folder.")
+                tr_format(self.tr("Downloads the OCR models (about %1 MB) into Anki Miner's folder."), mb)
             )
         else:
             self.install_button.setText(self.tr("Download OCR engine"))
             self.install_button.setToolTip(
-                self.tr("Downloads the OCR runtime and its two models (about 50 MB) into Anki Miner's folder.")
+                tr_format(
+                    self.tr("Downloads the OCR runtime and its models (about %1 MB) into Anki Miner's folder."),
+                    mb + _RUNTIME_MB,
+                )
             )
         self.set_install_status(
             self.tr("Not installed")

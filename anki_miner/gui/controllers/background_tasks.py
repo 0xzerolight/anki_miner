@@ -51,6 +51,7 @@ if TYPE_CHECKING:
     from anki_miner.services import ValidationService
     from anki_miner.services.anki_service import AnkiService
     from anki_miner.services.card_restyler import RestyleResult
+    from anki_miner.services.ocr.model_installer import ModelSpec
     from anki_miner.services.update_checker import UpdateInfo
 
 logger = logging.getLogger(__name__)
@@ -579,11 +580,13 @@ class BackgroundTaskController(QObject):
         self,
         onnx_pack_root: Path,
         models_root: Path,
+        specs: tuple[ModelSpec, ...],
         on_status: Callable[[str], None],
         on_finished: Callable[[bool, str], None],
     ) -> None:
-        """Start the Video OCR setup (onnxruntime pack if needed, then models) unless one is running.
+        """Start the Video OCR setup (onnxruntime pack if needed, then ``specs``) unless one is running.
 
+        ``specs`` is the mining language's model set (``runtime.required_models``).
         Refuses while the silence-removal (VAD) pack download runs: both install
         into ``onnx_pack_root`` and share its .part sweep and resume key.
         """
@@ -594,7 +597,7 @@ class BackgroundTaskController(QObject):
 
         self._start_install(
             "video_ocr_install_worker",
-            lambda: InstallWorker(video_ocr_install_task(onnx_pack_root, models_root), parent=self),
+            lambda: InstallWorker(video_ocr_install_task(onnx_pack_root, models_root, specs), parent=self),
             on_status,
             on_finished,
         )

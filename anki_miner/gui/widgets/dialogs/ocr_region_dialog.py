@@ -30,6 +30,7 @@ from anki_miner.gui.utils.image_fit import fit_transform, widget_to_image
 from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.enhanced import ModernButton
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.ocr import model_installer
 from anki_miner.services.video_ocr import runtime
 from anki_miner.services.video_ocr.frame_source import Region, crop_frame, still_at
@@ -336,10 +337,12 @@ class OcrRegionDialog(QDialog):
             return
         self._test_gen += 1
         gen, config = self._test_gen, self._config
-        # Cheap probes (a find_spec and two file stats): without the engine the
-        # read would fail, and its message must not blame the frame.
+        # Cheap probes (a find_spec and a stat per model file): without the mining
+        # language's engine the read would fail, and its message must not blame the frame.
+        specs = runtime.required_models(get_profile(config_language(config)))
         if not (
-            runtime.runtime_ready(config.onnx_pack_root) and model_installer.is_installed(config.video_ocr_models_root)
+            runtime.runtime_ready(config.onnx_pack_root)
+            and model_installer.is_installed(config.video_ocr_models_root, specs)
         ):
             self.test_result.setText(
                 self.tr("Download the OCR engine first, from the setup card on the Video OCR screen.")

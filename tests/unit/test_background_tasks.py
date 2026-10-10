@@ -17,6 +17,9 @@ from unittest.mock import MagicMock
 import pytest
 from PyQt6.QtCore import QObject, pyqtSignal
 
+from anki_miner.services.ocr.model_installer import MEIKI_SPECS
+from anki_miner.services.ocr.recognizers import RECOGNIZERS
+
 # ---------------------------------------------------------------------------
 # Fake worker
 # ---------------------------------------------------------------------------
@@ -750,13 +753,27 @@ class TestStartVideoOcrInstall:
 
         status_received: list[str] = []
         controller.start_video_ocr_install(
-            tmp_path / "pack", tmp_path / "models", status_received.append, lambda ok, msg: None
+            tmp_path / "pack", tmp_path / "models", MEIKI_SPECS, status_received.append, lambda ok, msg: None
         )
 
         assert controller.video_ocr_install_worker is worker
 
         worker.status.emit("Downloading the OCR models…")
         assert status_received == ["Downloading the OCR models…"]
+
+    def test_threads_the_specs_into_the_task(self, controller, qtbot, monkeypatch, tmp_path):
+        built: list[tuple] = []
+        monkeypatch.setattr(
+            "anki_miner.gui.workers.install_worker.video_ocr_install_task", lambda *args: built.append(args)
+        )
+        _patch_install_worker(monkeypatch, _FakeInstallWorker())
+        specs = (MEIKI_SPECS[0], RECOGNIZERS["korean"].model)
+
+        controller.start_video_ocr_install(
+            tmp_path / "pack", tmp_path / "models", specs, lambda m: None, lambda ok, m: None
+        )
+
+        assert built == [(tmp_path / "pack", tmp_path / "models", specs)]
 
     def test_routes_result(self, controller, qtbot, monkeypatch, tmp_path):
         worker = _FakeInstallWorker()
@@ -766,6 +783,7 @@ class TestStartVideoOcrInstall:
         controller.start_video_ocr_install(
             tmp_path / "pack",
             tmp_path / "models",
+            MEIKI_SPECS,
             lambda msg: None,
             lambda ok, msg: finished_calls.append((ok, msg)),
         )
@@ -776,18 +794,24 @@ class TestStartVideoOcrInstall:
     def test_refused_while_running(self, controller, qtbot, monkeypatch, tmp_path):
         worker_a = _FakeInstallWorker()
         _patch_install_worker(monkeypatch, worker_a)
-        controller.start_video_ocr_install(tmp_path / "pack", tmp_path / "models", lambda m: None, lambda ok, m: None)
+        controller.start_video_ocr_install(
+            tmp_path / "pack", tmp_path / "models", MEIKI_SPECS, lambda m: None, lambda ok, m: None
+        )
         assert controller.video_ocr_install_worker is worker_a
 
         worker_b = _FakeInstallWorker()
         _patch_install_worker(monkeypatch, worker_b)
-        controller.start_video_ocr_install(tmp_path / "pack", tmp_path / "models", lambda m: None, lambda ok, m: None)
+        controller.start_video_ocr_install(
+            tmp_path / "pack", tmp_path / "models", MEIKI_SPECS, lambda m: None, lambda ok, m: None
+        )
         assert controller.video_ocr_install_worker is worker_a
 
     def test_handle_released_on_finished(self, controller, qtbot, monkeypatch, tmp_path):
         worker = _FakeInstallWorker()
         _patch_install_worker(monkeypatch, worker)
-        controller.start_video_ocr_install(tmp_path / "pack", tmp_path / "models", lambda m: None, lambda ok, m: None)
+        controller.start_video_ocr_install(
+            tmp_path / "pack", tmp_path / "models", MEIKI_SPECS, lambda m: None, lambda ok, m: None
+        )
 
         worker.emit_finished()
 
@@ -809,6 +833,7 @@ class TestStartVideoOcrInstall:
         controller.start_video_ocr_install(
             tmp_path / "pack",
             tmp_path / "models",
+            MEIKI_SPECS,
             lambda msg: None,
             lambda ok, msg: finished_calls.append((ok, msg)),
         )

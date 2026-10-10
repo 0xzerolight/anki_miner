@@ -8,6 +8,9 @@ from unittest.mock import MagicMock
 from anki_miner.gui.workers import install_worker
 from anki_miner.services.asr import onnx_pack_installer
 from anki_miner.services.ocr import model_installer
+from anki_miner.services.ocr.recognizers import RECOGNIZERS
+
+_KO_SPECS = (model_installer.MEIKI_SPECS[0], RECOGNIZERS["korean"].model)
 
 
 class _FakeWorker:
@@ -24,9 +27,9 @@ def test_task_installs_the_pack_only_when_onnxruntime_is_missing(monkeypatch, tm
     calls: list[str] = []
     monkeypatch.setattr(onnx_pack_installer, "onnxruntime_importable", lambda root: False)
     monkeypatch.setattr(onnx_pack_installer, "install_onnx_pack", lambda root, **k: calls.append("pack"))
-    monkeypatch.setattr(model_installer, "install_models", lambda root, **k: calls.append("models"))
+    monkeypatch.setattr(model_installer, "install_models", lambda root, specs, **k: calls.append("models"))
     worker = _FakeWorker()
-    install_worker.video_ocr_install_task(tmp_path / "pack", tmp_path / "models")(worker)
+    install_worker.video_ocr_install_task(tmp_path / "pack", tmp_path / "models", model_installer.MEIKI_SPECS)(worker)
     assert calls == ["pack", "models"]
     assert worker._progress_ctx == "VideoOcrInstallWorker"
 
@@ -35,6 +38,16 @@ def test_task_skips_the_pack_when_onnxruntime_imports(monkeypatch, tmp_path):
     calls: list[str] = []
     monkeypatch.setattr(onnx_pack_installer, "onnxruntime_importable", lambda root: True)
     monkeypatch.setattr(onnx_pack_installer, "install_onnx_pack", lambda root, **k: calls.append("pack"))
-    monkeypatch.setattr(model_installer, "install_models", lambda root, **k: calls.append("models"))
-    install_worker.video_ocr_install_task(tmp_path / "pack", tmp_path / "models")(_FakeWorker())
+    monkeypatch.setattr(model_installer, "install_models", lambda root, specs, **k: calls.append("models"))
+    install_worker.video_ocr_install_task(tmp_path / "pack", tmp_path / "models", model_installer.MEIKI_SPECS)(
+        _FakeWorker()
+    )
     assert calls == ["models"]
+
+
+def test_task_installs_exactly_the_specs_it_was_given(monkeypatch, tmp_path):
+    installed: list[tuple] = []
+    monkeypatch.setattr(onnx_pack_installer, "onnxruntime_importable", lambda root: True)
+    monkeypatch.setattr(model_installer, "install_models", lambda root, specs, **k: installed.append((root, specs)))
+    install_worker.video_ocr_install_task(tmp_path / "pack", tmp_path / "models", _KO_SPECS)(_FakeWorker())
+    assert installed == [(tmp_path / "models", _KO_SPECS)]

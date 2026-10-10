@@ -34,12 +34,16 @@ import logging
 import threading
 from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QCoreApplication, pyqtSignal
 
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
+
+if TYPE_CHECKING:
+    from anki_miner.services.ocr.model_installer import ModelSpec
 
 logger = logging.getLogger(__name__)
 
@@ -287,8 +291,8 @@ def onnx_pack_task(onnx_pack_root: Path) -> InstallTask:
     return _task
 
 
-def video_ocr_install_task(onnx_pack_root: Path, models_root: Path) -> InstallTask:
-    """Task: the onnxruntime pack when onnxruntime is not importable, then the two OCR models."""
+def video_ocr_install_task(onnx_pack_root: Path, models_root: Path, specs: tuple[ModelSpec, ...]) -> InstallTask:
+    """Task: the onnxruntime pack when onnxruntime is not importable, then the mining language's OCR models."""
 
     def _task(worker: InstallWorker) -> str:
         from anki_miner.services.asr import onnx_pack_installer
@@ -301,7 +305,9 @@ def video_ocr_install_task(onnx_pack_root: Path, models_root: Path) -> InstallTa
                 onnx_pack_root, progress=worker._on_progress, cancel_event=worker.cancel_event
             )
         worker.status.emit(QCoreApplication.translate("VideoOcrInstallWorker", "Downloading the OCR models…"))
-        model_installer.install_models(models_root, progress=worker._on_progress, cancel_event=worker.cancel_event)
+        model_installer.install_models(
+            models_root, specs, progress=worker._on_progress, cancel_event=worker.cancel_event
+        )
         return QCoreApplication.translate("VideoOcrInstallWorker", "OCR engine installed.")
 
     return _task

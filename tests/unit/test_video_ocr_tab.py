@@ -14,8 +14,11 @@ from PyQt6.QtGui import QPixmap
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.widgets import video_ocr_tab as mod
 from anki_miner.gui.widgets.video_ocr_tab import VideoOcrTab, _EngineState
+from anki_miner.services.ocr import model_installer
+from anki_miner.services.ocr.recognizers import RECOGNIZERS
 from anki_miner.services.video_ocr.errors import EngineLoadError
 from anki_miner.services.video_ocr.region import Region
+from tests.unit._ocr_profiles import with_recognizer
 from tests.unit._tool_tab_harness import OS_ACCESS, FakeToolWorker
 
 
@@ -139,6 +142,47 @@ def test_setup_card_on_an_unsupported_platform_points_to_pip(qtbot, test_config)
         tab = _make(qtbot, test_config, _EngineState(False, False))
     assert tab.install_button.isHidden()
     assert "anki-miner[ocr]" in tab.install_status_label.text()
+
+
+def _place(root, *specs):
+    """Lay each spec's file down at its exact size (a sparse file: the probe only stats)."""
+    root.mkdir(parents=True, exist_ok=True)
+    for spec in specs:
+        with open(root / spec.filename, "wb") as f:
+            f.truncate(spec.size_bytes)
+
+
+def test_the_probe_wants_the_mining_languages_models(monkeypatch, test_config, tmp_path):
+    with_recognizer(monkeypatch, mod, "ko", "korean")
+    monkeypatch.setattr(mod.runtime, "runtime_ready", lambda root: True)
+    ja = replace(test_config, video_ocr_models_root=tmp_path)
+    ko = replace(ja, language="ko")
+    _place(tmp_path, *model_installer.MEIKI_SPECS)
+    assert VideoOcrTab._compute_engine_available(ja)
+    assert not VideoOcrTab._compute_engine_available(ko)
+    _place(tmp_path, RECOGNIZERS["korean"].model)
+    assert VideoOcrTab._compute_engine_available(ko)
+
+
+@pytest.mark.parametrize(
+    ("language", "models_mb", "with_runtime_mb"),
+    [("ja", 33, 50), ("ko", 28, 45)],  # ko: meikiocr's detector (14.5 MB) + the korean recogniser (13.5 MB)
+)
+def test_the_setup_tooltip_names_the_mining_languages_download(
+    monkeypatch, qtbot, test_config, language, models_mb, with_runtime_mb
+):
+    with_recognizer(monkeypatch, mod, "ko", "korean")
+    monkeypatch.setattr(mod.onnx_pack_installer, "onnx_pack_supported", lambda: True)
+    tab = _make(qtbot, replace(test_config, language=language), _EngineState(False, True))
+    assert tab.install_button.text() == "Download OCR models"
+    assert tab.install_button.toolTip() == (
+        f"Downloads the OCR models (about {models_mb} MB) into Anki Miner's folder."
+    )
+    tab._apply_probe_result(_EngineState(False, False))
+    assert tab.install_button.text() == "Download OCR engine"
+    assert tab.install_button.toolTip() == (
+        f"Downloads the OCR runtime and its models (about {with_runtime_mb} MB) into Anki Miner's folder."
+    )
 
 
 def test_install_click_requests_and_a_failure_keeps_its_message(qtbot, test_config):

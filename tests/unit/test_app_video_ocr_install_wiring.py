@@ -17,6 +17,9 @@ import pytest
 from PyQt6.QtCore import QObject, pyqtSignal
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.services.ocr.model_installer import MEIKI_SPECS
+from anki_miner.services.ocr.recognizers import RECOGNIZERS
+from tests.unit._ocr_profiles import with_recognizer
 
 
 class _FakeVideoOcrTab(QObject):
@@ -47,14 +50,16 @@ class _FakeSubtitlesPanel:
 _REFUSAL = "Wait for the silence-removal download to finish, then try again."
 
 
-def _wire(tmp_path, *, refuse: bool = False):
+def _wire(tmp_path, *, refuse: bool = False, language: str = "ja"):
     from anki_miner.gui import app as app_module
 
-    config = AnkiMinerConfig(onnx_pack_root=tmp_path / "onnx_pack", video_ocr_models_root=tmp_path / "ocr_models")
+    config = AnkiMinerConfig(
+        onnx_pack_root=tmp_path / "onnx_pack", video_ocr_models_root=tmp_path / "ocr_models", language=language
+    )
     captured: dict = {}
 
-    def _start(onnx_pack_root, models_root, on_status, on_finished):
-        captured.update(onnx_pack_root=onnx_pack_root, models_root=models_root, on_finished=on_finished)
+    def _start(onnx_pack_root, models_root, specs, on_status, on_finished):
+        captured.update(onnx_pack_root=onnx_pack_root, models_root=models_root, specs=specs, on_finished=on_finished)
         if refuse:
             # As BackgroundTaskController does while the VAD pack download runs.
             on_finished(False, _REFUSAL)
@@ -85,6 +90,16 @@ class TestVideoOcrInstallWiring:
 
         assert captured["onnx_pack_root"] == config.onnx_pack_root
         assert captured["models_root"] == config.video_ocr_models_root
+        assert captured["specs"] == MEIKI_SPECS
+
+    def test_request_installs_the_mining_languages_models(self, monkeypatch, tmp_path):
+        from anki_miner.gui import app as app_module
+
+        with_recognizer(monkeypatch, app_module, "ko", "korean")
+        _config, captured, tab, _panel = _wire(tmp_path, language="ko")
+        tab.video_ocr_install_requested.emit()
+
+        assert captured["specs"] == (MEIKI_SPECS[0], RECOGNIZERS["korean"].model)
 
     def test_success_notifies_the_tab_and_refreshes_the_vad_row_once(self, wired):
         config, captured, tab, panel = wired

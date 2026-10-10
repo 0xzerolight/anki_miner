@@ -92,9 +92,10 @@ _BLOCKING_PATTERNS: tuple[str, ...] = (
     # first call, which can take seconds).
     r"still_at\(",
     r"read_region_text\(",
-    # The OCR engine itself. GUI code goes through read_region_text, never here,
-    # so this pattern has no allowlist entry.
+    # The OCR engine itself, and the reader that loads it. GUI code goes through
+    # read_region_text, never here, so these patterns have no allowlist entry.
     r"read_boxes\(",
+    r"get_reader\(",
 )
 
 #: pattern -> {relative file paths where the pattern legitimately remains}.

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from contextlib import contextmanager
+from dataclasses import replace
+from pathlib import Path
 from unittest.mock import patch
 
 import numpy as np
@@ -14,7 +16,10 @@ from PyQt6.QtWidgets import QDialog, QDialogButtonBox
 
 from anki_miner.gui.widgets.dialogs import ocr_region_dialog as mod
 from anki_miner.gui.widgets.dialogs.ocr_region_dialog import OcrRegionDialog, _RegionCanvas
+from anki_miner.services.ocr import model_installer
+from anki_miner.services.ocr.recognizers import RECOGNIZERS
 from anki_miner.services.video_ocr.frame_source import Region
+from tests.unit._ocr_profiles import with_recognizer
 
 # numpy-backed (the gate in test_asr_marker_gating.py)
 pytestmark = pytest.mark.asr
@@ -70,18 +75,22 @@ def test_a_click_without_a_drag_draws_nothing(qtbot):
     assert drawn == []
 
 
-@pytest.fixture
-def dialog(qtbot, test_config, tmp_path):
+def _open(qtbot, config, video: Path) -> OcrRegionDialog:
     host = _RegionCanvas()  # any QObject parent for the off-thread workers
     qtbot.addWidget(host)
     with (
         patch.object(mod, "get_media_duration_seconds", return_value=60.0),
         patch.object(mod, "still_at", return_value=_FRAME),
     ):
-        dlg = OcrRegionDialog(test_config, tmp_path / "v.mkv", None, worker_parent=host)
+        dlg = OcrRegionDialog(config, video, None, worker_parent=host)
         qtbot.addWidget(dlg)
         qtbot.waitUntil(lambda: dlg._frame is not None, timeout=3000)
     return dlg
+
+
+@pytest.fixture
+def dialog(qtbot, test_config, tmp_path):
+    return _open(qtbot, test_config, tmp_path / "v.mkv")
 
 
 def test_ok_waits_for_a_region(dialog):
@@ -134,6 +143,30 @@ def test_test_without_the_engine_asks_for_the_download_and_reads_nothing(dialog)
     assert dialog.test_result.text() == "Download the OCR engine first, from the setup card on the Video OCR screen."
     dispatch.assert_not_called()
     read.assert_not_called()
+
+
+def test_test_this_frame_waits_for_the_mining_languages_models(qtbot, monkeypatch, test_config, tmp_path):
+    with_recognizer(monkeypatch, mod, "ko", "korean")
+    models = tmp_path / "models"
+    models.mkdir()
+
+    def place(spec):
+        with open(models / spec.filename, "wb") as f:
+            f.truncate(spec.size_bytes)  # a sparse file at the exact size: the probe only stats
+
+    for spec in model_installer.MEIKI_SPECS:
+        place(spec)
+    dlg = _open(qtbot, replace(test_config, language="ko", video_ocr_models_root=models), tmp_path / "v.mkv")
+    dlg._on_region_drawn(Region(0.1, 0.8, 0.8, 0.15))
+    with (
+        patch.object(mod.runtime, "runtime_ready", return_value=True),
+        patch.object(mod, "read_region_text", return_value="가자"),
+    ):
+        dlg.test_button.click()  # meikiocr's pair alone is not Korean's set
+        assert dlg.test_result.text() == "Download the OCR engine first, from the setup card on the Video OCR screen."
+        place(RECOGNIZERS["korean"].model)
+        dlg.test_button.click()
+        qtbot.waitUntil(lambda: dlg.test_result.text() == "가자", timeout=3000)
 
 
 def test_a_failed_test_read_names_the_engine_not_the_frame(dialog):

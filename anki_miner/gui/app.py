@@ -1499,9 +1499,12 @@ def _connect_video_ocr_install(window: MainWindow, subtitles_tab: SubtitlesTab, 
             settings_tab.subtitles_panel.notify_vad_pack_download_finished(window.get_config().onnx_pack_root)
 
     def _start(request_arg: object, on_status: Callable[[str], None], on_finished: Callable[[bool, str], None]) -> None:
+        from anki_miner.services.video_ocr import runtime
+
         config = window.get_config()
+        specs = runtime.required_models(get_profile(config_language(config)))
         window.background_tasks.start_video_ocr_install(
-            config.onnx_pack_root, config.video_ocr_models_root, on_status, on_finished
+            config.onnx_pack_root, config.video_ocr_models_root, specs, on_status, on_finished
         )
 
     _connect_download(
