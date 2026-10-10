@@ -69,6 +69,9 @@ def test_an_ltr_style_paints_byte_identically_to_the_stock_delegate(qtbot, text)
 def test_a_long_rtl_sentence_keeps_its_start_in_view(qtbot):
     """Elision takes the logical end (the left): the first word stays at the right edge."""
     table = _table(qtbot, " ".join([AR_SENTENCE] * 30), HADHA)
+    # One line whatever the font: wrapped, a short-line face (the CI runner's
+    # DejaVu) fits two lines in 32px and lifts the first word off the lone one.
+    table.setWordWrap(False)
     assert table.textElideMode() == Qt.TextElideMode.ElideRight
     delegate = ContentCellDelegate(table, lambda: AR)
     model = table.model()
