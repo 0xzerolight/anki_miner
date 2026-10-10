@@ -10,5 +10,5 @@ flashcards with audio, screenshots, and definitions.
 # Do NOT switch back to importlib.metadata.version() — frozen builds can pick
 # up orphan dist-info dirs from prior installs and report the wrong version
 # (Issue #10).
-__version__ = "3.7.0"
+__version__ = "3.8.0"
 __author__ = "Anki Miner Contributors"
