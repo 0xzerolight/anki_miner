@@ -521,6 +521,11 @@ ignore_missing_imports = true
 module = ["psutil.*"]
 ignore_missing_imports = true
 
+# services/ocr/mokuro_driver.py imports these inside the managed mokuro venv only.
+[[tool.mypy.overrides]]
+module = ["fire.*", "mokuro.*", "comic_text_detector.*", "paddle_rec"]
+ignore_missing_imports = true
+
 [tool.ruff]
 line-length = 120
 target-version = "py311"

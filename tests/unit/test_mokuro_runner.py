@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -11,7 +12,10 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions.mokuro import MokuroError, MokuroNotFoundError
 from anki_miner.services import mokuro_runner as mr
 from anki_miner.services.mokuro_volumes import MokuroVolume
+from anki_miner.services.ocr import MOKURO_DRIVER
+from anki_miner.utils.mokuro_resolver import managed_python_path
 from anki_miner.utils.process_supervisor import SupervisedResult, SupervisedState
+from tests.unit._ocr_profiles import with_recognizer
 
 _OK_LINES = [
     "2026-09-07 10:00:00.000 | INFO     | mokuro.run:run:128 - Processing 1/1: /m/vol1",
@@ -205,3 +209,55 @@ def test_model_downloads_stay_under_the_app_home(monkeypatch, tmp_path, config):
     mr.MokuroRunnerService(config).process_volume(vol, mr.MokuroOptions())
 
     assert fake.calls["kwargs"]["env"]["XDG_CACHE_HOME"] == str(config.uv_root / "model_cache")
+
+
+def test_a_recogniser_language_runs_the_driver_with_the_managed_python(tmp_path, monkeypatch, config):
+    config = replace(config, language="ko")
+    with_recognizer(monkeypatch, mr, "ko", "korean")
+    vol = _volume(tmp_path)
+    cmd = mr.MokuroRunnerService(config)._build_cmd(vol, mr.MokuroOptions(force_cpu=True))
+    assert cmd == [
+        str(managed_python_path(config.uv_root)),
+        str(MOKURO_DRIVER),
+        str(vol.source),
+        "--disable_confirmation=True",
+        "--ignore_errors=True",
+        "--legacy_html=False",
+        "--force_cpu=True",
+    ]
+
+
+def test_the_driver_env_names_the_model_and_its_direction(monkeypatch, config):
+    config = replace(config, language="ar")
+    with_recognizer(monkeypatch, mr, "ar", "arabic")
+    assert mr.MokuroRunnerService(config)._ocr_env() == {
+        "ANKI_MINER_OCR_MODEL": str(config.video_ocr_models_root / "arabic_PP-OCRv5_rec_mobile.onnx"),
+        "ANKI_MINER_OCR_REVERSE": "1",
+    }
+
+
+def test_the_child_gets_the_driver_env_beside_the_cache_dir(monkeypatch, tmp_path, config):
+    config = replace(config, language="ko")
+    with_recognizer(monkeypatch, mr, "ko", "korean")
+    vol = _volume(tmp_path)
+    fake = _fake_run(_OK_LINES, write_output=vol.output)
+    monkeypatch.setattr(mr, "run_supervised", fake)
+    mr.MokuroRunnerService(config).process_volume(vol, mr.MokuroOptions())
+    env = fake.calls["kwargs"]["env"]
+    assert env["ANKI_MINER_OCR_MODEL"] == str(config.video_ocr_models_root / "korean_PP-OCRv5_rec_mobile.onnx")
+    assert env["ANKI_MINER_OCR_REVERSE"] == "0"
+    assert env["XDG_CACHE_HOME"] == str(config.uv_root / "model_cache") and env["PYTHONUTF8"] == "1"
+
+
+def test_japanese_keeps_the_resolved_mokuro_and_no_ocr_env(config):
+    assert mr.MokuroRunnerService(replace(config, language="ja"))._ocr_env() == {}
+    # test_argv_has_path_first_then_explicit_flags still pins cmd[0] == resolve_mokuro(config)
+
+
+def test_a_recogniser_language_never_falls_back_to_a_path_mokuro(tmp_path, monkeypatch, config):
+    """Review Focus 2: a pip/PATH mokuro would run manga-ocr on Korean pages."""
+    config = replace(config, language="ko", mokuro_location=tmp_path / "mokuro")
+    with_recognizer(monkeypatch, mr, "ko", "korean")
+    monkeypatch.setattr(mr, "resolve_mokuro", lambda cfg: "/usr/bin/mokuro")
+    cmd = mr.MokuroRunnerService(config)._build_cmd(_volume(tmp_path), mr.MokuroOptions())
+    assert cmd[0] == str(managed_python_path(config.uv_root))

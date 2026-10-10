@@ -1,0 +1,110 @@
+"""Manga OCR for the mining languages manga-ocr cannot read: mokuro with a PP-OCR line recogniser.
+
+The app runs this file with the managed mokuro environment's Python and never imports it
+at run time:
+
+    <uv_root>/mokuro/bin/python mokuro_driver.py <volume> --disable_confirmation=True ...
+
+``ANKI_MINER_OCR_MODEL`` names the recogniser .onnx and ``ANKI_MINER_OCR_REVERSE`` is "1"
+for a right-to-left model. mokuro's detector, page loop, cache, .mokuro output and log
+lines are untouched, so MokuroRunnerService reads this run like the ``mokuro`` console
+script. Standalone: mokuro's own dependencies and ``paddle_rec`` (this folder, which is
+sys.path[0] for a script) only.
+"""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+from typing import Any
+
+#: mokuro cuts a long line into chunks and glues their text with "", which loses a
+#: spaced script's word gaps; a ratio no line reaches sends every line whole.
+_WHOLE_LINE = 10_000
+
+
+class _KeepVerticalLinesTurned:
+    """comic-text-detector hands vertical lines over already turned counter-clockwise
+    (textblock.get_transformed_region), the way PaddleOCR feeds vertical text
+    (``np.rot90``); mokuro turns them back clockwise only for manga-ocr. Skip that turn."""
+
+    def __init__(self, cv2: Any) -> None:
+        self._cv2 = cv2
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._cv2, name)
+
+    def rotate(self, src: Any, code: int) -> Any:
+        if code == self._cv2.ROTATE_90_CLOCKWISE:
+            return src
+        return self._cv2.rotate(src, code)
+
+
+def _narrow_line_margin(textblock_cls: Any) -> None:
+    """Halve the margin comic-text-detector adds around a horizontal line crop.
+
+    ``TextBlock.get_transformed_region`` widens each horizontal ``eng``/``unknown`` line by
+    ``font_size / 3`` on every side, and reads ``font_size`` for nothing else. PP-OCR reads
+    tighter crops than manga-ocr, and that margin pulled slices of the neighbouring lines
+    into Arabic crops. ``font_size / 6`` took the 2026-10-10 spike's Arabic line CER from
+    10.7% to 4.8%; no other script lost more than 0.7 points, and all still pass.
+    """
+    original = textblock_cls.get_transformed_region
+
+    def get_transformed_region(self: Any, *args: Any, **kwargs: Any) -> Any:
+        font_size = self.font_size
+        self.font_size = font_size / 2
+        try:
+            return original(self, *args, **kwargs)
+        finally:
+            self.font_size = font_size
+
+    textblock_cls.get_transformed_region = get_transformed_region
+
+
+def install(recognizer: Any, manga_page_ocr: Any, mokuro_generator: Any, textblock_cls: Any) -> None:
+    """Swap manga-ocr for ``recognizer`` in mokuro's modules and narrow the detector's line margin, in place."""
+    import numpy as np
+
+    class LineReader:
+        def __init__(self, *_args: Any, **_kwargs: Any) -> None:
+            pass  # stands in for MangaOcr(pretrained_model_name_or_path, force_cpu)
+
+        def __call__(self, image: Any) -> str:
+            # mokuro reads pages as BGR and wraps each crop with Image.fromarray: still BGR.
+            return str(recognizer.recognize([np.ascontiguousarray(np.asarray(image))])[0][0])
+
+    class WholeLinePageOcr(manga_page_ocr.MangaPageOcr):
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            kwargs.setdefault("max_ratio_hor", _WHOLE_LINE)
+            kwargs.setdefault("max_ratio_vert", _WHOLE_LINE)
+            super().__init__(*args, **kwargs)
+
+    manga_page_ocr.MangaOcr = LineReader
+    manga_page_ocr.cv2 = _KeepVerticalLinesTurned(manga_page_ocr.cv2)
+    mokuro_generator.MangaPageOcr = WholeLinePageOcr
+    _narrow_line_margin(textblock_cls)
+
+
+def main() -> None:
+    import sys
+
+    import fire
+    from comic_text_detector.utils.textblock import TextBlock
+    from mokuro import manga_page_ocr, mokuro_generator
+    from mokuro.run import run
+
+    # paddle_rec sits in the app's own folder: never write its __pycache__ there (a
+    # signed macOS .app must not be modified). mokuro's own imports above still cache.
+    sys.dont_write_bytecode = True
+    from paddle_rec import load_recognizer
+
+    recognizer = load_recognizer(
+        Path(os.environ["ANKI_MINER_OCR_MODEL"]), reverse=os.environ.get("ANKI_MINER_OCR_REVERSE") == "1"
+    )
+    install(recognizer, manga_page_ocr, mokuro_generator, TextBlock)
+    fire.Fire(run)
+
+
+if __name__ == "__main__":
+    main()

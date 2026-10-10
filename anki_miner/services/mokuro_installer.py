@@ -15,6 +15,9 @@ hand) is unmaintainable for torch. Instead:
    accelerator detection picks the CUDA index on an NVIDIA host and the
    CPU/MPS wheels elsewhere. ``UV_NO_CACHE=1``: no second copy of the wheels.
 
+A language read by a PP-OCR recogniser also gets onnxruntime in that venv
+(:func:`add_onnxruntime`); :func:`manga_ocr_state` is the readiness rule for both.
+
 Everything runs through ``run_supervised`` (cancel, timeout, log tail); the
 console script the resolver looks for is ``managed_mokuro_path(uv_root)``.
 Stateless, GUI-free; the ``InstallWorker`` task adapts it to Qt.
@@ -31,16 +34,21 @@ import zipfile
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.interfaces.progress import DownloadProgressFn
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services._install_common import cleanup_part, verify_sha256
+from anki_miner.services.ocr import model_installer
+from anki_miner.services.ocr.recognizers import RECOGNIZERS
 from anki_miner.services.resource_downloader import download_to_temp
 from anki_miner.utils.logging_ext import log_summary
 from anki_miner.utils.mokuro_resolver import (
     managed_mokuro_installed,
     managed_mokuro_path,
     managed_python_path,
+    mokuro_available,
     mokuro_env_dir,
     scrubbed_python_env,
 )
@@ -50,6 +58,10 @@ logger = logging.getLogger(__name__)
 
 UV_VERSION = "0.12.10"
 MOKURO_REQUIREMENT = "mokuro==0.2.5"
+#: Added to the mokuro venv only for a language read by a PP-OCR recogniser
+#: (services/ocr/mokuro_driver.py); the Japanese install never carries it.
+#: 1.23.2 has cp312 wheels for every _UV_SPECS platform incl. Intel macs (macOS 13+).
+ONNXRUNTIME_REQUIREMENT = "onnxruntime==1.23.2"
 #: An exact patch, never minor-only: for ``3.12`` uv reaches the interpreter
 #: through its ``cpython-3.12-<platform>`` minor-version link (a junction on
 #: Windows, refused with os error 448 "untrusted mount point" on some hosts) and
@@ -137,6 +149,45 @@ def _uv_receipt_path(bin_root: Path) -> Path:
 def is_installed(uv_root: Path) -> bool:
     """True when the managed mokuro console script is present and runnable. Cheap."""
     return managed_mokuro_installed(uv_root)
+
+
+@dataclass(frozen=True)
+class MangaOcrState:
+    """Whether Manga OCR can run in the mining language; truthy when it can."""
+
+    #: The mokuro below plus, for a recogniser language, onnxruntime in its venv and the model.
+    available: bool
+    #: A mokuro this language can use: any (managed, override, PATH) for manga-ocr's own
+    #: language; only the in-app one otherwise, since only it can run the driver.
+    mokuro: bool
+
+    def __bool__(self) -> bool:
+        return self.available
+
+
+def manga_ocr_state(config: Any) -> MangaOcrState:
+    """File probes only (never spawns mokuro: its import costs seconds)."""
+    key = get_profile(config_language(config)).ocr_recognizer
+    if not key:
+        found = mokuro_available(config.mokuro_location, config.uv_root)
+        return MangaOcrState(found, found)
+    managed = managed_mokuro_installed(config.uv_root)
+    parts = onnxruntime_installed(config.uv_root) and model_installer.is_installed(
+        config.video_ocr_models_root, (RECOGNIZERS[key].model,)
+    )
+    return MangaOcrState(managed and parts, managed)
+
+
+def _site_packages(uv_root: Path) -> Path:
+    env = mokuro_env_dir(uv_root)
+    if sys.platform == "win32":
+        return env / "Lib" / "site-packages"
+    return env / "lib" / f"python{MOKURO_PYTHON.rsplit('.', 1)[0]}" / "site-packages"
+
+
+def onnxruntime_installed(uv_root: Path) -> bool:
+    """True when the managed venv can import onnxruntime (file probe; never spawns Python)."""
+    return (_site_packages(uv_root) / "onnxruntime" / "__init__.py").is_file()
 
 
 def _uv_env(uv_root: Path) -> dict[str, str]:
@@ -318,3 +369,29 @@ def install_mokuro(
         raise SetupError(f"uv reported success but {shim} is missing.")
     log_summary(logger, "mokuro install done", shim=shim, requirement=MOKURO_REQUIREMENT)
     return shim
+
+
+def add_onnxruntime(
+    bin_root: Path,
+    uv_root: Path,
+    *,
+    status: Callable[[str], None] | None = None,
+    progress: DownloadProgressFn | None = None,
+    cancel_event=None,
+) -> None:
+    """Add onnxruntime to an existing managed mokuro venv (no torch re-download). Raises SetupError."""
+    spec = _current_spec()
+    if spec is None:
+        raise SetupError(f"In-app mokuro install is not supported on this platform ({sys.platform}).")
+    uv = _ensure_uv(bin_root, spec, progress=progress, cancel_event=cancel_event)
+    _run_uv(
+        [str(uv), "pip", "install", "--python", str(managed_python_path(uv_root)), ONNXRUNTIME_REQUIREMENT],
+        timeout_s=_PIP_TIMEOUT_S,
+        env=_uv_env(uv_root),
+        cwd=uv_root,
+        status=status,
+        cancel_event=cancel_event,
+        op="uv pip install",
+    )
+    if not onnxruntime_installed(uv_root):
+        raise SetupError("uv reported success but onnxruntime is missing from the mokuro environment.")

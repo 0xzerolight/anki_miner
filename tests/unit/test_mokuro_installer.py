@@ -12,9 +12,12 @@ from pathlib import Path
 
 import pytest
 
+from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.services import mokuro_installer as mi
+from anki_miner.services.ocr.recognizers import RECOGNIZERS
 from anki_miner.utils.process_supervisor import SupervisedResult, SupervisedState
+from tests.unit._ocr_profiles import with_recognizer
 
 
 def _tar_with_uv(tmp_path: Path, member_dir: str) -> tuple[Path, str]:
@@ -244,3 +247,136 @@ def test_is_installed(linux, tmp_path):
     shim.write_text("x")
     shim.chmod(0o755)
     assert mi.is_installed(tmp_path / "uv") is True
+
+
+# --- onnxruntime for the PP-OCR driver (a recogniser language only) -------------------
+
+
+def _ready_uv(bin_root: Path) -> Path:
+    bin_root.mkdir(parents=True, exist_ok=True)
+    (bin_root / "uv").write_text("#!/x\n")
+    (bin_root / "uv").chmod(0o755)
+    (bin_root / "uv.version").write_text(mi.UV_VERSION)
+    return bin_root / "uv"
+
+
+def _onnxruntime_init(uv_root: Path) -> Path:
+    return uv_root / "mokuro" / "lib" / "python3.12" / "site-packages" / "onnxruntime" / "__init__.py"
+
+
+def _touch(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("")
+
+
+def test_add_onnxruntime_installs_into_the_existing_venv_only(linux, tmp_path, monkeypatch):
+    bin_root, uv_root = tmp_path / "bin", tmp_path / "uv"
+    uv = _ready_uv(bin_root)
+    monkeypatch.setattr(mi, "download_to_temp", lambda *a, **k: pytest.fail("must not download"))
+    calls: list[list[str]] = []
+
+    def fake(cmd, **kwargs):
+        calls.append([str(c) for c in cmd])
+        _touch(_onnxruntime_init(uv_root))
+        return SupervisedResult(SupervisedState.COMPLETED, 0, "", "")
+
+    monkeypatch.setattr(mi, "run_supervised", fake)
+    mi.add_onnxruntime(bin_root, uv_root)
+    assert calls == [
+        [str(uv), "pip", "install", "--python", str(uv_root / "mokuro" / "bin" / "python"), mi.ONNXRUNTIME_REQUIREMENT]
+    ]
+
+
+def test_add_onnxruntime_refuses_a_success_without_the_package(linux, tmp_path, monkeypatch):
+    bin_root = tmp_path / "bin"
+    _ready_uv(bin_root)
+    monkeypatch.setattr(mi, "run_supervised", lambda *a, **k: SupervisedResult(SupervisedState.COMPLETED, 0, "", ""))
+    with pytest.raises(SetupError, match="onnxruntime is missing"):
+        mi.add_onnxruntime(bin_root, tmp_path / "uv")
+
+
+def test_onnxruntime_installed_probes_the_venv_site_packages(monkeypatch, tmp_path):
+    uv_root = tmp_path / "uv"
+    monkeypatch.setattr(mi.sys, "platform", "linux")
+    assert mi.onnxruntime_installed(uv_root) is False
+    _onnxruntime_init(uv_root).parent.mkdir(parents=True)
+    assert mi.onnxruntime_installed(uv_root) is False  # a bare folder is not an importable package
+    _touch(_onnxruntime_init(uv_root))
+    assert mi.onnxruntime_installed(uv_root) is True
+
+    monkeypatch.setattr(mi.sys, "platform", "win32")
+    assert mi.onnxruntime_installed(uv_root) is False
+    _touch(uv_root / "mokuro" / "Lib" / "site-packages" / "onnxruntime" / "__init__.py")
+    assert mi.onnxruntime_installed(uv_root) is True
+
+
+# --- manga_ocr_state: the one readiness rule --------------------------------------------
+
+
+def _config(tmp_path: Path, language: str) -> AnkiMinerConfig:
+    return AnkiMinerConfig(
+        media_temp_folder=tmp_path / "tmp",
+        uv_root=tmp_path / "uv",
+        video_ocr_models_root=tmp_path / "models",
+        language=language,
+    )
+
+
+def _managed_mokuro(uv_root: Path) -> None:
+    shim = uv_root / "mokuro" / "bin" / "mokuro"
+    _touch(shim)
+    shim.chmod(0o755)
+
+
+def _korean_model(models_root: Path) -> None:
+    model = RECOGNIZERS["korean"].model
+    models_root.mkdir(parents=True, exist_ok=True)
+    with (models_root / model.filename).open("wb") as f:
+        f.truncate(model.size_bytes)  # sparse: the probe checks the exact size only
+
+
+@pytest.mark.parametrize("found", [True, False])
+def test_japanese_manga_ocr_needs_any_mokuro(linux, tmp_path, monkeypatch, found):
+    seen = []
+    monkeypatch.setattr(mi, "mokuro_available", lambda location, uv_root: seen.append((location, uv_root)) or found)
+    config = _config(tmp_path, "ja")
+    state = mi.manga_ocr_state(config)
+    assert state == mi.MangaOcrState(available=found, mokuro=found)
+    assert bool(state) is found
+    assert seen == [(config.mokuro_location, config.uv_root)]
+
+
+def test_a_recogniser_language_ignores_a_path_mokuro(linux, tmp_path, monkeypatch):
+    """Review Focus 2: a pip/PATH mokuro cannot run the driver, so it counts for nothing."""
+    with_recognizer(monkeypatch, mi, "ko", "korean")
+    monkeypatch.setattr(mi, "mokuro_available", lambda *a: True)
+    config = _config(tmp_path, "ko")
+    _touch(_onnxruntime_init(config.uv_root))
+    _korean_model(config.video_ocr_models_root)
+    assert mi.manga_ocr_state(config) == mi.MangaOcrState(available=False, mokuro=False)
+
+
+@pytest.mark.parametrize("present", [(), ("onnxruntime",), ("model",)])
+def test_a_managed_mokuro_without_every_recogniser_part_is_not_ready(linux, tmp_path, monkeypatch, present):
+    """Review Focus 1: the mokuro is there, so the tab offers the remaining parts, not a reinstall."""
+    with_recognizer(monkeypatch, mi, "ko", "korean")
+    config = _config(tmp_path, "ko")
+    _managed_mokuro(config.uv_root)
+    if "onnxruntime" in present:
+        _touch(_onnxruntime_init(config.uv_root))
+    if "model" in present:
+        _korean_model(config.video_ocr_models_root)
+    state = mi.manga_ocr_state(config)
+    assert state == mi.MangaOcrState(available=False, mokuro=True)
+    assert not state
+
+
+def test_a_recogniser_language_with_every_part_is_ready(linux, tmp_path, monkeypatch):
+    with_recognizer(monkeypatch, mi, "ko", "korean")
+    config = _config(tmp_path, "ko")
+    _managed_mokuro(config.uv_root)
+    _touch(_onnxruntime_init(config.uv_root))
+    _korean_model(config.video_ocr_models_root)
+    state = mi.manga_ocr_state(config)
+    assert state == mi.MangaOcrState(available=True, mokuro=True)
+    assert state

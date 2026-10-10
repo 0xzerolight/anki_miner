@@ -17,6 +17,9 @@ One ``run_supervised`` subprocess per volume (``FileQueueWorker`` item). mokuro
 
 The child runs with ``PYTHONUTF8=1``/``PYTHONIOENCODING=utf-8`` so Japanese
 paths in its output decode under the supervisor's UTF-8 reader on Windows.
+
+A language whose profile names a PP-OCR recogniser runs ``services/ocr/mokuro_driver.py``
+with the managed venv's Python instead: same flags, same log lines, same ``.mokuro``.
 """
 
 from __future__ import annotations
@@ -34,9 +37,12 @@ from PyQt6.QtCore import QCoreApplication
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions.mokuro import MokuroError, MokuroNotFoundError
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.mokuro_volumes import MokuroVolume
+from anki_miner.services.ocr import MOKURO_DRIVER
+from anki_miner.services.ocr.recognizers import RECOGNIZERS
 from anki_miner.utils.i18n import tr_format
-from anki_miner.utils.mokuro_resolver import resolve_mokuro, scrubbed_python_env
+from anki_miner.utils.mokuro_resolver import managed_python_path, resolve_mokuro, scrubbed_python_env
 from anki_miner.utils.process_supervisor import SupervisedState, run_supervised
 
 logger = logging.getLogger(__name__)
@@ -151,7 +157,7 @@ class MokuroRunnerService:
             # huggingface_hub defaults HF_HOME to $XDG_CACHE_HOME/huggingface:
             # pointing XDG_CACHE_HOME next to the managed venv keeps both
             # (~970 MB) inside ANKI_MINER_HOME. A user's explicit HF_HOME still wins.
-            env=self._child_env() | {"XDG_CACHE_HOME": str(self._config.uv_root / "model_cache")},
+            env=self._child_env() | {"XDG_CACHE_HOME": str(self._config.uv_root / "model_cache")} | self._ocr_env(),
             line_callback=handle_line,
             combine_stderr=True,
             retain_output=False,
@@ -184,14 +190,24 @@ class MokuroRunnerService:
         logger.info("mokuro run complete: %s", volume.output)
         return MokuroResult(MokuroStatus.DONE, volume.output)
 
+    def _ocr_env(self) -> dict[str, str]:
+        key = get_profile(config_language(self._config)).ocr_recognizer
+        if not key:
+            return {}
+        spec = RECOGNIZERS[key]
+        return {
+            "ANKI_MINER_OCR_MODEL": str(self._config.video_ocr_models_root / spec.model.filename),
+            "ANKI_MINER_OCR_REVERSE": "1" if spec.reverse else "0",
+        }
+
     def _build_cmd(self, volume: MokuroVolume, options: MokuroOptions) -> list[str]:
-        cmd = [
-            resolve_mokuro(self._config),
-            str(volume.source),
-            "--disable_confirmation=True",
-            "--ignore_errors=True",
-            "--legacy_html=False",
-        ]
+        if get_profile(config_language(self._config)).ocr_recognizer:
+            # Only the in-app venv has the recogniser and the driver's onnxruntime; a PATH or
+            # override mokuro would read these pages with Japanese manga-ocr.
+            head = [str(managed_python_path(self._config.uv_root)), str(MOKURO_DRIVER)]
+        else:
+            head = [resolve_mokuro(self._config)]
+        cmd = [*head, str(volume.source), "--disable_confirmation=True", "--ignore_errors=True", "--legacy_html=False"]
         if options.force_cpu:
             cmd.append("--force_cpu=True")
         if options.no_cache:

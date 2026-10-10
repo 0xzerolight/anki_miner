@@ -106,10 +106,12 @@ def test_reverse_flag_applies_the_reorder():
     assert PaddleRecognizer(_FakeSession([[_A, _B, _C]], characters="ا\nب\nج")).recognize([_line()])[0][0] == "ابج"
 
 
-@pytest.mark.parametrize("name", ["paddle_rec.py"])
+@pytest.mark.parametrize("name", ["paddle_rec.py", "mokuro_driver.py"])
 def test_the_standalone_file_imports_nothing_from_anki_miner(name):
     tree = ast.parse((Path(paddle_rec.__file__).parent / name).read_text(encoding="utf-8"))
     modules = [alias.name for node in ast.walk(tree) if isinstance(node, ast.Import) for alias in node.names] + [
         node.module or "" for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)
     ]
     assert not [m for m in modules if m.startswith("anki_miner")]
+    # A relative import (from .paddle_rec import ...) has no package to resolve against in a script.
+    assert not [node.module for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) and node.level > 0]
