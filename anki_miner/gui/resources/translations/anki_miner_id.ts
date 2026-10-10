@@ -1588,12 +1588,20 @@ Tidak ada berkas indeks yang dihapus.</translation>
 </context><context>
     <name>BackgroundTaskController</name>
     <message>
+        <source>Wait for the Video OCR setup to finish, then try again.</source>
+        <translation>Tunggu hingga penyiapan Video OCR selesai, lalu coba lagi.</translation>
+    </message>
+    <message>
         <source>Wait for the OCR engine download to finish, then try again.</source>
         <translation>Tunggu hingga unduhan mesin OCR selesai, lalu coba lagi.</translation>
     </message>
     <message>
         <source>Wait for the silence-removal download to finish, then try again.</source>
         <translation>Tunggu hingga unduhan penghapusan keheningan selesai, lalu coba lagi.</translation>
+    </message>
+    <message>
+        <source>Wait for the Manga OCR setup to finish, then try again.</source>
+        <translation>Tunggu hingga penyiapan Manga OCR selesai, lalu coba lagi.</translation>
     </message>
 </context><context>
     <name>BatchProcessingTab</name>
@@ -2704,8 +2712,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Buat berkas .mokuro dari gambar manga</translation>
     </message>
     <message>
-        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
-        <translation>Jalankan OCR bahasa Jepang mokuro pada folder volume atau seluruh seri agar dapat di-mining di Bacaan → Manga. Pasang mokuro dari kartu penyiapannya di Utilitas → Manga OCR.</translation>
+        <source>Run mokuro's OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
+        <translation>Jalankan OCR mokuro pada folder volume atau seluruh seri agar dapat di-mining di Bacaan → Manga. Pasang mokuro dari kartu penyiapannya di Utilitas → Manga OCR.</translation>
     </message>
     <message>
         <source>Read burned-in subtitles from a video into an .srt</source>
@@ -7304,6 +7312,14 @@ Lanjutkan?</translation>
         <translation>Memasang mokuro…</translation>
     </message>
     <message>
+        <source>Adding the OCR runtime…</source>
+        <translation>Menambahkan runtime OCR…</translation>
+    </message>
+    <message>
+        <source>Downloading the OCR model…</source>
+        <translation>Mengunduh model OCR…</translation>
+    </message>
+    <message>
         <source>mokuro installed.</source>
         <translation>mokuro terpasang.</translation>
     </message>
@@ -7433,6 +7449,7 @@ Lanjutkan?</translation>
     </message>
     <message>
         <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
         <translation>Mengunduh mokuro dan mesin OCR-nya ke folder Anki Miner — sekitar 1 GB, hingga 4 GB dengan dukungan GPU NVIDIA.</translation>
     </message>
     <message>
@@ -7462,6 +7479,22 @@ Lanjutkan?</translation>
     <message>
         <source>Run OCR</source>
         <translation>Jalankan OCR</translation>
+    </message>
+    <message>
+        <source>This language needs its OCR model.</source>
+        <translation>Bahasa ini memerlukan model OCR-nya.</translation>
+    </message>
+    <message>
+        <source>This language needs Anki Miner's own mokuro. Install it below.</source>
+        <translation>Bahasa ini memerlukan mokuro milik Anki Miner sendiri. Pasang di bawah.</translation>
+    </message>
+    <message>
+        <source>Download OCR model</source>
+        <translation>Unduh model OCR</translation>
+    </message>
+    <message>
+        <source>Downloads the text-recognition model for your mining language (about %1 MB) into Anki Miner's folder.</source>
+        <translation>Mengunduh model pengenalan teks untuk bahasa mining Anda (sekitar %1 MB) ke folder Anki Miner.</translation>
     </message>
     <message>
         <source>Reinstall mokuro</source>
@@ -12725,12 +12758,12 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
         <translation>Unduh model OCR</translation>
     </message>
     <message>
-        <source>Downloads the two OCR models (about 33 MB) into Anki Miner's folder.</source>
-        <translation>Mengunduh dua model OCR (sekitar 33 MB) ke folder Anki Miner.</translation>
+        <source>Downloads the OCR models (about %1 MB) into Anki Miner's folder.</source>
+        <translation>Mengunduh model OCR (sekitar %1 MB) ke folder Anki Miner.</translation>
     </message>
     <message>
-        <source>Downloads the OCR runtime and its two models (about 50 MB) into Anki Miner's folder.</source>
-        <translation>Mengunduh runtime OCR beserta dua modelnya (sekitar 50 MB) ke folder Anki Miner.</translation>
+        <source>Downloads the OCR runtime and its models (about %1 MB) into Anki Miner's folder.</source>
+        <translation>Mengunduh runtime OCR beserta modelnya (sekitar %1 MB) ke folder Anki Miner.</translation>
     </message>
     <message>
         <source>Not installed</source>

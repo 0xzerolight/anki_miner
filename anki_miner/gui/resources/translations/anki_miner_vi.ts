@@ -1588,12 +1588,20 @@ Không có tệp chỉ mục nào bị xóa.</translation>
 </context><context>
     <name>BackgroundTaskController</name>
     <message>
+        <source>Wait for the Video OCR setup to finish, then try again.</source>
+        <translation>Hãy đợi quá trình thiết lập Video OCR hoàn tất, rồi thử lại.</translation>
+    </message>
+    <message>
         <source>Wait for the OCR engine download to finish, then try again.</source>
         <translation>Hãy đợi quá trình tải công cụ OCR hoàn tất, rồi thử lại.</translation>
     </message>
     <message>
         <source>Wait for the silence-removal download to finish, then try again.</source>
         <translation>Hãy đợi quá trình tải thư viện loại bỏ khoảng lặng hoàn tất, rồi thử lại.</translation>
+    </message>
+    <message>
+        <source>Wait for the Manga OCR setup to finish, then try again.</source>
+        <translation>Hãy đợi quá trình thiết lập Manga OCR hoàn tất, rồi thử lại.</translation>
     </message>
 </context><context>
     <name>BatchProcessingTab</name>
@@ -2704,8 +2712,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Tạo tệp .mokuro từ ảnh manga</translation>
     </message>
     <message>
-        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
-        <translation>Chạy OCR tiếng Nhật của mokuro trên thư mục của một tập hoặc cả một bộ truyện để Đọc → Manga có thể khai thác. Cài đặt mokuro từ mục thiết lập của nó trong Tiện ích → Manga OCR.</translation>
+        <source>Run mokuro's OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
+        <translation>Chạy OCR của mokuro trên thư mục của một tập hoặc cả một bộ truyện để Đọc → Manga có thể khai thác. Cài đặt mokuro từ mục thiết lập của nó trong Tiện ích → Manga OCR.</translation>
     </message>
     <message>
         <source>Read burned-in subtitles from a video into an .srt</source>
@@ -7304,6 +7312,14 @@ Tiếp tục?</translation>
         <translation>Đang cài đặt mokuro…</translation>
     </message>
     <message>
+        <source>Adding the OCR runtime…</source>
+        <translation>Đang thêm môi trường thực thi OCR…</translation>
+    </message>
+    <message>
+        <source>Downloading the OCR model…</source>
+        <translation>Đang tải mô hình OCR…</translation>
+    </message>
+    <message>
         <source>mokuro installed.</source>
         <translation>Đã cài đặt mokuro.</translation>
     </message>
@@ -7433,6 +7449,7 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
         <translation>Tải mokuro và công cụ OCR của nó vào thư mục của Anki Miner — khoảng 1 GB, lên đến 4 GB nếu hỗ trợ GPU NVIDIA.</translation>
     </message>
     <message>
@@ -7462,6 +7479,22 @@ Tiếp tục?</translation>
     <message>
         <source>Run OCR</source>
         <translation>Chạy OCR</translation>
+    </message>
+    <message>
+        <source>This language needs its OCR model.</source>
+        <translation>Ngôn ngữ này cần mô hình OCR riêng của nó.</translation>
+    </message>
+    <message>
+        <source>This language needs Anki Miner's own mokuro. Install it below.</source>
+        <translation>Ngôn ngữ này cần mokuro riêng của Anki Miner. Hãy cài đặt ở bên dưới.</translation>
+    </message>
+    <message>
+        <source>Download OCR model</source>
+        <translation>Tải mô hình OCR</translation>
+    </message>
+    <message>
+        <source>Downloads the text-recognition model for your mining language (about %1 MB) into Anki Miner's folder.</source>
+        <translation>Tải mô hình nhận dạng văn bản cho ngôn ngữ khai thác của bạn (khoảng %1 MB) vào thư mục của Anki Miner.</translation>
     </message>
     <message>
         <source>Reinstall mokuro</source>
@@ -12725,12 +12758,12 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
         <translation>Tải mô hình OCR</translation>
     </message>
     <message>
-        <source>Downloads the two OCR models (about 33 MB) into Anki Miner's folder.</source>
-        <translation>Tải hai mô hình OCR (khoảng 33 MB) vào thư mục của Anki Miner.</translation>
+        <source>Downloads the OCR models (about %1 MB) into Anki Miner's folder.</source>
+        <translation>Tải các mô hình OCR (khoảng %1 MB) vào thư mục của Anki Miner.</translation>
     </message>
     <message>
-        <source>Downloads the OCR runtime and its two models (about 50 MB) into Anki Miner's folder.</source>
-        <translation>Tải môi trường thực thi OCR và hai mô hình của nó (khoảng 50 MB) vào thư mục của Anki Miner.</translation>
+        <source>Downloads the OCR runtime and its models (about %1 MB) into Anki Miner's folder.</source>
+        <translation>Tải môi trường thực thi OCR và các mô hình của nó (khoảng %1 MB) vào thư mục của Anki Miner.</translation>
     </message>
     <message>
         <source>Not installed</source>

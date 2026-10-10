@@ -1581,11 +1581,19 @@ No index files are deleted.</source>
 </context><context>
     <name>BackgroundTaskController</name>
     <message>
+        <source>Wait for the Video OCR setup to finish, then try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Wait for the OCR engine download to finish, then try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Wait for the silence-removal download to finish, then try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Wait for the Manga OCR setup to finish, then try again.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -2698,7 +2706,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
+        <source>Run mokuro's OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -7311,6 +7319,14 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Adding the OCR runtime…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloading the OCR model…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>mokuro installed.</source>
         <translation type="unfinished" />
     </message>
@@ -7440,6 +7456,7 @@ Continue?</source>
     </message>
     <message>
         <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
         <translation type="unfinished" />
     </message>
     <message>
@@ -7468,6 +7485,22 @@ Continue?</source>
     </message>
     <message>
         <source>Run OCR</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This language needs its OCR model.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This language needs Anki Miner's own mokuro. Install it below.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download OCR model</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloads the text-recognition model for your mining language (about %1 MB) into Anki Miner's folder.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -12723,11 +12756,11 @@ Your installed resources and your theme are kept.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Downloads the two OCR models (about 33 MB) into Anki Miner's folder.</source>
+        <source>Downloads the OCR models (about %1 MB) into Anki Miner's folder.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Downloads the OCR runtime and its two models (about 50 MB) into Anki Miner's folder.</source>
+        <source>Downloads the OCR runtime and its models (about %1 MB) into Anki Miner's folder.</source>
         <translation type="unfinished" />
     </message>
     <message>

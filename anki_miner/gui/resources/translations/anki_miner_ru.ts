@@ -1592,12 +1592,20 @@ No index files are deleted.</source>
 </context><context>
     <name>BackgroundTaskController</name>
     <message>
+        <source>Wait for the Video OCR setup to finish, then try again.</source>
+        <translation>Дождитесь завершения настройки OCR видео и попробуйте снова.</translation>
+    </message>
+    <message>
         <source>Wait for the OCR engine download to finish, then try again.</source>
         <translation>Дождитесь завершения загрузки движка OCR и попробуйте снова.</translation>
     </message>
     <message>
         <source>Wait for the silence-removal download to finish, then try again.</source>
         <translation>Дождитесь завершения загрузки библиотеки удаления тишины и попробуйте снова.</translation>
+    </message>
+    <message>
+        <source>Wait for the Manga OCR setup to finish, then try again.</source>
+        <translation>Дождитесь завершения настройки OCR манги и попробуйте снова.</translation>
     </message>
 </context><context>
     <name>BatchProcessingTab</name>
@@ -2710,8 +2718,8 @@ No index files are deleted.</source>
         <translation>Создать файлы .mokuro из изображений манги</translation>
     </message>
     <message>
-        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
-        <translation>Запустите OCR mokuro для японского текста в папке тома или целой серии, чтобы майнить результат в разделе Чтение → Манга. Установите mokuro из блока установки в разделе Утилиты → OCR манги.</translation>
+        <source>Run mokuro's OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
+        <translation>Запустите OCR mokuro в папке тома или целой серии, чтобы майнить результат в разделе Чтение → Манга. Установите mokuro из блока установки в разделе Утилиты → OCR манги.</translation>
     </message>
     <message>
         <source>Read burned-in subtitles from a video into an .srt</source>
@@ -7378,6 +7386,14 @@ Continue?</source>
         <translation>Установка mokuro…</translation>
     </message>
     <message>
+        <source>Adding the OCR runtime…</source>
+        <translation>Добавление среды выполнения OCR…</translation>
+    </message>
+    <message>
+        <source>Downloading the OCR model…</source>
+        <translation>Загрузка модели OCR…</translation>
+    </message>
+    <message>
         <source>mokuro installed.</source>
         <translation>mokuro установлен.</translation>
     </message>
@@ -7507,6 +7523,7 @@ Continue?</source>
     </message>
     <message>
         <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
         <translation>Загружает mokuro и его OCR-движок в папку Anki Miner — около 1 ГБ, до 4 ГБ с поддержкой GPU NVIDIA.</translation>
     </message>
     <message>
@@ -7536,6 +7553,22 @@ Continue?</source>
     <message>
         <source>Run OCR</source>
         <translation>Запустить OCR</translation>
+    </message>
+    <message>
+        <source>This language needs its OCR model.</source>
+        <translation>Для этого языка нужна его модель OCR.</translation>
+    </message>
+    <message>
+        <source>This language needs Anki Miner's own mokuro. Install it below.</source>
+        <translation>Для этого языка нужен собственный mokuro Anki Miner. Установите его ниже.</translation>
+    </message>
+    <message>
+        <source>Download OCR model</source>
+        <translation>Загрузить модель OCR</translation>
+    </message>
+    <message>
+        <source>Downloads the text-recognition model for your mining language (about %1 MB) into Anki Miner's folder.</source>
+        <translation>Загружает модель распознавания текста для вашего языка майнинга (около %1 МБ) в папку Anki Miner.</translation>
     </message>
     <message>
         <source>Reinstall mokuro</source>
@@ -12815,12 +12848,12 @@ Your installed resources and your theme are kept.</source>
         <translation>Загрузить модели OCR</translation>
     </message>
     <message>
-        <source>Downloads the two OCR models (about 33 MB) into Anki Miner's folder.</source>
-        <translation>Загружает две модели OCR (около 33 МБ) в папку Anki Miner.</translation>
+        <source>Downloads the OCR models (about %1 MB) into Anki Miner's folder.</source>
+        <translation>Загружает модели OCR (около %1 МБ) в папку Anki Miner.</translation>
     </message>
     <message>
-        <source>Downloads the OCR runtime and its two models (about 50 MB) into Anki Miner's folder.</source>
-        <translation>Загружает среду выполнения OCR и две её модели (около 50 МБ) в папку Anki Miner.</translation>
+        <source>Downloads the OCR runtime and its models (about %1 MB) into Anki Miner's folder.</source>
+        <translation>Загружает среду выполнения OCR и её модели (около %1 МБ) в папку Anki Miner.</translation>
     </message>
     <message>
         <source>Not installed</source>

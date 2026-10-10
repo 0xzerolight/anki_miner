@@ -1590,12 +1590,20 @@ No se elimina ningún archivo de índice.</translation>
 </context><context>
     <name>BackgroundTaskController</name>
     <message>
+        <source>Wait for the Video OCR setup to finish, then try again.</source>
+        <translation>Espere a que termine la configuración de OCR de video y vuelva a intentarlo.</translation>
+    </message>
+    <message>
         <source>Wait for the OCR engine download to finish, then try again.</source>
         <translation>Espere a que termine la descarga del motor de OCR y vuelva a intentarlo.</translation>
     </message>
     <message>
         <source>Wait for the silence-removal download to finish, then try again.</source>
         <translation>Espere a que termine la descarga de la eliminación de silencios y vuelva a intentarlo.</translation>
+    </message>
+    <message>
+        <source>Wait for the Manga OCR setup to finish, then try again.</source>
+        <translation>Espere a que termine la configuración de OCR de manga y vuelva a intentarlo.</translation>
     </message>
 </context><context>
     <name>BatchProcessingTab</name>
@@ -2707,8 +2715,8 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Crear archivos .mokuro a partir de imágenes de manga</translation>
     </message>
     <message>
-        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
-        <translation>Ejecute el OCR japonés de mokuro sobre la carpeta de un volumen o una serie entera para poder minarla en Lectura → Manga. Instale mokuro desde su panel de configuración en Utilidades → OCR de manga.</translation>
+        <source>Run mokuro's OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
+        <translation>Ejecute el OCR de mokuro sobre la carpeta de un volumen o una serie entera para poder minarla en Lectura → Manga. Instale mokuro desde su panel de configuración en Utilidades → OCR de manga.</translation>
     </message>
     <message>
         <source>Read burned-in subtitles from a video into an .srt</source>
@@ -7341,6 +7349,14 @@ Cierre primero el navegador de tarjetas y el editor de notas de Anki — una not
         <translation>Instalando mokuro…</translation>
     </message>
     <message>
+        <source>Adding the OCR runtime…</source>
+        <translation>Añadiendo el entorno de ejecución de OCR…</translation>
+    </message>
+    <message>
+        <source>Downloading the OCR model…</source>
+        <translation>Descargando el modelo de OCR…</translation>
+    </message>
+    <message>
         <source>mokuro installed.</source>
         <translation>mokuro instalado.</translation>
     </message>
@@ -7470,6 +7486,7 @@ Cierre primero el navegador de tarjetas y el editor de notas de Anki — una not
     </message>
     <message>
         <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
         <translation>Descarga mokuro y su motor de OCR en la carpeta de Anki Miner — cerca de 1 GB, hasta 4 GB con compatibilidad con GPU NVIDIA.</translation>
     </message>
     <message>
@@ -7499,6 +7516,22 @@ Cierre primero el navegador de tarjetas y el editor de notas de Anki — una not
     <message>
         <source>Run OCR</source>
         <translation>Ejecutar OCR</translation>
+    </message>
+    <message>
+        <source>This language needs its OCR model.</source>
+        <translation>Este idioma necesita su modelo de OCR.</translation>
+    </message>
+    <message>
+        <source>This language needs Anki Miner's own mokuro. Install it below.</source>
+        <translation>Este idioma necesita el mokuro propio de Anki Miner. Instálelo abajo.</translation>
+    </message>
+    <message>
+        <source>Download OCR model</source>
+        <translation>Descargar modelo de OCR</translation>
+    </message>
+    <message>
+        <source>Downloads the text-recognition model for your mining language (about %1 MB) into Anki Miner's folder.</source>
+        <translation>Descarga el modelo de reconocimiento de texto de su idioma de minería (unos %1 MB) en la carpeta de Anki Miner.</translation>
     </message>
     <message>
         <source>Reinstall mokuro</source>
@@ -12770,12 +12803,12 @@ Sus recursos instalados y su tema se conservan.</translation>
         <translation>Descargar modelos de OCR</translation>
     </message>
     <message>
-        <source>Downloads the two OCR models (about 33 MB) into Anki Miner's folder.</source>
-        <translation>Descarga los dos modelos de OCR (unos 33 MB) en la carpeta de Anki Miner.</translation>
+        <source>Downloads the OCR models (about %1 MB) into Anki Miner's folder.</source>
+        <translation>Descarga los modelos de OCR (unos %1 MB) en la carpeta de Anki Miner.</translation>
     </message>
     <message>
-        <source>Downloads the OCR runtime and its two models (about 50 MB) into Anki Miner's folder.</source>
-        <translation>Descarga el entorno de ejecución de OCR y sus dos modelos (unos 50 MB) en la carpeta de Anki Miner.</translation>
+        <source>Downloads the OCR runtime and its models (about %1 MB) into Anki Miner's folder.</source>
+        <translation>Descarga el entorno de ejecución de OCR y sus modelos (unos %1 MB) en la carpeta de Anki Miner.</translation>
     </message>
     <message>
         <source>Not installed</source>

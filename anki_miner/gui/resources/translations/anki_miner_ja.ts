@@ -1588,12 +1588,20 @@ No index files are deleted.</source>
 </context><context>
     <name>BackgroundTaskController</name>
     <message>
+        <source>Wait for the Video OCR setup to finish, then try again.</source>
+        <translation>動画 OCR のセットアップが完了するのを待ってから、再試行してください。</translation>
+    </message>
+    <message>
         <source>Wait for the OCR engine download to finish, then try again.</source>
         <translation>OCR エンジンのダウンロードが完了するのを待ってから、再試行してください。</translation>
     </message>
     <message>
         <source>Wait for the silence-removal download to finish, then try again.</source>
         <translation>無音除去のダウンロードが完了するのを待ってから、再試行してください。</translation>
+    </message>
+    <message>
+        <source>Wait for the Manga OCR setup to finish, then try again.</source>
+        <translation>マンガ OCR のセットアップが完了するのを待ってから、再試行してください。</translation>
     </message>
 </context><context>
     <name>BatchProcessingTab</name>
@@ -2704,8 +2712,8 @@ No index files are deleted.</source>
         <translation>マンガ画像から .mokuro ファイルを作成</translation>
     </message>
     <message>
-        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
-        <translation>巻フォルダまたはシリーズ全体に対して mokuro の日本語 OCR を実行すると、「リーディング → マンガ」でマイニングできるようになります。mokuro は「ユーティリティ → マンガ OCR」のセットアップカードからインストールしてください。</translation>
+        <source>Run mokuro's OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
+        <translation>巻フォルダまたはシリーズ全体に対して mokuro の OCR を実行すると、「リーディング → マンガ」でマイニングできるようになります。mokuro は「ユーティリティ → マンガ OCR」のセットアップカードからインストールしてください。</translation>
     </message>
     <message>
         <source>Read burned-in subtitles from a video into an .srt</source>
@@ -7304,6 +7312,14 @@ Continue?</source>
         <translation>mokuro をインストール中…</translation>
     </message>
     <message>
+        <source>Adding the OCR runtime…</source>
+        <translation>OCR ランタイムを追加中…</translation>
+    </message>
+    <message>
+        <source>Downloading the OCR model…</source>
+        <translation>OCR モデルをダウンロード中…</translation>
+    </message>
+    <message>
         <source>mokuro installed.</source>
         <translation>mokuro をインストールしました。</translation>
     </message>
@@ -7433,6 +7449,7 @@ Continue?</source>
     </message>
     <message>
         <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
         <translation>mokuro とその OCR エンジンを Anki Miner のフォルダにダウンロードします — 約 1 GB、NVIDIA GPU サポートを含めると最大 4 GB です。</translation>
     </message>
     <message>
@@ -7462,6 +7479,22 @@ Continue?</source>
     <message>
         <source>Run OCR</source>
         <translation>OCR を実行</translation>
+    </message>
+    <message>
+        <source>This language needs its OCR model.</source>
+        <translation>この言語には専用の OCR モデルが必要です。</translation>
+    </message>
+    <message>
+        <source>This language needs Anki Miner's own mokuro. Install it below.</source>
+        <translation>この言語には Anki Miner 専用の mokuro が必要です。下からインストールしてください。</translation>
+    </message>
+    <message>
+        <source>Download OCR model</source>
+        <translation>OCR モデルをダウンロード</translation>
+    </message>
+    <message>
+        <source>Downloads the text-recognition model for your mining language (about %1 MB) into Anki Miner's folder.</source>
+        <translation>マイニング言語の文字認識モデル（約 %1 MB）を Anki Miner のフォルダにダウンロードします。</translation>
     </message>
     <message>
         <source>Reinstall mokuro</source>
@@ -12725,12 +12758,12 @@ Your installed resources and your theme are kept.</source>
         <translation>OCR モデルをダウンロード</translation>
     </message>
     <message>
-        <source>Downloads the two OCR models (about 33 MB) into Anki Miner's folder.</source>
-        <translation>2 つの OCR モデル（約 33 MB）を Anki Miner のフォルダにダウンロードします。</translation>
+        <source>Downloads the OCR models (about %1 MB) into Anki Miner's folder.</source>
+        <translation>OCR モデル（約 %1 MB）を Anki Miner のフォルダにダウンロードします。</translation>
     </message>
     <message>
-        <source>Downloads the OCR runtime and its two models (about 50 MB) into Anki Miner's folder.</source>
-        <translation>OCR ランタイムと 2 つのモデル（約 50 MB）を Anki Miner のフォルダにダウンロードします。</translation>
+        <source>Downloads the OCR runtime and its models (about %1 MB) into Anki Miner's folder.</source>
+        <translation>OCR ランタイムとモデル（約 %1 MB）を Anki Miner のフォルダにダウンロードします。</translation>
     </message>
     <message>
         <source>Not installed</source>
