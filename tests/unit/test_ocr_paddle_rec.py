@@ -90,6 +90,10 @@ def test_an_all_blank_line_reads_empty_with_zero_confidence():
         ("۱۴۰۳ مالس", "سلام ۱۴۰۳"),  # Persian digits are an LTR run too
         ("(ابحرم)", "(مرحبا)"),  # brackets mirror, as the bidi algorithm draws them
         ("«مالس»", "«سلام»"),
+        ("hello world ابحرم", "مرحبا hello world"),  # a space between two LTR words stays inside the run
+        ("1,000 مالس", "سلام 1,000"),
+        ("۱٫۵ مالس", "سلام ۱٫۵"),  # the Arabic decimal separator is a number character (AN)
+        ("café ابحرم", "مرحبا café"),  # accented Latin is LTR too
     ],
 )
 def test_visual_to_logical_reverses_rtl_but_keeps_ltr_runs(visual, logical):

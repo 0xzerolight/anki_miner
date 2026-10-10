@@ -8,14 +8,14 @@ Pre/post-processing follow RapidOCR v3.10.0 ``ch_ppocr_rec`` (Apache-2.0): BGR i
 height 48, width from the batch's widest aspect ratio (at least 320/48), scaled to
 [-1, 1] and zero-padded on the right; greedy CTC over ``[blank, *character, " "]``,
 ``character`` being the list RapidOCR stores in the model's metadata.
-``_visual_to_logical`` adapts PaddleOCR's ``BaseRecLabelDecode.pred_reverse``
-(Apache-2.0) for the Arabic-script models, which emit text in visual order.
+``_visual_to_logical`` is modelled on PaddleOCR's ``BaseRecLabelDecode.pred_reverse``
+(Apache-2.0), for the Arabic-script models, which emit text in visual order.
 """
 
 from __future__ import annotations
 
 import math
-import re
+import unicodedata
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -26,10 +26,14 @@ from PIL import Image
 _HEIGHT = 48
 _MIN_RATIO = 320 / 48
 _MAX_BATCH = 8
-# Characters that keep their order inside a reversed right-to-left line: Latin, ASCII
-# and Arabic-Indic digits, and number punctuation. Unlike PaddleOCR, the space is not
-# one of them, so it stays a word gap instead of moving to the end of a number.
-_LTR_RUN = re.compile(r"[a-zA-Z0-9٠-٩۰-۹:*./%+\-]")
+# Runs that keep their order inside a reversed right-to-left line start at a character
+# of bidi class L, EN or AN: left-to-right letters (accented Latin, Cyrillic), ASCII,
+# Arabic-Indic and Persian digits, and the Arabic separators ٫ ٬. Any other non-RTL
+# character (space, comma, period, %) stays in a run only between two such characters,
+# so "1,000" and "hello world" stay whole while the space before a right-to-left word
+# stays a word gap.
+_RUN_CLASSES = frozenset({"L", "EN", "AN"})
+_RTL_CLASSES = frozenset({"R", "AL", "NSM"})
 # A right-to-left line draws each bracket mirrored, so the glyph read as "(" is a logical ")".
 _MIRROR = str.maketrans("()[]{}<>«»", ")(][}{><»«")
 
@@ -37,8 +41,15 @@ _MIRROR = str.maketrans("()[]{}<>«»", ")(][}{><»«")
 def _visual_to_logical(text: str) -> str:
     parts: list[str] = []
     run = ""
-    for ch in text:
-        if _LTR_RUN.match(ch):
+    for i, ch in enumerate(text):
+        kind = unicodedata.bidirectional(ch)
+        bridges = (
+            bool(run)
+            and kind not in _RTL_CLASSES
+            and i + 1 < len(text)
+            and unicodedata.bidirectional(text[i + 1]) in _RUN_CLASSES
+        )
+        if kind in _RUN_CLASSES or bridges:
             run += ch
             continue
         if run:
