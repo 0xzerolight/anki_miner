@@ -52,10 +52,12 @@ def test_smoke_fails_loudly_when_the_engine_cannot_load(capsys):
 
 @pytest.mark.skipif(not _MODELS, reason="set ANKI_MINER_TEST_OCR_MODELS to a dir holding the two pinned models")
 def test_smoke_reads_its_line_with_the_real_models():
+    from anki_miner.services.video_ocr import runtime
     from anki_miner.services.video_ocr.meiki_engine import load_engine
+    from anki_miner.services.video_ocr.text_cleanup import clean
 
-    engine = load_engine(Path(str(_MODELS)))
-    with patch("anki_miner.services.video_ocr.runtime.get_engine", return_value=engine):
+    reader = runtime._Reader(load_engine(Path(str(_MODELS))), clean)
+    with patch("anki_miner.services.video_ocr.runtime.get_reader", return_value=reader):
         assert app._run_video_ocr_bundled_smoke() == 0
 
 

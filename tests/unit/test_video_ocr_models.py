@@ -13,6 +13,7 @@ from anki_miner.exceptions import SetupError
 from anki_miner.services.asr import onnx_pack_installer
 from anki_miner.services.ocr import model_installer as mi
 from anki_miner.services.video_ocr import runtime
+from tests.unit._ocr_profiles import with_recognizer
 from tests.unit._resume_key_assert import assert_stable_resume_key
 
 _PAYLOAD = b"onnx-fake-model"
@@ -100,14 +101,31 @@ def test_onnxruntime_importable_appends_the_pack_root(monkeypatch, tmp_path):
     assert str(tmp_path) in onnx_pack_installer.sys.path
 
 
-def test_get_engine_loads_once_per_models_root(monkeypatch, tmp_path):
-    from anki_miner.services.video_ocr import meiki_engine
+def test_get_reader_loads_once_per_models_root_and_language(monkeypatch, tmp_path, test_config):
+    from anki_miner.services.video_ocr import meiki_engine, paddle_engine
 
     runtime._clear_cache()
-    loads: list[Path] = []
-    monkeypatch.setattr(meiki_engine, "load_engine", lambda root: loads.append(root) or object())
-    first = runtime.get_engine(tmp_path, tmp_path / "a")
-    assert runtime.get_engine(tmp_path, tmp_path / "a") is first
-    runtime.get_engine(tmp_path, tmp_path / "b")
-    assert loads == [tmp_path / "a", tmp_path / "b"]
+    loads: list[tuple[Path, str]] = []
+    monkeypatch.setattr(meiki_engine, "load_engine", lambda root: loads.append((root, "meiki")) or object())
+    monkeypatch.setattr(
+        paddle_engine, "load_engine", lambda root, spec: loads.append((root, spec.model.filename)) or object()
+    )
+    with_recognizer(monkeypatch, runtime, "ko", "korean")
+
+    def config(models: str, language: str = "ja"):
+        return dataclasses.replace(
+            test_config, onnx_pack_root=tmp_path, video_ocr_models_root=tmp_path / models, language=language
+        )
+
+    first = runtime.get_reader(config("a")).engine
+    assert runtime.get_reader(config("a")).engine is first
+    runtime.get_reader(config("b"))
+    runtime.get_reader(config("b", "ko"))
+    runtime.get_reader(config("b"))
+    assert loads == [
+        (tmp_path / "a", "meiki"),
+        (tmp_path / "b", "meiki"),
+        (tmp_path / "b", "korean_PP-OCRv5_rec_mobile.onnx"),
+        (tmp_path / "b", "meiki"),
+    ]
     runtime._clear_cache()

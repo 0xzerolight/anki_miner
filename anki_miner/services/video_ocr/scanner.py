@@ -16,9 +16,7 @@ import numpy as np
 from anki_miner.exceptions import OperationCancelled
 from anki_miner.services.video_ocr import runtime
 from anki_miner.services.video_ocr.frame_source import FrameSourceError, Region, iter_samples
-from anki_miner.services.video_ocr.meiki_engine import OcrBox
 from anki_miner.services.video_ocr.segmenter import SAMPLE_FPS, segment
-from anki_miner.services.video_ocr.text_cleanup import clean
 from anki_miner.utils.audio_track_detector import get_media_duration_seconds
 from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
 from anki_miner.utils.logging_ext import log_summary
@@ -46,16 +44,16 @@ class VideoOcrResult:
 
 
 class TextReader(Protocol):
-    def read_boxes(self, bgr: np.ndarray) -> list[OcrBox]: ...
+    def read_text(self, bgr: np.ndarray) -> str: ...
 
 
 def _reader(config, reader: TextReader | None) -> TextReader:
-    return reader if reader is not None else runtime.get_engine(config.onnx_pack_root, config.video_ocr_models_root)
+    return reader if reader is not None else runtime.get_reader(config)
 
 
 def read_region_text(config, crop: np.ndarray) -> str:
-    """The cleaned text the scan would read from ``crop`` ("Test this frame")."""
-    return clean(_reader(config, None).read_boxes(crop))
+    """The text the scan would read from ``crop`` ("Test this frame")."""
+    return _reader(config, None).read_text(crop)
 
 
 def scan_video(
@@ -83,7 +81,7 @@ def scan_video(
 
     try:
         samples = iter_samples(config, video, region, fps=SAMPLE_FPS, cancel_event=cancel_event)
-        cues = segment(samples, lambda frame: clean(text_reader.read_boxes(frame)), on_progress=_on_sample)
+        cues = segment(samples, text_reader.read_text, on_progress=_on_sample)
     except OperationCancelled:
         return VideoOcrResult(VideoOcrStatus.CANCELLED)
     except FrameSourceError as exc:

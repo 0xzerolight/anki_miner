@@ -11,10 +11,11 @@ import numpy as np
 import pysubs2
 import pytest
 
-from anki_miner.services.video_ocr import scanner
+from anki_miner.services.video_ocr import runtime, scanner
 from anki_miner.services.video_ocr.frame_source import Region
 from anki_miner.services.video_ocr.meiki_engine import OcrBox
 from anki_miner.services.video_ocr.scanner import VideoOcrStatus, scan_video
+from anki_miner.services.video_ocr.text_cleanup import clean
 from tests.unit._video_ocr_clips import render_line, solid, write_clip
 
 # numpy-backed (the gate in test_asr_marker_gating.py)
@@ -35,11 +36,11 @@ class _ColourReader:
     def __init__(self, on_read=None) -> None:
         self.on_read = on_read
 
-    def read_boxes(self, bgr: np.ndarray) -> list[OcrBox]:
+    def read_text(self, bgr: np.ndarray) -> str:
         if self.on_read is not None:
             self.on_read()
         text = _LINES.get(int(bgr[2, 2, 0]), "")
-        return [OcrBox(text, (0, 0, bgr.shape[1], bgr.shape[0]), 0.9)] if text else []
+        return clean([OcrBox(text, (0, 0, bgr.shape[1], bgr.shape[0]), 0.9)] if text else [])
 
 
 def _three_line_clip(path: Path) -> Path:
@@ -116,6 +117,6 @@ def test_real_engine_reads_rendered_lines(test_config, tmp_path):
     frames = [blank] * fps + [render_line(lines[0])] * (2 * fps) + [blank] * fps + [render_line(lines[1])] * (2 * fps)
     clip = write_clip(tmp_path / "real.mkv", frames, fps=fps)
     out = tmp_path / "real.srt"
-    reader = load_engine(Path(str(_MODELS)))
+    reader = runtime._Reader(load_engine(Path(str(_MODELS))), clean)
     assert scan_video(test_config, clip, _REGION, out, reader=reader).status is VideoOcrStatus.SUCCESS
     assert [e.text for e in pysubs2.load(str(out))] == lines

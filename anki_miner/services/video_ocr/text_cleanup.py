@@ -37,7 +37,7 @@ def _is_furigana(small: OcrBox, boxes: Sequence[OcrBox]) -> bool:
     return False
 
 
-def _rows(boxes: Sequence[OcrBox]) -> list[str]:
+def _row_groups(boxes: Sequence[OcrBox]) -> list[list[OcrBox]]:
     rows: list[list[OcrBox]] = []
     for b in sorted(boxes, key=lambda b: (b.bbox[1], b.bbox[0])):
         for row in rows:
@@ -49,7 +49,25 @@ def _rows(boxes: Sequence[OcrBox]) -> list[str]:
         else:
             rows.append([b])
     rows.sort(key=lambda r: min(b.bbox[1] for b in r))
-    return ["".join(b.text.strip() for b in sorted(r, key=lambda b: b.bbox[0])) for r in rows]
+    return rows
+
+
+def _rows(boxes: Sequence[OcrBox]) -> list[str]:
+    return ["".join(b.text.strip() for b in sorted(r, key=lambda b: b.bbox[0])) for r in _row_groups(boxes)]
+
+
+def join_rows(boxes: Sequence[OcrBox], *, joiner: str, rtl: bool) -> str:
+    """Rows top to bottom, each row's boxes in reading order, for a recogniser that keeps its
+    own spaces and punctuation. None of :func:`clean`'s Japanese rules (furigana, speaker
+    names, ！？〜, the stray dot after an ellipsis) apply."""
+    rows = [
+        joiner.join(b.text.strip() for b in sorted(r, key=lambda b: b.bbox[0], reverse=rtl))
+        for r in _row_groups([b for b in boxes if b.text.strip()])
+    ]
+    rows = [r for r in rows if r]
+    if rows:
+        rows[-1] = rows[-1].rstrip(_CURSOR_GLYPHS)
+    return "\n".join(r for r in rows if r)
 
 
 def _is_name(text: str) -> bool:

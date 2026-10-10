@@ -72,6 +72,27 @@ def _overlaps(c1: int, c2: int, a1: int, a2: int) -> bool:
     return inter / min(c2 - c1 + _EPS, a2 - a1 + _EPS) > _X_OVERLAP
 
 
+def detect_lines(det_session: Any, image: np.ndarray) -> list[Box]:
+    """The detector's text-line boxes in ``image``'s pixels, top to bottom (shared with ``paddle_engine``)."""
+    h, w = image.shape[:2]
+    scale = min(_DET_W / w, _DET_H / h)
+    rw, rh = max(1, int(w * scale)), max(1, int(h * scale))
+    tensor = np.zeros((_DET_H, _DET_W, 3), dtype=np.float32)
+    tensor[:rh, :rw] = _resize(image, rw, rh).astype(np.float32) / 255.0
+    inputs = det_session.get_inputs()
+    feeds = {
+        inputs[0].name: tensor.transpose(2, 0, 1)[np.newaxis],
+        inputs[1].name: np.array([[_DET_W / scale, _DET_H / scale]], dtype=np.int64),
+    }
+    _, boxes, scores = det_session.run(None, feeds)
+    confident = boxes[0][scores[0] > _DET_THRESHOLD]
+    if confident.shape[0] == 0:
+        return []
+    clipped = np.clip(confident, 0, np.array([w, h, w, h])).astype(np.int32)
+    found = [(int(b[0]), int(b[1]), int(b[2]), int(b[3])) for b in clipped]
+    return sorted((b for b in found if b[2] > b[0] and b[3] > b[1]), key=lambda b: (b[1], b[0]))
+
+
 class MeikiEngine:
     """Detector + horizontal recogniser over two onnxruntime sessions."""
 
@@ -86,23 +107,7 @@ class MeikiEngine:
             return self._recognise(bgr, self._detect(bgr))
 
     def _detect(self, image: np.ndarray) -> list[Box]:
-        h, w = image.shape[:2]
-        scale = min(_DET_W / w, _DET_H / h)
-        rw, rh = max(1, int(w * scale)), max(1, int(h * scale))
-        tensor = np.zeros((_DET_H, _DET_W, 3), dtype=np.float32)
-        tensor[:rh, :rw] = _resize(image, rw, rh).astype(np.float32) / 255.0
-        inputs = self._det.get_inputs()
-        feeds = {
-            inputs[0].name: tensor.transpose(2, 0, 1)[np.newaxis],
-            inputs[1].name: np.array([[_DET_W / scale, _DET_H / scale]], dtype=np.int64),
-        }
-        _, boxes, scores = self._det.run(None, feeds)
-        confident = boxes[0][scores[0] > _DET_THRESHOLD]
-        if confident.shape[0] == 0:
-            return []
-        clipped = np.clip(confident, 0, np.array([w, h, w, h])).astype(np.int32)
-        found = [(int(b[0]), int(b[1]), int(b[2]), int(b[3])) for b in clipped]
-        return sorted((b for b in found if b[2] > b[0] and b[3] > b[1]), key=lambda b: (b[1], b[0]))
+        return detect_lines(self._det, image)
 
     def _run_rec(self, batch: np.ndarray) -> Any:
         sizes = np.array([[_REC_W, _REC_H]], dtype=np.int64)
@@ -156,21 +161,27 @@ class MeikiEngine:
         return OcrBox(text=text, bbox=box, mean_conf=mean)
 
 
-def load_engine(models_root: Path) -> MeikiEngine:
-    """Open both pinned models on CPU. Raises :class:`EngineLoadError`."""
-    try:
-        import onnxruntime as ort
-    except ImportError as exc:
-        raise EngineLoadError(f"onnxruntime is not importable: {exc}") from exc
+def open_session(path: Path) -> Any:
+    """One CPU onnxruntime session over ``path`` (the caller has checked onnxruntime imports)."""
+    import onnxruntime as ort
+
     ort.set_default_logger_severity(3)
     options = ort.SessionOptions()
     options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
     options.add_session_config_entry("session.intra_op.allow_spinning", "0")
     options.add_session_config_entry("session.inter_op.allow_spinning", "0")
-    providers = ["CPUExecutionProvider"]
+    return ort.InferenceSession(str(path), sess_options=options, providers=["CPUExecutionProvider"])
+
+
+def load_engine(models_root: Path) -> MeikiEngine:
+    """Open both pinned models on CPU. Raises :class:`EngineLoadError`."""
     try:
-        det = ort.InferenceSession(str(models_root / DET_MODEL_NAME), sess_options=options, providers=providers)
-        rec = ort.InferenceSession(str(models_root / REC_MODEL_NAME), sess_options=options, providers=providers)
+        import onnxruntime  # noqa: F401
+    except ImportError as exc:
+        raise EngineLoadError(f"onnxruntime is not importable: {exc}") from exc
+    try:
+        det = open_session(models_root / DET_MODEL_NAME)
+        rec = open_session(models_root / REC_MODEL_NAME)
     except Exception as exc:  # noqa: BLE001 — onnxruntime raises its own unexported error types
         raise EngineLoadError(f"OCR models could not be loaded: {exc}") from exc
     logger.info("Video OCR engine loaded: models=%s", models_root)

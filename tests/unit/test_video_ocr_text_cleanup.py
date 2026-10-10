@@ -1,11 +1,11 @@
-"""text_cleanup.clean: reading order, furigana, page cursors, speaker names."""
+"""text_cleanup.clean: reading order, furigana, page cursors, speaker names; join_rows for the other languages."""
 
 from __future__ import annotations
 
 import pytest
 
 from anki_miner.services.video_ocr.meiki_engine import OcrBox
-from anki_miner.services.video_ocr.text_cleanup import clean
+from anki_miner.services.video_ocr.text_cleanup import clean, join_rows
 
 
 def box(text: str, x1: int, y1: int, x2: int, y2: int) -> OcrBox:
@@ -87,3 +87,26 @@ def test_a_stray_dot_after_an_ellipsis_is_dropped(raw, expected):
 def test_no_boxes_or_blank_boxes_mean_no_dialogue():
     assert clean([]) == ""
     assert clean([box("  ", 0, 0, 100, 40)]) == ""
+
+
+def _b(text, x1, y1=0, x2=None, y2=30):
+    return OcrBox(text, (x1, y1, x2 if x2 is not None else x1 + 10 * len(text), y2), 0.9)
+
+
+def test_join_rows_puts_spaces_between_a_spaced_languages_boxes():
+    assert join_rows([_b("mundo", 120), _b("Hola", 0)], joiner=" ", rtl=False) == "Hola mundo"
+
+
+def test_join_rows_reads_right_to_left_rows_from_the_right():
+    assert join_rows([_b("عالم", 0), _b("مرحبا", 100)], joiner=" ", rtl=True) == "مرحبا عالم"
+
+
+def test_join_rows_keeps_ascii_punctuation_and_short_lines():
+    # None of the Japanese rules run here: no ！？ restore, no speaker strip, no furigana drop.
+    assert join_rows([_b("Tip:", 0), _b("Run!", 60)], joiner=" ", rtl=False) == "Tip: Run!"
+    assert join_rows([_b("Hi", 0, 0, 20, 10), _b("there", 0, 12, 60, 40)], joiner=" ", rtl=False) == "Hi\nthere"
+
+
+def test_join_rows_drops_the_trailing_cursor_glyph_and_empty_frames():
+    assert join_rows([_b("Weiter ▼", 0)], joiner=" ", rtl=False) == "Weiter"
+    assert join_rows([], joiner=" ", rtl=False) == ""
