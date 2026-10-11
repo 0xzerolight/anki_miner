@@ -7519,7 +7519,7 @@ Continuar?</translation>
     </message>
     <message>
         <source>This language needs its OCR model.</source>
-        <translation>Este idioma precisa do seu modelo de OCR.</translation>
+        <translation>Este idioma precisa de um modelo de OCR próprio.</translation>
     </message>
     <message>
         <source>This language needs Anki Miner's own mokuro. Install it below.</source>

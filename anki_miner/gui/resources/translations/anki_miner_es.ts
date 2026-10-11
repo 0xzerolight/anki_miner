@@ -7519,7 +7519,7 @@ Cierre primero el navegador de tarjetas y el editor de notas de Anki — una not
     </message>
     <message>
         <source>This language needs its OCR model.</source>
-        <translation>Este idioma necesita su modelo de OCR.</translation>
+        <translation>Este idioma necesita un modelo de OCR propio.</translation>
     </message>
     <message>
         <source>This language needs Anki Miner's own mokuro. Install it below.</source>
