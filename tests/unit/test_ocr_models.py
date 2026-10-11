@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import re
 
 from anki_miner.services.ocr import model_installer as mi
@@ -48,3 +49,14 @@ def test_install_models_downloads_only_the_given_specs(tmp_path, monkeypatch):
     monkeypatch.setattr(mi, "verify_sha256", lambda *a, **k: None)
     mi.install_models(tmp_path, (spec,))
     assert fetched == [spec.url]
+
+
+def test_missing_lists_the_specs_not_on_disk_at_their_exact_size(tmp_path):
+    present, truncated, absent = (
+        dataclasses.replace(mi.MEIKI_SPECS[0], filename=f"{name}.onnx", size_bytes=4)
+        for name in ("present", "truncated", "absent")
+    )
+    (tmp_path / present.filename).write_bytes(b"onnx")
+    (tmp_path / truncated.filename).write_bytes(b"onn")
+    assert mi.missing(tmp_path, (present, truncated, absent)) == (truncated, absent)
+    assert mi.missing(tmp_path, (present,)) == ()

@@ -26,7 +26,15 @@ from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["DET_MODEL_NAME", "REC_MODEL_NAME", "MEIKI_SPECS", "ModelSpec", "is_installed", "install_models"]
+__all__ = [
+    "DET_MODEL_NAME",
+    "REC_MODEL_NAME",
+    "MEIKI_SPECS",
+    "ModelSpec",
+    "is_installed",
+    "missing",
+    "install_models",
+]
 
 DET_MODEL_NAME = "meiki.text.detect.v0.1.960x544.onnx"
 REC_MODEL_NAME = "meiki.text.rec.v0.960x32.onnx"
@@ -76,6 +84,11 @@ def is_installed(models_root: Path, specs: Sequence[ModelSpec] | None = None) ->
     """True when every spec is on disk at its exact size (no import, no hashing)."""
     specs = MEIKI_SPECS if specs is None else specs
     return all(_present(models_root / spec.filename, spec.size_bytes) for spec in specs)
+
+
+def missing(models_root: Path, specs: Sequence[ModelSpec]) -> tuple[ModelSpec, ...]:
+    """The specs not on disk at their exact size: what :func:`install_models` would download."""
+    return tuple(spec for spec in specs if not _present(models_root / spec.filename, spec.size_bytes))
 
 
 def install_models(

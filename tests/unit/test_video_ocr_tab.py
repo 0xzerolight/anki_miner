@@ -185,6 +185,20 @@ def test_the_setup_tooltip_names_the_mining_languages_download(
     )
 
 
+def test_the_setup_tooltip_counts_only_the_models_still_missing(monkeypatch, qtbot, test_config, tmp_path):
+    """A Japanese user switching to Spanish already has meikiocr's detector (14.5 MB): only
+    the PP-OCRv6 recogniser (21.2 MB) downloads, not both (36 MB)."""
+    monkeypatch.setattr(mod.onnx_pack_installer, "onnx_pack_supported", lambda: True)
+    _place(tmp_path, model_installer.MEIKI_SPECS[0])
+    config = replace(test_config, language="es", video_ocr_models_root=tmp_path)
+    tab = _make(qtbot, config, _EngineState(False, True))
+    assert tab.install_button.toolTip() == "Downloads the OCR models (about 21 MB) into Anki Miner's folder."
+    tab._apply_probe_result(_EngineState(False, False))
+    assert tab.install_button.toolTip() == (
+        "Downloads the OCR runtime and its models (about 38 MB) into Anki Miner's folder."
+    )
+
+
 def test_install_click_requests_and_a_failure_keeps_its_message(qtbot, test_config):
     tab = _make(qtbot, test_config, _EngineState(False, True))
     with qtbot.waitSignal(tab.video_ocr_install_requested, timeout=1000):

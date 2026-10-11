@@ -32,7 +32,7 @@ from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionH
 from anki_miner.gui.workers.video_ocr_worker import VideoOcrWorker
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.asr import onnx_pack_installer
-from anki_miner.services.ocr import model_installer
+from anki_miner.services.ocr import ONNXRUNTIME_WHEEL_MB, model_installer
 from anki_miner.services.video_ocr import runtime
 from anki_miner.services.video_ocr.errors import EngineLoadError
 from anki_miner.services.video_ocr.region import Region
@@ -44,8 +44,6 @@ if TYPE_CHECKING:
 
 _VIDEO_EXTENSIONS = FilePairMatcher.VIDEO_EXTENSIONS
 _VIDEO_FILTER = "Video Files (" + " ".join(f"*{e}" for e in sorted(_VIDEO_EXTENSIONS)) + ");;All Files (*)"
-#: The onnxruntime pack; 50 MB with meikiocr's 33 MB, the figure this tooltip showed before.
-_RUNTIME_MB = 17
 
 
 @dataclass(frozen=True)
@@ -456,8 +454,10 @@ class VideoOcrTab(RunOptionsMixin, _ToolTabBase):
         offerable = self._runtime_ready or onnx_pack_installer.onnx_pack_supported()
         self.install_button.setVisible(offerable)
         self.install_button.setEnabled(offerable and not still_running(self.worker_thread))
+        # Only what is not on disk yet: a Japanese user switching language keeps meikiocr's detector.
         specs = runtime.required_models(get_profile(config_language(self.config)))
-        mb = round(sum(s.size_bytes for s in specs) / 1_000_000)
+        missing = model_installer.missing(self.config.video_ocr_models_root, specs)
+        mb = round(sum(s.size_bytes for s in missing) / 1_000_000)
         if self._runtime_ready:
             self.install_button.setText(self.tr("Download OCR models"))
             self.install_button.setToolTip(
@@ -468,7 +468,7 @@ class VideoOcrTab(RunOptionsMixin, _ToolTabBase):
             self.install_button.setToolTip(
                 tr_format(
                     self.tr("Downloads the OCR runtime and its models (about %1 MB) into Anki Miner's folder."),
-                    mb + _RUNTIME_MB,
+                    mb + ONNXRUNTIME_WHEEL_MB,
                 )
             )
         self.set_install_status(

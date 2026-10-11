@@ -15,6 +15,7 @@ from anki_miner.gui.widgets import mokuro_tab as mokuro_tab_module
 from anki_miner.gui.widgets.mokuro_tab import MokuroTab
 from anki_miner.services.mokuro_installer import MangaOcrState
 from anki_miner.services.mokuro_volumes import MokuroVolume
+from anki_miner.services.ocr.recognizers import RECOGNIZERS
 from tests.unit._ocr_profiles import with_recognizer
 
 _AVAILABLE = "anki_miner.gui.widgets.mokuro_tab.MokuroTab._mokuro_ready"
@@ -290,12 +291,37 @@ class TestLanguageStates:
 
         assert not tab.setup_row.isHidden() and tab.installed_row.isHidden()
         assert tab.install_mokuro_button.text() == "Download OCR model"
-        assert "13 MB" in tab.install_mokuro_button.toolTip()
         assert tab.mokuro_status_label.text() == _MODEL_MISSING
         assert tab.engine_notice_label.text() == _MODEL_MISSING
         assert not tab.engine_notice_label.isHidden()
         assert not tab.run_button.isEnabled()
         assert self._emitted(tab) == [False]
+
+    @pytest.mark.parametrize(
+        ("runtime_installed", "model_missing", "mb"),
+        [(False, True, 30), (True, True, 13), (False, False, 17)],
+        ids=["runtime-and-model", "model-only", "runtime-only"],
+    )
+    def test_the_model_tooltip_counts_only_what_is_missing(
+        self, qtbot, tmp_path, monkeypatch, runtime_installed, model_missing, mb
+    ):
+        """The korean recogniser is 13.5 MB, the onnxruntime wheel about 17 MB."""
+        asked: list[tuple] = []
+
+        def missing(models_root, specs):
+            asked.append(tuple(specs))
+            return tuple(specs) if model_missing else ()
+
+        monkeypatch.setattr(mokuro_tab_module.model_installer, "missing", missing)
+        monkeypatch.setattr(
+            mokuro_tab_module.mokuro_installer, "onnxruntime_installed", lambda uv_root: runtime_installed
+        )
+        tab = self._tab(qtbot, tmp_path, monkeypatch, MangaOcrState(False, True))
+
+        assert tab.install_mokuro_button.toolTip() == (
+            f"Downloads the text-recognition model for your mining language (about {mb} MB) into Anki Miner's folder."
+        )
+        assert asked and set(asked) == {(RECOGNIZERS["korean"].model,)}
 
     def test_a_path_mokuro_in_a_recogniser_language_asks_for_the_in_app_one(self, qtbot, tmp_path, monkeypatch):
         """Review Focus 2: a PATH or override mokuro cannot run the recogniser."""

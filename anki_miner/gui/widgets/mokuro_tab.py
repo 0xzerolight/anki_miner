@@ -48,6 +48,7 @@ from anki_miner.services import mokuro_installer
 from anki_miner.services.mokuro_installer import MangaOcrState, manga_ocr_state
 from anki_miner.services.mokuro_runner import MokuroOptions
 from anki_miner.services.mokuro_volumes import MokuroVolume, scan_volumes
+from anki_miner.services.ocr import ONNXRUNTIME_WHEEL_MB, model_installer
 from anki_miner.services.ocr.recognizers import RECOGNIZERS, RecognizerSpec
 from anki_miner.utils.i18n import tr_format
 
@@ -433,7 +434,11 @@ class MokuroTab(RunOptionsMixin, _ToolTabBase):
         self.install_mokuro_button.setEnabled(True)
         recognizer = self._recognizer()
         if state.mokuro and not state.available and recognizer is not None:
-            mb = round(recognizer.model.size_bytes / 1_000_000)
+            # Only what the install still fetches: the model, the venv's onnxruntime, or both.
+            missing = model_installer.missing(self.config.video_ocr_models_root, (recognizer.model,))
+            mb = round(sum(s.size_bytes for s in missing) / 1_000_000)
+            if not mokuro_installer.onnxruntime_installed(self.config.uv_root):
+                mb += ONNXRUNTIME_WHEEL_MB
             self.install_mokuro_button.setText(self.tr("Download OCR model"))
             self.install_mokuro_button.setToolTip(
                 tr_format(
