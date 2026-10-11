@@ -94,6 +94,10 @@ def test_an_all_blank_line_reads_empty_with_zero_confidence():
         ("1,000 مالس", "سلام 1,000"),
         ("۱٫۵ مالس", "سلام ۱٫۵"),  # the Arabic decimal separator is a number character (AN)
         ("café ابحرم", "مرحبا café"),  # accented Latin is LTR too
+        ("50% مالس", "سلام 50%"),  # a percent sign belongs to its number
+        ("۵۰٪ مالس", "سلام ۵۰٪"),  # the Arabic percent sign too
+        ("$5 مالس", "سلام $5"),  # a currency sign before its number
+        ("hello, world مالس", "سلام hello, world"),  # ", " between two LTR words stays inside the run
     ],
 )
 def test_visual_to_logical_reverses_rtl_but_keeps_ltr_runs(visual, logical):

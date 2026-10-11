@@ -28,27 +28,38 @@ _MIN_RATIO = 320 / 48
 _MAX_BATCH = 8
 # Runs that keep their order inside a reversed right-to-left line start at a character
 # of bidi class L, EN or AN: left-to-right letters (accented Latin, Cyrillic), ASCII,
-# Arabic-Indic and Persian digits, and the Arabic separators ٫ ٬. Any other non-RTL
-# character (space, comma, period, %) stays in a run only between two such characters,
-# so "1,000" and "hello world" stay whole while the space before a right-to-left word
+# Arabic-Indic and Persian digits, and the Arabic separators ٫ ٬. A number sign of
+# class ET (% ٪ $ # °) next to a digit joins its number, as UAX #9 rule W5 has it.
+# Any other non-RTL character (space, comma, period, a lone %) stays in an open run
+# only while the next character that is not one of them belongs to a run, so
+# "1,000" and "hello, world" stay whole while the space before a right-to-left word
 # stays a word gap.
 _RUN_CLASSES = frozenset({"L", "EN", "AN"})
+_NUMBER_CLASSES = frozenset({"EN", "AN"})
 _RTL_CLASSES = frozenset({"R", "AL", "NSM"})
 # A right-to-left line draws each bracket mirrored, so the glyph read as "(" is a logical ")".
 _MIRROR = str.maketrans("()[]{}<>«»", ")(][}{><»«")
 
 
 def _visual_to_logical(text: str) -> str:
+    kinds = [unicodedata.bidirectional(ch) for ch in text]
+    # W5: a sequence of ETs touching a number on either side becomes part of it.
+    for i in range(1, len(kinds)):
+        if kinds[i] == "ET" and kinds[i - 1] in _NUMBER_CLASSES:
+            kinds[i] = "EN"
+    for i in range(len(kinds) - 2, -1, -1):
+        if kinds[i] == "ET" and kinds[i + 1] in _NUMBER_CLASSES:
+            kinds[i] = "EN"
+    # next_strong[i]: the class of the first run or RTL character at or after i.
+    next_strong = [""] * (len(kinds) + 1)
+    for i in range(len(kinds) - 1, -1, -1):
+        strong = kinds[i] in _RUN_CLASSES or kinds[i] in _RTL_CLASSES
+        next_strong[i] = kinds[i] if strong else next_strong[i + 1]
     parts: list[str] = []
     run = ""
     for i, ch in enumerate(text):
-        kind = unicodedata.bidirectional(ch)
-        bridges = (
-            bool(run)
-            and kind not in _RTL_CLASSES
-            and i + 1 < len(text)
-            and unicodedata.bidirectional(text[i + 1]) in _RUN_CLASSES
-        )
+        kind = kinds[i]
+        bridges = bool(run) and kind not in _RTL_CLASSES and next_strong[i + 1] in _RUN_CLASSES
         if kind in _RUN_CLASSES or bridges:
             run += ch
             continue
