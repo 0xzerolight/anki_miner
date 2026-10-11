@@ -29,13 +29,14 @@ _MAX_BATCH = 8
 # Runs that keep their order inside a reversed right-to-left line start at a character
 # of bidi class L, EN or AN: left-to-right letters (accented Latin, Cyrillic), ASCII,
 # Arabic-Indic and Persian digits, and the Arabic separators ٫ ٬. A number sign of
-# class ET (% ٪ $ # °) next to a digit joins its number, as UAX #9 rule W5 has it.
-# Any other non-RTL character (space, comma, period, a lone %) stays in an open run
-# only while the next character that is not one of them belongs to a run, so
-# "1,000" and "hello, world" stay whole while the space before a right-to-left word
-# stays a word gap.
+# class ET (% ٪ $ # °) next to a European or Persian digit (EN) joins its number, as
+# UAX #9 rule W5 has it; beside Arabic-Indic digits (AN) it stays neutral. Any other
+# non-RTL character (space, comma, period, a lone %) stays in an open run when the
+# next character belongs to a run ("1,000", "hello world"), and a wider gap only
+# between two left-to-right letters ("hello, world"): rule N1 treats numbers as
+# right-to-left, so "10 - 5" is two runs. The space before a right-to-left word stays
+# a word gap.
 _RUN_CLASSES = frozenset({"L", "EN", "AN"})
-_NUMBER_CLASSES = frozenset({"EN", "AN"})
 _RTL_CLASSES = frozenset({"R", "AL", "NSM"})
 # A right-to-left line draws each bracket mirrored, so the glyph read as "(" is a logical ")".
 _MIRROR = str.maketrans("()[]{}<>«»", ")(][}{><»«")
@@ -43,12 +44,12 @@ _MIRROR = str.maketrans("()[]{}<>«»", ")(][}{><»«")
 
 def _visual_to_logical(text: str) -> str:
     kinds = [unicodedata.bidirectional(ch) for ch in text]
-    # W5: a sequence of ETs touching a number on either side becomes part of it.
+    # W5: a sequence of ETs touching an EN digit on either side becomes part of it.
     for i in range(1, len(kinds)):
-        if kinds[i] == "ET" and kinds[i - 1] in _NUMBER_CLASSES:
+        if kinds[i] == "ET" and kinds[i - 1] == "EN":
             kinds[i] = "EN"
     for i in range(len(kinds) - 2, -1, -1):
-        if kinds[i] == "ET" and kinds[i + 1] in _NUMBER_CLASSES:
+        if kinds[i] == "ET" and kinds[i + 1] == "EN":
             kinds[i] = "EN"
     # next_strong[i]: the class of the first run or RTL character at or after i.
     next_strong = [""] * (len(kinds) + 1)
@@ -57,12 +58,18 @@ def _visual_to_logical(text: str) -> str:
         next_strong[i] = kinds[i] if strong else next_strong[i + 1]
     parts: list[str] = []
     run = ""
+    run_strong = ""  # the class of the run's last L, EN or AN character
     for i, ch in enumerate(text):
         kind = kinds[i]
-        bridges = bool(run) and kind not in _RTL_CLASSES and next_strong[i + 1] in _RUN_CLASSES
-        if kind in _RUN_CLASSES or bridges:
+        if kind in _RUN_CLASSES:
             run += ch
+            run_strong = kind
             continue
+        if run and kind not in _RTL_CLASSES:
+            next_kind = kinds[i + 1] if i + 1 < len(kinds) else ""
+            if next_kind in _RUN_CLASSES or (run_strong == "L" and next_strong[i + 1] == "L"):
+                run += ch
+                continue
         if run:
             parts.append(run)
             run = ""

@@ -98,6 +98,9 @@ def test_an_all_blank_line_reads_empty_with_zero_confidence():
         ("۵۰٪ مالس", "سلام ۵۰٪"),  # the Arabic percent sign too
         ("$5 مالس", "سلام $5"),  # a currency sign before its number
         ("hello, world مالس", "سلام hello, world"),  # ", " between two LTR words stays inside the run
+        ("٪٥٠ مالس", "سلام ٥٠٪"),  # beside Arabic-Indic digits (AN) the percent sign reads right to left
+        ("10 - 5 نم", "من 5 - 10"),  # a gap between two numbers is right-to-left (UAX #9 N1)
+        ("2 ,1 مالس", "سلام 1, 2"),
     ],
 )
 def test_visual_to_logical_reverses_rtl_but_keeps_ltr_runs(visual, logical):
