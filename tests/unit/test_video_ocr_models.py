@@ -19,6 +19,14 @@ from tests.unit._resume_key_assert import assert_stable_resume_key
 _PAYLOAD = b"onnx-fake-model"
 
 
+@pytest.fixture(autouse=True)
+def _fresh_engine_cache():
+    """The reader caches one engine for the process; no test sees another's."""
+    runtime._clear_cache()
+    yield
+    runtime._clear_cache()
+
+
 @pytest.fixture
 def fake_specs(monkeypatch):
     specs = tuple(
@@ -104,7 +112,6 @@ def test_onnxruntime_importable_appends_the_pack_root(monkeypatch, tmp_path):
 def test_get_reader_loads_once_per_models_root_and_language(monkeypatch, tmp_path, test_config):
     from anki_miner.services.video_ocr import meiki_engine, paddle_engine
 
-    runtime._clear_cache()
     loads: list[tuple[Path, str]] = []
     monkeypatch.setattr(meiki_engine, "load_engine", lambda root: loads.append((root, "meiki")) or object())
     monkeypatch.setattr(
@@ -128,4 +135,3 @@ def test_get_reader_loads_once_per_models_root_and_language(monkeypatch, tmp_pat
         (tmp_path / "b", "korean_PP-OCRv5_rec_mobile.onnx"),
         (tmp_path / "b", "meiki"),
     ]
-    runtime._clear_cache()

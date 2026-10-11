@@ -17,6 +17,14 @@ from tests.unit.test_video_ocr_engine import _FakeDet
 pytestmark = pytest.mark.asr  # numpy-backed (the gate in test_asr_marker_gating.py)
 
 
+@pytest.fixture(autouse=True)
+def _fresh_engine_cache():
+    """The reader caches one engine for the process; no test sees another's."""
+    runtime._clear_cache()
+    yield
+    runtime._clear_cache()
+
+
 def _box(text, x1):
     return OcrBox(text, (x1, 0, x1 + 80, 30), 0.9)
 
@@ -54,13 +62,11 @@ def test_reader_follows_a_language_switch(monkeypatch, test_config):
     )
     monkeypatch.setattr(paddle_engine, "load_engine", lambda root, spec: loaded.append(spec.model.filename) or object())
     with_recognizer(monkeypatch, runtime, "ko", "korean")
-    runtime._clear_cache()
     runtime.get_reader(replace(test_config, language="ja"))
     runtime.get_reader(replace(test_config, language="ja"))
     runtime.get_reader(replace(test_config, language="ko"))
     runtime.get_reader(replace(test_config, language="ja"))
     assert loaded == ["meiki", "korean_PP-OCRv5_rec_mobile.onnx", "meiki"]
-    runtime._clear_cache()
 
 
 def test_a_spaced_rtl_language_joins_right_to_left_with_spaces(monkeypatch, test_config):
