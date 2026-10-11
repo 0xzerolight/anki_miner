@@ -1,10 +1,11 @@
 """Readability tab (Utilities → Readability, #132).
 
-Pick a subtitle file or a folder of them; the tool shows how much of each file,
-and of the whole set, the learner already knows: the share of word occurrences
-known, how many different new words there are, and the share of lines with no
-new word (i+0), one (i+1) or more. Known words are read the way mining reads
-them (:mod:`anki_miner.services.readability`); nothing is written.
+Pick a subtitle file, a book (.epub, .txt) or a mokuro manga volume, or a folder
+of them; the tool shows how much of each file, and of the whole set, the learner
+already knows: the share of word occurrences known, how many different new words
+there are, and the share of lines with no new word (i+0), one (i+1) or more.
+Known words are read the way mining reads them
+(:mod:`anki_miner.services.readability`); nothing is written.
 
 Structure follows :mod:`anki_miner.gui.widgets.booksync_tab` on
 :class:`~anki_miner.gui.widgets._tool_tab_base._ToolTabBase`, without an Output
@@ -12,12 +13,13 @@ row or a mode toggle: one field takes a file or a folder (D7-B).
 
 Guard contract:
 - The mining language cannot tokenize here → Check disabled, notice visible.
-- No path / missing path / not a subtitle / empty folder → screen issue, nothing starts.
+- No path / missing path / unsupported file / empty folder → screen issue, nothing starts.
 - Anki unreachable → the run fails with its own banner sentence, never a 0% report.
 """
 
 from __future__ import annotations
 
+import functools
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
@@ -28,7 +30,6 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QScrollArea, QTableWidg
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiConnectionError
 from anki_miner.gui.capabilities import CapabilityTarget
-from anki_miner.gui.constants import SUBTITLE_FILE_FILTER
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.qt_helpers import (
     CellRole,
@@ -48,11 +49,16 @@ from anki_miner.gui.workers.readability_worker import ReadabilityWorker
 from anki_miner.languages.registry import config_language, get_profile, subtitle_language
 from anki_miner.models.readability import I_PLUS_0, I_PLUS_1, I_PLUS_2_OR_MORE, ReadabilityStats
 from anki_miner.services.readability import combine
+from anki_miner.services.reading import detector
 from anki_miner.services.reading._util import natural_sort_key
 from anki_miner.utils.file_pairing import FilePairMatcher, SubtitleTag, subtitle_language_tag
 from anki_miner.utils.i18n import tr_format
 
 _SUBTITLE_EXTENSIONS = FilePairMatcher.SUBTITLE_EXTENSIONS
+_BOOK_EXTENSIONS = (".epub", ".txt")
+_ARCHIVE_EXTENSIONS = (".cbz", ".zip")
+#: What Check takes: the Reading tab's books and mokuro volumes as well as subtitles.
+_ACCEPTED_EXTENSIONS = frozenset(_SUBTITLE_EXTENSIONS) | {*_BOOK_EXTENSIONS, ".mokuro", *_ARCHIVE_EXTENSIONS}
 #: Known, New words, i+0, i+1, i+2+ (File is text).
 _NUMBER_COLUMNS = (1, 2, 3, 4, 5)
 #: Rows the table shows before it scrolls (a floor in rows, not pixels).
@@ -71,7 +77,7 @@ def _pct_cell(value: float | None, decimals: int) -> SortableTableWidgetItem:
 
 
 class ReadabilityTab(_ToolTabBase):
-    """How much of a subtitle file, or a folder of them, the learner already knows.
+    """How much of a subtitle file, book or manga volume, or a folder of them, the learner already knows.
 
     Args:
         config: Frozen application configuration.
@@ -125,8 +131,8 @@ class ReadabilityTab(_ToolTabBase):
             cancelled=self.tr("Cancelled"),
             failed=self.tr("Failed — see log"),
             partial=self.tr("Finished with errors — see log"),
-            run_problem=self.tr("Some subtitle files could not be read."),
-            run_problem_single=self.tr("This subtitle file could not be read."),
+            run_problem=self.tr("Some files could not be read."),
+            run_problem_single=self.tr("This file could not be read."),
             complete_template=self.tr("Complete — %1 file(s) checked"),
             complete_skipped_template=self.tr("Complete — %1 checked, %2 skipped (no words in the mining language)"),
             all_skipped_template=self.tr("Nothing to report — no file had words in the mining language."),
@@ -186,7 +192,7 @@ class ReadabilityTab(_ToolTabBase):
         layout = QVBoxLayout()
         configure_card_layout(layout)
 
-        layout.addWidget(SectionHeader(self.tr("Subtitles")))
+        layout.addWidget(SectionHeader(self.tr("Input")))
 
         self.engine_notice_label = QLabel(
             self.tr(
@@ -201,7 +207,7 @@ class ReadabilityTab(_ToolTabBase):
 
         desc = QLabel(
             self.tr(
-                "See how much of a subtitle file, or a folder of them, you already know. "
+                "See how much of a subtitle file, book or manga volume, or a folder of them, you already know. "
                 "Uses your Anki cards and known words; nothing is written."
             )
         )
@@ -209,20 +215,24 @@ class ReadabilityTab(_ToolTabBase):
         desc.setWordWrap(True)
         layout.addWidget(desc)
 
-        wrong_kind = self.tr("This field takes a subtitle file or a folder.")
+        wrong_kind = self.tr("This field takes a subtitle file, a book, a manga volume or a folder.")
         self.input_selector = FileSelector(
-            label=self.tr("Subtitle file or folder:"),
+            label=self.tr("File or folder:"),
             file_mode=True,
             allow_folder=True,
-            file_filter=SUBTITLE_FILE_FILTER,
-            label_width=field_label_width(self.tr("Subtitle file or folder:")),
+            file_filter=self._file_filter(),
+            label_width=field_label_width(self.tr("File or folder:")),
             history_key="tools.readability.inputs",
-            drop_validator=lambda p: (p.is_dir() or p.suffix.lower() in _SUBTITLE_EXTENSIONS, wrong_kind),
+            drop_validator=lambda p: (p.is_dir() or p.suffix.lower() in _ACCEPTED_EXTENSIONS, wrong_kind),
         )
         layout.addWidget(self.input_selector)
 
         group.setLayout(layout)
         return group
+
+    def _file_filter(self) -> str:
+        globs = " ".join(f"*{ext}" for ext in sorted(_ACCEPTED_EXTENSIONS))
+        return f"{self.tr('Subtitles, books and manga')} ({globs});;All Files (*)"
 
     def _create_report_card(self) -> QFrame:
         self.report_card = QFrame()
@@ -236,16 +246,22 @@ class ReadabilityTab(_ToolTabBase):
         cards.setSpacing(SPACING.sm)
         self.known_card = self._stat_card(
             self.tr("Known words"),
-            self.tr("Share of all words in these files you already know. A word said ten times counts ten times."),
+            self.tr("Share of all words in these files you already know. A word used ten times counts ten times."),
         )
         self.new_words_card = self._stat_card(
             self.tr("New words"),
             self.tr("Different words you don't know yet, counted once across all files."),
         )
-        self.i0_card = self._stat_card(self.tr("Lines fully known"), self.tr("Lines with no new words (i+0)."))
+        self.i0_card = self._stat_card(
+            self.tr("Lines fully known"),
+            self.tr("Lines with no new words (i+0). In a book a line is a sentence; in manga, a text bubble."),
+        )
         self.i1_card = self._stat_card(
             self.tr("Lines with one new word"),
-            self.tr("Lines with exactly one new word (i+1): the easiest sentences to learn from."),
+            self.tr(
+                "Lines with exactly one new word (i+1): the easiest sentences to learn from. "
+                "In a book a line is a sentence; in manga, a text bubble."
+            ),
         )
         for card in (self.known_card, self.new_words_card, self.i0_card, self.i1_card):
             cards.addWidget(card)
@@ -253,7 +269,7 @@ class ReadabilityTab(_ToolTabBase):
 
         self.files_table = QTableWidget(0, 6)
         headers = (
-            (self.tr("File"), self.tr("Subtitle file.")),
+            (self.tr("File"), self.tr("Subtitle file, book or manga volume.")),
             (self.tr("Known"), self.tr("Share of the file's words you already know.")),
             (
                 self.tr("New words"),
@@ -353,11 +369,18 @@ class ReadabilityTab(_ToolTabBase):
 
         path_str = self.input_selector.path_or_none()
         if path_str is None:
-            self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a subtitle file or a folder first.")))
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a file or a folder first.")))
             return
         path = Path(path_str)
 
         if path.is_dir():
+            sidecar = path.parent / f"{path.name}.mokuro"
+            if sidecar.is_file():
+                # The page folder of a mokuro volume: its text is the sidecar
+                # beside it. Checked first on purpose; a title folder has no
+                # sidecar of its own name. mokuro writes the suffix lowercase.
+                self._start_run([sidecar])
+                return
             # The listing can stall on a network share: off the GUI thread,
             # with Check held off so a second click cannot start a second scan.
             self.check_button.setEnabled(False)
@@ -366,6 +389,9 @@ class ReadabilityTab(_ToolTabBase):
                 if not files:
                     self.check_button.setEnabled(True)
                     return
+                if any(f.suffix.lower() in _SUBTITLE_EXTENSIONS for f in files):
+                    # Beside subtitles a .txt is a release readme, not a book.
+                    files = [f for f in files if f.suffix.lower() != ".txt"]
                 self._start_run(files)
 
             # A folder often holds the same episodes in other languages too
@@ -374,14 +400,26 @@ class ReadabilityTab(_ToolTabBase):
             # The caption codes fetched for the language count as its own here
             # (yue's ep01.zh-HK.srt): a filter keeps ties, unlike pairing.
             language = subtitle_language(config_language(self.config), with_caption_codes=True)
+            # Listed once, on the scan's thread, the first time an archive comes up.
+            volume_archives = functools.cache(lambda: detector.embedded_volume_archives(path))
+
+            def _accept(f: Path) -> bool:
+                suffix = f.suffix.lower()
+                if suffix in _SUBTITLE_EXTENSIONS:
+                    return subtitle_language_tag(f, language) is not SubtitleTag.OTHER
+                if suffix in _ARCHIVE_EXTENSIONS:
+                    # Only a volume of its own: a subtitle download's .zip is not,
+                    # and a .cbz beside its .mokuro is that .mokuro's row.
+                    return f in volume_archives()
+                return suffix in _BOOK_EXTENSIONS or suffix == ".mokuro"
+
             # Natural order (1, 2, 10): the rows read as the season does.
             self._scan_folder_async(
                 path,
-                lambda f: f.suffix.lower() in _SUBTITLE_EXTENSIONS
-                and subtitle_language_tag(f, language) is not SubtitleTag.OTHER,
+                _accept,
                 _on_files,
                 sort_key=lambda f: natural_sort_key(f.name),
-                empty_summary=self.tr("No subtitle files were found in that folder."),
+                empty_summary=self.tr("No subtitles, books or manga volumes were found in that folder."),
                 failed_summary=self.tr("That folder could not be scanned."),
             )
             return
@@ -391,9 +429,14 @@ class ReadabilityTab(_ToolTabBase):
                 ScreenIssue(summary=self.tr("That file or folder no longer exists."), details=path_str)
             )
             return
-        if path.suffix.lower() not in _SUBTITLE_EXTENSIONS:
+        if path.suffix.lower() not in _ACCEPTED_EXTENSIONS:
             self.show_screen_issue(
-                ScreenIssue(summary=self.tr("Pick a subtitle file (.ass, .srt, .ssa, .vtt or .smi)."), details=path_str)
+                ScreenIssue(
+                    summary=self.tr(
+                        "Pick a subtitle file, a book (.epub or .txt) or a manga volume (.mokuro, .cbz or .zip)."
+                    ),
+                    details=path_str,
+                )
             )
             return
         self._start_run([path])

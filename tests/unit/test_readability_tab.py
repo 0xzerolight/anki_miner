@@ -84,13 +84,13 @@ def test_engine_unavailable_disables_check(qtbot, tmp_path):
     assert not tab.engine_notice_label.isHidden()
 
 
-@pytest.mark.parametrize("kind", ["empty", "missing", "not_subtitle"])
+@pytest.mark.parametrize("kind", ["empty", "missing", "unsupported"])
 def test_refusals_start_nothing(kind, qtbot, tmp_path):
     tab = _make_tab(_make_config(tmp_path), qtbot)
     if kind == "missing":
         tab.input_selector.set_path(str(tmp_path / "gone.srt"))
-    elif kind == "not_subtitle":
-        notes = tmp_path / "notes.txt"
+    elif kind == "unsupported":
+        notes = tmp_path / "notes.pdf"  # a .txt is a book now
         notes.write_text("x")
         tab.input_selector.set_path(str(notes))
     with patch(_WORKER_CLS) as worker_cls:
@@ -156,6 +156,73 @@ def test_folder_leaves_out_subtitles_tagged_for_another_language(language, names
         tab.check_button.click()
         qtbot.waitUntil(lambda: worker_cls.called, timeout=3000)
     assert {p.name for p in worker_cls.call_args.args[1]} == kept
+
+
+_MOKURO = b'{"version": "0.1.0", "title": "T", "title_uuid": "t", "volume": "V", "volume_uuid": "v", "pages": []}'
+
+
+def _archive(path: Path, members: dict[str, bytes]) -> Path:
+    import zipfile
+
+    with zipfile.ZipFile(path, "w") as zf:
+        for name, data in members.items():
+            zf.writestr(name, data)
+    return path
+
+
+@pytest.mark.parametrize("name", ["novel.epub", "novel.txt", "Vol1.mokuro", "Vol1.cbz", "Vol1.zip"])
+def test_a_single_book_or_volume_starts_the_worker(name, qtbot, tmp_path):
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    path = tmp_path / name
+    path.write_text("x")
+    tab.input_selector.set_path(str(path))
+    with patch(_WORKER_CLS, return_value=FakeToolWorker()) as worker_cls:
+        tab.check_button.click()
+    assert worker_cls.call_args.args[1] == [path]
+
+
+def test_folder_takes_books_and_manga_volumes(qtbot, tmp_path):
+    """Review Focus 1, 2: a subtitle download's .zip is no volume; a .cbz beside its .mokuro is one row."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    folder = tmp_path / "library"
+    folder.mkdir()
+    for name in ("01.epub", "02.txt", "Vol1.mokuro", "cover.jpg"):
+        (folder / name).write_text("x")
+    _archive(folder / "Vol1.cbz", {"Vol1.mokuro": _MOKURO})
+    _archive(folder / "Vol2.cbz", {"Vol2.mokuro": _MOKURO})
+    _archive(folder / "subs.zip", {"ep01.srt": b"x"})
+    tab.input_selector.set_path(str(folder))
+    with patch(_WORKER_CLS, return_value=FakeToolWorker()) as worker_cls:
+        tab.check_button.click()
+        qtbot.waitUntil(lambda: worker_cls.called, timeout=3000)
+    assert [p.name for p in worker_cls.call_args.args[1]] == ["01.epub", "02.txt", "Vol1.mokuro", "Vol2.cbz"]
+
+
+def test_a_txt_beside_subtitles_is_left_out_but_a_book_is_kept(qtbot, tmp_path):
+    """Review Focus 1: a season folder's readme.txt would skew the totals."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    folder = tmp_path / "season"
+    folder.mkdir()
+    for name in ("ep01.srt", "readme.txt", "novel.epub"):
+        (folder / name).write_text("x")
+    tab.input_selector.set_path(str(folder))
+    with patch(_WORKER_CLS, return_value=FakeToolWorker()) as worker_cls:
+        tab.check_button.click()
+        qtbot.waitUntil(lambda: worker_cls.called, timeout=3000)
+    assert [p.name for p in worker_cls.call_args.args[1]] == ["ep01.srt", "novel.epub"]
+
+
+def test_picking_a_volume_image_folder_checks_its_mokuro(qtbot, tmp_path):
+    """Review Focus 4: mokuro writes Vol1/ (pages) beside Vol1.mokuro (text)."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    (tmp_path / "Vol1").mkdir()
+    (tmp_path / "Vol1" / "001.jpg").write_bytes(b"x")
+    sidecar = tmp_path / "Vol1.mokuro"
+    sidecar.write_text("x")
+    tab.input_selector.set_path(str(tmp_path / "Vol1"))
+    with patch(_WORKER_CLS, return_value=FakeToolWorker()) as worker_cls:
+        tab.check_button.click()
+    assert worker_cls.call_args.args[1] == [sidecar]
 
 
 def test_a_single_file_is_checked_whatever_its_language_tag(qtbot, tmp_path):
