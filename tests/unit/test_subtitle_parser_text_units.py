@@ -400,6 +400,17 @@ class TestCountFronts:
 
         assert counter == service.count_fronts(srt)
 
+    def test_text_units_counter_by_lemma_equals_count_lemmas(self, tmp_path):
+        """Readability scores a book by lemma, like a subtitle file (count_by_lemma)."""
+        service = self._service(tmp_path)
+        srt = _write_srt(tmp_path / "units.srt", self.LINES)
+        units = [ReadingUnit(text=text, index=i, location_label=f"p.{i}") for i, text in enumerate(self.LINES)]
+
+        by_lemma = service.parse_text_units(units, want_line_index=False, count_by_lemma=True)[2]
+
+        assert by_lemma == service.count_lemmas(srt)
+        assert by_lemma != service.parse_text_units(units, want_line_index=False)[2]
+
 
 def _parse_units(config, units_tokens, *, force_include=None):
     """parse_text_units over one unit per token list; the unit text is the joined surfaces."""

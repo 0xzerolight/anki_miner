@@ -2091,6 +2091,7 @@ class SubtitleParserService:
         want_line_index: bool,
         *,
         subtitle_cleanup: bool = False,
+        count_by_lemma: bool = False,
     ) -> tuple[list[TokenizedWord], list[LineLemmas] | None, collections.Counter[str]]:
         """Parse reading-tab text units into mining words, index, and lemma counts.
 
@@ -2132,13 +2133,17 @@ class SubtitleParserService:
                 subtitle-only annotation strip + user regex after normalization,
                 mirroring the video path's ``_clean_line_text``; a cue that
                 collapses to empty is dropped. Default ``False`` (manga/book).
+            count_by_lemma: Key ``counts`` by lemma (``count_lemmas``
+                semantics) instead of card front. Readability sets it, so a
+                book scores on a subtitle file's basis.
 
         Returns:
             ``(words, line_index, counts)``. ``words`` is mined_form-deduped
             (first-occurrence-wins across the whole call, like the subtitle
             entrypoints); ``line_index`` is the ``LineLemmas`` list when
             ``want_line_index`` else ``None``; ``counts`` maps card front
-            (``mined_form``) → total included occurrences (``count_fronts``
+            (``mined_form``), or lemma with ``count_by_lemma``, → total
+            included occurrences (``count_fronts`` / ``count_lemmas``
             semantics, no dedup).
         """
         self._require_engine()
@@ -2191,7 +2196,12 @@ class SubtitleParserService:
             # _iter_token_spans for the drop-rule rationale).
             for token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
                 if self._mine_token(token, text, tok_start, tok_end, merged_tokens, raw_tokens):
-                    counts[self._card_front(token, text, tok_start, tok_end, raw_tokens)] += 1
+                    key = (
+                        self._extract_lemma(token)
+                        if count_by_lemma
+                        else self._card_front(token, text, tok_start, tok_end, raw_tokens)
+                    )
+                    counts[key] += 1
 
             line_words, line_lemmas_entry = self._emit_line_words_and_index(
                 line_state, seen_mined_forms, collect_index=want_line_index, rejects=rejects
@@ -2233,8 +2243,9 @@ class SubtitleParserService:
         What the curator's Occurrences column reads: it judges a card, and UniDic
         files kanji-variant homographs under one lemma (賭ける and 掛ける under
         掛ける), so a lemma count credits a card with its sibling's lines (audit
-        L3-005). Deck Builder ranks and Readability scores by lemma, and keep
-        :meth:`count_lemmas`.
+        L3-005). Deck Builder ranks and Readability scores by lemma
+        (:meth:`count_lemmas`, or ``parse_text_units(count_by_lemma=True)`` for
+        a book).
         """
         return self._count_occurrences(subtitle_file, by_front=True)
 

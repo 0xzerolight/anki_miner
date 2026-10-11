@@ -132,3 +132,25 @@ def test_real_ja_parse_of_an_english_file_has_no_words(test_config, tmp_path):
 
     stats = measure(words, index, counts, set(), WordFilterService(test_config))
     assert stats.word_count == 0 and stats.known_pct is None
+
+
+def test_book_units_score_like_the_same_subtitle_text(test_config, tmp_path):
+    """One basis: the same lines as a book or as a .srt give identical stats."""
+    pytest.importorskip("fugashi")
+    from anki_miner.models.reading import ReadingUnit
+    from anki_miner.services.subtitle_parser import SubtitleParserService
+
+    sub = tmp_path / "ep01.ja.srt"
+    sub.write_text(_JA_SRT, encoding="utf-8")
+    file_words, file_index, file_counts = _parse(test_config, sub)
+    units = [
+        ReadingUnit(text="猫が魚を食べる", index=0, location_label="¶1"),
+        ReadingUnit(text="猫が寝る", index=1, location_label="¶2"),
+    ]
+    words, index, counts = SubtitleParserService(test_config).parse_text_units(units, True, count_by_lemma=True)
+
+    assert index is not None
+    word_filter = WordFilterService(test_config)
+    assert measure(words, index, counts, {"猫"}, word_filter) == measure(
+        file_words, file_index, file_counts, {"猫"}, word_filter
+    )
