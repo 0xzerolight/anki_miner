@@ -374,6 +374,15 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "木の下",
     "目の前",
     "気の利く",
+    # lexical-join: table targets, plus 時に/残らず DELIBERATELY attested so
+    # lj06/lj07 fail on the table, not on a fixture-dict miss.
+    "思わず",
+    "実は",
+    "常に",
+    "下らない",
+    "詰まらない",
+    "時に",
+    "残らず",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
@@ -403,6 +412,9 @@ _ANCHOR_RULES: dict[str, str] = {
     # plain-causative
     "知らせる": "v1",
     "済まない": "adj-i",
+    # lexical-join
+    "下らない": "adj-i",
+    "詰まらない": "adj-i",
 }
 
 # Readings for the rows the reading-gate category needs. Every other row keeps
@@ -412,6 +424,8 @@ _ANCHOR_READINGS: dict[str, str] = {
     "木の下": "このした",
     "目の前": "めのまえ",
     "気の利く": "きのきく",
+    "下らない": "くだらない",
+    "詰まらない": "つまらない",
 }
 
 _ANCHOR_COMMON_HEADWORDS = frozenset({"やる"})

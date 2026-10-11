@@ -1,0 +1,7 @@
+{"id":"lj01","sentence":"思わず笑った","expected":["思わず","笑う"],"category":"lexical-join","note":"The fix: unidic cuts 思わ+ず (orthBase 思う)."}
+{"id":"lj02","sentence":"実は俺も行く","expected":["実は","俺","行く"],"category":"lexical-join","note":"実+は joined; 実 alone means 'fruit'."}
+{"id":"lj03","sentence":"常に前を見る","expected":["常に","前","見る"],"category":"lexical-join","note":"常+に joined."}
+{"id":"lj04","sentence":"くだらない話だ","expected":["くだらない","話"],"category":"lexical-join","note":"Kana adjective: くだら+ない joined, then kana recovery attests くだらない as a reading of 下らない."}
+{"id":"lj05","sentence":"つまらなかった","expected":["つまらない"],"category":"lexical-join","note":"Inflected: the joined token's front is the dictionary form."}
+{"id":"lj06","sentence":"その時に笑う","expected":["時","笑う"],"category":"lexical-join","note":"時に is DELIBERATELY attested: only the table keeps 'at that time' split."}
+{"id":"lj07","sentence":"何も残らず消えた","expected":["何","残る","消える"],"category":"lexical-join","note":"残らず is DELIBERATELY attested and left out of the table: here it means 'nothing was left'."}

@@ -466,8 +466,21 @@ def test_anchor_meets_reading_gate_floor() -> None:
     assert mine_lite_anchor("気の利いた人") == {"気の利く", "人"}
 
 
-# NOTE:jiru-zuru (Task 3), kana-written (Task 4), nominal-suffix (Task 5),
+def test_anchor_meets_lexical_join_floor() -> None:
+    results = _scored()
+    a_lj = f1(results["a-lite-orthbase"].by_category["lexical-join"])
+    b_lj = results["b-lite-anchor"].by_category["lexical-join"]
+    assert f1(b_lj) > a_lj, f"strategy (b) lexical-join f1 {f1(b_lj)} did not beat (a) {a_lj}"
+    assert recall(b_lj) == 1.0, f"strategy (b) lexical-join recall {recall(b_lj)} below 1.0"
+    assert junk_rate(b_lj) == 0.0, f"(b) lexical-join junk_rate {junk_rate(b_lj)} above 0.0"
+    # Attestation-gated: with no dictionary the split words stay.
+    assert mine_lite_orthbase("思わず笑った") == {"思う", "笑う"}
+    # 時に and 残らず are attested on purpose; only the table keeps them split.
+    assert mine_lite_anchor("その時に笑う") == {"時", "笑う"}
+
+
+# NOTE: jiru-zuru (Task 3), kana-written (Task 4), nominal-suffix (Task 5),
 # colloquial/counter (A2), aux-context (A1), long-compound (Task 6/Q2),
 # ellipsis-truncation (U8), katakana-verb-front, front-remap, masu-stem-nominal,
-# prefix-compound and plain-causative floors are gated above; linebreak-split
-# is scoreboard-only.
+# prefix-compound, plain-causative, reading-gate and lexical-join floors are
+# gated above; linebreak-split is scoreboard-only.

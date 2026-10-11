@@ -30,6 +30,7 @@ from anki_miner.services.deinflection import (
     find_highlight_end_with_trace,
     resolve_dictionary_form,
 )
+from anki_miner.services.lexical_joiner import LexicalJoiner
 from anki_miner.services.masu_stem_nominalizer import MasuStemNominalizer
 from anki_miner.services.morphology import (
     REJECT_KANA_ONLY,
@@ -740,6 +741,12 @@ class SubtitleParserService:
         self._masu_stem_nominalizer: MasuStemNominalizer | None = None
         if self._attest is not None:
             self._masu_stem_nominalizer = MasuStemNominalizer(self._attest)
+        # Grammar-cut words (思わず, 実は, くだらない; see services/lexical_joiner.py).
+        # Attested through the term-OR-reading probe because the kana adjectives
+        # are JMdict readings; None without one keeps the no-dict output unchanged.
+        self._lexical_joiner: LexicalJoiner | None = None
+        if kana_attest_lookup is not None:
+            self._lexical_joiner = LexicalJoiner(kana_attest_lookup, self._inclusion_rule.allowed_pos)
         # Name resources define raw-source boundaries independently of the
         # ordinary dictionary. This pass runs before dictionary matching so an
         # exact name remains available to the late exact name-wordset filter;
@@ -1309,7 +1316,8 @@ class SubtitleParserService:
         Returns ``(text, raw_tokens, merged_tokens, start, end, duration)``:
         ``raw_tokens`` is the direct ``self.tagger(text)`` output,
         ``merged_tokens`` is that run through ``_merge_compound_suffixes``, the
-        optional name matcher, and the optional compound matcher; ``duration``
+        optional name matcher, the optional compound matcher, and the masu-stem
+        and grammar-cut passes; ``duration``
         is ``end - start``. The times are whatever the caller passes: the
         subtitle path passes offset-neutral ones and shifts at yield
         (``_shifted_line_state``), the text-unit path passes final ones.
@@ -1339,6 +1347,10 @@ class SubtitleParserService:
         # the two can never fight over the same token.
         if self._masu_stem_nominalizer is not None:
             merged_tokens = self._masu_stem_nominalizer.rewrite_line(merged_tokens)
+        # Also after the matcher: a longer attested span over the same tokens
+        # keeps priority, and the joiner only sees what is still split.
+        if self._lexical_joiner is not None:
+            merged_tokens = self._lexical_joiner.join_line(text, merged_tokens)
         # Dictionary reading attestation for merged compounds (audit F2): fixes
         # rendaku/junction kana on the synthetics; no-op (and no lookup) when
         # no reading_lookup is wired or the line produced no merges.

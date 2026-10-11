@@ -160,6 +160,7 @@ _EXPECTED_CATEGORIES = {
     "verb-nominalizer",
     "plain-causative",
     "reading-gate",
+    "lexical-join",
 }
 
 
