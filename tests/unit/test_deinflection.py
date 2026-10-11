@@ -654,6 +654,21 @@ def _common(*common: str):
     return lambda terms: {t: t in common_set for t in terms}
 
 
+def _rules(rules_by_term: dict[str, str]):
+    """Fake rules-aware lookup that honours each entry's POS rules like the real probe.
+
+    ``rules_by_term`` maps a headword to its space-separated JMdict rules ("" for a
+    non-inflecting entry such as an interjection or a noun).
+    """
+    from anki_miner.services.deinflection import condition_flags_from_rules, conditions_match
+
+    return lambda candidates: {
+        text
+        for text, conditions in candidates
+        if text in rules_by_term and conditions_match(conditions, condition_flags_from_rules(rules_by_term[text]))
+    }
+
+
 class TestResolveDictionaryForm:
     """``resolve_dictionary_form`` — JMdict-anchored modern verb/adjective front.
 
@@ -710,14 +725,13 @@ class TestResolveDictionaryForm:
     # --- Identity (the inflected surface itself) is excluded from candidates. ---
 
     def test_attested_inflected_surface_does_not_win(self):
-        # 待った IS an attested JMdict headword ("matta!"), but it is the
-        # inflected surface itself — excluding it lets 待つ win, so the card
-        # front is the dictionary form, not the inflected string.
-        assert self._resolve("待った", "待つ", _lookup("待つ", "待った")) == "待つ"
+        # 待った IS an attested JMdict headword ("matta!"), but an interjection with
+        # no verb rules: the surface competes only under the verb mask, so 待つ wins.
+        assert self._resolve("待った", "待つ", _rules({"待つ": "v5", "待った": ""})) == "待つ"
 
     def test_attested_te_form_surface_does_not_win(self):
-        # 通じて is attested but is the surface identity; 通じる wins.
-        assert self._resolve("通じて", "通ずる", _lookup("通じる", "通じて")) == "通じる"
+        # 通じて is attested but is no verb entry; 通じる wins.
+        assert self._resolve("通じて", "通ずる", _rules({"通じる": "v1", "通じて": ""})) == "通じる"
 
     # --- Regression guards: orthBase already the longest prefix → no override. ---
 
@@ -782,6 +796,28 @@ class TestResolveDictionaryForm:
         # Contract preserved: 感じて → 感じる when 感じる IS common (the じる/ずる
         # fix the filter must not break).
         assert self._resolve("感じて", "感ずる", _lookup("感じる", "感ずる"), _common("感じる")) == "感じる"
+
+    # --- The plain surface competes as a verb headword (知らせる). ---
+
+    def test_plain_causative_surface_wins_when_attested_as_verb(self):
+        # 知らせる tokenizes 知ら+せる with orthBase 知る. Nothing deinflects to the
+        # surface itself, so only the verb-masked surface candidate can pick it.
+        assert self._resolve("知らせる", "知る", _rules({"知らせる": "v1", "知る": "v5"})) == "知らせる"
+
+    def test_plain_surface_matches_past_tense_result(self):
+        lookup = _rules({"済ませる": "v1", "済ます": "v5", "済む": "v5"})
+        assert self._resolve("済ませる", "済む", lookup) == self._resolve("済ませた", "済む", lookup) == "済ませる"
+
+    def test_plain_surface_obeys_commonness_pool(self):
+        # 笑わせる is attested but uncommon; with 笑う common the pool drops it.
+        assert self._resolve("笑わせる", "笑う", _rules({"笑わせる": "v1", "笑う": "v5"}), _common("笑う")) == "笑う"
+
+    def test_adjective_surface_is_not_a_candidate(self):
+        # 変わらない is an adj-i entry; the verb mask leaves the verb front alone.
+        assert self._resolve("変わらない", "変わる", _rules({"変わらない": "adj-i", "変わる": "v5"})) == "変わる"
+
+    def test_plain_dictionary_verb_unchanged(self):
+        assert self._resolve("食べる", "食べる", _rules({"食べる": "v1"})) == "食べる"
 
 
 class TestConditionFlagsFromRules:

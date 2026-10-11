@@ -445,8 +445,19 @@ def test_anchor_meets_prefix_compound_floor() -> None:
     assert mine_lite_anchor("気をつけて帰る") == {"気をつける", "帰る"}
 
 
+def test_anchor_meets_plain_causative_floor() -> None:
+    results = _scored()
+    b_pv = results["b-lite-anchor"].by_category["plain-causative"]
+    assert recall(b_pv) == 1.0, f"strategy (b) plain-causative recall {recall(b_pv)} below 1.0"
+    assert junk_rate(b_pv) == 0.0, f"(b) plain-causative junk_rate {junk_rate(b_pv)} above 0.0"
+    # The plain form now agrees with the past tense.
+    assert mine_lite_anchor("時間を知らせる") == mine_lite_anchor("時間を知らせた") == {"時間", "知らせる"}
+    # 済まない is attested as an adjective on purpose; only the verb mask keeps 済む.
+    assert mine_lite_anchor("まだ済まない") == {"済む"}
+
+
 # NOTE: jiru-zuru (Task 3), kana-written (Task 4), nominal-suffix (Task 5),
 # colloquial/counter (A2), aux-context (A1), long-compound (Task 6/Q2),
-# ellipsis-truncation (U8), katakana-verb-front, front-remap, masu-stem-nominal
-# and prefix-compound floors are gated above; linebreak-split is
-# scoreboard-only.
+# ellipsis-truncation (U8), katakana-verb-front, front-remap, masu-stem-nominal,
+# prefix-compound and plain-causative floors are gated above; linebreak-split
+# is scoreboard-only.

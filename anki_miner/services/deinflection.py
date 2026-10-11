@@ -405,10 +405,13 @@ def resolve_dictionary_form(
       the target 感じる carries v1, and ``v1 & (vs|vz) == 0`` — masking would
       delete the exact form the fix must pick. The cType mask stays only on the
       highlight-END computation (``find_highlight_end``), a separate concern.
-    * **The inflected surface itself is discarded** from the candidate set. A
+    * **The inflected surface competes only as a verb headword.** A
       deinflection never keeps the surface, and JMdict attests many inflected /
       stem strings (待った "matta!", 通じて, the noun 感じ) that would otherwise
       win the strictly-greater override and ship an inflected/stem card front.
+      The surface is offered under the verb condition mask alone, so only a
+      dictionary-form verb entry can win with it (知らせる, whose plain form
+      has no deinflection left to reach it).
     * **Preserve each result's grammatical conditions through attestation.** A
       longer-prefix candidate is eligible only when a dictionary entry's stored
       POS rules accept its deinflection mask. This is the same gate Yomitan uses
@@ -444,8 +447,13 @@ def resolve_dictionary_form(
         for result in deinflector.transform(inflected_surface)
         if result.text != inflected_surface
     }
-    if not candidates:
-        return orth_base
+    # The surface competes too, but only as a verb headword: 知らせる tokenizes
+    # 知ら+せる (orthBase 知る) and has nothing left to deinflect, while 知らせた
+    # reaches 知らせる through the past-tense rule. The verb mask keeps out
+    # entries that are not verbs (待った is an interjection, 感じ a noun,
+    # 変わらない an adjective); the commonness pool below then treats the
+    # surface like any other candidate.
+    candidates.add((inflected_surface, deinflector.condition_flags("v")))
     attested = term_rules_lookup(sorted(candidates))
     if not attested:
         return orth_base

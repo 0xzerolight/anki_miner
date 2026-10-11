@@ -364,6 +364,11 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "アプリケーションプログラム",
     "お誕生日おめでとうございます",
     "インターナショナルコミュニケーション",
+    # plain-causative: 知らせる is the fix's target; 済まない is DELIBERATELY
+    # attested as an adjective so pv03 fails if the surface mask ever widens
+    # past verbs.
+    "知らせる",
+    "済まない",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
@@ -390,6 +395,9 @@ _ANCHOR_RULES: dict[str, str] = {
     "おく": "v5k",
     # i-adjectives
     **dict.fromkeys(("すごい", "凄い", "かわいい", "可愛い", "あざとい", "しがない", "やばい", "うまい"), "adj-i"),
+    # plain-causative
+    "知らせる": "v1",
+    "済まない": "adj-i",
 }
 
 _ANCHOR_COMMON_HEADWORDS = frozenset({"やる"})

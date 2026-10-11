@@ -1,0 +1,3 @@
+{"id":"pv01","sentence":"時間を知らせる","expected":["時間","知らせる"],"category":"plain-causative","note":"The fix: unidic tags 知ら+せる (orthBase 知る); the plain surface is a v1 headword the resolver now offers."}
+{"id":"pv02","sentence":"時間を知らせた","expected":["時間","知らせる"],"category":"plain-causative","note":"Consistency: the past tense already reached 知らせる through deinflection."}
+{"id":"pv03","sentence":"まだ済まない","expected":["済む"],"category":"plain-causative","note":"済まない is DELIBERATELY attested as adj-i: only the verb mask keeps the adjective entry from replacing 済む."}

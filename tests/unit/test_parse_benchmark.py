@@ -158,6 +158,7 @@ _EXPECTED_CATEGORIES = {
     "reading-override",
     "reading-overrides",
     "verb-nominalizer",
+    "plain-causative",
 }
 
 
