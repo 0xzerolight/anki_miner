@@ -396,12 +396,20 @@ def test_embedded_volume_archives_match_the_directory_scan(tmp_path):
     _write_archive(tmp_path / "Vol2.zip", member)  # the .cbz wins the stem
     _write_archive(tmp_path / "Vol3.zip", member)
     _write_archive(tmp_path / "subs.zip", {"ep01.srt": b"x"})  # no OCR data
-    (tmp_path / "broken.cbz").write_bytes(b"not a zip")
 
     found = detector.embedded_volume_archives(tmp_path)
 
     assert found == {tmp_path / "Vol2.cbz", tmp_path / "Vol3.zip"}
     assert found == {ref.path for ref in detector.detect(tmp_path) if ref.ocr_entry}
+
+
+def test_embedded_volume_archives_keep_a_broken_volume_for_the_caller_to_report(tmp_path):
+    """detect(dir) can only skip it; a caller listing the folder fails that one row with the reason."""
+    _write_archive(tmp_path / "Vol4.cbz", {"Vol4.mokuro": b"{not json"})
+    (tmp_path / "broken.cbz").write_bytes(b"not a zip")
+    _write_archive(tmp_path / "subs.zip", {"ep01.srt": b"x"})  # no OCR data: still left out
+
+    assert detector.embedded_volume_archives(tmp_path) == {tmp_path / "Vol4.cbz", tmp_path / "broken.cbz"}
 
 
 def test_embedded_volume_archives_of_a_folder_without_any_is_empty(tmp_path):

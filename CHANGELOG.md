@@ -7,7 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
-- **Check how much of a book or manga you can read (Utilities → Readability).** Besides subtitles, the readability report takes an EPUB or .txt book and a mokuro manga volume (.mokuro, or a .cbz/.zip with its OCR data), or a folder of them. It shows the share of words you know, how many new words there are, and the share of sentences or text bubbles with no new word or one, per book or volume and in total. In a folder of subtitles, a .txt or a .zip without OCR data is left out.
+- **Check how much of a book or manga you can read (Utilities → Readability).** Besides subtitles, the readability report takes an EPUB or .txt book and a mokuro manga volume (.mokuro, or a .cbz/.zip with its OCR data), or a folder of them. It shows the share of words you know, how many new words there are, and the share of sentences or text bubbles with no new word or one, per book or volume and in total. In a folder, a .zip without OCR data is left out, and so is a .txt beside subtitles.
 - **Manga OCR and Video OCR read every mining language except Hebrew, Vietnamese and Cantonese (Utilities → Manga OCR, Video OCR).** No free recogniser reads those three well enough. Japanese keeps its own OCR engines. Other languages download a small text-recognition model from the tool's setup card on first use, and Manga OCR adds onnxruntime to its mokuro install.
 
 ### Changed

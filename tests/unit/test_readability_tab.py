@@ -190,12 +190,14 @@ def test_folder_takes_books_and_manga_volumes(qtbot, tmp_path):
         (folder / name).write_text("x")
     _archive(folder / "Vol1.cbz", {"Vol1.mokuro": _MOKURO})
     _archive(folder / "Vol2.cbz", {"Vol2.mokuro": _MOKURO})
+    _archive(folder / "Vol3.cbz", {"Vol3.mokuro": b"{not json"})  # listed, so its row fails with the reason
     _archive(folder / "subs.zip", {"ep01.srt": b"x"})
     tab.input_selector.set_path(str(folder))
     with patch(_WORKER_CLS, return_value=FakeToolWorker()) as worker_cls:
         tab.check_button.click()
         qtbot.waitUntil(lambda: worker_cls.called, timeout=3000)
-    assert [p.name for p in worker_cls.call_args.args[1]] == ["01.epub", "02.txt", "Vol1.mokuro", "Vol2.cbz"]
+    names = [p.name for p in worker_cls.call_args.args[1]]
+    assert names == ["01.epub", "02.txt", "Vol1.mokuro", "Vol2.cbz", "Vol3.cbz"]
 
 
 def test_a_txt_beside_subtitles_is_left_out_but_a_book_is_kept(qtbot, tmp_path):

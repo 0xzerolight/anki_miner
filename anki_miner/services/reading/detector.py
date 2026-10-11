@@ -470,9 +470,16 @@ def embedded_volume_archives(directory: Path) -> frozenset[Path]:
     itself and takes each ``.mokuro`` by name (Utilities → Readability).
     Parsing every sidecar the way ``detect(directory)`` does would read each
     volume's JSON twice, and one invalid sidecar would empty the whole scan.
+
+    An archive that scan would skip as broken (unreadable, or a ``.mokuro``
+    member it cannot parse) is listed too: the caller's own :func:`detect`
+    then fails that one file with the reason, where a folder scan could only
+    leave it out.
     """
     sidecar_stems = {child.stem for child in directory.iterdir() if _is_sidecar(child)}
-    return frozenset(archive for archive, _ref in _embedded_archive_volumes(directory, sidecar_stems))
+    broken: list[tuple[Path, str]] = []
+    volumes = _embedded_archive_volumes(directory, sidecar_stems, degraded_archives=broken)
+    return frozenset(archive for archive, _ref in volumes) | {archive for archive, _reason in broken}
 
 
 def _is_sidecar(child: Path) -> bool:
