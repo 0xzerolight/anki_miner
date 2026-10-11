@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <JMdict>
   <entry><k_ele><keb>春</keb><ke_pri>news1</ke_pri><ke_pri>ichi1</ke_pri></k_ele><sense><gloss>spring (season)</gloss></sense></entry>
+  <entry><k_ele><keb>魔王</keb></k_ele><sense><gloss>demon king</gloss></sense></entry>
+  <entry><k_ele><keb>鬼灯</keb></k_ele><sense><gloss>Chinese lantern plant</gloss></sense></entry>
+  <entry><k_ele><keb>凛</keb></k_ele><sense><gloss>dignified</gloss></sense></entry>
+  <entry><k_ele><keb>夢</keb><ke_pri>ichi1</ke_pri></k_ele><sense><gloss>dream</gloss></sense></entry>
+  <entry><k_ele><keb>小さ</keb></k_ele><sense><gloss>smallness</gloss></sense></entry>
 </JMdict>

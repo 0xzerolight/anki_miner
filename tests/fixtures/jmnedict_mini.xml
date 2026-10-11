@@ -12,4 +12,10 @@
   <entry><k_ele><keb>太郎</keb></k_ele><trans><name_type>&masc;</name_type><trans_det>Tarou</trans_det></trans></entry>
   <entry><k_ele><keb>ソニー</keb></k_ele><trans><name_type>&company;</name_type><trans_det>Sony</trans_det></trans></entry>
   <entry><k_ele><keb>春</keb></k_ele><trans><name_type>&fem;</name_type><trans_det>Haru</trans_det></trans></entry>
+  <entry><k_ele><keb>魔王</keb></k_ele><trans><name_type>&masc;</name_type><trans_det>Maou</trans_det></trans></entry>
+  <entry><k_ele><keb>鬼灯</keb></k_ele><trans><name_type>&place;</name_type><trans_det>Hoozuki</trans_det></trans></entry>
+  <entry><k_ele><keb>凛</keb></k_ele><trans><name_type>&fem;</name_type><trans_det>Rin</trans_det></trans></entry>
+  <entry><k_ele><keb>夢の</keb></k_ele><trans><name_type>&place;</name_type><trans_det>Yumeno</trans_det></trans></entry>
+  <entry><k_ele><keb>亜矢の</keb></k_ele><trans><name_type>&fem;</name_type><trans_det>Ayano</trans_det></trans></entry>
+  <entry><k_ele><keb>小さと</keb></k_ele><trans><name_type>&fem;</name_type><trans_det>Kosato</trans_det></trans></entry>
 </JMnedict>
