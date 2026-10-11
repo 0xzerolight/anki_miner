@@ -47,7 +47,7 @@ def test_media_downloader_is_findable_by_subtitles_only() -> None:
     assert any(cap.id == "media-downloader" for cap in search("subtitles only"))
 
 
-@pytest.mark.parametrize("query", ["coverage", "readability", "ankimorphs"])
+@pytest.mark.parametrize("query", ["coverage", "readability", "ankimorphs", "epub", "mokuro", "jiten"])
 def test_readability_report_is_findable_the_way_its_users_ask(query) -> None:
     assert any(cap.id == "readability-report" for cap in search(query))
 

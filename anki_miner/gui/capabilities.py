@@ -1327,12 +1327,12 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         id="readability-report",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Check how much of a show you can read"),
+        title=QT_TRANSLATE_NOOP("Capabilities", "Check how much of a show, book or manga you can read"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Pick a subtitle file or a folder of them to see the share of words you already know, how many "
-            "new words there are, and how many lines are i+1. Uses your Anki cards and known words; "
-            "nothing is written.",
+            "Pick a subtitle file, a book (EPUB or text) or a mokuro manga volume, or a folder of them, to see "
+            "the share of words you already know, how many new words there are, and how many lines are i+1. "
+            "Uses your Anki cards and known words; nothing is written.",
         ),
         category=_CAT_TOOLS,
         target=CapabilityTarget("subtitles", "readability"),
@@ -1347,6 +1347,9 @@ CAPABILITIES: tuple[Capability, ...] = (
             "percent known",
             "morphman",
             "ankimorphs",
+            "novel",
+            "jiten",
+            "migaku",
         ),
     ),
     Capability(
