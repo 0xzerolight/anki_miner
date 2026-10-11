@@ -463,6 +463,36 @@ def test_ocr_recognizer_is_pinned_or_empty(code):
     assert recognizer == "" or recognizer in RECOGNIZERS
 
 
+#: The recogniser each language reads with ("" = no OCR tool, or ja's own engines).
+_OCR_RECOGNIZER_BY_CODE = {
+    **dict.fromkeys(
+        ("en", "es", "fr", "de", "it", "pt", "ca", "nl", "sv", "nb", "da"),
+        "ppocrv6-small",
+    ),
+    **dict.fromkeys(
+        ("fi", "hu", "pl", "lt", "hr", "sl", "ro", "tr", "id", "zh"),
+        "ppocrv6-small",
+    ),
+    "ko": "korean",
+    "ru": "eslav",
+    "uk": "eslav",
+    "el": "el",
+    "th": "th",
+    "ar": "arabic",
+    "fa": "arabic",
+    **dict.fromkeys(("ja", "he", "vi", "yue"), ""),
+}
+
+
+def test_ocr_recognizer_table_covers_every_language():
+    assert sorted(_OCR_RECOGNIZER_BY_CODE) == CODES
+
+
+@pytest.mark.parametrize("code", CODES)
+def test_ocr_recognizer_is_the_pinned_one(code):
+    assert get_profile(code).ocr_recognizer == _OCR_RECOGNIZER_BY_CODE[code]
+
+
 @pytest.mark.parametrize("code", CODES)
 def test_ocr_capabilities_agree_with_the_engine(code):
     profile = get_profile(code)
