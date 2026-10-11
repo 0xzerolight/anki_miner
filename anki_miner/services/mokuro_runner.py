@@ -203,8 +203,10 @@ class MokuroRunnerService:
     def _build_cmd(self, volume: MokuroVolume, options: MokuroOptions) -> list[str]:
         if get_profile(config_language(self._config)).ocr_recognizer:
             # Only the in-app venv has the recogniser and the driver's onnxruntime; a PATH or
-            # override mokuro would read these pages with Japanese manga-ocr.
-            head = [str(managed_python_path(self._config.uv_root)), str(MOKURO_DRIVER)]
+            # override mokuro would read these pages with Japanese manga-ocr. -P keeps the
+            # driver's folder off sys.path, so no file there can shadow one of mokuro's
+            # imports; the driver appends it itself, right before importing paddle_rec.
+            head = [str(managed_python_path(self._config.uv_root)), "-P", str(MOKURO_DRIVER)]
         else:
             head = [resolve_mokuro(self._config)]
         cmd = [*head, str(volume.source), "--disable_confirmation=True", "--ignore_errors=True", "--legacy_html=False"]

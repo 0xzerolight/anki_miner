@@ -218,6 +218,7 @@ def test_a_recogniser_language_runs_the_driver_with_the_managed_python(tmp_path,
     cmd = mr.MokuroRunnerService(config)._build_cmd(vol, mr.MokuroOptions(force_cpu=True))
     assert cmd == [
         str(managed_python_path(config.uv_root)),
+        "-P",  # no script folder on sys.path: services/ocr/ must not shadow mokuro's imports
         str(MOKURO_DRIVER),
         str(vol.source),
         "--disable_confirmation=True",

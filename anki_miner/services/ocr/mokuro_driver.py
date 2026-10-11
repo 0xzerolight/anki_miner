@@ -3,13 +3,14 @@
 The app runs this file with the managed mokuro environment's Python and never imports it
 at run time:
 
-    <uv_root>/mokuro/bin/python mokuro_driver.py <volume> --disable_confirmation=True ...
+    <uv_root>/mokuro/bin/python -P mokuro_driver.py <volume> --disable_confirmation=True ...
 
 ``ANKI_MINER_OCR_MODEL`` names the recogniser .onnx and ``ANKI_MINER_OCR_REVERSE`` is "1"
 for a right-to-left model. mokuro's detector, page loop, .mokuro output and log lines
 are untouched (the page cache only moves to a folder per recogniser), so
-MokuroRunnerService reads this run like the ``mokuro`` console script. Standalone: mokuro's own dependencies and ``paddle_rec`` (this folder, which is
-sys.path[0] for a script) only.
+MokuroRunnerService reads this run like the ``mokuro`` console script.
+Standalone: mokuro's own dependencies and ``paddle_rec`` (this folder, which ``main``
+appends to sys.path after mokuro's imports) only.
 """
 
 from __future__ import annotations
@@ -123,6 +124,9 @@ def main() -> None:
     # paddle_rec sits in the app's own folder: never write its __pycache__ there (a
     # signed macOS .app must not be modified). mokuro's own imports above still cache.
     sys.dont_write_bytecode = True
+    # The app runs this file with -P: its folder joins sys.path only now, last, so no
+    # file in it can shadow one of mokuro's imports above.
+    sys.path.append(str(Path(__file__).resolve().parent))
     from paddle_rec import load_recognizer
 
     model = Path(os.environ["ANKI_MINER_OCR_MODEL"])
