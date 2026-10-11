@@ -7,6 +7,7 @@ The parser is a fake; ``measure`` and the known-forms recipe run for real.
 
 from __future__ import annotations
 
+import json
 import logging
 from collections import Counter
 from pathlib import Path
@@ -18,15 +19,18 @@ import pytest
 pytest.importorskip("PyQt6.QtWidgets")
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.exceptions import AnkiConnectionError, SubtitleParseError
+from anki_miner.exceptions import AnkiConnectionError, OperationCancelled, SetupError, SubtitleParseError
 from anki_miner.gui.utils.service_factory import ServiceLoadResult
 from anki_miner.gui.workers.readability_worker import ReadabilityWorker
 from anki_miner.models import LineLemmas, TerminalOutcome, TokenizedWord
 from anki_miner.models.readability import ReadabilityStats
+from anki_miner.models.reading import ReadingDocument, ReadingUnit
 from anki_miner.services.word_filter import WordFilterService
 
 _SHARED = "anki_miner.gui.workers.readability_worker.create_shared_lookup_services"
 _SERVICES = "anki_miner.gui.workers.readability_worker.create_services"
+_LOAD = "anki_miner.gui.workers.readability_worker.load_reading_source"
+_SPLIT = "anki_miner.gui.workers.readability_worker.split_oversize"
 
 
 def _word(form: str) -> TokenizedWord:
@@ -49,6 +53,7 @@ class _FakeParser:
     def __init__(self, files: dict[str, object]) -> None:
         self.files = files
         self.calls: list[str] = []
+        self.unit_calls: list[tuple[str, bool]] = []
 
     def parse_subtitle_file_with_index(self, path: Path):
         self.calls.append(path.name)
@@ -60,6 +65,15 @@ class _FakeParser:
 
     def count_lemmas(self, path: Path) -> Counter[str]:
         return self.files[path.name][2]  # type: ignore[index]
+
+    def parse_text_units(self, units, want_line_index, *, count_by_lemma=False):
+        """Keyed by the first unit's text (the fake loader sets it to the file name)."""
+        key = units[0].text
+        self.unit_calls.append((key, count_by_lemma))
+        entry = self.files[key]
+        if isinstance(entry, Exception):
+            raise entry
+        return entry
 
 
 def _services(config: AnkiMinerConfig, parser: _FakeParser, *, vocabulary=frozenset({"猫"}), db=None):
@@ -241,3 +255,176 @@ def test_cancel_between_files_still_tears_down(qapp, tmp_path):
     assert parser.calls == ["1.srt"]
     assert cap["queue"] == [TerminalOutcome.CANCELLED]
     shared.close.assert_called_once()
+
+
+# --- Books and manga volumes: the Reading loaders, then parse_text_units ---
+
+
+def _doc(name: str) -> ReadingDocument:
+    return ReadingDocument(
+        title=name,
+        kind="book",
+        series="Books",
+        episode=name,
+        units=[ReadingUnit(text=name, index=0, location_label="¶1")],
+    )
+
+
+def _book_files(tmp_path: Path, *names: str) -> list[Path]:
+    """Real files: detect() reads books by extension, and split_oversize stats them."""
+    paths = _files(tmp_path, *names)
+    for path in paths:
+        path.write_text("x", encoding="utf-8")
+    return paths
+
+
+def _load_by_name(failures: dict[str, BaseException] | None = None):
+    def load(_services, _config, ref, *, cancel_check):
+        name = ref.path.name
+        if failures and name in failures:
+            raise failures[name]
+        return _doc(name)
+
+    return load
+
+
+def test_a_book_is_measured_from_its_text_units_by_lemma(qapp, tmp_path):
+    config = AnkiMinerConfig()
+    parser = _FakeParser({"novel.txt": _parsed(("猫", "犬"), ("犬",))})
+    services = _services(config, parser)
+    files = _book_files(tmp_path, "novel.txt")
+
+    with patch(_LOAD, side_effect=_load_by_name()) as load:
+        cap, _worker, _shared = _run(config, files, services)
+
+    assert parser.unit_calls == [("novel.txt", True)]
+    ((_idx, stats),) = cap["measured"]
+    assert (stats.word_count, stats.unknown_count, stats.new_words) == (3, 2, frozenset({"犬"}))
+    assert cap["finished"] == [(0, files[0], None)]
+    assert load.call_args.args[0] is services and load.call_args.args[2].kind == "txt"
+    assert cap["queue"] == [TerminalOutcome.SUCCESS]
+
+
+def test_a_real_txt_book_goes_through_the_reading_loader(qapp, tmp_path):
+    """The Services → load_reading_source seam unpatched: detect, split_oversize and the novel loader run."""
+    config = AnkiMinerConfig()
+    book = tmp_path / "novel.txt"
+    book.write_text("猫が寝る。", encoding="utf-8")
+    parser = _FakeParser({"猫が寝る。": _parsed(("猫", "寝る"))})
+
+    cap, _worker, _shared = _run(config, [book], _services(config, parser))
+
+    assert parser.unit_calls == [("猫が寝る。", True)]
+    assert [idx for idx, _ in cap["measured"]] == [0]
+
+
+def test_a_mokuro_volume_loads_as_a_manga_ref(qapp, tmp_path):
+    config = AnkiMinerConfig()
+    volume = tmp_path / "Vol1.mokuro"
+    volume.write_text(
+        json.dumps(
+            {
+                "version": "0.1.0",
+                "title": "T",
+                "title_uuid": "t",
+                "volume": "V",
+                "volume_uuid": "v",
+                "pages": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    parser = _FakeParser({"Vol1.mokuro": _parsed(("猫",))})
+
+    with patch(_LOAD, side_effect=_load_by_name()) as load:
+        cap, _worker, _shared = _run(config, [volume], _services(config, parser))
+
+    assert load.call_args.args[2].kind == "mokuro"
+    assert [idx for idx, _ in cap["measured"]] == [0]
+
+
+def test_a_book_that_cannot_load_fails_only_its_row(qapp, tmp_path, caplog):
+    """Review Focus 3: SetupError is fatal in the base, but a DRM book must not stop the others."""
+    config = AnkiMinerConfig()
+    parser = _FakeParser({"good.txt": _parsed(("猫",))})
+    files = _book_files(tmp_path, "bad.epub", "good.txt")
+    failure = SetupError("'bad.epub' is DRM-protected and cannot be mined.")
+
+    with caplog.at_level(logging.WARNING), patch(_LOAD, side_effect=_load_by_name({"bad.epub": failure})):
+        cap, worker, _shared = _run(config, files, _services(config, parser))
+
+    assert cap["finished"] == [(0, None, str(failure)), (1, files[1], None)]
+    assert [idx for idx, _ in cap["measured"]] == [1]
+    assert worker.fatal_exception is None
+    assert cap["queue"] == [TerminalOutcome.PARTIAL]
+    assert [r for r in caplog.records if r.exc_info] == []
+    assert any("DRM" in r.getMessage() for r in caplog.records if r.levelno == logging.WARNING)
+
+
+def test_an_archive_without_ocr_data_fails_its_row(qapp, tmp_path):
+    """A picked .zip that is not a mokuro volume: detect() says what is missing."""
+    import zipfile
+
+    config = AnkiMinerConfig()
+    archive = tmp_path / "subs.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("ep01.srt", "x")
+
+    with patch(_LOAD) as load:
+        cap, _worker, _shared = _run(config, [archive], _services(config, _FakeParser({})))
+
+    load.assert_not_called()
+    ((idx, out, error),) = cap["finished"]
+    assert (idx, out) == (0, None) and ".mokuro" in error
+    assert cap["queue"] == [TerminalOutcome.FAILED]
+
+
+def test_a_missing_engine_still_stops_the_run(qapp, tmp_path):
+    config = AnkiMinerConfig()
+    parser = _FakeParser({"a.txt": SetupError("no engine"), "b.txt": _parsed(("猫",))})
+    files = _book_files(tmp_path, "a.txt", "b.txt")
+
+    with patch(_LOAD, side_effect=_load_by_name()):
+        cap, worker, _shared = _run(config, files, _services(config, parser))
+
+    assert isinstance(worker.fatal_exception, SetupError)
+    assert [key for key, _ in parser.unit_calls] == ["a.txt"]
+    assert cap["queue"] == [TerminalOutcome.FAILED]
+
+
+def test_cancel_during_a_load_ends_without_a_failure(qapp, tmp_path):
+    """Review Focus 5: the loader's own cancel is not a broken book."""
+    config = AnkiMinerConfig()
+    files = _book_files(tmp_path, "big.epub", "next.epub")
+    worker = ReadabilityWorker(config, files)
+    cap = _capture(worker)
+
+    def load(_services, _config, _ref, *, cancel_check):
+        worker.cancel()
+        assert cancel_check()
+        raise OperationCancelled("Reading load cancelled")
+
+    with (
+        patch(_SHARED, return_value=MagicMock()),
+        patch(_SERVICES, return_value=_services(config, _FakeParser({}))),
+        patch(_LOAD, side_effect=load),
+    ):
+        worker.run()
+
+    assert cap["finished"] == [] and cap["measured"] == []
+    assert cap["queue"] == [TerminalOutcome.CANCELLED]
+
+
+def test_an_oversized_txt_is_one_row_from_its_parts(qapp, tmp_path):
+    config = AnkiMinerConfig()
+    parser = _FakeParser({"part1": _parsed(("猫", "犬")), "part2": _parsed(("犬", "鳥"))})
+    files = _book_files(tmp_path, "huge.txt")
+    parts = [SimpleNamespace(path=Path("part1"), kind="txt"), SimpleNamespace(path=Path("part2"), kind="txt")]
+
+    with patch(_SPLIT, return_value=parts), patch(_LOAD, side_effect=_load_by_name()):
+        cap, _worker, _shared = _run(config, files, _services(config, parser))
+
+    ((idx, stats),) = cap["measured"]
+    assert idx == 0
+    assert (stats.word_count, stats.unknown_count, stats.line_count) == (4, 3, 2)
+    assert stats.new_words == frozenset({"犬", "鳥"})

@@ -43,7 +43,7 @@ from typing import Any
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import OperationCancelled, SetupError
-from anki_miner.gui.utils.service_factory import import_decode_ladder
+from anki_miner.gui.utils.service_factory import Services, import_decode_ladder
 from anki_miner.gui.workers._queue_progress import QueueMiningProgressAdapter
 from anki_miner.gui.workers._queue_worker_base import AttemptOutcome, SequentialQueueWorker
 from anki_miner.languages.registry import config_language, get_profile
@@ -60,7 +60,7 @@ logger = logging.getLogger(__name__)
 
 
 def load_reading_source(
-    processor: EpisodeProcessor,
+    processor: EpisodeProcessor | Services,
     config: AnkiMinerConfig,
     source: ReadingSourceRef,
     *,
@@ -71,6 +71,8 @@ def load_reading_source(
     The loader cleans cues with the SAME normaliser and bilingual-cue gate the
     run's parser applies to every unit, so the two can never disagree (None =
     the Japanese pair / every line kept). Shared with the command line.
+    Utilities → Readability passes its :class:`Services`; only
+    ``subtitle_parser`` and ``anki_service`` are read.
     """
     ladder = import_decode_ladder(config)
     profile = get_profile(config_language(config))
