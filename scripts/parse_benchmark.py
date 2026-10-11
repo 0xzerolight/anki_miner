@@ -374,8 +374,9 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "木の下",
     "目の前",
     "気の利く",
-    # lexical-join: table targets, plus 時に/残らず DELIBERATELY attested so
-    # lj06/lj07 fail on the table, not on a fixture-dict miss.
+    # lexical-join: table targets; 下らない/詰まらない carry the kana readings
+    # (くだらない, つまらない) the kana rows attest through; 時に/残らず are
+    # DELIBERATELY attested so lj06/lj07 fail on the table, not a dict miss.
     "思わず",
     "実は",
     "常に",

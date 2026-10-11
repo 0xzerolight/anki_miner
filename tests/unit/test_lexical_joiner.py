@@ -103,6 +103,17 @@ def test_kanji_accumulate_verb_is_not_joined():
     assert _joiner({"たまらない", "貯まらない"}).join_line("貯まらない", tokens) is tokens
 
 
+def test_kanji_verb_spellings_keep_their_verb_sense():
+    # JMdict marks 下らない and 詰まらない usually-kana: a kanji spelling is the verb
+    # (パイプが詰まらない "won't clog", 千人を下らない "no fewer than 1000").
+    for surface, orth_base in (("詰まら", "詰まる"), ("下ら", "下る")):
+        tokens = [
+            _tok(surface, "動詞", orth_base=orth_base, c_form="未然形-一般"),
+            _tok("ない", "助動詞", orth_base="ない", kana="ナイ"),
+        ]
+        assert _joiner({"詰まらない", "下らない"}).join_line(surface + "ない", tokens) is tokens
+
+
 def test_unattested_headword_keeps_the_split_words():
     tokens = _omowazu()
     assert _joiner(set()).join_line("思わず笑った", tokens) is tokens

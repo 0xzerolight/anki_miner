@@ -69,15 +69,13 @@ _FIXED_JOINS: frozenset[tuple[str, ...]] = frozenset(
 )
 
 # Verb orthBase in 未然形 + the negative auxiliary ない (なかっ, なく, ねえ), mapped
-# to the i-adjective the pair spells. Kanji 貯まる/溜まる ('accumulate') carry
-# their own orthBase and are not rows. Kana たまる/つまる also spell 'does not
-# accumulate/clog' (お金がたまらない); accepted, as the adjectives are far
-# more common.
+# to the i-adjective the pair spells. No 下る/詰まる rows: JMdict marks 下らない
+# and 詰まらない usually-kana, so a kanji spelling is the verb (パイプが詰まらない,
+# 千人を下らない). Kana たまる/つまる also spell 'does not accumulate/clog'
+# (お金がたまらない); accepted, as the adjectives are far more common.
 _NEGATIVE_ADJECTIVES: dict[str, str] = {
     "くだる": "くだらない",
-    "下る": "下らない",
     "つまる": "つまらない",
-    "詰まる": "詰まらない",
     "たまる": "たまらない",
     "堪る": "堪らない",
     "思いがける": "思いがけない",
