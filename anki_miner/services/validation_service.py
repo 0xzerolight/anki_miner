@@ -51,10 +51,14 @@ _YTDLP_STALE_AFTER_DAYS = 120
 #: 3h transfer this refuses to park behind.
 _YTDLP_LOCK_WAIT_SECONDS = 10.0
 
-#: Manga OCR's absence, for manga-ocr's language and for a recogniser language
-#: with no in-app mokuro (a PATH one cannot run the recogniser). System Health
-#: reads both texts below as "Not installed" by their prefixes.
+#: Manga OCR's absence for manga-ocr's language. System Health reads all three
+#: texts below as "Not installed" by their prefixes.
 MOKURO_NOT_FOUND_MESSAGE = "mokuro not found — Utilities → Manga OCR is unavailable; install it on that tab"
+#: A recogniser language with no in-app mokuro: a PATH one cannot run the
+#: recogniser, so "not found" would be wrong beside it.
+_APP_MOKURO_MISSING = (
+    "Manga OCR in this language needs Anki Miner's own mokuro — install it on the Utilities → Manga OCR tab"
+)
 #: A recogniser language with the in-app mokuro but not onnxruntime or its model.
 _MODEL_MISSING = "Manga OCR model not downloaded — Utilities → Manga OCR downloads the model for this language"
 
@@ -272,7 +276,7 @@ class ValidationService:
             else:
                 state = manga_ocr_state(self.config)
                 if not state:
-                    message = _MODEL_MISSING if state.mokuro else MOKURO_NOT_FOUND_MESSAGE
+                    message = _MODEL_MISSING if state.mokuro else _APP_MOKURO_MISSING
                     issues.append(ValidationIssue(component="mokuro", severity="WARNING", message=message))
 
         # The mining language's engine (spaCy model, jieba, ...). Without it no

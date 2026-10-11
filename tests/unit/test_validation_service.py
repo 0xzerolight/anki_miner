@@ -1319,16 +1319,25 @@ class TestCheckMokuro:
         assert issues[0].message.startswith("Manga OCR model not downloaded")
         assert result.tool_versions["mokuro"] == "mokuro [app-managed]"
 
-    def test_a_recogniser_language_with_only_a_path_mokuro_reports_mokuro_missing(self, test_config, monkeypatch):
-        """Review Focus 2: a PATH mokuro would run manga-ocr on Korean pages, so it does not count."""
-        service = self._ko_service(test_config, monkeypatch, (False, False), (True, "mokuro [PATH]"))
+    @pytest.mark.parametrize(
+        "mokuro_verdict",
+        [(True, "mokuro [PATH]"), (False, validation_service.MOKURO_NOT_FOUND_MESSAGE)],
+        ids=["path-mokuro", "no-mokuro"],
+    )
+    def test_a_recogniser_language_without_the_in_app_mokuro_asks_for_it(
+        self, test_config, monkeypatch, mokuro_verdict
+    ):
+        """Review Focus 2: a PATH mokuro would run manga-ocr on Korean pages, so it does not
+        count, and "mokuro not found" would be wrong beside it: name the in-app mokuro."""
+        service = self._ko_service(test_config, monkeypatch, (False, False), mokuro_verdict)
 
         result = service.validate_setup()
 
         issues = [i for i in result.issues if i.component == "mokuro"]
-        assert len(issues) == 1
-        assert issues[0].message == validation_service.MOKURO_NOT_FOUND_MESSAGE
-        assert issues[0].message.startswith("mokuro not found")
+        assert len(issues) == 1 and issues[0].severity == "WARNING"
+        assert issues[0].message == (
+            "Manga OCR in this language needs Anki Miner's own mokuro — " "install it on the Utilities → Manga OCR tab"
+        )
 
     def test_a_ready_recogniser_language_has_no_issue(self, test_config, monkeypatch):
         service = self._ko_service(test_config, monkeypatch, (True, True), (True, "mokuro [app-managed]"))

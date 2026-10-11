@@ -975,13 +975,17 @@ def test_the_not_installed_prefixes_match_the_validation_service():
     source = Path(service.__file__).read_text(encoding="utf-8")
     prefixes = [prefix for group in _ABSENT_PREFIXES.values() for prefix in group]
     assert "Manga OCR model not downloaded" in prefixes
+    assert "Manga OCR in this language needs Anki Miner's own mokuro" in prefixes
     for prefix in prefixes:
         assert prefix in source
 
 
-def test_a_missing_manga_ocr_model_reads_not_installed(health_window):
-    """A recogniser language's model is absence too, not breakage."""
-    message = "Manga OCR model not downloaded — x"
+@pytest.mark.parametrize(
+    "message",
+    ["Manga OCR model not downloaded — x", "Manga OCR in this language needs Anki Miner's own mokuro — x"],
+)
+def test_a_recogniser_languages_missing_manga_ocr_reads_not_installed(health_window, message):
+    """A recogniser language's model, or its in-app mokuro, is absence too, not breakage."""
     result = _result(issues=[ValidationIssue(component="mokuro", severity="WARNING", message=message)])
     health_window.show()
 
