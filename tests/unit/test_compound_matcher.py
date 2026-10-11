@@ -31,13 +31,17 @@ def _tok(surface, pos1, pos2=None, lemma=None, kana=None, orth_base=None, c_form
     return token
 
 
-def _matcher(dictionary, rule=None, max_span_tokens=5, spy=None):
+def _matcher(dictionary, rule=None, max_span_tokens=5, spy=None, readings=None):
     def lookup(terms):
         if spy is not None:
             spy.append(list(terms))
         return dictionary & set(terms)
 
-    return CompoundDictionaryMatcher(lookup, rule or _rule(), max_span_tokens)
+    if readings is None:
+        return CompoundDictionaryMatcher(lookup, rule or _rule(), max_span_tokens)
+    return CompoundDictionaryMatcher(
+        lookup, rule or _rule(), max_span_tokens, reading_lookup=lambda headword: readings.get(headword, [])
+    )
 
 
 def _name_matcher(names, rule=None, max_span_tokens=5, spy=None):
@@ -559,3 +563,73 @@ class TestPrefixInflectedTailSurfaceJoin:
         snapshot = list(tokens)
         _matcher({"ご存じ"}).merge_line("ご存じ", tokens)
         assert tokens == snapshot
+
+
+class TestReadingAgreementAcrossNo:
+    """A join across の must be readable as the dictionary headword (彼の方 is not かれのほう)."""
+
+    @staticmethod
+    def _kare_no_hou():
+        return [
+            _tok("彼", "代名詞", "*", kana="カレ"),
+            _tok("の", "助詞", "格助詞", kana="ノ"),
+            _tok("方", "名詞", "普通名詞", kana="ホウ"),
+            _tok("が", "助詞", "格助詞", kana="ガ"),
+        ]
+
+    def test_join_read_as_another_word_is_refused(self):
+        out = _matcher({"彼の方"}, readings={"彼の方": ["あのかた"]}).merge_line("彼の方が", self._kare_no_hou())
+        assert [t.surface for t in out] == ["彼", "の", "方", "が"]
+
+    def test_join_whose_reading_matches_merges(self):
+        tokens = [
+            _tok("目", "名詞", "普通名詞", kana="メ"),
+            _tok("の", "助詞", "格助詞", kana="ノ"),
+            _tok("前", "名詞", "普通名詞", kana="マエ"),
+        ]
+        out = _matcher({"目の前"}, readings={"目の前": ["めのまえ"]}).merge_line("目の前", tokens)
+        assert [t.surface for t in out] == ["目の前"]
+
+    def test_inflected_tail_compares_its_base_reading(self):
+        tokens = [
+            _tok("気", "名詞", "普通名詞", kana="キ"),
+            _tok("の", "助詞", "格助詞", kana="ノ"),
+            _tok("利い", "動詞", "一般", lemma="利く", kana="キイ", orth_base="利く", c_form="連用形-イ音便"),
+            _tok("た", "助動詞", "*", kana="タ"),
+        ]
+        tokens[2].feature.kanaBase = "キク"
+        out = _matcher({"気の利く"}, readings={"気の利く": ["きのきく"]}).merge_line("気の利いた", tokens)
+        assert [t.surface for t in out] == ["気の利い", "た"]
+        assert out[0].feature.lemma == "気の利く"
+
+    def test_rendaku_in_the_tail_still_merges(self):
+        # トカゲ+の+しっぽ切り reads …しっぽきり; the dictionary voices it (しっぽぎり).
+        tokens = [
+            _tok("トカゲ", "名詞", "普通名詞", kana="トカゲ"),
+            _tok("の", "助詞", "格助詞", kana="ノ"),
+            _tok("しっぽ切り", "名詞", "普通名詞", kana="シッポキリ"),
+        ]
+        readings = {"トカゲのしっぽ切り": ["とかげのしっぽぎり"]}
+        out = _matcher({"トカゲのしっぽ切り"}, readings=readings).merge_line("トカゲのしっぽ切り", tokens)
+        assert [t.surface for t in out] == ["トカゲのしっぽ切り"]
+
+    def test_no_recorded_reading_leaves_existence_in_charge(self):
+        out = _matcher({"彼の方"}, readings={}).merge_line("彼の方が", self._kare_no_hou())
+        assert [t.surface for t in out] == ["彼の方", "が"]
+
+    def test_token_without_kana_leaves_existence_in_charge(self):
+        tokens = self._kare_no_hou()
+        tokens[0].feature.kana = None  # OOV: extract_reading falls back to the kanji surface
+        out = _matcher({"彼の方"}, readings={"彼の方": ["あのかた"]}).merge_line("彼の方が", tokens)
+        assert [t.surface for t in out] == ["彼の方", "が"]
+
+    def test_join_across_other_particles_is_not_checked(self):
+        # UniDic can read 入る as ハイル; checking に joins would refuse the real 気に入る.
+        tokens = [
+            _tok("気", "名詞", "普通名詞", kana="キ"),
+            _tok("に", "助詞", "格助詞", kana="ニ"),
+            _tok("入る", "動詞", "一般", lemma="入る", kana="ハイル", orth_base="入る"),
+        ]
+        tokens[2].feature.kanaBase = "ハイル"
+        out = _matcher({"気に入る"}, readings={"気に入る": ["きにいる"]}).merge_line("気に入る", tokens)
+        assert [t.surface for t in out] == ["気に入る"]

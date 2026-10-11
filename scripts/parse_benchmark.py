@@ -369,6 +369,11 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     # past verbs.
     "知らせる",
     "済まない",
+    # reading-gate: attested の joins; their readings live in _ANCHOR_READINGS.
+    "彼の方",
+    "木の下",
+    "目の前",
+    "気の利く",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
@@ -400,6 +405,15 @@ _ANCHOR_RULES: dict[str, str] = {
     "済まない": "adj-i",
 }
 
+# Readings for the rows the reading-gate category needs. Every other row keeps
+# reading=None, which the gate treats as "no reading recorded" (it passes).
+_ANCHOR_READINGS: dict[str, str] = {
+    "彼の方": "あのかた",
+    "木の下": "このした",
+    "目の前": "めのまえ",
+    "気の利く": "きのきく",
+}
+
 _ANCHOR_COMMON_HEADWORDS = frozenset({"やる"})
 
 _ANCHOR_DICT_ID = "anchor-fixture"
@@ -422,7 +436,7 @@ def build_anchor_index(dicts_root: Path, dict_id: str = _ANCHOR_DICT_ID) -> Path
     rows = [
         DictRow(
             term=term,
-            reading=None,
+            reading=_ANCHOR_READINGS.get(term),
             content=f'<li class="gloss-item">{term}</li>',
             tags="popular" if term in _ANCHOR_COMMON_HEADWORDS else "",
             sequence=i,
@@ -475,6 +489,7 @@ def _get_anchor_service() -> SubtitleParserService:
             term_lookup=definition_service.offline_terms_exist,
             term_common_lookup=definition_service.offline_term_commonness,
             term_rules_lookup=definition_service.offline_deinflection_terms_exist,
+            reading_lookup=definition_service.offline_term_readings,
             kana_attest_lookup=definition_service.has_offline_definitions,
         )
     return _anchor_service

@@ -23,6 +23,8 @@ from both.
 
 from __future__ import annotations
 
+import re
+import unicodedata
 from typing import Callable
 
 from anki_miner.services.morphology import (
@@ -32,6 +34,7 @@ from anki_miner.services.morphology import (
     extract_reading,
     iter_token_spans,
 )
+from anki_miner.utils.text_utils import katakana_to_hiragana
 
 # Batch existence probe: returns the subset of the input strings that exist as
 # exact dictionary headwords (DefinitionService.offline_terms_exist).
@@ -40,6 +43,31 @@ TermLookup = Callable[[list[str]], set[str]]
 # Same batch shape, kept as a separate type name so parser wiring cannot
 # accidentally substitute dictionary-form attestation for raw name membership.
 NameLookup = Callable[[list[str]], set[str]]
+
+# Single-headword attested-readings probe (the parser's memoized
+# _attested_readings): an empty list when the dictionary records no reading.
+ReadingsLookup = Callable[[str], list[str]]
+
+# A dictionary headword joined across this particle must be speakable as the
+# tokens' own readings. 彼の方 is a JMdict headword read あのかた, but 彼+の+方
+# reads かれのほう, so the join names another word. Limited to の on measured
+# evidence: checking every particle refused real joins (気に入る: UniDic reads
+# 入ら as ハイラ), while across 874 merges on 12,453 Unnatural lines the の check
+# refused none. Known cost: a token UniDic misreads (猫の額 as ねこのがく) loses
+# its join.
+_READING_CHECKED_PARTICLE = "の"
+
+_HIRAGANA_RE = re.compile(r"[ぁ-ゖー]+")
+
+# Voicing marks (゛゜ as combining characters after NFD). Readings are compared
+# without them so rendaku inside a compound tail (トカゲのしっぽ切り: the line
+# reads しっぽきり, the dictionary しっぽぎり) does not refuse a real join.
+_VOICING_MARKS = frozenset("゙゚")
+
+
+def _unvoiced(kana: str) -> str:
+    return "".join(ch for ch in unicodedata.normalize("NFD", kana) if ch not in _VOICING_MARKS)
+
 
 # Span tails that conjugate: their candidate uses orthBase (dictionary form in
 # the token's own orthography — unidic's lemma is kanji-canonical, し→為る,
@@ -122,6 +150,15 @@ def _c_form(token) -> str:
     return str(c_form) if c_form and c_form != "*" else ""
 
 
+def _tail_reading(token, kind: str) -> str:
+    """The span tail's reading: its base-form kana for a deinflected (kind A) span."""
+    if kind == "A":
+        kana_base = getattr(getattr(token, "feature", None), "kanaBase", None)
+        if isinstance(kana_base, str) and kana_base not in ("", "*"):
+            return kana_base
+    return extract_reading(token)
+
+
 class CompoundDictionaryMatcher:
     """Greedy longest-match merger over one line's token stream.
 
@@ -139,6 +176,7 @@ class CompoundDictionaryMatcher:
         max_span_tokens: int = _MAX_SPAN_TOKENS,  # parameterized for tests only
         max_span_chars: int | None = None,
         force_include: Callable[[str], bool] | None = None,
+        reading_lookup: ReadingsLookup | None = None,
     ) -> None:
         self._lookup = term_lookup
         self._rule = inclusion_rule
@@ -146,6 +184,8 @@ class CompoundDictionaryMatcher:
         # synthetic the gate refuses still merges when its headword is
         # whitelisted and its tags are rescuable (R1); the parser then rescues it.
         self._force_include = force_include
+        # Attested readings for the の check (see _reading_fits); None ⇒ no check.
+        self._readings = reading_lookup
         self._max_span = max(2, max_span_tokens)
         char_bound = self._default_max_span_chars if max_span_chars is None else max_span_chars
         self._max_span_chars = max(2, char_bound)
@@ -182,6 +222,8 @@ class CompoundDictionaryMatcher:
                     for candidate, kind in alternatives:
                         if not self._exist_cache.get(candidate):
                             continue
+                        if not self._reading_fits(tokens[i : j + 1], candidate, kind):
+                            continue
                         synthetic = self._build_synthetic(tokens[i : j + 1], candidate, kind)
                         # Never consume tokens for a word the gate would then drop.
                         if self._rule.should_include(synthetic) or self._whitelisted(synthetic, candidate):
@@ -201,6 +243,25 @@ class CompoundDictionaryMatcher:
     def _whitelisted(self, synthetic, headword: str) -> bool:
         """Whether the whitelist rescues a synthetic the inclusion gate refuses (R1)."""
         return self._force_include is not None and self._rule.rescuable(synthetic) and self._force_include(headword)
+
+    def _reading_fits(self, span: list, headword: str, kind: str) -> bool:
+        """Whether a join across の can be read as its dictionary headword.
+
+        True when no reading probe is wired, the span crosses no の, a token has
+        no kana reading (OOV: its "reading" is its surface), or the dictionary
+        records no reading for the headword. A kind-A span compares the tail's
+        base reading (利い → キク), since the headword ends in the base form.
+        Voicing marks are ignored on both sides, so rendaku still matches.
+        """
+        if self._readings is None or not any(
+            _pos1(token) == "助詞" and token.surface == _READING_CHECKED_PARTICLE for token in span
+        ):
+            return True
+        spoken = katakana_to_hiragana("".join(extract_reading(t) for t in span[:-1]) + _tail_reading(span[-1], kind))
+        if not _HIRAGANA_RE.fullmatch(spoken):
+            return True
+        readings = self._readings(headword)
+        return not readings or _unvoiced(spoken) in {_unvoiced(katakana_to_hiragana(r)) for r in readings}
 
     def _can_start(self, token) -> bool:
         """Whether candidate spans may start at ``token``."""

@@ -727,7 +727,12 @@ class SubtitleParserService:
         self._compound_matcher: CompoundDictionaryMatcher | None = None
         if self._attest is not None and COMPOUND_MATCHING and compound_matching:
             self._compound_matcher = CompoundDictionaryMatcher(
-                self._attest, self._inclusion_rule, force_include=force_include
+                self._attest,
+                self._inclusion_rule,
+                force_include=force_include,
+                # Memoized single-headword probe; the cache it reads is created
+                # later in __init__, before any line is merged.
+                reading_lookup=self._attested_readings if reading_lookup is not None else None,
             )
         # Masu-stem nominalization (see services/masu_stem_nominalizer.py).
         # Shares the same memoized probe; None when no dict is wired, so the

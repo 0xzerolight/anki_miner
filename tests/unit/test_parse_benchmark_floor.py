@@ -456,7 +456,17 @@ def test_anchor_meets_plain_causative_floor() -> None:
     assert mine_lite_anchor("まだ済まない") == {"済む"}
 
 
-# NOTE: jiru-zuru (Task 3), kana-written (Task 4), nominal-suffix (Task 5),
+def test_anchor_meets_reading_gate_floor() -> None:
+    results = _scored()
+    b_rg = results["b-lite-anchor"].by_category["reading-gate"]
+    assert recall(b_rg) == 1.0, f"strategy (b) reading-gate recall {recall(b_rg)} below 1.0"
+    assert junk_rate(b_rg) == 0.0, f"(b) reading-gate junk_rate {junk_rate(b_rg)} above 0.0"
+    # The anchor attests 彼の方, so only the reading check keeps it apart.
+    assert "彼の方" not in mine_lite_anchor("彼の方が強い")
+    assert mine_lite_anchor("気の利いた人") == {"気の利く", "人"}
+
+
+# NOTE:jiru-zuru (Task 3), kana-written (Task 4), nominal-suffix (Task 5),
 # colloquial/counter (A2), aux-context (A1), long-compound (Task 6/Q2),
 # ellipsis-truncation (U8), katakana-verb-front, front-remap, masu-stem-nominal,
 # prefix-compound and plain-causative floors are gated above; linebreak-split

@@ -1,0 +1,4 @@
+{"id":"rg01","sentence":"彼の方が強い","expected":["彼","方","強い"],"category":"reading-gate","note":"彼の方 is attested (あのかた); only the reading check keeps 彼 and 方 apart."}
+{"id":"rg02","sentence":"木の下で待つ","expected":["木","下","待つ"],"category":"reading-gate","note":"木の下 is attested (このした) but the line reads き-の-した."}
+{"id":"rg03","sentence":"目の前の店","expected":["目の前","店"],"category":"reading-gate","note":"Guard: a の join whose reading matches still merges."}
+{"id":"rg04","sentence":"気の利いた人","expected":["気の利く","人"],"category":"reading-gate","note":"Guard: an inflected tail compares its base reading (きく), not its inflected kana."}
