@@ -87,6 +87,23 @@ def _lapis_separator_selector() -> str:
     return f":is({parents}) > li:not(:first-child)::before"
 
 
+def _senren_important_display_rules() -> list[tuple[str, str]]:
+    """Senren's `display: … !important` rules on the gloss list and its items, as
+    (selector, display value). Its Jitendex "Compact Mode Fix" lays the list out as a
+    flex row and relies on its own `li::after` " | " separator, which our cancel removes."""
+    css = _no_comments((_NOTE_TYPES / "senren.css").read_text(encoding="utf-8"))
+    found = []
+    for grp, decl in _iter_rules(css):
+        display = re.search(r"display:\s*([-\w]+)\s*!important", decl)
+        if not display:
+            continue
+        for sel in _split_top_level(grp):
+            sel = " ".join(sel.split())
+            if re.search(r'ul\[data-sc-content="glossary"\](\s*>\s*li)?$', sel):
+                found.append((sel, display[1]))
+    return found
+
+
 def _no_comments(css: str) -> str:
     """Strip CSS comments so prose in the header can't trip token checks."""
     return re.sub(r"/\*.*?\*/", "", css, flags=re.DOTALL)
@@ -503,8 +520,10 @@ class TestHostListFlattenDefense:
     must re-assert block layout so the numbered senses + bulleted glosses survive.
 
     Defense split (by cascade cost):
-      * DISPLAY is restored ungated in core — our (0,3,x) out-specifies the host's
-        (0,1,1)/(0,2,x) so no !important is needed, and it fixes styled dicts too;
+      * DISPLAY is restored ungated in core, with !important. Our cancel deletes the
+        host's " | " separators, so our layout must win wherever the cancel does: a
+        host that wins the layout alone (Senren's Jitendex `display: flex !important`)
+        leaves the glosses in a row with nothing between them ("to waveto shake");
       * PADDING needs !important to beat the host's `padding-left:0!important`, and
         is gated to unstyled dicts so it can never clobber a styled dict's own
         padding (Yomitan parity);
@@ -526,12 +545,34 @@ class TestHostListFlattenDefense:
 
     def test_structural_lists_declare_block_display(self):
         # display must be explicit (not left to the ul/li default) so a host
-        # display:inline cannot strip the markers. Ungated so styled dicts benefit.
-        assert "display: block" in self._decls_for("ul.gloss-list")
-        assert "display: block" in self._decls_for(".gloss-sc-ul")
-        assert "display: block" in self._decls_for(".gloss-sc-ol")
-        assert "display: list-item" in self._decls_for("li.gloss-item")
-        assert "display: list-item" in self._decls_for("li.gloss-sc-li")
+        # display:inline cannot strip the markers, and !important so it is never
+        # weaker than the separator cancel. Ungated so styled dicts benefit.
+        assert "display: block !important" in self._decls_for("ul.gloss-list")
+        assert "display: block !important" in self._decls_for(".gloss-sc-ul")
+        assert "display: block !important" in self._decls_for(".gloss-sc-ol")
+        assert "display: list-item !important" in self._decls_for("li.gloss-item")
+        assert "display: list-item !important" in self._decls_for("li.gloss-sc-li")
+
+    def test_gloss_layout_holds_against_senren_jitendex_compact(self):
+        # Senren's own !important row layout must not out-rank our !important block
+        # layout: at equal specificity the tie goes to our trailing <style>.
+        senren = _senren_important_display_rules()
+        assert {value for _, value in senren} == {"flex", "block"}, senren
+        ours = {
+            "ul": (".gloss-sc-ul", "display: block !important"),
+            "li": ("li.gloss-sc-li", "display: list-item !important"),
+        }
+        for host_selector, _ in senren:
+            subject, declaration = ours["li" if host_selector.endswith("li") else "ul"]
+            assert declaration in self._decls_for(subject)
+            our_selector = next(
+                sel.strip()
+                for grp, decl in _iter_rules(load_glossary_css())
+                if declaration in decl
+                for sel in grp.split(",")
+                if sel.strip().endswith(subject)
+            )
+            assert _specificity(our_selector) >= _specificity(host_selector), (our_selector, host_selector)
 
     def test_indent_defense_is_gated_and_important(self):
         # padding-left !important, gated to unstyled dicts, on both list levels.
@@ -563,9 +604,10 @@ class TestHostListFlattenDefense:
         witnesses = css_witnesses([body])
         assert "unstyled-chrome" in witnesses, "unstamped plain-JMdict must witness unstyled-chrome"
         variant = base_css_variant(witnesses)
-        assert "ul.gloss-list{display: block" in variant
-        assert "li.gloss-item{display: list-item" in variant
-        assert "li.gloss-sc-li{display: list-item" in variant
+        assert "ul.gloss-list{display: block !important" in variant
+        assert "li.gloss-item{display: list-item !important" in variant
+        assert ".gloss-sc-ol{display: block !important" in variant
+        assert "li.gloss-sc-li{display: list-item !important" in variant
         assert "li.gloss-sc-li::after{content: none" in variant
         assert "padding-left: 1.35em !important" in variant
         assert "padding-left: 1.2em !important" in variant

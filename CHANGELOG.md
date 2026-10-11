@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 ### Fixed
+- **Meanings no longer run together on Senren cards ("to waveto shaketo swing").** The card's stylesheet removed the note type's " | " between meanings but could lose the fight to keep them one per line, so a note type that lays them out in a row, such as Senren for Jitendex, showed them with nothing in between. Each meaning now keeps its own line. Existing cards pick this up with Utilities → Card Backfill → Restyle cards…
 - **A one-file Utilities run shows how far through the file it is.** Video OCR, Generate, Audiobook Sync, Condense, Manga OCR and Tracks used to read 0% in the status bar and on the pinned bar until the file was done, because the bar counted finished files. A two-hour video therefore looked stuck for the whole scan. They now show the file's measured position. A run of several files still counts finished files.
 - **Video OCR keeps a line with an ellipsis as one subtitle.** On some frames the OCR engine read an extra dot after "…", so one line on screen, such as おお…客人たちよ, became several subtitles that differed only in that dot. The extra dot is now dropped. Run Video OCR again to rebuild a .srt made before the fix.
 

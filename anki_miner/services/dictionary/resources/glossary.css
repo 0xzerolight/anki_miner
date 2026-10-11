@@ -146,9 +146,11 @@
 /* Sense list: numbered, comfortable rhythm. `display: block` is declared (not
  * left to the ul default) so a host "Format Definitions" rule that forces
  * `display: inline` on our lists (see the cohabitation defense below) cannot
- * strip the sense ordinals — our (0,3,2) out-specifies the host's (0,2,1). */
+ * strip the sense ordinals. It is !important because the cancel below deletes
+ * the host's separators: whenever that cancel wins, this layout must win too, or
+ * the items sit in a row with nothing between them (see the gloss-list rule). */
 .yomitan-glossary ol[data-count] ul.gloss-list {
-  display: block;
+  display: block !important;
   margin: 0.2em 0 0;
   padding-left: 1.35em;
   list-style-type: decimal;
@@ -162,7 +164,7 @@
 }
 
 .yomitan-glossary ol[data-count] li.gloss-item {
-  display: list-item;
+  display: list-item !important;
   margin: 0.25em 0;
 }
 
@@ -196,9 +198,10 @@
  * trailing <style>, which comes after the note type's CSS. Raise no further: a
  * styled dictionary's own scoped CSS follows the base in the same block and must
  * keep winning its ties.
- * Pinned by test_separator_cancel_outranks_lapis. Display/indent flattening is
- * defended separately by the structural `display` declarations above and the
- * gated !important padding below. */
+ * Pinned by test_separator_cancel_outranks_lapis. This cancel is only safe while
+ * our structural `display` declarations (above and below) hold the vertical
+ * layout, so those are !important; indent flattening is defended by the gated
+ * !important padding below. */
 .yomitan-glossary ol[data-count] [data-dictionary] li.gloss-item::before,
 .yomitan-glossary ol[data-count] [data-dictionary] li.gloss-item::after,
 .yomitan-glossary ol[data-count] [data-dictionary] li.gloss-sc-li::before,
@@ -216,19 +219,28 @@
  * Nested ordered lists switch marker style so they don't read as the outer
  * decimal sense numbering. `display: block` is declared so a host that forces
  * `display: inline` on our gloss list (cohabitation defense above) cannot strip
- * the gloss bullets. */
+ * the gloss bullets.
+ * !important, because the cancel above deletes the host's separators: a host
+ * that wins only the layout leaves the glosses in a row with nothing between
+ * them ("to waveto shake"). Senren's Jitendex "Compact Mode Fix" does exactly
+ * that, `ul[data-sc-content="glossary"] { display: flex !important }` at (0,3,1)
+ * (and `> li { display: block !important }` at (0,3,2), against the item rule
+ * below); ours ties it and the tie goes to our trailing <style>. A styled
+ * dictionary's own non-important `display` on these lists now loses; no audited
+ * dictionary declares one (Jitendex's only `display` is on a forms-table span).
+ * Pinned by test_gloss_layout_holds_against_senren_jitendex_compact. */
 .yomitan-glossary ol[data-count] .gloss-sc-ul,
 .yomitan-glossary ol[data-count] .gloss-sc-ol {
-  display: block;
+  display: block !important;
   margin: 0.2em 0;
   padding-left: 1.2em;
 }
 
-/* Gloss items keep list-item display for the same reason (the disc/circle marker
- * comes from the ul's inline list-style-type, which is restored once display is
- * block again). */
+/* Gloss items keep list-item display for the same reasons, !important included
+ * (the disc/circle marker comes from the ul's inline list-style-type, which is
+ * restored once display is block again). */
 .yomitan-glossary ol[data-count] li.gloss-sc-li {
-  display: list-item;
+  display: list-item !important;
 }
 
 /* @am-group: unstyled-chrome */
