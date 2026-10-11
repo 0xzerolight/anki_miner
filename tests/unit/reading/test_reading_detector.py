@@ -387,6 +387,28 @@ def test_title_dir_embedded_cbz_beats_uppercase_zip_same_stem(tmp_path):
     assert refs[0].path == title_dir / "Vol2.cbz"
 
 
+def test_embedded_volume_archives_match_the_directory_scan(tmp_path):
+    """Readability lists the folder itself; its archive rule must be detect()'s."""
+    member = {"v.mokuro": _mokuro_bytes()}
+    _write_mokuro(tmp_path / "Vol1.mokuro")
+    _write_archive(tmp_path / "Vol1.cbz", member)  # covered by its sidecar
+    _write_archive(tmp_path / "Vol2.cbz", member)
+    _write_archive(tmp_path / "Vol2.zip", member)  # the .cbz wins the stem
+    _write_archive(tmp_path / "Vol3.zip", member)
+    _write_archive(tmp_path / "subs.zip", {"ep01.srt": b"x"})  # no OCR data
+    (tmp_path / "broken.cbz").write_bytes(b"not a zip")
+
+    found = detector.embedded_volume_archives(tmp_path)
+
+    assert found == {tmp_path / "Vol2.cbz", tmp_path / "Vol3.zip"}
+    assert found == {ref.path for ref in detector.detect(tmp_path) if ref.ocr_entry}
+
+
+def test_embedded_volume_archives_of_a_folder_without_any_is_empty(tmp_path):
+    (tmp_path / "ep01.srt").write_text("x")
+    assert detector.embedded_volume_archives(tmp_path) == frozenset()
+
+
 def test_title_dir_bad_archive_skipped_not_fatal(tmp_path):
     # One corrupt/ambiguous/OCR-less archive must not abort the folder scan.
     title_dir = tmp_path / "MyManga"

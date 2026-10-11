@@ -424,21 +424,74 @@ def _detect_directory(
     """A dropped directory is a title dir, a dropped image dir, or not mokuro.
 
     A title dir's volumes are its ``.mokuro`` children plus any self-contained
-    ``.cbz``/``.zip`` archives carrying an embedded ``.mokuro`` member. A
-    sidecar covers its same-stem archive (one volume, not two), and among
+    ``.cbz``/``.zip`` archives carrying an embedded ``.mokuro`` member
+    (:func:`_embedded_archive_volumes`).
+    """
+    children = sorted(
+        (child for child in directory.iterdir() if _is_sidecar(child)),
+        key=lambda child: natural_sort_key(child.name),
+    )
+    sidecar_stems = {child.stem for child in children}
+    embedded_pairs = _embedded_archive_volumes(directory, sidecar_stems, degraded_archives=degraded_archives)
+
+    if children or embedded_pairs:
+        volumes = [(child, _mokuro_ref(child)) for child in children] + embedded_pairs
+        volumes.sort(key=lambda pair: natural_sort_key(pair[0].name))
+        return [ref for _, ref in volumes]
+
+    # User dropped the image dir itself: prefer an exact "<name>.mokuro",
+    # then the first filename-sorted exact-stem extension case variant.
+    sidecar = directory.parent / (directory.name + ".mokuro")
+    if not sidecar.is_file():
+        sidecars = sorted(
+            (
+                entry
+                for entry in directory.parent.iterdir()
+                if entry.is_file() and entry.stem == directory.name and entry.suffix.lower() == ".mokuro"
+            ),
+            key=lambda entry: entry.name,
+        )
+        if sidecars:
+            sidecar = sidecars[0]
+    if sidecar.is_file():
+        return [_mokuro_ref(sidecar)]
+
+    raise SetupError(
+        f"'{directory.name}' is not a recognized reading source: no .mokuro "
+        "volumes or embedded-.mokuro archives inside it and no matching "
+        ".mokuro sidecar beside it."
+    )
+
+
+def embedded_volume_archives(directory: Path) -> frozenset[Path]:
+    """The archives :func:`detect` reads as volumes of their own in *directory*.
+
+    The archive half of the directory rule, for a caller that lists the folder
+    itself and takes each ``.mokuro`` by name (Utilities → Readability).
+    Parsing every sidecar the way ``detect(directory)`` does would read each
+    volume's JSON twice, and one invalid sidecar would empty the whole scan.
+    """
+    sidecar_stems = {child.stem for child in directory.iterdir() if _is_sidecar(child)}
+    return frozenset(archive for archive, _ref in _embedded_archive_volumes(directory, sidecar_stems))
+
+
+def _is_sidecar(child: Path) -> bool:
+    return child.is_file() and child.suffix.lower() == ".mokuro" and not is_junk_path(child.name)
+
+
+def _embedded_archive_volumes(
+    directory: Path,
+    sidecar_stems: set[str],
+    *,
+    degraded_archives: list[tuple[Path, str]] | None = None,
+) -> list[tuple[Path, ReadingSourceRef]]:
+    """Self-contained archives in *directory* that no sidecar covers.
+
+    A sidecar covers its same-stem archive (one volume, not two), and among
     embedded-only same-stem archives ``.cbz`` beats ``.zip`` (mirroring
     :func:`_resolve_image_root`). A broken/OCR-less archive contributes
     nothing — it must never abort the folder scan.
     """
-    children = sorted(
-        (
-            child
-            for child in directory.iterdir()
-            if child.is_file() and child.suffix.lower() == ".mokuro" and not is_junk_path(child.name)
-        ),
-        key=lambda child: natural_sort_key(child.name),
-    )
-    sidecar_stems = {child.stem for child in children}
     archives = sorted(
         (
             child
@@ -468,34 +521,7 @@ def _detect_directory(
         )
         if ref is not None:
             embedded_pairs.append((archive, ref))
-
-    if children or embedded_pairs:
-        volumes = [(child, _mokuro_ref(child)) for child in children] + embedded_pairs
-        volumes.sort(key=lambda pair: natural_sort_key(pair[0].name))
-        return [ref for _, ref in volumes]
-
-    # User dropped the image dir itself: prefer an exact "<name>.mokuro",
-    # then the first filename-sorted exact-stem extension case variant.
-    sidecar = directory.parent / (directory.name + ".mokuro")
-    if not sidecar.is_file():
-        sidecars = sorted(
-            (
-                entry
-                for entry in directory.parent.iterdir()
-                if entry.is_file() and entry.stem == directory.name and entry.suffix.lower() == ".mokuro"
-            ),
-            key=lambda entry: entry.name,
-        )
-        if sidecars:
-            sidecar = sidecars[0]
-    if sidecar.is_file():
-        return [_mokuro_ref(sidecar)]
-
-    raise SetupError(
-        f"'{directory.name}' is not a recognized reading source: no .mokuro "
-        "volumes or embedded-.mokuro archives inside it and no matching "
-        ".mokuro sidecar beside it."
-    )
+    return embedded_pairs
 
 
 def _embedded_mokuro_ref(
