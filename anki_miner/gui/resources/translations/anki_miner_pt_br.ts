@@ -2735,12 +2735,12 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Transcreva um audiolivro e sincronize as frases do próprio livro com ele, gravando um .srt que a aba Audiolivros, Leitura → Arquivos de Legenda ou um leitor de e-books pode usar.</translation>
     </message>
     <message>
-        <source>Check how much of a show you can read</source>
-        <translation>Verificar quanto de uma série você consegue ler</translation>
+        <source>Check how much of a show, book or manga you can read</source>
+        <translation>Verificar quanto de uma série, livro ou mangá você consegue ler</translation>
     </message>
     <message>
-        <source>Pick a subtitle file or a folder of them to see the share of words you already know, how many new words there are, and how many lines are i+1. Uses your Anki cards and known words; nothing is written.</source>
-        <translation>Escolha um arquivo de legenda ou uma pasta de legendas para ver a proporção de palavras que você já conhece, quantas palavras novas existem e quantas linhas são i+1. Usa seus cartões do Anki e suas palavras conhecidas; nada é gravado.</translation>
+        <source>Pick a subtitle file, a book (EPUB or text) or a mokuro manga volume, or a folder of them, to see the share of words you already know, how many new words there are, and how many lines are i+1. Uses your Anki cards and known words; nothing is written.</source>
+        <translation>Escolha um arquivo de legenda, um livro (EPUB ou texto) ou um volume de mangá do mokuro, ou uma pasta com eles, para ver a proporção de palavras que você já conhece, quantas palavras novas existem e quantas linhas são i+1. Usa seus cartões do Anki e suas palavras conhecidas; nada é gravado.</translation>
     </message>
     <message>
         <source>Save the subtitles or audio inside a video</source>
@@ -8625,12 +8625,12 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Concluído com erros — veja o log</translation>
     </message>
     <message>
-        <source>Some subtitle files could not be read.</source>
-        <translation>Não foi possível ler alguns arquivos de legenda.</translation>
+        <source>Some files could not be read.</source>
+        <translation>Não foi possível ler alguns arquivos.</translation>
     </message>
     <message>
-        <source>This subtitle file could not be read.</source>
-        <translation>Não foi possível ler este arquivo de legenda.</translation>
+        <source>This file could not be read.</source>
+        <translation>Não foi possível ler este arquivo.</translation>
     </message>
     <message>
         <source>Complete — %1 file(s) checked</source>
@@ -8649,24 +8649,28 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Verificação de legibilidade</translation>
     </message>
     <message>
-        <source>Subtitles</source>
-        <translation>Legendas</translation>
+        <source>Input</source>
+        <translation>Entrada</translation>
     </message>
     <message>
         <source>Your mining language can't read text on this computer yet. Download its language pack in Settings → Mining Language.</source>
         <translation>Este computador ainda não consegue ler texto no seu idioma de mineração. Baixe o pacote de idioma em Configurações → Idioma de Mineração.</translation>
     </message>
     <message>
-        <source>See how much of a subtitle file, or a folder of them, you already know. Uses your Anki cards and known words; nothing is written.</source>
-        <translation>Veja quanto de um arquivo de legenda, ou de uma pasta de legendas, você já conhece. Usa seus cartões do Anki e suas palavras conhecidas; nada é gravado.</translation>
+        <source>See how much of a subtitle file, book or manga volume, or a folder of them, you already know. Uses your Anki cards and known words; nothing is written.</source>
+        <translation>Veja quanto de um arquivo de legenda, livro ou volume de mangá, ou de uma pasta com eles, você já conhece. Usa seus cartões do Anki e suas palavras conhecidas; nada é gravado.</translation>
     </message>
     <message>
-        <source>This field takes a subtitle file or a folder.</source>
-        <translation>Este campo aceita um arquivo de legenda ou uma pasta.</translation>
+        <source>This field takes a subtitle file, a book, a manga volume or a folder.</source>
+        <translation>Este campo aceita um arquivo de legenda, um livro, um volume de mangá ou uma pasta.</translation>
     </message>
     <message>
-        <source>Subtitle file or folder:</source>
-        <translation>Arquivo de legenda ou pasta:</translation>
+        <source>File or folder:</source>
+        <translation>Arquivo ou pasta:</translation>
+    </message>
+    <message>
+        <source>Subtitles, books and manga</source>
+        <translation>Legendas, livros e mangás</translation>
     </message>
     <message>
         <source>Report</source>
@@ -8677,8 +8681,8 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Palavras conhecidas</translation>
     </message>
     <message>
-        <source>Share of all words in these files you already know. A word said ten times counts ten times.</source>
-        <translation>Proporção de todas as palavras destes arquivos que você já conhece. Uma palavra dita dez vezes conta dez vezes.</translation>
+        <source>Share of all words in these files you already know. A word used ten times counts ten times.</source>
+        <translation>Proporção de todas as palavras destes arquivos que você já conhece. Uma palavra usada dez vezes conta dez vezes.</translation>
     </message>
     <message>
         <source>New words</source>
@@ -8693,24 +8697,24 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Linhas totalmente conhecidas</translation>
     </message>
     <message>
-        <source>Lines with no new words (i+0).</source>
-        <translation>Linhas sem palavras novas (i+0).</translation>
+        <source>Lines with no new words (i+0). In a book a line is a sentence; in manga, a text bubble.</source>
+        <translation>Linhas sem palavras novas (i+0). Em um livro, uma linha é uma frase; em mangá, um balão de texto.</translation>
     </message>
     <message>
         <source>Lines with one new word</source>
         <translation>Linhas com uma palavra nova</translation>
     </message>
     <message>
-        <source>Lines with exactly one new word (i+1): the easiest sentences to learn from.</source>
-        <translation>Linhas com exatamente uma palavra nova (i+1): as frases mais fáceis para aprender.</translation>
+        <source>Lines with exactly one new word (i+1): the easiest sentences to learn from. In a book a line is a sentence; in manga, a text bubble.</source>
+        <translation>Linhas com exatamente uma palavra nova (i+1): as frases mais fáceis para aprender. Em um livro, uma linha é uma frase; em mangá, um balão de texto.</translation>
     </message>
     <message>
         <source>File</source>
         <translation>Arquivo</translation>
     </message>
     <message>
-        <source>Subtitle file.</source>
-        <translation>Arquivo de legenda.</translation>
+        <source>Subtitle file, book or manga volume.</source>
+        <translation>Arquivo de legenda, livro ou volume de mangá.</translation>
     </message>
     <message>
         <source>Known</source>
@@ -8745,12 +8749,12 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Não é possível acessar o Anki. Inicie o Anki (com o AnkiConnect) e verifique novamente.</translation>
     </message>
     <message>
-        <source>Choose a subtitle file or a folder first.</source>
-        <translation>Escolha um arquivo de legenda ou uma pasta primeiro.</translation>
+        <source>Choose a file or a folder first.</source>
+        <translation>Escolha um arquivo ou uma pasta primeiro.</translation>
     </message>
     <message>
-        <source>No subtitle files were found in that folder.</source>
-        <translation>Nenhum arquivo de legenda foi encontrado nessa pasta.</translation>
+        <source>No subtitles, books or manga volumes were found in that folder.</source>
+        <translation>Nenhum arquivo de legenda, livro ou volume de mangá foi encontrado nessa pasta.</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -8761,8 +8765,8 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Esse arquivo ou essa pasta não existe mais.</translation>
     </message>
     <message>
-        <source>Pick a subtitle file (.ass, .srt, .ssa, .vtt or .smi).</source>
-        <translation>Escolha um arquivo de legenda (.ass, .srt, .ssa, .vtt ou .smi).</translation>
+        <source>Pick a subtitle file, a book (.epub or .txt) or a manga volume (.mokuro, .cbz or .zip).</source>
+        <translation>Escolha um arquivo de legenda, um livro (.epub ou .txt) ou um volume de mangá (.mokuro, .cbz ou .zip).</translation>
     </message>
     <message>
         <source>Reading your Anki cards and known words…</source>

@@ -2732,12 +2732,12 @@ No index files are deleted.</source>
         <translation>转录有声书，并将书中的句子与其对应计时，写出可在“有声书”标签页、“阅读 → 字幕文件”或阅读器中使用的 .srt 文件。</translation>
     </message>
     <message>
-        <source>Check how much of a show you can read</source>
-        <translation>查看一部剧你能看懂多少</translation>
+        <source>Check how much of a show, book or manga you can read</source>
+        <translation>查看一部剧、一本书或一部漫画你能看懂多少</translation>
     </message>
     <message>
-        <source>Pick a subtitle file or a folder of them to see the share of words you already know, how many new words there are, and how many lines are i+1. Uses your Anki cards and known words; nothing is written.</source>
-        <translation>选择一个字幕文件或一个字幕文件夹，查看你已认识的单词占比、生词数量，以及有多少行是 i+1。使用你的 Anki 卡片和已知单词；不会写入任何内容。</translation>
+        <source>Pick a subtitle file, a book (EPUB or text) or a mokuro manga volume, or a folder of them, to see the share of words you already know, how many new words there are, and how many lines are i+1. Uses your Anki cards and known words; nothing is written.</source>
+        <translation>选择一个字幕文件、一本书（EPUB 或文本）或一卷 mokuro 漫画，或包含它们的文件夹，查看你已认识的单词占比、生词数量，以及有多少行是 i+1。使用你的 Anki 卡片和已知单词；不会写入任何内容。</translation>
     </message>
     <message>
         <source>Save the subtitles or audio inside a video</source>
@@ -8585,12 +8585,12 @@ No index files are deleted.</source>
         <translation>完成但有错误 — 请查看日志</translation>
     </message>
     <message>
-        <source>Some subtitle files could not be read.</source>
-        <translation>有些字幕文件无法读取。</translation>
+        <source>Some files could not be read.</source>
+        <translation>有些文件无法读取。</translation>
     </message>
     <message>
-        <source>This subtitle file could not be read.</source>
-        <translation>无法读取此字幕文件。</translation>
+        <source>This file could not be read.</source>
+        <translation>无法读取此文件。</translation>
     </message>
     <message>
         <source>Complete — %1 file(s) checked</source>
@@ -8609,24 +8609,28 @@ No index files are deleted.</source>
         <translation>可读性检查</translation>
     </message>
     <message>
-        <source>Subtitles</source>
-        <translation>字幕</translation>
+        <source>Input</source>
+        <translation>输入</translation>
     </message>
     <message>
         <source>Your mining language can't read text on this computer yet. Download its language pack in Settings → Mining Language.</source>
         <translation>这台电脑还无法读取你挖词语言的文本。请在“设置 → 挖词语言”中下载该语言的语言包。</translation>
     </message>
     <message>
-        <source>See how much of a subtitle file, or a folder of them, you already know. Uses your Anki cards and known words; nothing is written.</source>
-        <translation>查看一个字幕文件或一个字幕文件夹中有多少内容是你已认识的。使用你的 Anki 卡片和已知单词；不会写入任何内容。</translation>
+        <source>See how much of a subtitle file, book or manga volume, or a folder of them, you already know. Uses your Anki cards and known words; nothing is written.</source>
+        <translation>查看一个字幕文件、一本书或一卷漫画，或包含它们的文件夹中，有多少内容是你已认识的。使用你的 Anki 卡片和已知单词；不会写入任何内容。</translation>
     </message>
     <message>
-        <source>This field takes a subtitle file or a folder.</source>
-        <translation>此字段需要字幕文件或文件夹。</translation>
+        <source>This field takes a subtitle file, a book, a manga volume or a folder.</source>
+        <translation>此字段需要字幕文件、书籍、漫画卷或文件夹。</translation>
     </message>
     <message>
-        <source>Subtitle file or folder:</source>
-        <translation>字幕文件或文件夹：</translation>
+        <source>File or folder:</source>
+        <translation>文件或文件夹：</translation>
+    </message>
+    <message>
+        <source>Subtitles, books and manga</source>
+        <translation>字幕、书籍和漫画</translation>
     </message>
     <message>
         <source>Report</source>
@@ -8637,7 +8641,7 @@ No index files are deleted.</source>
         <translation>已知单词</translation>
     </message>
     <message>
-        <source>Share of all words in these files you already know. A word said ten times counts ten times.</source>
+        <source>Share of all words in these files you already know. A word used ten times counts ten times.</source>
         <translation>这些文件的所有单词中你已认识的占比。一个单词出现十次就计十次。</translation>
     </message>
     <message>
@@ -8653,24 +8657,24 @@ No index files are deleted.</source>
         <translation>完全认识的行</translation>
     </message>
     <message>
-        <source>Lines with no new words (i+0).</source>
-        <translation>没有生词的行（i+0）。</translation>
+        <source>Lines with no new words (i+0). In a book a line is a sentence; in manga, a text bubble.</source>
+        <translation>没有生词的行（i+0）。在书籍中，一行指一个句子；在漫画中，指一个文字气泡。</translation>
     </message>
     <message>
         <source>Lines with one new word</source>
         <translation>含一个生词的行</translation>
     </message>
     <message>
-        <source>Lines with exactly one new word (i+1): the easiest sentences to learn from.</source>
-        <translation>恰好含一个生词的行（i+1）：最容易从中学习的句子。</translation>
+        <source>Lines with exactly one new word (i+1): the easiest sentences to learn from. In a book a line is a sentence; in manga, a text bubble.</source>
+        <translation>恰好含一个生词的行（i+1）：最容易从中学习的句子。在书籍中，一行指一个句子；在漫画中，指一个文字气泡。</translation>
     </message>
     <message>
         <source>File</source>
         <translation>文件</translation>
     </message>
     <message>
-        <source>Subtitle file.</source>
-        <translation>字幕文件。</translation>
+        <source>Subtitle file, book or manga volume.</source>
+        <translation>字幕文件、书籍或漫画卷。</translation>
     </message>
     <message>
         <source>Known</source>
@@ -8705,12 +8709,12 @@ No index files are deleted.</source>
         <translation>无法连接到 Anki。请启动 Anki（需安装 AnkiConnect），然后重新检查。</translation>
     </message>
     <message>
-        <source>Choose a subtitle file or a folder first.</source>
-        <translation>请先选择一个字幕文件或文件夹。</translation>
+        <source>Choose a file or a folder first.</source>
+        <translation>请先选择一个文件或文件夹。</translation>
     </message>
     <message>
-        <source>No subtitle files were found in that folder.</source>
-        <translation>该文件夹中未找到字幕文件。</translation>
+        <source>No subtitles, books or manga volumes were found in that folder.</source>
+        <translation>该文件夹中未找到字幕、书籍或漫画卷。</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -8721,8 +8725,8 @@ No index files are deleted.</source>
         <translation>该文件或文件夹已不存在。</translation>
     </message>
     <message>
-        <source>Pick a subtitle file (.ass, .srt, .ssa, .vtt or .smi).</source>
-        <translation>请选择一个字幕文件（.ass、.srt、.ssa、.vtt 或 .smi）。</translation>
+        <source>Pick a subtitle file, a book (.epub or .txt) or a manga volume (.mokuro, .cbz or .zip).</source>
+        <translation>请选择一个字幕文件、一本书（.epub 或 .txt）或一卷漫画（.mokuro、.cbz 或 .zip）。</translation>
     </message>
     <message>
         <source>Reading your Anki cards and known words…</source>

@@ -2735,12 +2735,12 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Transcribe un audiolibro y sincroniza las oraciones del propio libro con él, escribiendo un .srt que la pestaña Audiolibros, Lectura → Archivos de subtítulos o un lector de libros electrónicos puedan usar.</translation>
     </message>
     <message>
-        <source>Check how much of a show you can read</source>
-        <translation>Comprobar qué parte de una serie ya puede leer</translation>
+        <source>Check how much of a show, book or manga you can read</source>
+        <translation>Comprobar qué parte de una serie, un libro o un manga ya puede leer</translation>
     </message>
     <message>
-        <source>Pick a subtitle file or a folder of them to see the share of words you already know, how many new words there are, and how many lines are i+1. Uses your Anki cards and known words; nothing is written.</source>
-        <translation>Elija un archivo de subtítulos o una carpeta con ellos para ver la proporción de palabras que ya conoce, cuántas palabras nuevas hay y cuántas líneas son i+1. Usa sus tarjetas de Anki y sus palabras conocidas; no se escribe nada.</translation>
+        <source>Pick a subtitle file, a book (EPUB or text) or a mokuro manga volume, or a folder of them, to see the share of words you already know, how many new words there are, and how many lines are i+1. Uses your Anki cards and known words; nothing is written.</source>
+        <translation>Elija un archivo de subtítulos, un libro (EPUB o texto) o un volumen de manga de mokuro, o una carpeta con ellos, para ver la proporción de palabras que ya conoce, cuántas palabras nuevas hay y cuántas líneas son i+1. Usa sus tarjetas de Anki y sus palabras conocidas; no se escribe nada.</translation>
     </message>
     <message>
         <source>Save the subtitles or audio inside a video</source>
@@ -8625,12 +8625,12 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Finalizó con errores — vea el registro</translation>
     </message>
     <message>
-        <source>Some subtitle files could not be read.</source>
-        <translation>No se pudieron leer algunos archivos de subtítulos.</translation>
+        <source>Some files could not be read.</source>
+        <translation>No se pudieron leer algunos archivos.</translation>
     </message>
     <message>
-        <source>This subtitle file could not be read.</source>
-        <translation>No se pudo leer este archivo de subtítulos.</translation>
+        <source>This file could not be read.</source>
+        <translation>No se pudo leer este archivo.</translation>
     </message>
     <message>
         <source>Complete — %1 file(s) checked</source>
@@ -8649,24 +8649,28 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Comprobación de legibilidad</translation>
     </message>
     <message>
-        <source>Subtitles</source>
-        <translation>Subtítulos</translation>
+        <source>Input</source>
+        <translation>Entrada</translation>
     </message>
     <message>
         <source>Your mining language can't read text on this computer yet. Download its language pack in Settings → Mining Language.</source>
         <translation>Su idioma de minería aún no puede leer texto en este equipo. Descargue el paquete de ese idioma en Ajustes → Idioma de minería.</translation>
     </message>
     <message>
-        <source>See how much of a subtitle file, or a folder of them, you already know. Uses your Anki cards and known words; nothing is written.</source>
-        <translation>Vea qué parte de un archivo de subtítulos, o de una carpeta con ellos, ya conoce. Usa sus tarjetas de Anki y sus palabras conocidas; no se escribe nada.</translation>
+        <source>See how much of a subtitle file, book or manga volume, or a folder of them, you already know. Uses your Anki cards and known words; nothing is written.</source>
+        <translation>Vea qué parte de un archivo de subtítulos, un libro o un volumen de manga, o de una carpeta con ellos, ya conoce. Usa sus tarjetas de Anki y sus palabras conocidas; no se escribe nada.</translation>
     </message>
     <message>
-        <source>This field takes a subtitle file or a folder.</source>
-        <translation>Este campo admite un archivo de subtítulos o una carpeta.</translation>
+        <source>This field takes a subtitle file, a book, a manga volume or a folder.</source>
+        <translation>Este campo admite un archivo de subtítulos, un libro, un volumen de manga o una carpeta.</translation>
     </message>
     <message>
-        <source>Subtitle file or folder:</source>
-        <translation>Archivo de subtítulos o carpeta:</translation>
+        <source>File or folder:</source>
+        <translation>Archivo o carpeta:</translation>
+    </message>
+    <message>
+        <source>Subtitles, books and manga</source>
+        <translation>Subtítulos, libros y manga</translation>
     </message>
     <message>
         <source>Report</source>
@@ -8677,8 +8681,8 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Palabras conocidas</translation>
     </message>
     <message>
-        <source>Share of all words in these files you already know. A word said ten times counts ten times.</source>
-        <translation>Proporción de todas las palabras de estos archivos que ya conoce. Una palabra dicha diez veces cuenta diez veces.</translation>
+        <source>Share of all words in these files you already know. A word used ten times counts ten times.</source>
+        <translation>Proporción de todas las palabras de estos archivos que ya conoce. Una palabra que aparece diez veces cuenta diez veces.</translation>
     </message>
     <message>
         <source>New words</source>
@@ -8693,24 +8697,24 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Líneas totalmente conocidas</translation>
     </message>
     <message>
-        <source>Lines with no new words (i+0).</source>
-        <translation>Líneas sin palabras nuevas (i+0).</translation>
+        <source>Lines with no new words (i+0). In a book a line is a sentence; in manga, a text bubble.</source>
+        <translation>Líneas sin palabras nuevas (i+0). En un libro, una línea es una oración; en un manga, un globo de texto.</translation>
     </message>
     <message>
         <source>Lines with one new word</source>
         <translation>Líneas con una palabra nueva</translation>
     </message>
     <message>
-        <source>Lines with exactly one new word (i+1): the easiest sentences to learn from.</source>
-        <translation>Líneas con exactamente una palabra nueva (i+1): las oraciones de las que es más fácil aprender.</translation>
+        <source>Lines with exactly one new word (i+1): the easiest sentences to learn from. In a book a line is a sentence; in manga, a text bubble.</source>
+        <translation>Líneas con exactamente una palabra nueva (i+1): las oraciones de las que es más fácil aprender. En un libro, una línea es una oración; en un manga, un globo de texto.</translation>
     </message>
     <message>
         <source>File</source>
         <translation>Archivo</translation>
     </message>
     <message>
-        <source>Subtitle file.</source>
-        <translation>Archivo de subtítulos.</translation>
+        <source>Subtitle file, book or manga volume.</source>
+        <translation>Archivo de subtítulos, libro o volumen de manga.</translation>
     </message>
     <message>
         <source>Known</source>
@@ -8745,12 +8749,12 @@ No se elimina ningún archivo de índice.</translation>
         <translation>No se puede acceder a Anki. Inicie Anki (con AnkiConnect) y vuelva a comprobar.</translation>
     </message>
     <message>
-        <source>Choose a subtitle file or a folder first.</source>
-        <translation>Elija primero un archivo de subtítulos o una carpeta.</translation>
+        <source>Choose a file or a folder first.</source>
+        <translation>Elija primero un archivo o una carpeta.</translation>
     </message>
     <message>
-        <source>No subtitle files were found in that folder.</source>
-        <translation>No se encontraron archivos de subtítulos en esa carpeta.</translation>
+        <source>No subtitles, books or manga volumes were found in that folder.</source>
+        <translation>No se encontraron subtítulos, libros ni volúmenes de manga en esa carpeta.</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -8761,8 +8765,8 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Ese archivo o esa carpeta ya no existe.</translation>
     </message>
     <message>
-        <source>Pick a subtitle file (.ass, .srt, .ssa, .vtt or .smi).</source>
-        <translation>Elija un archivo de subtítulos (.ass, .srt, .ssa, .vtt o .smi).</translation>
+        <source>Pick a subtitle file, a book (.epub or .txt) or a manga volume (.mokuro, .cbz or .zip).</source>
+        <translation>Elija un archivo de subtítulos, un libro (.epub o .txt) o un volumen de manga (.mokuro, .cbz o .zip).</translation>
     </message>
     <message>
         <source>Reading your Anki cards and known words…</source>

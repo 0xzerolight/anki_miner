@@ -2735,12 +2735,12 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Transcrivez un livre audio et synchronisez les phrases du livre avec lui, en écrivant un fichier .srt que l'onglet Livres audio, Lecture → Fichiers de sous-titres ou une application de lecture peuvent utiliser.</translation>
     </message>
     <message>
-        <source>Check how much of a show you can read</source>
-        <translation>Vérifier quelle part d'une série vous pouvez lire</translation>
+        <source>Check how much of a show, book or manga you can read</source>
+        <translation>Vérifier quelle part d'une série, d'un livre ou d'un manga vous pouvez lire</translation>
     </message>
     <message>
-        <source>Pick a subtitle file or a folder of them to see the share of words you already know, how many new words there are, and how many lines are i+1. Uses your Anki cards and known words; nothing is written.</source>
-        <translation>Choisissez un fichier de sous-titres ou un dossier de sous-titres pour voir la part de mots que vous connaissez déjà, le nombre de nouveaux mots et le nombre de lignes i+1. Utilise vos cartes Anki et vos mots connus ; rien n'est modifié.</translation>
+        <source>Pick a subtitle file, a book (EPUB or text) or a mokuro manga volume, or a folder of them, to see the share of words you already know, how many new words there are, and how many lines are i+1. Uses your Anki cards and known words; nothing is written.</source>
+        <translation>Choisissez un fichier de sous-titres, un livre (EPUB ou texte) ou un volume de manga mokuro, ou un dossier qui en contient, pour voir la part de mots que vous connaissez déjà, le nombre de nouveaux mots et le nombre de lignes i+1. Utilise vos cartes Anki et vos mots connus ; rien n'est modifié.</translation>
     </message>
     <message>
         <source>Save the subtitles or audio inside a video</source>
@@ -8625,12 +8625,12 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Terminé avec des erreurs — voir le journal</translation>
     </message>
     <message>
-        <source>Some subtitle files could not be read.</source>
-        <translation>Impossible de lire certains fichiers de sous-titres.</translation>
+        <source>Some files could not be read.</source>
+        <translation>Impossible de lire certains fichiers.</translation>
     </message>
     <message>
-        <source>This subtitle file could not be read.</source>
-        <translation>Impossible de lire ce fichier de sous-titres.</translation>
+        <source>This file could not be read.</source>
+        <translation>Impossible de lire ce fichier.</translation>
     </message>
     <message>
         <source>Complete — %1 file(s) checked</source>
@@ -8649,24 +8649,28 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Vérification de la lisibilité</translation>
     </message>
     <message>
-        <source>Subtitles</source>
-        <translation>Sous-titres</translation>
+        <source>Input</source>
+        <translation>Entrée</translation>
     </message>
     <message>
         <source>Your mining language can't read text on this computer yet. Download its language pack in Settings → Mining Language.</source>
         <translation>Le texte dans votre langue d'extraction ne peut pas encore être lu sur cet ordinateur. Téléchargez son pack de langue dans Paramètres → Langue d'extraction.</translation>
     </message>
     <message>
-        <source>See how much of a subtitle file, or a folder of them, you already know. Uses your Anki cards and known words; nothing is written.</source>
-        <translation>Voyez quelle part d'un fichier de sous-titres, ou d'un dossier de sous-titres, vous connaissez déjà. Utilise vos cartes Anki et vos mots connus ; rien n'est modifié.</translation>
+        <source>See how much of a subtitle file, book or manga volume, or a folder of them, you already know. Uses your Anki cards and known words; nothing is written.</source>
+        <translation>Voyez quelle part d'un fichier de sous-titres, d'un livre ou d'un volume de manga, ou d'un dossier qui en contient, vous connaissez déjà. Utilise vos cartes Anki et vos mots connus ; rien n'est modifié.</translation>
     </message>
     <message>
-        <source>This field takes a subtitle file or a folder.</source>
-        <translation>Ce champ accepte un fichier de sous-titres ou un dossier.</translation>
+        <source>This field takes a subtitle file, a book, a manga volume or a folder.</source>
+        <translation>Ce champ accepte un fichier de sous-titres, un livre, un volume de manga ou un dossier.</translation>
     </message>
     <message>
-        <source>Subtitle file or folder:</source>
-        <translation>Fichier de sous-titres ou dossier :</translation>
+        <source>File or folder:</source>
+        <translation>Fichier ou dossier :</translation>
+    </message>
+    <message>
+        <source>Subtitles, books and manga</source>
+        <translation>Sous-titres, livres et mangas</translation>
     </message>
     <message>
         <source>Report</source>
@@ -8677,8 +8681,8 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Mots connus</translation>
     </message>
     <message>
-        <source>Share of all words in these files you already know. A word said ten times counts ten times.</source>
-        <translation>Part de tous les mots de ces fichiers que vous connaissez déjà. Un mot prononcé dix fois compte dix fois.</translation>
+        <source>Share of all words in these files you already know. A word used ten times counts ten times.</source>
+        <translation>Part de tous les mots de ces fichiers que vous connaissez déjà. Un mot employé dix fois compte dix fois.</translation>
     </message>
     <message>
         <source>New words</source>
@@ -8693,24 +8697,24 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Lignes entièrement connues</translation>
     </message>
     <message>
-        <source>Lines with no new words (i+0).</source>
-        <translation>Lignes sans nouveau mot (i+0).</translation>
+        <source>Lines with no new words (i+0). In a book a line is a sentence; in manga, a text bubble.</source>
+        <translation>Lignes sans nouveau mot (i+0). Dans un livre, une ligne est une phrase ; dans un manga, une bulle de texte.</translation>
     </message>
     <message>
         <source>Lines with one new word</source>
         <translation>Lignes avec un nouveau mot</translation>
     </message>
     <message>
-        <source>Lines with exactly one new word (i+1): the easiest sentences to learn from.</source>
-        <translation>Lignes avec exactement un nouveau mot (i+1) : les phrases qui permettent d'apprendre le plus facilement.</translation>
+        <source>Lines with exactly one new word (i+1): the easiest sentences to learn from. In a book a line is a sentence; in manga, a text bubble.</source>
+        <translation>Lignes avec exactement un nouveau mot (i+1) : les phrases qui permettent d'apprendre le plus facilement. Dans un livre, une ligne est une phrase ; dans un manga, une bulle de texte.</translation>
     </message>
     <message>
         <source>File</source>
         <translation>Fichier</translation>
     </message>
     <message>
-        <source>Subtitle file.</source>
-        <translation>Fichier de sous-titres.</translation>
+        <source>Subtitle file, book or manga volume.</source>
+        <translation>Fichier de sous-titres, livre ou volume de manga.</translation>
     </message>
     <message>
         <source>Known</source>
@@ -8745,12 +8749,12 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Anki est injoignable. Lancez Anki (avec AnkiConnect) et relancez la vérification.</translation>
     </message>
     <message>
-        <source>Choose a subtitle file or a folder first.</source>
-        <translation>Choisissez d'abord un fichier de sous-titres ou un dossier.</translation>
+        <source>Choose a file or a folder first.</source>
+        <translation>Choisissez d'abord un fichier ou un dossier.</translation>
     </message>
     <message>
-        <source>No subtitle files were found in that folder.</source>
-        <translation>Aucun fichier de sous-titres n'a été trouvé dans ce dossier.</translation>
+        <source>No subtitles, books or manga volumes were found in that folder.</source>
+        <translation>Aucun sous-titre, livre ou volume de manga n'a été trouvé dans ce dossier.</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -8761,8 +8765,8 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Ce fichier ou dossier n'existe plus.</translation>
     </message>
     <message>
-        <source>Pick a subtitle file (.ass, .srt, .ssa, .vtt or .smi).</source>
-        <translation>Choisissez un fichier de sous-titres (.ass, .srt, .ssa, .vtt ou .smi).</translation>
+        <source>Pick a subtitle file, a book (.epub or .txt) or a manga volume (.mokuro, .cbz or .zip).</source>
+        <translation>Choisissez un fichier de sous-titres, un livre (.epub ou .txt) ou un volume de manga (.mokuro, .cbz ou .zip).</translation>
     </message>
     <message>
         <source>Reading your Anki cards and known words…</source>

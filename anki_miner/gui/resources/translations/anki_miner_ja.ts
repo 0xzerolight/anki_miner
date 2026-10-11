@@ -2732,12 +2732,12 @@ No index files are deleted.</source>
         <translation>オーディオブックを文字起こしし、書籍自体の文をそれに合わせてタイミング調整して、「オーディオブック」タブ、リーディング → 字幕ファイル、またはリーダーアプリで使える .srt を書き出します。</translation>
     </message>
     <message>
-        <source>Check how much of a show you can read</source>
-        <translation>作品をどれだけ読めるかを確認</translation>
+        <source>Check how much of a show, book or manga you can read</source>
+        <translation>番組・本・マンガをどれだけ読めるかを確認</translation>
     </message>
     <message>
-        <source>Pick a subtitle file or a folder of them to see the share of words you already know, how many new words there are, and how many lines are i+1. Uses your Anki cards and known words; nothing is written.</source>
-        <translation>字幕ファイル、または字幕ファイルを含むフォルダを選ぶと、すでに知っている単語の割合、新出単語の数、i+1 の行の数を確認できます。Anki カードと既知単語を使用し、何も書き込みません。</translation>
+        <source>Pick a subtitle file, a book (EPUB or text) or a mokuro manga volume, or a folder of them, to see the share of words you already know, how many new words there are, and how many lines are i+1. Uses your Anki cards and known words; nothing is written.</source>
+        <translation>字幕ファイル、本（EPUB またはテキスト）、mokuro のマンガの巻、またはそれらを含むフォルダを選ぶと、すでに知っている単語の割合、新出単語の数、i+1 の行の数を確認できます。Anki カードと既知単語を使用し、何も書き込みません。</translation>
     </message>
     <message>
         <source>Save the subtitles or audio inside a video</source>
@@ -8585,12 +8585,12 @@ No index files are deleted.</source>
         <translation>エラーが発生して完了しました — ログを確認してください</translation>
     </message>
     <message>
-        <source>Some subtitle files could not be read.</source>
-        <translation>一部の字幕ファイルを読み取れませんでした。</translation>
+        <source>Some files could not be read.</source>
+        <translation>一部のファイルを読み取れませんでした。</translation>
     </message>
     <message>
-        <source>This subtitle file could not be read.</source>
-        <translation>この字幕ファイルを読み取れませんでした。</translation>
+        <source>This file could not be read.</source>
+        <translation>このファイルを読み取れませんでした。</translation>
     </message>
     <message>
         <source>Complete — %1 file(s) checked</source>
@@ -8609,24 +8609,28 @@ No index files are deleted.</source>
         <translation>読みやすさチェック</translation>
     </message>
     <message>
-        <source>Subtitles</source>
-        <translation>字幕</translation>
+        <source>Input</source>
+        <translation>入力</translation>
     </message>
     <message>
         <source>Your mining language can't read text on this computer yet. Download its language pack in Settings → Mining Language.</source>
         <translation>このPCではまだマイニング言語のテキストを読み取れません。「設定 → マイニング言語」で言語パックをダウンロードしてください。</translation>
     </message>
     <message>
-        <source>See how much of a subtitle file, or a folder of them, you already know. Uses your Anki cards and known words; nothing is written.</source>
-        <translation>字幕ファイル、または字幕ファイルを含むフォルダに出てくる単語を、すでにどれだけ知っているかを確認します。Anki カードと既知単語を使用し、何も書き込みません。</translation>
+        <source>See how much of a subtitle file, book or manga volume, or a folder of them, you already know. Uses your Anki cards and known words; nothing is written.</source>
+        <translation>字幕ファイル、本、マンガの巻、またはそれらを含むフォルダに出てくる単語を、すでにどれだけ知っているかを確認します。Anki カードと既知単語を使用し、何も書き込みません。</translation>
     </message>
     <message>
-        <source>This field takes a subtitle file or a folder.</source>
-        <translation>このフィールドには字幕ファイルまたはフォルダを指定します。</translation>
+        <source>This field takes a subtitle file, a book, a manga volume or a folder.</source>
+        <translation>このフィールドには字幕ファイル、本、マンガの巻、またはフォルダを指定します。</translation>
     </message>
     <message>
-        <source>Subtitle file or folder:</source>
-        <translation>字幕ファイルまたはフォルダ：</translation>
+        <source>File or folder:</source>
+        <translation>ファイルまたはフォルダ：</translation>
+    </message>
+    <message>
+        <source>Subtitles, books and manga</source>
+        <translation>字幕・書籍・マンガ</translation>
     </message>
     <message>
         <source>Report</source>
@@ -8637,7 +8641,7 @@ No index files are deleted.</source>
         <translation>既知単語</translation>
     </message>
     <message>
-        <source>Share of all words in these files you already know. A word said ten times counts ten times.</source>
+        <source>Share of all words in these files you already know. A word used ten times counts ten times.</source>
         <translation>これらのファイルに出てくる全単語のうち、すでに知っている単語の割合です。10 回出てくる単語は 10 回として数えます。</translation>
     </message>
     <message>
@@ -8653,24 +8657,24 @@ No index files are deleted.</source>
         <translation>すべて既知の行</translation>
     </message>
     <message>
-        <source>Lines with no new words (i+0).</source>
-        <translation>新出単語を含まない行（i+0）。</translation>
+        <source>Lines with no new words (i+0). In a book a line is a sentence; in manga, a text bubble.</source>
+        <translation>新出単語を含まない行（i+0）。本では 1 文、マンガでは 1 つの吹き出しを 1 行として数えます。</translation>
     </message>
     <message>
         <source>Lines with one new word</source>
         <translation>新出単語が 1 つの行</translation>
     </message>
     <message>
-        <source>Lines with exactly one new word (i+1): the easiest sentences to learn from.</source>
-        <translation>新出単語をちょうど 1 つ含む行（i+1）。最も学びやすい文です。</translation>
+        <source>Lines with exactly one new word (i+1): the easiest sentences to learn from. In a book a line is a sentence; in manga, a text bubble.</source>
+        <translation>新出単語をちょうど 1 つ含む行（i+1）。最も学びやすい文です。本では 1 文、マンガでは 1 つの吹き出しを 1 行として数えます。</translation>
     </message>
     <message>
         <source>File</source>
         <translation>ファイル</translation>
     </message>
     <message>
-        <source>Subtitle file.</source>
-        <translation>字幕ファイル。</translation>
+        <source>Subtitle file, book or manga volume.</source>
+        <translation>字幕ファイル、本、またはマンガの巻。</translation>
     </message>
     <message>
         <source>Known</source>
@@ -8705,12 +8709,12 @@ No index files are deleted.</source>
         <translation>Anki に接続できません。Anki（AnkiConnect 付き）を起動して、もう一度確認してください。</translation>
     </message>
     <message>
-        <source>Choose a subtitle file or a folder first.</source>
-        <translation>先に字幕ファイルまたはフォルダを選択してください。</translation>
+        <source>Choose a file or a folder first.</source>
+        <translation>先にファイルまたはフォルダを選択してください。</translation>
     </message>
     <message>
-        <source>No subtitle files were found in that folder.</source>
-        <translation>そのフォルダに字幕ファイルが見つかりませんでした。</translation>
+        <source>No subtitles, books or manga volumes were found in that folder.</source>
+        <translation>そのフォルダに字幕、本、マンガの巻が見つかりませんでした。</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -8721,8 +8725,8 @@ No index files are deleted.</source>
         <translation>そのファイルまたはフォルダは存在しなくなっています。</translation>
     </message>
     <message>
-        <source>Pick a subtitle file (.ass, .srt, .ssa, .vtt or .smi).</source>
-        <translation>字幕ファイル（.ass、.srt、.ssa、.vtt、.smi）を選択してください。</translation>
+        <source>Pick a subtitle file, a book (.epub or .txt) or a manga volume (.mokuro, .cbz or .zip).</source>
+        <translation>字幕ファイル、本（.epub、.txt）、またはマンガの巻（.mokuro、.cbz、.zip）を選択してください。</translation>
     </message>
     <message>
         <source>Reading your Anki cards and known words…</source>

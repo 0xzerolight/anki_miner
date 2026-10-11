@@ -2738,12 +2738,12 @@ No index files are deleted.</source>
         <translation>Транскрибировать аудиокнигу и синхронизировать с ней предложения самой книги, записывая файл .srt, который можно использовать на вкладке «Аудиокниги», в разделе Чтение → Файлы субтитров или в приложении для чтения.</translation>
     </message>
     <message>
-        <source>Check how much of a show you can read</source>
-        <translation>Проверка, какую часть сериала вы понимаете</translation>
+        <source>Check how much of a show, book or manga you can read</source>
+        <translation>Проверка, какую часть сериала, книги или манги вы понимаете</translation>
     </message>
     <message>
-        <source>Pick a subtitle file or a folder of them to see the share of words you already know, how many new words there are, and how many lines are i+1. Uses your Anki cards and known words; nothing is written.</source>
-        <translation>Выберите файл субтитров или папку с ними, чтобы узнать долю уже известных вам слов, количество новых слов и число строк i+1. Используются ваши карточки Anki и известные слова; ничего не записывается.</translation>
+        <source>Pick a subtitle file, a book (EPUB or text) or a mokuro manga volume, or a folder of them, to see the share of words you already know, how many new words there are, and how many lines are i+1. Uses your Anki cards and known words; nothing is written.</source>
+        <translation>Выберите файл субтитров, книгу (EPUB или текст) или том манги mokuro либо папку с ними, чтобы узнать долю уже известных вам слов, количество новых слов и число строк i+1. Используются ваши карточки Anki и известные слова; ничего не записывается.</translation>
     </message>
     <message>
         <source>Save the subtitles or audio inside a video</source>
@@ -8665,12 +8665,12 @@ No index files are deleted.</source>
         <translation>Завершено с ошибками — см. журнал</translation>
     </message>
     <message>
-        <source>Some subtitle files could not be read.</source>
-        <translation>Не удалось прочитать некоторые файлы субтитров.</translation>
+        <source>Some files could not be read.</source>
+        <translation>Не удалось прочитать некоторые файлы.</translation>
     </message>
     <message>
-        <source>This subtitle file could not be read.</source>
-        <translation>Не удалось прочитать этот файл субтитров.</translation>
+        <source>This file could not be read.</source>
+        <translation>Не удалось прочитать этот файл.</translation>
     </message>
     <message>
         <source>Complete — %1 file(s) checked</source>
@@ -8689,24 +8689,28 @@ No index files are deleted.</source>
         <translation>Проверка понятности</translation>
     </message>
     <message>
-        <source>Subtitles</source>
-        <translation>Субтитры</translation>
+        <source>Input</source>
+        <translation>Ввод</translation>
     </message>
     <message>
         <source>Your mining language can't read text on this computer yet. Download its language pack in Settings → Mining Language.</source>
         <translation>Ваш язык майнинга пока не может обрабатывать текст на этом компьютере. Загрузите его языковой пакет в разделе Настройки → Язык майнинга.</translation>
     </message>
     <message>
-        <source>See how much of a subtitle file, or a folder of them, you already know. Uses your Anki cards and known words; nothing is written.</source>
-        <translation>Узнайте, какую часть файла субтитров или папки с ними вы уже знаете. Используются ваши карточки Anki и известные слова; ничего не записывается.</translation>
+        <source>See how much of a subtitle file, book or manga volume, or a folder of them, you already know. Uses your Anki cards and known words; nothing is written.</source>
+        <translation>Узнайте, какую часть файла субтитров, книги или тома манги либо папки с ними вы уже знаете. Используются ваши карточки Anki и известные слова; ничего не записывается.</translation>
     </message>
     <message>
-        <source>This field takes a subtitle file or a folder.</source>
-        <translation>Это поле принимает файл субтитров или папку.</translation>
+        <source>This field takes a subtitle file, a book, a manga volume or a folder.</source>
+        <translation>Это поле принимает файл субтитров, книгу, том манги или папку.</translation>
     </message>
     <message>
-        <source>Subtitle file or folder:</source>
-        <translation>Файл субтитров или папка:</translation>
+        <source>File or folder:</source>
+        <translation>Файл или папка:</translation>
+    </message>
+    <message>
+        <source>Subtitles, books and manga</source>
+        <translation>Субтитры, книги и манга</translation>
     </message>
     <message>
         <source>Report</source>
@@ -8717,8 +8721,8 @@ No index files are deleted.</source>
         <translation>Известные слова</translation>
     </message>
     <message>
-        <source>Share of all words in these files you already know. A word said ten times counts ten times.</source>
-        <translation>Доля уже известных вам слов среди всех слов в этих файлах. Слово, произнесённое десять раз, учитывается десять раз.</translation>
+        <source>Share of all words in these files you already know. A word used ten times counts ten times.</source>
+        <translation>Доля уже известных вам слов среди всех слов в этих файлах. Слово, встречающееся десять раз, учитывается десять раз.</translation>
     </message>
     <message>
         <source>New words</source>
@@ -8733,24 +8737,24 @@ No index files are deleted.</source>
         <translation>Полностью известные строки</translation>
     </message>
     <message>
-        <source>Lines with no new words (i+0).</source>
-        <translation>Строки без новых слов (i+0).</translation>
+        <source>Lines with no new words (i+0). In a book a line is a sentence; in manga, a text bubble.</source>
+        <translation>Строки без новых слов (i+0). В книге строкой считается предложение, в манге — облачко с текстом.</translation>
     </message>
     <message>
         <source>Lines with one new word</source>
         <translation>Строки с одним новым словом</translation>
     </message>
     <message>
-        <source>Lines with exactly one new word (i+1): the easiest sentences to learn from.</source>
-        <translation>Строки ровно с одним новым словом (i+1): самые удобные предложения для изучения.</translation>
+        <source>Lines with exactly one new word (i+1): the easiest sentences to learn from. In a book a line is a sentence; in manga, a text bubble.</source>
+        <translation>Строки ровно с одним новым словом (i+1): самые удобные предложения для изучения. В книге строкой считается предложение, в манге — облачко с текстом.</translation>
     </message>
     <message>
         <source>File</source>
         <translation>Файл</translation>
     </message>
     <message>
-        <source>Subtitle file.</source>
-        <translation>Файл субтитров.</translation>
+        <source>Subtitle file, book or manga volume.</source>
+        <translation>Файл субтитров, книга или том манги.</translation>
     </message>
     <message>
         <source>Known</source>
@@ -8785,12 +8789,12 @@ No index files are deleted.</source>
         <translation>Anki недоступен. Запустите Anki (с AnkiConnect) и проверьте снова.</translation>
     </message>
     <message>
-        <source>Choose a subtitle file or a folder first.</source>
-        <translation>Сначала выберите файл субтитров или папку.</translation>
+        <source>Choose a file or a folder first.</source>
+        <translation>Сначала выберите файл или папку.</translation>
     </message>
     <message>
-        <source>No subtitle files were found in that folder.</source>
-        <translation>В этой папке не найдено ни одного файла субтитров.</translation>
+        <source>No subtitles, books or manga volumes were found in that folder.</source>
+        <translation>В этой папке не найдено ни субтитров, ни книг, ни томов манги.</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -8801,8 +8805,8 @@ No index files are deleted.</source>
         <translation>Этот файл или папка больше не существует.</translation>
     </message>
     <message>
-        <source>Pick a subtitle file (.ass, .srt, .ssa, .vtt or .smi).</source>
-        <translation>Выберите файл субтитров (.ass, .srt, .ssa, .vtt или .smi).</translation>
+        <source>Pick a subtitle file, a book (.epub or .txt) or a manga volume (.mokuro, .cbz or .zip).</source>
+        <translation>Выберите файл субтитров, книгу (.epub или .txt) или том манги (.mokuro, .cbz или .zip).</translation>
     </message>
     <message>
         <source>Reading your Anki cards and known words…</source>

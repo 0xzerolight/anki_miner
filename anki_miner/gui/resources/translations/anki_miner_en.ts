@@ -2726,11 +2726,11 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Check how much of a show you can read</source>
+        <source>Check how much of a show, book or manga you can read</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Pick a subtitle file or a folder of them to see the share of words you already know, how many new words there are, and how many lines are i+1. Uses your Anki cards and known words; nothing is written.</source>
+        <source>Pick a subtitle file, a book (EPUB or text) or a mokuro manga volume, or a folder of them, to see the share of words you already know, how many new words there are, and how many lines are i+1. Uses your Anki cards and known words; nothing is written.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -8590,11 +8590,11 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Some subtitle files could not be read.</source>
+        <source>Some files could not be read.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>This subtitle file could not be read.</source>
+        <source>This file could not be read.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -8614,7 +8614,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Subtitles</source>
+        <source>Input</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -8622,15 +8622,19 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>See how much of a subtitle file, or a folder of them, you already know. Uses your Anki cards and known words; nothing is written.</source>
+        <source>See how much of a subtitle file, book or manga volume, or a folder of them, you already know. Uses your Anki cards and known words; nothing is written.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>This field takes a subtitle file or a folder.</source>
+        <source>This field takes a subtitle file, a book, a manga volume or a folder.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Subtitle file or folder:</source>
+        <source>File or folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitles, books and manga</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -8642,7 +8646,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Share of all words in these files you already know. A word said ten times counts ten times.</source>
+        <source>Share of all words in these files you already know. A word used ten times counts ten times.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -8658,7 +8662,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Lines with no new words (i+0).</source>
+        <source>Lines with no new words (i+0). In a book a line is a sentence; in manga, a text bubble.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -8666,7 +8670,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Lines with exactly one new word (i+1): the easiest sentences to learn from.</source>
+        <source>Lines with exactly one new word (i+1): the easiest sentences to learn from. In a book a line is a sentence; in manga, a text bubble.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -8674,7 +8678,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Subtitle file.</source>
+        <source>Subtitle file, book or manga volume.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -8710,11 +8714,11 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Choose a subtitle file or a folder first.</source>
+        <source>Choose a file or a folder first.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>No subtitle files were found in that folder.</source>
+        <source>No subtitles, books or manga volumes were found in that folder.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -8726,7 +8730,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Pick a subtitle file (.ass, .srt, .ssa, .vtt or .smi).</source>
+        <source>Pick a subtitle file, a book (.epub or .txt) or a manga volume (.mokuro, .cbz or .zip).</source>
         <translation type="unfinished" />
     </message>
     <message>

@@ -2732,12 +2732,12 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Phiên âm sách nói rồi khớp thời gian các câu của sách với bản ghi, tạo tệp .srt mà tab Sách nói, Đọc → Tệp phụ đề, hoặc một trình đọc khác có thể dùng.</translation>
     </message>
     <message>
-        <source>Check how much of a show you can read</source>
-        <translation>Kiểm tra mức độ đọc hiểu một bộ phim</translation>
+        <source>Check how much of a show, book or manga you can read</source>
+        <translation>Kiểm tra mức độ đọc hiểu một bộ phim, cuốn sách hoặc manga</translation>
     </message>
     <message>
-        <source>Pick a subtitle file or a folder of them to see the share of words you already know, how many new words there are, and how many lines are i+1. Uses your Anki cards and known words; nothing is written.</source>
-        <translation>Chọn một tệp phụ đề hoặc một thư mục phụ đề để xem tỷ lệ từ đã biết, số từ mới và số dòng i+1. Dùng thẻ Anki và từ đã biết của bạn; không ghi dữ liệu nào.</translation>
+        <source>Pick a subtitle file, a book (EPUB or text) or a mokuro manga volume, or a folder of them, to see the share of words you already know, how many new words there are, and how many lines are i+1. Uses your Anki cards and known words; nothing is written.</source>
+        <translation>Chọn một tệp phụ đề, một cuốn sách (EPUB hoặc văn bản) hoặc một tập manga mokuro, hoặc một thư mục chứa chúng, để xem tỷ lệ từ đã biết, số từ mới và số dòng i+1. Dùng thẻ Anki và từ đã biết của bạn; không ghi dữ liệu nào.</translation>
     </message>
     <message>
         <source>Save the subtitles or audio inside a video</source>
@@ -8585,12 +8585,12 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Hoàn tất với lỗi — xem nhật ký</translation>
     </message>
     <message>
-        <source>Some subtitle files could not be read.</source>
-        <translation>Không thể đọc một số tệp phụ đề.</translation>
+        <source>Some files could not be read.</source>
+        <translation>Không thể đọc một số tệp.</translation>
     </message>
     <message>
-        <source>This subtitle file could not be read.</source>
-        <translation>Không thể đọc tệp phụ đề này.</translation>
+        <source>This file could not be read.</source>
+        <translation>Không thể đọc tệp này.</translation>
     </message>
     <message>
         <source>Complete — %1 file(s) checked</source>
@@ -8609,24 +8609,28 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Kiểm tra độ dễ đọc</translation>
     </message>
     <message>
-        <source>Subtitles</source>
-        <translation>Phụ đề</translation>
+        <source>Input</source>
+        <translation>Đầu vào</translation>
     </message>
     <message>
         <source>Your mining language can't read text on this computer yet. Download its language pack in Settings → Mining Language.</source>
         <translation>Chưa thể đọc văn bản bằng ngôn ngữ khai thác của bạn trên máy tính này. Hãy tải gói ngôn ngữ tương ứng trong Cài đặt → Ngôn ngữ khai thác.</translation>
     </message>
     <message>
-        <source>See how much of a subtitle file, or a folder of them, you already know. Uses your Anki cards and known words; nothing is written.</source>
-        <translation>Xem bạn đã biết bao nhiêu phần của một tệp phụ đề hoặc một thư mục phụ đề. Dùng thẻ Anki và từ đã biết của bạn; không ghi dữ liệu nào.</translation>
+        <source>See how much of a subtitle file, book or manga volume, or a folder of them, you already know. Uses your Anki cards and known words; nothing is written.</source>
+        <translation>Xem bạn đã biết bao nhiêu phần của một tệp phụ đề, cuốn sách hoặc tập manga, hoặc một thư mục chứa chúng. Dùng thẻ Anki và từ đã biết của bạn; không ghi dữ liệu nào.</translation>
     </message>
     <message>
-        <source>This field takes a subtitle file or a folder.</source>
-        <translation>Trường này nhận tệp phụ đề hoặc thư mục.</translation>
+        <source>This field takes a subtitle file, a book, a manga volume or a folder.</source>
+        <translation>Trường này nhận tệp phụ đề, sách, tập manga hoặc thư mục.</translation>
     </message>
     <message>
-        <source>Subtitle file or folder:</source>
-        <translation>Tệp phụ đề hoặc thư mục:</translation>
+        <source>File or folder:</source>
+        <translation>Tệp hoặc thư mục:</translation>
+    </message>
+    <message>
+        <source>Subtitles, books and manga</source>
+        <translation>Phụ đề, sách và manga</translation>
     </message>
     <message>
         <source>Report</source>
@@ -8637,7 +8641,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Từ đã biết</translation>
     </message>
     <message>
-        <source>Share of all words in these files you already know. A word said ten times counts ten times.</source>
+        <source>Share of all words in these files you already know. A word used ten times counts ten times.</source>
         <translation>Tỷ lệ từ đã biết trên tổng số từ trong các tệp này. Một từ xuất hiện mười lần được tính mười lần.</translation>
     </message>
     <message>
@@ -8653,24 +8657,24 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Dòng đã biết hết</translation>
     </message>
     <message>
-        <source>Lines with no new words (i+0).</source>
-        <translation>Các dòng không có từ mới (i+0).</translation>
+        <source>Lines with no new words (i+0). In a book a line is a sentence; in manga, a text bubble.</source>
+        <translation>Các dòng không có từ mới (i+0). Trong sách, mỗi dòng là một câu; còn trong manga là một khung thoại.</translation>
     </message>
     <message>
         <source>Lines with one new word</source>
         <translation>Dòng có một từ mới</translation>
     </message>
     <message>
-        <source>Lines with exactly one new word (i+1): the easiest sentences to learn from.</source>
-        <translation>Các dòng có đúng một từ mới (i+1): những câu dễ học nhất.</translation>
+        <source>Lines with exactly one new word (i+1): the easiest sentences to learn from. In a book a line is a sentence; in manga, a text bubble.</source>
+        <translation>Các dòng có đúng một từ mới (i+1): những câu dễ học nhất. Trong sách, mỗi dòng là một câu; còn trong manga là một khung thoại.</translation>
     </message>
     <message>
         <source>File</source>
         <translation>Tệp</translation>
     </message>
     <message>
-        <source>Subtitle file.</source>
-        <translation>Tệp phụ đề.</translation>
+        <source>Subtitle file, book or manga volume.</source>
+        <translation>Tệp phụ đề, sách hoặc tập manga.</translation>
     </message>
     <message>
         <source>Known</source>
@@ -8705,12 +8709,12 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Không kết nối được tới Anki. Hãy khởi động Anki (có AnkiConnect) rồi kiểm tra lại.</translation>
     </message>
     <message>
-        <source>Choose a subtitle file or a folder first.</source>
-        <translation>Hãy chọn tệp phụ đề hoặc thư mục trước.</translation>
+        <source>Choose a file or a folder first.</source>
+        <translation>Hãy chọn tệp hoặc thư mục trước.</translation>
     </message>
     <message>
-        <source>No subtitle files were found in that folder.</source>
-        <translation>Không tìm thấy tệp phụ đề nào trong thư mục đó.</translation>
+        <source>No subtitles, books or manga volumes were found in that folder.</source>
+        <translation>Không tìm thấy phụ đề, sách hoặc tập manga nào trong thư mục đó.</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -8721,8 +8725,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Tệp hoặc thư mục đó không còn tồn tại.</translation>
     </message>
     <message>
-        <source>Pick a subtitle file (.ass, .srt, .ssa, .vtt or .smi).</source>
-        <translation>Hãy chọn một tệp phụ đề (.ass, .srt, .ssa, .vtt hoặc .smi).</translation>
+        <source>Pick a subtitle file, a book (.epub or .txt) or a manga volume (.mokuro, .cbz or .zip).</source>
+        <translation>Hãy chọn một tệp phụ đề, một cuốn sách (.epub hoặc .txt) hoặc một tập manga (.mokuro, .cbz hoặc .zip).</translation>
     </message>
     <message>
         <source>Reading your Anki cards and known words…</source>

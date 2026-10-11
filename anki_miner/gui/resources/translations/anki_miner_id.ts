@@ -2732,12 +2732,12 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Transkripsikan buku audio dan atur waktu kalimat buku itu sendiri terhadapnya, lalu tulis .srt yang dapat digunakan tab Buku Audio, Bacaan → Berkas Subtitel, atau pembaca lain.</translation>
     </message>
     <message>
-        <source>Check how much of a show you can read</source>
-        <translation>Periksa seberapa banyak isi sebuah acara yang dapat Anda baca</translation>
+        <source>Check how much of a show, book or manga you can read</source>
+        <translation>Periksa seberapa banyak isi sebuah acara, buku, atau manga yang dapat Anda baca</translation>
     </message>
     <message>
-        <source>Pick a subtitle file or a folder of them to see the share of words you already know, how many new words there are, and how many lines are i+1. Uses your Anki cards and known words; nothing is written.</source>
-        <translation>Pilih berkas subtitel atau folder berisi berkas subtitel untuk melihat persentase kata yang sudah Anda kenal, jumlah kata baru, dan jumlah baris i+1. Menggunakan kartu Anki dan kata yang dikenal milik Anda; tidak ada yang ditulis.</translation>
+        <source>Pick a subtitle file, a book (EPUB or text) or a mokuro manga volume, or a folder of them, to see the share of words you already know, how many new words there are, and how many lines are i+1. Uses your Anki cards and known words; nothing is written.</source>
+        <translation>Pilih berkas subtitel, buku (EPUB atau teks), atau volume manga mokuro, atau folder berisi berkas-berkas tersebut, untuk melihat persentase kata yang sudah Anda kenal, jumlah kata baru, dan jumlah baris yang i+1. Menggunakan kartu Anki dan kata yang dikenal milik Anda; tidak ada yang ditulis.</translation>
     </message>
     <message>
         <source>Save the subtitles or audio inside a video</source>
@@ -8585,12 +8585,12 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Selesai dengan kesalahan — lihat log</translation>
     </message>
     <message>
-        <source>Some subtitle files could not be read.</source>
-        <translation>Beberapa berkas subtitel tidak dapat dibaca.</translation>
+        <source>Some files could not be read.</source>
+        <translation>Beberapa berkas tidak dapat dibaca.</translation>
     </message>
     <message>
-        <source>This subtitle file could not be read.</source>
-        <translation>Berkas subtitel ini tidak dapat dibaca.</translation>
+        <source>This file could not be read.</source>
+        <translation>Berkas ini tidak dapat dibaca.</translation>
     </message>
     <message>
         <source>Complete — %1 file(s) checked</source>
@@ -8609,24 +8609,28 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Pemeriksaan keterbacaan</translation>
     </message>
     <message>
-        <source>Subtitles</source>
-        <translation>Subtitel</translation>
+        <source>Input</source>
+        <translation>Masukan</translation>
     </message>
     <message>
         <source>Your mining language can't read text on this computer yet. Download its language pack in Settings → Mining Language.</source>
         <translation>Teks dalam bahasa mining Anda belum dapat dibaca di komputer ini. Unduh paket bahasanya di Pengaturan → Bahasa Mining.</translation>
     </message>
     <message>
-        <source>See how much of a subtitle file, or a folder of them, you already know. Uses your Anki cards and known words; nothing is written.</source>
-        <translation>Lihat seberapa banyak isi berkas subtitel, atau folder berisi berkas subtitel, yang sudah Anda kenal. Menggunakan kartu Anki dan kata yang dikenal milik Anda; tidak ada yang ditulis.</translation>
+        <source>See how much of a subtitle file, book or manga volume, or a folder of them, you already know. Uses your Anki cards and known words; nothing is written.</source>
+        <translation>Lihat seberapa banyak isi berkas subtitel, buku, atau volume manga, atau folder berisi berkas-berkas tersebut, yang sudah Anda kenal. Menggunakan kartu Anki dan kata yang dikenal milik Anda; tidak ada yang ditulis.</translation>
     </message>
     <message>
-        <source>This field takes a subtitle file or a folder.</source>
-        <translation>Bidang ini menerima berkas subtitel atau folder.</translation>
+        <source>This field takes a subtitle file, a book, a manga volume or a folder.</source>
+        <translation>Bidang ini menerima berkas subtitel, buku, volume manga, atau folder.</translation>
     </message>
     <message>
-        <source>Subtitle file or folder:</source>
-        <translation>Berkas subtitel atau folder:</translation>
+        <source>File or folder:</source>
+        <translation>Berkas atau folder:</translation>
+    </message>
+    <message>
+        <source>Subtitles, books and manga</source>
+        <translation>Subtitel, buku, dan manga</translation>
     </message>
     <message>
         <source>Report</source>
@@ -8637,8 +8641,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Kata yang dikenal</translation>
     </message>
     <message>
-        <source>Share of all words in these files you already know. A word said ten times counts ten times.</source>
-        <translation>Persentase semua kata dalam berkas-berkas ini yang sudah Anda kenal. Kata yang diucapkan sepuluh kali dihitung sepuluh kali.</translation>
+        <source>Share of all words in these files you already know. A word used ten times counts ten times.</source>
+        <translation>Persentase semua kata dalam berkas-berkas ini yang sudah Anda kenal. Kata yang muncul sepuluh kali dihitung sepuluh kali.</translation>
     </message>
     <message>
         <source>New words</source>
@@ -8653,24 +8657,24 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Baris sepenuhnya dikenal</translation>
     </message>
     <message>
-        <source>Lines with no new words (i+0).</source>
-        <translation>Baris tanpa kata baru (i+0).</translation>
+        <source>Lines with no new words (i+0). In a book a line is a sentence; in manga, a text bubble.</source>
+        <translation>Baris tanpa kata baru (i+0). Dalam buku, satu baris adalah satu kalimat; dalam manga, satu balon teks.</translation>
     </message>
     <message>
         <source>Lines with one new word</source>
         <translation>Baris dengan satu kata baru</translation>
     </message>
     <message>
-        <source>Lines with exactly one new word (i+1): the easiest sentences to learn from.</source>
-        <translation>Baris dengan tepat satu kata baru (i+1): kalimat yang paling mudah dijadikan bahan belajar.</translation>
+        <source>Lines with exactly one new word (i+1): the easiest sentences to learn from. In a book a line is a sentence; in manga, a text bubble.</source>
+        <translation>Baris dengan tepat satu kata baru (i+1): kalimat yang paling mudah dijadikan bahan belajar. Dalam buku, satu baris adalah satu kalimat; dalam manga, satu balon teks.</translation>
     </message>
     <message>
         <source>File</source>
         <translation>Berkas</translation>
     </message>
     <message>
-        <source>Subtitle file.</source>
-        <translation>Berkas subtitel.</translation>
+        <source>Subtitle file, book or manga volume.</source>
+        <translation>Berkas subtitel, buku, atau volume manga.</translation>
     </message>
     <message>
         <source>Known</source>
@@ -8705,12 +8709,12 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Anki tidak dapat dijangkau. Jalankan Anki (dengan AnkiConnect) lalu periksa lagi.</translation>
     </message>
     <message>
-        <source>Choose a subtitle file or a folder first.</source>
-        <translation>Pilih berkas subtitel atau folder terlebih dahulu.</translation>
+        <source>Choose a file or a folder first.</source>
+        <translation>Pilih berkas atau folder terlebih dahulu.</translation>
     </message>
     <message>
-        <source>No subtitle files were found in that folder.</source>
-        <translation>Tidak ada berkas subtitel yang ditemukan di folder tersebut.</translation>
+        <source>No subtitles, books or manga volumes were found in that folder.</source>
+        <translation>Tidak ada subtitel, buku, atau volume manga yang ditemukan di folder tersebut.</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -8721,8 +8725,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Berkas atau folder tersebut sudah tidak ada.</translation>
     </message>
     <message>
-        <source>Pick a subtitle file (.ass, .srt, .ssa, .vtt or .smi).</source>
-        <translation>Pilih berkas subtitel (.ass, .srt, .ssa, .vtt atau .smi).</translation>
+        <source>Pick a subtitle file, a book (.epub or .txt) or a manga volume (.mokuro, .cbz or .zip).</source>
+        <translation>Pilih berkas subtitel, buku (.epub atau .txt), atau volume manga (.mokuro, .cbz, atau .zip).</translation>
     </message>
     <message>
         <source>Reading your Anki cards and known words…</source>
