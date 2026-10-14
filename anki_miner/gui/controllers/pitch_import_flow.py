@@ -7,9 +7,9 @@ root, the accepted suffixes, the worker factories, the chain entry type, and
 every user-facing string.
 
 Those strings stay here on purpose. ``lupdate`` resolves a translation context
-statically, and the ``PitchImportFlow`` context already carries twelve catalogs'
-worth of translations — moving a literal into the shared module would orphan
-every one of them.
+statically, and the ``PitchImportFlow`` context already carries translations in
+every catalog — moving a literal into the shared module would orphan all of
+them.
 
 A freshly imported source is *appended* (enabled) to the chain. Under
 first-hit-wins that means it starts as the lowest-priority filler; the user

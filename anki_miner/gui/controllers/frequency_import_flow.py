@@ -7,9 +7,9 @@ root, the accepted suffixes, the worker factories, the chain entry type, the
 word-based / occurrence-based disclosures, and every user-facing string.
 
 Those strings stay here on purpose. ``lupdate`` resolves a translation context
-statically, and the ``FrequencyImportFlow`` context already carries twelve
-catalogs' worth of translations — moving a literal into the shared module would
-orphan every one of them.
+statically, and the ``FrequencyImportFlow`` context already carries translations
+in every catalog — moving a literal into the shared module would orphan all of
+them.
 
 Frequency sources are purely additive, so a freshly imported source is simply
 *appended* (enabled) to the chain; the user reorders later if they care about

@@ -129,7 +129,7 @@ Each language is a package plus a set of registration sites. A site you miss eit
    - Add any new card field to its settings row in `gui/widgets/panels/anki_settings_panel.py`.
    - Add a new language-varying config field to `LANGUAGE_SCOPED_FIELDS` (`languages/switching.py`).
 8. **Findability**: add the language's names to the `mining-language` keywords in `gui/capabilities.py`, and its frequency probe terms to `MORE_COMMON_TERMS` / `LESS_COMMON_TERMS` (`services/frequency/mode_probe.py`).
-9. **Docs**: add a CHANGELOG entry, add the language's section to [RESOURCES.md](RESOURCES.md) (a test checks it against `catalog.py`), update the README language list and the eleven translations (then `python scripts/readme_i18n.py stamp`), and update [ARCHITECTURE.md](ARCHITECTURE.md#mining-languages).
+9. **Docs**: add a CHANGELOG entry, add the language's section to [RESOURCES.md](RESOURCES.md) (a test checks it against `catalog.py`), update the README language list and its translations under `i18n/` (then `python scripts/readme_i18n.py stamp`), and update [ARCHITECTURE.md](ARCHITECTURE.md#mining-languages).
 
 ## Logging
 
@@ -254,6 +254,12 @@ python scripts/i18n.py extract
 python scripts/i18n.py compile
 ```
 
+Adding a UI language: add its code (lower-case, `pt_pt` not `pt_PT`) and native name to
+`_LANGUAGES` in `anki_miner/gui/i18n.py` and a `Lang` row to `tests/unit/test_i18n_catalogs.py`.
+`extract` then creates the catalog, because `scripts/i18n.py` reads its list from `_LANGUAGES`.
+Set the new `.ts` root's `language="xx_YY"` attribute once (it gives lrelease the plural forms),
+translate, `compile`, and add the README translation below.
+
 ### README translations
 
 The README ships in every UI language under `i18n/README.<code>.md`, where
@@ -262,8 +268,8 @@ The README ships in every UI language under `i18n/README.<code>.md`, where
 - Editing `README.md` makes every translation's source stamp stale and turns
   `tests/unit/test_readme_translations.py` red. Update the affected passages in
   each `i18n/README.<code>.md`, then run `python scripts/readme_i18n.py stamp`.
-- Adding a language: add the entry to `_LANGUAGES`, then
-  `python scripts/readme_i18n.py scaffold <code>` and translate the result.
+- Adding a language: after the `_LANGUAGES` entry, run
+  `python scripts/readme_i18n.py nav`, then `scaffold <code>`, translate the result, and `stamp`.
 - Translations must keep the English structure exactly: same headings, same
   table rows, same `<details>` blocks, same URLs, and byte-identical code
   blocks. Only prose, headings, `<summary>` labels and table cell text change.

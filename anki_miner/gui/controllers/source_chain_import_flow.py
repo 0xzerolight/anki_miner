@@ -15,8 +15,8 @@ mode for, to serve exactly one caller.
 **Every user-facing string arrives pre-translated in ``SourceFlowLabels``; this
 module calls ``tr()`` exactly zero times.** Two reasons, both load-bearing:
 ``lupdate`` reads literals statically and cannot follow a variable context, and
-a literal that moved contexts would orphan its existing entry in all twelve
-catalogs. Same rule ``ChainRowSpec`` and ``ChainListLabels`` already follow.
+a literal that moved contexts would orphan its existing entry in every
+catalog. Same rule ``ChainRowSpec`` and ``ChainListLabels`` already follow.
 """
 
 from __future__ import annotations

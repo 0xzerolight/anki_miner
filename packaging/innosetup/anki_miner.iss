@@ -62,9 +62,9 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 
 [Languages]
-; The app ships 12 UI languages; Inno bundles official .isl files for seven of
-; them, and picks the user's system language automatically. id, vi, zh_cn and
-; zh_tw have no official Inno translation and fall back to English.
+; The installer speaks English and the seven other UI languages listed below,
+; picking the user's system language automatically; the app's remaining UI
+; languages fall back to English here.
 Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "german"; MessagesFile: "compiler:Languages\German.isl"
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"

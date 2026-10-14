@@ -7,12 +7,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **The interface comes in every mining language (Settings → General → Interface language).** Twenty-two new interface languages: Korean, Catalan, Dutch, Norwegian Bokmål, Romanian, Greek, Finnish, Hungarian, Croatian, Swedish, Polish, Lithuanian, Danish, Turkish, Arabic, Thai, Persian, Slovenian, Ukrainian, Hebrew, Cantonese (written Cantonese) and European Portuguese, each with a translated README. Arabic, Persian and Hebrew lay the whole window out right to left; mined text keeps its own direction, so a Japanese sentence in an Arabic interface still reads left to right, and the video timeline always runs left to right.
 - **Check how much of a book or manga you can read (Utilities → Readability).** Besides subtitles, the readability report takes an EPUB or .txt book and a mokuro manga volume (.mokuro, or a .cbz/.zip with its OCR data), or a folder of them. It shows the share of words you know, how many new words there are, and the share of sentences or text bubbles with no new word or one, per book or volume and in total. In a folder, a .zip without OCR data is left out, and so is a .txt beside subtitles.
 - **Manga OCR and Video OCR read every mining language except Hebrew, Vietnamese and Cantonese (Utilities → Manga OCR, Video OCR).** No free recogniser reads those three well enough. Japanese keeps its own OCR engines. Other languages download a small text-recognition model from the tool's setup card on first use, and Manga OCR adds onnxruntime to its mokuro install.
 
 ### Changed
 
 ### Fixed
+- **The Undo button's card count and the playlist picker's Add button follow the interface language's plural forms.** They chose between one singular and one plural wording, which Russian, Arabic and other languages with several plural classes cannot express, so a Russian interface read "Отменить (карточек: 2)". It now reads "Отменить (2 карточки)" and "Отменить (5 карточек)".
 - **Everyday words such as 魔王, 安堵 and 口元 are no longer treated as names.** The bundled name lists held about two hundred ordinary words that JMnedict also lists as names, so those words were never offered. They also held spellings of a word plus a particle (夢の, 上の, 秋を), which glued 夢 to its particle and dropped it from the line. Both kinds are gone from the lists.
 - **彼の方が強い no longer makes a card for 彼の方 ("that person").** A dictionary phrase joined across の is kept only when the line can read it that way, so 彼の方 (あのかた) stays 彼 and 方, while 目の前 and 気の毒 still join.
 - **思わず, 実は, 常に, くだらない and similar words are mined whole.** The tokenizer splits them at their grammar, so they gave cards for 思う, 実 and 常, and くだらない or つまらない gave no card at all. About thirty such words now make their own card.
