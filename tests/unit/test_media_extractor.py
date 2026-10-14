@@ -321,6 +321,8 @@ class TestExtractScreenshot:
             str(video_file),
             "-frames:v",
             "1",
+            "-vf",
+            "scale=-2:'min(720,ih)'",
             "-q:v",
             "2",
             str(output_path),
@@ -3370,9 +3372,39 @@ def test_a_still_height_scales_the_still(test_config, tmp_path, monkeypatch) -> 
     assert seen["cmd"][seen["cmd"].index("-vf") + 1] == "scale=-2:480"
 
 
-def test_no_still_height_keeps_the_still_unscaled(test_config, tmp_path, monkeypatch) -> None:
+def test_default_still_is_capped_at_720_without_enlarging(test_config, tmp_path, monkeypatch) -> None:
     service = MediaExtractorService(test_config)
     seen = {}
     monkeypatch.setattr(service, "_run_ffmpeg", lambda cmd, *a, **k: seen.setdefault("cmd", cmd) and False)
     service._extract_static_screenshot(tmp_path / "v.mkv", 1.0, 2.0, tmp_path / "out.jpg")
-    assert "-vf" not in seen["cmd"]
+    assert seen["cmd"][seen["cmd"].index("-vf") + 1] == "scale=-2:'min(720,ih)'"
+
+
+@pytest.mark.skipif(shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None, reason="needs ffmpeg")
+@pytest.mark.parametrize(("size", "height"), [("1920x1080", 720), ("640x480", 480)])
+def test_default_still_filter_shrinks_tall_frames_and_keeps_short_ones(tmp_path, size, height) -> None:
+    """The real filter: a 1080p frame comes out 720 high, a 480p one is not enlarged."""
+    out = tmp_path / "out.jpg"
+    subprocess.run(
+        ["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", f"testsrc=size={size}:duration=1"]
+        + ["-frames:v", "1", "-vf", "scale=-2:'min(720,ih)'", str(out)],
+        check=True,
+    )
+    probe = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=height",
+            "-of",
+            "csv=p=0",
+            str(out),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert int(probe.stdout.strip()) == height

@@ -65,6 +65,10 @@ _FILTER_PROBE_GRAPH = "aselect='between(t,1000,1001)',asetpts=N/SR/TB"
 #: negative-length ffmpeg ``-t`` if a bound ever arrives unclamped.
 MIN_CLIP_SECONDS = 0.2
 
+#: Tallest static card picture when the caller names no height. Matches the
+#: animated picture's default; a shorter source is never enlarged.
+STILL_MAX_HEIGHT = 720
+
 #: Longest track ``wav_to_float32`` will decode. Deliberately generous — this
 #: stops the 20h-audiobook OOM-kill (float32 output ≈ 230 MB/hour; the ~7 GB
 #: peak at 20h was the OLD int16-buffer-plus-float32-buffer combined resident
@@ -273,8 +277,8 @@ class MediaExtractorService:
         Args:
             config: Configuration for media extraction
             still_height: Scale the static picture to this height in pixels
-                (the ``--api media`` call's key); ``None`` keeps the video's
-                own size, as cards always have.
+                (the ``--api media`` call's key); ``None`` caps it at
+                ``STILL_MAX_HEIGHT`` without enlarging a shorter video.
         """
         self.config = config
         self._still_height = still_height
@@ -1112,7 +1116,12 @@ class MediaExtractorService:
         if screenshot_time is None:
             screenshot_time = resolve_screenshot_time(None, start_time, duration, self.config.screenshot_offset)
 
-        scale = ["-vf", f"scale=-2:{self._still_height}"] if self._still_height else []
+        # The quotes are filtergraph quoting for the comma inside min(); ffmpeg
+        # reads them itself, so they belong in the argv element.
+        scale = [
+            "-vf",
+            (f"scale=-2:{self._still_height}" if self._still_height else f"scale=-2:'min({STILL_MAX_HEIGHT},ih)'"),
+        ]
         cmd = [
             resolve_ffmpeg(self.config),
             "-y",  # Overwrite output
