@@ -531,8 +531,10 @@ class AnkiMinerConfig:
     # Sentence and SentenceFurigana fields. Match is the exact MeCab span
     # of the mined surface (after compound-merge), not a string search,
     # so duplicated surfaces in the same sentence bold only the morpheme
-    # that was actually mined. See Issue #20.
-    bold_target_in_sentence: bool = False
+    # that was actually mined. See Issue #20. On by default (fresh installs;
+    # a saved config keeps its value): a word with no tracked span falls back
+    # to the plain sentence.
+    bold_target_in_sentence: bool = True
 
     # Card styling (Issue #44). anki_miner emits definition HTML with its own
     # class scheme (`.yomitan-glossary`, `gloss-sc-*`, `data-sc-*`) and ships one

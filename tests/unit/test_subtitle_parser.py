@@ -3203,7 +3203,7 @@ class TestSurfaceOffsetsAndBolding:
             encoding="utf-8",
         )
 
-        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media", bold_target_in_sentence=False)
         service = SubtitleParserService(config)
         words = service.parse_subtitle_file(srt_file)
 
@@ -4872,7 +4872,7 @@ class TestKinshipHonorificReadings:
             assert "兄[あに]" not in sf
 
     def test_bold_sentence_furigana_uses_corrected_head(self, tmp_path):
-        """The bold variant (config.bold_target_in_sentence, off by default) also
+        """The bold variant (config.bold_target_in_sentence, on by default) also
         reads にい — pins the wrap_target_furigana_from_tokens call site."""
         import dataclasses
 

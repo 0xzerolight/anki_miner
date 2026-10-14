@@ -67,10 +67,20 @@ def test_merge_incomplete_cues_round_trips(qtbot):
 def test_bold_target_in_sentence_round_trips(qtbot):
     panel = SentencesSettingsPanel()
     qtbot.addWidget(panel)
+    panel.load_from_config(replace(AnkiMinerConfig(), bold_target_in_sentence=False))
     assert panel.bold_target_in_sentence_checkbox.isChecked() is False
+    assert panel.contribute(AnkiMinerConfig()).bold_target_in_sentence is False
     panel.load_from_config(replace(AnkiMinerConfig(), bold_target_in_sentence=True))
     assert panel.bold_target_in_sentence_checkbox.isChecked()
     assert panel.contribute(AnkiMinerConfig()).bold_target_in_sentence is True
+
+
+def test_bold_target_in_sentence_is_on_by_default(qtbot):
+    assert AnkiMinerConfig().bold_target_in_sentence is True
+    panel = SentencesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig())
+    assert panel.bold_target_in_sentence_checkbox.isChecked()
 
 
 def test_subtitle_regex_fields_round_trip(qtbot):

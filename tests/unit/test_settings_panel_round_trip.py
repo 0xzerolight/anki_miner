@@ -121,7 +121,7 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         use_subtitle_regex_filter=True,
         secondary_subtitle_enabled=True,
         merge_incomplete_cues=True,
-        bold_target_in_sentence=True,
+        bold_target_in_sentence=False,  # default is True
         # --- YouTubeSettingsPanel ---
         # C10: a file and a browser are one choice; the file wins, so a config carrying both is not round-trip-stable.
         youtube_cookies_from_browser=None,
