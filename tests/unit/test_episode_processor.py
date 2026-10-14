@@ -98,6 +98,9 @@ class TestSanitizeSourceLabel:
             ("[Grp] Show - 04 (1920x1080 x264)", "Show - 04"),
             ("Movie (2019)", "Movie (2019)"),
             ("[Oshi no Ko] - 01", "[Oshi no Ko] - 01"),
+            # A bracket with a space reads as a title, not a release group.
+            ("[Oshi no Ko] 01", "[Oshi no Ko] 01"),
+            ("Anime — [Oshi no Ko] 01", "Anime — [Oshi no Ko] 01"),
             ("[Judas] Jujutsu Kaisen 0", "Jujutsu Kaisen 0"),
             ("Show [Blu-ray] - S01E01 - Title", "Show [Blu-ray] - S01E01 - Title"),
         ],
@@ -108,8 +111,14 @@ class TestSanitizeSourceLabel:
     def test_source_label_sanitizes_series_and_episode_separately(self):
         assert _source_label("[Grp] Series (1080p)", "[Grp] Series - 02 (1080p)") == "Series — Series - 02"
 
+    def test_source_label_keeps_a_part_that_is_only_a_bracketed_title(self):
+        assert _source_label("[Oshi no Ko]", "Episode 01") == "[Oshi no Ko] — Episode 01"
+        assert _source_label("[Oshi no Ko] Season 2", "[Oshi no Ko] S2 - 01") == (
+            "[Oshi no Ko] Season 2 — [Oshi no Ko] S2 - 01"
+        )
+
     def test_source_label_drops_an_empty_part(self):
-        assert _source_label("[WEBRip][JA]-Trix", "Episode 1") == "Episode 1"
+        assert _source_label("", "Episode 1") == "Episode 1"
 
 
 class TestBuildLemmaContext:

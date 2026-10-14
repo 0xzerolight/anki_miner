@@ -205,10 +205,11 @@ def _attach_position_labels(words: list[TokenizedWord], unit_labels: Mapping[int
 _ARR_METADATA_RE = re.compile(
     r"\s*(?:(?:\[[^\]]*\]|\((?=[^()]*(?<!\d)\d{3,4}(?:[pP]|[xX×]\d{3,4}))[^()]*\))\s*)+(?:-\S+)?\s*$"
 )
-# One leading fansub tag (``[SubsPlease] Title``). Applied after the trailing strip,
-# and skipped when nothing but a dash or nothing at all would follow it, so a
-# bracketed title such as ``[Oshi no Ko] - 01`` keeps its name.
-_LEADING_GROUP_RE = re.compile(r"^\s*\[[^\]]*\]\s*")
+# One leading fansub tag (``[SubsPlease] Title``). Applied after the trailing strip.
+# Only a tag with no space: a bracket with words in it reads as a title such as
+# ``[Oshi no Ko] 01``. Also skipped when nothing but a dash or nothing at all
+# would follow it.
+_LEADING_GROUP_RE = re.compile(r"^\s*\[[^\]\s]*\]\s*")
 
 _OFFLINE_DICTIONARY_REQUIRED_MESSAGE = (
     "No usable offline dictionary is installed. Use Tools → Download Recommended Resources or Settings → Dictionaries."
@@ -250,9 +251,12 @@ def _source_label(series: str, episode: str) -> str:
     """``series — episode`` for the Source field, each part sanitized on its own.
 
     The episode stem carries its own fansub tag, which would otherwise sit
-    mid-label after the separator where the leading-tag strip cannot see it.
+    mid-label after the separator where the leading-tag strip cannot see it. A
+    part that sanitizes to nothing is kept as written: a folder named only
+    ``[Oshi no Ko]`` is a title, not release metadata.
     """
-    return " — ".join(part for part in (sanitize_source_label(series), sanitize_source_label(episode)) if part)
+    parts = ((sanitize_source_label(part) or part.strip()) for part in (series, episode))
+    return " — ".join(part for part in parts if part)
 
 
 def _online_run_identity(site: str, video_id: str) -> tuple[str, str]:
