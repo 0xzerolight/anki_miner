@@ -8131,13 +8131,12 @@ No se elimina ningún archivo de índice.</translation>
         <source>Videos are numbered from 1.</source>
         <translation>Los videos se numeran desde 1.</translation>
     </message>
-    <message>
-        <source>Add %1 video</source>
-        <translation>Añadir %1 video</translation>
-    </message>
-    <message>
-        <source>Add %1 videos</source>
-        <translation>Añadir %1 videos</translation>
+    <message numerus="yes">
+        <source>Add %n video(s)</source>
+        <translation>
+            <numerusform>Añadir %n video</numerusform>
+            <numerusform>Añadir %n videos</numerusform>
+        </translation>
     </message>
 </context><context>
     <name>ProfileController</name>
@@ -10185,13 +10184,12 @@ No se elimina ningún archivo de índice.</translation>
         <source>Close</source>
         <translation>Cerrar</translation>
     </message>
-    <message>
-        <source>Undo (%1 card)</source>
-        <translation>Deshacer (%1 tarjeta)</translation>
-    </message>
-    <message>
-        <source>Undo (%1 cards)</source>
-        <translation>Deshacer (%1 tarjetas)</translation>
+    <message numerus="yes">
+        <source>Undo (%n card(s))</source>
+        <translation>
+            <numerusform>Deshacer (%n tarjeta)</numerusform>
+            <numerusform>Deshacer (%n tarjetas)</numerusform>
+        </translation>
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -10209,13 +10207,12 @@ No se elimina ningún archivo de índice.</translation>
         <source>Undoing…</source>
         <translation>Deshaciendo…</translation>
     </message>
-    <message>
-        <source>Undone (%1 card deleted)</source>
-        <translation>Deshecho (%1 tarjeta eliminada)</translation>
-    </message>
-    <message>
-        <source>Undone (%1 cards deleted)</source>
-        <translation>Deshecho (%1 tarjetas eliminadas)</translation>
+    <message numerus="yes">
+        <source>Undone (%n card(s) deleted)</source>
+        <translation>
+            <numerusform>Deshecho (%n tarjeta eliminada)</numerusform>
+            <numerusform>Deshecho (%n tarjetas eliminadas)</numerusform>
+        </translation>
     </message>
     <message>
         <source>Undo Failed</source>

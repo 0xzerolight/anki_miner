@@ -8096,13 +8096,12 @@ No index files are deleted.</source>
         <source>Videos are numbered from 1.</source>
         <translation type="unfinished" />
     </message>
-    <message>
-        <source>Add %1 video</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Add %1 videos</source>
-        <translation type="unfinished" />
+    <message numerus="yes">
+        <source>Add %n video(s)</source>
+        <translation>
+            <numerusform>Add %n video</numerusform>
+            <numerusform>Add %n videos</numerusform>
+        </translation>
     </message>
 </context><context>
     <name>ProfileController</name>
@@ -10148,13 +10147,12 @@ No index files are deleted.</source>
         <source>Close</source>
         <translation type="unfinished" />
     </message>
-    <message>
-        <source>Undo (%1 card)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Undo (%1 cards)</source>
-        <translation type="unfinished" />
+    <message numerus="yes">
+        <source>Undo (%n card(s))</source>
+        <translation>
+            <numerusform>Undo (%n card)</numerusform>
+            <numerusform>Undo (%n cards)</numerusform>
+        </translation>
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -10172,13 +10170,12 @@ No index files are deleted.</source>
         <source>Undoing…</source>
         <translation type="unfinished" />
     </message>
-    <message>
-        <source>Undone (%1 card deleted)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Undone (%1 cards deleted)</source>
-        <translation type="unfinished" />
+    <message numerus="yes">
+        <source>Undone (%n card(s) deleted)</source>
+        <translation>
+            <numerusform>Undone (%n card deleted)</numerusform>
+            <numerusform>Undone (%n cards deleted)</numerusform>
+        </translation>
     </message>
     <message>
         <source>Undo Failed</source>

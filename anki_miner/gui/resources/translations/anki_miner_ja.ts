@@ -8094,13 +8094,11 @@ No index files are deleted.</source>
         <source>Videos are numbered from 1.</source>
         <translation>動画は 1 から番号が振られています。</translation>
     </message>
-    <message>
-        <source>Add %1 video</source>
-        <translation>%1 本の動画を追加</translation>
-    </message>
-    <message>
-        <source>Add %1 videos</source>
-        <translation>%1 本の動画を追加</translation>
+    <message numerus="yes">
+        <source>Add %n video(s)</source>
+        <translation>
+            <numerusform>%n 本の動画を追加</numerusform>
+        </translation>
     </message>
 </context><context>
     <name>ProfileController</name>
@@ -10143,13 +10141,11 @@ No index files are deleted.</source>
         <source>Close</source>
         <translation>閉じる</translation>
     </message>
-    <message>
-        <source>Undo (%1 card)</source>
-        <translation>元に戻す（カード %1 枚）</translation>
-    </message>
-    <message>
-        <source>Undo (%1 cards)</source>
-        <translation>元に戻す（カード %1 枚）</translation>
+    <message numerus="yes">
+        <source>Undo (%n card(s))</source>
+        <translation>
+            <numerusform>元に戻す（カード %n 枚）</numerusform>
+        </translation>
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -10167,13 +10163,11 @@ No index files are deleted.</source>
         <source>Undoing…</source>
         <translation>元に戻しています…</translation>
     </message>
-    <message>
-        <source>Undone (%1 card deleted)</source>
-        <translation>元に戻しました（カード %1 枚を削除）</translation>
-    </message>
-    <message>
-        <source>Undone (%1 cards deleted)</source>
-        <translation>元に戻しました（カード %1 枚を削除）</translation>
+    <message numerus="yes">
+        <source>Undone (%n card(s) deleted)</source>
+        <translation>
+            <numerusform>元に戻しました（カード %n 枚を削除）</numerusform>
+        </translation>
     </message>
     <message>
         <source>Undo Failed</source>

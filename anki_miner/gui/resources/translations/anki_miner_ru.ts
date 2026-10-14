@@ -8168,13 +8168,13 @@ No index files are deleted.</source>
         <source>Videos are numbered from 1.</source>
         <translation>Нумерация видео начинается с 1.</translation>
     </message>
-    <message>
-        <source>Add %1 video</source>
-        <translation>Добавить %1 видео</translation>
-    </message>
-    <message>
-        <source>Add %1 videos</source>
-        <translation>Добавить %1 видео</translation>
+    <message numerus="yes">
+        <source>Add %n video(s)</source>
+        <translation>
+            <numerusform>Добавить %n видео</numerusform>
+            <numerusform>Добавить %n видео</numerusform>
+            <numerusform>Добавить %n видео</numerusform>
+        </translation>
     </message>
 </context><context>
     <name>ProfileController</name>
@@ -10227,13 +10227,13 @@ No index files are deleted.</source>
         <source>Close</source>
         <translation>Закрыть</translation>
     </message>
-    <message>
-        <source>Undo (%1 card)</source>
-        <translation>Отменить (%1 карточка)</translation>
-    </message>
-    <message>
-        <source>Undo (%1 cards)</source>
-        <translation>Отменить (карточек: %1)</translation>
+    <message numerus="yes">
+        <source>Undo (%n card(s))</source>
+        <translation>
+            <numerusform>Отменить (%n карточка)</numerusform>
+            <numerusform>Отменить (%n карточки)</numerusform>
+            <numerusform>Отменить (%n карточек)</numerusform>
+        </translation>
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -10251,13 +10251,13 @@ No index files are deleted.</source>
         <source>Undoing…</source>
         <translation>Отмена…</translation>
     </message>
-    <message>
-        <source>Undone (%1 card deleted)</source>
-        <translation>Отменено (удалена %1 карточка)</translation>
-    </message>
-    <message>
-        <source>Undone (%1 cards deleted)</source>
-        <translation>Отменено (удалено карточек: %1)</translation>
+    <message numerus="yes">
+        <source>Undone (%n card(s) deleted)</source>
+        <translation>
+            <numerusform>Отменено (удалена %n карточка)</numerusform>
+            <numerusform>Отменено (удалены %n карточки)</numerusform>
+            <numerusform>Отменено (удалено %n карточек)</numerusform>
+        </translation>
     </message>
     <message>
         <source>Undo Failed</source>

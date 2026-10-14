@@ -8131,13 +8131,12 @@ Es werden keine Indexdateien gelöscht.</translation>
         <source>Videos are numbered from 1.</source>
         <translation>Videos sind ab 1 nummeriert.</translation>
     </message>
-    <message>
-        <source>Add %1 video</source>
-        <translation>%1 Video hinzufügen</translation>
-    </message>
-    <message>
-        <source>Add %1 videos</source>
-        <translation>%1 Videos hinzufügen</translation>
+    <message numerus="yes">
+        <source>Add %n video(s)</source>
+        <translation>
+            <numerusform>%n Video hinzufügen</numerusform>
+            <numerusform>%n Videos hinzufügen</numerusform>
+        </translation>
     </message>
 </context><context>
     <name>ProfileController</name>
@@ -10185,13 +10184,12 @@ Es werden keine Indexdateien gelöscht.</translation>
         <source>Close</source>
         <translation>Schließen</translation>
     </message>
-    <message>
-        <source>Undo (%1 card)</source>
-        <translation>Rückgängig (%1 Karte)</translation>
-    </message>
-    <message>
-        <source>Undo (%1 cards)</source>
-        <translation>Rückgängig (%1 Karten)</translation>
+    <message numerus="yes">
+        <source>Undo (%n card(s))</source>
+        <translation>
+            <numerusform>Rückgängig (%n Karte)</numerusform>
+            <numerusform>Rückgängig (%n Karten)</numerusform>
+        </translation>
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -10209,13 +10207,12 @@ Es werden keine Indexdateien gelöscht.</translation>
         <source>Undoing…</source>
         <translation>Wird rückgängig gemacht…</translation>
     </message>
-    <message>
-        <source>Undone (%1 card deleted)</source>
-        <translation>Rückgängig gemacht (%1 Karte gelöscht)</translation>
-    </message>
-    <message>
-        <source>Undone (%1 cards deleted)</source>
-        <translation>Rückgängig gemacht (%1 Karten gelöscht)</translation>
+    <message numerus="yes">
+        <source>Undone (%n card(s) deleted)</source>
+        <translation>
+            <numerusform>Rückgängig gemacht (%n Karte gelöscht)</numerusform>
+            <numerusform>Rückgängig gemacht (%n Karten gelöscht)</numerusform>
+        </translation>
     </message>
     <message>
         <source>Undo Failed</source>

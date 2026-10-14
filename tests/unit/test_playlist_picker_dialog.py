@@ -173,3 +173,18 @@ def test_a_range_on_a_later_page_uses_the_numbers_shown(qtbot: Any) -> None:
 def test_the_truncation_notice_says_how_to_continue(qtbot: Any) -> None:
     dialog = _make(qtbot, _playlist(3, total=900), truncated=True)
     assert "Paste the URL again" in dialog.truncation_label.text()
+
+
+def test_accept_button_reads_singular_and_plural_in_english(qtbot: Any, qapp: Any) -> None:
+    from anki_miner.gui import i18n
+
+    installed = i18n.install_translators(qapp, "en")
+    try:
+        dialog = _make(qtbot)
+        assert dialog.add_button.text() == "Add 3 videos"
+        dialog.entry_list.item(0).setCheckState(Qt.CheckState.Unchecked)
+        dialog.entry_list.item(1).setCheckState(Qt.CheckState.Unchecked)
+        assert dialog.add_button.text() == "Add 1 video"
+    finally:
+        for translator in installed:
+            qapp.removeTranslator(translator)

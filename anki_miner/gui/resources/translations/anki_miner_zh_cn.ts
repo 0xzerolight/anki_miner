@@ -8094,13 +8094,11 @@ No index files are deleted.</source>
         <source>Videos are numbered from 1.</source>
         <translation>视频编号从 1 开始。</translation>
     </message>
-    <message>
-        <source>Add %1 video</source>
-        <translation>添加 %1 个视频</translation>
-    </message>
-    <message>
-        <source>Add %1 videos</source>
-        <translation>添加 %1 个视频</translation>
+    <message numerus="yes">
+        <source>Add %n video(s)</source>
+        <translation>
+            <numerusform>添加 %n 个视频</numerusform>
+        </translation>
     </message>
 </context><context>
     <name>ProfileController</name>
@@ -10143,13 +10141,11 @@ No index files are deleted.</source>
         <source>Close</source>
         <translation>关闭</translation>
     </message>
-    <message>
-        <source>Undo (%1 card)</source>
-        <translation>撤销（%1 张卡片）</translation>
-    </message>
-    <message>
-        <source>Undo (%1 cards)</source>
-        <translation>撤销（%1 张卡片）</translation>
+    <message numerus="yes">
+        <source>Undo (%n card(s))</source>
+        <translation>
+            <numerusform>撤销（%n 张卡片）</numerusform>
+        </translation>
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -10167,13 +10163,11 @@ No index files are deleted.</source>
         <source>Undoing…</source>
         <translation>正在撤销…</translation>
     </message>
-    <message>
-        <source>Undone (%1 card deleted)</source>
-        <translation>已撤销（删除了 %1 张卡片）</translation>
-    </message>
-    <message>
-        <source>Undone (%1 cards deleted)</source>
-        <translation>已撤销（删除了 %1 张卡片）</translation>
+    <message numerus="yes">
+        <source>Undone (%n card(s) deleted)</source>
+        <translation>
+            <numerusform>已撤销（删除了 %n 张卡片）</numerusform>
+        </translation>
     </message>
     <message>
         <source>Undo Failed</source>

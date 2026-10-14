@@ -8131,13 +8131,12 @@ Nenhum arquivo de índice é excluído.</translation>
         <source>Videos are numbered from 1.</source>
         <translation>Os vídeos são numerados a partir de 1.</translation>
     </message>
-    <message>
-        <source>Add %1 video</source>
-        <translation>Adicionar %1 vídeo</translation>
-    </message>
-    <message>
-        <source>Add %1 videos</source>
-        <translation>Adicionar %1 vídeos</translation>
+    <message numerus="yes">
+        <source>Add %n video(s)</source>
+        <translation>
+            <numerusform>Adicionar %n vídeo</numerusform>
+            <numerusform>Adicionar %n vídeos</numerusform>
+        </translation>
     </message>
 </context><context>
     <name>ProfileController</name>
@@ -10185,13 +10184,12 @@ Nenhum arquivo de índice é excluído.</translation>
         <source>Close</source>
         <translation>Fechar</translation>
     </message>
-    <message>
-        <source>Undo (%1 card)</source>
-        <translation>Desfazer (%1 cartão)</translation>
-    </message>
-    <message>
-        <source>Undo (%1 cards)</source>
-        <translation>Desfazer (%1 cartões)</translation>
+    <message numerus="yes">
+        <source>Undo (%n card(s))</source>
+        <translation>
+            <numerusform>Desfazer (%n cartão)</numerusform>
+            <numerusform>Desfazer (%n cartões)</numerusform>
+        </translation>
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -10209,13 +10207,12 @@ Nenhum arquivo de índice é excluído.</translation>
         <source>Undoing…</source>
         <translation>Desfazendo…</translation>
     </message>
-    <message>
-        <source>Undone (%1 card deleted)</source>
-        <translation>Desfeito (%1 cartão excluído)</translation>
-    </message>
-    <message>
-        <source>Undone (%1 cards deleted)</source>
-        <translation>Desfeito (%1 cartões excluídos)</translation>
+    <message numerus="yes">
+        <source>Undone (%n card(s) deleted)</source>
+        <translation>
+            <numerusform>Desfeito (%n cartão excluído)</numerusform>
+            <numerusform>Desfeito (%n cartões excluídos)</numerusform>
+        </translation>
     </message>
     <message>
         <source>Undo Failed</source>

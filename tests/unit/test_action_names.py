@@ -22,6 +22,7 @@ import pytest
 pytest.importorskip("PyQt6.QtWidgets")
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui import i18n
 from anki_miner.gui.capabilities import CAPABILITIES, SUBTAB_KEYS
 from anki_miner.gui.widgets.backfill_tab import CardBackfillTab
 from anki_miner.gui.widgets.dialogs.results_dialog import ResultsDialog
@@ -46,6 +47,14 @@ def _result_with_cards(count: int) -> ProcessingResult:
 
 class TestUndoCountsCards:
     """The Undo wording counts cards (D20 item 5 reopened D46-B)."""
+
+    @pytest.fixture(autouse=True)
+    def _english(self, qapp):
+        """The singular/plural wording lives in the English catalogue (E14)."""
+        installed = i18n.install_translators(qapp, "en")
+        yield
+        for translator in installed:
+            qapp.removeTranslator(translator)
 
     def test_the_button_counts_cards(self, qtbot):
         dialog = ResultsDialog(_result_with_cards(42), undo_callback=lambda ids: len(ids))

@@ -217,8 +217,7 @@ class PlaylistPickerDialog(QDialog):
     def _refresh_add_button(self, *_: object) -> None:
         """Name the count on the button, and disable it at zero."""
         count = len(self.selected_urls())
-        template = self.tr("Add %1 video") if count == 1 else self.tr("Add %1 videos")
-        self.add_button.setText(tr_format(template, str(count)))
+        self.add_button.setText(self.tr("Add %n video(s)", "", count))
         self.add_button.setEnabled(count > 0)
 
     # ------------------------------------------------------------------

@@ -8094,13 +8094,11 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <source>Videos are numbered from 1.</source>
         <translation>Video diberi nomor mulai dari 1.</translation>
     </message>
-    <message>
-        <source>Add %1 video</source>
-        <translation>Tambahkan %1 video</translation>
-    </message>
-    <message>
-        <source>Add %1 videos</source>
-        <translation>Tambah %1 video</translation>
+    <message numerus="yes">
+        <source>Add %n video(s)</source>
+        <translation>
+            <numerusform>Tambahkan %n video</numerusform>
+        </translation>
     </message>
 </context><context>
     <name>ProfileController</name>
@@ -10143,13 +10141,11 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <source>Close</source>
         <translation>Tutup</translation>
     </message>
-    <message>
-        <source>Undo (%1 card)</source>
-        <translation>Urungkan (%1 kartu)</translation>
-    </message>
-    <message>
-        <source>Undo (%1 cards)</source>
-        <translation>Urungkan (%1 kartu)</translation>
+    <message numerus="yes">
+        <source>Undo (%n card(s))</source>
+        <translation>
+            <numerusform>Urungkan (%n kartu)</numerusform>
+        </translation>
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -10167,13 +10163,11 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <source>Undoing…</source>
         <translation>Mengurungkan…</translation>
     </message>
-    <message>
-        <source>Undone (%1 card deleted)</source>
-        <translation>Diurungkan (%1 kartu dihapus)</translation>
-    </message>
-    <message>
-        <source>Undone (%1 cards deleted)</source>
-        <translation>Diurungkan (%1 kartu dihapus)</translation>
+    <message numerus="yes">
+        <source>Undone (%n card(s) deleted)</source>
+        <translation>
+            <numerusform>Diurungkan (%n kartu dihapus)</numerusform>
+        </translation>
     </message>
     <message>
         <source>Undo Failed</source>

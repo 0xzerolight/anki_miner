@@ -8131,13 +8131,12 @@ Aucun fichier d'index n'est supprimé.</translation>
         <source>Videos are numbered from 1.</source>
         <translation>Les vidéos sont numérotées à partir de 1.</translation>
     </message>
-    <message>
-        <source>Add %1 video</source>
-        <translation>Ajouter %1 vidéo</translation>
-    </message>
-    <message>
-        <source>Add %1 videos</source>
-        <translation>Ajouter %1 vidéos</translation>
+    <message numerus="yes">
+        <source>Add %n video(s)</source>
+        <translation>
+            <numerusform>Ajouter %n vidéo</numerusform>
+            <numerusform>Ajouter %n vidéos</numerusform>
+        </translation>
     </message>
 </context><context>
     <name>ProfileController</name>
@@ -10185,13 +10184,12 @@ Aucun fichier d'index n'est supprimé.</translation>
         <source>Close</source>
         <translation>Fermer</translation>
     </message>
-    <message>
-        <source>Undo (%1 card)</source>
-        <translation>Annuler (%1 carte)</translation>
-    </message>
-    <message>
-        <source>Undo (%1 cards)</source>
-        <translation>Annuler (%1 cartes)</translation>
+    <message numerus="yes">
+        <source>Undo (%n card(s))</source>
+        <translation>
+            <numerusform>Annuler (%n carte)</numerusform>
+            <numerusform>Annuler (%n cartes)</numerusform>
+        </translation>
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -10209,13 +10207,12 @@ Aucun fichier d'index n'est supprimé.</translation>
         <source>Undoing…</source>
         <translation>Annulation…</translation>
     </message>
-    <message>
-        <source>Undone (%1 card deleted)</source>
-        <translation>Annulé (%1 carte supprimée)</translation>
-    </message>
-    <message>
-        <source>Undone (%1 cards deleted)</source>
-        <translation>Annulé (%1 cartes supprimées)</translation>
+    <message numerus="yes">
+        <source>Undone (%n card(s) deleted)</source>
+        <translation>
+            <numerusform>Annulé (%n carte supprimée)</numerusform>
+            <numerusform>Annulé (%n cartes supprimées)</numerusform>
+        </translation>
     </message>
     <message>
         <source>Undo Failed</source>

@@ -176,7 +176,7 @@ class ResultsDialog(EnhancedDialog):
 
     def _undo_button_text(self, count: int) -> str:
         """Label the Undo button, in the singular when it deletes one card."""
-        return tr_format(self.tr("Undo (%1 card)") if count == 1 else self.tr("Undo (%1 cards)"), count)
+        return self.tr("Undo (%n card(s))", "", count)
 
     def _on_copy_summary(self) -> None:
         """Put the receipt's summary line on the clipboard, verbatim (D4)."""
@@ -233,12 +233,7 @@ class ResultsDialog(EnhancedDialog):
         deleted = cast(int, result)
         self._undo_in_progress = False
         self._close_button.setEnabled(True)
-        self._undo_button.setText(
-            tr_format(
-                self.tr("Undone (%1 card deleted)") if deleted == 1 else self.tr("Undone (%1 cards deleted)"),
-                deleted,
-            )
-        )
+        self._undo_button.setText(self.tr("Undone (%n card(s) deleted)", "", deleted))
         self.undo_completed = True
         if self._on_undo_committed is not None:
             self._on_undo_committed(deleted)

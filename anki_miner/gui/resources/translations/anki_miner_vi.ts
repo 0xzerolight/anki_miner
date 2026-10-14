@@ -8094,13 +8094,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <source>Videos are numbered from 1.</source>
         <translation>Video được đánh số từ 1.</translation>
     </message>
-    <message>
-        <source>Add %1 video</source>
-        <translation>Thêm %1 video</translation>
-    </message>
-    <message>
-        <source>Add %1 videos</source>
-        <translation>Thêm %1 video</translation>
+    <message numerus="yes">
+        <source>Add %n video(s)</source>
+        <translation>
+            <numerusform>Thêm %n video</numerusform>
+        </translation>
     </message>
 </context><context>
     <name>ProfileController</name>
@@ -10143,13 +10141,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <source>Close</source>
         <translation>Đóng</translation>
     </message>
-    <message>
-        <source>Undo (%1 card)</source>
-        <translation>Hoàn tác (%1 thẻ)</translation>
-    </message>
-    <message>
-        <source>Undo (%1 cards)</source>
-        <translation>Hoàn tác (%1 thẻ)</translation>
+    <message numerus="yes">
+        <source>Undo (%n card(s))</source>
+        <translation>
+            <numerusform>Hoàn tác (%n thẻ)</numerusform>
+        </translation>
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -10167,13 +10163,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <source>Undoing…</source>
         <translation>Đang hoàn tác…</translation>
     </message>
-    <message>
-        <source>Undone (%1 card deleted)</source>
-        <translation>Đã hoàn tác (đã xóa %1 thẻ)</translation>
-    </message>
-    <message>
-        <source>Undone (%1 cards deleted)</source>
-        <translation>Đã hoàn tác (đã xóa %1 thẻ)</translation>
+    <message numerus="yes">
+        <source>Undone (%n card(s) deleted)</source>
+        <translation>
+            <numerusform>Đã hoàn tác (đã xóa %n thẻ)</numerusform>
+        </translation>
     </message>
     <message>
         <source>Undo Failed</source>
