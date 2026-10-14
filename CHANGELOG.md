@@ -11,6 +11,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Manga OCR and Video OCR read every mining language except Hebrew, Vietnamese and Cantonese (Utilities → Manga OCR, Video OCR).** No free recogniser reads those three well enough. Japanese keeps its own OCR engines. Other languages download a small text-recognition model from the tool's setup card on first use, and Manga OCR adds onnxruntime to its mokuro install.
 
 ### Changed
+- **Card pictures are at most 720 pixels high.** A still from a 1080p or 4K video used to be saved at full size, several times larger than an animated picture. A shorter video is never enlarged. This applies to every install.
+- **Sentence audio is mono, and new installs cut it at 96 kbps.** A dialogue clip gains nothing from stereo, so every install now saves one channel. A new install starts at 96 kbps instead of 192, half the file size; an existing install keeps its bitrate (Settings → Card Media → Audio Bitrate).
+- **Japanese, Chinese and Cantonese subtitles drop speaker names, (notes), [sound effects], ♪ and dialogue dashes on new installs (Settings → Sentences).** The other languages already did. Chinese and Cantonese get it when first opened; an existing install keeps its own setting.
+- **The mined word is bold in the sentence on new installs (Settings → Sentences → Bold target word in sentence).** An existing install keeps its own setting.
+- **New installs create cards in the order their words appear (Settings → Cards & Anki → Create cards in order of appearance).** An existing install keeps its own setting.
+- **New installs start Anki with Anki Miner when Anki is closed (Settings → Cards & Anki → Open Anki when Anki Miner starts).** An existing install keeps its own setting.
+- **The Source field leaves out the release group and the resolution.** `[SubsPlease] Frieren - 01 (1080p) [ABCD1234]` now reads `Frieren - 01`. Batch runs clean the series and episode names separately. A bracketed title such as `[Oshi no Ko] - 01` and a year such as `(2019)` are kept.
+- **The subtitle offset moves in 0.1 second steps (Single, Batch, Deck Builder, Batch Edit).** It moved in 0.5 second steps; the subtitle viewer already used 0.1.
+- **Transcription on the CPU uses about one thread per core, up to 8.** It used 4 on every machine. On a 16-core CPU a clip transcribed about 20% faster, with the same text.
 
 ### Fixed
 - **Everyday words such as 魔王, 安堵 and 口元 are no longer treated as names.** The bundled name lists held about two hundred ordinary words that JMnedict also lists as names, so those words were never offered. They also held spellings of a word plus a particle (夢の, 上の, 秋を), which glued 夢 to its particle and dropped it from the line. Both kinds are gone from the lists.
