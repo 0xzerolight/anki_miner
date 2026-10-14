@@ -44,6 +44,7 @@ _LANGUAGES: dict[str, str] = {
     "nl": "Nederlands",
     "th": "ไทย",
     "he": "עברית",
+    "fa": "فارسی",
 }
 
 
