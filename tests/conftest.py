@@ -734,6 +734,9 @@ def test_config(temp_dir):
         strict_card_order=False,
         # Plain sentences, as the suite was written against (bold on by default since 2026-10).
         bold_target_in_sentence=False,
+        # No subtitle cleanup, as the suite was written against (on by default since 2026-10).
+        use_subtitle_regex_filter=False,
+        subtitle_regex_filter="",
     )
 
 

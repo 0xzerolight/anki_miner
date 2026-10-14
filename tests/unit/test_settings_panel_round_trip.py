@@ -118,7 +118,7 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         # --- SentencesSettingsPanel ---
         subtitle_regex_filter=r"\([^)]*\)",
         subtitle_regex_replacement="",
-        use_subtitle_regex_filter=True,
+        use_subtitle_regex_filter=False,  # default is True
         secondary_subtitle_enabled=True,
         merge_incomplete_cues=True,
         bold_target_in_sentence=False,  # default is True

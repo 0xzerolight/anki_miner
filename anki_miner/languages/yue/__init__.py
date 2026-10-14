@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+from anki_miner.config.config import DEFAULT_SUBTITLE_CLEANUP_PATTERN
 from anki_miner.languages.profile import (
     CaptionLangs,
     LanguageProfile,
@@ -70,6 +71,10 @@ def _scoped_defaults() -> Mapping[str, object]:
             "anki_note_type": "",
             # The jyutping hook's only consumer; on, like zh's pinyin.
             "reading_tone_color": True,
+            # The built-in cleanup, as for ja and zh. Its speaker-label piece
+            # stops at 「『, the quotes Traditional-script lines open with.
+            "use_subtitle_regex_filter": True,
+            "subtitle_regex_filter": DEFAULT_SUBTITLE_CLEANUP_PATTERN,
         }
     )
     return defaults

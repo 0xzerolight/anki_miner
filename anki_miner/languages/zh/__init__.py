@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+from anki_miner.config.config import DEFAULT_SUBTITLE_CLEANUP_PATTERN
 from anki_miner.languages.profile import (
     CaptionLangs,
     LanguageProfile,
@@ -67,6 +68,10 @@ def _scoped_defaults() -> Mapping[str, object]:
             # unaffected — ``dedup_fold`` below is independent of this field.
             "script_variant": "",
             "reading_tone_color": True,
+            # The built-in cleanup, as for ja: Chinese tracks carry the same
+            # (notes), [SFX], ♪ and "名字：" speaker labels.
+            "use_subtitle_regex_filter": True,
+            "subtitle_regex_filter": DEFAULT_SUBTITLE_CLEANUP_PATTERN,
         }
     )
     return defaults

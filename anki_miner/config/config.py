@@ -64,6 +64,22 @@ _ENUM_RESETS: dict[str, tuple[frozenset[str], str]] = {
     "asr_device": (frozenset({"auto", "cuda", "cpu", "vulkan"}), "auto"),
 }
 
+# Built-in subtitle cleanup for a language whose profile ships no pattern of its
+# own (ja, zh, yue): parenthesised notes, [sound effects], music marks, a speaker
+# label and a dialogue dash. The Sentences panel offers them as one checkbox
+# (gui/widgets/panels/sentences_settings_panel.py); the joined pattern is the
+# default subtitle_regex_filter. Patterns cover half- and full-width punctuation.
+SUBTITLE_CLEANUP_PIECES: tuple[str, ...] = (
+    r"\([^)]*\)|（[^）]*）",
+    r"\[[^\]]*\]|［[^］]*］",
+    r"[♪♬♫#～〜]+",
+    r"^[^「『:：]+[:：]\s*",
+    # A dash that opens a speaker turn ("- Hi. - Hello."): at the line start or after
+    # a sentence terminator. Hyphenated words and a mid-sentence dash are untouched.
+    r"(?:^|(?<=[.!?…]\s))[-–—]\s+",
+)
+DEFAULT_SUBTITLE_CLEANUP_PATTERN = "|".join(SUBTITLE_CLEANUP_PIECES)
+
 # Discrete whole-UI zoom presets (whole percents) offered in the Zoom dropdown
 # (gui/widgets/panels/ui_settings_panel.py) and used to snap a folded legacy
 # ui_font_scale value onto the nearest preset (GUIConfigManager._fold_removed_fields).
@@ -521,10 +537,12 @@ class AnkiMinerConfig:
     # Python regex applied to each subtitle line after tag/HTML cleanup and
     # before tokenization. Matched text is replaced with subtitle_regex_replacement
     # (empty string = deletion). Both parse paths (raw entries for the viewer
-    # and the mining path) honor the filter.
-    subtitle_regex_filter: str = ""
+    # and the mining path) honor the filter. On by default with the built-in
+    # cleanup (fresh installs; a saved config keeps its value). These are ja's
+    # values; every other profile sets its own in scoped_defaults.
+    subtitle_regex_filter: str = DEFAULT_SUBTITLE_CLEANUP_PATTERN
     subtitle_regex_replacement: str = ""
-    use_subtitle_regex_filter: bool = False
+    use_subtitle_regex_filter: bool = True
 
     # Card formatting
     # When True, wrap the mined target word in <b>...</b> inside the

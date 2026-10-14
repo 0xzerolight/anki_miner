@@ -103,12 +103,14 @@ def test_subtitle_regex_fields_round_trip(qtbot):
     assert result.use_subtitle_regex_filter is True
 
 
+from anki_miner.config.config import DEFAULT_SUBTITLE_CLEANUP_PATTERN, SUBTITLE_CLEANUP_PIECES  # noqa: E402
 from anki_miner.gui.widgets.panels.sentences_settings_panel import (  # noqa: E402
     SUBTITLE_REGEX_PRESETS,
     add_missing_pieces,
     builtin_cleanup_pieces,
     cleanup_state,
 )
+from anki_miner.services.subtitle_parser import compile_subtitle_regex_filter  # noqa: E402
 
 JA_PIECES = tuple(pattern for _label, pattern in SUBTITLE_REGEX_PRESETS)
 
@@ -140,7 +142,7 @@ def test_one_click_turns_on_every_built_in_cleanup(qtbot):
     """D15 extension: the common case is one plain-language action."""
     panel = SentencesSettingsPanel()
     qtbot.addWidget(panel)
-    panel.load_from_config(AnkiMinerConfig())
+    panel.load_from_config(replace(AnkiMinerConfig(), use_subtitle_regex_filter=False, subtitle_regex_filter=""))
     assert panel.use_subtitle_regex_checkbox.checkState() == Qt.CheckState.Unchecked
 
     panel.use_subtitle_regex_checkbox.click()
@@ -149,6 +151,35 @@ def test_one_click_turns_on_every_built_in_cleanup(qtbot):
     assert out.use_subtitle_regex_filter is True
     assert out.subtitle_regex_filter == "|".join(JA_PIECES)
     assert panel.use_subtitle_regex_checkbox.checkState() == Qt.CheckState.Checked
+
+
+def test_fresh_default_loads_checked_and_collapsed(qtbot):
+    """ja's default is the built-in cleanup, on: the box reads checked, the raw pattern stays hidden."""
+    panel = SentencesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig())
+    assert panel.use_subtitle_regex_checkbox.checkState() == Qt.CheckState.Checked
+    assert not panel.subtitle_regex_group.isChecked()
+    out = panel.contribute(AnkiMinerConfig())
+    assert (out.use_subtitle_regex_filter, out.subtitle_regex_filter) == (True, "|".join(JA_PIECES))
+
+
+def test_builtin_pieces_for_the_default_pattern():
+    assert builtin_cleanup_pieces(DEFAULT_SUBTITLE_CLEANUP_PATTERN) == SUBTITLE_CLEANUP_PIECES == JA_PIECES
+
+
+def test_all_five_pieces_in_any_order_load_checked(qtbot):
+    """A pattern built with the old per-preset buttons, in another order, still reads as the built-ins."""
+    panel = SentencesSettingsPanel()
+    qtbot.addWidget(panel)
+    reordered = "|".join(reversed(JA_PIECES))
+    panel.load_from_config(replace(AnkiMinerConfig(), use_subtitle_regex_filter=True, subtitle_regex_filter=reordered))
+    assert panel.use_subtitle_regex_checkbox.checkState() == Qt.CheckState.Checked
+
+
+def test_default_pattern_compiles():
+    """A bad default would only log a warning and leave the filter silently off."""
+    assert compile_subtitle_regex_filter(AnkiMinerConfig().subtitle_regex_filter, "") is not None
 
 
 def test_a_pattern_with_some_presets_is_partly_checked_and_completed_by_a_click(qtbot):

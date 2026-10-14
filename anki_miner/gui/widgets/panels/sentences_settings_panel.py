@@ -25,22 +25,21 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from anki_miner.config.config import DEFAULT_SUBTITLE_CLEANUP_PATTERN, SUBTITLE_CLEANUP_PIECES
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.base.disclosure import make_disclosure
 from anki_miner.languages.registry import config_language, get_profile
 
 #: Built-in cleanups for a language whose profile ships no pattern of its own
 #: (ja, zh, yue). "Remove speaker names, sound effects and music notes" makes
-#: sure each one is in the pattern. The labels are no longer shown. Patterns
-#: target both half-width and full-width punctuation common in JP subtitle files.
-SUBTITLE_REGEX_PRESETS: tuple[tuple[str, str], ...] = (
-    ("Parens (Tanaka)", r"\([^)]*\)|（[^）]*）"),
-    ("Brackets [SFX]", r"\[[^\]]*\]|［[^］]*］"),
-    ("Music ♪♬", r"[♪♬♫#～〜]+"),
-    ("Speaker: prefix", r"^[^「『:：]+[:：]\s*"),
-    # A dash that opens a speaker turn ("- Hi. - Hello."): at the line start or after
-    # a sentence terminator. Hyphenated words and a mid-sentence dash are untouched.
-    ("Dialogue dash", r"(?:^|(?<=[.!?…]\s))[-–—]\s+"),
+#: sure each one is in the pattern. The labels are no longer shown. The pieces
+#: live in config (SUBTITLE_CLEANUP_PIECES), whose joined form is the default.
+SUBTITLE_REGEX_PRESETS: tuple[tuple[str, str], ...] = tuple(
+    zip(
+        ("Parens (Tanaka)", "Brackets [SFX]", "Music ♪♬", "Speaker: prefix", "Dialogue dash"),
+        SUBTITLE_CLEANUP_PIECES,
+        strict=True,
+    )
 )
 
 
@@ -49,11 +48,13 @@ def builtin_cleanup_pieces(language_default: str) -> tuple[str, ...]:
 
     A language that ships its own pattern (ko, th and the spaced languages set
     ``subtitle_regex_filter`` in their scoped defaults) keeps exactly that
-    pattern as one piece; the rest get the five presets above.
+    pattern as one piece. ja, zh and yue default to the joined built-ins, and
+    get them back piece by piece, so a pattern holding the same pieces in
+    another order still reads as the built-in cleanup.
     """
-    if language_default:
+    if language_default and language_default != DEFAULT_SUBTITLE_CLEANUP_PATTERN:
         return (language_default,)
-    return tuple(pattern for _label, pattern in SUBTITLE_REGEX_PRESETS)
+    return SUBTITLE_CLEANUP_PIECES
 
 
 def add_missing_pieces(pattern: str, pieces: Sequence[str]) -> str:
