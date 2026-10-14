@@ -45,6 +45,7 @@ _LANGUAGES: dict[str, str] = {
     "th": "ไทย",
     "he": "עברית",
     "fa": "فارسی",
+    "ca": "Català",
 }
 
 
