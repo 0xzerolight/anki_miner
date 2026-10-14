@@ -35,6 +35,7 @@ from anki_miner.orchestration.episode_processor import (
     _build_lemma_context,
     _build_pos_context,
     _EpisodeContext,
+    _source_label,
     sanitize_source_label,
 )
 from anki_miner.presenters import NullPresenter
@@ -88,6 +89,27 @@ class TestSanitizeSourceLabel:
 
     def test_all_metadata_collapses_to_empty(self):
         assert sanitize_source_label("[WEBRip][JA]-Trix") == ""
+
+    @pytest.mark.parametrize(
+        ("label", "expected"),
+        [
+            ("[SubsPlease] Frieren - 01 (1080p) [ABCD1234]", "Frieren - 01"),
+            ("[Erai-raws] Show - 03 (BD 1080p HEVC)", "Show - 03"),
+            ("[Grp] Show - 04 (1920x1080 x264)", "Show - 04"),
+            ("Movie (2019)", "Movie (2019)"),
+            ("[Oshi no Ko] - 01", "[Oshi no Ko] - 01"),
+            ("[Judas] Jujutsu Kaisen 0", "Jujutsu Kaisen 0"),
+            ("Show [Blu-ray] - S01E01 - Title", "Show [Blu-ray] - S01E01 - Title"),
+        ],
+    )
+    def test_strips_a_leading_group_tag_and_a_trailing_resolution(self, label, expected):
+        assert sanitize_source_label(label) == expected
+
+    def test_source_label_sanitizes_series_and_episode_separately(self):
+        assert _source_label("[Grp] Series (1080p)", "[Grp] Series - 02 (1080p)") == "Series — Series - 02"
+
+    def test_source_label_drops_an_empty_part(self):
+        assert _source_label("[WEBRip][JA]-Trix", "Episode 1") == "Episode 1"
 
 
 class TestBuildLemmaContext:

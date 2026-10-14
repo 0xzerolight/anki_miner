@@ -70,7 +70,7 @@ def test_card_source_defaults_to_sanitized_video_stem(tab, tmp_path):
 
     tab.video_selector.set_path(str(video))
 
-    assert tab.card_source_edit.text() == "[Judas] Jujutsu Kaisen 0"
+    assert tab.card_source_edit.text() == "Jujutsu Kaisen 0"
 
 
 def test_card_source_updates_when_video_path_changes(tab, tmp_path):
