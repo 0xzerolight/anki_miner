@@ -545,11 +545,12 @@ class AnkiMinerConfig:
 
     # Card creation order. When True, the words handed to phase 3 are re-sorted
     # into the order they first appear in the media, so the notes AnkiConnect
-    # receives — and therefore Anki's new-card positions — form a clean series.
-    # Off by default because the sort deliberately overrides three upstream
-    # orderings: the whitelist force-include prepend, the Word Curator's
-    # clicked column sort, and the season-mode merged pool order.
-    strict_card_order: bool = False
+    # receives — and therefore Anki's new-card positions — follow the episode.
+    # On by default (fresh installs; a saved config keeps its value). The sort
+    # deliberately overrides three upstream orderings: the whitelist
+    # force-include prepend, the Word Curator's clicked column sort, and the
+    # season-mode merged pool order; turning it off keeps those.
+    strict_card_order: bool = True
 
     # Deduplication settings. Keeps one card per example sentence: the FIRST
     # mineable word of a line wins and its sentence-mates are dropped. Off by

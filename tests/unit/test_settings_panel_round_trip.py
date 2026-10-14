@@ -76,7 +76,7 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
             "sentence": "SN",
             "audio": "AU",
         },
-        strict_card_order=True,  # T10: moved here from FilteringSettingsPanel
+        strict_card_order=False,  # T10: moved here from FilteringSettingsPanel; default is True
         auto_open_anki=True,
         # --- MediaSettingsPanel ---
         audio_format="opus",

@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from anki_miner.config import AnkiMinerConfig
 from anki_miner.models import TokenizedWord
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.presenters import NullPresenter
@@ -68,7 +69,11 @@ def test_strict_order_restores_appearance_order_after_curation(test_config, mock
     assert extracted == ["食べる", "飲む"]
 
 
-def test_default_leaves_the_curated_order_alone(test_config, mock_services, tmp_path):
+def test_default_is_appearance_order():
+    assert AnkiMinerConfig().strict_card_order is True
+
+
+def test_off_leaves_the_curated_order_alone(test_config, mock_services, tmp_path):
     words = [_make_word("食べる", 1.0), _make_word("走る", 5.0), _make_word("飲む", 9.0)]
     processor = _processor(test_config, mock_services, strict=False)
 
