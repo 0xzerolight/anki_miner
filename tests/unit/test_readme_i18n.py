@@ -70,6 +70,11 @@ def test_slugify_matches_github_anchor_rules_including_non_ascii() -> None:
     assert ri.slugify('<p align="center">Mining Demo</p>') == "mining-demo"
 
 
+def test_slugify_keeps_combining_marks_like_github() -> None:
+    """Thai vowel and tone marks are combining characters, not alphanumerics."""
+    assert ri.slugify("การตั้งค่า (เบื้องต้น)") == "การตั้งค่า-เบื้องต้น"
+
+
 def test_split_fences_separates_code_from_prose() -> None:
     text = "intro\n```bash\npipx install anki-miner\n```\nouttro\n"
     prose, blocks = ri.split_fences(text)

@@ -16,11 +16,16 @@ import argparse
 import hashlib
 import re
 import sys
+import unicodedata
 from pathlib import Path
 
-from anki_miner.gui.i18n import available_languages
-
 ROOT = Path(__file__).resolve().parents[1]
+# This checkout's package, not wherever the shared editable install points (a
+# worktree run would otherwise render the main checkout's language list).
+sys.path.insert(0, str(ROOT))
+
+from anki_miner.gui.i18n import available_languages  # noqa: E402
+
 SOURCE = ROOT / "README.md"
 I18N_DIR = ROOT / "i18n"
 
@@ -103,7 +108,8 @@ def strip_nav(text: str) -> str:
 def slugify(heading: str) -> str:
     """GitHub's heading -> anchor slug, close enough for link validation."""
     text = TAG_RE.sub("", heading).strip().lower()
-    kept = [ch for ch in text if ch.isalnum() or ch in " -_"]
+    # Combining marks (Thai vowels and tone marks) stay, as on GitHub.
+    kept = [ch for ch in text if ch.isalnum() or unicodedata.category(ch).startswith("M") or ch in " -_"]
     return "".join(kept).replace(" ", "-")
 
 
