@@ -69,6 +69,9 @@ MIN_CLIP_SECONDS = 0.2
 #: animated picture's default; a shorter source is never enlarged.
 STILL_MAX_HEIGHT = 720
 
+#: libopus's bitrate ceiling for one channel; card clips are mono.
+OPUS_MONO_MAX_KBPS = 256
+
 #: Longest track ``wav_to_float32`` will decode. Deliberately generous — this
 #: stops the 20h-audiobook OOM-kill (float32 output ≈ 230 MB/hour; the ~7 GB
 #: peak at 20h was the OLD int16-buffer-plus-float32-buffer combined resident
@@ -1574,13 +1577,18 @@ class MediaExtractorService:
             cmd.extend(["-map", "0:a:0"])  # First audio stream
             self._warn_no_japanese_audio_once(video_file)
 
+        # libopus takes at most 256 kbps per channel, so a mono opus clip caps
+        # there; a saved 272-320 kbps opus setting would otherwise fail every cut.
+        bitrate = self.config.audio_bitrate
+        if encoder == "libopus":
+            bitrate = min(bitrate, OPUS_MONO_MAX_KBPS)
         cmd.extend(
             [
                 "-vn",  # No video
                 "-acodec",
                 encoder,
                 "-b:a",
-                f"{self.config.audio_bitrate}k",
+                f"{bitrate}k",
             ]
         )
 

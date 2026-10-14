@@ -1269,6 +1269,29 @@ class TestExtractAudio:
     def test_default_bitrate_is_96(self):
         assert AnkiMinerConfig().audio_bitrate == 96
 
+    @pytest.mark.parametrize(
+        ("audio_format", "bitrate", "expected"), [("opus", 320, "256k"), ("opus", 96, "96k"), ("mp3", 320, "320k")]
+    )
+    def test_opus_bitrate_capped_at_the_mono_ceiling(
+        self, test_config, video_file, tmp_path, audio_format, bitrate, expected
+    ):
+        """libopus refuses more than 256 kbps for one channel; a saved 320 kbps opus setting must still cut audio."""
+        cfg = dataclasses.replace(test_config, audio_format=audio_format, audio_bitrate=bitrate)
+        with patch(f"{MODULE}.ensure_directory"):
+            svc = MediaExtractorService(cfg)
+        svc._animated_encoder_ok.update(libopus=True, libmp3lame=True)
+        output_path = tmp_path / f"out.{audio_format}"
+        output_path.write_bytes(b"x")
+
+        with (
+            patch(f"{MODULE}.subprocess.Popen", return_value=_popen_mock()) as mock_popen,
+            patch.object(svc, "_get_japanese_audio_stream", return_value=None),
+        ):
+            svc._extract_audio(video_file, 1.0, 2.0, output_path)
+
+        cmd = mock_popen.call_args[0][0]
+        assert cmd[cmd.index("-b:a") + 1] == expected
+
     def test_mp3_is_mono(self, service, video_file, tmp_path):
         """A dialogue clip gains nothing from stereo, so MP3 is downmixed to mono too."""
         output_path = tmp_path / "out.mp3"
