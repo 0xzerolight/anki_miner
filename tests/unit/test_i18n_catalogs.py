@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
-from PyQt6.QtCore import QTranslator
+from PyQt6.QtCore import QCoreApplication, QTranslator
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui import i18n
@@ -54,6 +54,7 @@ LANGUAGES = [
     Lang("id", "Bahasa Indonesia", "id_ID", None),
     Lang("ja", "日本語", "ja_JP", None),
     Lang("vi", "Tiếng Việt", "vi_VN", None),
+    Lang("ar", "العربية", "ar_SA", 6),
 ]
 
 _ALL = [pytest.param(lang, id=lang.code) for lang in LANGUAGES]
@@ -166,3 +167,34 @@ def test_config_ui_language_round_trip_loads_catalog(qapp, lang):
     finally:
         for t in result:
             qapp.removeTranslator(t)
+
+
+# n -> the plural form Qt picks, from lrelease's rules for the catalog's locale.
+_PLURAL_SLOTS = {
+    "ar": {0: 0, 1: 1, 2: 2, 3: 3, 10: 3, 11: 4, 99: 4, 100: 5, 102: 5},
+}
+
+
+@pytest.mark.parametrize("code", sorted(_PLURAL_SLOTS))
+def test_numerus_slot_examples(qapp, code):
+    """Each count reaches the form written for its plural class (zero, one, two, few, many…)."""
+    root = ET.parse(TS_DIR / f"anki_miner_{code}.ts").getroot()
+    translator = QTranslator()
+    assert translator.load(str(TS_DIR / f"anki_miner_{code}.qm"))
+    qapp.installTranslator(translator)  # QTranslator.translate itself takes ASCII only in PyQt6
+    checked = 0
+    try:
+        for ctx in root.findall("context"):
+            context = ctx.find("name").text or ""
+            for msg in ctx.findall("message"):
+                if msg.get("numerus") != "yes":
+                    continue
+                source = msg.find("source").text or ""
+                forms = [form.text or "" for form in msg.find("translation").findall("numerusform")]
+                for n, slot in _PLURAL_SLOTS[code].items():
+                    got = QCoreApplication.translate(context, source, None, n)
+                    assert got == forms[slot].replace("%n", str(n)), (source, n)
+                checked += 1
+    finally:
+        qapp.removeTranslator(translator)
+    assert checked > 40
