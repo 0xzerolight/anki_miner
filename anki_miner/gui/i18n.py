@@ -57,6 +57,7 @@ _LANGUAGES: dict[str, str] = {
     "hu": "Magyar",
     "el": "Ελληνικά",
     "ro": "Română",
+    "tr": "Türkçe",
 }
 
 
