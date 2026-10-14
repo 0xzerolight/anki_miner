@@ -170,11 +170,18 @@ def test_transcribe_builds_model_with_correct_params(monkeypatch, tmp_path):
     assert constructed["compute_type"] == "int8"
     assert constructed["download_root"] == tmp_path
     assert constructed["local_files_only"] is True
-    # cpu_threads must be min(4, os.cpu_count() or 4)
     import os
 
-    expected_threads = min(4, os.cpu_count() or 4)
-    assert constructed["cpu_threads"] == expected_threads
+    assert constructed["cpu_threads"] == transcriber._ct2_cpu_threads(os.cpu_count())
+
+
+@pytest.mark.parametrize(
+    ("cpu_count", "expected"),
+    [(None, 4), (1, 1), (2, 2), (4, 4), (8, 4), (12, 6), (16, 8), (32, 8), (64, 8)],
+)
+def test_ct2_cpu_threads_is_about_one_per_core_capped_at_eight(cpu_count, expected):
+    """Logical count / 2 (about one per physical core), never below min(4, n), at most 8."""
+    assert transcriber._ct2_cpu_threads(cpu_count) == expected
 
 
 def test_transcribe_calls_model_transcribe_with_correct_params(monkeypatch, tmp_path):
