@@ -50,6 +50,7 @@ _LANGUAGES: dict[str, str] = {
     "sv": "Svenska",
     "da": "Dansk",
     "pl": "Polski",
+    "uk": "Українська",
 }
 
 
