@@ -46,6 +46,7 @@ _LANGUAGES: dict[str, str] = {
     "he": "עברית",
     "fa": "فارسی",
     "ca": "Català",
+    "nb": "Norsk bokmål",
 }
 
 
