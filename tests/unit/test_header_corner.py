@@ -120,13 +120,22 @@ def test_the_header_is_the_main_tab_rows_corner_widget(main_window):
 
 
 # Vacuity guards: the translated "Settings" main-tab label (MainWindow context).
-_SETTINGS_TAB_TEXT = {"de": "Einstellungen", "es": "Configuración"}
+_SETTINGS_TAB_TEXT = {
+    "de": "Einstellungen",
+    "es": "Configuración",
+    "hu": "Beállítások",
+    "nl": "Instellingen",
+    "uk": "Налаштування",
+    "lt": "Nustatymai",
+}
 
 
-@pytest.mark.parametrize("lang", ["en", "de", "es"])
+@pytest.mark.parametrize("lang", ["en", "de", "es", "hu", "nl", "uk", "lt"])
 def test_the_main_row_does_not_scroll_at_the_minimum_width(lang, qapp, qtbot, patch_heavy_init, test_config):
-    """D16: Spanish has the widest main tab row (581 px at 7e4e541f, audit
-    homes/RT-2es-out/tabbars.json); German has the longest header captions."""
+    """D16: Spanish had the widest main tab row (581 px at 7e4e541f, audit
+    homes/RT-2es-out/tabbars.json); German has the longest header captions.
+    Hungarian, Dutch, Ukrainian and Lithuanian have the widest rows of the
+    languages added 2026-10 (atlas hostile cell)."""
     from anki_miner.gui.app import compose_main_window
     from anki_miner.gui.constants import WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH
     from anki_miner.gui.i18n import install_translators
