@@ -44,7 +44,8 @@
 <a href="i18n/README.lt.md">Lietuvių</a> ·
 <a href="i18n/README.fi.md">Suomi</a> ·
 <a href="i18n/README.hu.md">Magyar</a> ·
-<a href="i18n/README.el.md">Ελληνικά</a>
+<a href="i18n/README.el.md">Ελληνικά</a> ·
+<a href="i18n/README.ro.md">Română</a>
 </p>
 <!-- i18n-nav:end -->
 

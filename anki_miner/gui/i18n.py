@@ -56,6 +56,7 @@ _LANGUAGES: dict[str, str] = {
     "fi": "Suomi",
     "hu": "Magyar",
     "el": "Ελληνικά",
+    "ro": "Română",
 }
 
 
