@@ -28,7 +28,7 @@ _OFFSET_TIPS = {
     BatchProcessingTab: "Adjust subtitle timing for all episodes (positive = later, negative = earlier)",
     DeckBuilderTab: "Adjust subtitle timing for the whole season (positive = later, negative = earlier)",
 }
-_OFFSET_RANGE = (SUBTITLE_OFFSET_MIN, SUBTITLE_OFFSET_MAX, 0.5)
+_OFFSET_RANGE = (SUBTITLE_OFFSET_MIN, SUBTITLE_OFFSET_MAX, 0.1)
 _TRANSLATION_TIP = "Shift the translation subtitles only (positive = later, negative = earlier)"
 
 
