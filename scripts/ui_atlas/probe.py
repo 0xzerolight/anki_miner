@@ -342,6 +342,18 @@ def check_05_horizontal_overflow(root: QWidget, screen: str) -> list[dict]:
                     "detail": f"right edge {x + ww}px past window width {w_max}px",
                 }
             )
+        elif x < -2:
+            # A right-to-left UI (ar/fa/he) overflows past the LEFT edge instead.
+            out.append(
+                {
+                    "checker": "05_horizontal_overflow",
+                    "screen": screen,
+                    "widget": f"{type(w).__name__}#{w.objectName()}",
+                    "left_edge": x,
+                    "window_w": w_max,
+                    "detail": f"left edge {x}px past the window's left edge",
+                }
+            )
     return out
 
 

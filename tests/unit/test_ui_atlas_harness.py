@@ -172,6 +172,24 @@ class TestTheNewCheckersAreNotVacuous:
         assert findings, "a run button pushed below the fold was not reported"
         assert findings[0]["severity"] == "below_fold"
 
+    def test_overflow_past_either_edge_is_reported(self, probe, qtbot):
+        """A right-to-left UI pushes an unshrinkable row past the LEFT edge."""
+        root = QWidget()
+        qtbot.addWidget(root)
+        root.resize(400, 120)
+        left, right, inside = QLabel("left", root), QLabel("right", root), QLabel("inside", root)
+        left.setGeometry(-60, 0, 120, 20)
+        right.setGeometry(340, 30, 120, 20)
+        inside.setGeometry(100, 60, 120, 20)
+        root.show()
+        qtbot.waitExposed(root)
+
+        details = [f["detail"] for f in probe.check_05_horizontal_overflow(root, "synthetic")]
+
+        assert any("left edge -60px" in d for d in details), details
+        assert any("right edge 460px" in d for d in details), details
+        assert len(details) == 2
+
     def test_an_on_screen_primary_is_not_reported(self, probe, qtbot):
         from anki_miner.gui.widgets.enhanced.modern_button import ModernButton
 

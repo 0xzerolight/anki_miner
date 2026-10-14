@@ -155,9 +155,10 @@ def main() -> int:
     ap.add_argument("--cell", required=True, choices=list(CELLS))
     ap.add_argument("--out", default=str(HERE / "artifacts"))
     ap.add_argument("--timeout-ms", type=int, default=180_000)
+    ap.add_argument("--language", help="UI language code overriding the cell's (e.g. ar for a right-to-left run)")
     args = ap.parse_args()
 
-    out_dir = Path(args.out) / args.cell
+    out_dir = Path(args.out) / (f"{args.cell}-{args.language}" if args.language else args.cell)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     isolation.preflight_instance_lock()
@@ -169,6 +170,7 @@ def main() -> int:
     saved = set_test_home(isolation.SCRATCH_HOME)  # module bindings + CONFIG_FILE
 
     width, height, font_scale, locale, first_run, pseudo = CELLS[args.cell]
+    locale = args.language or locale
     fake = isolation.prepared_config(language=locale, font_scale=font_scale, first_run=first_run)
     log(f"fake AnkiConnect at {fake.url}; cell={args.cell} {width}x{height} {locale} scale={font_scale}")
 
