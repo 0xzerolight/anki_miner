@@ -55,6 +55,7 @@ LANGUAGES = [
     Lang("ja", "日本語", "ja_JP", None),
     Lang("vi", "Tiếng Việt", "vi_VN", None),
     Lang("ar", "العربية", "ar_SA", 6),
+    Lang("yue", "粵語", "yue_HK", None, "YUE"),
 ]
 
 _ALL = [pytest.param(lang, id=lang.code) for lang in LANGUAGES]

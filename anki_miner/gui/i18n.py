@@ -37,6 +37,7 @@ _LANGUAGES: dict[str, str] = {
     "zh_tw": "繁體中文",
     "it": "Italiano",
     "ar": "العربية",
+    "yue": "粵語",
 }
 
 
