@@ -611,7 +611,7 @@ jobs:
         # runtime. No GPU/driver needed to build. NOTE: apt cannot supply glslc on
         # the pinned ubuntu-22.04 runner — shaderc is only packaged from 24.04, so
         # `apt-get install glslc` fails with "Unable to locate package glslc".
-        uses: jakoch/install-vulkan-sdk-action@37effcfa045411f8bfbbda26df2fd1b3bf3436fa # v1.6.0
+        uses: jakoch/install-vulkan-sdk-action@d17de7e2f5e50efb5d2123efed18497d3c58c533 # v1.7.0
         with:
           vulkan_version: "1.4.350.0"
           install_runtime: false
@@ -623,7 +623,7 @@ jobs:
         # immutable commit SHA (matches the SHA-pinned third-party actions in this
         # workflow) AND a Vulkan SDK version (constraints/asr-vulkan-build.txt).
         # The action sets VULKAN_SDK and puts glslc on PATH for the build step.
-        uses: jakoch/install-vulkan-sdk-action@37effcfa045411f8bfbbda26df2fd1b3bf3436fa # v1.6.0
+        uses: jakoch/install-vulkan-sdk-action@d17de7e2f5e50efb5d2123efed18497d3c58c533 # v1.7.0
         with:
           vulkan_version: "1.4.350.0"
           install_runtime: false
@@ -1185,7 +1185,7 @@ jobs:
 
       - name: Upload Windows installer smoke logs
         if: ${{ failure() && runner.os == 'Windows' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: ${{ matrix.artifact_name }}-installer-smoke-logs
           if-no-files-found: warn
@@ -1299,7 +1299,7 @@ jobs:
       # expected asset set and erroring on any miss closes that gap.
       - name: Upload artifact (Linux)
         if: runner.os == 'Linux'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: ${{ matrix.artifact_name }}
           if-no-files-found: error
@@ -1310,7 +1310,7 @@ jobs:
 
       - name: Upload artifact (macOS)
         if: runner.os == 'macOS'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: ${{ matrix.artifact_name }}
           if-no-files-found: error
@@ -1318,7 +1318,7 @@ jobs:
 
       - name: Upload artifact (Windows)
         if: runner.os == 'Windows'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: ${{ matrix.artifact_name }}
           if-no-files-found: error
@@ -1336,7 +1336,7 @@ jobs:
       contents: write
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           path: artifacts/
 
