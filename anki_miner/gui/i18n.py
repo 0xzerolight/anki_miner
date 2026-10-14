@@ -38,6 +38,7 @@ _LANGUAGES: dict[str, str] = {
     "it": "Italiano",
     "ar": "العربية",
     "yue": "粵語",
+    "sl": "Slovenščina",
 }
 
 

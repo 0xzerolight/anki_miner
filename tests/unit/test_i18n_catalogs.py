@@ -56,6 +56,7 @@ LANGUAGES = [
     Lang("vi", "Tiếng Việt", "vi_VN", None),
     Lang("ar", "العربية", "ar_SA", 6),
     Lang("yue", "粵語", "yue_HK", None, "YUE"),
+    Lang("sl", "Slovenščina", "sl_SI", 4),
 ]
 
 _ALL = [pytest.param(lang, id=lang.code) for lang in LANGUAGES]
@@ -173,6 +174,7 @@ def test_config_ui_language_round_trip_loads_catalog(qapp, lang):
 # n -> the plural form Qt picks, from lrelease's rules for the catalog's locale.
 _PLURAL_SLOTS = {
     "ar": {0: 0, 1: 1, 2: 2, 3: 3, 10: 3, 11: 4, 99: 4, 100: 5, 102: 5},
+    "sl": {1: 0, 101: 0, 2: 1, 102: 1, 3: 2, 4: 2, 0: 3, 5: 3, 11: 3},
 }
 
 

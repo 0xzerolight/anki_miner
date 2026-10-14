@@ -26,7 +26,8 @@
 <a href="i18n/README.zh_tw.md">繁體中文</a> ·
 <a href="i18n/README.it.md">Italiano</a> ·
 <a href="i18n/README.ar.md">العربية</a> ·
-<a href="i18n/README.yue.md">粵語</a>
+<a href="i18n/README.yue.md">粵語</a> ·
+<a href="i18n/README.sl.md">Slovenščina</a>
 </p>
 <!-- i18n-nav:end -->
 
