@@ -40,7 +40,8 @@
 <a href="i18n/README.da.md">Dansk</a> ·
 <a href="i18n/README.pl.md">Polski</a> ·
 <a href="i18n/README.uk.md">Українська</a> ·
-<a href="i18n/README.hr.md">Hrvatski</a>
+<a href="i18n/README.hr.md">Hrvatski</a> ·
+<a href="i18n/README.lt.md">Lietuvių</a>
 </p>
 <!-- i18n-nav:end -->
 
