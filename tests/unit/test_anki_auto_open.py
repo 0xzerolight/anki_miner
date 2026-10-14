@@ -17,9 +17,25 @@ from anki_miner.gui.controllers import anki_auto_open as mod
 @pytest.fixture
 def launches(monkeypatch):
     calls: list[list[str]] = []
+    monkeypatch.setattr(mod, "_launch_suppressed", lambda: False)
     monkeypatch.setattr(mod, "anki_launch_command", lambda: ["anki"])
     monkeypatch.setattr(mod, "launch_anki", lambda command: calls.append(command) or True)
     return calls
+
+
+def test_an_offscreen_session_never_starts_anki(qtbot, monkeypatch, caplog):
+    """pytest, /verify and the e2e harness run offscreen; none may start the real Anki."""
+    started: list[list[str]] = []
+    monkeypatch.setattr(mod, "anki_launch_command", lambda: ["anki"])
+    monkeypatch.setattr(mod, "launch_anki", lambda command: started.append(command) or True)
+    parent, opener, checks, ready = _opener(qtbot, [(True, "ok")])
+
+    with caplog.at_level("INFO", logger=mod.__name__):
+        opener.open()
+    qtbot.wait(50)
+
+    assert started == [] and checks == [] and ready == []
+    assert "offscreen" in caplog.text
 
 
 def _opener(qtbot, answers, *, attempts=5, check=None):
@@ -66,6 +82,7 @@ def test_opens_once_per_launch(qtbot, launches):
 
 def test_no_install_found_starts_nothing(qtbot, monkeypatch):
     started: list[list[str]] = []
+    monkeypatch.setattr(mod, "_launch_suppressed", lambda: False)
     monkeypatch.setattr(mod, "anki_launch_command", lambda: None)
     monkeypatch.setattr(mod, "launch_anki", lambda command: started.append(command) or True)
     parent, opener, checks, ready = _opener(qtbot, [(True, "ok")])
@@ -77,6 +94,7 @@ def test_no_install_found_starts_nothing(qtbot, monkeypatch):
 
 
 def test_refused_start_does_not_poll(qtbot, monkeypatch):
+    monkeypatch.setattr(mod, "_launch_suppressed", lambda: False)
     monkeypatch.setattr(mod, "anki_launch_command", lambda: ["anki"])
     monkeypatch.setattr(mod, "launch_anki", lambda command: False)
     parent, opener, checks, ready = _opener(qtbot, [(True, "ok")])

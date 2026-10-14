@@ -263,9 +263,11 @@ class AnkiMinerConfig:
     )
     ankiconnect_url: str = "http://127.0.0.1:8765"
     # Start Anki at launch when the startup check finds AnkiConnect unreachable
-    # (gui/controllers/anki_auto_open.py). Opt-in. Portable, not language-scoped:
-    # one preference for every mining language.
-    auto_open_anki: bool = False
+    # (gui/controllers/anki_auto_open.py). On by default (fresh installs; a saved
+    # config keeps its value); a missing install or an offscreen session starts
+    # nothing. Portable, not language-scoped: one preference for every mining
+    # language.
+    auto_open_anki: bool = True
     anki_tags: str = "auto-mined"  # Whitespace-separated tags applied to every mined card; empty string means no tags
     # Deck names excluded from known-words detection (Issue #38). Notes in these
     # decks (and their subdecks) are dropped from the findNotes query, so their

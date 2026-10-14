@@ -88,6 +88,7 @@ def _disabling_gui_config(config: AnkiMinerConfig) -> AnkiMinerConfig:
         first_run_shortcut_done=True,
         first_run_setup_done=True,
         last_known_version=__version__,
+        auto_open_anki=False,
     )
 
 

@@ -207,10 +207,10 @@ class TestYouTubeConfig:
         config = AnkiMinerConfig()
         assert config.ytdlp_prerelease is False
 
-    def test_auto_open_anki_defaults_false(self):
-        """Starting another program at launch is opt-in."""
+    def test_auto_open_anki_defaults_true(self):
+        """Anki starts at launch when it is closed; nothing can be mined without it."""
         config = AnkiMinerConfig()
-        assert config.auto_open_anki is False
+        assert config.auto_open_anki is True
 
 
 def test_dictionary_chain_default():

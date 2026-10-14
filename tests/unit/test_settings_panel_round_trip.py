@@ -77,7 +77,7 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
             "audio": "AU",
         },
         strict_card_order=False,  # T10: moved here from FilteringSettingsPanel; default is True
-        auto_open_anki=True,
+        auto_open_anki=False,  # default is True
         # --- MediaSettingsPanel ---
         audio_format="opus",
         audio_bitrate=128,  # default is 96
