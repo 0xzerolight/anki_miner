@@ -6,12 +6,15 @@ falls back to English at runtime, and `scripts/i18n.py check` is the guard that
 flags newly-added strings missing from a catalog), QM loadability, and loading
 through `install_translators`.
 
-Languages with a plural rule (`numerus_forms` == 2 or 3) additionally assert the
-translated numerus form count: Russian needs three forms (one/few/many); the
-two-form languages (de/fr/es/it/pt_br) need two. Single-form languages
-(zh_cn/zh_tw/vi/id/ja — `%n` is just the number) have no numerus check.
+Languages with a plural rule (`numerus_forms` set) additionally assert the
+translated numerus form count, which is what lrelease's rule for the declared
+locale expects: two forms for most European languages, three for ru/uk/pl/hr/lt/ro,
+four for sl, six for ar. Single-form languages (ja, zh_cn/zh_tw, yue, ko, vi, id,
+th, tr, hu, fa — `%n` is just the number) have no numerus check.
+`test_numerus_slot_examples` also proves that counts reach the right form in the
+compiled ar and sl catalogs.
 
-Mixed-case region codes (pt_br, zh_cn, zh_tw) add a config-normalizer round-trip
+Mixed-case region codes (pt_br, pt_pt, zh_cn, zh_tw; and yue) add a config-normalizer round-trip
 guard: `AnkiMinerConfig.__post_init__` lowercases `ui_language`, so the catalog
 filename/key MUST be lowercase or the shipped app silently falls back to English.
 
