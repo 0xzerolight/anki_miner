@@ -53,6 +53,7 @@ _LANGUAGES: dict[str, str] = {
     "uk": "Українська",
     "hr": "Hrvatski",
     "lt": "Lietuvių",
+    "fi": "Suomi",
 }
 
 

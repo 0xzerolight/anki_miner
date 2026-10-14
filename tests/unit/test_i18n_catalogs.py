@@ -71,6 +71,7 @@ LANGUAGES = [
     Lang("uk", "Українська", "uk_UA", 3),
     Lang("hr", "Hrvatski", "hr_HR", 3),
     Lang("lt", "Lietuvių", "lt_LT", 3),
+    Lang("fi", "Suomi", "fi_FI", 2),
 ]
 
 _ALL = [pytest.param(lang, id=lang.code) for lang in LANGUAGES]
