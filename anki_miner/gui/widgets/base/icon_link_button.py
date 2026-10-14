@@ -75,11 +75,17 @@ class IconLinkButton(QToolButton):
         mark = self.iconSize()
         x = (self.width() - self._content_width()) // 2
         mark_rect = QRect(x, (self.height() - mark.height()) // 2, mark.width(), mark.height())
+        text_left = mark_rect.right() + 1 + _ICON_TEXT_GAP
+        text_rect = QRect(text_left, 0, self.width() - text_left, self.height())
+        # Laid out left to right above; a right-to-left UI mirrors both rects, and
+        # drawItemText mirrors AlignLeft to the text rect's right edge, so the
+        # label ends next to the mark instead of against the button's border.
+        direction = self.layoutDirection()
+        mark_rect = QStyle.visualRect(direction, self.rect(), mark_rect)
+        text_rect = QStyle.visualRect(direction, self.rect(), text_rect)
         mode = QIcon.Mode.Normal if self.isEnabled() else QIcon.Mode.Disabled
         self.icon().paint(painter, mark_rect, Qt.AlignmentFlag.AlignCenter, mode)
 
-        text_left = mark_rect.right() + 1 + _ICON_TEXT_GAP
-        text_rect = QRect(text_left, 0, self.width() - text_left, self.height())
         painter.drawItemText(
             text_rect,
             int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter),

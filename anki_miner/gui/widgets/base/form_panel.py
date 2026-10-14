@@ -208,10 +208,14 @@ class FormPanel(SettingAnchorHost, QFrame):
         label = QLabel(f"{text}:")
         label.setObjectName("field-label")
         make_label_fit_text(label)
-        # Right-aligned inside the shared column width _apply_field_cap gives
-        # every label (C02); QFormLayout's own label alignment only positions
-        # the label box, not the text inside a box wider than the text.
-        label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        # Aligned toward the field inside the shared column width
+        # _apply_field_cap gives every label (C02); QFormLayout's own label
+        # alignment only positions the label box, not the text inside a box
+        # wider than the text. Absolute, because QLabel mirrors alignment by its
+        # TEXT's direction: a Latin-only label ("Anki:") in a right-to-left UI
+        # would otherwise sit at the far edge of the column, away from its field.
+        toward_field = Qt.AlignmentFlag.AlignLeft if label.isRightToLeft() else Qt.AlignmentFlag.AlignRight
+        label.setAlignment(toward_field | Qt.AlignmentFlag.AlignAbsolute | Qt.AlignmentFlag.AlignVCenter)
         return label
 
     def add_field(

@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QPalette
 from PyQt6.QtWidgets import QApplication
 
@@ -79,6 +80,20 @@ FONT_SCALE_MAX: float = 2.0
 _THEME_JSON_MAX_BYTES = 256 * 1024
 _QSS_MAX_BYTES = 2 * 1024 * 1024
 _THEME_DIRECTORY_ENTRY_CAP = 256
+
+
+_BORDER_SIDE_RE = re.compile(r"\bborder-(top-|bottom-)?(left|right)\b")
+
+
+def mirror_border_sides(qss: str) -> str:
+    """Swap left and right border edges and corners, for a right-to-left UI.
+
+    Qt mirrors QSS padding and subcontrol positions in a right-to-left layout,
+    but not ``border-left``/``border-right`` or the corner radii, so a selection
+    marker drawn as a left border (the Settings navigator) would stay on the
+    physical left, the inner edge of a mirrored row.
+    """
+    return _BORDER_SIDE_RE.sub(lambda m: f"border-{m.group(1) or ''}{'right' if m.group(2) == 'left' else 'left'}", qss)
 
 
 def _clamp_font_scale(scale: float) -> float:
@@ -494,7 +509,9 @@ class Theme:
         if mode is None:
             mode = cls._current_mode
 
-        cached = cls._compiled_qss.get(mode)
+        rtl = QApplication.layoutDirection() == Qt.LayoutDirection.RightToLeft
+        key = f"{mode}|rtl" if rtl else mode
+        cached = cls._compiled_qss.get(key)
         if cached is not None:
             return cached
 
@@ -506,7 +523,9 @@ class Theme:
                 cls._qss_template = ""
 
         compiled = cls._substitute_variables(cls._qss_template, mode)
-        cls._compiled_qss[mode] = compiled
+        if rtl:
+            compiled = mirror_border_sides(compiled)
+        cls._compiled_qss[key] = compiled
         return compiled
 
     @classmethod

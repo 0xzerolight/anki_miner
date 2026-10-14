@@ -151,6 +151,11 @@ class ChainSourceRow(QWidget):
 
         self.title_label = ElidingLabel(spec.title)
         self.title_label.setObjectName("chain-row-title")
+        # Leading edge of the UI, not of the text: a resource name is Latin
+        # ("jmdict-english"), and QLabel would align it left in a right-to-left
+        # UI, away from its own status line below.
+        leading = Qt.AlignmentFlag.AlignRight if self.title_label.isRightToLeft() else Qt.AlignmentFlag.AlignLeft
+        self.title_label.setAlignment(leading | Qt.AlignmentFlag.AlignAbsolute | Qt.AlignmentFlag.AlignVCenter)
         text.addWidget(self.title_label)
 
         # The second line is built even when it is empty, so every row in a list
