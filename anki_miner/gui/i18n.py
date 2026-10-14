@@ -39,6 +39,12 @@ _LANGUAGES: dict[str, str] = {
 }
 
 
+# Qt's own catalog (qtbase: dialog buttons, file picker) for UI languages Qt ships
+# none for, by the nearest written form. Languages missing here and from Qt
+# (el, th, lt, ro, sl, nb) keep Qt's built-in strings in English.
+_QT_CATALOG_FALLBACK: dict[str, str] = {"yue": "zh_TW", "pt_pt": "pt_BR"}
+
+
 def translations_dir() -> Path:
     """Directory holding the bundled .ts/.qm catalogs (frozen-safe)."""
     return get_resource_dir() / "translations"
@@ -47,6 +53,11 @@ def translations_dir() -> Path:
 def available_languages() -> dict[str, str]:
     """Map of selectable language code → display name."""
     return dict(_LANGUAGES)
+
+
+def qt_catalog_locale(language: str) -> QLocale:
+    """Locale whose qtbase catalog serves the UI language ``language``."""
+    return QLocale(_QT_CATALOG_FALLBACK.get(language, language))
 
 
 def install_translators(app: QApplication, language: str) -> list[QTranslator]:
@@ -58,6 +69,10 @@ def install_translators(app: QApplication, language: str) -> list[QTranslator]:
     installed: list[QTranslator] = []
     if not language:
         return installed
+
+    # Right-to-left for ar/fa/he, set from the code itself: Qt also flips the
+    # app when qtbase_<lang>.qm loads, but only then, and that file is optional.
+    app.setLayoutDirection(QLocale(language).textDirection())
 
     app_translator = QTranslator()
     if app_translator.load(f"anki_miner_{language}", str(translations_dir())):
@@ -75,7 +90,7 @@ def install_translators(app: QApplication, language: str) -> list[QTranslator]:
     # absent under PyInstaller. Failure leaves Qt's built-ins in English.
     qt_translator = QTranslator()
     qt_path = QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)
-    if qt_translator.load(QLocale(language), "qtbase", "_", qt_path):
+    if qt_translator.load(qt_catalog_locale(language), "qtbase", "_", qt_path):
         app.installTranslator(qt_translator)
         installed.append(qt_translator)
 

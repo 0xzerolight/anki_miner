@@ -121,3 +121,34 @@ def test_a_japanese_sentence_picker_is_never_touched(qtbot):
     qtbot.addWidget(dialog)
 
     assert not dialog.sentence_list.testAttribute(Qt.WidgetAttribute.WA_SetLayoutDirection)
+
+
+def test_a_japanese_word_and_its_form_keep_left_to_right_under_an_rtl_interface(qtbot, qapp):
+    """Arabic UI, Japanese mining: the word leads from the left, its form follows rightwards."""
+    qapp.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+    try:
+        word = TokenizedWord(
+            surface="食べた",
+            lemma="食べる",
+            reading="タベタ",
+            sentence="ご飯を食べた。",
+            start_time=0.0,
+            end_time=1.0,
+            duration=1.0,
+            pos="動詞",
+        )
+        dialog = WordCurationDialog([word], content_style=JA)
+        qtbot.addWidget(dialog)
+        table = dialog.table
+        index = table.model().index(0, _WORD_COL)
+        table.item(0, _WORD_COL).setData(module._FORM_ROLE, "食べた")
+        delegate = table.itemDelegateForIndex(index)
+        assert delegate._form(index) == "食べた"
+
+        with_form = ink_span(paint_cell(delegate, table, index))
+        word_only = ink_span(paint_cell(ContentCellDelegate(table, lambda: JA), table, index))
+    finally:
+        qapp.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+
+    assert with_form[0] == word_only[0], "the word left the leading (left) edge"
+    assert with_form[1] > word_only[1], "the grey form is not to the word's right"

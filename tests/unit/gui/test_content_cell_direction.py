@@ -149,3 +149,43 @@ def test_the_known_words_list_takes_the_content_direction(qtbot, tmp_path):
 
     assert rtl.word_list.layoutDirection() == Qt.LayoutDirection.RightToLeft
     assert not ltr.word_list.testAttribute(Qt.WidgetAttribute.WA_SetLayoutDirection)
+
+
+# --- right-to-left UI (ar/fa/he interface) around left-to-right content -------
+
+
+@pytest.fixture
+def rtl_app(qapp):
+    """The interface in Arabic: the whole application lays out right to left."""
+    qapp.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+    yield qapp
+    qapp.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+
+
+def test_ltr_content_stays_ltr_under_an_rtl_interface(qtbot, rtl_app):
+    content = QListWidget()
+    qtbot.addWidget(content)
+    apply_content_direction(content, JA)
+    assert content.layoutDirection() == Qt.LayoutDirection.LeftToRight
+
+
+def test_rtl_content_stays_rtl_under_an_rtl_interface(qtbot, rtl_app):
+    content = QListWidget()
+    qtbot.addWidget(content)
+    apply_content_direction(content, AR)
+    assert content.layoutDirection() == Qt.LayoutDirection.RightToLeft
+
+
+def test_an_ltr_cell_is_a_left_to_right_paragraph_in_an_rtl_view(qtbot, rtl_app):
+    """A Japanese sentence's 。 stays at its logical end when the chrome is mirrored."""
+    table = _table(qtbot, "ご飯を食べた", "ご飯を食べた。")
+    assert table.layoutDirection() == Qt.LayoutDirection.RightToLeft
+    index = table.model().index(0, 0)
+    option = QStyleOptionViewItem()
+    table.initViewItemOption(option)
+    ContentCellDelegate(table, lambda: JA).initStyleOption(option, index)
+    assert option.direction == Qt.LayoutDirection.LeftToRight
+
+    bare, stopped = _spans(table, ContentCellDelegate(table, lambda: JA))
+    assert stopped[0] == bare[0], "the leading (left) edge moved"
+    assert stopped[1] > bare[1], "the 。 is not at the right"

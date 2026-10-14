@@ -70,3 +70,35 @@ def test_number_locale_keeps_the_thousands_comma(comma_system_locale):
     i18n.install_number_locale()
 
     assert QLocale().toString(184_200) == "184,200"
+
+
+def _uninstall(app: QApplication, installed: list) -> None:
+    for translator in installed:
+        app.removeTranslator(translator)
+
+
+@pytest.mark.parametrize("code", ["ar", "fa", "he"])
+def test_an_rtl_language_lays_the_app_out_right_to_left(qapp: QApplication, code: str):
+    """Set from the code: no anki_miner_<code>.qm has to exist for the flip."""
+    installed = i18n.install_translators(qapp, code)
+    try:
+        assert qapp.layoutDirection() == Qt.LayoutDirection.RightToLeft
+    finally:
+        _uninstall(qapp, installed)
+
+
+@pytest.mark.parametrize("code", ["ja", "en", "zz"])
+def test_an_ltr_or_unknown_language_keeps_left_to_right(qapp: QApplication, code: str):
+    qapp.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+    installed = i18n.install_translators(qapp, code)
+    try:
+        assert qapp.layoutDirection() == Qt.LayoutDirection.LeftToRight
+    finally:
+        _uninstall(qapp, installed)
+
+
+@pytest.mark.parametrize(
+    ("code", "qt_name"), [("yue", "zh_TW"), ("pt_pt", "pt_BR"), ("ko", "ko_KR"), ("pt_br", "pt_BR")]
+)
+def test_qt_catalog_locale_falls_back_to_the_nearest_written_form(code: str, qt_name: str):
+    assert i18n.qt_catalog_locale(code).name() == qt_name

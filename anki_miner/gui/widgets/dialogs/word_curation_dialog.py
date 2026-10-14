@@ -194,11 +194,12 @@ class _WordFormDelegate(ContentCellDelegate):
         rtl = opt.direction == Qt.LayoutDirection.RightToLeft
         advance = metrics.horizontalAdvance(word + " ")
         painter.save()
-        if rtl:
-            # AlignLeft is the LEADING edge: on an rtl painter Qt mirrors it and
-            # lays each run out right to left, so the word sits on the right and
-            # its form follows it leftwards.
-            painter.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        # AlignLeft is the LEADING edge: on an rtl painter Qt mirrors it and lays
+        # each run out right to left, so the word sits on the right and its form
+        # follows it leftwards. Pinned both ways: an ltr word in a right-to-left
+        # UI would otherwise take the painter's (chrome) direction and land on
+        # the right while `rest` still starts from the left.
+        painter.setLayoutDirection(opt.direction)
         painter.setFont(opt.font)
         painter.setPen(opt.palette.color(QPalette.ColorRole.HighlightedText if selected else QPalette.ColorRole.Text))
         painter.drawText(text_rect, flags, word)

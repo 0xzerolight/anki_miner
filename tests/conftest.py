@@ -418,6 +418,27 @@ def _instant_motion(request):
 
 
 @pytest.fixture(autouse=True)
+def _restore_layout_direction():
+    """Put the application back to left-to-right after a test that flipped it.
+
+    ``install_translators`` for ar/fa/he (and any test that sets it directly)
+    turns the whole QApplication right-to-left; under ``--dist loadfile`` every
+    later file on that worker would inherit it and paint mirrored. Restored only
+    when it changed, unlike the palette (see the note above): an unchanged
+    direction sends no LayoutDirectionChange to live widgets.
+    """
+    yield
+    if "PyQt6.QtWidgets" not in sys.modules:
+        return
+    from PyQt6.QtCore import Qt
+    from PyQt6.QtWidgets import QApplication
+
+    app = QApplication.instance()
+    if app is not None and app.layoutDirection() != Qt.LayoutDirection.LeftToRight:
+        app.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+
+
+@pytest.fixture(autouse=True)
 def _drain_qt_deletes():
     """Flush pending Qt deletions after each test to prevent cross-test leaks.
 

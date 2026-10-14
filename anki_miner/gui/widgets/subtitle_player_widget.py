@@ -280,6 +280,9 @@ class SubtitlePlayerWidget(QWidget):
         # Position slider and time display
         position_layout = QHBoxLayout()
         self.position_slider = QSlider(Qt.Orientation.Horizontal)
+        # Time runs left to right in every UI language, like the clip editor's
+        # hand-painted range below it; a mirrored slider would disagree with it.
+        self.position_slider.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
         self.position_slider.setRange(0, 0)
         self.position_slider.sliderMoved.connect(self._on_slider_moved)
 

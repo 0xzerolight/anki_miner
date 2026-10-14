@@ -20,7 +20,7 @@ from collections.abc import Callable
 
 from PyQt6.QtCore import QModelIndex, Qt
 from PyQt6.QtGui import QFont
-from PyQt6.QtWidgets import QAbstractItemView, QStyledItemDelegate, QStyleOptionViewItem, QWidget
+from PyQt6.QtWidgets import QAbstractItemView, QApplication, QStyledItemDelegate, QStyleOptionViewItem, QWidget
 
 from anki_miner.gui.resources.styles._variables import FONT_SIZES
 from anki_miner.gui.utils.fonts import (
@@ -49,14 +49,17 @@ def _families_for(style: ContentTextStyle) -> tuple[str, ...]:
 
 
 def apply_content_direction(widget: QWidget, style: ContentTextStyle) -> None:
-    """Flip mined content right-to-left for an rtl language, and back (S21).
+    """Lay mined content out in the mining language's direction (S21).
 
-    Only the content widget flips, with the children it owns (a list's viewport
-    and scrollbar); the application and its chrome stay left-to-right. Leaving
-    rtl UNSETS the direction rather than forcing LeftToRight: the widget goes
-    back to inheriting its parent's, the exact state of a widget that was never
-    flipped. A widget that never was is not touched, so the ja and ltr paths
-    make no Qt call here.
+    Only the content widget follows it, with the children it owns (a list's
+    viewport and scrollbar); the chrome follows the UI language. Under a
+    left-to-right UI, leaving rtl UNSETS the direction rather than forcing
+    LeftToRight: the widget goes back to inheriting its parent's, the exact state
+    of a widget that was never flipped, and a widget that never was is not
+    touched, so the ja and ltr paths make no Qt call here. Under a right-to-left
+    UI (ar/fa/he) left-to-right content is pinned LeftToRight, or it would
+    inherit the chrome's direction and a Japanese sentence's 。 would jump to
+    the wrong end.
 
     Public for the lists whose every row is mined content (the curator's
     sentence picker, Known Words): they flip whole, like the subtitle viewer's
@@ -64,6 +67,8 @@ def apply_content_direction(widget: QWidget, style: ContentTextStyle) -> None:
     """
     if style.direction == "rtl":
         widget.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+    elif QApplication.layoutDirection() == Qt.LayoutDirection.RightToLeft:
+        widget.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
     elif (
         widget.testAttribute(Qt.WidgetAttribute.WA_SetLayoutDirection)
         and widget.layoutDirection() == Qt.LayoutDirection.RightToLeft
@@ -87,15 +92,17 @@ class ContentCellDelegate(QStyledItemDelegate):
     content columns sit beside chrome ones (counts, field names, timestamps):
     install it on the columns that carry :func:`content_cell_font`. Qt's item
     painter takes a cell's paragraph direction from the option, which the view
-    fills from its own (left-to-right) chrome direction, so an rtl sentence
-    was a left-to-right paragraph with its final punctuation at the wrong end.
-    An rtl cell here is a right-to-left paragraph on the cell's leading (right)
-    edge, and elides at its logical end, so its start stays in view.
+    fills from its own chrome direction, so an rtl sentence in a left-to-right
+    UI was a left-to-right paragraph with its final punctuation at the wrong
+    end (and an ltr sentence in a right-to-left UI the mirror of that). An rtl
+    cell here is a right-to-left paragraph on the cell's leading (right) edge,
+    and elides at its logical end, so its start stays in view; an ltr cell is
+    always a left-to-right paragraph.
 
     ``style`` is read at paint time: a screen whose mining language switches
     in-session passes ``lambda: self._content_style`` and never re-installs.
-    An ltr style leaves the option exactly as the base built it, so ja and
-    every ltr cell paint byte-identically.
+    In a left-to-right UI an ltr style leaves the option exactly as the base
+    built it, so ja and every ltr cell paint byte-identically.
     """
 
     def __init__(self, view: QAbstractItemView, style: Callable[[], ContentTextStyle]) -> None:
@@ -106,8 +113,9 @@ class ContentCellDelegate(QStyledItemDelegate):
         self, option: QStyleOptionViewItem | None, index: QModelIndex
     ) -> None:
         super().initStyleOption(option, index)
-        if option is not None and self._style().direction == "rtl":
-            option.direction = Qt.LayoutDirection.RightToLeft
+        if option is not None:
+            rtl = self._style().direction == "rtl"
+            option.direction = Qt.LayoutDirection.RightToLeft if rtl else Qt.LayoutDirection.LeftToRight
 
 
 def apply_content_font(widget: QWidget, style: ContentTextStyle, *, role: str = JAPANESE_BODY) -> None:
