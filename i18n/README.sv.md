@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:7abee532738e1a66 -->
+<!-- i18n-source: README.md sha256:c4e52e2c50a3b22d -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -41,7 +41,8 @@
 <b>Svenska</b> ·
 <a href="README.da.md">Dansk</a> ·
 <a href="README.pl.md">Polski</a> ·
-<a href="README.uk.md">Українська</a>
+<a href="README.uk.md">Українська</a> ·
+<a href="README.hr.md">Hrvatski</a>
 </p>
 <!-- i18n-nav:end -->
 
