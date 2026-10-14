@@ -36,12 +36,20 @@ def test_the_rate_tile_is_gone(qtbot):
     assert "Cards Created" in labels
 
 
-def test_undo_counts_cards(qtbot):
-    dialog = ResultsDialog(_result(42), undo_callback=lambda ids: len(ids))
-    qtbot.addWidget(dialog)
-    assert dialog._undo_button.text() == "Undo (42 cards)"
-    dialog._on_undo_done(1)
-    assert dialog._undo_button.text() == "Undone (1 card deleted)"
+def test_undo_counts_cards(qtbot, qapp):
+    from anki_miner.gui import i18n
+
+    # The singular/plural wording lives in the English catalogue (E14).
+    installed = i18n.install_translators(qapp, "en")
+    try:
+        dialog = ResultsDialog(_result(42), undo_callback=lambda ids: len(ids))
+        qtbot.addWidget(dialog)
+        assert dialog._undo_button.text() == "Undo (42 cards)"
+        dialog._on_undo_done(1)
+        assert dialog._undo_button.text() == "Undone (1 card deleted)"
+    finally:
+        for translator in installed:
+            qapp.removeTranslator(translator)
 
 
 def test_the_confirmation_counts_cards(qtbot, monkeypatch):
