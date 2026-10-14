@@ -21,50 +21,23 @@ import tempfile
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+# This checkout's package, not wherever the shared editable install points (a
+# worktree run would otherwise read the main checkout's language registry).
+sys.path.insert(0, str(REPO_ROOT))
+
+from anki_miner.gui.i18n import available_languages  # noqa: E402
+
 SRC_ROOT = REPO_ROOT / "anki_miner"
 TS_DIR = SRC_ROOT / "gui" / "resources" / "translations"
-EN_TS = TS_DIR / "anki_miner_en.ts"
-EN_QM = TS_DIR / "anki_miner_en.qm"
-JA_TS = TS_DIR / "anki_miner_ja.ts"
-JA_QM = TS_DIR / "anki_miner_ja.qm"
-RU_TS = TS_DIR / "anki_miner_ru.ts"
-RU_QM = TS_DIR / "anki_miner_ru.qm"
-FR_TS = TS_DIR / "anki_miner_fr.ts"
-FR_QM = TS_DIR / "anki_miner_fr.qm"
-ES_TS = TS_DIR / "anki_miner_es.ts"
-ES_QM = TS_DIR / "anki_miner_es.qm"
-DE_TS = TS_DIR / "anki_miner_de.ts"
-DE_QM = TS_DIR / "anki_miner_de.qm"
-PT_BR_TS = TS_DIR / "anki_miner_pt_br.ts"
-PT_BR_QM = TS_DIR / "anki_miner_pt_br.qm"
-ID_TS = TS_DIR / "anki_miner_id.ts"
-ID_QM = TS_DIR / "anki_miner_id.qm"
-VI_TS = TS_DIR / "anki_miner_vi.ts"
-VI_QM = TS_DIR / "anki_miner_vi.qm"
-ZH_CN_TS = TS_DIR / "anki_miner_zh_cn.ts"
-ZH_CN_QM = TS_DIR / "anki_miner_zh_cn.qm"
-ZH_TW_TS = TS_DIR / "anki_miner_zh_tw.ts"
-ZH_TW_QM = TS_DIR / "anki_miner_zh_tw.qm"
-IT_TS = TS_DIR / "anki_miner_it.ts"
-IT_QM = TS_DIR / "anki_miner_it.qm"
 
-# Every shipped catalog as (source .ts, compiled .qm). "en" is the source
-# language (all entries unfinished); the rest carry translations. pylupdate6
-# updates-or-creates a .ts, preserving existing translations on merge, so the
-# same primitive regenerates en and syncs translated catalogs without data loss.
+# Every shipped catalog as (source .ts, compiled .qm), from the UI language
+# registry, so a registered language is always synced and compiled. "en" (the
+# registry's first key) is the source language (all entries unfinished); the
+# rest carry translations. pylupdate6 updates-or-creates a .ts, preserving
+# existing translations on merge, so the same primitive regenerates en and
+# syncs translated catalogs without data loss.
 _CATALOGS: list[tuple[Path, Path]] = [
-    (EN_TS, EN_QM),
-    (JA_TS, JA_QM),
-    (RU_TS, RU_QM),
-    (FR_TS, FR_QM),
-    (ES_TS, ES_QM),
-    (DE_TS, DE_QM),
-    (PT_BR_TS, PT_BR_QM),
-    (ID_TS, ID_QM),
-    (VI_TS, VI_QM),
-    (ZH_CN_TS, ZH_CN_QM),
-    (ZH_TW_TS, ZH_TW_QM),
-    (IT_TS, IT_QM),
+    (TS_DIR / f"anki_miner_{code}.ts", TS_DIR / f"anki_miner_{code}.qm") for code in available_languages()
 ]
 
 

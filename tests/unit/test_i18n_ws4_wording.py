@@ -7,8 +7,10 @@ from pathlib import Path
 
 import pytest
 
+from anki_miner.gui.i18n import available_languages
+
 TS_DIR = Path(__file__).resolve().parents[2] / "anki_miner" / "gui" / "resources" / "translations"
-TARGETS = ("de", "es", "fr", "id", "it", "ja", "pt_br", "ru", "vi", "zh_cn", "zh_tw")
+TARGETS = tuple(code for code in available_languages() if code != "en")
 
 
 def _translation(lang: str, context: str, source: str) -> str:

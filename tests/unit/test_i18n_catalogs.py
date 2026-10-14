@@ -19,6 +19,7 @@ German keeps an extra completeness gate in `test_i18n_german.py`; `de` is also
 covered by the generic rows here (harmless double coverage).
 """
 
+import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
@@ -72,6 +73,28 @@ def _sources_by_context(ts_path: Path) -> dict[str, set[str]]:
 @pytest.mark.parametrize("lang", _ALL)
 def test_language_is_registered(lang):
     assert i18n.available_languages()[lang.code] == lang.display_name
+
+
+def test_every_registered_language_has_a_row():
+    assert set(i18n.available_languages()) - {"en"} == {lang.code for lang in LANGUAGES}
+
+
+_BRACE = re.compile(r"\{[A-Za-z_][A-Za-z0-9_]*\}")
+
+
+@pytest.mark.parametrize("lang", _ALL)
+def test_brace_placeholders_match_source(lang):
+    """A translated {name} placeholder compiles, then KeyErrors at format time."""
+    root = ET.parse(TS_DIR / f"anki_miner_{lang.code}.ts").getroot()
+    for msg in root.iter("message"):
+        tr = msg.find("translation")
+        if tr is None or tr.get("type") == "unfinished":
+            continue
+        source = msg.find("source").text or ""
+        want = sorted(_BRACE.findall(source))
+        texts = [form.text or "" for form in tr.findall("numerusform")] or [tr.text or ""]
+        for text in texts:
+            assert sorted(_BRACE.findall(text)) == want, (source, text)
 
 
 @pytest.mark.parametrize("lang", _ALL)
