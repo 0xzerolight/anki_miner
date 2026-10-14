@@ -43,6 +43,7 @@ _LANGUAGES: dict[str, str] = {
     "pt_pt": "Português (Portugal)",
     "nl": "Nederlands",
     "th": "ไทย",
+    "he": "עברית",
 }
 
 

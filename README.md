@@ -31,7 +31,8 @@
 <a href="i18n/README.ko.md">한국어</a> ·
 <a href="i18n/README.pt_pt.md">Português (Portugal)</a> ·
 <a href="i18n/README.nl.md">Nederlands</a> ·
-<a href="i18n/README.th.md">ไทย</a>
+<a href="i18n/README.th.md">ไทย</a> ·
+<a href="i18n/README.he.md">עברית</a>
 </p>
 <!-- i18n-nav:end -->
 
