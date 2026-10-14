@@ -35,7 +35,8 @@
 <a href="i18n/README.he.md">עברית</a> ·
 <a href="i18n/README.fa.md">فارسی</a> ·
 <a href="i18n/README.ca.md">Català</a> ·
-<a href="i18n/README.nb.md">Norsk bokmål</a>
+<a href="i18n/README.nb.md">Norsk bokmål</a> ·
+<a href="i18n/README.sv.md">Svenska</a>
 </p>
 <!-- i18n-nav:end -->
 
