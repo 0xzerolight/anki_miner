@@ -117,7 +117,7 @@ Japonščina, indonezijščina in hebrejščina ne potrebujejo ničesar dodatneg
 pipx install "anki-miner[languages]"   # all; or one of [zh], [ko], [yue], [en], [ca], [de], [pt], [fr], [es], [it], [nl], [nb], [ro], [el], [fi], [hu], [hr], [sv], [pl], [lt], [da], [ru], [uk], [sl], [tr], [th], [vi]
 ```
 
-Arabščina in perzijščina nimata dodatka. Njune podatke in modele spaCy za evropske jezike prenesete v aplikaciji v Nastavitve -> Jezik zbiranja, kjer zgoraj navedeni prenosi pridobijo vse potrebno.
+Arabščina in perzijščina nimata dodatka. Njune podatke in modele spaCy za evropske jezike prenesete v aplikaciji v razdelku Nastavitve -> Jezik zbiranja, kjer zgoraj navedeni prenosi pridobijo vse potrebno.
 
 </details>
 
@@ -206,10 +206,10 @@ Uporablja priložene nabore imen, izpeljane iz [JMnedict](https://www.edrdg.org/
 | Težava                    | Rešitev                                                                         |
 |--------------------------|----------------------------------------------------------------------------------|
 | „Povezava z Anki ni mogoča“ | Zaženite Anki in se prepričajte, da je AnkiConnect nameščen.                                  |
-| „Komplet ni najden“         | Izberite obstoječi komplet v Nastavitve -> Kartice in Anki. Kompleti se ne ustvarijo samodejno; če potrebujete novega, ga najprej ustvarite v Anki. |
-| „Vrsta zapiska ni najdena“    | Nastavite imena polj svoje vrste zapiska v Nastavitve -> Kartice in Anki.               |
+| „Komplet ni najden“         | Izberite obstoječi komplet v razdelku Nastavitve -> Kartice in Anki. Kompleti se ne ustvarijo samodejno; če potrebujete novega, ga najprej ustvarite v Anki. |
+| „Vrsta zapiska ni najdena“    | Nastavite imena polj svoje vrste zapiska v razdelku Nastavitve -> Kartice in Anki.               |
 | „ffmpeg ni najden“       | Namestite ffmpeg in ga dodajte v PATH.                                               |
-| Ni najdenih definicij     | Dodajte slovar Yomitan v Nastavitve -> Slovarji -> Dodaj slovar … |
+| Ni najdenih definicij     | Dodajte slovar Yomitan v razdelku Nastavitve -> Slovarji -> Dodaj slovar … |
 | Namestitveni program za Windows se ne odpre / opozorilo SmartScreen | Glejte [Opombe ob prvem zagonu](#opombe-ob-prvem-zagonu-nepodpisane-različice): izberite **Več informacij** -> **Vseeno zaženi**; lažno pozitivne zadetke Defenderja obnovite iz **Zgodovina zaščite**. |
 | Nova namestitev nima definicij | Zaženite Orodja -> Čarovnik za nastavitev ali Orodja -> Prenesi priporočene vire. Pri ročnem uvozu pustite datoteko ZIP Yomitan nedotaknjeno (ne razširite je). |
 | Dodajanje slovarja obstane ali ne uspe | Zapišite si zadnjo vidno fazo in priložite dnevnike (glejte „Kje so dnevniki?“ spodaj). V poročilo vključite ime, vir in velikost datoteke ZIP slovarja. |

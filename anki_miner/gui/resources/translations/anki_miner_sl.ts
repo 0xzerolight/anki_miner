@@ -719,7 +719,7 @@
     </message>
     <message>
         <source>Pitch fields need a source in Settings → Pitch Accent. Blank = skip.</source>
-        <translation>Polja tonskega naglasa potrebujejo vir v Nastavitve → Tonski naglas. Prazno = preskoči.</translation>
+        <translation>Polja tonskega naglasa potrebujejo vir v razdelku Nastavitve → Tonski naglas. Prazno = preskoči.</translation>
     </message>
     <message>
         <source>Pitch Position Field</source>
@@ -791,7 +791,7 @@
     </message>
     <message>
         <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Sentences). Blank = skip.</source>
-        <translation>Shrani vrstico podnapisov v drugem jeziku za stavek (Video -&gt; Posamezno, z omogočenimi drugimi podnapisi v Stavki). Prazno = preskoči.</translation>
+        <translation>Shrani vrstico podnapisov v drugem jeziku za stavek (Video -&gt; Posamezno, z omogočenimi drugimi podnapisi v razdelku Stavki). Prazno = preskoči.</translation>
     </message>
     <message>
         <source>Language Field</source>
@@ -2114,7 +2114,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
-        <translation>Ob podnapisih v jeziku zbiranja naložite še drugo datoteko podnapisov v svojem jeziku: prikaže se pod vrstico v predogledu Kuratorja besed in jo lahko shranite v polje prevoda. V Video → Paketno namesto tega izberite mapo s podnapisi prevoda; ti se z videi povežejo po številki epizode. Vklopite to v Nastavitve → Stavki.</translation>
+        <translation>Ob podnapisih v jeziku zbiranja naložite še drugo datoteko podnapisov v svojem jeziku: prikaže se pod vrstico v predogledu Kuratorja besed in jo lahko shranite v polje prevoda. V razdelku Video → Paketno namesto tega izberite mapo s podnapisi prevoda; ti se z videi povežejo po številki epizode. Vklopite to v razdelku Nastavitve → Stavki.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2426,7 +2426,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings → Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
-        <translation>Nabor znakov določa zapis, ki ga uporabljata sprednja stran kartice in iskanje v slovarju: Poenostavljeno, Tradicionalno ali Kot je zapisano, da se ohrani izvorni zapis vsake besede. Polje tradicionalne pisave v Nastavitve → Kartice in Anki vsebuje drugi zapis, kadar se razlikuje od sprednje strani.</translation>
+        <translation>Nabor znakov določa zapis, ki ga uporabljata sprednja stran kartice in iskanje v slovarju: Poenostavljeno, Tradicionalno ali Kot je zapisano, da se ohrani izvorni zapis vsake besede. Polje tradicionalne pisave v razdelku Nastavitve → Kartice in Anki vsebuje drugi zapis, kadar se razlikuje od sprednje strani.</translation>
     </message>
     <message>
         <source>Use &amp; order multiple dictionaries</source>
@@ -2610,7 +2610,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings → Cards &amp; Anki.</source>
-        <translation>Na kartice dodajte pinjin besede, vsak zlog v barvi svojega tona -- barvanje je možnost Obarvaj branje po tonih v Nastavitve → Kartice in Anki.</translation>
+        <translation>Na kartice dodajte pinjin besede, vsak zlog v barvi svojega tona -- barvanje je možnost Obarvaj branje po tonih v razdelku Nastavitve → Kartice in Anki.</translation>
     </message>
     <message>
         <source>Colour the reading by tone</source>
@@ -2618,7 +2618,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings → Cards &amp; Anki.</source>
-        <translation>Vsak zlog branja v pinjinu ali jyutpingu obarvajte glede na njegov ton v Nastavitve → Kartice in Anki.</translation>
+        <translation>Vsak zlog branja v pinjinu ali jyutpingu obarvajte glede na njegov ton v razdelku Nastavitve → Kartice in Anki.</translation>
     </message>
     <message>
         <source>Measure word field</source>
@@ -2690,7 +2690,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Hide the Utilities tools you do not use, or bring them back, under Settings → Utilities. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
-        <translation>Orodja v zavihku Pripomočki, ki jih ne uporabljate, skrijte ali jih vrnite v Nastavitve → Pripomočki. Skrito orodje ohrani svoj vnos tukaj; njegov gumb Odpri vodi do tistega potrditvenega polja.</translation>
+        <translation>Orodja v zavihku Pripomočki, ki jih ne uporabljate, skrijte ali jih vrnite v razdelku Nastavitve → Pripomočki. Skrito orodje ohrani svoj vnos tukaj; njegov gumb Odpri vodi do tistega potrditvenega polja.</translation>
     </message>
     <message>
         <source>Search the settings</source>
@@ -2706,7 +2706,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings → General. The Windows installer and the AppImage can install the update themselves and restart.</source>
-        <translation>Novo različico programa Anki Miner preverite v meniju Pomoč ali vklopite/izklopite samodejno preverjanje ob zagonu v Nastavitve → Splošno. Namestitveni program za Windows in AppImage lahko posodobitev namestita sama in znova zaženeta program.</translation>
+        <translation>Novo različico programa Anki Miner preverite v meniju Pomoč ali vklopite/izklopite samodejno preverjanje ob zagonu v razdelku Nastavitve → Splošno. Namestitveni program za Windows in AppImage lahko posodobitev namestita sama in znova zaženeta program.</translation>
     </message>
     <message>
         <source>Download videos or audio</source>
@@ -2722,7 +2722,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Run mokuro's OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
-        <translation>Zaženite OCR mokuro na mapi zvezka ali celotni seriji, da lahko Branje → Manga iz nje zbira. Namestite mokuro z namestitvene kartice v Pripomočki → Manga OCR.</translation>
+        <translation>Zaženite OCR mokuro na mapi zvezka ali celotni seriji, da lahko Branje → Manga iz nje zbira. Namestite mokuro z namestitvene kartice v razdelku Pripomočki → Manga OCR.</translation>
     </message>
     <message>
         <source>Read burned-in subtitles from a video into an .srt</source>
@@ -2730,7 +2730,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt that Video → Single can mine. Made for game longplays without commentary. Download the OCR engine from the setup card on Utilities → Video OCR.</source>
-        <translation>Narišite okvir, kjer se na zaslonu pojavlja dialog videa, in Anki Miner ga prebere v časovno označen .srt, iz katerega lahko zbira Video → Posamezno. Narejeno za posnetke iger brez komentarja. Mehanizem OCR prenesite z namestitvene kartice v Pripomočki → Video OCR.</translation>
+        <translation>Narišite okvir, kjer se na zaslonu pojavlja dialog videa, in Anki Miner ga prebere v časovno označen .srt, iz katerega lahko zbira Video → Posamezno. Narejeno za posnetke iger brez komentarja. Mehanizem OCR prenesite z namestitvene kartice v razdelku Pripomočki → Video OCR.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -2770,7 +2770,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>See whether Anki, ffmpeg and your resources are ready, with one-click fixes -- open it from Tools → System Health… or the status-bar badges.</source>
-        <translation>Preverite, ali so Anki, ffmpeg in vaši viri pripravljeni, s popravki na en klik -- odprite iz Orodja → Stanje sistema … ali značk v vrstici stanja.</translation>
+        <translation>Preverite, ali so Anki, ffmpeg in vaši viri pripravljeni, s popravki na en klik -- odprite iz menija Orodja → Stanje sistema … ali iz značk v vrstici stanja.</translation>
     </message>
     <message>
         <source>Setup wizard</source>
@@ -3012,7 +3012,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Map this field in Settings → Cards &amp; Anki</source>
-        <translation>Preslikajte to polje v Nastavitve → Kartice in Anki</translation>
+        <translation>Preslikajte to polje v razdelku Nastavitve → Kartice in Anki</translation>
     </message>
     <message>
         <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries, frequency sources and pitch data.</source>
@@ -3109,7 +3109,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>These fields are not on the note type: {fields}. Fix them in Settings → Cards &amp; Anki.</source>
-        <translation>Teh polj ni v vrsti zapiska: {fields}. Popravite jih v Nastavitve → Kartice in Anki.</translation>
+        <translation>Teh polj ni v vrsti zapiska: {fields}. Popravite jih v razdelku Nastavitve → Kartice in Anki.</translation>
     </message>
     <message>
         <source>Skipped (resource not loaded): {fields}.</source>
@@ -3951,7 +3951,7 @@ To bo spremenilo %n zapiskov (%1) in jim dodalo oznako %2. Želite nadaljevati?<
     </message>
     <message>
         <source>Copy the worth-learning part of a premade deck into a new deck. Filters come from Settings → Word Filters; the source deck is not modified.</source>
-        <translation>Kopirajte del pripravljenega kompleta, ki se ga splača učiti, v nov komplet. Filtri so iz Nastavitve → Filtri besed; izvorni komplet se ne spremeni.</translation>
+        <translation>Kopirajte del pripravljenega kompleta, ki se ga splača učiti, v nov komplet. Filtri so iz razdelka Nastavitve → Filtri besed; izvorni komplet se ne spremeni.</translation>
     </message>
     <message>
         <source>Source deck:</source>
@@ -4986,7 +4986,7 @@ Nobena datoteka na disku ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Word-audio source is too slow — audio skipped; reorder or disable it in Settings → Word Audio.</source>
-        <translation>Vir zvoka besed je prepočasen — zvok je preskočen; prerazporedite ali onemogočite ga v Nastavitve → Zvok besed.</translation>
+        <translation>Vir zvoka besed je prepočasen — zvok je preskočen; prerazporedite ali onemogočite ga v razdelku Nastavitve → Zvok besed.</translation>
     </message>
     <message>
         <source>Word-audio source connection/certificate failure — audio skipped this run, will retry next run</source>
@@ -6215,11 +6215,11 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Decks this language's known-words scan skips: %1. Change them in Settings → Word Filters.</source>
-        <translation>Kompleti, ki jih pregled znanih besed za ta jezik preskoči: %1. Spremenite jih v Nastavitve → Filtri besed.</translation>
+        <translation>Kompleti, ki jih pregled znanih besed za ta jezik preskoči: %1. Spremenite jih v razdelku Nastavitve → Filtri besed.</translation>
     </message>
     <message>
         <source>Every deck is scanned for this language, including decks in another language written in the same script. Exclude them in Settings → Word Filters.</source>
-        <translation>Za ta jezik se pregleda vsak komplet, tudi kompleti v drugem jeziku, zapisani v isti pisavi. Izključite jih v Nastavitve → Filtri besed.</translation>
+        <translation>Za ta jezik se pregleda vsak komplet, tudi kompleti v drugem jeziku, zapisani v isti pisavi. Izključite jih v razdelku Nastavitve → Filtri besed.</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -7264,7 +7264,7 @@ Najprej zaprite brskalnik kartic in urejevalnik zapiskov v Anki — v odprtem za
     </message>
     <message>
         <source>This language's download cannot start from setup. Pick it in Settings → Mining Language after setup.</source>
-        <translation>Prenosa za ta jezik ni mogoče začeti med nastavitvijo. Po končani nastavitvi ga izberite v Nastavitve → Jezik zbiranja.</translation>
+        <translation>Prenosa za ta jezik ni mogoče začeti med nastavitvijo. Po končani nastavitvi ga izberite v razdelku Nastavitve → Jezik zbiranja.</translation>
     </message>
     <message>
         <source>%1 language pack: download failed. %2</source>
@@ -7709,7 +7709,7 @@ Najprej zaprite brskalnik kartic in urejevalnik zapiskov v Anki — v odprtem za
     </message>
     <message>
         <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>Deluje katera koli vrsta zapiska, ko so njena polja preslikana. Izberite eno od svojih vrst zapiskov: Anki Miner vstavi besedo v njeno prvo polje in izpolni polja, ki jih prepozna po imenu, kot so Word, Sentence, Reading, Definition, Picture in zvok. Katero polje dobi kaj, lahko po nastavitvi spremenite v Nastavitve → Kartice in Anki. Še nimate vrste zapiska za zbiranje? &lt;a href="%2"&gt;Prenesite Anki Miner Note&lt;/a&gt; (brezplačno, deluje za vse jezike), nato v Anki izberite Datoteka → Uvozi in izberite datoteko. Ta stran se posodobi, ko se vrnete. &lt;a href="%1"&gt;Katera polja lahko izpolni Anki Miner?&lt;/a&gt;</translation>
+        <translation>Deluje katera koli vrsta zapiska, ko so njena polja preslikana. Izberite eno od svojih vrst zapiskov: Anki Miner vstavi besedo v njeno prvo polje in izpolni polja, ki jih prepozna po imenu, kot so Word, Sentence, Reading, Definition, Picture in zvok. Katero polje dobi kaj, lahko po nastavitvi spremenite v razdelku Nastavitve → Kartice in Anki. Še nimate vrste zapiska za zbiranje? &lt;a href="%2"&gt;Prenesite Anki Miner Note&lt;/a&gt; (brezplačno, deluje za vse jezike), nato v Anki izberite Datoteka → Uvozi in izberite datoteko. Ta stran se posodobi, ko se vrnete. &lt;a href="%1"&gt;Katera polja lahko izpolni Anki Miner?&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>
@@ -8735,7 +8735,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Your mining language can't read text on this computer yet. Download its language pack in Settings → Mining Language.</source>
-        <translation>Vaš jezik zbiranja na tem računalniku še ne more brati besedila. Prenesite njegov jezikovni paket v Nastavitve → Jezik zbiranja.</translation>
+        <translation>Vaš jezik zbiranja na tem računalniku še ne more brati besedila. Prenesite njegov jezikovni paket v razdelku Nastavitve → Jezik zbiranja.</translation>
     </message>
     <message>
         <source>See how much of a subtitle file, book or manga volume, or a folder of them, you already know. Uses your Anki cards and known words; nothing is written.</source>
@@ -8976,11 +8976,11 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>No sentence-audio field is mapped in Settings → Cards &amp; Anki, so the deck's audio won't be copied.</source>
-        <translation>V Nastavitve → Kartice in Anki ni preslikanega polja za zvok stavka, zato zvok kompleta ne bo kopiran.</translation>
+        <translation>V razdelku Nastavitve → Kartice in Anki ni preslikanega polja za zvok stavka, zato zvok kompleta ne bo kopiran.</translation>
     </message>
     <message>
         <source>No Picture field is mapped in Settings → Cards &amp; Anki, so the deck's pictures won't be copied.</source>
-        <translation>V Nastavitve → Kartice in Anki ni preslikanega polja Picture, zato slike kompleta ne bodo kopirane.</translation>
+        <translation>V razdelku Nastavitve → Kartice in Anki ni preslikanega polja Picture, zato slike kompleta ne bodo kopirane.</translation>
     </message>
     <message>
         <source>Starting…</source>
@@ -9058,7 +9058,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Subtitle files are mined in Reading → Subtitle Files.</source>
-        <translation>Datoteke podnapisov se zbirajo v Branje → Podnapisi.</translation>
+        <translation>Datoteke podnapisov se zbirajo v razdelku Branje → Podnapisi.</translation>
     </message>
     <message>
         <source>Choose a manga volume or folder first.</source>
@@ -9172,7 +9172,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Subtitle files are mined in Reading → Subtitle Files.</source>
-        <translation>Datoteke podnapisov se zbirajo v Branje → Podnapisi.</translation>
+        <translation>Datoteke podnapisov se zbirajo v razdelku Branje → Podnapisi.</translation>
     </message>
     <message>
         <source>Choose a book or a folder of books first.</source>
@@ -9479,7 +9479,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>This card picture has no Picture field to land in. Map one in Settings → Cards &amp; Anki, or remove the picture.</source>
-        <translation>Za to sliko kartice ni polja Picture. Preslikajte ga v Nastavitve → Kartice in Anki ali odstranite sliko.</translation>
+        <translation>Za to sliko kartice ni polja Picture. Preslikajte ga v razdelku Nastavitve → Kartice in Anki ali odstranite sliko.</translation>
     </message>
     <message>
         <source>That picture cannot be read. Pick another, or remove it to mine without one.</source>
@@ -9816,7 +9816,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>   Could not remove older copy: %1 — remove it via Settings → Dictionaries</source>
-        <translation>   Starejše kopije ni bilo mogoče odstraniti: %1 — odstranite jo v Nastavitve → Slovarji</translation>
+        <translation>   Starejše kopije ni bilo mogoče odstraniti: %1 — odstranite jo v razdelku Nastavitve → Slovarji</translation>
     </message>
     <message>
         <source>✗ %1 — %2
@@ -9932,7 +9932,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>No recommended resources for this language. Import a dictionary in Settings → Dictionaries.</source>
-        <translation>Za ta jezik ni priporočenih virov. Uvozite slovar v Nastavitve → Slovarji.</translation>
+        <translation>Za ta jezik ni priporočenih virov. Uvozite slovar v razdelku Nastavitve → Slovarji.</translation>
     </message>
     <message>
         <source>%1 (%2)</source>
@@ -10020,7 +10020,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Dictionary: none installed. Add one in Settings → Dictionaries after setup.</source>
-        <translation>Slovar: nobeden ni nameščen. Po nastavitvi ga dodajte v Nastavitve → Slovarji.</translation>
+        <translation>Slovar: nobeden ni nameščen. Po nastavitvi ga dodajte v razdelku Nastavitve → Slovarji.</translation>
     </message>
     <message>
         <source>Downloads: still running — %1</source>
@@ -10578,7 +10578,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Cards will have no definitions until you add a dictionary in Settings → Dictionaries.</source>
-        <translation>Kartice ne bodo imele definicij, dokler ne dodate slovarja v Nastavitve → Slovarji.</translation>
+        <translation>Kartice ne bodo imele definicij, dokler ne dodate slovarja v razdelku Nastavitve → Slovarji.</translation>
     </message>
     <message>
         <source>Pitch accent source '%1' unavailable; skipped</source>
@@ -11094,7 +11094,7 @@ Nameščeni viri in tema se ohranijo.</translation>
     </message>
     <message>
         <source>No subtitle lines to preview — check the filter in Settings → Sentences.</source>
-        <translation>Ni vrstic podnapisov za predogled — preverite filter v Nastavitve → Stavki.</translation>
+        <translation>Ni vrstic podnapisov za predogled — preverite filter v razdelku Nastavitve → Stavki.</translation>
     </message>
     <message>
         <source>The subtitles could not be read. Check the file format.</source>
@@ -13355,7 +13355,7 @@ Razvrstite po tem stolpcu, da dolg posnetek obdelate po vrsti — nato označite
     <name>YouTubeQueueWorker</name>
     <message>
         <source>This run needs local transcription, but the model %1 is not installed. Install it in Settings -&gt; Transcription &amp; Alignment, or set Subtitles to Captions only.</source>
-        <translation>Ta zagon potrebuje lokalni prepis, vendar model %1 ni nameščen. Namestite ga v Nastavitve -&gt; Prepis in poravnava ali nastavite Podnapisi na Samo napisi.</translation>
+        <translation>Ta zagon potrebuje lokalni prepis, vendar model %1 ni nameščen. Namestite ga v razdelku Nastavitve -&gt; Prepis in poravnava ali nastavite Podnapisi na Samo napisi.</translation>
     </message>
     <message>
         <source>%1 · %2%</source>
