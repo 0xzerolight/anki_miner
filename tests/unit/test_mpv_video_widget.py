@@ -11,7 +11,7 @@ import logging
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtWidgets import QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QApplication, QVBoxLayout, QWidget
 
 from anki_miner.gui.widgets.mpv_video_widget import MpvVideoWidget
 from anki_miner.utils.mpv_loader import MpvUnavailableError
@@ -161,7 +161,8 @@ class TestSizeFloor:
     def test_the_frame_reserves_a_16_9_box(self, qtbot):
         widget = MpvVideoWidget()
         qtbot.addWidget(widget)
-        assert (widget.minimumWidth(), widget.minimumHeight()) == (320, 180)
+        hint = widget.minimumSizeHint()
+        assert (hint.width(), hint.height()) == (320, 180)
 
     def test_the_floor_does_not_track_the_text_scale(self, qtbot):
         """Video pixels are not text -- the one place a literal is correct."""
@@ -170,7 +171,7 @@ class TestSizeFloor:
         font = widget.font()
         font.setPointSizeF(font.pointSizeF() * 2)
         widget.setFont(font)
-        assert widget.minimumHeight() == 180
+        assert widget.minimumSizeHint().height() == 180
 
     def test_a_hidden_frame_stops_reserving_anything(self, qtbot):
         """Both audio-only paths hide the view, and the "audio still plays"
@@ -184,6 +185,29 @@ class TestSizeFloor:
         with_video = host.minimumSizeHint().height()
         widget.setVisible(False)
         assert host.minimumSizeHint().height() < with_video
+
+    def test_a_squeezed_frame_shrinks_instead_of_covering_its_siblings(self, qtbot):
+        """A window shorter than its layout floor (a tiling WM, a short screen)
+        squeezes the player. A hard minimum kept the frame 180px tall past its
+        slot, and the subtitle strip and slider below painted over the picture.
+        """
+        host = QWidget()
+        qtbot.addWidget(host)
+        layout = QVBoxLayout(host)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        widget = MpvVideoWidget()
+        layout.addWidget(widget, 1)
+        below = QWidget()
+        below.setFixedHeight(40)
+        layout.addWidget(below)
+        # An explicit window floor replaces the layout's (the curator sets 600
+        # against a ~670px layout), so the window really can be this short.
+        host.setMinimumHeight(120)
+        host.show()
+        host.resize(400, 120)
+        QApplication.processEvents()
+        assert widget.geometry().bottom() < below.geometry().top()
 
 
 class TestRenderReady:

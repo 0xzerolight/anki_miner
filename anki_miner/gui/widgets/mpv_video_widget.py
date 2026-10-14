@@ -29,7 +29,7 @@ import logging
 import os
 from typing import Any
 
-from PyQt6.QtCore import QByteArray, pyqtSignal
+from PyQt6.QtCore import QByteArray, QSize, pyqtSignal
 from PyQt6.QtGui import QGuiApplication, QOpenGLContext, QSurfaceFormat
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
 
@@ -153,7 +153,14 @@ class MpvVideoWidget(QOpenGLWidget):
         # text, so this floor must NOT track the UI font scale. And no
         # setHeightForWidth -- QSplitter ignores it, so it would promise an
         # aspect ratio nothing enforces.
-        self.setMinimumSize(320, 180)
+        #
+        # The floor is a size HINT (minimumSizeHint below), never
+        # setMinimumSize. Layouts and splitters reserve a hint exactly as they
+        # reserve a minimum, but QWidget clamps every resize to a hard minimum.
+        # When the window is shorter than its layout floor (a tiling WM, a
+        # short screen, the curator's own 600px window floor), the layout hands
+        # the frame less than 180px, the frame kept 180 anyway, and the subtitle
+        # strip and slider below it painted over the picture.
         self._player: Any = None
         self._render_ctx: Any = None
         self._gl_ready = False
@@ -166,6 +173,10 @@ class MpvVideoWidget(QOpenGLWidget):
         # calls into freed memory and the process segfaults.
         self._get_proc_cb: Any = None
         self._mpv_frame_update.connect(self.update)
+
+    def minimumSizeHint(self) -> QSize:  # noqa: N802 - Qt override
+        """The 16:9 floor; see the comment in ``__init__``."""
+        return QSize(320, 180)
 
     @property
     def has_render_context(self) -> bool:
