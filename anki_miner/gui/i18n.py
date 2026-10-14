@@ -40,6 +40,7 @@ _LANGUAGES: dict[str, str] = {
     "yue": "粵語",
     "sl": "Slovenščina",
     "ko": "한국어",
+    "pt_pt": "Português (Portugal)",
 }
 
 
