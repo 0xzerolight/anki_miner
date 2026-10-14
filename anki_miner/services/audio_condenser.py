@@ -290,8 +290,9 @@ def _format_lrc_timestamp(ms: int) -> str:
 
 # Suffix -> (ffmpeg audio encoder, uses -b:a bitrate, downmix to stereo). opus
 # (libopus) rejects >2ch input (5.1 eac3/ac3 is the common anime BD/WEB-DL case),
-# so it always gets ``-ac 2`` — mirrors media_extractor.py:1064-1070. flac is
-# lossless, so it takes neither a bitrate nor a channel remap.
+# so it always gets ``-ac 2``. Condensed audio stays stereo, unlike the mono card
+# clips media_extractor cuts. flac is lossless, so it takes neither a bitrate nor
+# a channel remap.
 _ENCODER_SETTINGS: dict[str, tuple[str, bool, bool]] = {
     ".mp3": ("libmp3lame", True, False),
     ".opus": ("libopus", True, True),

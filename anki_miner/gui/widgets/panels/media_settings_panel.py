@@ -93,9 +93,7 @@ class MediaSettingsPanel(FormPanel):
         self.add_field(
             self.tr("Audio Bitrate"),
             self.audio_bitrate_spinbox,
-            helper=self.tr(
-                "Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults."
-            ),
+            helper=self.tr("Clips are mono. Higher = better quality, larger files; 64-96 kbps is plenty for speech."),
         )
 
         # Audio padding

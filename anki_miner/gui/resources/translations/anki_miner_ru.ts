@@ -7066,8 +7066,8 @@ Continue?</source>
         <translation>Битрейт аудио</translation>
     </message>
     <message>
-        <source>Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults.</source>
-        <translation>Выше = лучше качество, больше файлы. 64–96 кбит/с для Opus или 128–192 кбит/с для MP3 — хорошие значения по умолчанию.</translation>
+        <source>Clips are mono. Higher = better quality, larger files; 64-96 kbps is plenty for speech.</source>
+        <translation>Клипы в моно. Выше = лучше качество, больше файлы; для речи достаточно 64–96 кбит/с.</translation>
     </message>
     <message>
         <source> seconds</source>

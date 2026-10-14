@@ -80,7 +80,7 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         auto_open_anki=True,
         # --- MediaSettingsPanel ---
         audio_format="opus",
-        audio_bitrate=96,
+        audio_bitrate=128,  # default is 96
         audio_padding=0.5,
         reading_tts_enabled=True,
         reading_tts_google_enabled=False,

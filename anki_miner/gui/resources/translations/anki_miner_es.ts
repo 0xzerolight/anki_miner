@@ -7029,8 +7029,8 @@ Cierre primero el navegador de tarjetas y el editor de notas de Anki — una not
         <translation>Tasa de bits de audio</translation>
     </message>
     <message>
-        <source>Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults.</source>
-        <translation>Mayor = mejor calidad, archivos más grandes. 64-96 kbps en Opus o 128-192 kbps en MP3 son valores predeterminados adecuados.</translation>
+        <source>Clips are mono. Higher = better quality, larger files; 64-96 kbps is plenty for speech.</source>
+        <translation>Los clips son mono. Mayor = mejor calidad, archivos más grandes; 64-96 kbps bastan para la voz.</translation>
     </message>
     <message>
         <source> seconds</source>

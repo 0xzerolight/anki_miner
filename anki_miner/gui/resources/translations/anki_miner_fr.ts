@@ -7029,8 +7029,8 @@ Continuer ?</translation>
         <translation>Débit audio</translation>
     </message>
     <message>
-        <source>Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults.</source>
-        <translation>Plus élevé = meilleure qualité, fichiers plus volumineux. 64-96 kbps en Opus ou 128-192 kbps en MP3 sont de bonnes valeurs par défaut.</translation>
+        <source>Clips are mono. Higher = better quality, larger files; 64-96 kbps is plenty for speech.</source>
+        <translation>Les extraits sont en mono. Plus élevé = meilleure qualité, fichiers plus volumineux ; 64-96 kbps suffisent pour la voix.</translation>
     </message>
     <message>
         <source> seconds</source>

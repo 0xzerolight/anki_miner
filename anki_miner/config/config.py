@@ -262,7 +262,7 @@ class AnkiMinerConfig:
     media_temp_folder: Path = field(default_factory=lambda: Path(tempfile.gettempdir()) / "anki_miner_temp")
     # Audio extraction settings (Issue #18)
     audio_format: str = "mp3"  # "mp3" | "opus"
-    audio_bitrate: int = 192  # kbps; applies to both mp3 and opus
+    audio_bitrate: int = 96  # kbps, mono clips; applies to both mp3 and opus
 
     # Audio Condenser settings. Persisted defaults for the Condense tab's inline
     # run options; the tab seeds its widgets from these on load and writes them

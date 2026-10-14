@@ -1584,13 +1584,10 @@ class MediaExtractorService:
             ]
         )
 
-        # libopus rejects multi-channel input (e.g. 5.1 surround eac3 common in
-        # anime BD/WEB-DL releases) without an explicit channel mapping. Downmix
-        # to stereo — Anki flashcards play through headphones/laptop speakers,
-        # surround serves no purpose. MP3 (libmp3lame) tolerates 5.1 natively so
-        # we leave its channel layout alone to preserve existing behavior.
-        if self.config.audio_format == "opus":
-            cmd.extend(["-ac", "2"])
+        # Mono for every codec: a dialogue clip gains nothing from stereo, so the
+        # bitrate all goes to one channel. -ac also downmixes 5.1 (common in anime
+        # BD/WEB-DL releases), which libopus rejects without a channel mapping.
+        cmd.extend(["-ac", "1"])
 
         cmd.append(str(output_path))
 

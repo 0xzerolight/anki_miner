@@ -6992,8 +6992,8 @@ Tiếp tục?</translation>
         <translation>Bitrate âm thanh</translation>
     </message>
     <message>
-        <source>Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults.</source>
-        <translation>Cao hơn = chất lượng tốt hơn, tệp lớn hơn. 64-96 kbps Opus hoặc 128-192 kbps MP3 là giá trị mặc định tốt.</translation>
+        <source>Clips are mono. Higher = better quality, larger files; 64-96 kbps is plenty for speech.</source>
+        <translation>Đoạn âm thanh là đơn kênh (mono). Cao hơn = chất lượng tốt hơn, tệp lớn hơn; 64-96 kbps là đủ cho giọng nói.</translation>
     </message>
     <message>
         <source> seconds</source>

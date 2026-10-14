@@ -11,6 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from anki_miner.config import AnkiMinerConfig
 from anki_miner.models import MediaData
 from anki_miner.services.media_extractor import (
     MIN_CLIP_SECONDS,
@@ -1243,8 +1244,8 @@ class TestExtractAudio:
         # No ffmpeg encode call should have been made.
         mock_popen.assert_not_called()
 
-    def test_opus_downmixes_to_stereo(self, test_config, video_file, tmp_path):
-        """Should pass -ac 2 when opus to avoid libopus 5.1 channel-mapping error (Issue #18)."""
+    def test_opus_is_mono(self, test_config, video_file, tmp_path):
+        """-ac 1 for opus: mono speech, and it also avoids libopus's 5.1 channel-mapping error (Issue #18)."""
         cfg = dataclasses.replace(test_config, audio_format="opus", audio_bitrate=64)
         with patch(f"{MODULE}.ensure_directory"):
             svc = MediaExtractorService(cfg)
@@ -1263,10 +1264,13 @@ class TestExtractAudio:
 
         cmd = mock_popen.call_args[0][0]
         ac_index = cmd.index("-ac")
-        assert cmd[ac_index + 1] == "2"
+        assert cmd[ac_index + 1] == "1"
 
-    def test_mp3_does_not_force_stereo(self, service, video_file, tmp_path):
-        """MP3 path preserves source channel layout (libmp3lame handles 5.1 natively)."""
+    def test_default_bitrate_is_96(self):
+        assert AnkiMinerConfig().audio_bitrate == 96
+
+    def test_mp3_is_mono(self, service, video_file, tmp_path):
+        """A dialogue clip gains nothing from stereo, so MP3 is downmixed to mono too."""
         output_path = tmp_path / "out.mp3"
         output_path.write_bytes(b"\xff\xfbfake")
 
@@ -1279,7 +1283,7 @@ class TestExtractAudio:
             service._extract_audio(video_file, 1.0, 2.0, output_path)
 
         cmd = mock_popen.call_args[0][0]
-        assert "-ac" not in cmd
+        assert cmd[cmd.index("-ac") + 1] == "1"
 
     def test_filename_extension_matches_format(self, test_config, video_file, make_tokenized_word, tmp_path):
         """extract_media should produce .opus filename when audio_format='opus' (Issue #18)."""
