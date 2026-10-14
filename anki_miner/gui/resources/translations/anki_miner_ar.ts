@@ -6153,7 +6153,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Whitelist words that got no card this run, one per line</source>
-        <translation>الكلمات التي لم تحصل على بطاقة في هذا التشغيل، لإضافتها إلى القائمة البيضاء، كلمة في كل سطر</translation>
+        <translation>كلمات القائمة البيضاء التي لم تحصل على بطاقة في هذا التشغيل، كلمة في كل سطر</translation>
     </message>
     <message>
         <source>Dismiss</source>
