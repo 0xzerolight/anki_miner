@@ -29,7 +29,8 @@
 <a href="i18n/README.yue.md">粵語</a> ·
 <a href="i18n/README.sl.md">Slovenščina</a> ·
 <a href="i18n/README.ko.md">한국어</a> ·
-<a href="i18n/README.pt_pt.md">Português (Portugal)</a>
+<a href="i18n/README.pt_pt.md">Português (Portugal)</a> ·
+<a href="i18n/README.nl.md">Nederlands</a>
 </p>
 <!-- i18n-nav:end -->
 

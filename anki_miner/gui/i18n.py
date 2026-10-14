@@ -41,6 +41,7 @@ _LANGUAGES: dict[str, str] = {
     "sl": "Slovenščina",
     "ko": "한국어",
     "pt_pt": "Português (Portugal)",
+    "nl": "Nederlands",
 }
 
 
